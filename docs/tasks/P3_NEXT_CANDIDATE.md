@@ -1,7 +1,22 @@
-# P3 next candidate: measure retained child rendering before caching
+# P3 next candidate: retained child cache correctness and calibration
 
-**Proposal only.** No upstream change, GPUI Fast activation, patch validation,
-benchmark run, or cache behavior is authorized by this note.
+**Status:** RustUI host-lowering diagnostics are already implemented and accepted
+as P3A. Their implementation is in
+`crates/rustui/src/runtime/render_diagnostics.rs`,
+`crates/rustui/src/runtime/component_host.rs`, and
+`crates/rustui/src/runtime/events.rs`; the public diagnostics surface and
+acceptance record are documented in `docs/tasks/P3A_HOST_DIAGNOSTICS.md`.
+Native verification is recorded in
+`target/headstart/milestone20-host-diagnostics-gui.json`, with the accepted
+milestone summarized in `docs/IMPLEMENTATION_ROADMAP.md`. Recording is opt-in
+and times only RustUI's `component.into_element` call inside
+`ComponentHost::render`.
+
+The next open P3B correctness gate is native keyboard/focus behavior after an
+AX-inactive cache hit. P3B has a separate, still-pending calibrated
+diagnostics-overhead measurement; the existing P3A checks are not calibrated
+performance evidence. No cache promotion, upstream change, GPUI Fast
+activation, or vendor change is authorized by this note.
 
 ## What the pinned stack already supports
 
@@ -15,39 +30,46 @@ prepaint, dispatch-tree, input-handler, and mouse-listener state
 upstream patch unnecessary for a *candidate* retained-child cache; it does not
 prove RustUI interaction correctness.
 
-RustUI retains child `Entity<ComponentHost<C>>` values and currently lowers both
-`ComponentView` and `ComponentPropsView` with `child.into_any_element()`
-(`crates/rustui/src/view.rs:645-670`). The child host performs RustUI lowering
-in `ComponentHost::render` (`crates/rustui/src/runtime/component_host.rs:243-282`).
-Changed props notify the child, but `refresh_environment` currently replaces
-its environment without notifying (`view.rs:339-385`, `component_host.rs:238-240`).
-Caching that path as-is could leave environment-driven content stale. GPUI's
-cached-view click and focus behavior also needs native verification, regardless
-of the pinned code's replay logic.
+RustUI retains child `Entity<ComponentHost<C>>` values. `ComponentView` and
+`ComponentPropsView` now expose opt-in `cached_fixed` lowering in
+`crates/rustui/src/view.rs`; props-changed frames lower normally to preserve
+same-frame freshness. A nonempty typed environment scope, active native drag,
+or active accessibility session also takes the normal uncached path. The
+environment refresh path replaces values without notifying the child host, so
+the typed-scope fallback remains part of this pilot's correctness boundary.
+Existing native evidence covers cache-hit counts and child state invalidation,
+props freshness, environment/theme/locale logical changes, removal/restoration,
+and the active-AX fallback. It does not yet verify keyboard/focus replay during
+an AX-inactive cache hit (`docs/tasks/P3B_CACHED_CHILD.md`).
 
-## Smallest next implementation
+## Smallest next acceptance unit
 
-Add **opt-in RustUI render diagnostics** around `ComponentHost::render` before
-adding a cache modifier. Count host renders and time only RustUI's call to
-`component.into_element`; publish bounded, per-owner observations through
-RustUI's public API or an explicitly diagnostic Playground story. Keep recording
-off by default, avoid a second scheduling/rendering system, and name the metric
-`RustUI lowering duration`. It excludes GPUI layout, prepaint, paint, platform
-submission, display presentation, and input latency. Measure the diagnostics'
-own overhead with the same executable and workload before using the durations
-to rank cache candidates. The pinned timing-hook audit in
-`docs/tasks/P2C_GPUI_TIMING_HOOKS.md` sets this measurement boundary.
+Reuse the existing `apps/rustui-playground/src/stories/cache_gallery.rs` for a
+bounded native keyboard/focus probe. With accessibility inactive, establish a
+cache hit after a parent-only rerender, Tab to the cached child button, and
+activate it with Space or Enter. Verify one local-state increment, move focus
+away and back, and repeat. Record accessibility state for each step; if it
+becomes active, classify that step as the uncached fallback rather than cache
+replay. Preserve the binary identity, key sequence, before/after child state,
+and raw observations in the P3B evidence record. Do not use an
+accessibility-mediated interaction for the cache-hit portion.
 
-If a retained subtree is a measured hotspot, the follow-up cache experiment is
-an opt-in fixed-bounds modifier on an entity-backed `ComponentView`; leave
-uncached behavior as the default. Before exposing it, specify how parent props,
-typed environment changes, theme/locale changes, child state notifications,
-layout/size changes, and unmount invalidate the cache. Use GPUI's existing
+Separately, measure diagnostics overhead with the same executable and workload
+against a contemporary unchanged baseline before using lowering durations to
+rank cache candidates. Preserve per-run counts/timings, collector overhead,
+CPU/RSS, and variance. The pinned timing-hook audit in
+`docs/tasks/P2C_GPUI_TIMING_HOOKS.md` sets the measurement boundary; P3A's
+existing functional verification is not this calibration.
+
+The fixed-bounds cache modifier is already present for both retained child
+paths; uncached behavior remains the default. Use GPUI's existing
 `.cached(style)` at the retained-child lowering point; do not copy its cache,
-introduce a second runtime, or change vendor source. Require click, keyboard,
-focus, accessibility, reorder, and removal/restoration checks on the native
-Playground story. A frozen subtree with stale values fails the experiment even
-if CPU use falls.
+introduce a second runtime, or change vendor source. P3B remains a pilot: do not
+promote caching based on the existing lowering-count results or one favorable
+performance sample. Broader click, accessibility, reorder,
+removal/restoration, and drag checks remain governed by
+`docs/tasks/P3B_CACHED_CHILD.md`. A frozen subtree with stale values fails the
+experiment even if CPU use falls.
 
 ## Evidence and decision gate
 
