@@ -1587,3 +1587,7 @@ List and Table source matched their documented contracts; neither audit establis
 ## M106 — Native List acceptance
 
 The canonical Playground List story passed bounded native checks for visible rows, viewport scrolling, filtering, source-index selection mapping, and Up/Down selection. Accessibility exposed a named list, settable search field, and named selectable rows. Exact child focus, screen-reader speech, Home/End behavior, RTL, cross-platform, pixel-comparison, and performance acceptance remain open. No Rust source changed. Evidence: `target/headstart/evidence/list-native-acceptance-20261019.md`. The Playground process was closed; its disposable app bundle and standalone executable were removed while shared Cargo caches were preserved.
+
+## M107 — Native Tree acceptance
+
+The canonical Playground Tree story passed bounded native checks for visible hierarchy rows, controlled selection/binding, Up/Down traversal, and Left/Right collapse/expand of a nested folder. The CUA accessibility snapshot exposed named selectable rows under outline controls. Direct pointer disclosure behavior, expanded-state reporting, focused-row reporting, screen-reader speech, RTL, cross-platform, pixel-comparison, theme/locale switching, and performance acceptance remain unverified. No Rust source changed. Evidence: `target/headstart/evidence/tree-native-acceptance-20261019.md`. The Playground process was quit and its disposable canonical bundle and standalone executable were removed; shared Cargo caches were preserved.
