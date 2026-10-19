@@ -48,3 +48,7 @@ or tested, and it does not authorize a RustUI Dialog implementation.
 ### Disabled Tree accessibility state
 
 `gpui-tree-aria-disabled.patch` adds an additive `StatefulInteractiveElement::aria_disabled(bool)` API in pinned `gpui-pre 0.3.9` and uses it for `gpui-base 0.7.3` TreeItem nodes. RustUI's `TreeNode::disabled(true)` already prevents pointer activation through GPUI Tree, but the native accessibility node currently omits disabled state. The paired changes expose that state to AccessKit. This proposal is not applied or validated; exact package/revision context, source hashes, compatibility risks, and focused validation are recorded in `docs/tasks/TREE_ARIA_DISABLED_PROPOSAL.md`.
+
+### PopupMenu disabled confirmation
+
+`gpui-component-popup-menu-disabled-confirm.patch` prevents a disabled selected item from running its handler/action or dismissing the menu. The focused source finding, exact package source hash, trade-offs, and validation plan are in `docs/tasks/POPUP_MENU_DISABLED_CONFIRM_PROPOSAL.md`. The patch is review-only and has not been applied or validated.
