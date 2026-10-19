@@ -1,10 +1,13 @@
 # P3B: Fixed-bounds retained child cache pilot
 
-`Component(key, initialize).cached_fixed(width, height)` opts one no-props
-retained child into the pinned GPUI `Entity::cached` API. Dimensions are finite,
+`Component(key, initialize).cached_fixed(width, height)` opts a retained child
+without incoming props into the pinned GPUI `Entity::cached` API.
+`Component(key, initialize).props(props, reconcile).cached_fixed(width, height)`
+opts a props-driven retained child into the same cache. Dimensions must be finite,
 positive logical pixels and provide the definite layout bounds required by GPUI.
-The default `Component` path remains uncached. Adding `.props(...)` after
-`.cached_fixed(...)` is rejected; the props view has no cache modifier.
+The default `Component` and props-driven paths remain uncached. The cache
+modifier must follow `.props(...)`; adding `.props(...)` after
+`.cached_fixed(...)` is rejected.
 
 The cache modifier automatically lowers through the normal uncached entity path
 when the current typed `EnvironmentValues` scope is nonempty, GPUI reports an
@@ -36,15 +39,16 @@ refreshes windows. These mechanisms are source-level reasons to test caching,
 not GUI acceptance.
 
 Focused unit tests cover valid and invalid dimensions, typed-environment,
-active-drag, and active-accessibility fallback eligibility, plus the props
-exclusion. Root-owned native acceptance must check cache-hit lowering counts,
-child state/task updates, click and keyboard activation, focus and accessibility,
-theme/locale/font changes, sizing, reorder/removal/restoration, and the uncached
-fallback. A separate drag-capable story and native drag review are required
-before claiming
-drag support. P3A host diagnostics and a contemporary paired workload baseline
-must establish any performance benefit; this pilot adds no upstream patch,
-revision, dependency, or second cache/runtime.
+active-drag, and active-accessibility fallback eligibility for both child paths,
+plus rejection of props after the no-props cache modifier. These unit tests are
+source-level checks, not GUI or native acceptance. Root-owned native acceptance
+must check cache-hit lowering counts, child state/task/props updates, click and
+keyboard activation, focus and accessibility, theme/locale/font changes, sizing,
+reorder/removal/restoration, and the uncached fallback. A separate drag-capable
+story and native drag review are required before claiming drag support. P3A host
+diagnostics and a contemporary paired workload baseline must establish any
+performance benefit; this pilot adds no upstream patch, revision, dependency,
+or second cache/runtime.
 
 ## Playground pilot story
 
@@ -69,7 +73,7 @@ normal lowering fallback. The story is not a speed benchmark or drag acceptance.
 
 Run `./scripts/cargo-headstart run -p rustui --example cache_benchmark` from
 the repository root. This opt-in framework example opens one GPUI window with
-RustUI `ComponentView::cached_fixed` and uncached children. It uses GPUI's
+RustUI retained children with and without `cached_fixed`. It uses GPUI's
 `Window::on_next_frame` scheduler for 10 warmup parent updates, then enables
 the existing lowering diagnostics for 100 parent-only updates, one cached-child
 state mutation, and one uncached-child state mutation. It records raw per-type
@@ -97,7 +101,8 @@ aggregate and binary SHA-256 are in
 `target/headstart/milestone22-cache-workload-repetitions.json`, with build
 provenance in `target/headstart/evidence/milestone22-cache-workload-build.json`.
 This demonstrates cache-hit lowering avoidance and local child invalidation in
-the controlled no-AX workload. It does not measure a speedup.
+the controlled no-AX workload for the measured no-props child. It does not
+measure a speedup or establish cache behavior for props-driven children.
 
 Theme and locale invalidation, removal/restoration, reordering, and native drag
 behavior remain outside this result. They require separate source and native
@@ -130,5 +135,11 @@ AX tree. Clicking the cached-pilot child changed its visible local count from
 This exercises normal rendering under active accessibility, not a cache hit.
 Evidence: `target/headstart/milestone22-cache-partial-gui.json`. The subsequent
 unit/integration run passed 77 tests across 12 binaries
-(`target/headstart/milestone22-23-tests.log`). Cache performance acceptance
-remains pending.
+(`target/headstart/milestone22-23-tests.log`). That recorded run predates the props-view cache API and does not verify it. A
+separate bounded Playground spot-check recorded in
+`target/headstart/milestone-props-cache-gui.json` changed the incoming revision
+from 0 to 1 while the child local count stayed at 1, then rerendered the parent
+while both values remained unchanged. This verifies props propagation and local
+state preservation in the props-driven child; it does not establish a GPUI cache
+hit or performance benefit. Keyboard/focus, drag, theme/locale, removal/restoration,
+and screen-reader acceptance remain pending. Cache performance acceptance remains pending.

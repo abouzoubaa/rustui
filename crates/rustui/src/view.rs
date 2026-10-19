@@ -870,6 +870,7 @@ pub struct ComponentPropsView<C: View, P: Clone + PartialEq + 'static> {
     component: ComponentView<C>,
     props: P,
     reconcile: fn(&mut C, &P),
+    cached_fixed: Option<(f32, f32)>,
 }
 
 /// Describe a child component. The initializer runs only when its slot is created.
@@ -891,10 +892,7 @@ impl<C: View> ComponentView<C> {
     /// use normal lowering. GPUI also misses the cache after a full-window
     /// refresh (including a focus change).
     pub fn cached_fixed(mut self, width: f32, height: f32) -> Self {
-        assert!(
-            width.is_finite() && height.is_finite() && width > 0.0 && height > 0.0,
-            "cached component dimensions must be finite and positive"
-        );
+        assert_valid_cache_bounds(width, height);
         self.cached_fixed = Some((width, height));
         self
     }
@@ -914,8 +912,26 @@ impl<C: View> ComponentView<C> {
             component: self,
             props,
             reconcile,
+            cached_fixed: None,
         }
     }
+}
+
+impl<C: View, P: Clone + PartialEq + 'static> ComponentPropsView<C, P> {
+    /// Opts this props-driven child into GPUI's cache at fixed logical-pixel bounds.
+    /// Call after `.props(...)`; changed props notify the retained child and invalidate its cache.
+    pub fn cached_fixed(mut self, width: f32, height: f32) -> Self {
+        assert_valid_cache_bounds(width, height);
+        self.cached_fixed = Some((width, height));
+        self
+    }
+}
+
+fn assert_valid_cache_bounds(width: f32, height: f32) {
+    assert!(
+        width.is_finite() && height.is_finite() && width > 0.0 && height > 0.0,
+        "cached component dimensions must be finite and positive"
+    );
 }
 
 impl<C: View> View for ComponentView<C> {
@@ -967,6 +983,31 @@ mod cached_component_tests {
     }
 
     #[test]
+    fn props_cache_accepts_fixed_bounds_and_uses_all_fallbacks() {
+        fn reconcile(_: &mut EmptyView, _: &u8) {}
+        let view = Component("props-child", || EmptyView)
+            .props(1_u8, reconcile)
+            .cached_fixed(80.0, 32.0);
+        assert_eq!(view.cached_fixed, Some((80.0, 32.0)));
+
+        let mut environment = EnvironmentValues::default();
+        assert!(cached_component_eligible(&environment, false, false));
+        assert!(!cached_component_eligible(&environment, true, false));
+        assert!(!cached_component_eligible(&environment, false, true));
+        environment.set(1_u8);
+        assert!(!cached_component_eligible(&environment, false, false));
+    }
+
+    #[test]
+    #[should_panic(expected = "cached component dimensions must be finite and positive")]
+    fn props_cache_rejects_non_positive_bounds() {
+        fn reconcile(_: &mut EmptyView, _: &u8) {}
+        Component("props-child", || EmptyView)
+            .props(1_u8, reconcile)
+            .cached_fixed(80.0, 0.0);
+    }
+
+    #[test]
     #[should_panic(expected = "cached component dimensions must be finite and positive")]
     fn fixed_cache_rejects_zero() {
         Component("child", || EmptyView).cached_fixed(0.0, 48.0);
@@ -1000,7 +1041,19 @@ impl<C: View, P: Clone + PartialEq + 'static> View for ComponentPropsView<C, P> 
             &self.props,
             self.reconcile,
         );
-        child.into_any_element()
+        if let Some((width, height)) = self.cached_fixed
+            && cached_component_eligible(
+                context.environment,
+                context.app().has_active_drag(),
+                context.window.is_a11y_active(),
+            )
+        {
+            child
+                .cached(StyleRefinement::default().w(px(width)).h(px(height)))
+                .into_any_element()
+        } else {
+            child.into_any_element()
+        }
     }
 }
 

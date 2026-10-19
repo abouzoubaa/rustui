@@ -1,4 +1,4 @@
-//! Fixed-bounds GPUI cache pilot with an uncached control.
+//! Fixed-bounds GPUI cache pilot with independent and props-driven children.
 
 use std::{any::type_name, cell::RefCell, rc::Rc};
 
@@ -12,6 +12,8 @@ pub fn demo() -> impl View {
 struct CacheGallery {
     snapshot: Rc<RefCell<String>>,
     #[state(0)]
+    props_revision: u32,
+    #[state(0)]
     parent_ticks: u32,
     #[state(0)]
     display_revision: u32,
@@ -22,6 +24,10 @@ impl CacheGallery {
         self.parent_ticks += 1;
     }
 
+    fn change_props(&mut self) {
+        self.props_revision += 1;
+    }
+
     fn refresh_display(&mut self) {
         self.display_revision += 1;
     }
@@ -30,6 +36,7 @@ impl CacheGallery {
 impl View for CacheGallery {
     fn body(&self) -> impl View {
         let parent_ticks = self.parent_ticks();
+        let props_revision = self.props_revision();
         let display_revision = self.display_revision();
         let snapshot = self.snapshot.clone();
 
@@ -44,9 +51,10 @@ impl View for CacheGallery {
                         .map_or(0, |host| host.count)
                 };
                 *snapshot_for_action.borrow_mut() = format!(
-                    "CachedLeaf: {}; UncachedLeaf: {}; CacheGallery: {}",
+                    "CachedLeaf: {}; UncachedLeaf: {}; CachedPropsLeaf: {}; CacheGallery: {}",
                     count(type_name::<CachedLeaf>()),
                     count(type_name::<UncachedLeaf>()),
+                    count(type_name::<CachedPropsLeaf>()),
                     count(type_name::<CacheGallery>())
                 );
             })
@@ -79,6 +87,14 @@ impl View for CacheGallery {
                         .spacing(12.0)
                         .child(Component("cached-leaf", CachedLeaf::default).cached_fixed(240.0, 130.0))
                         .child(Component("uncached-leaf", UncachedLeaf::default)),
+                )
+                .child(Button("Change cached child props", target.action(CacheGallery::change_props))
+                    .id("cache-change-props"))
+                .child(Text("Parent-only rerenders keep incoming props unchanged. Changing props updates the retained child; its local count is preserved."))
+                .child(
+                    Component("cached-props-leaf", CachedPropsLeaf::default)
+                        .props(props_revision, CachedPropsLeaf::apply_revision)
+                        .cached_fixed(320.0, 160.0),
                 )
                 .child(Text(snapshot.borrow().clone()))
         })
@@ -142,6 +158,43 @@ impl View for UncachedLeaf {
         )
         .width(240.0)
         .height(130.0)
+        .padding(8.0)
+        .border()
+    }
+}
+
+#[component]
+struct CachedPropsLeaf {
+    revision: u32,
+    #[state(0)]
+    count: u32,
+}
+
+impl CachedPropsLeaf {
+    fn apply_revision(&mut self, revision: &u32) {
+        self.revision = *revision;
+    }
+
+    fn increment(&mut self) {
+        self.count += 1;
+    }
+}
+
+impl View for CachedPropsLeaf {
+    fn body(&self) -> impl View {
+        Container(
+            VStack::new()
+                .spacing(8.0)
+                .child(Text("Cached child with props"))
+                .child(Text(format!("Incoming revision: {}", self.revision)))
+                .child(Text(format!("Local count: {}", self.count())))
+                .child(
+                    Button("Increment props child", self.action(Self::increment))
+                        .id("cache-increment-props-child"),
+                ),
+        )
+        .width(320.0)
+        .height(160.0)
         .padding(8.0)
         .border()
     }
