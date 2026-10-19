@@ -197,3 +197,8 @@ does. Focus transitions may lower both. Keyboard activation and retained local
 state must be recorded separately from cache reuse. Cache acceptance remains
 pending until that no-focus parent-only result and the required interaction
 checks are captured.
+
+
+## M129 native keyboard/focus re-entry probe (excluded cache sample)
+
+A Playground session using UI automation reported `GPUI accessibility active: true`; its lowering sample was `CachedLeaf: 4; UncachedLeaf: 4; CachedPropsLeaf: 4; CacheGallery: 4` after one parent-only update. This is expected fallback behavior and is not an eligible cache-hit sample. The mouse-activated cached child changed its local count from 0 to 1; pressing Tab did not change either child count. After mouse-activating the uncached child, Shift+Tab returned focus to the component search field rather than the cached child. Space/Return re-entry activation was not established. This session does not close the no-AX cache-hit gate or keyboard/focus acceptance. The UI automation's accessibility inspection activates GPUI accessibility, so this tool session cannot establish the required AX-inactive Playground baseline. Existing no-AX `cache_benchmark` records remain the cache-hit evidence. Details: `target/headstart/evidence/p3b-keyboard-focus-m129-20261019.json`.
