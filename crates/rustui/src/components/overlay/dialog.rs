@@ -69,6 +69,7 @@ pub struct DialogView {
     id: Identity,
     trigger: DialogText,
     title: Option<DialogText>,
+    accessibility_label: Option<DialogText>,
     content: Option<Rc<AnyView>>,
     confirm_label: Option<DialogText>,
     cancel_label: Option<DialogText>,
@@ -87,6 +88,7 @@ impl DialogView {
             id,
             trigger: DialogText::Literal(trigger.into()),
             title: None,
+            accessibility_label: None,
             content: None,
             confirm_label: None,
             cancel_label: None,
@@ -110,6 +112,28 @@ impl DialogView {
     pub fn localized_title(mut self, message_key: impl Into<SharedString>) -> Self {
         self.title = Some(DialogText::Message(message_key.into()));
         self
+    }
+
+    /// Names the dialog content for assistive technology.
+    ///
+    /// By default, the visible title is used when present; otherwise the
+    /// trigger label is used.
+    pub fn accessibility_label(mut self, label: impl Into<SharedString>) -> Self {
+        self.accessibility_label = Some(DialogText::Literal(label.into()));
+        self
+    }
+
+    /// Resolves the dialog's accessible name from the active RustUI message catalog.
+    pub fn localized_accessibility_label(mut self, message_key: impl Into<SharedString>) -> Self {
+        self.accessibility_label = Some(DialogText::Message(message_key.into()));
+        self
+    }
+
+    fn accessibility_label_text(&self) -> &DialogText {
+        self.accessibility_label
+            .as_ref()
+            .or(self.title.as_ref())
+            .unwrap_or(&self.trigger)
     }
 
     /// Adds arbitrary RustUI content to the dialog body.
@@ -166,11 +190,7 @@ impl View for DialogView {
 
     fn into_element(&self, context: &mut RenderContext<'_>) -> AnyElement {
         context.with_element_scope(RetentionScope::Key(self.id.clone()), |context| {
-            let accessibility_label = self
-                .title
-                .as_ref()
-                .map(|title| title.resolve(context))
-                .unwrap_or_else(|| self.trigger.resolve(context));
+            let accessibility_label = self.accessibility_label_text().resolve(context);
             let content = self.content.as_ref().map(|content| {
                 context.retained_component(Identity::from(format!("{}:content", self.id)), || {
                     DialogContent {
@@ -291,5 +311,32 @@ mod tests {
 
         assert_eq!(content.accessibility_id.as_ref(), "confirm:dialog");
         assert_eq!(content.accessibility_label.as_ref(), "Confirm changes");
+    }
+
+    #[test]
+    fn accessible_name_prefers_explicit_label_then_title_then_trigger() {
+        let trigger = Dialog("confirm", "Open").accessibility_label("Explicit name");
+        assert!(matches!(
+        trigger.accessibility_label_text(),
+        DialogText::Literal(label) if label.as_ref() == "Explicit name"
+        ));
+
+        let localized = trigger.localized_accessibility_label("dialog.confirm");
+        assert!(matches!(
+        localized.accessibility_label_text(),
+        DialogText::Message(key) if key.as_ref() == "dialog.confirm"
+        ));
+
+        let titled = Dialog("titled", "Open").title("Visible title");
+        assert!(matches!(
+        titled.accessibility_label_text(),
+        DialogText::Literal(label) if label.as_ref() == "Visible title"
+        ));
+
+        let untitled = Dialog("untitled", "Open");
+        assert!(matches!(
+        untitled.accessibility_label_text(),
+        DialogText::Literal(label) if label.as_ref() == "Open"
+        ));
     }
 }

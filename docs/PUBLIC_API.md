@@ -201,6 +201,19 @@ tests across 12 binaries (`target/headstart/milestone40-42-tests.log`), but the
 newer action-button naming source has not completed its subsequent build/test
 gate. Native acceptance remains pending for that version.
 
+## Trigger-driven dialogs
+
+`Dialog(id, trigger)` opens a window-scoped modal dialog. The accessible name
+uses the visible title when present, then the trigger label. Supply an explicit
+name with `.accessibility_label("Confirm saving changes")`, or resolve one from
+the active RustUI message catalog with
+`.localized_accessibility_label("dialog.save.name")`.
+
+The canonical Playground dialog story demonstrates an explicit accessible
+name. M119's macOS accessibility tree exposed a named `dialog` node. Focus
+entry, containment, restoration, and screen-reader speech still need separate
+acceptance.
+
 ## Popovers
 
 `Popover` presents RustUI content from a themed Button and binds whether it is

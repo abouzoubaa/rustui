@@ -11,3 +11,12 @@ Add a dedicated RustUI Playground demonstration for the public trigger-driven `D
 - Confirm and Cancel each produce visible result text.
 - The demonstration describes the single-topmost dialog contract. It makes no claim about nesting, controlled visibility, owner-removal closure, or patch-backed behavior.
 - Build and formatting checks pass. A bounded macOS interaction probe reached the `save_dialog` story and observed the accessibility-tree result text change to `Confirmed: action accepted.` after Return and `Cancelled: no action taken.` after Escape. The screenshot remained an unchanged Button story while the accessibility tree reflected Dialog state, so visible rendering, modal focus, accessibility semantics, theme appearance, and locale behavior remain unverified. Exact steps and cleanup are recorded in `target/headstart/dialog-gui-acceptance.json`; this is partial interaction evidence, not full GUI acceptance.
+
+## 2026-10-19 M119 source and native update
+
+`DialogView` now accepts literal and localized accessible names, with visible
+title and trigger fallbacks. Four focused Dialog unit tests and the Playground
+package check passed. The macOS story rendered the modal; its accessibility
+tree exposed a named `dialog` node with the title, body, and action controls.
+Focus entry/containment/restoration and screen-reader speech remain unverified.
+Evidence: `target/headstart/evidence/dialog-name-m119-20261019.json`.

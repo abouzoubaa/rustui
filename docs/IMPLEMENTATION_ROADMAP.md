@@ -1674,3 +1674,15 @@ focused `navigation_split` unit filter passed 4 tests; rustfmt passed. This
 validates builder selection and routing, not native rendering, locale switching,
 screen-reader speech, or broader accessibility acceptance. No GPUI or vendored
 source changed.
+
+## M119 — Explicit Dialog accessible name
+
+Added literal and localized accessible-name builders to `DialogView`. The
+semantic Dialog body now prefers the explicit name, then the visible title,
+then the trigger label. The canonical Playground story demonstrates an
+explicit name, and the public API guide documents the fallback order. Four
+focused Dialog unit tests passed and the Playground package check passed.
+The canonical macOS Playground story rendered the modal; its accessibility
+tree exposed a named `dialog` node, title, body, and actions. Focus entry,
+containment, restoration, screen-reader speech, theme, and locale acceptance
+remain open. Evidence: `target/headstart/evidence/dialog-name-m119-20261019.json`.

@@ -36,6 +36,7 @@ impl View for DialogGallery {
             .child(
                 Dialog("playground-save-dialog", "Open dialog")
                     .title("Save changes?")
+                    .accessibility_label("Confirm saving changes")
                     .content(Text("Save the current changes before continuing?"))
                     .confirm_label("Confirm")
                     .cancel_label("Cancel")
