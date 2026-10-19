@@ -247,3 +247,20 @@ focus/activation acceptance only; it does not establish parent-only cache
 reuse, lowering avoidance, or performance. The disposable process and app
 bundle were removed. Full screenshots and hashes are recorded in
 `target/headstart/evidence/p3b-cgevent-keyboard-focus-m134-20261019.json`.
+
+## M135 native Playground counter probe (inconclusive, 2026-10-19)
+
+Using only native CGEvent input, the story-local accessibility control read
+`GPUI accessibility active: false` before and after the counter sequence. After
+clearing diagnostics and sampling, the baseline was `CachedLeaf: 2`,
+`UncachedLeaf: 2`, `CachedPropsLeaf: 2`, and `CacheGallery: 2` at parent tick 1.
+One `Rerender parent only` action advanced the parent tick to 2. The next sample
+showed all four lowering counters at 6, a +4 delta for cached and uncached
+children; both local child counts stayed 0. The visible focus ring moved between
+the counter and parent controls during this sequence. Focus-driven full-window
+refreshes therefore contaminate the differential, so M135 is inconclusive for
+cache reuse and does not establish a Playground cache hit or performance. The
+controlled no-AX `cache_benchmark` results above remain separate direct cache-hit
+evidence. The native P3B gate remains open. The app process and disposable bundle
+were removed. Exact screenshots, hashes, input recipe, and values:
+`target/headstart/evidence/p3b-noax-playground-m135-20261019.json`.

@@ -1865,3 +1865,17 @@ and activation only. It does not establish parent-only cache reuse or
 performance; the no-focus cache-hit gate remains open. The app process and
 disposable bundle were removed. Evidence and screenshot hashes:
 `target/headstart/evidence/p3b-cgevent-keyboard-focus-m134-20261019.json`.
+
+## M135 — native Playground cache-counter probe (inconclusive)
+
+A fresh disposable Playground session used only native CGEvent input and
+story-local accessibility sampling. GPUI accessibility read false both before
+and after one parent-only action; cached and uncached local child counts stayed
+0. Lowering snapshots changed from 2/2 to 6/6 (`CachedLeaf`/`UncachedLeaf`),
+with one parent tick. The visible focus ring moved between controls during the
+sampling sequence, so focus-driven full-window refreshes are present and the
+equal +4/+4 deltas do not isolate the parent-only cache path. This probe is
+inconclusive for cache reuse and performance; the no-focus native P3B gate
+remains open. The app process and disposable bundle were removed. Screenshots,
+hashes, observations, and the input recipe:
+`target/headstart/evidence/p3b-noax-playground-m135-20261019.json`.
