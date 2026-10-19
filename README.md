@@ -1,2 +1,2 @@
 # rustui
-Swift-like Rust based UI framework written on top GPUI-kit and GPUI Fast.
+Swift-like Rust based UI framework written on top of GPUI-kit and GPUI Fast.
