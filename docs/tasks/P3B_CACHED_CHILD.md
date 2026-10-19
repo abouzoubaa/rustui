@@ -212,3 +212,16 @@ Quartz `CGEventPost` mouse and scroll events navigated the canonical Playground 
 ## Native CGEvent focus follow-up (excluded, 2026-10-19)
 
 The center content was scrolled until the Cache diagnostics and both child buttons were visible. The story-local status read `GPUI accessibility active: false`. Before keyboard traversal, the displayed lowering sample was `CachedLeaf: 4; UncachedLeaf: 4; CachedPropsLeaf: 4; CacheGallery: 4` after one parent tick; equal counts do not establish cache reuse, and this mouse-driven sequence is not a clean no-focus sample. Clicking `Enable diagnostics` produced a visible blue focus ring. The first Tab event opened the macOS app switcher instead of advancing the visible Playground focus; an attempted modifier release brought Finder forward. No child focus or Space/Return activation was confirmed, and the cached child's displayed local count remained 0. Stopped after this single Tab. The story's AX-false value was visible before traversal but was not resampled after Finder came forward. This is an excluded focus probe and does not close the cache or keyboard gate. Full step record, screenshot hashes, and input snippets: `target/headstart/evidence/p3b-cgevent-followup-excluded-20261019.json`. App cleanup used SIGTERM on the owned process after the app-switcher conflict; the process and disposable bundle were verified absent.
+
+
+## Native CGEvent anchored traversal retry (excluded, 2026-10-19)
+
+With both cached-child buttons visible, the story reported GPUI accessibility
+inactive. Clicking `Enable diagnostics` showed its blue focus ring. After
+explicitly releasing both-side modifiers, one Tab moved the visible ring to
+`English`, not `Clear counters`; the Playground remained foreground and no app
+switcher appeared. No further Tab or activation key was sent, and no cache-hit
+counter sample was taken. This is excluded: it does not establish cached-child
+keyboard activation or cache reuse. The no-AX keyboard/focus gate remains open.
+Screenshot hashes and the bounded input record are in
+`target/headstart/evidence/p3b-cgevent-retry-excluded-20261019.json`.

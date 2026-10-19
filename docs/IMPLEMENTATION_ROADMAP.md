@@ -1840,3 +1840,13 @@ Finder became foreground. The owned Playground process was terminated and its
 disposable bundle removed. This is excluded and leaves the keyboard/cache gate
 open. Evidence: `target/headstart/evidence/p3b-cgevent-followup-excluded-20261019.json`;
 details in `docs/tasks/P3B_CACHED_CHILD.md`.
+
+## M133 — excluded anchored Cache Tab traversal
+
+With the Cache story fully visible and `Enable diagnostics` showing a focus
+ring, one modifier-cleared Tab moved the visible focus ring to `English` rather
+than `Clear counters`. The story reported GPUI accessibility inactive and the
+Playground remained foreground. No additional key or child activation was
+sent; no cache-hit counter sample was taken. This is excluded and leaves the
+cache-pilot keyboard/focus gate open. Screenshot hashes and the input record:
+`target/headstart/evidence/p3b-cgevent-retry-excluded-20261019.json`.
