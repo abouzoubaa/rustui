@@ -54,7 +54,7 @@ that the entire stage or framework is accepted.
 | Inputs | M78 bounded ComboBox native checks fixed the options-replacement popup mismatch and covered selection, disabled blocking, owner updates, and missing-option rendering. M121 Picker native acceptance confirmed owner writeback, disabled popup blocking, external Kotlin updates while disabled, and correct selection after re-enable (`target/headstart/evidence/picker-acceptance-20261019.json`). Full keyboard/focus, VoiceOver, pixel, cross-platform, and performance acceptance remain open. The pinned DatePicker builder cannot name its focused trigger; see `docs/tasks/DATE_PICKER_ACCESSIBILITY.md`. Slider AX SetValue remains focused native evidence only. See `docs/tasks/C10_COMBO_BOX_SELECT.md`. |
 | Navigation | M78 bounded native routing checks passed: None/unknown hide the detail while preserving the sidebar and allowing native Settings/Files recovery; bound Files updates, reorder, selected-item removal, and restoration were observed. M125 native AX inspection also observed the `Workspace navigation` outline and `Files details`/`Settings details` containers as selection changed. Resize dragging, keyboard navigation, locale switching, full accessibility review, and direct allocation-release instrumentation remain pending. See `target/headstart/milestone78-navigation-gui.json` and `target/headstart/evidence/d1b-preview-host-acceptance-20261019.json`. |
 | Cache pilot | Three no-AX fixed-bounds workloads proved reuse and self-invalidation; environment/removal/locale/theme logical scenarios passed; drag, reorder and broader visual cases remain. No frame/GPU speed claim. |
-| Themes/tooling | Validated normalized theme JSON export and read-only Playground inspection accepted. M65 observed opt-in polling apply a valid edit, preserve the last good theme on invalid JSON, recover after repair, respect outer appearance selection, stop while disabled, and cease activation after story removal. Exact counters/quiescence, performance, missing-file/permission and multi-root cases remain unverified. D1a's versioned preview descriptor schema/codec is implemented and focused-tested; it does not serialize arbitrary Rust views or mount previews. D1b now has a signal-only in-process compiled host source implementation; focused tests were added but not run. Bounded native checks passed for typed edits, action dispatch, teardown/remount, rejection probes and NavigationSplit naming; caret/selection retention across rerender remains unverified. |
+| Themes/tooling | Validated normalized theme JSON export and read-only Playground inspection accepted. M65 observed opt-in polling apply a valid edit, preserve the last good theme on invalid JSON, recover after repair, respect outer appearance selection, stop while disabled, and cease activation after story removal. Exact counters/quiescence, performance, missing-file/permission and multi-root cases remain unverified. D1a's versioned preview descriptor schema/codec is implemented and focused-tested; it does not serialize arbitrary Rust views or mount previews. D1b's signal-only in-process compiled host is implemented; its focused tests were included in the later workspace `--lib` run of 335 tests across six result groups. Bounded native checks passed for typed edits, action dispatch, teardown/remount, rejection probes and NavigationSplit naming. M128 observed caret-position retention across parent rerender plus keyboard blur/refocus; text selection, IME composition, and retention without blur remain open. |
 | Upstream | Pins unchanged; GPUI Fast remains disabled. Isolated quad-sort harness passed 9 tests (7 algorithm, 2 integration), and baseline/candidate production builds succeeded. The upstream full-library test build remains failed; paired probes are building, with native visual and performance validation pending. Candidate promotion is not approved. See `docs/tasks/QUAD_SORT_PATCH_PROPOSAL.md`. |
 | Dialog candidate | M77a manual native checks on the isolated revised tracked-Dialog patch observed keyed middle removal/focus retention, callback-opened dialogs, deferred-confirm rebase, bottom removal, Escape focus restoration, and backdrop/native Close focus restoration. The updated counter capture shows 15/15 weak probe `InputState` entities retired/released, not every allocation. This remains partial evidence: automated/race variants, stale IDs, broader entity-release/callback counts, and baseline native comparison remain; no normal dependency promotion or full Dialog acceptance. See `docs/tasks/O7_DIALOG_KEYED_FOCUS_REBASE_REVIEW.md` and `target/headstart/candidates/dialog-focus-rebase-20261018-a/evidence/milestone77a-native-dialog.json`. |
 
@@ -848,12 +848,18 @@ and active accessibility. The accessibility fallback was checked natively: both
 child buttons stayed in the AX tree, and the cached-pilot child counter changed
 from 0 to 1 while the control stayed at 0. This is fallback acceptance, not proof
 of cache reuse. Equal lowering counts in the earlier active-AX workload do not
-establish a performance gain. A controlled non-AX workload and invalidation
-acceptance remain pending. No GPUI Fast fork or upstream patch was introduced.
+establish a performance gain. Later controlled no-AX workloads verified
+cache-hit lowering avoidance, child self-invalidation, typed-environment,
+theme and locale invalidation, and removal/restoration. These are bounded
+logical/lowering results, not pixel, drag/reorder, or performance-speed
+acceptance. The M129 Playground keyboard/focus probe was excluded because AX
+was active; no-AX cache-hit keyboard/focus behavior remains open. No GPUI Fast
+fork or upstream patch was introduced.
 
 Evidence: `target/headstart/milestone22-cache-partial-gui.json`,
 `target/headstart/milestone22-23-tests.log`, and
-`docs/tasks/P3B_CACHED_CHILD.md`.
+`docs/tasks/P3B_CACHED_CHILD.md`, and
+`target/headstart/evidence/p3b-keyboard-focus-m129-20261019.json`.
 
 ## Milestone 24 — Direct catalog access to existing display demos
 

@@ -12,11 +12,14 @@ milestone summarized in `docs/IMPLEMENTATION_ROADMAP.md`. Recording is opt-in
 and times only RustUI's `component.into_element` call inside
 `ComponentHost::render`.
 
-The next open P3B correctness gate is native keyboard/focus behavior after an
-AX-inactive cache hit. P3B has a separate, still-pending calibrated
-diagnostics-overhead measurement; the existing P3A checks are not calibrated
-performance evidence. No cache promotion, upstream change, GPUI Fast
-activation, or vendor change is authorized by this note.
+The next open P3B cache-pilot correctness gate is native keyboard/focus behavior after an
+AX-inactive cache hit. P3 diagnostics overhead now has bounded process-level
+captures: the older five-pair result is in
+`docs/tasks/P3_DIAGNOSTICS_OVERHEAD_RESULTS.md`, and the fresh current-source
+32-leaf run is recorded in `docs/IMPLEMENTATION_ROADMAP.md`. Its small CPU
+difference crosses 1.0 and is inconclusive. Neither capture establishes cache
+benefit or general diagnostics overhead. No cache promotion, upstream change,
+GPUI Fast activation, or vendor change follows from these results.
 
 ## What the pinned stack already supports
 
@@ -51,15 +54,16 @@ activate it with Space or Enter. Verify one local-state increment, move focus
 away and back, and repeat. Record accessibility state for each step; if it
 becomes active, classify that step as the uncached fallback rather than cache
 replay. Preserve the binary identity, key sequence, before/after child state,
-and raw observations in the P3B evidence record. Do not use an
+and raw observations in the cache-pilot evidence record. Do not use an
 accessibility-mediated interaction for the cache-hit portion.
 
-Separately, measure diagnostics overhead with the same executable and workload
-against a contemporary unchanged baseline before using lowering durations to
-rank cache candidates. Preserve per-run counts/timings, collector overhead,
-CPU/RSS, and variance. The pinned timing-hook audit in
-`docs/tasks/P2C_GPUI_TIMING_HOOKS.md` sets the measurement boundary; P3A's
-existing functional verification is not this calibration.
+The bounded diagnostics-overhead calibration is recorded in the result file
+and the latest current-source run in the roadmap. Do not use their lowering
+durations to rank cache candidates: nested host timings overlap, and the runs
+provide no cached-versus-uncached comparison. Any broader calibration needs
+its own workload and contemporary paired captures. The pinned timing-hook
+audit in `docs/tasks/P2C_GPUI_TIMING_HOOKS.md` sets the measurement boundary;
+P3A's functional verification alone is not performance evidence.
 
 The fixed-bounds cache modifier is already present for both retained child
 paths; uncached behavior remains the default. Use GPUI's existing
