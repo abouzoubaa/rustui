@@ -11,6 +11,10 @@ These patches are review artifacts only. They are not applied to `vendor/`, do n
 
 ## Patches
 
+### Focus trap accessibility forwarding
+
+`gpui-base-focus-trap-accessibility-v1.patch` proposes forwarding role, node-property, and synthetic-child accessibility hooks through GPUI Components' generic `FocusTrapContainer`. Its source trace and validation gates are recorded in `docs/tasks/FOCUS_TRAP_ACCESSIBILITY_PROPOSAL.md`. The patch SHA-256 is `cf5def8ebfb6284f2e63938dda4bd358b344327e3a6951b55eebc0ceffc9040c`. Zero-fuzz application, isolated checks, and bounded native Dialog exposure checks passed; see the proposal for remaining validation gates. The candidate is not applied to `vendor/`.
+
 ### DatePicker accessible name
 
 `gpui-component-date-picker-accessibility.patch` adds an optional `.accessibility_label(...)` builder to the styled component and forwards it to the existing base ComboBox via `aria_label`. This avoids treating the visible placeholder/value as a name. Existing callers remain source-compatible. A RustUI integration should pass a stable label; if the proposal is not accepted, keep the RustUI accessibility capability unavailable rather than presenting a placeholder as the control's name.
