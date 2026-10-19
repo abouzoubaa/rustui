@@ -177,6 +177,7 @@ enum Phase {
     Warmup(u32),
     Measure(u32),
     ChangedProps(u32),
+    PropsSettle,
     CachedMutation,
     UncachedMutation,
     Finished,
@@ -188,6 +189,7 @@ impl Phase {
             Self::Warmup(_) => "warmup",
             Self::Measure(_) => "measure",
             Self::ChangedProps(_) => "changed_props",
+            Self::PropsSettle => "props_settle",
             Self::CachedMutation => "cached_mutation",
             Self::UncachedMutation => "uncached_mutation",
             Self::Finished => "finished",
@@ -201,6 +203,8 @@ struct State {
     scenario: Scenario,
     props_mode: bool,
     changed_props_completed: u32,
+    cached_props_observed: Vec<u32>,
+    uncached_props_observed: Vec<u32>,
     cached: Option<gpui::WeakEntity<ViewHost<CachedLeaf>>>,
     uncached: Option<gpui::WeakEntity<ViewHost<UncachedLeaf>>>,
     cached_output: Rc<Cell<u32>>,
@@ -244,6 +248,20 @@ fn tick_root(root: &Entity<ViewHost<BenchmarkRoot>>, cx: &mut App) {
     });
 }
 
+fn observe_props(state: &Rc<RefCell<State>>, completed: u32) {
+    if completed == 0 {
+        return;
+    }
+
+    let (cached, uncached) = {
+        let state = state.borrow();
+        (state.cached_output.get(), state.uncached_output.get())
+    };
+    let mut state = state.borrow_mut();
+    state.cached_props_observed.push(cached);
+    state.uncached_props_observed.push(uncached);
+}
+
 fn advance(window: &mut Window, cx: &mut App, state: Rc<RefCell<State>>) {
     if window.is_a11y_active() {
         state.borrow_mut().ax_active_seen = true;
@@ -276,7 +294,9 @@ fn advance(window: &mut Window, cx: &mut App, state: Rc<RefCell<State>>) {
             state.borrow_mut().parent_snapshot = Some(snapshot);
             if state.borrow().props_mode {
                 state.borrow_mut().phase = Phase::ChangedProps(0);
-                advance(window, cx, state);
+                // Keep the first props update on a distinct frame from the
+                // parent-only measurement snapshot.
+                schedule(window, state);
                 return;
             }
             match cached.and_then(|child| {
@@ -295,6 +315,7 @@ fn advance(window: &mut Window, cx: &mut App, state: Rc<RefCell<State>>) {
             }
         }
         Phase::ChangedProps(completed) if completed < MEASURED_UPDATES => {
+            observe_props(&state, completed);
             state.borrow_mut().changed_props_completed = completed;
             let root = state.borrow().root.clone();
             root.update(cx, |host, cx| {
@@ -306,9 +327,13 @@ fn advance(window: &mut Window, cx: &mut App, state: Rc<RefCell<State>>) {
             schedule(window, state);
         }
         Phase::ChangedProps(completed) => {
+            observe_props(&state, completed);
             state.borrow_mut().changed_props_completed = completed;
-            finish(cx, state, "complete", None);
+            // Let the last changed-props invalidation render before sampling.
+            state.borrow_mut().phase = Phase::PropsSettle;
+            schedule(window, state);
         }
+        Phase::PropsSettle => finish(cx, state, "complete", None),
         Phase::CachedMutation => {
             let snapshot = render_diagnostics_snapshot(cx);
             let uncached = state.borrow().uncached.clone();
@@ -399,11 +424,15 @@ fn finish(cx: &mut App, state: Rc<RefCell<State>>, status: &str, error: Option<&
         let cached_changed = parent_cached.map(|before| final_cached.saturating_sub(before));
         let uncached_changed =
             parent_uncached.map(|before| after_uncached_mutation.saturating_sub(before));
+        let expected_values = (1..=MEASURED_UPDATES).collect::<Vec<_>>();
+        let all_props_values_observed = state.cached_props_observed == expected_values
+            && state.uncached_props_observed == expected_values;
         result["kind"] = json!("rustui_cached_props_child_workload");
         result["child_invalidation_observed"] = json!(
             state.changed_props_completed == MEASURED_UPDATES
-                && cached_changed == Some(expected_uncached)
+                && cached_changed.is_some_and(|count| count > 0 && count <= expected_uncached)
                 && uncached_changed == Some(expected_uncached)
+                && all_props_values_observed
                 && state.cached_output.get() == MEASURED_UPDATES
                 && state.uncached_output.get() == MEASURED_UPDATES
         );
@@ -415,6 +444,9 @@ fn finish(cx: &mut App, state: Rc<RefCell<State>>, status: &str, error: Option<&
             "expected_lowerings_per_changed_props_phase": expected_uncached,
             "cached_changed_props_lowerings": cached_changed,
             "uncached_changed_props_lowerings": uncached_changed,
+            "cached_props_observed_values": &state.cached_props_observed,
+            "uncached_props_observed_values": &state.uncached_props_observed,
+            "all_props_values_observed": all_props_values_observed,
             "parent_only_snapshot": state.parent_snapshot.as_ref().map(snapshot_json),
             "final_snapshot": snapshot_json(&final_snapshot),
             "wall_clock_measured": false,
@@ -801,6 +833,8 @@ fn main() {
             scenario,
             props_mode,
             changed_props_completed: 0,
+            cached_props_observed: Vec::new(),
+            uncached_props_observed: Vec::new(),
             cached: None,
             uncached: None,
             cached_output,

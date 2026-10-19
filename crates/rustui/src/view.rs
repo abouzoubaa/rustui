@@ -8,8 +8,8 @@ use std::{
 
 use gpui::{
     AnyElement, App, AppContext as _, ClickEvent, Context, ElementId, Entity, EntityId,
-    EventEmitter, IntoElement, Pixels, SharedString, StyleRefinement, Styled, Subscription,
-    WeakEntity, Window, div, px,
+    EventEmitter, IntoElement, ParentElement, Pixels, SharedString, StyleRefinement, Styled,
+    Subscription, WeakEntity, Window, div, px,
 };
 use rustui_core::{Action, Binding, EnvironmentValues, Identity};
 use rustui_i18n::LayoutDirection;
@@ -619,7 +619,7 @@ impl<'a> RenderContext<'a> {
         initialize: impl FnOnce() -> C,
         props: &P,
         reconcile: fn(&mut C, &P),
-    ) -> Entity<ComponentHost<C>> {
+    ) -> (Entity<ComponentHost<C>>, bool) {
         let environment = self.environment;
         let app = &mut *self.app;
         let (child, created) = self.retained.component(id.clone(), || {
@@ -638,7 +638,7 @@ impl<'a> RenderContext<'a> {
                 }
             });
         }
-        child
+        (child, changed && !created)
     }
 
     pub(crate) fn update_entity<T: 'static, R>(
@@ -918,8 +918,10 @@ impl<C: View> ComponentView<C> {
 }
 
 impl<C: View, P: Clone + PartialEq + 'static> ComponentPropsView<C, P> {
-    /// Opts this props-driven child into GPUI's cache at fixed logical-pixel bounds.
-    /// Call after `.props(...)`; changed props notify the retained child and invalidate its cache.
+    /// Opts a props-driven child into GPUI's cache at fixed logical-pixel bounds.
+    /// Call after `.props(...)`. A changed-props frame lowers normally at these
+    /// bounds so its new value is visible immediately; caching resumes while
+    /// props remain unchanged.
     pub fn cached_fixed(mut self, width: f32, height: f32) -> Self {
         assert_valid_cache_bounds(width, height);
         self.cached_fixed = Some((width, height));
@@ -1035,22 +1037,34 @@ impl<C: View, P: Clone + PartialEq + 'static> View for ComponentPropsView<C, P> 
     }
 
     fn into_element(&self, context: &mut RenderContext<'_>) -> AnyElement {
-        let child = context.retained_component_with_props(
+        let (child, props_changed) = context.retained_component_with_props(
             self.component.key.clone(),
             || (self.component.initialize)(),
             &self.props,
             self.reconcile,
         );
-        if let Some((width, height)) = self.cached_fixed
-            && cached_component_eligible(
+        if let Some((width, height)) = self.cached_fixed {
+            if props_changed {
+                // GPUI drains view invalidations before lowering the frame.
+                // A props notification raised during parent lowering is too
+                // late to invalidate a cached child in that same frame.
+                // Lower changed props normally so the current frame is fresh.
+                div()
+                    .w(px(width))
+                    .h(px(height))
+                    .child(child)
+                    .into_any_element()
+            } else if cached_component_eligible(
                 context.environment,
                 context.app().has_active_drag(),
                 context.window.is_a11y_active(),
-            )
-        {
-            child
-                .cached(StyleRefinement::default().w(px(width)).h(px(height)))
-                .into_any_element()
+            ) {
+                child
+                    .cached(StyleRefinement::default().w(px(width)).h(px(height)))
+                    .into_any_element()
+            } else {
+                child.into_any_element()
+            }
         } else {
             child.into_any_element()
         }

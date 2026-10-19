@@ -142,4 +142,38 @@ from 0 to 1 while the child local count stayed at 1, then rerendered the parent
 while both values remained unchanged. This verifies props propagation and local
 state preservation in the props-driven child; it does not establish a GPUI cache
 hit or performance benefit. Keyboard/focus, drag, theme/locale, removal/restoration,
-and screen-reader acceptance remain pending. Cache performance acceptance remains pending.
+and screen-reader acceptance remain pending. Props-cache freshness is measured
+below; performance acceptance remains pending.
+
+## Props-driven cache freshness workload (M113)
+
+The opt-in `--props` workload now checks unchanged-props cache reuse and freshness
+after each changed-props update. A first run found the cached child displayed the
+previous value for the first changed-props frame (`0, 2, 3, …, 100`) while the
+uncached child displayed `1, 2, 3, …, 100`. The cause was the timing of the
+notification: RustUI reconciles props while lowering the parent, after GPUI has
+drained pending view invalidations for that frame.
+
+For an existing props-driven child with changed props, RustUI now lowers the
+child through a fixed-size `div` for that frame; it resumes GPUI subtree caching
+when the props are unchanged. This preserves same-frame output freshness without
+changing the GPUI dependency or adding another cache.
+
+Validation used the existing executable with
+`--props --scenario small|medium|large`. All three no-AX runs completed with
+100 parent-only updates and 100 changed-props updates:
+
+| Scenario | Children per side | Parent-only cached / uncached lowerings | Changed-props cached / uncached lowerings | Values observed on both paths |
+|---|---:|---:|---:|---|
+| small | 1 | 0 / 100 | 100 / 100 | 1 through 100 |
+| medium | 8 | 0 / 800 | 800 / 800 | 1 through 100 |
+| large | 32 | 0 / 3,200 | 3,200 / 3,200 | 1 through 100 |
+
+The run records only RustUI component-host lowering counts and props freshness;
+it does not measure frame time, GPU work, presentation, or performance speedup.
+Raw results are `target/headstart/cache-benchmark-79051-1792402373373838000.json`,
+`target/headstart/cache-benchmark-79267-1792402401632304000.json`, and
+`target/headstart/cache-benchmark-79283-1792402404465529000.json`. The aggregate
+acceptance record is `target/headstart/evidence/props-cache-acceptance-20261019.json`.
+The app processes exited and the disposable example executable was removed;
+shared Cargo caches were preserved.
