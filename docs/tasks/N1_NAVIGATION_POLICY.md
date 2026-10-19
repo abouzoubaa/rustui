@@ -16,3 +16,8 @@ Navigation views → RustUI `Button` → `AppAction` → `RenderContext::binding
 ## Acceptance status
 
 Source change complete. No tests, Cargo build, or GUI run were performed in this task; the parent task owns shared compilation.
+
+
+## M99 — native keyboard acceptance (2026-10-19)
+
+The canonical Playground check covered Up/Down, Home/End, disabled Archive, and Return. Enabled destinations changed immediately with navigation keys. Keyboard navigation and a click left the disabled Archive unselected. Return preserved the current selected ID and detail, matching `docs/PUBLIC_API.md`'s contract that Enter has no separate activation callback. Evidence: `target/headstart/evidence/navigation-split-keyboard-acceptance-20261019.md`.

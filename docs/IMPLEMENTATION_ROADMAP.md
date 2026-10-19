@@ -1558,3 +1558,9 @@ keyboard check, not full accessibility, theme, locale, or platform acceptance.
 Evidence: `target/headstart/evidence/sheet-gui-acceptance-20261019.json`.
 The canonical disposable bundle and executable were removed, no Playground
 process remained, and the shared Cargo cache was preserved.
+
+
+## Milestones M98–M99 — calibrated workloads and keyboard acceptance
+
+- **M98:** Fixed the cache benchmark's missing active-theme setup. The calibrated small, medium, and large scenarios completed 18/18 valid records. Whole-process CPU medians were 0.462208 s, 0.665370 s, and 1.329313 s; peak-RSS medians were 124,747,776 B, 125,353,984 B, and 126,746,624 B. These are mixed-workload process baselines, not cached-versus-uncached speedup or frame/GPU results. See `docs/tasks/P3C_CACHE_CALIBRATION.md` and `target/headstart/evidence/cache-calibration-scenario-matrix-20261019-fixed.json`.
+- **M99:** Canonical Playground keyboard acceptance for NavigationSplitView passed the bounded path. Up/Down and Home/End selected enabled destinations; keyboard movement and a click skipped disabled Archive; Return preserved the current selected ID and detail as specified in the public contract. Evidence: `target/headstart/evidence/navigation-split-keyboard-acceptance-20261019.md`.
