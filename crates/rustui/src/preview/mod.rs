@@ -4,7 +4,9 @@
 //! does not serialize Rust views, component state, callbacks, or GPUI entities.
 
 mod codec;
+mod host;
 mod model;
+mod registry;
 mod schema;
 
 pub use codec::{decode_catalog, decode_preview, encode_catalog, encode_preview};
@@ -14,3 +16,6 @@ pub use model::{
     PropertyValue, ValidatedPreview,
 };
 pub use schema::{validate_catalog, validate_preview};
+
+pub use host::{PreviewHost, PreviewSignal, PreviewSnapshot, PreviewStamp};
+pub use registry::PreviewRegistry;

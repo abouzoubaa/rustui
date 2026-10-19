@@ -7,6 +7,7 @@ use gpui::{AnyElement, SharedString};
 use rustui_core::{Binding, Identity};
 
 use crate::{
+    accessibility::semantics::{Semantics, SemanticsRole},
     components::navigation::sidebar::{Sidebar, SidebarItem},
     view::{AnyView, EmptyView, RenderContext, RetentionScope, View},
 };
@@ -75,8 +76,24 @@ fn selected_index(items: &[NavigationSplitItem], selection: Option<&str>) -> Opt
     items.iter().position(|item| item.id == selection)
 }
 
+fn detail_accessibility_label(label: &str) -> String {
+    format!("{label} details")
+}
+
 struct NavigationSplitDetail {
-    route: Option<(String, Rc<AnyView>)>,
+    route: Option<(String, SharedString, Rc<AnyView>)>,
+}
+
+struct SharedAnyView(Rc<AnyView>);
+
+impl View for SharedAnyView {
+    fn body(&self) -> impl View {
+        EmptyView
+    }
+
+    fn into_element(&self, context: &mut RenderContext<'_>) -> AnyElement {
+        self.0.into_element(context)
+    }
 }
 
 impl View for NavigationSplitDetail {
@@ -86,10 +103,17 @@ impl View for NavigationSplitDetail {
 
     fn into_element(&self, context: &mut RenderContext<'_>) -> AnyElement {
         match &self.route {
-            Some((route, content)) => context
-                .with_element_scope(RetentionScope::Page(vec![route.clone()]), |context| {
-                    content.into_element(context)
-                }),
+            Some((route, label, content)) => {
+                let detail = Semantics(
+                    format!("navigation-split-detail:{route}"),
+                    SharedAnyView(Rc::clone(content)),
+                )
+                .role(SemanticsRole::Region)
+                .label(detail_accessibility_label(label));
+                context.with_element_scope(RetentionScope::Page(vec![route.clone()]), |context| {
+                    detail.into_element(context)
+                })
+            }
             None => EmptyView.into_element(context),
         }
     }
@@ -183,7 +207,13 @@ impl View for NavigationSplitView {
             .and_then(|id| selected_index(&self.items, Some(id)))
             .map(|index| {
                 let item = &self.items[index];
-                (item.id.clone(), Rc::clone(&item.content))
+                let label = match &item.label {
+                    SplitLabel::Literal(label) => label.clone(),
+                    SplitLabel::Message(message_id) => {
+                        SharedString::from(context.localized_message(message_id.as_ref()))
+                    }
+                };
+                (item.id.clone(), label, Rc::clone(&item.content))
             });
         let detail = NavigationSplitDetail { route };
         let layout = SplitView::horizontal(format!("{}:layout", self.id.as_str()))
@@ -203,7 +233,10 @@ impl View for NavigationSplitView {
 
 #[cfg(test)]
 mod tests {
-    use super::{NavigationSplitItem, NavigationSplitView, selected_index, validate_items};
+    use super::{
+        NavigationSplitItem, NavigationSplitView, detail_accessibility_label, selected_index,
+        validate_items,
+    };
     use crate::view::EmptyView;
     use rustui_core::Binding;
 
@@ -244,6 +277,11 @@ mod tests {
             view.accessibility_label,
             Some(super::SplitLabel::Message(message_id)) if message_id.as_ref() == "navigation.main"
         ));
+    }
+
+    #[test]
+    fn selected_destination_names_its_detail_region() {
+        assert_eq!(detail_accessibility_label("Files"), "Files details");
     }
 
     #[test]

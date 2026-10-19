@@ -77,6 +77,25 @@ impl<C: 'static> OwnerAction<C> {
         })
     }
 
+    /// Captures a typed local value for a compiled owner mutation.
+    /// Useful for rejecting callbacks from stale preview revisions.
+    pub fn action_with<T: Clone + 'static>(&self, value: T, handler: fn(&mut C, &T)) -> AppAction {
+        let update_component = self.update_component.clone();
+        AppAction::new(move |cx| {
+            let value = value.clone();
+            update_component(
+                Box::new(move |owner| {
+                    let owner = owner
+                        .downcast_mut::<C>()
+                        .expect("OwnerAction target has the wrong component type");
+                    handler(owner, &value);
+                    true
+                }),
+                cx,
+            );
+        })
+    }
+
     /// Notify the owner only when its mutation reports a change.
     pub fn action_if_changed(&self, handler: fn(&mut C) -> bool) -> AppAction {
         let update_component = self.update_component.clone();

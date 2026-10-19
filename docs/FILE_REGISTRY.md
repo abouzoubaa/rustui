@@ -26,6 +26,20 @@ Lab story modules now live under `apps/rustui-playground/src/stories/`, locale
 catalogs under `apps/rustui-playground/locales/`, and `apps/rustui-lab/src/main.rs`
 is only the compatibility launcher.
 
+## Roadmap delivery update — 2026-10-19
+
+| File | Responsibility / change | Status and evidence |
+| --- | --- | --- |
+| `crates/rustui/src/preview/{host,registry}.rs` | D1b signal-only compiled preview host, explicit factories/actions, stamped edits and teardown generations. | Native checks verified typed edits and binding feedback, action dispatch, teardown/remount generations, and stale/type rejection (M125); caret/selection retention across rerender remains unverified. Focused tests were added but not run. |
+| `crates/rustui/src/preview/mod.rs` | Publicly exports the compiled preview host and registry. | Formatting review and selected packages all-targets check passed. |
+| `crates/rustui/src/view.rs` | Adds captured-value `OwnerAction::action_with` for owner-safe stamped callbacks. | Formatting review and selected packages all-targets check passed. |
+| `crates/rustui-core/src/binding.rs` | Adds captured-context `Binding::new_with` with rejected stale writes. | Focused test added and compiled by all-targets check; not executed. |
+| `apps/rustui-playground/src/stories/compiled_preview_gallery.rs` | Demonstrates registered Text, Button and TextField specimens using the public preview API. | Integrated into Layout story; M125 native observations covered typed TextField edits, Button activation, and preview teardown/remount behavior. Caret/selection retention remains unverified. |
+| `crates/rustui/src/components/data/data_grid.rs` | Adds a named native Table role around existing virtualized TableView, with optional stable wrapper identity. | M126 observed the named native Table, row nodes, and controlled row selection; explicit column-header/cell roles remain unavailable upstream. |
+| `apps/rustui-playground/src/stories/data_grid_accessibility.rs` | Demonstrates controlled selection through the named DataGrid wrapper. | Integrated into the Table story; M126 native observation confirmed row selection through the wrapper. Full screen-reader, RTL, cross-platform, and performance acceptance remain open. |
+| `crates/rustui/src/components/navigation/navigation_split.rs`, `apps/rustui-playground/src/stories/navigation_split_gallery.rs` | Names the selected detail region and the Playground navigation tree. | M125 native inspection observed the named `Workspace navigation` outline and `Files details`/`Settings details` containers. Spoken-label behavior remains pending; resize dragging, keyboard resizing, and divider discoverability remain unsupported by the pinned public API. |
+| `docs/tasks/{D1B_COMPILED_PREVIEW_HOST,DATA_GRID_ACCESSIBILITY,NAVIGATION_SPLIT_ACCESSIBILITY}.md` | Records contracts, upstream limits and remaining acceptance. | Added. |
+
 ### Roadmap milestone 3 additions
 
 | File | Responsibility / change | Status and evidence |
@@ -545,7 +559,7 @@ Native observations do not establish VoiceOver announcements or cadence.
 | `docs/tasks/A1_OPACITY_ANIMATION.md` | M35 one-shot opacity contract and acceptance scope | Normal and reduced-motion endpoint captures verified; intermediate frames remain pending in `target/headstart/milestone35-opacity-gui.json` |
 | `crates/rustui/src/components/data/keyed_list.rs` | Stable-ID string rows over retained GPUI Components `ListState` | M34 insertion, reorder, filtering, removal, keyboard, scroll, and row-name checks recorded; no arbitrary RustUI cells or measured render-call bounds |
 | `crates/rustui/src/modifiers/opacity.rs` | Validated one-shot opacity animation using GPUI scheduling | M35 unit validation and endpoint evidence; no intermediate-frame, GPU, or OS-preference claim |
-| `apps/rustui-playground/src/stories/keyed_list_gallery.rs` | 1,000-row stable-ID list gallery | `KeyedList` catalog route; native behavior recorded in `target/headstart/milestone34-keyed-list-gui.json` |
+| `apps/rustui-playground/src/stories/keyed_list_gallery.rs` | 1,000-row stable-ID list gallery | `KeyedList` catalog route; M34 identity behavior and M126 non-selectable Escape observations in `target/headstart/milestone34-keyed-list-gui.json` and `target/headstart/evidence/r3-list-datagrid-acceptance-20261019.json` |
 | `apps/rustui-playground/src/stories/animation_gallery.rs` | One-shot opacity animation gallery | Endpoint captures only; M35 trajectory acceptance remains pending |
 | `apps/rustui-playground/src/stories/mod.rs` | Routes List to `KeyedList` and composes Menu, Tooltip, and animation galleries | Catalog route tests are included in `target/headstart/milestone34-35-tests-accepted.log` |
 | `apps/rustui-playground/src/catalog.rs` | M34 keyed-list catalog description | Records stable IDs and bounded string-list scope |

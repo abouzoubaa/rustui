@@ -68,7 +68,7 @@ pub const STORIES: [StoryDefinition; 10] = [
     StoryDefinition {
         id: StoryId::Table,
         title: "Table",
-        summary: "Virtualized string cells with controlled row selection.",
+        summary: "Virtualized rows, controlled selection, and named table accessibility semantics.",
     },
     StoryDefinition {
         id: StoryId::Tree,

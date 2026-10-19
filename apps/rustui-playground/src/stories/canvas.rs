@@ -5,7 +5,7 @@ use rustui::{
         Binding, Breadcrumb, BreadcrumbItem, Button, Checkbox, ColorPicker, ComboBox, Component,
         DatePicker, Environment, FontFallbackPolicy, HStack, Hsla, Keyed, List, LocalizedText,
         NaiveDate, NavigationDestination, NavigationLink, NavigationStack, Picker, Radio,
-        SearchField, SecureField, Slider, Stepper, TabItem, TabView, TabViewStyle, Table, Text,
+        SearchField, SecureField, Slider, Stepper, TabItem, TabView, TabViewStyle, Text,
         TextEditor, TextField, Toggle, Tree, TreeNode, VStack, View,
     },
     runtime::Action,
@@ -410,6 +410,7 @@ impl View for StoryCanvas {
                 .alignment(rustui::prelude::HorizontalAlignment::Start),
             StoryId::Table => VStack::new()
                 .child(super::table_reconciliation_gallery::demo())
+                .child(super::data_grid_accessibility::demo())
                 .spacing(8.0)
                 .alignment(rustui::prelude::HorizontalAlignment::Start),
             StoryId::Tree => VStack::new()

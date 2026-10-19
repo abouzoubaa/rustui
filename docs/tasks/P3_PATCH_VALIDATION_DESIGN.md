@@ -152,9 +152,15 @@ apply patches; run separately authorized correctness/build checks; complete GUI
 acceptance; compare performance; review evidence; separately approve promotion
 and post-promotion validation.
 
-P2 now proposes bounded workloads, including W1, and Milestone 12 implements an external process collector. Accepted baseline measurements and calibrated thresholds remain pending. This
-design does not authorize running it or invent its contents. Resolve these
-choices before implementing the orchestrator:
+The W1 baseline is no longer pending: Milestone 14 and
+`P2E_W1_ACCEPTANCE_BASELINE.md` record native acceptance, mounted-state readback,
+and 90 measured cycles across three fresh processes after warm-up. That is a
+same-build CPU/RSS repeatability baseline, not a candidate comparison or speedup
+result. Numerical regression thresholds remain unapproved, and presented-frame,
+GPU, and main-thread timings remain unavailable. The P2 workload plan and
+calibration evidence are inputs to future candidate work; they do not authorize
+running this proposed pipeline. Resolve these choices before implementing the
+orchestrator:
 
 1. **Source closure:** copy the full locked vendor closure or only the proven
    transitive closure for the selected platform/features. Full closure is easier
@@ -174,10 +180,13 @@ remain behind separate explicit phase approval.
 
 The external process collector, per-run summarizer, and timing-hook review are
 implemented. They provide CPU/RSS evidence, not a candidate-validation pipeline,
-workload completion timing, presented-frame timing, or accepted baseline. W1
-deterministic reset/actions and repeated calibrated measurements remain pending.
-No candidate patch, revision change, or GPUI Fast activation is authorized by
-this tooling milestone.
+workload completion timing, or presented-frame timing. At this milestone, W1
+deterministic reset/actions and repeated calibrated measurements remained
+pending. Milestone 14 and `P2E_W1_ACCEPTANCE_BASELINE.md` later superseded that
+W1 status with native acceptance and a three-process, 90-cycle CPU/RSS baseline;
+they did not approve numerical regression thresholds or add cycle/presentation,
+GPU, or main-thread timing. No candidate patch, revision change, or GPUI Fast
+activation is authorized by this tooling milestone.
 
 ## Milestone 14 baseline availability
 

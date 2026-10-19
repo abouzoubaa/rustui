@@ -51,3 +51,8 @@ data replacement.
 
 The explicit text child supplies native row names; full screenreader behavior
 remains unverified.
+
+
+## M126 native Escape check
+
+The canonical Playground `list · Partial` catalog route exercised the non-selectable source-index List and KeyedList controls together. After preselecting row 2 and disabling both selectors, clicking the selected East/EAST rows and pressing Escape left owner values at `Some(1)` and `east`; the native tree retained those selected rows and exposed the expected row names. The same story exposed visible KeyedList AX row names `Item row-0000` through `Item row-0013`. Raw observation: `target/headstart/evidence/r3-list-datagrid-acceptance-20261019.json`. Full screen-reader, RTL, cross-platform and performance acceptance remain open.

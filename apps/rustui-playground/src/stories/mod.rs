@@ -1,6 +1,7 @@
 //! Stateful RustUI stories embedded in the canonical Playground.
 
 use rustui::prelude::*;
+mod compiled_preview_gallery;
 
 mod alert_gallery;
 mod animation_gallery;
@@ -14,6 +15,7 @@ mod collection_gallery;
 mod combo_box_reconciliation_gallery;
 mod component_catalog;
 mod context_menu_gallery;
+pub(super) mod data_grid_accessibility;
 mod dialog_gallery;
 mod disclosure_gallery;
 mod event_inspector;
@@ -590,6 +592,7 @@ impl View for StoryHost {
         retention_controls.spacing(8.0)
             w1_controls.spacing(8.0)
             (selected == StoryId::Layout && self.w1_step() == 0).then(|| Component("foundation-demos", foundation_demos::FoundationDemos::default))
+            (selected == StoryId::Layout && self.w1_step() == 0).then(compiled_preview_gallery::demo)
         StoryCanvas::new(
             selected,
             self.count(),

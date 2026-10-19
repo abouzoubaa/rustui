@@ -225,17 +225,20 @@ impl View for NavigationSplitGallery {
                 self.removed_item().unwrap_or_else(|| String::from("None")),
             )))
             .child(
-                Container(NavigationSplit(
-                    "navigation-split-gallery-view",
-                    items,
-                    self.selection_binding(),
-                ))
+                Container(
+                    NavigationSplit(
+                        "navigation-split-gallery-view",
+                        items,
+                        self.selection_binding(),
+                    )
+                    .accessibility_label("Workspace navigation"),
+                )
                 .width(560.0)
                 .height(300.0)
                 .border(),
             )
             .child(Text(
-                "Only the selected detail is lowered; switching destinations releases its native controls. Owner-bound values stay in this gallery.",
+                "The navigation tree is named Workspace navigation. The selected detail is a named region; the pinned resizable API does not expose divider accessibility metadata. Switching destinations releases detail controls.",
             ))
             .child(Text(format!(
                 "Owner values · Files: {:?} / count {} · Settings: {:?} / count {} · Archive: {:?} / count {}",

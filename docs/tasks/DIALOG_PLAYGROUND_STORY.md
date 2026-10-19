@@ -20,3 +20,7 @@ package check passed. The macOS story rendered the modal; its accessibility
 tree exposed a named `dialog` node with the title, body, and action controls.
 Focus entry/containment/restoration and screen-reader speech remain unverified.
 Evidence: `target/headstart/evidence/dialog-name-m119-20261019.json`.
+
+## 2026-10-19 M127 bounded native focus probe
+
+On macOS, Tab moved visible focus through Cancel -> Confirm -> Close -> Cancel without an outside Playground control receiving focus. Starting from Cancel, Shift+Tab wrapped to Close and then moved through Confirm and Cancel; screenshots showed each focus ring. Escape dismissed the dialog and displayed `Cancelled: no action was taken.` Pressing Return immediately, without an intervening Tab or pointer action, reopened the dialog, showing keyboard activation returned to the Open dialog trigger. The accessibility API reported the Playground window rather than a focused child control, so direct child focus was not established. Screen-reader speech, theme, locale and cross-platform behavior remain unverified. Evidence: `target/headstart/evidence/dialog-focus-m127-20261019.json`.

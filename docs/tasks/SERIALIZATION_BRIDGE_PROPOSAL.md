@@ -1,6 +1,6 @@
 # Serialization and UI Studio bridge proposal
 
-**Status: D1a implemented; D1b remains proposed and awaits an architecture decision.**
+**Status: D1a and D1b source implementations are present.** D1b uses a signal-only event contract; its focused tests were added but not run. M125 native checks covered typed edits and binding feedback, action dispatch, lifecycle generations, stale/type rejection and NavigationSplit labels; caret/selection retention across rerender remains unverified. See `D1B_COMPILED_PREVIEW_HOST.md` for the implemented boundary and limits.
 The versioned descriptor schema and codec already exist under
 `crates/rustui/src/preview/` and are publicly exported as `rustui::preview`.
 The focused test filter passed 10 tests. This document authorizes no preview-host,
@@ -8,14 +8,13 @@ macro, dependency, transport or application changes. It remains a proposal, not 
 accepted ADR. `docs/adr/README.md` requires explicit authorization before creating
 an individual ADR; this proposal stays in the task register.
 
-## Decision requested
+## Decision and scope
 
 Decide whether to continue with **D1b: an in-process host for explicitly
 registered, compiled components**, using the existing versioned descriptor,
 declared editable properties and host-bound action references. D1a is already
 implemented. Keep external transport and full visual composition as separately
-reviewable deliverables. Before D1b, decide whether action events are
-signal-only or carry payload values. `EventSchema` already declares possible
+reviewable deliverables. D1b selected signal-only action events: payload values remain in owner-controlled RustUI state. `EventSchema` already declares possible
 payload-property shapes, while `PreviewDocument` binds event IDs to action
 references. The missing contract is for event-instance values and how they
 reach runtime actions; `rustui_core::Action` currently has no payload
@@ -271,7 +270,7 @@ UI Studio integration complete.
 
 > Decide whether to continue with D1b, an in-process host for explicitly
 > registered compiled components using the existing `rustui::preview` schema.
-> Before implementation, choose whether preview events remain signal-only
+> Decision: D1b preview events remain signal-only; typed values stay in owner-controlled RustUI state.
 > or carry serializable per-event payload values, and how those values reach
 > runtime actions. Keep transport and full composition separate.
 

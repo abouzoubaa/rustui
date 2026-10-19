@@ -32,6 +32,34 @@ impl<T: 'static> Binding<T> {
         }
     }
 
+    /// Captures immutable local context for a typed owner binding.
+    ///
+    /// The write callback reports whether its update was accepted. This allows
+    /// controls to reject a callback belonging to an old mounted revision.
+    /// Context remains an ordinary Rust value and is never serialized.
+    pub fn new_with<Component: 'static, Context: Clone + 'static>(
+        current: T,
+        context: Context,
+        read: fn(&Component, &Context) -> T,
+        write: fn(&mut Component, &Context, T) -> bool,
+    ) -> Self {
+        let read_context = context.clone();
+        Self {
+            current: Rc::new(current),
+            read: Rc::new(move |owner| {
+                owner
+                    .downcast_ref::<Component>()
+                    .map(|owner| read(owner, &read_context))
+            }),
+            write: Rc::new(move |owner, value| {
+                let owner = owner
+                    .downcast_mut::<Component>()
+                    .expect("Binding written with the wrong component owner type");
+                write(owner, &context, value)
+            }),
+        }
+    }
+
     /// Returns the value captured while the owning component described its body.
     pub fn value(&self) -> T
     where
@@ -70,5 +98,40 @@ impl<T> Clone for Binding<T> {
             read: self.read.clone(),
             write: self.write.clone(),
         }
+    }
+}
+
+#[cfg(test)]
+mod captured_context_tests {
+    use super::Binding;
+
+    struct Owner {
+        revision: u64,
+        text: String,
+    }
+
+    #[test]
+    fn rejects_old_captured_context_without_mutating_owner() {
+        let mut owner = Owner {
+            revision: 1,
+            text: "before".into(),
+        };
+        let binding = Binding::new_with(
+            owner.text.clone(),
+            1_u64,
+            |owner: &Owner, _| owner.text.clone(),
+            |owner: &mut Owner, revision, value| {
+                if owner.revision != *revision {
+                    return false;
+                }
+                owner.text = value;
+                owner.revision += 1;
+                true
+            },
+        );
+        assert!(binding.write_to(&mut owner, "accepted".into()));
+        assert!(!binding.write_to(&mut owner, "stale".into()));
+        assert_eq!(owner.text, "accepted");
+        assert_eq!(owner.revision, 2);
     }
 }

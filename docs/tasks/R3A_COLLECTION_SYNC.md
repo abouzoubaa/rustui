@@ -46,3 +46,8 @@ The Playground catalog search now resets its virtualized viewport on query chang
 Native run: searched from the scrolled catalog for collection, opened the single result, changed record-0000 note to preserved row, incremented its counter to 1, selected and removed it, reversed remaining rows, restored it, then selected the final row. Observed Rows: 999, selected ID: None after removal; after restore, Rows: 1000, selected ID: record-0000; restored row showed count 1 and note preserved row. Lifecycle observation moved from active 6/mounts 6/releases 0 to active 6/mounts 7/releases 1 on removal and active 6/mounts 13/releases 7 after reversal/restoration. Focused tests: 3 passed. Playground all-targets check and build succeeded. Binary SHA-256: f44b6120476b8d0ed6df360dd6aa46a9bb42ce62690cb38255b3e8aa3eb6dbb7.
 
 Evidence: target/headstart/milestone82-collection-mutation-gui.json, target/headstart/milestone82-collection-tests.log, target/headstart/milestone82-collection-check.log, and target/headstart/milestone82-collection-playground-build.log. Keyboard-only, screen-reader/accessibility, cross-platform, and performance acceptance remain open.
+
+
+## M126 native source-List Escape check
+
+With the source-index List's row 2 selected and `.selectable(false)`, clicking the selected East row and pressing Escape kept the owner selection at `Some(1)` and retained East as selected in the native tree. This is one bounded keyboard case; full keyboard traversal, screen-reader, RTL, cross-platform and performance acceptance remain open. Evidence: `target/headstart/evidence/r3-list-datagrid-acceptance-20261019.json`.
