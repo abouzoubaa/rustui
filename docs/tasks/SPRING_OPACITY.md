@@ -46,27 +46,27 @@ an activity counter. It keeps one stable spring identity.
 
 ## Playground initial-value remount sample
 
-The public-only `stories/spring_gallery.rs` includes a second spring created with
-`.from(0.0)`. “Remount from zero” increments a `Keyed` identity, so the new
-native spring starts from zero and moves toward the current target. Toggling the
-target without using that control keeps the key stable; it retargets the mounted
-spring and does not replay the initial value. The original sample remains
+The public-only `stories/spring_gallery.rs` includes a second spring created
+with `.from(0.0)`. “Remount from zero” increments a `Keyed` identity, so each
+new native spring starts at zero and moves toward the current target. Toggling
+the target without using that control keeps the key stable; the mounted spring
+retargets and does not replay its initial value. The original sample remains
 mounted with its own stable identity and clickable child.
 
-Native acceptance should observe the initial-value sample begin transparent on
-each new identity, reach the displayed target, and avoid replay when only the
-target or unrelated parent state changes. Reduced motion should resolve the
-new spring to its target under GPUI's existing behavior. These observations do
-not measure intermediate alpha, velocity continuity, presented frames, or
-native entity lifecycle counts.
+Native Playground acceptance observed generation 0 → 1 on remount, a visible
+fade when the target changed from 1.00 to 0.15 with generation 1 unchanged, and
+return to the endpoint when the target changed back to 1.00. With reduced motion
+enabled, a new identity displayed its target; with motion allowed, another new
+identity reached the target after the motion interval. This did not measure
+exact alpha, intermediate frames, velocity continuity, presented-frame timing,
+or native entity lifecycle counts. Evidence:
+`target/headstart/evidence/roadmap-m120-m123-native-20261019.json`.
 
-Source checks for this story update passed: the focused SpringOpacity tests
-passed 3/3, the Playground all-targets check exited 0, and the Playground build
-exited 0. Logs are retained in
-`target/headstart/spring-from-gallery-focused-tests.log`,
+Source checks passed: focused SpringOpacity tests passed 3/3, the Playground
+all-targets check and build exited 0, and formatting and whitespace checks
+passed. Logs are retained in `target/headstart/spring-from-gallery-focused-tests.log`,
 `target/headstart/spring-from-gallery-playground-check.log`, and
-`target/headstart/spring-from-gallery-playground-build.log`. Native acceptance
-for the new `.from(0.0)` sample has not been run.
+`target/headstart/spring-from-gallery-playground-build.log`.
 
 ## Evidence and remaining limits
 

@@ -28,3 +28,15 @@ upstream host or name its close button.
   pass.
 - These source checks do not establish native accessibility, screen-reader,
   locale-switching, focus, theme, RTL, or cross-platform acceptance.
+
+
+## Bounded native observation
+
+On 2026-10-19, the canonical `dev.rustui.playground` story opened a right-side
+sheet. The native accessibility tree exposed a `dialog` named “Details and sheet
+contents,” its visible title, and its body. Activating the upstream close
+button removed that dialog and its contents from the tree. This does not verify
+focus entry, containment or restoration, screen-reader speech, localized name
+switching, theme, RTL, cross-platform behavior, or pixel comparison. Evidence:
+`target/headstart/evidence/roadmap-m120-m123-native-20261019.json`. The app was
+quit; its disposable bundle was removed and shared build artifacts were kept.

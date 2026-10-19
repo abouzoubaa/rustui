@@ -1694,28 +1694,30 @@ Added literal and localized accessible-name builders for the semantic Dialog
 node inside `SheetView`, with explicit name → visible title → trigger label
 fallback. The Playground Sheet story demonstrates an explicit name without
 changing its visible title or trigger. Four focused Sheet tests, Rust formatting,
-the Playground package check, and scoped whitespace checks passed. Native Sheet
-accessibility, focus, screen-reader, locale, theme, RTL, and cross-platform
-acceptance remain open. See `docs/tasks/SHEET_PLAYGROUND_STORY.md`.
+the Playground package check, and scoped whitespace checks passed. The canonical
+macOS Playground exposed a `dialog` node named “Details and sheet contents,” its
+visible title and body; closing it removed the node. Focus, screen-reader,
+locale switching, theme, RTL, and cross-platform acceptance remain open. Evidence:
+`target/headstart/evidence/roadmap-m120-m123-native-20261019.json`.
 
 
 ## M121 — Preview event-contract wording correction
 
-Clarified that D1a `EventSchema` declares payload-property shapes, while the
-missing decision is whether event instances carry values and how those values
-reach runtime actions. The descriptor and runtime action model still do not
-provide a per-event payload dispatch contract, so D1b remains gated on that
-architecture decision. No preview implementation or public API changed.
+Clarified that D1a `EventSchema` declares payload-property shapes. The missing
+decision is whether event instances carry values and how they reach runtime
+actions; the descriptor and runtime action model do not provide a per-event
+payload dispatch contract. D1b remains gated on that architecture decision. No
+preview implementation or public API changed.
 
 
 ## M122 — KeyedList non-selectable Escape behavior
 
-Escape now preserves owner-controlled and requested selection when
-`KeyedListView` is configured with `.selectable(false)`; selectable lists retain
-the existing cancellation behavior. Two focused tests cover both paths, and
-the KeyedList unit filter passed five tests. Rust formatting and scoped diff
-checks passed. No GUI acceptance was run; focus and accessibility acceptance
-remain open. See `docs/tasks/R3B_KEYED_LIST.md`.
+Escape now preserves owner-controlled and requested selection when `KeyedListView`
+is configured with `.selectable(false)`; selectable lists retain the existing
+cancellation behavior. Two focused tests cover both paths, and the KeyedList
+unit filter passed five tests. Rust formatting and scoped diff checks passed.
+No GUI acceptance was run; focus and accessibility acceptance remain open. See
+`docs/tasks/R3B_KEYED_LIST.md`.
 
 
 ## M123 — SpringOpacity initial-value remount example
@@ -1724,6 +1726,17 @@ Added a public-API Playground sample using `.from(0.0)` and a changing `Keyed`
 identity to demonstrate initial opacity on remount while preserving the
 existing stable-identity retargeting sample. Focused SpringOpacity tests passed
 3/3, the Playground all-targets check and build passed, and formatting and
-whitespace checks passed. Native observation of initial transparency,
-retargeting, remount behavior, and reduced motion remains pending. See
-`docs/tasks/SPRING_OPACITY.md`.
+whitespace checks passed. Native Playground observation confirmed the identity
+increments on remount, target changes preserve identity, targets visibly
+retarget, and a reduced-motion remount shows the target. Exact alpha, velocity,
+and presented-frame timing remain unmeasured. Evidence:
+`target/headstart/evidence/roadmap-m120-m123-native-20261019.json`.
+
+
+## M124 — source-index List non-selectable Escape behavior
+
+Escape now preserves the controlled owner selection and pending request when
+`ListView` is configured with `.selectable(false)`; selectable Lists retain the
+existing cancel behavior. Focused List unit tests passed 4/4, formatting and
+scoped whitespace checks passed. No GUI was run. See
+`docs/tasks/R3A_COLLECTION_SYNC.md`.

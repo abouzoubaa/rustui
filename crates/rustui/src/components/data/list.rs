@@ -27,16 +27,30 @@ fn apply_selection_request(
     true
 }
 
+fn clear_cancel_request(selectable: bool, requested: &Cell<Option<usize>>) -> bool {
+    if !selectable {
+        return false;
+    }
+    requested.set(None);
+    true
+}
+
 struct StringListDelegate {
     items: Vec<String>,
     visible: Vec<usize>,
     query: String,
     row_height: f32,
     owner_selection: Rc<Cell<Option<usize>>>,
+    selectable: bool,
 }
 
 impl StringListDelegate {
-    fn new(items: Vec<String>, row_height: f32, selection: Option<usize>) -> Self {
+    fn new(
+        items: Vec<String>,
+        row_height: f32,
+        selection: Option<usize>,
+        selectable: bool,
+    ) -> Self {
         let visible = (0..items.len()).collect();
         Self {
             items,
@@ -44,6 +58,7 @@ impl StringListDelegate {
             query: String::new(),
             row_height,
             owner_selection: Rc::new(Cell::new(selection)),
+            selectable,
         }
     }
 
@@ -229,7 +244,8 @@ impl View for ListView {
         let searchable = self.searchable;
         let selectable = self.selectable;
         let (state, created) = context.retained_entity(identity.clone(), move |window, cx| {
-            let delegate = StringListDelegate::new(items, row_height, initial_selection);
+            let delegate =
+                StringListDelegate::new(items, row_height, initial_selection, selectable);
             let selected = delegate.visible_index(initial_selection);
             let mut state = ListState::new(delegate, window, cx)
                 .searchable(searchable)
@@ -288,8 +304,10 @@ impl View for ListView {
                         }
                     }
                     ListEvent::Cancel => {
-                        requested.set(None);
-                        update(cx);
+                        let selectable = state.read(cx).delegate().selectable;
+                        if clear_cancel_request(selectable, &requested) {
+                            update(cx);
+                        }
                     }
                 }
             });
@@ -327,6 +345,36 @@ mod tests {
 
         assert!(apply_selection_request(&mut owner, &expected, Some(1)));
         assert!(apply_selection_request(&mut owner, &expected, None));
+        assert_eq!(owner, None);
+        assert_eq!(expected.get(), None);
+    }
+
+    #[test]
+    fn cancel_preserves_requested_and_owner_selection_when_not_selectable() {
+        let requested = Cell::new(Some(0));
+        let expected = Cell::new(Some(0));
+        let mut owner = Some(0);
+
+        if clear_cancel_request(false, &requested) {
+            apply_selection_request(&mut owner, &expected, requested.get());
+        }
+
+        assert_eq!(requested.get(), Some(0));
+        assert_eq!(owner, Some(0));
+        assert_eq!(expected.get(), Some(0));
+    }
+
+    #[test]
+    fn cancel_clears_requested_and_owner_selection_when_selectable() {
+        let requested = Cell::new(Some(0));
+        let expected = Cell::new(Some(0));
+        let mut owner = Some(0);
+
+        if clear_cancel_request(true, &requested) {
+            apply_selection_request(&mut owner, &expected, requested.get());
+        }
+
+        assert_eq!(requested.get(), None);
         assert_eq!(owner, None);
         assert_eq!(expected.get(), None);
     }

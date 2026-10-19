@@ -10,6 +10,8 @@ Scope: List, Table, and Tree owner selection updates. This is the independent se
 
 ## Change
 
+For `List`, Escape clears the controlled selection only when `.selectable(true)`; with `.selectable(false)`, Escape preserves both the owner value and pending selection request.
+
 Each collection event or observer now uses `RenderContext::binding_updater`, which reads the current owner value through `Binding::read_from` and writes only when the requested selection differs. This prevents redundant owner writes and host notifications from repeated user events and deferred upstream setter events. List and Table retain source-index selection; Tree retains stable-ID selection.
 
 Table additionally retains the raw owner selection last seen at render or accepted from a UI event. A queued event is ignored if the owner value differs from that reconciliation marker, or if its payload no longer matches `TableState::selected_row()`. Accepted events advance the marker so multiple queued UI events can compose. **Selected policy: render-observed precedence.** An owner value observed during reconciliation takes precedence over an older queued event. An external A→B→A change completed before reconciliation is indistinguishable from no change; in that narrow ordering case, an already queued native event can still update the owner. This is source-derived and has not been reproduced as a runtime defect. The marker uses the raw value; an out-of-range owner index is normalized through the existing clear path.
