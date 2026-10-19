@@ -15,6 +15,7 @@ use gpui::{
 use rustui::{
     prelude::{Component, Container, HStack, Text, VStack, View, ViewHost},
     runtime::render_diagnostics::{enable_render_diagnostics, render_diagnostics_snapshot},
+    theme::{AppearanceMode, activate_theme, parse_theme},
 };
 use serde_json::{Value, json};
 
@@ -375,6 +376,8 @@ fn advance(window: &mut Window, cx: &mut App, state: Rc<RefCell<State>>) {
 }
 
 fn main() {
+    let theme = parse_theme(include_str!("../../../themes/macos27.json"))
+        .expect("bundled macOS 27 theme must parse");
     let config = Config::load().unwrap_or_else(|error| {
         eprintln!("cache comparison: {error}");
         std::process::exit(2)
@@ -382,8 +385,21 @@ fn main() {
     let ready = json!({"schema_version": 1, "kind": "rustui_cache_comparison_ready", "run_id": config.run_id,
         "mode": config.mode(), "pid": std::process::id(), "executable": std::env::current_exe().expect("executable path")});
     write(&config, "ready", &ready).expect("new comparison ready record");
+    // Finder-launched runs have no attached stderr; preserve any startup panic with the run evidence.
+    let panic_path = config.path("panic");
+    std::panic::set_hook(Box::new(move |info| {
+        if let Ok(mut stream) = OpenOptions::new()
+            .write(true)
+            .create_new(true)
+            .open(&panic_path)
+        {
+            let _ = writeln!(stream, "{info}");
+        }
+    }));
     gpui_platform::application().run(move |cx| {
         gpui_component::init(cx);
+        activate_theme(&theme, Some(AppearanceMode::Light), cx)
+            .expect("bundled macOS 27 theme must activate");
         let leaves = config.leaves;
         let values = Rc::new(RefCell::new(vec![0; leaves]));
         let mounts = Rc::new(RefCell::new(vec![0; leaves]));

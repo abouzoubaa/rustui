@@ -45,3 +45,15 @@ Milestone 97 confirms the new Sheet story's right-edge rendering, title/body, an
 Escape dismissal. Its accessibility snapshot omitted the title and Sheet
 semantics; full accessibility, theme, locale, and platform acceptance remain
 open. The disposable app outputs were removed after the check.
+
+
+## Update 2026-10-19 — P3D 32-leaf comparison
+
+M115 completed the planned 32-leaf native process comparison after fixing the
+probe's missing macOS 27 theme activation. All 12 runs passed workload
+correctness with no observed AX activation or native drag. Median paired
+cached/uncached attached CPU ratio was 0.0729; maximum-sampled RSS ratio was
+0.9873. This is workload-specific process evidence, not a frame/GPU speed
+claim or visual acceptance. Raw plan and summary:
+`target/headstart/performance/cache-comparison-p3d-32-20261019-c-plan.json` and
+`target/headstart/performance/cache-comparison-p3d-32-20261019-c-summary.json`.

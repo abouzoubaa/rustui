@@ -101,10 +101,11 @@ through CUA. CLI examples below invoke only the planning/attach/reporting tool.
 ## Correctness and measurement limits
 
 Each completed run must show exactly 100 parent host lowerings; zero cached or
-800 uncached child host lowerings during that phase; eight further leaf
-lowerings after local mutation; eight rendered values of one; and one mount per
-leaf. The raw JSON retains these counters and logical values. This checks reuse
-and child invalidation; it does not establish correct pixels or native input.
+`100 × leaves` uncached child host lowerings during that phase; `leaves` further
+leaf lowerings after local mutation; `leaves` rendered values of one; and one
+mount per leaf. The raw JSON retains these counters and logical values. This
+checks reuse and child invalidation; it does not establish correct pixels or
+native input.
 
 Any observed active accessibility session or native drag excludes the run.
 Typed environment scope is empty by construction. The existing framework cache
@@ -152,10 +153,50 @@ The initial focused Python suite passed **21 tests, 0 failed**; the log is `targ
 
 After adding workload selection, `python3 -m unittest scripts/tests/test_compare_cache_workload.py` passed **24 tests, 0 failed**. The fixtures cover both workload protocols and their leaf-count invariants; they do not build or launch the native example.
 
-## Native benchmark results (2026-10-18)
+## Native benchmark results — 8-leaf baseline (2026-10-18)
 
-All 12 planned processes completed with correctness checks true and no observed accessibility activation or native drag. This was one correctness-checked warmup pair, excluded from timing summaries, plus five measured cached/uncached pairs. Each run used one opt-level-0 workload: 8 leaves, 12 text lines per leaf, 10 warmup updates, 100 measured parent updates, then one mutation per leaf. Across all runs, cached parent updates produced 0 child lowerings versus 800 in uncached mode; each mode produced 8 post-mutation child lowerings and 8 expected rendered values. These native results cover only the `8-leaf` workload. The `32-leaf` selection has no native measurements yet and requires its own build provenance, CUA-launched session, and summary.
+All 12 planned processes completed correctness checks with no observed
+accessibility activation or native drag: one correctness-only warmup pair and
+five measured cached/uncached pairs. Each used 8 leaves, 12 text lines per leaf,
+10 warmup updates, 100 measured parent updates, and one mutation per leaf.
+Cached parent updates produced 0 child lowerings versus 800 uncached; each mode
+produced 8 post-mutation child lowerings and 8 expected rendered values.
 
-The median cached/uncached attached CPU ratio was **0.2895** (about 71% lower CPU time for the cached mode in this workload); paired ratios ranged from **0.2848 to 0.3154**. This CPU interval includes warmup, measured updates, mutation, diagnostics, and post-result collection wait; it is not frame time. Median max-sampled RSS ratio was **0.9956** (about 0.4% lower), with a paired range of 0.9924–1.0028. Sampled RSS is not OS peak memory. These measurements include instrumentation and support only this single workload and environment; they do not establish frame, GPU, presentation, input-to-photon, or generalized application speedup. No acceptance threshold or automatic speedup verdict was set.
+Median cached/uncached attached CPU ratio was **0.2895** (paired range
+0.2848–0.3154). Median ratio of maximum sampled RSS was **0.9956** (paired
+range 0.9924–1.0028). These process-level figures do not measure frame time,
+GPU work, input-to-photon latency, or general performance.
 
-Further work should add calibrated workloads with varied retained-tree sizes/content and repeat under controlled machine conditions. Native pixel, accessibility, and drag acceptance remain separate; these benchmark runs were launched through Finder without benchmark accessibility inspection and only establish that AX/drag were not observed during their callbacks. The protocol and results do not constitute visual acceptance.
+## Native benchmark results — 32-leaf workload (2026-10-19)
+
+The first launch exposed a real probe setup defect: it rendered RustUI themed
+components without activating a theme. The new per-run panic record captured
+`a RustUI component theme requires an active theme`. The probe now loads
+`themes/macos27.json` and activates its light appearance before mounting the
+root. No RustUI runtime or GPUI dependency behavior was changed.
+
+A fresh Headstart build and plan were used after this fix. All 12 planned Finder
+launches completed (one correctness-only warmup pair and five measured pairs).
+Every run passed its workload correctness checks; accessibility and native drag
+were not observed. For 32 leaves, 12 text lines per leaf, 10 warmup updates,
+100 measured parent updates, and one mutation per leaf, cached parent updates
+produced 0 child lowerings versus 3,200 uncached; each mode produced 32
+post-mutation child lowerings, 32 values of one, and one mount per leaf.
+
+The median paired cached/uncached attached CPU ratio was **0.0729** (range
+0.0718–0.0759; about 92.7% lower attached CPU in this specific probe). The
+median ratio of maximum sampled RSS was **0.9873** (about 1.3% lower). The CPU
+ratio spread was 5.6% of its median. These are instrumented process CPU and
+sampled RSS results, not frame/GPU or visual-performance evidence. They do not
+prove a general speedup or accept pixels, native input, accessibility, or drag
+behavior.
+
+The immutable session plan and summary are
+`target/headstart/performance/cache-comparison-p3d-32-20261019-c-plan.json` and
+`target/headstart/performance/cache-comparison-p3d-32-20261019-c-summary.json`.
+Build input provenance is recorded in
+`target/headstart/evidence/p3d-32-build-20261019-c-provenance.json`; the raw
+build log is `target/headstart/evidence/p3d-32-build-20261019-c.log`. The
+standalone benchmark app bundle and copied executable were removed after the
+session; the shared Headstart target cache remains. Visual, frame/GPU,
+accessibility, and sustained native-drag acceptance remain separate work.
