@@ -1826,3 +1826,17 @@ a follow-up, not cache correctness or performance acceptance. The test app
 was quit and its disposable bundle removed. Evidence and input recipe:
 `target/headstart/evidence/p3b-cgevent-noax-probe-20261019.json` and adjacent
 hashed artifacts; details are in `docs/tasks/P3B_CACHED_CHILD.md`.
+
+## M132 — excluded anchored Cache keyboard probe
+
+A second native `CGEventPost` attempt scrolled the canonical Cache story into
+view and established a visible focus ring on `Enable diagnostics`; the story
+reported GPUI accessibility inactive before the keyboard attempt. After one
+parent tick, cached and uncached lowering counts were 4/4, which is not cache
+reuse evidence. The first Tab opened the macOS app switcher instead of moving
+the visible focus ring; the attempt stopped without child activation. The
+cached-child count remained 0, and accessibility state was not resampled after
+Finder became foreground. The owned Playground process was terminated and its
+disposable bundle removed. This is excluded and leaves the keyboard/cache gate
+open. Evidence: `target/headstart/evidence/p3b-cgevent-followup-excluded-20261019.json`;
+details in `docs/tasks/P3B_CACHED_CHILD.md`.
