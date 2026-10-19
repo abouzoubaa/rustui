@@ -1782,3 +1782,28 @@ selection, IME composition, or retention without focus leaving the field.
 The Playground process exited and its disposable app bundle and executable
 were removed; absence checks passed. Evidence:
 `target/headstart/evidence/d1b-caret-m128-20261019.json`.
+
+
+## M129 — excluded P3B native cache/focus probe
+
+A macOS Playground session reported GPUI accessibility active and equal
+`CachedLeaf`/`UncachedLeaf` lowering counts (4/4) after a parent-only update.
+The AX-active fallback makes this an ineligible cache-hit sample. A cached
+child mouse activation changed its local count from 0 to 1; a subsequent Tab
+changed neither count. Mouse activation of the uncached child changed its count
+from 0 to 1; Shift+Tab returned to the component search field rather than the
+cached child. Space/Return after keyboard re-entry was not established. The
+no-AX cache-hit and keyboard/focus acceptance gates remain open. Evidence:
+`target/headstart/evidence/p3b-keyboard-focus-m129-20261019.json`.
+
+
+## M130 — bounded Picker and ComboBox keyboard observations
+
+In the canonical macOS Playground Inputs story, Down and Return changed the
+Picker owner value from `Rust` to `Swift`; Down followed by Escape left `Swift`
+selected. The searchable ComboBox filtered to `Skia` and Return committed it.
+A `no-match` query produced no selectable result; Escape closed the popup and
+the rendered trigger remained `Skia`. This is bounded keyboard behavior, not
+full focus traversal, VoiceOver, pixel, cross-platform, or performance
+acceptance. Evidence:
+`target/headstart/evidence/picker-combobox-keyboard-m130-20261019.json`.

@@ -71,3 +71,17 @@ GPUI Components public builder does not expose a label option; see
 `DATE_PICKER_ACCESSIBILITY.md` for the API audit and required upstream
 capability. Existing AX SetValue evidence does not establish trigger naming or
 VoiceOver announcement behavior.
+
+
+## M130 bounded Picker and ComboBox keyboard observations
+
+In the canonical macOS Playground Inputs story, enabling the Picker allowed
+its options to open. Down followed by Return changed its owner value from
+`Rust` to `Swift`; reopening, pressing Down, then Escape left `Swift`
+selected. In the searchable ComboBox, typing `Skia` reduced the popup to the
+matching option and Return committed `Skia`. Typing `no-match` returned no
+selectable result; Escape closed the popup and the rendered trigger remained
+`Skia`. This is bounded keyboard selection/filter/cancel evidence, not complete
+focus traversal, VoiceOver, or pixel acceptance. The accessibility API did not
+identify the focused popup child. Evidence:
+`target/headstart/evidence/picker-combobox-keyboard-m130-20261019.json`.
