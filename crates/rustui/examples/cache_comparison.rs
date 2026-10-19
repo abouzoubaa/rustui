@@ -382,6 +382,17 @@ fn main() {
     let ready = json!({"schema_version": 1, "kind": "rustui_cache_comparison_ready", "run_id": config.run_id,
         "mode": config.mode(), "pid": std::process::id(), "executable": std::env::current_exe().expect("executable path")});
     write(&config, "ready", &ready).expect("new comparison ready record");
+    // Finder-launched runs have no attached stderr; preserve any startup panic with the run evidence.
+    let panic_path = config.path("panic");
+    std::panic::set_hook(Box::new(move |info| {
+        if let Ok(mut stream) = OpenOptions::new()
+            .write(true)
+            .create_new(true)
+            .open(&panic_path)
+        {
+            let _ = writeln!(stream, "{info}");
+        }
+    }));
     gpui_platform::application().run(move |cx| {
         gpui_component::init(cx);
         let leaves = config.leaves;
