@@ -410,6 +410,10 @@ impl StoryHost {
         self.count = 0;
         self.events.record("Reset story state");
     }
+    fn set_picker_kotlin(&mut self) {
+        self.picker_value = String::from("Kotlin");
+        self.events.record("Picker owner value set to Kotlin");
+    }
 
     fn cycle_button_style(&mut self) {
         self.button_properties.cycle_style();
@@ -633,6 +637,7 @@ impl View for StoryHost {
                     alpha_workload_increment: self.w1_alpha_increment(),
                     beta_workload_increment: self.w1_beta_increment(),
             },
+            self.action(Self::set_picker_kotlin),
             self.action(Self::increment),
             self.action(Self::reset),
         )

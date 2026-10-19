@@ -55,3 +55,13 @@ results. Evidence: `target/headstart/milestone28-combobox-gui.json`; build log:
 and external options replacement remained separate native cases; the bounded
 M78 follow-up above now covers those cases. No upstream patch or dependency
 change was used.
+
+## Picker native acceptance (2026-10-19)
+
+The canonical Playground Inputs story now includes an independent Enabled
+toggle, a Kotlin owner-value setter, and a visible owner-value readout for
+Picker. Using `dev.rustui.playground`, selecting Swift changed the readout and
+trigger to Swift. Disabling Picker prevented its popup from opening or changing
+the value. Setting Kotlin externally updated the readout and disabled trigger;
+re-enabling opened the popup with Kotlin selected. Evidence:
+`target/headstart/evidence/picker-acceptance-20261019.json`.

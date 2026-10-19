@@ -65,6 +65,7 @@ pub struct StoryCanvas {
     navigation_path: Binding<Vec<String>>,
     retention: RetentionStoryFields,
     keyed_collection: KeyedCollectionFields,
+    set_picker_kotlin: Action,
     increment: Action,
     reset: Action,
 }
@@ -96,6 +97,7 @@ impl StoryCanvas {
         navigation_path: Binding<Vec<String>>,
         retention: RetentionStoryFields,
         keyed_collection: KeyedCollectionFields,
+        set_picker_kotlin: Action,
         increment: Action,
         reset: Action,
     ) -> Self {
@@ -124,6 +126,7 @@ impl StoryCanvas {
             navigation_path,
             retention,
             keyed_collection,
+            set_picker_kotlin,
             increment,
             reset,
         }
@@ -344,13 +347,22 @@ impl View for StoryCanvas {
                         .id("story-input-stepper")
                         .range(0..=10),
                 )
+                .child(Text(format!(
+                    "Picker owner value: {}",
+                    self.picker_binding.value()
+                )))
+                .child(
+                    Button("Set Picker to Kotlin", self.set_picker_kotlin.clone())
+                        .id("story-input-picker-set-kotlin"),
+                )
                 .child(
                     Picker(
                         "Framework",
                         self.picker_binding.clone(),
                         ["Rust", "Swift", "Kotlin"],
                     )
-                    .id("story-input-picker"),
+                    .id("story-input-picker")
+                    .disabled(!self.toggle_binding.value()),
                 )
                 .child(
                     ComboBox(
