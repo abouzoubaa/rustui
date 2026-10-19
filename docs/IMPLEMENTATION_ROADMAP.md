@@ -1813,3 +1813,16 @@ the rendered trigger remained `Skia`. This is bounded keyboard behavior, not
 full focus traversal, VoiceOver, pixel, cross-platform, or performance
 acceptance. Evidence:
 `target/headstart/evidence/picker-combobox-keyboard-m130-20261019.json`.
+
+## M131 — excluded no-AX Playground cache/focus probe
+
+Native Quartz `CGEventPost` input reached the canonical Playground Cache story;
+the story's own status control reported GPUI accessibility inactive before
+and after input. Cached and uncached lowering counters remained equal in the
+sampled parent-tick sequence, so this did not establish a cache hit. Tab plus
+Return reached an unrelated Stacks row-order control, leaving cached-child
+keyboard activation unverified. This confirms a viable native-input route for
+a follow-up, not cache correctness or performance acceptance. The test app
+was quit and its disposable bundle removed. Evidence and input recipe:
+`target/headstart/evidence/p3b-cgevent-noax-probe-20261019.json` and adjacent
+hashed artifacts; details are in `docs/tasks/P3B_CACHED_CHILD.md`.
