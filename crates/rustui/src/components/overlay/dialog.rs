@@ -2,7 +2,10 @@
 
 use std::rc::Rc;
 
-use gpui::{AnyElement, ParentElement as _, SharedString, Window};
+use gpui::{
+    AnyElement, InteractiveElement as _, IntoElement as _, ParentElement as _, Role, SharedString,
+    StatefulInteractiveElement as _, Window, div,
+};
 use gpui_component::{
     WindowExt as _,
     button::{Button as NativeButton, ButtonVariant, ButtonVariants as _},
@@ -32,7 +35,11 @@ impl DialogText {
 }
 
 /// Keeps arbitrary RustUI dialog content owned across native builder rerenders.
-struct DialogContent(Rc<AnyView>);
+struct DialogContent {
+    content: Rc<AnyView>,
+    accessibility_id: SharedString,
+    accessibility_label: SharedString,
+}
 
 impl View for DialogContent {
     fn body(&self) -> impl View {
@@ -40,7 +47,15 @@ impl View for DialogContent {
     }
 
     fn into_element(&self, context: &mut RenderContext<'_>) -> AnyElement {
-        self.0.into_element(context)
+        // GPUI Components does not expose its native Dialog surface element.
+        // Keep a semantic dialog node around the RustUI body; this cannot
+        // assign a role or contain focus on the upstream Dialog host.
+        div()
+            .id(self.accessibility_id.clone())
+            .role(Role::Dialog)
+            .aria_label(self.accessibility_label.clone())
+            .child(self.content.into_element(context))
+            .into_any_element()
     }
 }
 
@@ -151,9 +166,18 @@ impl View for DialogView {
 
     fn into_element(&self, context: &mut RenderContext<'_>) -> AnyElement {
         context.with_element_scope(RetentionScope::Key(self.id.clone()), |context| {
+            let accessibility_label = self
+                .title
+                .as_ref()
+                .map(|title| title.resolve(context))
+                .unwrap_or_else(|| self.trigger.resolve(context));
             let content = self.content.as_ref().map(|content| {
                 context.retained_component(Identity::from(format!("{}:content", self.id)), || {
-                    DialogContent(Rc::clone(content))
+                    DialogContent {
+                        content: Rc::clone(content),
+                        accessibility_id: format!("{}:dialog", self.id).into(),
+                        accessibility_label: accessibility_label.clone(),
+                    }
                 })
             });
             let trigger = self.trigger.resolve(context);
@@ -255,5 +279,17 @@ mod tests {
         assert!(dialog.content.is_none());
         assert!(dialog.on_confirm.is_some());
         assert!(dialog.on_cancel.is_some());
+    }
+
+    #[test]
+    fn semantic_dialog_content_has_a_stable_id_and_accessible_name() {
+        let content = DialogContent {
+            content: Rc::new(AnyView::new(EmptyView)),
+            accessibility_id: "confirm:dialog".into(),
+            accessibility_label: "Confirm changes".into(),
+        };
+
+        assert_eq!(content.accessibility_id.as_ref(), "confirm:dialog");
+        assert_eq!(content.accessibility_label.as_ref(), "Confirm changes");
     }
 }
