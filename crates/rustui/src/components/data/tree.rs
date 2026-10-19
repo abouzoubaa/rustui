@@ -399,6 +399,22 @@ mod tests {
     }
 
     #[test]
+    #[should_panic(expected = "every RustUI Tree node must have a unique ID")]
+    fn duplicate_ids_are_rejected_across_nested_nodes() {
+        struct Owner(Option<String>);
+        fn read(owner: &Owner) -> Option<String> {
+            owner.0.clone()
+        }
+        fn write(owner: &mut Owner, selection: Option<String>) {
+            owner.0 = selection;
+        }
+
+        let nodes = [TreeNode::new("same", "Root").child(TreeNode::new("same", "Child"))];
+
+        let _ = TreeView::new(nodes, Binding::new(None, read, write));
+    }
+
+    #[test]
     fn expansion_collection_includes_descendants_hidden_by_collapsed_ancestors() {
         let root = TreeItem::new("root", "Root").expanded(false).child(
             TreeItem::new("branch", "Branch")
