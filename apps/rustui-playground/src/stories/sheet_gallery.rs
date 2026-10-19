@@ -12,6 +12,7 @@ pub fn demo() -> impl View {
             .child(
                 Sheet("playground-details-sheet", "Open sheet")
                     .title("Details")
+                    .accessibility_label("Details and sheet contents")
                     .content(Text("This content is hosted inside the sheet.")),
             ),
     )

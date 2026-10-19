@@ -15,6 +15,21 @@ use crate::{
     view::{AnyView, EmptyView, RenderContext, RetentionScope, View},
 };
 
+#[derive(Clone)]
+enum SheetText {
+    Literal(SharedString),
+    Message(SharedString),
+}
+
+impl SheetText {
+    fn resolve(&self, context: &RenderContext<'_>) -> SharedString {
+        match self {
+            Self::Literal(text) => text.clone(),
+            Self::Message(key) => SharedString::from(context.localized_message(key.as_ref())),
+        }
+    }
+}
+
 /// Keeps arbitrary RustUI sheet content owned across native builder rerenders.
 struct SheetContent {
     content: Rc<AnyView>,
@@ -48,6 +63,7 @@ pub struct SheetView {
     id: Identity,
     trigger: SharedString,
     title: Option<SharedString>,
+    accessibility_label: Option<SheetText>,
     content: Option<Rc<AnyView>>,
 }
 
@@ -62,6 +78,7 @@ impl SheetView {
             id,
             trigger: trigger.into(),
             title: None,
+            accessibility_label: None,
             content: None,
         }
     }
@@ -71,8 +88,26 @@ impl SheetView {
         self
     }
 
-    fn resolved_accessibility_label(&self) -> SharedString {
-        self.title.clone().unwrap_or_else(|| self.trigger.clone())
+    /// Names the sheet content for assistive technology.
+    ///
+    /// By default, the visible title is used when present; otherwise the
+    /// trigger label is used.
+    pub fn accessibility_label(mut self, label: impl Into<SharedString>) -> Self {
+        self.accessibility_label = Some(SheetText::Literal(label.into()));
+        self
+    }
+
+    /// Resolves the sheet's accessible name from the active RustUI message catalog.
+    pub fn localized_accessibility_label(mut self, message_key: impl Into<SharedString>) -> Self {
+        self.accessibility_label = Some(SheetText::Message(message_key.into()));
+        self
+    }
+
+    fn accessibility_label_text(&self) -> SheetText {
+        self.accessibility_label
+            .clone()
+            .or_else(|| self.title.clone().map(SheetText::Literal))
+            .unwrap_or_else(|| SheetText::Literal(self.trigger.clone()))
     }
 
     /// Adds arbitrary RustUI content to the sheet body.
@@ -95,7 +130,7 @@ impl View for SheetView {
 
     fn into_element(&self, context: &mut RenderContext<'_>) -> AnyElement {
         context.with_element_scope(RetentionScope::Key(self.id.clone()), |context| {
-            let accessibility_label = self.resolved_accessibility_label();
+            let accessibility_label = self.accessibility_label_text().resolve(context);
             let content = self.content.as_ref().map(|content| {
                 context.retained_component(Identity::from(format!("{}:content", self.id)), || {
                     SheetContent {
@@ -152,16 +187,36 @@ mod tests {
 
         assert!(sheet.title.is_some());
         assert!(sheet.content.is_some());
-        assert_eq!(sheet.resolved_accessibility_label().as_ref(), "Details");
+        assert!(matches!(
+            sheet.accessibility_label_text(),
+            SheetText::Literal(label) if label.as_ref() == "Details"
+        ));
     }
 
     #[test]
     fn trigger_names_sheet_when_title_is_omitted() {
         let sheet = Sheet("details", "Open details");
 
-        assert_eq!(
-            sheet.resolved_accessibility_label().as_ref(),
-            "Open details"
-        );
+        assert!(matches!(
+            sheet.accessibility_label_text(),
+            SheetText::Literal(label) if label.as_ref() == "Open details"
+        ));
+    }
+
+    #[test]
+    fn accessible_name_prefers_explicit_label_then_title_then_trigger() {
+        let explicit = Sheet("details", "Open")
+            .title("Visible title")
+            .accessibility_label("Explicit name");
+        assert!(matches!(
+            explicit.accessibility_label_text(),
+            SheetText::Literal(label) if label.as_ref() == "Explicit name"
+        ));
+
+        let localized = explicit.localized_accessibility_label("sheet.details.name");
+        assert!(matches!(
+            localized.accessibility_label_text(),
+            SheetText::Message(key) if key.as_ref() == "sheet.details.name"
+        ));
     }
 }

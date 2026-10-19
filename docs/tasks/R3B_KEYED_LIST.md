@@ -18,6 +18,8 @@ items retains the selected ID. Removing the selected item clears native
 selection and defers an owner binding update to `None`; the deferred update
 checks that the owner still holds the removed ID. Native selection and cancel
 events write the bound ID only when it changes, avoiding notification feedback.
+Escape cancellation clears selection only when the list is selectable; a
+non-selectable list preserves its controlled owner selection.
 The upstream search path temporarily selects its first row; the adapter defers
 reconciliation back to the bound ID after that update.
 

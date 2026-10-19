@@ -214,6 +214,18 @@ name. M119's macOS accessibility tree exposed a named `dialog` node. Focus
 entry, containment, restoration, and screen-reader speech still need separate
 acceptance.
 
+## Trigger-driven sheets
+
+`Sheet(id, trigger)` opens a side sheet using GPUI Components' default placement
+and size. Its accessible name uses an explicit
+`.accessibility_label("Details and sheet contents")` when supplied, then the
+visible title, then the trigger label. Use
+`.localized_accessibility_label("sheet.details.name")` to resolve the explicit
+name from the active RustUI message catalog. The canonical Playground story
+demonstrates an explicit name. The semantic `dialog` node remains inside the
+sheet body because the upstream Sheet host does not expose its accessibility
+surface; this does not name the upstream close button.
+
 ## Popovers
 
 `Popover` presents RustUI content from a themed Button and binds whether it is

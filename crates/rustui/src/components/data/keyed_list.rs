@@ -72,6 +72,19 @@ fn clear_removed_selection(current: &mut Option<String>, removed_id: &str) -> bo
     true
 }
 
+fn clear_selection_on_cancel(
+    selectable: bool,
+    selection: &mut Option<String>,
+    requested: &mut Option<String>,
+) -> bool {
+    if !selectable {
+        return false;
+    }
+    *selection = None;
+    *requested = None;
+    true
+}
+
 struct KeyedListDelegate {
     items: Vec<KeyedListItem>,
     visible: Vec<usize>,
@@ -324,9 +337,14 @@ impl View for KeyedListView {
                         }
                     }
                     ListEvent::Cancel => {
-                        *event_selection_id.borrow_mut() = None;
-                        *requested.borrow_mut() = None;
-                        update(cx);
+                        let selectable = state.read(cx).delegate().selectable;
+                        if clear_selection_on_cancel(
+                            selectable,
+                            &mut *event_selection_id.borrow_mut(),
+                            &mut *requested.borrow_mut(),
+                        ) {
+                            update(cx);
+                        }
                     }
                 }
             });
@@ -404,7 +422,8 @@ impl View for KeyedListView {
 #[cfg(test)]
 mod tests {
     use super::{
-        KeyedListDelegate, KeyedListItem, clear_removed_selection, collect_items, valid_selection,
+        KeyedListDelegate, KeyedListItem, clear_removed_selection, clear_selection_on_cancel,
+        collect_items, valid_selection,
     };
     use gpui_component::IndexPath;
 
@@ -461,5 +480,33 @@ mod tests {
             "missing"
         ));
         assert_eq!(new_owner_selection.as_deref(), Some("a"));
+    }
+
+    #[test]
+    fn cancel_preserves_selection_when_list_is_not_selectable() {
+        let mut selection = Some("a".to_owned());
+        let mut requested = Some("a".to_owned());
+
+        assert!(!clear_selection_on_cancel(
+            false,
+            &mut selection,
+            &mut requested
+        ));
+        assert_eq!(selection.as_deref(), Some("a"));
+        assert_eq!(requested.as_deref(), Some("a"));
+    }
+
+    #[test]
+    fn cancel_clears_selection_when_list_is_selectable() {
+        let mut selection = Some("a".to_owned());
+        let mut requested = Some("a".to_owned());
+
+        assert!(clear_selection_on_cancel(
+            true,
+            &mut selection,
+            &mut requested
+        ));
+        assert_eq!(selection, None);
+        assert_eq!(requested, None);
     }
 }

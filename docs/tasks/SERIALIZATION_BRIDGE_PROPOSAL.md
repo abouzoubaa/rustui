@@ -14,9 +14,12 @@ Decide whether to continue with **D1b: an in-process host for explicitly
 registered, compiled components**, using the existing versioned descriptor,
 declared editable properties and host-bound action references. D1a is already
 implemented. Keep external transport and full visual composition as separately
-reviewable deliverables. Before D1b, decide whether action events are signal-only
-or require payload values; the current document maps event IDs to action IDs and
-does not carry event payloads.
+reviewable deliverables. Before D1b, decide whether action events are
+signal-only or carry payload values. `EventSchema` already declares possible
+payload-property shapes, while `PreviewDocument` binds event IDs to action
+references. The missing contract is for event-instance values and how they
+reach runtime actions; `rustui_core::Action` currently has no payload
+parameter.
 
 This boundary is the recommendation. It supports useful editable native previews
 without attempting to serialize arbitrary Rust views, closures or component
@@ -268,8 +271,9 @@ UI Studio integration complete.
 
 > Decide whether to continue with D1b, an in-process host for explicitly
 > registered compiled components using the existing `rustui::preview` schema.
-> Before implementation, choose whether preview actions are signal-only or need
-> serializable event payloads. Keep transport and full composition separate.
+> Before implementation, choose whether preview events remain signal-only
+> or carry serializable per-event payload values, and how those values reach
+> runtime actions. Keep transport and full composition separate.
 
 If the user instead requires arbitrary authored Rust source editing or a full
 composition document as the first deliverable, choose that alternative explicitly
