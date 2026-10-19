@@ -1591,3 +1591,10 @@ The canonical Playground List story passed bounded native checks for visible row
 ## M107 — Native Tree acceptance
 
 The canonical Playground Tree story passed bounded native checks for visible hierarchy rows, controlled selection/binding, Up/Down traversal, and Left/Right collapse/expand of a nested folder. The CUA accessibility snapshot exposed named selectable rows under outline controls. Direct pointer disclosure behavior, expanded-state reporting, focused-row reporting, screen-reader speech, RTL, cross-platform, pixel-comparison, theme/locale switching, and performance acceptance remain unverified. No Rust source changed. Evidence: `target/headstart/evidence/tree-native-acceptance-20261019.md`. The Playground process was quit and its disposable canonical bundle and standalone executable were removed; shared Cargo caches were preserved.
+
+
+## Milestone 108 — Dialog accessibility source trace
+
+The missing Dialog node is traced to the pinned `gpui-base 0.7.3` `FocusTrapContainer<E>` wrapper. Dialog assigns a role before `focus_trap`, but the wrapper forwards layout, prepaint, and paint without forwarding its three accessibility hooks. GPUI defaults to no role and no node properties, so the host Dialog node is skipped while child buttons remain. Dialog naming is a separate gap: its title text element has neither an accessibility ID nor a label.
+
+Prepared a review-only candidate forwarding role, node properties, and synthetic children in `patches/proposed/gpui-base-focus-trap-accessibility-v1.patch`; source and patch hashes and constraints are in `docs/tasks/FOCUS_TRAP_ACCESSIBILITY_PROPOSAL.md`. No vendor source or dependency lock changed. Zero-fuzz isolated application, candidate `gpui-base` check, Playground build, and bounded native probe passed. The tree exposed a Dialog node, title text, and action buttons; Escape dismissed it and recorded cancellation. Explicit accessible-name semantics, focus containment/restoration, nested dialogs, synthetic-child behavior, and patch promotion remain open. The disposable process, bundle, and standalone executable were removed; shared caches were preserved.
