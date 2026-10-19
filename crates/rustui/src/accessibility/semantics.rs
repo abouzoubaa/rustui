@@ -14,6 +14,7 @@ pub enum SemanticsRole {
     Group,
     Region,
     Section,
+    Navigation,
 }
 
 impl From<SemanticsRole> for Role {
@@ -22,6 +23,7 @@ impl From<SemanticsRole> for Role {
             SemanticsRole::Group => Self::Group,
             SemanticsRole::Region => Self::Region,
             SemanticsRole::Section => Self::Section,
+            SemanticsRole::Navigation => Self::Navigation,
         }
     }
 }
@@ -143,6 +145,7 @@ mod tests {
         assert_eq!(Role::from(SemanticsRole::Group), Role::Group);
         assert_eq!(Role::from(SemanticsRole::Region), Role::Region);
         assert_eq!(Role::from(SemanticsRole::Section), Role::Section);
+        assert_eq!(Role::from(SemanticsRole::Navigation), Role::Navigation);
     }
 
     #[test]

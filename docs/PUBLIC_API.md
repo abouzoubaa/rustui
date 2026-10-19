@@ -664,7 +664,7 @@ Semantics("counter-controls", HStack! {
 .description("Change the current count.")
 ```
 
-`SemanticsRole` supports `Group`, `Region`, and `Section`. Use
+`SemanticsRole` supports `Group`, `Region`, `Section`, and `Navigation` landmarks. Use
 `.localized_label(key)` or `.localized_description(key)` for active catalog
 lookup. A label or description without an explicit role defaults to Group.
 With no metadata, the wrapper adds no accessibility node. Stable nonempty IDs

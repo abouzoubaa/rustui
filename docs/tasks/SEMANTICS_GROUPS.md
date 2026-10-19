@@ -1,6 +1,6 @@
 # Semantics groups (M51)
 
-`Semantics(id, child)` gives a RustUI subtree a stable structural identity. Set `.role(SemanticsRole::Group | Region | Section)`, `.label(...)`, `.localized_label(...)`, `.description(...)`, or `.localized_description(...)` to expose a native accessibility node. A label or description without an explicit role uses `Group`. With no metadata, the wrapper creates no accessibility node. Localization resolves against the active catalog each render.
+`Semantics(id, child)` gives a RustUI subtree a stable structural identity. Set `.role(SemanticsRole::Group | Region | Section | Navigation)`, `.label(...)`, `.localized_label(...)`, `.description(...)`, or `.localized_description(...)` to expose a native accessibility node. A label or description without an explicit role uses `Group`. With no metadata, the wrapper creates no accessibility node. Localization resolves against the active catalog each render.
 
 The wrapper delegates the child's layout, prepaint, and paint to GPUI, preserving the child's own accessibility nodes, roles, and names. The group label names the group, not a descendant control. The ID must be nonempty and unique among siblings in the same logical scope; repeated sibling IDs panic during rendering. Its native element ID uses a dedicated `semantics` namespace.
 

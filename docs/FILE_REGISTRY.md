@@ -127,8 +127,8 @@ component expansion → advanced framework work.
 | `crates/rustui-rgpe/src/lib.rs` | rustui-rgpe module root. | performance | crates/rustui-rgpe/src/config.rs, crates/rustui-rgpe/src/diagnostics.rs, crates/rustui-rgpe/src/compatibility.rs | Module declarations only |
 | `crates/rustui/Cargo.toml` | Public framework package with the approved GPUI snapshot/platform and component dependencies. | bootstrap | Workspace manifest, rustui-core, rustui-macros | Configuration/documentation |
 | `crates/rustui/src/accessibility/mod.rs` | accessibility integration. | framework | crates/rustui/src/accessibility/semantics.rs, crates/rustui/src/accessibility/navigation.rs | Module declarations only |
-| `crates/rustui/src/accessibility/navigation.rs` | Accessible focus and navigation behavior. | framework | Approved API and upstream integration | Documentation only |
-| `crates/rustui/src/accessibility/semantics.rs` | Accessibility roles, labels, values, and actions. | framework | Approved API and upstream integration | Documentation only |
+| `crates/rustui/src/accessibility/navigation.rs` | Notes the Navigation landmark role and existing native focus scope; no separate runtime. | framework | `SemanticsRole::Navigation`, `FocusScope` | Documentation only |
+| `crates/rustui/src/accessibility/semantics.rs` | Structural accessibility roles and labels, including the Navigation landmark. | framework | GPUI and pinned AccessKit roles | Implemented API |
 | `crates/rustui/src/adapters/gpui_components.rs` | Pinned GPUI Components integration boundary. | framework | Approved API and upstream integration | Documentation only |
 | `crates/rustui/src/adapters/gpui.rs` | Official GPUI integration boundary. | framework | Approved API and upstream integration | Documentation only |
 | `crates/rustui/src/adapters/localization.rs` | Compatibility re-export for RustUI localization integration. | framework | RustUI localization module | Implemented facade |
