@@ -57,3 +57,22 @@ cached/uncached attached CPU ratio was 0.0729; maximum-sampled RSS ratio was
 claim or visual acceptance. Raw plan and summary:
 `target/headstart/performance/cache-comparison-p3d-32-20261019-c-plan.json` and
 `target/headstart/performance/cache-comparison-p3d-32-20261019-c-summary.json`.
+
+## Update 2026-10-19 — X1a WebAssembly compile viability
+
+The first compile-only WebAssembly viability check did not reach RustUI source.
+`./scripts/cargo-headstart check -p rustui --target wasm32-unknown-unknown --locked --offline`
+failed with E0463 because the Headstart stage1 sysroot has no `core` or `std`
+libraries for that target. The default rustup installation lists the target,
+but the launcher selects a separate Headstart compiler. Exact output is in
+`target/headstart/evidence/x1a-wasm-check-20261019.log`. This is not WebAssembly
+support evidence; building that target standard library for Headstart or using
+an approved compatible toolchain is required before the compile check can run.
+
+## Update 2026-10-19 — DatePicker accessible-name API audit
+
+The pinned GPUI Components DatePicker exposes no accessible-label builder and
+constructs the focused ComboBox internally. A RustUI wrapper would name a
+different accessibility node, so no source workaround was added. The required
+upstream capability and native acceptance contract are recorded in
+`docs/tasks/DATE_PICKER_ACCESSIBILITY.md`.

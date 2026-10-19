@@ -56,7 +56,7 @@ and external options replacement remained separate native cases; the bounded
 M78 follow-up above now covers those cases. No upstream patch or dependency
 change was used.
 
-## Picker native acceptance (2026-10-19)
+## M121 Picker native acceptance (2026-10-19)
 
 The canonical Playground Inputs story now includes an independent Enabled
 toggle, a Kotlin owner-value setter, and a visible owner-value readout for
@@ -65,3 +65,9 @@ trigger to Swift. Disabling Picker prevented its popup from opening or changing
 the value. Setting Kotlin externally updated the readout and disabled trigger;
 re-enabling opened the popup with Kotlin selected. Evidence:
 `target/headstart/evidence/picker-acceptance-20261019.json`.
+
+DatePicker's focused ComboBox trigger still has no accessible name. The pinned
+GPUI Components public builder does not expose a label option; see
+`DATE_PICKER_ACCESSIBILITY.md` for the API audit and required upstream
+capability. Existing AX SetValue evidence does not establish trigger naming or
+VoiceOver announcement behavior.

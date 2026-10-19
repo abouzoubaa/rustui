@@ -509,7 +509,10 @@ Native observations do not establish VoiceOver announcements or cadence.
 | `apps/rustui-playground/src/stories/task_release.rs` | Conditional child-owner task release and restoration story, exposed by the Release tab. | M25 native acceptance recorded; `target/headstart/milestone25-owner-release-gui.json` |
 | `apps/rustui-playground/src/stories/theme_inspector.rs` | Read-only normalized theme JSON preview and Light/Dark Button resolution, embedded in Foundation Additions. | Source test and native preview/reload accepted in M27; see target/headstart/milestone27-theme-inspector-gui.json |
 | `apps/rustui-playground/src/stories/mod.rs` | Routes Link, Label, Icon, and Image catalog entries to existing demos; other keys return no catalog demo. | Routing source and catalog coverage present; broader visual acceptance pending |
-| `docs/tasks/C10_COMBO_BOX_SELECT.md` | ComboBox searchable Select semantics, M77 regression reproduction, M78 bounded native closeout, and remaining acceptance limits. | M78 popup option-replacement, disabled, external-owner and missing-option cases observed; Picker not separately checked; full keyboard/focus/accessibility remains pending |
+| `docs/tasks/C10_COMBO_BOX_SELECT.md` | ComboBox searchable Select semantics, M77/M78 bounded native closeout, M121 Picker acceptance, and DatePicker accessibility limitation. | Picker native selection, disabled behavior, and external-owner updates observed; DatePicker trigger naming and VoiceOver remain pending; see `DATE_PICKER_ACCESSIBILITY.md`. |
+| `docs/tasks/DATE_PICKER_ACCESSIBILITY.md` | Pinned API audit for DatePicker trigger naming and required upstream capability. | No RustUI source workaround can name the focused ComboBox; native AX/VoiceOver acceptance remains pending. |
+| `docs/tasks/X1A_WASM_COMPILE.md` | X1a WebAssembly compile-viability attempt using the approved Headstart launcher. | Blocked before RustUI compilation because the Headstart stage1 sysroot lacks target `core` and `std`; WebAssembly support is not established. |
+| `docs/tasks/ROADMAP_COMPLETION_GATES.md` | Current capability gates, verified outcomes, remaining architecture and acceptance decisions. | Added X1a target-toolchain failure and DatePicker accessible-name API findings on 2026-10-19. |
 
 ## Milestone 30 menu acceptance
 

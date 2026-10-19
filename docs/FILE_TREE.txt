@@ -295,6 +295,9 @@ docs/tasks/A1_OPACITY_ANIMATION.md
 docs/tasks/A2_OPACITY_FRAME_ACCEPTANCE.md
 docs/tasks/ANIMATION_FRAME_LIMIT.md
 docs/tasks/C10_COMBO_BOX_SELECT.md
+docs/tasks/DATE_PICKER_ACCESSIBILITY.md
+docs/tasks/ROADMAP_COMPLETION_GATES.md
+docs/tasks/X1A_WASM_COMPILE.md
 docs/tasks/C1A_SCROLL_VIEW.md
 docs/tasks/C1B_SPACER_DIVIDER.md
 docs/tasks/C2_GRID_ZSTACK.md
