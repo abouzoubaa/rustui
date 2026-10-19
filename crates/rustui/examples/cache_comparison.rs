@@ -29,6 +29,7 @@ const UPDATES: u32 = 100;
 struct Config {
     run_id: String,
     cached: bool,
+    diagnostics_enabled: bool,
     leaves: usize,
 }
 
@@ -73,9 +74,16 @@ impl Config {
         if !matches!(leaves, 8 | 32) {
             return Err("leaves must be 8 or 32".into());
         }
+        let diagnostics_enabled = match value.get("diagnostics_enabled") {
+            Some(enabled) => enabled
+                .as_bool()
+                .ok_or("diagnostics_enabled must be a boolean")?,
+            None => true,
+        };
         Ok(Self {
             run_id: run_id.into(),
             cached,
+            diagnostics_enabled,
             leaves,
         })
     }
@@ -261,11 +269,18 @@ fn finish(cx: &mut App, state: &Rc<RefCell<State>>, requested: &str) {
     let document = json!({
         "schema_version": 1, "kind": "rustui_cache_comparison_workload",
         "run_id": state.config.run_id, "pid": std::process::id(), "mode": state.config.mode(),
+        "diagnostics_enabled": state.config.diagnostics_enabled,
         "status": status, "ax_active_seen": state.ax_seen, "native_drag_seen": state.drag_seen,
         "protocol": {"leaves": state.leaves, "lines_per_leaf": LINES, "width": WIDTH, "height": HEIGHT,
             "warmup_updates": WARMUP, "measured_updates": UPDATES},
         "counts": {"parent_root": state.parent_root, "parent_leaf": state.parent_leaf,
             "final_leaf": leaf, "mutation_leaf_delta": state.parent_leaf.and_then(|n| leaf.checked_sub(n))},
+        "diagnostics": render_diagnostics_snapshot(cx).hosts.into_iter().map(|host| json!({
+            "component_type": host.component_type,
+            "count": host.count,
+            "total_ns": host.total.as_nanos().min(u64::MAX as u128) as u64,
+            "max_ns": host.max.as_nanos().min(u64::MAX as u128) as u64,
+        })).collect::<Vec<_>>(),
         "values": *state.values.borrow(), "mounts": *state.mounts.borrow(),
         "environment_scope": "empty", "correctness_passed": valid,
     });
@@ -301,6 +316,7 @@ fn advance(window: &mut Window, cx: &mut App, state: Rc<RefCell<State>>) {
                 "kind": "rustui_cache_comparison_final",
                 "run_id": state.config.run_id,
                 "mode": state.config.mode(),
+                "diagnostics_enabled": state.config.diagnostics_enabled,
                 "pid": std::process::id(),
                 "status": status,
                 "ax_active_seen": state.ax_seen,
@@ -328,7 +344,9 @@ fn advance(window: &mut Window, cx: &mut App, state: Rc<RefCell<State>>) {
             }
         }
         Phase::Warmup(n) if n == WARMUP => {
-            enable_render_diagnostics(cx);
+            if state.borrow().config.diagnostics_enabled {
+                enable_render_diagnostics(cx);
+            }
             state.borrow_mut().phase = Phase::Measure(0);
             advance(window, cx, state);
             return;
@@ -383,7 +401,8 @@ fn main() {
         std::process::exit(2)
     });
     let ready = json!({"schema_version": 1, "kind": "rustui_cache_comparison_ready", "run_id": config.run_id,
-        "mode": config.mode(), "pid": std::process::id(), "executable": std::env::current_exe().expect("executable path")});
+        "mode": config.mode(), "diagnostics_enabled": config.diagnostics_enabled,
+        "pid": std::process::id(), "executable": std::env::current_exe().expect("executable path")});
     write(&config, "ready", &ready).expect("new comparison ready record");
     // Finder-launched runs have no attached stderr; preserve any startup panic with the run evidence.
     let panic_path = config.path("panic");

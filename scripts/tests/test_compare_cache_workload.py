@@ -16,13 +16,22 @@ import runtime_metrics
 def workload(run, pid, protocol=None):
     protocol = protocol or comparison.WORKLOADS["8-leaf"]
     leaves = protocol["leaves"]
-    leaf = 0 if run["mode"] == "cached" else leaves * protocol["measured_updates"]
+    enabled = run.get("diagnostics_enabled", True)
+    mode = run.get("runtime_mode", run["mode"])
+    leaf = 0 if mode == "cached" else leaves * protocol["measured_updates"]
+    counts = ({"parent_root": protocol["measured_updates"], "parent_leaf": leaf,
+               "final_leaf": leaf + leaves, "mutation_leaf_delta": leaves} if enabled else
+              {"parent_root": 0, "parent_leaf": 0, "final_leaf": 0, "mutation_leaf_delta": 0})
+    diagnostics = ([{"component_type": "fixture::ComparisonRoot", "count": protocol["measured_updates"],
+                     "total_ns": 500, "max_ns": 20},
+                    {"component_type": "fixture::ComparisonLeaf", "count": leaf + leaves,
+                     "total_ns": 1000, "max_ns": 30}] if enabled else [])
     return {"schema_version": 1, "kind": "rustui_cache_comparison_workload", "run_id": run["run_id"],
-            "pid": pid, "mode": run["mode"], "status": "complete", "ax_active_seen": False,
+            "pid": pid, "mode": mode, "diagnostics_enabled": enabled, "diagnostics": diagnostics,
+            "status": "complete", "ax_active_seen": False,
             "native_drag_seen": False, "environment_scope": "empty", "correctness_passed": True,
             "protocol": protocol, "values": [1] * leaves, "mounts": [1] * leaves,
-            "counts": {"parent_root": protocol["measured_updates"], "parent_leaf": leaf,
-                       "final_leaf": leaf + leaves, "mutation_leaf_delta": leaves}}
+            "counts": counts}
 
 
 def raw_capture(pid=100, run_id="test", provenance=None, cpu=20):
@@ -54,27 +63,32 @@ class ComparisonTests(unittest.TestCase):
         compiler.start()
         self.addCleanup(compiler.stop)
 
-    def plan(self, workload="8-leaf", session="fixture"):
-        path = comparison.make_plan(session, self.binary, workload)
+    def plan(self, workload="8-leaf", session="fixture", diagnostics_overhead=False):
+        path = comparison.make_plan(session, self.binary, workload, diagnostics_overhead)
         return path, comparison.load_plan(path)
 
-    def fixture_captures(self, control_cpu=20):
-        path, plan = self.plan()
+    def fixture_captures(self, control_cpu=20, diagnostics_overhead=False):
+        path, plan = self.plan(session="fixture-diag" if diagnostics_overhead else "fixture",
+                               diagnostics_overhead=diagnostics_overhead)
         for run in plan["runs"]:
             pid = 1000 + run["index"]
             result_path = comparison.path_for(run["run_id"], "result")
             result = workload(run, pid, plan["protocol"])
             runtime_metrics.write_json_exclusive(result_path, result)
             final = {"schema_version": 1, "kind": "rustui_cache_comparison_final",
-                     "run_id": run["run_id"], "mode": run["mode"], "pid": pid,
+                "run_id": run["run_id"], "mode": run["runtime_mode"],
+                "diagnostics_enabled": run["diagnostics_enabled"], "pid": pid,
                      "status": "complete", "ax_active_seen": False,
                      "native_drag_seen": False, "workload": result}
             final_path = comparison.path_for(run["run_id"], "final")
             runtime_metrics.write_json_exclusive(final_path, final)
-            cpu = 10000 if run["phase"] == "warmup" else (10 if run["mode"] == "cached" else control_cpu)
+            cpu = 10000 if run["phase"] == "warmup" else (
+                10 if run["mode"] in ("cached", "diagnostics_on") else control_cpu)
             raw = raw_capture(pid, run["run_id"], {"plan": comparison.identity(path)}, cpu)
             record = {"status": "complete", "run_id": run["run_id"], "pid": pid,
-                      "mode": run["mode"], "phase": run["phase"], "pair": run["pair"],
+                      "mode": run["mode"], "runtime_mode": run["runtime_mode"],
+                      "diagnostics_enabled": run["diagnostics_enabled"],
+                      "phase": run["phase"], "pair": run["pair"],
                       "plan": comparison.identity(path), "executable": comparison.identity(self.binary),
                       "workload": result, "workload_artifact": comparison.identity(result_path),
                       "final_workload": final,
@@ -165,6 +179,59 @@ class ComparisonTests(unittest.TestCase):
         with self.assertRaisesRegex(ValueError, "wrong raw lowering counts"):
             comparison.check_workload(bad, run, 7, protocol)
 
+    def test_diagnostics_overhead_plan_pairs_same_uncached_workload(self):
+        path, plan = self.plan("32-leaf", "diag-fixture", diagnostics_overhead=True)
+        self.assertEqual(plan["comparison"], "diagnostics_overhead")
+        self.assertEqual([run["mode"] for run in plan["runs"][:4]],
+                         ["diagnostics_on", "diagnostics_off", "diagnostics_off", "diagnostics_on"])
+        self.assertTrue(all(run["runtime_mode"] == "uncached" for run in plan["runs"]))
+        for run in plan["runs"]:
+            self.assertEqual(run["bundle_configuration"]["diagnostics_enabled"],
+                             run["mode"] == "diagnostics_on")
+            self.assertEqual(comparison.read_json(run["configuration_path"]), run["bundle_configuration"])
+        self.assertEqual(comparison.load_plan(path)["comparison"], "diagnostics_overhead")
+
+    def test_diagnostics_toggle_requires_raw_per_type_timings(self):
+        protocol = comparison.WORKLOADS["8-leaf"]
+        enabled_run = {"run_id": "fixture", "mode": "diagnostics_on",
+                       "runtime_mode": "uncached", "diagnostics_enabled": True}
+        enabled = workload(enabled_run, 7, protocol)
+        comparison.check_workload(enabled, enabled_run, 7, protocol)
+        enabled["diagnostics"] = []
+        with self.assertRaisesRegex(ValueError, "missing per-type diagnostic timings"):
+            comparison.check_workload(enabled, enabled_run, 7, protocol)
+        enabled = workload(enabled_run, 7, protocol)
+        enabled["diagnostics"].append(dict(enabled["diagnostics"][0]))
+        with self.assertRaisesRegex(ValueError, "duplicate"):
+            comparison.check_workload(enabled, enabled_run, 7, protocol)
+
+        for field, value, message in (("count", 1, "counts differ"),
+                                      ("total_ns", -1, "invalid per-type"),
+                                      ("max_ns", 501, "invalid per-type")):
+            malformed = workload(enabled_run, 7, protocol)
+            malformed["diagnostics"][0][field] = value
+            with self.subTest(field=field), self.assertRaisesRegex(ValueError, message):
+                comparison.check_workload(malformed, enabled_run, 7, protocol)
+        disabled_run = {"run_id": "fixture", "mode": "diagnostics_off",
+                        "runtime_mode": "uncached", "diagnostics_enabled": False}
+        disabled = workload(disabled_run, 7, protocol)
+        comparison.check_workload(disabled, disabled_run, 7, protocol)
+        disabled["diagnostics"] = [{"component_type": "ComparisonRoot", "count": 1,
+                                    "total_ns": 1, "max_ns": 1}]
+        with self.assertRaisesRegex(ValueError, "diagnostic-off run recorded timings"):
+            comparison.check_workload(disabled, disabled_run, 7, protocol)
+
+    def test_diagnostics_summary_reports_paired_on_off_spread(self):
+        path, _ = self.fixture_captures(control_cpu=20, diagnostics_overhead=True)
+        report = comparison.read_json(comparison.summarize(path))
+        self.assertEqual(report["comparison"], "diagnostics_overhead")
+        self.assertEqual(set(report["modes"]), {"diagnostics_on", "diagnostics_off"})
+        self.assertEqual(report["ratio_spread"]["attached_cpu_ns"]["median"], 0.5)
+        self.assertEqual(report["measured_pairs"], 5)
+        self.assertEqual(set(report["diagnostic_timings"]["diagnostics_on"]),
+                         {"fixture::ComparisonRoot", "fixture::ComparisonLeaf"})
+        self.assertEqual(report["diagnostic_timings"]["diagnostics_off"], {})
+
     def test_metric_values_use_attached_delta_and_sampled_rss(self):
         self.assertEqual(comparison.metric_values(raw_capture()), {"attached_cpu_ns": 20,
                          "attached_elapsed_ns": 100, "median_sampled_rss_bytes": 150, "max_sampled_rss_bytes": 200})
@@ -181,11 +248,14 @@ class ComparisonTests(unittest.TestCase):
         with self.assertRaises(ValueError):
             comparison.metric_values(raw)
 
-    def capture_fixture(self, status="complete", partial=False, final_guard=None, missing_final=False):
-        path, plan = self.plan()
+    def capture_fixture(self, status="complete", partial=False, final_guard=None, missing_final=False,
+                        diagnostics_overhead=False):
+        path, plan = self.plan(session="capture-diag" if diagnostics_overhead else "capture",
+                               diagnostics_overhead=diagnostics_overhead)
         run, pid = plan["runs"][0], 123
         ready = {"schema_version": 1, "kind": "rustui_cache_comparison_ready", "run_id": run["run_id"],
-                 "mode": run["mode"], "pid": pid, "executable": str(self.binary)}
+                "mode": run["runtime_mode"], "diagnostics_enabled": run["diagnostics_enabled"],
+                "pid": pid, "executable": str(self.binary)}
         runtime_metrics.write_json_exclusive(comparison.path_for(run["run_id"], "ready"), ready)
 
         def fake_collect(*args, provenance, stop_requested):
@@ -206,7 +276,8 @@ class ComparisonTests(unittest.TestCase):
                 return
             ax, drag = final_guard or (False, False)
             final = {"schema_version": 1, "kind": "rustui_cache_comparison_final",
-                     "run_id": run["run_id"], "mode": run["mode"], "pid": pid,
+                "run_id": run["run_id"], "mode": run["runtime_mode"],
+                "diagnostics_enabled": run["diagnostics_enabled"], "pid": pid,
                      "status": "excluded_interaction" if ax or drag else status,
                      "ax_active_seen": ax, "native_drag_seen": drag,
                      "workload": comparison.read_json(comparison.path_for(run["run_id"], "result"))}
@@ -236,6 +307,14 @@ class ComparisonTests(unittest.TestCase):
         record, outcome = self.capture_fixture(partial=True)
         self.assertEqual(outcome, "failed")
         self.assertEqual(record["raw_process_metrics"]["completion"]["status"], "incomplete")
+
+    def test_collector_validates_diagnostic_toggle_ready_and_final(self):
+        record, outcome = self.capture_fixture(diagnostics_overhead=True)
+        self.assertEqual(outcome, "complete")
+        self.assertEqual(record["mode"], "diagnostics_on")
+        self.assertEqual(record["runtime_mode"], "uncached")
+        self.assertTrue(record["diagnostics_enabled"])
+        self.assertEqual(record["workload"]["diagnostics"][0]["total_ns"], 500)
 
     def test_late_ax_guard_excludes_run(self):
         record, outcome = self.capture_fixture(final_guard=(True, False))
