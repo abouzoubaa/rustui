@@ -10,6 +10,7 @@ from unittest.mock import patch
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 import compare_cache_workload as comparison
+import record_build_provenance
 import runtime_metrics
 
 
@@ -48,10 +49,13 @@ class ComparisonTests(unittest.TestCase):
         self.root = Path(self.temporary.name)
         self.output = self.root / "target/headstart/performance"
         self.output.mkdir(parents=True)
-        for name in comparison.INPUTS:
+        for name in set(comparison.INPUTS) | set(record_build_provenance.INPUT_FILES):
             path = self.root / name
             path.parent.mkdir(parents=True, exist_ok=True)
             path.write_text(name)
+        app_fixture = self.root / "apps/fixture/src"
+        app_fixture.mkdir(parents=True)
+        (app_fixture / "main.rs").write_text("fn main() {}\n")
         self.binary = self.root / "cache_comparison"
         self.binary.write_bytes(b"same native binary")
         for target, field, value in [(comparison, "ROOT", self.root), (comparison, "OUTPUT_DIR", self.output),
@@ -62,9 +66,30 @@ class ComparisonTests(unittest.TestCase):
         compiler = patch.object(comparison, "compiler_identity", return_value={"sha256": "fixture compiler"})
         compiler.start()
         self.addCleanup(compiler.stop)
+        revision = "a" * 40
+        git = patch.object(comparison, "git_commit", return_value=revision)
+        git.start()
+        self.addCleanup(git.stop)
+        self.provenance_path = self.root / "build-provenance.json"
+        captured = {
+            "git_commit": revision,
+            "input_file_hashes": [record_build_provenance.file_record(self.root, name)
+                                  for name in record_build_provenance.INPUT_FILES],
+            "workspace_crate_app_file_hashes": record_build_provenance.source_records(self.root),
+        }
+        captured["source_snapshot_sha256"] = record_build_provenance.snapshot_digest(captured)
+        provenance = {
+            "schema_version": 1,
+            "selected_binary": record_build_provenance.file_record(self.root, self.binary.resolve()),
+            "compiler_identity": comparison.compiler_identity(),
+            "build_facts_declared_by_caller": {"status": "observed_success", "exit_status": 0},
+            "captured_current_workspace": captured,
+        }
+        self.provenance_path.write_text(json.dumps(provenance))
 
     def plan(self, workload="8-leaf", session="fixture", diagnostics_overhead=False):
-        path = comparison.make_plan(session, self.binary, workload, diagnostics_overhead)
+        path = comparison.make_plan(session, self.binary, workload, diagnostics_overhead,
+                                    self.provenance_path if diagnostics_overhead else None)
         return path, comparison.load_plan(path)
 
     def fixture_captures(self, control_cpu=20, diagnostics_overhead=False):
@@ -190,6 +215,46 @@ class ComparisonTests(unittest.TestCase):
                              run["mode"] == "diagnostics_on")
             self.assertEqual(comparison.read_json(run["configuration_path"]), run["bundle_configuration"])
         self.assertEqual(comparison.load_plan(path)["comparison"], "diagnostics_overhead")
+
+    def test_diagnostics_overhead_requires_and_binds_build_provenance(self):
+        with self.assertRaisesRegex(ValueError, "require --build-provenance"):
+            comparison.make_plan("missing-provenance", self.binary, diagnostics_overhead=True)
+        path, plan = self.plan(session="bound-provenance", diagnostics_overhead=True)
+        self.assertEqual(plan["build_provenance"], comparison.identity(self.provenance_path))
+        comparison.load_plan(path)
+
+        provenance = comparison.read_json(self.provenance_path)
+        provenance["tampered_note"] = True
+        self.provenance_path.write_text(json.dumps(provenance))
+        with self.assertRaisesRegex(ValueError, "provenance record changed"):
+            comparison.load_plan(path)
+
+    def test_diagnostics_overhead_rejects_wrong_binary_compiler_and_source_inputs(self):
+        baseline = json.loads(self.provenance_path.read_text())
+        mutations = (
+            (lambda record: record["selected_binary"].update(sha256="0" * 64), "binary does not match"),
+            (lambda record: record.update(compiler_identity={"sha256": "wrong"}), "compiler differs"),
+            (lambda record: record["captured_current_workspace"]["input_file_hashes"][0].update(
+                sha256="0" * 64), "source snapshot digest is invalid"),
+        )
+        for index, (mutate, message) in enumerate(mutations):
+            with self.subTest(message=message):
+                record = copy.deepcopy(baseline)
+                mutate(record)
+                self.provenance_path.write_text(json.dumps(record))
+                with self.assertRaisesRegex(ValueError, message):
+                    comparison.make_plan(f"bad-provenance-{index}", self.binary,
+                                         diagnostics_overhead=True,
+                                         build_provenance=self.provenance_path)
+        self.provenance_path.write_text(json.dumps(baseline))
+
+        source = self.root / "Cargo.toml"
+        original = source.read_text()
+        source.write_text("changed after build\n")
+        with self.assertRaisesRegex(ValueError, "build provenance input mismatch: Cargo.toml"):
+            comparison.make_plan("changed-source", self.binary, diagnostics_overhead=True,
+                                 build_provenance=self.provenance_path)
+        source.write_text(original)
 
     def test_diagnostics_toggle_requires_raw_per_type_timings(self):
         protocol = comparison.WORKLOADS["8-leaf"]

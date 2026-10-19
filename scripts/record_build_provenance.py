@@ -2,7 +2,8 @@
 """Capture current RustUI build inputs alongside an existing build log.
 
 This utility records metadata only. It does not parse the log as proof of a
-successful build and does not run Cargo, rustc, Git mutations, or benchmarks.
+successful build or run Cargo, Git mutations, or benchmarks. It queries the
+configured Headstart rustc identity for comparison with the selected binary.
 """
 
 import argparse
@@ -15,6 +16,8 @@ import platform
 import subprocess
 import sys
 
+from calibrate_cache_workload import compiler_identity
+
 
 WORKSPACE_ROOT = Path(__file__).resolve().parent.parent
 INPUT_FILES = (
@@ -23,6 +26,16 @@ INPUT_FILES = (
     "rust-toolchain.toml",
     "scripts/cargo-headstart",
     ".cargo/config.toml",
+    "themes/macos27.json",
+    "crates/rustui/examples/cache_comparison.rs",
+    "crates/rustui/src/view.rs",
+    "crates/rustui/src/runtime/component_host.rs",
+    "crates/rustui/src/runtime/render_diagnostics.rs",
+    "scripts/compare_cache_workload.py",
+    "scripts/collect_runtime_metrics.py",
+    "scripts/runtime_metrics.py",
+    "scripts/calibrate_cache_workload.py",
+    "docs/tasks/P3_DIAGNOSTICS_OVERHEAD_CALIBRATION.md",
 )
 SOURCE_ROOTS = ("crates", "apps")
 IGNORED_DIRS = {".git", "target", "vendor", "node_modules"}
@@ -49,7 +62,7 @@ def sha256_file(path):
 
 def file_record(root, relative_path):
     path = root / relative_path
-    record = {"path": relative_path}
+    record = {"path": str(relative_path)}
     try:
         if not path.is_file():
             record["status"] = "missing"
@@ -116,6 +129,16 @@ def git_commit(root):
     return commit or None
 
 
+def snapshot_digest(captured):
+    payload = {
+        "git_commit": captured["git_commit"],
+        "input_file_hashes": captured["input_file_hashes"],
+        "workspace_crate_app_file_hashes": captured["workspace_crate_app_file_hashes"],
+    }
+    encoded = json.dumps(payload, sort_keys=True, separators=(",", ":")).encode("utf-8")
+    return hashlib.sha256(encoded).hexdigest()
+
+
 def parse_exit_status(value):
     try:
         status = int(value)
@@ -142,6 +165,8 @@ def build_parser():
                         help="caller-observed command exit status; not independently verified")
     parser.add_argument("--cargo-version", help="caller-supplied Cargo version string; no tool is queried")
     parser.add_argument("--rustc-version", help="caller-supplied rustc version string; no tool is queried")
+    parser.add_argument("--binary", type=Path,
+                        help="built executable to bind into the record (relative to workspace or absolute)")
     return parser
 
 
@@ -181,6 +206,7 @@ def main():
     else:
         build_status = "observed_success" if exit_status == 0 else "observed_failure"
 
+    binary_path = args.binary if args.binary is None or args.binary.is_absolute() else root / args.binary
     document = {
         "schema_version": 1,
         "recorded_at_utc": captured_at,
@@ -191,6 +217,8 @@ def main():
             "size_bytes": log_size,
             "parsed_for_success": False,
         },
+        "selected_binary": file_record(root, binary_path) if binary_path else None,
+        "compiler_identity": compiler_identity() if binary_path else None,
         "build_facts_declared_by_caller": {
             "command": args.command,
             "profile": args.profile,
@@ -224,6 +252,9 @@ def main():
             "They are not asserted to match the conditions when the supplied log was produced."
         ),
     }
+    document["captured_current_workspace"]["source_snapshot_sha256"] = snapshot_digest(
+        document["captured_current_workspace"]
+    )
 
     destination = output_path(root, args.output)
     if destination.resolve() == log:

@@ -10,13 +10,27 @@ Measure the overhead of RustUI host-lowering diagnostics on one executable and o
 
 ## Required paired run protocol
 
-Build the changed `cache_comparison` example once with `./scripts/cargo-headstart build -p rustui --example cache_comparison --locked --offline` and use that exact binary for all runs. Create a fresh plan with:
+Build the changed `cache_comparison` example once and capture its build output and provenance before planning. The provenance record binds the executable SHA-256, installed Headstart compiler identity, Git revision, complete `crates/` and `apps/` source hashes, and the relevant workspace input hashes. It is hashed into the plan and revalidated before collection and summary. The helper records caller-declared command/exit status; it does not parse the log or independently certify historical compiler execution. Do not edit build inputs between the build and provenance capture.
+
+```sh
+mkdir -p target/headstart/evidence
+./scripts/cargo-headstart build -p rustui --example cache_comparison --locked --offline \
+  > target/headstart/evidence/diagnostics-build.log 2>&1
+python3 scripts/record_build_provenance.py target/headstart/evidence/diagnostics-build.log \
+  --binary target/headstart/debug/examples/cache_comparison \
+  --command './scripts/cargo-headstart build -p rustui --example cache_comparison --locked --offline' \
+  --profile dev --exit-status 0 \
+  --output target/headstart/evidence/diagnostics-build-provenance.json
+```
+
+Create a fresh plan with the matching provenance record:
 
 ```sh
 python3 scripts/compare_cache_workload.py plan \
   --session diagnostics-unique-session \
   --binary target/headstart/debug/examples/cache_comparison \
-  --workload 32-leaf --diagnostics-overhead
+  --workload 32-leaf --diagnostics-overhead \
+  --build-provenance target/headstart/evidence/diagnostics-build-provenance.json
 ```
 
 The plan holds cache mode at `uncached`, pairs `diagnostics_on` and `diagnostics_off`, and alternates pair order. It contains one warmup pair and five measured pairs. Follow its `launch_argv_for_cua` entries in index order. For each ready process, attach with the documented command in `P3D_CACHE_COMPARISON.md` using the diagnostics plan path and that run's index and PID. Summarize after all twelve captures with `python3 scripts/compare_cache_workload.py summarize --plan <plan-path>`. Each pair differs only in `diagnostics_enabled`. Preserve every run, including failed or excluded captures.
