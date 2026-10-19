@@ -105,7 +105,7 @@ pub struct NavigationSplitView {
     id: Identity,
     items: Vec<NavigationSplitItem>,
     selection: Binding<Option<String>>,
-    accessibility_label: Option<SharedString>,
+    accessibility_label: Option<SplitLabel>,
 }
 
 impl NavigationSplitView {
@@ -129,7 +129,13 @@ impl NavigationSplitView {
 
     /// Names the navigation tree for assistive technology.
     pub fn accessibility_label(mut self, label: impl Into<SharedString>) -> Self {
-        self.accessibility_label = Some(label.into());
+        self.accessibility_label = Some(SplitLabel::Literal(label.into()));
+        self
+    }
+
+    /// Resolves the navigation tree name from the active RustUI message catalog.
+    pub fn localized_accessibility_label(mut self, message_id: impl Into<SharedString>) -> Self {
+        self.accessibility_label = Some(SplitLabel::Message(message_id.into()));
         self
     }
 }
@@ -166,7 +172,10 @@ impl View for NavigationSplitView {
             self.selection.clone(),
         );
         let sidebar = match &self.accessibility_label {
-            Some(label) => sidebar.accessibility_label(label.clone()),
+            Some(SplitLabel::Literal(label)) => sidebar.accessibility_label(label.clone()),
+            Some(SplitLabel::Message(message_id)) => {
+                sidebar.accessibility_label(context.localized_message(message_id.as_ref()))
+            }
             None => sidebar,
         };
         let route = selected
@@ -219,7 +228,22 @@ mod tests {
         assert!(view.accessibility_label.is_none());
 
         let view = view.accessibility_label("Main navigation");
-        assert_eq!(view.accessibility_label.as_deref(), Some("Main navigation"));
+        assert!(matches!(
+            view.accessibility_label,
+            Some(super::SplitLabel::Literal(label)) if label.as_ref() == "Main navigation"
+        ));
+    }
+
+    #[test]
+    fn localized_accessibility_label_replaces_literal_label() {
+        let selection = Binding::new(None, read_selection, write_selection);
+        let view = NavigationSplitView::new("main", [item("home")], selection)
+            .accessibility_label("Main navigation")
+            .localized_accessibility_label("navigation.main");
+        assert!(matches!(
+            view.accessibility_label,
+            Some(super::SplitLabel::Message(message_id)) if message_id.as_ref() == "navigation.main"
+        ));
     }
 
     #[test]

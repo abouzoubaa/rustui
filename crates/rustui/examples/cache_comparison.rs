@@ -248,14 +248,28 @@ fn finish(cx: &mut App, state: &Rc<RefCell<State>>, requested: &str) {
         return;
     }
     let (_, leaf) = counts(cx);
-    let expected = if state.config.cached {
-        0
+    let expected_parent_root = if state.config.diagnostics_enabled {
+        u64::from(UPDATES)
     } else {
-        state.leaves as u64 * u64::from(UPDATES)
+        0
     };
-    let valid = state.parent_root == Some(u64::from(UPDATES))
-        && state.parent_leaf == Some(expected)
-        && leaf.checked_sub(expected) == Some(state.leaves as u64)
+    let expected_parent_leaf = if state.config.diagnostics_enabled && !state.config.cached {
+        state.leaves as u64 * u64::from(UPDATES)
+    } else {
+        0
+    };
+    let expected_mutation_leaf_delta = if state.config.diagnostics_enabled {
+        state.leaves as u64
+    } else {
+        0
+    };
+    let mutation_leaf_delta = state
+        .parent_leaf
+        .and_then(|parent_leaf| leaf.checked_sub(parent_leaf));
+    let valid = state.parent_root == Some(expected_parent_root)
+        && state.parent_leaf == Some(expected_parent_leaf)
+        && leaf == expected_parent_leaf + expected_mutation_leaf_delta
+        && mutation_leaf_delta == Some(expected_mutation_leaf_delta)
         && state.children.len() == state.leaves
         && state.values.borrow().iter().all(|value| *value == 1)
         && state.mounts.borrow().iter().all(|mounts| *mounts == 1);
@@ -274,7 +288,7 @@ fn finish(cx: &mut App, state: &Rc<RefCell<State>>, requested: &str) {
         "protocol": {"leaves": state.leaves, "lines_per_leaf": LINES, "width": WIDTH, "height": HEIGHT,
             "warmup_updates": WARMUP, "measured_updates": UPDATES},
         "counts": {"parent_root": state.parent_root, "parent_leaf": state.parent_leaf,
-            "final_leaf": leaf, "mutation_leaf_delta": state.parent_leaf.and_then(|n| leaf.checked_sub(n))},
+            "final_leaf": leaf, "mutation_leaf_delta": mutation_leaf_delta},
         "diagnostics": render_diagnostics_snapshot(cx).hosts.into_iter().map(|host| json!({
             "component_type": host.component_type,
             "count": host.count,

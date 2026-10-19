@@ -23,6 +23,16 @@ pub struct StepperView {
     disabled: bool,
 }
 
+fn stepped_value(value: i32, minimum: i32, maximum: i32, step: i32, increment: bool) -> i32 {
+    let value = value.clamp(minimum, maximum);
+    let stepped = if increment {
+        value.saturating_add(step)
+    } else {
+        value.saturating_sub(step)
+    };
+    stepped.clamp(minimum, maximum)
+}
+
 impl StepperView {
     pub fn new(label: impl Into<SharedString>, value: Binding<i32>) -> Self {
         Self {
@@ -88,10 +98,7 @@ impl View for StepperView {
             let maximum = *self.range.end();
             let step = self.step;
             move |value| {
-                let next = (*value)
-                    .clamp(minimum, maximum)
-                    .saturating_sub(step)
-                    .clamp(minimum, maximum);
+                let next = stepped_value(*value, minimum, maximum, step, false);
                 if next == *value {
                     return false;
                 }
@@ -104,10 +111,7 @@ impl View for StepperView {
             let maximum = *self.range.end();
             let step = self.step;
             move |value| {
-                let next = (*value)
-                    .clamp(minimum, maximum)
-                    .saturating_add(step)
-                    .clamp(minimum, maximum);
+                let next = stepped_value(*value, minimum, maximum, step, true);
                 if next == *value {
                     return false;
                 }
@@ -155,5 +159,32 @@ impl View for StepperView {
                     .child(styled_element(decrement_button, &decrement_style)),
             )
             .into_any_element()
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::stepped_value;
+
+    #[test]
+    fn stepper_clamps_owner_value_before_applying_each_step() {
+        assert_eq!(stepped_value(4, 5, 15, 2, false), 5);
+        assert_eq!(stepped_value(16, 5, 15, 2, true), 15);
+        assert_eq!(stepped_value(10, 5, 15, 2, true), 12);
+        assert_eq!(stepped_value(10, 5, 15, 2, false), 8);
+    }
+
+    #[test]
+    fn stepper_saturates_at_integer_limits_and_configured_bounds() {
+        assert_eq!(
+            stepped_value(i32::MAX, i32::MIN, i32::MAX, 1, true),
+            i32::MAX
+        );
+        assert_eq!(
+            stepped_value(i32::MIN, i32::MIN, i32::MAX, 1, false),
+            i32::MIN
+        );
+        assert_eq!(stepped_value(14, 5, 15, 4, true), 15);
+        assert_eq!(stepped_value(6, 5, 15, 4, false), 5);
     }
 }

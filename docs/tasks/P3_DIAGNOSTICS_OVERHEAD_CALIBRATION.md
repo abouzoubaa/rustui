@@ -42,3 +42,48 @@ For every run, retain the binary/source/config identities, workload record, raw 
 A valid calibration requires complete correctness records, matching workload protocol and binary hashes, unique native process identities, no active accessibility or drag observations, all five measured pairs, and preserved raw samples. Process CPU includes normal UI work, diagnostics, and collection; the paired delta estimates the instrumentation's effect for this specific workload. It does not identify a universal overhead or justify cache promotion. Small or noisy paired differences remain inconclusive.
 
 The earlier P3A record `target/headstart/milestone20-host-diagnostics-gui.json` contains functional observations only and is not this calibration. The P3D cache-comparison sessions always enabled diagnostics and compare cache modes, so they cannot serve as diagnostics-on/off pairs.
+
+
+## 2026-10-19 initial preparation checkpoint
+
+The locked `cache_comparison` example build exited 0; the raw log is
+`target/headstart/evidence/diagnostics-build-20261019.log`. The build emitted
+existing unused-import and dead-code warnings. Build provenance is recorded at
+`target/headstart/evidence/diagnostics-build-provenance-20261019.json`; its
+SHA-256 is bound into the plan
+`target/headstart/performance/cache-comparison-diagnostics-overhead-32-20261019-plan.json`.
+The plan has one warmup pair and five measured pairs (12 runs total), all using
+the same binary and the uncached 32-leaf workload. The focused Python suites
+passed 33 tests.
+
+The initial plan was not launched because CUA refused access to
+`com.apple.Terminal`. A Finder-based native launch route was subsequently
+available, so that checkpoint is superseded by the rerun below.
+
+## 2026-10-19 collector rejection and correction
+
+The first Finder-launched process on the `rerun2` plan completed its 32-leaf
+workload with correctness passing and both AX and native-drag observations
+false. The capture was preserved with `status=failed` and excluded from any
+summary: the collector rejected the timing record because it expected the
+`ComparisonRoot` timing count to equal `parent_root` (100), while the raw record
+contained 101 root timings. It recorded 3,232 `ComparisonLeaf` timings, matching
+the final leaf count. The last mutation phase performs one further root
+lowering after the measured parent-update counter is captured, so the correct
+root timing expectation is `parent_root + 1`.
+
+The validator and its fixtures now encode that distinction. The focused
+comparison suite passed 32 tests. Preserve the rejected run; the corrected
+validator requires a new build provenance record and a fresh plan before any
+additional native launches.
+
+## 2026-10-19 diagnostics-off correctness gate
+
+The diagnostics-off run on the `rerun4` plan produced all 32 expected values
+and mounts, with AX and native drag both false, but the probe marked it
+`failed_correctness`. Its internal finish check still required parent and leaf
+lowering counters even though diagnostics were disabled, leaving those counts
+at zero. The failed capture is preserved and excluded. The probe now expects
+zero diagnostic counts in the off arm while continuing to check values,
+mounts, child count, and the mutation delta. A fresh build provenance record
+and plan are required before further collection.

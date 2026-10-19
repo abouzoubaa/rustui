@@ -251,8 +251,12 @@ def check_workload(result, run, pid, protocol):
                    for key in ("count", "total_ns", "max_ns")) or host["max_ns"] > host["total_ns"]:
                 raise ValueError("invalid per-type diagnostic timing")
         counts = result["counts"]
-        expected_counts = {"ComparisonRoot": counts["parent_root"],
-                           "ComparisonLeaf": counts["final_leaf"]}
+        # The final mutation phase produces one root lowering after parent_root
+        # snapshots the measured update loop.
+        expected_counts = {
+            "ComparisonRoot": counts["parent_root"] + 1,
+            "ComparisonLeaf": counts["final_leaf"],
+        }
         if any(hosts[name]["count"] != count for name, count in expected_counts.items()):
             raise ValueError("diagnostic timing counts differ from lowering counts")
 

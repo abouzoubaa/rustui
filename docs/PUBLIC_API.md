@@ -853,6 +853,12 @@ point width range. It does not adaptively collapse to a single column. Place
 the split in a parent with bounded width and height so both columns receive a
 finite layout extent. The M78 native checks used a 560×300 parent.
 
+Name the navigation tree for assistive technology with
+`.accessibility_label("Settings navigation")`. Use
+`.localized_accessibility_label("settings.navigation")` when the name should
+follow the active RustUI message catalog; it resolves on each render, like a
+localized destination label.
+
 The 560×300 native checks observed that `None` and unknown IDs hide the detail
 while keeping the sidebar available; selecting Settings or Files from the
 sidebar restored a detail. Files text and counter bindings updated, reversing

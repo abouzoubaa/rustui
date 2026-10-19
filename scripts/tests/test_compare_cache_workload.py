@@ -23,7 +23,7 @@ def workload(run, pid, protocol=None):
     counts = ({"parent_root": protocol["measured_updates"], "parent_leaf": leaf,
                "final_leaf": leaf + leaves, "mutation_leaf_delta": leaves} if enabled else
               {"parent_root": 0, "parent_leaf": 0, "final_leaf": 0, "mutation_leaf_delta": 0})
-    diagnostics = ([{"component_type": "fixture::ComparisonRoot", "count": protocol["measured_updates"],
+    diagnostics = ([{"component_type": "fixture::ComparisonRoot", "count": protocol["measured_updates"] + 1,
                      "total_ns": 500, "max_ns": 20},
                     {"component_type": "fixture::ComparisonLeaf", "count": leaf + leaves,
                      "total_ns": 1000, "max_ns": 30}] if enabled else [])
@@ -266,6 +266,10 @@ class ComparisonTests(unittest.TestCase):
                        "runtime_mode": "uncached", "diagnostics_enabled": True}
         enabled = workload(enabled_run, 7, protocol)
         comparison.check_workload(enabled, enabled_run, 7, protocol)
+        self.assertEqual(
+            enabled["diagnostics"][0]["count"],
+            enabled["counts"]["parent_root"] + 1,
+        )
         enabled["diagnostics"] = []
         with self.assertRaisesRegex(ValueError, "missing per-type diagnostic timings"):
             comparison.check_workload(enabled, enabled_run, 7, protocol)
@@ -289,6 +293,33 @@ class ComparisonTests(unittest.TestCase):
                                     "total_ns": 1, "max_ns": 1}]
         with self.assertRaisesRegex(ValueError, "diagnostic-off run recorded timings"):
             comparison.check_workload(disabled, disabled_run, 7, protocol)
+
+    def test_diagnostic_root_count_includes_exactly_one_mutation_phase_redraw(self):
+        protocol = comparison.WORKLOADS["8-leaf"]
+        run = {
+            "run_id": "fixture",
+            "mode": "diagnostics_on",
+            "runtime_mode": "uncached",
+            "diagnostics_enabled": True,
+        }
+        result = workload(run, 7, protocol)
+        self.assertEqual(result["counts"]["parent_root"], protocol["measured_updates"])
+        self.assertEqual(
+            result["diagnostics"][0]["count"],
+            protocol["measured_updates"] + 1,
+        )
+        comparison.check_workload(result, run, 7, protocol)
+
+        for invalid_count in (
+            protocol["measured_updates"],
+            protocol["measured_updates"] + 2,
+        ):
+            invalid = workload(run, 7, protocol)
+            invalid["diagnostics"][0]["count"] = invalid_count
+            with self.subTest(count=invalid_count), self.assertRaisesRegex(
+                ValueError, "diagnostic timing counts differ"
+            ):
+                comparison.check_workload(invalid, run, 7, protocol)
 
     def test_diagnostics_summary_reports_paired_on_off_spread(self):
         path, _ = self.fixture_captures(control_cpu=20, diagnostics_overhead=True)

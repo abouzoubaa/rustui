@@ -4,8 +4,8 @@
 
 - Follow the user's authorized task scope and make related file changes needed to complete it without requesting approval for each file.
 - Once the user authorizes an objective, proceed with its necessary file edits, implementation, documentation, and validation without pausing for another approval. Keep the work reviewable and report completed milestones as requested.
-- Ask before expanding into a materially different objective, changing pinned dependency revisions, promoting an upstream patch, performing an irreversible external action, or committing/pushing. These limits do not create a per-file approval requirement.
-- Preserve unrelated work. Do not commit, branch, rebase, push, or initialize Git without explicit authorization.
+- Ask before expanding into a materially different objective, changing pinned dependency revisions, promoting an upstream patch, or performing an irreversible external action. These limits do not create a per-file approval requirement.
+- The user has granted standing authorization to create branches, commit, rebase, push, and initialize Git as needed to complete the active RustUI roadmap objective. Keep Git changes scoped and reviewable, and preserve unrelated work.
 
 ## Architectural boundaries
 

@@ -27,9 +27,10 @@ that the entire stage or framework is accepted.
 
 | Area | Latest evidence and remaining work |
 | --- | --- |
-| Tests | Latest M78 workspace run: 252 passed, 0 failed across 12 binaries (`target/headstart/milestone78-final-workspace-tests.log`). Earlier M75–M76 run passed 248 across 12 binaries. |
+| Tests | Current locked workspace all-targets run after M118 passed 328 tests across 18 result groups (`target/headstart/roadmap-workspace-all-targets-tests-20261019-m118-rerun.log`). The default `cargo test --workspace --locked` also attempted rustdoc and failed there: the installed Headstart tree has no stage1 `rustdoc`, so Cargo used Homebrew rustdoc 1.97.1 against Headstart-built artifacts. Doctests remain unverified. |
 | P3D comparison validation | 24 focused Python tests passed after the probe fix; Headstart check/build passed. Finder/CUA 32-leaf session completed 12 processes (one warmup pair plus five measured pairs); all correctness checks passed with AX/drag false. Median paired cached/uncached attached CPU ratio 0.0729 (range 0.0718–0.0759); median max-sampled RSS ratio 0.9873. Process-level evidence only, not frame/GPU or visual acceptance. The prior 8-leaf result remains documented separately. See `docs/tasks/P3D_CACHE_COMPARISON.md`. |
-| Workspace check | Latest M78 viewport all-targets check exited 0 (`target/headstart/milestone78-viewport-all-targets.log`). Earlier recorded M69–M71 and P3D checks remain at their evidence paths; the M66–M68 check failed on M69 macro errors. |
+| P3 diagnostics overhead | The first two Finder captures are preserved and excluded: the diagnostics-on run exposed and fixed a root-timing off-by-one in validation; the diagnostics-off run exposed and fixed a correctness gate that incorrectly required instrumentation counters. The focused comparison suite passes 32 tests. Fresh build provenance and a 12-run 32-leaf diagnostics-on/off plan now validate against current inputs; native collection is pending and no overhead result is claimed. See `docs/tasks/P3_DIAGNOSTICS_OVERHEAD_CALIBRATION.md`. |
+| Workspace check | Current post-M118 `./scripts/cargo-headstart check --workspace --all-targets --locked --offline` exited 0 (`target/headstart/roadmap-workspace-all-targets-check-20261019-m118.log`). Earlier milestone logs remain historical evidence. |
 | Builds and dependency reuse | Latest M78 Playground build exited 0 (`target/headstart/milestone78-final-playground-build.log`). Earlier M66–M68 and M69–M71 builds passed with all three pinned GPUI dependencies fresh. P3D example build passed with all three dependencies fresh; freshness is reuse evidence, not a performance claim. |
 | Focus/editor | M52 FocusScope and M53 CodeEditor bounded native interactions are recorded; focus removal policy, parser-feature approval, syntax highlighting, and full accessibility remain open. |
 | Layout | M74 Frame native acceptance verified retained text in Center/Stretch/Baseline, Stretch background expansion, Undo across mode change, cycle retention, and framed button action. Inner width 160 with horizontal Stretch fixed Input percent-width collapse; outer alignment cycle unchanged. Limits: no exact pixels/caret-selection/full keyboard-AX/RTL/platform acceptance, and no peer-baseline claim. See `target/headstart/milestone74-frame-gui.json`. M54/M55/M58/M61/M62/M63/M64 bounded results and their remaining limits are in the task contracts. |
@@ -1646,3 +1647,30 @@ speedup. Raw plan, summary, build log, and provenance are recorded in
 `docs/tasks/P3D_CACHE_COMPARISON.md`. The temporary app bundle and copied
 executable were removed; shared Cargo caches were preserved. No dependency or
 vendored source changed.
+
+## M116 — Playground story verification status
+
+The Playground status panel now distinguishes stories with some bounded native
+observations, stories with a recorded bounded native check, and stories still
+awaiting interaction and visual verification. The mapping follows the recorded
+Button, Input, Layout, List, Table, Tree, and Navigation evidence. Every
+non-pending label states that broader acceptance remains pending. A focused
+mapping test passed; no GUI acceptance was claimed by this source change.
+
+## M117 — Stepper boundary arithmetic coverage
+
+Extracted the existing owner-current clamp and saturating step calculation to
+one private helper and added focused coverage for out-of-range owner values,
+normal increments/decrements, configured bounds, and `i32` limits. The two
+Stepper tests passed. The change verifies the helper's current behavior; native
+keyboard, focus, and accessibility acceptance remain separate.
+
+## M118 — Localized NavigationSplit accessibility name
+
+Added `NavigationSplitView::localized_accessibility_label` alongside the
+literal label builder. The localized key resolves through the active RustUI
+message catalog during lowering, matching localized destination labels. The
+focused `navigation_split` unit filter passed 4 tests; rustfmt passed. This
+validates builder selection and routing, not native rendering, locale switching,
+screen-reader speech, or broader accessibility acceptance. No GPUI or vendored
+source changed.

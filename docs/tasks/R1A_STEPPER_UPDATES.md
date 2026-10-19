@@ -29,5 +29,4 @@ rendering; the button's disabled state itself updates on the next render.
 - Formatted the owned Stepper source with `rustfmt`.
 - The parent compile reported `E0308` because `clamp` resolved on `&mut i32`.
   Both callbacks now dereference the owner value before clamping.
-- Tests and Cargo commands were not run during this task; the parent is
-  rerunning workspace compilation after this correction.
+- `./scripts/cargo-headstart test -p rustui stepper::tests --locked`: passed, 2 focused tests; the remaining RustUI tests were filtered out.
