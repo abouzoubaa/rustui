@@ -28,7 +28,7 @@ that the entire stage or framework is accepted.
 | Area | Latest evidence and remaining work |
 | --- | --- |
 | Tests | Latest M78 workspace run: 252 passed, 0 failed across 12 binaries (`target/headstart/milestone78-final-workspace-tests.log`). Earlier M75–M76 run passed 248 across 12 binaries. |
-| P3D comparison validation | 21 Python tests passed (`target/headstart/p3d-final-python-tests.log`); example build and all-targets passed. Finder/CUA native session completed 1 correctness warmup pair plus 5 measured pairs (12 processes); all correctness checks passed with AX/drag false. Median cached/uncached attached CPU ratio 0.2895 (range 0.2848–0.3154) for one opt-level-0 workload; max-sampled RSS median ratio 0.9956. This is not frame/GPU/generalized speed evidence; further calibrated workloads and separate native visual acceptance remain. See `docs/tasks/P3D_CACHE_COMPARISON.md`. |
+| P3D comparison validation | 24 focused Python tests passed after the probe fix; Headstart check/build passed. Finder/CUA 32-leaf session completed 12 processes (one warmup pair plus five measured pairs); all correctness checks passed with AX/drag false. Median paired cached/uncached attached CPU ratio 0.0729 (range 0.0718–0.0759); median max-sampled RSS ratio 0.9873. Process-level evidence only, not frame/GPU or visual acceptance. The prior 8-leaf result remains documented separately. See `docs/tasks/P3D_CACHE_COMPARISON.md`. |
 | Workspace check | Latest M78 viewport all-targets check exited 0 (`target/headstart/milestone78-viewport-all-targets.log`). Earlier recorded M69–M71 and P3D checks remain at their evidence paths; the M66–M68 check failed on M69 macro errors. |
 | Builds and dependency reuse | Latest M78 Playground build exited 0 (`target/headstart/milestone78-final-playground-build.log`). Earlier M66–M68 and M69–M71 builds passed with all three pinned GPUI dependencies fresh. P3D example build passed with all three dependencies fresh; freshness is reuse evidence, not a performance claim. |
 | Focus/editor | M52 FocusScope and M53 CodeEditor bounded native interactions are recorded; focus removal policy, parser-feature approval, syntax highlighting, and full accessibility remain open. |
@@ -1623,3 +1623,26 @@ Fixed a stale first-frame result when changed props were reconciled during paren
 
 ## M114 — Paired cache comparison workload sizing
 Extended the existing paired retained-subtree comparison with a selectable `32-leaf` workload while preserving `8-leaf` as the default. Both keep four columns, twelve text views per leaf, 210 × 220 logical-pixel leaf bounds, ten warmup updates, one hundred measured updates, and one mutation per leaf. Plans, per-run configs, summaries, and correctness checks now include the selected workload and scale leaf counts accordingly. The focused comparison/calibration Python suite passed 28 tests, Rust formatting and Python syntax checks passed, and `./scripts/cargo-headstart check -p rustui --example cache_comparison --locked --offline` exited 0. Existing native CPU/RSS measurements still cover only the eight-leaf case; the new 32-leaf option has not been measured or visually accepted. No app was launched, and no dependency or vendored source changed.
+
+
+## M115 — 32-leaf retained-subtree comparison acceptance
+
+The standalone cache comparison now activates the bundled macOS 27 theme before
+rendering RustUI components. This fixes the probe's startup panic; the shared
+framework theme contract remains unchanged. Rust formatting, 24 focused Python
+comparison tests, and `./scripts/cargo-headstart build -p rustui --example
+cache_comparison --locked --offline` passed. A fresh immutable plan then drove
+12 Finder/CUA launches: one correctness-only warmup pair and five measured
+cached/uncached pairs. All correctness checks passed; AX and native drag were
+not observed. Cached runs lowered no children during the 100 parent updates;
+uncached runs lowered 3,200. Both modes lowered 32 children after local
+mutation and produced 32 expected values and mounts.
+
+Median paired attached CPU ratio was 0.0729 (range 0.0718–0.0759); median
+maximum-sampled RSS ratio was 0.9873. The CPU ratio spread was 5.6% of its
+median. These measurements cover this opt-level-0 process workload only. They
+do not establish frame/GPU performance, visual acceptance, or generalized
+speedup. Raw plan, summary, build log, and provenance are recorded in
+`docs/tasks/P3D_CACHE_COMPARISON.md`. The temporary app bundle and copied
+executable were removed; shared Cargo caches were preserved. No dependency or
+vendored source changed.
