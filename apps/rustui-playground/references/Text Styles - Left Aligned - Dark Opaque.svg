@@ -1,0 +1,77 @@
+<svg width="600" height="840" viewBox="0 0 600 840" fill="none" xmlns="http://www.w3.org/2000/svg">
+<rect width="600" height="840" fill="#808080"/>
+<g id="Text Styles - Left Aligned - Dark Opaque">
+<rect width="600" height="840" rx="2" fill="#1E1E1E"/>
+<g id="Labels">
+<text id="Tertiary Label Color" fill="white" fill-opacity="0.85" style="white-space: pre" xml:space="preserve" font-family="SF Pro" font-size="11" letter-spacing="0px"><tspan x="450" y="36.4102">Tertiary Label Color</tspan></text>
+<text id="Secondary Label Colo" fill="white" fill-opacity="0.85" style="white-space: pre" xml:space="preserve" font-family="SF Pro" font-size="11" letter-spacing="0px"><tspan x="240" y="36.4102">Secondary Label Color</tspan></text>
+<text id="Label Color" fill="white" fill-opacity="0.85" style="white-space: pre" xml:space="preserve" font-family="SF Pro" font-size="11" letter-spacing="0px"><tspan x="20" y="36.4102">Label Color</tspan></text>
+</g>
+<text id="Caption2" fill="white" fill-opacity="0.25" style="white-space: pre" xml:space="preserve" font-family="SF Pro" font-size="10" font-weight="590" letter-spacing="0em"><tspan x="450" y="800.055">Caption2</tspan></text>
+<text id="Caption2_2" fill="white" fill-opacity="0.25" style="white-space: pre" xml:space="preserve" font-family="SF Pro" font-size="10" font-weight="510" letter-spacing="0em"><tspan x="450" y="787.055">Caption2</tspan></text>
+<text id="Caption1" fill="white" fill-opacity="0.25" style="white-space: pre" xml:space="preserve" font-family="SF Pro" font-size="10" font-weight="510" letter-spacing="0em"><tspan x="450" y="751.055">Caption1</tspan></text>
+<text id="Caption1_2" fill="white" fill-opacity="0.25" style="white-space: pre" xml:space="preserve" font-family="SF Pro" font-size="10" letter-spacing="0em"><tspan x="450" y="735.055">Caption1</tspan></text>
+<text id="Footnote" fill="white" fill-opacity="0.25" style="white-space: pre" xml:space="preserve" font-family="SF Pro" font-size="10" font-weight="590" letter-spacing="0em"><tspan x="450" y="693.055">Footnote</tspan></text>
+<text id="Footnote_2" fill="white" fill-opacity="0.25" style="white-space: pre" xml:space="preserve" font-family="SF Pro" font-size="10" letter-spacing="0em"><tspan x="450" y="675.055">Footnote</tspan></text>
+<text id="Subheadline" fill="white" fill-opacity="0.25" style="white-space: pre" xml:space="preserve" font-family="SF Pro" font-size="11" font-weight="590" letter-spacing="0em"><tspan x="450" y="625.91">Subheadline</tspan></text>
+<text id="Subheadline_2" fill="white" fill-opacity="0.25" style="white-space: pre" xml:space="preserve" font-family="SF Pro" font-size="11" letter-spacing="0em"><tspan x="450" y="605.91">Subheadline</tspan></text>
+<text id="Callout" fill="white" fill-opacity="0.25" style="white-space: pre" xml:space="preserve" font-family="SF Pro" font-size="12" font-weight="590" letter-spacing="0em"><tspan x="450" y="564.766">Callout</tspan></text>
+<text id="Callout_2" fill="white" fill-opacity="0.25" style="white-space: pre" xml:space="preserve" font-family="SF Pro" font-size="12" letter-spacing="0em"><tspan x="450" y="543.766">Callout</tspan></text>
+<text id="Body" fill="white" fill-opacity="0.25" style="white-space: pre" xml:space="preserve" font-family="SF Pro" font-size="13" font-weight="590" letter-spacing="0em"><tspan x="450" y="498.621">Body</tspan></text>
+<text id="Body_2" fill="white" fill-opacity="0.25" style="white-space: pre" xml:space="preserve" font-family="SF Pro" font-size="13" letter-spacing="0em"><tspan x="450" y="476.621">Body</tspan></text>
+<text id="Headline" fill="white" fill-opacity="0.25" style="white-space: pre" xml:space="preserve" font-family="SF Pro" font-size="13" font-weight="860" letter-spacing="0em"><tspan x="450" y="434.621">Headline</tspan></text>
+<text id="Headline_2" fill="white" fill-opacity="0.25" style="white-space: pre" xml:space="preserve" font-family="SF Pro" font-size="13" font-weight="bold" letter-spacing="0em"><tspan x="450" y="412.621">Headline</tspan></text>
+<text id="Title3" fill="white" fill-opacity="0.25" style="white-space: pre" xml:space="preserve" font-family="SF Pro" font-size="15" font-weight="590" letter-spacing="0em"><tspan x="450" y="371.332">Title3</tspan></text>
+<text id="Title3_2" fill="white" fill-opacity="0.25" style="white-space: pre" xml:space="preserve" font-family="SF Pro" font-size="15" letter-spacing="0em"><tspan x="450" y="347.332">Title3</tspan></text>
+<text id="Title2" fill="white" fill-opacity="0.25" style="white-space: pre" xml:space="preserve" font-family="Inter" font-size="17" font-weight="bold" letter-spacing="0em"><tspan x="450" y="302.182">Title2</tspan></text>
+<text id="Title2_2" fill="white" fill-opacity="0.25" style="white-space: pre" xml:space="preserve" font-family="SF Pro" font-size="17" letter-spacing="0em"><tspan x="450" y="274.043">Title2</tspan></text>
+<text id="Title1" fill="white" fill-opacity="0.25" style="white-space: pre" xml:space="preserve" font-family="SF Pro" font-size="22" font-weight="bold" letter-spacing="0em"><tspan x="450" y="224.82">Title1</tspan></text>
+<text id="Title1_2" fill="white" fill-opacity="0.25" style="white-space: pre" xml:space="preserve" font-family="SF Pro" font-size="22" letter-spacing="0em"><tspan x="450" y="190.82">Title1</tspan></text>
+<text id="Large Title" fill="white" fill-opacity="0.25" style="white-space: pre" xml:space="preserve" font-family="SF Pro" font-size="26" font-weight="bold" letter-spacing="0em"><tspan x="450" y="146.242">LargeTitle</tspan></text>
+<text id="Large Title_2" fill="white" fill-opacity="0.25" style="white-space: pre" xml:space="preserve" font-family="SF Pro" font-size="26" letter-spacing="0em"><tspan x="450" y="105.242">LargeTitle</tspan></text>
+<text id="Caption2_3" fill="white" fill-opacity="0.55" style="white-space: pre" xml:space="preserve" font-family="SF Pro" font-size="10" font-weight="590" letter-spacing="0em"><tspan x="240" y="800.055">Caption2</tspan></text>
+<text id="Caption2_4" fill="white" fill-opacity="0.55" style="white-space: pre" xml:space="preserve" font-family="SF Pro" font-size="10" font-weight="510" letter-spacing="0em"><tspan x="240" y="787.055">Caption2</tspan></text>
+<text id="Caption1_3" fill="white" fill-opacity="0.55" style="white-space: pre" xml:space="preserve" font-family="SF Pro" font-size="10" font-weight="510" letter-spacing="0em"><tspan x="240" y="751.055">Caption1</tspan></text>
+<text id="Caption1_4" fill="white" fill-opacity="0.55" style="white-space: pre" xml:space="preserve" font-family="SF Pro" font-size="10" letter-spacing="0em"><tspan x="240" y="735.055">Caption1</tspan></text>
+<text id="Footnote_3" fill="white" fill-opacity="0.55" style="white-space: pre" xml:space="preserve" font-family="SF Pro" font-size="10" font-weight="590" letter-spacing="0em"><tspan x="240" y="693.055">Footnote</tspan></text>
+<text id="Footnote_4" fill="white" fill-opacity="0.55" style="white-space: pre" xml:space="preserve" font-family="SF Pro" font-size="10" letter-spacing="0em"><tspan x="240" y="675.055">Footnote</tspan></text>
+<text id="Subheadline_3" fill="white" fill-opacity="0.55" style="white-space: pre" xml:space="preserve" font-family="SF Pro" font-size="11" font-weight="590" letter-spacing="0em"><tspan x="240" y="625.91">Subheadline</tspan></text>
+<text id="Subheadline_4" fill="white" fill-opacity="0.55" style="white-space: pre" xml:space="preserve" font-family="SF Pro" font-size="11" letter-spacing="0em"><tspan x="240" y="605.91">Subheadline</tspan></text>
+<text id="Callout_3" fill="white" fill-opacity="0.55" style="white-space: pre" xml:space="preserve" font-family="SF Pro" font-size="12" font-weight="590" letter-spacing="0em"><tspan x="240" y="564.766">Callout</tspan></text>
+<text id="Callout_4" fill="white" fill-opacity="0.55" style="white-space: pre" xml:space="preserve" font-family="SF Pro" font-size="12" letter-spacing="0em"><tspan x="240" y="543.766">Callout</tspan></text>
+<text id="Body_3" fill="white" fill-opacity="0.55" style="white-space: pre" xml:space="preserve" font-family="SF Pro" font-size="13" font-weight="590" letter-spacing="0em"><tspan x="240" y="498.621">Body</tspan></text>
+<text id="Body_4" fill="white" fill-opacity="0.55" style="white-space: pre" xml:space="preserve" font-family="SF Pro" font-size="13" letter-spacing="0em"><tspan x="240" y="476.621">Body</tspan></text>
+<text id="Headline_3" fill="white" fill-opacity="0.55" style="white-space: pre" xml:space="preserve" font-family="SF Pro" font-size="13" font-weight="860" letter-spacing="0em"><tspan x="240" y="434.621">Headline</tspan></text>
+<text id="Headline_4" fill="white" fill-opacity="0.55" style="white-space: pre" xml:space="preserve" font-family="SF Pro" font-size="13" font-weight="bold" letter-spacing="0em"><tspan x="240" y="412.621">Headline</tspan></text>
+<text id="Title3_3" fill="white" fill-opacity="0.55" style="white-space: pre" xml:space="preserve" font-family="SF Pro" font-size="15" font-weight="590" letter-spacing="0em"><tspan x="240" y="371.332">Title3</tspan></text>
+<text id="Title3_4" fill="white" fill-opacity="0.55" style="white-space: pre" xml:space="preserve" font-family="SF Pro" font-size="15" letter-spacing="0em"><tspan x="240" y="347.332">Title3</tspan></text>
+<text id="Title2_3" fill="white" fill-opacity="0.55" style="white-space: pre" xml:space="preserve" font-family="Inter" font-size="17" font-weight="bold" letter-spacing="0em"><tspan x="240" y="302.182">Title2</tspan></text>
+<text id="Title2_4" fill="white" fill-opacity="0.55" style="white-space: pre" xml:space="preserve" font-family="SF Pro" font-size="17" letter-spacing="0em"><tspan x="240" y="274.043">Title2</tspan></text>
+<text id="Title1_3" fill="white" fill-opacity="0.55" style="white-space: pre" xml:space="preserve" font-family="SF Pro" font-size="22" font-weight="bold" letter-spacing="0em"><tspan x="240" y="224.82">Title1</tspan></text>
+<text id="Title1_4" fill="white" fill-opacity="0.55" style="white-space: pre" xml:space="preserve" font-family="SF Pro" font-size="22" letter-spacing="0em"><tspan x="240" y="190.82">Title1</tspan></text>
+<text id="Large Title_3" fill="white" fill-opacity="0.55" style="white-space: pre" xml:space="preserve" font-family="SF Pro" font-size="26" font-weight="bold" letter-spacing="0em"><tspan x="240" y="146.242">LargeTitle</tspan></text>
+<text id="Large Title_4" fill="white" fill-opacity="0.55" style="white-space: pre" xml:space="preserve" font-family="SF Pro" font-size="26" letter-spacing="0em"><tspan x="240" y="105.242">LargeTitle</tspan></text>
+<text id="Caption2_5" fill="white" fill-opacity="0.85" style="white-space: pre" xml:space="preserve" font-family="SF Pro" font-size="10" font-weight="590" letter-spacing="0em"><tspan x="20" y="800.055">Caption2</tspan></text>
+<text id="Caption2_6" fill="white" fill-opacity="0.85" style="white-space: pre" xml:space="preserve" font-family="SF Pro" font-size="10" font-weight="510" letter-spacing="0em"><tspan x="20" y="787.055">Caption2</tspan></text>
+<text id="Caption1_5" fill="white" fill-opacity="0.85" style="white-space: pre" xml:space="preserve" font-family="SF Pro" font-size="10" font-weight="510" letter-spacing="0em"><tspan x="20" y="751.055">Caption1</tspan></text>
+<text id="Caption1_6" fill="white" fill-opacity="0.85" style="white-space: pre" xml:space="preserve" font-family="SF Pro" font-size="10" letter-spacing="0em"><tspan x="20" y="735.055">Caption1</tspan></text>
+<text id="Footnote_5" fill="white" fill-opacity="0.85" style="white-space: pre" xml:space="preserve" font-family="SF Pro" font-size="10" font-weight="590" letter-spacing="0em"><tspan x="20" y="693.055">Footnote</tspan></text>
+<text id="Footnote_6" fill="white" fill-opacity="0.85" style="white-space: pre" xml:space="preserve" font-family="SF Pro" font-size="10" letter-spacing="0em"><tspan x="20" y="675.055">Footnote</tspan></text>
+<text id="Subheadline_5" fill="white" fill-opacity="0.85" style="white-space: pre" xml:space="preserve" font-family="SF Pro" font-size="11" font-weight="590" letter-spacing="0em"><tspan x="20" y="625.91">Subheadline</tspan></text>
+<text id="Subheadline_6" fill="white" fill-opacity="0.85" style="white-space: pre" xml:space="preserve" font-family="SF Pro" font-size="11" letter-spacing="0em"><tspan x="20" y="605.91">Subheadline</tspan></text>
+<text id="Callout_5" fill="white" fill-opacity="0.85" style="white-space: pre" xml:space="preserve" font-family="SF Pro" font-size="12" font-weight="590" letter-spacing="0em"><tspan x="20" y="564.766">Callout</tspan></text>
+<text id="Callout_6" fill="white" fill-opacity="0.85" style="white-space: pre" xml:space="preserve" font-family="SF Pro" font-size="12" letter-spacing="0em"><tspan x="20" y="543.766">Callout</tspan></text>
+<text id="Body_5" fill="white" fill-opacity="0.85" style="white-space: pre" xml:space="preserve" font-family="SF Pro" font-size="13" font-weight="590" letter-spacing="0em"><tspan x="20" y="498.621">Body</tspan></text>
+<text id="Body_6" fill="white" fill-opacity="0.85" style="white-space: pre" xml:space="preserve" font-family="SF Pro" font-size="13" letter-spacing="0em"><tspan x="20" y="476.621">Body</tspan></text>
+<text id="Headline_5" fill="white" fill-opacity="0.85" style="white-space: pre" xml:space="preserve" font-family="SF Pro" font-size="13" font-weight="860" letter-spacing="0em"><tspan x="20" y="434.621">Headline</tspan></text>
+<text id="Headline_6" fill="white" fill-opacity="0.85" style="white-space: pre" xml:space="preserve" font-family="SF Pro" font-size="13" font-weight="bold" letter-spacing="0em"><tspan x="20" y="412.621">Headline</tspan></text>
+<text id="Title3_5" fill="white" fill-opacity="0.85" style="white-space: pre" xml:space="preserve" font-family="SF Pro" font-size="15" font-weight="590" letter-spacing="0em"><tspan x="20" y="371.332">Title3</tspan></text>
+<text id="Title3_6" fill="white" fill-opacity="0.85" style="white-space: pre" xml:space="preserve" font-family="SF Pro" font-size="15" letter-spacing="0em"><tspan x="20" y="347.332">Title3</tspan></text>
+<text id="Title2_5" fill="white" fill-opacity="0.85" style="white-space: pre" xml:space="preserve" font-family="Inter" font-size="17" font-weight="bold" letter-spacing="0em"><tspan x="20" y="302.182">Title2</tspan></text>
+<text id="Title2_6" fill="white" fill-opacity="0.85" style="white-space: pre" xml:space="preserve" font-family="SF Pro" font-size="17" letter-spacing="0em"><tspan x="20" y="274.043">Title2</tspan></text>
+<text id="Title1_5" fill="white" fill-opacity="0.85" style="white-space: pre" xml:space="preserve" font-family="SF Pro" font-size="22" font-weight="bold" letter-spacing="0em"><tspan x="20" y="224.82">Title1</tspan></text>
+<text id="Title1_6" fill="white" fill-opacity="0.85" style="white-space: pre" xml:space="preserve" font-family="SF Pro" font-size="22" letter-spacing="0em"><tspan x="20" y="190.82">Title1</tspan></text>
+<text id="Large Title_5" fill="white" fill-opacity="0.85" style="white-space: pre" xml:space="preserve" font-family="SF Pro" font-size="26" font-weight="bold" letter-spacing="0em"><tspan x="20" y="146.242">LargeTitle</tspan></text>
+<text id="Large Title_6" fill="white" fill-opacity="0.85" style="white-space: pre" xml:space="preserve" font-family="SF Pro" font-size="26" letter-spacing="0em"><tspan x="20" y="105.242">LargeTitle</tspan></text>
+</g>
+</svg>

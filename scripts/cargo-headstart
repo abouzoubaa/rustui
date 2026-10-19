@@ -1,0 +1,45 @@
+#!/bin/sh
+set -eu
+
+headstart_root="${RUSTUI_HEADSTART_ROOT:-${HOME}/.local/opt/headstart}"
+cargo_bin="${headstart_root}/cargo/target/release/cargo"
+rustc_host="$(rustc -vV | sed -n 's/^host: //p')"
+rustc_bin="${headstart_root}/rustc/build/${rustc_host}/stage1/bin/rustc"
+rustdoc_bin="${headstart_root}/rustc/build/${rustc_host}/stage1/bin/rustdoc"
+
+if [ ! -x "$cargo_bin" ] || [ ! -x "$rustc_bin" ]; then
+    printf '%s\n' "Headstart toolchain is missing under ${headstart_root}." >&2
+    exit 127
+fi
+
+# Use rustdoc from the same Headstart stage as rustc when it is installed.
+# Otherwise Cargo keeps its normal rustdoc resolution; an explicit caller
+# RUSTDOC always takes precedence.
+if [ "${RUSTDOC+x}" != x ] && [ -x "$rustdoc_bin" ]; then
+    RUSTDOC="$rustdoc_bin"
+    export RUSTDOC
+fi
+
+# Keep compiled artifacts inside RustUI, as requested. Cargo fingerprints
+# compiler, target, profile, features, flags, dependencies, and source changes.
+if [ -z "${CARGO_TARGET_DIR:-}" ]; then
+    rustui_root="$(CDPATH= cd -- "$(dirname -- "$0")/.." && pwd)"
+    CARGO_TARGET_DIR="${rustui_root}/target/headstart"
+    export CARGO_TARGET_DIR
+fi
+
+# Workaround for Headstart's early/full metadata SVH mismatch. These flags are
+# visible to Cargo so they participate in artifact fingerprints.
+metadata_flag="-Zmetadata-crate-hash=no"
+if [ "${CARGO_ENCODED_RUSTFLAGS+x}" = x ]; then
+    separator="$(printf '\037')"
+    CARGO_ENCODED_RUSTFLAGS="${CARGO_ENCODED_RUSTFLAGS:+${CARGO_ENCODED_RUSTFLAGS}${separator}}${metadata_flag}"
+    export CARGO_ENCODED_RUSTFLAGS
+elif [ "${RUSTFLAGS+x}" = x ]; then
+    RUSTFLAGS="${RUSTFLAGS:+${RUSTFLAGS} }${metadata_flag}"
+    export RUSTFLAGS
+else
+    set -- --config 'build.rustflags=["-Zmetadata-crate-hash=no"]' "$@"
+fi
+
+exec env RUSTC="$rustc_bin" "$cargo_bin" -Zheadstart "$@"

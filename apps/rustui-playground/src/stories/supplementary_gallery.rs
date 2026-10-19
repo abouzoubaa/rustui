@@ -1,0 +1,91 @@
+//! Accessible supplementary components and observable link activation.
+use rustui::prelude::*;
+
+pub fn demo() -> impl View {
+    Component("supplementary-gallery", SupplementaryGallery::default)
+}
+
+#[component]
+struct SupplementaryGallery {
+    #[state(0)]
+    inbox_activations: i32,
+    #[state(0)]
+    link_activations: i32,
+}
+
+impl SupplementaryGallery {
+    fn increment_inbox(&mut self) {
+        self.inbox_activations += 1;
+    }
+    fn activate_link(&mut self) {
+        self.link_activations += 1;
+    }
+}
+
+impl View for SupplementaryGallery {
+    fn body(&self) -> impl View {
+        Container(
+            VStack::new()
+                .child(Text("Supplementary components"))
+                .child(Avatar("Ada Lovelace").size(32.0).id("gallery-ada-avatar"))
+                .child(
+                    Badge(
+                        Button("Inbox", self.action(Self::increment_inbox))
+                            .id("gallery-inbox")
+                            .accessibility_label(format!(
+                                "Inbox, activated {} times",
+                                self.inbox_activations()
+                            )),
+                    )
+                    .count(7)
+                    .id("gallery-inbox-badge")
+                    .accessibility_label("Inbox, 7 unread"),
+                )
+                .child(Text(format!(
+                    "Inbox button activations: {}",
+                    self.inbox_activations()
+                )))
+                .child(
+                    Link(
+                        "Open link fixture",
+                        concat!(
+                            "file://",
+                            env!("CARGO_MANIFEST_DIR"),
+                            "/../../assets/link-fixture.html"
+                        ),
+                    )
+                    .id("gallery-enabled-link")
+                    .accessibility_label(format!(
+                        "Open link fixture, activated {} times",
+                        self.link_activations()
+                    ))
+                    .on_activate(self.action(Self::activate_link)),
+                )
+                .child(
+                    Link(
+                        "Disabled link fixture",
+                        concat!(
+                            "file://",
+                            env!("CARGO_MANIFEST_DIR"),
+                            "/../../assets/link-disabled-fixture.html"
+                        ),
+                    )
+                    .id("gallery-disabled-link")
+                    .disabled(true)
+                    .accessibility_label(format!(
+                        "Disabled link fixture, activated {} times",
+                        self.link_activations()
+                    ))
+                    .on_activate(self.action(Self::activate_link)),
+                )
+                .child(Text(format!(
+                    "Link activations: {}",
+                    self.link_activations()
+                )))
+                .spacing(8.0),
+        )
+        .width(300.0)
+        .padding(8.0)
+        .border()
+    }
+}

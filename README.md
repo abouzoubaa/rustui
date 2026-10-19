@@ -1,0 +1,100 @@
+# RustUI
+
+RustUI is a standalone, SwiftUI-inspired Rust GUI framework built on GPUI and
+GPUI Components. It is MIT licensed and under active development.
+
+## Current status
+
+
+Stages 0–7 of the baseline roadmap are implemented. Stage 8 now includes retained,
+virtualized `List`, `Table`, and `Tree` controls with controlled selection.
+
+`ComponentHost` retains keyed GPUI entities and subscriptions. `TextField`,
+`SecureField`, `SearchField`, and `TextEditor` preserve editor state across
+body rebuilds. `Toggle`, `Checkbox`, and `Radio` use typed `Binding<bool>` values.
+`Slider` retains upstream slider state and synchronizes a `Binding<f32>`; `Stepper`
+updates a bounded `Binding<i32>` through GPUI Components buttons. `Picker` and
+`ComboBox` retain upstream selection entities and write selected strings through
+`Binding<String>`. `DatePicker` binds `Option<NaiveDate>` and `ColorPicker` binds
+`Option<Hsla>` while retaining their upstream popup state.
+`List` retains GPUI Components virtualization, search, focus, scrolling, and keyboard
+selection state. `Table` retains upstream virtual rows, column sizing, scrolling,
+focus, keyboard navigation, and row selection state.
+`Tree` retains upstream hierarchy expansion, virtual scrolling, focus, keyboard
+navigation, and stable-ID selection state.
+`TabView` composes the upstream tab bar with controlled stable-ID selection and a
+selected RustUI child.
+`Breadcrumb` maps ordered RustUI component actions onto the upstream accessible
+breadcrumb presentation.
+`NavigationStack` uses a bound route path, heterogeneous destinations, and GPUI
+Components buttons for forward and back navigation.
+
+Interpolation, plurals, locale-sensitive formatting, most component families, and
+advanced Playground inspectors remain incomplete. RustUI has no direct,
+transitive, optional, or public API dependency on Allui. GPUI and GPUI Components
+are the upstream implementation sources.
+
+## Run
+
+```sh
+./scripts/cargo-headstart playground
+./scripts/cargo-headstart dev
+./scripts/cargo-headstart lab
+```
+
+RustUI Playground is the canonical component development and manual acceptance
+application. It contains ten live stories—Button, Text, Layout, Input, List,
+Table, Tree, Tabs, Breadcrumb, and Navigation—plus the 41-row macOS 27 reference
+catalog. Story source, events, English/French/Arabic locales, and Light/Dark
+appearance controls are available. Layout and performance inspection remain
+incomplete, and GUI acceptance is pending.
+
+The `rustui-lab` package and `lab` alias are compatibility launchers for the same
+Playground UI. They do not contain a second story implementation. See the
+[Playground guide](docs/RUSTUI_PLAYGROUND.md) and [Lab compatibility note](docs/RUSTUI_LAB.md).
+
+## Build
+
+```sh
+./scripts/cargo-headstart build --workspace --locked
+./scripts/cargo-headstart check --workspace --all-targets --locked
+python3 scripts/verify_dependency_reuse.py target/headstart/evidence/reuse-confirmed.jsonl
+```
+
+Headstart is experimental and uses the approved metadata-hash workaround.
+Dependency sources stay in `vendor/`; build artifacts and reuse evidence stay in
+`target/headstart/`.
+
+Approved upstream stack:
+
+- `gpui-pre = 0.3.9`
+- `gpui-pre-platform = 0.3.9`
+- `gpui-component = 0.7.3`
+
+## Workspace packages
+
+| Package | Responsibility | Status |
+| --- | --- | --- |
+| `rustui` | Public declarative API, component adapters, layout, theme and GPUI integration | Partial |
+| `rustui-core` | Action, identity, state, binding, invalidation and environment contracts | Initial implementation |
+| `rustui-macros` | `#[component]`, `VStack!`, and `HStack!` | Initial implementation |
+| `rustui-i18n` | Locale, catalog, fallback, direction and validation | Initial implementation |
+| `rustui-rgpe` | Performance diagnostics and approved optimization integration | Scaffold |
+| `rustui-playground` | Canonical component development app and macOS 27 reference catalog | GUI acceptance pending |
+| `rustui-lab` | Compatibility launcher delegating to RustUI Playground | Compatibility |
+
+## Project map
+
+- [Architecture](docs/ARCHITECTURE.md)
+- [Public API](docs/PUBLIC_API.md)
+- [Authoritative file and capability registry](docs/FILE_REGISTRY.md)
+- [Component catalog](docs/COMPONENT_CATALOG.md)
+- [Implementation roadmap](docs/IMPLEMENTATION_ROADMAP.md)
+- [Upstream audit](docs/UPSTREAM_AUDIT.md)
+- [RustUI Playground](docs/RUSTUI_PLAYGROUND.md)
+- [RustUI Lab compatibility](docs/RUSTUI_LAB.md)
+- [Build and dependency reuse](docs/BUILDING.md)
+
+Implementation proceeds by coherent capabilities. An authorized capability may
+change all related files needed to complete and validate it; unrelated work and
+dependency revisions remain outside that scope.

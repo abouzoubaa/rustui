@@ -1,0 +1,8 @@
+{
+  "record_type": "rustui.locale",
+  "schema_version": 1,
+  "locale": "en",
+  "direction": "ltr",
+  "status": "runtime",
+  "catalog_format": "rustui-ftl-subset-v1"
+}

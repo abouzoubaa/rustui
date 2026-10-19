@@ -1,0 +1,247 @@
+//! Controlled source editing backed by the official retained EditorState.
+
+use gpui::{AnyElement, AppContext as _, Entity, IntoElement, SharedString, px};
+use gpui_component::input::{Editor, EditorState, InputEvent};
+use rustui_core::{Binding, Identity};
+
+use crate::view::{EmptyView, RenderContext, View};
+
+struct RetainedCodeEditor {
+    editor: Entity<EditorState>,
+    line_numbers: bool,
+}
+
+/// A controlled native code editor with stable caller-supplied identity.
+///
+/// Language selection controls upstream editing behavior. Syntax highlighting
+/// additionally requires enabled upstream grammars; the current workspace does
+/// not enable them. This adapter does not configure a language server.
+pub struct CodeEditorView {
+    id: Identity,
+    value: Binding<String>,
+    language: SharedString,
+    placeholder: SharedString,
+    line_numbers: bool,
+    height: f32,
+    disabled: bool,
+    readonly: bool,
+    accessibility_label: Option<SharedString>,
+    tab_index: isize,
+}
+
+/// Creates an editor whose value belongs to its enclosing component.
+///
+/// Use a stable unique ID for each editor and keep that ID associated with the
+/// same binding field. Omitting the editor releases its retained native state.
+#[allow(non_snake_case)]
+pub fn CodeEditor(id: impl Into<Identity>, value: Binding<String>) -> CodeEditorView {
+    CodeEditorView::new(id, value)
+}
+
+impl CodeEditorView {
+    /// Creates a 240-point editor with line numbers and plain-text editing.
+    /// Panics if `id` contains only whitespace or is empty.
+    pub fn new(id: impl Into<Identity>, value: Binding<String>) -> Self {
+        let id = id.into();
+        assert!(
+            !id.as_str().trim().is_empty(),
+            "CodeEditor ID must be nonempty"
+        );
+        Self {
+            id,
+            value,
+            language: "text".into(),
+            placeholder: SharedString::default(),
+            line_numbers: true,
+            height: 240.0,
+            disabled: false,
+            readonly: false,
+            accessibility_label: None,
+            tab_index: 0,
+        }
+    }
+
+    /// Selects upstream language editing rules without replacing the editor.
+    /// Unknown language names use the upstream fallback rules. Panics for an
+    /// empty or whitespace-only name. This does not enable syntax grammars.
+    pub fn language(mut self, language: impl Into<SharedString>) -> Self {
+        let language = language.into();
+        assert!(
+            !language.trim().is_empty(),
+            "CodeEditor language must be nonempty"
+        );
+        self.language = language;
+        self
+    }
+
+    /// Shows or hides the upstream line-number gutter without resetting text.
+    pub fn line_numbers(mut self, line_numbers: bool) -> Self {
+        self.line_numbers = line_numbers;
+        self
+    }
+
+    /// Sets a finite, positive editor height in logical points.
+    pub fn height(mut self, height: f32) -> Self {
+        assert!(
+            height.is_finite() && height > 0.0,
+            "CodeEditor height must be finite and positive"
+        );
+        self.height = height;
+        self
+    }
+
+    pub fn placeholder(mut self, placeholder: impl Into<SharedString>) -> Self {
+        self.placeholder = placeholder.into();
+        self
+    }
+
+    pub fn disabled(mut self, disabled: bool) -> Self {
+        self.disabled = disabled;
+        self
+    }
+
+    /// Prevents user edits while preserving native focus, selection, and copy.
+    pub fn readonly(mut self, readonly: bool) -> Self {
+        self.readonly = readonly;
+        self
+    }
+
+    pub fn accessibility_label(mut self, label: impl Into<SharedString>) -> Self {
+        self.accessibility_label = Some(label.into());
+        self
+    }
+
+    pub fn tab_index(mut self, tab_index: isize) -> Self {
+        self.tab_index = tab_index;
+        self
+    }
+}
+
+impl View for CodeEditorView {
+    fn body(&self) -> impl View {
+        EmptyView
+    }
+
+    fn into_element(&self, context: &mut RenderContext<'_>) -> AnyElement {
+        let current_value = self.value.value();
+        let (retained, created) =
+            context.retained_entity(self.id.clone(), |window, cx| RetainedCodeEditor {
+                editor: cx.new(|cx| {
+                    EditorState::new(window, cx)
+                        .language(self.language.clone())
+                        .placeholder(self.placeholder.clone())
+                        .line_number(self.line_numbers)
+                        .default_value(current_value.clone())
+                }),
+                line_numbers: self.line_numbers,
+            });
+        let retained_state = retained.read(context.app());
+        let editor = retained_state.editor.clone();
+        let line_numbers_changed = retained_state.line_numbers != self.line_numbers;
+        let native = editor.read(context.app());
+        let value_changed = native.value().to_string() != current_value;
+        let language_changed = native.language_name() != self.language;
+        let placeholder_changed = native.presentation().placeholder() != &self.placeholder;
+        if value_changed || language_changed || placeholder_changed || line_numbers_changed {
+            context.update_entity(&editor, |native, window, cx| {
+                if value_changed {
+                    native.set_value(current_value, window, cx);
+                }
+                if language_changed {
+                    native.set_highlighter(self.language.clone(), cx);
+                }
+                if placeholder_changed {
+                    native.set_placeholder(self.placeholder.clone(), window, cx);
+                }
+                if line_numbers_changed {
+                    native.set_line_number(self.line_numbers, window, cx);
+                }
+            });
+            if line_numbers_changed {
+                context.update_entity(&retained, |retained, _, _| {
+                    retained.line_numbers = self.line_numbers
+                });
+            }
+        }
+        if created {
+            let write = context.binding_writer(self.value.clone());
+            context.subscribe_retained(&self.id, &editor, move |editor, event: &InputEvent, cx| {
+                if matches!(event, InputEvent::Change) {
+                    write(editor.read(cx).value().to_string(), cx);
+                }
+            });
+        }
+        let mut editor_view = Editor::new(&editor)
+            .h(px(self.height))
+            .disabled(self.disabled)
+            .readonly(self.readonly)
+            .tab_index(self.tab_index);
+        if let Some(label) = &self.accessibility_label {
+            editor_view = editor_view.aria_label(label.clone());
+        }
+        editor_view.into_any_element()
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    struct Owner {
+        text: String,
+    }
+    fn binding() -> Binding<String> {
+        Binding::new::<Owner>(
+            "initial".into(),
+            |owner| owner.text.clone(),
+            |owner, value| owner.text = value,
+        )
+    }
+
+    #[test]
+    fn defaults_and_configuration_keep_identity_and_binding() {
+        let editor = CodeEditor("source", binding());
+        assert_eq!(editor.language.as_ref(), "text");
+        assert!(editor.line_numbers);
+        assert_eq!(editor.height, 240.0);
+        assert!(!editor.disabled && !editor.readonly);
+        let editor = editor
+            .language("rust")
+            .line_numbers(false)
+            .height(320.0)
+            .placeholder("Source")
+            .disabled(true)
+            .readonly(true)
+            .accessibility_label("Document source")
+            .tab_index(-1);
+        assert_eq!(editor.id, Identity::from("source"));
+        assert_eq!(editor.value.value(), "initial");
+        assert_eq!(editor.language.as_ref(), "rust");
+        assert!(!editor.line_numbers);
+        assert_eq!(editor.height, 320.0);
+        assert_eq!(editor.placeholder.as_ref(), "Source");
+        assert!(editor.disabled && editor.readonly);
+        assert_eq!(
+            editor.accessibility_label.as_deref(),
+            Some("Document source")
+        );
+        assert_eq!(editor.tab_index, -1);
+    }
+
+    #[test]
+    fn rejects_invalid_height_and_empty_identity_or_language() {
+        for height in [0.0, -1.0, f32::NAN, f32::INFINITY, f32::NEG_INFINITY] {
+            assert!(
+                std::panic::catch_unwind(|| CodeEditor("source", binding()).height(height))
+                    .is_err()
+            );
+        }
+        for empty in ["", "  "] {
+            assert!(std::panic::catch_unwind(|| CodeEditor(empty, binding())).is_err());
+            assert!(
+                std::panic::catch_unwind(|| CodeEditor("source", binding()).language(empty))
+                    .is_err()
+            );
+        }
+    }
+}

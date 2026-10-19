@@ -1,0 +1,534 @@
+//! Active resolved RustUI theme stored in GPUI's application globals.
+
+use std::{error::Error, fmt};
+
+use gpui::{App, Global, Hsla, Rgba};
+use gpui_component::Theme;
+
+use crate::{
+    adapters::themes::{ThemeApplyError, apply_profile},
+    theme::{
+        AppearanceMode, ButtonStyleSelector, ComponentStyleCapability, ResolvedButtonTheme,
+        ResolvedComponentStyle, ThemeCoverageReport, ThemeDocument, ThemeResolveError,
+        resolve_button, resolve_component_style, resolve_component_style_with,
+    },
+};
+
+use super::resolver::assess_theme_coverage_with_capabilities;
+
+/// Assess how much of a theme document the current RustUI renderers apply.
+pub fn assess_theme_coverage(document: &ThemeDocument) -> ThemeCoverageReport {
+    assess_theme_coverage_with_capabilities(
+        document,
+        MAPPED_COMPONENTS,
+        REFERENCE_ONLY_COMPONENTS,
+        RENDERER_CAPABILITIES,
+    )
+}
+
+// Records with a corresponding RustUI renderer. A record with no styles remains reference-only.
+const MAPPED_COMPONENTS: &[&str] = &[
+    "button",
+    "link",
+    "text",
+    "label",
+    "checkbox",
+    "divider",
+    "icon",
+    "image",
+    "slider",
+    "toggle",
+    "picker",
+    "stepper",
+    "text_field",
+    "search_field",
+    "radio_button",
+    "combo_box",
+    "color_picker",
+    "disclosure_control",
+    "menu",
+    "notification",
+    "toolbar",
+    "sidebar",
+    "tab_bar",
+    "table",
+    "outline_view",
+    "scroll_view",
+    "menu_item",
+];
+
+const REFERENCE_ONLY_COMPONENTS: &[(&str, &str)] = &[
+    (
+        "list",
+        "theme record defines a table column header; RustUI ListView has no header part",
+    ),
+    (
+        "alert_dialog",
+        "theme records describe source dialog compositions; RustUI AlertView is an inline alert",
+    ),
+    (
+        "menu_separator",
+        "GPUI owns popup menu separators; the theme records list and menu-bar separators instead",
+    ),
+    (
+        "search_field_examples",
+        "example composition, not a RustUI component",
+    ),
+    (
+        "form_accessories",
+        "form artwork composition, not a RustUI component",
+    ),
+    (
+        "save_dialog",
+        "source dialog composition, not a RustUI component",
+    ),
+    (
+        "window_chrome",
+        "window artwork composition, not a RustUI component",
+    ),
+    (
+        "text_style_guide",
+        "source typography catalogue, not a runtime component",
+    ),
+    (
+        "utility_window",
+        "source window composition, not a RustUI component",
+    ),
+    (
+        "button_group",
+        "source control composition, not a RustUI component",
+    ),
+    ("form", "source form composition, not a RustUI component"),
+    ("menu_bar", "no runtime styles or RustUI menu bar renderer"),
+    ("segmented_control", "no RustUI segmented control renderer"),
+    (
+        "window_controls",
+        "source titlebar composition, not a RustUI component",
+    ),
+];
+
+macro_rules! capability {
+    ($component:literal, $part:literal, when: [$(($field:literal, $value:literal)),+ $(,)?], [$($property:literal),* $(,)?]) => {
+        ComponentStyleCapability {
+            component: $component,
+            part: $part,
+            when: &[$(($field, $value)),+],
+            properties: &[$($property),*],
+        }
+    };
+    ($component:literal, $part:literal, [$($property:literal),* $(,)?]) => {
+        ComponentStyleCapability {
+            component: $component,
+            part: $part,
+            when: &[],
+            properties: &[$($property),*],
+        }
+    };
+}
+
+// Add a capability only when the renderer or a GPUI Theme role applies every named property.
+const RENDERER_CAPABILITIES: &[ComponentStyleCapability] = &[
+    capability!(
+        "button",
+        "body",
+        ["width", "height", "background", "foreground", "typography"]
+    ),
+    capability!("link", "body", ["foreground", "typography"]),
+    capability!(
+        "checkbox",
+        "body",
+        ["background", "foreground", "typography"]
+    ),
+    capability!(
+        "radio_button",
+        "body",
+        [
+            "width",
+            "height",
+            "corner_radius",
+            "background",
+            "foreground",
+            "typography"
+        ]
+    ),
+    capability!("slider", "sliders", ["width", "height"]),
+    capability!(
+        "text_field",
+        "body",
+        when: [("size", "small")],
+        [
+            "width",
+            "height",
+            "corner_radius",
+            "background",
+            "foreground",
+            "border",
+            "typography"
+        ]
+    ),
+    capability!(
+        "text_field",
+        "body",
+        when: [("size", "large")],
+        [
+            "width",
+            "height",
+            "corner_radius",
+            "background",
+            "foreground",
+            "border",
+            "typography"
+        ]
+    ),
+    capability!(
+        "search_field",
+        "list_search",
+        [
+            "width",
+            "height",
+            "corner_radius",
+            "background",
+            "foreground",
+            "typography"
+        ]
+    ),
+    capability!(
+        "color_picker",
+        "color_wheel",
+        ["width", "height", "corner_radius", "background"]
+    ),
+    capability!("color_picker", "swatches", ["width", "height"]),
+    capability!("color_picker", "crayons", ["width", "height"]),
+    capability!("scroll_view", "scrollbar_vertical", ["background"]),
+    capability!("scroll_view", "scrollbar_horizontal", ["background"]),
+    capability!(
+        "text",
+        "text_styles_left_aligned_light_opaque_body",
+        ["foreground", "typography"]
+    ),
+    capability!(
+        "text",
+        "text_styles_left_aligned_dark_opaque_body",
+        ["foreground", "typography"]
+    ),
+    capability!(
+        "label",
+        "text_styles_left_aligned_light_opaque_label_color",
+        ["foreground", "typography"]
+    ),
+    capability!(
+        "label",
+        "text_styles_left_aligned_dark_opaque_label_color",
+        ["foreground", "typography"]
+    ),
+    capability!("icon", "icon", ["width", "height"]),
+    capability!("image", "image", ["width", "height", "corner_radius"]),
+    capability!("divider", "list_separator", ["background"]),
+    capability!(
+        "divider",
+        "menubar_separator",
+        ["width", "height", "background"]
+    ),
+    capability!(
+        "toggle",
+        "body",
+        ["width", "height", "corner_radius", "background"]
+    ),
+    capability!(
+        "picker",
+        "body",
+        [
+            "width",
+            "height",
+            "corner_radius",
+            "background",
+            "foreground",
+            "typography"
+        ]
+    ),
+    capability!(
+        "combo_box",
+        "body",
+        [
+            "width",
+            "height",
+            "corner_radius",
+            "background",
+            "foreground",
+            "typography"
+        ]
+    ),
+    capability!(
+        "stepper",
+        "increment_button",
+        ["width", "height", "background"]
+    ),
+    capability!(
+        "stepper",
+        "decrement_button",
+        ["width", "height", "background"]
+    ),
+    capability!(
+        "stepper",
+        "separator",
+        ["width", "height", "corner_radius", "background"]
+    ),
+    capability!("stepper", "increment_glyph", ["foreground", "typography"]),
+    capability!("stepper", "decrement_glyph", ["foreground", "typography"]),
+    capability!(
+        "table",
+        "table_rows",
+        [
+            "width",
+            "height",
+            "corner_radius",
+            "background",
+            "foreground",
+            "typography"
+        ]
+    ),
+    capability!(
+        "table",
+        "table_column_headers",
+        ["background", "foreground", "typography"]
+    ),
+    capability!(
+        "outline_view",
+        "outline_view",
+        ["width", "height", "background"]
+    ),
+    capability!("menu", "body", ["background"]),
+    capability!("menu_item", "body", ["foreground", "typography"]),
+    capability!(
+        "disclosure_control",
+        "disclosure",
+        ["foreground", "typography"]
+    ),
+    capability!(
+        "notification",
+        "body",
+        [
+            "width",
+            "height",
+            "corner_radius",
+            "background",
+            "foreground",
+            "typography"
+        ]
+    ),
+];
+
+#[derive(Clone)]
+pub struct ActiveTheme {
+    /// Effective appearance used by the most recent successful activation.
+    pub mode: AppearanceMode,
+    /// Active platform profile supplying shared component metrics and tokens.
+    pub profile: crate::theme::ThemeProfile,
+    pub button: ResolvedButtonTheme,
+    pub coverage: ThemeCoverageReport,
+    document: ThemeDocument,
+}
+
+impl ActiveTheme {
+    pub fn component_style(
+        &self,
+        component: &str,
+        part: &str,
+        selector: &ButtonStyleSelector,
+    ) -> Result<ResolvedComponentStyle, ThemeResolveError> {
+        resolve_component_style(&self.document, component, part, selector)
+    }
+
+    pub fn component_style_with(
+        &self,
+        component: &str,
+        part: &str,
+        selector: &ButtonStyleSelector,
+        handled_extras: &[&str],
+    ) -> Result<ResolvedComponentStyle, ThemeResolveError> {
+        resolve_component_style_with(&self.document, component, part, selector, handled_extras)
+    }
+}
+
+impl Global for ActiveTheme {}
+
+pub fn active_theme(cx: &App) -> Option<&ActiveTheme> {
+    cx.try_global::<ActiveTheme>()
+}
+
+pub fn theme_coverage(cx: &App) -> Option<&ThemeCoverageReport> {
+    active_theme(cx).map(|theme| &theme.coverage)
+}
+
+pub fn activate_theme(
+    document: &ThemeDocument,
+    mode: Option<AppearanceMode>,
+    cx: &mut App,
+) -> Result<(), ThemeActivationError> {
+    document.validate().map_err(ThemeResolveError::Invalid)?;
+    let button = resolve_button(document, mode)?;
+    let mode = mode.unwrap_or(document.platform_snapshot.appearance.default);
+    let (table_head, table_head_foreground) = table_header_colors(document, mode)?;
+    let menu_popover = menu_background(document, mode)?;
+    let coverage = assess_theme_coverage(document);
+    apply_profile(&document.platform_snapshot, Some(mode), cx)?;
+
+    let background = hsla(button.background);
+    let (role_hover, role_pressed) = {
+        let colors = &Theme::global(cx).colors;
+        (colors.primary_hover, colors.primary_active)
+    };
+    let hover = if button.hover_has_style {
+        hsla(button.hover_background)
+    } else {
+        role_hover
+    };
+    let pressed = if button.pressed_has_style {
+        hsla(button.pressed_background)
+    } else {
+        role_pressed
+    };
+    let foreground = hsla(button.foreground);
+    Theme::update(cx, |theme| {
+        let colors = &mut theme.colors;
+        colors.button = background;
+        colors.button_hover = hover;
+        colors.button_active = pressed;
+        colors.button_foreground = foreground;
+        colors.button_secondary = background;
+        colors.button_secondary_hover = hover;
+        colors.button_secondary_active = pressed;
+        colors.button_secondary_foreground = foreground;
+        colors.table_head = table_head;
+        colors.table_head_foreground = table_head_foreground;
+        colors.popover = menu_popover;
+    });
+    cx.set_global(ActiveTheme {
+        mode,
+        profile: document.platform_snapshot.clone(),
+        button,
+        coverage,
+        document: document.clone(),
+    });
+    Ok(())
+}
+
+fn table_header_colors(
+    document: &ThemeDocument,
+    mode: AppearanceMode,
+) -> Result<(Hsla, Hsla), ThemeResolveError> {
+    let record = document
+        .component_theme("table")
+        .map_err(ThemeResolveError::Invalid)?;
+    let appearance = match mode {
+        AppearanceMode::Light => "light",
+        AppearanceMode::Dark => "dark",
+    };
+    let rule = record
+        .styles
+        .iter()
+        .find(|rule| rule.part == "table_column_headers" && rule.when.appearance == appearance)
+        .ok_or_else(|| {
+            ThemeResolveError::Invalid(format!(
+                "table has no column header style for {appearance} appearance"
+            ))
+        })?;
+    // The vector path is source artwork. Coverage still reports it as unresolved.
+    let style = resolve_component_style_with(
+        document,
+        "table",
+        "table_column_headers",
+        &rule.when,
+        &["vector_path"],
+    )?;
+    let background =
+        style.colors.get("background").copied().ok_or_else(|| {
+            ThemeResolveError::Invalid("table header style has no background".into())
+        })?;
+    let foreground =
+        style.colors.get("foreground").copied().ok_or_else(|| {
+            ThemeResolveError::Invalid("table header style has no foreground".into())
+        })?;
+    Ok((hsla(background), hsla(foreground)))
+}
+
+fn menu_background(
+    document: &ThemeDocument,
+    mode: AppearanceMode,
+) -> Result<Hsla, ThemeResolveError> {
+    let record = document
+        .component_theme("menu")
+        .map_err(ThemeResolveError::Invalid)?;
+    let appearance = match mode {
+        AppearanceMode::Light => "light",
+        AppearanceMode::Dark => "dark",
+    };
+    let rule = record
+        .styles
+        .iter()
+        .find(|rule| rule.part == "body" && rule.when.appearance == appearance)
+        .ok_or_else(|| {
+            ThemeResolveError::Invalid(format!(
+                "menu has no body style for {appearance} appearance"
+            ))
+        })?;
+    // These three source SVG properties are reported as unresolved coverage.
+    let style = resolve_component_style_with(
+        document,
+        "menu",
+        "body",
+        &rule.when,
+        &["filter", "blend_mode", "vector_path"],
+    )?;
+    let background =
+        style.colors.get("background").copied().ok_or_else(|| {
+            ThemeResolveError::Invalid("menu body style has no background".into())
+        })?;
+    Ok(hsla(background))
+}
+
+pub(crate) fn hsla(value: crate::theme::RgbaValue) -> Hsla {
+    Rgba {
+        r: value.r,
+        g: value.g,
+        b: value.b,
+        a: value.a,
+    }
+    .into()
+}
+
+#[derive(Debug)]
+pub enum ThemeActivationError {
+    Resolve(ThemeResolveError),
+    Apply(ThemeApplyError),
+}
+
+impl fmt::Display for ThemeActivationError {
+    fn fmt(&self, formatter: &mut fmt::Formatter<'_>) -> fmt::Result {
+        match self {
+            Self::Resolve(error) => write!(formatter, "could not resolve theme: {error}"),
+            Self::Apply(error) => write!(formatter, "could not apply theme: {error}"),
+        }
+    }
+}
+
+impl Error for ThemeActivationError {
+    fn source(&self) -> Option<&(dyn Error + 'static)> {
+        match self {
+            Self::Resolve(error) => Some(error),
+            Self::Apply(error) => Some(error),
+        }
+    }
+}
+
+impl From<ThemeResolveError> for ThemeActivationError {
+    fn from(error: ThemeResolveError) -> Self {
+        Self::Resolve(error)
+    }
+}
+
+impl From<ThemeApplyError> for ThemeActivationError {
+    fn from(error: ThemeApplyError) -> Self {
+        Self::Apply(error)
+    }
+}

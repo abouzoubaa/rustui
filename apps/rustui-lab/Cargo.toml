@@ -1,0 +1,11 @@
+[package]
+name = "rustui-lab"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+publish.workspace = true
+description = "Compatibility launcher for RustUI Playground"
+
+[dependencies]
+rustui-playground = { path = "../rustui-playground" }

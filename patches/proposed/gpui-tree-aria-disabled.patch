@@ -1,0 +1,59 @@
+diff --git a/vendor/gpui-pre-0.3.9/src/elements/div.rs b/vendor/gpui-pre-0.3.9/src/elements/div.rs
+--- a/vendor/gpui-pre-0.3.9/src/elements/div.rs
++++ b/vendor/gpui-pre-0.3.9/src/elements/div.rs
+@@ -1402,6 +1402,12 @@
+         self
+     }
+ 
++    /// Set the disabled state exposed to accessibility clients.
++    fn aria_disabled(mut self, disabled: bool) -> Self {
++        self.interactivity().aria.disabled = Some(disabled);
++        self
++    }
++
+     /// Set the toggled state for this element.
+     fn aria_toggled(mut self, toggled: accesskit::Toggled) -> Self {
+         self.interactivity().aria.toggled = Some(toggled);
+@@ -2110,6 +2116,7 @@
+     pub(crate) keyshortcuts: Option<SharedString>,
+     pub(crate) selected: Option<bool>,
+     pub(crate) expanded: Option<bool>,
++    pub(crate) disabled: Option<bool>,
+     pub(crate) toggled: Option<accesskit::Toggled>,
+     pub(crate) numeric_value: Option<f64>,
+     pub(crate) min_numeric_value: Option<f64>,
+@@ -3546,6 +3553,9 @@
+         if let Some(expanded) = self.aria.expanded {
+             node.set_expanded(expanded);
+         }
++        if let Some(disabled) = self.aria.disabled {
++            node.set_disabled(disabled);
++        }
+         if let Some(toggled) = self.aria.toggled {
+             node.set_toggled(toggled);
+         }
+diff --git a/vendor/gpui-base-0.7.3/src/tree.rs b/vendor/gpui-base-0.7.3/src/tree.rs
+--- a/vendor/gpui-base-0.7.3/src/tree.rs
++++ b/vendor/gpui-base-0.7.3/src/tree.rs
+@@ -463,6 +463,7 @@
+                             .role(gpui::Role::TreeItem)
+                             .aria_label(entry.item().label.clone())
+                             .aria_selected(entry_state.selected)
++                            .aria_disabled(entry.is_disabled())
+                             .when(entry.is_folder(), |this| {
+                                 this.aria_expanded(entry.is_expanded())
+                             })
+diff --git a/vendor/gpui-base-0.7.3/src/switch.rs b/vendor/gpui-base-0.7.3/src/switch.rs
+--- a/vendor/gpui-base-0.7.3/src/switch.rs
++++ b/vendor/gpui-base-0.7.3/src/switch.rs
+@@ -732,8 +732,8 @@
+         assert_eq!(disabled.role(), Role::Switch);
+         assert_eq!(disabled.toggled(), Some(Toggled::False));
+         assert!(!disabled.supports_action(accesskit::Action::Click));
+-        // GPUI currently has no aria-disabled setter. Keep the limitation
+-        // explicit instead of claiming an AccessKit disabled state.
++        // Switch does not yet forward the aria-disabled setter. Keep this
++        // limitation explicit until its renderer exposes disabled state.
+         assert!(!disabled.is_disabled());
+     }
+ }

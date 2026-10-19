@@ -1,0 +1,17 @@
+<svg width="1400" height="310" viewBox="0 0 1400 310" fill="none" xmlns="http://www.w3.org/2000/svg">
+<rect width="1400" height="310" fill="#808080"/>
+<g id="Header">
+<text id="Component" fill="white" style="white-space: pre" xml:space="preserve" font-family="SF Pro" font-size="56" font-weight="bold" letter-spacing="-0.28px"><tspan x="0" y="49.9062">Typography</tspan></text>
+<g id="Description">
+<text fill="white" style="white-space: pre" xml:space="preserve" font-family="SF Pro" font-size="28" letter-spacing="0px"><tspan x="0" y="118.953">Apple provides two typeface families that support an extensive range of weights, sizes, styles, and languages: San </tspan><tspan x="0" y="152.953">Francisco and New York, which you can download </tspan><tspan x="636.945" y="152.953">. The system defines a set of typographic attributes &#x2014; called text </tspan><tspan x="0" y="186.953">styles &#x2014; that work with both typeface families.&#xa0;Dynamic Type is a system-level feature that lets people adjust the size of </tspan><tspan x="0" y="220.953">visible text on their device to ensure readability and comfort.&#xa0;</tspan></text>
+<text fill="#98CCFF" style="white-space: pre" xml:space="preserve" font-family="SF Pro" font-size="28" letter-spacing="0px" text-decoration="underline"><tspan x="585.184" y="152.953"><a href="https://developer.apple.com/fonts/">here</a></tspan></text>
+</g>
+<g id="Frame">
+<g id="Link">
+<text fill="#98CCFF" style="white-space: pre" xml:space="preserve" font-family="SF Pro" font-size="28" letter-spacing="0px" text-decoration="underline"><tspan x="380.051" y="294.953"><a href="https://developer.apple.com/design/human-interface-guidelines/typography">ypography</a></tspan></text>
+<text fill="#98CCFF" style="white-space: pre" xml:space="preserve" font-family="SF Pro" font-size="28" letter-spacing="0px" text-decoration="underline"><tspan x="0" y="294.953"><a href="https://developer.apple.com/design/human-interface-guidelines/typography">Human Interface Guidelines</a></tspan><tspan x="367.062" y="294.953"><a href="https://developer.apple.com/design/human-interface-guidelines/typography">T</a></tspan></text>
+<text fill="#98CCFF" style="white-space: pre" xml:space="preserve" font-family="SF Pro" font-size="28" letter-spacing="0px" text-decoration="underline"><tspan x="323.203" y="294.953"> &#x10012b; </tspan></text>
+</g>
+</g>
+</g>
+</svg>

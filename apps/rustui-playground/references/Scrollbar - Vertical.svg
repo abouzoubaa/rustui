@@ -1,0 +1,52 @@
+<svg width="90" height="270" viewBox="0 0 90 270" fill="none" xmlns="http://www.w3.org/2000/svg">
+<rect width="90" height="270" fill="#808080"/>
+<g id="Scrollbar - Vertical">
+<rect x="0.5" y="0.5" width="89" height="269" rx="4.5" fill="black" fill-opacity="0.1"/>
+<rect x="0.5" y="0.5" width="89" height="269" rx="4.5" stroke="#C399FF" stroke-dasharray="10 5"/>
+<g id="Page Height=x 8, Position=Bottom">
+<g id="Frame">
+<rect id="Thumb" x="63" y="241" width="6" height="8" rx="3" fill="black" fill-opacity="0.5"/>
+</g>
+</g>
+<g id="Page Height=x 8, Position=Middle">
+<g id="Frame_2">
+<rect id="Thumb_2" x="43" y="216" width="6" height="8" rx="3" fill="black" fill-opacity="0.5"/>
+</g>
+</g>
+<g id="Page Height=x 8, Position=Top">
+<g id="Frame_3">
+<rect id="Thumb_3" x="23" y="191" width="6" height="8" rx="3" fill="black" fill-opacity="0.5"/>
+</g>
+</g>
+<g id="Page Height=x 4, Position=Bottom">
+<g id="Frame_4">
+<rect id="Thumb_4" x="63" y="150" width="6" height="15" rx="3" fill="black" fill-opacity="0.5"/>
+</g>
+</g>
+<g id="Page Height=x 4, Position=Middle">
+<g id="Frame_5">
+<rect id="Thumb_5" x="43" y="128.5" width="6" height="15" rx="3" fill="black" fill-opacity="0.5"/>
+</g>
+</g>
+<g id="Page Height=x 4, Position=Top">
+<g id="Frame_6">
+<rect id="Thumb_6" x="23" y="107" width="6" height="15" rx="3" fill="black" fill-opacity="0.5"/>
+</g>
+</g>
+<g id="Page Height=x 2, Position=Bottom">
+<g id="Frame_7">
+<rect id="Thumb_7" x="63" y="52" width="6" height="29" rx="3" fill="black" fill-opacity="0.5"/>
+</g>
+</g>
+<g id="Page Height=x 2, Position=Middle">
+<g id="Frame_8">
+<rect id="Thumb_8" x="43" y="37.5" width="6" height="29" rx="3" fill="black" fill-opacity="0.5"/>
+</g>
+</g>
+<g id="Page Height=x 2, Position=Top">
+<g id="Frame_9">
+<rect id="Thumb_9" x="23" y="23" width="6" height="29" rx="3" fill="black" fill-opacity="0.5"/>
+</g>
+</g>
+</g>
+</svg>

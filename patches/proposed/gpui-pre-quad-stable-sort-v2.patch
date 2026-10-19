@@ -1,0 +1,388 @@
+--- a/vendor/gpui-pre-0.3.9/src/scene.rs
++++ b/vendor/gpui-pre-0.3.9/src/scene.rs
+@@ -35,6 +35,151 @@
+         PaddedBool32(value as u32)
+     }
+ }
++
++// Quad-only adaptation of the stable counting-order idea reviewed in
++// longbridge/gpui-fast@fa133a1dd970532dce4ffaee8577438971e5dec9,
++// crates/gpui/src/fast/scene.rs (Apache-2.0). Uses in-place permutation
++// cycles rather than copying/gathering every primitive kind.
++const QUAD_ORDER_SCRATCH_BYTES: usize = 1024 * 1024;
++const QUAD_ORDER_MAX_BINS: usize = 65536;
++const QUAD_ORDER_MIN_COUNTING_LEN: usize = 1024;
++const QUAD_ORDER_MAX_COUNTING_LEN: usize = 131072;
++
++#[derive(Default)]
++struct QuadOrderScratch {
++    counts: Vec<usize>,
++    destinations: Vec<usize>,
++}
++
++#[derive(Debug, PartialEq, Eq)]
++enum QuadOrderPath {
++    AlreadyOrdered,
++    Counting,
++    Stock,
++}
++
++fn quad_order_bins(len: usize, max_order: DrawOrder, budget: usize) -> Option<usize> {
++    let bins = usize::try_from(max_order).ok()?.checked_add(1)?;
++    if bins > QUAD_ORDER_MAX_BINS || bins > len.checked_mul(4)? {
++        return None;
++    }
++    let bytes = bins
++        .checked_add(len)?
++        .checked_mul(std::mem::size_of::<usize>())?;
++    (bytes <= budget).then_some(bins)
++}
++
++impl QuadOrderScratch {
++    fn release(&mut self) {
++        *self = Self::default();
++    }
++
++    fn capacity_bytes(&self) -> Option<usize> {
++        self.counts
++            .capacity()
++            .checked_add(self.destinations.capacity())?
++            .checked_mul(std::mem::size_of::<usize>())
++    }
++
++    fn prepare(&mut self, len: usize, bins: usize, budget: usize) -> bool {
++        // Never retain two independently grown high-water marks over budget.
++        // Drop both before growing; failed reservations take the stock path.
++        if self.counts.capacity() < bins || self.destinations.capacity() < len {
++            self.release();
++            if self.counts.try_reserve_exact(bins).is_err()
++                || self.destinations.try_reserve_exact(len).is_err()
++            {
++                self.release();
++                return false;
++            }
++        }
++        // Vec/allocator may grant more capacity than requested. Bound the
++        // actual retained element capacities too, not just requested lengths.
++        if self.capacity_bytes().is_none_or(|bytes| bytes > budget) {
++            self.release();
++            return false;
++        }
++        self.counts.clear();
++        self.counts.resize(bins, 0);
++        self.destinations.clear();
++        self.destinations.resize(len, 0);
++        true
++    }
++}
++
++fn sort_quads_by_order(
++    quads: &mut [Quad],
++    scratch: &mut QuadOrderScratch,
++    budget: usize,
++) -> QuadOrderPath {
++    if scratch.capacity_bytes().is_none_or(|bytes| bytes > budget) {
++        scratch.release();
++    }
++    // Bounded release probes favored the stock stable sort outside this range.
++    if quads.len() < QUAD_ORDER_MIN_COUNTING_LEN
++        || quads.len() >= QUAD_ORDER_MAX_COUNTING_LEN
++    {
++        scratch.release();
++        quads.sort_by_key(|quad| quad.order);
++        return QuadOrderPath::Stock;
++    }
++    let max_counting_bins = QUAD_ORDER_MAX_BINS.min(quads.len().saturating_mul(4));
++    let mut max_order = 0;
++    let mut previous = 0;
++    let mut ordered = true;
++    for quad in quads.iter() {
++        ordered &= quad.order >= previous;
++        previous = quad.order;
++        max_order = max_order.max(quad.order);
++        // Once a disorder is observed, later elements cannot restore order.
++        // A sparse range cannot use counting, so skip the rest of this scan.
++        if !ordered
++            && usize::try_from(max_order).map_or(true, |order| order >= max_counting_bins)
++        {
++            scratch.release();
++            quads.sort_by_key(|quad| quad.order);
++            return QuadOrderPath::Stock;
++        }
++    }
++    if ordered {
++        return QuadOrderPath::AlreadyOrdered;
++    }
++    let Some(bins) = quad_order_bins(quads.len(), max_order, budget) else {
++        scratch.release();
++        quads.sort_by_key(|quad| quad.order);
++        return QuadOrderPath::Stock;
++    };
++    if !scratch.prepare(quads.len(), bins, budget) {
++        quads.sort_by_key(|quad| quad.order);
++        return QuadOrderPath::Stock;
++    }
++    // max_order was checked to fit usize above; every order is <= max_order.
++    for quad in quads.iter() {
++        scratch.counts[quad.order as usize] += 1;
++    }
++    let mut start = 0;
++    for count in &mut scratch.counts {
++        let amount = *count;
++        *count = start;
++        start += amount;
++    }
++    // Assign unique final positions in input order: ties keep that order.
++    for (index, quad) in quads.iter().enumerate() {
++        let destination = &mut scratch.counts[quad.order as usize];
++        scratch.destinations[index] = *destination;
++        *destination += 1;
++    }
++    // Move complete Quad values only; never reconstruct or mutate payloads.
++    for index in 0..quads.len() {
++        while scratch.destinations[index] != index {
++            let destination = scratch.destinations[index];
++            quads.swap(index, destination);
++            scratch.destinations.swap(index, destination);
++        }
++    }
++    QuadOrderPath::Counting
++}
++
+ 
+ #[derive(Default)]
+ #[expect(missing_docs)]
+@@ -50,6 +195,7 @@
+     pub subpixel_sprites: Vec<SubpixelSprite>,
+     pub polychrome_sprites: Vec<PolychromeSprite>,
+     pub surfaces: Vec<PaintSurface>,
++    quad_order_scratch: QuadOrderScratch,
+ }
+ 
+ #[expect(missing_docs)]
+@@ -150,7 +296,11 @@
+ 
+     pub fn finish(&mut self) {
+         self.shadows.sort_by_key(|shadow| shadow.order);
+-        self.quads.sort_by_key(|quad| quad.order);
++        sort_quads_by_order(
++            &mut self.quads,
++            &mut self.quad_order_scratch,
++            QUAD_ORDER_SCRATCH_BYTES,
++        );
+         self.paths.sort_by_key(|path| path.order);
+         self.underlines.sort_by_key(|underline| underline.order);
+         self.monochrome_sprites
+@@ -947,3 +1097,212 @@
+         }
+     }
+ }
++
++#[cfg(test)]
++mod quad_order_tests {
++    use super::*;
++    use crate::{ScaledPixels, hsla, size};
++
++    fn quad(order: DrawOrder, index: usize) -> Quad {
++        let p = ScaledPixels(index as f32);
++        Quad {
++            order,
++            border_style: if index % 2 == 0 {
++                BorderStyle::Solid
++            } else {
++                BorderStyle::Dashed
++            },
++            bounds: Bounds {
++                origin: point(p, ScaledPixels(p.0 + 1.0)),
++                size: size(ScaledPixels(p.0 + 2.0), ScaledPixels(p.0 + 3.0)),
++            },
++            content_mask: ContentMask {
++                bounds: Bounds {
++                    origin: point(ScaledPixels(p.0 + 4.0), ScaledPixels(p.0 + 5.0)),
++                    size: size(ScaledPixels(p.0 + 6.0), ScaledPixels(p.0 + 7.0)),
++                },
++            },
++            background: hsla((index % 10) as f32 / 10.0, 0.4, 0.5, 0.6).into(),
++            border_color: hsla(0.1, (index % 10) as f32 / 10.0, 0.3, 0.7),
++            corner_radii: Corners {
++                top_left: p,
++                top_right: ScaledPixels(p.0 + 1.0),
++                bottom_left: ScaledPixels(p.0 + 2.0),
++                bottom_right: ScaledPixels(p.0 + 3.0),
++            },
++            border_widths: Edges {
++                top: p,
++                right: ScaledPixels(p.0 + 1.0),
++                bottom: ScaledPixels(p.0 + 2.0),
++                left: ScaledPixels(p.0 + 3.0),
++            },
++        }
++    }
++
++    fn assert_same_quad(actual: &Quad, expected: &Quad) {
++        assert_eq!(actual.order, expected.order);
++        assert_eq!(actual.border_style, expected.border_style);
++        assert_eq!(actual.bounds, expected.bounds);
++        assert_eq!(actual.content_mask, expected.content_mask);
++        assert_eq!(actual.background, expected.background);
++        assert_eq!(actual.border_color, expected.border_color);
++        assert_eq!(actual.corner_radii, expected.corner_radii);
++        assert_eq!(actual.border_widths, expected.border_widths);
++    }
++
++    fn compare(orders: &[u32], budget: usize, scratch: &mut QuadOrderScratch) -> QuadOrderPath {
++        let mut actual: Vec<_> = orders
++            .iter()
++            .enumerate()
++            .map(|(i, &order)| quad(order, i))
++            .collect();
++        let mut expected = actual.clone();
++        expected.sort_by_key(|quad| quad.order);
++        let path = sort_quads_by_order(&mut actual, scratch, budget);
++        assert_eq!(actual.len(), expected.len());
++        for (actual, expected) in actual.iter().zip(&expected) {
++            assert_same_quad(actual, expected);
++        }
++        assert!(scratch.capacity_bytes().unwrap() <= budget);
++        path
++    }
++
++    #[test]
++    fn dense_counting_matches_stable_sort_and_preserves_all_payload_fields() {
++        let mut scratch = QuadOrderScratch::default();
++        for orders in [
++            vec![],
++            vec![4],
++            vec![1, 1, 2],
++            vec![2, 0, 1],
++            vec![2, 1, 2, 0, 1, 0],
++            vec![3, 2, 1, 0],
++        ] {
++            compare(&orders, QUAD_ORDER_SCRATCH_BYTES, &mut scratch);
++        }
++        let dense: Vec<_> = (0..1024).rev().map(|index| (index % 16) as u32).collect();
++        assert_eq!(
++            compare(&dense, QUAD_ORDER_SCRATCH_BYTES, &mut scratch),
++            QuadOrderPath::Counting
++        );
++    }
++
++    #[test]
++    fn measured_size_gates_and_sparse_guard_preserve_stable_payloads() {
++        let mut scratch = QuadOrderScratch::default();
++        let small: Vec<_> = (0..16).rev().map(|index| (index % 4) as u32).collect();
++        assert_eq!(
++            compare(&small, QUAD_ORDER_SCRATCH_BYTES, &mut scratch),
++            QuadOrderPath::Stock
++        );
++        let sparse: Vec<_> = (0..1024)
++            .map(|index| if index % 2 == 0 { u32::MAX } else { 0 })
++            .collect();
++        assert_eq!(
++            compare(&sparse, QUAD_ORDER_SCRATCH_BYTES, &mut scratch),
++            QuadOrderPath::Stock
++        );
++        assert_eq!(
++            compare(&vec![u32::MAX; 1024], QUAD_ORDER_SCRATCH_BYTES, &mut scratch),
++            QuadOrderPath::AlreadyOrdered
++        );
++        let large: Vec<_> = (0..131072).rev().map(|index| (index / 4) as u32).collect();
++        assert_eq!(
++            compare(&large, QUAD_ORDER_SCRATCH_BYTES, &mut scratch),
++            QuadOrderPath::Stock
++        );
++        assert_eq!(scratch.capacity_bytes(), Some(0));
++    }
++
++    #[test]
++    fn deterministic_generated_inputs_match_stable_sort() {
++        let mut scratch = QuadOrderScratch::default();
++        for seed in 0..32_u64 {
++            let mut rng = seed + 1;
++            for len in [2, 3, 16, 257, 1024] {
++                let orders: Vec<_> = (0..len)
++                    .map(|_| {
++                        rng = rng.wrapping_mul(6364136223846793005).wrapping_add(1);
++                        (rng >> 32) as u32 % (len as u32 / 2 + 1)
++                    })
++                    .collect();
++                compare(&orders, QUAD_ORDER_SCRATCH_BYTES, &mut scratch);
++            }
++        }
++    }
++
++    #[test]
++    fn sparse_maximum_and_memory_paths_fall_back_without_retained_scratch() {
++        let mut scratch = QuadOrderScratch::default();
++        for (orders, budget) in [
++            (vec![u32::MAX, 0, u32::MAX], QUAD_ORDER_SCRATCH_BYTES),
++            (vec![1000, 0], QUAD_ORDER_SCRATCH_BYTES),
++            (vec![1, 0], 0),
++        ] {
++            assert_eq!(compare(&orders, budget, &mut scratch), QuadOrderPath::Stock);
++            assert_eq!(scratch.capacity_bytes(), Some(0));
++        }
++    }
++
++    #[test]
++    fn budget_and_bin_planning_are_checked_before_allocation() {
++        let needed = (4 + 4) * std::mem::size_of::<usize>();
++        assert_eq!(quad_order_bins(4, 3, needed), Some(4));
++        assert_eq!(quad_order_bins(4, 3, needed - 1), None);
++        assert_eq!(quad_order_bins(usize::MAX, 2, usize::MAX), None);
++        assert_eq!(quad_order_bins(2, u32::MAX, usize::MAX), None);
++        assert_eq!(
++            quad_order_bins(QUAD_ORDER_MAX_BINS, QUAD_ORDER_MAX_BINS as u32, usize::MAX),
++            None
++        );
++        assert_eq!(
++            quad_order_bins(
++                QUAD_ORDER_MAX_BINS,
++                (QUAD_ORDER_MAX_BINS - 1) as u32,
++                QUAD_ORDER_SCRATCH_BYTES
++            ),
++            Some(QUAD_ORDER_MAX_BINS)
++        );
++    }
++
++    #[test]
++    fn scene_clear_and_size_changes_do_not_reuse_stale_permutations() {
++        let mut scene = Scene::default();
++        for len in [1024, 3, 0, 512, 1, 17] {
++            scene.clear();
++            scene.quads = (0..len).map(|i| quad(((len - i) % 8) as u32, i)).collect();
++            let mut expected = scene.quads.clone();
++            expected.sort_by_key(|quad| quad.order);
++            scene.finish();
++            for (actual, expected) in scene.quads.iter().zip(&expected) {
++                assert_same_quad(actual, expected);
++            }
++            assert!(scene.quad_order_scratch.capacity_bytes().unwrap() <= QUAD_ORDER_SCRATCH_BYTES);
++        }
++    }
++
++    #[test]
++    fn alternating_scratch_high_water_marks_remain_within_budget() {
++        let mut scratch = QuadOrderScratch::default();
++        compare(&[3, 1, 2, 0], QUAD_ORDER_SCRATCH_BYTES, &mut scratch);
++        let small = 8 * std::mem::size_of::<usize>();
++        compare(&[1, 0], small, &mut scratch);
++        assert!(scratch.capacity_bytes().unwrap() <= small);
++        compare(&[1, 0], 0, &mut scratch);
++        assert_eq!(scratch.capacity_bytes(), Some(0));
++    }
++
++    #[test]
++    fn nonfinite_and_signed_zero_payloads_are_swapped_without_arithmetic() {
++        let mut actual = vec![quad(1, 0), quad(0, 1)];
++        actual[0].border_color.h = f32::from_bits(0x7fc0_1234);
++        actual[0].border_widths.top = ScaledPixels(-0.0);
++        let mut scratch = QuadOrderScratch::default();
++        sort_quads_by_order(&mut actual, &mut scratch, QUAD_ORDER_SCRATCH_BYTES);
++        assert_eq!(actual[1].border_color.h.to_bits(), 0x7fc0_1234);
++        assert_eq!(
++            actual[1].border_widths.top.0.to_bits(),
++            (-0.0_f32).to_bits()
++        );
++    }
++}

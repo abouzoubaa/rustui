@@ -1,0 +1,52 @@
+<svg width="250" height="90" viewBox="0 0 250 90" fill="none" xmlns="http://www.w3.org/2000/svg">
+<rect width="250" height="90" fill="#808080"/>
+<g id="Scrollbar - Horizontal">
+<rect x="0.5" y="0.5" width="249" height="89" rx="4.5" fill="black" fill-opacity="0.1"/>
+<rect x="0.5" y="0.5" width="249" height="89" rx="4.5" stroke="#C399FF" stroke-dasharray="10 5"/>
+<g id="Page=800%, Position=Trailing">
+<g id="Frame">
+<rect id="Thumb" x="213" y="63" width="8" height="6" rx="3" fill="black" fill-opacity="0.5"/>
+</g>
+</g>
+<g id="Page=400%, Position=Trailing">
+<g id="Frame_2">
+<rect id="Thumb_2" x="136" y="63" width="15" height="6" rx="3" fill="black" fill-opacity="0.5"/>
+</g>
+</g>
+<g id="Page=200%, Position=Trailing">
+<g id="Frame_3">
+<rect id="Thumb_3" x="52" y="63" width="29" height="6" rx="3" fill="black" fill-opacity="0.5"/>
+</g>
+</g>
+<g id="Page=800%, Position=Center">
+<g id="Frame_4">
+<rect id="Thumb_4" x="188" y="43" width="8" height="6" rx="3" fill="black" fill-opacity="0.5"/>
+</g>
+</g>
+<g id="Page=400%, Position=Center">
+<g id="Frame_5">
+<rect id="Thumb_5" x="114.5" y="43" width="15" height="6" rx="3" fill="black" fill-opacity="0.5"/>
+</g>
+</g>
+<g id="Page=200%, Position=Center">
+<g id="Frame_6">
+<rect id="Thumb_6" x="37.5" y="43" width="29" height="6" rx="3" fill="black" fill-opacity="0.5"/>
+</g>
+</g>
+<g id="Page=800%, Position=Leading">
+<g id="Frame_7">
+<rect id="Thumb_7" x="163" y="23" width="8" height="6" rx="3" fill="black" fill-opacity="0.5"/>
+</g>
+</g>
+<g id="Page=400%, Position=Leading">
+<g id="Frame_8">
+<rect id="Thumb_8" x="93" y="23" width="15" height="6" rx="3" fill="black" fill-opacity="0.5"/>
+</g>
+</g>
+<g id="Page=200%, Position=Leading">
+<g id="Frame_9">
+<rect id="Thumb_9" x="23" y="23" width="29" height="6" rx="3" fill="black" fill-opacity="0.5"/>
+</g>
+</g>
+</g>
+</svg>

@@ -1,0 +1,18 @@
+[alias]
+playground = ["run", "-p", "rustui-playground", "--locked"]
+lab = ["run", "-p", "rustui-lab", "--locked"]
+warm = ["build", "--workspace", "--profile", "headstart", "--locked"]
+dev = ["run", "-p", "rustui-playground", "--profile", "headstart", "--locked"]
+audit = ["check", "--workspace", "--all-targets", "--profile", "headstart", "--locked"]
+
+[build]
+target-dir = "target/headstart"
+
+# Use ./scripts/cargo-headstart for the experimental compiler. Cargo validates
+# artifact fingerprints. Keep target/headstart between builds; do not clean routinely.
+
+[source.crates-io]
+replace-with = "vendored-sources"
+
+[source.vendored-sources]
+directory = "vendor"

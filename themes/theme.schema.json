@@ -1,0 +1,1068 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://rustui.dev/schemas/theme.schema.json",
+  "title": "RustUI appearance theme",
+  "description": "Version 1 RustUI theme documents combine one platform snapshot with RustUI component styles.",
+  "$ref": "#/$defs/theme",
+  "$defs": {
+    "color": {
+      "type": "string",
+      "pattern": "^#[0-9A-Fa-f]{6}$"
+    },
+    "measure": {
+      "type": "number",
+      "minimum": 0
+    },
+    "positiveMeasure": {
+      "type": "number",
+      "exclusiveMinimum": 0
+    },
+    "weight": {
+      "type": "integer",
+      "minimum": 1,
+      "maximum": 1000
+    },
+    "theme": {
+      "type": "object",
+      "required": [
+        "format",
+        "format_version",
+        "framework",
+        "profile",
+        "source",
+        "token_sources",
+        "theme_roles",
+        "components",
+        "derivation",
+        "platform_snapshot"
+      ],
+      "properties": {
+        "format": {
+          "const": "rustui-appearance"
+        },
+        "format_version": {
+          "const": 1
+        },
+        "framework": {
+          "$ref": "#/$defs/framework"
+        },
+        "profile": {
+          "type": "string",
+          "minLength": 1
+        },
+        "source": {
+          "type": "object"
+        },
+        "token_sources": {
+          "type": "object"
+        },
+        "theme_roles": {
+          "type": "object",
+          "minProperties": 1,
+          "additionalProperties": {
+            "type": "string"
+          }
+        },
+        "components": {
+          "type": "object",
+          "minProperties": 1,
+          "additionalProperties": {
+            "type": "object"
+          },
+          "required": [
+            "button"
+          ],
+          "properties": {
+            "button": {
+              "$ref": "#/$defs/buttonTheme"
+            }
+          }
+        },
+        "derivation": {
+          "type": "object"
+        },
+        "platform_snapshot": {
+          "$ref": "#/$defs/profile"
+        }
+      },
+      "additionalProperties": false
+    },
+    "profile": {
+      "type": "object",
+      "required": [
+        "id",
+        "platform",
+        "min_version",
+        "measure_unit",
+        "appearance",
+        "dimensions",
+        "radii",
+        "borders",
+        "spacing",
+        "materials",
+        "accents",
+        "window_controls",
+        "accessibility",
+        "typography"
+      ],
+      "properties": {
+        "id": {
+          "type": "string",
+          "minLength": 1
+        },
+        "platform": {
+          "enum": [
+            "macos",
+            "ios",
+            "ipados",
+            "windows",
+            "linux",
+            "android",
+            "web"
+          ]
+        },
+        "min_version": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "max_version": {
+          "anyOf": [
+            {
+              "type": "integer",
+              "minimum": 0
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "measure_unit": {
+          "const": "logical_px"
+        },
+        "appearance": {
+          "$ref": "#/$defs/appearance"
+        },
+        "dimensions": {
+          "$ref": "#/$defs/dimensions"
+        },
+        "radii": {
+          "$ref": "#/$defs/radii"
+        },
+        "borders": {
+          "$ref": "#/$defs/borders"
+        },
+        "spacing": {
+          "$ref": "#/$defs/spacing"
+        },
+        "materials": {
+          "$ref": "#/$defs/materials"
+        },
+        "accents": {
+          "$ref": "#/$defs/accents"
+        },
+        "window_controls": {
+          "$ref": "#/$defs/windowControls"
+        },
+        "accessibility": {
+          "$ref": "#/$defs/accessibility"
+        },
+        "typography": {
+          "$ref": "#/$defs/typography"
+        }
+      },
+      "additionalProperties": false
+    },
+    "appearance": {
+      "type": "object",
+      "required": [
+        "default",
+        "light",
+        "dark"
+      ],
+      "properties": {
+        "default": {
+          "enum": [
+            "light",
+            "dark"
+          ]
+        },
+        "light": {
+          "$ref": "#/$defs/appearanceColors"
+        },
+        "dark": {
+          "$ref": "#/$defs/appearanceColors"
+        }
+      },
+      "additionalProperties": false
+    },
+    "appearanceColors": {
+      "type": "object",
+      "required": [
+        "window_background",
+        "sidebar_background",
+        "content_background",
+        "elevated_panel_background",
+        "toolbar_background",
+        "selected_row_background",
+        "hover_row_background",
+        "pressed_row_background",
+        "separator",
+        "border",
+        "primary_text",
+        "secondary_text",
+        "tertiary_text",
+        "accent",
+        "success",
+        "warning",
+        "error",
+        "disabled_text",
+        "focus_ring",
+        "badge_background"
+      ],
+      "properties": {
+        "window_background": {
+          "$ref": "#/$defs/color"
+        },
+        "sidebar_background": {
+          "$ref": "#/$defs/color"
+        },
+        "content_background": {
+          "$ref": "#/$defs/color"
+        },
+        "elevated_panel_background": {
+          "$ref": "#/$defs/color"
+        },
+        "toolbar_background": {
+          "$ref": "#/$defs/color"
+        },
+        "selected_row_background": {
+          "$ref": "#/$defs/color"
+        },
+        "hover_row_background": {
+          "$ref": "#/$defs/color"
+        },
+        "pressed_row_background": {
+          "$ref": "#/$defs/color"
+        },
+        "separator": {
+          "$ref": "#/$defs/color"
+        },
+        "border": {
+          "$ref": "#/$defs/color"
+        },
+        "primary_text": {
+          "$ref": "#/$defs/color"
+        },
+        "secondary_text": {
+          "$ref": "#/$defs/color"
+        },
+        "tertiary_text": {
+          "$ref": "#/$defs/color"
+        },
+        "accent": {
+          "$ref": "#/$defs/color"
+        },
+        "success": {
+          "$ref": "#/$defs/color"
+        },
+        "warning": {
+          "$ref": "#/$defs/color"
+        },
+        "error": {
+          "$ref": "#/$defs/color"
+        },
+        "disabled_text": {
+          "$ref": "#/$defs/color"
+        },
+        "focus_ring": {
+          "$ref": "#/$defs/color"
+        },
+        "badge_background": {
+          "$ref": "#/$defs/color"
+        }
+      },
+      "additionalProperties": false
+    },
+    "dimensions": {
+      "type": "object",
+      "required": [
+        "sidebar_width",
+        "toolbar_height",
+        "navigation_row_height",
+        "control_height",
+        "window_control_inset",
+        "status_dot",
+        "badge_size",
+        "avatar_size",
+        "sidebar_toggle_width",
+        "sidebar_toggle_inset",
+        "window_traffic_light_inset",
+        "sidebar_toggle_height",
+        "window_traffic_light_width",
+        "window_traffic_light_gap"
+      ],
+      "properties": {
+        "sidebar_width": {
+          "$ref": "#/$defs/positiveMeasure"
+        },
+        "toolbar_height": {
+          "$ref": "#/$defs/positiveMeasure"
+        },
+        "navigation_row_height": {
+          "$ref": "#/$defs/positiveMeasure"
+        },
+        "control_height": {
+          "$ref": "#/$defs/positiveMeasure"
+        },
+        "window_control_inset": {
+          "$ref": "#/$defs/positiveMeasure"
+        },
+        "status_dot": {
+          "$ref": "#/$defs/positiveMeasure"
+        },
+        "badge_size": {
+          "$ref": "#/$defs/positiveMeasure"
+        },
+        "avatar_size": {
+          "$ref": "#/$defs/positiveMeasure"
+        },
+        "sidebar_toggle_width": {
+          "$ref": "#/$defs/positiveMeasure"
+        },
+        "sidebar_toggle_inset": {
+          "$ref": "#/$defs/positiveMeasure"
+        },
+        "window_traffic_light_inset": {
+          "$ref": "#/$defs/positiveMeasure"
+        },
+        "sidebar_toggle_height": {
+          "$ref": "#/$defs/positiveMeasure"
+        },
+        "window_traffic_light_width": {
+          "$ref": "#/$defs/positiveMeasure"
+        },
+        "window_traffic_light_gap": {
+          "$ref": "#/$defs/positiveMeasure"
+        }
+      },
+      "additionalProperties": false
+    },
+    "radii": {
+      "type": "object",
+      "required": [
+        "sm",
+        "md",
+        "lg",
+        "segment",
+        "window"
+      ],
+      "properties": {
+        "sm": {
+          "$ref": "#/$defs/measure"
+        },
+        "md": {
+          "$ref": "#/$defs/measure"
+        },
+        "lg": {
+          "$ref": "#/$defs/measure"
+        },
+        "segment": {
+          "$ref": "#/$defs/measure"
+        },
+        "window": {
+          "$ref": "#/$defs/measure"
+        }
+      },
+      "additionalProperties": false
+    },
+    "borders": {
+      "type": "object",
+      "required": [
+        "thin",
+        "medium"
+      ],
+      "properties": {
+        "thin": {
+          "$ref": "#/$defs/measure"
+        },
+        "medium": {
+          "$ref": "#/$defs/measure"
+        }
+      },
+      "additionalProperties": false
+    },
+    "spacing": {
+      "type": "object",
+      "required": [
+        "space_1",
+        "space_2",
+        "space_3",
+        "space_4",
+        "space_5",
+        "space_6"
+      ],
+      "properties": {
+        "space_1": {
+          "$ref": "#/$defs/measure"
+        },
+        "space_2": {
+          "$ref": "#/$defs/measure"
+        },
+        "space_3": {
+          "$ref": "#/$defs/measure"
+        },
+        "space_4": {
+          "$ref": "#/$defs/measure"
+        },
+        "space_5": {
+          "$ref": "#/$defs/measure"
+        },
+        "space_6": {
+          "$ref": "#/$defs/measure"
+        }
+      },
+      "additionalProperties": false
+    },
+    "materials": {
+      "type": "object",
+      "required": [
+        "material_opacity",
+        "sidebar_blur_radius",
+        "sidebar_opacity",
+        "toolbar_blur_radius",
+        "toolbar_opacity"
+      ],
+      "properties": {
+        "material_opacity": {
+          "type": "number",
+          "minimum": 0,
+          "maximum": 1
+        },
+        "sidebar_blur_radius": {
+          "$ref": "#/$defs/measure"
+        },
+        "sidebar_opacity": {
+          "type": "number",
+          "minimum": 0,
+          "maximum": 1
+        },
+        "toolbar_blur_radius": {
+          "$ref": "#/$defs/measure"
+        },
+        "toolbar_opacity": {
+          "type": "number",
+          "minimum": 0,
+          "maximum": 1
+        }
+      },
+      "additionalProperties": false
+    },
+    "accents": {
+      "type": "object",
+      "required": [
+        "blue",
+        "graphite",
+        "green",
+        "orange",
+        "pink",
+        "purple",
+        "red",
+        "selected",
+        "yellow"
+      ],
+      "properties": {
+        "blue": {
+          "$ref": "#/$defs/accentColors"
+        },
+        "graphite": {
+          "$ref": "#/$defs/accentColors"
+        },
+        "green": {
+          "$ref": "#/$defs/accentColors"
+        },
+        "orange": {
+          "$ref": "#/$defs/accentColors"
+        },
+        "pink": {
+          "$ref": "#/$defs/accentColors"
+        },
+        "purple": {
+          "$ref": "#/$defs/accentColors"
+        },
+        "red": {
+          "$ref": "#/$defs/accentColors"
+        },
+        "yellow": {
+          "$ref": "#/$defs/accentColors"
+        },
+        "selected": {
+          "enum": [
+            "blue",
+            "graphite",
+            "green",
+            "orange",
+            "pink",
+            "purple",
+            "red",
+            "yellow"
+          ]
+        }
+      },
+      "additionalProperties": false
+    },
+    "accentColors": {
+      "type": "object",
+      "required": [
+        "light",
+        "dark"
+      ],
+      "properties": {
+        "light": {
+          "$ref": "#/$defs/color"
+        },
+        "dark": {
+          "$ref": "#/$defs/color"
+        }
+      },
+      "additionalProperties": false
+    },
+    "windowControls": {
+      "type": "object",
+      "required": [
+        "close",
+        "inactive",
+        "minimize",
+        "zoom"
+      ],
+      "properties": {
+        "close": {
+          "$ref": "#/$defs/color"
+        },
+        "inactive": {
+          "$ref": "#/$defs/color"
+        },
+        "minimize": {
+          "$ref": "#/$defs/color"
+        },
+        "zoom": {
+          "$ref": "#/$defs/color"
+        }
+      },
+      "additionalProperties": false
+    },
+    "accessibility": {
+      "type": "object",
+      "required": [
+        "focus_offset",
+        "focus_width",
+        "min_body_contrast",
+        "min_focus_contrast",
+        "min_large_contrast",
+        "reduced_motion"
+      ],
+      "properties": {
+        "focus_offset": {
+          "$ref": "#/$defs/measure"
+        },
+        "focus_width": {
+          "$ref": "#/$defs/measure"
+        },
+        "min_body_contrast": {
+          "$ref": "#/$defs/positiveMeasure"
+        },
+        "min_focus_contrast": {
+          "$ref": "#/$defs/positiveMeasure"
+        },
+        "min_large_contrast": {
+          "$ref": "#/$defs/positiveMeasure"
+        },
+        "reduced_motion": {
+          "enum": [
+            "system",
+            "reduce",
+            "allow"
+          ]
+        }
+      },
+      "additionalProperties": false
+    },
+    "typography": {
+      "type": "object",
+      "required": [
+        "font_family",
+        "font_family_display",
+        "font_weight_normal",
+        "font_weight_medium",
+        "font_weight_semibold",
+        "font_weight_bold",
+        "font_weight_heavy",
+        "styles",
+        "font_size_page",
+        "font_size_title",
+        "font_size_body",
+        "font_size_small",
+        "font_size_caption"
+      ],
+      "properties": {
+        "font_family": {
+          "type": "string",
+          "minLength": 1
+        },
+        "font_family_display": {
+          "type": "string",
+          "minLength": 1
+        },
+        "font_weight_normal": {
+          "$ref": "#/$defs/weight"
+        },
+        "font_weight_medium": {
+          "$ref": "#/$defs/weight"
+        },
+        "font_weight_semibold": {
+          "$ref": "#/$defs/weight"
+        },
+        "font_weight_bold": {
+          "$ref": "#/$defs/weight"
+        },
+        "font_weight_heavy": {
+          "$ref": "#/$defs/weight"
+        },
+        "styles": {
+          "type": "object",
+          "minProperties": 1,
+          "patternProperties": {
+            "^[a-z][a-z0-9_]*$": {
+              "type": "object",
+              "required": [
+                "size",
+                "weight"
+              ],
+              "properties": {
+                "size": {
+                  "$ref": "#/$defs/positiveMeasure"
+                },
+                "weight": {
+                  "$ref": "#/$defs/weight"
+                }
+              },
+              "additionalProperties": false
+            }
+          },
+          "additionalProperties": false
+        },
+        "font_size_page": {
+          "$ref": "#/$defs/positiveMeasure"
+        },
+        "font_size_title": {
+          "$ref": "#/$defs/positiveMeasure"
+        },
+        "font_size_body": {
+          "$ref": "#/$defs/positiveMeasure"
+        },
+        "font_size_small": {
+          "$ref": "#/$defs/positiveMeasure"
+        },
+        "font_size_caption": {
+          "$ref": "#/$defs/positiveMeasure"
+        }
+      },
+      "additionalProperties": false
+    },
+    "framework": {
+      "type": "object",
+      "required": [
+        "name",
+        "version"
+      ],
+      "properties": {
+        "name": {
+          "const": "RustUI"
+        },
+        "version": {
+          "type": "string",
+          "pattern": "^[0-9]+\\.[0-9]+\\.[0-9]+$"
+        }
+      },
+      "additionalProperties": false
+    },
+    "buttonTheme": {
+      "type": "object",
+      "required": [
+        "rustui_type",
+        "metrics",
+        "theme_roles",
+        "parts",
+        "styles"
+      ],
+      "properties": {
+        "rustui_type": {
+          "const": "Button"
+        },
+        "metrics": {
+          "type": "object",
+          "required": [
+            "height",
+            "horizontal_padding",
+            "corner_radius",
+            "label"
+          ],
+          "properties": {
+            "height": {
+              "type": "string",
+              "minLength": 1
+            },
+            "horizontal_padding": {
+              "type": "string",
+              "minLength": 1
+            },
+            "corner_radius": {
+              "type": "string",
+              "minLength": 1
+            },
+            "label": {
+              "type": "string",
+              "minLength": 1
+            }
+          },
+          "additionalProperties": false
+        },
+        "theme_roles": {
+          "type": "object",
+          "required": [
+            "background",
+            "foreground",
+            "hover",
+            "pressed",
+            "disabled",
+            "focus"
+          ],
+          "properties": {
+            "background": {
+              "type": "string",
+              "minLength": 1
+            },
+            "foreground": {
+              "type": "string",
+              "minLength": 1
+            },
+            "hover": {
+              "type": "string",
+              "minLength": 1
+            },
+            "pressed": {
+              "type": "string",
+              "minLength": 1
+            },
+            "disabled": {
+              "type": "string",
+              "minLength": 1
+            },
+            "focus": {
+              "type": "string",
+              "minLength": 1
+            }
+          },
+          "additionalProperties": false
+        },
+        "parts": {
+          "type": "object",
+          "required": [
+            "body"
+          ],
+          "properties": {
+            "body": {
+              "type": "object"
+            }
+          },
+          "additionalProperties": true
+        },
+        "styles": {
+          "type": "array",
+          "minItems": 1,
+          "items": {
+            "type": "object",
+            "required": [
+              "part",
+              "when",
+              "style"
+            ],
+            "properties": {
+              "part": {
+                "const": "body"
+              },
+              "when": {
+                "type": "object",
+                "required": [
+                  "appearance",
+                  "material",
+                  "interaction",
+                  "text_presence",
+                  "size",
+                  "orientation",
+                  "chrome",
+                  "modality"
+                ],
+                "properties": {
+                  "appearance": {
+                    "type": "string",
+                    "minLength": 1
+                  },
+                  "material": {
+                    "type": "string",
+                    "minLength": 1
+                  },
+                  "interaction": {
+                    "type": "string",
+                    "minLength": 1
+                  },
+                  "text_presence": {
+                    "type": "string",
+                    "minLength": 1
+                  },
+                  "size": {
+                    "type": "string",
+                    "minLength": 1
+                  },
+                  "orientation": {
+                    "type": "string",
+                    "minLength": 1
+                  },
+                  "chrome": {
+                    "type": "string",
+                    "minLength": 1
+                  },
+                  "modality": {
+                    "type": "string",
+                    "minLength": 1
+                  }
+                },
+                "additionalProperties": false
+              },
+              "style": {
+                "type": "object",
+                "required": [
+                  "properties"
+                ],
+                "properties": {
+                  "properties": {
+                    "type": "object",
+                    "required": [
+                      "width",
+                      "height",
+                      "background",
+                      "foreground",
+                      "typography"
+                    ],
+                    "properties": {
+                      "width": {
+                        "type": "object",
+                        "required": [
+                          "kind",
+                          "value"
+                        ],
+                        "properties": {
+                          "kind": {
+                            "const": "length"
+                          },
+                          "value": {
+                            "type": "object",
+                            "required": [
+                              "px"
+                            ],
+                            "properties": {
+                              "px": {
+                                "type": "number",
+                                "exclusiveMinimum": 0
+                              }
+                            },
+                            "additionalProperties": false
+                          }
+                        },
+                        "additionalProperties": false
+                      },
+                      "height": {
+                        "type": "object",
+                        "required": [
+                          "kind",
+                          "value"
+                        ],
+                        "properties": {
+                          "kind": {
+                            "const": "length"
+                          },
+                          "value": {
+                            "type": "object",
+                            "required": [
+                              "px"
+                            ],
+                            "properties": {
+                              "px": {
+                                "type": "number",
+                                "exclusiveMinimum": 0
+                              }
+                            },
+                            "additionalProperties": false
+                          }
+                        },
+                        "additionalProperties": false
+                      },
+                      "background": {
+                        "type": "object",
+                        "required": [
+                          "kind",
+                          "value"
+                        ],
+                        "properties": {
+                          "kind": {
+                            "const": "color"
+                          },
+                          "value": {
+                            "type": "object",
+                            "required": [
+                              "rgba"
+                            ],
+                            "properties": {
+                              "rgba": {
+                                "type": "object",
+                                "required": [
+                                  "r",
+                                  "g",
+                                  "b",
+                                  "a"
+                                ],
+                                "properties": {
+                                  "r": {
+                                    "type": "number",
+                                    "minimum": 0,
+                                    "maximum": 1
+                                  },
+                                  "g": {
+                                    "type": "number",
+                                    "minimum": 0,
+                                    "maximum": 1
+                                  },
+                                  "b": {
+                                    "type": "number",
+                                    "minimum": 0,
+                                    "maximum": 1
+                                  },
+                                  "a": {
+                                    "type": "number",
+                                    "minimum": 0,
+                                    "maximum": 1
+                                  }
+                                },
+                                "additionalProperties": false
+                              }
+                            },
+                            "additionalProperties": false
+                          }
+                        },
+                        "additionalProperties": false
+                      },
+                      "foreground": {
+                        "type": "object",
+                        "required": [
+                          "kind",
+                          "value"
+                        ],
+                        "properties": {
+                          "kind": {
+                            "const": "color"
+                          },
+                          "value": {
+                            "type": "object",
+                            "required": [
+                              "rgba"
+                            ],
+                            "properties": {
+                              "rgba": {
+                                "type": "object",
+                                "required": [
+                                  "r",
+                                  "g",
+                                  "b",
+                                  "a"
+                                ],
+                                "properties": {
+                                  "r": {
+                                    "type": "number",
+                                    "minimum": 0,
+                                    "maximum": 1
+                                  },
+                                  "g": {
+                                    "type": "number",
+                                    "minimum": 0,
+                                    "maximum": 1
+                                  },
+                                  "b": {
+                                    "type": "number",
+                                    "minimum": 0,
+                                    "maximum": 1
+                                  },
+                                  "a": {
+                                    "type": "number",
+                                    "minimum": 0,
+                                    "maximum": 1
+                                  }
+                                },
+                                "additionalProperties": false
+                              }
+                            },
+                            "additionalProperties": false
+                          }
+                        },
+                        "additionalProperties": false
+                      },
+                      "typography": {
+                        "type": "object",
+                        "required": [
+                          "kind",
+                          "value"
+                        ],
+                        "properties": {
+                          "kind": {
+                            "const": "typography"
+                          },
+                          "value": {
+                            "type": "object",
+                            "required": [
+                              "family",
+                              "size",
+                              "weight"
+                            ],
+                            "properties": {
+                              "family": {
+                                "type": "string",
+                                "minLength": 1
+                              },
+                              "size": {
+                                "type": "number",
+                                "exclusiveMinimum": 0
+                              },
+                              "weight": {
+                                "type": "number",
+                                "minimum": 1,
+                                "maximum": 1000
+                              }
+                            },
+                            "additionalProperties": false
+                          }
+                        },
+                        "additionalProperties": false
+                      }
+                    },
+                    "additionalProperties": false
+                  }
+                },
+                "additionalProperties": false
+              }
+            },
+            "additionalProperties": false
+          }
+        }
+      },
+      "additionalProperties": false
+    }
+  }
+}
