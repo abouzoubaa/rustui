@@ -1008,7 +1008,7 @@ This accepts stable string selection and observed native naming, not arbitrary s
 - M43 bounded ContextMenu actions, disabled suppression, reorder, in-popup owner removal, and fresh owner restoration accepted; `target/headstart/milestone43-context-menu-gui.json`. Detached stale-action calls, long press, and full keyboard/accessibility coverage remain pending.
 - M45 static Container opacity API validation and native 1.0/0.5 comparison accepted; `target/headstart/milestone45-static-opacity-gui.json`. No exact pixel-alpha measurement or hit-test claim.
 - M44 real drag/drop preserved the mutated A value, final B/A/C order, and one mount per ID under AX; `target/headstart/milestone44-cache-drag-gui.json`. Overall cache evidence is excluded_ax_active. No-AX active-drag fallback, sampled native movements, and post-drag cache reuse remain pending.
-- D1a descriptor schema/codec is implemented; the local compiled preview host (D1b) remains a proposed boundary awaiting the user's architecture decision. `docs/tasks/SERIALIZATION_BRIDGE_PROPOSAL.md` records the current status; arbitrary view/state serialization and UI Studio integration remain unfinished.
+- D1a descriptor schema/codec and D1b's signal-only local compiled preview host are implemented. The user selected the signal-only event contract on 2026-10-19; the proposal records that boundary. Arbitrary view/state serialization, external transport, and UI Studio integration remain unfinished.
 
 
 ## Milestones 46–50 — resizable layout, effects, actions and animation cadence
@@ -1850,3 +1850,18 @@ Playground remained foreground. No additional key or child activation was
 sent; no cache-hit counter sample was taken. This is excluded and leaves the
 cache-pilot keyboard/focus gate open. Screenshot hashes and the input record:
 `target/headstart/evidence/p3b-cgevent-retry-excluded-20261019.json`.
+
+## M134 — bounded cached-child keyboard focus and activation
+
+A fresh no-AX-inspection Playground run used native CGEvents to reach
+`Stacks > Cache`, focus `Enable diagnostics`, and traverse one Tab per
+screenshot. Fifteen visible focus stops reached `Increment cached child`;
+Space changed its local count from 0 to 1, uncached child stayed 0, and the
+story-local accessibility sample after activation reported false. The
+pre-keyboard AX status was not sampled. The `Sample counters` step recorded
+visible local counts 0/0, but the button was only focused, not activated; no
+host lowering counts were displayed. Therefore M134 confirms keyboard focus
+and activation only. It does not establish parent-only cache reuse or
+performance; the no-focus cache-hit gate remains open. The app process and
+disposable bundle were removed. Evidence and screenshot hashes:
+`target/headstart/evidence/p3b-cgevent-keyboard-focus-m134-20261019.json`.

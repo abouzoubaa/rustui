@@ -225,3 +225,25 @@ counter sample was taken. This is excluded: it does not establish cached-child
 keyboard activation or cache reuse. The no-AX keyboard/focus gate remains open.
 Screenshot hashes and the bounded input record are in
 `target/headstart/evidence/p3b-cgevent-retry-excluded-20261019.json`.
+
+## M134 native keyboard focus and activation (2026-10-19)
+
+A fresh disposable Playground reached `Stacks > Cache` with native CGEvent
+mouse/scroll input. Clicking `Enable diagnostics` visibly focused it. After
+releasing both-side modifiers, 15 single Tab events each moved the visible
+focus ring in this order: `English`, `Français`, `العربية`, `Reverse keyed
+rows`, `Remove Beta row`, `Prefix child titles`, `Use detailed environment`,
+`Reset W1`, `Enable diagnostics`, `Clear counters`, `Sample counters`,
+`Sample accessibility state`, `Disable diagnostics`, `Rerender parent only`,
+`Increment cached child`. The Playground stayed foreground; no app switcher
+appeared. Space on the visibly focused cached-child button changed its local
+count from 0 to 1 while the uncached-child count remained 0. The story-local
+accessibility sample after activation read `GPUI accessibility active: false`.
+The pre-keyboard accessibility value was not sampled in this run. At the
+`Sample counters` focus step, visible local counts were `CachedLeaf: 0` and
+`UncachedLeaf: 0`; the Sample counters button was focused but not activated,
+and no host-lowering counters were displayed or sampled. This is keyboard
+focus/activation acceptance only; it does not establish parent-only cache
+reuse, lowering avoidance, or performance. The disposable process and app
+bundle were removed. Full screenshots and hashes are recorded in
+`target/headstart/evidence/p3b-cgevent-keyboard-focus-m134-20261019.json`.
