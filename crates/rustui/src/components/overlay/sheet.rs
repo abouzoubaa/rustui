@@ -2,7 +2,10 @@
 
 use std::rc::Rc;
 
-use gpui::{AnyElement, ParentElement as _, SharedString, Window};
+use gpui::{
+    AnyElement, InteractiveElement as _, IntoElement as _, ParentElement as _, Role, SharedString,
+    StatefulInteractiveElement as _, Window, div,
+};
 use gpui_component::WindowExt as _;
 use rustui_core::Identity;
 
@@ -13,7 +16,11 @@ use crate::{
 };
 
 /// Keeps arbitrary RustUI sheet content owned across native builder rerenders.
-struct SheetContent(Rc<AnyView>);
+struct SheetContent {
+    content: Rc<AnyView>,
+    accessibility_id: SharedString,
+    accessibility_label: SharedString,
+}
 
 impl View for SheetContent {
     fn body(&self) -> impl View {
@@ -21,7 +28,15 @@ impl View for SheetContent {
     }
 
     fn into_element(&self, context: &mut RenderContext<'_>) -> AnyElement {
-        self.0.into_element(context)
+        // GPUI Components does not expose its Sheet surface element. Keep the
+        // semantic dialog node around the RustUI body; this cannot assign a
+        // role to the upstream Sheet host itself.
+        div()
+            .id(self.accessibility_id.clone())
+            .role(Role::Dialog)
+            .aria_label(self.accessibility_label.clone())
+            .child(self.content.into_element(context))
+            .into_any_element()
     }
 }
 
@@ -56,6 +71,10 @@ impl SheetView {
         self
     }
 
+    fn resolved_accessibility_label(&self) -> SharedString {
+        self.title.clone().unwrap_or_else(|| self.trigger.clone())
+    }
+
     /// Adds arbitrary RustUI content to the sheet body.
     pub fn content<V: View>(mut self, content: V) -> Self {
         self.content = Some(Rc::new(AnyView::new(content)));
@@ -76,19 +95,32 @@ impl View for SheetView {
 
     fn into_element(&self, context: &mut RenderContext<'_>) -> AnyElement {
         context.with_element_scope(RetentionScope::Key(self.id.clone()), |context| {
+            let accessibility_label = self.resolved_accessibility_label();
             let content = self.content.as_ref().map(|content| {
                 context.retained_component(Identity::from(format!("{}:content", self.id)), || {
-                    SheetContent(Rc::clone(content))
+                    SheetContent {
+                        content: Rc::clone(content),
+                        accessibility_id: format!("{}:dialog", self.id).into(),
+                        accessibility_label: accessibility_label.clone(),
+                    }
                 })
             });
             let title = self.title.clone();
+            let title_id = format!("{}:title", self.id);
             let id = self.id.clone();
             let open = AppAction::with_window_action(move |_, window: &mut Window, cx| {
                 let content = content.clone();
                 let title = title.clone();
+                let title_id = title_id.clone();
                 window.open_sheet(cx, move |mut sheet, _, _| {
                     if let Some(title) = title.clone() {
-                        sheet = sheet.title(title);
+                        let accessible_title = div()
+                            .id(title_id.clone())
+                            .role(Role::Label)
+                            .aria_label(title.clone())
+                            .child(title)
+                            .into_any_element();
+                        sheet = sheet.title(accessible_title);
                     }
                     if let Some(body) = content.clone() {
                         sheet = sheet.child(body.clone());
@@ -120,5 +152,16 @@ mod tests {
 
         assert!(sheet.title.is_some());
         assert!(sheet.content.is_some());
+        assert_eq!(sheet.resolved_accessibility_label().as_ref(), "Details");
+    }
+
+    #[test]
+    fn trigger_names_sheet_when_title_is_omitted() {
+        let sheet = Sheet("details", "Open details");
+
+        assert_eq!(
+            sheet.resolved_accessibility_label().as_ref(),
+            "Open details"
+        );
     }
 }
