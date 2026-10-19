@@ -13,13 +13,16 @@ import compare_cache_workload as comparison
 import runtime_metrics
 
 
-def workload(run, pid):
-    leaf = 0 if run["mode"] == "cached" else 800
+def workload(run, pid, protocol=None):
+    protocol = protocol or comparison.WORKLOADS["8-leaf"]
+    leaves = protocol["leaves"]
+    leaf = 0 if run["mode"] == "cached" else leaves * protocol["measured_updates"]
     return {"schema_version": 1, "kind": "rustui_cache_comparison_workload", "run_id": run["run_id"],
             "pid": pid, "mode": run["mode"], "status": "complete", "ax_active_seen": False,
             "native_drag_seen": False, "environment_scope": "empty", "correctness_passed": True,
-            "protocol": comparison.PROTOCOL, "values": [1] * 8, "mounts": [1] * 8,
-            "counts": {"parent_root": 100, "parent_leaf": leaf, "final_leaf": leaf + 8, "mutation_leaf_delta": 8}}
+            "protocol": protocol, "values": [1] * leaves, "mounts": [1] * leaves,
+            "counts": {"parent_root": protocol["measured_updates"], "parent_leaf": leaf,
+                       "final_leaf": leaf + leaves, "mutation_leaf_delta": leaves}}
 
 
 def raw_capture(pid=100, run_id="test", provenance=None, cpu=20):
@@ -51,8 +54,8 @@ class ComparisonTests(unittest.TestCase):
         compiler.start()
         self.addCleanup(compiler.stop)
 
-    def plan(self):
-        path = comparison.make_plan("fixture", self.binary)
+    def plan(self, workload="8-leaf", session="fixture"):
+        path = comparison.make_plan(session, self.binary, workload)
         return path, comparison.load_plan(path)
 
     def fixture_captures(self, control_cpu=20):
@@ -60,7 +63,7 @@ class ComparisonTests(unittest.TestCase):
         for run in plan["runs"]:
             pid = 1000 + run["index"]
             result_path = comparison.path_for(run["run_id"], "result")
-            result = workload(run, pid)
+            result = workload(run, pid, plan["protocol"])
             runtime_metrics.write_json_exclusive(result_path, result)
             final = {"schema_version": 1, "kind": "rustui_cache_comparison_final",
                      "run_id": run["run_id"], "mode": run["mode"], "pid": pid,
@@ -102,6 +105,20 @@ class ComparisonTests(unittest.TestCase):
             comparison.make_plan("fixture", self.binary)
         self.assertTrue(path.exists())
 
+    def test_workload_selection_preserves_shape_and_records_leaf_count(self):
+        for name, leaves in (("8-leaf", 8), ("32-leaf", 32)):
+            with self.subTest(workload=name):
+                path, plan = self.plan(name, f"fixture-{name}")
+                self.assertEqual(plan["protocol"], {"leaves": leaves, "lines_per_leaf": 12,
+                                 "width": 210.0, "height": 220.0, "warmup_updates": 10,
+                                 "measured_updates": 100})
+                self.assertTrue(all(run["bundle_configuration"]["leaves"] == leaves for run in plan["runs"]))
+                self.assertEqual(comparison.load_plan(path)["workload"], name)
+
+    def test_unknown_workload_is_rejected(self):
+        with self.assertRaisesRegex(ValueError, "unknown workload"):
+            comparison.make_plan("fixture", self.binary, "64-leaf")
+
     def test_plan_detects_input_or_binary_drift(self):
         path, _ = self.plan()
         self.binary.write_bytes(b"changed")
@@ -124,13 +141,29 @@ class ComparisonTests(unittest.TestCase):
     def test_correctness_rejects_exclusion_wrong_counts_values_and_mounts(self):
         for mode in ("cached", "uncached"):
             run = {"run_id": "fixture", "mode": mode}
-            good = workload(run, 7)
-            comparison.check_workload(good, run, 7)
+            protocol = comparison.WORKLOADS["8-leaf"]
+            good = workload(run, 7, protocol)
+            comparison.check_workload(good, run, 7, protocol)
             for field, value in (("ax_active_seen", True), ("native_drag_seen", True), ("values", [0] * 8),
                                  ("mounts", [2] * 8), ("counts", {}), ("pid", 8), ("status", "timeout")):
                 changed = {**good, field: value}
                 with self.subTest(mode=mode, field=field), self.assertRaises(ValueError):
-                    comparison.check_workload(changed, run, 7)
+                    comparison.check_workload(changed, run, 7, protocol)
+
+    def test_workload_invariants_scale_to_32_leaves(self):
+        protocol = comparison.WORKLOADS["32-leaf"]
+        for mode in ("cached", "uncached"):
+            run = {"run_id": "fixture", "mode": mode}
+            result = workload(run, 7, protocol)
+            comparison.check_workload(result, run, 7, protocol)
+            self.assertEqual(len(result["values"]), 32)
+            self.assertEqual(len(result["mounts"]), 32)
+            self.assertEqual(result["counts"]["mutation_leaf_delta"], 32)
+        run = {"run_id": "fixture", "mode": "uncached"}
+        bad = workload(run, 7, protocol)
+        bad["counts"]["parent_leaf"] += 1
+        with self.assertRaisesRegex(ValueError, "wrong raw lowering counts"):
+            comparison.check_workload(bad, run, 7, protocol)
 
     def test_metric_values_use_attached_delta_and_sampled_rss(self):
         self.assertEqual(comparison.metric_values(raw_capture()), {"attached_cpu_ns": 20,
@@ -158,7 +191,7 @@ class ComparisonTests(unittest.TestCase):
         def fake_collect(*args, provenance, stop_requested):
             self.assertFalse(stop_requested())
             self.assertTrue(comparison.path_for(run["run_id"], "start").exists())
-            result = workload(run, pid)
+            result = workload(run, pid, plan["protocol"])
             result["status"] = status
             runtime_metrics.write_json_exclusive(comparison.path_for(run["run_id"], "result"), result)
             self.assertFalse(stop_requested())
@@ -224,6 +257,8 @@ class ComparisonTests(unittest.TestCase):
         path, _ = self.fixture_captures()
         output = comparison.summarize(path)
         report = comparison.read_json(output)
+        self.assertEqual(report["workload"], "8-leaf")
+        self.assertEqual(report["protocol"]["leaves"], 8)
         self.assertEqual(report["measured_pairs"], 5)
         self.assertEqual(report["modes"]["cached"]["attached_cpu_ns"]["median"], 10)
         self.assertEqual(report["ratio_spread"]["attached_cpu_ns"]["median"], .5)

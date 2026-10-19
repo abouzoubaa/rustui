@@ -9,11 +9,15 @@ No performance benefit is claimed before measurements and review.
 
 The original cache benchmark places cached and uncached children in one process.
 Its calibration establishes repeatability but cannot attribute process cost to
-caching. This example instead uses one binary with two modes. Each mode has the
-same root and leaf types, text/data, eight retained children, four columns/two
-rows, twelve Text views per leaf, 210 × 220 logical-pixel leaf geometry, ten
-warmup updates, one hundred measured parent updates, and one mutation of every
-leaf. The sole rendering difference is applying `.cached_fixed(210.0, 220.0)`.
+caching. This example instead uses one binary with two modes and two fixed
+workloads: `8-leaf` preserves the original eight-child baseline, while
+`32-leaf` varies retained child count. Both use the same root and leaf types,
+text/data, four columns, twelve Text views per leaf, 210 × 220 logical-pixel
+leaf geometry, ten warmup updates, one hundred measured parent updates, and
+one mutation per leaf. The sole rendering difference is applying
+`.cached_fixed(210.0, 220.0)`. The selected leaf count is included in each
+immutable run configuration and checked against reported values, mounts, and
+lowering counts.
 
 The native example is framework implementation code and may use GPUI directly;
 the canonical Playground remains a consumer of the public RustUI API.
@@ -25,19 +29,23 @@ The comparison script never builds, launches GUI applications, sends signals,
 fetches sources, or applies/promotes patches. Every native run must be launched
 through CUA. CLI examples below invoke only the planning/attach/reporting tool.
 
-1. Create a fresh plan against an existing binary:
+1. Create a fresh plan against an existing binary. The default is `8-leaf`;
+   pass `--workload 32-leaf` for the varied retained-tree case:
 
    ```sh
    python3 scripts/compare_cache_workload.py plan \
      --session p3d-unique-session \
-     --binary target/headstart/debug/examples/cache_comparison
+     --binary target/headstart/debug/examples/cache_comparison \
+     --workload 32-leaf
    ```
 
    This writes an exclusive immutable plan and twelve configuration JSON files
-   directly under `target/headstart/performance/`. The plan captures the binary,
-   relevant RustUI/collector sources, Cargo inputs, launcher, and current compiler
-   identities. These are plan-time facts, not proof of which source produced the
-   executable; preserve the separate matching build provenance and raw build log.
+   directly under `target/headstart/performance/`. The plan captures the selected
+   workload, binary, relevant RustUI/collector sources, Cargo inputs, launcher,
+   and current compiler identities. These are plan-time facts, not proof of which
+   source produced the executable; preserve separate matching build provenance
+   and the raw build log. Use a fresh session ID for each workload and do not mix
+   captures from different workloads in one summary.
 
 2. Follow `runs` in the plan in exact index order. There is one fresh-process
    warmup pair, followed by five measured fresh-process pairs. Pair start order
@@ -55,7 +63,8 @@ through CUA. CLI examples below invoke only the planning/attach/reporting tool.
 
    CUA then opens the bundle. The example reads this resource when launched
    without arguments; an explicit `--config <path>` takes precedence. Config
-   contains only `run_id` and `mode`. Output is fixed inside this repository.
+   contains `run_id`, `mode`, and the planned `leaves` count. Output is fixed
+   inside this repository.
    Use fresh IDs and preserve every prior run artifact. Do not launch through a
    shell `open`, shell executable invocation, or Python `Popen`.
 
@@ -139,11 +148,13 @@ invariants, sample validation, start/ack ordering, excluded/partial retention,
 paired summaries, warmup exclusion, changed artifacts/counters/PIDs, and zero
 denominators. They launch no GUI applications.
 
-The final focused Python suite passed **21 tests, 0 failed**; the log is `target/headstart/p3d-final-python-tests.log`. Its final guard tests exclude runs if accessibility or native drag is observed, including late observations. The comparison tool, example build, and corrected locked/offline all-targets check passed; see `docs/BUILDING.md` for build evidence. The completed Finder/CUA-only session `p3d-review-01` is summarized in `target/headstart/performance/cache-comparison-p3d-review-01-summary.json` and bound to its immutable plan at `target/headstart/performance/cache-comparison-p3d-review-01-plan.json`.
+The initial focused Python suite passed **21 tests, 0 failed**; the log is `target/headstart/p3d-final-python-tests.log`. Its final guard tests exclude runs if accessibility or native drag is observed, including late observations. The comparison tool, example build, and corrected locked/offline all-targets check passed at that milestone; see `docs/BUILDING.md` for build evidence. The completed Finder/CUA-only session `p3d-review-01` is summarized in `target/headstart/performance/cache-comparison-p3d-review-01-summary.json` and bound to its immutable plan at `target/headstart/performance/cache-comparison-p3d-review-01-plan.json`.
+
+After adding workload selection, `python3 -m unittest scripts/tests/test_compare_cache_workload.py` passed **24 tests, 0 failed**. The fixtures cover both workload protocols and their leaf-count invariants; they do not build or launch the native example.
 
 ## Native benchmark results (2026-10-18)
 
-All 12 planned processes completed with correctness checks true and no observed accessibility activation or native drag. This was one correctness-checked warmup pair, excluded from timing summaries, plus five measured cached/uncached pairs. Each run used one opt-level-0 workload: 8 leaves, 12 text lines per leaf, 10 warmup updates, 100 measured parent updates, then one mutation per leaf. Across all runs, cached parent updates produced 0 child lowerings versus 800 in uncached mode; each mode produced 8 post-mutation child lowerings and 8 expected rendered values.
+All 12 planned processes completed with correctness checks true and no observed accessibility activation or native drag. This was one correctness-checked warmup pair, excluded from timing summaries, plus five measured cached/uncached pairs. Each run used one opt-level-0 workload: 8 leaves, 12 text lines per leaf, 10 warmup updates, 100 measured parent updates, then one mutation per leaf. Across all runs, cached parent updates produced 0 child lowerings versus 800 in uncached mode; each mode produced 8 post-mutation child lowerings and 8 expected rendered values. These native results cover only the `8-leaf` workload. The `32-leaf` selection has no native measurements yet and requires its own build provenance, CUA-launched session, and summary.
 
 The median cached/uncached attached CPU ratio was **0.2895** (about 71% lower CPU time for the cached mode in this workload); paired ratios ranged from **0.2848 to 0.3154**. This CPU interval includes warmup, measured updates, mutation, diagnostics, and post-result collection wait; it is not frame time. Median max-sampled RSS ratio was **0.9956** (about 0.4% lower), with a paired range of 0.9924–1.0028. Sampled RSS is not OS peak memory. These measurements include instrumentation and support only this single workload and environment; they do not establish frame, GPU, presentation, input-to-photon, or generalized application speedup. No acceptance threshold or automatic speedup verdict was set.
 

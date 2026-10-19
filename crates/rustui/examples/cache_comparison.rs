@@ -18,7 +18,6 @@ use rustui::{
 };
 use serde_json::{Value, json};
 
-const LEAVES: usize = 8;
 const LINES: usize = 12;
 const WIDTH: f32 = 210.0;
 const HEIGHT: f32 = 220.0;
@@ -29,6 +28,7 @@ const UPDATES: u32 = 100;
 struct Config {
     run_id: String,
     cached: bool,
+    leaves: usize,
 }
 
 impl Config {
@@ -67,9 +67,15 @@ impl Config {
             Some("uncached") => false,
             _ => return Err("mode must be cached or uncached".into()),
         };
+        let leaves = usize::try_from(value["leaves"].as_u64().ok_or("missing leaves")?)
+            .map_err(|_| "leaves does not fit this platform")?;
+        if !matches!(leaves, 8 | 32) {
+            return Err("leaves must be 8 or 32".into());
+        }
         Ok(Self {
             run_id: run_id.into(),
             cached,
+            leaves,
         })
     }
 
@@ -118,6 +124,7 @@ fn write(config: &Config, kind: &str, document: &Value) -> std::io::Result<()> {
 struct ComparisonRoot {
     tick: u32,
     cached: bool,
+    leaves: usize,
     values: Rc<RefCell<Vec<u32>>>,
     mounts: Rc<RefCell<Vec<u32>>>,
 }
@@ -125,10 +132,13 @@ struct ComparisonRoot {
 impl View for ComparisonRoot {
     fn body(&self) -> impl View {
         let mut content = VStack::new().child(Text(format!("Parent update {:06}", self.tick)));
-        for row in 0..2 {
+        for row in 0..self.leaves.div_ceil(4) {
             let mut children = HStack::new();
             for column in 0..4 {
                 let index = row * 4 + column;
+                if index >= self.leaves {
+                    break;
+                }
                 let values = self.values.clone();
                 let mounts = self.mounts.clone();
                 let child = Component(format!("comparison-leaf-{index}"), move || ComparisonLeaf {
@@ -190,6 +200,7 @@ enum Phase {
 
 struct State {
     config: Config,
+    leaves: usize,
     phase: Phase,
     root: Entity<ViewHost<ComparisonRoot>>,
     children: Vec<WeakEntity<ViewHost<ComparisonLeaf>>>,
@@ -231,12 +242,12 @@ fn finish(cx: &mut App, state: &Rc<RefCell<State>>, requested: &str) {
     let expected = if state.config.cached {
         0
     } else {
-        LEAVES as u64 * u64::from(UPDATES)
+        state.leaves as u64 * u64::from(UPDATES)
     };
     let valid = state.parent_root == Some(u64::from(UPDATES))
         && state.parent_leaf == Some(expected)
-        && leaf.checked_sub(expected) == Some(LEAVES as u64)
-        && state.children.len() == LEAVES
+        && leaf.checked_sub(expected) == Some(state.leaves as u64)
+        && state.children.len() == state.leaves
         && state.values.borrow().iter().all(|value| *value == 1)
         && state.mounts.borrow().iter().all(|mounts| *mounts == 1);
     let status = if requested != "complete" {
@@ -250,7 +261,7 @@ fn finish(cx: &mut App, state: &Rc<RefCell<State>>, requested: &str) {
         "schema_version": 1, "kind": "rustui_cache_comparison_workload",
         "run_id": state.config.run_id, "pid": std::process::id(), "mode": state.config.mode(),
         "status": status, "ax_active_seen": state.ax_seen, "native_drag_seen": state.drag_seen,
-        "protocol": {"leaves": LEAVES, "lines_per_leaf": LINES, "width": WIDTH, "height": HEIGHT,
+        "protocol": {"leaves": state.leaves, "lines_per_leaf": LINES, "width": WIDTH, "height": HEIGHT,
             "warmup_updates": WARMUP, "measured_updates": UPDATES},
         "counts": {"parent_root": state.parent_root, "parent_leaf": state.parent_leaf,
             "final_leaf": leaf, "mutation_leaf_delta": state.parent_leaf.and_then(|n| leaf.checked_sub(n))},
@@ -275,11 +286,14 @@ fn advance(window: &mut Window, cx: &mut App, state: Rc<RefCell<State>>) {
     }
     if matches!(phase, Phase::Finished) {
         if state.borrow().config.gate("ack") {
-            let mut state = state.borrow_mut();
+            let state = state.borrow();
             let status = if state.ax_seen || state.drag_seen {
                 "excluded_interaction"
             } else {
-                state.terminal_status.as_deref().unwrap_or("failed_missing_result")
+                state
+                    .terminal_status
+                    .as_deref()
+                    .unwrap_or("failed_missing_result")
             };
             let final_document = json!({
                 "schema_version": 1,
@@ -348,7 +362,7 @@ fn advance(window: &mut Window, cx: &mut App, state: Rc<RefCell<State>>) {
                     })
                     .is_ok()
             });
-            if !success || children.len() != LEAVES {
+            if !success || children.len() != state.borrow().leaves {
                 finish(cx, &state, "failed_children");
             } else {
                 state.borrow_mut().phase = Phase::Mutation;
@@ -370,13 +384,15 @@ fn main() {
     write(&config, "ready", &ready).expect("new comparison ready record");
     gpui_platform::application().run(move |cx| {
         gpui_component::init(cx);
-        let values = Rc::new(RefCell::new(vec![0; LEAVES]));
-        let mounts = Rc::new(RefCell::new(vec![0; LEAVES]));
+        let leaves = config.leaves;
+        let values = Rc::new(RefCell::new(vec![0; leaves]));
+        let mounts = Rc::new(RefCell::new(vec![0; leaves]));
         let root = cx.new(|cx| {
             ViewHost::new(
                 ComparisonRoot {
                     tick: 0,
                     cached: config.cached,
+                    leaves,
                     values: values.clone(),
                     mounts: mounts.clone(),
                 },
@@ -385,6 +401,7 @@ fn main() {
         });
         let state = Rc::new(RefCell::new(State {
             config,
+            leaves,
             phase: Phase::Waiting,
             root: root.clone(),
             children: Vec::new(),
