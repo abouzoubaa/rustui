@@ -2,6 +2,8 @@
 //!
 //! Run from the repository root with:
 //! `./scripts/cargo-headstart run -p rustui --example cache_benchmark`
+//! Add `-- --props --scenario small` for equal-props parent rerenders followed
+//! by repeated changed-props updates. Reports lowering counts, not timing speedup.
 
 use std::{
     cell::{Cell, RefCell},
@@ -55,11 +57,14 @@ const SCENARIOS: [Scenario; 3] = [
     },
 ];
 
-fn scenario_from_args() -> Result<Scenario, String> {
+fn scenario_from_args() -> Result<(Scenario, bool), String> {
     let mut args = std::env::args().skip(1);
     let mut selected = None;
+    let mut props = false;
     while let Some(argument) = args.next() {
-        if argument == "--scenario" {
+        if argument == "--props" {
+            props = true;
+        } else if argument == "--scenario" {
             selected = Some(args.next().ok_or("--scenario needs a value")?);
         } else if let Some(value) = argument.strip_prefix("--scenario=") {
             selected = Some(value.to_owned());
@@ -72,11 +77,14 @@ fn scenario_from_args() -> Result<Scenario, String> {
         .iter()
         .copied()
         .find(|scenario| scenario.name == selected)
+        .map(|scenario| (scenario, props))
         .ok_or_else(|| format!("unknown scenario {selected:?}; choose small, medium, or large"))
 }
 
 struct BenchmarkRoot {
     tick: u32,
+    props_mode: bool,
+    props_value: u32,
     scenario: Scenario,
     cached_output: Rc<Cell<u32>>,
     uncached_output: Rc<Cell<u32>>,
@@ -94,21 +102,42 @@ impl View for BenchmarkRoot {
                         let output = cached_output.clone();
                         move |index| {
                             let output = output.clone();
-                            Component(format!("cached-leaf-{index}"), move || CachedLeaf {
-                                value: 0,
-                                output: output.clone(),
-                            })
-                            .cached_fixed(220.0, 100.0)
+                            let child =
+                                Component(format!("cached-leaf-{index}"), move || CachedLeaf {
+                                    value: 0,
+                                    output: output.clone(),
+                                });
+                            if self.props_mode {
+                                AnyView::new(
+                                    child
+                                        .props(self.props_value, |child, value| {
+                                            child.value = *value
+                                        })
+                                        .cached_fixed(220.0, 100.0),
+                                )
+                            } else {
+                                AnyView::new(child.cached_fixed(220.0, 100.0))
+                            }
                         }
                     }))
                     .children((0..self.scenario.retained_children_per_side).map({
                         let output = uncached_output.clone();
                         move |index| {
                             let output = output.clone();
-                            Component(format!("uncached-leaf-{index}"), move || UncachedLeaf {
-                                value: 0,
-                                output: output.clone(),
-                            })
+                            let child =
+                                Component(format!("uncached-leaf-{index}"), move || UncachedLeaf {
+                                    value: 0,
+                                    output: output.clone(),
+                                });
+                            if self.props_mode {
+                                AnyView::new(
+                                    child.props(self.props_value, |child, value| {
+                                        child.value = *value
+                                    }),
+                                )
+                            } else {
+                                AnyView::new(child)
+                            }
                         }
                     })),
             )
@@ -147,6 +176,7 @@ impl View for UncachedLeaf {
 enum Phase {
     Warmup(u32),
     Measure(u32),
+    ChangedProps(u32),
     CachedMutation,
     UncachedMutation,
     Finished,
@@ -157,6 +187,7 @@ impl Phase {
         match self {
             Self::Warmup(_) => "warmup",
             Self::Measure(_) => "measure",
+            Self::ChangedProps(_) => "changed_props",
             Self::CachedMutation => "cached_mutation",
             Self::UncachedMutation => "uncached_mutation",
             Self::Finished => "finished",
@@ -168,6 +199,8 @@ struct State {
     phase: Phase,
     root: Entity<ViewHost<BenchmarkRoot>>,
     scenario: Scenario,
+    props_mode: bool,
+    changed_props_completed: u32,
     cached: Option<gpui::WeakEntity<ViewHost<CachedLeaf>>>,
     uncached: Option<gpui::WeakEntity<ViewHost<UncachedLeaf>>>,
     cached_output: Rc<Cell<u32>>,
@@ -183,6 +216,21 @@ fn count(snapshot: &RenderDiagnosticsSnapshot, name: &str) -> u64 {
         .iter()
         .find(|host| host.component_type == name)
         .map_or(0, |host| host.count)
+}
+
+fn snapshot_json(snapshot: &RenderDiagnosticsSnapshot) -> Value {
+    json!(
+        snapshot
+            .hosts
+            .iter()
+            .map(|host| json!({
+                "component_type": host.component_type,
+                "count": host.count,
+                "total_ns": host.total.as_nanos(),
+                "max_ns": host.max.as_nanos(),
+            }))
+            .collect::<Vec<_>>()
+    )
 }
 
 fn schedule(window: &Window, state: Rc<RefCell<State>>) {
@@ -226,6 +274,11 @@ fn advance(window: &mut Window, cx: &mut App, state: Rc<RefCell<State>>) {
             let snapshot = render_diagnostics_snapshot(cx);
             let cached = state.borrow().cached.clone();
             state.borrow_mut().parent_snapshot = Some(snapshot);
+            if state.borrow().props_mode {
+                state.borrow_mut().phase = Phase::ChangedProps(0);
+                advance(window, cx, state);
+                return;
+            }
             match cached.and_then(|child| {
                 child
                     .update(cx, |host, cx| {
@@ -240,6 +293,21 @@ fn advance(window: &mut Window, cx: &mut App, state: Rc<RefCell<State>>) {
                 }
                 None => finish(cx, state, "failed", Some("cached child host missing")),
             }
+        }
+        Phase::ChangedProps(completed) if completed < MEASURED_UPDATES => {
+            state.borrow_mut().changed_props_completed = completed;
+            let root = state.borrow().root.clone();
+            root.update(cx, |host, cx| {
+                host.component_mut().tick += 1;
+                host.component_mut().props_value += 1;
+                cx.notify();
+            });
+            state.borrow_mut().phase = Phase::ChangedProps(completed + 1);
+            schedule(window, state);
+        }
+        Phase::ChangedProps(completed) => {
+            state.borrow_mut().changed_props_completed = completed;
+            finish(cx, state, "complete", None);
         }
         Phase::CachedMutation => {
             let snapshot = render_diagnostics_snapshot(cx);
@@ -299,7 +367,7 @@ fn finish(cx: &mut App, state: Rc<RefCell<State>>, status: &str, error: Option<&
         && state.cached_output.get() == 1
         && state.uncached_output.get() == 1;
 
-    let result = json!({
+    let mut result = json!({
         "schema_version": 1,
         "kind": "rustui_cached_child_workload",
         "status": status,
@@ -326,6 +394,32 @@ fn finish(cx: &mut App, state: Rc<RefCell<State>>, status: &str, error: Option<&
         "child_invalidation_observed": child_invalidation_observed,
         "measurement_scope": "RustUI host lowering counts only; not frame, GPU, or presentation time",
     });
+    if state.props_mode {
+        let final_cached = count(&final_snapshot, cached_type);
+        let cached_changed = parent_cached.map(|before| final_cached.saturating_sub(before));
+        let uncached_changed =
+            parent_uncached.map(|before| after_uncached_mutation.saturating_sub(before));
+        result["kind"] = json!("rustui_cached_props_child_workload");
+        result["child_invalidation_observed"] = json!(
+            state.changed_props_completed == MEASURED_UPDATES
+                && cached_changed == Some(expected_uncached)
+                && uncached_changed == Some(expected_uncached)
+                && state.cached_output.get() == MEASURED_UPDATES
+                && state.uncached_output.get() == MEASURED_UPDATES
+        );
+        result["props_evidence"] = json!({
+            "initial_props": 0,
+            "props_increment_per_update": 1,
+            "changed_props_updates_requested": MEASURED_UPDATES,
+            "changed_props_updates_completed": state.changed_props_completed,
+            "expected_lowerings_per_changed_props_phase": expected_uncached,
+            "cached_changed_props_lowerings": cached_changed,
+            "uncached_changed_props_lowerings": uncached_changed,
+            "parent_only_snapshot": state.parent_snapshot.as_ref().map(snapshot_json),
+            "final_snapshot": snapshot_json(&final_snapshot),
+            "wall_clock_measured": false,
+        });
+    }
     drop(state);
 
     if let Err(error) = write_result(&result) {
@@ -672,8 +766,8 @@ fn main() {
         run_invalidation();
         return;
     }
-    let scenario = match scenario_from_args() {
-        Ok(scenario) => scenario,
+    let (scenario, props_mode) = match scenario_from_args() {
+        Ok(configuration) => configuration,
         Err(error) => {
             eprintln!("{error}");
             std::process::exit(2);
@@ -692,6 +786,8 @@ fn main() {
             ViewHost::new(
                 BenchmarkRoot {
                     tick: 0,
+                    props_mode,
+                    props_value: 0,
                     scenario,
                     cached_output: cached_output.clone(),
                     uncached_output: uncached_output.clone(),
@@ -703,6 +799,8 @@ fn main() {
             phase: Phase::Warmup(0),
             root: root.clone(),
             scenario,
+            props_mode,
+            changed_props_completed: 0,
             cached: None,
             uncached: None,
             cached_output,
