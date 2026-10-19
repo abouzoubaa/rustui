@@ -214,8 +214,8 @@ RustUI/workload inputs were used for the isolated candidate.
    --offline` thereafter. Baseline/candidate versions/features must remain equal.
 4. **Partially executed:** from the copied workspace and candidate-only target,
    the filtered upstream test command was run. It failed before test execution;
-   the all-targets and Playground build commands remain pending. The intended
-   commands are:
+   the all-targets and Playground build commands subsequently passed on
+   2026-10-19; see the dated validation record below. The intended commands were:
 
    ```sh
    ./scripts/cargo-headstart test -p gpui-pre --lib quad_order_tests --locked --offline
@@ -375,8 +375,8 @@ hashes. The repaired harness source SHA-256 is
 `079d5c0f58d04eb94de1df3d9fb50586f2fa5fd1aa10e6b985490a76c84391f7`.
 The repaired harness rerun subsequently passed 9 tests; see
 `evidence/harness-tests-rerun.log`. Baseline and candidate production builds
-also succeeded. Paired probes, native visual review, and performance measurement
-remain pending. Raw production build logs are
+also succeeded. This preparation checkpoint predates the later paired probes, native visual review, and performance results.
+Raw production build logs are
 `baseline/production-build.log` and `candidate/production-build.log` under the
 same experiment root.
 
@@ -430,7 +430,7 @@ raw JSON, validates scenario/hash/mixed-batch equality, and reports each pair's
 trial-median mean sample timing, candidate/baseline ratios, ranges and allocator
 metrics. It writes a new report exclusively, marks fewer than five pairs as an
 incomplete protocol and sets no automatic promotion threshold. At preparation
-handoff, compilation, native checks and CPU measurements remain pending.
+handoff, compilation, native checks, and CPU measurements were pending at preparation; later results are recorded below.
 
 ## Earlier development-profile CPU and native visual results
 
@@ -481,3 +481,13 @@ The medium sizes show strong dense/reverse gains (1024 quads: 0.297/0.337; 16,38
 A complete unapplied V2 replacement diff targets only `vendor/gpui-pre-0.3.9/src/scene.rs` in a new isolated snapshot. Its patch SHA-256 is `75d876d572664df312091145de445eefa0641316f6640b5be8f7c2854a975ae7`; proposed postimage SHA-256 is `1da784711db7148374fb357652e01e2e8b21050a79127124f25dc18a570ae549`. V2 keeps V1's stable counting algorithm and fallback, but uses stock stable sorting below 1024 and at or above 131,072 elements. It is a proposal only: approval is pending, and no V2 source application, build, test, benchmark, or performance benefit is claimed. The exact proposed review is in `docs/tasks/QUAD_SORT_V2_PROPOSAL.md`.
 
 
+
+
+## Isolated workspace and Playground build validation (2026-10-19)
+
+The approved V1 candidate passed both remaining offline build gates using its isolated source snapshot and candidate-only Cargo target directory:
+
+- `CARGO_TARGET_DIR=/Users/Abium/Developer/rustui/target/headstart/candidates/quad-stable-sort-20261018-a/candidate/target ./scripts/cargo-headstart check --workspace --all-targets --locked --offline` — exit 0. Raw output: `evidence/20261019-workspace-all-targets-check.log`.
+- `CARGO_TARGET_DIR=/Users/Abium/Developer/rustui/target/headstart/candidates/quad-stable-sort-20261018-a/candidate/target ./scripts/cargo-headstart build -p rustui-playground --locked --offline` — exit 0. Raw output: `evidence/20261019-playground-build.log`. Cargo reported the existing future-incompatibility warning for `block v0.1.6`.
+
+The pinned upstream `gpui-pre --lib quad_order_tests` test build remains blocked by its missing font assets and test-support closure; zero upstream quad tests ran. The standalone extracted-code harness passed 9 tests. Historical native visual review found matching output at the initial size, but resize acceptance remains unverified. Release CPU results remain mixed and show regressions in all five largest workloads. V1 remains isolated and unpromoted; no app was launched for these build checks, and no vendored or dependency files were changed. V2 remains a separate proposal requiring explicit approval.
