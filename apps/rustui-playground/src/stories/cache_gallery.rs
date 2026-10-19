@@ -11,6 +11,7 @@ pub fn demo() -> impl View {
 #[component]
 struct CacheGallery {
     snapshot: Rc<RefCell<String>>,
+    accessibility_activity: Rc<RefCell<String>>,
     #[state(0)]
     props_revision: u32,
     #[state(0)]
@@ -39,6 +40,7 @@ impl View for CacheGallery {
         let props_revision = self.props_revision();
         let display_revision = self.display_revision();
         let snapshot = self.snapshot.clone();
+        let accessibility_activity = self.accessibility_activity.clone();
 
         OwnerActionReader(move |target: OwnerAction<CacheGallery>| {
             let snapshot_for_action = snapshot.clone();
@@ -59,6 +61,12 @@ impl View for CacheGallery {
                 );
             })
             .then(target.action(CacheGallery::refresh_display));
+            let accessibility_snapshot = accessibility_activity.clone();
+            let read_accessibility_activity = AppAction::read_accessibility_active(move |active| {
+                *accessibility_snapshot.borrow_mut() =
+                    format!("GPUI accessibility active: {active}");
+            })
+            .then(target.action(CacheGallery::refresh_display));
 
             VStack::new()
                 .spacing(10.0)
@@ -75,11 +83,15 @@ impl View for CacheGallery {
                             .id("cache-clear-diagnostics"))
                         .child(Button("Sample counters", read_snapshot)
                             .id("cache-sample-counters"))
+                        .child(Button("Sample accessibility state", read_accessibility_activity)
+                            .id("cache-sample-accessibility"))
                         .child(Button("Disable diagnostics", AppAction::disable_render_diagnostics()
                             .then(target.action(CacheGallery::refresh_display)))
                             .id("cache-disable-diagnostics")),
                 )
-                .child(Button("Rerender parent only", target.action(CacheGallery::tick_parent))
+        .child(Text(snapshot.borrow().clone()))
+        .child(Text(accessibility_activity.borrow().clone()))
+        .child(Button("Rerender parent only", target.action(CacheGallery::tick_parent))
                     .id("cache-parent-tick"))
                 .child(Text(format!("Parent ticks: {parent_ticks}; display revision: {display_revision}")))
                 .child(
@@ -96,7 +108,6 @@ impl View for CacheGallery {
                         .props(props_revision, CachedPropsLeaf::apply_revision)
                         .cached_fixed(320.0, 160.0),
                 )
-                .child(Text(snapshot.borrow().clone()))
         })
     }
 }

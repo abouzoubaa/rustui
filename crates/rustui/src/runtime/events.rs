@@ -64,6 +64,15 @@ impl AppAction {
         Self::new(move |cx| on_snapshot(diagnostics_snapshot(cx)))
     }
 
+    /// Reads whether GPUI currently considers the action's window accessibility-active.
+    pub fn read_accessibility_active(on_status: impl Fn(bool) + 'static) -> Self {
+        Self {
+            invoke: AppActionKind::Context(Rc::new(move |window, _cx| {
+                on_status(window.is_a11y_active());
+            })),
+        }
+    }
+
     pub(crate) fn with_window_action(
         action: impl Fn(&ClickEvent, &mut Window, &mut App) + 'static,
     ) -> Self {

@@ -177,3 +177,23 @@ Raw results are `target/headstart/cache-benchmark-79051-1792402373373838000.json
 acceptance record is `target/headstart/evidence/props-cache-acceptance-20261019.json`.
 The app processes exited and the disposable example executable was removed;
 shared Cargo caches were preserved.
+
+## M117 focus and accessibility diagnostic
+
+The Playground gallery now exposes GPUI's current window accessibility-active
+value beside the lowering counters. A native sample reported accessibility
+inactive while the cached and uncached leaf counters still matched during
+keyboard/focus activity. This is consistent with GPUI's refresh rules: focus
+changes call a full-window refresh and bypass cached subtree reuse even when
+accessibility is inactive. `ComponentHost::render` diagnostics count calls to
+`Component::into_element`; they do not count cached paint, prepaint replay, GPU
+work, or frames. Equal counts during a focus-driven full refresh therefore do
+not show whether the cached path works during an eligible parent-only update.
+
+The next cache acceptance probe must record a parent-only rerender without a
+focus change, then record Tab/focus transitions separately. On an eligible
+parent-only update, the cached leaf should not lower while the uncached leaf
+does. Focus transitions may lower both. Keyboard activation and retained local
+state must be recorded separately from cache reuse. Cache acceptance remains
+pending until that no-focus parent-only result and the required interaction
+checks are captured.
