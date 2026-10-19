@@ -43,6 +43,10 @@ def raw_capture(pid=100, run_id="test", provenance=None, cpu=20):
 
 
 class ComparisonTests(unittest.TestCase):
+    def test_build_input_inventory_matches_provenance_recorder(self):
+        self.assertEqual(comparison.INPUTS, record_build_provenance.INPUT_FILES)
+        self.assertIn("rust-toolchain.toml", comparison.INPUTS)
+
     def setUp(self):
         self.temporary = tempfile.TemporaryDirectory()
         self.addCleanup(self.temporary.cleanup)

@@ -19,7 +19,7 @@ import time
 
 import collect_runtime_metrics as collector
 from calibrate_cache_workload import compiler_identity
-from record_build_provenance import file_record, git_commit, snapshot_digest, source_records
+from record_build_provenance import INPUT_FILES, file_record, git_commit, snapshot_digest, source_records
 from runtime_metrics import OUTPUT_DIR, validate_output_path, write_json_exclusive
 
 ROOT = Path(__file__).resolve().parent.parent
@@ -29,13 +29,7 @@ WORKLOADS = {
     "32-leaf": {"leaves": 32, "lines_per_leaf": 12, "width": 210.0, "height": 220.0,
                 "warmup_updates": 10, "measured_updates": 100},
 }
-INPUTS = ("Cargo.toml", "Cargo.lock", ".cargo/config.toml", "scripts/cargo-headstart",
-          "themes/macos27.json",
-          "crates/rustui/examples/cache_comparison.rs", "crates/rustui/src/view.rs",
-          "crates/rustui/src/runtime/component_host.rs", "crates/rustui/src/runtime/render_diagnostics.rs",
-          "scripts/compare_cache_workload.py", "scripts/collect_runtime_metrics.py",
-          "scripts/runtime_metrics.py", "scripts/calibrate_cache_workload.py",
-          "docs/tasks/P3_DIAGNOSTICS_OVERHEAD_CALIBRATION.md")
+INPUTS = INPUT_FILES
 WARMUP_PAIRS = 1
 MEASURED_PAIRS = 5
 INTERVAL_NS = 100_000_000
