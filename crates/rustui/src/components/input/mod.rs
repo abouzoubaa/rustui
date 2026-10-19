@@ -1,6 +1,4 @@
-//! input component family.
-//!
-//! Scaffold only. The modules below do not yet implement their planned APIs.
+//! Public input and selection controls with values connected through RustUI bindings.
 
 pub mod checkbox;
 pub mod color_picker;
