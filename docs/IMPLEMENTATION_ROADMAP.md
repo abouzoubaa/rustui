@@ -1564,3 +1564,10 @@ process remained, and the shared Cargo cache was preserved.
 
 - **M98:** Fixed the cache benchmark's missing active-theme setup. The calibrated small, medium, and large scenarios completed 18/18 valid records. Whole-process CPU medians were 0.462208 s, 0.665370 s, and 1.329313 s; peak-RSS medians were 124,747,776 B, 125,353,984 B, and 126,746,624 B. These are mixed-workload process baselines, not cached-versus-uncached speedup or frame/GPU results. See `docs/tasks/P3C_CACHE_CALIBRATION.md` and `target/headstart/evidence/cache-calibration-scenario-matrix-20261019-fixed.json`.
 - **M99:** Canonical Playground keyboard acceptance for NavigationSplitView passed the bounded path. Up/Down and Home/End selected enabled destinations; keyboard movement and a click skipped disabled Archive; Return preserved the current selected ID and detail as specified in the public contract. Evidence: `target/headstart/evidence/navigation-split-keyboard-acceptance-20261019.md`.
+
+
+## M100 — Menu owner removal and dependency boundaries
+
+The canonical Playground Menu check confirmed that removing the owner while its popup is open removes the Menu and popup from the accessibility tree immediately. The stale-action callback was not activatable in the observed state; component-entity destruction was not instrumented. Evidence: `target/headstart/evidence/menu-owner-removal-20261019.json`.
+
+A read-only workspace audit found no Allui or Chorus package in workspace manifests or resolved dependencies; Playground uses the public `rustui` crate, GPUI dependencies remain in the framework crate, and `rustui-lab` delegates to Playground. This source/metadata audit is bounded to the inspected workspace.

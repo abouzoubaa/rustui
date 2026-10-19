@@ -33,3 +33,10 @@ The pinned popup still permits selecting a disabled row by keyboard, and Enter
 dismisses it; RustUI suppresses that row's callback. Native row identity remains
 positional. Open-popup owner removal, live label refresh and complete accessibility
 acceptance remain unverified. Submenus are not implemented by this adapter.
+
+
+## M100 — native owner-removal acceptance (2026-10-19)
+
+The canonical `dev.rustui.playground` app opened the Actions popup. Clicking the story's **Remove/restore menu owner** control removed the Menu view and dismissed the popup immediately. A fresh accessibility snapshot showed `Menu owner removed` and no menu/dialog node. A stale callback could not be activated in the observed state; destruction/release of the story component entity was not measured.
+
+Evidence: `target/headstart/evidence/menu-owner-removal-20261019.json`; build log: `target/headstart/menu-owner-playground-build.log`. The app was quit, the disposable bundle and executable were removed, no Playground process remained, and shared Cargo caches were retained.

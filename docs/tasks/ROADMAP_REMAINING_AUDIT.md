@@ -121,3 +121,10 @@ Fixed the cache example's missing active-theme setup and completed the small, me
 ## Update 2026-10-19 — M99 NavigationSplitView keyboard acceptance
 
 The canonical Playground keyboard path passed for Up/Down, Home/End, disabled-row skipping, and Return preserving the current selection. This confirms the existing public contract; no NavigationSplitView code change was needed. Evidence: `target/headstart/evidence/navigation-split-keyboard-acceptance-20261019.md`.
+
+
+## Update 2026-10-19 — M100 Menu ownership and dependency boundaries
+
+Native acceptance confirmed an open Menu popup disappears from the accessibility tree when its RustUI owner is removed. Stale-action activation was not possible in the observed state; component-entity destruction remains unverified. See `docs/tasks/O1_MENU_DROPDOWN.md` and `target/headstart/evidence/menu-owner-removal-20261019.json`.
+
+A read-only manifest/source audit found no confirmed Allui or Chorus dependency violation: resolved packages contain neither, Playground depends on public `rustui`, GPUI dependencies are owned by the framework crate, and Lab delegates to Playground.
