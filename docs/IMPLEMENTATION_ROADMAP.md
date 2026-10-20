@@ -2043,3 +2043,48 @@ The selected detail region now reuses the resolved destination label for its acc
 ## M159 — State-driven translation animation
 
 Added public `SpringOffset` with independent GPUI-retained X/Y pixel springs, typed child-retention identity, stable-ID retargeting, and a Playground Offset-gallery sample. The focused coordinate test passed 1/1; the locked/offline Playground all-targets check exited 0; rustfmt and `git diff --check` passed. Logs: `target/headstart/evidence/spring-offset-focused-test.log` and `target/headstart/evidence/spring-offset-playground-check.log`. This source contract follows GPUI layout, translated hit-test/accessibility bounds, and native clipping behavior; no GUI run was performed, so native frame trajectory, exact pixels, interrupted velocity continuity, screen-reader geometry, and performance remain unaccepted. See `docs/tasks/SPRING_OFFSET.md`.
+
+## M160 — Named localization interpolation
+
+Added `rustui_i18n::interpolate` for `{name}` placeholders with typed text and
+integer arguments. `{{` and `}}` escape literal braces; missing arguments and
+malformed placeholders return explicit errors. Integer rendering is ordinary
+decimal and intentionally locale-independent. This applies after catalog
+resolution and does not alter catalog fallback. Focused formatter tests and the
+locked/offline crate test run passed; plurals, terms, select expressions, and
+locale-sensitive number/date formatting remain open.
+
+The canonical Playground Text story now compares resolved English, French, and
+Arabic messages using the formatter and shows a malformed-template error. Its
+catalog-presence regression check and fresh isolated Playground check passed.
+
+## M161 — Retained overlay names follow locale changes
+
+Dialog and Sheet semantic content nodes now reconcile their resolved accessible
+name when the active catalog changes, rather than retaining the first rendered
+label. Focused overlay tests passed (25 tests). Native locale switching while
+an overlay remains mounted is still unverified; child-focus ownership,
+screen-reader, RTL, and cross-platform acceptance remain open.
+
+## M162 — Alert accessibility role
+
+Added `SemanticsRole::Alert` mapped to the pinned AccessKit `Role::Alert` and a
+public-API save-error example in the canonical Semantics story. The fresh
+workspace all-targets test run passed, including the role mapping regression.
+Native alert announcement behavior remains unverified.
+
+## M163 — Toggle compiled-preview specimen
+
+The D1c compiled-preview catalog now includes an opt-in Toggle with only its
+editable `label` and `checked` properties, a mount-scoped owner binding, and
+descriptor import mapping. The focused Toggle schema/feedback test passed. The
+fresh isolated workspace all-targets check and test run passed (361 tests
+across nine nonempty result groups). Native Toggle interaction and accessibility
+acceptance remain open. Logs: `target/headstart/evidence/d1c-toggle-preview-test-20261020.log`,
+`target/headstart/evidence/roadmap-workspace-all-targets-toggle-check-20261020.log`,
+and `target/headstart/evidence/roadmap-workspace-all-targets-toggle-tests-20261020.log`.
+
+The default shared `target/headstart` check still reuses Oct 19 RustUI
+localization metadata from a removed candidate worktree and reports E0432 for
+exports present in the current source. No shared cache files were removed; the
+integration was checked in `target/headstart/localization-preview-check`.

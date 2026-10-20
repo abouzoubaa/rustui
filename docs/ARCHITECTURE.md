@@ -155,9 +155,12 @@ finally the message identifier. `HStack` reverses logical flow for RTL locales;
 continues to own text shaping and rendering.
 
 The initial catalog parser intentionally supports comments, blank lines, and
-single-line `message-id = value` records. Unicode bidirectional isolation, font
-fallback policy, interpolation, plurals, terms, select expressions, and
-locale-sensitive date/number formatting remain separate future contracts.
+single-line `message-id = value` records. `rustui_i18n::interpolate` applies
+named `{name}` text/integer arguments to a resolved message; `{{` and `}}`
+represent literal braces. Integers use ordinary decimal output, independent of
+locale. Missing arguments and malformed braces are errors. Plural selection,
+terms, select expressions, locale-sensitive date/number formatting, Unicode
+bidirectional isolation, and font fallback policy remain separate contracts.
 
 ## RustUI Playground and Lab compatibility
 

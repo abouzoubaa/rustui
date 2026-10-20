@@ -54,6 +54,14 @@ impl View for SemanticsGallery {
             )
             .child(
                 Semantics(
+                    "semantics-gallery-alert",
+                    Text("Connection lost. Changes could not be saved."),
+                )
+                .role(SemanticsRole::Alert)
+                .label("Save error"),
+            )
+            .child(
+                Semantics(
                     "semantics-gallery-localized",
                     Text("Change locale to update this group's accessible name."),
                 )

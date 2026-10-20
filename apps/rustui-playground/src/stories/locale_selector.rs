@@ -96,4 +96,25 @@ mod tests {
             }
         }
     }
+
+    #[test]
+    fn interpolation_story_messages_exist_in_every_playground_catalog() {
+        let catalogs = catalogs();
+        for identifier in ["en", "fr", "ar"] {
+            let catalog = catalogs
+                .get(&locale(identifier))
+                .expect("Playground locale should be registered");
+            for message in [
+                "lab-i18n-title",
+                "lab-i18n-sample",
+                "lab-i18n-malformed",
+                "lab-i18n-error-label",
+            ] {
+                assert!(
+                    catalog.get(message).is_some(),
+                    "{message} missing in {identifier}"
+                );
+            }
+        }
+    }
 }

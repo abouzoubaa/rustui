@@ -37,6 +37,10 @@ struct SheetContent {
     accessibility_label: SharedString,
 }
 
+fn update_sheet_accessibility_label(content: &mut SheetContent, label: &SharedString) {
+    content.accessibility_label = label.clone();
+}
+
 impl View for SheetContent {
     fn body(&self) -> impl View {
         EmptyView
@@ -145,13 +149,18 @@ impl View for SheetView {
             let accessibility_label = self.accessibility_label_text().resolve(context);
             let trigger = self.trigger.resolve(context);
             let content = self.content.as_ref().map(|content| {
-                context.retained_component(Identity::from(format!("{}:content", self.id)), || {
-                    SheetContent {
-                        content: Rc::clone(content),
-                        accessibility_id: format!("{}:dialog", self.id).into(),
-                        accessibility_label: accessibility_label.clone(),
-                    }
-                })
+                context
+                    .retained_component_with_props(
+                        Identity::from(format!("{}:content", self.id)),
+                        || SheetContent {
+                            content: Rc::clone(content),
+                            accessibility_id: format!("{}:dialog", self.id).into(),
+                            accessibility_label: accessibility_label.clone(),
+                        },
+                        &accessibility_label,
+                        update_sheet_accessibility_label,
+                    )
+                    .0
             });
             let title = self.title.as_ref().map(|title| title.resolve(context));
             let title_id = format!("{}:title", self.id);
@@ -220,6 +229,19 @@ mod tests {
             sheet.title,
             Some(SheetText::Message(key)) if key.as_ref() == "sheet.title"
         ));
+    }
+
+    #[test]
+    fn retained_sheet_accessible_name_tracks_catalog_changes() {
+        let mut content = SheetContent {
+            content: Rc::new(AnyView::new(EmptyView)),
+            accessibility_id: "details:dialog".into(),
+            accessibility_label: "Details".into(),
+        };
+
+        update_sheet_accessibility_label(&mut content, &"Détails".into());
+
+        assert_eq!(content.accessibility_label.as_ref(), "Détails");
     }
 
     #[test]

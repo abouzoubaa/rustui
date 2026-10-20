@@ -32,6 +32,7 @@ pub enum SemanticsRole {
     Section,
     Navigation,
     Status,
+    Alert,
 }
 
 impl From<SemanticsRole> for Role {
@@ -42,6 +43,7 @@ impl From<SemanticsRole> for Role {
             SemanticsRole::Section => Self::Section,
             SemanticsRole::Navigation => Self::Navigation,
             SemanticsRole::Status => Self::Status,
+            SemanticsRole::Alert => Self::Alert,
         }
     }
 }
@@ -202,6 +204,7 @@ mod tests {
         assert_eq!(Role::from(SemanticsRole::Section), Role::Section);
         assert_eq!(Role::from(SemanticsRole::Navigation), Role::Navigation);
         assert_eq!(Role::from(SemanticsRole::Status), Role::Status);
+        assert_eq!(Role::from(SemanticsRole::Alert), Role::Alert);
     }
 
     #[test]

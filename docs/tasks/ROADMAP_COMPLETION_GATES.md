@@ -4,6 +4,14 @@ Completion map updated 2026-10-20. This is not itself an implementation or accep
 
 ## Source work still required
 
+Update 2026-10-20: M161 refreshes retained Dialog/Sheet accessible names when
+the resolved catalog label changes; native locale switching while open remains
+unverified. M162 adds AccessKit Alert semantics and a Playground example. M163
+extends the D1c catalog with a Toggle schema and stamp-validated checked-value
+feedback. These source slices do not close the broader overlay, accessibility,
+or preview-catalog acceptance gates; M160–M163 evidence is recorded in
+`docs/IMPLEMENTATION_ROADMAP.md`.
+
 | Priority | Capability and smallest next delivery | Live source boundary | Completion gate |
 | --- | --- | --- | --- |
 | 1 | **R3 collection acceptance limits:** render-observed Table precedence is selected; List/Table/Tree synchronization and stable-ID `KeyedList` are implemented. `Collection` also has bounded native mutation/restoration evidence. | `crates/rustui/src/components/data/{list,table,tree,keyed_list,collection}.rs`; `docs/tasks/R3A_COLLECTION_SYNC.md`, `R3B_KEYED_LIST.md`, and M80/M82/M84 evidence. | M75/M76 and M80/M82/M84 cover bounded cases. M126 additionally verifies non-selectable Escape preservation in source List and KeyedList; full collection acceptance remains open. Remaining limits include full keyboard/screen-reader/RTL/platform/performance coverage and broader collection contracts. The A→B→A Table ordering limit is accepted by Contract A, not a reproduced defect; do not implement Contract B without mutation provenance. |

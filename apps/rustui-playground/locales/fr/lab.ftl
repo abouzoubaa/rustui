@@ -5,3 +5,7 @@ lab-navigation-locales = Langues
 lab-sheet-open = Ouvrir le panneau
 lab-sheet-title = Détails
 lab-sheet-name = Détails et contenu du panneau
+lab-i18n-title = Interpolation de messages nommés
+lab-i18n-sample = Bonjour, {name} ! Vous avez {count} notes.
+lab-i18n-malformed = Ce modèle contient une accolade non fermée : {name
+lab-i18n-error-label = Résultat du modèle mal formé

@@ -5,3 +5,7 @@ lab-navigation-locales = اللغات
 lab-sheet-open = فتح اللوحة
 lab-sheet-title = التفاصيل
 lab-sheet-name = التفاصيل ومحتوى اللوحة
+lab-i18n-title = إدراج القيم في الرسائل
+lab-i18n-sample = مرحبًا {name}! لديك {count} ملاحظات.
+lab-i18n-malformed = يحتوي هذا القالب على قوس غير مغلق {name
+lab-i18n-error-label = نتيجة القالب غير صالحة

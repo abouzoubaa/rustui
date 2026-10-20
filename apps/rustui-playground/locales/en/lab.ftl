@@ -5,3 +5,7 @@ lab-navigation-locales = Locales
 lab-sheet-open = Open sheet
 lab-sheet-title = Details
 lab-sheet-name = Details and sheet contents
+lab-i18n-title = Named message interpolation
+lab-i18n-sample = Hello, {name}! You have {count} notes.
+lab-i18n-malformed = This template has an unmatched {name
+lab-i18n-error-label = Malformed template result

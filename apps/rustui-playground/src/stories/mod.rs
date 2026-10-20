@@ -29,6 +29,7 @@ mod keyed_list_gallery;
 mod layout_inspector;
 mod lazy_grid_gallery;
 mod locale_selector;
+mod localization_gallery;
 mod menu_gallery;
 mod navigation_split_gallery;
 mod offset_gallery;
@@ -646,6 +647,7 @@ impl View for StoryHost {
             self.action(Self::reset),
         )
         (selected == StoryId::Tree).then(tree_reconciliation_gallery::demo)
+            (selected == StoryId::Text).then(localization_gallery::demo)
         button_controls.spacing(8.0)
         Button("Clear event log", clear_events)
             .id("lab-clear-events")

@@ -41,6 +41,10 @@ struct DialogContent {
     accessibility_label: SharedString,
 }
 
+fn update_dialog_accessibility_label(content: &mut DialogContent, label: &SharedString) {
+    content.accessibility_label = label.clone();
+}
+
 impl View for DialogContent {
     fn body(&self) -> impl View {
         EmptyView
@@ -192,13 +196,18 @@ impl View for DialogView {
         context.with_element_scope(RetentionScope::Key(self.id.clone()), |context| {
             let accessibility_label = self.accessibility_label_text().resolve(context);
             let content = self.content.as_ref().map(|content| {
-                context.retained_component(Identity::from(format!("{}:content", self.id)), || {
-                    DialogContent {
-                        content: Rc::clone(content),
-                        accessibility_id: format!("{}:dialog", self.id).into(),
-                        accessibility_label: accessibility_label.clone(),
-                    }
-                })
+                context
+                    .retained_component_with_props(
+                        Identity::from(format!("{}:content", self.id)),
+                        || DialogContent {
+                            content: Rc::clone(content),
+                            accessibility_id: format!("{}:dialog", self.id).into(),
+                            accessibility_label: accessibility_label.clone(),
+                        },
+                        &accessibility_label,
+                        update_dialog_accessibility_label,
+                    )
+                    .0
             });
             let trigger = self.trigger.resolve(context);
             let title = self.title.as_ref().map(|title| title.resolve(context));
@@ -311,6 +320,22 @@ mod tests {
 
         assert_eq!(content.accessibility_id.as_ref(), "confirm:dialog");
         assert_eq!(content.accessibility_label.as_ref(), "Confirm changes");
+    }
+
+    #[test]
+    fn retained_dialog_accessible_name_tracks_catalog_changes() {
+        let mut content = DialogContent {
+            content: Rc::new(AnyView::new(EmptyView)),
+            accessibility_id: "confirm:dialog".into(),
+            accessibility_label: "Confirm changes".into(),
+        };
+
+        update_dialog_accessibility_label(&mut content, &"Confirmer les changements".into());
+
+        assert_eq!(
+            content.accessibility_label.as_ref(),
+            "Confirmer les changements"
+        );
     }
 
     #[test]

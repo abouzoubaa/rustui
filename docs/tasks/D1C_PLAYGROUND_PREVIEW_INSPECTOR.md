@@ -78,3 +78,34 @@ M149 native replay (2026-10-20): the canonical macOS 27 Playground captured the 
 ## M149 ordered replay follow-up
 
 The canonical macOS 27 sequence was repeated with the stale callback replayed immediately after descriptor import, before any generation-2 edit. The generation-1 callback returned false and left the draft, owner value, and preview at `0.246813579`, generation 2/revision 0. A current-generation edit to `0.13579` then succeeded at revision 1. The first run, which edited the current generation before replay, is retained alongside the repeat in the evidence JSON. This deterministic callback replay still does not demonstrate naturally queued GPUI event dispatch. Evidence: `target/headstart/evidence/d1c-stale-draft-replay-m149-20261020.json`.
+
+## Toggle catalog extension (2026-10-20)
+
+The canonical compiled-preview gallery now registers the public RustUI Toggle as
+an opt-in specimen. Its descriptor has only the actual editable inputs: string
+`label` and Boolean `checked`. A compiled factory renders `Toggle` with a
+mount-scoped owner binding; accepted changes feed the `checked` property through
+the existing stamp-validated preview-host binding path. Descriptor import maps
+those fields back to the gallery owner, and the Playground exposes a
+`Preview Toggle` control. Signal-only event behavior and the descriptor format
+are unchanged.
+
+A focused Playground unit test verifies the schema fields and checked-value
+feedback through `PreviewHost`; it passed. The fresh isolated locked/offline
+Playground all-targets check also passed using
+`target/headstart/localization-preview-check`. Its log is
+`target/headstart/evidence/playground-interpolation-check-20261020.log`; the
+matching `rustui-i18n` test run passed 11 unit and 1 integration test, recorded
+in `target/headstart/evidence/i18n-interpolation-tests-20261020.log`. A later
+check against the shared `target/headstart` still returned E0432 for the
+localization exports even though current sources export them. Treat that
+shared-target result as an inconsistent artifact/cache observation; the clean
+isolated checks are the current build evidence. With the same isolated target,
+`check --workspace --all-targets --locked --offline` and
+`test --workspace --all-targets --locked --offline` both passed. The workspace
+test run passed 361 tests across nine nonempty result groups. Logs:
+`target/headstart/evidence/roadmap-workspace-all-targets-toggle-check-20261020.log`
+and `target/headstart/evidence/roadmap-workspace-all-targets-toggle-tests-20261020.log`.
+No native interaction acceptance was run for Toggle, so rendered appearance,
+pointer/keyboard operation, accessibility, locale, RTL, and cross-platform
+behavior remain unverified for this new specimen.

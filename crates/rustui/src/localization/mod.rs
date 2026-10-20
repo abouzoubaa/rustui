@@ -10,8 +10,9 @@ use gpui::{App, Global};
 
 use crate::runtime::AppAction;
 pub use rustui_i18n::{
-    Catalog, CatalogError, CatalogValidation, Catalogs, LayoutDirection, Locale, LocaleError,
-    MessageId, MessageIdError, validate_catalogs,
+    Catalog, CatalogError, CatalogValidation, Catalogs, InterpolationError, LayoutDirection,
+    Locale, LocaleError, MessageArgument, MessageArguments, MessageId, MessageIdError, interpolate,
+    validate_catalogs,
 };
 
 #[derive(Clone, Debug)]

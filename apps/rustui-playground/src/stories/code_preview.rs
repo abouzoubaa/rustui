@@ -8,7 +8,13 @@ pub fn source_for(story: StoryId) -> &'static str {
             r#"Button("Increment", increment)
     .button_style(ButtonStyle::BorderedProminent)"#
         }
-        StoryId::Text => r#"Text(format!("Count: {}", self.count()))"#,
+        StoryId::Text => {
+            r#"use rustui::localization::{interpolate, MessageArguments};
+
+let template = catalogs.resolve(&locale, "lab-i18n-sample");
+let arguments = MessageArguments::new().with("name", "Ada").with("count", 3);
+interpolate(template, &arguments)?"#
+        }
         StoryId::Layout => {
             r#"let alpha = Keyed(
     "alpha",

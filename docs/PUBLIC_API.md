@@ -277,8 +277,9 @@ returns `bool`, allowing no-op updates to skip `Context::notify()`.
   Unicode bidi isolation and logical padding are not implemented.
 - Button accepts component methods through `Action` and application-global changes
   through `AppAction`; broader typed event contracts are not implemented.
-- The catalog subset does not implement interpolation, plurals, terms, select
-  expressions, or locale-sensitive date/number formatting.
+- `rustui-i18n::interpolate` supports named text/integer placeholders with
+  escaped braces. Plurals, terms, select expressions, and locale-sensitive
+  date/number formatting are not implemented.
 - Repeated Button labels require explicit stable IDs to avoid GPUI element ID
   collisions.
 - Most public module paths contain scaffolds rather than supported contracts.
@@ -951,6 +952,18 @@ RustUI::new()
 use `Button("Français", set_locale_action(locale))`; the resulting `AppAction`
 updates the GPUI global and GPUI Components locale. Missing messages render their
 identifier after exact, primary-language, and configured fallback lookup.
+
+For parameterized catalog text, resolve the message first, then call the
+`rustui-i18n` formatter. This keeps interpolation separate from locale fallback:
+
+```rust
+let template = catalogs.resolve(&locale, "greeting");
+let arguments = rustui_i18n::MessageArguments::new().with("name", "Ada");
+let greeting = rustui_i18n::interpolate(template, &arguments)?;
+```
+
+The formatter accepts text and integers, requires every referenced argument,
+and uses `{{` / `}}` for literal braces. Integer output is locale-independent.
 
 ## Theme activation
 

@@ -124,8 +124,8 @@ component expansion → advanced framework work.
 | `crates/rustui-i18n/src/catalog.rs` | Initial Fluent-compatible catalog parser, registry, and exact/primary/fallback lookup. | localization | Locale and MessageId | Implemented baseline |
 | `crates/rustui-i18n/src/direction.rs` | Locale-derived logical left-to-right/right-to-left direction. | localization | Locale | Implemented baseline |
 | `crates/rustui-i18n/src/fallback.rs` | Documents the implemented catalog fallback order. | localization | Catalogs | Implemented documentation |
-| `crates/rustui-i18n/src/formatting.rs` | Explicit boundary for unsupported interpolation, plural, date, and number formatting. | localization | Future approved formatter | Deferred |
-| `crates/rustui-i18n/src/lib.rs` | Public locale, catalog, direction, message, fallback, and validation facade. | localization | i18n modules | Implemented facade |
+| `crates/rustui-i18n/src/formatting.rs` | Named text/integer interpolation with escaped braces; plural, date, and locale-sensitive number formatting remain unsupported. | localization | Standard library | Implemented bounded formatter |
+| `crates/rustui-i18n/src/lib.rs` | Public locale, catalog, direction, message, formatting, fallback, and validation facade. | localization | i18n modules | Implemented facade |
 | `crates/rustui-i18n/src/locale.rs` | Validated and normalized BCP 47 style locale identifiers. | localization | Standard library | Implemented baseline |
 | `crates/rustui-i18n/src/message.rs` | Validated message identifiers for the supported catalog subset. | localization | Standard library | Implemented baseline |
 | `crates/rustui-i18n/src/validation.rs` | Missing/extra message validation against the fallback catalog. | localization | Catalogs | Implemented baseline |

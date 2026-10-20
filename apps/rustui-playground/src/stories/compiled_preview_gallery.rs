@@ -9,6 +9,7 @@ pub fn demo() -> impl View {
 struct FactoryContext {
     owner: OwnerAction<CompiledPreviewGallery>,
     text: Binding<String>,
+    checked: Binding<bool>,
 }
 
 #[derive(Clone)]
@@ -175,6 +176,51 @@ impl Default for CompiledPreviewGallery {
                 })
                 .unwrap();
         }
+        let toggle_schema = ComponentSchema {
+            id: ComponentId::new("toggle").unwrap(),
+            version: 1,
+            display_name: "Toggle".into(),
+            properties: BTreeMap::from([
+                (
+                    PropertyId::new("label").unwrap(),
+                    PropertySchema {
+                        kind: PropertyKind::String,
+                        default: Some(PropertyValue::String("Preview toggle".into())),
+                        required: false,
+                        editable: true,
+                        minimum: None,
+                        maximum: None,
+                        min_length: None,
+                        max_length: Some(200),
+                        allowed_values: vec![],
+                    },
+                ),
+                (
+                    PropertyId::new("checked").unwrap(),
+                    PropertySchema {
+                        kind: PropertyKind::Boolean,
+                        default: Some(PropertyValue::Boolean(false)),
+                        required: false,
+                        editable: true,
+                        minimum: None,
+                        maximum: None,
+                        min_length: None,
+                        max_length: None,
+                        allowed_values: vec![],
+                    },
+                ),
+            ]),
+            events: BTreeMap::new(),
+        };
+        registry
+            .register(toggle_schema, |snapshot, context: &FactoryContext| {
+                let label = property_string(snapshot, "label").expect("validated toggle label");
+                AnyView::new(Toggle(label, context.checked.clone()).id(format!(
+                    "compiled-preview-toggle-{}",
+                    snapshot.stamp.generation
+                )))
+            })
+            .unwrap();
         registry
             .register_action(ActionRef::new("increment").unwrap())
             .unwrap();
@@ -204,18 +250,29 @@ impl CompiledPreviewGallery {
             ComponentId::new(component).unwrap(),
             1,
         );
-        document.properties.insert(
-            PropertyId::new("text").unwrap(),
-            PropertyValue::String(self.text.clone()),
-        );
-        document.properties.insert(
-            PropertyId::new("enabled").unwrap(),
-            PropertyValue::Boolean(self.enabled),
-        );
-        document.properties.insert(
-            PropertyId::new("amount").unwrap(),
-            PropertyValue::Number(self.amount),
-        );
+        if component == "toggle" {
+            document.properties.insert(
+                PropertyId::new("label").unwrap(),
+                PropertyValue::String(self.text.clone()),
+            );
+            document.properties.insert(
+                PropertyId::new("checked").unwrap(),
+                PropertyValue::Boolean(self.enabled),
+            );
+        } else {
+            document.properties.insert(
+                PropertyId::new("text").unwrap(),
+                PropertyValue::String(self.text.clone()),
+            );
+            document.properties.insert(
+                PropertyId::new("enabled").unwrap(),
+                PropertyValue::Boolean(self.enabled),
+            );
+            document.properties.insert(
+                PropertyId::new("amount").unwrap(),
+                PropertyValue::Number(self.amount),
+            );
+        }
         if component == "button" {
             document.actions.insert(
                 EventId::new("activate").unwrap(),
@@ -239,6 +296,9 @@ impl CompiledPreviewGallery {
     }
     fn mount_field(&mut self) {
         self.mount("text-field");
+    }
+    fn mount_toggle(&mut self) {
+        self.mount("toggle");
     }
     fn rerender(&mut self) {
         self.renders += 1;
@@ -269,11 +329,15 @@ impl CompiledPreviewGallery {
                 return;
             }
         };
+        let is_toggle = parsed.component_id.as_str() == "toggle";
         match self.host.mount(parsed) {
             Ok(stamp) => {
                 if let Some(snapshot) = self.host.snapshot() {
-                    self.text = property_string(snapshot, "text").unwrap_or_default();
-                    self.enabled = property_boolean(snapshot, "enabled").unwrap_or(true);
+                    self.text = property_string(snapshot, if is_toggle { "label" } else { "text" })
+                        .unwrap_or_default();
+                    self.enabled =
+                        property_boolean(snapshot, if is_toggle { "checked" } else { "enabled" })
+                            .unwrap_or(true);
                     self.amount = property_number(snapshot, "amount").unwrap_or(0.375);
                     self.amount_draft = self.amount.to_string();
                 }
@@ -558,6 +622,15 @@ impl View for CompiledPreviewGallery {
             Self::read_text,
             Self::write_text,
         );
+        let checked_binding = Binding::new_with(
+            self.enabled,
+            PropertyBindingContext {
+                property: PropertyId::new("checked").unwrap(),
+                stamp: self.stamp_lease.clone(),
+            },
+            Self::read_enabled,
+            Self::write_enabled,
+        );
         VStack::new()
             .spacing(8.0)
             .child(Text("Compiled preview host"))
@@ -586,6 +659,10 @@ impl View for CompiledPreviewGallery {
                     .child(Button(
                         "Preview TextField",
                         rustui::runtime::Action::new(Self::mount_field),
+                    ))
+                    .child(Button(
+                        "Preview Toggle",
+                        rustui::runtime::Action::new(Self::mount_toggle),
                     )),
             )
             .child(Text("Schema inspector"))
@@ -660,9 +737,55 @@ impl View for CompiledPreviewGallery {
                     render_preview(&FactoryContext {
                         owner,
                         text: binding.clone(),
+                        checked: checked_binding.clone(),
                     })
                     .expect("registered compiled factory")
                 },
             ))
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn toggle_preview_declares_label_and_checked_and_accepts_checked_feedback() {
+        let mut gallery = CompiledPreviewGallery::default();
+        let toggle_id = ComponentId::new("toggle").unwrap();
+        let schema = &gallery.host.catalog().components[&toggle_id];
+        assert_eq!(schema.properties.len(), 2);
+        assert_eq!(
+            schema.properties[&PropertyId::new("label").unwrap()].kind,
+            PropertyKind::String
+        );
+        assert_eq!(
+            schema.properties[&PropertyId::new("checked").unwrap()].kind,
+            PropertyKind::Boolean
+        );
+
+        let stamp = gallery
+            .host
+            .mount(PreviewDocument::new(
+                PreviewId::new("toggle-test").unwrap(),
+                toggle_id,
+                1,
+            ))
+            .unwrap();
+        let next = gallery
+            .host
+            .binding_feedback(
+                &stamp,
+                PropertyId::new("checked").unwrap(),
+                PropertyValue::Boolean(true),
+            )
+            .unwrap();
+
+        assert_eq!(next.revision, stamp.revision + 1);
+        assert_eq!(
+            gallery.host.snapshot().unwrap().preview.properties
+                [&PropertyId::new("checked").unwrap()],
+            PropertyValue::Boolean(true),
+        );
     }
 }
