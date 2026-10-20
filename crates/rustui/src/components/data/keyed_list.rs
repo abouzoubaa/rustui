@@ -72,6 +72,31 @@ fn clear_removed_selection(current: &mut Option<String>, removed_id: &str) -> bo
     true
 }
 
+fn apply_selection_request(
+    current: &mut Option<String>,
+    expected: &RefCell<Option<String>>,
+    request: &Option<SelectionRequest>,
+) -> bool {
+    let Some(request) = request else {
+        return false;
+    };
+    if current.as_ref() != request.expected_owner.as_ref()
+        || expected.borrow().as_ref() != request.expected_owner.as_ref()
+        || current.as_ref() == request.selection.as_ref()
+    {
+        return false;
+    }
+    *expected.borrow_mut() = request.selection.clone();
+    *current = request.selection.clone();
+    true
+}
+
+#[derive(Clone, Debug, PartialEq, Eq)]
+struct SelectionRequest {
+    expected_owner: Option<String>,
+    selection: Option<String>,
+}
+
 fn clear_selection_on_cancel(
     selectable: bool,
     selection: &mut Option<String>,
@@ -91,6 +116,7 @@ struct KeyedListDelegate {
     query: String,
     row_height: f32,
     selection_id: Rc<RefCell<Option<String>>>,
+    expected_owner_selection: Rc<RefCell<Option<String>>>,
     searchable: bool,
     selectable: bool,
 }
@@ -109,7 +135,8 @@ impl KeyedListDelegate {
             visible,
             query: String::new(),
             row_height,
-            selection_id: Rc::new(RefCell::new(selection_id)),
+            selection_id: Rc::new(RefCell::new(selection_id.clone())),
+            expected_owner_selection: Rc::new(RefCell::new(selection_id)),
             searchable,
             selectable,
         }
@@ -313,36 +340,53 @@ impl View for KeyedListView {
             state
         });
         let selection_id = state.read(context.app()).delegate().selection_id.clone();
+        let expected_selection = state
+            .read(context.app())
+            .delegate()
+            .expected_owner_selection
+            .clone();
 
         if created {
-            let requested = Rc::new(RefCell::new(None::<String>));
+            let requested = Rc::new(RefCell::new(None::<SelectionRequest>));
             let current_request = requested.clone();
+            let expected = expected_selection.clone();
             let update = context.binding_updater(self.selection.clone(), move |current| {
-                let selected = current_request.borrow();
-                if *current == *selected {
-                    return false;
-                }
-                *current = selected.clone();
-                true
+                apply_selection_request(current, &expected, &current_request.borrow())
             });
             let event_selection_id = selection_id.clone();
+            let event_expected_selection = expected_selection.clone();
             context.subscribe_retained(&identity, &state, move |state, event: &ListEvent, cx| {
+                let selected_index = state.read(cx).selected_index();
                 match event {
                     ListEvent::Select(index) | ListEvent::Confirm(index) => {
+                        if selected_index != Some(*index) {
+                            return;
+                        }
                         let selected = state.read(cx).delegate().id_at(*index).map(str::to_owned);
                         if let Some(id) = selected {
                             *event_selection_id.borrow_mut() = Some(id.clone());
-                            *requested.borrow_mut() = Some(id);
+                            *requested.borrow_mut() = Some(SelectionRequest {
+                                expected_owner: event_expected_selection.borrow().clone(),
+                                selection: Some(id),
+                            });
                             update(cx);
                         }
                     }
                     ListEvent::Cancel => {
+                        if selected_index.is_some() {
+                            return;
+                        }
                         let selectable = state.read(cx).delegate().selectable;
+                        let mut cancelled_selection = event_selection_id.borrow().clone();
                         if clear_selection_on_cancel(
                             selectable,
                             &mut *event_selection_id.borrow_mut(),
-                            &mut *requested.borrow_mut(),
+                            &mut cancelled_selection,
                         ) {
+                            *requested.borrow_mut() = Some(SelectionRequest {
+                                expected_owner: event_expected_selection.borrow().clone(),
+                                selection: cancelled_selection,
+                            });
                             update(cx);
                         }
                     }
@@ -351,6 +395,7 @@ impl View for KeyedListView {
         }
 
         let requested = self.selection.value();
+        *expected_selection.borrow_mut() = requested.clone();
         let desired = valid_selection(&self.items, requested.as_deref());
         *selection_id.borrow_mut() = desired.clone();
         let flags_changed = {
@@ -422,8 +467,8 @@ impl View for KeyedListView {
 #[cfg(test)]
 mod tests {
     use super::{
-        KeyedListDelegate, KeyedListItem, clear_removed_selection, clear_selection_on_cancel,
-        collect_items, valid_selection,
+        KeyedListDelegate, KeyedListItem, SelectionRequest, apply_selection_request,
+        clear_removed_selection, clear_selection_on_cancel, collect_items, valid_selection,
     };
     use gpui_component::IndexPath;
 
@@ -480,6 +525,51 @@ mod tests {
             "missing"
         ));
         assert_eq!(new_owner_selection.as_deref(), Some("a"));
+    }
+
+    #[test]
+    fn queued_selection_preserves_newer_owner_value() {
+        let expected = std::cell::RefCell::new(Some(String::from("first")));
+        let mut owner = Some(String::from("newer"));
+        let request = Some(SelectionRequest {
+            expected_owner: Some(String::from("first")),
+            selection: Some(String::from("stale")),
+        });
+
+        assert!(!apply_selection_request(&mut owner, &expected, &request));
+        assert_eq!(owner.as_deref(), Some("newer"));
+        assert_eq!(expected.borrow().as_deref(), Some("first"));
+    }
+
+    #[test]
+    fn queued_selection_is_rejected_after_owner_rerender() {
+        let expected = std::cell::RefCell::new(Some(String::from("A")));
+        let request = Some(SelectionRequest {
+            expected_owner: Some(String::from("A")),
+            selection: Some(String::from("B")),
+        });
+
+        // The owner rerenders with C after B is queued but before its updater runs.
+        let mut owner = Some(String::from("C"));
+        *expected.borrow_mut() = owner.clone();
+
+        assert!(!apply_selection_request(&mut owner, &expected, &request));
+        assert_eq!(owner.as_deref(), Some("C"));
+        assert_eq!(expected.borrow().as_deref(), Some("C"));
+    }
+
+    #[test]
+    fn accepted_selection_advances_expected_owner_value() {
+        let expected = std::cell::RefCell::new(Some(String::from("first")));
+        let mut owner = Some(String::from("first"));
+        let request = Some(SelectionRequest {
+            expected_owner: Some(String::from("first")),
+            selection: Some(String::from("second")),
+        });
+
+        assert!(apply_selection_request(&mut owner, &expected, &request));
+        assert_eq!(owner.as_deref(), Some("second"));
+        assert_eq!(expected.borrow().as_deref(), Some("second"));
     }
 
     #[test]

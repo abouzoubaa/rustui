@@ -1,4 +1,6 @@
-pub use crate::accessibility::semantics::{Semantics, SemanticsRole, SemanticsView};
+pub use crate::accessibility::semantics::{
+    LivePoliteness, Semantics, SemanticsRole, SemanticsView,
+};
 pub use crate::animation::spring::{SpringConfig, SpringOpacity, SpringOpacityError};
 pub use crate::components::advanced::canvas::{
     Canvas, CanvasError, CanvasPoint, CanvasRect, CanvasScene, CanvasSceneBuilder, CanvasSize,
@@ -82,9 +84,11 @@ pub use crate::layout::{
 };
 pub use crate::localization::{LayoutDirection, Locale};
 pub use crate::modifiers::frame::{Frame, FrameView};
+pub use crate::modifiers::interaction::{PointerCursor, PointerCursorView};
 pub use crate::modifiers::opacity::{AnimatedOpacity, OpacityAnimationError};
 pub use crate::modifiers::padding::{LogicalInsets, LogicalInsetsError, PhysicalInsets};
 pub use crate::modifiers::transform::{Offset, OffsetView};
+pub use crate::animation::offset::{SpringOffset, SpringOffsetError};
 pub use crate::runtime::{AppAction, AsyncState, Binding, Identity, OwnerTask, RustUI, State};
 pub use crate::text::font_policy::{FontFallbackPolicy, FontFallbackPolicyError};
 pub use crate::view::{

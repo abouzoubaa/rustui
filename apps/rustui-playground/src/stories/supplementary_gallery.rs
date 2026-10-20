@@ -10,12 +10,17 @@ struct SupplementaryGallery {
     #[state(0)]
     inbox_activations: i32,
     #[state(0)]
+    pointer_taps: i32,
+    #[state(0)]
     link_activations: i32,
 }
 
 impl SupplementaryGallery {
     fn increment_inbox(&mut self) {
         self.inbox_activations += 1;
+    }
+    fn tap_cursor_target(&mut self) {
+        self.pointer_taps += 1;
     }
     fn activate_link(&mut self) {
         self.link_activations += 1;
@@ -45,6 +50,32 @@ impl View for SupplementaryGallery {
                     "Inbox button activations: {}",
                     self.inbox_activations()
                 )))
+                .child(Text(
+                    "PointerCursor shows a hand when its child has no cursor request",
+                ))
+                .child(PointerCursor(TapRegion(
+                    "gallery-pointer-cursor",
+                    Container(
+                        VStack::new()
+                            .child(Text("Tap region cursor target"))
+                            .child(Text("This child does not set a cursor style")),
+                    )
+                    .width(260.0)
+                    .padding(8.0)
+                    .border(),
+                    self.action(Self::tap_cursor_target),
+                )))
+                .child(Text(format!(
+                    "Pointer target taps: {}",
+                    self.pointer_taps()
+                )))
+                .child(
+                    Button(
+                        "Keyboard alternative: tap cursor target",
+                        self.action(Self::tap_cursor_target),
+                    )
+                    .id("gallery-pointer-cursor-keyboard"),
+                )
                 .child(
                     Link(
                         "Open link fixture",

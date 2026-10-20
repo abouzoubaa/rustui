@@ -36,7 +36,7 @@ macro_rules! item {
 
 /// The first 41 entries mirror `themes/macos27.json`; app-only gallery entries follow.
 const THEME_CATALOG_LEN: usize = 41;
-pub const CATALOG: [CatalogItem; 45] = [
+pub const CATALOG: [CatalogItem; 46] = [
     item!(
         "link",
         "Link",
@@ -328,7 +328,7 @@ pub const CATALOG: [CatalogItem; 45] = [
         "navigation_split",
         "NavigationSplit",
         Partial,
-        "NavigationSplit source and Playground gallery are implemented; native GUI, visual, keyboard, and accessibility acceptance pending.",
+        "M137 canonical Playground pointer resize and destination switching passed; keyboard divider, full accessibility, locale, adaptive collapse, and cross-platform acceptance remain pending.",
         "docs/ui/macos-27/Windows/Default with Titlebar and Sidebar.svg|docs/ui/macos-27/Windows/Default with Titlebar and Sidebar-1.svg"
     ),
     item!(
@@ -351,6 +351,13 @@ pub const CATALOG: [CatalogItem; 45] = [
         Partial,
         "Trigger-opened GPUI Components side sheet with optional title and body; native GUI acceptance pending.",
         "docs/ui/macos-27/Utility Window.svg"
+    ),
+    item!(
+        "drag_drop",
+        "Drag and drop",
+        Partial,
+        "Typed same-process Copy and Transfer gallery; M142 verified keyboard alternatives and M148 verified target removal during a held drag on macOS.",
+        "docs/ui/macos-27/Form.svg"
     ),
 ];
 
@@ -388,7 +395,7 @@ mod tests {
     fn catalog_preserves_theme_pack_and_appends_gallery_rows() {
         let document = rustui::theme::parse_theme(PACK).expect("appearance pack parses");
         let components = &document.components;
-        assert_eq!(CATALOG.len(), THEME_CATALOG_LEN + 4);
+        assert_eq!(CATALOG.len(), THEME_CATALOG_LEN + 5);
         assert_eq!(components.len(), THEME_CATALOG_LEN);
         for item in CATALOG.iter().take(THEME_CATALOG_LEN) {
             assert!(components.contains_key(item.key), "missing {}", item.key);
@@ -409,12 +416,18 @@ mod tests {
         assert_eq!(CATALOG[THEME_CATALOG_LEN + 2].api, "Collection");
         assert_eq!(CATALOG[THEME_CATALOG_LEN + 2].coverage, Coverage::Partial);
         assert_eq!(CATALOG[THEME_CATALOG_LEN + 3].key, "sheet");
+        assert_eq!(CATALOG[THEME_CATALOG_LEN + 4].key, "drag_drop");
         assert_eq!(CATALOG[THEME_CATALOG_LEN + 3].api, "Sheet");
         assert_eq!(CATALOG[THEME_CATALOG_LEN].coverage, Coverage::Partial);
         assert!(
             CATALOG[THEME_CATALOG_LEN]
                 .note
-                .contains("native GUI, visual, keyboard, and accessibility acceptance pending")
+                .contains("M137 canonical Playground pointer resize")
+        );
+        assert!(
+            CATALOG[THEME_CATALOG_LEN]
+                .note
+                .contains("keyboard divider")
         );
     }
 

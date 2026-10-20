@@ -76,8 +76,8 @@ fn selected_index(items: &[NavigationSplitItem], selection: Option<&str>) -> Opt
     items.iter().position(|item| item.id == selection)
 }
 
-fn detail_accessibility_label(label: &str) -> String {
-    format!("{label} details")
+fn detail_accessibility_label(label: &str) -> SharedString {
+    SharedString::from(label)
 }
 
 struct NavigationSplitDetail {
@@ -109,6 +109,8 @@ impl View for NavigationSplitDetail {
                     SharedAnyView(Rc::clone(content)),
                 )
                 .role(SemanticsRole::Region)
+                // Reuse the destination's resolved label so localized rows
+                // do not acquire an English-only "details" suffix.
                 .label(detail_accessibility_label(label));
                 context.with_element_scope(RetentionScope::Page(vec![route.clone()]), |context| {
                     detail.into_element(context)
@@ -280,8 +282,8 @@ mod tests {
     }
 
     #[test]
-    fn selected_destination_names_its_detail_region() {
-        assert_eq!(detail_accessibility_label("Files"), "Files details");
+    fn localized_destination_label_is_used_for_its_detail_region() {
+        assert_eq!(detail_accessibility_label("Fichiers").as_ref(), "Fichiers");
     }
 
     #[test]

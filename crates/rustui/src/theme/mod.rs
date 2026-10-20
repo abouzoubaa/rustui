@@ -1,5 +1,6 @@
 //! Versioned platform themes and adapters.
 
+pub(crate) mod invalidation;
 pub mod loader;
 pub mod registry;
 pub mod resolver;

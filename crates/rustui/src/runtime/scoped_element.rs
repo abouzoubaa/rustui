@@ -19,6 +19,7 @@ pub(crate) struct SemanticInfo {
     pub(crate) role: Role,
     pub(crate) label: Option<String>,
     pub(crate) description: Option<String>,
+    pub(crate) live_value: Option<(String, accesskit::Live)>,
 }
 
 pub(crate) fn scoped_element(scope: &RetentionScope, child: AnyElement) -> AnyElement {
@@ -67,6 +68,7 @@ fn scope_id(scope: &RetentionScope) -> ElementId {
         RetentionScope::DropTarget(id) => segment_id("drop-target", id.as_str()),
         RetentionScope::ScrollViewContent => "rustui:scroll-view-content".to_owned(),
         RetentionScope::SpringOpacity(id) => segment_id("spring-opacity", id.as_str()),
+        RetentionScope::SpringOffset(id) => segment_id("spring-offset", id.as_str()),
         RetentionScope::AnimatedOpacity(id) => segment_id("animated-opacity", id.as_str()),
         RetentionScope::Tabs(id) => segment_id("tabs", id.as_str()),
         RetentionScope::Tab(id) => segment_id("tab", id),
@@ -91,7 +93,10 @@ fn segment_id(kind: &str, value: &str) -> String {
 mod scope_tests {
     use super::{ScopedElement, SemanticInfo, scope_id};
     use crate::view::RetentionScope;
-    use gpui::{Element, IntoElement, Role, accesskit::Node};
+    use gpui::{
+        Element, IntoElement, Role,
+        accesskit::{Live, Node},
+    };
     use rustui_core::Identity;
 
     #[test]
@@ -209,6 +214,7 @@ mod scope_tests {
                 role: Role::Region,
                 label: Some("Settings".into()),
                 description: Some("Change preferences".into()),
+                live_value: None,
             }),
         };
         assert_eq!(scoped.a11y_role(), Some(Role::Region));
@@ -216,6 +222,17 @@ mod scope_tests {
         scoped.write_a11y_info(&mut node);
         assert_eq!(node.label(), Some("Settings"));
         assert_eq!(node.description(), Some("Change preferences"));
+
+        scoped.semantics = Some(SemanticInfo {
+            role: Role::Status,
+            label: None,
+            description: None,
+            live_value: Some(("3 files saved".into(), Live::Polite)),
+        });
+        let mut node = Node::new(scoped.a11y_role().unwrap());
+        scoped.write_a11y_info(&mut node);
+        assert_eq!(node.value(), Some("3 files saved"));
+        assert_eq!(node.live(), Some(Live::Polite));
 
         scoped.semantics = None;
         assert_eq!(scoped.a11y_role(), None);
@@ -249,6 +266,10 @@ impl Element for ScopedElement {
             }
             if let Some(description) = &info.description {
                 node.set_description(description.clone());
+            }
+            if let Some((value, politeness)) = &info.live_value {
+                node.set_value(value.clone());
+                node.set_live(*politeness);
             }
         }
     }

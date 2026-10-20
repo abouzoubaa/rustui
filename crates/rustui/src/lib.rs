@@ -19,8 +19,10 @@ pub mod theme;
 pub mod view;
 
 pub use gpui::{App, AssetSource, Result as AssetResult, SharedString};
+pub use modifiers::interaction::{PointerCursor, PointerCursorView};
 pub use modifiers::opacity::{AnimatedOpacity, OpacityAnimationError};
 pub use modifiers::transform::{Offset, OffsetView};
+pub use animation::offset::{SpringOffset, SpringOffsetError};
 pub use runtime::RustUI;
 pub use rustui_macros::{HStack, VStack, component};
 

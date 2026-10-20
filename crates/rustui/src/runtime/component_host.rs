@@ -264,6 +264,7 @@ pub struct ComponentHost<V> {
     pub(crate) tasks: TaskRegistry,
     _release: Subscription,
     _localization: Subscription,
+    _theme: Subscription,
 }
 
 impl<V: View> ComponentHost<V> {
@@ -278,6 +279,7 @@ impl<V: View> ComponentHost<V> {
     ) -> Self {
         let release = cx.on_release(|host, cx| host.component.on_unmount(cx));
         let localization = crate::localization::invalidation::observe(cx);
+        let theme = crate::theme::invalidation::observe(cx);
         component.on_mount(cx);
         Self {
             component,
@@ -286,6 +288,7 @@ impl<V: View> ComponentHost<V> {
             tasks: TaskRegistry::default(),
             _release: release,
             _localization: localization,
+            _theme: theme,
         }
     }
 

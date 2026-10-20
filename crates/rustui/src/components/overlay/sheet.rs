@@ -61,8 +61,8 @@ impl View for SheetContent {
 /// slice has no controlled visibility or owner-driven close operation.
 pub struct SheetView {
     id: Identity,
-    trigger: SharedString,
-    title: Option<SharedString>,
+    trigger: SheetText,
+    title: Option<SheetText>,
     accessibility_label: Option<SheetText>,
     content: Option<Rc<AnyView>>,
 }
@@ -76,15 +76,27 @@ impl SheetView {
         );
         Self {
             id,
-            trigger: trigger.into(),
+            trigger: SheetText::Literal(trigger.into()),
             title: None,
             accessibility_label: None,
             content: None,
         }
     }
 
+    /// Resolves the trigger label from the active RustUI message catalog.
+    pub fn localized_trigger(mut self, message_key: impl Into<SharedString>) -> Self {
+        self.trigger = SheetText::Message(message_key.into());
+        self
+    }
+
     pub fn title(mut self, title: impl Into<SharedString>) -> Self {
-        self.title = Some(title.into());
+        self.title = Some(SheetText::Literal(title.into()));
+        self
+    }
+
+    /// Resolves the visible title from the active RustUI message catalog when opened.
+    pub fn localized_title(mut self, message_key: impl Into<SharedString>) -> Self {
+        self.title = Some(SheetText::Message(message_key.into()));
         self
     }
 
@@ -106,8 +118,8 @@ impl SheetView {
     fn accessibility_label_text(&self) -> SheetText {
         self.accessibility_label
             .clone()
-            .or_else(|| self.title.clone().map(SheetText::Literal))
-            .unwrap_or_else(|| SheetText::Literal(self.trigger.clone()))
+            .or_else(|| self.title.clone())
+            .unwrap_or_else(|| self.trigger.clone())
     }
 
     /// Adds arbitrary RustUI content to the sheet body.
@@ -131,6 +143,7 @@ impl View for SheetView {
     fn into_element(&self, context: &mut RenderContext<'_>) -> AnyElement {
         context.with_element_scope(RetentionScope::Key(self.id.clone()), |context| {
             let accessibility_label = self.accessibility_label_text().resolve(context);
+            let trigger = self.trigger.resolve(context);
             let content = self.content.as_ref().map(|content| {
                 context.retained_component(Identity::from(format!("{}:content", self.id)), || {
                     SheetContent {
@@ -140,7 +153,7 @@ impl View for SheetView {
                     }
                 })
             });
-            let title = self.title.clone();
+            let title = self.title.as_ref().map(|title| title.resolve(context));
             let title_id = format!("{}:title", self.id);
             let id = self.id.clone();
             let open = AppAction::with_window_action(move |_, window: &mut Window, cx| {
@@ -164,7 +177,7 @@ impl View for SheetView {
                 });
             });
 
-            Button(self.trigger.clone(), open)
+            Button(trigger, open)
                 .id(format!("{}:trigger", id))
                 .into_element(context)
         })
@@ -194,12 +207,45 @@ mod tests {
     }
 
     #[test]
+    fn trigger_and_title_can_be_localized() {
+        let sheet = Sheet("details", "Open")
+            .localized_trigger("sheet.open")
+            .localized_title("sheet.title");
+
+        assert!(matches!(
+            sheet.trigger,
+            SheetText::Message(key) if key.as_ref() == "sheet.open"
+        ));
+        assert!(matches!(
+            sheet.title,
+            Some(SheetText::Message(key)) if key.as_ref() == "sheet.title"
+        ));
+    }
+
+    #[test]
     fn trigger_names_sheet_when_title_is_omitted() {
         let sheet = Sheet("details", "Open details");
 
         assert!(matches!(
             sheet.accessibility_label_text(),
             SheetText::Literal(label) if label.as_ref() == "Open details"
+        ));
+    }
+
+    #[test]
+    fn localized_title_or_trigger_is_the_accessible_name_fallback() {
+        let titled = Sheet("details", "Open")
+            .localized_trigger("sheet.open")
+            .localized_title("sheet.title");
+        assert!(matches!(
+            titled.accessibility_label_text(),
+            SheetText::Message(key) if key.as_ref() == "sheet.title"
+        ));
+
+        let untitled = Sheet("details", "Open").localized_trigger("sheet.open");
+        assert!(matches!(
+            untitled.accessibility_label_text(),
+            SheetText::Message(key) if key.as_ref() == "sheet.open"
         ));
     }
 

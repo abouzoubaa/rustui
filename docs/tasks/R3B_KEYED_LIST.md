@@ -56,3 +56,7 @@ remains unverified.
 ## M126 native Escape check
 
 The canonical Playground `list · Partial` catalog route exercised the non-selectable source-index List and KeyedList controls together. After preselecting row 2 and disabling both selectors, clicking the selected East/EAST rows and pressing Escape left owner values at `Some(1)` and `east`; the native tree retained those selected rows and exposed the expected row names. The same story exposed visible KeyedList AX row names `Item row-0000` through `Item row-0013`. Raw observation: `target/headstart/evidence/r3-list-datagrid-acceptance-20261019.json`. Full screen-reader, RTL, cross-platform and performance acceptance remain open.
+
+## Owner update ordering
+
+The retained adapter tracks the owner selection observed at render or an accepted event. Each event captures that owner value when the adapter receives the event. Writeback applies only if the native selected index still matches the event and both the current binding and current marker still match the captured owner value; accepted writes advance the marker. A focused unit test covers the A→queued B→owner rerender C→updater ordering. This source-level guard does not claim native queued-event race acceptance.

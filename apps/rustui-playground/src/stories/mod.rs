@@ -85,6 +85,7 @@ pub(crate) fn catalog_demo(key: &str) -> Option<AnyView> {
         "navigation_split" => Some(AnyView::new(navigation_split_gallery::demo())),
         "offset" => Some(AnyView::new(offset_gallery::demo())),
         "collection" => Some(AnyView::new(collection_gallery::demo())),
+        "drag_drop" => Some(AnyView::new(drag_drop_gallery::demo())),
         "disclosure_control" => Some(AnyView::new(disclosure_gallery::demo())),
         "label" | "icon" | "image" => Some(AnyView::new(primitive_gallery::demo())),
         _ => None,

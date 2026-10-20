@@ -19,6 +19,7 @@ use gpui::{
 use rustui::{
     prelude::{Component, Text, VStack, View, ViewHost},
     runtime::render_diagnostics::{enable_render_diagnostics, render_diagnostics_snapshot},
+    theme::{AppearanceMode, activate_theme, parse_theme},
     view::{EmptyView, RenderContext},
 };
 use serde_json::{Value, json};
@@ -340,8 +341,12 @@ fn write_result(result: &Value) -> std::io::Result<PathBuf> {
 }
 
 fn main() {
-    gpui_platform::application().run(|cx| {
+    let theme = parse_theme(include_str!("../../../themes/macos27.json"))
+        .expect("bundled theme must parse");
+    gpui_platform::application().run(move |cx| {
         gpui_component::init(cx);
+        activate_theme(&theme, Some(AppearanceMode::Light), cx)
+            .expect("bundled light theme must activate");
         enable_render_diagnostics(cx);
         let local = Rc::new(RefCell::new(Vec::new()));
         let owner = Rc::new(RefCell::new(None));

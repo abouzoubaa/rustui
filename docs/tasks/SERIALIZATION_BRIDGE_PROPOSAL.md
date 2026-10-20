@@ -1,6 +1,8 @@
 # Serialization and UI Studio bridge proposal
 
-**Status: D1a and D1b source implementations are present.** The selected D1b
+**Status: D1a–D1c source implementations are present.** D1c's schema-driven
+Playground inspector passes its targeted locked/offline all-targets check; native
+inspector acceptance remains open. The selected D1b
 contract is signal-only (2026-10-19). The versioned descriptor schema, codec,
 compiled registry and local preview host are publicly exported under
 `rustui::preview`. D1b focused tests were included in the workspace `--lib` run
@@ -12,9 +14,9 @@ retention without blur remain open. See `D1B_COMPILED_PREVIEW_HOST.md` for the
 implemented boundary and limits.
 
 This task document records the design rationale and current status; it is not an
-ADR. D1a and D1b are implemented. D1c Playground inspector work and D1d external
-host integration remain separate roadmap work. Creating an individual ADR still
-follows `docs/adr/README.md`.
+ADR. D1a–D1c are implemented as source slices. D1d external host integration
+remains separate roadmap work. Creating an individual ADR still follows
+`docs/adr/README.md`.
 
 ## Decision and scope
 
@@ -250,7 +252,7 @@ All paths below are proposals, not created placeholders.
 |---|---|---|
 | D1a — schema and codec | Implemented in `crates/rustui/src/preview/{mod.rs,model.rs,schema.rs,codec.rs}` and exported by `rustui::preview` | Focused test filter passed 10 tests. Provides versioned scalar descriptor/catalog data, validation errors, defaults, deterministic export, duplicate-key rejection and whole-batch validation. No host/runtime behavior. |
 | D1b — local compiled preview host | `preview/{registry.rs,host.rs}` plus public exports; small existing owner/props adapters only if proved necessary | Register Text, Button and TextField specimens; keep one native ownership path. Verify typed prop edits, explicit action target, binding feedback, stale mount/revision rejection, native input state on parent rerender, teardown and remount. No transport. |
-| D1c — canonical Playground inspector | Dedicated Playground story/panel using public `rustui::preview` API; task documentation and fixtures | Show schema-derived controls, edit known properties, read action events, import/export normalized descriptors and retain specimen identity. Native theme/locale/lifecycle/keyboard/accessibility checks recorded separately. Theme JSON remains a separate document. |
+| D1c — canonical Playground inspector | Implemented in `apps/rustui-playground/src/stories/compiled_preview_gallery.rs`; see `D1C_PLAYGROUND_PREVIEW_INSPECTOR.md` | Schema-derived string-property editor, stamp-validated writes, signal-only action dispatch, normalized descriptor import/export and preview ID retention are present. Targeted locked/offline all-targets check passed. Native theme/locale/lifecycle/keyboard/accessibility acceptance remains open. Theme JSON remains separate. |
 | D1d — external host adapter | Consumer-owned adapter/module chosen after an actual host and transport are specified | Capability/version negotiation, request/reply/error behavior, stale revisions, host disconnect/close, explicit action policy and owner-safe dispatch. No framework dependency on UI Studio or Chorus. |
 
 Keep the first model in `rustui::preview`, using its existing serde dependencies;
@@ -278,10 +280,10 @@ still needs explicit work for:
 - Accessibility inspection and reproducible native acceptance, including state
   retention while inspecting/editing and observable failure recovery.
 
-Those broader goals remain on the roadmap. D1a/D1b provide a reusable descriptor
-contract and compiled preview host; they do not complete general view/state
-serialization, D1c's canonical Playground inspector, or D1d UI Studio/external
-host integration.
+Those broader goals remain on the roadmap. D1a–D1c provide a reusable descriptor
+contract, compiled preview host and bounded canonical Playground inspector; they
+do not complete general view/state serialization or D1d UI Studio/external host
+integration.
 
 ## Selected D1b boundary (2026-10-19)
 

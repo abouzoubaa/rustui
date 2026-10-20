@@ -1,9 +1,86 @@
 //! Typed same-process drag/drop and keyboard-equivalent model actions.
 
 use rustui::prelude::*;
+use std::{thread, time::Duration};
 
 pub fn demo() -> impl View {
-    Component("drag-drop-gallery", DragDropGallery::default)
+    Component(
+        "drag-drop-owner-release-probe",
+        DragDropOwnerReleaseProbe::default,
+    )
+}
+
+#[component]
+struct DragDropOwnerReleaseProbe {
+    #[state(true)]
+    gallery_visible: bool,
+    #[state(String::from("Ready. Arm removal, then begin and hold a drag."))]
+    status: String,
+}
+
+impl DragDropOwnerReleaseProbe {
+    fn finish_removal(&mut self, result: AsyncState<(), String>) -> bool {
+        match result {
+            AsyncState::Loading => self.status = "Removal armed; start and hold a drag.".into(),
+            AsyncState::Success(()) => {
+                self.gallery_visible = false;
+                self.status = "Gallery owner removed; release the drag now.".into();
+            }
+            AsyncState::Error(error) => self.status = format!("Removal probe failed: {error}"),
+            AsyncState::Idle => return false,
+        }
+        true
+    }
+
+    fn restore(&mut self) {
+        self.gallery_visible = true;
+        self.status = "Gallery restored. Arm removal, then begin and hold a drag.".into();
+    }
+}
+
+impl View for DragDropOwnerReleaseProbe {
+    fn body(&self) -> impl View {
+        let gallery_visible = self.gallery_visible();
+        let status = self.status();
+        VStack::new()
+			.spacing(8.0)
+			.child(Text("M66: remove the drag gallery component owner during a held native drag."))
+			.child(Text("Arm, immediately drag a source over the target, and keep the pointer held until removal is reported."))
+			.child(OwnerTaskReader(move |tasks: OwnerTask<DragDropOwnerReleaseProbe>| {
+				VStack::new()
+					.spacing(6.0)
+					.child(Button(
+						"Arm owner removal (3 seconds)",
+						tasks.start(
+							"remove-drag-owner",
+							|| async {
+								thread::sleep(Duration::from_secs(3));
+								Ok::<(), String>(())
+							},
+							DragDropOwnerReleaseProbe::finish_removal,
+						),
+					)
+					.disabled(!gallery_visible)
+					.id("drag-owner-release-arm"))
+					.child(OwnerActionReader(
+						|owner: OwnerAction<DragDropOwnerReleaseProbe>| {
+							Button("Restore gallery", owner.action(DragDropOwnerReleaseProbe::restore))
+								.id("drag-owner-release-restore")
+						},
+					))
+			}))
+			.child(Text(status))
+			.child(gallery_visible.then(|| {
+				Component("drag-drop-gallery-owner", DragDropGallery::default)
+			}))
+			.child((!gallery_visible).then(|| {
+				Container(Text("Drag gallery owner has been released."))
+					.width(360.0)
+					.height(180.0)
+					.padding(8.0)
+					.border()
+			}))
+    }
 }
 
 #[component]
@@ -68,6 +145,23 @@ impl DragDropGallery {
 
     fn toggle_target(&mut self) {
         self.show_target = !self.show_target;
+    }
+
+    fn finish_target_removal(&mut self, result: AsyncState<(), String>) -> bool {
+        match result {
+            AsyncState::Loading => {
+                self.result = "Target removal armed; start and hold a drag.".into();
+            }
+            AsyncState::Success(()) => {
+                self.show_target = false;
+                self.result = "Target subtree removed; gallery owner remains mounted.".into();
+            }
+            AsyncState::Error(error) => {
+                self.result = format!("Target removal probe failed: {error}");
+            }
+            AsyncState::Idle => return false,
+        }
+        true
     }
 
     fn toggle_source_enabled(&mut self) {
@@ -169,13 +263,30 @@ impl View for DragDropGallery {
             .spacing(8.0)
             .child(Text("Native typed drag/drop · same process"))
             .child(Text(format!("Operation: {operation:?}. Drag A/B/C into the target.")))
-            .child(HStack::new().spacing(6.0)
-                .child(Button("Copy / Transfer", self.action(Self::toggle_operation)).id("drag-operation"))
-                .child(Button("Reverse sources", self.action(Self::reverse_sources)).id("drag-reverse"))
-                .child(Button("Enable / disable sources", self.action(Self::toggle_source_enabled)).id("drag-source-enabled"))
-                .child(Button("Enable / disable target", self.action(Self::toggle_target_enabled)).id("drag-target-enabled"))
-                .child(Button("Remove / restore target", self.action(Self::toggle_target)).id("drag-target-toggle"))
-                .child(Button("Reset", self.action(Self::reset)).id("drag-reset")))
+            .child(OwnerTaskReader(move |tasks: OwnerTask<DragDropGallery>| {
+                Button(
+                    "Arm target removal (3 seconds)",
+                    tasks.start(
+                        "remove-drop-target-during-drag",
+                        || async {
+                            thread::sleep(Duration::from_secs(3));
+                            Ok::<(), String>(())
+                        },
+                        DragDropGallery::finish_target_removal,
+                    ),
+                )
+                .id("drag-target-removal-arm")
+            }))
+            .child(VStack::new()
+                .spacing(6.0)
+                .child(HStack::new().spacing(6.0)
+                    .child(Button("Copy / Transfer", self.action(Self::toggle_operation)).id("drag-operation"))
+                    .child(Button("Reverse sources", self.action(Self::reverse_sources)).id("drag-reverse"))
+                    .child(Button("Enable / disable sources", self.action(Self::toggle_source_enabled)).id("drag-source-enabled")))
+                .child(HStack::new().spacing(6.0)
+                    .child(Button("Enable / disable target", self.action(Self::toggle_target_enabled)).id("drag-target-enabled"))
+                    .child(Button("Remove / restore target", self.action(Self::toggle_target)).id("drag-target-toggle"))
+                    .child(Button("Reset", self.action(Self::reset)).id("drag-reset"))))
             .child(Text(format!("Sources enabled: {} · target enabled: {}", self.source_enabled(), self.target_enabled())))
             .child(sources)
             .child(target)

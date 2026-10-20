@@ -16,6 +16,14 @@ type AssetSetup = Box<dyn FnOnce(gpui::Application) -> gpui::Application>;
 
 gpui::actions!(rustui_runtime, [Quit]);
 
+fn tree_confirm_key_binding() -> KeyBinding {
+    KeyBinding::new(
+        "enter",
+        gpui_base::actions::Confirm { secondary: false },
+        Some("Tree"),
+    )
+}
+
 /// Configures and runs one root RustUI window.
 #[must_use]
 pub struct RustUI {
@@ -107,6 +115,7 @@ impl RustUI {
         };
         app.run(move |cx| {
             gpui_component::init(cx);
+            cx.bind_keys([tree_confirm_key_binding()]);
             // Pinned Popover binds Space to Confirm. Suppress that binding only
             // while an Input inside a Popover has focus, leaving text insertion
             // to the input and Button activation and Escape to their own paths.
@@ -145,5 +154,27 @@ impl Default for RustUI {
             asset_setup: None,
             environment: EnvironmentValues::default(),
         }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use gpui::{KeyBinding, Keystroke};
+
+    use super::tree_confirm_key_binding;
+
+    #[test]
+    fn tree_confirm_binding_matches_enter_only() {
+        let binding: KeyBinding = tree_confirm_key_binding();
+        let enter = [Keystroke::parse("enter").unwrap()];
+        let space = [Keystroke::parse("space").unwrap()];
+
+        assert!(
+            binding
+                .action()
+                .partial_eq(&gpui_base::actions::Confirm { secondary: false })
+        );
+        assert_eq!(binding.match_keystrokes(&enter), Some(false));
+        assert_eq!(binding.match_keystrokes(&space), None);
     }
 }

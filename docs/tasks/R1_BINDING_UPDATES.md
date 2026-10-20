@@ -19,10 +19,9 @@ updated in N1; see `N1_NAVIGATION_POLICY.md`. Retention lifetime is now implemen
 
 `NavigationLinkView` and `NavigationStackView` → `RenderContext::binding_updater` → `ComponentUpdater` → GPUI `ComponentHost` owner update → `Binding::update_on` → owner field read/write. This adds no reactive runtime, dependency, upstream revision, or vendored edit.
 
-## Queued work outside R1
+## Related work outside R1
 
-- `crates/rustui/src/components/input/stepper.rs` calculates increment and decrement targets from `Binding::value()` during rendering. Rapid callbacks can still overwrite a newer owner value. Apply the same owner-current pattern in its own task, including range behavior when the owner changes between render and click.
-- `crates/rustui/src/runtime/component_host.rs` retains control entities and subscriptions by `Identity` in `RetainedEntities`, but the inspected code has no removal path when a control disappears from a later render. Audit conditional views and reuse of identities separately; this task does not change retention or lifecycle policy.
+- `crates/rustui/src/runtime/component_host.rs` now reconciles retained controls after each root render: entries seen in the frame and declared inactive scopes remain; other entries and their subscriptions are pruned. The scoped-retention implementation and its limits are documented in `R2_RUNTIME_RETENTION.md` and `R2_COMPOSITION_RETENTION.md`; it does not add child-view lifecycle callbacks.
 
 ## Acceptance status and future checks
 

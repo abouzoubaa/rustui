@@ -76,3 +76,24 @@ pub fn catalogs() -> Catalogs {
 fn locale(identifier: &str) -> Locale {
     Locale::parse(identifier).expect("Playground locale constants should be valid")
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn sheet_story_messages_exist_in_every_playground_catalog() {
+        let catalogs = catalogs();
+        for identifier in ["en", "fr", "ar"] {
+            let catalog = catalogs
+                .get(&locale(identifier))
+                .expect("Playground locale should be registered");
+            for message in ["lab-sheet-open", "lab-sheet-title", "lab-sheet-name"] {
+                assert!(
+                    catalog.get(message).is_some(),
+                    "{message} missing in {identifier}"
+                );
+            }
+        }
+    }
+}

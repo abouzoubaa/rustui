@@ -264,3 +264,16 @@ controlled no-AX `cache_benchmark` results above remain separate direct cache-hi
 evidence. The native P3B gate remains open. The app process and disposable bundle
 were removed. Exact screenshots, hashes, input recipe, and values:
 `target/headstart/evidence/p3b-noax-playground-m135-20261019.json`.
+
+## M152 native keyboard activation re-entry (2026-10-20)
+
+In the canonical macOS 27 Playground `Stacks > Cache` story, GPUI accessibility
+was active. A visible focus ring reached `Increment cached child`; Space changed
+its local count 0→1. Tab then Shift+Tab returned the visible ring to that button,
+and Space changed the count 1→2. Return on the still-focused button changed it
+2→3. The uncached child remained at 0. This supplements M134's AX-inactive Space
+observation with focus re-entry and Return activation. Because accessibility was
+active, cache eligibility, cache-hit lowering, and performance are excluded.
+Screenshots were observed live but not persisted as files; exact displayed
+counts and focus-ring observations are recorded here. Evidence metadata and
+binary identity: `target/headstart/evidence/p3b-keyboard-reentry-m152-20261020.json`.

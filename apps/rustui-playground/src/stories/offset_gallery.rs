@@ -95,7 +95,8 @@ impl View for OffsetGallery {
                     )
                     .child(
                         Container(
-                            Offset(
+                            SpringOffset::new(
+                                "offset-gallery-shifted-controls",
                                 VStack::new()
                                     .spacing(8.0)
                                     .child(
@@ -114,8 +115,10 @@ impl View for OffsetGallery {
                                             .id("offset-shifted-input"),
                                     )
                                     .child(Text("Both controls move; this slot does not.")),
+                                self.x(),
+                                self.y(),
                             )
-                            .translation(self.x(), self.y()),
+                            .expect("gallery translation targets are finite"),
                         )
                         .width(330.0)
                         .height(240.0)

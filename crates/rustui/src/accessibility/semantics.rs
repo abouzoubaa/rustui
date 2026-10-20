@@ -1,12 +1,28 @@
 //! Structural accessibility metadata for a RustUI subtree.
 
-use gpui::{AnyElement, Role, SharedString};
+use gpui::{AnyElement, Role, SharedString, accesskit::Live};
 use rustui_core::Identity;
 
 use crate::{
     runtime::scoped_element::{SemanticInfo, semantic_scoped_element},
     view::{EmptyView, RenderContext, RetentionScope, View},
 };
+
+/// Announcement urgency for a [`SemanticsView`] live-region value.
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub enum LivePoliteness {
+    Polite,
+    Assertive,
+}
+
+impl From<LivePoliteness> for Live {
+    fn from(value: LivePoliteness) -> Self {
+        match value {
+            LivePoliteness::Polite => Self::Polite,
+            LivePoliteness::Assertive => Self::Assertive,
+        }
+    }
+}
 
 /// Structural roles supported by [`Semantics`].
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
@@ -15,6 +31,7 @@ pub enum SemanticsRole {
     Region,
     Section,
     Navigation,
+    Status,
 }
 
 impl From<SemanticsRole> for Role {
@@ -24,6 +41,7 @@ impl From<SemanticsRole> for Role {
             SemanticsRole::Region => Self::Region,
             SemanticsRole::Section => Self::Section,
             SemanticsRole::Navigation => Self::Navigation,
+            SemanticsRole::Status => Self::Status,
         }
     }
 }
@@ -53,6 +71,7 @@ pub struct SemanticsView<V> {
     role: Option<SemanticsRole>,
     label: Option<SemanticText>,
     description: Option<SemanticText>,
+    live_value: Option<(SemanticText, Live)>,
 }
 
 impl<V: View> SemanticsView<V> {
@@ -68,6 +87,7 @@ impl<V: View> SemanticsView<V> {
             role: None,
             label: None,
             description: None,
+            live_value: None,
         }
     }
 
@@ -96,14 +116,49 @@ impl<V: View> SemanticsView<V> {
         self
     }
 
+    /// Exposes changing status text as an AccessKit live-region value.
+    /// Assigns the Status role unless a later `.role(...)` call overrides it.
+    pub fn live_region_value(
+        mut self,
+        value: impl Into<SharedString>,
+        politeness: LivePoliteness,
+    ) -> Self {
+        self.role = Some(SemanticsRole::Status);
+        self.live_value = Some((SemanticText::Literal(value.into()), politeness.into()));
+        self
+    }
+
+    /// Exposes a localized changing status as an AccessKit live-region value.
+    /// Assigns the Status role unless a later `.role(...)` call overrides it.
+    pub fn localized_live_region_value(
+        mut self,
+        message_key: impl Into<SharedString>,
+        politeness: LivePoliteness,
+    ) -> Self {
+        self.role = Some(SemanticsRole::Status);
+        self.live_value = Some((
+            SemanticText::Localized(message_key.into()),
+            politeness.into(),
+        ));
+        self
+    }
+
     fn semantic_info(&self, context: &RenderContext<'_>) -> Option<SemanticInfo> {
-        if self.role.is_none() && self.label.is_none() && self.description.is_none() {
+        if self.role.is_none()
+            && self.label.is_none()
+            && self.description.is_none()
+            && self.live_value.is_none()
+        {
             return None;
         }
         Some(SemanticInfo {
             role: self.role.unwrap_or(SemanticsRole::Group).into(),
             label: self.label.as_ref().map(|text| text.resolve(context)),
             description: self.description.as_ref().map(|text| text.resolve(context)),
+            live_value: self
+                .live_value
+                .as_ref()
+                .map(|(text, politeness)| (text.resolve(context), *politeness)),
         })
     }
 }
@@ -146,6 +201,31 @@ mod tests {
         assert_eq!(Role::from(SemanticsRole::Region), Role::Region);
         assert_eq!(Role::from(SemanticsRole::Section), Role::Section);
         assert_eq!(Role::from(SemanticsRole::Navigation), Role::Navigation);
+        assert_eq!(Role::from(SemanticsRole::Status), Role::Status);
+    }
+
+    #[test]
+    fn live_region_builder_sets_value_and_politeness() {
+        let status = Semantics("status", Text("child"))
+            .live_region_value("3 files saved", LivePoliteness::Polite);
+        assert_eq!(status.role, Some(SemanticsRole::Status));
+        assert!(matches!(
+            status.live_value.as_ref(),
+            Some((SemanticText::Literal(value), Live::Polite)) if value.as_ref() == "3 files saved"
+        ));
+
+        let localized = Semantics("localized-status", Text("child"))
+            .localized_live_region_value("status.saved", LivePoliteness::Assertive);
+        assert_eq!(localized.role, Some(SemanticsRole::Status));
+        assert!(matches!(
+            localized.live_value.as_ref(),
+            Some((SemanticText::Localized(key), Live::Assertive)) if key.as_ref() == "status.saved"
+        ));
+
+        let explicit_role = Semantics("status-region", Text("child"))
+            .live_region_value("3 files saved", LivePoliteness::Polite)
+            .role(SemanticsRole::Region);
+        assert_eq!(explicit_role.role, Some(SemanticsRole::Region));
     }
 
     #[test]

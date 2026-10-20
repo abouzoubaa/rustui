@@ -4,11 +4,11 @@
 
 The wrapper delegates the child's layout, prepaint, and paint to GPUI, preserving the child's own accessibility nodes, roles, and names. The group label names the group, not a descendant control. The ID must be nonempty and unique among siblings in the same logical scope; repeated sibling IDs panic during rendering. Its native element ID uses a dedicated `semantics` namespace.
 
-This milestone supports structural roles only. It does not provide interactive roles, actions, focus callbacks, or accessibility-only hiding. Hiding a subtree from accessibility while leaving focusable descendants in keyboard navigation needs a coordinated focus policy and is deferred.
+This milestone supports structural roles and AccessKit live status values. `live_region_value` and `localized_live_region_value` expose the changing value and announcement politeness, and assign the Status role unless a later `.role(...)` overrides it; the Playground counter is the public-API example. Prefer polite announcements for routine status changes. It does not provide interactive roles, actions, focus callbacks, or accessibility-only hiding. Hiding a subtree from accessibility while leaving focusable descendants in keyboard navigation needs a coordinated focus policy and is deferred.
 
 ## Checks
 
-- Unit checks cover role mapping, blank IDs, duplicate sibling scope IDs, and native namespace separation.
+- Unit checks cover role mapping, live value/politeness writing, blank IDs, duplicate sibling scope IDs, and native namespace separation.
 - Cargo and native GUI validation are owned by the root task and are not recorded here.
 
 ## Executed verification
@@ -23,6 +23,7 @@ without losing the counter. The no-metadata wrapper exposed its child without an
 extra accessibility container. Evidence and binary hash:
 `target/headstart/milestone51-semantics-gui.json`.
 
-This is bounded accessibility-tree and pointer acceptance. Screenreader
-announcements, keyboard traversal, description localization, reordered native
-node identity and wider platform support remain unverified.
+This is bounded accessibility-tree and pointer acceptance. The new live-region
+source contract is covered by unit checks; screenreader announcements, keyboard
+traversal, description localization, reordered native node identity and wider
+platform support remain unverified.

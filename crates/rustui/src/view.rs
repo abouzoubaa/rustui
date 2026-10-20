@@ -169,6 +169,7 @@ pub(crate) enum RetentionScope {
     DragSource(Identity),
     DropTarget(Identity),
     SpringOpacity(Identity),
+    SpringOffset(Identity),
     AnimatedOpacity(Identity),
     Tabs(Identity),
     Tab(String),

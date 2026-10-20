@@ -20,7 +20,7 @@ use rustui::prelude::{
     ToastBuilder, ToastKind, Toolbar, ToolbarItem, ToolbarView, CodeEditor, CodeEditorView,
     FocusScope, FocusScopeView, KeyboardShortcutError, KeyboardShortcuts,
     KeyboardShortcutsView, Frame, FrameView, LazyGrid, LazyGridItem,
-    SpringConfig, SpringOpacity, SpringOpacityError, GeometryReader, GeometrySize,
+    SpringConfig, SpringOpacity, SpringOpacityError, SpringOffset, SpringOffsetError, GeometryReader, GeometrySize,
     HoverActionError, HoverRegion, HoverRegionView,
     DragOperation, DragSource, DragSourceView, DropEvent, DropTarget, DropTargetView,
     Shadow, ShadowElevation, ShadowStyle, ShadowStyleError, ShadowView,
@@ -882,7 +882,8 @@ Name the navigation tree for assistive technology with
 `.accessibility_label("Settings navigation")`. Use
 `.localized_accessibility_label("settings.navigation")` when the name should
 follow the active RustUI message catalog; it resolves on each render, like a
-localized destination label.
+localized destination label. The selected detail region uses that resolved
+destination label as its accessible name.
 
 The 560×300 native checks observed that `None` and unknown IDs hide the detail
 while keeping the sidebar available; selecting Settings or Files from the
@@ -1556,3 +1557,14 @@ performance remain unverified. See `docs/tasks/PROPERTY_INSPECTOR.md` and
 
 The M69–M71 workspace suite passed 236 tests across 12 binaries, the build succeeded with all three pinned GPUI dependencies fresh, and the all-targets check exited 0. Bounded native acceptance is complete for M69, M70, and M71, with the limits recorded in their task contracts. The expanded test log is `target/headstart/milestone71-expanded-tests.log`. See the milestone task contracts and `docs/IMPLEMENTATION_ROADMAP.md`.
 
+
+## State-driven translation
+
+`SpringOffset::new(id, view, x, y)` uses two GPUI retained springs for finite
+signed logical-pixel targets. Keep `id` stable across renders to retarget each
+axis; newly mounted springs begin at their target. GPUI owns scheduling and
+app-level reduced-motion behavior. The child keeps its layout slot; GPUI applies
+the translation to native hit-test and accessibility bounds. Parent clipping,
+overlap, stacking, and accessibility-tree behavior remain native. It does not
+scale or rotate, and source-level tests do not establish intermediate frames,
+pixels, velocity continuity, or performance.

@@ -43,6 +43,17 @@ impl View for SemanticsGallery {
             )
             .child(
                 Semantics(
+                    "semantics-gallery-live-status",
+                    Text(format!("{} items added", self.count())),
+                )
+                .role(SemanticsRole::Status)
+                .live_region_value(
+                    format!("{} items added", self.count()),
+                    LivePoliteness::Polite,
+                ),
+            )
+            .child(
+                Semantics(
                     "semantics-gallery-localized",
                     Text("Change locale to update this group's accessible name."),
                 )

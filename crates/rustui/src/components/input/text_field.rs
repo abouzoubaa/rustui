@@ -1,11 +1,12 @@
 //! Single-line text input backed by a retained GPUI Components InputState.
 
-use gpui::{AnyElement, IntoElement, SharedString, Styled};
+use gpui::{AnyElement, AppContext, Entity, EntityInputHandler, IntoElement, SharedString, Styled};
 use gpui_component::{
     Icon, IconName, Sizable,
     input::{Input, InputContentType, InputEvent, InputState},
 };
 use rustui_core::{Binding, Identity};
+use std::ops::Range;
 
 use crate::{
     components::theme::{required_style_with_artwork, selector, styled_element},
@@ -25,6 +26,11 @@ pub enum TextFieldSize {
     #[default]
     Small,
     Large,
+}
+
+struct RetainedTextField {
+    state: Entity<InputState>,
+    owner_value: String,
 }
 
 impl TextFieldSize {
@@ -122,6 +128,16 @@ impl TextFieldView {
     }
 }
 
+fn should_sync_owner_value(
+    current_owner_value: &str,
+    previous_owner_value: &str,
+    retained_value: &str,
+    marked_range: Option<Range<usize>>,
+) -> bool {
+    retained_value != current_owner_value
+        && !(marked_range.is_some() && current_owner_value == previous_owner_value)
+}
+
 /// Creates a controlled single-line text field.
 #[allow(non_snake_case)]
 pub fn TextField(placeholder: impl Into<SharedString>, value: Binding<String>) -> TextFieldView {
@@ -138,21 +154,45 @@ impl View for TextFieldView {
         let initial_value = self.value.value();
         let placeholder = self.placeholder.clone();
         let secure = self.kind == TextFieldKind::Secure;
-        let (state, created) = context.retained_entity(identity.clone(), move |window, cx| {
-            InputState::new(window, cx)
-                .placeholder(placeholder)
-                .default_value(initial_value)
-                .masked(secure)
+        let (retained, created) = context.retained_entity(identity.clone(), move |window, cx| {
+            let state = cx.new(|cx| {
+                InputState::new(window, cx)
+                    .placeholder(placeholder)
+                    .default_value(initial_value.clone())
+                    .masked(secure)
+            });
+            RetainedTextField {
+                state,
+                owner_value: initial_value,
+            }
         });
-
+        let state = retained.read(context.app()).state.clone();
         let current_value = self.value.value();
-        let (retained_value, retained_masked) = {
-            let state = state.read(context.app());
-            (state.value().to_string(), state.presentation().is_masked())
-        };
-        if retained_value != current_value {
+        let previous_owner_value = retained.read(context.app()).owner_value.clone();
+        let (retained_value, retained_masked, marked_range) =
+            context.update_entity(&state, |state, window, cx| {
+                (
+                    state.value().to_string(),
+                    state.presentation().is_masked(),
+                    state.marked_text_range(window, cx),
+                )
+            });
+        // IME preedit updates InputState before InputEvent::Change writes the owner.
+        // Keep it only while the owner still has its last synchronized value.
+        if should_sync_owner_value(
+            &current_value,
+            &previous_owner_value,
+            &retained_value,
+            marked_range,
+        ) {
+            let value_to_sync = current_value.clone();
             context.update_entity(&state, move |state, window, cx| {
-                state.set_value(current_value, window, cx);
+                state.set_value(value_to_sync, window, cx);
+            });
+        }
+        if current_value != previous_owner_value {
+            context.update_entity(&retained, move |retained, _, _| {
+                retained.owner_value = current_value;
             });
         }
         if retained_masked != secure {
@@ -214,7 +254,7 @@ impl View for TextFieldView {
 
 #[cfg(test)]
 mod tests {
-    use super::TextFieldSize;
+    use super::{TextFieldSize, should_sync_owner_value};
     use crate::{
         components::theme::selector_for_mode,
         theme::{AppearanceMode, parse_theme, resolve_component_style_with},
@@ -240,5 +280,46 @@ mod tests {
                 assert_eq!(style.lengths["width"], expected_width);
             }
         }
+    }
+
+    #[test]
+    fn marked_preedit_replacing_selection_does_not_sync_unchanged_owner() {
+        // The preedit replaced selected "bc"; the original owner value is "abcd".
+        assert!(!should_sync_owner_value("abcd", "abcd", "aにd", Some(1..2)));
+    }
+
+    #[test]
+    fn repeated_marked_preedit_does_not_sync_unchanged_owner() {
+        assert!(!should_sync_owner_value(
+            "abcd",
+            "abcd",
+            "a日本d",
+            Some(1..3)
+        ));
+    }
+
+    #[test]
+    fn committed_input_matching_owner_does_not_sync_again() {
+        assert!(!should_sync_owner_value("a日本d", "abcd", "a日本d", None));
+    }
+
+    #[test]
+    fn external_owner_update_during_preedit_is_synchronized() {
+        assert!(should_sync_owner_value(
+            "external update",
+            "abcd",
+            "aにd",
+            Some(1..2)
+        ));
+    }
+
+    #[test]
+    fn external_owner_update_without_preedit_is_synchronized() {
+        assert!(should_sync_owner_value(
+            "external update",
+            "abcd",
+            "abcd",
+            None
+        ));
     }
 }

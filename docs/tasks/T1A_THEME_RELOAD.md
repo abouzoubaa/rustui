@@ -1,5 +1,9 @@
 # T1A: Explicit theme file reload
 
+## Existing-host invalidation
+
+Theme activation writes RustUI's `ActiveTheme` GPUI global after applying the GPUI Components profile. Existing `ComponentHost` instances must observe that global and notify GPUI so RustUI renderers reread their resolved theme on the next frame. `ComponentHost` now holds that observer subscription alongside localization invalidation. The behavior fix is source-level; native appearance-switch rendering remains an acceptance check and is not claimed by compilation alone.
+
 ## Scope
 
 `ThemeFile` provides validated file loading and explicit, transactional reloads

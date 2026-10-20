@@ -44,21 +44,21 @@ that the entire stage or framework is accepted.
 | P3 diagnostics overhead | The two earlier rejected captures remain preserved and excluded. A fresh current-source 32-leaf Finder/CUA session completed 12 processes (one warmup pair, five measured pairs); correctness passed in all runs, PIDs were unique, and AX/drag stayed false. Median paired diagnostics-on/off ratios: attached CPU 0.995855 (range 0.982688–1.002083), elapsed 0.990446 (0.989967–1.000772), maximum sampled RSS 1.000000 (0.994326–1.002659), median sampled RSS 0.999155 (0.994317–1.000242). CPU spread crosses 1.0, so the observed small difference is inconclusive; this is process-level evidence, not a general overhead or performance claim. Details and evidence: `docs/tasks/P3_DIAGNOSTICS_OVERHEAD_RESULTS.md`. |
 | Workspace check | Current post-M118 `./scripts/cargo-headstart check --workspace --all-targets --locked --offline` exited 0 (`target/headstart/roadmap-workspace-all-targets-check-20261019-m118.log`). Earlier milestone logs remain historical evidence. |
 | Builds and dependency reuse | Latest M78 Playground build exited 0 (`target/headstart/milestone78-final-playground-build.log`). Earlier M66–M68 and M69–M71 builds passed with all three pinned GPUI dependencies fresh. P3D example build passed with all three dependencies fresh; freshness is reuse evidence, not a performance claim. |
-| Focus/editor | M52 FocusScope and M53 CodeEditor bounded native interactions are recorded; focus removal policy, parser-feature approval, syntax highlighting, and full accessibility remain open. |
+| Focus/editor | M52 FocusScope and M53 CodeEditor bounded native interactions are recorded. FocusScope removal follows the caller-owned binding-clearing contract; parser-feature approval, syntax highlighting, and full accessibility remain open. |
 | Layout | M74 Frame native acceptance verified retained text in Center/Stretch/Baseline, Stretch background expansion, Undo across mode change, cycle retention, and framed button action. Inner width 160 with horizontal Stretch fixed Input percent-width collapse; outer alignment cycle unchanged. Limits: no exact pixels/caret-selection/full keyboard-AX/RTL/platform acceptance, and no peer-baseline claim. See `target/headstart/milestone74-frame-gui.json`. M54/M55/M58/M61/M62/M63/M64 bounded results and their remaining limits are in the task contracts. |
 | Collections | M75 Tree native checks covered replacement expansion retention/change, branch removal/restoration, stable-ID selection through reorder, selection clearing on removal, and selected-descendant auto-expansion. M76 Table checks covered invalid-index normalization, index-based reorder/removal, native row selection, repeat-click, and clear. M126 additionally observed Escape preserving selection for non-selectable source List and KeyedList, visible virtualized KeyedList row names, and DataGrid Table/Row semantics with controlled row selection. Limits: full keyboard/AX/screen-reader, RTL, cross-platform, and performance acceptance; Table notification counts and ABA provenance were not measured. See `docs/tasks/R3A_COLLECTION_SYNC.md` and `target/headstart/evidence/r3-list-datagrid-acceptance-20261019.json`. |
-| Interaction | M56 scoped keyboard shortcuts and M59 HoverRegion received bounded native acceptance; shortcut conflict precedence, pointer-only hover dwell, AppAction, nested scopes/regions, and full keyboard/screen-reader coverage remain open. |
+| Interaction | M56 scoped keyboard shortcuts and M59 HoverRegion received bounded native acceptance. `PointerCursor` wraps a RustUI child with GPUI’s pointing-hand cursor; source/API implementation and the canonical Playground example in `supplementary_gallery.rs` are recorded at M154. The focused unit test was added but is blocked by the existing GPUI test-support dependency/configuration gap. Native hover acceptance remains open, as do shortcut conflict precedence, pointer-only hover dwell, AppAction, nested scopes/regions, and full keyboard/screen-reader coverage. |
 | Animation | M57 child-retention identity passed bounded native sibling-gallery checks (bundle SHA-256 `bc184cdda3d2e0f0e3d134f288a3e808153ee4febc74ac2defbe6410826f8dbd`). M60 normal and reduced-motion SpringProbe verification passed; counts are RustUI root host lowerings, not GPUI frames, alpha, or velocity continuity. Exact alpha, animation trajectory, velocity continuity, and performance remain unmeasured. |
 | Ownership/tasks | M72 native owner-task acceptance passed restart/cancel/error/same-ID terminal restart and pending-child removal/restore. The removed worker finished but delivered no result; restore was Idle with two mounts. Arbitrary blocking-work interruption and private registry allocation cleanup were not established; cross-platform, keyboard-only and full screen-reader acceptance remain. See `target/headstart/milestone72-owner-tasks-gui.json`. |
 | Display controls | Link/Badge/Avatar and feedback native slices accepted; Icon/Spinner artwork awaits asset-source dependency approval. |
 | Inputs | M78 bounded ComboBox native checks fixed the options-replacement popup mismatch and covered selection, disabled blocking, owner updates, and missing-option rendering. M121 Picker native acceptance confirmed owner writeback, disabled popup blocking, external Kotlin updates while disabled, and correct selection after re-enable (`target/headstart/evidence/picker-acceptance-20261019.json`). Full keyboard/focus, VoiceOver, pixel, cross-platform, and performance acceptance remain open. The pinned DatePicker builder cannot name its focused trigger; see `docs/tasks/DATE_PICKER_ACCESSIBILITY.md`. Slider AX SetValue remains focused native evidence only. See `docs/tasks/C10_COMBO_BOX_SELECT.md`. |
 | Navigation | M78 bounded native routing checks passed: None/unknown hide the detail while preserving the sidebar and allowing native Settings/Files recovery; bound Files updates, reorder, selected-item removal, and restoration were observed. M125 native AX inspection also observed the `Workspace navigation` outline and `Files details`/`Settings details` containers as selection changed. Resize dragging, keyboard navigation, locale switching, full accessibility review, and direct allocation-release instrumentation remain pending. See `target/headstart/milestone78-navigation-gui.json` and `target/headstart/evidence/d1b-preview-host-acceptance-20261019.json`. |
-| Cache pilot | Three no-AX fixed-bounds workloads proved reuse and self-invalidation; environment/removal/locale/theme logical scenarios passed; drag, reorder and broader visual cases remain. No frame/GPU speed claim. |
-| Themes/tooling | Validated normalized theme JSON export and read-only Playground inspection accepted. M65 observed opt-in polling apply a valid edit, preserve the last good theme on invalid JSON, recover after repair, respect outer appearance selection, stop while disabled, and cease activation after story removal. Exact counters/quiescence, performance, missing-file/permission and multi-root cases remain unverified. D1a's versioned preview descriptor schema/codec is implemented and focused-tested; it does not serialize arbitrary Rust views or mount previews. D1b's signal-only in-process compiled host is implemented; its focused tests were included in the later workspace `--lib` run of 335 tests across six result groups. Bounded native checks passed for typed edits, action dispatch, teardown/remount, rejection probes and NavigationSplit naming. M128 observed caret-position retention across parent rerender plus keyboard blur/refocus; text selection, IME composition, and retention without blur remain open. |
+| Cache pilot | Three no-AX fixed-bounds workloads proved cache reuse and self-invalidation; environment, removal, locale, and theme logical scenarios passed. M141 adds bounded native drag-fallback and idle-reuse evidence; broader visual cases remain. No frame, GPU, or speed claim. |
+| Themes/tooling | Validated normalized theme JSON export and read-only Playground inspection accepted. M65 observed opt-in polling apply a valid edit, preserve the last good theme on invalid JSON, recover after repair, respect outer appearance selection, stop while disabled, and cease activation after story removal. Exact counters/quiescence, performance, missing-file/permission and multi-root cases remain unverified. D1a schema/codec, D1b signal-only compiled host and D1c schema-driven Playground inspector are implemented. D1c locked/offline all-targets check and Playground build passed; M144 verified Boolean and fractional `f64` inspector edits, schema rejection, remount binding, and descriptor round-trip on macOS 27. Broader catalog, VoiceOver, IME, theme/locale, RTL, and cross-platform acceptance remain open. D1b focused tests were included in the later workspace --lib run of 335 tests across six result groups. Bounded native checks passed typed edits, binding feedback, action dispatch, teardown/remount, rejection probes and NavigationSplit naming. M128 observed caret-position retention across parent rerender plus keyboard blur/refocus; selection retention through focus traversal and rerender is recorded in the consolidated D1b evidence; IME composition and retention without blur remain open. See `target/headstart/evidence/d1b-preview-host-acceptance-20261019.json` and `docs/tasks/D1C_PLAYGROUND_PREVIEW_INSPECTOR.md`. |
 | Upstream | Pins unchanged; GPUI Fast remains disabled. Isolated quad-sort harness passed 9 tests (7 algorithm, 2 integration), and baseline/candidate production builds succeeded. The upstream full-library test build remains failed; paired probes are building, with native visual and performance validation pending. Candidate promotion is not approved. See `docs/tasks/QUAD_SORT_PATCH_PROPOSAL.md`. |
 | Dialog candidate | M77a manual native checks on the isolated revised tracked-Dialog patch observed keyed middle removal/focus retention, callback-opened dialogs, deferred-confirm rebase, bottom removal, Escape focus restoration, and backdrop/native Close focus restoration. The updated counter capture shows 15/15 weak probe `InputState` entities retired/released, not every allocation. This remains partial evidence: automated/race variants, stale IDs, broader entity-release/callback counts, and baseline native comparison remain; no normal dependency promotion or full Dialog acceptance. See `docs/tasks/O7_DIALOG_KEYED_FOCUS_REBASE_REVIEW.md` and `target/headstart/candidates/dialog-focus-rebase-20261018-a/evidence/milestone77a-native-dialog.json`. |
 
-**M66–M68 closeout:** source contracts and Playground examples are present. The suite passed 221 tests across 12 binaries and the M66–M68 build succeeded with all three pinned GPUI dependencies fresh. M66's bounded native pointer evidence is recorded in `target/headstart/milestone66-drag-drop-gui.json`; keyboard-only acceptance and actual owner destruction during an in-flight drag remain pending. Bounded M67 native acceptance is recorded in `target/headstart/milestone67-shadow-gui.json`: Dark and Light appearance, independent retained A/B values, style/offset/parent changes, owner action, omission/restoration, and Arabic RTL/English restoration were observed. Exact pixels, native shadow-disable behavior, full keyboard/AX speech, and performance remain unverified. Bounded M68 native acceptance is recorded in `target/headstart/milestone68-card-gui.json`: equal 260-point gallery widths, independently editable same-ID children, custom style and parent updates, omission/restoration, Light appearance, and Arabic RTL/English restoration were observed. Gallery width is not intrinsic Card sizing; exact pixels/padding, undo, full accessibility/keyboard, and performance remain unverified.
+**M66–M68 closeout:** source contracts and Playground examples are present. The suite passed 221 tests across 12 binaries and the M66–M68 build succeeded with all three pinned GPUI dependencies fresh. M66's bounded native pointer evidence is recorded in `target/headstart/milestone66-drag-drop-gui.json`; M142 verifies keyboard-only Copy and Transfer alternatives. M146 verified whole-gallery child-owner removal before native drag release; no stale target update or crash was observed, and the app restored afterward. A surviving independent receiver, screen-reader, cross-platform, and broader accessibility acceptance remain open. Bounded M67 native acceptance is recorded in `target/headstart/milestone67-shadow-gui.json`: Dark and Light appearance, independent retained A/B values, style/offset/parent changes, owner action, omission/restoration, and Arabic RTL/English restoration were observed. Exact pixels, native shadow-disable behavior, full keyboard/AX speech, and performance remain unverified. Bounded M68 native acceptance is recorded in `target/headstart/milestone68-card-gui.json`: equal 260-point gallery widths, independently editable same-ID children, custom style and parent updates, omission/restoration, Light appearance, and Arabic RTL/English restoration were observed. Gallery width is not intrinsic Card sizing; exact pixels/padding, undo, full accessibility/keyboard, and performance remain unverified. M148 verified removal of the target subtree during a held native drag while the gallery owner remained mounted; the destination stayed empty through release and target restoration plus a fresh Copy drag succeeded. See `target/headstart/evidence/m66-target-removed-during-held-drag-m148-20261020.json`.
 
 ## M83 — Collection keyboard decision tests
 
@@ -1064,9 +1064,11 @@ bound text. Evidence: `target/headstart/milestone52-focus-scope-gui.json`; revie
 binary SHA-256 `05fabb23fc5780056a01adeca40eab671a2704a740ba428638aab531d027ab9a`.
 The report observed a transient A=true/B=true state before the following native
 focus event settled it. Removing a scope does not clear the caller binding; the
-gallery clears it explicitly. Optional tab-stop and screen-reader acceptance,
-focus-removal binding policy, and targeting private focus handles inside child
-controls remain open. Contract: `docs/tasks/FOCUS_SCOPE.md`.
+gallery clears it explicitly, and callers removing a focused scope own that
+cleanup. Automatic clearing through a lifecycle API would require a future
+contract and design. Optional tab-stop and screen-reader acceptance, and
+targeting private focus handles inside child controls remain open. Contract:
+`docs/tasks/FOCUS_SCOPE.md`.
 
 ### Milestone 53 — controlled native CodeEditor
 
@@ -1346,11 +1348,11 @@ runtime, dependency or application implementation.
 
 ### Milestones 66–68 — source contracts and bounded native observations
 
-- **M66 typed same-process drag/drop:** `DragSource` and `DropTarget` use pinned GPUI typed drag events and an owner binding for `DropEvent<T>` with Copy/Transfer intent. Bounded native pointer evidence in `target/headstart/milestone66-drag-drop-gui.json` records copy/drop, transfer, reordering, disabled source/target, incompatible numeric payload, and target removal/restoration. Keyboard-only acceptance and actual owner destruction during an in-flight drag remain pending. AX unchanged on rejected drops is bounded negative evidence, not an event trace or broad accessibility result. This does not cover external files, cross-window payloads, touch, or GPU optimization. See `docs/tasks/DRAG_AND_DROP.md`.
+- **M66 typed same-process drag/drop:** `DragSource` and `DropTarget` use pinned GPUI typed drag events and an owner binding for `DropEvent<T>` with Copy/Transfer intent. Bounded native pointer evidence in `target/headstart/milestone66-drag-drop-gui.json` records copy/drop, transfer, reordering, disabled source/target, incompatible numeric payload, and target removal/restoration. M142 verifies keyboard-only Copy and Transfer alternatives; M146 verified whole-gallery owner removal while a native drag remained held; no stale update or crash was observed after release, and restore succeeded. A surviving independent receiver remains untested. AX unchanged on rejected drops is bounded negative evidence, not an event trace or broad accessibility result. This does not cover external files, cross-window payloads, touch, or GPU optimization. See `docs/tasks/DRAG_AND_DROP.md`. M148 separately covers surviving gallery-owner target removal during a held drag, normal release, and successful restored-target retry; internal cancellation and event tracing remain unverified.
 - **M67 native Shadow:** bounded native acceptance is complete and recorded in `target/headstart/milestone67-shadow-gui.json` (bundle SHA-256 `a00fcb2482c3ac63122228d7b704e53a264763df078bd7aca1386f5f9848f4f4`). Dark and Light shadows, independent retained A/B fields, explicit style/offset/parent updates, owner action, omission/restoration, Arabic RTL, and English LTR restoration were observed. Exact pixels, native shadow-disable behavior, full keyboard/AX speech, and performance remain unverified. No inset or custom GPU path is included. See `docs/tasks/SHADOW_MODIFIER.md`.
 - **M68 themed Card:** bounded native acceptance is complete and recorded in `target/headstart/milestone68-card-gui.json` (corrected bundle SHA-256 `c19a89cd2fe3597cf1cd487bcf352486afb6debc3c8c036c53a28a0c1661fe25`). Independently editable same-ID children, custom style and parent updates, omission/restoration, Light appearance, and Arabic RTL were observed. The equal 260-point width is gallery layout, not intrinsic Card sizing. Exact pixels/padding, cursor/undo, full keyboard/AX speech, and performance remain unverified. See `docs/tasks/CARD.md`.
 
-M66 retains its separate native gaps: keyboard-only acceptance and actual owner destruction during an in-flight drag remain pending. M67 and M68 bounded native acceptance is complete with the limits listed above. Their test, build, and dependency-reuse evidence is recorded above. The initial M66–M68 all-targets check failed on M69 macro errors; the later M69–M71 check exited 0. M63–M65 evidence is historical and does not cover these changes.
+M66 owner destruction in an in-flight native drag closed by M146: the parent reported child-owner removal while the native left button remained down at the target; release completed without a stale update or crash, and restore succeeded. This covers removal of the whole gallery owner, not delivery to a surviving independent receiver. M67 M68 bounded native acceptance complete limits listed above. M148 adds target-only removal while the drag is held and the gallery owner remains mounted; the release had no destination update, restoration succeeded, and retry copied A. Evidence: `target/headstart/evidence/m66-target-removed-during-held-drag-m148-20261020.json`.
 
 ### Milestones 69–71 — bounded native acceptance complete
 
@@ -1637,7 +1639,7 @@ The canonical Playground build and package command exited 0. In `save_dialog`, t
 
 ## M113 — Props-driven fixed-bounds cache freshness
 
-Fixed a stale first-frame result when changed props were reconciled during parent lowering after GPUI's pending invalidations had already been drained. Changed-props frames now lower through a fixed-size `div`; GPUI subtree caching resumes while props remain unchanged. The `small`, `medium`, and `large` no-AX workloads each passed: parent-only cached/uncached child lowerings were `0/100`, `0/800`, and `0/3200`; changed-props lowerings were `100/100`, `800/800`, and `3200/3200`; both paths observed every value from 1 through 100. This is host-lowering and freshness evidence only, not a frame/GPU/presentation or performance-speedup claim. Validation: `rustfmt --edition 2024 --check` and `./scripts/cargo-headstart check -p rustui --example cache_benchmark --locked --offline`, plus the three instrumented workload runs after `./scripts/cargo-headstart build -p rustui --example cache_benchmark --locked --offline`. Evidence: `target/headstart/evidence/props-cache-acceptance-20261019.json` and the raw JSON records referenced by `docs/tasks/P3B_CACHED_CHILD.md`. No GPUI dependency, vendored source, or GPUI Fast change. The benchmark app processes exited, its disposable executable was removed, and shared Cargo caches were preserved. Broader P3B acceptance remains open for keyboard/focus/accessibility, theme/locale/font changes, reordering/removal/restoration, native drag behavior, and performance comparison.
+Fixed a stale first-frame result when changed props were reconciled during parent lowering after GPUI's pending invalidations had already been drained. Changed-props frames now lower through a fixed-size `div`; GPUI subtree caching resumes while props remain unchanged. The `small`, `medium`, and `large` no-AX workloads each passed: parent-only cached/uncached child lowerings were `0/100`, `0/800`, and `0/3200`; changed-props lowerings were `100/100`, `800/800`, and `3200/3200`; both paths observed every value from 1 through 100. This is host-lowering and freshness evidence only, not a frame/GPU/presentation or performance-speedup claim. Validation: `rustfmt --edition 2024 --check` and `./scripts/cargo-headstart check -p rustui --example cache_benchmark --locked --offline`, plus the three instrumented workload runs after `./scripts/cargo-headstart build -p rustui --example cache_benchmark --locked --offline`. Evidence: `target/headstart/evidence/props-cache-acceptance-20261019.json` and the raw JSON records referenced by `docs/tasks/P3B_CACHED_CHILD.md`. No GPUI dependency, vendored source, or GPUI Fast change. The benchmark app processes exited, its disposable executable was removed, and shared Cargo caches were preserved. Broader P3B acceptance remains open for keyboard, focus, accessibility, theme/locale/font changes, removal/restoration, and performance comparison. M141 covers one bounded native drag-fallback and idle-reuse case; it makes no general performance claim.
 
 
 ## M114 — Paired cache comparison workload sizing
@@ -1879,3 +1881,165 @@ inconclusive for cache reuse and performance; the no-focus native P3B gate
 remains open. The app process and disposable bundle were removed. Screenshots,
 hashes, observations, and the input recipe:
 `target/headstart/evidence/p3b-noax-playground-m135-20261019.json`.
+
+## M136 — Sheet keyboard focus return
+
+The canonical macOS Playground sheet story opened from its visibly keyboard-focused trigger with Return. Escape dismissed the Sheet, and the visible focus ring remained on Open sheet; an immediate Return reopened it without Tab or pointer input. The accessibility API continued to report the Playground window as focused, so this verifies the trigger keyboard path but not Sheet child focus ownership or focus containment. VoiceOver, theme/locale, RTL, and cross-platform acceptance remain open. Screenshots were inspected during the live probe but were not persisted. Evidence: target/headstart/evidence/sheet-focus-return-m136-20261019.json.
+
+## M137 — NavigationSplit native resize-drag acceptance
+On macOS 27, the canonical `dev.rustui.playground` bundle opened the `navigation_split` story. Native pointer drags moved the divider in both directions within the bounded 560 × 300 story; after selecting Settings, a further divider drag changed the split while the Settings detail container and controls remained available. The inspected AX tree exposed the named navigation outline, selected Settings row, and named Settings details region; it did not expose a divider node. This closes only the bounded pointer resize case. Keyboard divider operation, divider AX semantics, adaptive collapse, locale, full accessibility, and cross-platform acceptance remain open. The app process was absent after the run; the disposable bundle and standalone executable were removed, with Cargo caches retained. Evidence: `target/headstart/evidence/navigation-split-resize-m137-20261019.json` (executable SHA-256 `8d005f4d22bf9acf700f9dedfeb3293cfd03048d9c52929ac5617a37b9d0842b`).
+
+
+## M138 — D1c preview inspector keyboard traversal
+
+On macOS 27, Tab from the inspector field reached Rerender, Teardown, Import, and Export in order. Return on Export updated the normalized descriptor with the live `Keyboard value`. Tab then entered the JSON Textarea. Import was reached by keyboard focus but its keyboard activation was not confirmed; after entering the editor, its Tab indentation binding prevents traversing back to Import. Keyboard import after editing, text selection, IME, accessibility, locale, and cross-platform behavior remain open. Evidence: `target/headstart/evidence/d1c-keyboard-m138-20261019.json` (executable SHA-256 `f2235313993442768e381e1bcd47baef137585d59a27311bfdd3564634e42619`).
+
+
+## M139 — L3B Playground retention acceptance
+
+On macOS 27, separate Overview and Details tab values survived switching; removing selected Details fell back to Overview, and restoring Details retained its value. The conditional Overview editor and conditional NavigationStack root editor each retained bound text across hide/show. NavigationStack preserved distinct root, Details, and Inspector values across forward/back navigation, including reopening the popped Inspector route. The story event log showed the exercised actions. Cursor/undo history, focus restoration, screen-reader, theme/locale, and cross-platform behavior remain open. Evidence: `target/headstart/evidence/l3b-retention-m139-20261019.json` (executable SHA-256 `f2235313993442768e381e1bcd47baef137585d59a27311bfdd3564634e42619`).
+
+## M140 — D1c keyboard Import from the descriptor editor
+
+Added an owner-scoped `secondary-shift-enter` shortcut to the descriptor editor. On macOS 27, Command-Shift-Return rejected malformed JSON without changing the mounted generation, then imported a valid descriptor, preserved preview ID `compiled-gallery`, advanced to generation 2, and updated the owner and compiled TextField to `Keyboard Import`. The Playground all-targets check and locked/offline build passed. The disposable bundle and executable were moved to Trash after the run; no Playground process remained. Evidence: `target/headstart/evidence/d1c-keyboard-import-m140-20261019.json`. Text selection, IME, accessibility, locale, and cross-platform acceptance remain open.
+
+## M141 — P3B native drag fallback and idle cache reuse
+
+The cache drag probe now activates the bundled macOS theme before rendering. Check and build for `cache_drag_benchmark` passed. On macOS 27, a direct Quartz mouse run with accessibility inactive dragged A onto B: final order B/A/C, A local value 166 retained, all mount counts one, 441 move samples, and 357 active-frame samples. Active native-drag fallback was observed; a separate idle parent update lowered the root once and children zero times. The raw result is `complete` and cache eligible, with no accessibility activation. Evidence: `target/headstart/evidence/p3b-cache-drag-m141-20261019.json` and raw `target/headstart/cache-drag-benchmark-16398-1792453262573662000.json` (probe SHA-256 `57f8e240559c54f7d05b5f07f6a8116226a75170246b7587dc62562565bf3f44`). This is interaction and host-lowering evidence, not a speed or GPU claim. Broader P3B keyboard/focus/accessibility and performance acceptance remain open.
+
+
+## M142 — M66 keyboard alternatives and gallery reachability
+
+Added the existing typed drag/drop gallery to the canonical Playground catalog and split its management controls into two visible rows after native inspection found Reset clipped at the window edge. On macOS 27, keyboard activation of Copy first preserved source A and added A to the destination; after keyboard reset, Transfer first removed A from the source and added it once to the destination. The first-item alternatives are verified; screen-reader behavior, cross-platform acceptance, and owner destruction during an in-flight pointer drag remain open. Evidence: `target/headstart/evidence/m66-keyboard-alternatives-m142-20261019.json`.
+
+## M143 — Sheet keyboard focus containment
+
+On macOS 27, Tab cycled among the Sheet close control, body field, and body
+action, and Shift+Tab returned from the action to the field. Escape dismissed
+the Sheet and restored the trigger focus ring; immediate Return reopened it.
+The native accessibility API continued to report window focus, so child focus
+ownership and VoiceOver remain unverified. Theme/locale, RTL, and
+cross-platform acceptance remain open. See
+`docs/tasks/SHEET_PLAYGROUND_STORY.md` and
+`target/headstart/evidence/sheet-focus-containment-m143-20261020.json`.
+
+## M144 — D1c typed preview inspector properties
+
+The canonical macOS 27 Playground accepted Boolean toggle and fractional
+`f64` edits through schema-driven inspector rows. The value
+`0.12345678901234566` appeared unchanged in owner state and normalized JSON;
+import preserved the Boolean and number while advancing the preview generation.
+A number above the schema maximum was rejected without changing the accepted
+host value. After remount, a new-generation numeric edit was accepted at
+revision 1; generation-scoped inspector row identities prevent a retained
+editor from using its previous mount's stamp lease. The locked/offline
+Playground all-targets check and build passed. VoiceOver, IME, selection,
+theme/locale, RTL, cross-platform, and broader catalog acceptance remain open.
+Evidence: `target/headstart/evidence/d1c-typed-inspector-m144-20261020.json`.
+
+## M145 — stale numeric draft callback guard
+
+`write_amount_draft` now compares its captured preview stamp with the exact currently mounted stamp before mutating owner draft text. Stale generation or revision callbacks return without changing the draft; current valid values still pass through schema-validated binding feedback. Locked/offline Playground all-targets check and build passed, as did `git diff --check`. The old callback was not natively replayed after remount; this is a source-level correction, not native race acceptance. Evidence: `target/headstart/evidence/d1c-stale-draft-guard-m145-20261020.json`.
+
+
+## M146 — M66 owner destruction during a held native drag
+
+On macOS 27, the canonical `drag_drop` story removed its gallery child component owner after the parent timer fired while a native left-button drag was held at the String target. The parent accessibility tree showed the released-owner placeholder before mouse-up; the live probe then released the pointer. The app remained responsive, no stale target update or crash was observed, and restoring the gallery succeeded. The probe removes source and target together, so it does not test payload delivery to a surviving independent receiver. Evidence: `target/headstart/evidence/m66-owner-destroyed-during-drag-m146-20261020.json`.
+
+
+## M147 — D1b TextField IME preedit reconciliation
+
+`TextField` now retains the last owner value beside its GPUI `InputState`. During
+marked preedit, a parent rerender preserves input state while the owner remains
+unchanged; a changed external owner value still synchronizes through
+`InputState::set_value`. Committed `InputEvent::Change` writeback is unchanged.
+Six focused TextField tests passed and
+`./scripts/cargo-headstart check -p rustui --all-targets --locked --offline`
+exited 0. Native active-IME and no-blur focus acceptance remain unverified.
+Evidence: `target/headstart/evidence/d1b-ime-rerender-m147-20261020.json`.
+
+## M148 — M66 target subtree removal during held native drag
+
+On macOS 27, the canonical Playground removed only the drop-target subtree after a three-second owner task while a native left-button drag was held over it. The gallery owner remained mounted; the accessibility tree reported the target absent, source A still present, and an empty destination while the drag process was live and CoreGraphics reported the left button down. After normal mouse-up, the app remained responsive with no destination update. Restoring the target and retrying the drag copied A. This is bounded negative evidence, not an internal GPUI cancellation or event trace. The disposable app bundle and temporary helper were moved to Trash; the Playground process was absent and shared Cargo artifacts were preserved. Evidence: `target/headstart/evidence/m66-target-removed-during-held-drag-m148-20261020.json`.
+
+
+## M149 — D1c stale numeric-draft callback replay
+
+The canonical macOS 27 Playground captured the actual amount `Binding<String>` at generation 1/revision 0, imported the normalized descriptor to remount generation 2/revision 0, accepted a current-generation amount of `0.246813579` at revision 1, then replayed the retained generation-1 binding with `0.987`. `Binding::write_to` returned false; the visible draft, owner amount, and compiled preview value remained `0.246813579` at generation 2/revision 1. A new generation-2 edit to `0.13579` succeeded and advanced revision to 2. The replay control deterministically invoked the captured D1c writer; naturally queued GPUI event dispatch and races remain unverified. Locked/offline Playground all-targets check and build exited 0; rustfmt and `git diff --check` passed. No tests were run. The app process was stopped, its canonical disposable bundle moved to Trash, and shared Cargo artifacts were preserved. Evidence: `target/headstart/evidence/d1c-stale-draft-replay-m149-20261020.json`.
+
+## M150 — R3 source-index List keyboard follow-up
+
+On macOS 27, selecting `Text` then pressing Down changed source-index owner selection to `Some(2)` and the native tree marked `TextField` selected. Home and End left `Some(2)` unchanged; pinned GPUI Components List binds Up/Down but not Home/End, so this is not a RustUI defect and no Home/End support is claimed. Escape cleared owner selection and native selected rows. The window-level AX focus report does not establish child-focus ownership. Bounded native evidence: `target/headstart/evidence/r3-source-list-keyboard-m150-20261020.json`; remaining screen-reader, RTL, cross-platform, visual, and performance acceptance is open.
+
+## M151 — Sheet localized trigger, title, and accessible name
+
+`SheetView::localized_trigger` and `localized_title` now mirror Dialog's active-catalog message-key behavior, and the Sheet story uses English, French, and Arabic catalog entries. Six focused Sheet tests, one all-catalog key test, the Playground check/build, formatting, and diff checks passed. In the canonical macOS 27 Playground, switching to French then opening the Sheet showed `Ouvrir le panneau`, title `Détails`, and a native dialog named `Détails et contenu du panneau`, with the body field and action present. Evidence: `target/headstart/evidence/sheet-localized-native-m151-20261020.json`. Arabic rendering, VoiceOver speech, focus ownership, locale changes while open, RTL, and cross-platform behavior remain open; Sheet host role and close-button naming remain unavailable in the pinned API.
+
+## M149 ordered replay follow-up
+
+The M149 native sequence was repeated after M150 with no generation-2 edit before stale replay: generation 1/revision 0 callback captured, descriptor import mounted generation 2/revision 0 at `0.246813579`, then old callback `0.987` returned false while draft, owner, and preview stayed at generation 2/revision 0. A current edit to `0.13579` then succeeded at revision 1. The prior run (where a valid generation-2 edit preceded replay) is retained in the same evidence JSON. The replay still invokes the captured binding writer deterministically and does not establish a naturally queued GPUI event race. Evidence: `target/headstart/evidence/d1c-stale-draft-replay-m149-20261020.json`.
+
+## M152 — P3B keyboard activation re-entry
+
+Canonical macOS 27 Playground showed a visible focus ring on the cached-child
+button, Space activation (local count 0→1), Tab/Shift+Tab focus return, a second
+Space activation (1→2), and Return activation (2→3). The uncached child stayed
+at 0. GPUI accessibility was active, so this is keyboard/focus evidence only;
+it does not establish cache eligibility, cache reuse, or performance. The
+Playground process and app bundle were removed after the run; shared Cargo
+artifacts were preserved. Evidence: `target/headstart/evidence/p3b-keyboard-reentry-m152-20261020.json`.
+
+## M153 — R3b KeyedList stale selection event guard
+
+The retained stable-ID KeyedList adapter now captures the owner selection when
+it receives a native selection event, then rejects writeback if the owner has
+changed since that capture or the ListState selected index no longer matches
+the event. A regression covers selection A, queued B, owner rerender to C, then
+updater delivery; C remains selected. The focused KeyedList suite passed 8/8,
+formatting and diff checks passed. This source-level guard does not establish
+native queued-event race acceptance. See `docs/tasks/R3B_KEYED_LIST.md`.
+
+
+## M154 — GPUI-backed PointerCursor modifier
+
+Implemented public `PointerCursor`/`PointerCursorView` in
+`crates/rustui/src/modifiers/interaction.rs` and exported both names from the
+crate root and prelude. GPUI resolves nested cursor requests by hitbox, so an
+inner component that requests its own cursor takes precedence; the standard
+Button requests Arrow. The Playground example wraps a cursor-neutral
+`TapRegion` child, with a separate keyboard-accessible Button alternative, in
+`apps/rustui-playground/src/stories/supplementary_gallery.rs`. API docs state
+this cursor-request boundary. The focused wrapper-style unit test runs through
+the existing default RustUI test setup and passes. It does not test effective
+rendered-frame cursor precedence. Testing that precedence through GPUI's test
+host would require `gpui/test-support`, which depends on the absent vendored
+`futures-concurrency` package; pinned dependencies remain unchanged. The
+locked/offline Playground check, rustfmt check, and `git diff --check` pass.
+Native hover and TapRegion/Button event/focus acceptance remain unverified.
+
+## M155 — R3 Tree Enter confirmation binding
+
+RustUI binds Enter to the existing GPUI Components `Confirm` action within the
+`Tree` key context. The upstream action toggles a selected folder's expansion;
+leaf activation is not implemented and the public RustUI Tree API has no leaf
+activation callback. The focused source test verifies the Enter keystroke
+mapping. Native keyboard acceptance remains open; see
+`docs/tasks/R3A_COLLECTION_SYNC.md`.
+
+## M156 — R3 Tree Enter native keyboard acceptance
+
+On macOS 27 in the canonical Playground Tree story, selecting `Archive` and pressing Enter collapsed it and hid `Archived item`. Return collapsed it as well; Right expanded it again. This confirms Enter against existing Tree expansion controls. It does not add leaf activation. Screen-reader speech, cross-platform behavior, RTL, and broader accessibility acceptance remain open. Evidence: `target/headstart/evidence/r3-tree-enter-m156-20261020.json`; executable SHA-256 `4ad52d366d00f48b8782c402cda6aba4ce2082d2fcb768fac352802529e0f378`.
+
+## M157 — Live status role default
+
+Literal and localized live-region builders now assign `Status` automatically; a later explicit `.role(...)` still overrides the default. The focused builder and AccessKit writer tests passed, the locked/offline Playground check passed, and formatting plus `git diff --check` passed. Native VoiceOver announcements remain unverified. Evidence: `target/headstart/evidence/semantics-live-region-test-m157-20261020.log` and `target/headstart/evidence/semantics-live-region-playground-check-m157-20261020.log`.
+
+
+## M158 — NavigationSplit localized detail region name
+
+The selected detail region now reuses the resolved destination label for its accessible name. This removes the literal English `details` suffix from labels whose destination is localized. The focused `navigation_split` regression test passed 1/1 and `./scripts/cargo-headstart check -p rustui --all-targets --locked --offline` exited 0. Logs: `target/headstart/evidence/navigation-split-localized-region-m158-tests.log` and `target/headstart/evidence/navigation-split-localized-region-m158-check.log`. This is source-level contract evidence; native VoiceOver announcement and cross-platform acceptance remain open.
+
+
+## M159 — State-driven translation animation
+
+Added public `SpringOffset` with independent GPUI-retained X/Y pixel springs, typed child-retention identity, stable-ID retargeting, and a Playground Offset-gallery sample. The focused coordinate test passed 1/1; the locked/offline Playground all-targets check exited 0; rustfmt and `git diff --check` passed. Logs: `target/headstart/evidence/spring-offset-focused-test.log` and `target/headstart/evidence/spring-offset-playground-check.log`. This source contract follows GPUI layout, translated hit-test/accessibility bounds, and native clipping behavior; no GUI run was performed, so native frame trajectory, exact pixels, interrupted velocity continuity, screen-reader geometry, and performance remain unaccepted. See `docs/tasks/SPRING_OFFSET.md`.

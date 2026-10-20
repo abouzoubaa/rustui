@@ -1,6 +1,6 @@
 //! Trigger-driven side Sheet demonstration using only the public RustUI API.
 
-use rustui::prelude::*;
+use rustui::{component, prelude::*};
 
 pub fn demo() -> impl View {
     Container(
@@ -11,12 +11,42 @@ pub fn demo() -> impl View {
             ))
             .child(
                 Sheet("playground-details-sheet", "Open sheet")
-                    .title("Details")
-                    .accessibility_label("Details and sheet contents")
-                    .content(Text("This content is hosted inside the sheet.")),
+                    .localized_trigger("lab-sheet-open")
+                    .localized_title("lab-sheet-title")
+                    .localized_accessibility_label("lab-sheet-name")
+                    .content(Component("sheet-focus-content", SheetFocusContent::default)),
             ),
     )
     .width(560.0)
     .padding(8.0)
     .border()
+}
+
+#[component]
+struct SheetFocusContent {
+    #[state(String::from("Sheet body field"))]
+    text: String,
+    #[state(0)]
+    activations: usize,
+}
+
+impl SheetFocusContent {
+    fn activate(&mut self) {
+        self.activations += 1;
+    }
+}
+
+impl View for SheetFocusContent {
+    fn body(&self) -> impl View {
+        VStack::new()
+            .spacing(8.0)
+            .child(TextField("Sheet body field", self.text_binding()).id("sheet-body-field"))
+            .child(
+                Button(
+                    format!("Sheet body action ({})", self.activations()),
+                    self.action(Self::activate),
+                )
+                .id("sheet-body-action"),
+            )
+    }
 }

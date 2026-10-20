@@ -50,4 +50,22 @@ Evidence: target/headstart/milestone82-collection-mutation-gui.json, target/head
 
 ## M126 native source-List Escape check
 
-With the source-index List's row 2 selected and `.selectable(false)`, clicking the selected East row and pressing Escape kept the owner selection at `Some(1)` and retained East as selected in the native tree. This is one bounded keyboard case; full keyboard traversal, screen-reader, RTL, cross-platform and performance acceptance remain open. Evidence: `target/headstart/evidence/r3-list-datagrid-acceptance-20261019.json`.
+With the source-index List's row 2 selected and `.selectable(false)`, clicking the selected East row and pressing Escape kept the owner selection at `Some(1)` and retained East as selected in the native tree. This is one bounded keyboard case; full keyboard traversal, screen-reader, RTL, cross-platform and performance acceptance remain open. Evidence: `target/headstart/evidence/r3-list-datagrid-acceptance-20261019.json`. Related M126 DataGrid native observation in the same evidence: the Quarterly revenue table exposed native row nodes, and selecting its first rendered row changed owner selection from None to Some(0); this does not establish full screen-reader or upstream ColumnHeader/Cell roles.
+
+## M150 native source-List keyboard follow-up
+
+On macOS 27, clicking `Text` then pressing Down changed the source-index owner to `Some(2)` and the native tree marked `TextField` selected. Home and End left `Some(2)` and `TextField` selected; no Home/End navigation support is claimed. Escape then changed the owner to `None` and the native tree showed all seven rows as selectable with none selected. CUA continued to report the root window as focused, so exact child-focus ownership was not established. Screen-reader speech, RTL, cross-platform, visual pixel comparison, and performance were not tested. This is bounded native evidence, not full keyboard acceptance. Evidence: `target/headstart/evidence/r3-source-list-keyboard-m150-20261020.json`.
+
+## M155 Tree Enter confirmation source check
+
+RustUI now binds Enter to GPUI Components' existing `Confirm` action only in
+the `Tree` key context. The upstream handler toggles expansion for a selected
+folder; selecting a leaf and pressing Enter has no activation effect. RustUI's
+public `Tree` API still has no leaf-activation callback. The focused source
+test verifies that the binding matches Enter and not Space. Output:
+`target/headstart/evidence/r3-tree-enter-m155-tests.log`. This is a source check
+only; native keyboard acceptance is still open.
+
+## M156 native Tree Enter acceptance
+
+On macOS 27 in the canonical Playground Tree story, selecting `Archive` and pressing Enter collapsed it and hid `Archived item`. Return collapsed it as well; Right expanded it again. This confirms the Enter mapping against the existing Tree expansion controls. It does not add leaf activation. Screen-reader speech, cross-platform behavior, RTL, and broader accessibility acceptance remain open. The Playground process was absent after close; its disposable app bundle was removed, with Cargo artifacts and caches preserved. Evidence: `target/headstart/evidence/r3-tree-enter-m156-20261020.json` (Playground executable SHA-256 `4ad52d366d00f48b8782c402cda6aba4ce2082d2fcb768fac352802529e0f378`).
