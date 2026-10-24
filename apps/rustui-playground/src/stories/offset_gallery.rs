@@ -14,6 +14,8 @@ struct OffsetGallery {
     y: f32,
     #[state(0)]
     shifted_count: i32,
+    #[state(false)]
+    reference_action_selected: bool,
     #[state(String::from("Shifted input"))]
     shifted_text: String,
 }
@@ -37,6 +39,18 @@ impl OffsetGallery {
 
     fn increment_shifted(&mut self) {
         self.shifted_count += 1;
+    }
+
+    fn activate_reference_action(&mut self) {
+        self.reference_action_selected = true;
+    }
+
+    fn reference_action_label(&self) -> &'static str {
+        if self.reference_action_selected() {
+            "Reference action · selected"
+        } else {
+            "Reference action"
+        }
     }
 
     fn bound_shifted_text(&self) -> Binding<String> {
@@ -83,8 +97,11 @@ impl View for OffsetGallery {
                                 .spacing(10.0)
                                 .child(Text("Reference slot · unchanged"))
                                 .child(
-                                    Button("Reference action", AppAction::new(|_| {}))
-                                        .id("offset-reference-button"),
+                                    Button(
+                                        self.reference_action_label(),
+                                        self.action(Self::activate_reference_action),
+                                    )
+                                    .id("offset-reference-button"),
                                 )
                                 .child(Text("The layout slot stays here.")),
                         )
@@ -126,5 +143,23 @@ impl View for OffsetGallery {
                         .border(),
                     ),
             )
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::OffsetGallery;
+
+    #[test]
+    fn reference_action_reports_activation_in_its_owner_state() {
+        let mut gallery = OffsetGallery::default();
+        assert_eq!(gallery.reference_action_label(), "Reference action");
+
+        gallery.activate_reference_action();
+
+        assert_eq!(
+            gallery.reference_action_label(),
+            "Reference action · selected"
+        );
     }
 }
