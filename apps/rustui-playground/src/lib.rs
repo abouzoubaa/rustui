@@ -238,7 +238,7 @@ impl Playground {
                             .axis(ScrollAxis::Both)
                             .scrollbars(true)
                             .height(360.0)
-                            .id("playground-component-canvas"),
+                            .id(format!("playground-component-canvas-{title}")),
                     )
                     .spacing(12.0),
             )

@@ -363,6 +363,43 @@ impl GraphViewport {
     }
 }
 
+const DISCONNECT_CONTROL_SIZE: f32 = 24.0;
+
+fn projected_port_endpoint(
+    graph: &GraphDocument,
+    viewport: GraphViewport,
+    endpoint: &GraphEndpoint,
+) -> Result<CanvasPoint, GraphError> {
+    let (node, port) = graph.endpoint(endpoint)?;
+    let rect = viewport.rect(node.rect)?;
+    let index = node
+        .ports
+        .iter()
+        .position(|candidate| candidate.id == port.id)
+        .unwrap();
+    CanvasPoint::new(
+        if port.direction == GraphPortDirection::Input {
+            rect.x
+        } else {
+            rect.x + rect.width
+        },
+        rect.y + rect.height * ((index as f32 + 1.5) / (node.ports.len() + 1) as f32),
+    )
+    .map_err(|_| GraphError::InvalidGeometry)
+}
+
+fn disconnect_control_origin(
+    from: CanvasPoint,
+    to: CanvasPoint,
+) -> Result<CanvasPoint, GraphError> {
+    let half_size = f64::from(DISCONNECT_CONTROL_SIZE) / 2.0;
+    CanvasPoint::new(
+        ((f64::from(from.x) + f64::from(to.x)) / 2.0 - half_size) as f32,
+        ((f64::from(from.y) + f64::from(to.y)) / 2.0 - half_size) as f32,
+    )
+    .map_err(|_| GraphError::InvalidGeometry)
+}
+
 /// Colors are independent of graph topology and may be supplied from a public theme.
 #[derive(Clone, Copy)]
 pub struct GraphStyle {
@@ -587,22 +624,8 @@ pub(super) fn render_graph(
     };
     let mut scene = CanvasScene::builder();
     for edge in &graph.edges {
-        let endpoint = |endpoint: &GraphEndpoint| -> Result<CanvasPoint, GraphError> {
-            let (node, port) = graph.endpoint(endpoint)?;
-            let rect = viewport.rect(node.rect)?;
-            let index = node.ports.iter().position(|p| p.id == port.id).unwrap();
-            CanvasPoint::new(
-                if port.direction == GraphPortDirection::Input {
-                    rect.x
-                } else {
-                    rect.x + rect.width
-                },
-                rect.y + rect.height * ((index as f32 + 1.5) / (node.ports.len() + 1) as f32),
-            )
-            .map_err(|_| GraphError::InvalidGeometry)
-        };
-        let drawn = endpoint(&edge.from).and_then(|from| {
-            endpoint(&edge.to).and_then(|to| {
+        let drawn = projected_port_endpoint(graph, viewport, &edge.from).and_then(|from| {
+            projected_port_endpoint(graph, viewport, &edge.to).and_then(|to| {
                 if from == to {
                     let corner = CanvasPoint::new(from.x + 12.0, from.y - 12.0)
                         .map_err(|_| GraphError::InvalidGeometry)?;
@@ -917,8 +940,9 @@ pub(super) fn render_graph(
             let pointer = handler.clone();
             let keyboard = handler.clone();
             let accessible = handler;
-            let from = viewport.rect(source.0.rect).unwrap();
-            let to = viewport.rect(target.0.rect).unwrap();
+            let from = projected_port_endpoint(graph, viewport, &edge.from).unwrap();
+            let to = projected_port_endpoint(graph, viewport, &edge.to).unwrap();
+            let control_origin = disconnect_control_origin(from, to).unwrap();
             root = root.child(
                 div()
                     .id(graph_element_id(
@@ -926,10 +950,10 @@ pub(super) fn render_graph(
                         &[view.id.as_str(), edge.id.as_str()],
                     ))
                     .absolute()
-                    .left(px(((f64::from(from.x) + f64::from(to.x)) / 2.0) as f32))
-                    .top(px(((f64::from(from.y) + f64::from(to.y)) / 2.0) as f32))
-                    .w(px(24.0))
-                    .h(px(24.0))
+                    .left(px(control_origin.x))
+                    .top(px(control_origin.y))
+                    .w(px(DISCONNECT_CONTROL_SIZE))
+                    .h(px(DISCONNECT_CONTROL_SIZE))
                     .flex()
                     .items_center()
                     .justify_center()
@@ -1205,6 +1229,29 @@ mod tests {
         )
         .unwrap()
     }
+    #[test]
+    fn disconnect_control_tracks_projected_port_midpoint() {
+        let graph = graph();
+        let size = CanvasSize::new(500.0, 300.0).unwrap();
+        let viewport = GraphViewport::new(size, 5.0, 10.0, 2.0).unwrap();
+        let edge = edge();
+        let from = projected_port_endpoint(&graph, viewport, edge.from()).unwrap();
+        let to = projected_port_endpoint(&graph, viewport, edge.to()).unwrap();
+
+        assert_eq!(from, CanvasPoint::new(250.0, 150.0).unwrap());
+        assert_eq!(to, CanvasPoint::new(470.0, 90.0).unwrap());
+        let origin = disconnect_control_origin(from, to).unwrap();
+        assert_eq!(origin, CanvasPoint::new(348.0, 108.0).unwrap());
+        assert_eq!(
+            origin.x + DISCONNECT_CONTROL_SIZE / 2.0,
+            (from.x + to.x) / 2.0
+        );
+        assert_eq!(
+            origin.y + DISCONNECT_CONTROL_SIZE / 2.0,
+            (from.y + to.y) / 2.0
+        );
+    }
+
     #[test]
     fn validates_identity_labels_and_references() {
         assert_eq!(

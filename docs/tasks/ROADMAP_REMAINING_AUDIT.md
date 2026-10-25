@@ -235,6 +235,24 @@ graph membership and does not prove linked/distributed closure or legal clearanc
 
 ## Current integration checkpoint — 2026-10-25
 
+Current browser evidence is bound to HEAD `f4ccb8ad`: all 733 served artifact
+hashes match the manifest. NodeEditor search, selection, two arrow movements,
+double-click activation, connection removal and recreation were observed.
+Enter activation fails because the Web adapter supplies inconsistent key metadata;
+a same-version composition-preserving proposal is prepared, not promoted.
+Disconnect placement is repaired using the actual projected port endpoints;
+14 graph regressions pass. Story-specific specimen scroll identity now prevents
+old offsets hiding a newly selected story's opening controls. Opaque Text
+foregrounds were incorrectly 25% alpha in both modes; the repair passes nine Text
+tests and static theme checks. Current-browser confirmation of these repairs is
+pending. Drawer browser checks observed all four physical edges, retained edited
+owner text, title/size refresh, owner action, Escape/backdrop dismissal, and French
+Close localization. Browser semantic accessibility, VoiceOver and active IME remain
+unaccepted. Native launch rendered, but CUA input repeatedly
+reported no windows even after identity isolation. Only launch/render evidence is
+recorded; the owned process, disposable bundle and standalone executable were
+removed, and no test app remains running. Full native keyboard/AX/VoiceOver is open.
+
 - Drawer source is integrated; seven focused real-Root/validation tests pass.
   Playground library tests and all-target checking pass. Independent modal
   text-selection isolation and native/browser/AX/VoiceOver acceptance remain open.

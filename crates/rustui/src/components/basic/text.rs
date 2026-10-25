@@ -276,6 +276,38 @@ mod tests {
     }
 
     #[test]
+    fn opaque_text_uses_primary_foreground_in_each_appearance() {
+        let document =
+            crate::theme::parse_theme(include_str!("../../../../../themes/macos27.json"))
+                .expect("macOS 27 theme parses");
+
+        for (mode, expected_channel) in [
+            (crate::theme::AppearanceMode::Light, 26.0 / 255.0),
+            (crate::theme::AppearanceMode::Dark, 1.0),
+        ] {
+            let mut query = crate::components::theme::selector_for_mode(mode);
+            let part = text_style_part(&mut query, false);
+            let style = crate::theme::resolve_component_style_with(
+                &document,
+                "text",
+                &part,
+                &query,
+                &[],
+            )
+            .expect("opaque text style resolves");
+            let foreground = style
+                .colors
+                .get("foreground")
+                .expect("opaque text declares its foreground");
+
+            assert_eq!(foreground.r, expected_channel);
+            assert_eq!(foreground.g, expected_channel);
+            assert_eq!(foreground.b, expected_channel);
+            assert_eq!(foreground.a, 1.0);
+        }
+    }
+
+    #[test]
     fn blank_literal_text_is_allowed_without_an_accessible_name() {
         for value in ["", " \t "] {
             let text = Text(value);
