@@ -46,13 +46,15 @@ python3 scripts/roadmap_claims.py list --verbose
 
 The default list reports a count for pre-existing baseline paths; `--verbose`
 includes their names for a detailed audit.
+`progress` also renews the lease; use `heartbeat` during long work between
+milestone updates.
 
 The registry serializes acquisitions in SQLite transactions. A claim on a
 directory conflicts with claims on that directory, any parent, or any child.
 Use `@shared/<name>` for logical shared resources such as roadmap ledgers;
 coordinator-owned ledgers are edited one at a time. The registry rejects the
 primary checkout, detached/non-`codex/` branches, dirty worktrees at claim time,
-and reuse of an active thread, worktree, or branch. A session may edit only
+and reuse of an active task ID, thread, worktree, or branch. A session may edit only
 inside its claimed paths; run `audit` at turn boundaries to check the actual
 Git changes against the claim.
 

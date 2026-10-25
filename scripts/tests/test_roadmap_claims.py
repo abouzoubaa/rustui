@@ -41,9 +41,10 @@ class RoadmapClaimsTests(unittest.TestCase):
     def git(root: Path, *args: str) -> str:
         return subprocess.check_output(["git", "-C", str(root), *args], text=True).strip()
 
-    def run_claim(self, root: Path, thread: str, *paths: str, lease: int = 900) -> subprocess.CompletedProcess[str]:
+    def run_claim(self, root: Path, thread: str, *paths: str, lease: int = 900,
+                  task: str = "M-test") -> subprocess.CompletedProcess[str]:
         return subprocess.run(
-            [sys.executable, str(SCRIPT), "claim", "--task", "M-test", "--thread", thread,
+            [sys.executable, str(SCRIPT), "claim", "--task", task, "--thread", thread,
              "--worktree", str(root), "--stage", "Stage test", "--milestone", "M-test",
              "--next-action", "check claim", "--lease-seconds", str(lease), *paths],
             cwd=root, env=self.env, text=True, capture_output=True,
@@ -63,6 +64,37 @@ class RoadmapClaimsTests(unittest.TestCase):
                      for command, root in zip(commands, (self.wt1, self.wt2))]
         results = [process.communicate() + (process.returncode,) for process in processes]
         self.assertEqual(sum(code == 0 for _, _, code in results), 1, results)
+
+    def test_active_task_id_cannot_be_claimed_twice_on_disjoint_paths(self) -> None:
+        first = self.run_claim(self.wt1, "thread-task-one", "src/one.rs", task="M-unique")
+        self.assertEqual(first.returncode, 0, first.stderr)
+        second = self.run_claim(self.wt2, "thread-task-two", "src/two.rs", task="M-unique")
+        self.assertNotEqual(second.returncode, 0)
+        self.assertIn("claim conflicts", second.stderr)
+
+    def test_progress_renews_expired_lease_and_records_next_action(self) -> None:
+        claim = self.run_claim(self.wt1, "thread-progress", "src", lease=60)
+        self.assertEqual(claim.returncode, 0, claim.stderr)
+        claim_id = json.loads(claim.stdout)["claim_id"]
+        database_path = next(self.db.glob("claims-*.sqlite3"))
+        with sqlite3.connect(database_path) as database:
+            database.execute("UPDATE claims SET lease_until=? WHERE id=?",
+                             (int(time.time()) - 1, claim_id))
+        progress = subprocess.run(
+            [sys.executable, str(SCRIPT), "progress", "--claim-id", claim_id,
+             "--thread", "thread-progress", "--stage", "Stage 4",
+             "--milestone", "M-progress", "--next-action", "run focused check",
+             "--lease-seconds", "120"],
+            cwd=self.wt1, env=self.env, text=True, capture_output=True,
+        )
+        self.assertEqual(progress.returncode, 0, progress.stderr)
+        row = next(item for item in json.loads(subprocess.run(
+            [sys.executable, str(SCRIPT), "list"], cwd=self.wt1, env=self.env,
+            text=True, capture_output=True, check=True,
+        ).stdout) if item["claim_id"] == claim_id)
+        self.assertEqual(row["state"], "active")
+        self.assertEqual(row["next_action"], "run focused check")
+        self.assertGreater(row["lease_until"], int(time.time()))
 
     def test_primary_or_dirty_worktree_cannot_be_claimed(self) -> None:
         primary = self.run_claim(self.repo, "primary", "README.md")

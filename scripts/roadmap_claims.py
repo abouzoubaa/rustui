@@ -73,6 +73,8 @@ def connect(db_path: Path) -> sqlite3.Connection:
             PRIMARY KEY (claim_id, path)
         );
         CREATE INDEX IF NOT EXISTS claims_state_idx ON claims(state);
+        CREATE UNIQUE INDEX IF NOT EXISTS claims_active_task_idx ON claims(task)
+            WHERE state='active';
         CREATE INDEX IF NOT EXISTS claimed_paths_path_idx ON claimed_paths(path);
         COMMIT;
     """)
@@ -231,7 +233,7 @@ def cmd_claim(args: argparse.Namespace, root: Path, db: sqlite3.Connection) -> N
         """).fetchall()
         conflicts = [
             row for row in rows
-            if row[2] == args.thread or row[3] == str(worktree)
+            if row[1] == args.task or row[2] == args.thread or row[3] == str(worktree)
             or (row[5] and row[5] == branch)
             or any(overlaps(path, row[4]) for path in paths)
         ]
@@ -283,7 +285,7 @@ def cmd_adopt(args: argparse.Namespace, root: Path, common: Path, db: sqlite3.Co
             FROM claims c JOIN claimed_paths p ON p.claim_id=c.id
             WHERE c.state='active'
         """).fetchall()
-        conflicts = [row for row in rows if row[2] == args.thread or row[3] == str(root)
+        conflicts = [row for row in rows if row[1] == args.task or row[2] == args.thread or row[3] == str(root)
                      or (row[5] and row[5] == branch)
                      or any(overlaps(path, row[4]) for path in paths)]
         if conflicts:
@@ -334,12 +336,13 @@ def cmd_heartbeat(args: argparse.Namespace, db: sqlite3.Connection) -> None:
 
 
 def cmd_progress(args: argparse.Namespace, db: sqlite3.Connection) -> None:
+    now = int(time.time())
     db.execute("BEGIN IMMEDIATE")
     try:
         result = db.execute("""
-            UPDATE claims SET stage=?,milestone=?,next_action=?,heartbeat_at=?
+            UPDATE claims SET stage=?,milestone=?,next_action=?,heartbeat_at=?,lease_until=?
             WHERE id=? AND thread=? AND state='active'
-        """, (args.stage, args.milestone, args.next_action, int(time.time()),
+        """, (args.stage, args.milestone, args.next_action, now, now + args.lease_seconds,
               args.claim_id, args.thread))
         if result.rowcount != 1:
             raise ValueError("claim is missing, released, or owned by another thread")
@@ -348,7 +351,8 @@ def cmd_progress(args: argparse.Namespace, db: sqlite3.Connection) -> None:
         db.execute("ROLLBACK")
         raise
     print(json.dumps({"claim_id": args.claim_id, "stage": args.stage,
-                      "milestone": args.milestone, "next_action": args.next_action}))
+                      "milestone": args.milestone, "next_action": args.next_action,
+                      "lease_until": now + args.lease_seconds}))
 
 
 def cmd_release(args: argparse.Namespace, db: sqlite3.Connection) -> None:
@@ -392,8 +396,9 @@ def cmd_handoff(args: argparse.Namespace, common_git_dir: Path, db: sqlite3.Conn
             raise ValueError("claim is missing, released, or not owned by the old thread")
         conflict = db.execute("""
             SELECT id,thread FROM claims
-            WHERE state='active' AND (worktree=? OR thread=? OR branch=?) AND id<>?
-        """, (str(new_root), args.new_thread, branch, args.claim_id)).fetchone()
+            WHERE state='active' AND (worktree=? OR thread=? OR branch=? OR task=?) AND id<>?
+        """, (str(new_root), args.new_thread, branch, args.task or old[0],
+              args.claim_id)).fetchone()
         if conflict:
             raise ValueError(f"new worktree is already claimed by thread {conflict[1]} ({conflict[0]})")
         db.execute("""
@@ -517,6 +522,7 @@ def main() -> int:
     progress.add_argument("--stage", required=True)
     progress.add_argument("--milestone", required=True)
     progress.add_argument("--next-action", required=True)
+    progress.add_argument("--lease-seconds", type=int, default=900)
     release = sub.add_parser("release", help="release only after confirming the old thread is terminal")
     release.add_argument("--claim-id", required=True)
     release.add_argument("--thread", required=True)
@@ -569,6 +575,8 @@ def main() -> int:
                 raise ValueError("lease must be at least 60 seconds")
             cmd_heartbeat(args, db)
         elif args.command == "progress":
+            if args.lease_seconds < 60:
+                raise ValueError("lease must be at least 60 seconds")
             cmd_progress(args, db)
         elif args.command == "release":
             cmd_release(args, db)
