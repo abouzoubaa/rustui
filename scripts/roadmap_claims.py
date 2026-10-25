@@ -544,6 +544,121 @@ def cmd_advance(args: argparse.Namespace, root: Path, db: sqlite3.Connection) ->
     }))
 
 
+def cmd_rescope(args: argparse.Namespace, root: Path, db: sqlite3.Connection) -> None:
+    """Atomically replace an owner's paths when removed scope has no work."""
+    requested_paths = sorted({normalized_path(root, raw) for raw in args.paths})
+    if not requested_paths:
+        raise ValueError("rescope requires at least one exact path")
+    now = int(time.time())
+    db.execute("BEGIN IMMEDIATE")
+    try:
+        current = db.execute(
+            "SELECT task,thread,worktree,branch,base_head,stage,milestone FROM claims "
+            "WHERE id=? AND state='active'", (args.claim_id,),
+        ).fetchone()
+        if current is None or current[1] != args.thread:
+            raise ValueError("claim missing, released, or owned by another thread")
+        if Path(current[2]).resolve() != root:
+            raise ValueError("run rescope from the worktree recorded by the claim")
+        branch = git(root, "branch", "--show-current")
+        if branch != current[3]:
+            raise ValueError("current branch differs from the branch recorded by the claim")
+
+        old_paths = [row[0] for row in db.execute(
+            "SELECT path FROM claimed_paths WHERE claim_id=?", (args.claim_id,)
+        )]
+        task = args.task.strip() if args.task is not None else current[0]
+        if not task:
+            raise ValueError("task must not be empty")
+        if task == current[0] and requested_paths == sorted(old_paths):
+            raise ValueError("rescope requires a changed task ID or path set")
+
+        changed = set(changed_paths(root))
+        base_head = current[4] or git(root, "rev-parse", "HEAD")
+        committed = subprocess.check_output(
+            ["git", "-C", str(root), "diff", "--name-only", "-z", base_head, "HEAD"],
+            stderr=subprocess.PIPE,
+        ).split(b"\0")
+        normalized_changes = {
+            normalized_path(root, path)
+            for path in changed
+        }
+        normalized_changes.update(
+            normalized_path(root, path.decode("utf-8", errors="surrogateescape"))
+            for path in committed if path
+        )
+        baseline = dict(db.execute(
+            "SELECT path,fingerprint FROM claim_baselines WHERE claim_id=?",
+            (args.claim_id,),
+        ))
+
+        dropped_changes = sorted(
+            path for path in normalized_changes
+            if covered(path, old_paths) and not covered(path, requested_paths)
+            and not (path in baseline and path_fingerprint(root, path) == baseline[path])
+        )
+        if dropped_changes:
+            raise ValueError(
+                "cannot drop claimed paths containing changes: " + json.dumps(dropped_changes)
+            )
+
+        added_paths = [path for path in requested_paths if not covered(path, old_paths)]
+        dirty_added_paths = sorted({
+            path for path in normalized_changes
+            if not covered(path, old_paths)
+            and any(overlaps(path, added) for added in added_paths)
+        })
+        if dirty_added_paths:
+            raise ValueError(
+                "new paths already contain changes; adopt them before rescoping: "
+                + json.dumps(dirty_added_paths)
+            )
+
+        rows = db.execute("""
+            SELECT c.id,c.task,c.thread,c.worktree,p.path,c.branch
+            FROM claims c JOIN claimed_paths p ON p.claim_id=c.id
+            WHERE c.state='active' AND c.id<>?
+        """, (args.claim_id,)).fetchall()
+        conflicts = [
+            {"claim_id": row[0], "task": row[1], "thread": row[2],
+             "worktree": row[3], "path": row[4]}
+            for row in rows
+            if row[1] == task or row[2] == args.thread or row[3] == str(root)
+            or (row[5] and row[5] == branch)
+            or any(overlaps(path, row[4]) for path in requested_paths)
+        ]
+        if conflicts:
+            raise ValueError("rescope conflicts with active claims: " + json.dumps(conflicts))
+
+        result = db.execute("""
+            UPDATE claims
+            SET task=?,stage=?,milestone=?,next_action=?,heartbeat_at=?,lease_until=?
+            WHERE id=? AND thread=? AND state='active'
+        """, (task, args.stage, args.milestone, args.next_action, now,
+              now + args.lease_seconds, args.claim_id, args.thread))
+        if result.rowcount != 1:
+            raise ValueError("claim changed while rescoping; retry after re-reading the ledger")
+        db.execute("DELETE FROM claimed_paths WHERE claim_id=?", (args.claim_id,))
+        db.executemany(
+            "INSERT INTO claimed_paths(claim_id,path) VALUES(?,?)",
+            [(args.claim_id, path) for path in requested_paths],
+        )
+        removed_paths = [path for path in old_paths if not covered(path, requested_paths)]
+        record_transition(
+            db, args.claim_id, "rescope", current[0], task, args.thread, args.thread,
+            current[5], args.stage, current[6], args.milestone, added_paths,
+            args.next_action, now, base_head, base_head,
+            evidence=json.dumps({"removed_paths": removed_paths}, sort_keys=True),
+        )
+        db.execute("COMMIT")
+    except BaseException:
+        db.execute("ROLLBACK")
+        raise
+    print(json.dumps({"claim_id": args.claim_id, "task": task, "thread": args.thread,
+                      "paths": requested_paths, "removed_paths": removed_paths,
+                      "lease_until": now + args.lease_seconds}))
+
+
 def cmd_release(args: argparse.Namespace, db: sqlite3.Connection) -> None:
     db.execute("BEGIN IMMEDIATE")
     try:
@@ -760,6 +875,17 @@ def main() -> int:
     advance.add_argument("--next-action", required=True)
     advance.add_argument("--lease-seconds", type=int, default=900)
     advance.add_argument("paths", nargs="*", help="additional paths to add to the existing claim")
+    rescope = sub.add_parser(
+        "rescope", help="atomically replace an owner's paths when dropped paths have no work"
+    )
+    rescope.add_argument("--claim-id", required=True)
+    rescope.add_argument("--thread", required=True)
+    rescope.add_argument("--task", help="new task ID; defaults to the current task")
+    rescope.add_argument("--stage", required=True)
+    rescope.add_argument("--milestone", required=True)
+    rescope.add_argument("--next-action", required=True)
+    rescope.add_argument("--lease-seconds", type=int, default=900)
+    rescope.add_argument("paths", nargs="+", help="complete replacement set of exact paths")
     release = sub.add_parser("release", help="release only after confirming the old thread is terminal")
     release.add_argument("--claim-id", required=True)
     release.add_argument("--thread", required=True)
@@ -807,6 +933,12 @@ def main() -> int:
             raise ValueError("stage, milestone, and next action must not be empty")
         if args.command == "advance" and args.task is not None and not args.task.strip():
             raise ValueError("task must not be empty")
+        if args.command == "rescope" and not all(
+            (args.stage.strip(), args.milestone.strip(), args.next_action.strip())
+        ):
+            raise ValueError("stage, milestone, and next action must not be empty")
+        if args.command == "rescope" and args.task is not None and not args.task.strip():
+            raise ValueError("task must not be empty")
         root, common = repo_identity()
         db = connect(database_path(common))
         if args.command == "claim":
@@ -829,6 +961,10 @@ def main() -> int:
             if args.lease_seconds < 60:
                 raise ValueError("lease must be at least 60 seconds")
             cmd_advance(args, root, db)
+        elif args.command == "rescope":
+            if args.lease_seconds < 60:
+                raise ValueError("lease must be at least 60 seconds")
+            cmd_rescope(args, root, db)
         elif args.command == "release":
             cmd_release(args, db)
         elif args.command == "handoff":

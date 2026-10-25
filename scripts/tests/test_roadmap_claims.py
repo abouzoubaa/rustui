@@ -164,6 +164,84 @@ class RoadmapClaimsTests(unittest.TestCase):
         self.assertNotEqual(changed.returncode, 0)
         self.assertIn("outside this claim", changed.stderr)
 
+    def test_rescope_releases_clean_paths_atomically_and_records_history(self) -> None:
+        claim = self.run_claim(self.wt1, "thread-rescope", "old/file.rs")
+        self.assertEqual(claim.returncode, 0, claim.stderr)
+        claim_id = json.loads(claim.stdout)["claim_id"]
+        rescope = subprocess.run(
+            [sys.executable, str(SCRIPT), "rescope", "--claim-id", claim_id,
+             "--thread", "thread-rescope", "--stage", "Stage 8",
+             "--milestone", "M1222", "--next-action", "write the acceptance run sheet",
+             "docs/new-run-sheet.md"],
+            cwd=self.wt1, env=self.env, text=True, capture_output=True,
+        )
+        self.assertEqual(rescope.returncode, 0, rescope.stderr)
+        self.assertEqual(json.loads(rescope.stdout)["removed_paths"], ["old/file.rs"])
+
+        listing = subprocess.run(
+            [sys.executable, str(SCRIPT), "list", "--verbose"],
+            cwd=self.wt1, env=self.env, text=True, capture_output=True, check=True,
+        )
+        row = next(item for item in json.loads(listing.stdout) if item["claim_id"] == claim_id)
+        self.assertEqual(row["paths"], ["docs/new-run-sheet.md"])
+        audit = subprocess.run(
+            [sys.executable, str(SCRIPT), "audit", "--claim-id", claim_id,
+             "--thread", "thread-rescope"],
+            cwd=self.wt1, env=self.env, text=True, capture_output=True,
+        )
+        self.assertEqual(audit.returncode, 0, audit.stderr)
+        history = json.loads(audit.stdout)["history"]
+        self.assertEqual(history[-1]["kind"], "rescope")
+        self.assertEqual(history[-1]["evidence"], '{"removed_paths": ["old/file.rs"]}')
+        reclaimed = self.run_claim(
+            self.wt2, "thread-reclaim", "old/file.rs", task="M-reclaim-old-path"
+        )
+        self.assertEqual(reclaimed.returncode, 0, reclaimed.stderr)
+
+    def test_rescope_rejects_dropping_a_changed_claimed_path(self) -> None:
+        claim = self.run_claim(self.wt1, "thread-rescope-dirty", "old/file.rs")
+        self.assertEqual(claim.returncode, 0, claim.stderr)
+        claim_id = json.loads(claim.stdout)["claim_id"]
+        (self.wt1 / "old").mkdir()
+        (self.wt1 / "old" / "file.rs").write_text("preserve\n", encoding="utf-8")
+        rescope = subprocess.run(
+            [sys.executable, str(SCRIPT), "rescope", "--claim-id", claim_id,
+             "--thread", "thread-rescope-dirty", "--stage", "Stage 8",
+             "--milestone", "M1222", "--next-action", "write the acceptance run sheet",
+             "docs/new-run-sheet.md"],
+            cwd=self.wt1, env=self.env, text=True, capture_output=True,
+        )
+        self.assertNotEqual(rescope.returncode, 0)
+        self.assertIn("cannot drop claimed paths containing changes", rescope.stderr)
+        listing = subprocess.run(
+            [sys.executable, str(SCRIPT), "list"],
+            cwd=self.wt1, env=self.env, text=True, capture_output=True, check=True,
+        )
+        row = next(item for item in json.loads(listing.stdout) if item["claim_id"] == claim_id)
+        self.assertEqual(row["paths"], ["old/file.rs"])
+
+    def test_rescope_rejects_conflicting_scope_without_mutating_claim(self) -> None:
+        first = self.run_claim(self.wt1, "thread-rescope-conflict", "old/file.rs", task="M-first")
+        second = self.run_claim(self.wt2, "thread-new-owner", "docs/new-run-sheet.md", task="M-second")
+        self.assertEqual(first.returncode, 0, first.stderr)
+        self.assertEqual(second.returncode, 0, second.stderr)
+        claim_id = json.loads(first.stdout)["claim_id"]
+        rescope = subprocess.run(
+            [sys.executable, str(SCRIPT), "rescope", "--claim-id", claim_id,
+             "--thread", "thread-rescope-conflict", "--stage", "Stage 8",
+             "--milestone", "M1222", "--next-action", "write the acceptance run sheet",
+             "docs/new-run-sheet.md"],
+            cwd=self.wt1, env=self.env, text=True, capture_output=True,
+        )
+        self.assertNotEqual(rescope.returncode, 0)
+        self.assertIn("rescope conflicts with active claims", rescope.stderr)
+        listing = subprocess.run(
+            [sys.executable, str(SCRIPT), "list"],
+            cwd=self.wt1, env=self.env, text=True, capture_output=True, check=True,
+        )
+        row = next(item for item in json.loads(listing.stdout) if item["claim_id"] == claim_id)
+        self.assertEqual(row["paths"], ["old/file.rs"])
+
     def test_expired_claim_stays_locked_until_explicit_release(self) -> None:
         claim = self.run_claim(self.wt1, "thread-expiring", "src", lease=60)
         self.assertEqual(claim.returncode, 0, claim.stderr)

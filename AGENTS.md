@@ -85,7 +85,8 @@
   invoked while the shell is in the session's own worktree. Follow
   `docs/tasks/MULTI_SESSION_COORDINATION.md`.
 - Use `advance` for same-session task changes or scope expansion; it preserves
-  the existing claim atomically. Use `handoff` only after independently
+  the existing claim atomically. Use `rescope` to replace mistaken paths only
+  after verifying no changed work would be dropped. Use `handoff` only after independently
   confirming that the old session is terminal.
 - Start claims only from a clean registered worktree on a unique `codex/`
   branch. Record Stage, milestone, and next action; run `audit` at turn

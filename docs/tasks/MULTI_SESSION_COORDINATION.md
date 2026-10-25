@@ -84,6 +84,20 @@ adoption flow. The command rejects active task, thread, worktree, branch, or
 path conflicts without changing the claim. `audit` returns the claim's recorded
 advance and handoff history.
 
+Use `rescope` to correct an overbroad or mistaken path set without releasing
+ownership. It replaces the complete path set in one transaction, checks the
+owner, worktree, branch, active conflicts, and changed paths, and records the
+removed paths in transition evidence. It refuses to drop any path containing
+uncommitted or committed changes and refuses to add a dirty path. A rejected
+rescope leaves the original claim intact:
+
+```sh
+python3 /Users/Abium/.codex/worktrees/session-coordination/rustui/scripts/roadmap_claims.py rescope \
+  --claim-id <claim-id> --thread <your-own-codex-thread-id> --task M1236 \
+  --stage "Stage 8" --milestone M1236 --next-action "write the scoped acceptance sheet" \
+  docs/tasks/m1236_acceptance_run_sheet.md
+```
+
 The registry serializes acquisitions in SQLite transactions. A claim on a
 directory conflicts with claims on that directory, any parent, or any child.
 Use `@shared/<name>` for logical shared resources such as roadmap ledgers;
