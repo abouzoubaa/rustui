@@ -25,6 +25,14 @@ def package(name, path, dependencies=()):
 
 
 class DependencyBoundaryTests(unittest.TestCase):
+    def test_boundary_inspection_cannot_resolve_or_rewrite_the_approved_lock(self):
+        with patch.object(MODULE, "_capture_cargo_metadata", return_value=(0, b"{}", b"")) as capture:
+            for no_deps in (False, True):
+                self.assertEqual(MODULE.cargo_metadata(no_deps), {})
+                command = capture.call_args.args[0]
+                self.assertIn("--locked", command)
+                self.assertIn("--offline", command)
+
     def test_playground_cannot_bypass_rustui_with_renamed_upstream_assets(self):
         root = MODULE.ROOT
         app = package("rustui-playground", root / "apps/rustui-playground", [

@@ -58,7 +58,7 @@ def _capture_cargo_metadata(command: list[str]) -> tuple[int, bytearray, bytearr
 
 
 def cargo_metadata(no_deps: bool) -> dict:
-    command = [str(ROOT / "scripts/cargo-headstart"), "metadata", "--format-version", "1"]
+    command = [str(ROOT / "scripts/cargo-headstart"), "metadata", "--locked", "--offline", "--format-version", "1"]
     if no_deps:
         command.append("--no-deps")
     returncode, stdout, stderr = _capture_cargo_metadata(command)
