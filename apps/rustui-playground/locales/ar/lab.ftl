@@ -67,3 +67,5 @@ lab-catalog-note-sheet = لوحة جانبية من GPUI Components تُفتح �
 lab-catalog-note-drag_drop = معرض لعمليتي النسخ والنقل المكتوبتين ضمن العملية نفسها؛ وقد تحقق M142 من بدائل لوحة المفاتيح وM148 من إزالة الهدف أثناء سحب مستمر على macOS.
 
 lab-i18n-runtime-examples = رسائل Fluent والأرقام والتواريخ حسب اللغة
+
+lab-composition-title = التركيب: إضافة العناصر وحذفها وإعادة ترتيبها

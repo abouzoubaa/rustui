@@ -15,6 +15,7 @@ const MENU_BAR_REFERENCE_LABELS: [&str; 9] = [
 ];
 
 mod compiled_preview_gallery;
+mod composition_gallery;
 
 mod alert_gallery;
 mod animation_gallery;
@@ -715,6 +716,7 @@ impl View for StoryHost {
             w1_controls.spacing(8.0)
             (selected == StoryId::Layout && self.w1_step() == 0).then(|| Component("foundation-demos", foundation_demos::FoundationDemos::default))
             (selected == StoryId::Layout && self.w1_step() == 0).then(compiled_preview_gallery::demo)
+            (selected == StoryId::Layout && self.w1_step() == 0).then(composition_gallery::demo)
         StoryCanvas::new(
             selected,
             self.count(),

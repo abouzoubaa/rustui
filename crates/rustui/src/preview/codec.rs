@@ -127,7 +127,7 @@ fn normalize_property_defaults(
     Ok(())
 }
 
-fn normalize_numeric_properties(
+pub(super) fn normalize_numeric_properties(
     catalog: &ComponentCatalog,
     document: &mut PreviewDocument,
 ) -> Result<(), PreviewError> {

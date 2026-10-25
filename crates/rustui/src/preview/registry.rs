@@ -3,10 +3,12 @@ use std::{collections::BTreeMap, rc::Rc};
 
 use crate::view::AnyView;
 
+use super::composition::{CompositionNodeSnapshot, CompositionSlots, NodeId, SlotId, SlotSchema};
 use super::host::PreviewSnapshot;
 use super::{ActionRef, ComponentCatalog, ComponentId, ComponentSchema, PreviewError};
 
 type Factory<C> = dyn Fn(&PreviewSnapshot, &C) -> AnyView;
+type ComposableFactory<C> = dyn Fn(&CompositionNodeSnapshot, &C, CompositionSlots) -> AnyView;
 
 /// A local catalog paired with compiled Rust factories and typed owner context.
 ///
@@ -15,6 +17,8 @@ type Factory<C> = dyn Fn(&PreviewSnapshot, &C) -> AnyView;
 pub struct PreviewRegistry<C> {
     catalog: ComponentCatalog,
     factories: BTreeMap<ComponentId, Rc<Factory<C>>>,
+    composable_factories: BTreeMap<ComponentId, Rc<ComposableFactory<C>>>,
+    slot_contracts: BTreeMap<ComponentId, BTreeMap<SlotId, SlotSchema>>,
 }
 
 impl<C> Default for PreviewRegistry<C> {
@@ -22,6 +26,8 @@ impl<C> Default for PreviewRegistry<C> {
         Self {
             catalog: ComponentCatalog::new(),
             factories: BTreeMap::new(),
+            composable_factories: BTreeMap::new(),
+            slot_contracts: BTreeMap::new(),
         }
     }
 }
@@ -562,6 +568,54 @@ impl<C> PreviewRegistry<C> {
         Ok(())
     }
 
+    /// Registers a descriptor-first component with named child slots. This is
+    /// additive: existing `register` leaf factories and `PreviewHost` are intact.
+    pub fn register_composable(
+        &mut self,
+        schema: ComponentSchema,
+        slots: BTreeMap<SlotId, SlotSchema>,
+        factory: impl Fn(&CompositionNodeSnapshot, &C, CompositionSlots) -> AnyView + 'static,
+    ) -> Result<(), PreviewError> {
+        let id = schema.id.clone();
+        if slots.len() > super::composition::MAX_SLOTS_PER_COMPONENT {
+            return Err(PreviewError::Invalid(
+                "component exceeds composition slot limit".into(),
+            ));
+        }
+        for (slot, contract) in &slots {
+            SlotId::new(slot.as_str())?;
+            if contract.min_children > contract.max_children
+                || contract.max_children > super::composition::MAX_COMPOSITION_NODES
+            {
+                return Err(PreviewError::Invalid(
+                    "invalid slot cardinality bounds".into(),
+                ));
+            }
+            for child in &contract.allowed_children {
+                ComponentId::new(child.as_str()).map_err(PreviewError::Invalid)?;
+            }
+        }
+        // Reserve the ordinary registration path too, so duplicate component
+        // IDs remain rejected by the existing atomic catalog insertion.
+        let factory_for_leaf = Rc::new(factory);
+        let leaf_factory = factory_for_leaf.clone();
+        let leaf_node_id = NodeId::new(id.as_str())?;
+        self.register(schema, move |snapshot, context| {
+            leaf_factory(
+                &CompositionNodeSnapshot {
+                    id: leaf_node_id.clone(),
+                    snapshot: snapshot.clone(),
+                },
+                context,
+                CompositionSlots::new(),
+            )
+        })?;
+        self.composable_factories
+            .insert(id.clone(), factory_for_leaf);
+        self.slot_contracts.insert(id, slots);
+        Ok(())
+    }
+
     /// Explicitly allowlists a local action target. Handlers stay with the owner.
     pub fn register_action(&mut self, action: ActionRef) -> Result<(), PreviewError> {
         self.catalog.register_action(action)
@@ -571,12 +625,43 @@ impl<C> PreviewRegistry<C> {
         &self.catalog
     }
 
+    pub(super) fn slot_contract(&self, id: &ComponentId) -> Option<&BTreeMap<SlotId, SlotSchema>> {
+        self.slot_contracts.get(id)
+    }
+
+    pub(super) fn render_composition(
+        &self,
+        snapshot: &CompositionNodeSnapshot,
+        context: &C,
+        slots: CompositionSlots,
+    ) -> Result<AnyView, PreviewError> {
+        let id = &snapshot.snapshot.preview.document.component_id;
+        if let Some(factory) = self.composable_factories.get(id) {
+            return Ok(factory(snapshot, context, slots));
+        }
+        if slots.is_empty() {
+            return self.render(&snapshot.snapshot, context);
+        }
+        Err(PreviewError::Invalid(format!(
+            "component `{id}` has child slots but no composable factory"
+        )))
+    }
+
     pub(super) fn render(
         &self,
         snapshot: &PreviewSnapshot,
         context: &C,
     ) -> Result<AnyView, PreviewError> {
         let id = &snapshot.preview.document.component_id;
+        if self
+            .slot_contracts
+            .get(id)
+            .is_some_and(|slots| slots.values().any(|slot| slot.min_children > 0))
+        {
+            return Err(PreviewError::Invalid(
+                "component requires a composition document with child slots".into(),
+            ));
+        }
         let factory = self
             .factories
             .get(id)

@@ -67,3 +67,5 @@ lab-catalog-note-sheet = Trigger-opened GPUI Components side sheet with optional
 lab-catalog-note-drag_drop = Typed same-process Copy and Transfer gallery; M142 verified keyboard alternatives and M148 verified target removal during a held drag on macOS.
 
 lab-i18n-runtime-examples = Fluent messages and locale-aware numbers and dates
+
+lab-composition-title = Composition: add, remove and reorder children

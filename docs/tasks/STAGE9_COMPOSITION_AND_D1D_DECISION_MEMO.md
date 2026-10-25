@@ -1,6 +1,8 @@
 # Stage 9 composition editing and D1d decision memo
 
-**Status: decision requested; no architecture is selected by this memo.** D1a–D1c
+**Status: Strategy A approved and implemented on 2026-10-25; external D1d consumer/transport still needs specification.**
+
+The user approved the pending proposals ("I approve everything just proceed"). See `STAGE9_DESCRIPTOR_COMPOSITION_IMPLEMENTATION.md` for the implemented additive factory/slot/document contract and current evidence. The original alternatives below remain design history, not a new generic approval gate. D1a–D1c
 already provide the versioned descriptor/codec, local compiled preview host, and
 bounded Playground inspector. They do not implement structural composition
 editing or an external-host adapter. This memo distills the options already in

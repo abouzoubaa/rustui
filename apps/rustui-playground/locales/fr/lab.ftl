@@ -67,3 +67,5 @@ lab-catalog-note-sheet = Panneau latéral GPUI Components ouvert par déclencheu
 lab-catalog-note-drag_drop = Galerie de transfert et de copie typés au sein du même processus ; M142 a validé les alternatives clavier et M148 le retrait de la cible pendant un glissement maintenu sur macOS.
 
 lab-i18n-runtime-examples = Messages Fluent, nombres et dates selon la langue
+
+lab-composition-title = Composition : ajouter, supprimer et réordonner les enfants

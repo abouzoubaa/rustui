@@ -18,6 +18,24 @@ Reverify its HEAD and dirty state before integration. Do not overwrite its work.
 
 The user approved all pending prepared upstream patches and locale architecture/dependencies ("I approve everything just proceed"). Pinned GPUI 0.3.9 and Components 0.7.3 remain unchanged. Tree root/name/level series is installed through the reproducible helper and its exact POST verification passes; focused tests are being repaired/run. ICU4X/Fluent candidate passed ten preimage checks; 29 new dependency archives were verified and vendored, with minimal lockfile resolution. ICU Provider sync fixes the concurrent-memoizer integration. Locale tests pass 101/101 (82 unit, 9 legacy catalog, 10 Fluent/ICU). The source release driver passes 552 Python tests plus packaging/static checks. Component checkpoint now passes 937/937 after correcting a stale theme-count fixture. The approved default Headstart incremental path hit an ICU def_span fingerprint ICE on reuse; a per-command rustui-i18n-only nonincremental diagnostic passes without changing repository compiler configuration or other packages incremental policy. Current native/browser acceptance and default-cache reliability remain separate gates. The exact Tree series is committed as `016c938b`; its in-memory rendered Tree regression is source evidence, not native AX. The locale API doctest passes 1/1, and the existing Playground localization story passes 3/3 including new Fluent/ICU samples for English/French/Arabic. Fresh isolated validation with the unchanged approved incremental configuration also passes all 102 locale tests/doctest, confirming a reused-cache compiler defect. All 29 new packages declare SPDX metadata; four verbatim upstream MIT/Apache notices for the two incomplete archives are captured by exact-revision supplements. The manifest now validates 40 package mappings, with final distribution compatibility still open. Browser semantic/secure-input candidate remains detached pending verification. No new native/browser acceptance claimed.
 
+## Current source milestone — 2026-10-25
+
+Inventory remains 37 required areas; whole-project coding/acceptance percentages
+remain provisional. This milestone implements the six explicit composition source
+contracts recorded in `STAGE9_DESCRIPTOR_COMPOSITION_IMPLEMENTATION.md` (6/6
+coded; three target/performance acceptance groups remain 0/3 closed). The browser
+semantic/protected-input series is installed reproducibly and its 14 actual-JS
+fixtures pass. Native all-targets checking passes; Wasm compilation found seven
+platform-configuration errors now being repaired through a revised exact patch.
+No browser semantic/IME/screen-reader or native AX/VoiceOver acceptance is claimed.
+
+A fresh OSV query covers 834 registry packages: eight maintenance notices and
+RUSTSEC-2026-0382 for rustls-webpki 0.103.15. Default macOS and Wasm reverse trees
+select no such package; all-target dependency selection does. Fixed version is
+0.103.16. Raw current evidence is under `target/headstart/evidence/osv-*20261025.json`.
+No dependency revision was silently changed; feature-specific release selection
+must be checked before distribution.
+
 ## Ownership and preservation
 
 - Dispatcher `rustui-roadmap-coordination-sweep` is PAUSED.
@@ -327,7 +345,7 @@ recovery leads, not permission to rebuild existing work.
 | R21 | 9: accessibility and keyboard across public controls | Partial; semantic projection, action handling, disabled state and actual VoiceOver need current evidence on both targets. |
 | R22 | 9: descriptor/schema/codec validation | Present; recovered additional registry/schema/codec tests pass in current library checkpoint. Full contract review remains. |
 | R23 | 9: compiled preview/inspector | Present; inspect edit/rejection/remount/generation behavior and run current native inspector acceptance. |
-| R24 | 9: structural composition editing | No selected boundary; descriptor-first proposal is prepared. Requires a real architecture choice. |
+| R24 | 9: structural composition editing | Approved descriptor-first composition implemented: versioned stable-identity graph/slots, compiled recursive factories, atomic structure/property edits, bounded codec and node-scoped local signals. Focused preview 42/42 and Playground 1/1 pass including property edits, source reload and codec. Native/browser/performance acceptance open. |
 | R25 | 9: D1d external consumer adapter | No named external consumer/transport. Define host/version/action/disconnect policy before implementation. Keep RustUI independent. |
 | R26 | 9: live theme/data reload | Present, distinct from Rust source hot reload; verify invalid-update recovery and owner-release cleanup. |
 | R27 | 10: performance, provenance and candidate workflow | Extensive bounded tooling present; current-source GUI/performance evidence and candidate review/promotion open. No optimization speed claim or GPU phase acceptance. |

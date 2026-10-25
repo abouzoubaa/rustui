@@ -1,6 +1,8 @@
 # Serialization and UI Studio bridge proposal
 
-**Status: D1a–D1c source implementations are present.** D1c's schema-driven
+**Status: D1a–D1c and descriptor-first composition source implementations are present.**
+
+The user approved Strategy A on 2026-10-25. `STAGE9_DESCRIPTOR_COMPOSITION_IMPLEMENTATION.md` records the separate composition format, slot factories, structural/property operations, local node signals and current evidence. Native/browser acceptance and the D1d external consumer/transport remain open. D1c's schema-driven
 Playground inspector passes its targeted locked/offline all-targets check; native
 inspector acceptance remains open. The selected D1b
 contract is signal-only (2026-10-19). The versioned descriptor schema, codec,
