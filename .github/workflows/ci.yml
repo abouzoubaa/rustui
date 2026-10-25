@@ -33,6 +33,10 @@ jobs:
         with:
           persist-credentials: false
           clean: false
+      - name: Verify trusted checkout
+        env:
+          EXPECTED_SHA: ${{ github.sha }}
+        run: ./scripts/verify-ci-checkout.sh "$EXPECTED_SHA"
       - name: macOS checks and optimized package
         run: ./scripts/verify-release.sh macos
       - name: Web optimized bundle

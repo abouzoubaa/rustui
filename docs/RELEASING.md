@@ -33,7 +33,9 @@ with the approved compiler, SDK and matching Wasm sysroot. The workflow is
 prepared; runner availability and a successful remote CI run remain unverified.
 Do not automatically run untrusted pull-request code on this runner. The
 checkout preserves the runner's caches; use a dedicated checkout and never
-point it at a user's dirty development tree.
+point it at a user's dirty development tree. The build job verifies the selected
+Git revision and rejects tracked changes or nonignored untracked files after
+checkout, while retaining ignored build caches.
 
 ## Compiler and dependency inputs
 

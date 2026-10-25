@@ -9,6 +9,7 @@ case "${1:-}" in
     python3 -m unittest discover -s scripts/tests -p 'test_*.py'
     sh scripts/tests/test_package_playground_app.sh
     sh scripts/tests/test_build_playground_web.sh
+    sh scripts/tests/test_verify_ci_checkout.sh
     python3 scripts/validate_locales.py
     python3 scripts/validate_themes.py --plans-only
     python3 scripts/verify_theme_adapter_coverage.py
