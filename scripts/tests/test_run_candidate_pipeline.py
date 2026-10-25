@@ -421,10 +421,10 @@ class CandidatePipelineTests(unittest.TestCase):
         with tempfile.TemporaryDirectory() as tmp:
             root = Path(tmp)
             intake_path, source_root = self.fixture(root)
-            shutil.copyfile(
-                Path(pipeline.__file__).with_name("apply_candidate_patch.py"),
-                root / "scripts/apply_candidate_patch.py",
-            )
+            for script in ("apply_candidate_patch.py", "validate_candidate_snapshot.py", "p3_candidate_fs.py"):
+                shutil.copyfile(
+                    Path(pipeline.__file__).with_name(script), root / "scripts" / script,
+                )
             package_name = "gpui-pre-0.3.9"
             package_dirs = {}
             for variant in ("baseline", "candidate"):
@@ -1614,10 +1614,10 @@ class CandidatePipelineTests(unittest.TestCase):
             intake, source = self.fixture(root)
             original_copy = pipeline._copy_regular_file
 
-            def remove_patch_before_copy(src, dst, label="source snapshot file", *, root=None):
+            def remove_patch_before_copy(src, dst, label="source snapshot file", **kwargs):
                 if src.name == "approved.patch" and dst.parent.name == "run-a":
                     Path(src).unlink()
-                return original_copy(src, dst, label, root=root)
+                return original_copy(src, dst, label, **kwargs)
 
             with patch.object(pipeline, "_copy_regular_file", side_effect=remove_patch_before_copy):
                 with self.assertRaisesRegex(pipeline.PipelineError, "readable regular file"):
@@ -1635,11 +1635,11 @@ class CandidatePipelineTests(unittest.TestCase):
             outside.write_text("outside contents\n")
             original_copy = pipeline._copy_regular_file
 
-            def replace_patch_then_copy(src, dst, label="source snapshot file", *, root=None):
+            def replace_patch_then_copy(src, dst, label="source snapshot file", **kwargs):
                 if src.name == "approved.patch" and dst.parent.name == "run-a":
                     src.unlink()
                     src.symlink_to(outside)
-                return original_copy(src, dst, label, root=root)
+                return original_copy(src, dst, label, **kwargs)
 
             with patch.object(pipeline, "_copy_regular_file", side_effect=replace_patch_then_copy):
                 with self.assertRaisesRegex(pipeline.PipelineError, "readable regular file"):

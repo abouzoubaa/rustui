@@ -243,6 +243,18 @@ class ComparisonTests(unittest.TestCase):
             self.assertEqual(comparison.read_json(run["configuration_path"]), run["bundle_configuration"])
         self.assertEqual(comparison.load_plan(path)["comparison"], "diagnostics_overhead")
 
+    def test_diagnostics_provenance_accepts_rooted_and_legacy_absolute_binary_paths(self):
+        provenance = json.loads(self.provenance_path.read_text())
+        self.assertEqual(provenance["selected_binary"]["path"], "cache_comparison")
+        self.plan(session="rooted-path", diagnostics_overhead=True)
+        provenance["selected_binary"]["path"] = str(self.binary.resolve())
+        self.provenance_path.write_text(json.dumps(provenance))
+        self.plan(session="absolute-path", diagnostics_overhead=True)
+        provenance["selected_binary"]["path"] = "another-binary"
+        self.provenance_path.write_text(json.dumps(provenance))
+        with self.assertRaisesRegex(ValueError, "binary does not match"):
+            self.plan(session="wrong-path", diagnostics_overhead=True)
+
     def test_diagnostics_overhead_requires_and_binds_build_provenance(self):
         with self.assertRaisesRegex(ValueError, "require --build-provenance"):
             comparison.make_plan("missing-provenance", self.binary, diagnostics_overhead=True)

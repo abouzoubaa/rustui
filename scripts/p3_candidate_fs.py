@@ -523,6 +523,13 @@ class PinnedDir:
                                 != parent_frame["destination_identity"]):
                             raise CandidateFSError("destination directory parent changed during copy")
 
+                        named_source_info = os.stat(
+                            child_frame["name"], dir_fd=source_parent, follow_symlinks=False
+                        )
+                        if stat.S_ISLNK(named_source_info.st_mode):
+                            raise CandidateFSError(
+                                f"symlink rejected during source copy: {child_frame['name']}"
+                            )
                         named_source = os.open(
                             child_frame["name"], directory_flags, dir_fd=source_parent
                         )
@@ -544,9 +551,11 @@ class PinnedDir:
                         finally:
                             os.close(named_source)
                         os.fchmod(destination_fd, child_frame["source_mode"])
-                    except BaseException:
+                    except BaseException as error:
                         os.close(source_parent)
                         os.close(destination_parent)
+                        if isinstance(error, OSError):
+                            raise CandidateFSError("source or destination directory changed during copy") from error
                         raise
 
                     os.close(source_fd)

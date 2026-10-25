@@ -96,9 +96,18 @@ def validate_build_provenance(path, binary, compiler, inputs):
     facts = provenance.get("build_facts_declared_by_caller", {})
     if facts.get("status") != "observed_success" or facts.get("exit_status") != 0:
         raise ValueError("build provenance does not report an observed successful build")
-    if provenance.get("selected_binary") != {
-            "path": binary["path"], "sha256": binary["sha256"],
-            "size_bytes": binary["size_bytes"], "status": "captured"}:
+    # Current provenance uses pinned-root-relative paths; older schema-1 records
+    # used absolute paths. Bind either spelling to the same current rooted file.
+    current_binary = file_record(ROOT, binary["path"])
+    selected = provenance.get("selected_binary")
+    if (current_binary.get("status") != "captured"
+            or current_binary.get("sha256") != binary["sha256"]
+            or current_binary.get("size_bytes") != binary["size_bytes"]
+            or not isinstance(selected, dict)
+            or selected.get("path") not in (current_binary["path"], binary["path"])
+            or {key: value for key, value in selected.items() if key != "path"} != {
+                "sha256": binary["sha256"], "size_bytes": binary["size_bytes"],
+                "status": "captured"}):
         raise ValueError("build provenance binary does not match selected executable")
     if provenance.get("compiler_identity") != compiler:
         raise ValueError("build provenance compiler differs from planned compiler")
