@@ -806,3 +806,5 @@ mod conditional_gallery;
 mod shadow_gallery;
 
 mod card_gallery;
+
+mod graph_gallery;

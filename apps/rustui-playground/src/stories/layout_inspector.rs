@@ -11,6 +11,12 @@ pub fn summary_for(story: StoryId) -> &'static str {
         StoryId::List => "Layout: fixed-height GPUI virtual list inside RustUI VStack",
         StoryId::Table => "Layout: fixed-height GPUI virtual table inside RustUI VStack",
         StoryId::Outline => "Layout: named outline group containing a retained GPUI virtual tree",
+        StoryId::GraphView => {
+            "Layout: bounded Canvas edges and positioned named node groups in a controlled viewport"
+        }
+        StoryId::NodeEditor => {
+            "Layout: shared positioned graph surface with node dragging and focusable port/connection controls"
+        }
         StoryId::Drawer => {
             "Layout: window-hosted modal sheet with an owner-controlled physical edge"
         }

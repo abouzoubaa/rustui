@@ -11,6 +11,8 @@ pub enum StoryId {
     Table,
     Tree,
     Drawer,
+    GraphView,
+    NodeEditor,
     Outline,
     Tabs,
     Breadcrumb,
@@ -28,6 +30,8 @@ impl StoryId {
             Self::Table => "Table",
             Self::Tree => "Tree",
             Self::Drawer => "Drawer",
+            Self::GraphView => "GraphView",
+            Self::NodeEditor => "NodeEditor",
             Self::Outline => "Outline",
             Self::Tabs => "Tabs",
             Self::Breadcrumb => "Breadcrumb",
@@ -43,7 +47,7 @@ pub struct StoryDefinition {
     pub summary: &'static str,
 }
 
-pub const STORIES: [StoryDefinition; 12] = [
+pub const STORIES: [StoryDefinition; 14] = [
     StoryDefinition {
         id: StoryId::Button,
         title: "Button",
@@ -104,6 +108,16 @@ pub const STORIES: [StoryDefinition; 12] = [
         title: "Drawer",
         summary: "Controlled modal drawer with physical edges, owner refresh, and focus restoration.",
     },
+    StoryDefinition {
+        id: StoryId::GraphView,
+        title: "GraphView",
+        summary: "Positioned graph with stable nodes, named ports and connections, controlled viewport and keyboard activation.",
+    },
+    StoryDefinition {
+        id: StoryId::NodeEditor,
+        title: "NodeEditor",
+        summary: "Controlled graph editing with typed ports, node dragging, keyboard movement and connection controls.",
+    },
 ];
 
 pub fn filtered_story_indices(query: &str) -> Vec<usize> {
@@ -144,5 +158,35 @@ mod tests {
     #[test]
     fn story_search_matches_the_visible_story_label() {
         assert_eq!(filtered_story_indices("HStack"), vec![2]);
+    }
+    #[test]
+    fn graph_stories_are_individually_searchable_and_reachable() {
+        for (query, id) in [
+            (" GraphView ", super::StoryId::GraphView),
+            (" nOdEeDiToR ", super::StoryId::NodeEditor),
+        ] {
+            let index = super::STORIES
+                .iter()
+                .position(|story| story.id == id)
+                .expect("standalone graph story");
+            assert_eq!(filtered_story_indices(query), vec![index]);
+            assert_eq!(
+                crate::story_for(if id == super::StoryId::GraphView {
+                    "graph_view"
+                } else {
+                    "node_editor"
+                }),
+                Some(id)
+            );
+            assert!(
+                !crate::stories::code_preview::source_for(id)
+                    .trim()
+                    .is_empty()
+            );
+            assert_eq!(
+                crate::stories::test_runner::status_for(id),
+                crate::stories::test_runner::VerificationStatus::InteractionAndVisualPending
+            );
+        }
     }
 }

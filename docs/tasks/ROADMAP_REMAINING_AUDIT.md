@@ -247,8 +247,19 @@ graph membership and does not prove linked/distributed closure or legal clearanc
   embedded font licenses, and hash the packaged files in bundle manifests.
   Four notice-packager tests and both packaging shell fixtures passed. Five
   captured-notice gaps and broader license/distribution review remain unresolved.
-- GraphView/NodeEditor and animation repairs are being prepared as patches outside
-  the writing checkout. They are not integrated or counted as complete.
+- GraphView and NodeEditor source, current-owner event fixes, searchable stories
+  and compiled-preview factories are integrated. Thirteen graph regressions and
+  193 Playground tests pass. Full macOS integration passes 1,250 library tests,
+  43 integration tests, all-target checking and optimized packaging. The matching
+  macro doctest target has zero cases. GUI/AX/VoiceOver/performance acceptance
+  remains open; no project-wide completion percentage follows from these counts.
+- The release source checkpoint passes 541 Python tests and packaging/CI fixtures.
+  A subsequent deterministic-notice projection passes five focused tests, including
+  equivalent checkout roots with different raw Cargo evidence hashes; raw evidence
+  remains external. This does not establish reproducible binaries.
+- Obsolete per-file approval wording was removed from the Transition/Animator
+  stubs after tracing its baseline origin. Their consumer contracts remain planned;
+  no second animation runtime or unsupported behavior is claimed.
 
 ## Initial requirement inventory (provisional)
 
@@ -280,7 +291,7 @@ recovery leads, not permission to rebuild existing work.
 | R07 | 2: layout, geometry and animation identity | Present; current-source native geometry, RTL and reduced-motion observations remain. |
 | R08 | 2/9: timing/animation API | Opacity/spring present; timing curves implemented and source-checked; transition/animator scaffolds need scoped contract review. No second scheduler. |
 | R09 | 3: Playground catalog, stories, events, source examples | Present; current library tests passed. Validate reachability, examples and visual/keyboard behavior in the canonical app. |
-| R10 | 4: macro grammar and public integration tests | Present; unit checkpoint passed. Run public integration targets and matching-toolchain doctests; diagnose M69 from current artifacts. |
+| R10 | 4: macro grammar and public integration tests | Implemented; current macOS checkpoint passes all 43 workspace integration tests plus library/all-target checks. Matching-toolchain macro doctest target runs with zero cases. Historical M69/E0463 failure is not reproduced in the persistent verification target; native declarative-layout acceptance remains separate. |
 | R11 | 4: basic components and semantics | Present; audit source contracts and current native visual/focus/AX behavior. |
 | R12 | 5: theme states, metrics and fallbacks | Static coverage passes for 139 roles/24 styled records; runtime pack validation, light/dark/locale visuals and unapplied radio blend-mode requirement remain. |
 | R13 | 6: bounded locale/catalog contract | Three runtime locale records validate; current locale unit tests pass. Native/Web locale switching, fallback and RTL acceptance remain. |
@@ -300,13 +311,13 @@ recovery leads, not permission to rebuild existing work.
 | R27 | 10: performance, provenance and candidate workflow | Extensive bounded tooling present; current-source GUI/performance evidence and candidate review/promotion open. No optimization speed claim or GPU phase acceptance. |
 | R28 | 11: Web reproducible build/package/assets | Source tooling present; rebuild current source and bind browser observations to exact bundle manifest. |
 | R29 | 11: browser keyboard/AX/IME/fonts | M855 approved patch reproduced; focused-input accessible-name patch prepared but not approved. Full semantic controls/action routing, IME, glyph and screen-reader acceptance remain. |
-| R30 | Release: CI and reproducible release builds | No GitHub workflow found in recovered checkout. Establish runnable compiler/sysroot/bootstrap policy and required macOS/Web checks. |
+| R30 | Release: CI and reproducible release builds | CI workflow and trusted-runner/clean-checkout policy are implemented; source fixtures pass. Current local macOS checkpoint passes 1,250 library and 43 integration tests, all-target checks and optimized packaging. Macro doctests contain zero cases. Actual remote CI execution, compiler/bootstrap reproduction and clean-build artifact comparison remain unverified. |
 | R31 | Release: security, licensing, performance budgets, packaging/instructions | Complete threat/error audit, dependency/license and font notices, supported-version matrix, reproducibility, package signing/distribution plan and release instructions. Publication requires approval. |
 | R32 | 8: Outline | Source implemented: controlled single-column hierarchy over the existing Tree engine, explicit identity and group name, selected/expanded bindings, public-API Playground story and compiled-preview descriptor. Focused Tree/Outline 25/25 and Playground 189/189 tests passed, with all-target checking. Native/browser, AX/VoiceOver, visual/locale/RTL acceptance and upstream Tree naming/hierarchy-level limitations remain open. See `docs/tasks/OUTLINE_IMPLEMENTATION.md`. |
 | R33 | 8: Drawer | Source implemented: controlled visibility, four physical edges, window-owned hosting, current-owner content/bindings, guarded dismissal/unmount, restored focus, named Close, public Playground story and compiled-preview factory. Seven real-Root/validation tests passed; Playground library tests and all-target check passed. Native/browser/AX/VoiceOver, popup stacking and independent modal text-selection isolation remain open. See `docs/tasks/DRAWER_IMPLEMENTATION.md`. |
 | R34 | 9: ResizablePanel | Coding closed for the host-owned panel adapter: public ResizablePanel reuses SplitPanel directly, with the same size/identity/lifecycle contract and no second resize runtime. Canonical SplitView story uses the public name; rendered focus/key/clamp/RTL event test and Playground check pass. Native/browser visual, AX and screen-reader acceptance remain open. |
-| R35 | 9: GraphView | Scaffold only. Required data/identity, viewport, selection, keyboard and accessibility contracts and implementation are absent. |
-| R36 | 9: NodeEditor | Scaffold only. Required node/edge model, editing/action/validation, ownership and accessible keyboard interaction contracts and implementation are absent. |
+| R35 | 9: GraphView | Source implemented: validated positioned node/port/edge model, controlled viewport/selection, named native controls, activation, theme defaults and lifecycle guards. Standalone searchable Playground story and compiled-preview factory use the public API. Focused regressions and full macOS source/build checkpoint pass; native/browser/AX/VoiceOver, locale/RTL and representative workloads remain open. See `docs/tasks/GRAPH_COMPONENTS_IMPLEMENTATION.md`. |
+| R36 | 9: NodeEditor | Source implemented over GraphView: atomic controlled graph edits, node drag/move/remove, typed port connections and named Disconnect controls, current-owner keyboard events, disabled focus and stale-callback guards. Standalone story and preview factory are integrated. Source/build checks pass; native/browser interaction, accessibility and performance acceptance remain open. See `docs/tasks/GRAPH_COMPONENTS_IMPLEMENTATION.md`. |
 
 ## Current executed evidence
 

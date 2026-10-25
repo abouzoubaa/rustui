@@ -5,7 +5,7 @@ use crate::{
     view::{AnyView, EmptyView, RenderContext, RenderSeed, RetentionScope, View},
 };
 use gpui::{
-    AnyElement, AnyWindowHandle, App, AppContext as _, Context, Entity, EntityId, FocusHandle,
+    AnyElement, AnyWindowHandle, App, Context, Entity, EntityId, FocusHandle,
     InteractiveElement as _, IntoElement as _, ParentElement as _, Render, SharedString,
     StatefulInteractiveElement as _, Styled as _, Subscription, WeakEntity, WeakFocusHandle,
     Window, div, px,

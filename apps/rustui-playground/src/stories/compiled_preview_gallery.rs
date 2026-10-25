@@ -289,6 +289,32 @@ struct CompiledPreviewGallery {
     descriptor_json: String,
 }
 
+fn register_graph_specimens<Context: 'static>(registry: &mut PreviewRegistry<Context>) {
+    for (id, name, editor) in [
+        ("graph-view-specimen", "GraphView", false),
+        ("node-editor-specimen", "NodeEditor", true),
+    ] {
+        registry
+            .register(
+                ComponentSchema {
+                    id: ComponentId::new(id).unwrap(),
+                    version: 1,
+                    display_name: name.into(),
+                    properties: BTreeMap::new(),
+                    events: BTreeMap::new(),
+                },
+                move |_, _context: &Context| {
+                    if editor {
+                        AnyView::new(super::graph_gallery::editor_demo())
+                    } else {
+                        AnyView::new(super::graph_gallery::graph_demo())
+                    }
+                },
+            )
+            .unwrap();
+    }
+}
+
 impl Default for CompiledPreviewGallery {
     fn default() -> Self {
         let mut registry = PreviewRegistry::new();
@@ -3463,6 +3489,7 @@ impl Default for CompiledPreviewGallery {
                 },
             )
             .unwrap();
+        register_graph_specimens(&mut registry);
         let canvas_specimen_schema = ComponentSchema {
             id: ComponentId::new("canvas-specimen").unwrap(),
             version: 1,
@@ -7941,6 +7968,8 @@ mod tests {
             "button-specimen",
             "card-specimen",
             "canvas-specimen",
+            "graph-view-specimen",
+            "node-editor-specimen",
             "checkbox",
             "code-editor-specimen",
             "collection-specimen",
@@ -8016,7 +8045,7 @@ mod tests {
                 "missing compiled preview specimen for {component_id}"
             );
         }
-        assert_eq!(expected.len(), 76);
+        assert_eq!(expected.len(), 78);
     }
 
     #[test]
@@ -14098,5 +14127,25 @@ mod tests {
             imported.preview.properties[&height_id],
             PropertyValue::Number(192.0)
         );
+    }
+}
+
+#[cfg(test)]
+mod graph_preview_tests {
+    use super::*;
+    #[test]
+    fn graph_factories_mount_and_render_through_the_real_preview_registry() {
+        let mut registry = PreviewRegistry::<()>::new();
+        register_graph_specimens(&mut registry);
+        let mut host = PreviewHost::new(registry);
+        for id in ["graph-view-specimen", "node-editor-specimen"] {
+            host.mount(PreviewDocument::new(
+                PreviewId::new("graph-preview-test").unwrap(),
+                ComponentId::new(id).unwrap(),
+                1,
+            ))
+            .unwrap();
+            assert!(host.render(&()).unwrap().is_some());
+        }
     }
 }

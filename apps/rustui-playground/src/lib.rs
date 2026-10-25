@@ -424,6 +424,8 @@ fn story_for(key: &str) -> Option<StoryId> {
         "list" => Some(StoryId::List),
         "table" => Some(StoryId::Table),
         "drawer" => Some(StoryId::Drawer),
+        "graph_view" => Some(StoryId::GraphView),
+        "node_editor" => Some(StoryId::NodeEditor),
         "outline_view" => Some(StoryId::Outline),
         "tab_bar" | "segmented_control" => Some(StoryId::Tabs),
         _ => None,

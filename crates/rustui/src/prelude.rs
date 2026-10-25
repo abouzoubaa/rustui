@@ -112,3 +112,9 @@ pub use crate::modifiers::shadow::{
 };
 
 pub use crate::components::data::collection::{Collection, CollectionItem};
+
+pub use crate::components::advanced::{
+    GraphDocument, GraphEdge, GraphEdit, GraphEndpoint, GraphError, GraphNode, GraphPort,
+    GraphPortDirection, GraphStyle, GraphView, GraphViewControl, GraphViewport, NodeEditor,
+    NodeEditorView,
+};

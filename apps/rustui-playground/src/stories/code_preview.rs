@@ -98,6 +98,26 @@ Environment(display_mode, child_stack)
 .accessibility_label("Document outline")
 .height(280.0)"#
         }
+        StoryId::GraphView => {
+            r#"GraphView(
+    "dependency-graph",
+    self.document().clone(),
+    self.selection_binding(),
+    self.viewport_binding(),
+)
+.accessibility_label("Dependency graph")
+.on_activate(self.action(Self::activate))"#
+        }
+        StoryId::NodeEditor => {
+            r#"NodeEditor(
+    "node-editor",
+    self.document_binding(),
+    self.selection_binding(),
+    self.viewport_binding(),
+)
+.accessibility_label("Node editor")
+.on_activate(self.action(Self::activate))"#
+        }
         StoryId::Drawer => {
             r#"Drawer("details", self.visible_binding())
     .title("Details")

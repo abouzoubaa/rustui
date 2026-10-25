@@ -35,6 +35,8 @@ pub const fn status_for(story: StoryId) -> VerificationStatus {
         | StoryId::Tabs
         | StoryId::Breadcrumb
         | StoryId::Outline
+        | StoryId::GraphView
+        | StoryId::NodeEditor
         | StoryId::Drawer => VerificationStatus::InteractionAndVisualPending,
     }
 }
@@ -70,6 +72,8 @@ mod tests {
             StoryId::Tabs,
             StoryId::Breadcrumb,
             StoryId::Outline,
+            StoryId::GraphView,
+            StoryId::NodeEditor,
         ] {
             assert_eq!(
                 status_for(story),

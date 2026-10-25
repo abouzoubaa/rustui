@@ -14,3 +14,9 @@ pub use canvas::{
     Canvas, CanvasError, CanvasPoint, CanvasRect, CanvasScene, CanvasSceneBuilder, CanvasSize,
     CanvasView,
 };
+
+pub use graph_view::{
+    GraphDocument, GraphEdge, GraphEdit, GraphEndpoint, GraphError, GraphNode, GraphPort,
+    GraphPortDirection, GraphStyle, GraphView, GraphViewControl, GraphViewport,
+};
+pub use node_editor::{NodeEditor, NodeEditorView};

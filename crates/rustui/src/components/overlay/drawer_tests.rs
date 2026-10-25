@@ -3,6 +3,7 @@ use crate::{
     prelude::{TextField, VStack},
     runtime::{Action, ComponentHost},
 };
+use gpui::AppContext as _;
 use std::cell::RefCell;
 
 struct Probe {

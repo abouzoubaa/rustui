@@ -32,6 +32,7 @@ impl View for FoundationDemos {
                         .child(super::property_inspector_gallery::demo()),
                 ),
                 TabItem::new("canvas", "Canvas", super::canvas_gallery::demo()),
+                TabItem::new("graph", "Graphs", super::graph_gallery::demo()),
                 TabItem::new(
                     "grid",
                     "Grid",

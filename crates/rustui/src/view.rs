@@ -615,6 +615,51 @@ impl<'a> RenderContext<'a> {
         })
     }
 
+    /// Reads the current owner through the existing synchronous component dispatcher.
+    /// A detached/wrong owner returns None; this never schedules a second runtime.
+    pub(crate) fn binding_reader<T: 'static>(
+        &self,
+        binding: Binding<T>,
+    ) -> Rc<dyn Fn(&mut App) -> Option<T>> {
+        let update_component = self.update_component.clone();
+        Rc::new(move |cx| {
+            let output = Rc::new(std::cell::RefCell::new(None));
+            let result = output.clone();
+            let binding = binding.clone();
+            update_component(
+                Box::new(move |owner| {
+                    *result.borrow_mut() = binding.read_from(owner);
+                    false
+                }),
+                cx,
+            );
+            let value = output.borrow_mut().take();
+            value
+        })
+    }
+
+    /// Applies an event to the latest owner value, avoiding captured render snapshots.
+    pub(crate) fn binding_event_updater<T: 'static, Event: 'static>(
+        &self,
+        binding: Binding<T>,
+        update: impl Fn(&mut T, Event) -> bool + 'static,
+    ) -> Rc<dyn Fn(Event, &mut App)> {
+        let update_component = self.update_component.clone();
+        let update = Rc::new(update);
+        Rc::new(move |event, cx| {
+            let binding = binding.clone();
+            let update = update.clone();
+            update_component(
+                Box::new(move |component| {
+                    apply_binding_event(&binding, component, event, |value, event| {
+                        update(value, event)
+                    })
+                }),
+                cx,
+            );
+        })
+    }
+
     pub(crate) fn binding_updater<T: 'static>(
         &self,
         binding: Binding<T>,
@@ -1330,5 +1375,77 @@ impl View for EmptyView {
 
     fn into_element(&self, _context: &mut RenderContext<'_>) -> AnyElement {
         div().into_any_element()
+    }
+}
+
+fn apply_binding_event<T: 'static, Event>(
+    binding: &Binding<T>,
+    owner: &mut dyn std::any::Any,
+    event: Event,
+    update: impl FnOnce(&mut T, Event) -> bool,
+) -> bool {
+    binding.update_on(owner, |value| update(value, event))
+}
+
+#[cfg(test)]
+mod binding_event_regressions {
+    use super::*;
+    struct Owner {
+        value: Vec<String>,
+        revision: u64,
+    }
+    #[test]
+    fn event_dispatch_reads_current_owner_value_and_preserves_intervening_changes() {
+        let binding = Binding::new::<Owner>(
+            vec!["snapshot".into()],
+            |owner| owner.value.clone(),
+            |owner, value| owner.value = value,
+        );
+        let mut owner = Owner {
+            value: vec!["current".into(), "intervening".into()],
+            revision: 0,
+        };
+        assert!(apply_binding_event(
+            &binding,
+            &mut owner,
+            "event",
+            |value, event| {
+                value.push(event.into());
+                true
+            }
+        ));
+        assert_eq!(owner.value, ["current", "intervening", "event"]);
+        let before = owner.value.clone();
+        assert!(!apply_binding_event(&binding, &mut owner, (), |_, _| false));
+        assert_eq!(owner.value, before);
+    }
+    #[test]
+    fn event_dispatch_honors_owner_revision_rejection() {
+        let binding = Binding::new_with(
+            vec![String::from("snapshot")],
+            1_u64,
+            |owner: &Owner, _| owner.value.clone(),
+            |owner: &mut Owner, revision, value| {
+                if owner.revision != *revision {
+                    return false;
+                }
+                owner.value = value;
+                true
+            },
+        );
+        let mut owner = Owner {
+            value: vec!["new owner revision".into()],
+            revision: 2,
+        };
+        assert!(!apply_binding_event(
+            &binding,
+            &mut owner,
+            "stale",
+            |value, event| {
+                value.push(event.into());
+                true
+            }
+        ));
+        assert_eq!(owner.value, ["new owner revision"]);
     }
 }
