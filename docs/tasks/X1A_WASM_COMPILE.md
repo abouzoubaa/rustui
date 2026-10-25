@@ -65,3 +65,25 @@ building host dependencies because the selected Stage 1 compiler lacks its
 RustUI WebAssembly compilation. Next, repair the Stage 1 host sysroot or use the
 matching installed Headstart host compiler configuration, then rerun the same
 focused check.
+
+## Update 2026-10-25 — Stage 1 host and wasm sysroots
+
+Built Stage 1 host `library/std`, `library/proc_macro`, and `library/test`, then
+the `wasm32-unknown-unknown` `library/std`, all through the same Headstart
+build directory under `target/headstart/x1a-rustc`. The resulting Stage 1
+sysroot contains host and wasm `core`/`std`, plus host `proc_macro`.
+
+The locked, offline `rustui` check then exited successfully:
+
+```sh
+RUSTC=target/headstart/x1a-rustc/aarch64-apple-darwin/stage1/bin/rustc \
+  CARGO_TARGET_DIR=target/headstart/x1a-rustc \
+  ./scripts/cargo-headstart check -p rustui \
+  --target wasm32-unknown-unknown --locked --offline
+```
+
+The check emitted three existing RustUI warnings (two unused imports and the
+unused `ButtonPalette::disabled_text` field). Full output is preserved at
+`target/headstart/x1a-rustc/rustui-check.log`. This proves compile-only
+WebAssembly viability for the `rustui` library; Playground browser startup,
+accessibility, rendering, and platform acceptance remain separate work.
