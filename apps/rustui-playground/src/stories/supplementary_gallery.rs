@@ -90,6 +90,7 @@ impl View for SupplementaryGallery {
                         "Open link fixture, activated {} times",
                         self.link_activations()
                     ))
+                    .localized_accessibility_label("rustui-link-open-fixture")
                     .on_activate(self.action(Self::activate_link)),
                 )
                 .child(

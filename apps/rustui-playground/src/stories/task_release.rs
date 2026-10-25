@@ -6,7 +6,6 @@ use std::{
         Arc,
         atomic::{AtomicUsize, Ordering},
     },
-    thread,
     time::Duration,
 };
 
@@ -137,11 +136,16 @@ impl View for PendingTaskChild {
                 .child(
                     Button(
                         "Start 3 second task",
-                        tasks.start(
+                        tasks.start_with_executor(
                             "pending-release",
                             {
-                                let probe = probe.clone();
-                                move || delayed_result(probe.clone())
+                                let task_probe = probe.clone();
+                                move |executor| {
+                                    delayed_result(
+                                        task_probe.clone(),
+                                        executor.timer(Duration::from_secs(3)),
+                                    )
+                                }
                             },
                             PendingTaskChild::apply_result,
                         ),
@@ -164,13 +168,31 @@ impl View for PendingTaskChild {
 
 fn delayed_result(
     probe: Arc<TaskReleaseProbe>,
+    delay: impl Future<Output = ()> + Send + 'static,
 ) -> impl Future<Output = Result<String, String>> + Send {
     async move {
-        // Match the existing owner-task demo: deterministic delayed work on GPUI's
-        // background executor, with a counter set before the result is delivered.
         probe.background_started.fetch_add(1, Ordering::SeqCst);
-        thread::sleep(Duration::from_secs(3));
+        delay.await;
         probe.background_finished.fetch_add(1, Ordering::SeqCst);
         Ok(String::from("finished after child removal"))
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use std::task::{Context, Poll, Waker};
+
+    use super::*;
+
+    #[test]
+    fn delayed_result_yields_while_its_executor_delay_is_pending() {
+        let probe = Arc::new(TaskReleaseProbe::default());
+        let mut result = Box::pin(delayed_result(probe.clone(), std::future::pending()));
+        let waker = Waker::noop();
+        let mut context = Context::from_waker(waker);
+
+        assert!(matches!(result.as_mut().poll(&mut context), Poll::Pending));
+        assert_eq!(probe.background_started.load(Ordering::SeqCst), 1);
+        assert_eq!(probe.background_finished.load(Ordering::SeqCst), 0);
     }
 }

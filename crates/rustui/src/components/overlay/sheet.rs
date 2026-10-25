@@ -30,6 +30,35 @@ impl SheetText {
     }
 }
 
+fn first_nonblank_accessibility_label(
+    labels: impl IntoIterator<Item = SharedString>,
+    identity: SharedString,
+) -> SharedString {
+    labels
+        .into_iter()
+        .find(|label| !label.trim().is_empty())
+        .unwrap_or(identity)
+}
+
+fn first_nonblank_trigger_label(
+    key: Option<&SharedString>,
+    localized: Option<SharedString>,
+    fallback: SharedString,
+) -> SharedString {
+    localized
+        .filter(|label| {
+            !label.trim().is_empty() && key.is_none_or(|key| label.trim() != key.trim())
+        })
+        .unwrap_or(fallback)
+}
+
+fn resolved_localized_accessibility_candidate(
+    key: &SharedString,
+    label: SharedString,
+) -> Option<SharedString> {
+    (label.trim() != key.trim() && !label.trim().is_empty()).then_some(label)
+}
+
 /// Keeps arbitrary RustUI sheet content owned across native builder rerenders.
 struct SheetContent {
     content: Rc<AnyView>,
@@ -66,6 +95,7 @@ impl View for SheetContent {
 pub struct SheetView {
     id: Identity,
     trigger: SheetText,
+    localized_trigger: Option<SharedString>,
     title: Option<SheetText>,
     accessibility_label: Option<SheetText>,
     content: Option<Rc<AnyView>>,
@@ -78,9 +108,15 @@ impl SheetView {
             !id.as_str().trim().is_empty(),
             "Sheet identity must be nonempty"
         );
+        let trigger = trigger.into();
+        assert!(
+            !trigger.trim().is_empty(),
+            "Sheet trigger requires a non-empty visible label"
+        );
         Self {
             id,
-            trigger: SheetText::Literal(trigger.into()),
+            trigger: SheetText::Literal(trigger),
+            localized_trigger: None,
             title: None,
             accessibility_label: None,
             content: None,
@@ -89,18 +125,30 @@ impl SheetView {
 
     /// Resolves the trigger label from the active RustUI message catalog.
     pub fn localized_trigger(mut self, message_key: impl Into<SharedString>) -> Self {
-        self.trigger = SheetText::Message(message_key.into());
+        let message_key = message_key.into();
+        assert!(
+            !message_key.trim().is_empty(),
+            "Sheet trigger requires a non-empty localization key"
+        );
+        self.localized_trigger = Some(message_key);
         self
     }
 
     pub fn title(mut self, title: impl Into<SharedString>) -> Self {
-        self.title = Some(SheetText::Literal(title.into()));
+        let title = title.into();
+        assert!(!title.trim().is_empty(), "Sheet title must not be blank");
+        self.title = Some(SheetText::Literal(title));
         self
     }
 
     /// Resolves the visible title from the active RustUI message catalog when opened.
     pub fn localized_title(mut self, message_key: impl Into<SharedString>) -> Self {
-        self.title = Some(SheetText::Message(message_key.into()));
+        let message_key = message_key.into();
+        assert!(
+            !message_key.trim().is_empty(),
+            "Sheet title requires a non-empty localization key"
+        );
+        self.title = Some(SheetText::Message(message_key));
         self
     }
 
@@ -109,21 +157,59 @@ impl SheetView {
     /// By default, the visible title is used when present; otherwise the
     /// trigger label is used.
     pub fn accessibility_label(mut self, label: impl Into<SharedString>) -> Self {
-        self.accessibility_label = Some(SheetText::Literal(label.into()));
+        let label = label.into();
+        assert!(
+            !label.trim().is_empty(),
+            "Sheet accessibility label must not be blank"
+        );
+        self.accessibility_label = Some(SheetText::Literal(label));
         self
     }
 
     /// Resolves the sheet's accessible name from the active RustUI message catalog.
     pub fn localized_accessibility_label(mut self, message_key: impl Into<SharedString>) -> Self {
-        self.accessibility_label = Some(SheetText::Message(message_key.into()));
+        let message_key = message_key.into();
+        assert!(
+            !message_key.trim().is_empty(),
+            "Sheet accessibility label localization key must not be blank"
+        );
+        self.accessibility_label = Some(SheetText::Message(message_key));
         self
     }
 
+    #[cfg(test)]
     fn accessibility_label_text(&self) -> SheetText {
         self.accessibility_label
             .clone()
             .or_else(|| self.title.clone())
+            .or_else(|| self.localized_trigger.clone().map(SheetText::Message))
             .unwrap_or_else(|| self.trigger.clone())
+    }
+
+    fn resolve_accessibility_label(&self, context: &RenderContext<'_>) -> SharedString {
+        first_nonblank_accessibility_label(
+            self.accessibility_label
+                .iter()
+                .chain(self.title.iter())
+                .filter_map(|label| match label {
+                    SheetText::Literal(_) => Some(label.resolve(context)),
+                    SheetText::Message(key) => {
+                        resolved_localized_accessibility_candidate(key, label.resolve(context))
+                    }
+                })
+                .chain(std::iter::once(self.resolve_trigger_label(context))),
+            self.id.as_str().into(),
+        )
+    }
+
+    fn resolve_trigger_label(&self, context: &RenderContext<'_>) -> SharedString {
+        first_nonblank_trigger_label(
+            self.localized_trigger.as_ref(),
+            self.localized_trigger
+                .as_ref()
+                .map(|key| SharedString::from(context.localized_message(key.as_ref()))),
+            self.trigger.resolve(context),
+        )
     }
 
     /// Adds arbitrary RustUI content to the sheet body.
@@ -146,8 +232,8 @@ impl View for SheetView {
 
     fn into_element(&self, context: &mut RenderContext<'_>) -> AnyElement {
         context.with_element_scope(RetentionScope::Key(self.id.clone()), |context| {
-            let accessibility_label = self.accessibility_label_text().resolve(context);
-            let trigger = self.trigger.resolve(context);
+            let accessibility_label = self.resolve_accessibility_label(context);
+            let trigger = self.resolve_trigger_label(context);
             let content = self.content.as_ref().map(|content| {
                 context
                     .retained_component_with_props(
@@ -204,6 +290,38 @@ mod tests {
     }
 
     #[test]
+    #[should_panic(expected = "Sheet trigger requires a non-empty visible label")]
+    fn blank_visible_trigger_is_rejected() {
+        Sheet("details", " \t");
+    }
+
+    #[test]
+    #[should_panic(expected = "Sheet trigger requires a non-empty localization key")]
+    fn blank_localized_trigger_key_is_rejected() {
+        Sheet("details", "Open").localized_trigger(" \t");
+    }
+
+    #[test]
+    #[should_panic(expected = "Sheet title requires a non-empty localization key")]
+    fn blank_localized_title_key_is_rejected() {
+        Sheet("details", "Open").localized_title(" \t");
+    }
+
+    #[test]
+    #[should_panic(expected = "Sheet title must not be blank")]
+    fn blank_literal_title_is_rejected() {
+        Sheet("details", "Open").title(" \t");
+    }
+
+    #[test]
+    fn blank_localized_trigger_falls_back_to_its_visible_label() {
+        assert_eq!(
+            first_nonblank_trigger_label(None, Some(" \t".into()), "Open details".into()),
+            "Open details"
+        );
+    }
+
+    #[test]
     fn title_and_content_are_optional() {
         let sheet = Sheet("details", "Open").title("Details").content(EmptyView);
 
@@ -222,8 +340,8 @@ mod tests {
             .localized_title("sheet.title");
 
         assert!(matches!(
-            sheet.trigger,
-            SheetText::Message(key) if key.as_ref() == "sheet.open"
+            sheet.localized_trigger,
+            Some(key) if key.as_ref() == "sheet.open"
         ));
         assert!(matches!(
             sheet.title,
@@ -269,6 +387,96 @@ mod tests {
             untitled.accessibility_label_text(),
             SheetText::Message(key) if key.as_ref() == "sheet.open"
         ));
+        assert_eq!(untitled.localized_trigger.as_deref(), Some("sheet.open"));
+    }
+
+    #[test]
+    #[should_panic(expected = "Sheet accessibility label must not be blank")]
+    fn rejects_blank_explicit_accessible_name() {
+        Sheet("details", "Open").accessibility_label(" \t ");
+    }
+
+    #[test]
+    #[should_panic(expected = "Sheet accessibility label localization key must not be blank")]
+    fn rejects_blank_localized_accessible_name_key() {
+        Sheet("details", "Open").localized_accessibility_label(" \t ");
+    }
+
+    #[test]
+    fn preserves_nonblank_explicit_accessible_name_verbatim() {
+        let sheet = Sheet("details", "Open").accessibility_label("  Details panel  ");
+
+        assert!(matches!(
+            sheet.accessibility_label_text(),
+            SheetText::Literal(label) if label.as_ref() == "  Details panel  "
+        ));
+    }
+
+    #[test]
+    fn blank_resolved_accessible_name_falls_back_to_the_next_candidate() {
+        assert_eq!(
+            first_nonblank_accessibility_label([" \t ".into(), "Details".into()], "details".into()),
+            "Details"
+        );
+    }
+
+    #[test]
+    fn unresolved_localized_accessible_name_falls_back_to_visible_title() {
+        let key: SharedString = "sheet.accessibility.details".into();
+        let unresolved = resolved_localized_accessibility_candidate(&key, key.clone());
+
+        assert_eq!(
+            first_nonblank_accessibility_label(
+                [unresolved.unwrap_or_default(), "Visible title".into()],
+                "details".into(),
+            ),
+            "Visible title"
+        );
+    }
+
+    #[test]
+    fn padded_untranslated_accessibility_key_falls_back_to_visible_title() {
+        let key: SharedString = "sheet.accessibility.details".into();
+        let padded_echo: SharedString = format!(" \t{key}\n").into();
+        let unresolved = resolved_localized_accessibility_candidate(&key, padded_echo);
+
+        assert_eq!(
+            first_nonblank_accessibility_label(
+                [unresolved.unwrap_or_default(), "Visible title".into()],
+                "details".into(),
+            ),
+            "Visible title"
+        );
+    }
+
+    #[test]
+    fn all_blank_resolved_accessible_name_candidates_fall_back_to_identity() {
+        assert_eq!(
+            first_nonblank_accessibility_label([" ".into(), "\n".into()], "details".into()),
+            "details"
+        );
+    }
+
+    #[test]
+    fn unresolved_localized_trigger_key_falls_back_to_visible_trigger() {
+        let key: SharedString = "sheet.open_details".into();
+
+        assert_eq!(
+            first_nonblank_trigger_label(Some(&key), Some(key.clone()), "Open".into()),
+            "Open"
+        );
+        assert_eq!(
+            first_nonblank_trigger_label(
+                Some(&key),
+                Some(format!(" \t{key}\n").into()),
+                "Open".into(),
+            ),
+            "Open"
+        );
+        assert_eq!(
+            first_nonblank_trigger_label(Some(&key), Some("Ouvrir".into()), "Open".into()),
+            "Ouvrir"
+        );
     }
 
     #[test]

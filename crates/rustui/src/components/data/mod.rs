@@ -1,6 +1,7 @@
-//! data component family.
+//! Data components for collections, lists, tables, and trees.
 //!
-//! Scaffold only. The modules below do not yet implement their planned APIs.
+//! The outline module remains a planning scaffold; its runtime API is not
+//! implemented.
 
 pub mod collection;
 pub mod data_grid;

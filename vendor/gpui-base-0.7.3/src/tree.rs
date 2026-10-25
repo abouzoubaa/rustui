@@ -463,6 +463,7 @@ impl Render for TreeState {
                             .role(gpui::Role::TreeItem)
                             .aria_label(entry.item().label.clone())
                             .aria_selected(entry_state.selected)
+                            .aria_disabled(entry.is_disabled())
                             .when(entry.is_folder(), |this| {
                                 this.aria_expanded(entry.is_expanded())
                             })

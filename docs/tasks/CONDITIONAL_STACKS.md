@@ -94,3 +94,7 @@ unselected actions are absent. Repeat under both locale directions; branch
 selection itself introduces no direction policy.
 
 The final M69–M71 workspace suite passed 236 tests across 12 binaries, and the build succeeded with all three pinned GPUI dependencies fresh. The locked/offline all-targets check exited 0. Bounded native acceptance is complete and recorded in `target/headstart/milestone69-conditional-stacks-gui.json`. It observed branch selection, keyed editor reorder, action dispatch, parent updates, and optional-child omission/restoration. Stateful children require explicit `Keyed` identity. RTL, full keyboard/accessibility speech, cursor/undo, release callbacks, and performance remain unverified; `for`/`match` syntax is outside this milestone..
+
+### M551 generic handler paths
+
+The Button shorthand transform applies only to a bare handler identifier. An unqualified turbofish handler such as `save::<Commit>` retains its explicit type arguments and is not rewritten to `self.action(...)`. The focused explicit/qualified-handler regression passed 1/1. Evidence: `target/headstart/evidence/m551-explicit-generic-button-action-test-20261021.log`.

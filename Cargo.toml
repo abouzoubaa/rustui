@@ -24,7 +24,7 @@ rustui-core = { path = "crates/rustui-core" }
 rustui-i18n = { path = "crates/rustui-i18n" }
 rustui-macros = { path = "crates/rustui-macros" }
 serde = { version = "1", features = ["derive"] }
-serde_json = "1"
+serde_json = { version = "1", features = ["raw_value"] }
 chrono = "=0.4.45"
 
 # Approved Zed snapshot, repackaged by Longbridge; see docs/UPSTREAM_AUDIT.md.
@@ -32,6 +32,15 @@ gpui = { package = "gpui-pre", version = "=0.3.9" }
 gpui_platform = { package = "gpui-pre-platform", version = "=0.3.9", features = ["font-kit", "wayland", "x11", "runtime_shaders"] }
 gpui-component = { version = "=0.7.3", default-features = false }
 gpui-base = { version = "=0.7.3", default-features = false }
+gpui-kit-assets = "=0.7.3"
+
+[patch.crates-io]
+# Keep upstream package versions pinned while reproducibly applying the
+# approved GPUI accessibility patches; see patches/README.md.
+gpui-pre = { path = "vendor/gpui-pre-0.3.9" }
+gpui-base = { path = "vendor/gpui-base-0.7.3" }
+gpui-component = { path = "vendor/gpui-component-0.7.3" }
+gpui-pre-web = { path = "vendor/gpui-pre-web-0.3.9" }
 
 [profile.headstart]
 inherits = "dev"

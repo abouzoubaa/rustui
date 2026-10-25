@@ -115,7 +115,7 @@ impl WebWindow {
             .map_err(|error| anyhow::anyhow!("Failed to create canvas element: {error:?}"))?
             .dyn_into()
             .map_err(|error| anyhow::anyhow!("Created element is not a canvas: {error:?}"))?;
-        canvas.set_tab_index(-1);
+        canvas.set_tab_index(0);
 
         let style = canvas.style();
         for (property, value) in [

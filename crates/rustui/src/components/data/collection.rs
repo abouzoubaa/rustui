@@ -5,7 +5,7 @@ use std::{cell::RefCell, collections::HashSet, marker::PhantomData, rc::Rc};
 use gpui::{
     AnyElement, App, Bounds, ClickEvent, Element, ElementId, FocusHandle, GlobalElementId,
     InspectorElementId, InteractiveElement as _, IntoElement, KeyDownEvent, LayoutId,
-    ListAlignment, ListOffset, ListState, MouseButton, ParentElement as _, Pixels, Role,
+    ListAlignment, ListOffset, ListState, Modifiers, MouseButton, ParentElement as _, Pixels, Role,
     SharedString, StatefulInteractiveElement as _, Styled as _, WeakEntity, Window, div, list, px,
 };
 use gpui_component::ActiveTheme as _;
@@ -22,6 +22,32 @@ use crate::{
 type SelectionWriter = Rc<dyn Fn(Option<Identity>, &mut App)>;
 
 /// A snapshot value identified independently of its position.
+fn collection_list_element(
+    collection_id: &Identity,
+    label: SharedString,
+) -> gpui::Stateful<gpui::Div> {
+    div()
+        .id(format!("rustui-collection:{}", collection_id.as_str()))
+        .role(Role::List)
+        .aria_label(label)
+}
+
+fn collection_row_element(
+    id: &str,
+    label: SharedString,
+    position: usize,
+    set_size: usize,
+    selected: bool,
+) -> gpui::Stateful<gpui::Div> {
+    div()
+        .id(id.to_owned())
+        .role(Role::ListItem)
+        .aria_label(label)
+        .aria_position_in_set(position)
+        .aria_size_of_set(set_size)
+        .aria_selected(selected)
+}
+
 pub struct CollectionItem<T> {
     id: Identity,
     value: T,
@@ -166,13 +192,14 @@ fn normalize(ids: &[Identity], selected: Option<&Identity>) -> Option<Identity> 
 
 fn update_selection(
     current: &mut Option<Identity>,
-    expected: &Option<Identity>,
+    expected: &RefCell<Option<Identity>>,
     desired: &Option<Identity>,
 ) -> bool {
-    if current != expected || current == desired {
+    if *current != *expected.borrow() || current == desired {
         return false;
     }
     *current = desired.clone();
+    *expected.borrow_mut() = desired.clone();
     true
 }
 
@@ -181,6 +208,9 @@ fn next_selection(
     selected: Option<&Identity>,
     key: &str,
 ) -> Option<Option<Identity>> {
+    if ids.is_empty() && key != "escape" {
+        return None;
+    }
     let index = selected.and_then(|id| ids.iter().position(|item| item == id));
     let target = match key {
         "escape" => return Some(None),
@@ -198,6 +228,21 @@ enum KeyboardIntent {
     Confirm,
     Navigate,
     Ignore,
+}
+
+fn keyboard_event_eligible(
+    focused: bool,
+    prefer_character_input: bool,
+    ime_in_progress: bool,
+    modifiers: &Modifiers,
+) -> bool {
+    focused
+        && !prefer_character_input
+        && !ime_in_progress
+        && !modifiers.control
+        && !modifiers.platform
+        && !modifiers.alt
+        && !modifiers.shift
 }
 
 fn keyboard_intent(
@@ -259,14 +304,13 @@ impl CollectionState {
     }
 
     fn keyboard(&self, event: &KeyDownEvent, window: &mut Window, cx: &mut App) {
-        if !self.focus.is_focused(window)
-            || event.prefer_character_input
-            || event.keystroke.is_ime_in_progress()
-        {
-            return;
-        }
         let modifiers = &event.keystroke.modifiers;
-        if modifiers.control || modifiers.platform || modifiers.alt || modifiers.shift {
+        if !keyboard_event_eligible(
+            self.focus.is_focused(window),
+            event.prefer_character_input,
+            event.keystroke.is_ime_in_progress(),
+            modifiers,
+        ) {
             return;
         }
         match keyboard_intent(
@@ -417,10 +461,11 @@ impl<T: 'static, V: View, F: Fn(usize, &T) -> V + 'static> View for Collection<T
             let writer: Option<SelectionWriter> = self.selection.as_ref().map(|binding| {
                 let target = Rc::new(RefCell::new(None));
                 let read_target = target.clone();
-                let expected = requested.clone();
+                let expected = Rc::new(RefCell::new(requested.clone()));
+                let update_expected = expected.clone();
                 let update = context.binding_updater(binding.clone(), move |current| {
                     let desired = read_target.borrow();
-                    update_selection(current, &expected, &desired)
+                    update_selection(current, &update_expected, &desired)
                 });
                 Rc::new(move |desired, cx: &mut App| {
                     *target.borrow_mut() = desired;
@@ -501,17 +546,17 @@ impl<T: 'static, V: View, F: Fn(usize, &T) -> V + 'static> View for Collection<T
                     drop(context);
                     state.retained.finish_cell(&item.id);
                     let selected = state.selected.as_ref() == Some(&item.id);
-                    let mut row = div()
-                        .id(item.id.as_str().to_owned())
-                        .role(Role::ListItem)
-                        .aria_label(item.label.clone())
-                        .aria_position_in_set(index + 1)
-                        .aria_size_of_set(items.len())
-                        .aria_selected(selected)
-                        .w_full()
-                        .h(px(row_height))
-                        .overflow_hidden()
-                        .child(child);
+                    let mut row = collection_row_element(
+                        item.id.as_str(),
+                        item.label.clone(),
+                        index + 1,
+                        items.len(),
+                        selected,
+                    )
+                    .w_full()
+                    .h(px(row_height))
+                    .overflow_hidden()
+                    .child(child);
                     if selected {
                         row = row.bg(cx.theme().list_active);
                     }
@@ -563,10 +608,7 @@ impl<T: 'static, V: View, F: Fn(usize, &T) -> V + 'static> View for Collection<T
                 },
             };
 
-            div()
-                .id("rustui-collection")
-                .role(Role::List)
-                .aria_label(self.label.clone())
+            collection_list_element(&self.id, self.label.clone())
                 .track_focus(&focus)
                 .on_key_down(move |event, window, cx| {
                     keyboard_owner
@@ -585,7 +627,57 @@ impl<T: 'static, V: View, F: Fn(usize, &T) -> V + 'static> View for Collection<T
 
 #[cfg(test)]
 mod tests {
+    use gpui::{Element, Modifiers, Role, accesskit::Node};
+
     use super::*;
+
+    fn accesskit_node(element: &impl Element) -> Node {
+        let role = element
+            .a11y_role()
+            .expect("collection accessibility element has a role");
+        let mut node = Node::new(role);
+        element.write_a11y_info(&mut node);
+        node
+    }
+
+    #[test]
+    fn collection_elements_emit_list_and_list_item_accesskit_metadata() {
+        let identity = Identity::from("saved-views");
+        let list = accesskit_node(&collection_list_element(
+            &identity,
+            "Saved views".into(),
+        ));
+        assert_eq!(list.role(), Role::List);
+        assert_eq!(list.label(), Some("Saved views"));
+
+        let first = accesskit_node(&collection_row_element(
+            "view-1",
+            "Overview".into(),
+            1,
+            2,
+            true,
+        ));
+        assert_eq!(first.role(), Role::ListItem);
+        assert_eq!(first.label(), Some("Overview"));
+        assert_eq!(first.position_in_set(), Some(1));
+        assert_eq!(first.size_of_set(), Some(2));
+        assert_eq!(first.is_selected(), Some(true));
+
+        let second = accesskit_node(&collection_row_element(
+            "view-2",
+            "Activity".into(),
+            2,
+            2,
+            false,
+        ));
+        assert_eq!(second.position_in_set(), Some(2));
+        assert_eq!(second.size_of_set(), Some(2));
+        assert_eq!(second.is_selected(), Some(false));
+
+        let other = collection_list_element(&Identity::from("recent-files"), "Recent files".into());
+        let element = collection_list_element(&identity, "Saved views".into());
+        assert_ne!(Element::id(&element), Element::id(&other));
+    }
 
     #[test]
     fn selection_scroll_addresses_unmeasured_native_rows_by_index() {
@@ -622,29 +714,64 @@ mod tests {
     }
 
     #[test]
- fn keyboard_decision_helpers_cover_navigation_escape_confirmation_and_ignored_input() {
+    fn keyboard_decision_helpers_cover_navigation_escape_confirmation_and_ignored_input() {
         let ids = vec![
             Identity::from("a"),
             Identity::from("b"),
             Identity::from("c"),
         ];
 
-        assert_eq!(next_selection(&ids, Some(&ids[0]), "up"), Some(Some(ids[0].clone())));
-        assert_eq!(next_selection(&ids, Some(&ids[2]), "down"), Some(Some(ids[2].clone())));
+        assert_eq!(
+            next_selection(&ids, Some(&ids[0]), "up"),
+            Some(Some(ids[0].clone()))
+        );
+        assert_eq!(
+            next_selection(&ids, Some(&ids[2]), "down"),
+            Some(Some(ids[2].clone()))
+        );
         assert_eq!(next_selection(&ids, None, "up"), Some(Some(ids[2].clone())));
-        assert_eq!(next_selection(&ids, None, "down"), Some(Some(ids[0].clone())));
-        assert_eq!(next_selection(&ids, Some(&ids[1]), "home"), Some(Some(ids[0].clone())));
-        assert_eq!(next_selection(&ids, Some(&ids[1]), "end"), Some(Some(ids[2].clone())));
+        assert_eq!(
+            next_selection(&ids, None, "down"),
+            Some(Some(ids[0].clone()))
+        );
+        assert_eq!(
+            next_selection(&ids, Some(&ids[1]), "home"),
+            Some(Some(ids[0].clone()))
+        );
+        assert_eq!(
+            next_selection(&ids, Some(&ids[1]), "end"),
+            Some(Some(ids[2].clone()))
+        );
         assert_eq!(next_selection(&ids, Some(&ids[1]), "escape"), Some(None));
 
-        assert_eq!(keyboard_intent("enter", false, false, true), KeyboardIntent::Confirm);
-        assert_eq!(keyboard_intent("enter", true, false, true), KeyboardIntent::Ignore);
-        assert_eq!(keyboard_intent("enter", true, true, true), KeyboardIntent::Confirm);
-        assert_eq!(keyboard_intent("enter", false, false, false), KeyboardIntent::Ignore);
+        for key in ["up", "down", "home", "end"] {
+            assert_eq!(next_selection(&[], None, key), None);
+        }
+        assert_eq!(next_selection(&[], None, "escape"), Some(None));
+
+        assert_eq!(
+            keyboard_intent("enter", false, false, true),
+            KeyboardIntent::Confirm
+        );
+        assert_eq!(
+            keyboard_intent("enter", true, false, true),
+            KeyboardIntent::Ignore
+        );
+        assert_eq!(
+            keyboard_intent("enter", true, true, true),
+            KeyboardIntent::Confirm
+        );
+        assert_eq!(
+            keyboard_intent("enter", false, false, false),
+            KeyboardIntent::Ignore
+        );
 
         for key in ["a", "é", "ime"] {
             assert_eq!(next_selection(&ids, Some(&ids[1]), key), None);
-            assert_eq!(keyboard_intent(key, true, true, true), KeyboardIntent::Ignore);
+            assert_eq!(
+                keyboard_intent(key, true, true, true),
+                KeyboardIntent::Ignore
+            );
         }
     }
 
@@ -679,16 +806,62 @@ mod tests {
     }
 
     #[test]
+    fn keyboard_event_filter_rejects_unfocused_text_ime_and_modified_input() {
+        let plain = Modifiers::default();
+        assert!(keyboard_event_eligible(true, false, false, &plain));
+        assert!(!keyboard_event_eligible(false, false, false, &plain));
+        assert!(!keyboard_event_eligible(true, true, false, &plain));
+        assert!(!keyboard_event_eligible(true, false, true, &plain));
+
+        for modifiers in [
+            Modifiers {
+                control: true,
+                ..plain
+            },
+            Modifiers {
+                platform: true,
+                ..plain
+            },
+            Modifiers { alt: true, ..plain },
+            Modifiers {
+                shift: true,
+                ..plain
+            },
+        ] {
+            assert!(!keyboard_event_eligible(true, false, false, &modifiers));
+        }
+    }
+
+    #[test]
     fn selection_writes_check_the_current_owner_value() {
         let a = Some(Identity::from("a"));
         let b = Some(Identity::from("b"));
+        let expected = RefCell::new(a.clone());
         let mut owner = b.clone();
-        assert!(!update_selection(&mut owner, &a, &None));
+        assert!(!update_selection(&mut owner, &expected, &None));
         assert_eq!(owner, b);
-        assert!(update_selection(&mut owner, &b, &a));
-        assert!(!update_selection(&mut owner, &a, &a));
+        *expected.borrow_mut() = b.clone();
+        assert!(update_selection(&mut owner, &expected, &a));
+        assert!(!update_selection(&mut owner, &expected, &a));
         // Equality is an ordinary stale guard, not A-B-A mutation provenance.
-        assert!(update_selection(&mut owner, &a, &None));
+        assert!(update_selection(&mut owner, &expected, &None));
+    }
+
+    #[test]
+    fn consecutive_selection_updates_advance_the_reconciliation_marker() {
+        let a = Some(Identity::from("a"));
+        let b = Some(Identity::from("b"));
+        let c = Some(Identity::from("c"));
+        let expected = RefCell::new(a.clone());
+        let mut owner = a;
+
+        assert!(update_selection(&mut owner, &expected, &b));
+        assert_eq!(owner, b);
+        assert_eq!(*expected.borrow(), owner);
+
+        assert!(update_selection(&mut owner, &expected, &c));
+        assert_eq!(owner, c);
+        assert_eq!(*expected.borrow(), owner);
     }
     #[test]
     fn validates_ids_dimensions_and_owner_removal() {
@@ -735,7 +908,7 @@ mod tests {
             Some(Some(ids[2].clone()))
         );
         assert_eq!(next_selection(&ids, None, "escape"), Some(None));
-        assert_eq!(next_selection(&[], None, "down"), Some(None));
+        assert_eq!(next_selection(&[], None, "down"), None);
         assert_eq!(next_selection(&ids, None, "x"), None);
     }
 }

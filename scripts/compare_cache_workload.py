@@ -18,7 +18,7 @@ import sys
 import time
 
 import collect_runtime_metrics as collector
-from calibrate_cache_workload import compiler_identity
+from calibrate_cache_workload import compiler_identity, json_value_matches
 from record_build_provenance import INPUT_FILES, file_record, git_commit, snapshot_digest, source_records
 from runtime_metrics import OUTPUT_DIR, validate_output_path, write_json_exclusive
 
@@ -81,6 +81,18 @@ def validate_build_provenance(path, binary, compiler, inputs):
     provenance = read_json(provenance_path)
     if provenance.get("schema_version") != 1:
         raise ValueError("unsupported build provenance schema")
+    build_log = provenance.get("build_log")
+    if (
+        not isinstance(build_log, dict)
+        or not isinstance(build_log.get("path"), str)
+        or not build_log["path"]
+        or not isinstance(build_log.get("sha256"), str)
+        or not re.fullmatch(r"[0-9a-f]{64}", build_log["sha256"])
+        or type(build_log.get("size_bytes")) is not int
+        or build_log["size_bytes"] < 0
+        or build_log.get("parsed_for_success") is not False
+    ):
+        raise ValueError("build provenance has an invalid build log record")
     facts = provenance.get("build_facts_declared_by_caller", {})
     if facts.get("status") != "observed_success" or facts.get("exit_status") != 0:
         raise ValueError("build provenance does not report an observed successful build")
@@ -97,7 +109,16 @@ def validate_build_provenance(path, binary, compiler, inputs):
     if captured.get("source_snapshot_sha256") != snapshot_digest(captured):
         raise ValueError("build provenance source snapshot digest is invalid")
     records = captured.get("input_file_hashes", [])
-    by_path = {entry.get("path"): entry for entry in records if isinstance(entry, dict)}
+    if not isinstance(records, list) or any(not isinstance(entry, dict) for entry in records):
+        raise ValueError("build provenance input file hashes must be a list of objects")
+    paths = [entry.get("path") for entry in records]
+    if any(not isinstance(path, str) or not path for path in paths):
+        raise ValueError("build provenance input paths must be nonempty strings")
+    if len(paths) != len(set(paths)):
+        raise ValueError("build provenance input paths must be unique")
+    if set(paths) != set(inputs):
+        raise ValueError("build provenance input paths do not match expected inputs")
+    by_path = {entry["path"]: entry for entry in records}
     for name, expected in inputs.items():
         entry = by_path.get(name)
         if not entry or entry.get("status") != "captured" or entry.get("sha256") != expected["sha256"]:
@@ -209,6 +230,8 @@ def load_plan(path, verify_inputs=True):
 
 
 def check_workload(result, run, pid, protocol):
+    if not isinstance(result, dict):
+        raise ValueError("workload must be an object")
     expected = {"schema_version": 1, "kind": "rustui_cache_comparison_workload", "run_id": run["run_id"],
                 "pid": pid, "mode": run.get("runtime_mode", run["mode"]),
                 "diagnostics_enabled": run.get("diagnostics_enabled", True),
@@ -216,7 +239,7 @@ def check_workload(result, run, pid, protocol):
                 "native_drag_seen": False, "environment_scope": "empty", "correctness_passed": True,
                 "protocol": protocol, "values": [1] * protocol["leaves"], "mounts": [1] * protocol["leaves"]}
     for field, value in expected.items():
-        if result.get(field) != value:
+        if not json_value_matches(value, result.get(field)):
             raise ValueError(f"workload {field}: expected {value!r}, got {result.get(field)!r}")
     diagnostic_counts = run.get("diagnostics_enabled", True)
     if not diagnostic_counts:
@@ -226,7 +249,7 @@ def check_workload(result, run, pid, protocol):
         leaf = 0 if runtime_mode == "cached" else protocol["leaves"] * protocol["measured_updates"]
         required = {"parent_root": protocol["measured_updates"], "parent_leaf": leaf,
                     "final_leaf": leaf + protocol["leaves"], "mutation_leaf_delta": protocol["leaves"]}
-    if result.get("counts") != required:
+    if not json_value_matches(required, result.get("counts")):
         raise ValueError("wrong raw lowering counts")
     diagnostic_records = result.get("diagnostics")
     if not isinstance(diagnostic_records, list):

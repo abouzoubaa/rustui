@@ -15,7 +15,7 @@ impl Action {
         Self {
             invoke: Rc::new(move |target| {
                 let Some(component) = target.downcast_mut::<Component>() else {
-                    panic!("Action dispatched with the wrong component owner type");
+                    return Invalidation::None;
                 };
                 action(component);
                 Invalidation::Notify
@@ -29,7 +29,7 @@ impl Action {
         Self {
             invoke: Rc::new(move |target| {
                 let Some(component) = target.downcast_mut::<Component>() else {
-                    panic!("Action dispatched with the wrong component owner type");
+                    return Invalidation::None;
                 };
                 action(component).into()
             }),
@@ -40,5 +40,60 @@ impl Action {
     #[doc(hidden)]
     pub fn dispatch(&self, target: &mut dyn Any) -> Invalidation {
         (self.invoke)(target)
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    struct Owner {
+        value: usize,
+    }
+
+    struct WrongOwner {
+        mutation_count: usize,
+    }
+
+    fn increment(owner: &mut Owner) {
+        owner.value += 1;
+    }
+
+    fn increment_if_changed(owner: &mut Owner) -> bool {
+        owner.value += 1;
+        true
+    }
+
+    fn unchanged(_: &mut Owner) -> bool {
+        false
+    }
+
+    #[test]
+    fn matching_owner_dispatch_reports_mutation_and_change_contracts() {
+        let action = Action::new(increment);
+        let changed_action = Action::new_if_changed(increment_if_changed);
+        let unchanged_action = Action::new_if_changed(unchanged);
+        let mut owner = Owner { value: 0 };
+
+        assert_eq!(action.dispatch(&mut owner), Invalidation::Notify);
+        assert_eq!(owner.value, 1);
+        assert_eq!(unchanged_action.dispatch(&mut owner), Invalidation::None);
+        assert_eq!(owner.value, 1);
+        assert_eq!(changed_action.dispatch(&mut owner), Invalidation::Notify);
+        assert_eq!(owner.value, 2);
+    }
+
+    #[test]
+    fn wrong_owner_dispatch_is_a_noop_for_both_action_kinds() {
+        let action = Action::new(increment);
+        let conditional_action = Action::new_if_changed(increment_if_changed);
+        let mut wrong_owner = WrongOwner { mutation_count: 0 };
+
+        assert_eq!(action.dispatch(&mut wrong_owner), Invalidation::None);
+        assert_eq!(
+            conditional_action.dispatch(&mut wrong_owner),
+            Invalidation::None
+        );
+        assert_eq!(wrong_owner.mutation_count, 0);
     }
 }

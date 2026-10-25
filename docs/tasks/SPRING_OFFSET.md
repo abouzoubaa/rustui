@@ -25,3 +25,21 @@ The Playground Offset gallery reuses its existing state controls and moved
 interactive subtree to demonstrate target retargeting. See
 `apps/rustui-playground/src/stories/offset_gallery.rs` and the unit test in
 `crates/rustui/src/animation/offset.rs`.
+
+
+## M472 — Reject blank retained spring identities
+
+`SpringOffset::new` now returns `SpringOffsetError::EmptyIdentity` for empty or
+whitespace-only IDs while preserving nonblank IDs verbatim. The same contract is
+applied to `SpringOpacity::new` through `SpringOpacityError::EmptyIdentity`;
+these IDs directly name GPUI retained springs and child scopes. Finite
+coordinate/opacity and physics validation remain unchanged.
+
+Focused locked/offline identity tests cover both wrappers, empty and
+whitespace-only inputs, and spelling-preserving valid IDs. Native motion,
+visual, focus, accessibility, and cross-platform acceptance remain open.
+
+Focused M472 verification passed: `animation::offset::tests` 2/2 and
+`animation::spring::tests` 4/4, both with locked/offline Headstart Cargo. Evidence
+logs: `target/headstart/evidence/m472-spring-offset-identity-tests-20261021.log`
+and `target/headstart/evidence/m472-spring-opacity-identity-tests-20261021.log`.

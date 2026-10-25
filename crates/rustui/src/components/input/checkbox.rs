@@ -2,7 +2,7 @@
 
 use gpui::{
     AnyElement, FontWeight, InteractiveElement as _, IntoElement, ParentElement as _, SharedString,
-    Styled as _, div, prelude::FluentBuilder as _, px,
+    StatefulInteractiveElement as _, Styled as _, div, prelude::FluentBuilder as _, px,
 };
 use gpui_base::{Checkbox as BaseCheckbox, CheckboxState};
 use gpui_component::theme::try_parse_color;
@@ -68,6 +68,11 @@ pub(super) fn appearance_color(
     try_parse_color(value).expect("validated RustUI appearance color")
 }
 
+fn disabled_label_color(profile: &ThemeProfile, mode: AppearanceMode) -> gpui::Hsla {
+    try_parse_color(&profile.colors(Some(mode)).disabled_text)
+        .expect("validated RustUI checkbox disabled text color")
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -116,6 +121,36 @@ mod tests {
             );
         }
     }
+
+    #[test]
+    fn disabled_label_uses_the_platform_disabled_text_color() {
+        let profile = parse_theme(include_str!("../../../../../themes/macos27.json"))
+            .unwrap()
+            .platform_snapshot;
+        for mode in [AppearanceMode::Light, AppearanceMode::Dark] {
+            assert_eq!(
+                disabled_label_color(&profile, mode),
+                try_parse_color(&profile.colors(Some(mode)).disabled_text).unwrap()
+            );
+        }
+    }
+}
+
+#[derive(Clone, Debug, PartialEq, Eq)]
+enum CheckboxAccessibilityLabel {
+    Literal(SharedString),
+    Message {
+        id: SharedString,
+        fallback: SharedString,
+    },
+}
+
+fn resolved_message_label(id: &str, localized: String, fallback: &SharedString) -> SharedString {
+    if localized.trim().is_empty() || localized.trim() == id.trim() {
+        fallback.clone()
+    } else {
+        SharedString::from(localized)
+    }
 }
 
 pub struct CheckboxView {
@@ -123,15 +158,18 @@ pub struct CheckboxView {
     checked: Binding<bool>,
     id: Option<Identity>,
     disabled: bool,
-    accessibility_label: Option<SharedString>,
+    accessibility_label: Option<CheckboxAccessibilityLabel>,
     tab_index: isize,
     focusable: bool,
 }
 
 impl CheckboxView {
+    /// Creates a checkbox whose non-empty visible label is also its default
+    /// accessible name.
     pub fn new(label: impl Into<SharedString>, checked: Binding<bool>) -> Self {
+        let label = label.into();
         Self {
-            label: label.into(),
+            label,
             checked,
             id: None,
             disabled: false,
@@ -142,7 +180,12 @@ impl CheckboxView {
     }
 
     pub fn id(mut self, id: impl Into<Identity>) -> Self {
-        self.id = Some(id.into());
+        let id = id.into();
+        assert!(
+            !id.as_str().trim().is_empty(),
+            "Checkbox IDs must be nonempty"
+        );
+        self.id = Some(id);
         self
     }
 
@@ -151,9 +194,50 @@ impl CheckboxView {
         self
     }
 
+    /// Overrides the accessible name with a non-empty label.
     pub fn accessibility_label(mut self, label: impl Into<SharedString>) -> Self {
-        self.accessibility_label = Some(label.into());
+        let label = label.into();
+        assert!(
+            !label.trim().is_empty(),
+            "checkbox accessibility label must not be empty"
+        );
+        self.accessibility_label = Some(CheckboxAccessibilityLabel::Literal(label));
         self
+    }
+
+    /// Resolves checkbox's accessible name from the active RustUI message catalog.
+    pub fn localized_accessibility_label(mut self, message_id: impl Into<SharedString>) -> Self {
+        let id = message_id.into();
+        assert!(
+            !id.trim().is_empty(),
+            "checkbox accessibility localization key must not be blank"
+        );
+        let fallback = match &self.accessibility_label {
+            Some(CheckboxAccessibilityLabel::Literal(label))
+            | Some(CheckboxAccessibilityLabel::Message {
+                fallback: label, ..
+            }) => label.clone(),
+            None => self.label.clone(),
+        };
+        self.accessibility_label = Some(CheckboxAccessibilityLabel::Message { id, fallback });
+        self
+    }
+
+    fn resolved_accessibility_label(&self, context: &RenderContext<'_>) -> SharedString {
+        let label = match &self.accessibility_label {
+            Some(CheckboxAccessibilityLabel::Literal(label)) => label.clone(),
+            Some(CheckboxAccessibilityLabel::Message { id, fallback }) => resolved_message_label(
+                id.as_ref(),
+                context.localized_message(id.as_ref()),
+                fallback,
+            ),
+            None => self.label.clone(),
+        };
+        assert!(
+            !label.trim().is_empty(),
+            "checkbox needs a non-empty accessible name"
+        );
+        label
     }
 
     pub fn tab_index(mut self, tab_index: isize) -> Self {
@@ -166,10 +250,113 @@ impl CheckboxView {
         self
     }
 
-    fn identity(&self) -> Identity {
+    fn identity(&self, context: &mut RenderContext<'_>) -> Identity {
+        self.identity_with(|base| context.next_implicit_retained_identity(base))
+    }
+
+    fn identity_with(&self, allocate_implicit: impl FnOnce(Identity) -> Identity) -> Identity {
         self.id
             .clone()
-            .unwrap_or_else(|| Identity::from(format!("checkbox:{}", self.label)))
+            .unwrap_or_else(|| allocate_implicit(Identity::from("checkbox")))
+    }
+}
+
+#[cfg(test)]
+mod accessibility_tests {
+    use super::*;
+
+    fn binding() -> Binding<bool> {
+        Binding::new(false, |value: &bool| *value, |value, next| *value = next)
+    }
+
+    #[test]
+    fn visible_label_provides_the_default_accessible_name() {
+        let checkbox = Checkbox("Accepted", binding());
+
+        assert_eq!(checkbox.label.as_ref(), "Accepted");
+        assert_eq!(checkbox.accessibility_label, None);
+    }
+
+    #[test]
+    fn indicator_only_checkbox_can_use_an_explicit_accessible_name() {
+        let checkbox = Checkbox("", binding()).accessibility_label("Accept the terms");
+
+        assert!(checkbox.label.is_empty());
+        assert_eq!(
+            checkbox.accessibility_label,
+            Some(CheckboxAccessibilityLabel::Literal("Accept the terms".into()))
+        );
+    }
+
+    #[test]
+    fn explicit_accessible_name_must_not_be_blank() {
+        let result = std::panic::catch_unwind(|| {
+            Checkbox("Accepted", binding()).accessibility_label("  ");
+        });
+
+        assert!(result.is_err());
+    }
+
+    #[test]
+    fn localized_accessible_name_preserves_fallback_and_replaces_message_key() {
+        let checkbox = Checkbox("Accepted", binding())
+            .accessibility_label("Accept the terms")
+            .localized_accessibility_label("checkbox.accept_terms")
+            .localized_accessibility_label("checkbox.terms");
+
+        assert!(matches!(
+            checkbox.accessibility_label,
+            Some(CheckboxAccessibilityLabel::Message { id, fallback })
+                if id.as_ref() == "checkbox.terms" && fallback.as_ref() == "Accept the terms"
+        ));
+    }
+
+    #[test]
+    fn localized_accessible_name_uses_catalog_value_or_fallback() {
+        let id = SharedString::from("checkbox.accepted");
+        let fallback = SharedString::from("Accepted");
+
+        assert_eq!(
+            resolved_message_label(id.as_ref(), "Accepté".to_owned(), &fallback,).as_ref(),
+            "Accepté"
+        );
+        assert_eq!(
+            resolved_message_label(id.as_ref(), id.to_string(), &fallback),
+            fallback
+        );
+        assert_eq!(
+            resolved_message_label(id.as_ref(), " \t".to_owned(), &fallback),
+            fallback
+        );
+    }
+
+    #[test]
+    #[should_panic(expected = "checkbox accessibility localization key must not be blank")]
+    fn localized_accessible_name_rejects_blank_message_id() {
+        Checkbox("Accepted", binding()).localized_accessibility_label(" \t ");
+    }
+
+}
+
+#[cfg(test)]
+mod implicit_identity_tests {
+    use super::*;
+
+    fn binding() -> Binding<bool> {
+        Binding::new(false, |value: &bool| *value, |value, next| *value = next)
+    }
+
+    #[test]
+    fn identity_survives_label_localization_and_distinguishes_siblings() {
+        let allocate_at_slot = |slot| {
+            move |base: Identity| Identity::from(format!("owner:implicit-retained:{slot}:{base}"))
+        };
+        let original = Checkbox("Accepted", binding()).identity_with(allocate_at_slot(0));
+        let translated = Checkbox("Accepté", binding()).identity_with(allocate_at_slot(0));
+        let sibling = Checkbox("Accepted", binding()).identity_with(allocate_at_slot(1));
+
+        assert_eq!(original, translated);
+        assert_ne!(original, sibling);
     }
 }
 
@@ -198,8 +385,11 @@ impl View for CheckboxView {
         let focus_color = appearance_color(&active.profile, active.mode, "focus");
         let border_width = active.profile.borders.thin as f32;
         let focus_width = active.profile.accessibility.focus_width as f32;
+        let label_disabled_color = self
+            .disabled
+            .then(|| disabled_label_color(&active.profile, active.mode));
         let checked = self.checked.value();
-        let identity = self.identity();
+        let identity = self.identity(context);
         let write = context.binding_writer(self.checked.clone());
         let indicator = div()
             .w(px(width))
@@ -214,11 +404,16 @@ impl View for CheckboxView {
             } else {
                 unchecked_background
             })
+            // Keep disabled mark/fill/border dimming while leaving label color
+            // to the active profile's semantic disabled-text token.
+            .when(self.disabled, |this| this.opacity(0.5))
             .when(checked, |this| {
                 this.child(div().text_color(foreground).text_size(px(12.0)).child("✓"))
             });
         let mut label = div().child(self.label.clone());
-        if let Some(color) = style.colors.get("foreground") {
+        if let Some(color) = label_disabled_color {
+            label = label.text_color(color);
+        } else if let Some(color) = style.colors.get("foreground") {
             label = label.text_color(crate::theme::registry::hsla(*color));
         }
         if let Some(typography) = &style.typography {
@@ -232,18 +427,18 @@ impl View for CheckboxView {
             .gap_2()
             .items_center()
             .focus(move |style| style.border(px(focus_width)).border_color(focus_color))
-            .when(self.disabled, |this| this.opacity(0.5))
             .child(indicator)
             .child(label)
             .checked(checked)
             .disabled(self.disabled)
             .tab_index(self.tab_index)
             .tab_stop(self.focusable)
-            .accessibility_label(
-                self.accessibility_label
-                    .clone()
-                    .unwrap_or_else(|| self.label.clone()),
-            )
+            .accessibility_label(self.resolved_accessibility_label(context))
+            .when(self.disabled, |control| {
+                control.a11y_synthetic_children(|builder| {
+                    super::mark_accessibility_node_disabled(builder.parent_node());
+                })
+            })
             .on_change(move |state, _event, _window, cx| write(state == CheckboxState::Checked, cx))
             .into_any_element()
     }

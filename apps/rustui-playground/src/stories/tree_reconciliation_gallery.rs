@@ -21,6 +21,10 @@ struct TreeReconciliationGallery {
     declared_root_expanded: bool,
     #[state(false)]
     relabeled: bool,
+    #[state(None)]
+    last_activated_leaf: Option<String>,
+    #[state(0)]
+    leaf_activation_count: u32,
 }
 
 impl TreeReconciliationGallery {
@@ -38,6 +42,13 @@ impl TreeReconciliationGallery {
 
     fn relabel(&mut self) {
         self.relabeled = !self.relabeled;
+    }
+
+    fn activate_selected_leaf(&mut self) {
+        if let Some(selection) = self.selection.clone() {
+            self.last_activated_leaf = Some(selection);
+            self.leaf_activation_count = self.leaf_activation_count.saturating_add(1);
+        }
     }
 }
 
@@ -123,9 +134,11 @@ impl View for TreeReconciliationGallery {
                     ),
             )
             .child(Text(format!(
-                "Declared Workspace expansion: {} · selected stable ID: {}",
+                "Declared Workspace expansion: {} · selected stable ID: {} · last activated leaf: {} ({} activations)",
                 self.declared_root_expanded(),
                 self.selection().as_deref().unwrap_or("none"),
+                self.last_activated_leaf().as_deref().unwrap_or("none"),
+                self.leaf_activation_count(),
             )))
             .child(Text(
                 "Expand the nested folders, then collapse Workspace and update labels or order. Removing and restoring Branch starts it at its declared default.",
@@ -133,6 +146,7 @@ impl View for TreeReconciliationGallery {
             .child(
                 Tree(roots, self.selection_binding())
                     .id("tree-reconciliation-tree")
+                    .on_activate(self.action(Self::activate_selected_leaf))
                     .height(280.0),
             )
     }

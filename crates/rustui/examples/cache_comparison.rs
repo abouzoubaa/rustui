@@ -22,6 +22,9 @@ use serde_json::{Value, json};
 const LINES: usize = 12;
 const WIDTH: f32 = 210.0;
 const HEIGHT: f32 = 220.0;
+const VISUAL_COLUMNS: usize = 8;
+const VISUAL_WINDOW_WIDTH: f32 = 1700.0;
+const VISUAL_WINDOW_HEIGHT: f32 = 1000.0;
 const WARMUP: u32 = 10;
 const UPDATES: u32 = 100;
 
@@ -31,6 +34,7 @@ struct Config {
     cached: bool,
     diagnostics_enabled: bool,
     leaves: usize,
+    visual_capture: bool,
 }
 
 impl Config {
@@ -80,11 +84,22 @@ impl Config {
                 .ok_or("diagnostics_enabled must be a boolean")?,
             None => true,
         };
+        let visual_capture = match value.get("visual_capture") {
+            Some(value) => value.as_bool().ok_or("visual_capture must be a boolean")?,
+            None => false,
+        };
+        if visual_capture && leaves != 32 {
+            return Err("visual_capture requires the 32-leaf workload".into());
+        }
+        if visual_capture && diagnostics_enabled {
+            return Err("visual_capture requires diagnostics_enabled: false".into());
+        }
         Ok(Self {
             run_id: run_id.into(),
             cached,
             diagnostics_enabled,
             leaves,
+            visual_capture,
         })
     }
 
@@ -134,6 +149,7 @@ struct ComparisonRoot {
     tick: u32,
     cached: bool,
     leaves: usize,
+    columns: usize,
     values: Rc<RefCell<Vec<u32>>>,
     mounts: Rc<RefCell<Vec<u32>>>,
 }
@@ -141,10 +157,10 @@ struct ComparisonRoot {
 impl View for ComparisonRoot {
     fn body(&self) -> impl View {
         let mut content = VStack::new().child(Text(format!("Parent update {:06}", self.tick)));
-        for row in 0..self.leaves.div_ceil(4) {
+        for row in 0..self.leaves.div_ceil(self.columns) {
             let mut children = HStack::new();
-            for column in 0..4 {
-                let index = row * 4 + column;
+            for column in 0..self.columns {
+                let index = row * self.columns + column;
                 if index >= self.leaves {
                     break;
                 }
@@ -317,7 +333,8 @@ fn advance(window: &mut Window, cx: &mut App, state: Rc<RefCell<State>>) {
     if matches!(phase, Phase::Finished) {
         if state.borrow().config.gate("ack") {
             let state = state.borrow();
-            let status = if state.ax_seen || state.drag_seen {
+            // Screenshot tooling may activate AX; visual-only runs record it without stopping mutation.
+            let status = if !state.config.visual_capture && (state.ax_seen || state.drag_seen) {
                 "excluded_interaction"
             } else {
                 state
@@ -346,7 +363,9 @@ fn advance(window: &mut Window, cx: &mut App, state: Rc<RefCell<State>>) {
         }
         return;
     }
-    if state.borrow().ax_seen || state.borrow().drag_seen {
+    // Screenshot tooling may activate AX; visual-only runs record it without stopping mutation.
+    if !state.borrow().config.visual_capture && (state.borrow().ax_seen || state.borrow().drag_seen)
+    {
         finish(cx, &state, "excluded_interaction");
         schedule(window, state);
         return;
@@ -442,6 +461,11 @@ fn main() {
                     tick: 0,
                     cached: config.cached,
                     leaves,
+                    columns: if config.visual_capture {
+                        VISUAL_COLUMNS
+                    } else {
+                        4
+                    },
                     values: values.clone(),
                     mounts: mounts.clone(),
                 },
@@ -469,15 +493,20 @@ fn main() {
         })
         .detach();
         let window_state = state.clone();
-        let bounds = Bounds::centered(None, size(px(900.0), px(520.0)), cx);
+        let window_size = if state.borrow().config.visual_capture {
+            size(px(VISUAL_WINDOW_WIDTH), px(VISUAL_WINDOW_HEIGHT))
+        } else {
+            size(px(900.0), px(520.0))
+        };
+        let bounds = Bounds::centered(None, window_size, cx);
         cx.open_window(
             WindowOptions {
                 window_bounds: Some(WindowBounds::Windowed(bounds)),
                 ..Default::default()
             },
-            move |window, _| {
+        move |window, cx| {
                 schedule(window, window_state);
-                root.clone()
+            cx.new(|cx| gpui_component::Root::new(root.clone(), window, cx))
             },
         )
         .expect("comparison window");

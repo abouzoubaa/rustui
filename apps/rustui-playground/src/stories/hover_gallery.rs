@@ -39,7 +39,10 @@ impl HoverGallery {
 
     fn hide(&mut self) {
         self.shown = false;
-        self.hovered = false;
+        if self.hovered {
+            self.hovered = false;
+            self.exits += 1;
+        }
     }
 
     fn show(&mut self) {
@@ -52,8 +55,45 @@ impl HoverGallery {
     }
 }
 
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn hiding_a_hovered_region_records_its_exit_once() {
+        let mut gallery = HoverGallery::default();
+        gallery.enter();
+        gallery.hide();
+
+        assert!(!gallery.hovered());
+        assert_eq!(gallery.enters(), 1);
+        assert_eq!(gallery.exits(), 1);
+
+        gallery.exit(); // Delayed exit callback from the unmounted region.
+        assert_eq!(gallery.exits(), 1);
+
+        gallery.show();
+        assert!(gallery.shown());
+        assert!(!gallery.hovered());
+
+        gallery.hide();
+        assert!(!gallery.shown());
+        assert_eq!(gallery.exits(), 1);
+
+        gallery.hide();
+        assert_eq!(gallery.exits(), 1);
+    }
+}
+
 impl View for HoverGallery {
     fn body(&self) -> impl View {
+        let status = format!(
+            "Hovered: {} · Enters: {} · Exits: {} · Child clicks: {}",
+            self.hovered(),
+            self.enters(),
+            self.exits(),
+            self.child_count(),
+        );
         let region = self.shown().then(|| {
             HoverRegion(
                 "hover-gallery-region",
@@ -80,13 +120,10 @@ impl View for HoverGallery {
         VStack::new()
             .spacing(10.0)
             .child(Text("Hover region"))
-            .child(Text(format!(
-                "Hovered: {} · Enters: {} · Exits: {} · Child clicks: {}",
-                self.hovered(),
-                self.enters(),
-                self.exits(),
-                self.child_count(),
-            )))
+            .child(
+                Semantics("hover-gallery-status", Text(status.clone()))
+                    .live_region_value(status, LivePoliteness::Polite),
+            )
             .child(region)
             .child(
                 Button("Restore region", self.action(Self::show))

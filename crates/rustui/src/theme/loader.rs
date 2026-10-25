@@ -17,8 +17,9 @@ pub fn parse_theme(source: &str) -> Result<ThemeDocument, ThemeLoadError> {
 /// Whitespace, object ordering, and numeric spelling may change; absent optional
 /// fields may be emitted explicitly. Arbitrary JSON values stored in the
 /// document are preserved as JSON values. Fields rejected by the parser as
-/// unknown cannot be recovered, and non-Button component values are not
-/// semantically validated by the current theme contract.
+/// unknown cannot be recovered. Non-Button records with the typed `parts` or
+/// `styles` envelope are validated against the shared component resolver;
+/// opaque extension records and unsupported style properties remain intact.
 pub fn serialize_theme(document: &ThemeDocument) -> Result<String, ThemeSerializeError> {
     document.validate().map_err(ThemeSerializeError::Invalid)?;
     serde_json::to_string_pretty(document).map_err(ThemeSerializeError::Json)
@@ -123,6 +124,12 @@ mod tests {
             "custom_widget".into(),
             serde_json::json!({"rustui_type": "CustomWidget", "config": [1, true]}),
         );
+        let future_artwork = serde_json::json!({
+            "kind": "future_artwork",
+            "value": {"path": "custom://toggle-thumb"}
+        });
+        theme.components.get_mut("toggle").unwrap()["styles"][0]["style"]["properties"]["future_artwork"] =
+            future_artwork.clone();
 
         let serialized = serialize_theme(&theme).expect("valid theme serializes");
         let round_tripped = parse_theme(&serialized).expect("serialized theme parses");
@@ -138,6 +145,82 @@ mod tests {
             round_tripped.components["button"]["parts"]["custom_metadata"],
             theme.components["button"]["parts"]["custom_metadata"]
         );
+        assert_eq!(
+            round_tripped.components["toggle"]["styles"][0]["style"]["properties"]["future_artwork"],
+            future_artwork
+        );
+    }
+
+    #[test]
+    fn parser_rejects_non_object_custom_component_records() {
+        let mut theme: ThemeDocument = serde_json::from_str(THEME_SOURCE).unwrap();
+        theme
+            .components
+            .insert("custom_widget".into(), serde_json::json!("opaque"));
+        let source = serde_json::to_string(&theme).unwrap();
+
+        assert!(matches!(
+            parse_theme(&source),
+            Err(ThemeLoadError::Invalid(message))
+                if message.contains("custom_widget") && message.contains("must be an object")
+        ));
+    }
+
+    #[test]
+    fn parser_accepts_typed_component_records_with_intentionally_empty_styles() {
+        let theme = parse_theme(THEME_SOURCE).expect("source theme is valid");
+
+        for component in ["toolbar", "sidebar", "menu_bar", "tab_bar"] {
+            assert!(theme.component_theme(component).unwrap().styles.is_empty());
+        }
+    }
+
+    #[test]
+    fn parser_rejects_non_button_style_rules_that_reference_undeclared_parts() {
+        let mut theme: ThemeDocument = serde_json::from_str(THEME_SOURCE).unwrap();
+        theme.components.get_mut("toggle").unwrap()["styles"][0]["part"] =
+            serde_json::json!("missing_part");
+        let source = serde_json::to_string(&theme).unwrap();
+
+        assert!(matches!(
+            parse_theme(&source),
+            Err(ThemeLoadError::Invalid(message))
+                if message.contains("toggle") && message.contains("missing_part")
+        ));
+    }
+
+    #[test]
+    fn parser_rejects_ambiguous_equal_specificity_component_selectors() {
+        let mut theme: ThemeDocument = serde_json::from_str(THEME_SOURCE).unwrap();
+        let styles = theme.components.get_mut("toggle").unwrap()["styles"]
+            .as_array_mut()
+            .unwrap();
+        styles[0]["when"]["appearance"] = serde_json::json!("dark");
+        styles[0]["when"]["interaction"] = serde_json::json!("rest");
+        styles[1]["when"]["appearance"] = serde_json::json!("any");
+        styles[1]["when"]["material"] = serde_json::json!("opaque");
+        styles[1]["when"]["interaction"] = serde_json::json!("rest");
+        let source = serde_json::to_string(&theme).unwrap();
+
+        assert!(matches!(
+            parse_theme(&source),
+            Err(ThemeLoadError::Invalid(message))
+                if message.contains("toggle") && message.contains("ambiguous")
+        ));
+    }
+
+    #[test]
+    fn parser_rejects_invalid_recognized_property_on_non_default_rule() {
+        let mut theme: ThemeDocument = serde_json::from_str(THEME_SOURCE).unwrap();
+        theme.components.get_mut("toggle").unwrap()["styles"][0]["style"]["properties"]["width"]
+            ["value"]["px"] = serde_json::json!(0.0);
+        let source = serde_json::to_string(&theme).unwrap();
+
+        assert!(matches!(
+            parse_theme(&source),
+            Err(ThemeLoadError::Invalid(message))
+                if message.contains("toggle") && message.contains("width")
+        ));
     }
 
     #[test]

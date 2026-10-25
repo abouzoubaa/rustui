@@ -1,0 +1,31 @@
+diff --git a/vendor/gpui-base-0.7.3/src/tree.rs b/vendor/gpui-base-0.7.3/src/tree.rs
+--- a/vendor/gpui-base-0.7.3/src/tree.rs
++++ b/vendor/gpui-base-0.7.3/src/tree.rs
+@@ -353 +353 @@
+-        if !entry.is_folder() {
++        if !entry.is_folder() || entry.is_disabled() {
+@@ -695,0 +696,24 @@
++    fn disabled_folders_ignore_expansion_requests(cx: &mut gpui::TestAppContext) {
++        let collapsed = TreeItem::new("collapsed", "Collapsed")
++            .child(TreeItem::new("collapsed-child", "Child"))
++            .disabled(true);
++        let expanded = TreeItem::new("expanded", "Expanded")
++            .child(TreeItem::new("expanded-child", "Child"))
++            .expanded(true)
++            .disabled(true);
++        let state = cx.new(|cx| TreeState::new(cx).items(vec![collapsed, expanded]));
++        let collector = cx.new(|cx| EventCollector::new(&state, cx));
++
++        state.update(cx, |state, cx| {
++            state.toggle_expand(0, cx);
++            state.toggle_expand(1, cx);
++            assert!(!state.entry(0).unwrap().is_expanded());
++            assert!(state.entry(1).unwrap().is_expanded());
++            assert_eq!(state.entries.len(), 3);
++        });
++
++        let events = collector.read_with(cx, |collector, _| collector.events.borrow().clone());
++        assert!(events.is_empty());
++    }
++
++    #[gpui::test]

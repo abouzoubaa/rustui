@@ -374,7 +374,7 @@ mod tests {
             .expect("initial activation");
 
         let changed = format!("{initial}\n");
-        let result = theme.reload_source(changed, None, false, |_| {
+        let result = theme.reload_source(changed.clone(), None, false, |_| {
             Err(ThemeActivationError::Resolve(ThemeResolveError::Invalid(
                 "simulated activation failure".into(),
             )))
@@ -384,6 +384,31 @@ mod tests {
             theme.theme(),
             &parse_theme(&initial).expect("original theme")
         );
+        assert_eq!(theme.activated_source.as_deref(), Some(initial.as_str()));
+        assert_eq!(theme.activated_mode, None);
+
+        let activations = AtomicUsize::new(0);
+        assert!(
+            theme
+                .reload_source(changed.clone(), None, false, |_| {
+                    activations.fetch_add(1, Ordering::Relaxed);
+                    Ok(())
+                })
+                .expect("retry identical candidate after activation failure")
+        );
+        assert_eq!(theme.activated_source.as_deref(), Some(changed.as_str()));
+        assert_eq!(theme.activated_mode, None);
+        assert_eq!(activations.load(Ordering::Relaxed), 1);
+
+        assert!(
+            !theme
+                .reload_source(changed.clone(), None, false, |_| {
+                    activations.fetch_add(1, Ordering::Relaxed);
+                    Ok(())
+                })
+                .expect("unchanged candidate skips activation")
+        );
+        assert_eq!(activations.load(Ordering::Relaxed), 1);
     }
 
     #[test]

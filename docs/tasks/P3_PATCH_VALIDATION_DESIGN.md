@@ -1,10 +1,6 @@
 # P3: Isolated upstream patch validation design
 
-**Status: design only.** This document does not implement a pipeline, enable
-GPUI Fast, or authorize a fetch, build, test, benchmark, dependency change, or
-patch promotion. Enabling Fast or beginning advanced GPU/native composition
-requires explicit phase approval. Any upstream revision change and each patch
-set also require explicit approval.
+**Status: design plus bounded local intake chain.** `P3_LOCAL_CANDIDATE_INTAKE.md` documents the implemented runner for already-prepared, approved source pairs. This does not enable GPUI Fast, authorize fetching or constructing candidate snapshots, or authorize candidate builds, correctness runs, benchmarks, dependency changes, or patch promotion. Enabling Fast or beginning advanced GPU/native composition requires explicit phase approval. Any upstream revision change and each patch set also require explicit approval.
 
 ## Goal and boundary
 
@@ -80,6 +76,21 @@ access is an intake option only after exact candidate revision approval. Later
 stages use locked offline/frozen inputs where possible. The orchestrator records
 evidence and never promotes automatically.
 
+The copied launcher identifies a candidate workspace from its physical cwd
+under `target/headstart/candidates/<candidate-id>/` and defaults Cargo output to
+`target/headstart/candidates/<candidate-id>/target/`. For example, from the
+snapshot root run:
+
+```sh
+cd target/headstart/candidates/<candidate-id>/source
+./scripts/cargo-headstart check --workspace --all-targets --locked --offline
+```
+
+An explicit `CARGO_TARGET_DIR` remains available for paired candidate-local
+caches, but the launcher rejects a location outside that candidate ID. Normal
+workspace invocations continue to default to `target/headstart/`. The focused
+launcher regression is `python3 scripts/tests/test_cargo_headstart_candidate_target.py`.
+
 1. **Intake and pin.** After explicit authorization to validate the candidate,
    require approved exact revisions, package identities, source locations, and
    patch approval references. Copy/fetch required workspace inputs and the
@@ -121,28 +132,54 @@ Create candidate directories and evidence only after explicit candidate
 validation authorization. Use unique append-only event names and retain partial
 logs on failure; never clean or overwrite a candidate directory.
 
-## Existing tools and missing pieces
+## Existing tools and remaining gaps
 
-- `scripts/record_build_provenance.py` hashes an existing log and captures
-  current workspace inputs. It does not parse the log for success, query Cargo or
-  rustc, capture vendored source identities, or bind captured state to build
-  time. It cannot identify an isolated candidate snapshot by itself.
-- `scripts/verify_dependency_reuse.py` validates a successful Cargo JSON build
-  event and artifact freshness for named packages. This is a narrow cache fact,
-  not executable correctness, GUI acceptance, performance, or isolation.
-- `scripts/cargo-headstart` selects the experimental compiler, preserves the
-  metadata hash workaround, and defaults outputs to `target/headstart/`. It does
-  not accept candidate workspace identity, isolate source resolution or target
-  cache, or guard promotion.
-- `patches/README.md` says no patches are installed and lists review fields. It
-  does not provide candidate snapshotting, immutable manifests, deterministic
-  patch application, result events, acceptance gates, or promotion controls.
+- `scripts/record_build_provenance.py` hashes a recorded build log and the
+  current workspace inputs. It does not bind those observations to an
+  isolated candidate build or establish that a candidate passed its gates.
+- `scripts/verify_dependency_reuse.py` checks artifact freshness in successful
+  Cargo JSON build events. That is a cache-reuse observation, not candidate
+  correctness, GUI acceptance, performance, or source isolation.
+- `scripts/validate_candidate_snapshot.py` (P3G) checks paired source
+  inventories, hashes, symlink boundaries, path-source trees, and workspace
+  source parity. It does not establish the truth of supplied provenance or
+  approval claims.
+- `scripts/report_candidate_sources.py` and the P3I/P3J comparators report
+  Cargo's locked-offline effective source inventory and compare package
+  inventories, dependency edges, and selected feature sets. These are
+  metadata checks; they do not prove builds or authorize candidate acceptance.
+- `scripts/run_candidate_pipeline.py` accepts an already-prepared baseline
+  and candidate pair, validates a hash-pinned intake and optional P3E plan,
+  copies the inputs, then invokes the available P3G/P3H/P3I/P3J/P3K/P3F
+  checks. Its approval reference is an input claim, not authenticated
+  identity. M220, M224, and M226 add special-file rejection and descriptor-
+  pinned copying. M234 exercises schema-3 patch application through a
+  synthetic pipeline fixture. The runner does not fetch or construct upstream
+  snapshots and leaves build, correctness, GUI, performance, and promotion
+  gates as `not_run`.
+- `scripts/apply_candidate_patch.py` (P3K) verifies exact ordered patches in a
+  disposable copy of the prepared baseline package. Schema 3 supports a
+  multi-file series over existing files; M234 verifies that path with a
+  synthetic fixture. It does not apply a real approved candidate through the
+  full acceptance pipeline.
+- `scripts/cargo-headstart` keeps ordinary build output under
+  `target/headstart/`. From a candidate workspace it derives the candidate ID,
+  defaults output to that candidate's `target/`, and rejects target paths
+  outside the candidate. This does not authenticate provenance or guard
+  promotion.
 
-Missing pieces are the candidate orchestrator, isolated workspace snapshot and
-source resolver, input hashing, pristine-versus-patched source accounting,
-candidate-specific Cargo configuration and target directory, deterministic
-patch application, baseline/candidate pairing, and evidence capture for
-correctness, native GUI acceptance, and controlled performance comparison.
+The next P3 requirement is an end-to-end run on a real, fully pinned candidate
+whose source, patch, and approval evidence is reviewable. The prepared Quad
+root manifest records useful snapshot and package source, checksum, tree, and
+license data, but it is not a complete approved intake event for the local
+runner: it does not bind the runner's approval reference and intake record, and
+its `cargo` field remains `not_run`. The local runner also cannot authenticate
+an approval reference. Separately,
+`docs/tasks/P2_WORKLOAD_PLAN.md` remains a proposal: its numerical regression
+thresholds are unapproved. Do not treat the proposal or synthetic M234 result
+as workload approval. Until those inputs are approved and pinned, the
+candidate build/correctness, GUI, controlled performance, promotion, and
+post-promotion validation gates remain open.
 
 ## Dependencies and unresolved choices
 
@@ -197,3 +234,14 @@ contemporary baseline. This does not supply presented-frame/GPU/main-thread
 timing, approve numerical regression thresholds, or implement the P3 pipeline.
 GPUI Fast features remain candidates for RustUI additions or controlled upstream
 patches; the fork itself is not adopted.
+
+## M186 update — exact patch reproduction
+
+`scripts/apply_candidate_patch.py` now provides the bounded P3K patch
+application check for the prepared Quad candidate. It validates the manifest,
+snapshot package hashes, patch hash, exact preimage and candidate postimage,
+then applies the unified diff at its declared hunk positions to a fresh copy of
+the baseline package. It rejects offsets/fuzz and preserves both prepared
+snapshots. This is not the general intake/orchestration layer and does not
+build, test production candidate correctness, run GUI/performance acceptance,
+or promote. See `P3K_CANDIDATE_PATCH_APPLICATION.md`.

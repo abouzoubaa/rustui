@@ -11,6 +11,13 @@ impl Coverage {
             Self::Missing => "Missing",
         }
     }
+
+    pub const fn message_id(self) -> &'static str {
+        match self {
+            Self::Partial => "lab-catalog-coverage-partial",
+            Self::Missing => "lab-catalog-coverage-missing",
+        }
+    }
 }
 
 #[derive(Clone, Copy, Debug)]
@@ -19,6 +26,7 @@ pub struct CatalogItem {
     pub api: &'static str,
     pub coverage: Coverage,
     pub note: &'static str,
+    pub note_message_id: &'static str,
     pub sources: &'static str,
 }
 
@@ -29,12 +37,14 @@ macro_rules! item {
             api: $api,
             coverage: Coverage::$coverage,
             note: $note,
+            note_message_id: concat!("lab-catalog-note-", $key),
             sources: $sources,
         }
     };
 }
 
 /// The first 41 entries mirror `themes/macos27.json`; app-only gallery entries follow.
+#[cfg(test)]
 const THEME_CATALOG_LEN: usize = 41;
 pub const CATALOG: [CatalogItem; 46] = [
     item!(
@@ -48,14 +58,14 @@ pub const CATALOG: [CatalogItem; 46] = [
         "button",
         "Button",
         Partial,
-        "RustUI baseline demo; interaction/visual acceptance pending.",
+        "Public RustUI Button story with a live count, Increment and Reset actions, and a disabled Unavailable state; native visual, keyboard, and accessibility acceptance remain pending.",
         "docs/ui/macos-27/Form.svg|docs/ui/macos-27/Form-1.svg"
     ),
     item!(
         "text",
         "Text",
         Partial,
-        "RustUI baseline demo; interaction/visual acceptance pending.",
+        "Standalone public RustUI Text specimen with heading, body, and wrapping samples; the framework Text story remains a catalog-message localization gallery with interpolation and plural/ordinal/select examples. Native visual, keyboard, and accessibility acceptance remains pending.",
         "docs/ui/macos-27/Text Styles/Text Styles - Left Aligned - Dark Opaque.svg|docs/ui/macos-27/Text Styles/Text Styles - Left Aligned - Light Opaque.svg"
     ),
     item!(
@@ -139,7 +149,7 @@ pub const CATALOG: [CatalogItem; 46] = [
         "search_field_examples",
         "Input",
         Partial,
-        "RustUI baseline demo; interaction/visual acceptance pending.",
+        "Routes to the shared Text inputs story, which renders six Search and Token Field examples plus all six Dark Search Field combinations (Disabled, Focused, and Idle with text absent or present). Coverage remains Partial pending native visual and accessibility acceptance.",
         "docs/ui/macos-27/Dark Examples.svg|docs/ui/macos-27/Light Examples.svg"
     ),
     item!(
@@ -158,9 +168,9 @@ pub const CATALOG: [CatalogItem; 46] = [
     ),
     item!(
         "form_accessories",
-        "—",
-        Missing,
-        "Catalog reference retained; standalone RustUI does not expose — yet.",
+        "Input",
+        Partial,
+        "Public-API Form Accessories composition with a filter field and detail, info, and action controls; native visual and accessibility acceptance remain pending.",
         "docs/ui/macos-27/Form.svg|docs/ui/macos-27/Form-1.svg"
     ),
     item!(
@@ -195,14 +205,14 @@ pub const CATALOG: [CatalogItem; 46] = [
         "notification",
         "VStack composition",
         Partial,
-        "Preview uses current RustUI VStack, HStack, Text, and Button composition; a dedicated adapter is not implemented.",
+        "Public RustUI feedback gallery with action and kind-specific Toasts, EmptyState, ErrorState, and Skeleton examples; native visual and accessibility acceptance remain pending.",
         "docs/ui/macos-27/Notifications.svg|docs/ui/macos-27/Notifications-1.svg"
     ),
     item!(
         "window_chrome",
         "VStack composition",
         Partial,
-        "Preview uses current RustUI VStack, HStack, Text, and Button composition; a dedicated adapter is not implemented.",
+        "Owner-state public RustUI VStack, HStack, Text, and Button composition; creating or closing a sample document updates its title and body. Illustrative only: no native titlebar or system-window action; dedicated adapter and native acceptance remain open.",
         "docs/ui/macos-27/Windows/Unified Toolbar + Title.svg|docs/ui/macos-27/Windows/Unified Toolbar + Title-1.svg"
     ),
     item!(
@@ -221,30 +231,30 @@ pub const CATALOG: [CatalogItem; 46] = [
     ),
     item!(
         "text_style_guide",
-        "VStack composition",
+        "Text Style Guide",
         Partial,
-        "Preview uses current RustUI VStack, HStack, Text, and Button composition; a dedicated adapter is not implemented.",
+        "Public RustUI Text examples for reference sizes and regular/bold weights; the separate framework Text story contains the localization gallery. Native visual, keyboard, and accessibility acceptance remains pending.",
         "docs/ui/macos-27/Text Styles/Header.svg|docs/ui/macos-27/Text Styles/Text Styles - Left Aligned - Dark Opaque.svg"
     ),
     item!(
         "utility_window",
         "VStack composition",
         Partial,
-        "Preview uses current RustUI VStack, HStack, Text, and Button composition; a dedicated adapter is not implemented.",
+        "Preview mirrors the Utility Panel title and its five named category tabs; native visual, keyboard, and accessibility acceptance remain pending.",
         "docs/ui/macos-27/Utility Window.svg|docs/ui/macos-27/Utility Window-1.svg"
     ),
     item!(
         "button_group",
         "Layout",
         Partial,
-        "RustUI baseline demo; interaction/visual acceptance pending.",
+        "Public Button/HStack composition with three related actions; native visual, keyboard, and accessibility acceptance remain pending.",
         "docs/ui/macos-27/List.svg|docs/ui/macos-27/Windows/Unified Compact Toolbar + Title.svg"
     ),
     item!(
         "color_picker",
         "Input",
         Partial,
-        "RustUI baseline demo; interaction/visual acceptance pending.",
+        "Public RustUI ColorPicker with a retained color binding in the shared Text inputs story alongside DatePicker and other controls; native visual, keyboard, and accessibility acceptance remain pending.",
         "docs/ui/macos-27/Utility Window.svg|docs/ui/macos-27/Utility Window-1.svg"
     ),
     item!(
@@ -256,37 +266,37 @@ pub const CATALOG: [CatalogItem; 46] = [
     ),
     item!(
         "form",
-        "VStack composition",
+        "Public Form Accessories composition",
         Partial,
-        "Preview uses current RustUI VStack, HStack, Text, and Button composition; a dedicated adapter is not implemented.",
+        "Reuses the public Form Accessories composition with a filter field and detail, info, and action controls; native visual and accessibility acceptance remain pending.",
         "docs/ui/macos-27/Form.svg|docs/ui/macos-27/Form-1.svg"
     ),
     item!(
         "menu_bar",
-        "HStack composition",
+        "Public Menu composition",
         Partial,
-        "Preview uses current RustUI VStack, HStack, Text, and Button composition; a dedicated adapter is not implemented.",
+        "Six interactive RustUI Menu controls dispatch owner actions; Finder and date/time are labels. Native menu-bar chrome, icons, and visual/accessibility acceptance remain pending.",
         "docs/ui/macos-27/Menubar.svg|docs/ui/macos-27/Menubar-1.svg"
     ),
     item!(
         "menu_item",
         "PopupMenuItem",
         Partial,
-        "Preview uses current RustUI VStack, HStack, Text, and Button composition; a dedicated adapter is not implemented.",
+        "Routes to the public RustUI Menu gallery, which demonstrates MenuItem actions, separators, disabled-item handling, and removing/restoring the menu owner; native visual and accessibility acceptance remain pending.",
         "docs/ui/macos-27/Menubar.svg|docs/ui/macos-27/Menubar-1.svg"
     ),
     item!(
         "menu_separator",
-        "—",
-        Missing,
-        "Catalog reference retained; standalone RustUI does not expose — yet.",
+        "MenuItem::separator",
+        Partial,
+        "Menu separator is demonstrated in the existing menu action gallery; standalone native visual and accessibility acceptance pending.",
         "docs/ui/macos-27/Menubar.svg|docs/ui/macos-27/List.svg"
     ),
     item!(
         "outline_view",
         "Tree",
         Partial,
-        "RustUI baseline demo; interaction/visual acceptance pending.",
+        "Public RustUI Tree gallery with a controlled stable-ID hierarchy, expansion, branch removal/restoration, and reorder/relabel controls; native interaction and accessibility acceptance remain pending.",
         "docs/ui/macos-27/List.svg|docs/ui/macos-27/List-1.svg"
     ),
     item!(
@@ -300,28 +310,28 @@ pub const CATALOG: [CatalogItem; 46] = [
         "segmented_control",
         "Tabs",
         Partial,
-        "RustUI baseline demo; interaction/visual acceptance pending.",
+        "Finder view modes are represented by mutually exclusive public Button controls; RustUI has no dedicated Segmented Control renderer, and native visual/accessibility acceptance remains pending.",
         "docs/ui/macos-27/List.svg|docs/ui/macos-27/Windows/Unified Compact Toolbar + Title.svg"
     ),
     item!(
         "tab_bar",
         "Tabs",
         Partial,
-        "RustUI baseline demo; interaction/visual acceptance pending.",
+        "Public RustUI TabView with Overview, Activity, and Settings; native visual, keyboard, and accessibility acceptance remain pending.",
         "docs/ui/macos-27/Utility Window.svg|docs/ui/macos-27/Utility Window-1.svg"
     ),
     item!(
         "table",
         "Table",
         Partial,
-        "RustUI baseline demo; interaction/visual acceptance pending.",
+        "Public RustUI Table story combines controlled row selection, reordering, removal/restoration, and a DataGrid accessibility example; native visual, keyboard, and accessibility acceptance remain pending.",
         "docs/ui/macos-27/List.svg|docs/ui/macos-27/List-1.svg"
     ),
     item!(
         "window_controls",
         "HStack composition",
         Partial,
-        "Preview uses current RustUI VStack, HStack, Text, and Button composition; a dedicated adapter is not implemented.",
+        "Illustrative public Button composition shows active red/yellow/green and inactive traffic-light states; clicks only change the preview state. RustUI has no public native window-control/titlebar renderer, so system actions and native chrome are not represented.",
         "docs/ui/macos-27/Windows/Default with Titlebar and Sidebar.svg|docs/ui/macos-27/Utility Window.svg"
     ),
     item!(
@@ -361,14 +371,7 @@ pub const CATALOG: [CatalogItem; 46] = [
     ),
 ];
 
-pub const MISSING_REFERENCES: [&str; 6] = [
-    "Dark Search Field · Disabled · Text absent",
-    "Dark Search Field · Disabled · Text present",
-    "Dark Search Field · Focused · Text absent",
-    "Dark Search Field · Focused · Text present",
-    "Dark Search Field · Idle · Text absent",
-    "Dark Search Field · Idle · Text present",
-];
+pub const MISSING_REFERENCES: [&str; 0] = [];
 
 pub fn filtered_indices(query: &str) -> Vec<usize> {
     let query = query.trim().to_ascii_lowercase();
@@ -424,11 +427,7 @@ mod tests {
                 .note
                 .contains("M137 canonical Playground pointer resize")
         );
-        assert!(
-            CATALOG[THEME_CATALOG_LEN]
-                .note
-                .contains("keyboard divider")
-        );
+        assert!(CATALOG[THEME_CATALOG_LEN].note.contains("keyboard divider"));
     }
 
     #[test]
@@ -475,23 +474,292 @@ mod tests {
             if key == "list" {
                 assert!(item.note.contains("KeyedList"));
                 assert!(item.note.contains("1,000 stable IDs"));
-            } else {
-                assert_eq!(
-                    item.note, "RustUI baseline demo; interaction/visual acceptance pending.",
-                    "{key}"
+            } else if key == "button_group" {
+                assert!(item.note.contains("Public Button/HStack composition"));
+                assert!(item.note.contains(
+                    "native visual, keyboard, and accessibility acceptance remain pending"
+                ));
+            } else if key == "segmented_control" {
+                assert!(
+                    item.note
+                        .contains("mutually exclusive public Button controls")
                 );
+                assert!(
+                    item.note
+                        .contains("native visual/accessibility acceptance remains pending")
+                );
+            } else if key == "search_field_examples" {
+                assert!(item.note.contains("shared Text inputs story"));
+                assert!(item.note.contains("all six Dark Search Field combinations"));
+                assert!(item.note.contains("native visual and accessibility acceptance"));
+            } else {
+                assert!(!item.note.trim().is_empty(), "missing note for {key}");
             }
         }
         assert_eq!(filtered_indices("definitely absent"), Vec::<usize>::new());
     }
 
     #[test]
-    fn dark_search_reference_gap_stays_explicit() {
-        assert_eq!(MISSING_REFERENCES.len(), 6);
+    fn catalog_notes_and_coverage_resolve_in_each_playground_locale() {
+        let catalogs = crate::stories::catalogs();
+        let english = rustui::localization::Locale::parse("en")
+            .expect("English catalog locale should parse");
+        for (identifier, partial, missing) in [
+            ("en", "Partial", "Missing"),
+            ("fr", "Partiel", "Manquant"),
+            ("ar", "جزئي", "غير متوفر"),
+        ] {
+            let locale = rustui::localization::Locale::parse(identifier)
+                .expect("catalog locale should parse");
+            assert_eq!(
+                catalogs.resolve(&locale, Coverage::Partial.message_id()),
+                partial
+            );
+            assert_eq!(
+                catalogs.resolve(&locale, Coverage::Missing.message_id()),
+                missing
+            );
+            for item in &CATALOG {
+                let note = catalogs.resolve(&locale, item.note_message_id);
+                let english_note = catalogs.resolve(&english, item.note_message_id);
+                assert!(!note.trim().is_empty(), "empty note for {} in {identifier}", item.key);
+                assert_ne!(note, item.note_message_id, "missing note for {} in {identifier}", item.key);
+                if identifier != "en" {
+                    assert_ne!(note, english_note, "untranslated note for {} in {identifier}", item.key);
+                }
+            }
+        }
+    }
+
+    #[test]
+    fn dark_search_reference_combinations_are_covered_by_the_input_story() {
+        assert!(MISSING_REFERENCES.is_empty());
+    }
+
+    #[test]
+    fn search_field_examples_routes_to_input_story_with_reference_gaps() {
+        let item = CATALOG
+            .iter()
+            .find(|item| item.key == "search_field_examples")
+            .expect("search field examples catalog row");
+
+        assert_eq!(item.coverage, Coverage::Partial);
+        assert!(item.note.contains("shared Text inputs story"));
+        assert!(item.note.contains("all six Dark Search Field combinations"));
+        assert!(item.note.contains("native visual and accessibility acceptance"));
+        assert_eq!(
+            crate::story_for(item.key),
+            Some(crate::stories::StoryId::Input)
+        );
+    }
+
+    #[test]
+    fn text_style_guide_catalog_describes_its_public_typography_gallery() {
+        let item = CATALOG
+            .iter()
+            .find(|item| item.key == "text_style_guide")
+            .expect("text style guide catalog row");
+
+        assert_eq!(item.coverage, Coverage::Partial);
+        assert_eq!(item.api, "Text Style Guide");
+        assert!(item.note.contains("Public RustUI Text examples"));
         assert!(
-            MISSING_REFERENCES
-                .iter()
-                .all(|row| row.starts_with("Dark Search Field"))
+            item.note
+                .contains("reference sizes and regular/bold weights")
+        );
+        assert!(
+            item.note
+                .contains("separate framework Text story contains the localization gallery")
+        );
+        assert!(
+            item.note
+                .contains("Native visual, keyboard, and accessibility acceptance remains pending")
+        );
+        assert!(crate::stories::catalog_demo(item.key).is_some());
+        assert_eq!(
+            crate::story_for(item.key),
+            Some(crate::stories::StoryId::Text)
+        );
+    }
+
+    #[test]
+    fn text_catalog_describes_its_specimen_and_preserves_localization_route() {
+        let item = CATALOG
+            .iter()
+            .find(|item| item.key == "text")
+            .expect("text catalog row");
+        assert_eq!(item.coverage, Coverage::Partial);
+        assert!(item.note.contains("Standalone public RustUI Text specimen"));
+        assert!(item.note.contains("heading, body, and wrapping samples"));
+        assert!(
+            item.note
+                .contains("framework Text story remains a catalog-message localization gallery")
+        );
+        assert!(
+            item.note
+                .contains("Native visual, keyboard, and accessibility acceptance remains pending")
+        );
+        assert_eq!(
+            crate::story_for(item.key),
+            Some(crate::stories::StoryId::Text)
+        );
+        assert!(crate::stories::catalog_demo(item.key).is_some());
+    }
+
+    #[test]
+    fn menu_item_catalog_describes_the_public_menu_gallery() {
+        let item = CATALOG
+            .iter()
+            .find(|item| item.key == "menu_item")
+            .expect("menu item catalog row");
+
+        assert_eq!(item.coverage, Coverage::Partial);
+        assert!(item.note.contains("public RustUI Menu gallery"));
+        assert!(item.note.contains("MenuItem actions, separators"));
+        assert!(item.note.contains("disabled-item handling"));
+        assert!(item.note.contains("removing/restoring the menu owner"));
+        assert!(item.note.contains("native visual and accessibility acceptance remain pending"));
+        assert!(crate::stories::catalog_demo(item.key).is_some());
+    }
+
+    #[test]
+    fn notification_catalog_describes_the_public_feedback_composition() {
+        let item = CATALOG
+            .iter()
+            .find(|item| item.key == "notification")
+            .expect("notification catalog row");
+
+        assert_eq!(item.coverage, Coverage::Partial);
+        assert!(item.note.contains("Public RustUI feedback gallery"));
+        assert!(item.note.contains("action and kind-specific Toasts"));
+        assert!(item.note.contains("EmptyState, ErrorState, and Skeleton"));
+        assert!(item.note.contains("native visual and accessibility acceptance remain pending"));
+        assert!(crate::stories::catalog_demo(item.key).is_some());
+    }
+
+    #[test]
+    fn tab_bar_catalog_describes_the_public_tab_view_composition() {
+        let item = CATALOG
+            .iter()
+            .find(|item| item.key == "tab_bar")
+            .expect("tab bar catalog row");
+
+        assert_eq!(item.coverage, Coverage::Partial);
+        assert!(item.note.contains("Public RustUI TabView"));
+        assert!(item.note.contains("Overview, Activity, and Settings"));
+        assert!(
+            item.note
+                .contains("native visual, keyboard, and accessibility acceptance remain pending")
+        );
+        assert!(crate::stories::catalog_demo(item.key).is_some());
+    }
+
+    #[test]
+    fn button_catalog_describes_the_public_button_story() {
+        let item = CATALOG
+            .iter()
+            .find(|item| item.key == "button")
+            .expect("button catalog row");
+
+        assert_eq!(item.coverage, Coverage::Partial);
+        assert!(item.note.contains("Public RustUI Button story"));
+        assert!(
+            item.note
+                .contains("live count, Increment and Reset actions")
+        );
+        assert!(item.note.contains("disabled Unavailable state"));
+        assert!(
+            item.note
+                .contains("native visual, keyboard, and accessibility acceptance remain pending")
+        );
+        assert_eq!(
+            crate::story_for(item.key),
+            Some(crate::stories::StoryId::Button)
+        );
+    }
+
+    #[test]
+    fn color_picker_catalog_describes_the_shared_input_story() {
+        let item = CATALOG
+            .iter()
+            .find(|item| item.key == "color_picker")
+            .expect("color picker catalog row");
+
+        assert_eq!(item.coverage, Coverage::Partial);
+        assert!(item.note.contains("Public RustUI ColorPicker"));
+        assert!(item.note.contains("retained color binding"));
+        assert!(item.note.contains("shared Text inputs story"));
+        assert!(item.note.contains("native visual, keyboard, and accessibility acceptance remain pending"));
+        assert_eq!(
+            crate::story_for(item.key),
+            Some(crate::stories::StoryId::Input)
+        );
+    }
+
+    #[test]
+    fn outline_view_catalog_describes_the_tree_story() {
+        let item = CATALOG
+            .iter()
+            .find(|item| item.key == "outline_view")
+            .expect("outline view catalog row");
+
+        assert_eq!(item.coverage, Coverage::Partial);
+        assert!(item.note.contains("Public RustUI Tree gallery"));
+        assert!(item.note.contains("controlled stable-ID hierarchy"));
+        assert!(item.note.contains("branch removal/restoration"));
+        assert!(item.note.contains("reorder/relabel controls"));
+        assert!(item.note.contains("native interaction and accessibility acceptance remain pending"));
+        assert_eq!(crate::story_for(item.key), Some(crate::stories::StoryId::Tree));
+    }
+
+    #[test]
+    fn table_catalog_describes_the_controlled_table_story() {
+        let item = CATALOG
+            .iter()
+            .find(|item| item.key == "table")
+            .expect("table catalog row");
+
+        assert_eq!(item.coverage, Coverage::Partial);
+        assert!(item.note.contains("Public RustUI Table story"));
+        assert!(item.note.contains("controlled row selection, reordering"));
+        assert!(item.note.contains("removal/restoration"));
+        assert!(item.note.contains("DataGrid accessibility example"));
+        assert!(item.note.contains("native visual, keyboard, and accessibility acceptance remain pending"));
+        assert_eq!(crate::story_for(item.key), Some(crate::stories::StoryId::Table));
+    }
+
+    #[test]
+    fn window_controls_catalog_documents_the_illustrative_button_composition() {
+        let item = CATALOG
+            .iter()
+            .find(|item| item.key == "window_controls")
+            .expect("window controls catalog row");
+
+        assert_eq!(item.coverage, Coverage::Partial);
+        assert!(item.note.contains("Illustrative public Button composition"));
+        assert!(item.note.contains("active red/yellow/green"));
+        assert!(item.note.contains("inactive traffic-light states"));
+        assert!(item.note.contains("clicks only change the preview state"));
+        assert!(item.note.contains("no public native window-control/titlebar renderer"));
+        assert!(item.note.contains("system actions and native chrome are not represented"));
+    }
+
+    #[test]
+    fn segmented_control_catalog_documents_the_public_button_composition() {
+        let item = CATALOG
+            .iter()
+            .find(|item| item.key == "segmented_control")
+            .expect("segmented control catalog row");
+
+        assert_eq!(item.coverage, Coverage::Partial);
+        assert!(
+            item.note
+                .contains("mutually exclusive public Button controls")
+        );
+        assert!(item.note.contains("no dedicated Segmented Control renderer"));
+        assert!(
+            item.note
+                .contains("native visual/accessibility acceptance remains pending")
         );
     }
 }

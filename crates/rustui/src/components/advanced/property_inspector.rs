@@ -1,20 +1,31 @@
 //! Ordered typed property rows composed from RustUI's controlled inputs.
 
-use std::collections::HashSet;
+use std::{cell::RefCell, collections::HashSet, rc::Rc};
 
-use gpui::{AnyElement, IntoElement, ParentElement, SharedString, Styled, div};
+use gpui::{
+    AnyElement, App, AppContext, Entity, IntoElement, ParentElement, SharedString, Styled, div,
+};
+use gpui_component::{
+    Sizable as _,
+    input::{Input, InputEvent, InputState},
+};
 use rustui_core::{Binding, Identity};
 
 use crate::{
-    components::input::{stepper::Stepper, text_field::TextField, toggle::Toggle},
+    components::input::{picker::Picker, stepper::Stepper, text_field::TextField, toggle::Toggle},
     view::{EmptyView, RenderContext, RetentionScope, View},
 };
 
 /// A controlled editor whose value stays in its enclosing component owner.
 pub enum PropertyEditor {
     Text(Binding<String>),
+    Choice {
+        value: Binding<String>,
+        options: Vec<String>,
+    },
     Toggle(Binding<bool>),
     Integer(Binding<i32>),
+    IntegerValue(Binding<i64>),
 }
 
 /// One labeled property with a stable identity independent of its position.
@@ -34,6 +45,31 @@ impl PropertyInspectorRow {
         Self::new(id, label, PropertyEditor::Text(value))
     }
 
+    /// Creates a string property row whose value is selected from `options`.
+    ///
+    /// The caller is responsible for supplying unique options and ensuring the
+    /// current binding value is one of them. Schema-backed inspectors meet both
+    /// conditions through catalog validation.
+    pub fn choice<I, S>(
+        id: impl Into<String>,
+        label: impl Into<SharedString>,
+        value: Binding<String>,
+        options: I,
+    ) -> Self
+    where
+        I: IntoIterator<Item = S>,
+        S: Into<String>,
+    {
+        Self::new(
+            id,
+            label,
+            PropertyEditor::Choice {
+                value,
+                options: options.into_iter().map(Into::into).collect(),
+            },
+        )
+    }
+
     pub fn toggle(
         id: impl Into<String>,
         label: impl Into<SharedString>,
@@ -48,6 +84,16 @@ impl PropertyInspectorRow {
         value: Binding<i32>,
     ) -> Self {
         Self::new(id, label, PropertyEditor::Integer(value))
+    }
+
+    /// Creates an `i64` integer property row. Invalid or out-of-range drafts
+    /// remain in the field and are not written to the component owner.
+    pub fn integer_value(
+        id: impl Into<String>,
+        label: impl Into<SharedString>,
+        value: Binding<i64>,
+    ) -> Self {
+        Self::new(id, label, PropertyEditor::IntegerValue(value))
     }
 
     pub fn new(
@@ -78,6 +124,7 @@ impl PropertyInspectorRow {
 pub enum PropertyInspectorError {
     EmptyInspectorId,
     EmptyRowId { index: usize },
+    EmptyRowLabel { index: usize },
     DuplicateRowId(String),
 }
 
@@ -86,6 +133,33 @@ pub struct PropertyInspectorView {
     id: Identity,
     rows: Vec<PropertyInspectorRow>,
     disabled: bool,
+}
+
+struct RetainedIntegerValueField {
+    state: Entity<InputState>,
+    owner_value: i64,
+    writer: Rc<RefCell<Rc<dyn Fn(i64, &mut App)>>>,
+}
+
+fn parse_integer_value_draft(draft: &str) -> Option<i64> {
+    draft.parse().ok()
+}
+
+fn with_current_writer<T: Clone, Writer: Clone, Result>(
+    writer: &RefCell<Writer>,
+    value: T,
+    apply: impl FnOnce(Writer, T) -> Result,
+) -> Result {
+    apply(writer.borrow().clone(), value)
+}
+
+fn editor_has_visible_label(editor: &PropertyEditor) -> bool {
+    matches!(
+        editor,
+        PropertyEditor::Choice { .. }
+            | PropertyEditor::Toggle(_)
+            | PropertyEditor::Integer(_)
+    )
 }
 
 /// Creates a property inspector. Row IDs must be unique and nonblank.
@@ -103,6 +177,9 @@ pub fn PropertyInspector(
     for (index, row) in rows.iter().enumerate() {
         if row.id.trim().is_empty() {
             return Err(PropertyInspectorError::EmptyRowId { index });
+        }
+        if row.label.trim().is_empty() {
+            return Err(PropertyInspectorError::EmptyRowLabel { index });
         }
         if !ids.insert(row.id.as_str()) {
             return Err(PropertyInspectorError::DuplicateRowId(row.id.clone()));
@@ -142,21 +219,25 @@ impl View for PropertyInspectorView {
                         |context| {
                             let control_id = format!("property-inspector:{}", row.id);
                             let disabled = self.disabled || row.disabled;
-                            match &row.editor {
-                                PropertyEditor::Text(value) => div()
-                                    .flex()
-                                    .items_center()
-                                    .justify_between()
-                                    .gap_4()
-                                    .child(row.label.clone())
-                                    .child(
-                                        TextField("", value.clone())
-                                            .id(control_id)
-                                            .disabled(disabled)
-                                            .accessibility_label(row.label.clone())
-                                            .into_element(context),
-                                    )
-                                    .into_any_element(),
+                            let mut rendered_row =
+                                div().flex().items_center().justify_between().gap_4();
+                            if !editor_has_visible_label(&row.editor) {
+                                rendered_row = rendered_row.child(row.label.clone());
+                            }
+                            let control = match &row.editor {
+                                PropertyEditor::Text(value) => TextField("", value.clone())
+                                    .id(control_id)
+                                    .disabled(disabled)
+                                    .accessibility_label(row.label.clone())
+                                    .into_element(context),
+                                PropertyEditor::Choice { value, options } => Picker(
+                                    row.label.clone(),
+                                    value.clone(),
+                                    options.iter().cloned(),
+                                )
+                                .id(control_id)
+                                .disabled(disabled)
+                                .into_element(context),
                                 PropertyEditor::Toggle(value) => {
                                     Toggle(row.label.clone(), value.clone())
                                         .id(control_id)
@@ -169,7 +250,72 @@ impl View for PropertyInspectorView {
                                         .disabled(disabled)
                                         .into_element(context)
                                 }
-                            }
+                                PropertyEditor::IntegerValue(value) => {
+                                    let current_value = value.value();
+                                    let field_id = Identity::from(format!(
+                                        "property-inspector-integer:{control_id}"
+                                    ));
+                                    let writer = context.binding_writer(value.clone());
+                                    let initial_writer = writer.clone();
+                                    let (retained, created) = context.retained_entity(
+                                        field_id.clone(),
+                                        move |window, cx| RetainedIntegerValueField {
+                                            state: cx.new(|cx| {
+                                                InputState::new(window, cx)
+                                                    .default_value(current_value.to_string())
+                                            }),
+                                            owner_value: current_value,
+                                            writer: Rc::new(RefCell::new(initial_writer)),
+                                        },
+                                    );
+                                    let (state, previous_owner_value, current_writer) = {
+                                        let retained = retained.read(context.app());
+                                        (
+                                            retained.state.clone(),
+                                            retained.owner_value,
+                                            retained.writer.clone(),
+                                        )
+                                    };
+                                    *current_writer.borrow_mut() = writer;
+                                    if current_value != previous_owner_value {
+                                        let draft = current_value.to_string();
+                                        context.update_entity(&state, move |state, window, cx| {
+                                            state.set_value(draft, window, cx);
+                                        });
+                                        context.update_entity(&retained, move |retained, _, _| {
+                                            retained.owner_value = current_value;
+                                        });
+                                    }
+                                    if created {
+                                        let current_writer = current_writer.clone();
+                                        context.subscribe_retained(
+                                            &field_id,
+                                            &state,
+                                            move |state, event: &InputEvent, cx| {
+                                                if matches!(event, InputEvent::Change) {
+                                                    let draft = state.read(cx).value().to_string();
+                                                    if let Some(value) =
+                                                        parse_integer_value_draft(&draft)
+                                                    {
+                                                        with_current_writer(
+                                                            &current_writer,
+                                                            value,
+                                                            |write, value| write(value, cx),
+                                                        );
+                                                    }
+                                                }
+                                            },
+                                        );
+                                    }
+                                    Input::new(&state)
+                                        .id(field_id.to_string())
+                                        .small()
+                                        .disabled(disabled)
+                                        .aria_label(row.label.clone())
+                                        .into_any_element()
+                                }
+                            };
+                            rendered_row.child(control).into_any_element()
                         },
                     );
                     inspector = inspector.child(rendered_row);
@@ -190,6 +336,7 @@ mod tests {
         text: String,
         enabled: bool,
         count: i32,
+        integer_value: i64,
     }
 
     fn text_binding() -> Binding<String> {
@@ -218,6 +365,16 @@ mod tests {
             |owner| owner.count,
             |owner, value| {
                 owner.count = value;
+            },
+        )
+    }
+
+    fn integer_value_binding() -> Binding<i64> {
+        Binding::new::<Owner>(
+            0,
+            |owner| owner.integer_value,
+            |owner, value| {
+                owner.integer_value = value;
             },
         )
     }
@@ -255,6 +412,38 @@ mod tests {
             .err(),
             Some(PropertyInspectorError::DuplicateRowId("same".into()))
         );
+    }
+
+    #[test]
+    fn rejects_blank_accessible_row_labels() {
+        assert_eq!(
+            PropertyInspector(
+                "inspector",
+                [PropertyInspectorRow::text("name", " \t", text_binding())]
+            )
+            .err(),
+            Some(PropertyInspectorError::EmptyRowLabel { index: 0 })
+        );
+    }
+
+    #[test]
+    fn avoids_repeating_labels_owned_by_choice_toggle_and_stepper_editors() {
+        assert!(editor_has_visible_label(&PropertyEditor::Toggle(
+            toggle_binding()
+        )));
+        assert!(editor_has_visible_label(&PropertyEditor::Integer(
+            integer_binding()
+        )));
+        assert!(!editor_has_visible_label(&PropertyEditor::Text(
+            text_binding()
+        )));
+        assert!(editor_has_visible_label(&PropertyEditor::Choice {
+            value: text_binding(),
+            options: vec!["one".into()],
+        }));
+        assert!(!editor_has_visible_label(&PropertyEditor::IntegerValue(
+            integer_value_binding()
+        )));
     }
 
     #[test]
@@ -306,5 +495,66 @@ mod tests {
         assert_eq!(owner.text, "Ada");
         assert!(owner.enabled);
         assert_eq!(owner.count, 7);
+    }
+
+    #[test]
+    fn choice_rows_keep_options_and_forward_selection_to_the_owner() {
+        let row = PropertyInspectorRow::choice(
+            "layout",
+            "Layout",
+            text_binding(),
+            ["compact", "comfortable", "spacious"],
+        );
+        let mut owner = Owner::default();
+        let owner_any: &mut dyn Any = &mut owner;
+        match &row.editor {
+            PropertyEditor::Choice { value, options } => {
+                assert_eq!(
+                    options,
+                    &vec![
+                        "compact".to_owned(),
+                        "comfortable".to_owned(),
+                        "spacious".to_owned()
+                    ]
+                );
+                assert!(value.write_to(owner_any, "spacious".into()));
+            }
+            _ => unreachable!(),
+        }
+        assert_eq!(owner.text, "spacious");
+    }
+
+    #[test]
+    fn i64_integer_rows_accept_in_range_values_and_reject_invalid_drafts() {
+        let binding = integer_value_binding();
+        let row = PropertyInspectorRow::integer_value("limit", "Limit", binding.clone());
+        assert!(matches!(row.editor, PropertyEditor::IntegerValue(_)));
+
+        let mut owner = Owner::default();
+        for invalid in ["1.5", "9223372036854775808", "-9223372036854775809"] {
+            if let Some(parsed) = parse_integer_value_draft(invalid) {
+                binding.write_to(&mut owner, parsed);
+            }
+        }
+        assert_eq!(owner.integer_value, 0);
+
+        let parsed = parse_integer_value_draft("-9223372036854775808").unwrap();
+        assert!(binding.write_to(&mut owner, parsed));
+        assert_eq!(owner.integer_value, i64::MIN);
+    }
+
+    #[test]
+    fn retained_integer_editor_uses_the_latest_binding_writer() {
+        let writes = Rc::new(RefCell::new(Vec::new()));
+        let first_writes = writes.clone();
+        let current = RefCell::new(
+            Rc::new(move |value| first_writes.borrow_mut().push(value)) as Rc<dyn Fn(i64)>
+        );
+
+        let latest_writes = writes.clone();
+        *current.borrow_mut() = Rc::new(move |value| latest_writes.borrow_mut().push(value));
+
+        with_current_writer(&current, 42, |write, value| write(value));
+        assert_eq!(*writes.borrow(), [42]);
     }
 }

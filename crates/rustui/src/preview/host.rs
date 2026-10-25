@@ -103,6 +103,9 @@ impl<C> PreviewHost<C> {
     ) -> Result<PreviewStamp, PreviewError> {
         let current = self.require_current(stamp)?;
         let preview = current.preview.apply_batch(self.catalog(), updates)?;
+        if current.preview == preview {
+            return Ok(stamp.clone());
+        }
         let revision = stamp
             .revision
             .checked_add(1)
@@ -249,6 +252,38 @@ mod tests {
             ActionRef::new("count").unwrap(),
         );
         document
+    }
+
+    #[test]
+    fn unchanged_edit_preserves_revision_but_changed_edit_advances_it() {
+        let mut host = host();
+        let property = PropertyId::new("text").unwrap();
+        let initial = host.mount(document()).unwrap();
+
+        // Making an implicit default explicit changes the document.
+        let explicit_default = host
+            .edit(
+                &initial,
+                [(property.clone(), PropertyValue::String("hello".into()))],
+            )
+            .unwrap();
+        assert_eq!(explicit_default.revision, initial.revision + 1);
+
+        let unchanged = host
+            .edit(
+                &explicit_default,
+                [(property.clone(), PropertyValue::String("hello".into()))],
+            )
+            .unwrap();
+        assert_eq!(unchanged, explicit_default);
+
+        let changed = host
+            .edit(
+                &unchanged,
+                [(property, PropertyValue::String("edited".into()))],
+            )
+            .unwrap();
+        assert_eq!(changed.revision, unchanged.revision + 1);
     }
 
     #[test]

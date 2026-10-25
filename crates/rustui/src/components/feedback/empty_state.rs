@@ -18,6 +18,7 @@ pub struct EmptyStateView {
     detail: Option<SharedString>,
     id: Option<Identity>,
     accessibility_label: Option<SharedString>,
+    localized_accessibility_label: Option<(SharedString, SharedString)>,
 }
 
 impl EmptyStateView {
@@ -27,6 +28,7 @@ impl EmptyStateView {
             detail: None,
             id: None,
             accessibility_label: None,
+            localized_accessibility_label: None,
         }
     }
 
@@ -44,7 +46,30 @@ impl EmptyStateView {
 
     /// Names the status for assistive technology; defaults to the title.
     pub fn accessibility_label(mut self, label: impl Into<SharedString>) -> Self {
-        self.accessibility_label = Some(label.into());
+        let label = label.into();
+        assert!(
+            !label.trim().is_empty(),
+            "EmptyState accessibility label must not be empty"
+        );
+        self.accessibility_label = Some(label);
+        self.localized_accessibility_label = None;
+        self
+    }
+
+    /// Resolves the status name from the active locale, falling back to the explicit label or title.
+    pub fn localized_accessibility_label(mut self, message_id: impl Into<SharedString>) -> Self {
+        let id = message_id.into();
+        assert!(
+            !id.trim().is_empty(),
+            "EmptyState accessibility localization key must not be empty"
+        );
+        let fallback = self
+            .localized_accessibility_label
+            .as_ref()
+            .map(|(_, fallback)| fallback.clone())
+            .or_else(|| self.accessibility_label.clone())
+            .unwrap_or_else(|| self.title.clone());
+        self.localized_accessibility_label = Some((id, fallback));
         self
     }
 
@@ -59,6 +84,31 @@ impl EmptyStateView {
                 detail
             ))
         })
+    }
+
+    fn resolved_accessibility_label(
+        &self,
+        localized_message: impl FnOnce(&str) -> String,
+    ) -> SharedString {
+        let label = match &self.localized_accessibility_label {
+            Some((id, fallback)) => {
+                let localized = localized_message(id.as_ref());
+                if localized.trim().is_empty() || localized.trim() == id.trim() {
+                    fallback.clone()
+                } else {
+                    localized.into()
+                }
+            }
+            None => self
+                .accessibility_label
+                .clone()
+                .unwrap_or_else(|| self.title.clone()),
+        };
+        assert!(
+            !label.trim().is_empty(),
+            "EmptyState must provide a non-empty accessible name"
+        );
+        label
     }
 }
 
@@ -77,10 +127,8 @@ impl View for EmptyStateView {
         let theme = gpui_component::Theme::global(context.app());
         let foreground = theme.colors.foreground;
         let muted_foreground = theme.colors.muted_foreground;
-        let accessibility_label = self
-            .accessibility_label
-            .clone()
-            .unwrap_or_else(|| self.title.clone());
+        let accessibility_label =
+            self.resolved_accessibility_label(|id| context.localized_message(id));
         let mut state = div()
             .id(self.identity().to_string())
             .role(gpui::Role::Status)
@@ -137,6 +185,77 @@ mod tests {
             state.accessibility_label.as_deref(),
             Some("Search results are empty")
         );
+    }
+
+    #[test]
+    fn empty_state_preserves_nonblank_accessible_name() {
+        let state = EmptyState("No results").accessibility_label("  Search results are empty  ");
+        assert_eq!(
+            state.accessibility_label.as_deref(),
+            Some("  Search results are empty  ")
+        );
+    }
+
+    #[test]
+    #[should_panic(expected = "EmptyState accessibility label must not be empty")]
+    fn empty_state_rejects_a_blank_accessible_name() {
+        EmptyState("No results").accessibility_label("\t ");
+    }
+
+    #[test]
+    fn blank_visible_title_is_allowed_with_nonblank_accessible_name_override() {
+        let state = EmptyState("").accessibility_label("No search results");
+
+        assert_eq!(state.title.as_ref(), "");
+        assert_eq!(
+            state.resolved_accessibility_label(|_| unreachable!()),
+            "No search results"
+        );
+    }
+
+    #[test]
+    #[should_panic(expected = "EmptyState must provide a non-empty accessible name")]
+    fn blank_visible_title_requires_accessible_name_override() {
+        EmptyState("").resolved_accessibility_label(|_| unreachable!());
+    }
+
+    #[test]
+    fn localized_accessibility_name_uses_catalog_and_preserves_fallback() {
+        let explicit = EmptyState("No results")
+            .accessibility_label("Search results are empty")
+            .localized_accessibility_label("empty_state.no_results");
+        assert_eq!(
+            explicit
+                .resolved_accessibility_label(|id| format!("{id} traduit"))
+                .as_ref(),
+            "empty_state.no_results traduit"
+        );
+        for unresolved in [
+            "empty_state.no_results".to_owned(),
+            " empty_state.no_results \t".to_owned(),
+            " \t ".to_owned(),
+        ] {
+            assert_eq!(
+                explicit
+                    .resolved_accessibility_label(|_| unresolved.clone())
+                    .as_ref(),
+                "Search results are empty"
+            );
+        }
+
+        let default = EmptyState("No results").localized_accessibility_label("empty_state.title");
+        assert_eq!(
+            default
+                .resolved_accessibility_label(|_| String::new())
+                .as_ref(),
+            "No results"
+        );
+    }
+
+    #[test]
+    #[should_panic(expected = "EmptyState accessibility localization key must not be empty")]
+    fn localized_accessibility_name_rejects_a_blank_key() {
+        EmptyState("No results").localized_accessibility_label(" \t\n ");
     }
 
     #[test]

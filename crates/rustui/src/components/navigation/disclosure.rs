@@ -27,6 +27,7 @@ fn toggle_open_if_enabled(open: &mut bool, disabled: bool) -> bool {
 pub struct DisclosureView<V> {
     id: Identity,
     label: SharedString,
+    accessibility_label: Option<SharedString>,
     is_open: Binding<bool>,
     content: V,
     disabled: bool,
@@ -44,9 +45,15 @@ impl<V: View> DisclosureView<V> {
             !id.as_str().trim().is_empty(),
             "Disclosure identity must be nonempty"
         );
+        let label = label.into();
+        assert!(
+            !label.trim().is_empty(),
+            "Disclosure label must not be blank"
+        );
         Self {
             id,
-            label: label.into(),
+            label,
+            accessibility_label: None,
             is_open,
             content,
             disabled: false,
@@ -56,6 +63,23 @@ impl<V: View> DisclosureView<V> {
     /// Prevents user activation while preserving externally controlled state.
     pub fn disabled(mut self, disabled: bool) -> Self {
         self.disabled = disabled;
+        self
+    }
+
+    fn resolved_accessibility_label(&self) -> SharedString {
+        self.accessibility_label
+            .clone()
+            .unwrap_or_else(|| self.label.clone())
+    }
+
+    /// Overrides the visible label used as the trigger's accessible name.
+    pub fn accessibility_label(mut self, label: impl Into<SharedString>) -> Self {
+        let label = label.into();
+        assert!(
+            !label.trim().is_empty(),
+            "Disclosure accessibility label must not be blank"
+        );
+        self.accessibility_label = Some(label);
         self
     }
 }
@@ -84,6 +108,7 @@ impl<V: View> View for DisclosureView<V> {
         );
         let open = self.is_open.value();
         let label = self.label.clone();
+        let accessibility_label = self.resolved_accessibility_label();
         let visible_label =
             SharedString::from(format!("{} {}", if open { "▾" } else { "▸" }, label));
         let disabled = self.disabled;
@@ -95,7 +120,7 @@ impl<V: View> View for DisclosureView<V> {
                 context,
                 SharedString::from(format!("{}:trigger", self.id)),
                 visible_label,
-                label,
+                accessibility_label,
                 ButtonStyle::Plain,
                 disabled,
                 0,
@@ -128,7 +153,59 @@ impl<V: View> View for DisclosureView<V> {
 
 #[cfg(test)]
 mod tests {
-    use super::toggle_open_if_enabled;
+    use super::{Disclosure, DisclosureView, toggle_open_if_enabled};
+    use crate::view::EmptyView;
+    use rustui_core::Binding;
+
+    fn disclosure() -> DisclosureView<EmptyView> {
+        Disclosure(
+            "details",
+            "Details",
+            Binding::new(
+                false,
+                |value: &bool| *value,
+                |value: &mut bool, next| *value = next,
+            ),
+            EmptyView,
+        )
+    }
+
+    #[test]
+    fn visible_label_is_the_default_accessible_name() {
+        assert_eq!(disclosure().resolved_accessibility_label(), "Details");
+    }
+
+    #[test]
+    fn explicit_accessible_name_preserves_nonblank_text() {
+        assert_eq!(
+            disclosure()
+                .accessibility_label(" Additional details ")
+                .accessibility_label
+                .as_deref(),
+            Some(" Additional details ")
+        );
+    }
+
+    #[test]
+    #[should_panic(expected = "Disclosure accessibility label must not be blank")]
+    fn blank_accessible_name_is_rejected() {
+        disclosure().accessibility_label(" \t ");
+    }
+
+    #[test]
+    #[should_panic(expected = "Disclosure label must not be blank")]
+    fn blank_visible_label_is_rejected() {
+        Disclosure(
+            "details",
+            " \t ",
+            Binding::new(
+                false,
+                |value: &bool| *value,
+                |value: &mut bool, next| *value = next,
+            ),
+            EmptyView,
+        );
+    }
 
     #[test]
     fn disabled_disclosure_does_not_mutate_open_state() {

@@ -16,11 +16,12 @@ Each collection event or observer now uses `RenderContext::binding_updater`, whi
 
 Table additionally retains the raw owner selection last seen at render or accepted from a UI event. A queued event is ignored if the owner value differs from that reconciliation marker, or if its payload no longer matches `TableState::selected_row()`. Accepted events advance the marker so multiple queued UI events can compose. **Selected policy: render-observed precedence.** An owner value observed during reconciliation takes precedence over an older queued event. An external A→B→A change completed before reconciliation is indistinguishable from no change; in that narrow ordering case, an already queued native event can still update the owner. This is source-derived and has not been reproduced as a runtime defect. The marker uses the raw value; an out-of-range owner index is normalized through the existing clear path.
 
-Table selection is positional: reorder keeps a valid numeric source index, so it may identify a different row after reorder. Deleting rows clears selection only when the selected index becomes out of range; a still-valid index continues to select that slot's new occupant. Tree selection follows the selected stable ID through reorder or replacement while that ID remains present, and clears when the selected ID is removed. Tree expansion for unchanged node IDs follows the retained state when the expanded declaration is unchanged; changed declarations take effect, and removed IDs no longer retain expansion state. `KeyedList` selection follows its stable ID through insertion, reorder, and filtering, and clears if the selected ID is removed (`docs/tasks/R3B_KEYED_LIST.md`).
+List and Table selection are positional: reorder keeps a valid numeric source index, so it may identify a different row after reorder. Filtering a List row out of view retains its source-index selection. Removing enough List items to make the selected source index out of range now clears selection; Table also clears selection only when the selected index becomes out of range, while a still-valid index continues to select that slot's new occupant. Tree selection follows the selected stable ID through reorder or replacement while that ID remains present, and clears when the selected ID is removed. Tree expansion for unchanged node IDs follows the retained state when the expanded declaration is unchanged; changed declarations take effect, and removed IDs no longer retain expansion state. `KeyedList` selection follows its stable ID through insertion, reorder, and filtering, and clears if the selected ID is removed (`docs/tasks/R3B_KEYED_LIST.md`).
 
 ## Boundaries and follow-up interaction checks
 
 - The change does not alter fallback identities, selection pruning, or Tree expansion policy. Those depend on R2.
+- Tree retention across arbitrary root-topology changes requires a stable explicit `.id(...)`. Without one, `TreeView::identity()` derives its fallback from root count and first root ID; changing either remounts the retained `TreeState`. This is the documented boundary, not a source identity change: an anonymous Tree cannot infer an identity that survives arbitrary topology changes while distinguishing multiple Trees in one scope.
 - The owner API exposes a value, not a change generation. Contract A intentionally accepts that a value changed away and back before reconciliation is indistinguishable from an unchanged value. Contract B would require mutation provenance and event sequencing not supplied by the current binding and Table event APIs; it is deferred as a future option in `docs/tasks/R3B_SELECTION_PROVENANCE_PROPOSAL.md`.
 - The M75/M76 checks below cover Tree replacement/selection/expansion and Table invalid-index normalization/reorder/removal/native selection. They do not instrument owner-notification counts or establish ABA/away-and-back provenance behavior.
 
@@ -69,3 +70,49 @@ only; native keyboard acceptance is still open.
 ## M156 native Tree Enter acceptance
 
 On macOS 27 in the canonical Playground Tree story, selecting `Archive` and pressing Enter collapsed it and hid `Archived item`. Return collapsed it as well; Right expanded it again. This confirms the Enter mapping against the existing Tree expansion controls. It does not add leaf activation. Screen-reader speech, cross-platform behavior, RTL, and broader accessibility acceptance remain open. The Playground process was absent after close; its disposable app bundle was removed, with Cargo artifacts and caches preserved. Evidence: `target/headstart/evidence/r3-tree-enter-m156-20261020.json` (Playground executable SHA-256 `4ad52d366d00f48b8782c402cda6aba4ce2082d2fcb768fac352802529e0f378`).
+
+## M183 List source-index normalization
+
+List now clears owner selection when its source index becomes out of range after item removal. A valid source index hidden by search filtering remains selected. This matches Table's positional-selection normalization and retains a guard against clearing a newer owner selection. All six focused List unit tests pass; the locked/offline RustUI all-targets check and rustfmt check pass. No GUI acceptance was run. Logs: `target/headstart/evidence/r3-list-invalid-selection-m183-tests-20261020.log` and `target/headstart/evidence/r3-list-invalid-selection-m183-check-20261020.log`.
+
+## Native source-List focus probe (2026-10-20)
+
+Using the canonical Playground `Framework Demos > List` story, clicking `Text`
+changed the owner to `Some(1)` and marked `Text` selected in the native AX tree.
+Pressing Down changed the owner to `Some(2)` and marked `TextField` selected.
+The AX snapshot reported the root standard window as the focused UI element both
+after the click and after Down; exact List/row focus ownership therefore remains
+unknown. VoiceOver speech/navigation was not tested. This bounded probe does not
+close the broader keyboard or screen-reader gate. Evidence:
+`target/headstart/evidence/r3-source-list-focus-probe-20261020.json` (rerun
+against the current Playground executable, SHA-256
+`217a85d8222e0932a81f2d7b41068f14b8c9f11fbf499154ac47e91c8c9ce1a4`).
+# M408 — refresh retained List selection writers
+List and KeyedList now refresh their retained selection writer on each render and dispatch events through the latest writer. This preserves writes when owner rerenders create a new `Binding::new_with` context. List tests passed 10/10 and KeyedList tests passed 11/11. Native interaction and accessibility acceptance remain open. Evidence: `target/headstart/evidence/stage8-list-latest-writer-m408-20261021.log`.
+
+
+## M475 current-source native List acceptance (2026-10-21)
+Rebuilt the current Playground source and opened the canonical `Framework Demos > List` story. Its explicit List identity remains `story-list-components` across owner updates. Clicking `Text` produced owner `Some(1)` with `Text` selected in the native AX tree; clicking `TextField` after that rerender produced `Some(2)` with `TextField` selected. Searching `Button` preserved owner `Some(2)` while the selected row was hidden; clearing search restored the selected `TextField` row. Every AX response reported the root window focused, so exact child focus ownership is unverified. VoiceOver speech/navigation was not tested. M478 later added the final-row removal fixture and recorded the M183 native GUI-update-cycle normalization case; see the M478 acceptance record below. M183's bounded normalization contract is covered. The broader R3 keyboard, screen-reader, RTL, platform, and performance acceptance remains open. Build and native evidence: `target/headstart/evidence/m475-playground-build-20261021.log`, `target/headstart/evidence/m475-source-list-native-acceptance-20261021.json`.
+
+
+## M477 current-source native Table acceptance (2026-10-21)
+Rebuilt current Playground source and opened `Framework Demos > Table`, whose controlled table keeps the explicit identity `table-reconciliation-rows`. Clicking native `Delta` at source index 3 reported owner `Some(3)` and highlighted the row. Removing that last row left Alpha/Beta/Gamma, cleared owner selection to `None`, and left no selected row. Clicking native `Alpha` reported `Some(0)`; reversing the rows kept `Some(0)` and highlighted `Gamma` at its new position. Setting an invalid index normalized the owner to `None`; restoring the rows kept selection empty. AX exposed the named Table with row/cell hierarchy but reported the root window focused, so exact child focus ownership remains unverified. The fixture has no filter control. VoiceOver speech/navigation was not tested, and broader R3 acceptance remains open. Evidence: `target/headstart/evidence/m477-playground-build-20261021.log`, `target/headstart/evidence/m477-table-native-acceptance-20261021.json`.
+
+## M476 current-source native Tree acceptance (2026-10-21)
+
+Sizing the intermediate RustUI action-capture wrapper restored the 280-point reconciliation Tree rows. On current-source macOS 27 Playground, `Workspace`, `Branch`, nested folders, `Grandchild leaf`, `Stable sibling`, `Archive`, and `Archived item` were visible in both themes and exposed in the native accessibility tree. Selecting `Workspace` updated the controlled stable ID; reversing roots preserved that selection. Toggling the declared expansion collapsed and restored descendants while preserving selection. Selecting `Grandchild leaf` updated selection and recorded one activation. Removing its branch cleared selection to `None`; restoring the branch returned its declared expanded state. Exact child focus is unverified; VoiceOver was not run. RTL, cross-platform, performance, and broader R3 acceptance remain open. Evidence: `target/headstart/evidence/m476-tree-native-acceptance-20261021.json`.
+
+## M478 current-source native List removal acceptance (2026-10-21)
+
+The canonical List story now owns mutable rows in a same-identity reconciliation specimen with a final-row removal control. Selecting `ColorPicker` at source index 6 reported owner `Some(6)`; removing it reduced the row count to six, removed its native AX row, and normalized selection to `None`. Selecting `TextField` reported `Some(2)`; a `Button` filter hid it without clearing that valid selection, and clearing the filter restored the selected row. The List identity remained `story-list-components`. Exact child focus is unverified; VoiceOver was not run. RTL, cross-platform, performance, and broader R3 acceptance remain open. Evidence: `target/headstart/evidence/m478-list-removal-native-acceptance-20261021.json` and `target/headstart/evidence/r3-m476-m183-playground-build-20261021.log`.
+
+
+## M479 current-source native List restoration acceptance (2026-10-21)
+
+The existing `ListReconciliationGallery` now restores its initial rows through the same List identity, `story-list-components`, while leaving owner selection unchanged. On macOS 27, selecting final row `ColorPicker` reported `Some(6)`; removing it reduced rows from seven to six and normalized selection to `None`; restoring rows returned all seven items, including `ColorPicker`, while selection stayed `None`. Build passed with `./scripts/cargo-headstart build -p rustui-playground --locked --offline`. Evidence: `target/headstart/evidence/m479-list-restore-native-acceptance-20261021.json`. Child focus, VoiceOver, RTL, cross-platform, performance, and broader R3 acceptance remain open.
+
+### M475 child-focus and VoiceOver follow-up (2026-10-21)
+
+Rebuilt and opened the existing disposable validation identity (`dev.rustui.playground.validation`) on macOS 27. In `Framework Demos > List`, selecting the `Button` row changed the selected source row to `Some(0)` and marked the row container selected in the AX tree. After Tab navigation, the AX state continued to report the standard window as the focused UI element. VoiceOver was enabled for a brief follow-up and restored to off; CUA did not expose a spoken transcript, so child focus and spoken role/name/selected-state acceptance remain unverified. This probe did not establish a source defect, so no List implementation change was made. The app was quit and the disposable bundle removed; Cargo build artifacts were preserved.
+
+Evidence: `target/headstart/evidence/r3a-list-child-focus-voiceover-attempt-20261021.json` and `target/headstart/evidence/r3-list-child-focus-playground-build-20261021.log`.

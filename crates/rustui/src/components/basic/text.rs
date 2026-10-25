@@ -1,14 +1,16 @@
 use gpui::{
-    AnyElement, FontWeight, InteractiveElement as _, IntoElement, ParentElement, Role,
-    SharedString, StatefulInteractiveElement, Styled, div, px,
+    div, px, AnyElement, FontWeight, InteractiveElement as _, IntoElement, ParentElement, Role,
+    SharedString, StatefulInteractiveElement, Styled,
 };
 
 use crate::text::font_policy::FontFallbackPolicy;
 use crate::view::{EmptyView, RenderContext, View};
 use crate::{
     components::theme::{required_style, selector},
+    localization::MessageArguments,
     theme::ButtonStyleSelector,
 };
+use rustui_core::Identity;
 
 /// A plain text view rendered by GPUI.
 #[derive(Clone, Copy, Debug, Default, PartialEq, Eq)]
@@ -37,9 +39,11 @@ impl TextWeight {
 pub struct TextView {
     content: TextContent,
     size: Option<f32>,
-    weight: TextWeight,
+    weight: Option<TextWeight>,
     font_fallbacks: Option<FontFallbackPolicy>,
     vibrant: bool,
+    arguments: Option<MessageArguments>,
+    id: Option<Identity>,
 }
 
 #[derive(Clone, Debug)]
@@ -50,32 +54,62 @@ enum TextContent {
 
 impl TextView {
     pub fn new(value: impl Into<SharedString>) -> Self {
+        let value = value.into();
         Self {
-            content: TextContent::Literal(value.into()),
+            content: TextContent::Literal(value),
             size: None,
-            weight: TextWeight::Regular,
+            weight: None,
             font_fallbacks: None,
             vibrant: false,
+            arguments: None,
+            id: None,
         }
     }
 
     pub fn localized(identifier: impl Into<SharedString>) -> Self {
+        let identifier = identifier.into();
+        assert!(
+            !identifier.trim().is_empty(),
+            "LocalizedText message IDs must be nonempty"
+        );
         Self {
-            content: TextContent::Message(identifier.into()),
+            content: TextContent::Message(identifier),
             size: None,
-            weight: TextWeight::Regular,
+            weight: None,
             font_fallbacks: None,
             vibrant: false,
+            arguments: None,
+            id: None,
         }
     }
 
+    /// Interpolates named arguments in the active-locale message at render time.
+    /// Interpolation failures remain typed at the render-context API and are
+    /// displayed here so malformed catalogs or missing arguments are visible.
+    pub fn with_arguments(mut self, arguments: MessageArguments) -> Self {
+        self.arguments = Some(arguments);
+        self
+    }
+
+    /// Sets a stable identity within this render owner, geometry reader, or grid cell.
+    pub fn id(mut self, id: impl Into<Identity>) -> Self {
+        let id = id.into();
+        assert!(
+            !id.as_str().trim().is_empty(),
+            "Text identity must not be empty"
+        );
+        self.id = Some(id);
+        self
+    }
+
     pub fn font_size(mut self, size: f32) -> Self {
+        assert!(size.is_finite(), "Text font size must be finite");
         self.size = Some(size.max(1.0));
         self
     }
 
     pub fn font_weight(mut self, weight: TextWeight) -> Self {
-        self.weight = weight;
+        self.weight = Some(weight);
         self
     }
 
@@ -113,6 +147,14 @@ fn text_style_part(query: &mut ButtonStyleSelector, vibrant: bool) -> String {
     )
 }
 
+fn resolved_font_weight(weight: Option<TextWeight>, theme_weight: f32) -> FontWeight {
+    weight.map_or(FontWeight(theme_weight), TextWeight::gpui)
+}
+
+fn nonempty_accessible_label(value: &SharedString) -> Option<SharedString> {
+    (!value.trim().is_empty()).then(|| value.clone())
+}
+
 impl View for TextView {
     fn body(&self) -> impl View {
         EmptyView
@@ -122,9 +164,16 @@ impl View for TextView {
         let value = match &self.content {
             TextContent::Literal(value) => value.clone(),
             TextContent::Message(identifier) => {
-                SharedString::from(context.localized_message(identifier.as_ref()))
+                let value = match &self.arguments {
+                    Some(arguments) => context
+                        .localized_message_with_arguments(identifier.as_ref(), arguments)
+                        .unwrap_or_else(|error| format!("[localization error: {error}]")),
+                    None => context.localized_message(identifier.as_ref()),
+                };
+                SharedString::from(value)
             }
         };
+        let accessible_label = nonempty_accessible_label(&value);
         let mut query = selector(context);
         let part = text_style_part(&mut query, self.vibrant);
         let style = if self.vibrant {
@@ -148,17 +197,16 @@ impl View for TextView {
                 .expect("text theme needs foreground"),
         );
         let mut text = div()
-            .id(context.next_text_element_id())
-            .role(Role::Label)
-            .aria_label(value.clone())
+            .id(context.next_text_element_id_with(self.id.as_ref()))
+            .role(Role::Label);
+        if let Some(label) = accessible_label {
+            text = text.aria_label(label);
+        }
+        text = text
             .font_family(typography.family.clone())
             .text_color(foreground)
             .text_size(px(self.size.unwrap_or(typography.size)))
-            .font_weight(if self.weight == TextWeight::Regular {
-                FontWeight(typography.weight)
-            } else {
-                self.weight.gpui()
-            });
+            .font_weight(resolved_font_weight(self.weight, typography.weight));
         if let Some(policy) = &self.font_fallbacks {
             text.style().text.font_fallbacks = Some(policy.as_gpui().clone());
         }
@@ -178,6 +226,24 @@ mod tests {
 
         assert!(!opaque.vibrant);
         assert!(vibrant.vibrant);
+    }
+
+    #[test]
+    fn explicit_identity_is_validated() {
+        assert!(std::panic::catch_unwind(|| Text("Title").id(" \t ")).is_err());
+        assert_eq!(
+            Text("Title").id("heading").id.unwrap(),
+            Identity::from("heading")
+        );
+    }
+
+    #[test]
+    fn explicit_regular_weight_overrides_theme_weight() {
+        assert_eq!(resolved_font_weight(None, 510.0), FontWeight(510.0));
+        assert_eq!(
+            resolved_font_weight(Some(TextWeight::Regular), 510.0),
+            FontWeight::NORMAL
+        );
     }
 
     #[test]
@@ -207,5 +273,46 @@ mod tests {
             assert!(style.colors.contains_key("foreground"));
             assert!(style.extra_properties.contains_key("blend_mode"));
         }
+    }
+
+    #[test]
+    fn blank_literal_text_is_allowed_without_an_accessible_name() {
+        for value in ["", " \t "] {
+            let text = Text(value);
+            assert!(
+                matches!(text.content, TextContent::Literal(ref content) if content.as_ref() == value)
+            );
+            assert_eq!(nonempty_accessible_label(&SharedString::from(value)), None);
+        }
+    }
+
+    #[test]
+    fn rejects_blank_localized_message_ids() {
+        assert!(std::panic::catch_unwind(|| LocalizedText(" \t ")).is_err());
+    }
+
+    #[test]
+    fn blank_localized_text_after_interpolation_omits_accessible_label() {
+        let value =
+            crate::localization::interpolate("{name}", &MessageArguments::new().with("name", ""))
+                .unwrap();
+        assert!(value.is_empty());
+        assert_eq!(nonempty_accessible_label(&SharedString::from(value)), None);
+        assert_eq!(nonempty_accessible_label(&SharedString::from(" \t ")), None);
+        assert_eq!(
+            nonempty_accessible_label(&SharedString::from("Welcome, Ada")),
+            Some(SharedString::from("Welcome, Ada"))
+        );
+    }
+
+    #[test]
+    fn font_size_rejects_non_finite_values_and_clamps_finite_values() {
+        for size in [f32::NAN, f32::INFINITY, f32::NEG_INFINITY] {
+            assert!(std::panic::catch_unwind(|| Text("Title").font_size(size)).is_err());
+        }
+
+        assert_eq!(Text("Title").font_size(0.0).size, Some(1.0));
+        assert_eq!(Text("Title").font_size(-4.0).size, Some(1.0));
+        assert_eq!(Text("Title").font_size(14.0).size, Some(14.0));
     }
 }

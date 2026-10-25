@@ -1,6 +1,9 @@
 //! Controlled virtualized string list backed by retained GPUI ListState.
 
-use std::{cell::Cell, rc::Rc};
+use std::{
+    cell::{Cell, RefCell},
+    rc::Rc,
+};
 
 use gpui::{
     AnyElement, App, Context, InteractiveElement as _, IntoElement, ParentElement as _,
@@ -13,6 +16,22 @@ use gpui_component::{
 use rustui_core::{Binding, Identity};
 
 use crate::view::{EmptyView, RenderContext, View};
+
+type SelectionUpdater<T> = Rc<dyn Fn(&mut T)>;
+
+fn replace_selection_updater<T>(
+    slot: &RefCell<Option<SelectionUpdater<T>>>,
+    updater: SelectionUpdater<T>,
+) {
+    *slot.borrow_mut() = Some(updater);
+}
+
+fn apply_selection_updater<T>(slot: &RefCell<Option<SelectionUpdater<T>>>, context: &mut T) {
+    let updater = slot.borrow().clone();
+    if let Some(updater) = updater {
+        updater(context);
+    }
+}
 
 fn apply_selection_request(
     current: &mut Option<usize>,
@@ -27,6 +46,13 @@ fn apply_selection_request(
     true
 }
 
+fn selection_event_matches_current(event: &ListEvent, selected: Option<IndexPath>) -> bool {
+    match event {
+        ListEvent::Select(index) | ListEvent::Confirm(index) => selected == Some(*index),
+        ListEvent::Cancel => selected.is_none(),
+    }
+}
+
 fn clear_cancel_request(selectable: bool, requested: &Cell<Option<usize>>) -> bool {
     if !selectable {
         return false;
@@ -35,12 +61,48 @@ fn clear_cancel_request(selectable: bool, requested: &Cell<Option<usize>>) -> bo
     true
 }
 
+fn clear_invalid_selection(current: &mut Option<usize>, invalid: usize) -> bool {
+    if *current != Some(invalid) {
+        return false;
+    }
+    *current = None;
+    true
+}
+
+fn resolve_list_items(
+    items: &[String],
+    localized_suffixes: &[String],
+    mut resolve: impl FnMut(&str) -> String,
+) -> Vec<String> {
+    if localized_suffixes.is_empty() {
+        return items.to_vec();
+    }
+    debug_assert_eq!(items.len(), localized_suffixes.len());
+    items
+        .iter()
+        .zip(localized_suffixes)
+        .map(|(item, message_id)| format!("{item} · {}", resolve(message_id)))
+        .collect()
+}
+
+fn list_data_changed(
+    current_items: &[String],
+    current_row_height: f32,
+    next_items: &[String],
+    next_row_height: f32,
+) -> bool {
+    current_items != next_items || current_row_height != next_row_height
+}
+
 struct StringListDelegate {
     items: Vec<String>,
     visible: Vec<usize>,
     query: String,
     row_height: f32,
     owner_selection: Rc<Cell<Option<usize>>>,
+    requested_selection: Rc<Cell<Option<usize>>>,
+    selection_update: Rc<RefCell<Option<SelectionUpdater<App>>>>,
+    searchable: bool,
     selectable: bool,
 }
 
@@ -49,6 +111,7 @@ impl StringListDelegate {
         items: Vec<String>,
         row_height: f32,
         selection: Option<usize>,
+        searchable: bool,
         selectable: bool,
     ) -> Self {
         let visible = (0..items.len()).collect();
@@ -58,6 +121,9 @@ impl StringListDelegate {
             query: String::new(),
             row_height,
             owner_selection: Rc::new(Cell::new(selection)),
+            requested_selection: Rc::new(Cell::new(None)),
+            selection_update: Rc::new(RefCell::new(None)),
+            searchable,
             selectable,
         }
     }
@@ -91,6 +157,10 @@ impl StringListDelegate {
             .iter()
             .position(|index| *index == source_index)
             .map(IndexPath::new)
+    }
+
+    fn options_match(&self, searchable: bool, selectable: bool) -> bool {
+        self.searchable == searchable && self.selectable == selectable
     }
 }
 
@@ -147,6 +217,7 @@ impl ListDelegate for StringListDelegate {
 /// A virtualized string list with controlled source-index selection.
 pub struct ListView {
     items: Vec<String>,
+    localized_suffixes: Vec<String>,
     selection: Binding<Option<usize>>,
     id: Option<Identity>,
     height: f32,
@@ -163,8 +234,15 @@ impl ListView {
         I: IntoIterator<Item = S>,
         S: Into<String>,
     {
+        let items: Vec<String> = items.into_iter().map(Into::into).collect();
+        assert!(
+            items.iter().all(|item| !item.trim().is_empty()),
+            "List item labels must be nonempty"
+        );
+
         Self {
-            items: items.into_iter().map(Into::into).collect(),
+            items,
+            localized_suffixes: Vec::new(),
             selection,
             id: None,
             height: 240.0,
@@ -177,16 +255,23 @@ impl ListView {
     }
 
     pub fn id(mut self, id: impl Into<Identity>) -> Self {
-        self.id = Some(id.into());
+        let id = id.into();
+        assert!(
+            !id.as_str().trim().is_empty(),
+            "List identity must be nonempty"
+        );
+        self.id = Some(id);
         self
     }
 
     pub fn height(mut self, height: f32) -> Self {
+        assert!(height.is_finite(), "List height must be finite");
         self.height = height.max(1.0);
         self
     }
 
     pub fn row_height(mut self, row_height: f32) -> Self {
+        assert!(row_height.is_finite(), "List row height must be finite");
         self.row_height = row_height.max(1.0);
         self
     }
@@ -211,13 +296,33 @@ impl ListView {
         self
     }
 
-    fn identity(&self) -> Identity {
+    /// Appends the active-locale message for each corresponding item.
+    pub fn localized_suffixes<I, S>(mut self, message_ids: I) -> Self
+    where
+        I: IntoIterator<Item = S>,
+        S: Into<String>,
+    {
+        self.localized_suffixes = message_ids.into_iter().map(Into::into).collect();
+        assert!(
+            self.localized_suffixes.is_empty() || self.localized_suffixes.len() == self.items.len(),
+            "Localized list suffixes must match the item count"
+        );
+        assert!(
+            self.localized_suffixes
+                .iter()
+                .all(|id| !id.trim().is_empty()),
+            "Localized list suffix message IDs must be nonempty"
+        );
+        self
+    }
+
+    fn identity_with(&self, allocate: impl FnOnce(Identity) -> Identity) -> Identity {
         self.id.clone().unwrap_or_else(|| {
-            Identity::from(format!(
+            allocate(Identity::from(format!(
                 "list:{}:{}",
                 self.items.len(),
                 self.items.first().map_or("", String::as_str)
-            ))
+            )))
         })
     }
 }
@@ -237,15 +342,23 @@ impl View for ListView {
     }
 
     fn into_element(&self, context: &mut RenderContext<'_>) -> AnyElement {
-        let identity = self.identity();
-        let items = self.items.clone();
+        let identity = self.identity_with(|base| context.next_implicit_retained_identity(base));
+        let items = resolve_list_items(&self.items, &self.localized_suffixes, |message_id| {
+            context.localized_message(message_id)
+        });
         let initial_selection = self.selection.value();
         let row_height = self.row_height;
         let searchable = self.searchable;
         let selectable = self.selectable;
+        let initial_items = items.clone();
         let (state, created) = context.retained_entity(identity.clone(), move |window, cx| {
-            let delegate =
-                StringListDelegate::new(items, row_height, initial_selection, selectable);
+            let delegate = StringListDelegate::new(
+                initial_items,
+                row_height,
+                initial_selection,
+                searchable,
+                selectable,
+            );
             let selected = delegate.visible_index(initial_selection);
             let mut state = ListState::new(delegate, window, cx)
                 .searchable(searchable)
@@ -254,15 +367,35 @@ impl View for ListView {
             state
         });
 
-        let owner_selection = state.read(context.app()).delegate().owner_selection.clone();
+        let (owner_selection, requested_selection, selection_update) = {
+            let delegate = state.read(context.app()).delegate();
+            (
+                delegate.owner_selection.clone(),
+                delegate.requested_selection.clone(),
+                delegate.selection_update.clone(),
+            )
+        };
         owner_selection.set(self.selection.value());
+        let marker = owner_selection.clone();
+        let current_request = requested_selection.clone();
+        replace_selection_updater(
+            &selection_update,
+            context.binding_updater(self.selection.clone(), move |current| {
+                apply_selection_request(current, &marker, current_request.get())
+            }),
+        );
 
         let data_changed = {
             let state = state.read(context.app());
-            state.delegate().items != self.items || state.delegate().row_height != self.row_height
+            list_data_changed(
+                &state.delegate().items,
+                state.delegate().row_height,
+                &items,
+                self.row_height,
+            )
         };
         if data_changed {
-            let items = self.items.clone();
+            let items = items.clone();
             let selection = self.selection.value();
             let row_height = self.row_height;
             context.update_entity(&state, move |state, window, cx| {
@@ -288,28 +421,55 @@ impl View for ListView {
         }
 
         if created {
-            let requested = Rc::new(Cell::new(None));
-            let current_request = requested.clone();
-            let expected_selection = owner_selection.clone();
-            let update = context.binding_updater(self.selection.clone(), move |current| {
-                let selected = current_request.get();
-                apply_selection_request(current, &expected_selection, selected)
-            });
+            let current_update = selection_update.clone();
             context.subscribe_retained(&identity, &state, move |state, event: &ListEvent, cx| {
+                if !selection_event_matches_current(event, state.read(cx).selected_index()) {
+                    return;
+                }
                 match event {
                     ListEvent::Select(index) | ListEvent::Confirm(index) => {
                         if let Some(source_index) = state.read(cx).delegate().source_index(*index) {
-                            requested.set(Some(source_index));
-                            update(cx);
+                            requested_selection.set(Some(source_index));
+                            apply_selection_updater(&current_update, cx);
                         }
                     }
                     ListEvent::Cancel => {
                         let selectable = state.read(cx).delegate().selectable;
-                        if clear_cancel_request(selectable, &requested) {
-                            update(cx);
+                        if clear_cancel_request(selectable, &requested_selection) {
+                            apply_selection_updater(&current_update, cx);
                         }
                     }
                 }
+            });
+        }
+
+        let options_match = state
+            .read(context.app())
+            .delegate()
+            .options_match(searchable, selectable);
+        if !options_match {
+            context.update_entity(&state, move |state, _window, cx| {
+                if state.delegate().searchable != searchable {
+                    state.set_searchable(searchable, cx);
+                    state.delegate_mut().searchable = searchable;
+                }
+                if state.delegate().selectable != selectable {
+                    state.set_selectable(selectable, cx);
+                    state.delegate_mut().selectable = selectable;
+                }
+            });
+        }
+
+        if let Some(invalid) = self
+            .selection
+            .value()
+            .filter(|index| *index >= self.items.len())
+        {
+            let normalize = context.binding_updater(self.selection.clone(), move |current| {
+                clear_invalid_selection(current, invalid)
+            });
+            context.update_entity(&state, move |_state, _window, cx| {
+                cx.defer(move |cx| normalize(cx));
             });
         }
 
@@ -327,6 +487,114 @@ impl View for ListView {
 mod tests {
     use super::*;
 
+    struct Owner;
+
+    fn selection_binding() -> Binding<Option<usize>> {
+        Binding::new(None, |_: &Owner| None, |_: &mut Owner, _| {})
+    }
+
+    #[test]
+    fn implicit_list_identity_distinguishes_siblings_and_is_stable_by_slot() {
+        let list = ListView::new(["first", "second"], selection_binding());
+        let allocate_at_slot = |slot| {
+            move |base: Identity| Identity::from(format!("owner:implicit-retained:{slot}:{base}"))
+        };
+
+        let first = list.identity_with(allocate_at_slot(0));
+        let second = list.identity_with(allocate_at_slot(1));
+        let first_after_rerender = list.identity_with(allocate_at_slot(0));
+
+        assert_ne!(first, second);
+        assert_eq!(first, first_after_rerender);
+    }
+
+    #[test]
+    #[should_panic(expected = "List item labels must be nonempty")]
+    fn blank_row_accessible_names_are_rejected() {
+        ListView::new(["  ", "Valid row"], selection_binding());
+    }
+
+    #[test]
+    fn nonblank_row_labels_are_preserved_verbatim() {
+        let view = ListView::new(["  Valid row  "], selection_binding());
+
+        assert_eq!(view.items, ["  Valid row  "]);
+    }
+
+    #[test]
+    fn localized_suffixes_preserve_item_prefixes_and_resolve_by_active_locale() {
+        let message_id = "lab-catalog-coverage-partial";
+        let view = ListView::new(["slider"], selection_binding()).localized_suffixes([message_id]);
+        let mut catalogs =
+            rustui_i18n::Catalogs::new(rustui_i18n::Locale::parse("en").expect("English locale"));
+        for (locale, label) in [("en", "Partial"), ("fr", "Partiel"), ("ar", "جزئي")] {
+            catalogs
+                .insert(
+                    rustui_i18n::Catalog::parse(
+                        rustui_i18n::Locale::parse(locale).expect("test locale"),
+                        &format!("lab-catalog-coverage-partial = {label}"),
+                    )
+                    .expect("test catalog"),
+                )
+                .expect("insert test catalog");
+        }
+
+        for (locale, expected) in [
+            ("en", "slider · Partial"),
+            ("fr", "slider · Partiel"),
+            ("ar", "slider · جزئي"),
+        ] {
+            let locale = rustui_i18n::Locale::parse(locale).expect("test locale");
+            let label = resolve_list_items(&view.items, &view.localized_suffixes, |message_id| {
+                catalogs.resolve(&locale, message_id).to_owned()
+            });
+            assert_eq!(label, [expected]);
+        }
+    }
+
+    #[test]
+    fn localized_rows_remain_stable_until_the_resolved_locale_changes() {
+        let items = vec![String::from("slider")];
+        let suffixes = vec![String::from("coverage-partial")];
+        let english = resolve_list_items(&items, &suffixes, |_| String::from("Partial"));
+        let french = resolve_list_items(&items, &suffixes, |_| String::from("Partiel"));
+
+        assert!(!list_data_changed(&english, 36.0, &english, 36.0));
+        assert!(list_data_changed(&english, 36.0, &french, 36.0));
+    }
+
+    #[test]
+    fn retained_delegate_keeps_resolved_rows_across_rerender_and_locale_change() {
+        let english = vec![String::from("slider · Partial")];
+        let french = vec![String::from("slider · Partiel")];
+        let mut delegate = StringListDelegate::new(english.clone(), 36.0, None, false, true);
+
+        if list_data_changed(&delegate.items, delegate.row_height, &english, 36.0) {
+            delegate.replace_items(english.clone(), 36.0);
+        }
+        assert_eq!(delegate.items, english);
+
+        if list_data_changed(&delegate.items, delegate.row_height, &french, 36.0) {
+            delegate.replace_items(french.clone(), 36.0);
+        }
+        assert_eq!(delegate.items, french);
+    }
+
+    #[test]
+    #[should_panic(expected = "List identity must be nonempty")]
+    fn rejects_whitespace_only_retained_identity() {
+        ListView::new(["row"], selection_binding()).id("  \t");
+    }
+
+    #[test]
+    fn retained_list_options_detect_search_and_selection_changes() {
+        let delegate = StringListDelegate::new(Vec::new(), 36.0, None, false, true);
+
+        assert!(delegate.options_match(false, true));
+        assert!(!delegate.options_match(true, true));
+        assert!(!delegate.options_match(false, false));
+    }
+
     #[test]
     fn selection_event_preserves_newer_owner_selection() {
         let expected = Cell::new(Some(0));
@@ -336,6 +604,40 @@ mod tests {
         assert!(!apply_selection_request(&mut owner, &expected, None));
         assert_eq!(owner, Some(2));
         assert_eq!(expected.get(), Some(0));
+    }
+
+    #[test]
+    fn queued_events_do_not_overwrite_reconciled_owner_selection() {
+        let expected = Cell::new(Some(0));
+        let mut owner = Some(2);
+        // Reconciliation has already observed the newer owner and selected its row.
+        expected.set(owner);
+        let selected = Some(IndexPath::new(2));
+        for event in [
+            ListEvent::Select(IndexPath::new(1)),
+            ListEvent::Confirm(IndexPath::new(1)),
+            ListEvent::Cancel,
+        ] {
+            if selection_event_matches_current(&event, selected) {
+                let requested = match event {
+                    ListEvent::Select(_) | ListEvent::Confirm(_) => Some(1),
+                    ListEvent::Cancel => None,
+                };
+                apply_selection_request(&mut owner, &expected, requested);
+            }
+            assert_eq!(owner, Some(2));
+        }
+
+        // A subsequent matching UI selection and cancellation still reach the owner.
+        let next = IndexPath::new(1);
+        assert!(selection_event_matches_current(
+            &ListEvent::Select(next),
+            Some(next)
+        ));
+        assert!(apply_selection_request(&mut owner, &expected, Some(1)));
+        assert!(selection_event_matches_current(&ListEvent::Cancel, None));
+        assert!(apply_selection_request(&mut owner, &expected, None));
+        assert_eq!(owner, None);
     }
 
     #[test]
@@ -377,5 +679,38 @@ mod tests {
         assert_eq!(requested.get(), None);
         assert_eq!(owner, None);
         assert_eq!(expected.get(), None);
+    }
+
+    #[test]
+    fn invalid_source_index_is_normalized_after_items_are_removed() {
+        let mut owner = Some(3);
+
+        assert!(clear_invalid_selection(&mut owner, 3));
+        assert_eq!(owner, None);
+    }
+
+    #[test]
+    fn stale_invalid_source_index_does_not_clear_a_newer_selection() {
+        let mut owner = Some(1);
+
+        assert!(!clear_invalid_selection(&mut owner, 3));
+        assert_eq!(owner, Some(1));
+    }
+
+    #[test]
+    fn retained_selection_event_uses_latest_owner_binding_writer() {
+        let slot = RefCell::new(None);
+        let old_writer_called = Rc::new(Cell::new(false));
+        let new_writer_called = Rc::new(Cell::new(false));
+
+        let old = old_writer_called.clone();
+        replace_selection_updater(&slot, Rc::new(move |_: &mut ()| old.set(true)));
+        let new = new_writer_called.clone();
+        replace_selection_updater(&slot, Rc::new(move |_: &mut ()| new.set(true)));
+
+        apply_selection_updater(&slot, &mut ());
+
+        assert!(!old_writer_called.get());
+        assert!(new_writer_called.get());
     }
 }

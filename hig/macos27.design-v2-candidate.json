@@ -1,0 +1,1842 @@
+{
+  "format": "rustui-appearance-design-candidate",
+  "candidate_version": 1,
+  "target_format": "rustui-appearance@2",
+  "runtime_compatible": false,
+  "status": "design inventory and contracts; not accepted by current ThemeDocument loader",
+  "created_on": "2026-10-22",
+  "source_baselines": {
+    "production_theme": {
+      "path": "themes/macos27.json",
+      "sha256": "5a4a81adb6af226d59af916a4feadf575b23447b7cee2517882e9bdf2453e01e"
+    },
+    "hig_pre_design": {
+      "path": "hig/macos27.hig-pre-design-baseline.2026-10-22.json",
+      "sha256": "903c483647ee2c9cf371d98e8c1f051c6ff58ee8ff21b1903e5bd15fa1ee5e3e"
+    },
+    "image_inventory": "hig/IMAGE_INVENTORY.json"
+  },
+  "preservation": {
+    "v1_component_ids": [
+      "alert_dialog",
+      "button",
+      "button_group",
+      "checkbox",
+      "color_picker",
+      "combo_box",
+      "disclosure_control",
+      "divider",
+      "form",
+      "form_accessories",
+      "icon",
+      "image",
+      "label",
+      "link",
+      "list",
+      "menu",
+      "menu_bar",
+      "menu_item",
+      "menu_separator",
+      "notification",
+      "outline_view",
+      "picker",
+      "radio_button",
+      "save_dialog",
+      "scroll_view",
+      "search_field",
+      "search_field_examples",
+      "segmented_control",
+      "sidebar",
+      "slider",
+      "stepper",
+      "tab_bar",
+      "table",
+      "text",
+      "text_field",
+      "text_style_guide",
+      "toggle",
+      "toolbar",
+      "utility_window",
+      "window_chrome",
+      "window_controls"
+    ],
+    "v1_component_count": 41,
+    "v1_style_count": 419,
+    "policy": "retain all v1 IDs, styles, provenance, compositions, metrics; migrate only with explicit mapping"
+  },
+  "status_legend": {
+    "runtime_status": [
+      "partial",
+      "absent",
+      "native-only"
+    ],
+    "design_completeness": [
+      "not-designed",
+      "inventory-only",
+      "specified-candidate"
+    ],
+    "meaning": "source/module presence does not imply complete runtime behavior; no candidate is claimed to work"
+  },
+  "additional_rustui_component_contracts": [
+    {
+      "id": "avatar",
+      "kind": "reusable_component",
+      "runtime_status": "partial",
+      "runtime_evidence": "basic/avatar.rs",
+      "theme_record_present": false,
+      "design_completeness": "inventory-only",
+      "variants": [
+        "appearance:light|dark",
+        "density:regular|compact",
+        "enabled|disabled",
+        "focused"
+      ],
+      "states": [
+        "identity",
+        "profile artwork, fallback initials, loading",
+        "error"
+      ],
+      "visual_refs": [
+        "P29 image/icon concepts",
+        "#10 asset browser"
+      ],
+      "contract_gaps": [
+        "identity/profile artwork",
+        "fallback initials",
+        "loading/error"
+      ]
+    },
+    {
+      "id": "badge",
+      "kind": "reusable_component",
+      "runtime_status": "partial",
+      "runtime_evidence": "basic/badge.rs",
+      "theme_record_present": false,
+      "design_completeness": "inventory-only",
+      "variants": [
+        "appearance:light|dark",
+        "density:regular|compact",
+        "enabled|disabled",
+        "focused"
+      ],
+      "states": [
+        "status",
+        "count",
+        "notification",
+        "semantic severity"
+      ],
+      "visual_refs": [
+        "P28 status/feedback",
+        "#05 analytics"
+      ],
+      "contract_gaps": [
+        "status/count/notification/semantic severity"
+      ]
+    },
+    {
+      "id": "canvas",
+      "kind": "reusable_component",
+      "runtime_status": "partial",
+      "runtime_evidence": "advanced/canvas.rs",
+      "theme_record_present": false,
+      "design_completeness": "inventory-only",
+      "variants": [
+        "appearance:light|dark",
+        "density:regular|compact",
+        "enabled|disabled",
+        "focused"
+      ],
+      "states": [
+        "zoom",
+        "pan",
+        "selection",
+        "overlay",
+        "empty"
+      ],
+      "visual_refs": [
+        "P16 wrapping",
+        "P18 split",
+        "P34 drag/drop"
+      ],
+      "contract_gaps": [
+        "zoom/pan/selection/overlay/empty"
+      ]
+    },
+    {
+      "id": "code_editor",
+      "kind": "reusable_component",
+      "runtime_status": "partial",
+      "runtime_evidence": "advanced/code_editor.rs",
+      "theme_record_present": false,
+      "design_completeness": "inventory-only",
+      "variants": [
+        "appearance:light|dark",
+        "density:regular|compact",
+        "enabled|disabled",
+        "focused"
+      ],
+      "states": [
+        "syntax theme, selection, caret, diagnostics, large text"
+      ],
+      "visual_refs": [
+        "paired #13 split/code workspace",
+        "P27 rich text"
+      ],
+      "contract_gaps": [
+        "syntax theme",
+        "selection",
+        "caret",
+        "diagnostics",
+        "large text"
+      ]
+    },
+    {
+      "id": "collection",
+      "kind": "reusable_component",
+      "runtime_status": "partial",
+      "runtime_evidence": "data/collection.rs",
+      "theme_record_present": false,
+      "design_completeness": "inventory-only",
+      "variants": [
+        "appearance:light|dark",
+        "density:regular|compact",
+        "enabled|disabled",
+        "focused"
+      ],
+      "states": [
+        "grid",
+        "list density, selection, drag",
+        "drop, empty",
+        "loading"
+      ],
+      "visual_refs": [
+        "P14 asset grid",
+        "#10 asset browser"
+      ],
+      "contract_gaps": [
+        "grid/list density",
+        "selection",
+        "drag/drop",
+        "empty/loading"
+      ]
+    },
+    {
+      "id": "data_grid",
+      "kind": "reusable_component",
+      "runtime_status": "partial",
+      "runtime_evidence": "data/data_grid.rs",
+      "theme_record_present": false,
+      "design_completeness": "inventory-only",
+      "variants": [
+        "appearance:light|dark",
+        "density:regular|compact",
+        "enabled|disabled",
+        "focused"
+      ],
+      "states": [
+        "sort",
+        "filter",
+        "resize",
+        "selection",
+        "focus",
+        "virtualized rows"
+      ],
+      "visual_refs": [
+        "P13 tables/tree",
+        "#06 data explorer"
+      ],
+      "contract_gaps": [
+        "sort/filter/resize/selection/focus/virtualized rows"
+      ]
+    },
+    {
+      "id": "date_picker",
+      "kind": "reusable_component",
+      "runtime_status": "partial",
+      "runtime_evidence": "input/date_picker.rs",
+      "theme_record_present": false,
+      "design_completeness": "inventory-only",
+      "variants": [
+        "appearance:light|dark",
+        "density:regular|compact",
+        "enabled|disabled",
+        "focused"
+      ],
+      "states": [
+        "locale calendar, range, disabled date, keyboard"
+      ],
+      "visual_refs": [
+        "P07 date/time",
+        "#09 calendar"
+      ],
+      "contract_gaps": [
+        "locale calendar",
+        "range",
+        "disabled date",
+        "keyboard"
+      ]
+    },
+    {
+      "id": "empty_state",
+      "kind": "reusable_component",
+      "runtime_status": "partial",
+      "runtime_evidence": "feedback/empty_state.rs",
+      "theme_record_present": false,
+      "design_completeness": "inventory-only",
+      "variants": [
+        "appearance:light|dark",
+        "density:regular|compact",
+        "enabled|disabled",
+        "focused"
+      ],
+      "states": [
+        "empty",
+        "search-empty",
+        "permission",
+        "action"
+      ],
+      "visual_refs": [
+        "P14 assets",
+        "P12 lists"
+      ],
+      "contract_gaps": [
+        "empty/search-empty/permission/action"
+      ]
+    },
+    {
+      "id": "error_state",
+      "kind": "reusable_component",
+      "runtime_status": "partial",
+      "runtime_evidence": "feedback/error_state.rs",
+      "theme_record_present": false,
+      "design_completeness": "inventory-only",
+      "variants": [
+        "appearance:light|dark",
+        "density:regular|compact",
+        "enabled|disabled",
+        "focused"
+      ],
+      "states": [
+        "recoverable",
+        "fatal",
+        "retry",
+        "inline"
+      ],
+      "visual_refs": [
+        "P28 feedback",
+        "P33 document viewer"
+      ],
+      "contract_gaps": [
+        "recoverable/fatal/retry/inline"
+      ]
+    },
+    {
+      "id": "graph_view",
+      "kind": "reusable_component",
+      "runtime_status": "partial",
+      "runtime_evidence": "advanced/graph_view.rs",
+      "theme_record_present": false,
+      "design_completeness": "inventory-only",
+      "variants": [
+        "appearance:light|dark",
+        "density:regular|compact",
+        "enabled|disabled",
+        "focused"
+      ],
+      "states": [
+        "node",
+        "edge selection, zoom, keyboard alternative"
+      ],
+      "visual_refs": [
+        "paired #12 workflow",
+        "P31 charts"
+      ],
+      "contract_gaps": [
+        "node/edge selection",
+        "zoom",
+        "keyboard alternative"
+      ]
+    },
+    {
+      "id": "keyed_list",
+      "kind": "reusable_component",
+      "runtime_status": "partial",
+      "runtime_evidence": "data/keyed_list.rs",
+      "theme_record_present": false,
+      "design_completeness": "inventory-only",
+      "variants": [
+        "appearance:light|dark",
+        "density:regular|compact",
+        "enabled|disabled",
+        "focused"
+      ],
+      "states": [
+        "stable identity, reorder, insertion",
+        "removal, focus retention"
+      ],
+      "visual_refs": [
+        "P12 list/outline",
+        "P34 drag/drop"
+      ],
+      "contract_gaps": [
+        "stable identity",
+        "reorder",
+        "insertion/removal",
+        "focus retention"
+      ]
+    },
+    {
+      "id": "node_editor",
+      "kind": "reusable_component",
+      "runtime_status": "partial",
+      "runtime_evidence": "advanced/node_editor.rs",
+      "theme_record_present": false,
+      "design_completeness": "inventory-only",
+      "variants": [
+        "appearance:light|dark",
+        "density:regular|compact",
+        "enabled|disabled",
+        "focused"
+      ],
+      "states": [
+        "connection",
+        "selection",
+        "drag",
+        "validation"
+      ],
+      "visual_refs": [
+        "paired #12 workflow",
+        "P19 rule editor"
+      ],
+      "contract_gaps": [
+        "connection/selection/drag/validation"
+      ]
+    },
+    {
+      "id": "progress_indicator",
+      "kind": "reusable_component",
+      "runtime_status": "partial",
+      "runtime_evidence": "feedback/progress.rs",
+      "theme_record_present": false,
+      "design_completeness": "inventory-only",
+      "variants": [
+        "appearance:light|dark",
+        "density:regular|compact",
+        "enabled|disabled",
+        "focused"
+      ],
+      "states": [
+        "determinate",
+        "indeterminate",
+        "paused",
+        "error",
+        "read-only"
+      ],
+      "visual_refs": [
+        "P28 corrected progress concept"
+      ],
+      "contract_gaps": [
+        "determinate/indeterminate/paused/error/read-only"
+      ]
+    },
+    {
+      "id": "property_inspector",
+      "kind": "reusable_component",
+      "runtime_status": "partial",
+      "runtime_evidence": "advanced/property_inspector.rs",
+      "theme_record_present": false,
+      "design_completeness": "inventory-only",
+      "variants": [
+        "appearance:light|dark",
+        "density:regular|compact",
+        "enabled|disabled",
+        "focused"
+      ],
+      "states": [
+        "sections, editable",
+        "read-only, mixed value, validation"
+      ],
+      "visual_refs": [
+        "P10 sidebar",
+        "P18 inspector"
+      ],
+      "contract_gaps": [
+        "sections",
+        "editable/read-only",
+        "mixed value",
+        "validation"
+      ]
+    },
+    {
+      "id": "resizable_panel",
+      "kind": "reusable_component",
+      "runtime_status": "partial",
+      "runtime_evidence": "advanced/resizable_panel.rs",
+      "theme_record_present": false,
+      "design_completeness": "inventory-only",
+      "variants": [
+        "appearance:light|dark",
+        "density:regular|compact",
+        "enabled|disabled",
+        "focused"
+      ],
+      "states": [
+        "min",
+        "max",
+        "collapse",
+        "keyboard resize",
+        "focus retention"
+      ],
+      "visual_refs": [
+        "P16 adaptive layout",
+        "P18 split views"
+      ],
+      "contract_gaps": [
+        "min/max/collapse/keyboard resize/focus retention"
+      ]
+    },
+    {
+      "id": "secure_field",
+      "kind": "reusable_component",
+      "runtime_status": "partial",
+      "runtime_evidence": "input/secure_field.rs",
+      "theme_record_present": false,
+      "design_completeness": "inventory-only",
+      "variants": [
+        "appearance:light|dark",
+        "density:regular|compact",
+        "enabled|disabled",
+        "focused"
+      ],
+      "states": [
+        "password visibility, IME, paste policy, accessible reveal"
+      ],
+      "visual_refs": [
+        "P04 text validation"
+      ],
+      "contract_gaps": [
+        "password visibility",
+        "IME",
+        "paste policy",
+        "accessible reveal"
+      ]
+    },
+    {
+      "id": "skeleton",
+      "kind": "reusable_component",
+      "runtime_status": "partial",
+      "runtime_evidence": "feedback/skeleton.rs",
+      "theme_record_present": false,
+      "design_completeness": "inventory-only",
+      "variants": [
+        "appearance:light|dark",
+        "density:regular|compact",
+        "enabled|disabled",
+        "focused"
+      ],
+      "states": [
+        "loading shape, reduce motion, avoid false semantic values"
+      ],
+      "visual_refs": [
+        "P28 loading"
+      ],
+      "contract_gaps": [
+        "loading shape",
+        "reduce motion",
+        "avoid false semantic values"
+      ]
+    },
+    {
+      "id": "spinner",
+      "kind": "reusable_component",
+      "runtime_status": "partial",
+      "runtime_evidence": "feedback/spinner.rs",
+      "theme_record_present": false,
+      "design_completeness": "inventory-only",
+      "variants": [
+        "appearance:light|dark",
+        "density:regular|compact",
+        "enabled|disabled",
+        "focused"
+      ],
+      "states": [
+        "busy status, announcement throttle, reduced motion"
+      ],
+      "visual_refs": [
+        "P28 feedback"
+      ],
+      "contract_gaps": [
+        "busy status",
+        "announcement throttle",
+        "reduced motion"
+      ]
+    },
+    {
+      "id": "text_editor",
+      "kind": "reusable_component",
+      "runtime_status": "partial",
+      "runtime_evidence": "input/text_editor.rs",
+      "theme_record_present": false,
+      "design_completeness": "inventory-only",
+      "variants": [
+        "appearance:light|dark",
+        "density:regular|compact",
+        "enabled|disabled",
+        "focused"
+      ],
+      "states": [
+        "selection",
+        "IME",
+        "bidi",
+        "formatting",
+        "scale"
+      ],
+      "visual_refs": [
+        "paired #11 Notes",
+        "P27 rich text"
+      ],
+      "contract_gaps": [
+        "selection/IME/bidi/formatting/scale"
+      ]
+    },
+    {
+      "id": "tree",
+      "kind": "reusable_component",
+      "runtime_status": "partial",
+      "runtime_evidence": "data/tree.rs",
+      "theme_record_present": false,
+      "design_completeness": "inventory-only",
+      "variants": [
+        "appearance:light|dark",
+        "density:regular|compact",
+        "enabled|disabled",
+        "focused"
+      ],
+      "states": [
+        "hierarchy",
+        "expand",
+        "selection",
+        "typeahead",
+        "virtualization"
+      ],
+      "visual_refs": [
+        "P12 outline",
+        "P13 tree tables"
+      ],
+      "contract_gaps": [
+        "hierarchy/expand/selection/typeahead/virtualization"
+      ]
+    },
+    {
+      "id": "breadcrumb",
+      "kind": "reusable_component",
+      "runtime_status": "partial",
+      "runtime_evidence": "navigation/breadcrumb.rs",
+      "theme_record_present": false,
+      "design_completeness": "inventory-only",
+      "variants": [
+        "appearance:light|dark",
+        "density:regular|compact",
+        "enabled|disabled",
+        "focused"
+      ],
+      "states": [
+        "overflow, current item, RTL, keyboard"
+      ],
+      "visual_refs": [
+        "P11 path controls"
+      ],
+      "contract_gaps": [
+        "overflow",
+        "current item",
+        "RTL",
+        "keyboard"
+      ]
+    },
+    {
+      "id": "navigation_split",
+      "kind": "reusable_component",
+      "runtime_status": "partial",
+      "runtime_evidence": "navigation/navigation_split.rs",
+      "theme_record_present": false,
+      "design_completeness": "inventory-only",
+      "variants": [
+        "appearance:light|dark",
+        "density:regular|compact",
+        "enabled|disabled",
+        "focused"
+      ],
+      "states": [
+        "sidebar",
+        "detail",
+        "inspector modes and resize"
+      ],
+      "visual_refs": [
+        "paired #13 split workspace",
+        "P10 sidebar"
+      ],
+      "contract_gaps": [
+        "sidebar/detail/inspector modes and resize"
+      ]
+    },
+    {
+      "id": "navigation_stack",
+      "kind": "reusable_component",
+      "runtime_status": "partial",
+      "runtime_evidence": "navigation/navigation_stack.rs",
+      "theme_record_present": false,
+      "design_completeness": "inventory-only",
+      "variants": [
+        "appearance:light|dark",
+        "density:regular|compact",
+        "enabled|disabled",
+        "focused"
+      ],
+      "states": [
+        "push",
+        "pop",
+        "history",
+        "keyboard",
+        "focus"
+      ],
+      "visual_refs": [
+        "P11 tabs/path controls"
+      ],
+      "contract_gaps": [
+        "push/pop/history/keyboard/focus"
+      ]
+    },
+    {
+      "id": "context_menu",
+      "kind": "reusable_component",
+      "runtime_status": "partial",
+      "runtime_evidence": "overlay/context_menu.rs",
+      "theme_record_present": false,
+      "design_completeness": "inventory-only",
+      "variants": [
+        "appearance:light|dark",
+        "density:regular|compact",
+        "enabled|disabled",
+        "focused"
+      ],
+      "states": [
+        "context action semantics, shortcuts, dismissal"
+      ],
+      "visual_refs": [
+        "P08 Menus, Pop-ups and Pull-downs",
+        "P34 drag/drop"
+      ],
+      "contract_gaps": [
+        "context action semantics",
+        "shortcuts",
+        "dismissal"
+      ]
+    },
+    {
+      "id": "dialog",
+      "kind": "reusable_component",
+      "runtime_status": "partial",
+      "runtime_evidence": "overlay/dialog.rs",
+      "theme_record_present": false,
+      "design_completeness": "inventory-only",
+      "variants": [
+        "appearance:light|dark",
+        "density:regular|compact",
+        "enabled|disabled",
+        "focused"
+      ],
+      "states": [
+        "modal",
+        "nonmodal, initial",
+        "return focus, cancel",
+        "destructive"
+      ],
+      "visual_refs": [
+        "P21 alerts/dialogs/sheets"
+      ],
+      "contract_gaps": [
+        "modal/nonmodal",
+        "initial/return focus",
+        "cancel/destructive"
+      ]
+    },
+    {
+      "id": "drawer",
+      "kind": "reusable_component",
+      "runtime_status": "partial",
+      "runtime_evidence": "overlay/drawer.rs",
+      "theme_record_present": false,
+      "design_completeness": "inventory-only",
+      "variants": [
+        "appearance:light|dark",
+        "density:regular|compact",
+        "enabled|disabled",
+        "focused"
+      ],
+      "states": [
+        "edge",
+        "placement, modality, focus, reduce motion"
+      ],
+      "visual_refs": [
+        "P18 split/panel concepts"
+      ],
+      "contract_gaps": [
+        "edge/placement",
+        "modality",
+        "focus",
+        "reduce motion"
+      ]
+    },
+    {
+      "id": "popover",
+      "kind": "reusable_component",
+      "runtime_status": "partial",
+      "runtime_evidence": "overlay/popover.rs",
+      "theme_record_present": false,
+      "design_completeness": "inventory-only",
+      "variants": [
+        "appearance:light|dark",
+        "density:regular|compact",
+        "enabled|disabled",
+        "focused"
+      ],
+      "states": [
+        "anchor",
+        "placement",
+        "dismissal",
+        "focus behavior"
+      ],
+      "visual_refs": [
+        "P20 popovers/tooltips"
+      ],
+      "contract_gaps": [
+        "anchor/placement/dismissal/focus behavior"
+      ]
+    },
+    {
+      "id": "sheet",
+      "kind": "reusable_component",
+      "runtime_status": "partial",
+      "runtime_evidence": "overlay/sheet.rs",
+      "theme_record_present": false,
+      "design_completeness": "inventory-only",
+      "variants": [
+        "appearance:light|dark",
+        "density:regular|compact",
+        "enabled|disabled",
+        "focused"
+      ],
+      "states": [
+        "task-scoped vs OS-owned sheet distinction"
+      ],
+      "visual_refs": [
+        "P21 sheets",
+        "P23 save/open"
+      ],
+      "contract_gaps": [
+        "task-scoped vs OS-owned sheet distinction"
+      ]
+    },
+    {
+      "id": "toast",
+      "kind": "reusable_component",
+      "runtime_status": "partial",
+      "runtime_evidence": "overlay/toast.rs",
+      "theme_record_present": false,
+      "design_completeness": "inventory-only",
+      "variants": [
+        "appearance:light|dark",
+        "density:regular|compact",
+        "enabled|disabled",
+        "focused"
+      ],
+      "states": [
+        "severity, timeout, action, announcement"
+      ],
+      "visual_refs": [
+        "P28 feedback",
+        "P35 notification"
+      ],
+      "contract_gaps": [
+        "severity",
+        "timeout",
+        "action",
+        "announcement"
+      ]
+    },
+    {
+      "id": "tooltip",
+      "kind": "reusable_component",
+      "runtime_status": "partial",
+      "runtime_evidence": "overlay/tooltip.rs",
+      "theme_record_present": false,
+      "design_completeness": "inventory-only",
+      "variants": [
+        "appearance:light|dark",
+        "density:regular|compact",
+        "enabled|disabled",
+        "focused"
+      ],
+      "states": [
+        "hover",
+        "focus timing, keyboard, accessible description"
+      ],
+      "visual_refs": [
+        "P20 help"
+      ],
+      "contract_gaps": [
+        "hover/focus timing",
+        "keyboard",
+        "accessible description"
+      ]
+    },
+    {
+      "id": "alert_view",
+      "kind": "reusable_component",
+      "runtime_status": "partial",
+      "runtime_evidence": "overlay/alert.rs",
+      "theme_record_present": false,
+      "design_completeness": "inventory-only",
+      "variants": [
+        "appearance:light|dark",
+        "density:regular|compact",
+        "enabled|disabled",
+        "focused"
+      ],
+      "states": [
+        "inline RustUI alert distinct from native alert",
+        "panel"
+      ],
+      "visual_refs": [
+        "P21 alerts"
+      ],
+      "contract_gaps": [
+        "inline RustUI alert distinct from native alert/panel"
+      ]
+    }
+  ],
+  "absent_reusable_patterns": [
+    {
+      "id": "command_palette",
+      "kind": "reusable component",
+      "runtime_status": "absent",
+      "theme_record_present": false,
+      "design_completeness": "candidate",
+      "visual_refs": [
+        "paired #14 command/search center",
+        "P36 keyboard/focus"
+      ],
+      "candidate_states": [
+        "query",
+        "scopes",
+        "recent commands",
+        "shortcuts",
+        "empty state"
+      ],
+      "implementation_gate": "new public component/runtime architecture approval"
+    },
+    {
+      "id": "media_player",
+      "kind": "reusable domain component",
+      "runtime_status": "absent",
+      "theme_record_present": false,
+      "design_completeness": "candidate",
+      "visual_refs": [
+        "P30 media"
+      ],
+      "candidate_states": [
+        "play",
+        "pause",
+        "scrub",
+        "volume",
+        "captions",
+        "keyboard"
+      ],
+      "implementation_gate": "new public component/runtime architecture approval"
+    },
+    {
+      "id": "chart_view",
+      "kind": "reusable domain component",
+      "runtime_status": "absent",
+      "theme_record_present": false,
+      "design_completeness": "candidate",
+      "visual_refs": [
+        "P31 charts and gauges; #05 dashboard"
+      ],
+      "candidate_states": [
+        "series",
+        "legend",
+        "scale",
+        "selection",
+        "non-color encoding"
+      ],
+      "implementation_gate": "new public component/runtime architecture approval"
+    },
+    {
+      "id": "map_view",
+      "kind": "reusable domain component",
+      "runtime_status": "absent",
+      "theme_record_present": false,
+      "design_completeness": "candidate",
+      "visual_refs": [
+        "P32 maps and locations"
+      ],
+      "candidate_states": [
+        "markers",
+        "selection",
+        "zoom",
+        "keyboard",
+        "list alternative"
+      ],
+      "implementation_gate": "new public component/runtime architecture approval"
+    },
+    {
+      "id": "document_preview",
+      "kind": "reusable document component / OS bridge",
+      "runtime_status": "absent",
+      "theme_record_present": false,
+      "design_completeness": "candidate",
+      "visual_refs": [
+        "P33 Quick Look"
+      ],
+      "candidate_states": [
+        "preview",
+        "loading",
+        "unavailable",
+        "protected",
+        "OS handoff"
+      ],
+      "implementation_gate": "new public component/runtime architecture approval"
+    }
+  ],
+  "native_integrations": [
+    {
+      "id": "font_panel_bridge",
+      "kind": "native system integration",
+      "runtime_status": "native-only",
+      "theme_record_present": true,
+      "design_completeness": "integration candidate",
+      "visual_refs": [
+        "P26 typography"
+      ],
+      "design_contract_notes": [
+        "native panel lifecycle",
+        "selection",
+        "cancellation"
+      ],
+      "implementation_gate": "macOS/AppKit bridge and ownership approval"
+    },
+    {
+      "id": "print_panel_bridge",
+      "kind": "native system integration",
+      "runtime_status": "native-only",
+      "theme_record_present": true,
+      "design_completeness": "integration candidate",
+      "visual_refs": [
+        "P24 print/export"
+      ],
+      "design_contract_notes": [
+        "native print workflow",
+        "preview",
+        "progress/error"
+      ],
+      "implementation_gate": "macOS/AppKit bridge and ownership approval"
+    },
+    {
+      "id": "open_panel_bridge",
+      "kind": "native system integration",
+      "runtime_status": "native-only",
+      "theme_record_present": true,
+      "design_completeness": "integration candidate",
+      "visual_refs": [
+        "P23 open/save"
+      ],
+      "design_contract_notes": [
+        "sandboxed file selection",
+        "filter",
+        "cancellation"
+      ],
+      "implementation_gate": "macOS/AppKit bridge and ownership approval"
+    },
+    {
+      "id": "save_panel_bridge",
+      "kind": "native system integration",
+      "runtime_status": "native-only",
+      "theme_record_present": true,
+      "design_completeness": "integration candidate",
+      "visual_refs": [
+        "P23 open/save"
+      ],
+      "design_contract_notes": [
+        "filename validation",
+        "overwrite",
+        "extension",
+        "cancellation"
+      ],
+      "implementation_gate": "macOS/AppKit bridge and ownership approval"
+    },
+    {
+      "id": "share_panel_bridge",
+      "kind": "native system integration",
+      "runtime_status": "native-only",
+      "theme_record_present": true,
+      "design_completeness": "integration candidate",
+      "visual_refs": [
+        "P35 sharing"
+      ],
+      "design_contract_notes": [
+        "system services handoff",
+        "permissions",
+        "failure"
+      ],
+      "implementation_gate": "macOS/AppKit bridge and ownership approval"
+    },
+    {
+      "id": "menu_bar_command_bridge",
+      "kind": "native app integration",
+      "runtime_status": "native-only",
+      "theme_record_present": true,
+      "design_completeness": "host integration candidate",
+      "visual_refs": [
+        "P35 menu bar; Apple menu-bar guidance"
+      ],
+      "design_contract_notes": [
+        "command hierarchy",
+        "standard shortcuts",
+        "validation"
+      ],
+      "implementation_gate": "macOS/AppKit bridge and ownership approval"
+    },
+    {
+      "id": "window_chrome_bridge",
+      "kind": "native window integration",
+      "runtime_status": "native-only",
+      "theme_record_present": true,
+      "design_completeness": "host integration candidate",
+      "visual_refs": [
+        "P22 window anatomy"
+      ],
+      "design_contract_notes": [
+        "active/inactive",
+        "full-screen",
+        "titlebar/toolbar integration"
+      ],
+      "implementation_gate": "macOS/AppKit bridge and ownership approval"
+    },
+    {
+      "id": "window_controls_bridge",
+      "kind": "native window integration",
+      "runtime_status": "native-only",
+      "theme_record_present": true,
+      "design_completeness": "host integration candidate",
+      "visual_refs": [
+        "P22 window anatomy"
+      ],
+      "design_contract_notes": [
+        "OS-owned close/minimize/zoom; no imitation without full ownership"
+      ],
+      "implementation_gate": "macOS/AppKit bridge and ownership approval"
+    },
+    {
+      "id": "notification_center_bridge",
+      "kind": "native OS integration",
+      "runtime_status": "native-only",
+      "theme_record_present": true,
+      "design_completeness": "integration candidate",
+      "visual_refs": [
+        "P35 system previews/sharing",
+        "P40 Desktop Widgets and System Controls",
+        "P28 app feedback comparison"
+      ],
+      "design_contract_notes": [
+        "delivery",
+        "user permission",
+        "actions",
+        "grouping"
+      ],
+      "implementation_gate": "macOS/AppKit bridge and ownership approval"
+    },
+    {
+      "id": "menu_extra",
+      "kind": "native OS integration",
+      "runtime_status": "native-only",
+      "theme_record_present": true,
+      "design_completeness": "integration candidate",
+      "visual_refs": [
+        "P35 system previews"
+      ],
+      "design_contract_notes": [
+        "status item",
+        "menu lifecycle",
+        "overflow",
+        "accessibility"
+      ],
+      "implementation_gate": "macOS/AppKit bridge and ownership approval"
+    },
+    {
+      "id": "system_widget_extension",
+      "kind": "OS extension",
+      "runtime_status": "native-only",
+      "theme_record_present": true,
+      "design_completeness": "extension candidate",
+      "visual_refs": [
+        "P40 Desktop Widgets and System Controls"
+      ],
+      "design_contract_notes": [
+        "timeline refresh",
+        "privacy",
+        "extension lifecycle"
+      ],
+      "implementation_gate": "macOS/AppKit bridge and ownership approval"
+    }
+  ],
+  "composition_and_reference_examples": [
+    "settings/form compositions",
+    "workflow canvas",
+    "analytics dashboard",
+    "kanban board",
+    "calendar week view",
+    "asset browser",
+    "split code workspace",
+    "guided setup",
+    "document editor"
+  ],
+  "schema_assumptions": {
+    "appearance": "runtime input, system/light/dark; never hard-coded global default",
+    "units": "logical points, explicit unit per metric",
+    "unknown_keys": "only preserve inside x-* extension namespace; diagnostics required",
+    "style_resolution": "explicit priority + typed selector; reject ambiguous overlap",
+    "runtime_capabilities": "external renderer manifest; JSON design status never asserts consumer existence",
+    "legacy": "v1 imported as namespaced preserved source"
+  },
+  "mapping_policy": "The v1 record IDs are retained as references; additions use distinct concepts only. Do not create aliases for `radio`/`radio_button`, `outline`/`outline_view`, `tab_view`/`tab_bar`, `search_field_examples`/SearchField, or composition groups. Existing v1 reference-only records remain reference-only.",
+  "first_additive_design_batch": {
+    "batch_id": "search-menu-system-surface-contracts-v1",
+    "status": "design-only additive refinement",
+    "runtime_compatible": false,
+    "purpose": "Correct and complete a small visual-reference-linked contract slice while preserving the v1 theme and all candidate inventory counts.",
+    "ownership_rule": "A screenshot names a design scenario only. RustUI/GPUI renderers own in-app components; AppKit/WidgetKit or the host owns native system surfaces. Ownership proposals below are unverified until source and platform integration evidence is reviewed.",
+    "visual_references": [
+      {
+        "index": "P05",
+        "title": "Search, Tokens and Combo Boxes",
+        "stored_path": "rustui-images/playground-dark/RustUI Playground: Dark Search and Token Fields.png",
+        "visual_category": "dark_playground",
+        "source_conversation_id": "6ad6bcc8-8c24-83ea-b45c-3df8e7535503",
+        "source_message_id": "4a96ccb7-d880-56e2-9220-28634e2fd291",
+        "library_file_id": "libfile_b7372be4b0c88191ac05547cceb029e0",
+        "sha256": "69175f528987237ea22cc09f2bb19f1b1d0fb017b04e9d70f0b655d90a1da26d",
+        "size_bytes": 1479868,
+        "related_contract_ids": [
+          "search_field",
+          "search_field_examples",
+          "combo_box"
+        ],
+        "visible_design_concepts": [
+          "empty and populated search fields",
+          "clear action",
+          "recent searches",
+          "token entry composition",
+          "editable combo box",
+          "disabled search and combo box"
+        ],
+        "evidence_limit": "Inspected local image; illustrative RustUI design evidence only, not an Apple requirement or proof of runtime support."
+      },
+      {
+        "index": "P08",
+        "title": "Menus, Pop-ups and Pull-downs",
+        "stored_path": "rustui-images/playground-dark/RustUI Menus and Pop-ups Showcase.png",
+        "visual_category": "dark_playground",
+        "source_conversation_id": "6ad6bcc8-8c24-83ea-b45c-3df8e7535503",
+        "source_message_id": "4a96ccb7-d880-56e2-9220-28634e2fd291",
+        "library_file_id": "libfile_cc4b8ad28eb88191aee0472700bd90e7",
+        "sha256": "5acb3620c55a124b7835d3b0aeafe14b44941f457ff8dd7fe13d4f8a61e13864",
+        "size_bytes": 1565674,
+        "related_contract_ids": [
+          "menu",
+          "menu_item",
+          "menu_separator",
+          "picker",
+          "context_menu"
+        ],
+        "visible_design_concepts": [
+          "selection pop-up",
+          "menu with check and shortcut rows",
+          "command pull-down",
+          "split and unified action-menu compositions",
+          "contextual submenu"
+        ],
+        "evidence_limit": "Inspected local image; illustrative RustUI design evidence only, not an Apple requirement or proof of runtime support."
+      },
+      {
+        "index": "P40",
+        "title": "Desktop Widgets and System Controls",
+        "stored_path": "rustui-images/playground-dark/RustUI system widgets and controls.png",
+        "visual_category": "dark_playground",
+        "source_conversation_id": "6ad6bcc8-8c24-83ea-b45c-3df8e7535503",
+        "source_message_id": "4a96ccb7-d880-56e2-9220-28634e2fd291",
+        "library_file_id": "libfile_de75938b55008191b3e2b8308d5bd40a",
+        "sha256": "9d3e8cc425e6b8d362deaa260ce8566c839b7ba72c1a09e3e8cead91f3c56142",
+        "size_bytes": 1641230,
+        "related_contract_ids": [
+          "system_widget_extension",
+          "notification_center_bridge"
+        ],
+        "visible_design_concepts": [
+          "small, medium and large widget previews",
+          "full-color and accented presentation",
+          "system-control preview",
+          "notification banner and stack"
+        ],
+        "evidence_limit": "Inspected local image; illustrative RustUI design evidence only, not an Apple requirement or proof of runtime support."
+      }
+    ],
+    "contract_refinements": [
+      {
+        "id": "search-and-token-entry",
+        "contract_kind": "existing component and application composition refinement",
+        "related_v1_ids": [
+          "search_field",
+          "search_field_examples"
+        ],
+        "runtime_status": "partial; behavior and accessibility contract not verified in this design batch",
+        "proposed_owner": "RustUI SearchField for in-app query entry; GPUI popup/menu surface for suggestions when explicitly composed. Token chips remain an application composition; no TokenInput public component is proposed.",
+        "semantic_parts": [
+          {
+            "id": "search_field.leading_symbol",
+            "role": "optional search affordance; decorative unless it conveys an action"
+          },
+          {
+            "id": "search_field.label",
+            "role": "programmatic and visible name, distinct from placeholder"
+          },
+          {
+            "id": "search_field.query",
+            "role": "editable query text"
+          },
+          {
+            "id": "search_field.clear_action",
+            "role": "named action available only when a query exists"
+          },
+          {
+            "id": "search_field.suggestions",
+            "role": "optional list of recent or matching choices"
+          },
+          {
+            "id": "token_entry.chip",
+            "role": "selected query token in an app-owned composition; removable only with an explicit action"
+          },
+          {
+            "id": "token_entry.editor",
+            "role": "text entry following or preceding tokens according to the documented interaction model"
+          }
+        ],
+        "variants": [
+          "empty",
+          "query-present",
+          "recent-searches",
+          "suggestions-open",
+          "disabled",
+          "compact",
+          "regular",
+          "light",
+          "dark"
+        ],
+        "states": [
+          "idle",
+          "focused",
+          "editing",
+          "suggestions-expanded",
+          "option-active",
+          "clearing",
+          "disabled",
+          "no-results",
+          "invalid (only when the owning app defines validation)"
+        ],
+        "accessibility_contract": {
+          "role_concepts": [
+            "search field",
+            "text input",
+            "list box",
+            "option"
+          ],
+          "requirements": [
+            "Provide a stable accessible name independent of placeholder text.",
+            "Expose expanded state and active suggestion when a suggestion list is open.",
+            "Give the clear action its own localized name and keyboard focus target.",
+            "Announce result-count changes only when useful; do not announce every keystroke.",
+            "Expose each token as text with a separately named removal action when removal is supported."
+          ],
+          "keyboard": [
+            "Return submits or accepts the active option according to an explicit owner policy.",
+            "Up/Down moves through suggestions only while the suggestion surface is open.",
+            "Escape closes suggestions before clearing or cancelling query state.",
+            "Tab order follows the logical field, token actions, then suggestion content without trapping focus."
+          ],
+          "verification_status": "design obligation only; no accessibility tree, VoiceOver, or keyboard test was run"
+        },
+        "localization_and_layout": [
+          "Localize the field name, placeholder, clear action, recent-search labels, and result announcements.",
+          "Use logical leading/trailing placement; keep query content and embedded identifiers readable in mixed-direction text.",
+          "Keep popups anchored to the field and constrain them to available window space.",
+          "Define whether tokens wrap, scroll, or remain in a single row; do not silently clip removable tokens.",
+          "Test narrow widths, long localized labels, large text, and RTL direction."
+        ],
+        "fallbacks": [
+          "If suggestions are unavailable, retain a plain editable search field and omit the popup affordance.",
+          "If token interaction has no owner contract, render tokens as static app content and do not imply removability."
+        ],
+        "unsupported_or_unresolved": [
+          "Whether token entry is a reusable RustUI control or only an app composition.",
+          "Whether SearchField supports a stable label, clear-action keyboard semantics, suggestions, and result announcements.",
+          "The screenshot does not establish native Spotlight behavior or any existing implementation capability."
+        ],
+        "evidence_refs": [
+          "P05"
+        ]
+      },
+      {
+        "id": "combo-box",
+        "contract_kind": "existing component refinement",
+        "related_v1_ids": [
+          "combo_box",
+          "picker"
+        ],
+        "runtime_status": "partial; the design does not establish editable/noneditable behavior support",
+        "proposed_owner": "RustUI ComboBox for its value and selection contract; GPUI popup/menu surface for an in-app option list. Native menus remain separately owned.",
+        "semantic_parts": [
+          {
+            "id": "combo_box.label",
+            "role": "stable accessible name"
+          },
+          {
+            "id": "combo_box.value",
+            "role": "editable text or selected option, chosen by the control mode"
+          },
+          {
+            "id": "combo_box.expand_action",
+            "role": "named action that opens or closes the options"
+          },
+          {
+            "id": "combo_box.options",
+            "role": "list of selectable options with stable identities"
+          },
+          {
+            "id": "combo_box.active_option",
+            "role": "keyboard-active option, distinct from committed value"
+          }
+        ],
+        "variants": [
+          "editable",
+          "selection-only",
+          "empty",
+          "selected",
+          "suggestions",
+          "disabled",
+          "light",
+          "dark"
+        ],
+        "states": [
+          "collapsed",
+          "expanded",
+          "focused",
+          "editing (editable mode only)",
+          "option-active",
+          "selection-committed",
+          "disabled",
+          "no-options",
+          "invalid (owner-defined validation only)"
+        ],
+        "accessibility_contract": {
+          "role_concepts": [
+            "combo box",
+            "list box",
+            "option"
+          ],
+          "requirements": [
+            "Expose the current value, expanded state, selected option, and disabled state.",
+            "Keep the active option distinct from the committed value until selection is accepted.",
+            "Give the popup and each option stable names and identities."
+          ],
+          "keyboard": [
+            "Arrow navigation follows an explicit option-selection model.",
+            "Return commits the active option; Escape closes without committing.",
+            "Type-to-select or filtering must be documented separately for editable and selection-only modes."
+          ],
+          "verification_status": "design obligation only; no semantic or keyboard behavior was verified"
+        },
+        "localization_and_layout": [
+          "Localize option labels and sorting/filtering rules using the active locale.",
+          "Preserve user-entered query text in bidi content; mirror only directional affordances.",
+          "Anchor the option list to the control and constrain height with scrolling rather than clipping options.",
+          "Test long labels, large text, narrow windows, and RTL layouts."
+        ],
+        "fallbacks": [
+          "Use a labeled text field only when free-form input is allowed.",
+          "Use a labeled button plus in-app menu only for selection-only mode; keep committed value visible."
+        ],
+        "unsupported_or_unresolved": [
+          "Editable and selection-only modes may have different keyboard contracts; the source API must decide whether both are supported.",
+          "The P05 image is a design reference and does not prove the option popup or accessibility behavior exists."
+        ],
+        "evidence_refs": [
+          "P05"
+        ]
+      },
+      {
+        "id": "menu-pop-up-pull-down",
+        "contract_kind": "existing surfaces plus source-present context-menu refinement",
+        "related_v1_ids": [
+          "menu",
+          "menu_item",
+          "menu_separator",
+          "picker",
+          "button_group"
+        ],
+        "candidate_source_ids": [
+          "context_menu"
+        ],
+        "runtime_status": "partial/reference-only mix; see the per-ID classification in the preserved 41-record audit",
+        "proposed_owner": "GPUI Components owns its menu surface and menu item rendering; RustUI owns in-app context-menu composition where its component is used. The host owns the macOS menu bar and native menu integration.",
+        "semantic_parts": [
+          {
+            "id": "menu.trigger",
+            "role": "button or selection trigger that names the action/menu"
+          },
+          {
+            "id": "menu.surface",
+            "role": "transient in-app menu container"
+          },
+          {
+            "id": "menu.item",
+            "role": "action or selection row with stable label"
+          },
+          {
+            "id": "menu.check_indicator",
+            "role": "checked or mixed selection indicator, not decoration alone"
+          },
+          {
+            "id": "menu.shortcut",
+            "role": "visible keyboard equivalent associated with the action"
+          },
+          {
+            "id": "menu.submenu_indicator",
+            "role": "directional relationship to a nested menu"
+          },
+          {
+            "id": "menu.separator",
+            "role": "visual grouping only unless a meaningful group label exists"
+          }
+        ],
+        "variants": [
+          "selection-pop-up",
+          "command-pull-down",
+          "context-menu",
+          "submenu",
+          "split-action-menu composition",
+          "light",
+          "dark"
+        ],
+        "states": [
+          "closed",
+          "open",
+          "item-hovered",
+          "item-focused",
+          "checked",
+          "mixed",
+          "disabled",
+          "destructive",
+          "submenu-open",
+          "dismissed",
+          "action-completed"
+        ],
+        "accessibility_contract": {
+          "role_concepts": [
+            "menu",
+            "menu item",
+            "menu item checkbox/radio",
+            "separator"
+          ],
+          "requirements": [
+            "Expose item name, enabled state, checked/mixed state, shortcut description, and submenu relationship.",
+            "Do not use color alone to distinguish destructive, checked, or focused rows.",
+            "Restore focus to the trigger or context target on dismissal according to the opening interaction."
+          ],
+          "keyboard": [
+            "Arrow keys move between eligible items; Home/End behavior is documented if provided.",
+            "Return or Space activates the focused item.",
+            "Escape closes the deepest open menu first.",
+            "Type-ahead is locale-aware and does not conflict with explicit shortcuts."
+          ],
+          "verification_status": "design obligation only; no GPUI or RustUI menu audit was run in this batch"
+        },
+        "localization_and_layout": [
+          "Mirror submenu placement and directional disclosure in RTL while retaining non-directional semantic icons.",
+          "Keep shortcut glyphs and key names stable; localize spoken descriptions.",
+          "Constrain menu placement to the visible window and allow scrolling for long menus.",
+          "Test long translated labels, mixed-direction text, and nested menus."
+        ],
+        "fallbacks": [
+          "Use an in-app popup menu when native menu integration is unavailable; label it as app-owned.",
+          "Keep separators decorative and omit them from accessibility navigation.",
+          "A split button is a composition proposal using an action trigger and menu trigger; do not infer a new supported public component."
+        ],
+        "unsupported_or_unresolved": [
+          "`menu_separator` and `button_group` retain their existing reference-only classifications until a renderer contract is established.",
+          "AppKit menu-bar ownership and native keyboard conventions are not specified by the P08 concept.",
+          "Context-menu pointer, keyboard, touchpad, focus, and dismissal behavior require source and runtime review."
+        ],
+        "evidence_refs": [
+          "P08"
+        ]
+      },
+      {
+        "id": "desktop-widgets-and-system-controls",
+        "contract_kind": "native system integration reference; not a RustUI widget component",
+        "related_v1_ids": [],
+        "candidate_native_ids": [
+          "system_widget_extension",
+          "notification_center_bridge"
+        ],
+        "runtime_status": "native-only design candidate; no integration is claimed",
+        "proposed_owner": "WidgetKit and the macOS host own real desktop widgets; macOS owns system-control surfaces; the notification system owns delivered notification presentation. RustUI may show an app-contained preview only if clearly presented as a preview.",
+        "semantic_parts": [
+          {
+            "id": "widget.family",
+            "role": "small, medium, or large information layout selected by the host"
+          },
+          {
+            "id": "widget.content",
+            "role": "localized status, action summary, or data visualization"
+          },
+          {
+            "id": "widget.action",
+            "role": "explicitly supported intent/action entry point"
+          },
+          {
+            "id": "system_control.value",
+            "role": "current value plus enabled/selected state for a system-owned control"
+          },
+          {
+            "id": "notification.content",
+            "role": "title, body, timestamp, and any system-approved actions"
+          }
+        ],
+        "variants": [
+          "small",
+          "medium",
+          "large",
+          "full-color-preview",
+          "accented-preview",
+          "notification-banner",
+          "notification-stack"
+        ],
+        "states": [
+          "current",
+          "stale",
+          "loading",
+          "unavailable",
+          "action-pending",
+          "action-failed",
+          "notification-collapsed",
+          "notification-expanded"
+        ],
+        "accessibility_contract": {
+          "requirements": [
+            "Give each widget a concise name and expose values and state without relying on chart color.",
+            "Describe charts with a textual summary or data alternative.",
+            "Give every action a stable localized name and preserve the system surface focus/activation model.",
+            "Do not claim VoiceOver behavior from the static image."
+          ],
+          "verification_status": "not applicable to this image-only concept; native API accessibility must be tested in a future integration task"
+        },
+        "localization_and_layout": [
+          "Use locale-aware dates, numbers, units, and relative times.",
+          "Fit content to host-selected widget families and larger text settings without clipping essential values.",
+          "Treat RTL as a layout input while preserving semantic icon direction.",
+          "For notifications, distinguish system-delivered notifications from in-app toast/alert content."
+        ],
+        "fallbacks": [
+          "An app-owned static preview may be used inside Playground or documentation, clearly labeled preview-only.",
+          "When no native widget or notification integration exists, do not show an app-owned surface as a system widget or delivered notification."
+        ],
+        "unsupported_or_unresolved": [
+          "Whether RustUI should build a WidgetKit extension, and its lifecycle/data ownership, is undecided.",
+          "No Control Center extension/integration capability is asserted by the screenshot.",
+          "The image does not prove native widget, system-control, notification, permission, or VoiceOver support.",
+          "Design and dependency approval is required before any AppKit/WidgetKit bridge or native surface is implemented."
+        ],
+        "evidence_refs": [
+          "P40"
+        ]
+      }
+    ],
+    "count_preservation": {
+      "additional_rustui_component_contracts": 31,
+      "absent_reusable_patterns": 5,
+      "native_integrations": 11,
+      "composition_and_reference_examples": 9,
+      "v1_component_ids": 41,
+      "v1_style_rules": 419
+    }
+  },
+  "updated_on": "2026-10-22",
+  "owner_reference_coverage": {
+    "source": "OWNER_COMPONENT_REFERENCE_2026-10-22.md",
+    "matrix": "MACOS27_OWNER_COMPONENT_COVERAGE_2026-10-22.csv",
+    "named_item_rows": 148,
+    "section_count": 16,
+    "counting_rule": "one row for each top-level bullet under the 16 numbered headings in Named-item inventory; repeated concepts stay as rows and link through concept IDs/aliases",
+    "status": "reconciled design inventory; not runtime support",
+    "runtime_compatible": false,
+    "evidence_boundary": "Apple source claims, RustUI runtime status, and design contracts are separate matrix fields",
+    "supplemental_matrix": "MACOS27_OWNER_CLAIM_COVERAGE_2026-10-22.csv",
+    "supplemental_rows": {
+      "appearance_requirements": 8,
+      "version_claim_families": 11,
+      "user_supplied_links": 9,
+      "total": 28
+    }
+  },
+  "cross_cutting_owner_contracts": [
+    {
+      "id": "appearance_resolution",
+      "scope": "light/dark/system appearance, semantic colors, accent and wallpaper tint, adaptive assets, contrast/transparency inputs",
+      "design_only": true
+    },
+    {
+      "id": "keyboard_focus_and_accessibility",
+      "scope": "keyboard traversal, focus visibility, roles/values, disabled/inactive/selected states, VoiceOver, full keyboard access",
+      "design_only": true
+    },
+    {
+      "id": "localization_and_rtl",
+      "scope": "text expansion, bidi, locale-sensitive date/number input, direction-aware layout and shortcuts",
+      "design_only": true
+    },
+    {
+      "id": "interaction_and_input",
+      "scope": "pointer/trackpad/gesture/drag state, text selection, control events, cancellation and state restoration",
+      "design_only": true
+    },
+    {
+      "id": "collection_scale_and_feedback",
+      "scope": "virtualization, loading/empty/error/validation, progress announcements and data alternatives",
+      "design_only": true
+    },
+    {
+      "id": "native_system_ownership",
+      "scope": "desktop/security surfaces, system popups, panels, notifications, WidgetKit and App Intents handoffs",
+      "design_only": true
+    },
+    {
+      "id": "native_materials_and_effects",
+      "scope": "Liquid Glass, scroll-edge effects, corner-concentricity, Reduce Transparency and Increase Contrast",
+      "design_only": true
+    },
+    {
+      "id": "retired_or_unresolved_platform_items",
+      "scope": "Touch Bar exclusion and unverified macOS 27 claims; resolve only against official sources",
+      "design_only": true
+    }
+  ],
+  "owner_capability_gaps": [
+    {
+      "id": "validation_messages",
+      "contract_owner": "text_field, form, error_state",
+      "source_sections": [
+        "6. Text input and display",
+        "10. Layout containers",
+        "14. Input and interaction patterns"
+      ],
+      "purpose": "Specify inline field error, warning, help, association, and announcement behavior.",
+      "evidence": "Existing text_field/form theme records plus error_state source-module candidate; theme/source presence is not behavior acceptance.",
+      "design_only": true
+    },
+    {
+      "id": "empty_loading_error_states",
+      "contract_owner": "empty_state, error_state, progress_indicator, spinner, skeleton, collection, data_grid",
+      "source_sections": [
+        "8. Values and progress",
+        "9. Lists and collections",
+        "12. Media and content views"
+      ],
+      "purpose": "Define shared collection/content lifecycle states and recovery actions without counting each state as a primitive.",
+      "evidence": "Existing candidate component source modules in the gap catalogue; no full state/accessibility verification.",
+      "design_only": true
+    },
+    {
+      "id": "virtualized_collections",
+      "contract_owner": "collection, data_grid, tree, keyed_list",
+      "source_sections": [
+        "9. Lists and collections"
+      ],
+      "purpose": "Specify large-data rendering, stable identity, focus/selection retention, and accessibility under virtualization.",
+      "evidence": "Source-present candidate modules; performance/virtualization acceptance remains unverified.",
+      "design_only": true
+    },
+    {
+      "id": "rich_text_and_rulers",
+      "contract_owner": "text_editor, code_editor",
+      "source_sections": [
+        "6. Text input and display",
+        "12. Media and content views"
+      ],
+      "purpose": "Specify formatting, selection, ruler measurements, syntax/diagnostic states, IME and bidi behavior.",
+      "evidence": "Source-present editor modules; the visual gallery is illustrative and does not prove rich-text or ruler behavior.",
+      "design_only": true
+    },
+    {
+      "id": "date_time_and_range_variants",
+      "contract_owner": "date_picker, slider, stepper",
+      "source_sections": [
+        "7. Pickers and selection",
+        "8. Values and progress"
+      ],
+      "purpose": "Keep date/time/calendar/clock/range and linear/circular/tick-mark variants within their owning controls.",
+      "evidence": "DatePicker, Slider, and Stepper API hints in owner reference; exact RustUI runtime behavior remains partial/unverified.",
+      "design_only": true
+    },
+    {
+      "id": "tree_tables",
+      "contract_owner": "tree, data_grid, outline_view, table",
+      "source_sections": [
+        "9. Lists and collections"
+      ],
+      "purpose": "Compose hierarchy, columns, row/column selection, sorting, disclosure, and keyboard navigation.",
+      "evidence": "Source-present tree/data-grid candidate modules and v1 outline/table records; no dedicated tree-table primitive asserted.",
+      "design_only": true
+    },
+    {
+      "id": "pagination_pattern",
+      "contract_owner": "collection, data_grid, list",
+      "source_sections": [
+        "9. Lists and collections"
+      ],
+      "purpose": "Treat paging, load-more, and result-position feedback as collection behavior if product/API needs it.",
+      "evidence": "No dedicated RustUI pagination module or owner-reference component; defer as a behavior pattern, not a component promise.",
+      "design_only": true
+    },
+    {
+      "id": "breadcrumbs_and_splitter_resizing",
+      "contract_owner": "breadcrumb, navigation_split, resizable_panel",
+      "source_sections": [
+        "3. Navigation and structure",
+        "10. Layout containers"
+      ],
+      "purpose": "Specify path overflow/current item and splitter min/max/collapse/keyboard resizing under existing navigation/layout contracts.",
+      "evidence": "Source-present breadcrumb, navigation-split, and resizable-panel modules; interaction/a11y remains unverified.",
+      "design_only": true
+    }
+  ],
+  "acceptance_criteria": {
+    "path": "MACOS27_VISUAL_FIDELITY_ACCEPTANCE_2026-10-22.md",
+    "objective": "demonstrable macOS 27 visual interaction fidelity against observed native controls and official Apple macOS 27 guidance/APIs",
+    "status": "NOT DEMONSTRATED - macOS 27 runtime reference evidence is not present in the current HIG set",
+    "generated_images_are_supplementary": true,
+    "static_catalogue_or_json_checks_can_establish_fidelity": false,
+    "macos_26_1_sdk_is_a_macOS_27_reference": false,
+    "requires_provenance_for_color_metric_material_state": true,
+    "requires_light_dark_accent_inactive_contrast_transparency_sizing_typography_keyboard_accessibility_native_integration_review": true
+  }
+}

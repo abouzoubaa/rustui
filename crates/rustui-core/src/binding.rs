@@ -24,7 +24,7 @@ impl<T: 'static> Binding<T> {
             read: Rc::new(move |owner| owner.downcast_ref::<Component>().map(read)),
             write: Rc::new(move |owner, value| {
                 let Some(owner) = owner.downcast_mut::<Component>() else {
-                    panic!("Binding written with the wrong component owner type");
+                    return false;
                 };
                 write(owner, value);
                 true
@@ -52,9 +52,9 @@ impl<T: 'static> Binding<T> {
                     .map(|owner| read(owner, &read_context))
             }),
             write: Rc::new(move |owner, value| {
-                let owner = owner
-                    .downcast_mut::<Component>()
-                    .expect("Binding written with the wrong component owner type");
+                let Some(owner) = owner.downcast_mut::<Component>() else {
+                    return false;
+                };
                 write(owner, &context, value)
             }),
         }
@@ -81,9 +81,9 @@ impl<T: 'static> Binding<T> {
     /// Reads the owner's current value and writes it back when the update reports a change.
     #[doc(hidden)]
     pub fn update_on(&self, owner: &mut dyn Any, update: impl FnOnce(&mut T) -> bool) -> bool {
-        let mut value = self
-            .read_from(owner)
-            .unwrap_or_else(|| panic!("Binding updated with the wrong component owner type"));
+        let Some(mut value) = self.read_from(owner) else {
+            return false;
+        };
         if !update(&mut value) {
             return false;
         }
@@ -133,5 +133,140 @@ mod captured_context_tests {
         assert!(!binding.write_to(&mut owner, "stale".into()));
         assert_eq!(owner.text, "accepted");
         assert_eq!(owner.revision, 2);
+    }
+}
+
+#[cfg(test)]
+mod wrong_owner_write_tests {
+    use super::Binding;
+
+    struct Owner {
+        value: String,
+    }
+
+    #[test]
+    fn new_write_to_returns_false_for_wrong_owner_type() {
+        let binding = Binding::new(
+            String::from("initial"),
+            |owner: &Owner| owner.value.clone(),
+            |owner: &mut Owner, value| owner.value = value,
+        );
+        let mut wrong_owner = String::from("unchanged");
+
+        assert!(!binding.write_to(&mut wrong_owner, String::from("updated")));
+        assert_eq!(wrong_owner, "unchanged");
+    }
+
+    #[test]
+    fn new_with_write_to_returns_false_for_wrong_owner_type() {
+        let binding = Binding::new_with(
+            String::from("initial"),
+            (),
+            |owner: &Owner, _| owner.value.clone(),
+            |owner: &mut Owner, _context, value| {
+                owner.value = value;
+                true
+            },
+        );
+        let mut wrong_owner = String::from("unchanged");
+
+        assert!(!binding.write_to(&mut wrong_owner, String::from("updated")));
+        assert_eq!(wrong_owner, "unchanged");
+    }
+}
+
+#[cfg(test)]
+mod update_on_tests {
+    use super::Binding;
+
+    struct Owner {
+        value: i32,
+    }
+
+    #[test]
+    fn wrong_owner_type_rejects_update_without_running_mutation() {
+        let binding = Binding::new(
+            7,
+            |owner: &Owner| owner.value,
+            |owner: &mut Owner, value| owner.value = value,
+        );
+        let mut wrong_owner = String::from("unchanged");
+
+        let changed = binding.update_on(&mut wrong_owner, |_| {
+            panic!("mutation must not run for the wrong owner type");
+        });
+
+        assert!(!changed);
+        assert_eq!(wrong_owner, "unchanged");
+    }
+
+    #[test]
+    fn no_op_update_does_not_write_or_report_a_change() {
+        let mut owner = Owner { value: 7 };
+        let binding = Binding::new(
+            7,
+            |owner: &Owner| owner.value,
+            |owner: &mut Owner, value| owner.value = value,
+        );
+
+        assert!(!binding.update_on(&mut owner, |_| false));
+        assert_eq!(owner.value, 7);
+    }
+
+    #[test]
+    fn stale_context_rejects_update_without_mutating_owner() {
+        struct VersionedOwner {
+            revision: u64,
+            value: i32,
+        }
+
+        let mut owner = VersionedOwner {
+            revision: 2,
+            value: 7,
+        };
+        let binding = Binding::new_with(
+            7,
+            1_u64,
+            |owner: &VersionedOwner, _revision| owner.value,
+            |owner: &mut VersionedOwner, revision, value| {
+                if owner.revision != *revision {
+                    return false;
+                }
+                owner.value = value;
+                owner.revision += 1;
+                true
+            },
+        );
+        let mut update_ran = false;
+
+        let changed = binding.update_on(&mut owner, |value| {
+            update_ran = true;
+            *value += 1;
+            true
+        });
+
+        assert!(update_ran);
+        assert!(!changed);
+        assert_eq!(owner.revision, 2);
+        assert_eq!(owner.value, 7);
+    }
+
+    #[test]
+    fn consecutive_updates_read_the_latest_owner_value_in_order() {
+        let mut owner = Owner { value: 7 };
+        let binding = Binding::new(
+            0,
+            |owner: &Owner| owner.value,
+            |owner: &mut Owner, value| owner.value = value,
+        );
+
+        for _ in 0..2 {
+            assert!(binding.update_on(&mut owner, |value| {
+                *value += 1;
+                true
+            }));
+        }
+
+        assert_eq!(owner.value, 9);
     }
 }

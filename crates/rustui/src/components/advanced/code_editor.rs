@@ -1,14 +1,37 @@
 //! Controlled source editing backed by the official retained EditorState.
 
+use std::{cell::RefCell, rc::Rc};
+
 use gpui::{AnyElement, AppContext as _, Entity, IntoElement, SharedString, px};
 use gpui_component::input::{Editor, EditorState, InputEvent};
 use rustui_core::{Binding, Identity};
 
 use crate::view::{EmptyView, RenderContext, View};
 
+type EventWriter<Value, Context> = Rc<dyn Fn(Value, &mut Context)>;
+
+fn replace_event_writer<Value, Context>(
+    slot: &RefCell<Option<EventWriter<Value, Context>>>,
+    writer: EventWriter<Value, Context>,
+) {
+    *slot.borrow_mut() = Some(writer);
+}
+
+fn write_with_current_writer<Value, Context>(
+    slot: &RefCell<Option<EventWriter<Value, Context>>>,
+    value: Value,
+    context: &mut Context,
+) {
+    let writer = slot.borrow().clone();
+    if let Some(writer) = writer {
+        writer(value, context);
+    }
+}
+
 struct RetainedCodeEditor {
     editor: Entity<EditorState>,
     line_numbers: bool,
+    writer: Rc<RefCell<Option<EventWriter<String, gpui::App>>>>,
 }
 
 /// A controlled native code editor with stable caller-supplied identity.
@@ -107,7 +130,12 @@ impl CodeEditorView {
     }
 
     pub fn accessibility_label(mut self, label: impl Into<SharedString>) -> Self {
-        self.accessibility_label = Some(label.into());
+        let label = label.into();
+        assert!(
+            !label.trim().is_empty(),
+            "CodeEditor accessibility label must not be empty"
+        );
+        self.accessibility_label = Some(label);
         self
     }
 
@@ -134,6 +162,7 @@ impl View for CodeEditorView {
                         .default_value(current_value.clone())
                 }),
                 line_numbers: self.line_numbers,
+                writer: Rc::new(RefCell::new(None)),
             });
         let retained_state = retained.read(context.app());
         let editor = retained_state.editor.clone();
@@ -164,13 +193,15 @@ impl View for CodeEditorView {
             }
         }
         if created {
-            let write = context.binding_writer(self.value.clone());
+            let writer = retained.read(context.app()).writer.clone();
             context.subscribe_retained(&self.id, &editor, move |editor, event: &InputEvent, cx| {
                 if matches!(event, InputEvent::Change) {
-                    write(editor.read(cx).value().to_string(), cx);
+                    write_with_current_writer(&writer, editor.read(cx).value().to_string(), cx);
                 }
             });
         }
+        let writer = retained.read(context.app()).writer.clone();
+        replace_event_writer(&writer, context.binding_writer(self.value.clone()));
         let mut editor_view = Editor::new(&editor)
             .h(px(self.height))
             .disabled(self.disabled)
@@ -187,6 +218,23 @@ impl View for CodeEditorView {
 mod tests {
     use super::*;
 
+    #[test]
+    fn retained_editor_event_uses_latest_owner_binding_writer() {
+        let slot = RefCell::new(None);
+        let old_writer_called = Rc::new(std::cell::Cell::new(false));
+        let new_writer_called = Rc::new(std::cell::Cell::new(false));
+
+        let old = old_writer_called.clone();
+        replace_event_writer(&slot, Rc::new(move |_: String, _: &mut ()| old.set(true)));
+        let new = new_writer_called.clone();
+        replace_event_writer(&slot, Rc::new(move |_: String, _: &mut ()| new.set(true)));
+
+        write_with_current_writer(&slot, "edited".to_owned(), &mut ());
+
+        assert!(!old_writer_called.get());
+        assert!(new_writer_called.get());
+    }
+
     struct Owner {
         text: String,
     }
@@ -201,6 +249,7 @@ mod tests {
     #[test]
     fn defaults_and_configuration_keep_identity_and_binding() {
         let editor = CodeEditor("source", binding());
+        assert_eq!(editor.accessibility_label, None);
         assert_eq!(editor.language.as_ref(), "text");
         assert!(editor.line_numbers);
         assert_eq!(editor.height, 240.0);
@@ -226,6 +275,22 @@ mod tests {
             Some("Document source")
         );
         assert_eq!(editor.tab_index, -1);
+    }
+
+    #[test]
+    fn accessible_name_preserves_nonblank_text_verbatim() {
+        let editor = CodeEditor("source", binding()).accessibility_label("  Document source  ");
+
+        assert_eq!(
+            editor.accessibility_label.as_deref(),
+            Some("  Document source  ")
+        );
+    }
+
+    #[test]
+    #[should_panic(expected = "CodeEditor accessibility label must not be empty")]
+    fn rejects_blank_explicit_accessible_name() {
+        CodeEditor("source", binding()).accessibility_label(" \t\n ");
     }
 
     #[test]

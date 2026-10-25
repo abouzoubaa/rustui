@@ -31,10 +31,17 @@ def catalog_ids(path: Path) -> set[str]:
     return identifiers
 
 
-def validate_catalog_group(root: Path, name: str) -> None:
+def validate_catalog_group(root: Path, name: str, expected_locales: set[str]) -> None:
     paths = sorted(root.glob("*/" + name))
     if not paths:
         raise ValueError(f"No {name} catalogs found in {root}")
+    locales = {path.parent.name for path in paths}
+    if locales != expected_locales:
+        missing = sorted(expected_locales - locales)
+        extra = sorted(locales - expected_locales)
+        raise ValueError(
+            f"{root}: {name} locale mismatch; missing={missing}, extra={extra}"
+        )
     expected = catalog_ids(paths[0])
     for path in paths[1:]:
         actual = catalog_ids(path)
@@ -59,6 +66,7 @@ def main() -> int:
         paths = sorted(args.root.glob("*/locale.json"))
         if not paths:
             raise ValueError(f"No locale records found in {args.root}")
+        runtime_locales = {path.parent.name for path in paths}
         for path in paths:
             data = json.loads(path.read_text(encoding="utf-8"))
             expected_fields = {
@@ -73,6 +81,7 @@ def main() -> int:
                 raise ValueError(f"{path}: unexpected or missing locale fields")
             if (
                 data["record_type"] != "rustui.locale"
+                or type(data["schema_version"]) is not int
                 or data["schema_version"] != 1
                 or data["status"] != "runtime"
                 or data["catalog_format"] != "rustui-ftl-subset-v1"
@@ -81,8 +90,8 @@ def main() -> int:
             ):
                 raise ValueError(f"{path}: invalid runtime locale record")
 
-        validate_catalog_group(args.root, "rustui.ftl")
-        validate_catalog_group(args.lab_root, "lab.ftl")
+        validate_catalog_group(args.root, "rustui.ftl", runtime_locales)
+        validate_catalog_group(args.lab_root, "lab.ftl", runtime_locales)
         print(f"Validated {len(paths)} runtime locale records and catalog groups.")
         return 0
     except (OSError, ValueError, json.JSONDecodeError) as error:

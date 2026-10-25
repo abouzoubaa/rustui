@@ -214,6 +214,7 @@ impl FormAccessoriesGallery {
 impl View for FormAccessoriesGallery {
     fn body(&self) -> impl View {
         let query = self.query_binding();
+        let action_feedback = self.last_action_feedback();
         let visible = visible_form_items(&self.query());
         let mut content = VStack::new()
             .spacing(10.0)
@@ -229,7 +230,13 @@ impl View for FormAccessoriesGallery {
                 content = content.child(row);
             }
         }
-        content.child(Text(self.last_action_feedback()))
+        content.child(
+            Semantics(
+                "form-accessories-action-status",
+                Text(action_feedback.clone()),
+            )
+            .live_region_value(action_feedback, LivePoliteness::Polite),
+        )
     }
 }
 
@@ -275,6 +282,7 @@ mod tests {
     fn form_accessory_buttons_report_the_activated_reference_action() {
         let mut gallery = FormAccessoriesGallery::default();
         assert_eq!(gallery.last_action(), "None");
+        assert_eq!(gallery.last_action_feedback(), "Last activated: None");
 
         gallery.activate_button();
         assert_eq!(gallery.last_action(), "Button");

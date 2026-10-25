@@ -140,6 +140,16 @@ handle each owner as follows:
   the thread is idle or waiting.
 - A `notLoaded` thread is not terminal. Keep its claim and worktree intact
   until the app reports a terminal state.
+- If work must continue on a `notLoaded` owner, first open that exact thread by
+  its literal thread ID in the Codex app and let its current state load. Refresh
+  `list_threads`, export the complete result, and reconcile again immediately
+  before acting. Continue only if the refreshed inventory reports that same
+  owner as `idle`, coverage includes its claim, and the claim, worktree,
+  branch, and paths still match. Send the continuation to that same thread
+  with every field from its current claim. If it remains `notLoaded`, preserve
+  the claim and worktree, record that exact gate, and move to independent safe
+  work; do not infer that the owner stopped or that a continuation was
+  delivered.
 - After a terminal state, audit and retain the worktree before releasing or
   handing off its claim.
 
@@ -147,6 +157,12 @@ Codex threads run in turns; an active goal and a held claim do not keep a model
 turn sampling continuously. A continuation is required after a turn completes.
 Report lock ownership separately from thread execution state so an `active`
 claim is never presented as proof that its session is working.
+Each sweep should count `running`, `idle`, and `notLoaded` owners separately
+from `active` and `suspect` claims. A goal is not continuously executing
+between turns: continue the same idle owner only when its next action is
+ungated. For gated owners, record the exact dependency, decision, artifact, or
+shared runtime condition and keep their paths reserved. Never create a
+replacement writer to make an idle or `notLoaded` session appear active.
 
 Before assigning, continuing, releasing, or handing off roadmap work, export the
 current `list_threads` result to a temporary JSON file outside every checkout
@@ -285,3 +301,28 @@ python3 /Users/Abium/.codex/worktrees/session-coordination/rustui/scripts/roadma
 
 After baseline, run `audit` and inspect its output before continuing. Baseline
 fingerprints are preserved in the shared registry and shown by `list --verbose`.
+# Current objective: one implementation writer (2026-10-25)
+
+The human user retired the previous roadmap writing sessions for the active
+production-consolidation objective. Do not dispatch or continue implementation
+in those sessions. The sole writer is thread
+`01a172cd-8a21-73f1-82cd-62d451c71ec9`, claim `c44f414bfbf4ef4c4f30`, worktree
+`/Users/Abium/.codex/worktrees/rustui-production-consolidation/rustui`, branch
+`codex/production-consolidation-01a172cd`.
+
+The previous dispatcher `rustui-roadmap-coordination-sweep` is PAUSED. All 11
+previous claims were superseded after preserved snapshots and explicit user
+authorization. The app reported idle/completed turns rather than a terminal
+enum. The user approved verified owner retirement acknowledgments as evidence;
+claim `214af0307629e64d5706` has a separate explicit administrative-retirement
+authorization because its owner declined acknowledgment. The claim history
+records these facts without pretending that idle proves terminal status.
+This specific authorization does not weaken the general terminal-state rule
+below for future transfers.
+
+Keep the old worktrees, branches, changes and evidence until useful work has
+been integrated and its preservation verified. Use `advance` on the sole
+claim for further scope; do not create another implementation chat or delegate
+repository edits. Current requirements and evidence are maintained in
+`ROADMAP_REMAINING_AUDIT.md`.
+

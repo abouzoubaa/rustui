@@ -1,0 +1,64 @@
+<!doctype html>
+<html lang="en" dir="ltr">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="color-scheme" content="dark light" />
+    <link rel="icon" href="data:," />
+    <title>RustUI Playground</title>
+    <style>
+      html,
+      body {
+        width: 100%;
+        height: 100%;
+        margin: 0;
+        overflow: hidden;
+      }
+      #startup-status {
+        position: fixed;
+        inset: 0;
+        display: grid;
+        place-items: center;
+        color: CanvasText;
+        background: Canvas;
+        font: 14px/1.5 system-ui, sans-serif;
+      }
+      #startup-error {
+        position: fixed;
+        inset: 1rem;
+        z-index: 1;
+        overflow: auto;
+        padding: 1rem;
+        color: #fff;
+        background: #5b1c1c;
+        white-space: pre-wrap;
+        font: 14px/1.5 ui-monospace, monospace;
+      }
+    </style>
+  </head>
+  <body>
+    <div id="startup-status" role="status">
+      <noscript>RustUI Playground requires JavaScript to load WebAssembly. Enable JavaScript and reload this page.</noscript>
+    </div>
+    <script nomodule>
+      document.getElementById("startup-status").textContent =
+        "This browser does not support the JavaScript modules required by RustUI Playground. Use a recent browser to open this page.";
+    </script>
+    <script type="module">
+      document.getElementById("startup-status").textContent = "Loading RustUI Playground…";
+      try {
+        const { default: init } = await import("./rustui_playground.js");
+        await init();
+        document.getElementById("startup-status")?.remove();
+      } catch (error) {
+        console.error("RustUI Playground failed to start", error);
+        document.getElementById("startup-status")?.remove();
+        const report = document.createElement("pre");
+        report.id = "startup-error";
+        report.setAttribute("role", "alert");
+        report.textContent = `RustUI Playground failed to start.\n${error}`;
+        document.body.append(report);
+      }
+    </script>
+  </body>
+</html>

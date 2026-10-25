@@ -87,9 +87,13 @@ pub struct SpringOpacity<V: View> {
 
 impl<V: View> SpringOpacity<V> {
     pub fn new(id: impl Into<Identity>, child: V, target: f32) -> Result<Self, SpringOpacityError> {
+        let id = id.into();
+        if id.as_str().trim().is_empty() {
+            return Err(SpringOpacityError::EmptyIdentity);
+        }
         validate_opacity("target", target)?;
         Ok(Self {
-            id: id.into(),
+            id,
             child,
             target,
             initial: None,
@@ -155,6 +159,7 @@ impl<V: View> View for SpringOpacity<V> {
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub enum SpringOpacityError {
+    EmptyIdentity,
     InvalidOpacity { endpoint: &'static str },
     InvalidPhysics,
     InvalidEpsilon,
@@ -163,6 +168,7 @@ pub enum SpringOpacityError {
 impl fmt::Display for SpringOpacityError {
     fn fmt(&self, formatter: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
+            Self::EmptyIdentity => formatter.write_str("spring opacity identity must be nonempty"),
             Self::InvalidOpacity { endpoint } => write!(formatter, "opacity `{endpoint}` must be finite in 0..=1"),
             Self::InvalidPhysics => formatter.write_str("spring physics must be positive and finite with representable native intermediates"),
             Self::InvalidEpsilon => formatter.write_str("spring epsilon must be finite in [f32::EPSILON, 1]"),
@@ -215,6 +221,19 @@ mod tests {
         assert_eq!(spring.initial, None);
         assert_eq!(spring.epsilon, 0.001);
         assert_eq!(spring.from(0.0).unwrap().initial, Some(0.0));
+    }
+
+    #[test]
+    fn rejects_blank_ids_and_preserves_nonblank_identity() {
+        for id in ["", " \t\n"] {
+            assert_eq!(
+                SpringOpacity::new(id, EmptyView, 1.0).err(),
+                Some(SpringOpacityError::EmptyIdentity)
+            );
+        }
+
+        let spring = SpringOpacity::new(" moving ", EmptyView, 1.0).unwrap();
+        assert_eq!(spring.id.as_str(), " moving ");
     }
 
     #[test]

@@ -3,7 +3,8 @@
 use std::{error::Error, fmt, num::NonZeroU16, time::Duration};
 
 use gpui::{
-    Animation, AnimationExt, AnyElement, IntoElement as _, ParentElement as _, Styled as _, div,
+    Animation, AnimationExt, AnyElement, App, Bounds, Element, ElementId, GlobalElementId,
+    InspectorElementId, IntoElement, LayoutId, ParentElement as _, Pixels, Styled as _, Window, div,
 };
 use rustui_core::Identity;
 
@@ -23,6 +24,32 @@ pub struct AnimatedOpacity<V: View> {
     max_fps: Option<NonZeroU16>,
 }
 
+#[derive(Clone, Copy, Debug, PartialEq)]
+struct AnimationConfiguration {
+    from: f32,
+    to: f32,
+    duration: Duration,
+    max_fps: Option<NonZeroU16>,
+}
+
+impl AnimationConfiguration {
+    fn native_animation(self) -> Animation {
+        let animation = Animation::new(self.duration);
+        match self.max_fps {
+            Some(max_fps) => animation.with_max_fps(f32::from(max_fps.get())),
+            None => animation,
+        }
+    }
+}
+
+/// Freezes the first requested configuration for this GPUI element identity.
+struct AnimatedOpacityElement {
+    id: ElementId,
+    animation_id: ElementId,
+    child: Option<AnyElement>,
+    configuration: AnimationConfiguration,
+}
+
 impl<V: View> AnimatedOpacity<V> {
     /// Creates a mount-only opacity animation for `child`.
     ///
@@ -35,11 +62,15 @@ impl<V: View> AnimatedOpacity<V> {
         to: f32,
         duration: Duration,
     ) -> Result<Self, OpacityAnimationError> {
+        let id = id.into();
+        if id.as_str().trim().is_empty() {
+            return Err(OpacityAnimationError::EmptyIdentity);
+        }
         validate_opacity("from", from)?;
         validate_opacity("to", to)?;
         validate_duration(duration)?;
         Ok(Self {
-            id: id.into(),
+            id,
             child,
             from,
             to,
@@ -59,11 +90,12 @@ impl<V: View> AnimatedOpacity<V> {
         self
     }
 
-    fn native_animation(&self) -> Animation {
-        let animation = Animation::new(self.duration);
-        match self.max_fps {
-            Some(max_fps) => animation.with_max_fps(f32::from(max_fps.get())),
-            None => animation,
+    fn configuration(&self) -> AnimationConfiguration {
+        AnimationConfiguration {
+            from: self.from,
+            to: self.to,
+            duration: self.duration,
+            max_fps: self.max_fps,
         }
     }
 }
@@ -78,23 +110,110 @@ impl<V: View> View for AnimatedOpacity<V> {
             RetentionScope::AnimatedOpacity(self.id.clone()),
             |context| self.child.into_element(context),
         );
-        let from = self.from;
-        let to = self.to;
-        div()
-            .self_start()
-            .with_animation(
-                format!("rustui-animated-opacity-{}", self.id.as_str()),
-                self.native_animation(),
-                move |element, progress| element.opacity(interpolate_opacity(from, to, progress)),
-            )
-            .child(child)
-            .into_any_element()
+        AnimatedOpacityElement {
+            id: format!("rustui-animated-opacity-config-{}", self.id.as_str()).into(),
+            animation_id: format!("rustui-animated-opacity-animation-{}", self.id.as_str()).into(),
+            child: Some(child),
+            configuration: self.configuration(),
+        }
+        .into_any_element()
+    }
+}
+
+fn retain_initial_configuration(
+    state: Option<AnimationConfiguration>,
+    requested: AnimationConfiguration,
+) -> AnimationConfiguration {
+    state.unwrap_or(requested)
+}
+
+impl IntoElement for AnimatedOpacityElement {
+    type Element = Self;
+
+    fn into_element(self) -> Self::Element {
+        self
+    }
+}
+
+impl Element for AnimatedOpacityElement {
+    type RequestLayoutState = AnyElement;
+    type PrepaintState = ();
+
+    fn id(&self) -> Option<ElementId> {
+        Some(self.id.clone())
+    }
+
+    fn source_location(&self) -> Option<&'static std::panic::Location<'static>> {
+        None
+    }
+
+    fn request_layout(
+        &mut self,
+        global_id: Option<&GlobalElementId>,
+        _: Option<&InspectorElementId>,
+        window: &mut Window,
+        cx: &mut App,
+    ) -> (LayoutId, Self::RequestLayoutState) {
+        let requested = self.configuration;
+        let animation_id = self.animation_id.clone();
+        let child = self
+            .child
+            .take()
+            .expect("AnimatedOpacityElement requests layout only once");
+        window.with_element_state(
+            global_id.expect("AnimatedOpacityElement always has an element ID"),
+            |state, window| {
+                let configuration = retain_initial_configuration(state, requested);
+                let from = configuration.from;
+                let to = configuration.to;
+                let mut element = div()
+                    .self_start()
+                    .with_animation(
+                        animation_id,
+                        configuration.native_animation(),
+                        move |element, progress| {
+                            element.opacity(interpolate_opacity(from, to, progress))
+                        },
+                    )
+                    .child(child)
+                    .into_any_element();
+                let result = (element.request_layout(window, cx), element);
+                (result, configuration)
+            },
+        )
+    }
+
+    fn prepaint(
+        &mut self,
+        _: Option<&GlobalElementId>,
+        _: Option<&InspectorElementId>,
+        _: Bounds<Pixels>,
+        element: &mut Self::RequestLayoutState,
+        window: &mut Window,
+        cx: &mut App,
+    ) {
+        element.prepaint(window, cx);
+    }
+
+    fn paint(
+        &mut self,
+        _: Option<&GlobalElementId>,
+        _: Option<&InspectorElementId>,
+        _: Bounds<Pixels>,
+        element: &mut Self::RequestLayoutState,
+        _: &mut Self::PrepaintState,
+        window: &mut Window,
+        cx: &mut App,
+    ) {
+        element.paint(window, cx);
     }
 }
 
 /// Invalid arguments passed to [`AnimatedOpacity::new`].
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub enum OpacityAnimationError {
+    /// The animation identity was empty or whitespace-only.
+    EmptyIdentity,
     /// An opacity endpoint was non-finite or outside `0..=1`.
     InvalidOpacity { endpoint: &'static str },
     /// The animation duration was zero.
@@ -104,6 +223,7 @@ pub enum OpacityAnimationError {
 impl fmt::Display for OpacityAnimationError {
     fn fmt(&self, formatter: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
+            Self::EmptyIdentity => formatter.write_str("opacity animation identity must be nonempty"),
             Self::InvalidOpacity { endpoint } => {
                 write!(
                     formatter,
@@ -141,8 +261,8 @@ mod tests {
     use std::{num::NonZeroU16, time::Duration};
 
     use super::{
-        AnimatedOpacity, OpacityAnimationError, interpolate_opacity, validate_duration,
-        validate_opacity,
+        AnimatedOpacity, AnimationConfiguration, OpacityAnimationError, interpolate_opacity,
+        retain_initial_configuration, validate_duration, validate_opacity,
     };
     use crate::view::EmptyView;
 
@@ -150,7 +270,7 @@ mod tests {
     fn defaults_to_native_unthrottled_one_shot() {
         let fade =
             AnimatedOpacity::new("fade", EmptyView, 0.0, 1.0, Duration::from_secs(1)).unwrap();
-        let animation = fade.native_animation();
+        let animation = fade.configuration().native_animation();
         assert_eq!(animation.max_fps, None);
         assert_eq!(animation.duration, Duration::from_secs(1));
         assert!(animation.oneshot);
@@ -162,7 +282,7 @@ mod tests {
             AnimatedOpacity::new("fade", EmptyView, 0.0, 1.0, Duration::from_secs(1)).unwrap();
         for limit in [1, 30, u16::MAX] {
             fade = fade.max_fps(NonZeroU16::new(limit).unwrap());
-            let animation = fade.native_animation();
+            let animation = fade.configuration().native_animation();
             assert_eq!(animation.max_fps, Some(f32::from(limit)));
             assert_eq!(animation.duration, Duration::from_secs(1));
             assert!(animation.oneshot);
@@ -184,11 +304,53 @@ mod tests {
     }
 
     #[test]
+    fn rejects_blank_ids_and_preserves_nonblank_identity() {
+        for id in ["", " \t\n"] {
+            assert_eq!(
+                AnimatedOpacity::new(id, EmptyView, 0.0, 1.0, Duration::from_secs(1)).err(),
+                Some(OpacityAnimationError::EmptyIdentity)
+            );
+        }
+
+        let fade = AnimatedOpacity::new(
+            " fade ",
+            EmptyView,
+            0.0,
+            1.0,
+            Duration::from_secs(1),
+        )
+        .unwrap();
+        assert_eq!(fade.id.as_str(), " fade ");
+    }
+
+    #[test]
     fn interpolates_between_opacity_endpoints() {
         assert_eq!(interpolate_opacity(0.0, 1.0, 0.0), 0.0);
         assert_eq!(interpolate_opacity(0.0, 1.0, 0.5), 0.5);
         assert_eq!(interpolate_opacity(0.0, 1.0, 1.0), 1.0);
         assert_eq!(interpolate_opacity(1.0, 0.0, 0.25), 0.75);
+    }
+
+    #[test]
+    fn stable_identity_keeps_mount_time_animation_configuration() {
+        let initial = AnimationConfiguration {
+            from: 0.2,
+            to: 0.8,
+            duration: Duration::from_secs(2),
+            max_fps: NonZeroU16::new(30),
+        };
+        let updated = AnimationConfiguration {
+            from: 0.0,
+            to: 1.0,
+            duration: Duration::from_secs(5),
+            max_fps: None,
+        };
+
+        assert_eq!(retain_initial_configuration(None, initial), initial);
+        assert_eq!(
+            retain_initial_configuration(Some(initial), updated),
+            initial
+        );
     }
 
     #[test]

@@ -1,6 +1,6 @@
 //! accessibility integration.
 //!
-//! Structural semantics and accessibility navigation landmarks.
+//! Structural semantics, live status values, and accessibility landmarks.
 
 pub mod navigation;
 pub mod semantics;

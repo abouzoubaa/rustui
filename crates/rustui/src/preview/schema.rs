@@ -284,7 +284,27 @@ fn validate_property_schema(id: &PropertyId, schema: &PropertySchema) -> Result<
             "property `{id}` minimum exceeds maximum"
         )));
     }
-    if schema.kind != PropertyKind::Number && (schema.minimum.is_some() || schema.maximum.is_some())
+    if schema.kind == PropertyKind::Integer {
+        let first_allowed = schema
+            .minimum
+            .map_or(i64::MIN, |minimum| minimum.ceil() as i64);
+        let has_no_value = schema
+            .minimum
+            .is_some_and(|minimum| integer_below_bound(i64::MAX, minimum))
+            || schema
+                .maximum
+                .is_some_and(|maximum| integer_above_bound(i64::MIN, maximum))
+            || schema
+                .maximum
+                .is_some_and(|maximum| integer_above_bound(first_allowed, maximum));
+        if has_no_value {
+            return Err(PreviewError::Invalid(format!(
+                "property `{id}` integer bounds contain no representable value"
+            )));
+        }
+    }
+    if !matches!(schema.kind, PropertyKind::Integer | PropertyKind::Number)
+        && (schema.minimum.is_some() || schema.maximum.is_some())
     {
         return Err(PreviewError::Invalid(format!(
             "property `{id}` has numeric bounds but is not a number"
@@ -329,6 +349,18 @@ fn validate_property_schema(id: &PropertyId, schema: &PropertySchema) -> Result<
                 "property `{id}` allowed value exceeds the string size limit"
             )));
         }
+        let character_count = value.chars().count();
+        if schema
+            .min_length
+            .is_some_and(|minimum| character_count < minimum)
+            || schema
+                .max_length
+                .is_some_and(|maximum| character_count > maximum)
+        {
+            return Err(PreviewError::Invalid(format!(
+                "property `{id}` allowed value violates its string length bounds"
+            )));
+        }
         if !schema.allowed_values.is_empty() {
             validate_id(value, "enumeration value")?;
         }
@@ -370,6 +402,20 @@ fn validate_property_value(
             }
         }
         (PropertyKind::Boolean, PropertyValue::Boolean(_)) => {}
+        (PropertyKind::Integer, PropertyValue::Integer(value)) => {
+            if schema
+                .minimum
+                .is_some_and(|minimum| integer_below_bound(*value, minimum))
+            {
+                return Err(invalid("integer is below the minimum"));
+            }
+            if schema
+                .maximum
+                .is_some_and(|maximum| integer_above_bound(*value, maximum))
+            {
+                return Err(invalid("integer is above the maximum"));
+            }
+        }
         (PropertyKind::Number, PropertyValue::Number(value)) => {
             if !value.is_finite() {
                 return Err(invalid("number must be finite"));
@@ -384,6 +430,26 @@ fn validate_property_value(
         _ => return Err(invalid("value type does not match the declared kind")),
     }
     Ok(())
+}
+
+fn integer_below_bound(value: i64, bound: f64) -> bool {
+    if bound <= i64::MIN as f64 {
+        false
+    } else if bound >= 2_f64.powi(63) {
+        true
+    } else {
+        value < bound.ceil() as i64
+    }
+}
+
+fn integer_above_bound(value: i64, bound: f64) -> bool {
+    if bound >= 2_f64.powi(63) {
+        false
+    } else if bound < i64::MIN as f64 {
+        true
+    } else {
+        value > bound.floor() as i64
+    }
 }
 
 fn validate_id(value: &str, label: &str) -> Result<(), PreviewError> {
@@ -493,6 +559,15 @@ mod tests {
             validated.properties.get(&id("disabled", PropertyId::new)),
             Some(&PropertyValue::Boolean(false))
         );
+    }
+
+    #[test]
+    fn duplicate_action_registration_preserves_existing_allowlist_entry() {
+        let mut catalog = catalog();
+        let action = ActionRef::new("host.preview.report").unwrap();
+
+        assert!(catalog.register_action(action).is_err());
+        assert!(validate_preview(&catalog, document()).is_ok());
     }
 
     #[test]
@@ -608,6 +683,27 @@ mod tests {
     }
 
     #[test]
+    fn required_default_conflict_does_not_poison_component_registration() {
+        let baseline = catalog();
+        let component_id = ComponentId::new("rustui.button").unwrap();
+        let property_id = PropertyId::new("label").unwrap();
+        let corrected = baseline.components[&component_id].clone();
+        let mut invalid = corrected.clone();
+        invalid.properties.get_mut(&property_id).unwrap().required = true;
+        let mut accepted = ComponentCatalog::new();
+
+        assert!(matches!(
+            accepted.register_component(invalid),
+            Err(PreviewError::Invalid(_))
+        ));
+        accepted.register_component(corrected).unwrap();
+        accepted
+            .register_action(ActionRef::new("host.preview.report").unwrap())
+            .unwrap();
+        assert!(validate_preview(&accepted, document()).is_ok());
+    }
+
+    #[test]
     fn schema_rejects_invalid_bounds_and_identifier_values() {
         let mut catalog = catalog();
         let schema = catalog
@@ -624,5 +720,71 @@ mod tests {
             Err(PreviewError::Invalid(_))
         ));
         assert!(PropertyId::new("Not-Lowercase").is_err());
+    }
+
+    #[test]
+    fn integer_schema_rejects_ranges_with_no_representable_value() {
+        let mut catalog = catalog();
+        let schema = catalog
+            .components
+            .get_mut(&id("rustui.button", ComponentId::new))
+            .unwrap();
+        schema.properties.insert(
+            id("count", PropertyId::new),
+            PropertySchema {
+                kind: PropertyKind::Integer,
+                default: None,
+                required: false,
+                editable: true,
+                minimum: Some(1.1),
+                maximum: Some(1.9),
+                min_length: None,
+                max_length: None,
+                allowed_values: Vec::new(),
+            },
+        );
+
+        assert!(matches!(
+            validate_catalog(&catalog),
+            Err(PreviewError::Invalid(_))
+        ));
+    }
+
+    #[test]
+    fn schema_rejects_allowed_values_outside_string_length_bounds() {
+        let mut catalog = catalog();
+        {
+            let schema = catalog
+                .components
+                .get_mut(&id("rustui.button", ComponentId::new))
+                .unwrap()
+                .properties
+                .get_mut(&id("label", PropertyId::new))
+                .unwrap();
+            schema.default = None;
+            schema.min_length = Some(2);
+            schema.allowed_values = vec!["a".to_owned()];
+        }
+
+        assert!(matches!(
+            validate_catalog(&catalog),
+            Err(PreviewError::Invalid(_))
+        ));
+
+        {
+            let schema = catalog
+                .components
+                .get_mut(&id("rustui.button", ComponentId::new))
+                .unwrap()
+                .properties
+                .get_mut(&id("label", PropertyId::new))
+                .unwrap();
+            schema.min_length = None;
+            schema.max_length = Some(0);
+        }
+        assert!(matches!(
+            validate_catalog(&catalog),
+            Err(PreviewError::Invalid(_))
+        ));
     }
 }

@@ -26,6 +26,8 @@ pub fn demo() -> impl View {
 struct SheetFocusContent {
     #[state(String::from("Sheet body field"))]
     text: String,
+    #[state(false)]
+    child_focus_contains_focus: bool,
     #[state(0)]
     activations: usize,
 }
@@ -40,13 +42,30 @@ impl View for SheetFocusContent {
     fn body(&self) -> impl View {
         VStack::new()
             .spacing(8.0)
-            .child(TextField("Sheet body field", self.text_binding()).id("sheet-body-field"))
+            .child(Text(format!(
+                "Sheet child focus scope contains focus: {}",
+                self.child_focus_contains_focus()
+            )))
             .child(
-                Button(
-                    format!("Sheet body action ({})", self.activations()),
-                    self.action(Self::activate),
+                FocusScope(
+                    "sheet-child-focus-scope",
+                    self.child_focus_contains_focus_binding(),
+                    VStack::new()
+                        .spacing(8.0)
+                        .child(
+                            TextField("Sheet body field", self.text_binding())
+                                .id("sheet-body-field"),
+                        )
+                        .child(
+                            Button(
+                                format!("Sheet body action ({})", self.activations()),
+                                self.action(Self::activate),
+                            )
+                            .id("sheet-body-action"),
+                        ),
                 )
-                .id("sheet-body-action"),
+                .tab_stop(false)
+                .label("Sheet body controls"),
             )
     }
 }

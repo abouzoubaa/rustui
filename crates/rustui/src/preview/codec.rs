@@ -1,20 +1,25 @@
 use crate::preview::model::{
-    ComponentCatalog, MAX_DOCUMENT_BYTES, PreviewDocument, PreviewError, ValidatedPreview,
+    ComponentCatalog, ComponentId, EventId, MAX_DOCUMENT_BYTES, PreviewDocument, PreviewError,
+    PropertyId, PropertyKind, PropertySchema, PropertyValue, ValidatedPreview,
 };
 use crate::preview::schema::{validate_catalog, validate_preview};
 
 /// Decodes and validates a versioned compiled-component catalog.
 pub fn decode_catalog(source: &str) -> Result<ComponentCatalog, PreviewError> {
     check_size(source)?;
-    let catalog: ComponentCatalog = serde_json::from_str(source)?;
+    let mut catalog: ComponentCatalog = serde_json::from_str(source)?;
+    validate_catalog_number_default_tokens(source)?;
+    normalize_numeric_defaults(&mut catalog)?;
     validate_catalog(&catalog)?;
     Ok(catalog)
 }
 
 /// Encodes a validated catalog with deterministic key ordering.
 pub fn encode_catalog(catalog: &ComponentCatalog) -> Result<String, PreviewError> {
-    validate_catalog(catalog)?;
-    encode_json(catalog)
+    let mut catalog = catalog.clone();
+    normalize_numeric_defaults(&mut catalog)?;
+    validate_catalog(&catalog)?;
+    encode_json(&catalog)
 }
 
 /// Decodes a preview descriptor and resolves its defaults against the catalog.
@@ -23,7 +28,9 @@ pub fn decode_preview(
     catalog: &ComponentCatalog,
 ) -> Result<ValidatedPreview, PreviewError> {
     check_size(source)?;
-    let document: PreviewDocument = serde_json::from_str(source)?;
+    let mut document: PreviewDocument = serde_json::from_str(source)?;
+    validate_number_integer_tokens(source, catalog, &document)?;
+    normalize_numeric_properties(catalog, &mut document)?;
     validate_preview(catalog, document)
 }
 
@@ -32,8 +39,221 @@ pub fn encode_preview(
     document: &PreviewDocument,
     catalog: &ComponentCatalog,
 ) -> Result<String, PreviewError> {
+    let mut document = document.clone();
+    normalize_numeric_properties(catalog, &mut document)?;
     validate_preview(catalog, document.clone())?;
-    encode_json(document)
+    encode_json(&document)
+}
+
+fn normalize_numeric_defaults(catalog: &mut ComponentCatalog) -> Result<(), PreviewError> {
+    for component in catalog.components.values_mut() {
+        normalize_property_defaults(&mut component.properties)?;
+        for event in component.events.values_mut() {
+            normalize_property_defaults(&mut event.payload)?;
+        }
+    }
+    Ok(())
+}
+
+fn validate_catalog_number_default_tokens(source: &str) -> Result<(), PreviewError> {
+    let raw: RawCatalog<'_> = serde_json::from_str(source)?;
+    for component in raw.components.values() {
+        for (id, schema) in &component.properties {
+            validate_raw_number(id, schema.kind, schema.default)?;
+        }
+        for event in component.events.values() {
+            for (id, schema) in &event.payload {
+                validate_raw_number(id, schema.kind, schema.default)?;
+            }
+        }
+    }
+    Ok(())
+}
+
+fn validate_raw_number(
+    property: &PropertyId,
+    kind: PropertyKind,
+    value: Option<&serde_json::value::RawValue>,
+) -> Result<(), PreviewError> {
+    if kind == PropertyKind::Number
+        && value
+            .is_some_and(|raw| is_integer_token(raw.get()) && !is_exact_integer_token(raw.get()))
+    {
+        return Err(PreviewError::InvalidPropertyValue {
+            property: property.clone(),
+            reason: "integer cannot be represented exactly as number".to_owned(),
+        });
+    }
+    Ok(())
+}
+
+#[derive(serde::Deserialize)]
+struct RawCatalog<'a> {
+    #[serde(borrow, default)]
+    components: std::collections::BTreeMap<ComponentId, RawComponent<'a>>,
+}
+
+#[derive(serde::Deserialize)]
+struct RawComponent<'a> {
+    #[serde(borrow, default)]
+    properties: std::collections::BTreeMap<PropertyId, RawPropertySchema<'a>>,
+    #[serde(borrow, default)]
+    events: std::collections::BTreeMap<EventId, RawEventSchema<'a>>,
+}
+
+#[derive(serde::Deserialize)]
+struct RawEventSchema<'a> {
+    #[serde(borrow, default)]
+    payload: std::collections::BTreeMap<PropertyId, RawPropertySchema<'a>>,
+}
+
+#[derive(serde::Deserialize)]
+struct RawPropertySchema<'a> {
+    kind: PropertyKind,
+    #[serde(borrow, default)]
+    default: Option<&'a serde_json::value::RawValue>,
+}
+
+fn normalize_property_defaults(
+    properties: &mut std::collections::BTreeMap<PropertyId, PropertySchema>,
+) -> Result<(), PreviewError> {
+    for (id, schema) in properties {
+        if schema.kind == PropertyKind::Number {
+            if let Some(PropertyValue::Integer(value)) = &schema.default {
+                schema.default = Some(PropertyValue::Number(exact_integer_as_number(*value, id)?));
+            }
+        }
+    }
+    Ok(())
+}
+
+fn normalize_numeric_properties(
+    catalog: &ComponentCatalog,
+    document: &mut PreviewDocument,
+) -> Result<(), PreviewError> {
+    let Some(schema) = catalog.components.get(&document.component_id) else {
+        return Ok(());
+    };
+    for (id, value) in &mut document.properties {
+        if schema
+            .properties
+            .get(id)
+            .is_some_and(|property| property.kind == PropertyKind::Number)
+        {
+            if let PropertyValue::Integer(integer) = value {
+                *value = PropertyValue::Number(exact_integer_as_number(*integer, id)?);
+            }
+        }
+    }
+    Ok(())
+}
+
+fn validate_number_integer_tokens(
+    source: &str,
+    catalog: &ComponentCatalog,
+    document: &PreviewDocument,
+) -> Result<(), PreviewError> {
+    let Some(component) = catalog.components.get(&document.component_id) else {
+        return Ok(());
+    };
+    let raw: RawPreviewProperties<'_> = serde_json::from_str(source)?;
+    for (id, value) in raw.properties {
+        if component
+            .properties
+            .get(&id)
+            .is_some_and(|schema| schema.kind == PropertyKind::Number)
+        {
+            validate_raw_number(&id, PropertyKind::Number, Some(value))?;
+        }
+    }
+    Ok(())
+}
+
+#[derive(serde::Deserialize)]
+struct RawPreviewProperties<'a> {
+    #[serde(borrow, default)]
+    properties: std::collections::BTreeMap<PropertyId, &'a serde_json::value::RawValue>,
+}
+
+fn is_integer_token(token: &str) -> bool {
+    token
+        .strip_prefix('-')
+        .unwrap_or(token)
+        .bytes()
+        .all(|byte| byte.is_ascii_digit())
+}
+
+fn is_exact_integer_token(token: &str) -> bool {
+    let Ok(value) = token.parse::<f64>() else {
+        return false;
+    };
+    if !value.is_finite() {
+        return false;
+    }
+    let digits = token.strip_prefix('-').unwrap_or(token);
+    let mut limbs = Vec::<u32>::new();
+    for chunk in digits.as_bytes().rchunks(9).rev() {
+        let Ok(chunk) = std::str::from_utf8(chunk) else {
+            return false;
+        };
+        let Ok(chunk) = chunk.parse::<u32>() else {
+            return false;
+        };
+        let mut carry = chunk;
+        for limb in &mut limbs {
+            let next = u64::from(*limb) * 1_000_000_000 + u64::from(carry);
+            *limb = (next & 0xffff_ffff) as u32;
+            carry = (next >> 32) as u32;
+        }
+        while carry != 0 {
+            limbs.push(carry);
+            carry = 0;
+        }
+    }
+    while limbs.last() == Some(&0) {
+        limbs.pop();
+    }
+    if limbs.is_empty() {
+        return true;
+    }
+    let mut probe = limbs.clone();
+    let mut bit_length = 0usize;
+    while !probe.is_empty() {
+        divide_big_integer_by_two(&mut probe);
+        bit_length += 1;
+    }
+    probe = limbs;
+    for _ in 0..bit_length.saturating_sub(53) {
+        if divide_big_integer_by_two(&mut probe) {
+            return false;
+        }
+    }
+    true
+}
+
+fn divide_big_integer_by_two(limbs: &mut Vec<u32>) -> bool {
+    let mut remainder = 0u64;
+    for limb in limbs.iter_mut().rev() {
+        let value = (remainder << 32) | u64::from(*limb);
+        *limb = (value / 2) as u32;
+        remainder = value % 2;
+    }
+    while limbs.last() == Some(&0) {
+        limbs.pop();
+    }
+    remainder != 0
+}
+
+fn exact_integer_as_number(value: i64, property: &PropertyId) -> Result<f64, PreviewError> {
+    let number = value as f64;
+    if number as i128 == i128::from(value) {
+        Ok(number)
+    } else {
+        Err(PreviewError::InvalidPropertyValue {
+            property: property.clone(),
+            reason: "integer cannot be represented exactly as a number".to_owned(),
+        })
+    }
 }
 
 fn check_size(source: &str) -> Result<(), PreviewError> {
@@ -141,6 +361,12 @@ mod tests {
     #[test]
     fn decoder_rejects_unknown_versions_and_duplicate_property_keys() {
         let catalog = build_catalog();
+        let missing_components =
+            r#"{"format":"rustui.component-catalog","format_version":1,"actions":[]}"#;
+        assert!(matches!(
+            decode_catalog(missing_components),
+            Err(PreviewError::Invalid(_))
+        ));
         let unknown_catalog_version = r#"{"format":"rustui.component-catalog","format_version":9,"components":{},"actions":[]}"#;
         assert!(matches!(
             decode_catalog(unknown_catalog_version),
@@ -183,4 +409,240 @@ mod tests {
             Err(PreviewError::Invalid(_))
         ));
     }
+
+    #[test]
+    fn integer_values_round_trip_without_f64_precision_loss() {
+        let mut catalog = build_catalog();
+        let schema = catalog
+            .components
+            .get_mut(&ComponentId::new("rustui.button").unwrap())
+            .unwrap();
+        schema.properties.insert(
+            PropertyId::new("count").unwrap(),
+            PropertySchema {
+                kind: PropertyKind::Integer,
+                default: None,
+                required: true,
+                editable: true,
+                minimum: Some(9_007_199_254_740_993.0),
+                maximum: Some(9_223_372_036_854_775_807.0),
+                min_length: None,
+                max_length: None,
+                allowed_values: Vec::new(),
+            },
+        );
+        let source = r#"{"format":"rustui.preview","format_version":1,"preview_id":"sample","component_id":"rustui.button","component_version":1,"properties":{"label":"Run","count":9007199254740993},"actions":{}}"#;
+        let decoded = decode_preview(source, &catalog).unwrap();
+        assert_eq!(
+            decoded.properties.get(&PropertyId::new("count").unwrap()),
+            Some(&PropertyValue::Integer(9_007_199_254_740_993))
+        );
+        let encoded = encode_preview(&decoded.document, &catalog).unwrap();
+        assert!(encoded.contains("9007199254740993"));
+        assert_eq!(
+            decode_preview(&encoded, &catalog).unwrap().document,
+            decoded.document
+        );
+    }
+
+    #[test]
+    fn i64_extrema_round_trip_and_out_of_range_json_integers_are_rejected() {
+        let mut catalog = build_catalog();
+        let count = PropertyId::new("count").unwrap();
+        catalog
+            .components
+            .get_mut(&ComponentId::new("rustui.button").unwrap())
+            .unwrap()
+            .properties
+            .insert(
+                count.clone(),
+                PropertySchema {
+                    kind: PropertyKind::Integer,
+                    default: None,
+                    required: true,
+                    editable: true,
+                    minimum: None,
+                    maximum: Some(2_f64.powi(63)),
+                    min_length: None,
+                    max_length: None,
+                    allowed_values: Vec::new(),
+                },
+            );
+        let source_with_count = |count: &str| {
+            format!(
+                r#"{{"format":"rustui.preview","format_version":1,"preview_id":"sample","component_id":"rustui.button","component_version":1,"properties":{{"label":"Run","count":{count}}},"actions":{{}}}}"#
+            )
+        };
+
+        for value in [i64::MIN, i64::MAX] {
+            let decoded = decode_preview(&source_with_count(&value.to_string()), &catalog).unwrap();
+            assert_eq!(
+                decoded.properties.get(&count),
+                Some(&PropertyValue::Integer(value))
+            );
+            let encoded = encode_preview(&decoded.document, &catalog).unwrap();
+            assert!(encoded.contains(&value.to_string()));
+            assert_eq!(
+                decode_preview(&encoded, &catalog).unwrap().document,
+                decoded.document
+            );
+        }
+
+        for out_of_range in ["9223372036854775808", "-9223372036854775809"] {
+            assert!(matches!(
+                decode_preview(&source_with_count(out_of_range), &catalog),
+                Err(PreviewError::InvalidPropertyValue { property, .. }) if property == count
+            ));
+        }
+    }
+
+    #[test]
+    fn integer_schema_rejects_fractional_json_and_out_of_bounds_values() {
+        let mut catalog = build_catalog();
+        let schema = catalog
+            .components
+            .get_mut(&ComponentId::new("rustui.button").unwrap())
+            .unwrap();
+        schema.properties.insert(
+            PropertyId::new("count").unwrap(),
+            PropertySchema {
+                kind: PropertyKind::Integer,
+                default: None,
+                required: true,
+                editable: true,
+                minimum: Some(2.0),
+                maximum: Some(4.0),
+                min_length: None,
+                max_length: None,
+                allowed_values: Vec::new(),
+            },
+        );
+        for json_value in ["1.5", "1", "5"] {
+            let source = format!(
+                r#"{{"format":"rustui.preview","format_version":1,"preview_id":"sample","component_id":"rustui.button","component_version":1,"properties":{{"label":"Run","count":{json_value}}},"actions":{{}}}}"#
+            );
+            assert!(matches!(
+                decode_preview(&source, &catalog),
+                Err(PreviewError::InvalidPropertyValue { .. })
+            ));
+        }
+    }
+
+    #[test]
+    fn number_properties_accept_exact_integer_tokens_and_reject_lossy_ones() {
+        let mut catalog = build_catalog();
+        let schema = catalog
+            .components
+            .get_mut(&ComponentId::new("rustui.button").unwrap())
+            .unwrap();
+        schema.properties.insert(
+            PropertyId::new("amount").unwrap(),
+            PropertySchema {
+                kind: PropertyKind::Number,
+                default: Some(PropertyValue::Integer(1)),
+                required: false,
+                editable: true,
+                minimum: None,
+                maximum: None,
+                min_length: None,
+                max_length: None,
+                allowed_values: Vec::new(),
+            },
+        );
+
+        let encoded_catalog = encode_catalog(&catalog).unwrap();
+        let decoded_catalog = decode_catalog(&encoded_catalog).unwrap();
+        assert_eq!(
+            decoded_catalog.components[&ComponentId::new("rustui.button").unwrap()].properties
+                [&PropertyId::new("amount").unwrap()]
+                .default,
+            Some(PropertyValue::Number(1.0))
+        );
+        let lossy_default =
+            encoded_catalog.replace("\"default\": 1.0", "\"default\": 9223372036854775809");
+        assert!(matches!(
+            decode_catalog(&lossy_default),
+            Err(PreviewError::InvalidPropertyValue { .. })
+        ));
+        let mut event_catalog = build_catalog();
+        event_catalog
+            .components
+            .get_mut(&ComponentId::new("rustui.button").unwrap())
+            .unwrap()
+            .events
+            .get_mut(&EventId::new("activate").unwrap())
+            .unwrap()
+            .payload
+            .insert(
+                PropertyId::new("amount").unwrap(),
+                PropertySchema {
+                    kind: PropertyKind::Number,
+                    default: Some(PropertyValue::Integer(1)),
+                    required: false,
+                    editable: true,
+                    minimum: None,
+                    maximum: None,
+                    min_length: None,
+                    max_length: None,
+                    allowed_values: Vec::new(),
+                },
+            );
+        let encoded_event_catalog = encode_catalog(&event_catalog).unwrap();
+        let lossy_event_default =
+            encoded_event_catalog.replace("\"default\": 1.0", "\"default\": 9223372036854775809");
+        assert!(matches!(
+            decode_catalog(&lossy_event_default),
+            Err(PreviewError::InvalidPropertyValue { .. })
+        ));
+
+        let source = r#"{"format":"rustui.preview","format_version":1,"preview_id":"sample","component_id":"rustui.button","component_version":1,"properties":{"label":"Run","amount":2},"actions":{}}"#;
+        let decoded = decode_preview(source, &decoded_catalog).unwrap();
+        assert_eq!(
+            decoded.properties.get(&PropertyId::new("amount").unwrap()),
+            Some(&PropertyValue::Number(2.0))
+        );
+        let mut integer_document = decoded.document.clone();
+        integer_document.properties.insert(
+            PropertyId::new("amount").unwrap(),
+            PropertyValue::Integer(2),
+        );
+        let encoded_integer_document = encode_preview(&integer_document, &decoded_catalog).unwrap();
+        assert_eq!(
+            decode_preview(&encoded_integer_document, &decoded_catalog)
+                .unwrap()
+                .document,
+            decoded.document
+        );
+        let encoded = encode_preview(&decoded.document, &decoded_catalog).unwrap();
+        assert_eq!(
+            decode_preview(&encoded, &decoded_catalog).unwrap().document,
+            decoded.document
+        );
+
+        let lossy = source.replace("\"amount\":2", "\"amount\":9007199254740993");
+        assert!(matches!(
+            decode_preview(&lossy, &decoded_catalog),
+            Err(PreviewError::InvalidPropertyValue { .. })
+        ));
+
+        for (token, accepted) in [
+            ("9223372036854775808", true),
+            ("9223372036854775809", false),
+            ("18446744073709551615", false),
+            ("18446744073709551616", true),
+            ("18446744073709551617", false),
+            ("1267650600228229401496703205376", true),
+            ("1267650600228229401496703205377", false),
+            ("-9223372036854775809", false),
+            ("9223372036854775809.0", true),
+        ] {
+            let candidate = source.replace("\"amount\":2", &format!("\"amount\":{token}"));
+            assert_eq!(
+                decode_preview(&candidate, &decoded_catalog).is_ok(),
+                accepted,
+                "unexpected acceptance for Number token {token}"
+            );
+        }
+    }
+
 }

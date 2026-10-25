@@ -44,6 +44,18 @@ class CalibrateCacheWorkloadTests(unittest.TestCase):
         with self.assertRaisesRegex(ValueError, "scenario"):
             check_workload(result, "small")
 
+    def test_rejects_boolean_where_integer_count_is_required(self):
+        result = self.workload("small")
+        result["counts"]["cached_after_parent_updates"] = False
+        with self.assertRaisesRegex(ValueError, "cached_after_parent_updates"):
+            check_workload(result, "small")
+
+    def test_rejects_non_object_workload_counts(self):
+        result = self.workload("small")
+        result["counts"] = False
+        with self.assertRaisesRegex(ValueError, "counts must be an object"):
+            check_workload(result, "small")
+
 
 if __name__ == "__main__":
     unittest.main()

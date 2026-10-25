@@ -14,6 +14,22 @@ use rustui_core::{Binding, Identity};
 
 use crate::view::{EmptyView, RenderContext, View};
 
+type SelectionUpdater<T> = Rc<dyn Fn(&mut T)>;
+
+fn replace_selection_updater<T>(
+    slot: &RefCell<Option<SelectionUpdater<T>>>,
+    updater: SelectionUpdater<T>,
+) {
+    *slot.borrow_mut() = Some(updater);
+}
+
+fn apply_selection_updater<T>(slot: &RefCell<Option<SelectionUpdater<T>>>, context: &mut T) {
+    let updater = slot.borrow().clone();
+    if let Some(updater) = updater {
+        updater(context);
+    }
+}
+
 /// One string row with identity independent of its position and label.
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub struct KeyedListItem {
@@ -22,14 +38,16 @@ pub struct KeyedListItem {
 }
 
 impl KeyedListItem {
-    /// Creates a row. IDs must be unique and contain a non-whitespace character.
+    /// Creates a row. IDs must be unique, and labels must contain a non-whitespace character.
     pub fn new(id: impl Into<String>, label: impl Into<String>) -> Self {
         let id = id.into();
+        let label = label.into();
         assert!(!id.trim().is_empty(), "KeyedList item IDs must be nonempty");
-        Self {
-            id,
-            label: label.into(),
-        }
+        assert!(
+            !label.trim().is_empty(),
+            "KeyedList item labels must be nonempty"
+        );
+        Self { id, label }
     }
 
     pub fn id(&self) -> &str {
@@ -117,6 +135,8 @@ struct KeyedListDelegate {
     row_height: f32,
     selection_id: Rc<RefCell<Option<String>>>,
     expected_owner_selection: Rc<RefCell<Option<String>>>,
+    requested_selection: Rc<RefCell<Option<SelectionRequest>>>,
+    selection_update: Rc<RefCell<Option<SelectionUpdater<App>>>>,
     searchable: bool,
     selectable: bool,
 }
@@ -137,6 +157,8 @@ impl KeyedListDelegate {
             row_height,
             selection_id: Rc::new(RefCell::new(selection_id.clone())),
             expected_owner_selection: Rc::new(RefCell::new(selection_id)),
+            requested_selection: Rc::new(RefCell::new(None)),
+            selection_update: Rc::new(RefCell::new(None)),
             searchable,
             selectable,
         }
@@ -264,8 +286,13 @@ impl KeyedListView {
         items: impl IntoIterator<Item = KeyedListItem>,
         selection: Binding<Option<String>>,
     ) -> Self {
+        let id = id.into();
+        assert!(
+            !id.as_str().trim().is_empty(),
+            "KeyedList identity must be nonempty"
+        );
         Self {
-            id: id.into(),
+            id,
             items: collect_items(items),
             selection,
             height: 240.0,
@@ -278,10 +305,12 @@ impl KeyedListView {
     }
 
     pub fn height(mut self, height: f32) -> Self {
+        assert!(height.is_finite(), "KeyedList height must be finite");
         self.height = height.max(1.0);
         self
     }
     pub fn row_height(mut self, height: f32) -> Self {
+        assert!(height.is_finite(), "KeyedList row height must be finite");
         self.row_height = height.max(1.0);
         self
     }
@@ -345,16 +374,28 @@ impl View for KeyedListView {
             .delegate()
             .expected_owner_selection
             .clone();
+        let (requested_selection, selection_update) = {
+            let delegate = state.read(context.app()).delegate();
+            (
+                delegate.requested_selection.clone(),
+                delegate.selection_update.clone(),
+            )
+        };
+
+        let current_request = requested_selection.clone();
+        let expected = expected_selection.clone();
+        replace_selection_updater(
+            &selection_update,
+            context.binding_updater(self.selection.clone(), move |current| {
+                apply_selection_request(current, &expected, &current_request.borrow())
+            }),
+        );
 
         if created {
-            let requested = Rc::new(RefCell::new(None::<SelectionRequest>));
-            let current_request = requested.clone();
-            let expected = expected_selection.clone();
-            let update = context.binding_updater(self.selection.clone(), move |current| {
-                apply_selection_request(current, &expected, &current_request.borrow())
-            });
             let event_selection_id = selection_id.clone();
             let event_expected_selection = expected_selection.clone();
+            let current_update = selection_update.clone();
+            let requested = requested_selection.clone();
             context.subscribe_retained(&identity, &state, move |state, event: &ListEvent, cx| {
                 let selected_index = state.read(cx).selected_index();
                 match event {
@@ -369,7 +410,7 @@ impl View for KeyedListView {
                                 expected_owner: event_expected_selection.borrow().clone(),
                                 selection: Some(id),
                             });
-                            update(cx);
+                            apply_selection_updater(&current_update, cx);
                         }
                     }
                     ListEvent::Cancel => {
@@ -387,7 +428,7 @@ impl View for KeyedListView {
                                 expected_owner: event_expected_selection.borrow().clone(),
                                 selection: cancelled_selection,
                             });
-                            update(cx);
+                            apply_selection_updater(&current_update, cx);
                         }
                     }
                 }
@@ -466,11 +507,26 @@ impl View for KeyedListView {
 
 #[cfg(test)]
 mod tests {
-    use super::{
-        KeyedListDelegate, KeyedListItem, SelectionRequest, apply_selection_request,
-        clear_removed_selection, clear_selection_on_cancel, collect_items, valid_selection,
-    };
+    use super::*;
     use gpui_component::IndexPath;
+
+    struct Owner(Option<String>);
+
+    fn read_selection(owner: &Owner) -> Option<String> {
+        owner.0.clone()
+    }
+
+    fn write_selection(owner: &mut Owner, selection: Option<String>) {
+        owner.0 = selection;
+    }
+
+    fn list() -> KeyedListView {
+        KeyedListView::new(
+            "list",
+            [],
+            Binding::new(None, read_selection, write_selection),
+        )
+    }
 
     fn item(id: &str, label: &str) -> KeyedListItem {
         KeyedListItem::new(id, label)
@@ -483,6 +539,42 @@ mod tests {
             std::panic::catch_unwind(|| collect_items([item("a", "A"), item("a", "Other")]))
                 .is_err()
         );
+    }
+
+    #[test]
+    fn rejects_blank_accessible_labels_and_preserves_nonblank_labels() {
+        assert!(std::panic::catch_unwind(|| item("a", "")).is_err());
+        assert!(std::panic::catch_unwind(|| item("b", " \t\n ")).is_err());
+
+        assert_eq!(item("c", "  Cedar  ").label(), "  Cedar  ");
+    }
+
+    #[test]
+    fn rejects_blank_list_identity() {
+        assert!(
+            std::panic::catch_unwind(|| {
+                KeyedListView::new("", [], Binding::new(None, read_selection, write_selection))
+            })
+            .is_err()
+        );
+        assert!(
+            std::panic::catch_unwind(|| {
+                KeyedListView::new(
+                    " \t\n ",
+                    [],
+                    Binding::new(None, read_selection, write_selection),
+                )
+            })
+            .is_err()
+        );
+    }
+
+    #[test]
+    fn rejects_non_finite_viewport_and_row_heights() {
+        for height in [f32::INFINITY, f32::NEG_INFINITY, f32::NAN] {
+            assert!(std::panic::catch_unwind(|| list().height(height)).is_err());
+            assert!(std::panic::catch_unwind(|| list().row_height(height)).is_err());
+        }
     }
 
     #[test]
@@ -598,5 +690,22 @@ mod tests {
         ));
         assert_eq!(selection, None);
         assert_eq!(requested, None);
+    }
+
+    #[test]
+    fn retained_selection_event_uses_latest_owner_binding_writer() {
+        let slot = RefCell::new(None);
+        let old_writer_called = Rc::new(std::cell::Cell::new(false));
+        let new_writer_called = Rc::new(std::cell::Cell::new(false));
+
+        let old = old_writer_called.clone();
+        replace_selection_updater(&slot, Rc::new(move |_: &mut ()| old.set(true)));
+        let new = new_writer_called.clone();
+        replace_selection_updater(&slot, Rc::new(move |_: &mut ()| new.set(true)));
+
+        apply_selection_updater(&slot, &mut ());
+
+        assert!(!old_writer_called.get());
+        assert!(new_writer_called.get());
     }
 }

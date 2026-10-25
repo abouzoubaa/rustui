@@ -33,13 +33,61 @@ if [ "${RUSTDOC+x}" != x ] && [ -x "$rustdoc_bin" ]; then
     export RUSTDOC
 fi
 
-# Keep compiled artifacts inside RustUI, as requested. Cargo fingerprints
-# compiler, target, profile, features, flags, dependencies, and source changes.
-if [ -z "${CARGO_TARGET_DIR:-}" ]; then
-    rustui_root="$(CDPATH= cd -- "$(dirname -- "$0")/.." && pwd)"
-    CARGO_TARGET_DIR="${rustui_root}/target/headstart"
-    export CARGO_TARGET_DIR
-fi
+# Keep candidate snapshots from sharing the accepted workspace cache. Candidate
+# workspaces live below target/headstart/candidates/<id>; their ID is therefore
+# available from the physical working directory, including copied wrappers.
+working_dir="$(pwd -P)"
+case "$working_dir" in
+    */target/headstart/candidates/*)
+        candidate_prefix="${working_dir%%/target/headstart/candidates/*}"
+        candidate_suffix="${working_dir#"${candidate_prefix}/target/headstart/candidates/"}"
+        candidate_id="${candidate_suffix%%/*}"
+        case "$candidate_id" in
+            ''|[!A-Za-z0-9]*|*[!A-Za-z0-9._-]*|*..* )
+                printf '%s\n' "Invalid candidate workspace ID: ${candidate_id}" >&2
+                exit 2
+                ;;
+            * ) ;;
+        esac
+        if [ "${#candidate_id}" -gt 64 ]; then
+            printf '%s\n' "Invalid candidate workspace ID: ${candidate_id}" >&2
+            exit 2
+        fi
+        candidate_root="${candidate_prefix}/target/headstart/candidates/${candidate_id}"
+        candidate_root="$(CDPATH= cd -- "$candidate_root" && pwd -P)"
+        if [ -z "${CARGO_TARGET_DIR:-}" ]; then
+            CARGO_TARGET_DIR="${candidate_root}/target"
+        else
+            # Permit explicit candidate-local targets (for example paired
+            # baseline/candidate caches), but reject paths outside this ID.
+            # A dangling final symlink would otherwise pass the lexical check
+            # below and let Cargo create its target outside this candidate.
+            if [ -L "$CARGO_TARGET_DIR" ] && [ ! -d "$CARGO_TARGET_DIR" ]; then
+                printf '%s\n' "Candidate CARGO_TARGET_DIR cannot be a dangling or non-directory symlink: ${CARGO_TARGET_DIR}." >&2
+                exit 2
+            elif [ -d "$CARGO_TARGET_DIR" ]; then
+                resolved_target_dir="$(CDPATH= cd -- "$CARGO_TARGET_DIR" && pwd -P)"
+            else
+                target_parent="$(dirname -- "$CARGO_TARGET_DIR")"
+                target_leaf="$(basename -- "$CARGO_TARGET_DIR")"
+                resolved_target_dir="$(CDPATH= cd -- "$target_parent" && pwd -P)/${target_leaf}"
+            fi
+            case "$resolved_target_dir" in
+                "$candidate_root"|"${candidate_root}"/*) ;;
+                *) printf '%s\n' "Candidate builds require CARGO_TARGET_DIR inside ${candidate_root}; refusing ${CARGO_TARGET_DIR}." >&2; exit 2 ;;
+            esac
+        fi
+        export CARGO_TARGET_DIR
+        ;;
+    *)
+        # Normal workspace default remains unchanged.
+        if [ -z "${CARGO_TARGET_DIR:-}" ]; then
+            rustui_root="$(CDPATH= cd -- "$(dirname -- "$0")/.." && pwd)"
+            CARGO_TARGET_DIR="${rustui_root}/target/headstart"
+            export CARGO_TARGET_DIR
+        fi
+        ;;
+esac
 
 # Workaround for Headstart's early/full metadata SVH mismatch. These flags are
 # visible to Cargo so they participate in artifact fingerprints.

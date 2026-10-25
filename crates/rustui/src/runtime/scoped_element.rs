@@ -91,7 +91,7 @@ fn segment_id(kind: &str, value: &str) -> String {
 
 #[cfg(test)]
 mod scope_tests {
-    use super::{ScopedElement, SemanticInfo, scope_id};
+    use super::{ScopedElement, SemanticInfo, scope_id, semantic_scoped_element};
     use crate::view::RetentionScope;
     use gpui::{
         Element, IntoElement, Role,
@@ -236,6 +236,33 @@ mod scope_tests {
 
         scoped.semantics = None;
         assert_eq!(scoped.a11y_role(), None);
+    }
+
+    #[test]
+    fn semantic_scoped_element_serializes_navigation_accessible_name() {
+        use gpui::Element as _;
+
+        let mut element = semantic_scoped_element(
+            &RetentionScope::Semantics(Identity::from("navigation")),
+            gpui::div().into_any_element(),
+            Some(SemanticInfo {
+                role: Role::Navigation,
+                label: Some("Primary navigation".into()),
+                description: None,
+                live_value: None,
+            }),
+        );
+        let scoped = element
+            .downcast_mut::<ScopedElement>()
+            .expect("semantic wrapper remains the element stored by GPUI");
+
+        let role = scoped
+            .a11y_role()
+            .expect("named Navigation semantics must expose an accessibility node");
+        assert_eq!(role, Role::Navigation);
+        let mut node = Node::new(role);
+        scoped.write_a11y_info(&mut node);
+        assert_eq!(node.label(), Some("Primary navigation"));
     }
 }
 

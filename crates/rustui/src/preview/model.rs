@@ -70,6 +70,7 @@ pub(crate) fn is_valid_stable_id(value: &str) -> bool {
 pub enum PropertyValue {
     String(String),
     Boolean(bool),
+    Integer(i64),
     Number(f64),
 }
 
@@ -78,6 +79,7 @@ pub enum PropertyValue {
 pub enum PropertyKind {
     String,
     Boolean,
+    Integer,
     Number,
 }
 

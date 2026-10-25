@@ -14,6 +14,79 @@ use crate::view::View;
 type LaunchHook = Box<dyn FnOnce(&mut App)>;
 type AssetSetup = Box<dyn FnOnce(gpui::Application) -> gpui::Application>;
 
+#[cfg(any(test, target_family = "wasm"))]
+fn web_font_assets() -> Vec<std::borrow::Cow<'static, [u8]>> {
+    vec![
+        std::borrow::Cow::Borrowed(
+            include_bytes!("../../assets/fonts/InterVariable.ttf").as_slice(),
+        ),
+        std::borrow::Cow::Borrowed(
+            include_bytes!("../../assets/fonts/NotoSans-Regular.ttf").as_slice(),
+        ),
+        std::borrow::Cow::Borrowed(
+            include_bytes!("../../assets/fonts/NotoSansArabic.ttf").as_slice(),
+        ),
+        std::borrow::Cow::Borrowed(
+            include_bytes!("../../assets/fonts/NotoSansHebrew.ttf").as_slice(),
+        ),
+        std::borrow::Cow::Borrowed(
+            include_bytes!("../../assets/fonts/FiraMono-Medium.ttf").as_slice(),
+        ),
+    ]
+}
+
+struct EmbeddedAssetSource<S> {
+    source: S,
+    path: SharedString,
+    bytes: &'static [u8],
+}
+
+/// Adds one compile-time asset while preserving an application's asset source.
+pub fn with_embedded_asset(
+    source: impl gpui::AssetSource,
+    path: impl Into<SharedString>,
+    bytes: &'static [u8],
+) -> impl gpui::AssetSource {
+    EmbeddedAssetSource {
+        source,
+        path: path.into(),
+        bytes,
+    }
+}
+
+impl<S: gpui::AssetSource> gpui::AssetSource for EmbeddedAssetSource<S> {
+    fn load(&self, path: &str) -> gpui::Result<Option<std::borrow::Cow<'static, [u8]>>> {
+        if self.path.as_ref() == path {
+            Ok(Some(std::borrow::Cow::Borrowed(self.bytes)))
+        } else {
+            self.source.load(path)
+        }
+    }
+
+    fn list(&self, path: &str) -> gpui::Result<Vec<SharedString>> {
+        let mut assets = self.source.list(path)?;
+        let directory = path.trim_end_matches('/');
+        let remaining = if directory.is_empty() {
+            Some(self.path.as_ref())
+        } else {
+            self.path
+                .as_ref()
+                .strip_prefix(directory)
+                .and_then(|suffix| suffix.strip_prefix('/'))
+        };
+
+        if let Some(name) = remaining
+            .and_then(|suffix| suffix.split('/').next())
+            .filter(|name| !name.is_empty())
+        {
+            if !assets.iter().any(|asset| asset.as_ref() == name) {
+                assets.push(name.into());
+            }
+        }
+        Ok(assets)
+    }
+}
+
 gpui::actions!(rustui_runtime, [Quit]);
 
 fn tree_confirm_key_binding() -> KeyBinding {
@@ -108,13 +181,24 @@ impl RustUI {
         let window_size = self.window_size;
         let environment = self.environment;
 
+        #[cfg(target_family = "wasm")]
+        gpui_platform::web_init();
         let app = gpui_platform::application();
         let app = match self.asset_setup.take() {
             Some(setup) => setup(app),
             None => app,
         };
         app.run(move |cx| {
+            #[cfg(target_family = "wasm")]
+            cx.text_system()
+                .add_fonts(web_font_assets())
+                .expect("bundled Web fonts must register");
             gpui_component::init(cx);
+            // Set the Web default before caller launch/theme customization.
+            #[cfg(target_family = "wasm")]
+            {
+                gpui_component::Theme::global_mut(cx).mono_font_family = "Fira Mono".into();
+            }
             cx.bind_keys([tree_confirm_key_binding()]);
             // Pinned Popover binds Space to Confirm. Suppress that binding only
             // while an Input inside a Popover has focus, leaving text insertion
@@ -159,9 +243,79 @@ impl Default for RustUI {
 
 #[cfg(test)]
 mod tests {
-    use gpui::{KeyBinding, Keystroke};
+    use gpui::{AssetSource as _, KeyBinding, Keystroke};
 
-    use super::tree_confirm_key_binding;
+    use super::{tree_confirm_key_binding, web_font_assets, with_embedded_asset};
+
+    struct TestAssetSource;
+
+    impl gpui::AssetSource for TestAssetSource {
+        fn load(&self, path: &str) -> gpui::Result<Option<std::borrow::Cow<'static, [u8]>>> {
+            Ok((path == "assets/base.png")
+                .then_some(std::borrow::Cow::Borrowed(b"base asset".as_slice())))
+        }
+
+        fn list(&self, path: &str) -> gpui::Result<Vec<gpui::SharedString>> {
+            Ok(if path == "assets" {
+                vec!["base.png".into()]
+            } else {
+                Vec::new()
+            })
+        }
+    }
+
+    #[test]
+    fn web_font_registration_includes_variable_weights_and_hebrew() {
+        let fonts = web_font_assets();
+
+        assert_eq!(fonts.len(), 5);
+        assert!(fonts.iter().all(|font| font.starts_with(b"\0\x01\0\0")));
+        assert!(fonts.iter().any(|font| {
+            font.as_ref() == include_bytes!("../../assets/fonts/InterVariable.ttf")
+        }));
+        assert!(fonts.iter().any(|font| {
+            font.as_ref() == include_bytes!("../../assets/fonts/NotoSans-Regular.ttf")
+        }));
+        assert!(fonts.iter().any(|font| {
+            font.as_ref() == include_bytes!("../../assets/fonts/NotoSansArabic.ttf")
+        }));
+        assert!(fonts.iter().any(|font| {
+            font.as_ref() == include_bytes!("../../assets/fonts/NotoSansHebrew.ttf")
+        }));
+        assert!(fonts.iter().any(|font| {
+            font.as_ref() == include_bytes!("../../assets/fonts/FiraMono-Medium.ttf")
+        }));
+    }
+
+    #[test]
+    fn embedded_asset_resolves_png_bytes_and_path() {
+        let png = b"\x89PNG\r\n\x1a\nplayground sample";
+        let source = with_embedded_asset(TestAssetSource, "assets/playground-sample.png", png);
+
+        let loaded = source
+            .load("assets/playground-sample.png")
+            .unwrap()
+            .unwrap();
+        assert_eq!(&loaded[..8], b"\x89PNG\r\n\x1a\n");
+        assert_eq!(
+            source
+                .load("assets/base.png")
+                .unwrap()
+                .unwrap()
+                .as_ref(),
+            b"base asset"
+        );
+        assert_eq!(source.load("missing.png").unwrap(), None);
+        assert_eq!(
+            source
+                .list("assets")
+                .unwrap()
+                .iter()
+                .map(|asset| asset.as_ref())
+                .collect::<Vec<_>>(),
+            ["base.png", "playground-sample.png"]
+        );
+    }
 
     #[test]
     fn tree_confirm_binding_matches_enter_only() {

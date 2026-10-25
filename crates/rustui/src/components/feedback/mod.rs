@@ -1,7 +1,7 @@
 //! Feedback adapters backed by GPUI Components and GPUI primitives.
 //!
 //! Progress, Spinner, Skeleton, EmptyState, and ErrorState are implemented.
-//! Toast remains a planned component.
+//! Toast is implemented separately in [`crate::components::overlay::toast`].
 
 pub mod empty_state;
 pub mod error_state;

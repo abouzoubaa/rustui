@@ -59,6 +59,7 @@ impl WindowControlsGallery {
 impl View for WindowControlsGallery {
     fn body(&self) -> impl View {
         let active = self.active();
+        let selection_feedback = self.last_control_feedback();
         let lights = TRAFFIC_LIGHTS.iter().map(|(id, name, color)| {
             let action = match *id {
                 "close" => Self::select_close,
@@ -91,7 +92,13 @@ impl View for WindowControlsGallery {
             .child(Text(
                 "Illustration only · clicks change preview state, not system controls; no native chrome",
             ))
-            .child(Text(self.last_control_feedback()))
+            .child(
+                Semantics(
+                    "window-control-selection-status",
+                    Text(selection_feedback.clone()),
+                )
+                .live_region_value(selection_feedback, LivePoliteness::Polite),
+            )
     }
 }
 
@@ -130,6 +137,10 @@ mod tests {
                 WindowControlsGallery::light_label(name, color, gallery.active()),
                 format!("⚪ {name} · inactive")
             );
+            assert_eq!(
+                WindowControlsGallery::light_accessibility_label(name, gallery.active()),
+                format!("Illustrative {name} light; preview window inactive")
+            );
         }
 
         gallery.simulate_inactive();
@@ -150,5 +161,27 @@ mod tests {
         assert!(gallery.active());
         assert_eq!(gallery.last_control(), "Zoom");
         assert_eq!(gallery.last_control_feedback(), "Last selected control: Zoom");
+    }
+
+    #[test]
+    fn window_control_generated_actions_update_selection_feedback() {
+        let actions: [(fn(&mut WindowControlsGallery), &str); 3] = [
+            (WindowControlsGallery::select_close, "Close"),
+            (WindowControlsGallery::select_minimize, "Minimize"),
+            (WindowControlsGallery::select_zoom, "Zoom"),
+        ];
+        let mut gallery = WindowControlsGallery::default();
+
+        for (action, expected) in actions {
+            gallery.simulate_inactive();
+            assert!(!gallery.active());
+            assert!(gallery.action(action).dispatch(&mut gallery).should_notify());
+            assert!(gallery.active());
+            assert_eq!(gallery.last_control(), expected);
+            assert_eq!(
+                gallery.last_control_feedback(),
+                format!("Last selected control: {expected}")
+            );
+        }
     }
 }

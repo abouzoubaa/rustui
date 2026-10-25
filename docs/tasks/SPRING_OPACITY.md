@@ -142,3 +142,11 @@ files; the final verifier accepts the emitted f32 values within tolerance.
 The probe counts RustUI root host lowerings only. They do not measure GPUI
 frames, presented alpha, or velocity continuity. See
 `docs/tasks/SPRING_OPACITY_PROBE.md`.
+
+
+## M472 — Nonblank retained identity
+
+`SpringOpacity::new` rejects empty and whitespace-only IDs with the typed
+`SpringOpacityError::EmptyIdentity`; nonblank IDs are preserved verbatim. See
+`docs/tasks/SPRING_OFFSET.md` for the paired SpringOffset contract and M472
+acceptance status.

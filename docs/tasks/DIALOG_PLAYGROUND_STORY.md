@@ -24,3 +24,14 @@ Evidence: `target/headstart/evidence/dialog-name-m119-20261019.json`.
 ## 2026-10-19 M127 bounded native focus probe
 
 On macOS, Tab moved visible focus through Cancel -> Confirm -> Close -> Cancel without an outside Playground control receiving focus. Starting from Cancel, Shift+Tab wrapped to Close and then moved through Confirm and Cancel; screenshots showed each focus ring. Escape dismissed the dialog and displayed `Cancelled: no action was taken.` Pressing Return immediately, without an intervening Tab or pointer action, reopened the dialog, showing keyboard activation returned to the Open dialog trigger. The accessibility API reported the Playground window rather than a focused child control, so direct child focus was not established. Screen-reader speech, theme, locale and cross-platform behavior remain unverified. Evidence: `target/headstart/evidence/dialog-focus-m127-20261019.json`.
+
+## 2026-10-21 VoiceOver capture attempt
+
+Using the current M479 Playground binary, VoiceOver was temporarily enabled
+while the `save_dialog` story was open. The native accessibility tree exposed a
+`dialog` named “Confirm saving changes” with Cancel, Confirm, and Close actions;
+Escape displayed the cancellation result. VoiceOver Utility's caption-panel
+preference was enabled, but CUA exposed no caption transcript or audio capture.
+This is native accessibility-tree evidence only; VoiceOver speech and child
+focus ownership remain unverified. Evidence:
+`target/headstart/evidence/dialog-sheet-voiceover-probe-20261021.json`.

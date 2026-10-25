@@ -1,12 +1,13 @@
 //! Isolated rendering for the stories currently supported by RustUI Playground.
 
 use rustui::{
+    component,
     prelude::{
-        Binding, Breadcrumb, BreadcrumbItem, Button, Checkbox, ColorPicker, ComboBox, Component,
-        DatePicker, Environment, FontFallbackPolicy, HStack, Hsla, Keyed, List, LocalizedText,
-        NaiveDate, NavigationDestination, NavigationLink, NavigationStack, Picker, Radio,
-        SearchField, SecureField, Slider, Stepper, TabItem, TabView, TabViewStyle, Text,
-        TextEditor, TextField, Toggle, Tree, TreeNode, VStack, View,
+        Binding, Breadcrumb, BreadcrumbItem, Button, Card, Checkbox, ColorPicker, ComboBox,
+        Component, DatePicker, Environment, FontFallbackPolicy, HStack, Hsla, Keyed, List,
+        LocalizedText, NaiveDate, NavigationDestination, NavigationLink, NavigationStack, Picker,
+        Popover, Radio, SearchField, SecureField, Slider, Stepper, TabItem, TabView, TabViewStyle,
+        Text, TextEditor, TextField, Toggle, TokenField, Tree, TreeNode, VStack, View,
     },
     runtime::Action,
 };
@@ -55,8 +56,8 @@ pub struct StoryCanvas {
     combo_box_binding: Binding<String>,
     date_binding: Binding<Option<NaiveDate>>,
     color_binding: Binding<Option<Hsla>>,
-    list_binding: Binding<Option<usize>>,
-    table_binding: Binding<Option<usize>>,
+    _list_binding: Binding<Option<usize>>,
+    _table_binding: Binding<Option<usize>>,
     tree_binding: Binding<Option<String>>,
     tab_binding: Binding<String>,
     breadcrumb_page: String,
@@ -116,8 +117,8 @@ impl StoryCanvas {
             combo_box_binding,
             date_binding,
             color_binding,
-            list_binding,
-            table_binding,
+            _list_binding: list_binding,
+            _table_binding: table_binding,
             tree_binding,
             tab_binding,
             breadcrumb_page,
@@ -143,6 +144,7 @@ impl View for StoryCanvas {
                         .child(
                             Button("Increment", self.increment.clone())
                                 .id("story-button-increment")
+                                .localized_accessibility_label("lab-button-increment-accessibility")
                                 .button_style(self.button.style)
                                 .disabled(self.button.disabled),
                         )
@@ -300,6 +302,10 @@ impl View for StoryCanvas {
                 }
             }
             StoryId::Input => VStack::new()
+                .child(Component(
+                    "search-field-reference-gallery",
+                    SearchFieldReferenceGallery::default,
+                ))
                 .child(Text(format!("Bound value: {}", self.input_text)))
                 .child(
                     TextField("Name", self.input_binding.clone())
@@ -331,15 +337,25 @@ impl View for StoryCanvas {
                             Checkbox("Accepted", self.checkbox_binding.clone())
                                 .id("story-input-checkbox"),
                         )
+                        // Native acceptance probe: sharing the value makes an
+                        // accidental disabled activation visible on both controls.
+                        .child(
+                            Checkbox("Accepted (disabled)", self.checkbox_binding.clone())
+                                .id("story-input-checkbox-disabled")
+                                .accessibility_label("Accepted option (disabled)")
+                                .disabled(true),
+                        )
                         .child(
                             Radio("Selected", self.radio_binding.clone()).id("story-input-radio"),
                         )
                         .spacing(12.0)
                         .alignment(rustui::prelude::VerticalAlignment::Center),
                 )
+                .child(CheckboxReferenceGallery::default())
                 .child(
                     Slider(self.slider_binding.clone(), 0.0..=100.0)
                         .id("story-input-slider")
+                        .accessibility_label("Input value")
                         .step(1.0),
                 )
                 .child(
@@ -383,31 +399,10 @@ impl View for StoryCanvas {
                 .child(super::code_editor_gallery::demo())
                 .spacing(8.0)
                 .alignment(rustui::prelude::HorizontalAlignment::Start),
-            StoryId::List => VStack::new()
-                .child(Text(format!(
-                    "Selected source row: {:?}",
-                    self.list_binding.value()
-                )))
-                .child(
-                    List(
-                        [
-                            "Button",
-                            "Text",
-                            "TextField",
-                            "Slider",
-                            "Picker",
-                            "DatePicker",
-                            "ColorPicker",
-                        ],
-                        self.list_binding.clone(),
-                    )
-                    .id("story-list-components")
-                    .height(260.0)
-                    .searchable(true)
-                    .search_placeholder("Find a component"),
-                )
-                .spacing(8.0)
-                .alignment(rustui::prelude::HorizontalAlignment::Start),
+            StoryId::List => VStack::new().child(Component(
+                "list-reconciliation-gallery",
+                ListReconciliationGallery::default,
+            )),
             StoryId::Table => VStack::new()
                 .child(super::table_reconciliation_gallery::demo())
                 .child(super::data_grid_accessibility::demo())
@@ -455,7 +450,10 @@ impl View for StoryCanvas {
                             .height(80.0),
                     );
                 }
-                let mut tabs = vec![TabItem::new("overview", "Overview", overview)];
+                let mut tabs = vec![
+                    TabItem::new("overview", "Overview", overview)
+                        .localized_accessibility_label("lab-tab-overview-accessibility"),
+                ];
                 if self.retention.details_tab_present {
                     tabs.push(TabItem::new(
                         "details",
@@ -556,5 +554,544 @@ impl View for StoryCanvas {
                 )
             }
         }
+    }
+}
+
+#[component]
+struct CheckboxReferenceGallery {
+    #[state(true)]
+    checked: bool,
+    #[state(false)]
+    unchecked: bool,
+}
+
+impl View for CheckboxReferenceGallery {
+    fn body(&self) -> impl View {
+        VStack::new()
+            .spacing(6.0)
+            .child(Text("Checkbox reference states"))
+            .child(
+                HStack::new()
+                    .spacing(12.0)
+                    .child(
+                        Checkbox("Label", self.checked_binding())
+                            .id("checkbox-reference-checked")
+                            .accessibility_label("Checked checkbox reference state"),
+                    )
+                    .child(
+                        Checkbox("Label", self.unchecked_binding())
+                            .id("checkbox-reference-unchecked")
+                            .accessibility_label("Unchecked checkbox reference state"),
+                    ),
+            )
+    }
+}
+
+#[component]
+struct SearchFieldReferenceGallery {
+    #[state(String::new())]
+    empty_query: String,
+    #[state(String::from("Design"))]
+    active_query: String,
+    #[state(String::from("Design"))]
+    disabled_query: String,
+    #[state(String::new())]
+    dark_focused_empty_query: String,
+    #[state(String::from("Design"))]
+    dark_focused_populated_query: String,
+    #[state(String::new())]
+    dark_idle_empty_query: String,
+    #[state(String::from("Design"))]
+    dark_idle_populated_query: String,
+    #[state(String::new())]
+    recent_query: String,
+    #[state(true)]
+    recent_menu_open: bool,
+    #[state(initial_recent_searches())]
+    recent_searches: Vec<String>,
+    #[state(String::from("Design"))]
+    token_query: String,
+    #[state(initial_recipient_tokens())]
+    recipient_tokens: Vec<String>,
+    #[state(String::from("Studio"))]
+    combo_selection: String,
+    #[state(String::from("Atlas"))]
+    disabled_combo_selection: String,
+    #[state(3)]
+    disabled_count: i32,
+}
+
+fn initial_recent_searches() -> Vec<String> {
+    ["Design", "Studio", "Atlas", "Notes"]
+        .into_iter()
+        .map(String::from)
+        .collect()
+}
+
+fn initial_recipient_tokens() -> Vec<String> {
+    ["Atlas", "Studio", "Notes"]
+        .into_iter()
+        .map(String::from)
+        .collect()
+}
+
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+enum DarkSearchFieldState {
+    Disabled,
+    Focused,
+    Idle,
+}
+
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+struct DarkSearchFieldCase {
+    id: &'static str,
+    state: DarkSearchFieldState,
+    text_present: bool,
+}
+
+const DARK_SEARCH_FIELD_CASES: [DarkSearchFieldCase; 6] = [
+    DarkSearchFieldCase {
+        id: "search-field-reference-disabled",
+        state: DarkSearchFieldState::Disabled,
+        text_present: false,
+    },
+    DarkSearchFieldCase {
+        id: "search-field-reference-disabled-populated",
+        state: DarkSearchFieldState::Disabled,
+        text_present: true,
+    },
+    DarkSearchFieldCase {
+        id: "search-field-dark-focused-empty",
+        state: DarkSearchFieldState::Focused,
+        text_present: false,
+    },
+    DarkSearchFieldCase {
+        id: "search-field-dark-focused-populated",
+        state: DarkSearchFieldState::Focused,
+        text_present: true,
+    },
+    DarkSearchFieldCase {
+        id: "search-field-dark-idle-empty",
+        state: DarkSearchFieldState::Idle,
+        text_present: false,
+    },
+    DarkSearchFieldCase {
+        id: "search-field-dark-idle-populated",
+        state: DarkSearchFieldState::Idle,
+        text_present: true,
+    },
+];
+
+fn dark_search_field_specimen(
+    case: DarkSearchFieldCase,
+    value: Binding<String>,
+) -> impl View {
+    let state_label = match case.state {
+        DarkSearchFieldState::Disabled => "Disabled",
+        DarkSearchFieldState::Focused => "Focused",
+        DarkSearchFieldState::Idle => "Idle",
+    };
+    let text_label = if case.text_present {
+        "Text present"
+    } else {
+        "Text absent"
+    };
+    let description = if case.state == DarkSearchFieldState::Focused {
+        "Click this field to show its focused appearance."
+    } else {
+        ""
+    };
+    Card(
+        format!("{}-card", case.id),
+        VStack::new()
+            .spacing(6.0)
+            .child(Text(format!("{state_label} · {text_label}")))
+            .child(Text(description))
+            .child(
+                SearchField("Search components...", value)
+                    .id(case.id)
+                    .accessibility_label(format!("Dark Search Field, {state_label}, {text_label}"))
+                    .disabled(case.state == DarkSearchFieldState::Disabled),
+            ),
+    )
+}
+
+impl SearchFieldReferenceGallery {
+    fn clear_recent_searches(&mut self) {
+        self.recent_searches.clear();
+    }
+
+    fn select_recent_design(&mut self) {
+        self.recent_query = "Design".into();
+        self.recent_menu_open = false;
+    }
+
+    fn select_recent_studio(&mut self) {
+        self.recent_query = "Studio".into();
+        self.recent_menu_open = false;
+    }
+
+    fn select_recent_atlas(&mut self) {
+        self.recent_query = "Atlas".into();
+        self.recent_menu_open = false;
+    }
+
+    fn select_recent_notes(&mut self) {
+        self.recent_query = "Notes".into();
+        self.recent_menu_open = false;
+    }
+}
+
+impl View for SearchFieldReferenceGallery {
+    fn body(&self) -> impl View {
+        let mut recent_rows = VStack::new().spacing(4.0);
+        if self
+            .recent_searches()
+            .iter()
+            .any(|search| search == "Design")
+        {
+            recent_rows = recent_rows.child(
+                Button("Design", self.action(Self::select_recent_design))
+                    .id("search-field-reference-recent-design"),
+            );
+        }
+        if self
+            .recent_searches()
+            .iter()
+            .any(|search| search == "Studio")
+        {
+            recent_rows = recent_rows.child(
+                Button("Studio", self.action(Self::select_recent_studio))
+                    .id("search-field-reference-recent-studio"),
+            );
+        }
+        if self
+            .recent_searches()
+            .iter()
+            .any(|search| search == "Atlas")
+        {
+            recent_rows = recent_rows.child(
+                Button("Atlas", self.action(Self::select_recent_atlas))
+                    .id("search-field-reference-recent-atlas"),
+            );
+        }
+        if self
+            .recent_searches()
+            .iter()
+            .any(|search| search == "Notes")
+        {
+            recent_rows = recent_rows.child(
+                Button("Notes", self.action(Self::select_recent_notes))
+                    .id("search-field-reference-recent-notes"),
+            );
+        }
+
+        VStack::new()
+            .spacing(8.0)
+            .child(
+                HStack::new()
+                    .spacing(8.0)
+                    .child(Card(
+                        "search-field-empty",
+                        VStack::new()
+                            .spacing(6.0)
+                            .child(Text("Search field (empty)"))
+                            .child(Text("Basic search input with placeholder."))
+                            .child(
+                                SearchField("Search components...", self.empty_query_binding())
+                                    .id("search-field-reference-empty")
+                                    .accessibility_label("Search components"),
+                            ),
+                    ))
+                    .child(Card(
+                        "search-field-active",
+                        VStack::new()
+                            .spacing(6.0)
+                            .child(Text("Search field (active)"))
+                            .child(Text("Query text with clear action."))
+                            .child(
+                                SearchField("Search components...", self.active_query_binding())
+                                    .id("search-field-reference-active")
+                                    .accessibility_label("Search components"),
+                            ),
+                    ))
+                    .child(Card(
+                        "search-field-recent-searches",
+                        VStack::new()
+                            .spacing(6.0)
+                            .child(Text("Search field (recent searches)"))
+                            .child(Text("Recent searches menu."))
+                            .child(
+                                SearchField("Search components...", self.recent_query_binding())
+                                    .id("search-field-reference-recent")
+                                    .accessibility_label("Search components"),
+                            )
+                            .child(Popover(
+                                "search-field-reference-recent-menu",
+                                "Recent Searches",
+                                self.recent_menu_open_binding(),
+                                VStack::new().spacing(6.0).child(recent_rows).child(
+                                    Button(
+                                        "Clear Recent Searches",
+                                        self.action(Self::clear_recent_searches),
+                                    )
+                                    .id("search-field-reference-clear-recent"),
+                                ),
+                            )),
+                    )),
+            )
+            .child(Text(
+                "Dark Search Field states · switch Playground appearance to Dark; focus the two focused examples manually.",
+            ))
+            .child(
+                VStack::new()
+                    .spacing(8.0)
+                    .child(
+                        HStack::new()
+                            .spacing(8.0)
+                            .child(dark_search_field_specimen(
+                                DARK_SEARCH_FIELD_CASES[0],
+                                Binding::new(String::new(), |value: &String| value.clone(), |_, _| {}),
+                            ))
+                            .child(dark_search_field_specimen(
+                                DARK_SEARCH_FIELD_CASES[1],
+                                Binding::new(
+                                    self.disabled_query(),
+                                    |value: &String| value.clone(),
+                                    |_, _| {},
+                                ),
+                            )),
+                    )
+                    .child(
+                        HStack::new()
+                            .spacing(8.0)
+                            .child(dark_search_field_specimen(
+                                DARK_SEARCH_FIELD_CASES[2],
+                                self.dark_focused_empty_query_binding(),
+                            ))
+                            .child(dark_search_field_specimen(
+                                DARK_SEARCH_FIELD_CASES[3],
+                                self.dark_focused_populated_query_binding(),
+                            )),
+                    )
+                    .child(
+                        HStack::new()
+                            .spacing(8.0)
+                            .child(dark_search_field_specimen(
+                                DARK_SEARCH_FIELD_CASES[4],
+                                self.dark_idle_empty_query_binding(),
+                            ))
+                            .child(dark_search_field_specimen(
+                                DARK_SEARCH_FIELD_CASES[5],
+                                self.dark_idle_populated_query_binding(),
+                            )),
+                    ),
+            )
+            .child(
+                HStack::new()
+                    .spacing(8.0)
+                    .child(Card(
+                        "search-field-token-recipients",
+                        VStack::new()
+                            .spacing(6.0)
+                            .child(Text("Token input (recipients)"))
+                            .child(Text("Add recipients and remove selected tokens."))
+                            .child(
+                                TokenField(
+                                    "Add recipients",
+                                    self.recipient_tokens_binding(),
+                                    self.token_query_binding(),
+                                )
+                                .id("search-field-reference-token-query"),
+                            ),
+                    ))
+                    .child(Card(
+                        "search-field-editable-combo-box",
+                        VStack::new()
+                            .spacing(6.0)
+                            .child(Text("Combo box (editable)"))
+                            .child(Text("Editable field with suggestions."))
+                            .child(
+                                ComboBox(
+                                    "Framework",
+                                    self.combo_selection_binding(),
+                                    ["Studio", "Atlas", "Notes", "Design"],
+                                )
+                                .id("search-field-reference-editable-combo")
+                                .search_placeholder("Choose a workspace"),
+                            ),
+                    ))
+                    .child(Card(
+                        "search-field-disabled-examples",
+                        VStack::new()
+                            .spacing(6.0)
+                            .child(Text("Disabled examples"))
+                    .child(Text("Disabled combo box and count."))
+                            .child(
+                                ComboBox(
+                                    "Framework",
+                                    self.disabled_combo_selection_binding(),
+                                    ["Atlas", "Studio", "Notes"],
+                                )
+                                .id("search-field-reference-disabled-combo")
+                                .disabled(true),
+                            )
+                            .child(
+                                Stepper("Count (disabled)", self.disabled_count_binding())
+                                    .id("search-field-reference-disabled-count")
+                                    .range(0..=10)
+                                    .disabled(true),
+                            ),
+                    )),
+            )
+    }
+}
+
+#[cfg(test)]
+mod search_field_reference_tests {
+    use super::{DARK_SEARCH_FIELD_CASES, DarkSearchFieldState, SearchFieldReferenceGallery};
+
+    #[test]
+    fn search_field_reference_gallery_starts_with_the_six_reference_states() {
+        let gallery = SearchFieldReferenceGallery::default();
+
+        assert!(gallery.empty_query.is_empty());
+        assert_eq!(gallery.active_query, "Design");
+        assert_eq!(gallery.disabled_query, "Design");
+        assert!(gallery.dark_focused_empty_query.is_empty());
+        assert_eq!(gallery.dark_focused_populated_query, "Design");
+        assert!(gallery.dark_idle_empty_query.is_empty());
+        assert_eq!(gallery.dark_idle_populated_query, "Design");
+        assert_eq!(
+            gallery.recent_searches,
+            ["Design", "Studio", "Atlas", "Notes"]
+        );
+        assert_eq!(gallery.recipient_tokens, ["Atlas", "Studio", "Notes"]);
+        assert!(gallery.recent_menu_open);
+        assert_eq!(gallery.combo_selection, "Studio");
+        assert_eq!(gallery.disabled_combo_selection, "Atlas");
+        assert_eq!(gallery.disabled_count, 3);
+    }
+
+    #[test]
+    fn recipient_token_field_bindings_update_the_gallery_state() {
+        let mut gallery = SearchFieldReferenceGallery::default();
+        let tokens = gallery.recipient_tokens_binding();
+        let draft = gallery.token_query_binding();
+
+        assert!(draft.write_to(&mut gallery, "Research".into()));
+        assert_eq!(gallery.token_query(), "Research");
+        assert!(tokens.write_to(&mut gallery, vec!["Atlas".into(), "Notes".into()]));
+        assert_eq!(
+            tokens.read_from(&gallery),
+            Some(vec!["Atlas".into(), "Notes".into()])
+        );
+    }
+
+    #[test]
+    fn dark_search_field_matrix_covers_each_reference_state_and_text_value() {
+        assert_eq!(
+            DARK_SEARCH_FIELD_CASES.map(|case| (case.state, case.text_present)),
+            [
+                (DarkSearchFieldState::Disabled, false),
+                (DarkSearchFieldState::Disabled, true),
+                (DarkSearchFieldState::Focused, false),
+                (DarkSearchFieldState::Focused, true),
+                (DarkSearchFieldState::Idle, false),
+                (DarkSearchFieldState::Idle, true),
+            ]
+        );
+        assert_eq!(
+            DARK_SEARCH_FIELD_CASES[0].id,
+            "search-field-reference-disabled"
+        );
+        assert_eq!(
+            DARK_SEARCH_FIELD_CASES[1].id,
+            "search-field-reference-disabled-populated"
+        );
+    }
+}
+
+#[cfg(test)]
+mod checkbox_reference_tests {
+    use super::CheckboxReferenceGallery;
+
+    #[test]
+    fn checkbox_reference_gallery_starts_with_checked_and_unchecked_states() {
+        let gallery = CheckboxReferenceGallery::default();
+
+        assert!(gallery.checked());
+        assert!(!gallery.unchecked());
+    }
+
+    #[test]
+    fn checkbox_reference_state_bindings_update_independently() {
+        let mut gallery = CheckboxReferenceGallery::default();
+
+        assert!(gallery.checked_binding().write_to(&mut gallery, false));
+        assert!(!gallery.checked());
+        assert!(!gallery.unchecked());
+
+        assert!(gallery.unchecked_binding().write_to(&mut gallery, true));
+        assert!(!gallery.checked());
+        assert!(gallery.unchecked());
+    }
+}
+
+#[component]
+struct ListReconciliationGallery {
+    #[state(list_rows())]
+    rows: Vec<String>,
+    #[state(None)]
+    selection: Option<usize>,
+}
+
+fn list_rows() -> Vec<String> {
+    [
+        "Button",
+        "Text",
+        "TextField",
+        "Slider",
+        "Picker",
+        "DatePicker",
+        "ColorPicker",
+    ]
+    .into_iter()
+    .map(String::from)
+    .collect()
+}
+
+impl ListReconciliationGallery {
+    fn remove_last_row(&mut self) {
+        self.rows.pop();
+    }
+
+    fn restore_rows(&mut self) {
+        self.rows = list_rows();
+    }
+}
+
+impl View for ListReconciliationGallery {
+    fn body(&self) -> impl View {
+        VStack::new()
+            .spacing(8.0)
+            .child(Text(format!("Rows: {}", self.rows().len())))
+            .child(Text(format!("Selected source row: {:?}", self.selection())))
+            .child(
+                Button("Remove last row", self.action(Self::remove_last_row))
+                    .id("list-reconciliation-remove-last")
+                    .disabled(self.rows().is_empty()),
+            )
+            .child(
+                Button("Restore rows", self.action(Self::restore_rows))
+                    .id("list-reconciliation-restore-rows"),
+            )
+            .child(
+                List(self.rows().clone(), self.selection_binding())
+                    .id("story-list-components")
+                    .height(260.0)
+                    .searchable(true)
+                    .search_placeholder("Find a component"),
+            )
     }
 }

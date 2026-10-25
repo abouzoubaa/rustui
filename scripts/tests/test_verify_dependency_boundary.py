@@ -1,4 +1,9 @@
 import importlib.util
+import io
+import signal
+import sys
+import threading
+import time
 import unittest
 from pathlib import Path
 from unittest.mock import patch
@@ -20,13 +25,126 @@ def package(name, path, dependencies=()):
 
 
 class DependencyBoundaryTests(unittest.TestCase):
+    class FakeProcess:
+        def __init__(self, stdout=b"", stderr=b""):
+            self.stdout = io.BytesIO(stdout)
+            self.stderr = io.BytesIO(stderr)
+            self.killed = False
+
+        def wait(self):
+            return 0
+
+        def kill(self):
+            self.killed = True
+
+    def test_real_child_overflow_is_killed_and_reaped_without_pipe_deadlock(self):
+        cap = MODULE.MAX_CARGO_METADATA_OUTPUT_BYTES
+        bytes_per_pipe = cap // 2 + 64 * 1024
+        child = f"""
+import os
+import threading
+import time
+
+chunk = b"x" * 65536
+def write_pipe(fd):
+    remaining = {bytes_per_pipe}
+    while remaining:
+        sent = os.write(fd, chunk[:min(len(chunk), remaining)])
+        remaining -= sent
+
+writers = [threading.Thread(target=write_pipe, args=(fd,)) for fd in (1, 2)]
+for writer in writers:
+    writer.start()
+for writer in writers:
+    writer.join()
+time.sleep(30)
+"""
+        real_popen = MODULE.subprocess.Popen
+        processes = []
+
+        def capture_process(*args, **kwargs):
+            process = real_popen(*args, **kwargs)
+            processes.append(process)
+            return process
+
+        finished = threading.Event()
+        outcome = {}
+
+        def capture():
+            try:
+                outcome["result"] = MODULE._capture_cargo_metadata([sys.executable, "-c", child])
+            except Exception as exc:
+                outcome["error"] = exc
+            finally:
+                finished.set()
+
+        worker = threading.Thread(target=capture)
+        started = time.monotonic()
+        completed = False
+        try:
+            with patch.object(MODULE.subprocess, "Popen", side_effect=capture_process):
+                worker.start()
+                completed = finished.wait(timeout=20)
+        finally:
+            if processes:
+                process = processes[0]
+                if process.poll() is None:
+                    process.kill()
+                    process.wait(timeout=5)
+            worker.join(timeout=5)
+
+        self.assertTrue(completed, "capture deadlocked while draining the child's full stdout/stderr pipes")
+        self.assertFalse(worker.is_alive(), "capture worker did not finish after the child was reaped")
+        self.assertEqual(len(processes), 1)
+        process = processes[0]
+        self.assertIsNotNone(process.returncode, "capture did not wait for and reap the child")
+        self.assertLess(time.monotonic() - started, 20, "overflow termination took too long")
+        self.assertIsInstance(outcome.get("error"), RuntimeError)
+        self.assertEqual(
+            str(outcome["error"]),
+            f"cargo metadata stdout and stderr exceeded the {cap}-byte limit",
+        )
+        if sys.platform == "win32":
+            self.assertNotEqual(process.returncode, 0, "overflow child exited naturally instead of being killed")
+        else:
+            self.assertEqual(process.returncode, -signal.SIGKILL, "overflow child was not killed by the capture helper")
+
+    def test_cargo_metadata_accepts_output_within_combined_limit(self):
+        output = b'{"ok":true}'
+        process = self.FakeProcess(stdout=output)
+        with (
+            patch.object(MODULE, "MAX_CARGO_METADATA_OUTPUT_BYTES", len(output)),
+            patch.object(MODULE.subprocess, "Popen", return_value=process),
+        ):
+            self.assertEqual(MODULE.cargo_metadata(no_deps=True), {"ok": True})
+        self.assertFalse(process.killed)
+
+    def test_cargo_metadata_kills_process_when_combined_output_exceeds_limit(self):
+        process = self.FakeProcess(stdout=b"{}", stderr=b"x" * 9)
+        with (
+            patch.object(MODULE, "MAX_CARGO_METADATA_OUTPUT_BYTES", 10),
+            patch.object(MODULE.subprocess, "Popen", return_value=process),
+        ):
+            with self.assertRaisesRegex(RuntimeError, "exceeded the 10-byte limit"):
+                MODULE.cargo_metadata(no_deps=True)
+        self.assertTrue(process.killed)
+
     def run_check(self, root, declarations, resolved_packages):
         workspace_id = "rustui 1"
         member = {"id": workspace_id, "name": "rustui", "dependencies": declarations}
         declared = {"workspace_root": str(root), "workspace_members": [workspace_id], "packages": [member]}
+        nodes = []
+        for item in resolved_packages:
+            edges = []
+            for dep in item["dependencies"]:
+                target_id = dep.pop("pkg", None)
+                if target_id:
+                    edges.append({"pkg": target_id, "dep_kinds": []})
+            nodes.append({"id": item["id"], "deps": edges})
         resolved = {
             "workspace_members": [workspace_id],
             "packages": resolved_packages,
+            "resolve": {"nodes": nodes},
         }
         with patch.object(MODULE, "cargo_metadata", side_effect=[declared, resolved]):
             return MODULE.check()
@@ -72,6 +190,21 @@ class DependencyBoundaryTests(unittest.TestCase):
         )
         self.assertTrue(any("declared dependency on Allui" in error for error in errors))
         self.assertTrue(any("declared path dependency outside workspace" in error for error in errors))
+
+    def test_follows_cargo_resolve_edges_to_transitive_declarations(self):
+        root = Path("/tmp/rustui")
+        errors = self.run_check(
+            root,
+            [{"name": "intermediate", "path": None, "kind": None}],
+            [
+                package("rustui", root / "crates/rustui", [{"pkg": "intermediate 1"}]),
+                package("intermediate", root / "vendor/intermediate", [
+                    {"name": "Allui", "path": None, "optional": True},
+                ]),
+                package("Allui", root / "vendor/allui"),
+            ],
+        )
+        self.assertTrue(any("declared dependency on Allui" in error for error in errors))
 
     def test_rejects_external_workspace_and_resolved_path_dependencies(self):
         root = Path("/tmp/rustui")

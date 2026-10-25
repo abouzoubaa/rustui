@@ -9,11 +9,10 @@ pub fn source_for(story: StoryId) -> &'static str {
     .button_style(ButtonStyle::BorderedProminent)"#
         }
         StoryId::Text => {
-            r#"use rustui::localization::{interpolate, MessageArguments};
+            r#"use rustui::localization::MessageArguments;
 
-let template = catalogs.resolve(&locale, "lab-i18n-sample");
 let arguments = MessageArguments::new().with("name", "Ada").with("count", 3);
-interpolate(template, &arguments)?"#
+LocalizedText("lab-i18n-sample").with_arguments(arguments)"#
         }
         StoryId::Layout => {
             r#"let alpha = Keyed(
@@ -114,6 +113,7 @@ if self.tab_conditional_visible() {
             .height(80.0),
     );
 }
+
 let mut tabs = vec![TabItem::new("overview", "Overview", overview)];
 if self.details_tab_present() {
     tabs.push(TabItem::new(
@@ -124,6 +124,7 @@ if self.details_tab_present() {
             .height(80.0),
     ));
 }
+
 TabView(tabs, self.tab_selection_binding())
     .id("story-tabs")
     .style(TabViewStyle::Segmented)"#
@@ -157,6 +158,23 @@ NavigationStack(
     path,
 )
 .id("story-navigation-stack")"#
+        }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::super::component_catalog::STORIES;
+    use super::source_for;
+
+    #[test]
+    fn every_rendered_story_has_illustrative_source() {
+        for story in STORIES {
+            assert!(
+                !source_for(story.id).trim().is_empty(),
+                "missing source preview for {}",
+                story.title
+            );
         }
     }
 }
