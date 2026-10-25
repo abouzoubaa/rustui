@@ -138,6 +138,12 @@ def stable_package_id(package_id, repo_root, name, version):
 
 def distributable_report(report, repo_root):
     projected = dict(report)
+    inputs = dict(report.get("inputs", {}))
+    # These hash build-local Cargo reports. Keep the raw evidence in the
+    # external collection, but omit unstable hashes from the distributed notice.
+    inputs.pop("metadata_sha256", None)
+    inputs.pop("build_json_sha256", None)
+    projected["inputs"] = inputs
     packages = []
     for original in report["packages"]:
         package = dict(original)

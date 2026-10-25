@@ -123,7 +123,9 @@ for name in ("index.html", "rustui_playground.js", "rustui_playground_bg.wasm"):
 notice_report_path = bundle / "licenses/release/dependency-notices/report.json"
 notice_report = json.loads(notice_report_path.read_text())
 assert hashlib.sha256(notice_report_path.read_bytes()).hexdigest() == files["licenses/release/dependency-notices/report.json"]
-assert notice_report["inputs"]["metadata_sha256"] and notice_report["inputs"]["build_json_sha256"]
+assert "metadata_sha256" not in notice_report["inputs"]
+assert "build_json_sha256" not in notice_report["inputs"]
+assert notice_report["inputs"]["supplement_manifest_sha256"]
 assert notice_report["complete_license_or_compatibility_claim"] is False
 assert all("file://" not in item["package_id"] for item in notice_report["packages"]), "absolute Cargo path ID remains"
 assert "scripts/collect_dependency_notices.py" in {item["path"] for item in manifest["source"]["files"]}, "collector missing from source provenance"

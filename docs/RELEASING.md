@@ -106,10 +106,13 @@ hashes, explicit gaps, and review notes. The collector includes observed build
 dependencies; it does not establish exact runtime closure or legal completeness
 and writes only a fresh output directory. Each packaged validation bundle includes
 the verified collection and the verbatim embedded font and icon license files.
-Bundle manifests hash these files. Packaged reports retain input hashes, package
+Bundle manifests hash these files. Packaged reports retain the supplement hash, package
 sources, manifest hashes, review notes, provenance, and unresolved gaps, while
 replacing machine-local paths with stable repository or Cargo-source labels; the
-original report remains in external evidence. Ordinary developer packaging does
+original report and machine-specific Cargo input hashes remain in external
+evidence. A fixture verifies identical notice bytes across different checkout
+roots and Cargo input hashes; this does not establish reproducible binaries.
+Ordinary developer packaging does
 not run the collection step. This records evidence and does not create a release
 approval gate. Complete security dependency/license review, notices for all
 distributed code/assets, supported macOS/browser versions, native
