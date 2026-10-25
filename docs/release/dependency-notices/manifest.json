@@ -134,6 +134,56 @@
       "version": "0.3.1"
     },
     {
+      "name": "fluent-langneg",
+      "version": "0.13.1",
+      "source": "registry+https://github.com/rust-lang/crates.io-index",
+      "manifest_sha256": "30592b2881518521cd996a2a6e332ddf9d8d22f2def90df65ead10afa65e9ed8",
+      "upstream": {
+        "repository": "projectfluent/fluent-langneg-rs",
+        "revision": "7fdc590466ea63ca2367ac10fb1b881fe561f1a8",
+        "package_path": ""
+      },
+      "files": [
+        {
+          "path": "texts/b40930bbcf80744c86c46a12bc9da056641d722716c378f5659b9e555ef833e1.txt",
+          "sha256": "b40930bbcf80744c86c46a12bc9da056641d722716c378f5659b9e555ef833e1",
+          "upstream_path": "LICENSE-APACHE",
+          "url": "https://raw.githubusercontent.com/projectfluent/fluent-langneg-rs/7fdc590466ea63ca2367ac10fb1b881fe561f1a8/LICENSE-APACHE"
+        },
+        {
+          "path": "texts/016fcc02048817d628b04b140c54db290fd9d29a5e8a55b77871194e810716ac.txt",
+          "sha256": "016fcc02048817d628b04b140c54db290fd9d29a5e8a55b77871194e810716ac",
+          "upstream_path": "LICENSE-MIT",
+          "url": "https://raw.githubusercontent.com/projectfluent/fluent-langneg-rs/7fdc590466ea63ca2367ac10fb1b881fe561f1a8/LICENSE-MIT"
+        }
+      ]
+    },
+    {
+      "name": "intl_pluralrules",
+      "version": "7.0.2",
+      "source": "registry+https://github.com/rust-lang/crates.io-index",
+      "manifest_sha256": "595634ece6249e274c389db766170aa88f78df41e8887d333a7cac8dad6b0bed",
+      "upstream": {
+        "repository": "zbraniecki/pluralrules",
+        "revision": "d0715d5b7cca72e228d6e6c4de154bd30dfdd06a",
+        "package_path": "intl_pluralrules"
+      },
+      "files": [
+        {
+          "path": "texts/62c7a1e35f56406896d7aa7ca52d0cc0d272ac022b5d2796e7d6905db8a3636a.txt",
+          "sha256": "62c7a1e35f56406896d7aa7ca52d0cc0d272ac022b5d2796e7d6905db8a3636a",
+          "upstream_path": "intl_pluralrules/LICENSE-APACHE",
+          "url": "https://raw.githubusercontent.com/zbraniecki/pluralrules/d0715d5b7cca72e228d6e6c4de154bd30dfdd06a/intl_pluralrules/LICENSE-APACHE"
+        },
+        {
+          "path": "texts/23f18e03dc49df91622fe2a76176497404e46ced8a715d9d2b67a7446571cca3.txt",
+          "sha256": "23f18e03dc49df91622fe2a76176497404e46ced8a715d9d2b67a7446571cca3",
+          "upstream_path": "intl_pluralrules/LICENSE-MIT",
+          "url": "https://raw.githubusercontent.com/zbraniecki/pluralrules/d0715d5b7cca72e228d6e6c4de154bd30dfdd06a/intl_pluralrules/LICENSE-MIT"
+        }
+      ]
+    },
+    {
       "files": [
         {
           "path": "texts/216486f29671a4262efe32af6d84a75bef398127f8c5f369b5c8305983887a06.txt",

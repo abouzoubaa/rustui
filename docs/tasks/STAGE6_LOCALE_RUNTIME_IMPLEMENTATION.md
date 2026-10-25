@@ -71,6 +71,8 @@ startup/frame performance. Licensing and distributed notices must include the
 resolved new dependencies. Further ICU/Fluent upgrades require a reviewed data
 and dependency update with conformance, target, size and license checks.
 
-The 29 new packages all declare SPDX metadata. Upstream notice files are absent
-from the fluent-langneg and intl_pluralrules archives; versioned verbatim
-notice supplements must be captured before distribution.
+The 29 new packages all declare SPDX metadata. The fluent-langneg and
+intl_pluralrules archives omit upstream notices; all four verbatim MIT/Apache
+texts are now captured in the versioned supplement manifest, pinned to each
+crate-recorded exact revision. Distribution notice collection and license
+compatibility still require the actual final release build closure.

@@ -6,7 +6,10 @@ each package name/version and Cargo source to its vendored Cargo manifest hash,
 upstream repository/revision, original file URL and file SHA-256. Text files are
 deduplicated by content hash. No dependency or vendored source is changed.
 
-The initial 38 mappings cover 16 distinct files. The imported revision was checked
+The current 40 mappings cover 18 distinct files. Four verbatim MIT/Apache
+notices for Fluent Langneg 0.13.1 and Intl Pluralrules 7.0.2 were added at their
+crate-recorded exact revisions; two distinct texts reuse existing content hashes.
+The initial 38 mappings covered 16 distinct files. The imported revision was checked
 against each package's `.cargo_vcs_info.json`. The two Foundation packages use the
 repository's notice at their own recorded revision. Zune's Zlib text also matched
 a fresh download from its exact-revision URL. These checks establish provenance;
