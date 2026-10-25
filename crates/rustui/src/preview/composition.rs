@@ -346,6 +346,17 @@ pub struct CompositionHost<C> {
     mounted: Option<(CompositionStamp, CompositionDocument)>,
     generation: u64,
 }
+
+fn node_identity(stamp: &CompositionStamp, id: &NodeId) -> String {
+    // IDs may contain hyphens; length-prefix the preview ID to keep scopes unique.
+    format!(
+        "composition-node-{}:{}-{}-{}",
+        stamp.preview_id.as_str().len(),
+        stamp.preview_id,
+        stamp.generation,
+        id
+    )
+}
 impl<C> CompositionHost<C> {
     pub fn new(registry: PreviewRegistry<C>) -> Self {
         Self {
@@ -607,13 +618,7 @@ impl<C> CompositionHost<C> {
                 context,
                 slots,
             )?;
-            Ok(AnyView::new(Keyed(
-                format!(
-                    "composition-node-{}-{}-{}",
-                    stamp.preview_id, stamp.generation, id
-                ),
-                view,
-            )))
+            Ok(AnyView::new(Keyed(node_identity(stamp, id), view)))
         }
         Ok(Some(render_node(
             &self.registry,
@@ -1045,4 +1050,39 @@ mod tests {
             .insert(SlotId::new("body").unwrap(), children);
         assert!(validate_composition(&registry, &document).is_err());
     }
+}
+#[test]
+fn node_identity_separates_documents_and_mounts_but_survives_edits() {
+    let a = CompositionStamp {
+        preview_id: PreviewId::new("a-1").unwrap(),
+        generation: 1,
+        revision: 0,
+    };
+    let b = CompositionStamp {
+        preview_id: PreviewId::new("a").unwrap(),
+        ..a.clone()
+    };
+    let x = NodeId::new("x").unwrap();
+    let other_x = NodeId::new("1-x").unwrap();
+    assert_ne!(node_identity(&a, &x), node_identity(&b, &other_x));
+    assert_eq!(
+        node_identity(&a, &x),
+        node_identity(
+            &CompositionStamp {
+                revision: 1,
+                ..a.clone()
+            },
+            &x
+        )
+    );
+    assert_ne!(
+        node_identity(&a, &x),
+        node_identity(
+            &CompositionStamp {
+                generation: 2,
+                ..a.clone()
+            },
+            &x
+        )
+    );
 }

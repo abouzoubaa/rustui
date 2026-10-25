@@ -23,7 +23,7 @@ The user approved all pending prepared upstream patches and locale architecture/
 Inventory remains 37 required areas; whole-project coding/acceptance percentages
 remain provisional. This milestone implements the six explicit composition source
 contracts recorded in `STAGE9_DESCRIPTOR_COMPOSITION_IMPLEMENTATION.md` (6/6
-coded; three target/performance acceptance groups remain 0/3 closed). The browser
+coded in commit `986141fd`; three target/performance acceptance groups remain 0/3 closed). The browser
 semantic/protected-input series is installed reproducibly and its 14 actual-JS
 fixtures pass. Native all-targets checking passes; Wasm compilation found seven
 platform-configuration errors now being repaired through a revised exact patch.
@@ -345,7 +345,7 @@ recovery leads, not permission to rebuild existing work.
 | R21 | 9: accessibility and keyboard across public controls | Partial; semantic projection, action handling, disabled state and actual VoiceOver need current evidence on both targets. |
 | R22 | 9: descriptor/schema/codec validation | Present; recovered additional registry/schema/codec tests pass in current library checkpoint. Full contract review remains. |
 | R23 | 9: compiled preview/inspector | Present; inspect edit/rejection/remount/generation behavior and run current native inspector acceptance. |
-| R24 | 9: structural composition editing | Approved descriptor-first composition implemented: versioned stable-identity graph/slots, compiled recursive factories, atomic structure/property edits, bounded codec and node-scoped local signals. Focused preview 42/42 and Playground 1/1 pass including property edits, source reload and codec. Native/browser/performance acceptance open. |
+| R24 | 9: structural composition editing | Approved descriptor-first composition implemented: versioned stable-identity graph/slots, compiled recursive factories, atomic structure/property edits, bounded codec and node-scoped local signals. Focused preview 43/43 and Playground 1/1 pass including property edits, source reload and codec. Native/browser/performance acceptance open. |
 | R25 | 9: D1d external consumer adapter | No named external consumer/transport. Define host/version/action/disconnect policy before implementation. Keep RustUI independent. |
 | R26 | 9: live theme/data reload | Present, distinct from Rust source hot reload; verify invalid-update recovery and owner-release cleanup. |
 | R27 | 10: performance, provenance and candidate workflow | Extensive bounded tooling present; current-source GUI/performance evidence and candidate review/promotion open. No optimization speed claim or GPU phase acceptance. |

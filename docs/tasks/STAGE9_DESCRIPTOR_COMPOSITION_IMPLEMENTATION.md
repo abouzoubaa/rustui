@@ -44,7 +44,7 @@ and edit a child's text property. It uses the same component application and
 shows validation errors. No second application or editor-specific dependency
 was introduced.
 
-Focused preview source checks passed 42/42, including 10 composition tests;
+Focused preview source checks passed 43/43, including 11 composition tests;
 public-API Playground composition checks passed 1/1 after property editing,
 source reload and codec additions. Source
 contracts 1–6 above are implemented; native UI/AX/keyboard, browser/IME/AX and
