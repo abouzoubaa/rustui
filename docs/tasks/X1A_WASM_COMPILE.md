@@ -53,3 +53,15 @@ dependency pin, or lockfile was changed. This does not establish RustUI
 WebAssembly compilation. The next step is an approved repair of the incomplete
 `cc-1.8.0` vendor snapshot, followed by the same locked check; browser runtime,
 accessibility, and platform acceptance remain separate gates.
+
+## Update 2026-10-25 — vendor checksum recovery
+
+Restored the four `cc-1.8.0/src/target/` files listed by its existing checksum
+manifest from the matching Cargo-generated vendor snapshot. Their SHA-256
+digests match the manifest, and `Cargo.lock` was unchanged. The follow-up
+locked/offline WebAssembly check passed checksum validation but stopped while
+building host dependencies because the selected Stage 1 compiler lacks its
+`aarch64-apple-darwin` `core`/`std` libraries. This still does not establish
+RustUI WebAssembly compilation. Next, repair the Stage 1 host sysroot or use the
+matching installed Headstart host compiler configuration, then rerun the same
+focused check.
