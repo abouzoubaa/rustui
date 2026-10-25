@@ -278,6 +278,34 @@ class RoadmapClaimsTests(unittest.TestCase):
         )
         self.assertEqual(reclaimed.returncode, 0, reclaimed.stderr)
 
+    def test_rescope_preserves_retained_shared_paths_in_history(self) -> None:
+        shared_path = "@shared/target/headstart/evidence/rescope.log"
+        claim = self.run_claim(self.wt1, "thread-rescope-shared", "old/file.rs", shared_path)
+        self.assertEqual(claim.returncode, 0, claim.stderr)
+        claim_id = json.loads(claim.stdout)["claim_id"]
+
+        rescope = subprocess.run(
+            [sys.executable, str(SCRIPT), "rescope", "--claim-id", claim_id,
+             "--thread", "thread-rescope-shared", "--stage", "Stage 8",
+             "--milestone", "M1222", "--next-action", "write the acceptance run sheet",
+             "docs/new-run-sheet.md", shared_path],
+            cwd=self.wt1, env=self.env, text=True, capture_output=True,
+        )
+        self.assertEqual(rescope.returncode, 0, rescope.stderr)
+        result = json.loads(rescope.stdout)
+        self.assertEqual(result["removed_paths"], ["old/file.rs"])
+        self.assertEqual(result["paths"], [shared_path, "docs/new-run-sheet.md"])
+
+        audit = subprocess.run(
+            [sys.executable, str(SCRIPT), "audit", "--claim-id", claim_id,
+             "--thread", "thread-rescope-shared"],
+            cwd=self.wt1, env=self.env, text=True, capture_output=True,
+        )
+        self.assertEqual(audit.returncode, 0, audit.stderr)
+        transition = json.loads(audit.stdout)["history"][-1]
+        self.assertEqual(transition["added_paths"], ["docs/new-run-sheet.md"])
+        self.assertEqual(transition["evidence"], '{"removed_paths": ["old/file.rs"]}')
+
     def test_rescope_rejects_dropping_a_changed_claimed_path(self) -> None:
         claim = self.run_claim(self.wt1, "thread-rescope-dirty", "old/file.rs")
         self.assertEqual(claim.returncode, 0, claim.stderr)

@@ -272,7 +272,7 @@ def changed_paths(root: Path) -> list[str]:
 
 def covered(path: str, claimed: list[str]) -> bool:
     return any(path == scope or path.startswith(scope.rstrip("/") + "/")
-               for scope in claimed if not scope.startswith("@shared/"))
+               for scope in claimed)
 
 
 def path_fingerprint(root: Path, raw: str) -> str:
