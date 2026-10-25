@@ -382,7 +382,7 @@ fn main() {
         }, move |window, _| {
             window.set_window_title("RustUI Cache Drag Probe");
             let probe = probe.clone();
-            window.on_next_frame(move |window, cx| {
+            window.on_next_frame(move |window, _cx| {
                 window.activate_window();
                 probe.ax_active_seen.set(window.is_a11y_active());
                 schedule_poll(window, probe);
