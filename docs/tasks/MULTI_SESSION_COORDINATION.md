@@ -21,7 +21,10 @@ Every writing session owns one clean, registered Git worktree on a unique
 `codex/` branch. Before editing, it acquires an atomic claim for the task,
 thread, stage/milestone, worktree, and exact repository-relative files. Claims
 are stored in one SQLite database outside the checkout and shared by all linked
-worktrees for this repository.
+worktrees for this repository. Its location is pinned to `~/.local/state`;
+`XDG_STATE_HOME` is deliberately ignored because separate Codex sessions can
+inherit different values and otherwise create independent ledgers for the same
+repository.
 
 ```sh
 python3 /Users/Abium/.codex/worktrees/session-coordination/rustui/scripts/roadmap_claims.py claim \

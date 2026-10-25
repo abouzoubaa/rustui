@@ -33,21 +33,26 @@ class RoadmapClaimsTests(unittest.TestCase):
         self.wt2 = self.base / "wt2"
         self.git(self.repo, "worktree", "add", "-qb", "codex/claims-one", str(self.wt1), "HEAD")
         self.git(self.repo, "worktree", "add", "-qb", "codex/claims-two", str(self.wt2), "HEAD")
-        self.state = self.base / "state"
+        self.home = self.base / "home"
+        self.home.mkdir()
+        self.state = self.home / ".local" / "state"
         self.db = self.state / "rustui-roadmap"
-        self.env = {**os.environ, "XDG_STATE_HOME": str(self.state)}
+        self.env = {**os.environ, "HOME": str(self.home), "XDG_STATE_HOME": str(self.state)}
 
     @staticmethod
     def git(root: Path, *args: str) -> str:
         return subprocess.check_output(["git", "-C", str(root), *args], text=True).strip()
 
     def run_claim(self, root: Path, thread: str, *paths: str, lease: int = 900,
-                  task: str = "M-test") -> subprocess.CompletedProcess[str]:
+                  task: str = "M-test", xdg_state_home: Path | None = None) -> subprocess.CompletedProcess[str]:
+        env = self.env if xdg_state_home is None else {
+            **self.env, "XDG_STATE_HOME": str(xdg_state_home)
+        }
         return subprocess.run(
             [sys.executable, str(SCRIPT), "claim", "--task", task, "--thread", thread,
              "--worktree", str(root), "--stage", "Stage test", "--milestone", "M-test",
              "--next-action", "check claim", "--lease-seconds", str(lease), *paths],
-            cwd=root, env=self.env, text=True, capture_output=True,
+            cwd=root, env=env, text=True, capture_output=True,
         )
 
     def test_parallel_overlapping_claims_have_one_winner(self) -> None:
@@ -64,6 +69,16 @@ class RoadmapClaimsTests(unittest.TestCase):
                      for command, root in zip(commands, (self.wt1, self.wt2))]
         results = [process.communicate() + (process.returncode,) for process in processes]
         self.assertEqual(sum(code == 0 for _, _, code in results), 1, results)
+
+    def test_different_xdg_state_home_values_share_one_claim_ledger(self) -> None:
+        first = self.run_claim(self.wt1, "thread-xdg-one", "src/shared.rs", task="M-xdg-one")
+        self.assertEqual(first.returncode, 0, first.stderr)
+        second = self.run_claim(
+            self.wt2, "thread-xdg-two", "src/shared.rs", task="M-xdg-two",
+            xdg_state_home=self.base / "alternate-xdg-state",
+        )
+        self.assertNotEqual(second.returncode, 0)
+        self.assertIn("claim conflicts", second.stderr)
 
     def test_shared_gui_slot_allows_only_one_worktree_claim(self) -> None:
         slot = "@shared/playground-gui-slot"

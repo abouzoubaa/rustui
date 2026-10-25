@@ -32,7 +32,10 @@ def repo_identity() -> tuple[Path, Path]:
 
 def database_path(common_git_dir: Path) -> Path:
     digest = hashlib.sha256(str(common_git_dir).encode()).hexdigest()[:20]
-    base = Path(os.environ.get("XDG_STATE_HOME", Path.home() / ".local/state"))
+    # Codex sessions can inherit different XDG_STATE_HOME values. A repository
+    # claim ledger must not split across those environments, so pin it to the
+    # user's stable state directory.
+    base = Path.home() / ".local/state"
     return base / "rustui-roadmap" / f"claims-{digest}.sqlite3"
 
 
