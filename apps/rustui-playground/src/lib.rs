@@ -407,7 +407,7 @@ fn story_for(key: &str) -> Option<StoryId> {
         | "form_accessories" => Some(StoryId::Input),
         "list" => Some(StoryId::List),
         "table" => Some(StoryId::Table),
-        "outline_view" => Some(StoryId::Tree),
+        "outline_view" => Some(StoryId::Outline),
         "tab_bar" | "segmented_control" => Some(StoryId::Tabs),
         _ => None,
     }

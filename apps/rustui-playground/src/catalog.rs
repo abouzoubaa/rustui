@@ -294,9 +294,9 @@ pub const CATALOG: [CatalogItem; 46] = [
     ),
     item!(
         "outline_view",
-        "Tree",
+        "Outline",
         Partial,
-        "Public RustUI Tree gallery with a controlled stable-ID hierarchy, expansion, branch removal/restoration, and reorder/relabel controls; native interaction and accessibility acceptance remain pending.",
+        "Public RustUI Outline gallery with controlled stable-ID selection and branch expansion, collapse/expand-all, branch removal/restoration, reorder/relabel controls, and unmount/remount; native interaction and accessibility acceptance remain pending.",
         "docs/ui/macos-27/List.svg|docs/ui/macos-27/List-1.svg"
     ),
     item!(
@@ -724,15 +724,18 @@ mod tests {
     }
 
     #[test]
-    fn outline_view_catalog_describes_the_tree_story() {
+    fn outline_view_catalog_describes_the_controlled_outline_story() {
         let item = CATALOG
             .iter()
             .find(|item| item.key == "outline_view")
             .expect("outline view catalog row");
 
         assert_eq!(item.coverage, Coverage::Partial);
-        assert!(item.note.contains("Public RustUI Tree gallery"));
-        assert!(item.note.contains("controlled stable-ID hierarchy"));
+        assert!(item.note.contains("Public RustUI Outline gallery"));
+        assert!(
+            item.note
+                .contains("controlled stable-ID selection and branch expansion")
+        );
         assert!(item.note.contains("branch removal/restoration"));
         assert!(item.note.contains("reorder/relabel controls"));
         assert!(
@@ -741,7 +744,7 @@ mod tests {
         );
         assert_eq!(
             crate::story_for(item.key),
-            Some(crate::stories::StoryId::Tree)
+            Some(crate::stories::StoryId::Outline)
         );
     }
 

@@ -31,7 +31,7 @@ pub const fn status_for(story: StoryId) -> VerificationStatus {
         StoryId::Layout | StoryId::List | StoryId::Table | StoryId::Tree | StoryId::Navigation => {
             VerificationStatus::BoundedNativeChecksRecorded
         }
-        StoryId::Text | StoryId::Tabs | StoryId::Breadcrumb => {
+        StoryId::Text | StoryId::Tabs | StoryId::Breadcrumb | StoryId::Outline => {
             VerificationStatus::InteractionAndVisualPending
         }
     }
@@ -63,7 +63,12 @@ mod tests {
             );
             assert!(status_for(story).label().contains("remains pending"));
         }
-        for story in [StoryId::Text, StoryId::Tabs, StoryId::Breadcrumb] {
+        for story in [
+            StoryId::Text,
+            StoryId::Tabs,
+            StoryId::Breadcrumb,
+            StoryId::Outline,
+        ] {
             assert_eq!(
                 status_for(story),
                 VerificationStatus::InteractionAndVisualPending

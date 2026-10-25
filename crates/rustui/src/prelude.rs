@@ -25,6 +25,7 @@ pub use crate::components::basic::{
 };
 pub use crate::components::data::keyed_list::{KeyedList, KeyedListItem, KeyedListView};
 pub use crate::components::data::list::{List, ListView};
+pub use crate::components::data::outline::{Outline, OutlineView};
 pub use crate::components::data::table::{Table, TableView};
 pub use crate::components::data::tree::{Tree, TreeNode, TreeView};
 pub use crate::components::feedback::empty_state::{EmptyState, EmptyStateView};

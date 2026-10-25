@@ -10,6 +10,7 @@ pub enum StoryId {
     List,
     Table,
     Tree,
+    Outline,
     Tabs,
     Breadcrumb,
     Navigation,
@@ -25,6 +26,7 @@ impl StoryId {
             Self::List => "List",
             Self::Table => "Table",
             Self::Tree => "Tree",
+            Self::Outline => "Outline",
             Self::Tabs => "Tabs",
             Self::Breadcrumb => "Breadcrumb",
             Self::Navigation => "NavigationStack",
@@ -39,7 +41,7 @@ pub struct StoryDefinition {
     pub summary: &'static str,
 }
 
-pub const STORIES: [StoryDefinition; 10] = [
+pub const STORIES: [StoryDefinition; 11] = [
     StoryDefinition {
         id: StoryId::Button,
         title: "Button",
@@ -89,6 +91,11 @@ pub const STORIES: [StoryDefinition; 10] = [
         id: StoryId::Navigation,
         title: "NavigationStack",
         summary: "Edit root and destinations, navigate back, and toggle a root editor.",
+    },
+    StoryDefinition {
+        id: StoryId::Outline,
+        title: "Outline",
+        summary: "Document hierarchy with owner-controlled selected and expanded stable IDs.",
     },
 ];
 

@@ -262,6 +262,94 @@ fn should_consume_tree_arrow() -> bool {
     true
 }
 
+#[derive(Clone, Debug, PartialEq, Eq)]
+struct ExpansionRequest {
+    expected_owner: HashSet<String>,
+    expanded: HashSet<String>,
+}
+
+fn apply_expansion_request(current: &mut HashSet<String>, request: &ExpansionRequest) -> bool {
+    if *current != request.expected_owner || *current == request.expanded {
+        return false;
+    }
+    *current = request.expanded.clone();
+    true
+}
+
+fn apply_pending_expansion_request(
+    current: &mut HashSet<String>,
+    pending: &RefCell<Option<ExpansionRequest>>,
+) -> bool {
+    pending
+        .borrow_mut()
+        .take()
+        .is_some_and(|request| apply_expansion_request(current, &request))
+}
+
+fn valid_expanded_branches(nodes: &[TreeNode], requested: &HashSet<String>) -> HashSet<String> {
+    fn collect(nodes: &[TreeNode], requested: &HashSet<String>, valid: &mut HashSet<String>) {
+        for node in nodes {
+            if !node.children.is_empty() && requested.contains(&node.id) {
+                valid.insert(node.id.clone());
+            }
+            collect(&node.children, requested, valid);
+        }
+    }
+    let mut valid = HashSet::new();
+    collect(nodes, requested, &mut valid);
+    valid
+}
+
+fn controlled_expansion(nodes: &[TreeNode], expanded: &HashSet<String>) -> HashMap<String, bool> {
+    declared_expansion(nodes)
+        .into_keys()
+        .map(|id| {
+            let value = expanded.contains(&id);
+            (id, value)
+        })
+        .collect()
+}
+
+fn current_expanded_branches(state: &TreeState) -> HashSet<String> {
+    fn collect(item: &TreeItem, expanded: &mut HashSet<String>) {
+        if item.is_folder() && item.is_expanded() {
+            expanded.insert(item.id.to_string());
+        }
+        for child in &item.children {
+            collect(child, expanded);
+        }
+    }
+    let mut expanded = HashSet::new();
+    let mut index = 0;
+    while let Some(entry) = state.entry(index) {
+        if entry.is_root() {
+            collect(entry.item(), &mut expanded);
+        }
+        index += 1;
+    }
+    expanded
+}
+
+fn visible_controlled_selection(
+    nodes: &[TreeNode],
+    selection: Option<&str>,
+    expanded: &HashSet<String>,
+) -> Option<String> {
+    for node in nodes {
+        if selection == Some(node.id.as_str()) {
+            return Some(node.id.clone());
+        }
+        if expanded.contains(&node.id) {
+            if let Some(selected) =
+                visible_controlled_selection(&node.children, selection, expanded)
+            {
+                return Some(selected);
+            }
+        }
+    }
+    None
+}
+
 struct RetainedTree {
     tree: gpui::Entity<TreeState>,
     nodes: Vec<TreeNode>,
@@ -269,12 +357,17 @@ struct RetainedTree {
     owner_selection: Rc<RefCell<Option<String>>>,
     pending_selection: Rc<RefCell<Option<SelectionRequest>>>,
     selection_update: Rc<RefCell<Option<SelectionUpdater<App>>>>,
+    observed_expansion: Rc<RefCell<HashSet<String>>>,
+    owner_expansion: Rc<RefCell<Option<HashSet<String>>>>,
+    pending_expansion: Rc<RefCell<Option<ExpansionRequest>>>,
+    expansion_update: Rc<RefCell<Option<SelectionUpdater<App>>>>,
 }
 
 /// A virtualized hierarchy with controlled stable-ID selection.
 pub struct TreeView {
     nodes: Vec<TreeNode>,
     selection: Binding<Option<String>>,
+    expansion: Option<Binding<HashSet<String>>>,
     on_activate: Option<ControlAction>,
     id: Option<Identity>,
     height: Option<f32>,
@@ -295,6 +388,7 @@ impl TreeView {
         Self {
             nodes,
             selection,
+            expansion: None,
             on_activate: None,
             id: None,
             height: None,
@@ -331,6 +425,11 @@ impl TreeView {
         self
     }
 
+    pub(crate) fn controlled_expansion(mut self, expanded: Binding<HashSet<String>>) -> Self {
+        self.expansion = Some(expanded);
+        self
+    }
+
     fn identity_with(&self, allocate: impl FnOnce(Identity) -> Identity) -> Identity {
         self.id.clone().unwrap_or_else(|| {
             allocate(Identity::from(format!(
@@ -360,9 +459,23 @@ impl View for TreeView {
         let identity = self.identity_with(|base| context.next_implicit_retained_identity(base));
         let nodes = self.nodes.clone();
         let initial_selection = self.selection.value();
+        let requested_expansion = self.expansion.as_ref().map(Binding::value);
+        let desired_expansion = requested_expansion
+            .as_ref()
+            .map(|requested| valid_expanded_branches(&self.nodes, requested));
+        let initial_expansion = desired_expansion.clone();
         let (retained, created) = context.retained_entity(identity.clone(), move |_window, cx| {
             let tree = cx.new(|cx| {
-                TreeState::new(cx).items(nodes.iter().map(TreeNode::to_gpui).collect::<Vec<_>>())
+                let items = if let Some(expanded) = initial_expansion.as_ref() {
+                    let expansion = controlled_expansion(&nodes, expanded);
+                    nodes
+                        .iter()
+                        .map(|node| node.to_gpui_with_expansion(&expansion))
+                        .collect::<Vec<_>>()
+                } else {
+                    nodes.iter().map(TreeNode::to_gpui).collect::<Vec<_>>()
+                };
+                TreeState::new(cx).items(items)
             });
             RetainedTree {
                 tree,
@@ -371,6 +484,12 @@ impl View for TreeView {
                 owner_selection: Rc::new(RefCell::new(initial_selection)),
                 pending_selection: Rc::new(RefCell::new(None)),
                 selection_update: Rc::new(RefCell::new(None)),
+                observed_expansion: Rc::new(RefCell::new(
+                    initial_expansion.clone().unwrap_or_default(),
+                )),
+                owner_expansion: Rc::new(RefCell::new(initial_expansion)),
+                pending_expansion: Rc::new(RefCell::new(None)),
+                expansion_update: Rc::new(RefCell::new(None)),
             }
         });
 
@@ -381,6 +500,10 @@ impl View for TreeView {
             owner_selection,
             pending_selection,
             selection_update,
+            observed_expansion,
+            owner_expansion,
+            pending_expansion,
+            expansion_update,
         ) = {
             let retained = retained.read(context.app());
             (
@@ -390,6 +513,10 @@ impl View for TreeView {
                 retained.owner_selection.clone(),
                 retained.pending_selection.clone(),
                 retained.selection_update.clone(),
+                retained.observed_expansion.clone(),
+                retained.owner_expansion.clone(),
+                retained.pending_expansion.clone(),
+                retained.expansion_update.clone(),
             )
         };
         *owner_selection.borrow_mut() = self.selection.value();
@@ -399,12 +526,31 @@ impl View for TreeView {
             apply_pending_selection_request(current, &pending)
         });
         replace_selection_updater(&selection_update, updater);
+        *owner_expansion.borrow_mut() = requested_expansion.clone();
+        if let Some(binding) = self.expansion.as_ref() {
+            let pending = pending_expansion.clone();
+            let owner_expansion = owner_expansion.clone();
+            let updater = context.binding_updater(binding.clone(), move |current| {
+                let changed = apply_pending_expansion_request(current, &pending);
+                *owner_expansion.borrow_mut() = Some(current.clone());
+                changed
+            });
+            replace_selection_updater(&expansion_update, updater);
+        } else {
+            // A retained Tree may replace an Outline at the same explicit identity.
+            *expansion_update.borrow_mut() = None;
+            *pending_expansion.borrow_mut() = None;
+        }
 
         if created {
             let last_selection = observed_selection.clone();
             let event_owner_selection = owner_selection.clone();
             let pending_selection = pending_selection.clone();
             let current_update = selection_update.clone();
+            let last_expansion = observed_expansion.clone();
+            let event_owner_expansion = owner_expansion.clone();
+            let pending_expansion = pending_expansion.clone();
+            let expansion_update = expansion_update.clone();
             context.observe_retained(&identity, &tree, move |tree, cx| {
                 let selected = tree
                     .read(cx)
@@ -417,6 +563,18 @@ impl View for TreeView {
                         selection: selected,
                     });
                     apply_selection_updater(&current_update, cx);
+                }
+                let expected_owner = event_owner_expansion.borrow().clone();
+                if let Some(expected_owner) = expected_owner {
+                    let expanded = current_expanded_branches(tree.read(cx));
+                    if *last_expansion.borrow() != expanded {
+                        *last_expansion.borrow_mut() = expanded.clone();
+                        *pending_expansion.borrow_mut() = Some(ExpansionRequest {
+                            expected_owner,
+                            expanded,
+                        });
+                        apply_selection_updater(&expansion_update, cx);
+                    }
                 }
             });
         }
@@ -433,6 +591,40 @@ impl View for TreeView {
                 });
             }
         }
+        if let (Some(binding), Some(requested), Some(desired)) = (
+            self.expansion.as_ref(),
+            requested_expansion.as_ref(),
+            desired_expansion.as_ref(),
+        ) {
+            if requested != desired {
+                let request = ExpansionRequest {
+                    expected_owner: requested.clone(),
+                    expanded: desired.clone(),
+                };
+                let owner_expansion = owner_expansion.clone();
+                let normalize = context.binding_updater(binding.clone(), move |current| {
+                    let changed = apply_expansion_request(current, &request);
+                    *owner_expansion.borrow_mut() = Some(current.clone());
+                    changed
+                });
+                context.update_entity(&tree, move |_, _, cx| cx.defer(move |cx| normalize(cx)));
+            }
+        }
+        let native_desired = desired_expansion.as_ref().map_or_else(
+            || desired.clone(),
+            |expanded| visible_controlled_selection(&self.nodes, desired.as_deref(), expanded),
+        );
+        if let Some(expanded) = desired_expansion.as_ref() {
+            *observed_expansion.borrow_mut() = expanded.clone();
+            if requested == desired {
+                // A hidden owner selection can already match the empty native
+                // selection without requiring a TreeState update this frame.
+                *observed_selection.borrow_mut() = native_desired.clone();
+            }
+        }
+        let expansion_changed = desired_expansion
+            .as_ref()
+            .is_some_and(|desired| current_expanded_branches(tree.read(context.app())) != *desired);
         let selected = tree
             .read(context.app())
             .selected_item()
@@ -447,27 +639,47 @@ impl View for TreeView {
             .clone()
             .map(|action| Rc::new(context.bind_keyboard_action(action)));
 
-        if data_changed || selected != desired || requested != desired {
+        if data_changed || expansion_changed || selected != native_desired || requested != desired {
             if requested == desired {
-                *observed_selection.borrow_mut() = desired.clone();
+                *observed_selection.borrow_mut() = native_desired.clone();
             }
-            let nodes = data_changed.then(|| {
-                let expansion = reconcile_expansion(
-                    &retained_nodes,
-                    &self.nodes,
-                    &current_expansion(&tree.read(context.app())),
+            if let Some(expanded) = desired_expansion.as_ref() {
+                *observed_expansion.borrow_mut() = expanded.clone();
+            }
+            let nodes = (data_changed || expansion_changed).then(|| {
+                let expansion = desired_expansion.as_ref().map_or_else(
+                    || {
+                        reconcile_expansion(
+                            &retained_nodes,
+                            &self.nodes,
+                            &current_expansion(&tree.read(context.app())),
+                        )
+                    },
+                    |expanded| controlled_expansion(&self.nodes, expanded),
                 );
                 self.nodes
                     .iter()
                     .map(|node| node.to_gpui_with_expansion(&expansion))
                     .collect::<Vec<_>>()
             });
-            let selected_item = desired.as_ref().map(|id| TreeItem::new(id.clone(), ""));
+            let selected_item = native_desired
+                .as_ref()
+                .map(|id| TreeItem::new(id.clone(), ""));
+            let controlled = self.expansion.is_some();
             context.update_entity(&tree, move |state, _window, cx| {
                 if let Some(nodes) = nodes {
                     state.set_items(nodes, cx);
                 }
-                state.set_selected_item(selected_item.as_ref(), cx);
+                if controlled {
+                    // Upstream set_selected_item reveals hidden ancestors. Controlled Outline
+                    // keeps owner expansion authoritative and retains hidden selection only in its binding.
+                    let index = selected_item
+                        .as_ref()
+                        .and_then(|item| state.index_of(&item.id));
+                    state.set_selected_index(index, cx);
+                } else {
+                    state.set_selected_item(selected_item.as_ref(), cx);
+                }
             });
 
             if data_changed {
@@ -907,3 +1119,7 @@ mod tests {
         assert_eq!(*second_owner.borrow(), 7);
     }
 }
+
+#[cfg(test)]
+#[path = "outline_tests.rs"]
+mod outline_tests;

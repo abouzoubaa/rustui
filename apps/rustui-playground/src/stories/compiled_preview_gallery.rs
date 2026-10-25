@@ -3078,95 +3078,143 @@ impl Default for CompiledPreviewGallery {
                 },
             )
             .unwrap();
-        let tree_specimen_schema = ComponentSchema {
-            id: ComponentId::new("tree-specimen").unwrap(),
-            version: 1,
-            display_name: "Tree".into(),
-            properties: BTreeMap::from([
-                (
-                    PropertyId::new("root_label").unwrap(),
-                    tree_label_schema("Project"),
-                ),
-                (
-                    PropertyId::new("src_label").unwrap(),
-                    tree_label_schema("src"),
-                ),
-                (
-                    PropertyId::new("readme_label").unwrap(),
-                    tree_label_schema("README.md"),
-                ),
-                (
-                    PropertyId::new("tests_label").unwrap(),
-                    tree_label_schema("tests"),
-                ),
-                (
-                    PropertyId::new("selected_id").unwrap(),
+        for (component, display_name, outline) in [
+            ("tree-specimen", "Tree", false),
+            ("outline-specimen", "Outline", true),
+        ] {
+            let mut tree_specimen_schema = ComponentSchema {
+                id: ComponentId::new(component).unwrap(),
+                version: 1,
+                display_name: display_name.into(),
+                properties: BTreeMap::from([
+                    (
+                        PropertyId::new("root_label").unwrap(),
+                        tree_label_schema("Project"),
+                    ),
+                    (
+                        PropertyId::new("src_label").unwrap(),
+                        tree_label_schema("src"),
+                    ),
+                    (
+                        PropertyId::new("readme_label").unwrap(),
+                        tree_label_schema("README.md"),
+                    ),
+                    (
+                        PropertyId::new("tests_label").unwrap(),
+                        tree_label_schema("tests"),
+                    ),
+                    (
+                        PropertyId::new("selected_id").unwrap(),
+                        PropertySchema {
+                            kind: PropertyKind::String,
+                            default: Some(PropertyValue::String("none".into())),
+                            required: false,
+                            editable: true,
+                            minimum: None,
+                            maximum: None,
+                            min_length: None,
+                            max_length: None,
+                            allowed_values: std::iter::once("none".into())
+                                .chain(PREVIEW_TREE_NODE_IDS.iter().map(|id| (*id).into()))
+                                .collect(),
+                        },
+                    ),
+                ]),
+                events: BTreeMap::new(),
+            };
+            if outline {
+                tree_specimen_schema.properties.insert(
+                    PropertyId::new("expanded").unwrap(),
                     PropertySchema {
                         kind: PropertyKind::String,
-                        default: Some(PropertyValue::String("none".into())),
+                        default: Some(PropertyValue::String("all".into())),
                         required: false,
                         editable: true,
                         minimum: None,
                         maximum: None,
                         min_length: None,
                         max_length: None,
-                        allowed_values: std::iter::once("none".into())
-                            .chain(PREVIEW_TREE_NODE_IDS.iter().map(|id| (*id).into()))
+                        allowed_values: ["collapsed", "root", "nested", "all"]
+                            .into_iter()
+                            .map(str::to_owned)
                             .collect(),
                     },
-                ),
-            ]),
-            events: BTreeMap::new(),
-        };
-        registry
-            .register(
-                tree_specimen_schema,
-                |snapshot, context: &FactoryContext| {
-                    let root_label =
-                        property_string(snapshot, "root_label").expect("validated Tree root label");
-                    let src_label =
-                        property_string(snapshot, "src_label").expect("validated Tree src label");
-                    let readme_label = property_string(snapshot, "readme_label")
-                        .expect("validated Tree README label");
-                    let tests_label = property_string(snapshot, "tests_label")
-                        .expect("validated Tree tests label");
-                    let selected_id =
-                        property_string(snapshot, "selected_id").expect("validated Tree selection");
-                    let selection = CompiledPreviewGallery::tree_selection_binding(
-                        (selected_id != "none").then_some(selected_id),
-                        PropertyBindingContext {
-                            property: PropertyId::new("selected_id").unwrap(),
-                            stamp: context.stamp_lease.clone(),
-                        },
-                    );
-                    let nodes = [rustui::components::data::tree::TreeNode::new(
-                        PREVIEW_TREE_NODE_IDS[0],
-                        root_label,
-                    )
-                    .expanded(true)
-                    .child(
-                        rustui::components::data::tree::TreeNode::new(
-                            PREVIEW_TREE_NODE_IDS[1],
-                            src_label,
+                );
+            }
+            registry
+                .register(
+                    tree_specimen_schema,
+                    move |snapshot, context: &FactoryContext| {
+                        let root_label = property_string(snapshot, "root_label")
+                            .expect("validated Tree root label");
+                        let src_label = property_string(snapshot, "src_label")
+                            .expect("validated Tree src label");
+                        let readme_label = property_string(snapshot, "readme_label")
+                            .expect("validated Tree README label");
+                        let tests_label = property_string(snapshot, "tests_label")
+                            .expect("validated Tree tests label");
+                        let selected_id = property_string(snapshot, "selected_id")
+                            .expect("validated Tree selection");
+                        let selection = CompiledPreviewGallery::tree_selection_binding(
+                            (selected_id != "none").then_some(selected_id),
+                            PropertyBindingContext {
+                                property: PropertyId::new("selected_id").unwrap(),
+                                stamp: context.stamp_lease.clone(),
+                            },
+                        );
+                        let nodes = [rustui::components::data::tree::TreeNode::new(
+                            PREVIEW_TREE_NODE_IDS[0],
+                            root_label,
                         )
                         .expanded(true)
-                        .children([
+                        .child(
                             rustui::components::data::tree::TreeNode::new(
-                                PREVIEW_TREE_NODE_IDS[2],
-                                readme_label,
-                            ),
-                            rustui::components::data::tree::TreeNode::new(
-                                PREVIEW_TREE_NODE_IDS[3],
-                                tests_label,
-                            ),
-                        ]),
-                    )];
-                    AnyView::new(rustui::components::data::tree::Tree(nodes, selection).id(
-                        format!("compiled-preview-tree-{}", snapshot.stamp.generation),
-                    ))
-                },
-            )
-            .unwrap();
+                                PREVIEW_TREE_NODE_IDS[1],
+                                src_label,
+                            )
+                            .expanded(true)
+                            .children([
+                                rustui::components::data::tree::TreeNode::new(
+                                    PREVIEW_TREE_NODE_IDS[2],
+                                    readme_label,
+                                ),
+                                rustui::components::data::tree::TreeNode::new(
+                                    PREVIEW_TREE_NODE_IDS[3],
+                                    tests_label,
+                                ),
+                            ]),
+                        )];
+                        if outline {
+                            let expanded = property_string(snapshot, "expanded")
+                                .expect("validated Outline expansion");
+                            let expanded = CompiledPreviewGallery::outline_expansion_binding(
+                                expanded,
+                                PropertyBindingContext {
+                                    property: PropertyId::new("expanded").unwrap(),
+                                    stamp: context.stamp_lease.clone(),
+                                },
+                            );
+                            AnyView::new(
+                                Outline(
+                                    format!(
+                                        "compiled-preview-outline-{}",
+                                        snapshot.stamp.generation
+                                    ),
+                                    nodes,
+                                    selection,
+                                    expanded,
+                                )
+                                .accessibility_label("Project outline"),
+                            )
+                        } else {
+                            AnyView::new(rustui::components::data::tree::Tree(nodes, selection).id(
+                                format!("compiled-preview-tree-{}", snapshot.stamp.generation),
+                            ))
+                        }
+                    },
+                )
+                .unwrap();
+        }
         let navigation_split_specimen_schema = ComponentSchema {
             id: ComponentId::new("navigation-split-specimen").unwrap(),
             version: 1,
@@ -5148,7 +5196,7 @@ impl CompiledPreviewGallery {
                 PropertyId::new("selected_id").unwrap(),
                 PropertyValue::String("none".into()),
             );
-        } else if component == "tree-specimen" {
+        } else if matches!(component, "tree-specimen" | "outline-specimen") {
             document.properties.extend([
                 (
                     PropertyId::new("root_label").unwrap(),
@@ -5487,6 +5535,10 @@ impl CompiledPreviewGallery {
     fn mount_tree_specimen(&mut self) {
         self.mount("tree-specimen");
     }
+
+    fn mount_outline_specimen(&mut self) {
+        self.mount("outline-specimen");
+    }
     fn mount_navigation_split_specimen(&mut self) {
         self.mount("navigation-split-specimen");
     }
@@ -5719,13 +5771,23 @@ impl CompiledPreviewGallery {
             self.status = "Import rejected: DataGrid label must not be blank".into();
             return;
         }
-        if parsed.component_id.as_str() == "tree-specimen" {
+        if matches!(
+            parsed.component_id.as_str(),
+            "tree-specimen" | "outline-specimen"
+        ) {
             for name in ["root_label", "src_label", "readme_label", "tests_label"] {
                 if let Some(PropertyValue::String(label)) =
                     parsed.properties.get(&PropertyId::new(name).unwrap())
                     && label.trim().is_empty()
                 {
-                    self.status = format!("Import rejected: Tree {name} must not be blank");
+                    self.status = format!(
+                        "Import rejected: {} {name} must not be blank",
+                        if parsed.component_id.as_str() == "outline-specimen" {
+                            "Outline"
+                        } else {
+                            "Tree"
+                        }
+                    );
                     return;
                 }
             }
@@ -6188,6 +6250,42 @@ impl CompiledPreviewGallery {
             context,
             Self::read_tree_selection,
             Self::write_tree_selection,
+        )
+    }
+
+    fn outline_expansion_binding(
+        value: String,
+        context: PropertyBindingContext,
+    ) -> Binding<std::collections::HashSet<String>> {
+        fn expanded(value: &str) -> std::collections::HashSet<String> {
+            let ids: &[&str] = match value {
+                "all" => &["root", "src"],
+                "root" => &["root"],
+                "nested" => &["src"],
+                _ => &[],
+            };
+            ids.iter().map(|id| (*id).to_owned()).collect()
+        }
+        Binding::new_with(
+            expanded(&value),
+            context,
+            |owner: &Self, context| expanded(&owner.read_text(context)),
+            |owner: &mut Self, context, ids| {
+                if ids.iter().any(|id| !["root", "src"].contains(&id.as_str()))
+                    || owner
+                        .preview_snapshot_for_component(context, "outline-specimen")
+                        .is_none()
+                {
+                    return false;
+                }
+                let value = match (ids.contains("root"), ids.contains("src")) {
+                    (false, false) => "collapsed",
+                    (true, false) => "root",
+                    (false, true) => "nested",
+                    (true, true) => "all",
+                };
+                owner.write_text(context, value.into())
+            },
         )
     }
 
@@ -7504,6 +7602,10 @@ impl View for CompiledPreviewGallery {
                         rustui::runtime::Action::new(Self::mount_tree_specimen),
                     ))
                     .child(Button(
+                        "Preview Outline specimen",
+                        rustui::runtime::Action::new(Self::mount_outline_specimen),
+                    ))
+                    .child(Button(
                         "Preview NavigationSplitView specimen",
                         rustui::runtime::Action::new(Self::mount_navigation_split_specimen),
                     ))
@@ -7796,6 +7898,7 @@ mod tests {
             "toolbar-specimen",
             "tooltip-specimen",
             "tree-specimen",
+            "outline-specimen",
             "vstack-specimen",
             "zstack-specimen",
         ];
@@ -7808,7 +7911,7 @@ mod tests {
                 "missing compiled preview specimen for {component_id}"
             );
         }
-        assert_eq!(expected.len(), 74);
+        assert_eq!(expected.len(), 75);
     }
 
     #[test]
@@ -11540,6 +11643,100 @@ mod tests {
             PropertyValue::String("Find item".into())
         );
         assert_eq!(exported.properties[&size_id], PropertyValue::Number(36.0));
+    }
+
+    #[test]
+    fn outline_specimen_round_trips_controlled_expansion_and_rejects_stale_writes() {
+        let mut gallery = CompiledPreviewGallery::default();
+        gallery.mount_outline_specimen();
+        let component_id = ComponentId::new("outline-specimen").unwrap();
+        let expanded_id = PropertyId::new("expanded").unwrap();
+        let selected_id = PropertyId::new("selected_id").unwrap();
+        let schema = &gallery.host.catalog().components[&component_id];
+        assert_eq!(schema.properties.len(), 6);
+        assert_eq!(
+            schema.properties[&expanded_id].allowed_values,
+            ["collapsed", "root", "nested", "all"]
+        );
+        let initial_stamp = gallery.host.snapshot().unwrap().stamp.clone();
+        let stale = CompiledPreviewGallery::outline_expansion_binding(
+            "all".into(),
+            PropertyBindingContext {
+                property: expanded_id.clone(),
+                stamp: Rc::new(RefCell::new(Some(initial_stamp))),
+            },
+        );
+        let expansion = CompiledPreviewGallery::outline_expansion_binding(
+            "all".into(),
+            PropertyBindingContext {
+                property: expanded_id.clone(),
+                stamp: gallery.stamp_lease.clone(),
+            },
+        );
+        let selection = CompiledPreviewGallery::tree_selection_binding(
+            None,
+            PropertyBindingContext {
+                property: selected_id.clone(),
+                stamp: gallery.stamp_lease.clone(),
+            },
+        );
+        assert!(selection.write_to(&mut gallery, Some("readme".into())));
+        assert!(!stale.write_to(&mut gallery, Default::default()));
+        for (ids, encoded) in [
+            (vec!["src"], "nested"),
+            (vec![], "collapsed"),
+            (vec!["root"], "root"),
+            (vec!["root", "src"], "all"),
+        ] {
+            let ids = ids.into_iter().map(str::to_owned).collect();
+            assert!(expansion.write_to(&mut gallery, ids));
+            assert_eq!(
+                property_string(gallery.host.snapshot().unwrap(), "expanded").as_deref(),
+                Some(encoded)
+            );
+            assert_eq!(selection.read_from(&gallery), Some(Some("readme".into())));
+        }
+        let before_invalid = gallery.host.snapshot().unwrap().clone();
+        assert!(!expansion.write_to(&mut gallery, ["readme".into()].into_iter().collect()));
+        assert_eq!(gallery.host.snapshot().unwrap().stamp, before_invalid.stamp);
+        let label = PropertyBindingContext {
+            property: PropertyId::new("root_label").unwrap(),
+            stamp: gallery.stamp_lease.clone(),
+        };
+        assert!(!gallery.write_text(&label, " \t".into()));
+        assert_eq!(gallery.host.snapshot().unwrap().stamp, before_invalid.stamp);
+        assert!(expansion.write_to(&mut gallery, ["src".into()].into_iter().collect()));
+        gallery.export_descriptor();
+        let saved = gallery.descriptor_json.clone();
+        gallery.import_descriptor();
+        let imported = gallery.host.snapshot().unwrap().clone();
+        assert_eq!(
+            property_string(&imported, "expanded").as_deref(),
+            Some("nested")
+        );
+        assert_eq!(
+            property_string(&imported, "selected_id").as_deref(),
+            Some("readme")
+        );
+        assert_eq!(
+            decode_preview(&saved, gallery.host.catalog())
+                .unwrap()
+                .document
+                .component_id,
+            component_id
+        );
+        gallery.descriptor_json = saved.replacen("\"nested\"", "\"unknown\"", 1);
+        gallery.import_descriptor();
+        assert!(gallery.status.starts_with("Import rejected:"));
+        assert_eq!(gallery.host.snapshot().unwrap().stamp, imported.stamp);
+        gallery.descriptor_json = saved.replacen("\"Project\"", "\"   \"", 1);
+        gallery.import_descriptor();
+        assert!(
+            gallery
+                .status
+                .contains("Outline root_label must not be blank")
+        );
+        assert_eq!(gallery.host.snapshot().unwrap().stamp, imported.stamp);
     }
 
     #[test]

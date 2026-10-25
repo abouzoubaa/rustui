@@ -44,15 +44,154 @@ Reverify its HEAD and dirty state before integration. Do not overwrite its work.
   are retained for review. The Stage 1 Picker replacement-subscription runtime
   fix is integrated with a focused GPUI-handle lifetime regression.
 
+
+## Current release checkpoint — 2026-10-25
+
+- Commits `5320d181`, `f9da582e`, `651a71c0` complete bounded GPUI timing
+  curves, embed all 106 pinned default icons, retain icon license notices,
+  support exact Cargo executable paths, bind Web bundles to source/artifact
+  hashes, reject incomplete manifest inputs and keep dependency inspection
+  locked/offline. Focused timing/opacity/icon tests and packaging regressions
+  passed. This does not close native animation or broad asset acceptance.
+- Fresh Web reload rendered the canonical catalog; pointer/text filtering and
+  the Icon story rendered embedded search SVGs. Fresh console messages contained
+  only the documented single-thread dispatcher fallback, with no icon-fetch
+  errors. All 41 bundle artifact hashes matched the retained manifest. Evidence:
+  `/tmp/rustui-preservation-20261025/web-embedded-icons/`. Browser AX still exposes
+  only a canvas image and unnamed textarea; semantic keyboard/IME/screen-reader
+  and cross-browser acceptance remain open. Screenshots are in this thread.
+- Initial full Python checkpoint: 517 tests, 4 failures and 7 errors. Commit
+  `ac29044b` fixes rooted/legacy provenance compatibility and source-directory
+  replacement error handling, and refreshes stale failure-injection fixtures.
+  The affected suites passed 117 tests. Commit `92880239` normalizes recovered
+  Rust source formatting with host rustfmt 1.97.1; formatting now passes.
+- `scripts/verify-release.sh` and `.github/workflows/ci.yml` prepare repeatable
+  source/macOS/Web checks. CI source checks use a hosted runner; builds require
+  manual dispatch on a trusted, pre-provisioned macOS ARM64 Headstart runner.
+  YAML and shell syntax validate; remote CI is unrun. Full source validation
+  passed 518 Python tests, both packaging regressions and static catalog/theme
+  checks. macOS validation passed all-target checking, 1,206 library tests,
+  43 public integration tests across the workspace and matching-toolchain macro
+  doctests (zero cases), then built and packaged optimized Playground. The
+  packaged executable SHA-256 is
+  `03261783cacc04b436756bf2744268f5461430aa4bd83b216150e51094c5d605`.
+  It was not launched for GUI acceptance. Logs remain under `/tmp/rustui-release-*`.
+
+- Test-support source investigation is resolved under the current human objective:
+  the earlier separate-approval assertion originated in an agent run sheet, not
+  an applicable human revision/runtime restriction. Eighteen additive registry
+  packages were verified against official registry metadata, cached archives and
+  614 source-file checksums, with licenses retained and no yanked releases. No
+  existing versions/checksums changed. Both default Playground normal/build
+  dependency trees remain byte-for-byte unchanged. Locked/offline metadata passes.
+- Ten recovered production owner lifecycle/event-path tests passed, including
+  escaped callbacks after host release and subscription lifetime through final
+  entity-handle release. The new SplitView event-path regression also passed:
+  real divider focus and key dispatch, horizontal LTR/RTL and vertical sizing,
+  both clamp limits and ignored-key propagation. GPUI fake windows lack an AX
+  projection, so the SplitView test reads retained native state; native AX,
+  VoiceOver and visual acceptance are separate and remain open. The test-only
+  retained-slot inspector does not change visitation or production APIs.
+- The harness integration checkpoint passed all-target checking and **1,217
+  workspace library tests** (899, 9, 81, 40, 188, 0). The optimized Web release
+  entrypoint passed using the existing approved Wasm toolchain and wasm-bindgen
+  installation; no compiler/dependency installation or cache cleaning occurred.
+- R34 now has a bounded public adapter instead of a placeholder: ResizablePanel
+  reexports the existing keyed SplitPanel descriptor, used by the canonical
+  SplitView story. The event regression exercises this public path and passes;
+  the Playground library check passes. Native/browser acceptance is still open.
+- Five previously scaffold-only capabilities omitted from the first inventory are
+  now explicit R32–R36; R34 has since been implemented by reusing SplitPanel. Other planned modules still require classification against
+  implemented contracts; advanced RGPE GPU work remains separately disabled.
+  Release instructions and compiler-provenance limitations are in
+  `docs/RELEASING.md`. Clean-build reproduction, distribution licensing, security,
+  platform versions and signing/publication acceptance remain open.
+
+## Existing-control and CI checks — 2026-10-25
+
+The rendered RustUI keyboard regression passed for forward/reverse traversal
+past disabled Button, Checkbox, Radio, Toggle and Slider controls. Enabled
+boundary Buttons activate through actual key-down/up dispatch; disabled owner
+bindings remain unchanged. This is fake-window event/focus evidence, not native
+AX/VoiceOver acceptance. The test fixture explicitly activates the real RustUI
+theme and dispatches complete key press/release sequences.
+
+Commit `9c0bb6f6` adds the CI checkout guard. Its regression rejects stale
+untracked source, tracked changes and an incorrect selected SHA while preserving
+ignored build caches. The remote CI job remains unrun. Subagents prepared
+notice provenance/collection drafts outside checkouts; these require integration
+and real-artifact checks before any licensing completion claim.
+
+## Recovery and progress correction — 2026-10-25
+
+The user reiterated that existing components must be preserved rather than
+reimplemented. A read-only sweep inspected all 24 registered worktrees (23
+originals plus consolidation), 31 branch refs and reachable history for the
+five originally flagged paths. Outline, Drawer, GraphView and NodeEditor are
+comment-only scaffolds throughout; no alternate implementations were found
+under any worktree's crates/apps source. ResizablePanel reuses the already
+implemented SplitPanel. Current source defines **54 public component
+construction APIs**, excluding aliases/helper models. D1C's table lists 53
+because it omits NavigationLink. This is source breadth, not native acceptance
+or whole-roadmap completion. Exact inventories are retained at
+`/tmp/rustui-retained-component-inventory.json` and
+`/tmp/rustui-current-component-breadth.json`.
+
+The previous 11%/8% figures described newly verified audit closure and were
+misleading as project progress. They are withdrawn as project completion
+estimates. A broad **about 70% overall engineering estimate, with 60–80%
+uncertainty**, was subsequently given to the user as explicitly provisional;
+it is not a measured readiness score. Most source exists; remaining framework,
+platform, acceptance and release contracts must still be completed.
+
+Subagents now perform independent read-only audits and prepare unapplied
+patches outside checkouts, following the user's latest acceleration request.
+This session remains the repository writer. No existing component is being
+rebuilt. Only the confirmed Outline scaffold is under implementation
+preparation through the existing Tree engine; native accessibility remains a
+separate gate.
+
+## Controlled Outline source checkpoint — 2026-10-25
+
+Stage 8 R32 now has public `Outline(id, nodes, selection, expanded)` construction,
+reusing the existing Tree retained engine. Controlled branch expansion preserves
+hidden selection, normalizes invalid IDs, refreshes owner bindings, and releases
+observers on unmount. The canonical Playground has a dedicated Outline story and
+an `outline-specimen` compiled-preview factory with revision-checked selection and
+four expansion states. Descriptor round trips and invalid/stale writes are tested.
+
+Focused Tree/Outline validation passed **25 tests**; Playground passed **189 library
+tests** and its all-target check. Logs: `/tmp/rustui-outline-tree-tests-20261025.log`,
+`/tmp/rustui-outline-playground-tests-20261025.log`, and
+`/tmp/rustui-outline-all-targets-20261025.log`. The suite initially exposed an
+outdated fixed specimen count, corrected from 74 to 75. No native/browser acceptance
+was run for these edits. Existing Web/native binaries predate this source.
+
+Coding: **1 of the 4 confirmed scaffold capabilities** now has a bounded
+implementation; Drawer, GraphView and NodeEditor remain scaffolds. Source breadth
+is now **55 public component construction APIs**, plus the ResizablePanel alias.
+These are capability counts, not a whole-roadmap completion percentage. Outline's
+keyboard/visual/locale/RTL, native AX/VoiceOver and browser acceptance remain open;
+upstream Tree accessible-name and hierarchy-level limitations remain explicit in
+`docs/tasks/OUTLINE_IMPLEMENTATION.md`.
+
 ## Initial requirement inventory (provisional)
 
-There are **32 provisional release requirements** below. Only requirements
-R00–R02 are closed by this audit so far: **coding 3/32; acceptance 3/32
-(9.4%, provisional audit closure)**. This is a conservative closure count,
-not an estimate of how much source code exists or framework maturity.
-All other rows remain open until their complete contract and current evidence
-are reviewed. “Present” describes recovered source, not completed acceptance.
-Expand this inventory when the full contract audit identifies distinct requirements.
+The current inventory has **37 provisional audit requirements**. Four source
+contracts and three acceptance contracts have been fully audited and closed;
+most other rows already contain substantial implementation but remain under
+review. These counts measure audit closure, not code written or overall roadmap
+completion. The previously quoted 11%/8% figures are withdrawn as project
+progress estimates because the inventory is incomplete and the requirements
+have unequal scope. A reliable implementation/acceptance percentage requires
+verification against all preserved work before assigning complete/partial/missing
+states. Do not restart implemented components to improve this count.
+
+The user explicitly reiterated on 2026-10-25 that components have already been
+coded. Before new component feature work, inspect all retained worktrees and
+branches for useful implementations; recover/integrate them first. The five
+scaffold observations below describe the consolidation checkout and remain
+recovery leads, not permission to rebuild existing work.
 
 | ID | Stage / required capability | Current implementation and remaining release work |
 | --- | --- | --- |
@@ -61,17 +200,17 @@ Expand this inventory when the full contract audit identifies distinct requireme
 | R02 | 0: reproducible approved patch selection | Closed for the three existing approved patch sets: exact helpers apply/verify and pristine checksum manifests match. New promotions remain gated. |
 | R03 | 0: architecture, registry, public documentation | Audit all exported APIs and planned/scaffold claims; reconcile stale lifecycle/animation/tooling status. |
 | R04 | 1: application/window bootstrap | Present; current library checkpoint passed. Native launch/error/close and packaging acceptance remain. |
-| R05 | 1: lifecycle, owner actions, subscriptions | Present; F1E/M16 native ownership acceptance open. Picker obsolete-subscription runtime fix and focused handle-lifetime test integrated; full lifecycle event-path tests remain. |
+| R05 | 1: lifecycle, owner actions, subscriptions | Present; F1E/M16 native ownership acceptance open. Picker obsolete-subscription runtime fix and focused handle-lifetime test integrated; ten full lifecycle event-path tests now pass; native ownership acceptance remains. |
 | R06 | 2: state, identity, binding, observation, environment | Present within documented GPUI/render-time contracts; audit invalidation, retention and error boundaries against F1 contracts. |
 | R07 | 2: layout, geometry and animation identity | Present; current-source native geometry, RTL and reduced-motion observations remain. |
-| R08 | 2/9: timing/animation API | Opacity/spring present; timing/transition scaffolds need original-authority review and bounded implementation. No second scheduler. |
+| R08 | 2/9: timing/animation API | Opacity/spring present; timing curves implemented and source-checked; transition/animator scaffolds need scoped contract review. No second scheduler. |
 | R09 | 3: Playground catalog, stories, events, source examples | Present; current library tests passed. Validate reachability, examples and visual/keyboard behavior in the canonical app. |
 | R10 | 4: macro grammar and public integration tests | Present; unit checkpoint passed. Run public integration targets and matching-toolchain doctests; diagnose M69 from current artifacts. |
 | R11 | 4: basic components and semantics | Present; audit source contracts and current native visual/focus/AX behavior. |
 | R12 | 5: theme states, metrics and fallbacks | Static coverage passes for 139 roles/24 styled records; runtime pack validation, light/dark/locale visuals and unapplied radio blend-mode requirement remain. |
 | R13 | 6: bounded locale/catalog contract | Three runtime locale records validate; current locale unit tests pass. Native/Web locale switching, fallback and RTL acceptance remain. |
 | R14 | 6: full CLDR/ICU/Fluent runtime | Missing approved runtime/data strategy and dependency versions; choose cross-target strategy before adding dependencies. Bounded handwritten rules are not full coverage. |
-| R15 | 7: persistent inputs, selection, disabled behavior | Present; audit disabled focus/activation/AX, replacement subscriptions and event paths. Optional upstream test-support sources are absent. |
+| R15 | 7: persistent inputs, selection, disabled behavior | Present; audit disabled focus/activation/AX, replacement subscriptions and event paths. Test-support sources and ownership harness are now integrated; focused event tests pass. |
 | R16 | 7/9: text selection and active IME | Source preservation logic and delayed no-blur preview trigger present in recovered primary; native active composition and Web IME still unverified. |
 | R17 | 8: collections/navigation synchronization | Present; verify keyed replacement, route recovery, keyboard/RTL and virtualization behavior with current source. |
 | R18 | 8: Tree row accessibility | aria-disabled approved patch reproduced; outer-row aria-level is a prepared, exact-hash proposed upstream patch requiring approval. Native AX/VoiceOver open. |
@@ -88,6 +227,11 @@ Expand this inventory when the full contract audit identifies distinct requireme
 | R29 | 11: browser keyboard/AX/IME/fonts | M855 approved patch reproduced; focused-input accessible-name patch prepared but not approved. Full semantic controls/action routing, IME, glyph and screen-reader acceptance remain. |
 | R30 | Release: CI and reproducible release builds | No GitHub workflow found in recovered checkout. Establish runnable compiler/sysroot/bootstrap policy and required macOS/Web checks. |
 | R31 | Release: security, licensing, performance budgets, packaging/instructions | Complete threat/error audit, dependency/license and font notices, supported-version matrix, reproducibility, package signing/distribution plan and release instructions. Publication requires approval. |
+| R32 | 8: Outline | Source implemented: controlled single-column hierarchy over the existing Tree engine, explicit identity and group name, selected/expanded bindings, public-API Playground story and compiled-preview descriptor. Focused Tree/Outline 25/25 and Playground 189/189 tests passed, with all-target checking. Native/browser, AX/VoiceOver, visual/locale/RTL acceptance and upstream Tree naming/hierarchy-level limitations remain open. See `docs/tasks/OUTLINE_IMPLEMENTATION.md`. |
+| R33 | 8: Drawer | Scaffold only. Sheet is a trigger-opened wrapper and explicitly does not establish Drawer support; complete controlled visibility, placement, focus, dismissal and accessibility contracts. |
+| R34 | 9: ResizablePanel | Coding closed for the host-owned panel adapter: public ResizablePanel reuses SplitPanel directly, with the same size/identity/lifecycle contract and no second resize runtime. Canonical SplitView story uses the public name; rendered focus/key/clamp/RTL event test and Playground check pass. Native/browser visual, AX and screen-reader acceptance remain open. |
+| R35 | 9: GraphView | Scaffold only. Required data/identity, viewport, selection, keyboard and accessibility contracts and implementation are absent. |
+| R36 | 9: NodeEditor | Scaffold only. Required node/edge model, editing/action/validation, ownership and accessible keyboard interaction contracts and implementation are absent. |
 
 ## Current executed evidence
 
@@ -130,10 +274,41 @@ Expand this inventory when the full contract audit identifies distinct requireme
   `futures-concurrency 7.7.1`, `postage 0.5`, and `proptest 1`;
   these names are absent from the current lockfile/vendor. This is a distinct
   graph expansion, not restoration of an existing locked package.
-- No native GUI, browser, VoiceOver, release build or performance validation has
-  run in this consolidation session. Historical Playground PIDs 10507 and
-  23568 were reidentified but left untouched because application ownership
-  remains unresolved; reserve the GUI slot before any new validation.
+- Bounded GPUI timing curves are implemented under the active roadmap objective:
+  Linear/EaseIn/EaseOut/EaseInOut, clamped progress/NaN contract, linear default,
+  retained mount-time curve, and a public-API Playground comparison. Curve test
+  passed 1/1; opacity forwarding/retention suite passed 8/8. The current
+  workspace all-targets Headstart check passed. Native motion remains open.
+- Lifecycle scaffold/registry documentation now describes the existing
+  View/ComponentHost/GPUI entity boundary; no new lifecycle runtime/type was added.
+- No successful native interaction, browser, VoiceOver, release/performance
+  acceptance has run in this consolidation session. The user later explicitly authorized stopping historical Playground PIDs
+  10507 and 23568. Exact paths were rechecked, both were terminated, zero
+  Playground processes were verified, and the sole claim reserved the GUI slot.
+  The current-source native bundle built/packaged successfully with identical
+  executable hashes and launched as PID 85329. Native rendering and a populated
+  AX tree were observed; coordinate input failed with noWindowsAvailable, and
+  attempted AX actions/text editing caused no observed state change. Native
+  interaction/keyboard/VoiceOver acceptance is not passed; desktop foreground
+  availability is awaiting the user. The active test must be cleaned up before
+  yielding the slot.
+
+## Security query and target applicability — 2026-10-25
+
+OSV queried 793 registry package/version pairs from the lockfile, with no
+request errors. Nine RustSec IDs matched: eight maintenance notices and
+RUSTSEC-2026-0382 for `rustls-webpki 0.103.15` (certificate verification can
+accept distrusted emSign intermediates). The stable fixed version is 0.103.16,
+ISC, Rust 1.71 minimum, archive checksum
+`4443b1b6d39d7c663139942cc4558262562d2c84123bb6282ef177009ca8b281`.
+Default-target reverse trees for both `aarch64-apple-darwin` and
+`wasm32-unknown-unknown` reported no active `rustls-webpki` dependency. Retain
+this as a lockfile advisory and check any different release feature selection;
+do not claim an exploitable default macOS/Web path or a clean vulnerability
+bill. Full raw responses and queries are retained in
+`/tmp/rustui-preservation-20261025/security/`. Review other maintenance notices
+and the all-target reverse graph before deciding any dependency update.
+No dependency revision was changed by this audit.
 
 ## Next work
 

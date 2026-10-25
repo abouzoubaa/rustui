@@ -48,6 +48,7 @@ mod menu_bar_reference_gallery;
 mod menu_gallery;
 mod navigation_split_gallery;
 mod offset_gallery;
+mod outline_gallery;
 mod owner_callbacks;
 mod owner_tasks;
 mod popover_gallery;

@@ -38,7 +38,7 @@ proposals, and implemented slices retain their explicit limits.
 | KeyedList | **Implemented, bounded M34 native acceptance:** stable-ID string selection survives reorder, insertion, and filtering; removal clears selection, and native row labels were verified. Upstream outer row paths remain position-based. Arbitrary stateful row builders, full screenreader acceptance, and measured render-call bounds remain unsupported/unverified. | `crates/rustui/src/components/data/keyed_list.rs` |
 | Table | Controlled string cells over retained upstream virtualization and row selection. | `crates/rustui/src/components/data/table.rs` |
 | Tree | Controlled stable-ID hierarchy over retained upstream expansion and virtualization. | `crates/rustui/src/components/data/tree.rs` |
-| Outline | **Planned scaffold:** no public type or runtime behavior is implemented yet. Its row/selection/expansion contract remains open; see `docs/tasks/D1C_COMPONENT_CATALOG_COVERAGE.md`. | `crates/rustui/src/components/data/outline.rs` |
+| Outline | **Partial:** named document hierarchy over the existing Tree engine, with owner-controlled selected and expanded stable IDs. Canonical public-API Playground story present; target keyboard, visual and accessibility acceptance pending. See `docs/tasks/OUTLINE_IMPLEMENTATION.md`. | `crates/rustui/src/components/data/outline.rs` |
 | DataGrid | Table-based data grid with explicitly reviewed editing behavior. | `crates/rustui/src/components/data/data_grid.rs` |
 | Collection | Keyed dynamic content and collection composition. | `crates/rustui/src/components/data/collection.rs` |
 | NavigationStack | Bound string route path, heterogeneous destinations, links, and back navigation. | `crates/rustui/src/components/navigation/navigation_stack.rs` |

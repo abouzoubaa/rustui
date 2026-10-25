@@ -87,6 +87,17 @@ Environment(display_mode, child_stack)
 .id("component-table")
 .height(300.0)"#
         }
+        StoryId::Outline => {
+            r#"Outline(
+    "document-outline",
+    [TreeNode::new("document", "Document")
+        .child(TreeNode::new("heading", "Heading"))],
+    self.selected_binding(),
+    self.expanded_binding(),
+)
+.accessibility_label("Document outline")
+.height(280.0)"#
+        }
         StoryId::Tree => {
             r#"Tree(
     [TreeNode::new("components", "Components")

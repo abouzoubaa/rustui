@@ -408,6 +408,7 @@ impl View for StoryCanvas {
                 .child(super::data_grid_accessibility::demo())
                 .spacing(8.0)
                 .alignment(rustui::prelude::HorizontalAlignment::Start),
+            StoryId::Outline => VStack::new().child(super::outline_gallery::demo()),
             StoryId::Tree => VStack::new()
                 .child(Text(format!(
                     "Selected node: {:?}",

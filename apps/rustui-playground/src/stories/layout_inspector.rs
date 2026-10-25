@@ -10,6 +10,7 @@ pub fn summary_for(story: StoryId) -> &'static str {
         StoryId::Input => "Layout: retained GPUI input entities inside a RustUI VStack",
         StoryId::List => "Layout: fixed-height GPUI virtual list inside RustUI VStack",
         StoryId::Table => "Layout: fixed-height GPUI virtual table inside RustUI VStack",
+        StoryId::Outline => "Layout: named outline group containing a retained GPUI virtual tree",
         StoryId::Tree => "Layout: fixed-height GPUI virtual tree inside RustUI VStack",
         StoryId::Tabs => "Layout: GPUI tab bar above the selected RustUI child",
         StoryId::Breadcrumb => "Layout: ordered GPUI breadcrumb items with separators",

@@ -1,0 +1,82 @@
+# Controlled Outline
+
+`Outline(id, nodes, selection, expanded)` is a single-column document hierarchy
+over the existing Tree retained engine. `nodes` contains public `TreeNode` values;
+`selection` is `Binding<Option<String>>` and `expanded` is
+`Binding<HashSet<String>>`. It adds controlled expansion to the existing stable-ID
+selection behavior. It does not add columns, editing, drag/drop or a new runtime.
+
+## State and ownership
+
+- Identity is explicit, stable and nonblank. Node IDs are nonblank and unique
+  across the hierarchy. Labels must be nonblank. Invalid construction panics at
+  the same checks as Tree. An explicit nonblank `.accessibility_label(...)` is
+  required before render; missing or blank labels panic with a specific message.
+- The expansion binding is authoritative on every render, including changes with
+  identical node declarations. Per-node `TreeNode::expanded` values are ignored.
+  Only IDs of current branches are retained; missing IDs and leaf IDs normalize
+  away through a guarded owner update. Expansions beneath collapsed ancestors
+  remain in the binding and survive reopening the ancestor.
+- Selection is owner-controlled by stable ID, using Tree's existing invalid-ID
+  normalization. A hidden selected descendant stays in the owner binding without
+  opening its ancestors. The native Tree has no selected row while that ID is
+  hidden. Keyboard navigation from that state selects an enabled visible row.
+- Disabled branches cannot be expanded by user keyboard/pointer interaction.
+  Owner bindings can still declare disabled-row selection/expansion, matching
+  Tree's existing programmatic-state contract.
+- Owner reorders and relabels retain one GPUI TreeState for the same identity.
+  Observer callbacks always use the current owner Binding. Queued normalization
+  and interaction updates check their expected owner state to preserve a newer
+  owner change; identical values do not notify again.
+- Removing the view drops its retained observer and TreeState ownership. A stale
+  externally retained TreeState cannot update the removed owner's bindings.
+  Unmount itself does not clear either binding. Remount initializes from current
+  owner state; it does not resurrect stale internal expansion.
+
+`.height(f32)` rejects nonfinite values and clamps finite values to at least one
+logical pixel, matching Tree. `.on_activate(...)` requires an action that can run
+from keyboard input and activates enabled leaves only.
+
+## Keyboard and accessibility
+
+The existing Tree input path handles enabled visible-row Up/Down traversal,
+Left/Right expansion and Enter activation. Disabled-row and disabled-folder
+guards remain in that shared path. No Home/End shortcut is promised here.
+
+The required accessible label names an outer `Group` that contains the upstream
+semantic Tree and rows. The pinned Components wrapper exposes no Tree name setter;
+this slice does not name that inner node. Hierarchy levels are not provided by
+an unapproved vendor patch. Native AX, VoiceOver, Web accessibility, focus display,
+locale/RTL, visual and cross-platform acceptance require separate runtime checks.
+Source code and test-support event simulation do not establish that acceptance.
+
+## Canonical Playground and checks
+
+The `outline_view` catalog route opens a dedicated public-API Outline story.
+It includes collapse/expand-all, hidden-heading selection, branch removal and
+restoration, reorder/relabel, a disabled branch and unmount/remount. The existing
+Tree story remains separate. The `outline-specimen` compiled-preview factory uses
+the public Outline API with editable labels, selected ID, and four expansion
+states (`collapsed`, `root`, `nested`, `all`). Its fixed-node descriptor preserves
+hidden selection and nested expansion across export/import. Existing schema and
+revision checks reject invalid properties, blank labels and stale binding writes.
+
+Focused regressions are in `crates/rustui/src/components/data/outline_tests.rs`:
+controlled expansion and invalid-ID normalization, expected-owner guards, actual
+rendered physical-key routing to the latest binding, unchanged-declaration owner
+updates, hidden selection, retained state, removed observer and remount.
+
+Validation uses the existing consolidation cache:
+
+```sh
+CARGO_TARGET_DIR=target/headstart/verification/production-consolidation ./scripts/cargo-headstart test --profile headstart --locked --offline -p rustui --lib components::data::tree::
+CARGO_TARGET_DIR=target/headstart/verification/production-consolidation ./scripts/cargo-headstart test --profile headstart --locked --offline -p rustui-playground --lib
+CARGO_TARGET_DIR=target/headstart/verification/production-consolidation ./scripts/cargo-headstart check --profile headstart --locked --offline -p rustui-playground --all-targets
+```
+
+On 2026-10-25 the focused Tree/Outline suite passed 25 tests, including two
+rendered-keyboard Outline tests. Logs: `/tmp/rustui-outline-tree-tests-20261025.log`.
+Playground passed 189 library tests and all-target checking; logs are
+`/tmp/rustui-outline-playground-tests-20261025.log` and
+`/tmp/rustui-outline-all-targets-20261025.log`.
+Native and browser acceptance have not been performed for this source change.
