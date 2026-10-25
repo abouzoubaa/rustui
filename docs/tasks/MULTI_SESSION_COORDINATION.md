@@ -124,6 +124,30 @@ continues to lock all paths. The coordinator must inspect the thread state and
 worktree before releasing or transferring ownership. Never release a claim
 because a session is idle, blocked, not loaded, or has missed a heartbeat.
 
+A claim's `active` or `suspect` state describes its write lock; it does not
+mean the Codex thread is currently running. At each coordination sweep, join
+the claim list to the Codex thread inventory by the literal thread ID, then
+handle each owner as follows:
+
+- For a running thread, track its recorded next action and use `wait_threads`
+  for progress rather than starting another writer.
+- For an idle thread with an un-gated next action, send a continuation to that
+  same thread and wait for its turn. Do not create a duplicate writer for its
+  claim.
+- For an idle thread waiting on a documented decision, dependency, artifact, or
+  shared GUI slot, preserve its claim and record the precise gate. Continue
+  only with independent safe work; do not mark the goal blocked merely because
+  the thread is idle or waiting.
+- A `notLoaded` thread is not terminal. Keep its claim and worktree intact
+  until the app reports a terminal state.
+- After a terminal state, audit and retain the worktree before releasing or
+  handing off its claim.
+
+Codex threads run in turns; an active goal and a held claim do not keep a model
+turn sampling continuously. A continuation is required after a turn completes.
+Report lock ownership separately from thread execution state so an `active`
+claim is never presented as proof that its session is working.
+
 ```sh
 python3 /Users/Abium/.codex/worktrees/session-coordination/rustui/scripts/roadmap_claims.py release --claim-id <claim-id> \
   --thread <codex-thread-id> --terminal-state completed \
