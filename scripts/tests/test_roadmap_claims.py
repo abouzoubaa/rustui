@@ -65,6 +65,14 @@ class RoadmapClaimsTests(unittest.TestCase):
         results = [process.communicate() + (process.returncode,) for process in processes]
         self.assertEqual(sum(code == 0 for _, _, code in results), 1, results)
 
+    def test_shared_gui_slot_allows_only_one_worktree_claim(self) -> None:
+        slot = "@shared/playground-gui-slot"
+        first = self.run_claim(self.wt1, "thread-gui-one", slot, task="M-gui-one")
+        self.assertEqual(first.returncode, 0, first.stderr)
+        second = self.run_claim(self.wt2, "thread-gui-two", slot, task="M-gui-two")
+        self.assertNotEqual(second.returncode, 0)
+        self.assertIn("claim conflicts", second.stderr)
+
     def test_active_task_id_cannot_be_claimed_twice_on_disjoint_paths(self) -> None:
         first = self.run_claim(self.wt1, "thread-task-one", "src/one.rs", task="M-unique")
         self.assertEqual(first.returncode, 0, first.stderr)

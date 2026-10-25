@@ -162,6 +162,33 @@ and never free ownership. A completed milestone can be followed by a new task
 only through the same owner's atomic `advance`, or through a verified terminal
 handoff to a new thread and clean worktree.
 
+## Serializing shared Playground validation
+
+The disposable Playground app, bundle identifier, and shared GUI slot are
+single-session resources. Before launching any Playground GUI test or isolated
+probe, the owning session must add `@shared/playground-gui-slot` to its active
+claim with `advance` and verify the claim in `list`. The coordinator's atomic
+path conflict check allows only one active or suspect owner at a time. If the
+slot is already claimed, do not launch another app or probe.
+
+After acquiring the slot, inspect for already-running RustUI test apps. The
+registry cannot adopt a process started before this lock was introduced; if a
+test app exists, identify its owning session before launching or cleaning it
+up. Never terminate a user-owned or unknown app to free the slot.
+
+After the test, the owner must quit its app, remove its disposable app bundle
+and standalone executable, and confirm no test app remains running. Then use
+`rescope` to remove the shared slot while retaining every other path in that
+claim; if the claim itself is complete, release it only after the thread is
+confirmed terminal. Expired or suspect ownership still reserves the slot.
+
+```sh
+python3 /Users/Abium/.codex/worktrees/session-coordination/rustui/scripts/roadmap_claims.py advance \
+  --claim-id <claim-id> --thread <codex-thread-id> \
+  --stage "Stage 2" --milestone M1274 --next-action "run serialized Playground acceptance" \
+  @shared/playground-gui-slot
+```
+
 ## Preserving pre-existing work in an active claim
 
 `advance` and `rescope` reject adding files that already contain changes. If an
