@@ -30,3 +30,26 @@ Build the WebAssembly standard library for the Headstart stage1 toolchain or
 select an approved compatible toolchain, then rerun the locked, offline check.
 If the check passes, decide the browser application and runtime acceptance
 scope before claiming WebAssembly support.
+
+## Update 2026-10-25 — Headstart WebAssembly target
+
+Built Stage 1 `wasm32-unknown-unknown` standard-library artifacts from the
+existing Headstart source into `target/headstart/x1a-rustc`; the bootstrap
+command exited successfully. The source checkout was left unchanged.
+
+The follow-up RustUI check stopped before compiling RustUI:
+
+```text
+RUSTC=target/headstart/x1a-rustc/aarch64-apple-darwin/stage1/bin/rustc \
+  CARGO_TARGET_DIR=target/headstart ./scripts/cargo-headstart check -p rustui \
+  --target wasm32-unknown-unknown --locked --offline
+exit code: 101
+error: failed to calculate checksum of vendor/cc-1.8.0/src/target/llvm.rs
+No such file or directory
+```
+
+Exact output: `target/headstart/x1a-rustc/rustui-check.log`. No vendored source,
+dependency pin, or lockfile was changed. This does not establish RustUI
+WebAssembly compilation. The next step is an approved repair of the incomplete
+`cc-1.8.0` vendor snapshot, followed by the same locked check; browser runtime,
+accessibility, and platform acceptance remain separate gates.

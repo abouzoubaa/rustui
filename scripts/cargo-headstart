@@ -7,8 +7,21 @@ rustc_host="$(rustc -vV | sed -n 's/^host: //p')"
 rustc_bin="${headstart_root}/rustc/build/${rustc_host}/stage1/bin/rustc"
 rustdoc_bin="${headstart_root}/rustc/build/${rustc_host}/stage1/bin/rustdoc"
 
-if [ ! -x "$cargo_bin" ] || [ ! -x "$rustc_bin" ]; then
-    printf '%s\n' "Headstart toolchain is missing under ${headstart_root}." >&2
+if [ ! -x "$cargo_bin" ]; then
+    printf '%s\n' "Headstart Cargo is missing under ${headstart_root}." >&2
+    exit 127
+fi
+
+# Preserve explicit compiler selection for target-specific builds. Otherwise
+# use the installed Headstart stage1 compiler as before.
+if [ "${RUSTC+x}" != x ]; then
+    if [ ! -x "$rustc_bin" ]; then
+        printf '%s\n' "Headstart rustc is missing under ${headstart_root}." >&2
+        exit 127
+    fi
+    RUSTC="$rustc_bin"
+elif ! command -v "$RUSTC" >/dev/null 2>&1; then
+    printf '%s\n' "The explicit RUSTC compiler is not executable: ${RUSTC}." >&2
     exit 127
 fi
 
@@ -42,4 +55,4 @@ else
     set -- --config 'build.rustflags=["-Zmetadata-crate-hash=no"]' "$@"
 fi
 
-exec env RUSTC="$rustc_bin" "$cargo_bin" -Zheadstart "$@"
+exec env RUSTC="$RUSTC" "$cargo_bin" -Zheadstart "$@"
