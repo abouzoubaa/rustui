@@ -16,6 +16,45 @@ use crate::view::{ComponentMutation, ComponentUpdater, RenderContext, RetentionS
 pub(crate) struct RetainedEntry {
     entity: Box<dyn Any>,
     _subscriptions: Vec<Subscription>,
+    _replaceable_subscriptions: HashMap<Identity, Subscription>,
+}
+
+#[cfg(test)]
+mod replacement_subscription_tests {
+    use super::*;
+    use std::cell::Cell;
+
+    #[test]
+    fn replacement_drops_only_its_slot_and_owner_removal_drops_the_rest() {
+        let dropped = Rc::new(Cell::new(0));
+        let subscription = || {
+            let dropped = dropped.clone();
+            Subscription::new(move || dropped.set(dropped.get() + 1))
+        };
+        let id = Identity::from("picker");
+        let slot = Identity::from("selection");
+        let mut retained = RetainedEntities::default();
+        retained.entries.insert(
+            retained.key(&id),
+            RetainedEntry {
+                entity: Box::new(()),
+                _subscriptions: vec![subscription()],
+                _replaceable_subscriptions: std::collections::HashMap::new(),
+            },
+        );
+        retained.replace_subscription(&id, slot.clone(), subscription());
+        retained.replace_subscription(&id, Identity::from("other"), subscription());
+        retained.replace_subscription(&id, slot, subscription());
+        assert_eq!(dropped.get(), 1);
+        let entry = retained.entries.get(&retained.key(&id)).unwrap();
+        assert_eq!(entry._subscriptions.len(), 1);
+        assert_eq!(entry._replaceable_subscriptions.len(), 2);
+
+        retained.begin_frame();
+        retained.finish_frame();
+        assert_eq!(dropped.get(), 4);
+        assert!(retained.entries.is_empty());
+    }
 }
 
 struct RetainedComponent {
@@ -188,6 +227,7 @@ impl RetainedEntities {
             RetainedEntry {
                 entity: Box::new(entity),
                 _subscriptions: Vec::new(),
+                _replaceable_subscriptions: std::collections::HashMap::new(),
             },
         );
     }
@@ -259,6 +299,20 @@ impl RetainedEntities {
             .expect("retained subscriptions require an existing entity")
             ._subscriptions
             .push(subscription);
+    }
+
+    pub(crate) fn replace_subscription(
+        &mut self,
+        id: &Identity,
+        slot: Identity,
+        subscription: Subscription,
+    ) {
+        let key = self.key(id);
+        self.entries
+            .get_mut(&key)
+            .expect("retained subscriptions require an existing entity")
+            ._replaceable_subscriptions
+            .insert(slot, subscription);
     }
 }
 
@@ -532,10 +586,8 @@ mod context_menu_scope_tests {
         retained.push_scope(scope.clone());
         retained.pop_scope();
         assert!(
-            std::panic::catch_unwind(std::panic::AssertUnwindSafe(
-                || retained.push_scope(scope)
-            ))
-            .is_err()
+            std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| retained.push_scope(scope)))
+                .is_err()
         );
     }
 
@@ -574,6 +626,7 @@ mod context_menu_scope_tests {
             RetainedEntry {
                 entity: Box::new(()),
                 _subscriptions: Vec::new(),
+                _replaceable_subscriptions: std::collections::HashMap::new(),
             },
         );
         retained.begin_frame();
@@ -622,10 +675,8 @@ mod context_menu_scope_tests {
         retained.push_scope(scope.clone());
         retained.pop_scope();
         assert!(
-            std::panic::catch_unwind(std::panic::AssertUnwindSafe(
-                || retained.push_scope(scope)
-            ))
-            .is_err()
+            std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| retained.push_scope(scope)))
+                .is_err()
         );
     }
 
@@ -682,6 +733,7 @@ mod context_menu_scope_tests {
                 RetainedEntry {
                     entity: Box::new(()),
                     _subscriptions: Vec::new(),
+                    _replaceable_subscriptions: std::collections::HashMap::new(),
                 },
             );
             retained.components.insert(
@@ -711,6 +763,7 @@ mod context_menu_scope_tests {
                 RetainedEntry {
                     entity: Box::new(()),
                     _subscriptions: Vec::new(),
+                    _replaceable_subscriptions: std::collections::HashMap::new(),
                 },
             );
         }
@@ -744,6 +797,7 @@ mod collection_eviction_tests {
                 RetainedEntry {
                     entity: Box::new(ReleaseProbe(released.clone())),
                     _subscriptions: Vec::new(),
+                    _replaceable_subscriptions: std::collections::HashMap::new(),
                 },
             );
             retained.components.insert(

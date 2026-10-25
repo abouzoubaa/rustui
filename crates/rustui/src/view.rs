@@ -727,6 +727,20 @@ impl<'a> RenderContext<'a> {
         self.retained.retain_subscription(id, subscription);
     }
 
+    pub(crate) fn replace_retained_subscription<T, Event>(
+        &mut self,
+        id: &Identity,
+        slot: Identity,
+        entity: &Entity<T>,
+        listener: impl FnMut(Entity<T>, &Event, &mut App) + 'static,
+    ) where
+        T: EventEmitter<Event> + 'static,
+        Event: 'static,
+    {
+        let subscription: Subscription = self.app.subscribe(entity, listener);
+        self.retained.replace_subscription(id, slot, subscription);
+    }
+
     pub(crate) fn observe_retained<T: 'static>(
         &mut self,
         id: &Identity,
@@ -1033,7 +1047,11 @@ fn assert_valid_cache_bounds(width: f32, height: f32) {
 }
 
 fn fixed_bounds_child(child: AnyElement, width: f32, height: f32) -> gpui::Div {
-    div().w(px(width)).h(px(height)).flex_shrink_0().child(child)
+    div()
+        .w(px(width))
+        .h(px(height))
+        .flex_shrink_0()
+        .child(child)
 }
 
 fn fixed_cache_style(width: f32, height: f32) -> StyleRefinement {

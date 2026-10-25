@@ -270,18 +270,19 @@ impl View for PickerView {
         if created || searchable_changed {
             let current_selection_writer = current_selection_writer.clone();
             let retained_picker = retained.clone();
-            context.subscribe_retained(
+            context.replace_retained_subscription(
                 &identity,
+                Identity::from("picker-select-state-events"),
                 &select,
-                move |_state, event: &SelectEvent<SearchableVec<String>>, cx| {
+                move |state, event: &SelectEvent<SearchableVec<String>>, cx| {
+                    if state.entity_id() != retained_picker.read(cx).select.entity_id() {
+                        return;
+                    }
                     let SelectEvent::Confirm(value) = event;
                     if let Some(value) = value {
                         let confirmed_value = value.clone();
                         retained_picker.update(cx, |retained, _cx| {
-                            record_confirmed_selection(
-                                &mut retained.owner_value,
-                                &confirmed_value,
-                            );
+                            record_confirmed_selection(&mut retained.owner_value, &confirmed_value);
                         });
                         with_current_writer(
                             &current_selection_writer,
