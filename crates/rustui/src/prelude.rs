@@ -11,7 +11,7 @@ pub use crate::components::advanced::property_inspector::{
     PropertyEditor, PropertyInspector, PropertyInspectorError, PropertyInspectorRow,
     PropertyInspectorView,
 };
-pub use crate::components::advanced::{CodeEditor, CodeEditorView};
+pub use crate::components::advanced::{CodeEditor, CodeEditorView, ResizablePanel};
 pub use crate::components::basic::avatar::{Avatar, AvatarView};
 pub use crate::components::basic::badge::{Badge, BadgeSize, BadgeView};
 pub use crate::components::basic::divider::{Divider, DividerView};

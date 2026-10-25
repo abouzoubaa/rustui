@@ -1717,3 +1717,24 @@ the translation to native hit-test and accessibility bounds. Parent clipping,
 overlap, stacking, and accessibility-tree behavior remain native. It does not
 scale or rotate, and source-level tests do not establish intermediate frames,
 pixels, velocity continuity, or performance.
+
+## ResizablePanel
+
+`ResizablePanel` is the public advanced-component name for the existing
+`SplitPanel` descriptor. Use it inside a `SplitView`; it shares the same keyed
+child ownership, finite initial-size/range validation, native resizing, physical
+arrow-key behavior and RTL panel ordering. It does not mount independently.
+
+```rust
+use rustui::prelude::*;
+
+let panels = SplitView::horizontal("workspace")
+    .panel(ResizablePanel::new("sidebar", Text("Sidebar"))
+        .initial_size(200.0).size_range(100.0..300.0))
+    .panel(ResizablePanel::new("content", Text("Content")));
+```
+
+The canonical SplitView story uses this API, including stateful child panels,
+reorder/removal/restoration, range changes and axis changes. The GPUI event test
+exercises this public name through actual divider focus/key dispatch and native
+resize state. Native/browser visual, AX and VoiceOver acceptance remain separate.

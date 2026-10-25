@@ -74,7 +74,7 @@ impl View for SplitGallery {
             } else {
                 [160.0, 180.0, 220.0][index]
             };
-            SplitPanel::new(
+            ResizablePanel::new(
                 id,
                 Component("counter", move || PaneCounter {
                     index,

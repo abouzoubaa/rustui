@@ -19,7 +19,7 @@ impl View for SplitProbe {
             Axis::Vertical => SplitView::vertical("event-path"),
         }
         .panels(["first", "second"].map(|id| {
-            SplitPanel::new(id, EmptyView)
+            crate::prelude::ResizablePanel::new(id, EmptyView)
                 .initial_size(200.0)
                 .size_range(100.0..300.0)
         }));
