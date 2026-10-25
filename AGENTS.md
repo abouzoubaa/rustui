@@ -67,3 +67,27 @@
 - Do not invent cost or token-savings figures. Report model assignments and outcomes; quantify savings only when reliable usage telemetry is available.
 - Never claim a build, test, benchmark, visual check, or accessibility check passed
   unless it ran. Compile success of this scaffold is not GUI acceptance.
+
+## Multi-session roadmap coordination
+
+- Before any roadmap edit, create or use one isolated Git worktree for the
+  writing session and claim its task, worktree, and exact repository-relative
+  files with `python3 scripts/roadmap_claims.py`. Follow
+  `docs/tasks/MULTI_SESSION_COORDINATION.md`.
+- Start claims only from a clean registered worktree on a unique `codex/`
+  branch. Record Stage, milestone, and next action; run `audit` at turn
+  boundaries and before integration. Never assign overlapping paths or the
+  same worktree/branch to simultaneous writers.
+- Do not write in the shared primary checkout or outside claimed paths. A claim
+  on a directory conflicts with claims on any child or parent path. Claim shared
+  ledgers as `@shared/<name>`; only the coordinator edits them, one at a time.
+- Renew claims at the start and end of each work turn. Expired claims are
+  suspect and remain locked; never reassign them based only on timeout, idle,
+  blocked, or not-loaded session status.
+- Release or transfer a claim only after the coordinator checks the old thread
+  is terminal and records evidence. If ownership is uncertain, preserve the
+  claim and assign disjoint files in a different worktree.
+- The registry is cooperative enforcement: every session must claim before
+  writing, and the coordinator must audit claims before assigning sessions.
+  A registry entry is not proof that an unregistered process stopped; verify
+  terminal session state before release or handoff.

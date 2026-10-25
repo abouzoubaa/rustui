@@ -1,0 +1,104 @@
+"""Focused concurrency and ownership checks for roadmap session claims."""
+
+from __future__ import annotations
+
+import os
+import json
+from pathlib import Path
+import sqlite3
+import subprocess
+import sys
+import tempfile
+import time
+import unittest
+
+
+SCRIPT = Path(__file__).resolve().parents[1] / "roadmap_claims.py"
+
+
+class RoadmapClaimsTests(unittest.TestCase):
+    def setUp(self) -> None:
+        self.temp = tempfile.TemporaryDirectory()
+        self.addCleanup(self.temp.cleanup)
+        self.base = Path(self.temp.name)
+        self.repo = self.base / "repo"
+        self.repo.mkdir()
+        self.git(self.repo, "init", "-q")
+        self.git(self.repo, "config", "user.email", "claims@example.invalid")
+        self.git(self.repo, "config", "user.name", "Claims Test")
+        (self.repo / "README.md").write_text("seed\n", encoding="utf-8")
+        self.git(self.repo, "add", "README.md")
+        self.git(self.repo, "commit", "-qm", "seed")
+        self.wt1 = self.base / "wt1"
+        self.wt2 = self.base / "wt2"
+        self.git(self.repo, "worktree", "add", "-qb", "codex/claims-one", str(self.wt1), "HEAD")
+        self.git(self.repo, "worktree", "add", "-qb", "codex/claims-two", str(self.wt2), "HEAD")
+        self.state = self.base / "state"
+        self.db = self.state / "rustui-roadmap"
+        self.env = {**os.environ, "XDG_STATE_HOME": str(self.state)}
+
+    @staticmethod
+    def git(root: Path, *args: str) -> str:
+        return subprocess.check_output(["git", "-C", str(root), *args], text=True).strip()
+
+    def run_claim(self, root: Path, thread: str, *paths: str, lease: int = 900) -> subprocess.CompletedProcess[str]:
+        return subprocess.run(
+            [sys.executable, str(SCRIPT), "claim", "--task", "M-test", "--thread", thread,
+             "--worktree", str(root), "--stage", "Stage test", "--milestone", "M-test",
+             "--next-action", "check claim", "--lease-seconds", str(lease), *paths],
+            cwd=root, env=self.env, text=True, capture_output=True,
+        )
+
+    def test_parallel_overlapping_claims_have_one_winner(self) -> None:
+        commands = [
+            [sys.executable, str(SCRIPT), "claim", "--task", "M1", "--thread", "thread-one",
+             "--worktree", str(self.wt1), "--stage", "Stage 1", "--milestone", "M1",
+             "--next-action", "implement", "src"],
+            [sys.executable, str(SCRIPT), "claim", "--task", "M2", "--thread", "thread-two",
+             "--worktree", str(self.wt2), "--stage", "Stage 2", "--milestone", "M2",
+             "--next-action", "implement", "src/components/button.rs"],
+        ]
+        processes = [subprocess.Popen(command, cwd=root, env=self.env, text=True,
+                                      stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+                     for command, root in zip(commands, (self.wt1, self.wt2))]
+        results = [process.communicate() + (process.returncode,) for process in processes]
+        self.assertEqual(sum(code == 0 for _, _, code in results), 1, results)
+
+    def test_primary_or_dirty_worktree_cannot_be_claimed(self) -> None:
+        primary = self.run_claim(self.repo, "primary", "README.md")
+        self.assertNotEqual(primary.returncode, 0)
+        (self.wt1 / "preexisting.txt").write_text("preserve\n", encoding="utf-8")
+        dirty = self.run_claim(self.wt1, "dirty", "preexisting.txt")
+        self.assertNotEqual(dirty.returncode, 0)
+        self.assertIn("clean", dirty.stderr)
+
+    def test_audit_accepts_owned_edits_and_rejects_unowned_edits(self) -> None:
+        (self.wt1 / "src").mkdir()
+        claim = self.run_claim(self.wt1, "thread-audit", "src")
+        self.assertEqual(claim.returncode, 0, claim.stderr)
+        claim_id = json.loads(claim.stdout)["claim_id"]
+        (self.wt1 / "src" / "owned.rs").write_text("// owned\n", encoding="utf-8")
+        command = [sys.executable, str(SCRIPT), "audit", "--claim-id", claim_id,
+                   "--thread", "thread-audit"]
+        allowed = subprocess.run(command, cwd=self.wt1, env=self.env, text=True, capture_output=True)
+        self.assertEqual(allowed.returncode, 0, allowed.stderr)
+        (self.wt1 / "README.md").write_text("outside claim\n", encoding="utf-8")
+        rejected = subprocess.run(command, cwd=self.wt1, env=self.env, text=True, capture_output=True)
+        self.assertNotEqual(rejected.returncode, 0)
+        self.assertIn("outside this claim", rejected.stderr)
+
+    def test_expired_claim_stays_locked_until_explicit_release(self) -> None:
+        claim = self.run_claim(self.wt1, "thread-expiring", "src", lease=60)
+        self.assertEqual(claim.returncode, 0, claim.stderr)
+        database_path = next(self.db.glob("claims-*.sqlite3"))
+        with sqlite3.connect(database_path) as database:
+            database.execute("UPDATE claims SET lease_until=?", (int(time.time()) - 1,))
+        contender = self.run_claim(self.wt2, "thread-contender", "src/file.rs")
+        self.assertNotEqual(contender.returncode, 0)
+        listing = subprocess.run([sys.executable, str(SCRIPT), "list"], cwd=self.wt1,
+                                 env=self.env, text=True, capture_output=True, check=True)
+        self.assertEqual(json.loads(listing.stdout)[0]["state"], "suspect")
+
+
+if __name__ == "__main__":
+    unittest.main()
