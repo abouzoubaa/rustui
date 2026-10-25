@@ -1,0 +1,76 @@
+diff --git a/vendor/gpui-base-0.7.3/src/tree.rs b/vendor/gpui-base-0.7.3/src/tree.rs
+--- a/vendor/gpui-base-0.7.3/src/tree.rs
++++ b/vendor/gpui-base-0.7.3/src/tree.rs
+@@ -461,7 +461,8 @@
+                             .id(ix)
+                             .test_support()
+                             .role(gpui::Role::TreeItem)
++                            .aria_level(entry.depth() + 1)
+                             .aria_label(entry.item().label.clone())
+                             .aria_selected(entry_state.selected)
+                             .aria_disabled(entry.is_disabled())
+                             .when(entry.is_folder(), |this| {
+@@ -692,6 +693,63 @@
+         });
+     }
+ 
++    struct TreeRoot {
++        state: Entity<TreeState>,
++    }
++
++    impl Render for TreeRoot {
++        fn render(&mut self, _: &mut Window, _: &mut Context<Self>) -> impl IntoElement {
++            div().size_full().child(Tree::new(&self.state))
++        }
++    }
++
++    #[gpui::test]
++    fn tree_item_accessibility_levels_follow_entry_depth(cx: &mut gpui::TestAppContext) {
++        let (_, cx) = cx.add_window_view(|_, cx| {
++            let grandchild = TreeItem::new("grandchild", "Grandchild leaf");
++            let child = TreeItem::new("child", "Nested child folder")
++                .expanded(true)
++                .child(grandchild);
++            let branch = TreeItem::new("branch", "Branch")
++                .expanded(true)
++                .child(child);
++            let workspace = TreeItem::new("workspace", "Workspace")
++                .expanded(true)
++                .child(branch);
++            let state = cx.new(|cx| TreeState::new(cx).items(vec![workspace]));
++            TreeRoot { state }
++        });
++        cx.update(|window, cx| window.draw(cx).clear(cx));
++
++        let tree = cx
++            .update(|window, _| window.debug_a11y_tree_json())
++            .expect("Tree accessibility snapshot is available");
++        let tree: serde_json::Value = serde_json::from_str(&tree).unwrap();
++        let mut rows = tree["nodes"]
++            .as_object()
++            .expect("debug accessibility nodes are keyed by ephemeral ID")
++            .values()
++            .filter(|node| node["aria"]["role"] == "TreeItem")
++            .map(|node| {
++                (
++                    node["aria"]["label"].as_str().unwrap().to_owned(),
++                    node["aria"]["level"].as_u64().unwrap(),
++                )
++            })
++            .collect::<Vec<_>>();
++        rows.sort_by_key(|(_, level)| *level);
++
++        assert_eq!(
++            rows,
++            vec![
++                ("Workspace".to_owned(), 1),
++                ("Branch".to_owned(), 2),
++                ("Nested child folder".to_owned(), 3),
++                ("Grandchild leaf".to_owned(), 4),
++            ]
++        );
++    }
++
+     #[gpui::test]
+     fn expansion_events_preserve_ids_and_set_items_stays_silent(cx: &mut gpui::TestAppContext) {
+         let root = TreeItem::new("src", "src").child(TreeItem::new("src/lib.rs", "lib.rs"));

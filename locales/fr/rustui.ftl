@@ -7,6 +7,7 @@ rustui-navigation-unavailable-destination = Destination indisponible
 rustui-navigation-open-selected-destination = Ouvrir la destination sélectionnée
 rustui-navigation-open-destination = Ouvrir {destination}
 rustui-navigation-tree = Navigation
+rustui-tree = Arbre
 rustui-navigation-tabs = Onglets
 rustui-splitter-resize-divider = Redimensionner le séparateur
 rustui-text-field-clear-button = Effacer le texte

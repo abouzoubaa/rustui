@@ -20,7 +20,8 @@ jobs:
       - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
         with:
           persist-credentials: false
-      - run: ./scripts/verify-release.sh source
+      - name: Verify approved Tree sources, replay lifecycle, and source release gates
+        run: ./scripts/verify-release.sh source
 
   # Run only after a maintainer selects a trusted revision. Never execute PR
   # code automatically on the persistent runner/toolchain cache.

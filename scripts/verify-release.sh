@@ -4,8 +4,14 @@ set -euo pipefail
 repository_root="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")/.." && pwd)"
 cd "$repository_root"
 
+verify_tree_accessibility_series() {
+  python3 scripts/apply_gpui_tree_accessibility_series.py --verify
+  python3 scripts/apply_gpui_tree_aria_disabled_patch.py --check
+}
+
 case "${1:-}" in
   source)
+    verify_tree_accessibility_series
     python3 -m unittest discover -s scripts/tests -p 'test_*.py'
     sh scripts/tests/test_package_playground_app.sh
     sh scripts/tests/test_build_playground_web.sh
@@ -15,6 +21,7 @@ case "${1:-}" in
     python3 scripts/verify_theme_adapter_coverage.py
     ;;
   macos)
+    verify_tree_accessibility_series
     if [[ "$(uname -s)" != Darwin ]]; then
       echo 'The macos release check requires a macOS host.' >&2
       exit 2
@@ -61,6 +68,7 @@ PY
       apps/rustui-playground/package-app.sh
     ;;
   web)
+    verify_tree_accessibility_series
     RUSTUI_HEADSTART_ROOT="${RUSTUI_WASM_HEADSTART_ROOT:-$repository_root/target/headstart/wasm-root}" \
     CARGO_TARGET_DIR="${RUSTUI_WASM_TARGET_DIR:-$repository_root/target/headstart/x1a-wasm}" \
       ./scripts/build-playground-web.sh

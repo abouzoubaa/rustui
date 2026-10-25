@@ -47,9 +47,9 @@ diff --git a/vendor/gpui-base-0.7.3/src/tree.rs b/vendor/gpui-base-0.7.3/src/tre
 +            .expect("Tree accessibility snapshot is available");
 +        let tree: serde_json::Value = serde_json::from_str(&tree).unwrap();
 +        let mut rows = tree["nodes"]
-+            .as_array()
-+            .unwrap()
-+            .iter()
++            .as_object()
++            .expect("debug accessibility nodes are keyed by ephemeral ID")
++            .values()
 +            .filter(|node| node["aria"]["role"] == "TreeItem")
 +            .map(|node| {
 +                (

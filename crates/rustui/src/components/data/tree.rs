@@ -23,6 +23,30 @@ use crate::{
     view::{ControlAction, EmptyView, RenderContext, View},
 };
 
+#[derive(Clone)]
+enum TreeAccessibilityLabel {
+    Literal(SharedString),
+    Message {
+        id: SharedString,
+        fallback: SharedString,
+    },
+}
+
+fn resolved_tree_accessibility_label(
+    label: &TreeAccessibilityLabel,
+    localized: &str,
+) -> SharedString {
+    match label {
+        TreeAccessibilityLabel::Literal(label) => label.clone(),
+        TreeAccessibilityLabel::Message { id, fallback }
+            if localized.trim().is_empty() || localized.trim() == id.as_ref() =>
+        {
+            fallback.clone()
+        }
+        TreeAccessibilityLabel::Message { .. } => localized.into(),
+    }
+}
+
 #[derive(Clone, Debug, PartialEq, Eq)]
 struct SelectionRequest {
     expected_owner: Option<String>,
@@ -372,6 +396,7 @@ pub struct TreeView {
     on_activate: Option<ControlAction>,
     id: Option<Identity>,
     height: Option<f32>,
+    accessibility_label: TreeAccessibilityLabel,
 }
 
 impl TreeView {
@@ -393,6 +418,47 @@ impl TreeView {
             on_activate: None,
             id: None,
             height: None,
+            accessibility_label: TreeAccessibilityLabel::Message {
+                id: "rustui-tree".into(),
+                fallback: "Tree".into(),
+            },
+        }
+    }
+
+    /// Set a nonempty accessible name for the outer tree.
+    pub fn accessibility_label(mut self, label: impl Into<SharedString>) -> Self {
+        let label = label.into();
+        assert!(
+            !label.trim().is_empty(),
+            "Tree accessible name must be nonempty"
+        );
+        self.accessibility_label = TreeAccessibilityLabel::Literal(label);
+        self
+    }
+
+    /// Resolve the outer tree name from a catalog message, falling back to
+    /// the current literal name or the localized generic "Tree" name.
+    pub fn localized_accessibility_label(mut self, id: impl Into<SharedString>) -> Self {
+        let id = id.into();
+        assert!(
+            !id.trim().is_empty(),
+            "Tree accessible-name message ID must be nonempty"
+        );
+        let fallback = match &self.accessibility_label {
+            TreeAccessibilityLabel::Literal(label) => label.clone(),
+            TreeAccessibilityLabel::Message { fallback, .. } => fallback.clone(),
+        };
+        self.accessibility_label = TreeAccessibilityLabel::Message { id, fallback };
+        self
+    }
+
+    fn resolved_accessibility_label(&self, context: &RenderContext<'_>) -> SharedString {
+        match &self.accessibility_label {
+            TreeAccessibilityLabel::Literal(label) => label.clone(),
+            TreeAccessibilityLabel::Message { id, .. } => resolved_tree_accessibility_label(
+                &self.accessibility_label,
+                &context.localized_message(id.as_ref()),
+            ),
         }
     }
 
@@ -458,6 +524,7 @@ impl View for TreeView {
     fn into_element(&self, context: &mut RenderContext<'_>) -> AnyElement {
         let style = required_style(context, "outline_view", "outline_view", &selector(context));
         let identity = self.identity_with(|base| context.next_implicit_retained_identity(base));
+        let root_accessibility_label = self.resolved_accessibility_label(context);
         let nodes = self.nodes.clone();
         let initial_selection = self.selection.value();
         let requested_expansion = self.expansion.as_ref().map(Binding::value);
@@ -756,52 +823,54 @@ impl View for TreeView {
         });
         let click_tree = tree.clone();
         container
-            .child(tree_container.child(GpuiTree::new(
-                &tree,
-                move |_ix, entry, _selected, _window, _cx| {
-                    let marker = if entry.is_folder() {
-                        Icon::new(if entry.is_expanded() {
-                            IconName::ChevronDown
+            .child(
+                tree_container.child(
+                    GpuiTree::new(&tree, move |_ix, entry, _selected, _window, _cx| {
+                        let marker = if entry.is_folder() {
+                            Icon::new(if entry.is_expanded() {
+                                IconName::ChevronDown
+                            } else {
+                                IconName::ChevronRight
+                            })
+                            .with_size(px(12.0))
+                            .into_any_element()
                         } else {
-                            IconName::ChevronRight
-                        })
-                        .with_size(px(12.0))
-                        .into_any_element()
-                    } else {
-                        div().w(px(12.0)).flex_none().into_any_element()
-                    };
-                    let mut row = ListItem::new(ElementId::Name(
-                        format!("rustui-tree-row-{}", entry.item().id).into(),
-                    ))
-                    .pl(px(8.0 + entry.depth() as f32 * 16.0))
-                    .accessibility_label(entry.item().label.clone())
-                    .child(
-                        div()
-                            .flex()
-                            .items_center()
-                            .gap_1()
-                            .child(marker)
-                            .child(entry.item().label.clone()),
-                    );
-                    if let Some(activation) = click_activation
-                        .clone()
-                        .filter(|_| !entry.is_folder() && !entry.is_disabled())
-                    {
-                        let click_tree = click_tree.clone();
-                        let node_id = entry.item().id.clone();
-                        row = row.on_click(move |event, window, cx| {
-                            let selected_leaf = {
-                                let state = click_tree.read(cx);
-                                selected_enabled_leaf(state.selected_entry(), Some(&node_id))
-                            };
-                            if selected_leaf {
-                                activation(event, window, cx);
-                            }
-                        });
-                    }
-                    row
-                },
-            )))
+                            div().w(px(12.0)).flex_none().into_any_element()
+                        };
+                        let mut row = ListItem::new(ElementId::Name(
+                            format!("rustui-tree-row-{}", entry.item().id).into(),
+                        ))
+                        .pl(px(8.0 + entry.depth() as f32 * 16.0))
+                        .accessibility_label(entry.item().label.clone())
+                        .child(
+                            div()
+                                .flex()
+                                .items_center()
+                                .gap_1()
+                                .child(marker)
+                                .child(entry.item().label.clone()),
+                        );
+                        if let Some(activation) = click_activation
+                            .clone()
+                            .filter(|_| !entry.is_folder() && !entry.is_disabled())
+                        {
+                            let click_tree = click_tree.clone();
+                            let node_id = entry.item().id.clone();
+                            row = row.on_click(move |event, window, cx| {
+                                let selected_leaf = {
+                                    let state = click_tree.read(cx);
+                                    selected_enabled_leaf(state.selected_entry(), Some(&node_id))
+                                };
+                                if selected_leaf {
+                                    activation(event, window, cx);
+                                }
+                            });
+                        }
+                        row
+                    })
+                    .accessibility_label(root_accessibility_label),
+                ),
+            )
             .into_any_element()
     }
 }
@@ -809,6 +878,67 @@ impl View for TreeView {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn tree_accessibility_names_preserve_localized_fallbacks() {
+        struct Owner;
+        let selection = Binding::new(None, |_: &Owner| None, |_: &mut Owner, _| {});
+        let default = TreeView::new(
+            Vec::<TreeNode>::new(),
+            Binding::new(None, |_: &Owner| None, |_: &mut Owner, _| {}),
+        );
+        assert!(matches!(
+            default.accessibility_label,
+            TreeAccessibilityLabel::Message { ref id, ref fallback }
+                if id.as_ref() == "rustui-tree" && fallback.as_ref() == "Tree"
+        ));
+        let tree = TreeView::new(Vec::<TreeNode>::new(), selection)
+            .accessibility_label("Project files")
+            .localized_accessibility_label("tree.project-files");
+        assert!(matches!(
+            tree.accessibility_label,
+            TreeAccessibilityLabel::Message { ref id, ref fallback }
+                if id.as_ref() == "tree.project-files" && fallback.as_ref() == "Project files"
+        ));
+        assert_eq!(
+            resolved_tree_accessibility_label(&tree.accessibility_label, "Fichiers du projet"),
+            "Fichiers du projet"
+        );
+        assert_eq!(
+            resolved_tree_accessibility_label(&tree.accessibility_label, " \ttree.project-files"),
+            "Project files"
+        );
+        assert_eq!(
+            resolved_tree_accessibility_label(&tree.accessibility_label, "tree.project-files"),
+            "Project files"
+        );
+        let default = TreeAccessibilityLabel::Message {
+            id: "rustui-tree".into(),
+            fallback: "Tree".into(),
+        };
+        assert_eq!(
+            resolved_tree_accessibility_label(&default, "Arbre"),
+            "Arbre"
+        );
+        assert_eq!(resolved_tree_accessibility_label(&default, ""), "Tree");
+    }
+
+    #[test]
+    #[should_panic(expected = "Tree accessible name must be nonempty")]
+    fn rejects_blank_tree_accessible_name() {
+        struct Owner;
+        let selection = Binding::new(None, |_: &Owner| None, |_: &mut Owner, _| {});
+        let _ = TreeView::new(Vec::<TreeNode>::new(), selection).accessibility_label(" \t");
+    }
+
+    #[test]
+    #[should_panic(expected = "Tree accessible-name message ID must be nonempty")]
+    fn rejects_blank_tree_accessible_name_message_id() {
+        struct Owner;
+        let selection = Binding::new(None, |_: &Owner| None, |_: &mut Owner, _| {});
+        let _ =
+            TreeView::new(Vec::<TreeNode>::new(), selection).localized_accessibility_label(" \t");
+    }
 
     #[test]
     fn implicit_tree_identity_distinguishes_siblings_and_is_stable_by_slot() {
@@ -1136,3 +1266,99 @@ mod tests {
 #[cfg(test)]
 #[path = "outline_tests.rs"]
 mod outline_tests;
+
+#[cfg(test)]
+mod rendered_accessibility_tests {
+    use super::*;
+    use crate::runtime::ComponentHost;
+
+    struct TreeSelectionOwner;
+    struct RenderedTreeProbe;
+
+    impl View for RenderedTreeProbe {
+        fn body(&self) -> impl View {
+            EmptyView
+        }
+
+        fn into_element(&self, context: &mut RenderContext<'_>) -> AnyElement {
+            let selection = Binding::new(
+                None,
+                |_: &TreeSelectionOwner| None,
+                |_: &mut TreeSelectionOwner, _| {},
+            );
+            let nodes = vec![
+                TreeNode::new("workspace", "Workspace")
+                    .expanded(true)
+                    .child(
+                        TreeNode::new("branch", "Branch").expanded(true).child(
+                            TreeNode::new("folder", "Folder")
+                                .expanded(true)
+                                .child(TreeNode::new("leaf", "Leaf")),
+                        ),
+                    ),
+            ];
+
+            TreeView::new(nodes, selection)
+                .id("tree-accessibility-regression")
+                .into_element(context)
+        }
+    }
+
+    fn init(cx: &mut gpui::TestAppContext) {
+        let theme = crate::theme::parse_theme(include_str!(concat!(
+            env!("CARGO_MANIFEST_DIR"),
+            "/../../themes/macos27.json"
+        )))
+        .unwrap();
+        cx.update(|app| {
+            gpui_component::init(app);
+            crate::theme::activate_theme(&theme, Some(crate::theme::AppearanceMode::Dark), app)
+                .unwrap();
+        });
+    }
+
+    #[gpui::test]
+    fn rendered_tree_projects_root_name_and_one_based_row_levels(cx: &mut gpui::TestAppContext) {
+        init(cx);
+        let (_, window) = cx.add_window_view(|_, app| ComponentHost::new(RenderedTreeProbe, app));
+        let snapshot = window
+            .update(|window, app| {
+                let _ = window.draw(app);
+                window.debug_a11y_tree_json()
+            })
+            .expect("test window accessibility activation projects the rendered Tree");
+        let tree: serde_json::Value = serde_json::from_str(&snapshot).unwrap();
+        let nodes = tree["nodes"]
+            .as_object()
+            .expect("debug accessibility nodes are keyed by ephemeral ID")
+            .values()
+            .collect::<Vec<_>>();
+
+        let root = nodes
+            .iter()
+            .find(|node| node["aria"]["role"] == "Tree")
+            .expect("rendered RustUI Tree root");
+        assert_eq!(root["aria"]["label"], "Tree");
+
+        let mut rows = nodes
+            .iter()
+            .filter(|node| node["aria"]["role"] == "TreeItem")
+            .map(|node| {
+                (
+                    node["aria"]["label"].as_str().unwrap().to_owned(),
+                    node["aria"]["level"].as_u64().unwrap(),
+                )
+            })
+            .collect::<Vec<_>>();
+        rows.sort_by_key(|(_, level)| *level);
+        assert_eq!(
+            rows,
+            vec![
+                ("Workspace".to_owned(), 1),
+                ("Branch".to_owned(), 2),
+                ("Folder".to_owned(), 3),
+                ("Leaf".to_owned(), 4),
+            ]
+        );
+    }
+}

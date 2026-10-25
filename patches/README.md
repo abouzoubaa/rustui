@@ -81,3 +81,34 @@ research input, not a dependency or the upstream source of truth.
   `gpui-pre` unit-test build was blocked before test execution by missing
   upstream font/test-support prerequisites; native AX, VoiceOver, pointer, and
   keyboard acceptance remain open. See the task record above for exact logs.
+
+
+### GPUI Tree accessible root, row level, and test accessibility activation — v1
+
+This approved same-version series composes after the existing aria-disabled v1
+baseline and changes exactly three pinned sources: gpui-base 0.7.3 Tree,
+gpui-component 0.7.3 Tree, and gpui-pre 0.3.9 TestWindow. It retains one existing
+Tree root, adds the accessible-name API used by RustUI, records one-based levels
+on existing TreeItem rows, and activates accessibility only in TestWindow tests.
+No package version, revision, checksum metadata or license changes.
+
+The exact ordered patch/source/provenance hashes are recorded in
+`approved/gpui-tree-accessibility-series-v1.json`. Order: test-a11y-activation v1,
+aria-level v1 (corrected nodes-map test, patch SHA 7729270cd97bfc74039e05d5142d522b78cc9bd563a825ccaa33caeb2d8f77f7), then component-tree-accessible-name v1.
+The identical review artifacts remain archived under `proposed/`.
+
+Use `scripts/apply_gpui_tree_accessibility_series.py --check` for a read-only
+PRE round trip; `--apply` installs all three exact postimages; `--verify` proves
+current POST, reverses/replays in disposable copies and proves the underlying
+aria-disabled baseline; `--reverse` restores the exact three PRE images while
+leaving the approved aria-disabled baseline installed. The existing aria-disabled
+`--check` now delegates composed Tree verification to the full series. Its
+apply/reverse modes reject a composed source and require the series to be
+reversed first. Standalone aria-level mutation is retired; its old entry point
+supports read-only full-series checks only.
+
+CI and all release modes verify POST and the composed baseline before further
+checks; the source fixture suite replays PRE/check/apply/POST/verify/reverse for
+all three sources and rejects unknown/partial images and altered patches.
+Fixture evidence is not native/browser/AX/VoiceOver acceptance. See
+`docs/tasks/TREE_ROOT_AND_LEVEL_PROMOTION_DECISION.md`.

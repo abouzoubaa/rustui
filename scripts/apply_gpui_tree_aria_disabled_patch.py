@@ -10,6 +10,7 @@ from pathlib import Path
 import re
 import shutil
 import subprocess
+import sys
 import tempfile
 import tomllib
 
@@ -108,8 +109,17 @@ def install_files(root: Path, staged_files: dict[str, bytes]) -> None:
 def run(root: Path, reverse: bool, check: bool) -> None:
     root = root.resolve()
     verify_identity(root)
+    composed = sha256(root / "vendor/gpui-base-0.7.3/src/tree.rs") == '0a1321f50154fb145b325517f9be93f262e959d21a213d61ecfdfadec38e4747'
+    if composed:
+        if not check:
+            raise ValueError("reverse the approved Tree accessibility series before changing its aria-disabled baseline")
+        verified = subprocess.run([sys.executable, str(root / "scripts/apply_gpui_tree_accessibility_series.py"), "--verify", "--root", str(root)], capture_output=True, text=True, check=False)
+        if verified.returncode:
+            raise ValueError(f"composed Tree series verification failed: {verified.stdout}{verified.stderr}")
     expected_index = 1 if reverse or check else 0
     for rel, hashes in FILES.items():
+        if composed and rel == "vendor/gpui-base-0.7.3/src/tree.rs":
+            continue
         actual = sha256(root / rel)
         expected = hashes[expected_index]
         if actual != expected:

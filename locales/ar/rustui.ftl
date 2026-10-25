@@ -7,6 +7,7 @@ rustui-navigation-unavailable-destination = الوجهة غير متاحة
 rustui-navigation-open-selected-destination = افتح الوجهة المحددة
 rustui-navigation-open-destination = افتح {destination}
 rustui-navigation-tree = التنقل
+rustui-tree = شجرة
 rustui-navigation-tabs = علامات التبويب
 rustui-splitter-resize-divider = تغيير حجم الفاصل
 rustui-text-field-clear-button = مسح النص

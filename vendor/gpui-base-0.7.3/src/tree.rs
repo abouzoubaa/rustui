@@ -461,6 +461,7 @@ impl Render for TreeState {
                             .id(ix)
                             .test_support()
                             .role(gpui::Role::TreeItem)
+                            .aria_level(entry.depth() + 1)
                             .aria_label(entry.item().label.clone())
                             .aria_selected(entry_state.selected)
                             .aria_disabled(entry.is_disabled())
@@ -499,6 +500,7 @@ pub struct Tree {
     state: Entity<TreeState>,
     style: StyleRefinement,
     list_style: StyleRefinement,
+    accessibility_label: Option<SharedString>,
     render_item: Rc<RenderItem>,
 }
 
@@ -509,8 +511,15 @@ impl Tree {
             state: state.clone(),
             style: StyleRefinement::default(),
             list_style: StyleRefinement::default(),
+            accessibility_label: None,
             render_item: Rc::new(|_, _, _, _, _| div().into_any_element()),
         }
+    }
+
+    /// Sets the accessible name of the tree.
+    pub fn accessibility_label(mut self, label: impl Into<SharedString>) -> Self {
+        self.accessibility_label = Some(label.into());
+        self
     }
 
     /// Supplies the application-owned content for each visible entry.
@@ -547,6 +556,7 @@ impl RenderOnce for Tree {
             .id(self.id)
             .test_support()
             .role(gpui::Role::Tree)
+            .when_some(self.accessibility_label, |tree, label| tree.aria_label(label))
             .key_context(CONTEXT)
             .track_focus(&focus_handle)
             .on_action(window.listener_for(&self.state, TreeState::on_action_confirm))
@@ -690,6 +700,63 @@ mod tests {
             state.toggle_expand(0, cx);
             assert_eq!(state.entries.len(), 1);
         });
+    }
+
+    struct TreeRoot {
+        state: Entity<TreeState>,
+    }
+
+    impl Render for TreeRoot {
+        fn render(&mut self, _: &mut Window, _: &mut Context<Self>) -> impl IntoElement {
+            div().size_full().child(Tree::new(&self.state))
+        }
+    }
+
+    #[gpui::test]
+    fn tree_item_accessibility_levels_follow_entry_depth(cx: &mut gpui::TestAppContext) {
+        let (_, cx) = cx.add_window_view(|_, cx| {
+            let grandchild = TreeItem::new("grandchild", "Grandchild leaf");
+            let child = TreeItem::new("child", "Nested child folder")
+                .expanded(true)
+                .child(grandchild);
+            let branch = TreeItem::new("branch", "Branch")
+                .expanded(true)
+                .child(child);
+            let workspace = TreeItem::new("workspace", "Workspace")
+                .expanded(true)
+                .child(branch);
+            let state = cx.new(|cx| TreeState::new(cx).items(vec![workspace]));
+            TreeRoot { state }
+        });
+        cx.update(|window, cx| window.draw(cx).clear(cx));
+
+        let tree = cx
+            .update(|window, _| window.debug_a11y_tree_json())
+            .expect("Tree accessibility snapshot is available");
+        let tree: serde_json::Value = serde_json::from_str(&tree).unwrap();
+        let mut rows = tree["nodes"]
+            .as_object()
+            .expect("debug accessibility nodes are keyed by ephemeral ID")
+            .values()
+            .filter(|node| node["aria"]["role"] == "TreeItem")
+            .map(|node| {
+                (
+                    node["aria"]["label"].as_str().unwrap().to_owned(),
+                    node["aria"]["level"].as_u64().unwrap(),
+                )
+            })
+            .collect::<Vec<_>>();
+        rows.sort_by_key(|(_, level)| *level);
+
+        assert_eq!(
+            rows,
+            vec![
+                ("Workspace".to_owned(), 1),
+                ("Branch".to_owned(), 2),
+                ("Nested child folder".to_owned(), 3),
+                ("Grandchild leaf".to_owned(), 4),
+            ]
+        );
     }
 
     #[gpui::test]
