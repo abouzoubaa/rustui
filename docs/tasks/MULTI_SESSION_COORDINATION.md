@@ -1,5 +1,16 @@
 # Multi-session roadmap coordination
 
+For every writer, the `--thread` value must be that session's **own Codex
+thread ID**. The orchestrator must obtain it from the session inventory and put
+the literal ID in that session's assignment; never reuse a generic placeholder
+or substitute the orchestrator's ID. Before the first edit, the session must
+check `list` and confirm its claim records its own thread ID, actual worktree,
+unique `codex/` branch, and only its exact assigned paths. If any field differs
+or claim acquisition fails, stop before writing and report the mismatch. The
+orchestrator independently checks the same ledger entry before treating the
+assignment as active. The coordinator cannot infer Codex session identity from
+a shell process.
+
 Every session must invoke the canonical coordinator at
 `/Users/Abium/.codex/worktrees/session-coordination/rustui/scripts/roadmap_claims.py`.
 Run it with the shell's current directory set to your own linked worktree so it
