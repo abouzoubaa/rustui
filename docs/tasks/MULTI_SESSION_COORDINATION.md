@@ -41,7 +41,11 @@ python3 scripts/roadmap_claims.py heartbeat --claim-id <claim-id> \
 python3 scripts/roadmap_claims.py audit --claim-id <claim-id> \
   --thread <codex-thread-id>
 python3 scripts/roadmap_claims.py list
+python3 scripts/roadmap_claims.py list --verbose
 ```
+
+The default list reports a count for pre-existing baseline paths; `--verbose`
+includes their names for a detailed audit.
 
 The registry serializes acquisitions in SQLite transactions. A claim on a
 directory conflicts with claims on that directory, any parent, or any child.

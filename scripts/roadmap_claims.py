@@ -472,6 +472,7 @@ def cmd_list(args: argparse.Namespace, db: sqlite3.Connection) -> None:
             "state": ("suspect" if row[8] == "active" and row[10] < now else row[8]),
             "heartbeat_at": row[9], "lease_until": row[10], "terminal_state": row[11],
             "handoff_terminal_state": row[12], "evidence": row[13], "paths": [],
+            "baseline_path_count": 0,
         })
         if row[14] is not None:
             item["paths"].append(row[14])
@@ -479,7 +480,9 @@ def cmd_list(args: argparse.Namespace, db: sqlite3.Connection) -> None:
         "SELECT claim_id,path FROM claim_baselines ORDER BY claim_id,path"
     ):
         if claim_id in claims:
-            claims[claim_id].setdefault("baseline_paths", []).append(path)
+            claims[claim_id]["baseline_path_count"] += 1
+            if args.verbose:
+                claims[claim_id].setdefault("baseline_paths", []).append(path)
     print(json.dumps(list(claims.values()), indent=2))
 
 
@@ -538,7 +541,8 @@ def main() -> int:
     audit = sub.add_parser("audit", help="ensure all worktree changes stay within the active claim")
     audit.add_argument("--claim-id", required=True)
     audit.add_argument("--thread", required=True)
-    sub.add_parser("list", help="list active, suspect, and released claims")
+    listing = sub.add_parser("list", help="list active, suspect, and released claims")
+    listing.add_argument("--verbose", action="store_true", help="include every baseline path")
     args = parser.parse_args()
     try:
         for name in ("task", "thread", "stage", "milestone", "next_action") if args.command in ("claim", "adopt") else ():

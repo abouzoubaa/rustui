@@ -108,7 +108,13 @@ class RoadmapClaimsTests(unittest.TestCase):
         result = json.loads(adopted.stdout)
         self.assertEqual(result["adopted_paths"], ["@shared/target/headstart/evidence/m-adopt.log", "src"])
         self.assertEqual(result["baseline_paths"], ["readme.md"])
-        listing = subprocess.run([sys.executable, str(SCRIPT), "list"], cwd=self.wt1,
+        compact = subprocess.run([sys.executable, str(SCRIPT), "list"], cwd=self.wt1,
+                                 env=self.env, text=True, capture_output=True, check=True)
+        compact_row = next(item for item in json.loads(compact.stdout)
+                           if item["claim_id"] == result["claim_id"])
+        self.assertEqual(compact_row["baseline_path_count"], 1)
+        self.assertNotIn("baseline_paths", compact_row)
+        listing = subprocess.run([sys.executable, str(SCRIPT), "list", "--verbose"], cwd=self.wt1,
                                  env=self.env, text=True, capture_output=True, check=True)
         listed = next(item for item in json.loads(listing.stdout)
                       if item["claim_id"] == result["claim_id"])
