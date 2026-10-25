@@ -12,6 +12,7 @@ import stat
 import subprocess
 import sys
 import time
+import unicodedata
 from pathlib import Path
 
 
@@ -72,10 +73,31 @@ def connect(db_path: Path) -> sqlite3.Connection:
             fingerprint TEXT NOT NULL,
             PRIMARY KEY (claim_id, path)
         );
+        CREATE TABLE IF NOT EXISTS claim_transitions (
+            sequence INTEGER PRIMARY KEY AUTOINCREMENT,
+            claim_id TEXT NOT NULL REFERENCES claims(id),
+            kind TEXT NOT NULL,
+            from_task TEXT NOT NULL,
+            to_task TEXT NOT NULL,
+            from_thread TEXT NOT NULL,
+            to_thread TEXT NOT NULL,
+            from_stage TEXT NOT NULL,
+            to_stage TEXT NOT NULL,
+            from_milestone TEXT NOT NULL,
+            to_milestone TEXT NOT NULL,
+            from_base_head TEXT NOT NULL DEFAULT '',
+            to_base_head TEXT NOT NULL DEFAULT '',
+            added_paths_json TEXT NOT NULL,
+            next_action TEXT NOT NULL,
+            terminal_state TEXT,
+            evidence TEXT,
+            occurred_at INTEGER NOT NULL
+        );
         CREATE INDEX IF NOT EXISTS claims_state_idx ON claims(state);
         CREATE UNIQUE INDEX IF NOT EXISTS claims_active_task_idx ON claims(task)
             WHERE state='active';
         CREATE INDEX IF NOT EXISTS claimed_paths_path_idx ON claimed_paths(path);
+        CREATE INDEX IF NOT EXISTS claim_transitions_claim_idx ON claim_transitions(claim_id, sequence);
         COMMIT;
     """)
     # Migrate databases created by the first coordination draft.
@@ -92,6 +114,17 @@ def connect(db_path: Path) -> sqlite3.Connection:
         ):
             if name not in columns:
                 db.execute(f"ALTER TABLE claims ADD COLUMN {name} {definition}")
+        transition_columns = {
+            row[1] for row in db.execute("PRAGMA table_info(claim_transitions)")
+        }
+        for name, definition in (
+            ("from_base_head", "TEXT NOT NULL DEFAULT ''"),
+            ("to_base_head", "TEXT NOT NULL DEFAULT ''"),
+            ("terminal_state", "TEXT"),
+            ("evidence", "TEXT"),
+        ):
+            if name not in transition_columns:
+                db.execute(f"ALTER TABLE claim_transitions ADD COLUMN {name} {definition}")
         for claim_id, worktree in db.execute(
             "SELECT id,worktree FROM claims WHERE branch='' AND state='active'"
         ).fetchall():
@@ -106,6 +139,56 @@ def connect(db_path: Path) -> sqlite3.Connection:
         db.execute("ROLLBACK")
         raise
     return db
+
+
+def record_transition(
+    db: sqlite3.Connection,
+    claim_id: str,
+    kind: str,
+    from_task: str,
+    to_task: str,
+    from_thread: str,
+    to_thread: str,
+    from_stage: str,
+    to_stage: str,
+    from_milestone: str,
+    to_milestone: str,
+    added_paths: list[str],
+    next_action: str,
+    occurred_at: int,
+    from_base_head: str = "",
+    to_base_head: str = "",
+    terminal_state: str | None = None,
+    evidence: str | None = None,
+) -> None:
+    db.execute(
+        """
+        INSERT INTO claim_transitions(
+            claim_id,kind,from_task,to_task,from_thread,to_thread,from_stage,to_stage,
+            from_milestone,to_milestone,from_base_head,to_base_head,added_paths_json,
+            next_action,terminal_state,evidence,occurred_at
+        ) VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)
+        """,
+        (
+            claim_id,
+            kind,
+            from_task,
+            to_task,
+            from_thread,
+            to_thread,
+            from_stage,
+            to_stage,
+            from_milestone,
+            to_milestone,
+            from_base_head,
+            to_base_head,
+            json.dumps(added_paths),
+            next_action,
+            terminal_state,
+            evidence,
+            occurred_at,
+        ),
+    )
 
 
 def git(root: Path, *args: str) -> str:
@@ -155,7 +238,8 @@ def normalized_path(root: Path, raw: str) -> str:
     if relative in ("", "."):
         raise ValueError("claim the specific files or directories, not the repository root")
     # macOS volumes are commonly case-insensitive; over-locking is safer than a race.
-    return relative.casefold() if sys.platform == "darwin" else relative
+    normalized = unicodedata.normalize("NFD", relative)
+    return normalized.casefold() if sys.platform == "darwin" else normalized
 
 
 def overlaps(left: str, right: str) -> bool:
@@ -355,6 +439,111 @@ def cmd_progress(args: argparse.Namespace, db: sqlite3.Connection) -> None:
                       "lease_until": now + args.lease_seconds}))
 
 
+def cmd_advance(args: argparse.Namespace, root: Path, db: sqlite3.Connection) -> None:
+    """Keep the current owner while atomically changing task metadata and extending paths."""
+    requested_paths = sorted({normalized_path(root, raw) for raw in args.paths})
+    now = int(time.time())
+    db.execute("BEGIN IMMEDIATE")
+    try:
+        current = db.execute(
+            """
+            SELECT task,thread,worktree,branch,base_head,stage,milestone
+            FROM claims WHERE id=? AND state='active'
+            """,
+            (args.claim_id,),
+        ).fetchone()
+        if current is None or current[1] != args.thread:
+            raise ValueError("claim missing, released, or owned by another thread")
+        if Path(current[2]).resolve() != root:
+            raise ValueError("run advance from the worktree recorded by the claim")
+        branch = git(root, "branch", "--show-current")
+        if branch != current[3]:
+            raise ValueError("current branch differs from the branch recorded by the claim")
+
+        current_paths = [row[0] for row in db.execute(
+            "SELECT path FROM claimed_paths WHERE claim_id=?", (args.claim_id,)
+        )]
+        added_paths = [
+            path for path in requested_paths
+            if path not in current_paths and not covered(path, current_paths)
+        ]
+        task = args.task.strip() if args.task is not None else current[0]
+        if not task.strip():
+            raise ValueError("task must not be empty")
+        if task == current[0] and not added_paths:
+            raise ValueError("advance requires a new task ID or at least one additional path")
+
+        changed = set(changed_paths(root))
+        base_head = current[4] or git(root, "rev-parse", "HEAD")
+        committed = subprocess.check_output(
+            ["git", "-C", str(root), "diff", "--name-only", "-z", base_head, "HEAD"],
+            stderr=subprocess.PIPE,
+        ).split(b"\0")
+        changed.update(path.decode("utf-8", errors="surrogateescape")
+                       for path in committed if path)
+        dirty_added_paths = sorted({
+            normalized_path(root, path)
+            for path in changed
+            if not path.startswith("@shared/")
+            and not covered(normalized_path(root, path), current_paths)
+            and any(overlaps(normalized_path(root, path), added) for added in added_paths)
+        })
+        if dirty_added_paths:
+            raise ValueError(
+                "new paths already contain changes; claim them before editing or use the audited adoption flow: "
+                + json.dumps(dirty_added_paths)
+            )
+
+        rows = db.execute("""
+            SELECT c.id,c.task,c.thread,c.worktree,p.path,c.branch
+            FROM claims c JOIN claimed_paths p ON p.claim_id=c.id
+            WHERE c.state='active' AND c.id<>?
+        """, (args.claim_id,)).fetchall()
+        conflicts = [
+            {"claim_id": row[0], "task": row[1], "thread": row[2],
+             "worktree": row[3], "path": row[4]}
+            for row in rows
+            if row[1] == task or row[2] == args.thread or row[3] == str(root)
+            or (row[5] and row[5] == branch)
+            or any(overlaps(added, row[4]) for added in added_paths)
+        ]
+        if conflicts:
+            raise ValueError("advance conflicts with active claims: " + json.dumps(conflicts))
+
+        result = db.execute("""
+            UPDATE claims
+            SET task=?,stage=?,milestone=?,next_action=?,heartbeat_at=?,lease_until=?
+            WHERE id=? AND thread=? AND state='active'
+        """, (task, args.stage, args.milestone, args.next_action, now,
+              now + args.lease_seconds, args.claim_id, args.thread))
+        if result.rowcount != 1:
+            raise ValueError("claim changed while advancing; retry after re-reading the ledger")
+        db.executemany(
+            "INSERT INTO claimed_paths(claim_id,path) VALUES(?,?)",
+            [(args.claim_id, path) for path in added_paths],
+        )
+        record_transition(
+            db, args.claim_id, "advance", current[0], task, args.thread, args.thread,
+            current[5], args.stage, current[6], args.milestone, added_paths,
+            args.next_action, now, base_head, base_head,
+        )
+        db.execute("COMMIT")
+    except BaseException:
+        db.execute("ROLLBACK")
+        raise
+
+    all_paths = sorted(set(current_paths) | set(added_paths))
+    print(json.dumps({
+        "claim_id": args.claim_id,
+        "from_task": current[0],
+        "task": task,
+        "thread": args.thread,
+        "added_paths": added_paths,
+        "paths": all_paths,
+        "lease_until": now + args.lease_seconds,
+    }))
+
+
 def cmd_release(args: argparse.Namespace, db: sqlite3.Connection) -> None:
     db.execute("BEGIN IMMEDIATE")
     try:
@@ -387,10 +576,11 @@ def cmd_handoff(args: argparse.Namespace, common_git_dir: Path, db: sqlite3.Conn
     if common_path.resolve() != common_git_dir:
         raise ValueError("new worktree belongs to a different Git repository")
     branch = validate_writer_worktree(new_root, common_git_dir)
+    new_base_head = git(new_root, "rev-parse", "HEAD")
     now = int(time.time())
     db.execute("BEGIN IMMEDIATE")
     try:
-        old = db.execute("SELECT task FROM claims WHERE id=? AND thread=? AND state='active'",
+        old = db.execute("SELECT task,stage,milestone,base_head FROM claims WHERE id=? AND thread=? AND state='active'",
                          (args.claim_id, args.old_thread)).fetchone()
         if old is None:
             raise ValueError("claim is missing, released, or not owned by the old thread")
@@ -402,14 +592,20 @@ def cmd_handoff(args: argparse.Namespace, common_git_dir: Path, db: sqlite3.Conn
         if conflict:
             raise ValueError(f"new worktree is already claimed by thread {conflict[1]} ({conflict[0]})")
         db.execute("""
-            UPDATE claims SET task=?,thread=?,worktree=?,branch=?,stage=?,milestone=?,next_action=?,
+            UPDATE claims SET task=?,thread=?,worktree=?,branch=?,base_head=?,stage=?,milestone=?,next_action=?,
                               heartbeat_at=?,lease_until=?,handoff_terminal_state=?,evidence=?
             WHERE id=? AND thread=? AND state='active'
-        """, (args.task or old[0], args.new_thread, str(new_root), branch, args.stage,
+        """, (args.task or old[0], args.new_thread, str(new_root), branch, new_base_head, args.stage,
               args.milestone, args.next_action, now, now + args.lease_seconds,
               args.terminal_state,
               f"handoff from terminal thread {args.old_thread}: {args.evidence}",
               args.claim_id, args.old_thread))
+        record_transition(
+            db, args.claim_id, "handoff", old[0], args.task or old[0],
+            args.old_thread, args.new_thread, old[1], args.stage, old[2],
+            args.milestone, [], args.next_action, now, old[3], new_base_head,
+            args.terminal_state, args.evidence,
+        )
         db.execute("COMMIT")
     except BaseException:
         db.execute("ROLLBACK")
@@ -455,9 +651,39 @@ def cmd_audit(args: argparse.Namespace, root: Path, db: sqlite3.Connection) -> N
         outside.append(path)
     if outside:
         raise ValueError("changed files outside this claim: " + json.dumps(outside))
+    history = [
+        {
+            "sequence": item[0],
+            "kind": item[1],
+            "from_task": item[2],
+            "to_task": item[3],
+            "from_thread": item[4],
+            "to_thread": item[5],
+            "from_stage": item[6],
+            "to_stage": item[7],
+            "from_milestone": item[8],
+            "to_milestone": item[9],
+            "from_base_head": item[10],
+            "to_base_head": item[11],
+            "added_paths": json.loads(item[12]),
+            "next_action": item[13],
+            "terminal_state": item[14],
+            "evidence": item[15],
+            "occurred_at": item[16],
+        }
+        for item in db.execute(
+            """
+            SELECT sequence,kind,from_task,to_task,from_thread,to_thread,from_stage,to_stage,
+                   from_milestone,to_milestone,from_base_head,to_base_head,added_paths_json,
+                   next_action,terminal_state,evidence,occurred_at
+            FROM claim_transitions WHERE claim_id=? ORDER BY sequence
+            """,
+            (args.claim_id,),
+        )
+    ]
     print(json.dumps({"claim_id": args.claim_id, "state": "within-claim",
                       "changed_paths": changed, "stage": row[4],
-                      "milestone": row[5], "next_action": row[6]}))
+                      "milestone": row[5], "next_action": row[6], "history": history}))
 
 
 def cmd_list(args: argparse.Namespace, db: sqlite3.Connection) -> None:
@@ -523,6 +749,17 @@ def main() -> int:
     progress.add_argument("--milestone", required=True)
     progress.add_argument("--next-action", required=True)
     progress.add_argument("--lease-seconds", type=int, default=900)
+    advance = sub.add_parser(
+        "advance", help="atomically advance an owner-held task and add exact paths without releasing the claim"
+    )
+    advance.add_argument("--claim-id", required=True)
+    advance.add_argument("--thread", required=True)
+    advance.add_argument("--task", help="new task ID; defaults to the current task")
+    advance.add_argument("--stage", required=True)
+    advance.add_argument("--milestone", required=True)
+    advance.add_argument("--next-action", required=True)
+    advance.add_argument("--lease-seconds", type=int, default=900)
+    advance.add_argument("paths", nargs="*", help="additional paths to add to the existing claim")
     release = sub.add_parser("release", help="release only after confirming the old thread is terminal")
     release.add_argument("--claim-id", required=True)
     release.add_argument("--thread", required=True)
@@ -530,7 +767,7 @@ def main() -> int:
                          choices=("completed", "cancelled", "archived", "superseded"))
     release.add_argument("--evidence", required=True,
                          help="link or concise coordinator evidence that the thread stopped")
-    handoff = sub.add_parser("handoff", help="atomically transfer paths after verifying the old thread stopped")
+    handoff = sub.add_parser("handoff", help="atomically transfer paths after confirming the old thread stopped")
     handoff.add_argument("--claim-id", required=True)
     handoff.add_argument("--old-thread", required=True)
     handoff.add_argument("--new-thread", required=True)
@@ -541,6 +778,8 @@ def main() -> int:
     handoff.add_argument("--next-action", required=True)
     handoff.add_argument("--terminal-state", required=True,
                          choices=("completed", "cancelled", "archived", "superseded"))
+    handoff.add_argument("--confirmed-terminal", action="store_true",
+                         help="attest that the old thread was independently checked and is terminal")
     handoff.add_argument("--lease-seconds", type=int, default=900)
     handoff.add_argument("--evidence", required=True,
                          help="evidence that the old thread is terminal and handoff is authorized")
@@ -556,10 +795,18 @@ def main() -> int:
                 raise ValueError(f"{name} must not be empty")
         if args.command in ("release", "handoff") and not args.evidence.strip():
             raise ValueError("evidence must not be empty")
+        if args.command == "handoff" and not args.confirmed_terminal:
+            raise ValueError("verify the old thread is terminal, then pass --confirmed-terminal")
         if args.command == "progress" and not all(
             (args.stage.strip(), args.milestone.strip(), args.next_action.strip())
         ):
             raise ValueError("stage, milestone, and next action must not be empty")
+        if args.command == "advance" and not all(
+            (args.stage.strip(), args.milestone.strip(), args.next_action.strip())
+        ):
+            raise ValueError("stage, milestone, and next action must not be empty")
+        if args.command == "advance" and args.task is not None and not args.task.strip():
+            raise ValueError("task must not be empty")
         root, common = repo_identity()
         db = connect(database_path(common))
         if args.command == "claim":
@@ -578,6 +825,10 @@ def main() -> int:
             if args.lease_seconds < 60:
                 raise ValueError("lease must be at least 60 seconds")
             cmd_progress(args, db)
+        elif args.command == "advance":
+            if args.lease_seconds < 60:
+                raise ValueError("lease must be at least 60 seconds")
+            cmd_advance(args, root, db)
         elif args.command == "release":
             cmd_release(args, db)
         elif args.command == "handoff":

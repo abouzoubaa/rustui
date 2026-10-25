@@ -49,6 +49,24 @@ includes their names for a detailed audit.
 `progress` also renews the lease; use `heartbeat` during long work between
 milestone updates.
 
+Use `advance` when the same session moves to another task ID or needs additional
+paths. It extends the existing claim; it never drops prior paths or releases the
+owner. The task update, new paths, transition history, and lease renewal are one
+SQLite transaction:
+
+```sh
+python3 scripts/roadmap_claims.py advance --claim-id <claim-id> \
+  --thread <codex-thread-id> --task M1235 --stage "Stage 9" \
+  --milestone M1235 --next-action "implement the next bounded registry slice" \
+  crates/rustui/src/preview/registry.rs docs/tasks/m1235_registry_slice.md
+```
+
+Omit `--task` to keep the current task ID while expanding its scope. New paths
+must be clean when added; if they already contain changes, use the audited
+adoption flow. The command rejects active task, thread, worktree, branch, or
+path conflicts without changing the claim. `audit` returns the claim's recorded
+advance and handoff history.
+
 The registry serializes acquisitions in SQLite transactions. A claim on a
 directory conflicts with claims on that directory, any parent, or any child.
 Use `@shared/<name>` for logical shared resources such as roadmap ledgers;
@@ -72,14 +90,18 @@ python3 scripts/roadmap_claims.py release --claim-id <claim-id> \
 For handoff, first verify the old session is terminal and preserve its worktree
 and uncommitted changes. Then transfer the claim atomically to a separate clean
 worktree on a unique `codex/` branch. The replacement must inspect and
-deliberately integrate the old work before continuing.
+deliberately integrate the old work before continuing. The CLI cannot observe
+Codex thread liveness; the orchestrator must inspect the old thread and confirm
+it has stopped before using `--confirmed-terminal`. This is an explicit
+cooperative gate, not an automatic liveness check.
 
 ```sh
 python3 scripts/roadmap_claims.py handoff --claim-id <claim-id> \
   --old-thread <stopped-thread-id> --new-thread <replacement-thread-id> \
   --new-worktree /path/to/clean/replacement/worktree \
   --stage "Stage 5" --milestone M1234 --next-action "continue implementation" \
-  --terminal-state superseded --evidence "Terminal state checked in Codex"
+  --terminal-state superseded --confirmed-terminal \
+  --evidence "Terminal state checked in Codex"
 ```
 
 The database prevents collisions only among cooperating sessions. It cannot
