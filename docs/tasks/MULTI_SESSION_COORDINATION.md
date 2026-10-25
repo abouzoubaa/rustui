@@ -1,5 +1,11 @@
 # Multi-session roadmap coordination
 
+Every session must invoke the canonical coordinator at
+`/Users/Abium/.codex/worktrees/session-coordination/rustui/scripts/roadmap_claims.py`.
+Run it with the shell's current directory set to your own linked worktree so it
+uses that worktree's Git common directory and the shared claim database. Avoid a
+checkout-local copy unless it is confirmed to match this canonical revision.
+
 Every writing session owns one clean, registered Git worktree on a unique
 `codex/` branch. Before editing, it acquires an atomic claim for the task,
 thread, stage/milestone, worktree, and exact repository-relative files. Claims
@@ -7,7 +13,7 @@ are stored in one SQLite database outside the checkout and shared by all linked
 worktrees for this repository.
 
 ```sh
-python3 scripts/roadmap_claims.py claim \
+python3 /Users/Abium/.codex/worktrees/session-coordination/rustui/scripts/roadmap_claims.py claim \
   --task M1234 --thread <codex-thread-id> \
   --stage "Stage 5" --milestone M1234 --next-action "implement resolver" \
   --worktree "$(git rev-parse --show-toplevel)" \
@@ -22,7 +28,7 @@ those paths only while their content stays unchanged; a later edit or commit
 outside the claim fails the audit:
 
 ```sh
-python3 scripts/roadmap_claims.py adopt \
+python3 /Users/Abium/.codex/worktrees/session-coordination/rustui/scripts/roadmap_claims.py adopt \
   --task M1234 --thread <codex-thread-id> \
   --stage "Stage 5" --milestone M1234 --next-action "finish resolver" \
   --worktree "$(git rev-parse --show-toplevel)" \
@@ -33,15 +39,15 @@ python3 scripts/roadmap_claims.py adopt \
 Continue tracking after claim or adoption:
 
 ```sh
-python3 scripts/roadmap_claims.py progress --claim-id <claim-id> \
+python3 /Users/Abium/.codex/worktrees/session-coordination/rustui/scripts/roadmap_claims.py progress --claim-id <claim-id> \
   --thread <codex-thread-id> --stage "Stage 5" --milestone M1234 \
   --next-action "add focused regression"
-python3 scripts/roadmap_claims.py heartbeat --claim-id <claim-id> \
+python3 /Users/Abium/.codex/worktrees/session-coordination/rustui/scripts/roadmap_claims.py heartbeat --claim-id <claim-id> \
   --thread <codex-thread-id>
-python3 scripts/roadmap_claims.py audit --claim-id <claim-id> \
+python3 /Users/Abium/.codex/worktrees/session-coordination/rustui/scripts/roadmap_claims.py audit --claim-id <claim-id> \
   --thread <codex-thread-id>
-python3 scripts/roadmap_claims.py list
-python3 scripts/roadmap_claims.py list --verbose
+python3 /Users/Abium/.codex/worktrees/session-coordination/rustui/scripts/roadmap_claims.py list
+python3 /Users/Abium/.codex/worktrees/session-coordination/rustui/scripts/roadmap_claims.py list --verbose
 ```
 
 The default list reports a count for pre-existing baseline paths; `--verbose`
@@ -55,7 +61,7 @@ owner. The task update, new paths, transition history, and lease renewal are one
 SQLite transaction:
 
 ```sh
-python3 scripts/roadmap_claims.py advance --claim-id <claim-id> \
+python3 /Users/Abium/.codex/worktrees/session-coordination/rustui/scripts/roadmap_claims.py advance --claim-id <claim-id> \
   --thread <codex-thread-id> --task M1235 --stage "Stage 9" \
   --milestone M1235 --next-action "implement the next bounded registry slice" \
   crates/rustui/src/preview/registry.rs docs/tasks/m1235_registry_slice.md
@@ -82,7 +88,7 @@ worktree before releasing or transferring ownership. Never release a claim
 because a session is idle, blocked, not loaded, or has missed a heartbeat.
 
 ```sh
-python3 scripts/roadmap_claims.py release --claim-id <claim-id> \
+python3 /Users/Abium/.codex/worktrees/session-coordination/rustui/scripts/roadmap_claims.py release --claim-id <claim-id> \
   --thread <codex-thread-id> --terminal-state completed \
   --evidence "Reviewed terminal thread status and retained worktree"
 ```
@@ -96,7 +102,7 @@ it has stopped before using `--confirmed-terminal`. This is an explicit
 cooperative gate, not an automatic liveness check.
 
 ```sh
-python3 scripts/roadmap_claims.py handoff --claim-id <claim-id> \
+python3 /Users/Abium/.codex/worktrees/session-coordination/rustui/scripts/roadmap_claims.py handoff --claim-id <claim-id> \
   --old-thread <stopped-thread-id> --new-thread <replacement-thread-id> \
   --new-worktree /path/to/clean/replacement/worktree \
   --stage "Stage 5" --milestone M1234 --next-action "continue implementation" \

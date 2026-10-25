@@ -72,8 +72,13 @@
 
 - Before any roadmap edit, create or use one isolated Git worktree for the
   writing session and claim its task, worktree, and exact repository-relative
-  files with `python3 scripts/roadmap_claims.py`. Follow
+  files with the canonical coordinator at
+  `/Users/Abium/.codex/worktrees/session-coordination/rustui/scripts/roadmap_claims.py`,
+  invoked while the shell is in the session's own worktree. Follow
   `docs/tasks/MULTI_SESSION_COORDINATION.md`.
+- Use `advance` for same-session task changes or scope expansion; it preserves
+  the existing claim atomically. Use `handoff` only after independently
+  confirming that the old session is terminal.
 - Start claims only from a clean registered worktree on a unique `codex/`
   branch. Record Stage, milestone, and next action; run `audit` at turn
   boundaries and before integration. Never assign overlapping paths or the
