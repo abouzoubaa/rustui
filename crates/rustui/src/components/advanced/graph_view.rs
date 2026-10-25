@@ -1,7 +1,10 @@
 //! Positioned, controlled graph visualization using RustUI Canvas and GPUI input.
 
 use super::canvas::{Canvas, CanvasPoint, CanvasRect, CanvasScene, CanvasSize};
-use crate::view::{ControlAction, EmptyView, RenderContext, View};
+use crate::{
+    localization::MessageArguments,
+    view::{ControlAction, EmptyView, RenderContext, View},
+};
 use gpui::{
     AnyElement, FocusHandle, Hsla, InteractiveElement as _, IntoElement as _, MouseButton,
     ParentElement as _, Role, StatefulInteractiveElement as _, Styled as _, div, px,
@@ -60,6 +63,47 @@ fn label(value: &str) -> Result<(), GraphError> {
     } else {
         Ok(())
     }
+}
+
+fn resolved_localized_message(id: &str, localized: String, fallback: &str) -> String {
+    if localized.trim().is_empty() || localized.trim() == id.trim() {
+        fallback.to_owned()
+    } else {
+        localized
+    }
+}
+
+fn localized_graph_message(
+    context: &RenderContext<'_>,
+    id: &str,
+    arguments: &MessageArguments,
+    fallback: &str,
+) -> String {
+    let localized = context
+        .localized_message_with_arguments(id, arguments)
+        .unwrap_or_else(|_| id.to_owned());
+    resolved_localized_message(id, localized, fallback)
+}
+
+fn graph_error_message_id(error: &GraphError) -> &'static str {
+    match error {
+        GraphError::BlankIdentity => "rustui-graph-error-blank-identity",
+        GraphError::BlankLabel => "rustui-graph-error-blank-label",
+        GraphError::DuplicateNode => "rustui-graph-error-duplicate-node",
+        GraphError::DuplicatePort => "rustui-graph-error-duplicate-port",
+        GraphError::DuplicateEdge => "rustui-graph-error-duplicate-edge",
+        GraphError::MissingNode => "rustui-graph-error-missing-node",
+        GraphError::MissingEdge => "rustui-graph-error-missing-edge",
+        GraphError::MissingPort => "rustui-graph-error-missing-port",
+        GraphError::PortDirection => "rustui-graph-error-port-direction",
+        GraphError::DuplicateConnection => "rustui-graph-error-duplicate-connection",
+        GraphError::InvalidGeometry => "rustui-graph-error-invalid-geometry",
+    }
+}
+
+fn localized_graph_error(context: &RenderContext<'_>, error: &GraphError) -> String {
+    let id = graph_error_message_id(error);
+    localized_graph_message(context, id, &MessageArguments::new(), &error.to_string())
 }
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
@@ -432,13 +476,39 @@ impl GraphStyle {
     }
 }
 
+#[derive(Clone, Debug)]
+pub(super) enum GraphAccessibilityLabel {
+    Literal(String),
+    Message { id: String, fallback: String },
+}
+
+impl GraphAccessibilityLabel {
+    fn fallback(&self) -> &str {
+        match self {
+            Self::Literal(label)
+            | Self::Message {
+                fallback: label, ..
+            } => label,
+        }
+    }
+
+    fn resolve(&self, context: &RenderContext<'_>) -> String {
+        match self {
+            Self::Literal(label) => label.clone(),
+            Self::Message { id, fallback } => {
+                localized_graph_message(context, id, &MessageArguments::new(), fallback)
+            }
+        }
+    }
+}
+
 pub struct GraphViewControl {
     pub(super) id: Identity,
     pub(super) graph: GraphDocument,
     pub(super) selection: Binding<Option<String>>,
     pub(super) viewport: Binding<GraphViewport>,
     pub(super) style: Option<GraphStyle>,
-    pub(super) label: String,
+    pub(super) label: GraphAccessibilityLabel,
     pub(super) activate: Option<ControlAction>,
     pub(super) disabled: bool,
 }
@@ -466,7 +536,10 @@ impl GraphViewControl {
             selection,
             viewport,
             style: None,
-            label: "Graph".into(),
+            label: GraphAccessibilityLabel::Message {
+                id: "rustui-graph-view".into(),
+                fallback: "Graph".into(),
+            },
             activate: None,
             disabled: false,
         }
@@ -476,8 +549,22 @@ impl GraphViewControl {
         Ok(self)
     }
     pub fn accessibility_label(mut self, name: impl Into<String>) -> Self {
-        self.label = name.into();
-        label(&self.label).expect("GraphView requires an accessible name");
+        let name = name.into();
+        label(&name).expect("GraphView requires an accessible name");
+        self.label = GraphAccessibilityLabel::Literal(name);
+        self
+    }
+
+    /// Resolve the view's accessible name from the active locale catalog.
+    /// The current default or caller-supplied label remains its fallback.
+    pub fn localized_accessibility_label(mut self, message_id: impl Into<String>) -> Self {
+        let id = message_id.into();
+        assert!(
+            !id.trim().is_empty(),
+            "GraphView accessibility localization key must not be blank"
+        );
+        let fallback = self.label.fallback().to_owned();
+        self.label = GraphAccessibilityLabel::Message { id, fallback };
         self
     }
     pub fn on_activate(mut self, action: impl Into<ControlAction>) -> Self {
@@ -658,8 +745,21 @@ pub(super) fn render_graph(
         .border_1().border_color(gpui::transparent_black())
         .role(Role::Group)
         .aria_disabled(view.disabled)
-        .aria_label(view.label.clone())
-        .aria_description(if editor.is_some() {"Arrows move selected node; brackets select; Delete removes. A D W S pan; PageUp and PageDown zoom; Home resets; Escape cancels. Tab reaches ports; select output and input to connect."} else {"Arrows select nodes; Enter activates. A D W S pan; PageUp and PageDown zoom; Home resets; Escape clears selection."})
+        .aria_label(view.label.resolve(context))
+        .aria_description(localized_graph_message(
+            context,
+            if editor.is_some() {
+                "rustui-graph-editor-help"
+            } else {
+                "rustui-graph-view-help"
+            },
+            &MessageArguments::new(),
+            if editor.is_some() {
+                "Arrows move selected node; brackets select; Delete removes. A, D, W, and S pan; Page Up and Page Down zoom; Home resets; Escape cancels. Tab reaches ports; select output and input to connect."
+            } else {
+                "Arrows select nodes; Enter activates. A, D, W, and S pan; Page Up and Page Down zoom; Home resets; Escape clears selection."
+            },
+        ))
         .child(canvas);
     if !view.disabled {
         root = root
@@ -845,15 +945,17 @@ pub(super) fn render_graph(
                 let accessible = handler;
                 let port_selected =
                     pending.as_ref() == Some(&GraphEndpoint::new(node.id.clone(), port.id.clone()));
-                let port_label = format!(
-                    "{} {} {}",
-                    node.label,
-                    if port.direction == GraphPortDirection::Input {
-                        "input"
-                    } else {
-                        "output"
-                    },
-                    port.label
+                let (message_id, direction) = match port.direction {
+                    GraphPortDirection::Input => ("rustui-graph-port-input", "input"),
+                    GraphPortDirection::Output => ("rustui-graph-port-output", "output"),
+                };
+                let port_label = localized_graph_message(
+                    context,
+                    message_id,
+                    &MessageArguments::new()
+                        .with("node", node.label.clone())
+                        .with("port", port.label.clone()),
+                    &format!("{} {} {}", node.label, direction, port.label),
                 );
                 let port_control = div()
                     .id(graph_element_id(
@@ -921,9 +1023,18 @@ pub(super) fn render_graph(
     for edge in &graph.edges {
         let source = graph.endpoint(&edge.from).unwrap();
         let target = graph.endpoint(&edge.to).unwrap();
-        let description = format!(
-            "{} {} to {} {}",
-            source.0.label, source.1.label, target.0.label, target.1.label
+        let description = localized_graph_message(
+            context,
+            "rustui-graph-disconnect",
+            &MessageArguments::new()
+                .with("source_node", source.0.label.clone())
+                .with("source_port", source.1.label.clone())
+                .with("target_node", target.0.label.clone())
+                .with("target_port", target.1.label.clone()),
+            &format!(
+                "Disconnect {} {} to {} {}",
+                source.0.label, source.1.label, target.0.label, target.1.label
+            ),
         );
         if let Some(binding) = editor.as_ref().filter(|_| !view.disabled) {
             let update = context.binding_event_updater(binding.clone(), apply_edit);
@@ -964,7 +1075,7 @@ pub(super) fn render_graph(
                     .role(Role::Button)
                     .focusable()
                     .focus_visible(move |style_ref| style_ref.border_color(style.selection))
-                    .aria_label(format!("Disconnect {description}"))
+                    .aria_label(description.clone())
                     .on_click(move |_, window, cx| {
                         pointer(window, cx);
                         cx.stop_propagation();
@@ -1166,7 +1277,7 @@ pub(super) fn render_graph(
                 .absolute()
                 .bottom_0()
                 .role(Role::Status)
-                .child(error.to_string()),
+                .child(localized_graph_error(context, &error)),
         );
     }
     root.into_any_element()
@@ -1220,6 +1331,135 @@ mod tests {
     }
     fn graph() -> GraphDocument {
         GraphDocument::new([node("a", 10.0), node("b", 240.0)], []).unwrap()
+    }
+
+    fn test_binding<T: Clone + 'static>(value: T) -> Binding<T> {
+        fn read<T: Clone>(value: &T) -> T {
+            value.clone()
+        }
+        fn write<T>(value: &mut T, next: T) {
+            *value = next;
+        }
+        Binding::new::<T>(value, read::<T>, write::<T>)
+    }
+
+    fn label_test_view() -> GraphViewControl {
+        let viewport =
+            GraphViewport::new(CanvasSize::new(20.0, 20.0).unwrap(), 0.0, 0.0, 1.0).unwrap();
+        GraphView(
+            "localized-graph",
+            GraphDocument::new(Vec::<GraphNode>::new(), Vec::<GraphEdge>::new()).unwrap(),
+            test_binding(None),
+            test_binding(viewport),
+        )
+    }
+
+    #[test]
+    fn graph_accessibility_names_resolve_catalogs_and_keep_literal_fallbacks() {
+        let default = label_test_view();
+        assert!(matches!(
+            default.label,
+            GraphAccessibilityLabel::Message { ref id, ref fallback }
+                if id == "rustui-graph-view" && fallback == "Graph"
+        ));
+
+        let view = label_test_view()
+            .accessibility_label("Custom graph")
+            .localized_accessibility_label("rustui-graph-view");
+        let GraphAccessibilityLabel::Message { id, fallback } = view.label else {
+            panic!("expected localized GraphView label");
+        };
+        assert_eq!(id, "rustui-graph-view");
+        assert_eq!(fallback, "Custom graph");
+
+        let locale = crate::localization::Locale::parse("fr").unwrap();
+        let catalog = crate::localization::Catalog::parse(
+            locale.clone(),
+            include_str!("../../../../../locales/fr/rustui.ftl"),
+        )
+        .unwrap();
+        let translated = catalog.get(&id).unwrap().to_owned();
+        assert_eq!(
+            resolved_localized_message(&id, translated, &fallback),
+            "Graphe"
+        );
+        assert_eq!(
+            resolved_localized_message(&id, id.clone(), &fallback),
+            "Custom graph"
+        );
+        assert_eq!(
+            resolved_localized_message(&id, " ".into(), &fallback),
+            "Custom graph"
+        );
+
+        let arguments = MessageArguments::new()
+            .with("source_node", "Source")
+            .with("source_port", "Sortie")
+            .with("target_node", "Cible")
+            .with("target_port", "Entrée");
+        let template = catalog.get("rustui-graph-disconnect").unwrap();
+        let disconnect =
+            crate::localization::interpolate_with_locale(template, &arguments, &locale).unwrap();
+        assert!(disconnect.contains("Déconnecter"));
+        assert!(disconnect.contains("vers"));
+
+        let port_args = MessageArguments::new()
+            .with("node", "Source")
+            .with("port", "Sortie");
+        for key in ["rustui-graph-port-input", "rustui-graph-port-output"] {
+            let template = catalog.get(key).unwrap();
+            let translated =
+                crate::localization::interpolate_with_locale(template, &port_args, &locale)
+                    .unwrap();
+            assert!(translated.contains("Source"));
+            assert!(translated.contains("Sortie"));
+        }
+        assert_eq!(
+            catalog.get("rustui-graph-reset-view").unwrap(),
+            "La vue est hors limites. Réinitialiser la vue"
+        );
+        assert!(
+            catalog
+                .get("rustui-graph-editor-help")
+                .unwrap()
+                .contains("flèches")
+        );
+        assert!(
+            catalog
+                .get("rustui-graph-view-help")
+                .unwrap()
+                .contains("flèches")
+        );
+
+        let error = GraphError::MissingNode;
+        let error_id = graph_error_message_id(&error);
+        assert_eq!(error.to_string(), "graph node does not exist");
+        let english_locale = crate::localization::Locale::parse("en").unwrap();
+        let english_catalog = crate::localization::Catalog::parse(
+            english_locale,
+            include_str!("../../../../../locales/en/rustui.ftl"),
+        )
+        .unwrap();
+        assert_eq!(
+            resolved_localized_message(
+                error_id,
+                english_catalog.get(error_id).unwrap().to_owned(),
+                &error.to_string(),
+            ),
+            error.to_string()
+        );
+        assert_eq!(
+            resolved_localized_message(
+                error_id,
+                catalog.get(error_id).unwrap().to_owned(),
+                &error.to_string(),
+            ),
+            "Le nœud du graphe est introuvable."
+        );
+        assert_eq!(
+            resolved_localized_message(error_id, error_id.to_owned(), &error.to_string(),),
+            "graph node does not exist"
+        );
     }
     fn edge() -> GraphEdge {
         GraphEdge::new(
@@ -1542,11 +1782,17 @@ fn projection_error(
     let pointer = action.clone();
     let keyboard = action.clone();
     let accessible = action;
+    let reset_label = localized_graph_message(
+        context,
+        "rustui-graph-reset-view",
+        &MessageArguments::new(),
+        "View is out of range. Reset view",
+    );
     let mut reset = div()
         .id(graph_element_id("graph", &[view.id.as_str()]))
         .role(Role::Button)
         .aria_disabled(disabled)
-        .aria_label("Graph view is out of range. Reset view")
+        .aria_label(reset_label.clone())
         .on_click(move |_, _, cx| pointer(cx))
         .on_key_down(move |event, _, cx| {
             if eligible(event) && matches!(event.keystroke.key.as_ref(), "home" | "enter" | "space")
@@ -1558,7 +1804,7 @@ fn projection_error(
         .on_a11y_action(gpui::accesskit::Action::Click, move |_, _, cx| {
             accessible(cx)
         })
-        .child("View is out of range. Reset view");
+        .child(reset_label);
     if !disabled {
         reset = reset.track_focus(focus);
     }
