@@ -7,15 +7,36 @@ trap 'rm -rf "$temporary_root"' EXIT HUP INT TERM
 
 target_root="$temporary_root/target"
 references_source="$temporary_root/reference assets"
+notice_source="$temporary_root/notice collection"
 binary="$target_root/debug/rustui-playground"
 bundle="$target_root/debug/RustUI Playground.app"
 
-mkdir -p "$target_root/debug" "$references_source/Nested Folder"
+mkdir -p "$target_root/debug" "$references_source/Nested Folder" "$notice_source/notices"
 printf '%s\n' '#!/bin/sh' 'exit 0' > "$binary"
 chmod 755 "$binary"
 printf '%s\n' '<svg />' > "$references_source/Nested Folder/Example.svg"
+printf '%s\n' 'verbatim dependency notice' > "$notice_source/notices/LICENSE"
+python3 - "$notice_source" <<'PY'
+import hashlib, json, sys
+from pathlib import Path
+root = Path(sys.argv[1])
+notice = root / "notices/LICENSE"
+report = {"schema_version": 1, "status": "gaps",
+          "complete_license_or_compatibility_claim": False,
+          "inputs": {"metadata_sha256": "1" * 64, "build_json_sha256": "2" * 64},
+          "packages": [{"name": "fixture", "version": "1.0.0", "source": None,
+                        "package_id": "fixture-id", "manifest_path": "fixture/Cargo.toml",
+                        "manifest_sha256": "3" * 64,
+                        "notices": [{"path": "notices/LICENSE",
+                                     "sha256": hashlib.sha256(notice.read_bytes()).hexdigest()}]}],
+          "unresolved_gaps": [{"name": "gap", "version": "1", "package_id": "gap-id",
+                               "reason": "no captured notice files"}]}
+(root / "report.json").write_text(json.dumps(report), encoding="utf-8")
+(root / "REPORT.txt").write_text("fixture report\n", encoding="utf-8")
+PY
 
 CARGO_TARGET_DIR="$target_root" \
+RUSTUI_RELEASE_NOTICES_DIR="$notice_source" \
 RUSTUI_PLAYGROUND_REFERENCES_DIR="$references_source" \
     "$repository_root/apps/rustui-playground/package-app.sh" >/dev/null
 
@@ -23,12 +44,19 @@ test -x "$bundle/Contents/MacOS/rustui-playground"
 test -f "$bundle/Contents/Info.plist"
 cmp "$repository_root/vendor/gpui-kit-assets-0.7.3/LICENSE-LUCIDE" \
     "$bundle/Contents/Resources/licenses/icons/LICENSE-LUCIDE"
+cmp "$notice_source/notices/LICENSE" \
+    "$bundle/Contents/Resources/licenses/release/dependency-notices/notices/LICENSE"
+for font_license in FiraMono-LICENSE Inter-LICENSE NotoSans-LICENSE; do
+    cmp "$repository_root/crates/rustui/assets/fonts/$font_license" \
+        "$bundle/Contents/Resources/licenses/release/fonts/$font_license"
+done
 headstart_binary="$target_root/headstart/build/package hash/out/rustui-playground"
 mkdir -p "$(dirname -- "$headstart_binary")"
 printf '%s\n' '#!/bin/sh' '# headstart artifact' 'exit 0' > "$headstart_binary"
 chmod 755 "$headstart_binary"
 CARGO_TARGET_DIR="$target_root" \
 RUSTUI_PLAYGROUND_BINARY="$headstart_binary" \
+RUSTUI_RELEASE_NOTICES_DIR="$notice_source" \
 RUSTUI_PLAYGROUND_REFERENCES_DIR="$references_source" \
     "$repository_root/apps/rustui-playground/package-app.sh" >/dev/null
 cmp "$headstart_binary" "$bundle/Contents/MacOS/rustui-playground"

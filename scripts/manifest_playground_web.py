@@ -20,12 +20,15 @@ SOURCE_INPUTS = (
     "scripts/cargo-headstart",
     "scripts/build-playground-web.sh",
     "scripts/manifest_playground_web.py",
+    "scripts/collect_dependency_notices.py",
+    "scripts/package_release_notices.py",
 )
 SOURCE_ROOTS = (
     "crates", "apps", "themes", "locales",
     "vendor/gpui-pre-0.3.9", "vendor/gpui-base-0.7.3",
     "vendor/gpui-component-0.7.3", "vendor/gpui-pre-web-0.3.9",
     "vendor/gpui-kit-assets-0.7.3",
+    "docs/release/dependency-notices",
 )
 IGNORED_DIRS = {".git", "node_modules", "target", "graft", ".trail", "__pycache__"}
 

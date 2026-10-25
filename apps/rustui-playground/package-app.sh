@@ -11,6 +11,7 @@ resources="$bundle/Contents/Resources"
 references_bundle="$resources/references"
 references_staging=""
 references_previous="$resources/references.previous.$$"
+release_notices_source="${RUSTUI_RELEASE_NOTICES_DIR:-}"
 
 cleanup() {
     status=$?
@@ -44,6 +45,13 @@ mkdir -p "$bundle/Contents/MacOS" "$resources"
 mkdir -p "$resources/licenses/icons"
 cp "$repository_root/vendor/gpui-kit-assets-0.7.3/LICENSE-LUCIDE" \
     "$resources/licenses/icons/LICENSE-LUCIDE"
+if [ -n "$release_notices_source" ]; then
+    python3 "$repository_root/scripts/package_release_notices.py" \
+        --collection "$release_notices_source" \
+        --font-source "$repository_root/crates/rustui/assets/fonts" \
+        --repo-root "$repository_root" \
+        --destination "$resources/licenses/release"
+fi
 references_staging=$(mktemp -d "$resources/.references.next.XXXXXX")
 cp -R "$references_dir/." "$references_staging/"
 if [ -e "$references_bundle" ] || [ -L "$references_bundle" ]; then

@@ -97,20 +97,25 @@ tests and compilation are not substitutes.
 
 ## Distribution checkpoint
 
-Collect dependency notices from successful Cargo build JSON with
-[`collect_dependency_notices.py`](../scripts/collect_dependency_notices.py) and the
-[versioned supplements](release/dependency-notices/README.md). The collector binds
-verbatim files to package identities and hashes and preserves explicit gaps and
-review notes. It includes observed build dependencies; it does not establish an
-exact runtime closure or legal completeness. It writes only a fresh output
-directory. Include reviewed notices and required source material in distribution
-artifacts after the remaining licensing and packaging work is complete.
-
-Complete security and dependency/license review, notices for all distributed
-code/assets, supported macOS/browser versions, native signing/notarization,
-artifact checksums and a rollback plan before requesting publication approval.
-The native bundle and Web directory are local validation outputs, not signed
-release distributions. Retain the previous approved artifact and its manifest
-until replacement acceptance is complete; on failed validation, keep serving
-the previous artifact. External distribution and package publishing remain
-unperformed.
+The macOS and Web/Wasm release checks save locked/offline Cargo metadata and
+successful compiler-artifact JSON, then collect notices into unique directories
+under target/headstart/evidence/. Native collections use the
+native-dependency-notices-checked-* prefix; Web collections use
+web-dependency-notices-checked-*. Both bind verbatim files, package identities,
+hashes, explicit gaps, and review notes. The collector includes observed build
+dependencies; it does not establish exact runtime closure or legal completeness
+and writes only a fresh output directory. Each packaged validation bundle includes
+the verified collection and the verbatim embedded font and icon license files.
+Bundle manifests hash these files. Packaged reports retain input hashes, package
+sources, manifest hashes, review notes, provenance, and unresolved gaps, while
+replacing machine-local paths with stable repository or Cargo-source labels; the
+original report remains in external evidence. Ordinary developer packaging does
+not run the collection step. This records evidence and does not create a release
+approval gate. Complete security dependency/license review, notices for all
+distributed code/assets, supported macOS/browser versions, native
+signing/notarization, artifact checksums, and rollback plan before requesting
+publication approval. Native bundle and Web directory are local validation
+outputs, not signed release distributions. Retain the previous approved artifact
+manifest until replacement acceptance is complete; on failed validation, keep
+serving the previous artifact. External distribution and package publishing
+remain unperformed.

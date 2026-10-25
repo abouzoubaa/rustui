@@ -7,15 +7,24 @@ trap 'rm -rf "$temporary_root"' EXIT HUP INT TERM
 
 fixture="$temporary_root/repo"
 fake_bin="$temporary_root/bin"
+export FIXTURE_ROOT="$fixture"
+export CARGO_HOME="$temporary_root/cargo-home"
 mkdir -p \
     "$fixture/scripts" \
     "$fixture/apps/rustui-playground/web" \
     "$fixture/apps/rustui-playground/references" \
     "$fixture/crates/rustui/assets/fonts" \
     "$fixture/vendor/gpui-kit-assets-0.7.3" \
+    "$fixture/docs/release/dependency-notices" \
+    "$temporary_root/cargo-home/registry/src" \
+    "$temporary_root/cargo-home/git/checkouts" \
     "$fake_bin"
 cp "$repository_root/scripts/build-playground-web.sh" "$fixture/scripts/"
 cp "$repository_root/scripts/manifest_playground_web.py" "$fixture/scripts/"
+cp "$repository_root/scripts/collect_dependency_notices.py" "$fixture/scripts/"
+cp "$repository_root/scripts/package_release_notices.py" "$fixture/scripts/"
+cp -R "$repository_root/docs/release/dependency-notices/." \
+    "$fixture/docs/release/dependency-notices/"
 cp "$repository_root/apps/rustui-playground/web/index.html" \
     "$fixture/apps/rustui-playground/web/"
 cp -R "$repository_root/apps/rustui-playground/references/." \
@@ -24,8 +33,9 @@ cp "$repository_root"/crates/rustui/assets/fonts/*-LICENSE \
     "$fixture/crates/rustui/assets/fonts/"
 cp "$repository_root/vendor/gpui-kit-assets-0.7.3/LICENSE-LUCIDE" \
     "$fixture/vendor/gpui-kit-assets-0.7.3/"
+printf '%s\n' 'fixture workspace license' > "$fixture/LICENSE"
 python3 - "$fixture" <<'PY_INPUTS'
-import runpy, sys
+import json, runpy, sys
 from pathlib import Path
 root = Path(sys.argv[1])
 manifest = runpy.run_path(str(root / "scripts/manifest_playground_web.py"))
@@ -35,14 +45,29 @@ for relative in manifest["SOURCE_INPUTS"]:
     path = root / relative
     path.parent.mkdir(parents=True, exist_ok=True)
     path.touch(exist_ok=True)
+(root / "apps/rustui-playground/Cargo.toml").write_text(
+    '[package]\nname = "rustui-playground"\nversion = "0.1.0"\n', encoding="utf-8")
+package_id = "path+" + (root / "apps/rustui-playground/Cargo.toml").resolve().as_uri() + "#rustui-playground@0.1.0"
+metadata = {"packages": [{"id": package_id, "name": "rustui-playground", "version": "0.1.0",
+                          "source": None, "manifest_path": str(root / "apps/rustui-playground/Cargo.toml")}],
+            "workspace_members": [package_id]}
+(root / "fixture-metadata.json").write_text(json.dumps(metadata), encoding="utf-8")
+build = [{"reason": "compiler-artifact", "package_id": package_id},
+         {"reason": "build-finished", "success": True}]
+(root / "fixture-build.jsonl").write_text("".join(json.dumps(item) + "\n" for item in build), encoding="utf-8")
 PY_INPUTS
 
 cat > "$fixture/scripts/cargo-headstart" <<'EOF'
 #!/bin/sh
 set -eu
+if [ "${1:-}" = metadata ]; then
+    cat "$FIXTURE_ROOT/fixture-metadata.json"
+    exit 0
+fi
 output="$CARGO_TARGET_DIR/wasm32-unknown-unknown/release/rustui-playground.wasm"
 mkdir -p "$(dirname -- "$output")"
 printf 'fixture wasm' > "$output"
+cat "$FIXTURE_ROOT/fixture-build.jsonl"
 EOF
 cat > "$fake_bin/wasm-bindgen" <<'EOF'
 #!/bin/sh
@@ -73,6 +98,8 @@ EOF
 chmod +x "$fixture/scripts/cargo-headstart" "$fake_bin/wasm-bindgen" "$fake_bin/rust-lld"
 
 PATH="$fake_bin:$PATH" \
+CARGO_HOME="$temporary_root/cargo-home" \
+FIXTURE_ROOT="$fixture" \
 CARGO_TARGET_DIR="$temporary_root/cargo-target" \
 RUSTUI_HEADSTART_ROOT="$temporary_root/unused-headstart" \
     "$fixture/scripts/build-playground-web.sh" >/dev/null
@@ -93,6 +120,20 @@ assert len(manifest["source"]["sha256"]) == 64
 files = {item["path"]: item["sha256"] for item in manifest["bundle"]["files"]}
 for name in ("index.html", "rustui_playground.js", "rustui_playground_bg.wasm"):
     assert hashlib.sha256((bundle / name).read_bytes()).hexdigest() == files[name]
+notice_report_path = bundle / "licenses/release/dependency-notices/report.json"
+notice_report = json.loads(notice_report_path.read_text())
+assert hashlib.sha256(notice_report_path.read_bytes()).hexdigest() == files["licenses/release/dependency-notices/report.json"]
+assert notice_report["inputs"]["metadata_sha256"] and notice_report["inputs"]["build_json_sha256"]
+assert notice_report["complete_license_or_compatibility_claim"] is False
+assert all("file://" not in item["package_id"] for item in notice_report["packages"]), "absolute Cargo path ID remains"
+assert "scripts/collect_dependency_notices.py" in {item["path"] for item in manifest["source"]["files"]}, "collector missing from source provenance"
+assert "scripts/package_release_notices.py" in {item["path"] for item in manifest["source"]["files"]}, "packaging helper missing from source provenance"
+assert "docs/release/dependency-notices/manifest.json" in {item["path"] for item in manifest["source"]["files"]}, "supplement manifest missing from source provenance"
+for package in notice_report["packages"]:
+    for notice in package["notices"]:
+        packaged_path = "licenses/release/dependency-notices/" + notice["path"]
+        assert packaged_path in files
+        assert hashlib.sha256((bundle / packaged_path).read_bytes()).hexdigest() == files[packaged_path]
 PY_MANIFEST
 grep -Fq '<body>' "$bundle/index.html"
 grep -Fq 'script nomodule' "$bundle/index.html"

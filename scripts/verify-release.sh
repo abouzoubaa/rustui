@@ -27,8 +27,20 @@ case "${1:-}" in
     ./scripts/cargo-headstart test -p rustui-macros --doc --profile headstart --locked --offline
     evidence="$repository_root/target/headstart/evidence/release-checks"
     mkdir -p "$evidence"
+    ./scripts/cargo-headstart metadata --format-version 1 --locked --offline > "$evidence/native-metadata.json"
     ./scripts/cargo-headstart build -p rustui-playground --release --locked --offline \
       --message-format=json > "$evidence/native-build.jsonl"
+    notices="$repository_root/target/headstart/evidence/native-dependency-notices-checked-$(date -u +%Y%m%dT%H%M%SZ)-$$"
+    cargo_home="${CARGO_HOME:-$HOME/.cargo}"
+    python3 scripts/collect_dependency_notices.py \
+      --metadata "$evidence/native-metadata.json" \
+      --build-json "$evidence/native-build.jsonl" \
+      --repo-root "$repository_root" \
+      --source-root "$cargo_home/registry/src" \
+      --source-root "$cargo_home/git/checkouts" \
+      --supplement-manifest docs/release/dependency-notices/manifest.json \
+      --supplement-root docs/release/dependency-notices \
+      --output "$notices"
     binary="$(python3 - "$evidence/native-build.jsonl" <<'PY'
 import json, sys
 from pathlib import Path
@@ -44,7 +56,9 @@ if len(executables) != 1:
 print(executables.pop())
 PY
 )"
-    RUSTUI_PLAYGROUND_BINARY="$binary" apps/rustui-playground/package-app.sh
+    RUSTUI_PLAYGROUND_BINARY="$binary" \
+    RUSTUI_RELEASE_NOTICES_DIR="$notices" \
+      apps/rustui-playground/package-app.sh
     ;;
   web)
     RUSTUI_HEADSTART_ROOT="${RUSTUI_WASM_HEADSTART_ROOT:-$repository_root/target/headstart/wasm-root}" \

@@ -64,8 +64,30 @@ python3 "$REPO_ROOT/scripts/manifest_playground_web.py" \
   --root "$REPO_ROOT" \
   --output "$SOURCE_SNAPSHOT_FILE"
 
+EVIDENCE_DIR="$REPO_ROOT/target/headstart/evidence/release-checks"
+mkdir -p "$EVIDENCE_DIR"
+"$REPO_ROOT/scripts/cargo-headstart" metadata --format-version 1 --locked --offline \
+  > "$EVIDENCE_DIR/web-metadata.json"
 "$REPO_ROOT/scripts/cargo-headstart" build -p rustui-playground \
-  --target wasm32-unknown-unknown --locked --offline --release
+  --target wasm32-unknown-unknown --locked --offline --release --message-format=json \
+  > "$EVIDENCE_DIR/web-build.jsonl"
+NOTICES_BASE="$REPO_ROOT/target/headstart/evidence/web-dependency-notices-checked-$(date -u +%Y%m%dT%H%M%SZ)-$$"
+NOTICES_DIR="$NOTICES_BASE"
+notices_suffix=0
+while [[ -e "$NOTICES_DIR" || -L "$NOTICES_DIR" ]]; do
+  notices_suffix=$((notices_suffix + 1))
+  NOTICES_DIR="$NOTICES_BASE-$notices_suffix"
+done
+CARGO_HOME_FOR_NOTICES="${CARGO_HOME:-$HOME/.cargo}"
+python3 "$REPO_ROOT/scripts/collect_dependency_notices.py" \
+  --metadata "$EVIDENCE_DIR/web-metadata.json" \
+  --build-json "$EVIDENCE_DIR/web-build.jsonl" \
+  --repo-root "$REPO_ROOT" \
+  --source-root "$CARGO_HOME_FOR_NOTICES/registry/src" \
+  --source-root "$CARGO_HOME_FOR_NOTICES/git/checkouts" \
+  --supplement-manifest "$REPO_ROOT/docs/release/dependency-notices/manifest.json" \
+  --supplement-root "$REPO_ROOT/docs/release/dependency-notices" \
+  --output "$NOTICES_DIR"
 
 mkdir -p "$(dirname -- "$OUT_DIR")"
 STAGING_DIR="$(mktemp -d "$(dirname -- "$OUT_DIR")/.playground-web.XXXXXX")"
@@ -233,6 +255,11 @@ cp "$REPO_ROOT"/crates/rustui/assets/fonts/*-LICENSE "$STAGING_DIR/licenses/font
 mkdir -p "$STAGING_DIR/licenses/icons"
 cp "$REPO_ROOT/vendor/gpui-kit-assets-0.7.3/LICENSE-LUCIDE" \
   "$STAGING_DIR/licenses/icons/LICENSE-LUCIDE"
+python3 "$REPO_ROOT/scripts/package_release_notices.py" \
+  --collection "$NOTICES_DIR" \
+  --font-source "$REPO_ROOT/crates/rustui/assets/fonts" \
+  --repo-root "$REPO_ROOT" \
+  --destination "$STAGING_DIR/licenses/release"
 python3 "$REPO_ROOT/scripts/manifest_playground_web.py" \
   --root "$REPO_ROOT" \
   --bundle-dir "$STAGING_DIR" \
