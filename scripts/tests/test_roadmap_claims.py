@@ -55,6 +55,96 @@ class RoadmapClaimsTests(unittest.TestCase):
             cwd=root, env=env, text=True, capture_output=True,
         )
 
+    def test_reconcile_keeps_idle_claim_locked_and_rejects_worktree_mismatch(self) -> None:
+        claimed = self.run_claim(
+            self.wt1, "thread-reconcile", "src/owned.rs", task="M-reconcile"
+        )
+        self.assertEqual(claimed.returncode, 0, claimed.stderr)
+
+        inventory = {
+            "threads": [
+                {
+                    "id": "thread-reconcile",
+                    "status": "idle",
+                    "cwd": str(self.wt1),
+                    "title": "Stage test owner",
+                }
+            ]
+        }
+        command = [sys.executable, str(SCRIPT), "reconcile", "--inventory", "-"]
+        matched = subprocess.run(
+            command,
+            cwd=self.wt1,
+            env=self.env,
+            input=json.dumps(inventory),
+            text=True,
+            capture_output=True,
+        )
+        self.assertEqual(matched.returncode, 0, matched.stderr)
+        report = json.loads(matched.stdout)
+        self.assertTrue(report["ok"])
+        self.assertEqual(report["claims"][0]["execution_state"], "idle")
+        self.assertEqual(report["claims"][0]["lock_state"], "active")
+        self.assertTrue(report["claims"][0]["worktree_registered"])
+        self.assertTrue(report["claims"][0]["branch_matches_claim"])
+        self.assertIn("continue this same thread", report["claims"][0]["action"])
+
+        inventory["threads"][0]["cwd"] = str(self.wt2)
+        mismatched = subprocess.run(
+            command,
+            cwd=self.wt1,
+            env=self.env,
+            input=json.dumps(inventory),
+            text=True,
+            capture_output=True,
+        )
+        self.assertEqual(mismatched.returncode, 1, mismatched.stderr)
+        report = json.loads(mismatched.stdout)
+        self.assertFalse(report["ok"])
+        self.assertFalse(report["claims"][0]["thread_worktree_matches_claim"])
+
+        self.git(self.wt1, "switch", "-c", "codex/claims-branch-drift")
+        inventory["threads"][0]["cwd"] = str(self.wt1)
+        wrong_branch = subprocess.run(
+            command,
+            cwd=self.wt1,
+            env=self.env,
+            input=json.dumps(inventory),
+            text=True,
+            capture_output=True,
+        )
+        self.assertEqual(wrong_branch.returncode, 1, wrong_branch.stderr)
+        report = json.loads(wrong_branch.stdout)
+        self.assertFalse(report["claims"][0]["branch_matches_claim"])
+
+        database_path = next(self.db.glob("claims-*.sqlite3"))
+        with sqlite3.connect(database_path) as db:
+            db.execute("UPDATE claims SET lease_until=0 WHERE thread=?", ("thread-reconcile",))
+        suspect = subprocess.run(
+            command,
+            cwd=self.wt1,
+            env=self.env,
+            input=json.dumps(inventory),
+            text=True,
+            capture_output=True,
+        )
+        self.assertEqual(suspect.returncode, 1, suspect.stderr)
+        report = json.loads(suspect.stdout)
+        self.assertEqual(report["claims"][0]["lock_state"], "suspect")
+        self.assertIn(
+            "renew this same claim before editing", report["claims"][0]["action"]
+        )
+
+        claims = subprocess.run(
+            [sys.executable, str(SCRIPT), "list"],
+            cwd=self.wt1,
+            env=self.env,
+            text=True,
+            capture_output=True,
+        )
+        self.assertEqual(claims.returncode, 0, claims.stderr)
+        self.assertEqual(json.loads(claims.stdout)[0]["state"], "suspect")
+
     def test_parallel_overlapping_claims_have_one_winner(self) -> None:
         commands = [
             [sys.executable, str(SCRIPT), "claim", "--task", "M1", "--thread", "thread-one",

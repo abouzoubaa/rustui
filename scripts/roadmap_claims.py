@@ -980,6 +980,170 @@ def cmd_list(args: argparse.Namespace, db: sqlite3.Connection) -> None:
     print(json.dumps(list(claims.values()), indent=2))
 
 
+def cmd_reconcile(args: argparse.Namespace, root: Path, db: sqlite3.Connection) -> int:
+    """Join live thread inventory to write claims without changing the ledger."""
+    if args.inventory == "-":
+        inventory = json.load(sys.stdin)
+    else:
+        with Path(args.inventory).open(encoding="utf-8") as stream:
+            inventory = json.load(stream)
+
+    if isinstance(inventory, list):
+        thread_items = inventory
+    elif isinstance(inventory, dict):
+        thread_items = list(inventory.get("pinnedThreads", [])) + list(
+            inventory.get("threads", [])
+        )
+    else:
+        raise ValueError("inventory must be a list or contain thread lists")
+
+    threads: dict[str, dict[str, object]] = {}
+    duplicates: set[str] = set()
+    for item in thread_items:
+        if not isinstance(item, dict) or not isinstance(item.get("id"), str):
+            raise ValueError("each inventory thread must have a string id")
+        thread_id = item["id"]
+        if thread_id in threads:
+            duplicates.add(thread_id)
+        threads[thread_id] = item
+
+    registered_output = subprocess.check_output(
+        ["git", "-C", str(root), "worktree", "list", "--porcelain"], text=True
+    )
+    registered_worktrees = {
+        Path(line.removeprefix("worktree ")).resolve()
+        for line in registered_output.splitlines()
+        if line.startswith("worktree ")
+    }
+
+    now = int(time.time())
+    rows = db.execute(
+        """SELECT c.id,c.task,c.thread,c.worktree,c.branch,c.stage,c.milestone,
+                  c.next_action,c.heartbeat_at,c.lease_until,p.path
+           FROM claims c LEFT JOIN claimed_paths p ON p.claim_id=c.id
+           WHERE c.state='active' ORDER BY c.created_at,c.id"""
+    ).fetchall()
+    claims: dict[str, dict[str, object]] = {}
+    for row in rows:
+        claim = claims.setdefault(
+            row[0],
+            {
+                "claim_id": row[0],
+                "task": row[1],
+                "thread": row[2],
+                "worktree": row[3],
+                "branch": row[4],
+                "stage": row[5],
+                "milestone": row[6],
+                "next_action": row[7],
+                "lock_state": "suspect" if row[9] < now else "active",
+                "heartbeat_at": row[8],
+                "lease_until": row[9],
+                "paths": [],
+            },
+        )
+        if row[10] is not None:
+            claim["paths"].append(row[10])
+
+    identity_conflicts: list[dict[str, object]] = []
+    for field in ("task", "thread", "worktree", "branch"):
+        owners: dict[str, str] = {}
+        for claim in claims.values():
+            key = str(claim[field])
+            if key in owners:
+                identity_conflicts.append(
+                    {"field": field, "value": key, "claims": [owners[key], claim["claim_id"]]}
+                )
+            else:
+                owners[key] = str(claim["claim_id"])
+
+    path_conflicts: list[dict[str, object]] = []
+    claim_list = list(claims.values())
+    for index, left in enumerate(claim_list):
+        for right in claim_list[index + 1 :]:
+            for left_path in left["paths"]:
+                for right_path in right["paths"]:
+                    if overlaps(left_path, right_path):
+                        path_conflicts.append(
+                            {
+                                "claims": [left["claim_id"], right["claim_id"]],
+                                "paths": [left_path, right_path],
+                            }
+                        )
+
+    fatal = bool(duplicates or identity_conflicts or path_conflicts)
+    reports: list[dict[str, object]] = []
+    for claim in claims.values():
+        thread = threads.get(claim["thread"])
+        if thread is None:
+            execution_state = "missing-from-inventory"
+            cwd_matches = False
+            action = "preserve claim; inspect this exact thread ID before handoff"
+            fatal = True
+        else:
+            execution_state = thread.get("status", "unknown")
+            cwd = thread.get("cwd")
+            try:
+                cwd_matches = bool(cwd) and Path(str(cwd)).resolve() == Path(
+                    str(claim["worktree"])
+                ).resolve()
+            except (OSError, RuntimeError):
+                cwd_matches = False
+            worktree_path = Path(str(claim["worktree"])).resolve()
+            worktree_registered = worktree_path in registered_worktrees
+            try:
+                actual_branch = subprocess.check_output(
+                    ["git", "-C", str(worktree_path), "branch", "--show-current"],
+                    text=True,
+                    stderr=subprocess.PIPE,
+                ).strip() if worktree_registered else ""
+            except (OSError, subprocess.CalledProcessError):
+                actual_branch = ""
+            branch_matches = bool(actual_branch) and actual_branch == claim["branch"]
+            if not cwd_matches or not worktree_registered or not branch_matches:
+                action = "stop assignment; resolve the thread, registered worktree, or branch mismatch"
+                fatal = True
+            elif execution_state == "active":
+                action = f"wait for this thread; next: {claim['next_action']}"
+            elif execution_state == "idle":
+                action = f"continue this same thread; next: {claim['next_action']}"
+            elif execution_state == "notLoaded":
+                action = "preserve claim and worktree; notLoaded is not terminal"
+            else:
+                action = "preserve claim; confirm terminal state before release or handoff"
+            if claim["lock_state"] == "suspect":
+                action = f"renew this same claim before editing; then {action}"
+
+        reports.append(
+            {
+                **claim,
+                "execution_state": execution_state,
+                "inventory_title": thread.get("title") if thread else None,
+                "thread_worktree_matches_claim": cwd_matches,
+                "worktree_registered": worktree_registered if thread else False,
+                "actual_branch": actual_branch if thread else None,
+                "branch_matches_claim": branch_matches if thread else False,
+                "action": action,
+            }
+        )
+
+    print(
+        json.dumps(
+            {
+                "ok": not fatal,
+                "inventory_thread_count": len(threads),
+                "duplicate_thread_ids": sorted(duplicates),
+                "identity_conflicts": identity_conflicts,
+                "path_conflicts": path_conflicts,
+                "claims": reports,
+                "rule": "execution state and claim lock are separate; idle, notLoaded, and suspect never release paths",
+            },
+            indent=2,
+        )
+    )
+    return 1 if fatal else 0
+
+
 def main() -> int:
     parser = argparse.ArgumentParser(description=__doc__)
     sub = parser.add_subparsers(dest="command", required=True)
@@ -1071,6 +1235,15 @@ def main() -> int:
     baseline.add_argument("paths", nargs="+", help="currently changed repository paths to preserve")
     listing = sub.add_parser("list", help="list active, suspect, and released claims")
     listing.add_argument("--verbose", action="store_true", help="include every baseline path")
+    reconcile = sub.add_parser(
+        "reconcile",
+        help="join an exported Codex thread inventory to active claims; report-only",
+    )
+    reconcile.add_argument(
+        "--inventory",
+        required=True,
+        help="JSON from list_threads (file path, or - to read stdin)",
+    )
     args = parser.parse_args()
     try:
         if args.command == "baseline" and not args.evidence.strip():
@@ -1136,6 +1309,8 @@ def main() -> int:
             cmd_baseline(args, root, db)
         elif args.command == "audit":
             cmd_audit(args, root, db)
+        elif args.command == "reconcile":
+            return cmd_reconcile(args, root, db)
         else:
             cmd_list(args, db)
         return 0

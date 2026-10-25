@@ -148,6 +148,35 @@ turn sampling continuously. A continuation is required after a turn completes.
 Report lock ownership separately from thread execution state so an `active`
 claim is never presented as proof that its session is working.
 
+Before assigning, continuing, releasing, or handing off roadmap work, export the
+current `list_threads` result to a temporary JSON file outside every checkout
+and reconcile it against the shared claim ledger:
+
+```sh
+python3 /Users/Abium/.codex/worktrees/session-coordination/rustui/scripts/roadmap_claims.py \
+  reconcile --inventory /tmp/rustui-thread-inventory.json
+```
+
+`reconcile` is read-only. Its report joins by literal thread ID and checks that
+the inventory's reported `cwd` matches the claimed worktree, the worktree is
+still registered, the claimed branch is checked out, and active claim paths
+and writer identities remain unique and non-overlapping. It prints the thread
+execution state, claim lock state, exact task/stage/milestone/next action, and
+an action for each owner. A nonzero result means stop new assignments and
+resolve the reported inconsistency first. The report does not release or
+transfer claims. `idle` means continue that same thread; `notLoaded`, missing
+inventory entries, and `suspect` leases keep their paths reserved until
+terminal state is independently confirmed. Reconcile again immediately before
+a release or handoff.
+
+Every assignment message must carry the exact claim ID, thread ID, task, stage,
+milestone, worktree, branch, paths, and next action reported by the ledger.
+Before editing, the recipient confirms those values with `list` from its own
+worktree. If the assignment's task or stage differs from the existing claim,
+the owner first uses `advance` and the coordinator reconciles the updated
+claim; never start a second writer to work around a mismatch. A title or
+summary is descriptive only and cannot override the claim or live thread ID.
+
 ```sh
 python3 /Users/Abium/.codex/worktrees/session-coordination/rustui/scripts/roadmap_claims.py release --claim-id <claim-id> \
   --thread <codex-thread-id> --terminal-state completed --confirmed-terminal \
