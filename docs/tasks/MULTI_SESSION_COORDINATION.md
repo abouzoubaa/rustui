@@ -15,15 +15,18 @@ python3 scripts/roadmap_claims.py claim \
 ```
 
 For an existing session that already has changes, create a unique `codex/`
-branch in its own linked worktree, then adopt all current Git changes before
-continuing. Adoption records every modified, staged, deleted, renamed, and
-untracked path, so it can surface pre-existing overlap immediately:
+branch in its own linked worktree, then adopt its exact assigned paths before
+continuing. Adoption records those paths as the session's write scope and
+fingerprints unrelated pre-existing dirty paths as a baseline. `audit` allows
+those paths only while their content stays unchanged; a later edit or commit
+outside the claim fails the audit:
 
 ```sh
 python3 scripts/roadmap_claims.py adopt \
   --task M1234 --thread <codex-thread-id> \
   --stage "Stage 5" --milestone M1234 --next-action "finish resolver" \
-  --worktree "$(git rev-parse --show-toplevel)"
+  --worktree "$(git rev-parse --show-toplevel)" \
+  crates/rustui/src/theme/resolver.rs
 ```
 
 Continue tracking after claim or adoption:

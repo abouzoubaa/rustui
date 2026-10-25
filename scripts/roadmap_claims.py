@@ -8,6 +8,7 @@ import hashlib
 import json
 import os
 import sqlite3
+import stat
 import subprocess
 import sys
 import time
@@ -48,6 +49,7 @@ def connect(db_path: Path) -> sqlite3.Connection:
             thread TEXT NOT NULL,
             worktree TEXT NOT NULL,
             branch TEXT NOT NULL DEFAULT '',
+            base_head TEXT NOT NULL DEFAULT '',
             stage TEXT NOT NULL DEFAULT '',
             milestone TEXT NOT NULL DEFAULT '',
             next_action TEXT NOT NULL DEFAULT '',
@@ -64,6 +66,12 @@ def connect(db_path: Path) -> sqlite3.Connection:
             path TEXT NOT NULL,
             PRIMARY KEY (claim_id, path)
         );
+        CREATE TABLE IF NOT EXISTS claim_baselines (
+            claim_id TEXT NOT NULL REFERENCES claims(id),
+            path TEXT NOT NULL,
+            fingerprint TEXT NOT NULL,
+            PRIMARY KEY (claim_id, path)
+        );
         CREATE INDEX IF NOT EXISTS claims_state_idx ON claims(state);
         CREATE INDEX IF NOT EXISTS claimed_paths_path_idx ON claimed_paths(path);
         COMMIT;
@@ -74,6 +82,7 @@ def connect(db_path: Path) -> sqlite3.Connection:
         columns = {row[1] for row in db.execute("PRAGMA table_info(claims)")}
         for name, definition in (
             ("branch", "TEXT NOT NULL DEFAULT ''"),
+            ("base_head", "TEXT NOT NULL DEFAULT ''"),
             ("stage", "TEXT NOT NULL DEFAULT ''"),
             ("milestone", "TEXT NOT NULL DEFAULT ''"),
             ("next_action", "TEXT NOT NULL DEFAULT ''"),
@@ -172,6 +181,35 @@ def changed_paths(root: Path) -> list[str]:
     return sorted(set(changed))
 
 
+def covered(path: str, claimed: list[str]) -> bool:
+    return any(path == scope or path.startswith(scope.rstrip("/") + "/")
+               for scope in claimed if not scope.startswith("@shared/"))
+
+
+def path_fingerprint(root: Path, raw: str) -> str:
+    path = root / raw
+    try:
+        info = path.lstat()
+    except FileNotFoundError:
+        return "missing"
+    mode = stat.S_IMODE(info.st_mode)
+    if stat.S_ISLNK(info.st_mode):
+        payload = b"symlink\0" + os.fsencode(os.readlink(path))
+    elif stat.S_ISREG(info.st_mode):
+        payload = b"file\0" + path.read_bytes()
+    elif stat.S_ISDIR(info.st_mode):
+        entries = []
+        for child in sorted(path.rglob("*")):
+            relative = child.relative_to(root).as_posix()
+            if ".git" in Path(relative).parts:
+                continue
+            entries.append((relative, path_fingerprint(root, relative)))
+        payload = json.dumps(entries, ensure_ascii=True, separators=(",", ":")).encode()
+    else:
+        payload = f"special\0{info.st_mode}\0{info.st_size}".encode()
+    return hashlib.sha256(f"{mode}\0".encode() + payload).hexdigest()
+
+
 def cmd_claim(args: argparse.Namespace, root: Path, db: sqlite3.Connection) -> None:
     worktree = Path(args.worktree).expanduser().resolve()
     if worktree != root:
@@ -183,6 +221,7 @@ def cmd_claim(args: argparse.Namespace, root: Path, db: sqlite3.Connection) -> N
         raise ValueError("at least one file, directory, or @shared resource must be claimed")
     now = int(time.time())
     claim_id = hashlib.sha256(f"{args.thread}\0{args.task}\0{now}\0{os.urandom(16).hex()}".encode()).hexdigest()[:20]
+    base_head = git(root, "rev-parse", "HEAD")
     db.execute("BEGIN IMMEDIATE")
     try:
         rows = db.execute("""
@@ -204,10 +243,10 @@ def cmd_claim(args: argparse.Namespace, root: Path, db: sqlite3.Connection) -> N
             ]
             raise ValueError("claim conflicts; resolve the existing owner first: " + json.dumps(details))
         db.execute("""
-            INSERT INTO claims(id,task,thread,worktree,branch,stage,milestone,next_action,
+            INSERT INTO claims(id,task,thread,worktree,branch,base_head,stage,milestone,next_action,
                                state,created_at,heartbeat_at,lease_until)
-            VALUES(?,?,?,?,?,?,?,?,'active',?,?,?)
-        """, (claim_id, args.task, args.thread, str(worktree), branch, args.stage,
+            VALUES(?,?,?,?,?,?,?,?,?,'active',?,?,?)
+        """, (claim_id, args.task, args.thread, str(worktree), branch, base_head, args.stage,
               args.milestone, args.next_action, now, now, now + args.lease_seconds))
         db.executemany("INSERT INTO claimed_paths(claim_id,path) VALUES(?,?)",
                        [(claim_id, path) for path in paths])
@@ -222,13 +261,16 @@ def cmd_claim(args: argparse.Namespace, root: Path, db: sqlite3.Connection) -> N
 
 
 def cmd_adopt(args: argparse.Namespace, root: Path, common: Path, db: sqlite3.Connection) -> None:
-    """Atomically register all existing edits when migrating a live session."""
+    """Claim exact task paths while fingerprinting unrelated pre-existing dirt."""
     worktree = Path(args.worktree).expanduser().resolve()
     if worktree != root:
         raise ValueError(f"--worktree must be the current Git worktree root ({root})")
     branch = validate_writer_worktree(root, common, require_clean=False)
-    paths = sorted({normalized_path(root, raw) for raw in changed_paths(root)})
-    if not paths:
+    paths = sorted({normalized_path(root, raw) for raw in args.paths})
+    if not paths or any(path.startswith("@shared/") for path in paths):
+        raise ValueError("adoption requires exact repository-relative file or directory paths")
+    existing_changes = changed_paths(root)
+    if not existing_changes:
         raise ValueError("worktree has no changes to adopt; use claim before starting edits")
     now = int(time.time())
     claim_id = hashlib.sha256(
@@ -249,14 +291,20 @@ def cmd_adopt(args: argparse.Namespace, root: Path, common: Path, db: sqlite3.Co
                         "worktree": row[3], "path": row[4]} for row in conflicts]
             raise ValueError("adoption conflicts; resolve the existing owner first: "
                              + json.dumps(details))
+        baseline = sorted({normalized_path(root, raw) for raw in existing_changes
+                           if not covered(normalized_path(root, raw), paths)})
+        fingerprints = [(claim_id, path, path_fingerprint(root, path)) for path in baseline]
+        base_head = git(root, "rev-parse", "HEAD")
         db.execute("""
-            INSERT INTO claims(id,task,thread,worktree,branch,stage,milestone,next_action,
+            INSERT INTO claims(id,task,thread,worktree,branch,base_head,stage,milestone,next_action,
                                state,created_at,heartbeat_at,lease_until)
-            VALUES(?,?,?,?,?,?,?,?,'active',?,?,?)
-        """, (claim_id,args.task,args.thread,str(root),branch,args.stage,args.milestone,
+            VALUES(?,?,?,?,?,?,?,?,?,'active',?,?,?)
+        """, (claim_id,args.task,args.thread,str(root),branch,base_head,args.stage,args.milestone,
               args.next_action,now,now,now + args.lease_seconds))
         db.executemany("INSERT INTO claimed_paths(claim_id,path) VALUES(?,?)",
                        [(claim_id,path) for path in paths])
+        db.executemany("INSERT INTO claim_baselines(claim_id,path,fingerprint) VALUES(?,?,?)",
+                       fingerprints)
         db.execute("COMMIT")
     except BaseException:
         db.execute("ROLLBACK")
@@ -264,7 +312,8 @@ def cmd_adopt(args: argparse.Namespace, root: Path, common: Path, db: sqlite3.Co
     print(json.dumps({"claim_id": claim_id,"task": args.task,"thread": args.thread,
                       "worktree": str(root),"branch": branch,"stage": args.stage,
                       "milestone": args.milestone,"next_action": args.next_action,
-                      "adopted_paths": paths,"lease_until": now + args.lease_seconds}))
+                      "adopted_paths": paths,"baseline_paths": baseline,
+                      "lease_until": now + args.lease_seconds}))
 
 
 def cmd_heartbeat(args: argparse.Namespace, db: sqlite3.Connection) -> None:
@@ -368,7 +417,7 @@ def cmd_handoff(args: argparse.Namespace, common_git_dir: Path, db: sqlite3.Conn
 
 def cmd_audit(args: argparse.Namespace, root: Path, db: sqlite3.Connection) -> None:
     row = db.execute("""
-        SELECT worktree,thread,branch,stage,milestone,next_action
+        SELECT worktree,thread,branch,base_head,stage,milestone,next_action
         FROM claims WHERE id=? AND state='active'
     """, (args.claim_id,)).fetchone()
     if row is None or row[1] != args.thread:
@@ -380,20 +429,30 @@ def cmd_audit(args: argparse.Namespace, root: Path, db: sqlite3.Connection) -> N
     paths = [item[0] for item in db.execute(
         "SELECT path FROM claimed_paths WHERE claim_id=?", (args.claim_id,)
     )]
+    baseline = dict(db.execute(
+        "SELECT path,fingerprint FROM claim_baselines WHERE claim_id=?", (args.claim_id,)
+    ))
     changed = changed_paths(root)
+    base_head = row[3] or git(root, "rev-parse", "HEAD")
+    committed = subprocess.check_output(
+        ["git", "-C", str(root), "diff", "--name-only", "-z", base_head, "HEAD"],
+        stderr=subprocess.PIPE,
+    ).split(b"\0")
+    changed = sorted(set(changed + [path.decode("utf-8", errors="surrogateescape")
+                                    for path in committed if path]))
     outside = []
     for path in changed:
         normalized = normalized_path(root, path)
-        if normalized.startswith("@shared/") or not any(
-            normalized == claim or normalized.startswith(claim.rstrip("/") + "/")
-            for claim in paths if not claim.startswith("@shared/")
-        ):
-            outside.append(path)
+        if normalized.startswith("@shared/") or covered(normalized, paths):
+            continue
+        if normalized in baseline and path_fingerprint(root, normalized) == baseline[normalized]:
+            continue
+        outside.append(path)
     if outside:
         raise ValueError("changed files outside this claim: " + json.dumps(outside))
     print(json.dumps({"claim_id": args.claim_id, "state": "within-claim",
-                      "changed_paths": changed, "stage": row[3],
-                      "milestone": row[4], "next_action": row[5]}))
+                      "changed_paths": changed, "stage": row[4],
+                      "milestone": row[5], "next_action": row[6]}))
 
 
 def cmd_list(args: argparse.Namespace, db: sqlite3.Connection) -> None:
@@ -416,6 +475,11 @@ def cmd_list(args: argparse.Namespace, db: sqlite3.Connection) -> None:
         })
         if row[14] is not None:
             item["paths"].append(row[14])
+    for claim_id, path in db.execute(
+        "SELECT claim_id,path FROM claim_baselines ORDER BY claim_id,path"
+    ):
+        if claim_id in claims:
+            claims[claim_id].setdefault("baseline_paths", []).append(path)
     print(json.dumps(list(claims.values()), indent=2))
 
 
@@ -431,7 +495,7 @@ def main() -> int:
     claim.add_argument("--next-action", required=True)
     claim.add_argument("--lease-seconds", type=int, default=900)
     claim.add_argument("paths", nargs="+")
-    adopt = sub.add_parser("adopt", help="claim all existing changes in a live isolated worktree")
+    adopt = sub.add_parser("adopt", help="claim assigned paths and baseline existing unrelated dirt")
     adopt.add_argument("--task", required=True)
     adopt.add_argument("--thread", required=True)
     adopt.add_argument("--worktree", required=True)
@@ -439,6 +503,7 @@ def main() -> int:
     adopt.add_argument("--milestone", required=True)
     adopt.add_argument("--next-action", required=True)
     adopt.add_argument("--lease-seconds", type=int, default=900)
+    adopt.add_argument("paths", nargs="+")
     heartbeat = sub.add_parser("heartbeat", help="renew an owner-held claim; expiry never releases it")
     heartbeat.add_argument("--claim-id", required=True)
     heartbeat.add_argument("--thread", required=True)

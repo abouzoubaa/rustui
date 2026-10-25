@@ -86,8 +86,13 @@ class RoadmapClaimsTests(unittest.TestCase):
         rejected = subprocess.run(command, cwd=self.wt1, env=self.env, text=True, capture_output=True)
         self.assertNotEqual(rejected.returncode, 0)
         self.assertIn("outside this claim", rejected.stderr)
+        self.git(self.wt1, "add", "README.md")
+        self.git(self.wt1, "commit", "-qm", "out-of-scope change")
+        committed = subprocess.run(command, cwd=self.wt1, env=self.env, text=True, capture_output=True)
+        self.assertNotEqual(committed.returncode, 0)
+        self.assertIn("outside this claim", committed.stderr)
 
-    def test_adopt_registers_all_preexisting_changes(self) -> None:
+    def test_adopt_claims_assigned_paths_and_fingerprints_other_dirt(self) -> None:
         (self.wt1 / "src").mkdir()
         (self.wt1 / "src" / "existing.rs").write_text("// existing\n", encoding="utf-8")
         (self.wt1 / "README.md").write_text("modified\n", encoding="utf-8")
@@ -95,12 +100,30 @@ class RoadmapClaimsTests(unittest.TestCase):
             [sys.executable, str(SCRIPT), "adopt", "--task", "M-adopt",
              "--thread", "thread-adopt", "--worktree", str(self.wt1),
              "--stage", "Stage 3", "--milestone", "M-adopt",
-             "--next-action", "continue existing work"],
+             "--next-action", "continue existing work", "src"],
             cwd=self.wt1, env=self.env, text=True, capture_output=True,
         )
         self.assertEqual(adopted.returncode, 0, adopted.stderr)
         result = json.loads(adopted.stdout)
-        self.assertEqual(result["adopted_paths"], ["readme.md", "src/existing.rs"])
+        self.assertEqual(result["adopted_paths"], ["src"])
+        self.assertEqual(result["baseline_paths"], ["readme.md"])
+        listing = subprocess.run([sys.executable, str(SCRIPT), "list"], cwd=self.wt1,
+                                 env=self.env, text=True, capture_output=True, check=True)
+        listed = next(item for item in json.loads(listing.stdout)
+                      if item["claim_id"] == result["claim_id"])
+        self.assertEqual(listed["baseline_paths"], ["readme.md"])
+        audit = [sys.executable, str(SCRIPT), "audit", "--claim-id", result["claim_id"],
+                 "--thread", "thread-adopt"]
+        unchanged = subprocess.run(audit, cwd=self.wt1, env=self.env, text=True,
+                                   capture_output=True)
+        self.assertEqual(unchanged.returncode, 0, unchanged.stderr)
+        (self.wt1 / "README.md").write_text("changed after adoption\n", encoding="utf-8")
+        self.git(self.wt1, "add", "README.md")
+        self.git(self.wt1, "commit", "-qm", "change baseline after adoption")
+        changed = subprocess.run(audit, cwd=self.wt1, env=self.env, text=True,
+                                 capture_output=True)
+        self.assertNotEqual(changed.returncode, 0)
+        self.assertIn("outside this claim", changed.stderr)
 
     def test_expired_claim_stays_locked_until_explicit_release(self) -> None:
         claim = self.run_claim(self.wt1, "thread-expiring", "src", lease=60)
