@@ -1,7 +1,10 @@
 # Stage 1 lifecycle API proposal
 
-**Status:** Proposal only. No lifecycle implementation or public API change is
-authorized by this document.
+**Status (2026-10-25):** The no-new-runtime recommendation is retained under the
+human's sole-session roadmap objective. The existing View/ComponentHost API is
+unchanged; lifecycle module/registry wording now describes the implemented GPUI
+entity boundary. No independent lifecycle type was added. Native F1E/M16
+acceptance and full lifecycle event-path tests remain open.
 
 ## Existing boundary
 

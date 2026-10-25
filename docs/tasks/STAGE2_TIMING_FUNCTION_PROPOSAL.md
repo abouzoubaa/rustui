@@ -1,6 +1,12 @@
 # Stage 2 timing function API proposal
 
-**Status:** Proposal only. Implementation remains gated on explicit approval.
+**Status (2026-10-25):** The bounded API below is implemented under the human's
+sole-session roadmap-completion authorization. Original authority review found
+only scaffold/proposal wording for its file/API gate. This implementation uses
+the existing GPUI easing hook, adds no dependency or scheduler, and does not
+change the runtime strategy. Curves, linear default, retained mount-time curve,
+and duration/frame-limit forwarding have focused source tests; native motion
+and reduced-motion acceptance remain open.
 
 ## Existing gate and boundary
 
@@ -89,7 +95,7 @@ No manifest, vendor, runtime, or shared roadmap/ledger change is proposed.
   duration and restart semantics. Any native motion/reduced-motion observation
   is recorded separately from source-level acceptance.
 
-## Decisions requested before implementation
+## Original proposal decisions (historical)
 
 Please approve or revise:
 

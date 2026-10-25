@@ -2,6 +2,7 @@
 
 use std::time::Duration;
 
+use rustui::animation::timing::TimingFunction;
 use rustui::prelude::*;
 
 pub fn demo() -> impl View {
@@ -92,5 +93,20 @@ impl View for AnimationGallery {
                 .expect("fixed demo animation parameters are valid"),
             ))
             .child(Text("One-shot mount animation; changing a target on the same identity does not restart it. Reduced motion uses the endpoint immediately."))
+            .child(Keyed(
+                format!("curve-generation-{}", self.generation()),
+                HStack::new().spacing(8.0).children(
+                    [TimingFunction::Linear, TimingFunction::EaseIn,
+                     TimingFunction::EaseOut, TimingFunction::EaseInOut]
+                        .into_iter().map(|curve| {
+                            AnimatedOpacity::new(
+                                format!("curve-{curve:?}"),
+                                Text(format!("{curve:?}")),
+                                0.0, 1.0, Duration::from_secs(3),
+                            ).expect("fixed demo animation parameters are valid")
+                                .timing_function(curve)
+                        }),
+                ),
+            ))
     }
 }

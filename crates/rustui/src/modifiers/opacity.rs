@@ -4,11 +4,15 @@ use std::{error::Error, fmt, num::NonZeroU16, time::Duration};
 
 use gpui::{
     Animation, AnimationExt, AnyElement, App, Bounds, Element, ElementId, GlobalElementId,
-    InspectorElementId, IntoElement, LayoutId, ParentElement as _, Pixels, Styled as _, Window, div,
+    InspectorElementId, IntoElement, LayoutId, ParentElement as _, Pixels, Styled as _, Window,
+    div,
 };
 use rustui_core::Identity;
 
-use crate::view::{EmptyView, RenderContext, RetentionScope, View};
+use crate::{
+    animation::timing::TimingFunction,
+    view::{EmptyView, RenderContext, RetentionScope, View},
+};
 
 /// A child view that fades between two opacity values when it is mounted.
 ///
@@ -22,6 +26,7 @@ pub struct AnimatedOpacity<V: View> {
     to: f32,
     duration: Duration,
     max_fps: Option<NonZeroU16>,
+    timing_function: TimingFunction,
 }
 
 #[derive(Clone, Copy, Debug, PartialEq)]
@@ -30,11 +35,13 @@ struct AnimationConfiguration {
     to: f32,
     duration: Duration,
     max_fps: Option<NonZeroU16>,
+    timing_function: TimingFunction,
 }
 
 impl AnimationConfiguration {
     fn native_animation(self) -> Animation {
-        let animation = Animation::new(self.duration);
+        let animation = Animation::new(self.duration)
+            .with_easing(move |progress| self.timing_function.sample(progress));
         match self.max_fps {
             Some(max_fps) => animation.with_max_fps(f32::from(max_fps.get())),
             None => animation,
@@ -76,6 +83,7 @@ impl<V: View> AnimatedOpacity<V> {
             to,
             duration,
             max_fps: None,
+            timing_function: TimingFunction::Linear,
         })
     }
 
@@ -90,12 +98,19 @@ impl<V: View> AnimatedOpacity<V> {
         self
     }
 
+    /// Selects the mount-time curve. A stable identity keeps its first curve.
+    pub fn timing_function(mut self, timing_function: TimingFunction) -> Self {
+        self.timing_function = timing_function;
+        self
+    }
+
     fn configuration(&self) -> AnimationConfiguration {
         AnimationConfiguration {
             from: self.from,
             to: self.to,
             duration: self.duration,
             max_fps: self.max_fps,
+            timing_function: self.timing_function,
         }
     }
 }
@@ -223,7 +238,9 @@ pub enum OpacityAnimationError {
 impl fmt::Display for OpacityAnimationError {
     fn fmt(&self, formatter: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
-            Self::EmptyIdentity => formatter.write_str("opacity animation identity must be nonempty"),
+            Self::EmptyIdentity => {
+                formatter.write_str("opacity animation identity must be nonempty")
+            }
             Self::InvalidOpacity { endpoint } => {
                 write!(
                     formatter,
@@ -264,7 +281,7 @@ mod tests {
         AnimatedOpacity, AnimationConfiguration, OpacityAnimationError, interpolate_opacity,
         retain_initial_configuration, validate_duration, validate_opacity,
     };
-    use crate::view::EmptyView;
+    use crate::{animation::timing::TimingFunction, view::EmptyView};
 
     #[test]
     fn defaults_to_native_unthrottled_one_shot() {
@@ -273,6 +290,21 @@ mod tests {
         let animation = fade.configuration().native_animation();
         assert_eq!(animation.max_fps, None);
         assert_eq!(animation.duration, Duration::from_secs(1));
+        assert!(animation.oneshot);
+        assert_eq!((animation.easing)(0.25), 0.25);
+    }
+
+    #[test]
+    fn forwards_curve_with_duration_and_frame_limit_to_gpui() {
+        let animation = AnimatedOpacity::new("ease", EmptyView, 0.0, 1.0, Duration::from_secs(2))
+            .unwrap()
+            .max_fps(NonZeroU16::new(30).unwrap())
+            .timing_function(TimingFunction::EaseIn)
+            .configuration()
+            .native_animation();
+        assert_eq!((animation.easing)(0.5), 0.125);
+        assert_eq!(animation.duration, Duration::from_secs(2));
+        assert_eq!(animation.max_fps, Some(30.0));
         assert!(animation.oneshot);
     }
 
@@ -312,14 +344,8 @@ mod tests {
             );
         }
 
-        let fade = AnimatedOpacity::new(
-            " fade ",
-            EmptyView,
-            0.0,
-            1.0,
-            Duration::from_secs(1),
-        )
-        .unwrap();
+        let fade =
+            AnimatedOpacity::new(" fade ", EmptyView, 0.0, 1.0, Duration::from_secs(1)).unwrap();
         assert_eq!(fade.id.as_str(), " fade ");
     }
 
@@ -338,12 +364,14 @@ mod tests {
             to: 0.8,
             duration: Duration::from_secs(2),
             max_fps: NonZeroU16::new(30),
+            timing_function: TimingFunction::EaseIn,
         };
         let updated = AnimationConfiguration {
             from: 0.0,
             to: 1.0,
             duration: Duration::from_secs(5),
             max_fps: None,
+            timing_function: TimingFunction::EaseOut,
         };
 
         assert_eq!(retain_initial_configuration(None, initial), initial);
