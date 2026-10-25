@@ -1,0 +1,39 @@
+name: RustUI checks
+
+on:
+  push:
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: rustui-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  source:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
+        with:
+          persist-credentials: false
+      - run: ./scripts/verify-release.sh source
+
+  # Run only after a maintainer selects a trusted revision. Never execute PR
+  # code automatically on the persistent runner/toolchain cache.
+  macos-and-web-builds:
+    if: github.event_name == 'workflow_dispatch'
+    runs-on: [self-hosted, macOS, ARM64, rustui-headstart]
+    timeout-minutes: 120
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
+        with:
+          persist-credentials: false
+          clean: false
+      - name: macOS checks and optimized package
+        run: ./scripts/verify-release.sh macos
+      - name: Web optimized bundle
+        run: ./scripts/verify-release.sh web

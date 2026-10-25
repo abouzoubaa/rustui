@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+from contextlib import closing
 import os
 import json
 from pathlib import Path
@@ -184,7 +185,7 @@ class RoadmapClaimsTests(unittest.TestCase):
         self.assertFalse(report["claims"][0]["branch_matches_claim"])
 
         database_path = next(self.db.glob("claims-*.sqlite3"))
-        with sqlite3.connect(database_path) as db:
+        with closing(sqlite3.connect(database_path)) as db, db:
             db.execute("UPDATE claims SET lease_until=0 WHERE thread=?", ("thread-reconcile",))
         suspect = subprocess.run(
             command,
@@ -287,7 +288,7 @@ class RoadmapClaimsTests(unittest.TestCase):
         self.assertEqual(claim.returncode, 0, claim.stderr)
         claim_id = json.loads(claim.stdout)["claim_id"]
         database_path = next(self.db.glob("claims-*.sqlite3"))
-        with sqlite3.connect(database_path) as database:
+        with closing(sqlite3.connect(database_path)) as database, database:
             database.execute("UPDATE claims SET lease_until=? WHERE id=?",
                              (int(time.time()) - 1, claim_id))
         progress = subprocess.run(
@@ -541,7 +542,7 @@ class RoadmapClaimsTests(unittest.TestCase):
         claim = self.run_claim(self.wt1, "thread-expiring", "src", lease=60)
         self.assertEqual(claim.returncode, 0, claim.stderr)
         database_path = next(self.db.glob("claims-*.sqlite3"))
-        with sqlite3.connect(database_path) as database:
+        with closing(sqlite3.connect(database_path)) as database, database:
             database.execute("UPDATE claims SET lease_until=?", (int(time.time()) - 1,))
         contender = self.run_claim(self.wt2, "thread-contender", "src/file.rs")
         self.assertNotEqual(contender.returncode, 0)
@@ -605,7 +606,7 @@ class RoadmapClaimsTests(unittest.TestCase):
         self.assertEqual(claim.returncode, 0, claim.stderr)
         claim_id = json.loads(claim.stdout)["claim_id"]
         database_path = next(self.db.glob("claims-*.sqlite3"))
-        with sqlite3.connect(database_path) as database:
+        with closing(sqlite3.connect(database_path)) as database, database:
             database.execute("UPDATE claims SET branch='' WHERE id=?", (claim_id,))
         listing = subprocess.run([sys.executable, str(SCRIPT), "list"], cwd=self.wt1,
                                  env=self.env, text=True, capture_output=True, check=True)
