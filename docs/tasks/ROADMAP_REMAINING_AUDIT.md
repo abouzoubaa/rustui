@@ -233,6 +233,23 @@ packages are in the normal graph. Exact per-package flags, Cargo tree outputs an
 hashes are retained in `/tmp/rustui-notice-audit-20261025/recovery/`; this classifies
 graph membership and does not prove linked/distributed closure or legal clearance.
 
+## Current integration checkpoint — 2026-10-25
+
+- Drawer source is integrated; seven focused real-Root/validation tests pass.
+  Playground library tests and all-target checking pass. Independent modal
+  text-selection isolation and native/browser/AX/VoiceOver acceptance remain open.
+- Preview captions and locale controls now remain in a vertical shell; oversized
+  specimens use a separate bounded two-axis canvas. The earlier RTL rendered
+  layout regression and 189-test pre-Drawer Playground checkpoint passed.
+  Current-source browser verification of this shell is still pending.
+- Native and Web release packaging now collect observed dependency notices from
+  locked/offline metadata and successful Cargo JSON, verify copied hashes, include
+  embedded font licenses, and hash the packaged files in bundle manifests.
+  Four notice-packager tests and both packaging shell fixtures passed. Five
+  captured-notice gaps and broader license/distribution review remain unresolved.
+- GraphView/NodeEditor and animation repairs are being prepared as patches outside
+  the writing checkout. They are not integrated or counted as complete.
+
 ## Initial requirement inventory (provisional)
 
 The current inventory has **37 provisional audit requirements**. Four source
@@ -286,7 +303,7 @@ recovery leads, not permission to rebuild existing work.
 | R30 | Release: CI and reproducible release builds | No GitHub workflow found in recovered checkout. Establish runnable compiler/sysroot/bootstrap policy and required macOS/Web checks. |
 | R31 | Release: security, licensing, performance budgets, packaging/instructions | Complete threat/error audit, dependency/license and font notices, supported-version matrix, reproducibility, package signing/distribution plan and release instructions. Publication requires approval. |
 | R32 | 8: Outline | Source implemented: controlled single-column hierarchy over the existing Tree engine, explicit identity and group name, selected/expanded bindings, public-API Playground story and compiled-preview descriptor. Focused Tree/Outline 25/25 and Playground 189/189 tests passed, with all-target checking. Native/browser, AX/VoiceOver, visual/locale/RTL acceptance and upstream Tree naming/hierarchy-level limitations remain open. See `docs/tasks/OUTLINE_IMPLEMENTATION.md`. |
-| R33 | 8: Drawer | Scaffold only. Sheet is a trigger-opened wrapper and explicitly does not establish Drawer support; complete controlled visibility, placement, focus, dismissal and accessibility contracts. |
+| R33 | 8: Drawer | Source implemented: controlled visibility, four physical edges, window-owned hosting, current-owner content/bindings, guarded dismissal/unmount, restored focus, named Close, public Playground story and compiled-preview factory. Seven real-Root/validation tests passed; Playground library tests and all-target check passed. Native/browser/AX/VoiceOver, popup stacking and independent modal text-selection isolation remain open. See `docs/tasks/DRAWER_IMPLEMENTATION.md`. |
 | R34 | 9: ResizablePanel | Coding closed for the host-owned panel adapter: public ResizablePanel reuses SplitPanel directly, with the same size/identity/lifecycle contract and no second resize runtime. Canonical SplitView story uses the public name; rendered focus/key/clamp/RTL event test and Playground check pass. Native/browser visual, AX and screen-reader acceptance remain open. |
 | R35 | 9: GraphView | Scaffold only. Required data/identity, viewport, selection, keyboard and accessibility contracts and implementation are absent. |
 | R36 | 9: NodeEditor | Scaffold only. Required node/edge model, editing/action/validation, ownership and accessible keyboard interaction contracts and implementation are absent. |

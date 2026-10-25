@@ -409,6 +409,7 @@ impl View for StoryCanvas {
                 .spacing(8.0)
                 .alignment(rustui::prelude::HorizontalAlignment::Start),
             StoryId::Outline => VStack::new().child(super::outline_gallery::demo()),
+            StoryId::Drawer => VStack::new().child(super::drawer_gallery::demo()),
             StoryId::Tree => VStack::new()
                 .child(Text(format!(
                     "Selected node: {:?}",

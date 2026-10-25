@@ -273,6 +273,20 @@ pub(crate) struct RenderSeed {
 }
 
 impl RenderSeed {
+    /// Lowers window-hosted overlay content with its original RustUI owner.
+    pub(crate) fn overlay_context<'a>(
+        &'a self,
+        overlay_instance: EntityId,
+        window: &'a mut Window,
+        app: &'a mut App,
+        retained: &'a mut RetainedEntities,
+    ) -> RenderContext<'a> {
+        let mut context = self.geometry_context(overlay_instance, window, app, retained);
+        context.text_element_id_prefix =
+            format!("{:?}:overlay:{:?}", self.owner_id, overlay_instance).into();
+        context
+    }
+
     /// Builds deferred geometry content while preserving its actual component owner.
     pub(crate) fn geometry_context<'a>(
         &'a self,

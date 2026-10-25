@@ -209,7 +209,8 @@ impl Playground {
             .item()
             .filter(|_| self.story_selection.is_none())
             .and_then(|item| stories::catalog_demo(item.key));
-        let content = match (catalog_demo, self.active_story()) {
+        let active_story = self.active_story();
+        let content = match (catalog_demo, active_story) {
             (Some(demo), _) => demo,
             (None, Some(story)) => AnyView::new(
                 Component("playground-story-host", move || StoryHost::new(story))
@@ -225,12 +226,24 @@ impl Playground {
                     .child(Text(title).font_size(20.0).font_weight(TextWeight::Bold))
                     .child(coverage.font_size(12.0))
                     .child(note.font_size(13.0))
-                    .child(Container(content).padding(12.0).radius(10.0).border())
+                    .child(active_story.map(|_| {
+                        VStack! {
+                            LocalizedText("lab-navigation-locales")
+                            stories::LocaleSelector::new()
+                        }
+                        .spacing(8.0)
+                    }))
+                    .child(
+                        ScrollView(Container(content).padding(12.0).radius(10.0).border())
+                            .axis(ScrollAxis::Both)
+                            .scrollbars(true)
+                            .height(360.0)
+                            .id("playground-component-canvas"),
+                    )
                     .spacing(12.0),
             )
-            // Preserve declared component widths without clipping RTL content
-            // outside a vertical-only viewport.
-            .axis(ScrollAxis::Both)
+            .axis(ScrollAxis::Vertical)
+            .scrollbars(true)
             .id("playground-preview-scroll"),
         )
         .fill()
@@ -410,6 +423,7 @@ fn story_for(key: &str) -> Option<StoryId> {
         | "form_accessories" => Some(StoryId::Input),
         "list" => Some(StoryId::List),
         "table" => Some(StoryId::Table),
+        "drawer" => Some(StoryId::Drawer),
         "outline_view" => Some(StoryId::Outline),
         "tab_bar" | "segmented_control" => Some(StoryId::Tabs),
         _ => None,

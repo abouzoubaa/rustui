@@ -357,7 +357,7 @@ impl View for DialogView {
             let id = self.id.clone();
 
             let open = AppAction::with_window_action(move |_, window: &mut Window, cx| {
-                if window.has_active_dialog(cx) {
+                if window.has_active_dialog(cx) || super::drawer::is_active(window, cx) {
                     return;
                 }
 

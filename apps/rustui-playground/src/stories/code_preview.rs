@@ -98,6 +98,15 @@ Environment(display_mode, child_stack)
 .accessibility_label("Document outline")
 .height(280.0)"#
         }
+        StoryId::Drawer => {
+            r#"Drawer("details", self.visible_binding())
+    .title("Details")
+    .edge(DrawerEdge::Right)
+    .size(350.0)
+    .accessibility_label("Details drawer")
+    .localized_close_label("rustui-action-close")
+    .content(TextField("Notes", self.notes_binding()))"#
+        }
         StoryId::Tree => {
             r#"Tree(
     [TreeNode::new("components", "Components")

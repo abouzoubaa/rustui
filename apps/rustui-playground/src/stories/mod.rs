@@ -31,6 +31,7 @@ mod context_menu_gallery;
 pub(super) mod data_grid_accessibility;
 mod dialog_gallery;
 mod disclosure_gallery;
+mod drawer_gallery;
 mod event_inspector;
 mod feedback_gallery;
 mod focus_gallery;
@@ -79,7 +80,7 @@ use canvas::{RetentionStoryFields, StoryCanvas};
 use child_component::DemoDisplayMode;
 pub(crate) use component_catalog::{STORIES, StoryId, filtered_story_indices};
 use event_inspector::EventLog;
-use locale_selector::LocaleSelector;
+pub(crate) use locale_selector::LocaleSelector;
 pub(crate) use locale_selector::{catalogs, initial_locale};
 use properties_panel::ButtonProperties;
 
@@ -102,7 +103,12 @@ pub(crate) fn catalog_demo(key: &str) -> Option<AnyView> {
         "window_controls" => Some(AnyView::new(window_controls_gallery::demo())),
         "alert_dialog" => Some(AnyView::new(alert_gallery::demo())),
         "save_dialog" => Some(AnyView::new(dialog_gallery::demo())),
-        "sheet" => Some(AnyView::new(sheet_gallery::demo())),
+        "sheet" => Some(AnyView::new(
+            VStack::new()
+                .spacing(16.0)
+                .child(sheet_gallery::demo())
+                .child(drawer_gallery::demo()),
+        )),
         "toolbar" => Some(AnyView::new(toolbar_gallery::demo())),
         "tab_bar" => Some(AnyView::new(tab_bar_reference_gallery::demo())),
         "menu_item" => Some(AnyView::new(menu_gallery::demo())),
@@ -705,8 +711,6 @@ impl View for StoryHost {
         };
 
         VStack! {
-        LocalizedText("lab-navigation-locales")
-        LocaleSelector::new()
         retention_controls.spacing(8.0)
             w1_controls.spacing(8.0)
             (selected == StoryId::Layout && self.w1_step() == 0).then(|| Component("foundation-demos", foundation_demos::FoundationDemos::default))

@@ -314,6 +314,7 @@ impl RustUI {
                 .add_fonts(web_font_assets())
                 .expect("bundled Web fonts must register");
             gpui_component::init(cx);
+            crate::components::overlay::drawer::init(cx);
             // Set the Web default before caller launch/theme customization.
             #[cfg(target_family = "wasm")]
             {

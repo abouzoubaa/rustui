@@ -63,6 +63,7 @@ pub use crate::components::navigation::{
 pub use crate::components::overlay::alert::{Alert, AlertVariant, AlertView};
 pub use crate::components::overlay::context_menu::{ContextMenu, ContextMenuView};
 pub use crate::components::overlay::dialog::{Dialog, DialogView};
+pub use crate::components::overlay::drawer::{Drawer, DrawerEdge, DrawerError, DrawerView};
 pub use crate::components::overlay::menu::{Menu, MenuItem, MenuView};
 pub use crate::components::overlay::popover::{Popover, PopoverView};
 pub use crate::components::overlay::sheet::{Sheet, SheetView};

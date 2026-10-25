@@ -10,6 +10,7 @@ pub enum StoryId {
     List,
     Table,
     Tree,
+    Drawer,
     Outline,
     Tabs,
     Breadcrumb,
@@ -26,6 +27,7 @@ impl StoryId {
             Self::List => "List",
             Self::Table => "Table",
             Self::Tree => "Tree",
+            Self::Drawer => "Drawer",
             Self::Outline => "Outline",
             Self::Tabs => "Tabs",
             Self::Breadcrumb => "Breadcrumb",
@@ -41,7 +43,7 @@ pub struct StoryDefinition {
     pub summary: &'static str,
 }
 
-pub const STORIES: [StoryDefinition; 11] = [
+pub const STORIES: [StoryDefinition; 12] = [
     StoryDefinition {
         id: StoryId::Button,
         title: "Button",
@@ -96,6 +98,11 @@ pub const STORIES: [StoryDefinition; 11] = [
         id: StoryId::Outline,
         title: "Outline",
         summary: "Document hierarchy with owner-controlled selected and expanded stable IDs.",
+    },
+    StoryDefinition {
+        id: StoryId::Drawer,
+        title: "Drawer",
+        summary: "Controlled modal drawer with physical edges, owner refresh, and focus restoration.",
     },
 ];
 

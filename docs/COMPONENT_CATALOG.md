@@ -57,7 +57,7 @@ proposals, and implemented slices retain their explicit limits.
 | Menu | Action menu with stable trigger/action IDs, localization, separators, and disabled items; bounded M30 native interactions accepted, with positional native row identity. | `crates/rustui/src/components/overlay/menu.rs` |
 | ContextMenu | **Implemented, bounded M43 native review:** right-click opening, Increment, disabled callback guard, item reversal, and in-menu owner removal with fresh restore observed. Detached stale actions, long press, complete keyboard focus, and screen-reader behavior remain unverified. | `crates/rustui/src/components/overlay/context_menu.rs` |
 | Toast | **Implemented, latest action-button naming build/test and native acceptance pending:** in-app window notification with title, semantic kind, replacement ID, autohide, body action, and native action button. | `crates/rustui/src/components/overlay/toast.rs` |
-| Drawer | Drawer presentation composed from existing panel or sheet behavior. | `crates/rustui/src/components/overlay/drawer.rs` |
+| Drawer | **Partial:** controlled modal visibility, physical edge sizing, original owner/content retention, named dialog and localized Close control over the existing GPUI Root/Sheet host. Native/browser/VoiceOver acceptance pending. | `crates/rustui/src/components/overlay/drawer.rs` |
 | Progress | Determinate and indeterminate progress. | `crates/rustui/src/components/feedback/progress.rs` |
 | Spinner | Spinner adapter. | `crates/rustui/src/components/feedback/spinner.rs` |
 | Skeleton | Skeleton placeholder adapter. | `crates/rustui/src/components/feedback/skeleton.rs` |

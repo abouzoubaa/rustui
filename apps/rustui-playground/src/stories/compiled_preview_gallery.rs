@@ -2739,6 +2739,75 @@ impl Default for CompiledPreviewGallery {
             )
             .unwrap();
 
+        let drawer_specimen_schema = ComponentSchema {
+            id: ComponentId::new("drawer-specimen").unwrap(),
+            version: 1,
+            display_name: "Drawer".into(),
+            properties: BTreeMap::from([
+                (
+                    PropertyId::new("trigger_label").unwrap(),
+                    PropertySchema {
+                        kind: PropertyKind::String,
+                        default: Some(PropertyValue::String("Open details".into())),
+                        required: false,
+                        editable: true,
+                        minimum: None,
+                        maximum: None,
+                        min_length: Some(1),
+                        max_length: Some(PREVIEW_SHEET_TRIGGER_MAX_LENGTH),
+                        allowed_values: vec![],
+                    },
+                ),
+                (
+                    PropertyId::new("title").unwrap(),
+                    PropertySchema {
+                        kind: PropertyKind::String,
+                        default: Some(PropertyValue::String("Details".into())),
+                        required: false,
+                        editable: true,
+                        minimum: None,
+                        maximum: None,
+                        min_length: Some(1),
+                        max_length: Some(PREVIEW_SHEET_TITLE_MAX_LENGTH),
+                        allowed_values: vec![],
+                    },
+                ),
+                (
+                    PropertyId::new("body_text").unwrap(),
+                    PropertySchema {
+                        kind: PropertyKind::String,
+                        default: Some(PropertyValue::String("Preview sheet content".into())),
+                        required: false,
+                        editable: true,
+                        minimum: None,
+                        maximum: None,
+                        min_length: Some(1),
+                        max_length: Some(PREVIEW_SHEET_BODY_MAX_LENGTH),
+                        allowed_values: vec![],
+                    },
+                ),
+            ]),
+            events: BTreeMap::new(),
+        };
+        registry
+            .register(
+                drawer_specimen_schema,
+                |snapshot, _context: &FactoryContext| {
+                    let trigger_label = property_string(snapshot, "trigger_label")
+                        .expect("validated Drawer trigger label");
+                    let title = property_string(snapshot, "title").expect("validated Drawer title");
+                    let body_text =
+                        property_string(snapshot, "body_text").expect("validated Drawer body text");
+                    AnyView::new(super::drawer_gallery::specimen(
+                        format!("compiled-preview-drawer-{}", snapshot.stamp.generation),
+                        trigger_label,
+                        title,
+                        body_text,
+                    ))
+                },
+            )
+            .unwrap();
+
         let sidebar_specimen_schema = ComponentSchema {
             id: ComponentId::new("sidebar-specimen").unwrap(),
             version: 1,
@@ -5145,6 +5214,22 @@ impl CompiledPreviewGallery {
                     PropertyValue::String("Preview sheet content".into()),
                 ),
             ]);
+        } else if component == "drawer-specimen" {
+            self.text = "Open details".into();
+            document.properties.extend([
+                (
+                    PropertyId::new("trigger_label").unwrap(),
+                    PropertyValue::String(self.text.clone()),
+                ),
+                (
+                    PropertyId::new("title").unwrap(),
+                    PropertyValue::String("Details".into()),
+                ),
+                (
+                    PropertyId::new("body_text").unwrap(),
+                    PropertyValue::String("Preview sheet content".into()),
+                ),
+            ]);
         } else if component == "sidebar-specimen" {
             document.properties.extend([
                 (
@@ -5513,6 +5598,9 @@ impl CompiledPreviewGallery {
     fn mount_sheet_specimen(&mut self) {
         self.mount("sheet-specimen");
     }
+    fn mount_drawer_specimen(&mut self) {
+        self.mount("drawer-specimen");
+    }
     fn mount_sidebar_specimen(&mut self) {
         self.mount("sidebar-specimen");
     }
@@ -5801,7 +5889,10 @@ impl CompiledPreviewGallery {
         let uses_popover_specimen = parsed.component_id.as_str() == "popover-specimen";
         let uses_alert_specimen = parsed.component_id.as_str() == "alert-specimen";
         let uses_toast_specimen = parsed.component_id.as_str() == "toast-specimen";
-        let uses_sheet_specimen = parsed.component_id.as_str() == "sheet-specimen";
+        let uses_sheet_specimen = matches!(
+            parsed.component_id.as_str(),
+            "sheet-specimen" | "drawer-specimen"
+        );
         let uses_disclosure_specimen = parsed.component_id.as_str() == "disclosure-specimen";
         let uses_toolbar_specimen = parsed.component_id.as_str() == "toolbar-specimen";
         let uses_image_specimen = parsed.component_id.as_str() == "image-specimen";
@@ -5874,7 +5965,14 @@ impl CompiledPreviewGallery {
                     parsed.properties.get(&PropertyId::new(name).unwrap())
                     && value.trim().is_empty()
                 {
-                    self.status = format!("Import rejected: Sheet {name} must not be blank");
+                    self.status = format!(
+                        "Import rejected: {} {name} must not be blank",
+                        if parsed.component_id.as_str() == "drawer-specimen" {
+                            "Drawer"
+                        } else {
+                            "Sheet"
+                        }
+                    );
                     return;
                 }
             }
@@ -7167,7 +7265,9 @@ impl CompiledPreviewGallery {
                             PropertyId::new("label").unwrap()
                         }
                         "toast-specimen" => PropertyId::new("message").unwrap(),
-                        "sheet-specimen" => PropertyId::new("trigger_label").unwrap(),
+                        "sheet-specimen" | "drawer-specimen" => {
+                            PropertyId::new("trigger_label").unwrap()
+                        }
                         "search-field-specimen" => PropertyId::new("query").unwrap(),
                         "text-field-specimen" => PropertyId::new("value").unwrap(),
                         "text-editor-specimen" | "text-specimen" | "code-editor-specimen" => {
@@ -7578,6 +7678,10 @@ impl View for CompiledPreviewGallery {
                         rustui::runtime::Action::new(Self::mount_sheet_specimen),
                     ))
                     .child(Button(
+                        "Preview Drawer specimen",
+                        rustui::runtime::Action::new(Self::mount_drawer_specimen),
+                    ))
+                    .child(Button(
                         "Preview Sidebar specimen",
                         rustui::runtime::Action::new(Self::mount_sidebar_specimen),
                     ))
@@ -7880,6 +7984,7 @@ mod tests {
             "semantics-specimen",
             "shadow-specimen",
             "sheet-specimen",
+            "drawer-specimen",
             "sidebar-specimen",
             "skeleton-specimen",
             "split-view-specimen",
@@ -7911,7 +8016,7 @@ mod tests {
                 "missing compiled preview specimen for {component_id}"
             );
         }
-        assert_eq!(expected.len(), 75);
+        assert_eq!(expected.len(), 76);
     }
 
     #[test]
@@ -11006,6 +11111,89 @@ mod tests {
                 gallery
                     .status
                     .contains(&format!("Sheet {name} must not be blank"))
+            );
+            let current = gallery.host.snapshot().unwrap();
+            assert_eq!(current.stamp, before.stamp);
+            assert_eq!(current.preview.document, before.preview.document);
+        }
+    }
+
+    #[test]
+    fn drawer_specimen_round_trips_bounded_strings_and_rejects_blank_imports() {
+        let mut gallery = CompiledPreviewGallery::default();
+        gallery.mount_drawer_specimen();
+
+        let component_id = ComponentId::new("drawer-specimen").unwrap();
+        let schema = &gallery.host.catalog().components[&component_id];
+        assert_eq!(schema.properties.len(), 3);
+        assert!(schema.events.is_empty());
+        for (name, default, max_length) in [
+            (
+                "trigger_label",
+                "Open details",
+                PREVIEW_SHEET_TRIGGER_MAX_LENGTH,
+            ),
+            ("title", "Details", PREVIEW_SHEET_TITLE_MAX_LENGTH),
+            (
+                "body_text",
+                "Preview sheet content",
+                PREVIEW_SHEET_BODY_MAX_LENGTH,
+            ),
+        ] {
+            let property = &schema.properties[&PropertyId::new(name).unwrap()];
+            assert_eq!(property.kind, PropertyKind::String);
+            assert_eq!(property.min_length, Some(1));
+            assert_eq!(property.max_length, Some(max_length));
+            assert_eq!(
+                property.default,
+                Some(PropertyValue::String(default.into()))
+            );
+        }
+
+        let mounted = gallery.host.snapshot().unwrap().clone();
+        assert_eq!(mounted.preview.document.properties.len(), 3);
+        assert!(mounted.preview.document.actions.is_empty());
+        let mut customized = mounted.preview.document.clone();
+        customized.properties.insert(
+            PropertyId::new("trigger_label").unwrap(),
+            PropertyValue::String("Open project details".into()),
+        );
+        customized.properties.insert(
+            PropertyId::new("title").unwrap(),
+            PropertyValue::String("Project details".into()),
+        );
+        customized.properties.insert(
+            PropertyId::new("body_text").unwrap(),
+            PropertyValue::String("Build and test status".into()),
+        );
+        gallery.descriptor_json = encode_preview(&customized, gallery.host.catalog()).unwrap();
+        gallery.import_descriptor();
+        gallery.export_descriptor();
+        let exported = decode_preview(&gallery.descriptor_json, gallery.host.catalog()).unwrap();
+        for (name, value) in [
+            ("trigger_label", "Open project details"),
+            ("title", "Project details"),
+            ("body_text", "Build and test status"),
+        ] {
+            assert_eq!(
+                exported.properties[&PropertyId::new(name).unwrap()],
+                PropertyValue::String(value.into())
+            );
+        }
+
+        let before = gallery.host.snapshot().unwrap().clone();
+        for name in ["trigger_label", "title", "body_text"] {
+            let mut invalid = before.preview.document.clone();
+            invalid.properties.insert(
+                PropertyId::new(name).unwrap(),
+                PropertyValue::String(" \t".into()),
+            );
+            gallery.descriptor_json = encode_preview(&invalid, gallery.host.catalog()).unwrap();
+            gallery.import_descriptor();
+            assert!(
+                gallery
+                    .status
+                    .contains(&format!("Drawer {name} must not be blank"))
             );
             let current = gallery.host.snapshot().unwrap();
             assert_eq!(current.stamp, before.stamp);

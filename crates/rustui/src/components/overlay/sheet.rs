@@ -252,6 +252,9 @@ impl View for SheetView {
             let title_id = format!("{}:title", self.id);
             let id = self.id.clone();
             let open = AppAction::with_window_action(move |_, window: &mut Window, cx| {
+                if super::drawer::is_active(window, cx) {
+                    return;
+                }
                 let content = content.clone();
                 let title = title.clone();
                 let title_id = title_id.clone();
