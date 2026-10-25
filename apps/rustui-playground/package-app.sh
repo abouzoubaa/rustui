@@ -4,7 +4,7 @@ set -eu
 app_root=$(CDPATH= cd -- "$(dirname -- "$0")" && pwd)
 repository_root=$(CDPATH= cd -- "$app_root/../.." && pwd)
 target_root="${CARGO_TARGET_DIR:-$repository_root/target/headstart}"
-binary="$target_root/debug/rustui-playground"
+binary="${RUSTUI_PLAYGROUND_BINARY:-$target_root/debug/rustui-playground}"
 bundle="$target_root/debug/RustUI Playground.app"
 references_dir="${RUSTUI_PLAYGROUND_REFERENCES_DIR:-$app_root/references}"
 resources="$bundle/Contents/Resources"
@@ -30,9 +30,9 @@ cleanup() {
 trap cleanup EXIT
 trap 'exit 1' HUP INT TERM
 
-if [ ! -x "$binary" ]; then
+if [ ! -f "$binary" ] || [ ! -x "$binary" ]; then
     printf '%s\n' "missing executable: $binary" >&2
-    printf '%s\n' "run ./scripts/cargo-headstart build -p rustui-playground" >&2
+    printf '%s\n' "build rustui-playground; set RUSTUI_PLAYGROUND_BINARY to its Cargo artifact path when using a nonstandard layout" >&2
     exit 1
 fi
 if [ ! -d "$references_dir" ]; then
@@ -41,6 +41,9 @@ if [ ! -d "$references_dir" ]; then
 fi
 
 mkdir -p "$bundle/Contents/MacOS" "$resources"
+mkdir -p "$resources/licenses/icons"
+cp "$repository_root/vendor/gpui-kit-assets-0.7.3/LICENSE-LUCIDE" \
+    "$resources/licenses/icons/LICENSE-LUCIDE"
 references_staging=$(mktemp -d "$resources/.references.next.XXXXXX")
 cp -R "$references_dir/." "$references_staging/"
 if [ -e "$references_bundle" ] || [ -L "$references_bundle" ]; then

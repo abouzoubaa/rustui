@@ -21,6 +21,25 @@ RUSTUI_PLAYGROUND_REFERENCES_DIR="$references_source" \
 
 test -x "$bundle/Contents/MacOS/rustui-playground"
 test -f "$bundle/Contents/Info.plist"
+cmp "$repository_root/vendor/gpui-kit-assets-0.7.3/LICENSE-LUCIDE" \
+    "$bundle/Contents/Resources/licenses/icons/LICENSE-LUCIDE"
+headstart_binary="$target_root/headstart/build/package hash/out/rustui-playground"
+mkdir -p "$(dirname -- "$headstart_binary")"
+printf '%s\n' '#!/bin/sh' '# headstart artifact' 'exit 0' > "$headstart_binary"
+chmod 755 "$headstart_binary"
+CARGO_TARGET_DIR="$target_root" \
+RUSTUI_PLAYGROUND_BINARY="$headstart_binary" \
+RUSTUI_PLAYGROUND_REFERENCES_DIR="$references_source" \
+    "$repository_root/apps/rustui-playground/package-app.sh" >/dev/null
+cmp "$headstart_binary" "$bundle/Contents/MacOS/rustui-playground"
+if CARGO_TARGET_DIR="$target_root" \
+    RUSTUI_PLAYGROUND_BINARY="$(dirname -- "$headstart_binary")" \
+    RUSTUI_PLAYGROUND_REFERENCES_DIR="$references_source" \
+        "$repository_root/apps/rustui-playground/package-app.sh" >/dev/null 2>&1; then
+    printf '%s\n' "package accepted a directory as an executable" >&2
+    exit 1
+fi
+cmp "$headstart_binary" "$bundle/Contents/MacOS/rustui-playground"
 cmp \
     "$references_source/Nested Folder/Example.svg" \
     "$bundle/Contents/Resources/references/Nested Folder/Example.svg"

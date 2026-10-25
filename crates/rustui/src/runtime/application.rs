@@ -41,13 +41,124 @@ struct EmbeddedAssetSource<S> {
     bytes: &'static [u8],
 }
 
-/// Returns the pinned component icon source through RustUI's application API.
+// The pinned package's default-icons.txt selects these component assets.
+// Use its public embedding macro on both targets so Web needs no CDN fetch.
+// Original SVG sources and license metadata remain in the pinned vendor package.
+gpui_kit_assets::icon_assets!(
+    ComponentAssets,
+    [
+        ALargeSmall,
+        ArrowDown,
+        ArrowLeft,
+        ArrowRight,
+        ArrowUp,
+        Asterisk,
+        Ban,
+        BatteryCharging,
+        BatteryFull,
+        BatteryLow,
+        BatteryMedium,
+        BatteryWarning,
+        Battery,
+        Bell,
+        BookOpen,
+        Bot,
+        Building2,
+        Calendar,
+        CaseSensitive,
+        ChartPie,
+        Check,
+        ChevronDown,
+        ChevronLeft,
+        ChevronRight,
+        ChevronUp,
+        ChevronsUpDown,
+        CircleAlert,
+        CircleCheck,
+        CircleUser,
+        CircleX,
+        Close,
+        Copy,
+        Cpu,
+        Dash,
+        Delete,
+        EllipsisVertical,
+        Ellipsis,
+        ExternalLink,
+        EyeOff,
+        Eye,
+        FileText,
+        File,
+        FolderClosed,
+        FolderOpen,
+        Folder,
+        Frame,
+        GalleryVerticalEnd,
+        Github,
+        Globe,
+        HardDrive,
+        HeartOff,
+        Heart,
+        Inbox,
+        Info,
+        Inspector,
+        LayoutDashboard,
+        LoaderCircle,
+        Loader,
+        Map,
+        Maximize,
+        MemoryStick,
+        Menu,
+        Mic,
+        Minimize,
+        Minus,
+        Moon,
+        Network,
+        Palette,
+        PanelBottomOpen,
+        PanelBottom,
+        PanelLeftClose,
+        PanelLeftOpen,
+        PanelLeft,
+        PanelRightClose,
+        PanelRightOpen,
+        PanelRight,
+        Pause,
+        Play,
+        Plus,
+        Redo2,
+        Redo,
+        RefreshCw,
+        Replace,
+        ResizeCorner,
+        RotateCw,
+        Search,
+        Settings2,
+        Settings,
+        SortAscending,
+        SortDescending,
+        SquareTerminal,
+        Square,
+        StarFill,
+        StarOff,
+        Star,
+        Sun,
+        ThumbsDown,
+        ThumbsUp,
+        TriangleAlert,
+        Undo2,
+        Undo,
+        User,
+        WindowClose,
+        WindowMaximize,
+        WindowMinimize,
+        WindowRestore
+    ]
+);
+
+/// Returns embedded component icons through RustUI's application API.
 pub fn component_assets() -> impl gpui::AssetSource {
-    #[cfg(not(target_family = "wasm"))]
-    let assets = gpui_kit_assets::Assets;
-    #[cfg(target_family = "wasm")]
-    let assets = gpui_kit_assets::Assets::default();
-    assets
+    ComponentAssets
 }
 
 /// Adds one compile-time asset while preserving an application's asset source.
@@ -254,7 +365,24 @@ impl Default for RustUI {
 mod tests {
     use gpui::{AssetSource as _, KeyBinding, Keystroke};
 
-    use super::{tree_confirm_key_binding, web_font_assets, with_embedded_asset};
+    use super::{component_assets, tree_confirm_key_binding, web_font_assets, with_embedded_asset};
+
+    #[test]
+    fn component_icons_are_embedded_for_every_pinned_default_path() {
+        let source = component_assets();
+        let paths = include_str!(concat!(
+            env!("CARGO_MANIFEST_DIR"),
+            "/../../vendor/gpui-kit-assets-0.7.3/default-icons.txt"
+        ));
+        for path in paths.lines().filter(|line| !line.is_empty()) {
+            let bytes = source.load(path).unwrap().expect("default component icon");
+            assert!(
+                std::str::from_utf8(&bytes).unwrap().contains("<svg"),
+                "{path}"
+            );
+        }
+        assert!(source.load("icons/not-a-component.svg").unwrap().is_none());
+    }
 
     struct TestAssetSource;
 
@@ -307,11 +435,7 @@ mod tests {
             .unwrap();
         assert_eq!(&loaded[..8], b"\x89PNG\r\n\x1a\n");
         assert_eq!(
-            source
-                .load("assets/base.png")
-                .unwrap()
-                .unwrap()
-                .as_ref(),
+            source.load("assets/base.png").unwrap().unwrap().as_ref(),
             b"base asset"
         );
         assert_eq!(source.load("missing.png").unwrap(), None);

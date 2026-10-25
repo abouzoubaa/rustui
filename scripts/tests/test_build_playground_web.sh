@@ -12,14 +12,30 @@ mkdir -p \
     "$fixture/apps/rustui-playground/web" \
     "$fixture/apps/rustui-playground/references" \
     "$fixture/crates/rustui/assets/fonts" \
+    "$fixture/vendor/gpui-kit-assets-0.7.3" \
     "$fake_bin"
 cp "$repository_root/scripts/build-playground-web.sh" "$fixture/scripts/"
+cp "$repository_root/scripts/manifest_playground_web.py" "$fixture/scripts/"
 cp "$repository_root/apps/rustui-playground/web/index.html" \
     "$fixture/apps/rustui-playground/web/"
 cp -R "$repository_root/apps/rustui-playground/references/." \
     "$fixture/apps/rustui-playground/references/"
 cp "$repository_root"/crates/rustui/assets/fonts/*-LICENSE \
     "$fixture/crates/rustui/assets/fonts/"
+cp "$repository_root/vendor/gpui-kit-assets-0.7.3/LICENSE-LUCIDE" \
+    "$fixture/vendor/gpui-kit-assets-0.7.3/"
+python3 - "$fixture" <<'PY_INPUTS'
+import runpy, sys
+from pathlib import Path
+root = Path(sys.argv[1])
+manifest = runpy.run_path(str(root / "scripts/manifest_playground_web.py"))
+for relative in manifest["SOURCE_ROOTS"]:
+    (root / relative).mkdir(parents=True, exist_ok=True)
+for relative in manifest["SOURCE_INPUTS"]:
+    path = root / relative
+    path.parent.mkdir(parents=True, exist_ok=True)
+    path.touch(exist_ok=True)
+PY_INPUTS
 
 cat > "$fixture/scripts/cargo-headstart" <<'EOF'
 #!/bin/sh
@@ -66,6 +82,18 @@ test -f "$bundle/index.html"
 test -f "$bundle/rustui_playground.js"
 test -f "$bundle/rustui_playground_bg.wasm"
 test -f "$bundle/references/Form.svg"
+cmp "$repository_root/vendor/gpui-kit-assets-0.7.3/LICENSE-LUCIDE" \
+    "$bundle/licenses/icons/LICENSE-LUCIDE"
+python3 - "$bundle/bundle-manifest.json" "$bundle" <<'PY_MANIFEST'
+import hashlib, json, sys
+from pathlib import Path
+bundle = Path(sys.argv[2])
+manifest = json.loads(Path(sys.argv[1]).read_text())
+assert len(manifest["source"]["sha256"]) == 64
+files = {item["path"]: item["sha256"] for item in manifest["bundle"]["files"]}
+for name in ("index.html", "rustui_playground.js", "rustui_playground_bg.wasm"):
+    assert hashlib.sha256((bundle / name).read_bytes()).hexdigest() == files[name]
+PY_MANIFEST
 grep -Fq '<body>' "$bundle/index.html"
 grep -Fq 'script nomodule' "$bundle/index.html"
 grep -Fq 'does not support the JavaScript modules required by RustUI Playground' "$bundle/index.html"

@@ -39,13 +39,11 @@ if [ -x "$HEADSTART_RUSTC" ]; then
   fi
 fi
 
-"$REPO_ROOT/scripts/cargo-headstart" build -p rustui-playground \
-  --target wasm32-unknown-unknown --locked --offline --release
-
 OUT_DIR="$REPO_ROOT/target/headstart/playground-web"
-mkdir -p "$(dirname -- "$OUT_DIR")"
-STAGING_DIR="$(mktemp -d "$(dirname -- "$OUT_DIR")/.playground-web.XXXXXX")"
+STAGING_DIR=""
 PREVIOUS_DIR=""
+SOURCE_SNAPSHOT_DIR="$(mktemp -d "${TMPDIR:-/tmp}/rustui-playground-web-source.XXXXXX")"
+SOURCE_SNAPSHOT_FILE="$SOURCE_SNAPSHOT_DIR/source.json"
 cleanup() {
   if [[ -n "$STAGING_DIR" ]]; then
     rm -rf -- "$STAGING_DIR"
@@ -57,8 +55,20 @@ cleanup() {
       rm -rf -- "$PREVIOUS_DIR"
     fi
   fi
+  if [[ -n "$SOURCE_SNAPSHOT_DIR" ]]; then
+    rm -rf -- "$SOURCE_SNAPSHOT_DIR"
+  fi
 }
 trap cleanup EXIT
+python3 "$REPO_ROOT/scripts/manifest_playground_web.py" \
+  --root "$REPO_ROOT" \
+  --output "$SOURCE_SNAPSHOT_FILE"
+
+"$REPO_ROOT/scripts/cargo-headstart" build -p rustui-playground \
+  --target wasm32-unknown-unknown --locked --offline --release
+
+mkdir -p "$(dirname -- "$OUT_DIR")"
+STAGING_DIR="$(mktemp -d "$(dirname -- "$OUT_DIR")/.playground-web.XXXXXX")"
 wasm-bindgen \
   --target web \
   --out-dir "$STAGING_DIR" \
@@ -220,6 +230,14 @@ mkdir "$STAGING_DIR/references"
 cp -R "$REPO_ROOT/apps/rustui-playground/references/." "$STAGING_DIR/references/"
 mkdir -p "$STAGING_DIR/licenses/fonts"
 cp "$REPO_ROOT"/crates/rustui/assets/fonts/*-LICENSE "$STAGING_DIR/licenses/fonts/"
+mkdir -p "$STAGING_DIR/licenses/icons"
+cp "$REPO_ROOT/vendor/gpui-kit-assets-0.7.3/LICENSE-LUCIDE" \
+  "$STAGING_DIR/licenses/icons/LICENSE-LUCIDE"
+python3 "$REPO_ROOT/scripts/manifest_playground_web.py" \
+  --root "$REPO_ROOT" \
+  --bundle-dir "$STAGING_DIR" \
+  --source-baseline "$SOURCE_SNAPSHOT_FILE" \
+  --output "$STAGING_DIR/bundle-manifest.json"
 if [[ -e "$OUT_DIR" || -L "$OUT_DIR" ]]; then
   PREVIOUS_DIR="$(mktemp -d "$(dirname -- "$OUT_DIR")/.playground-web-previous.XXXXXX")"
   rmdir -- "$PREVIOUS_DIR"
