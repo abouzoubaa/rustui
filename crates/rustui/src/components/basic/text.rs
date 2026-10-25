@@ -287,14 +287,9 @@ mod tests {
         ] {
             let mut query = crate::components::theme::selector_for_mode(mode);
             let part = text_style_part(&mut query, false);
-            let style = crate::theme::resolve_component_style_with(
-                &document,
-                "text",
-                &part,
-                &query,
-                &[],
-            )
-            .expect("opaque text style resolves");
+            let style =
+                crate::theme::resolve_component_style_with(&document, "text", &part, &query, &[])
+                    .expect("opaque text style resolves");
             let foreground = style
                 .colors
                 .get("foreground")
