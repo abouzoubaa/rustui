@@ -114,3 +114,5 @@ mod tests {
         assert!(node.is_disabled());
     }
 }
+#[cfg(test)]
+mod focus_tests;
