@@ -267,8 +267,8 @@ def cmd_adopt(args: argparse.Namespace, root: Path, common: Path, db: sqlite3.Co
         raise ValueError(f"--worktree must be the current Git worktree root ({root})")
     branch = validate_writer_worktree(root, common, require_clean=False)
     paths = sorted({normalized_path(root, raw) for raw in args.paths})
-    if not paths or any(path.startswith("@shared/") for path in paths):
-        raise ValueError("adoption requires exact repository-relative file or directory paths")
+    if not paths:
+        raise ValueError("adoption requires exact repository-relative file, directory, or @shared paths")
     existing_changes = changed_paths(root)
     if not existing_changes:
         raise ValueError("worktree has no changes to adopt; use claim before starting edits")

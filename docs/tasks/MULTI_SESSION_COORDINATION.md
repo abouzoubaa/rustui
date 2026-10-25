@@ -26,7 +26,8 @@ python3 scripts/roadmap_claims.py adopt \
   --task M1234 --thread <codex-thread-id> \
   --stage "Stage 5" --milestone M1234 --next-action "finish resolver" \
   --worktree "$(git rev-parse --show-toplevel)" \
-  crates/rustui/src/theme/resolver.rs
+  crates/rustui/src/theme/resolver.rs \
+  @shared/target/headstart/evidence/M1234.log
 ```
 
 Continue tracking after claim or adoption:
