@@ -157,17 +157,27 @@ python3 /Users/Abium/.codex/worktrees/session-coordination/rustui/scripts/roadma
   reconcile --inventory /tmp/rustui-thread-inventory.json
 ```
 
-`reconcile` is read-only. Its report joins by literal thread ID and checks that
-the inventory's reported `cwd` matches the claimed worktree, the worktree is
-still registered, the claimed branch is checked out, and active claim paths
-and writer identities remain unique and non-overlapping. It prints the thread
-execution state, claim lock state, exact task/stage/milestone/next action, and
-an action for each owner. A nonzero result means stop new assignments and
-resolve the reported inconsistency first. The report does not release or
-transfer claims. `idle` means continue that same thread; `notLoaded`, missing
-inventory entries, and `suspect` leases keep their paths reserved until
-terminal state is independently confirmed. Reconcile again immediately before
-a release or handoff.
+`reconcile` is read-only. It accepts the JSON body from `list_threads`, the
+tool's full result envelope, and the desktop's compact typed thread-list
+rendering inside that envelope. Its report joins by literal thread ID and
+checks that the inventory's reported `cwd` matches the claimed worktree, the
+worktree is still registered, the claimed branch is checked out, and active
+claim paths and writer identities remain unique and non-overlapping. Shared
+resource names are Unicode-normalized and case-folded so equivalent spellings
+cannot acquire separate locks. The report prints thread execution state, claim
+lock state, exact task/stage/milestone/next action, claim-owner coverage, and an
+action for each owner. A nonzero result means stop assignments and resolve the
+reported inconsistency first. The report does not release or transfer claims.
+
+`list_threads` returns at most 50 non-pinned threads. If the report says the
+inventory may be partial, `ok` is safe only when every active claim owner is
+present in `claim_owner_coverage`. For any missing owner, fetch that exact
+thread with `read_thread`, build an owner-only inventory from the returned
+thread ID/status/cwd, and reconcile again. Never interpret a missing owner as
+terminal. Reconcile immediately before each assignment or continuation, and
+again immediately before every release or handoff. `idle` means continue the
+same thread; `notLoaded` and `suspect` claims keep paths reserved until the
+owner renews or terminal state is independently confirmed.
 
 Every assignment message must carry the exact claim ID, thread ID, task, stage,
 milestone, worktree, branch, paths, and next action reported by the ledger.

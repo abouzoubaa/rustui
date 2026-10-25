@@ -72,11 +72,15 @@ class RoadmapClaimsTests(unittest.TestCase):
             ]
         }
         command = [sys.executable, str(SCRIPT), "reconcile", "--inventory", "-"]
+        tool_result = {
+            "content": [{"type": "text", "text": json.dumps(inventory)}],
+            "isError": False,
+        }
         matched = subprocess.run(
             command,
             cwd=self.wt1,
             env=self.env,
-            input=json.dumps(inventory),
+            input=json.dumps(tool_result),
             text=True,
             capture_output=True,
         )
@@ -88,6 +92,68 @@ class RoadmapClaimsTests(unittest.TestCase):
         self.assertTrue(report["claims"][0]["worktree_registered"])
         self.assertTrue(report["claims"][0]["branch_matches_claim"])
         self.assertIn("continue this same thread", report["claims"][0]["action"])
+        self.assertEqual(report["claim_owner_coverage"], {
+            "required": 1,
+            "found": 1,
+            "missing_threads": [],
+        })
+
+        compact_inventory = {
+            "threads": (
+                "[1]{id:string,status:string,cwd:string,title:string}\n"
+                f'thread-reconcile,idle,{self.wt1},"Stage 11, browser"'
+            )
+        }
+        compact_tool_result = {
+            "content": [{"type": "text", "text": json.dumps(compact_inventory)}],
+            "isError": False,
+        }
+        compact = subprocess.run(
+            command,
+            cwd=self.wt1,
+            env=self.env,
+            input=json.dumps(compact_tool_result),
+            text=True,
+            capture_output=True,
+        )
+        self.assertEqual(compact.returncode, 0, compact.stderr)
+        compact_report = json.loads(compact.stdout)
+        self.assertTrue(compact_report["ok"])
+        self.assertEqual(compact_report["claims"][0]["inventory_title"], "Stage 11, browser")
+
+        capped_inventory = {
+            "threads": inventory["threads"]
+            + [
+                {"id": f"unclaimed-{index}", "status": "idle", "cwd": str(self.wt2)}
+                for index in range(49)
+            ]
+        }
+        capped = subprocess.run(
+            command,
+            cwd=self.wt1,
+            env=self.env,
+            input=json.dumps(capped_inventory),
+            text=True,
+            capture_output=True,
+        )
+        self.assertEqual(capped.returncode, 0, capped.stderr)
+        report = json.loads(capped.stdout)
+        self.assertTrue(report["inventory_may_be_partial"])
+        self.assertEqual(report["claim_owner_coverage"]["found"], 1)
+
+        missing = subprocess.run(
+            command,
+            cwd=self.wt1,
+            env=self.env,
+            input=json.dumps({"threads": []}),
+            text=True,
+            capture_output=True,
+        )
+        self.assertEqual(missing.returncode, 1, missing.stderr)
+        report = json.loads(missing.stdout)
+        self.assertEqual(
+            report["claim_owner_coverage"]["missing_threads"], ["thread-reconcile"]
+        )
 
         inventory["threads"][0]["cwd"] = str(self.wt2)
         mismatched = subprocess.run(
@@ -145,6 +211,19 @@ class RoadmapClaimsTests(unittest.TestCase):
         self.assertEqual(claims.returncode, 0, claims.stderr)
         self.assertEqual(json.loads(claims.stdout)[0]["state"], "suspect")
 
+    def test_reconcile_rejects_malformed_thread_arrays_with_diagnostic(self) -> None:
+        result = subprocess.run(
+            [sys.executable, str(SCRIPT), "reconcile", "--inventory", "-"],
+            cwd=self.wt1,
+            env=self.env,
+            input=json.dumps({"threads": {"thread-x": {"status": "idle"}}}),
+            text=True,
+            capture_output=True,
+        )
+        self.assertEqual(result.returncode, 2)
+        self.assertIn("pinnedThreads and threads must be arrays", result.stderr)
+        self.assertNotIn("Traceback", result.stderr)
+
     def test_parallel_overlapping_claims_have_one_winner(self) -> None:
         commands = [
             [sys.executable, str(SCRIPT), "claim", "--task", "M1", "--thread", "thread-one",
@@ -174,9 +253,27 @@ class RoadmapClaimsTests(unittest.TestCase):
         slot = "@shared/playground-gui-slot"
         first = self.run_claim(self.wt1, "thread-gui-one", slot, task="M-gui-one")
         self.assertEqual(first.returncode, 0, first.stderr)
-        second = self.run_claim(self.wt2, "thread-gui-two", slot, task="M-gui-two")
+        second = self.run_claim(
+            self.wt2, "thread-gui-two", "@shared/Playground-GUI-Slot", task="M-gui-two"
+        )
         self.assertNotEqual(second.returncode, 0)
         self.assertIn("claim conflicts", second.stderr)
+
+    def test_shared_paths_reject_empty_dot_and_parent_segments(self) -> None:
+        wrong_prefix = self.run_claim(
+            self.wt1, "thread-invalid-shared-prefix", "@Shared/gui", task="M-invalid-prefix"
+        )
+        self.assertNotEqual(wrong_prefix.returncode, 0)
+        self.assertIn("canonical @shared/ prefix", wrong_prefix.stderr)
+
+        for index, path in enumerate(
+            ("@shared/", "@shared/gui//slot", "@shared/gui/./slot", "@shared/gui/../slot")
+        ):
+            result = self.run_claim(
+                self.wt1, f"thread-invalid-shared-{index}", path, task=f"M-invalid-{index}"
+            )
+            self.assertNotEqual(result.returncode, 0)
+            self.assertIn("invalid shared resource path", result.stderr)
 
     def test_active_task_id_cannot_be_claimed_twice_on_disjoint_paths(self) -> None:
         first = self.run_claim(self.wt1, "thread-task-one", "src/one.rs", task="M-unique")

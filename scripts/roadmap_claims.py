@@ -4,9 +4,12 @@
 from __future__ import annotations
 
 import argparse
+import csv
 import hashlib
+import io
 import json
 import os
+import re
 import sqlite3
 import stat
 import subprocess
@@ -225,11 +228,17 @@ def validate_writer_worktree(root: Path, common_git_dir: Path, require_clean: bo
 
 
 def normalized_path(root: Path, raw: str) -> str:
-    if raw.startswith("@shared/"):
-        parts = Path(raw[8:]).parts
+    shared_prefix = "@shared"
+    if raw[: len(shared_prefix)].casefold() == shared_prefix and (
+        len(raw) == len(shared_prefix) or raw[len(shared_prefix)] == "/"
+    ):
+        if not raw.startswith("@shared/"):
+            raise ValueError("shared resource paths must use the canonical @shared/ prefix")
+        parts = raw[len("@shared/") :].split("/")
         if not parts or any(part in ("", ".", "..") for part in parts):
             raise ValueError(f"invalid shared resource path: {raw}")
-        return "@shared/" + "/".join(parts)
+        shared_path = unicodedata.normalize("NFD", "/".join(parts)).casefold()
+        return "@shared/" + shared_path
     candidate = Path(raw)
     if candidate.is_absolute() or ".." in candidate.parts or raw in ("", "."):
         raise ValueError(f"claim paths must be repository-relative: {raw}")
@@ -243,6 +252,24 @@ def normalized_path(root: Path, raw: str) -> str:
     # macOS volumes are commonly case-insensitive; over-locking is safer than a race.
     normalized = unicodedata.normalize("NFD", relative)
     return normalized.casefold() if sys.platform == "darwin" else normalized
+
+
+def decode_compact_threads(value: str) -> list[dict[str, str]]:
+    """Decode the desktop thread tool's typed, CSV-like inventory rendering."""
+    match = re.fullmatch(r"\[(\d+)\]\{([^{}\r\n]+)\}\r?\n(.*)", value, re.DOTALL)
+    if match is None:
+        raise ValueError("serialized thread inventory has an invalid header")
+    expected_count = int(match.group(1))
+    fields = [entry.split(":", 1)[0] for entry in match.group(2).split(",")]
+    if not fields or any(not field for field in fields) or len(set(fields)) != len(fields):
+        raise ValueError("serialized thread inventory has invalid field names")
+    try:
+        rows = list(csv.reader(io.StringIO(match.group(3), newline=""), strict=True))
+    except csv.Error as error:
+        raise ValueError(f"serialized thread inventory has invalid rows: {error}") from error
+    if len(rows) != expected_count or any(len(row) != len(fields) for row in rows):
+        raise ValueError("serialized thread inventory row count or width does not match")
+    return [dict(zip(fields, row, strict=True)) for row in rows]
 
 
 def overlaps(left: str, right: str) -> bool:
@@ -988,14 +1015,44 @@ def cmd_reconcile(args: argparse.Namespace, root: Path, db: sqlite3.Connection) 
         with Path(args.inventory).open(encoding="utf-8") as stream:
             inventory = json.load(stream)
 
+    if isinstance(inventory, dict) and inventory.get("isError") is True:
+        raise ValueError("thread inventory tool returned an error")
+    if isinstance(inventory, dict) and "content" in inventory:
+        content = inventory["content"]
+        if not isinstance(content, list):
+            raise ValueError("tool result content must be an array")
+        text_blocks = [
+            item.get("text")
+            for item in content
+            if isinstance(item, dict)
+            and item.get("type") == "text"
+            and isinstance(item.get("text"), str)
+        ]
+        if not text_blocks:
+            raise ValueError("tool result contains no text inventory")
+        inventory = json.loads(text_blocks[0])
+    elif isinstance(inventory, dict) and isinstance(
+        inventory.get("structuredContent"), dict
+    ):
+        inventory = inventory["structuredContent"]
+
+    if isinstance(inventory, dict):
+        for key in ("pinnedThreads", "threads"):
+            if isinstance(inventory.get(key), str):
+                inventory[key] = decode_compact_threads(inventory[key])
+
     if isinstance(inventory, list):
         thread_items = inventory
+        listed_threads = inventory
     elif isinstance(inventory, dict):
-        thread_items = list(inventory.get("pinnedThreads", [])) + list(
-            inventory.get("threads", [])
-        )
+        pinned_threads = inventory.get("pinnedThreads", [])
+        listed_threads = inventory.get("threads", [])
+        if not isinstance(pinned_threads, list) or not isinstance(listed_threads, list):
+            raise ValueError("pinnedThreads and threads must be arrays")
+        thread_items = list(pinned_threads) + list(listed_threads)
     else:
         raise ValueError("inventory must be a list or contain thread lists")
+    inventory_may_be_partial = len(listed_threads) >= 50
 
     threads: dict[str, dict[str, object]] = {}
     duplicates: set[str] = set()
@@ -1063,7 +1120,10 @@ def cmd_reconcile(args: argparse.Namespace, root: Path, db: sqlite3.Connection) 
         for right in claim_list[index + 1 :]:
             for left_path in left["paths"]:
                 for right_path in right["paths"]:
-                    if overlaps(left_path, right_path):
+                    if overlaps(
+                        normalized_path(root, left_path),
+                        normalized_path(root, right_path),
+                    ):
                         path_conflicts.append(
                             {
                                 "claims": [left["claim_id"], right["claim_id"]],
@@ -1078,7 +1138,7 @@ def cmd_reconcile(args: argparse.Namespace, root: Path, db: sqlite3.Connection) 
         if thread is None:
             execution_state = "missing-from-inventory"
             cwd_matches = False
-            action = "preserve claim; inspect this exact thread ID before handoff"
+            action = "preserve claim; retrieve this exact thread ID to complete the inventory"
             fatal = True
         else:
             execution_state = thread.get("status", "unknown")
@@ -1132,6 +1192,16 @@ def cmd_reconcile(args: argparse.Namespace, root: Path, db: sqlite3.Connection) 
             {
                 "ok": not fatal,
                 "inventory_thread_count": len(threads),
+                "inventory_may_be_partial": inventory_may_be_partial,
+                "claim_owner_coverage": {
+                    "required": len(claims),
+                    "found": sum(claim["thread"] in threads for claim in claims.values()),
+                    "missing_threads": sorted(
+                        claim["thread"]
+                        for claim in claims.values()
+                        if claim["thread"] not in threads
+                    ),
+                },
                 "duplicate_thread_ids": sorted(duplicates),
                 "identity_conflicts": identity_conflicts,
                 "path_conflicts": path_conflicts,
