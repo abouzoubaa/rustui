@@ -35,6 +35,14 @@
 
 ## Tools and evidence
 
+- For multi-session roadmap work, read `docs/tasks/multi_session_coordination.md`
+  and use the canonical shared coordinator from your own linked worktree. The
+  `--thread` argument must be your own Codex thread ID, supplied literally in
+  your assignment; never use the orchestrator's ID. Before editing, confirm the
+  ledger shows your own thread ID, actual worktree, unique `codex/` branch, and
+  exact assigned paths. If the row is missing or any value differs, stop and
+  report it before writing.
+
 - Reuse one disposable Playground validation bundle and bundle identifier; do not
   create a separate application for each milestone.
 - After each GUI test, quit the test application and remove its disposable app
