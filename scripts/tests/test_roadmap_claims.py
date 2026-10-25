@@ -87,6 +87,21 @@ class RoadmapClaimsTests(unittest.TestCase):
         self.assertNotEqual(rejected.returncode, 0)
         self.assertIn("outside this claim", rejected.stderr)
 
+    def test_adopt_registers_all_preexisting_changes(self) -> None:
+        (self.wt1 / "src").mkdir()
+        (self.wt1 / "src" / "existing.rs").write_text("// existing\n", encoding="utf-8")
+        (self.wt1 / "README.md").write_text("modified\n", encoding="utf-8")
+        adopted = subprocess.run(
+            [sys.executable, str(SCRIPT), "adopt", "--task", "M-adopt",
+             "--thread", "thread-adopt", "--worktree", str(self.wt1),
+             "--stage", "Stage 3", "--milestone", "M-adopt",
+             "--next-action", "continue existing work"],
+            cwd=self.wt1, env=self.env, text=True, capture_output=True,
+        )
+        self.assertEqual(adopted.returncode, 0, adopted.stderr)
+        result = json.loads(adopted.stdout)
+        self.assertEqual(result["adopted_paths"], ["readme.md", "src/existing.rs"])
+
     def test_expired_claim_stays_locked_until_explicit_release(self) -> None:
         claim = self.run_claim(self.wt1, "thread-expiring", "src", lease=60)
         self.assertEqual(claim.returncode, 0, claim.stderr)
@@ -98,6 +113,18 @@ class RoadmapClaimsTests(unittest.TestCase):
         listing = subprocess.run([sys.executable, str(SCRIPT), "list"], cwd=self.wt1,
                                  env=self.env, text=True, capture_output=True, check=True)
         self.assertEqual(json.loads(listing.stdout)[0]["state"], "suspect")
+
+    def test_legacy_claim_gets_branch_identity_backfilled(self) -> None:
+        claim = self.run_claim(self.wt1, "thread-legacy", "src")
+        self.assertEqual(claim.returncode, 0, claim.stderr)
+        claim_id = json.loads(claim.stdout)["claim_id"]
+        database_path = next(self.db.glob("claims-*.sqlite3"))
+        with sqlite3.connect(database_path) as database:
+            database.execute("UPDATE claims SET branch='' WHERE id=?", (claim_id,))
+        listing = subprocess.run([sys.executable, str(SCRIPT), "list"], cwd=self.wt1,
+                                 env=self.env, text=True, capture_output=True, check=True)
+        row = next(item for item in json.loads(listing.stdout) if item["claim_id"] == claim_id)
+        self.assertEqual(row["branch"], "codex/claims-one")
 
 
 if __name__ == "__main__":

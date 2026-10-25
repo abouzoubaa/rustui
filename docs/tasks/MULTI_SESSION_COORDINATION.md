@@ -12,6 +12,23 @@ python3 scripts/roadmap_claims.py claim \
   --stage "Stage 5" --milestone M1234 --next-action "implement resolver" \
   --worktree "$(git rev-parse --show-toplevel)" \
   crates/rustui/src/example.rs
+```
+
+For an existing session that already has changes, create a unique `codex/`
+branch in its own linked worktree, then adopt all current Git changes before
+continuing. Adoption records every modified, staged, deleted, renamed, and
+untracked path, so it can surface pre-existing overlap immediately:
+
+```sh
+python3 scripts/roadmap_claims.py adopt \
+  --task M1234 --thread <codex-thread-id> \
+  --stage "Stage 5" --milestone M1234 --next-action "finish resolver" \
+  --worktree "$(git rev-parse --show-toplevel)"
+```
+
+Continue tracking after claim or adoption:
+
+```sh
 python3 scripts/roadmap_claims.py progress --claim-id <claim-id> \
   --thread <codex-thread-id> --stage "Stage 5" --milestone M1234 \
   --next-action "add focused regression"

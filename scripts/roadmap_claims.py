@@ -81,6 +81,15 @@ def connect(db_path: Path) -> sqlite3.Connection:
         ):
             if name not in columns:
                 db.execute(f"ALTER TABLE claims ADD COLUMN {name} {definition}")
+        for claim_id, worktree in db.execute(
+            "SELECT id,worktree FROM claims WHERE branch='' AND state='active'"
+        ).fetchall():
+            path = Path(worktree)
+            if path.is_dir():
+                branch = git(path, "branch", "--show-current")
+                if not branch:
+                    branch = f"@detached:{path}:{git(path, 'rev-parse', '--short', 'HEAD')}"
+                db.execute("UPDATE claims SET branch=? WHERE id=?", (branch, claim_id))
         db.execute("COMMIT")
     except BaseException:
         db.execute("ROLLBACK")
@@ -144,6 +153,25 @@ def overlaps(left: str, right: str) -> bool:
     return left.startswith(right.rstrip("/") + "/") or right.startswith(left.rstrip("/") + "/")
 
 
+def changed_paths(root: Path) -> list[str]:
+    raw = subprocess.check_output(
+        ["git", "-C", str(root), "status", "--porcelain=v1", "-z", "--untracked-files=all"],
+        stderr=subprocess.PIPE,
+    )
+    records = raw.split(b"\0")
+    changed: list[str] = []
+    i = 0
+    while i < len(records) and records[i]:
+        record = records[i].decode("utf-8", errors="surrogateescape")
+        changed.append(record[3:])
+        if record[:2].strip() in ("R", "C"):
+            i += 1
+            if i < len(records) and records[i]:
+                changed.append(records[i].decode("utf-8", errors="surrogateescape"))
+        i += 1
+    return sorted(set(changed))
+
+
 def cmd_claim(args: argparse.Namespace, root: Path, db: sqlite3.Connection) -> None:
     worktree = Path(args.worktree).expanduser().resolve()
     if worktree != root:
@@ -191,6 +219,52 @@ def cmd_claim(args: argparse.Namespace, root: Path, db: sqlite3.Connection) -> N
                       "worktree": str(worktree), "branch": branch, "stage": args.stage,
                       "milestone": args.milestone, "next_action": args.next_action,
                       "paths": paths, "lease_until": now + args.lease_seconds}))
+
+
+def cmd_adopt(args: argparse.Namespace, root: Path, common: Path, db: sqlite3.Connection) -> None:
+    """Atomically register all existing edits when migrating a live session."""
+    worktree = Path(args.worktree).expanduser().resolve()
+    if worktree != root:
+        raise ValueError(f"--worktree must be the current Git worktree root ({root})")
+    branch = validate_writer_worktree(root, common, require_clean=False)
+    paths = sorted({normalized_path(root, raw) for raw in changed_paths(root)})
+    if not paths:
+        raise ValueError("worktree has no changes to adopt; use claim before starting edits")
+    now = int(time.time())
+    claim_id = hashlib.sha256(
+        f"{args.thread}\0{args.task}\0{now}\0{os.urandom(16).hex()}".encode()
+    ).hexdigest()[:20]
+    db.execute("BEGIN IMMEDIATE")
+    try:
+        rows = db.execute("""
+            SELECT c.id,c.task,c.thread,c.worktree,p.path,c.branch
+            FROM claims c JOIN claimed_paths p ON p.claim_id=c.id
+            WHERE c.state='active'
+        """).fetchall()
+        conflicts = [row for row in rows if row[2] == args.thread or row[3] == str(root)
+                     or (row[5] and row[5] == branch)
+                     or any(overlaps(path, row[4]) for path in paths)]
+        if conflicts:
+            details = [{"claim_id": row[0], "task": row[1], "thread": row[2],
+                        "worktree": row[3], "path": row[4]} for row in conflicts]
+            raise ValueError("adoption conflicts; resolve the existing owner first: "
+                             + json.dumps(details))
+        db.execute("""
+            INSERT INTO claims(id,task,thread,worktree,branch,stage,milestone,next_action,
+                               state,created_at,heartbeat_at,lease_until)
+            VALUES(?,?,?,?,?,?,?,?,'active',?,?,?)
+        """, (claim_id,args.task,args.thread,str(root),branch,args.stage,args.milestone,
+              args.next_action,now,now,now + args.lease_seconds))
+        db.executemany("INSERT INTO claimed_paths(claim_id,path) VALUES(?,?)",
+                       [(claim_id,path) for path in paths])
+        db.execute("COMMIT")
+    except BaseException:
+        db.execute("ROLLBACK")
+        raise
+    print(json.dumps({"claim_id": claim_id,"task": args.task,"thread": args.thread,
+                      "worktree": str(root),"branch": branch,"stage": args.stage,
+                      "milestone": args.milestone,"next_action": args.next_action,
+                      "adopted_paths": paths,"lease_until": now + args.lease_seconds}))
 
 
 def cmd_heartbeat(args: argparse.Namespace, db: sqlite3.Connection) -> None:
@@ -306,21 +380,7 @@ def cmd_audit(args: argparse.Namespace, root: Path, db: sqlite3.Connection) -> N
     paths = [item[0] for item in db.execute(
         "SELECT path FROM claimed_paths WHERE claim_id=?", (args.claim_id,)
     )]
-    raw = subprocess.check_output(
-        ["git", "-C", str(root), "status", "--porcelain=v1", "-z", "--untracked-files=all"],
-        stderr=subprocess.PIPE,
-    )
-    records = raw.split(b"\0")
-    changed: list[str] = []
-    i = 0
-    while i < len(records) and records[i]:
-        record = records[i].decode("utf-8", errors="surrogateescape")
-        changed.append(record[3:])
-        if record[:2].strip() in ("R", "C"):
-            i += 1
-            if i < len(records) and records[i]:
-                changed.append(records[i].decode("utf-8", errors="surrogateescape"))
-        i += 1
+    changed = changed_paths(root)
     outside = []
     for path in changed:
         normalized = normalized_path(root, path)
@@ -371,6 +431,14 @@ def main() -> int:
     claim.add_argument("--next-action", required=True)
     claim.add_argument("--lease-seconds", type=int, default=900)
     claim.add_argument("paths", nargs="+")
+    adopt = sub.add_parser("adopt", help="claim all existing changes in a live isolated worktree")
+    adopt.add_argument("--task", required=True)
+    adopt.add_argument("--thread", required=True)
+    adopt.add_argument("--worktree", required=True)
+    adopt.add_argument("--stage", required=True)
+    adopt.add_argument("--milestone", required=True)
+    adopt.add_argument("--next-action", required=True)
+    adopt.add_argument("--lease-seconds", type=int, default=900)
     heartbeat = sub.add_parser("heartbeat", help="renew an owner-held claim; expiry never releases it")
     heartbeat.add_argument("--claim-id", required=True)
     heartbeat.add_argument("--thread", required=True)
@@ -408,7 +476,7 @@ def main() -> int:
     sub.add_parser("list", help="list active, suspect, and released claims")
     args = parser.parse_args()
     try:
-        for name in ("task", "thread", "stage", "milestone", "next_action") if args.command == "claim" else ():
+        for name in ("task", "thread", "stage", "milestone", "next_action") if args.command in ("claim", "adopt") else ():
             if not getattr(args, name).strip():
                 raise ValueError(f"{name} must not be empty")
         if args.command in ("release", "handoff") and not args.evidence.strip():
@@ -423,6 +491,10 @@ def main() -> int:
             if args.lease_seconds < 60:
                 raise ValueError("lease must be at least 60 seconds")
             cmd_claim(args, root, db)
+        elif args.command == "adopt":
+            if args.lease_seconds < 60:
+                raise ValueError("lease must be at least 60 seconds")
+            cmd_adopt(args, root, common, db)
         elif args.command == "heartbeat":
             if args.lease_seconds < 60:
                 raise ValueError("lease must be at least 60 seconds")
