@@ -78,6 +78,13 @@ def check() -> list[str]:
 
     for package in declared:
         for dep in package["dependencies"]:
+            dependency_name = dep["name"].casefold()
+            if package["name"] in {"rustui-playground", "rustui-lab"} and (
+                dependency_name == "gpui" or dependency_name.startswith(("gpui-", "gpui_"))
+            ):
+                errors.append(
+                    f"{package['name']}: upstream UI dependency must be behind RustUI's public API: {dep['name']}"
+                )
             if dep["name"].casefold() == FORBIDDEN_PACKAGE:
                 errors.append(f"{package['name']}: declared dependency on Allui ({dep['name']})")
             if dep.get("path"):

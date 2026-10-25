@@ -25,6 +25,29 @@ def package(name, path, dependencies=()):
 
 
 class DependencyBoundaryTests(unittest.TestCase):
+    def test_playground_cannot_bypass_rustui_with_renamed_upstream_assets(self):
+        root = MODULE.ROOT
+        app = package("rustui-playground", root / "apps/rustui-playground", [
+            {"name": "gpui-kit-assets", "rename": "icons", "optional": True},
+        ])
+        framework = package("rustui", root / "crates/rustui", [
+            {"name": "gpui-kit-assets"},
+        ])
+        metadata = {
+            "workspace_root": str(root),
+            "workspace_members": [app["id"], framework["id"]],
+            "packages": [app, framework],
+            "resolve": {"nodes": [
+                {"id": app["id"], "deps": []},
+                {"id": framework["id"], "deps": []},
+            ]},
+        }
+        with patch.object(MODULE, "cargo_metadata", return_value=metadata):
+            errors = MODULE.check()
+        self.assertEqual(len(errors), 1)
+        self.assertIn("rustui-playground", errors[0])
+        self.assertIn("gpui-kit-assets", errors[0])
+
     class FakeProcess:
         def __init__(self, stdout=b"", stderr=b""):
             self.stdout = io.BytesIO(stdout)

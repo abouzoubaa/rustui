@@ -41,6 +41,15 @@ struct EmbeddedAssetSource<S> {
     bytes: &'static [u8],
 }
 
+/// Returns the pinned component icon source through RustUI's application API.
+pub fn component_assets() -> impl gpui::AssetSource {
+    #[cfg(not(target_family = "wasm"))]
+    let assets = gpui_kit_assets::Assets;
+    #[cfg(target_family = "wasm")]
+    let assets = gpui_kit_assets::Assets::default();
+    assets
+}
+
 /// Adds one compile-time asset while preserving an application's asset source.
 pub fn with_embedded_asset(
     source: impl gpui::AssetSource,

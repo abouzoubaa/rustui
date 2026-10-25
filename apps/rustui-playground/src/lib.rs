@@ -478,10 +478,7 @@ pub fn run() {
         theme: Some(theme),
         ..Playground::default()
     };
-    #[cfg(not(target_family = "wasm"))]
-    let assets = gpui_kit_assets::Assets;
-    #[cfg(target_family = "wasm")]
-    let assets = gpui_kit_assets::Assets::default();
+    let assets = rustui::component_assets();
     let assets = rustui::with_embedded_asset(
         assets,
         "assets/playground-sample.png",

@@ -5432,6 +5432,7 @@ dependencies = [
  "chrono",
  "gpui-base",
  "gpui-component",
+ "gpui-kit-assets",
  "gpui-pre",
  "gpui-pre-platform",
  "rustui-core",
@@ -5469,7 +5470,6 @@ dependencies = [
 name = "rustui-playground"
 version = "0.1.0"
 dependencies = [
- "gpui-kit-assets",
  "rustui",
  "serde_json",
  "wasm-bindgen",

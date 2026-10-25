@@ -23,7 +23,7 @@ pub use gpui::{App, AssetSource, Result as AssetResult, SharedString};
 pub use modifiers::interaction::{PointerCursor, PointerCursorView};
 pub use modifiers::opacity::{AnimatedOpacity, OpacityAnimationError};
 pub use modifiers::transform::{Offset, OffsetView};
-pub use runtime::{RustUI, with_embedded_asset};
+pub use runtime::{RustUI, component_assets, with_embedded_asset};
 pub use rustui_macros::{HStack, VStack, component};
 
 pub use components::data::collection::{Collection, CollectionItem};
