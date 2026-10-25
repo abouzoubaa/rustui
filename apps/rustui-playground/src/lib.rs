@@ -228,6 +228,9 @@ impl Playground {
                     .child(Container(content).padding(12.0).radius(10.0).border())
                     .spacing(12.0),
             )
+            // Preserve declared component widths without clipping RTL content
+            // outside a vertical-only viewport.
+            .axis(ScrollAxis::Both)
             .id("playground-preview-scroll"),
         )
         .fill()

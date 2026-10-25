@@ -182,9 +182,16 @@ It exposed stale runtime locale notes and missing text-triangle glyphs. The en/f
 notes now describe Outline; the English resolved note is checked against catalog
 metadata. Tree now draws disclosure chevrons from the already-embedded SVG assets.
 Focused source checks passed **20 catalog tests** and **25 Tree/Outline tests**.
-These corrections still need a fresh browser rebuild and observation. Browser AX
-continues to expose only a canvas image and unnamed textarea; native/browser
-semantic, IME, screen-reader, full glyph and visual acceptance remain open.
+The rebuilt `59c530de` bundle displayed SVG chevrons and the corrected English and
+French notes. Browser Left/Right collapsed/expanded the selected branch. Arabic
+revealed a wider preview-clipping defect; returning to English restored labels
+and preserved selection/expansion. A rendered 240px/948px layout probe reproduced
+RTL child X=-708px with vertical-only scrolling and X=0 with 708px horizontal
+overflow using Both axes, in both locales. That regression passed; Playground's
+preview now selects Both axes and its all-target check passes. Browser confirmation
+of that container repair remains pending. Browser AX continues to expose only a
+canvas image and unnamed textarea; native/browser semantic, IME, screen-reader,
+full glyph and visual acceptance remain open.
 
 ## Dependency notice capture checkpoint — 2026-10-25
 
@@ -218,6 +225,13 @@ returned no advisories for that set. The query, timestamp and lockfile hash are 
 `/tmp/rustui-preservation-20261025/security/test-support-osv-20261025.json`.
 This does not supersede the earlier whole-lockfile findings or establish runtime
 closure, absence of undisclosed vulnerabilities, or release security clearance.
+
+Default macOS graph classification found **328 normal non-proc-macro packages**
+among the 417 observations; the other 89 belong to compile/build closures.
+`cbindgen` is build-only and `option-ext` is a normal dependency. All five no-file
+packages are in the normal graph. Exact per-package flags, Cargo tree outputs and
+hashes are retained in `/tmp/rustui-notice-audit-20261025/recovery/`; this classifies
+graph membership and does not prove linked/distributed closure or legal clearance.
 
 ## Initial requirement inventory (provisional)
 

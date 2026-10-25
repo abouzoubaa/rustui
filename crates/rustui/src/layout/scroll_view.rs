@@ -344,6 +344,111 @@ fn validate_dimension(value: f32, name: &str) {
 }
 
 #[cfg(test)]
+mod rendered_overflow_tests {
+    use super::*;
+    use crate::{
+        layout::{HorizontalAlignment, VStack},
+        localization::activate_localization,
+        runtime::ComponentHost,
+    };
+    use rustui_i18n::{Catalogs, Locale};
+    use std::{cell::Cell, rc::Rc};
+
+    struct WideLeaf(Rc<Cell<Option<gpui::Bounds<Pixels>>>>);
+
+    impl View for WideLeaf {
+        fn body(&self) -> impl View {
+            EmptyView
+        }
+        fn into_element(&self, _: &mut RenderContext<'_>) -> AnyElement {
+            let observed = self.0.clone();
+            div()
+                .w(px(948.0))
+                .h(px(32.0))
+                .flex_none()
+                .on_prepaint(move |bounds, _, _| observed.set(Some(bounds)))
+                .into_any_element()
+        }
+    }
+
+    struct PreviewProbe {
+        axis: ScrollAxis,
+        observed: Rc<Cell<Option<gpui::Bounds<Pixels>>>>,
+    }
+
+    impl View for PreviewProbe {
+        fn body(&self) -> impl View {
+            EmptyView
+        }
+        fn into_element(&self, context: &mut RenderContext<'_>) -> AnyElement {
+            ScrollView(
+                VStack::new()
+                    .alignment(HorizontalAlignment::Start)
+                    .child(WideLeaf(self.observed.clone())),
+            )
+            .id("wide-preview")
+            .width(240.0)
+            .height(160.0)
+            .axis(self.axis)
+            .into_element(context)
+        }
+    }
+
+    #[gpui::test]
+    fn both_axes_preserve_wide_content_in_ltr_and_rtl(cx: &mut gpui::TestAppContext) {
+        cx.update(gpui_component::init);
+        for (axis, locale) in [
+            (ScrollAxis::Vertical, "en"),
+            (ScrollAxis::Vertical, "ar"),
+            (ScrollAxis::Both, "en"),
+            (ScrollAxis::Both, "ar"),
+        ] {
+            cx.update(|app| {
+                activate_localization(
+                    Catalogs::new(Locale::parse("en").unwrap()),
+                    Locale::parse(locale).unwrap(),
+                    app,
+                )
+            });
+            let observed = Rc::new(Cell::new(None));
+            let sample = observed.clone();
+            let (owner, window) = cx.add_window_view(|_, app| {
+                ComponentHost::new(
+                    PreviewProbe {
+                        axis,
+                        observed: sample,
+                    },
+                    app,
+                )
+            });
+            window.update(|window, app| {
+                let _ = window.draw(app);
+                let native = owner.read(app).retained_entity_for_test::<ScrollState>(
+                    vec![RetentionScope::ScrollView(Identity::from("wide-preview"))],
+                    Identity::from("scroll-state"),
+                ).expect("rendered ScrollView state");
+                let handle = native.read(app).handle.clone();
+                let leaf = observed.get().expect("prepaint must measure the wide leaf");
+                let viewport = handle.bounds();
+                let relative_x = (leaf.origin.x - viewport.origin.x).as_f32();
+                eprintln!("wide-preview axis={axis:?} locale={locale} leaf={leaf:?} viewport={viewport:?} max={:?}", handle.max_offset());
+                assert!((leaf.size.width.as_f32() - 948.0).abs() < 0.5);
+                assert!((viewport.size.width.as_f32() - 240.0).abs() < 0.5);
+                if axis == ScrollAxis::Both {
+                    assert!(relative_x >= -0.5, "wide content starts outside its scrollable area");
+                    assert!(handle.max_offset().x.as_f32() >= 708.0 - 0.5,
+                        "declared width must be reachable by horizontal scrolling");
+                } else if locale == "ar" {
+                    assert!(relative_x < -600.0, "control must reproduce clipped RTL content");
+                } else {
+                    assert!(relative_x.abs() < 0.5);
+                }
+            });
+        }
+    }
+}
+
+#[cfg(test)]
 mod tests {
     use super::*;
 
