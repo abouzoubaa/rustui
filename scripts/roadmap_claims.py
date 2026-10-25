@@ -700,10 +700,12 @@ def cmd_handoff(args: argparse.Namespace, common_git_dir: Path, db: sqlite3.Conn
     now = int(time.time())
     db.execute("BEGIN IMMEDIATE")
     try:
-        old = db.execute("SELECT task,stage,milestone,base_head FROM claims WHERE id=? AND thread=? AND state='active'",
+        old = db.execute("SELECT task,stage,milestone,base_head,worktree,branch FROM claims WHERE id=? AND thread=? AND state='active'",
                          (args.claim_id, args.old_thread)).fetchone()
         if old is None:
             raise ValueError("claim is missing, released, or not owned by the old thread")
+        if new_root == Path(old[4]).resolve() or branch == old[5]:
+            raise ValueError("handoff requires a different worktree and codex branch from the old owner")
         conflict = db.execute("""
             SELECT id,thread FROM claims
             WHERE state='active' AND (worktree=? OR thread=? OR branch=? OR task=?) AND id<>?

@@ -167,7 +167,10 @@ worktree on a unique `codex/` branch. The replacement must inspect and
 deliberately integrate the old work before continuing. The CLI cannot observe
 Codex thread liveness; the orchestrator must inspect the old thread and confirm
 it has stopped before using `--confirmed-terminal`. This is an explicit
-cooperative gate, not an automatic liveness check.
+cooperative gate, not an automatic liveness check. The CLI rejects a
+handoff that reuses the old owner's worktree or branch, so the replacement
+cannot edit from the same checkout even if a terminal-state attestation is
+mistaken.
 
 ```sh
 python3 /Users/Abium/.codex/worktrees/session-coordination/rustui/scripts/roadmap_claims.py handoff --claim-id <claim-id> \

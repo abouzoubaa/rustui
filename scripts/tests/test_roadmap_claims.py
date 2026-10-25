@@ -362,6 +362,28 @@ class RoadmapClaimsTests(unittest.TestCase):
                                  env=self.env, text=True, capture_output=True, check=True)
         self.assertEqual(json.loads(listing.stdout)[0]["state"], "suspect")
 
+    def test_handoff_rejects_same_worktree_and_preserves_old_owner(self) -> None:
+        claim = self.run_claim(self.wt1, "thread-handoff-same-old", "src/owned.rs")
+        self.assertEqual(claim.returncode, 0, claim.stderr)
+        claim_id = json.loads(claim.stdout)["claim_id"]
+        handoff = subprocess.run(
+            [sys.executable, str(SCRIPT), "handoff", "--claim-id", claim_id,
+             "--old-thread", "thread-handoff-same-old", "--new-thread", "thread-handoff-same-new",
+             "--new-worktree", str(self.wt1), "--stage", "Stage 2", "--milestone", "M-next",
+             "--next-action", "continue safely", "--terminal-state", "superseded",
+             "--confirmed-terminal", "--evidence", "verified terminal"],
+            cwd=self.wt1, env=self.env, text=True, capture_output=True,
+        )
+        self.assertNotEqual(handoff.returncode, 0)
+        self.assertIn("different worktree and codex branch", handoff.stderr)
+        listing = subprocess.run(
+            [sys.executable, str(SCRIPT), "list"], cwd=self.wt1, env=self.env,
+            text=True, capture_output=True, check=True,
+        )
+        row = next(item for item in json.loads(listing.stdout) if item["claim_id"] == claim_id)
+        self.assertEqual(row["thread"], "thread-handoff-same-old")
+        self.assertEqual(Path(row["worktree"]).resolve(), self.wt1.resolve())
+
     def test_handoff_transfers_identity_without_dropping_old_worktree_changes(self) -> None:
         claim = self.run_claim(self.wt1, "thread-handoff-old", "src/owned.rs")
         self.assertEqual(claim.returncode, 0, claim.stderr)
