@@ -150,9 +150,16 @@ claim is never presented as proof that its session is working.
 
 ```sh
 python3 /Users/Abium/.codex/worktrees/session-coordination/rustui/scripts/roadmap_claims.py release --claim-id <claim-id> \
-  --thread <codex-thread-id> --terminal-state completed \
+  --thread <codex-thread-id> --terminal-state completed --confirmed-terminal \
   --evidence "Reviewed terminal thread status and retained worktree"
 ```
+
+`release` refuses to unlock a claim unless `--confirmed-terminal` is supplied.
+This flag is an explicit coordinator attestation, not an automatic Codex
+liveness check: verify the literal thread ID in the current thread inventory
+immediately before releasing. If its state is idle, active, blocked, or
+`notLoaded`, keep the claim and continue that same thread or preserve it for
+later recovery.
 
 For handoff, first verify the old session is terminal and preserve its worktree
 and uncommitted changes. Then transfer the claim atomically to a separate clean

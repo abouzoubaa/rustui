@@ -663,6 +663,8 @@ def cmd_rescope(args: argparse.Namespace, root: Path, db: sqlite3.Connection) ->
 
 
 def cmd_release(args: argparse.Namespace, db: sqlite3.Connection) -> None:
+    if not args.confirmed_terminal:
+        raise ValueError("refusing to release claim without independently confirmed terminal thread state")
     db.execute("BEGIN IMMEDIATE")
     try:
         result = db.execute("""
@@ -1035,6 +1037,8 @@ def main() -> int:
     release.add_argument("--thread", required=True)
     release.add_argument("--terminal-state", required=True,
                          choices=("completed", "cancelled", "archived", "superseded"))
+    release.add_argument("--confirmed-terminal", action="store_true",
+                         help="attest the thread inventory was checked and the owner is terminal")
     release.add_argument("--evidence", required=True,
                          help="link or concise coordinator evidence that the thread stopped")
     handoff = sub.add_parser("handoff", help="atomically transfer paths after confirming the old thread stopped")
