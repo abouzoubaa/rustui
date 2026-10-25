@@ -643,10 +643,7 @@ mod tests {
     #[test]
     fn collection_elements_emit_list_and_list_item_accesskit_metadata() {
         let identity = Identity::from("saved-views");
-        let list = accesskit_node(&collection_list_element(
-            &identity,
-            "Saved views".into(),
-        ));
+        let list = accesskit_node(&collection_list_element(&identity, "Saved views".into()));
         assert_eq!(list.role(), Role::List);
         assert_eq!(list.label(), Some("Saved views"));
 

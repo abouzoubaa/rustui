@@ -117,7 +117,10 @@ fn captured_factory_keeps_its_revision_while_a_new_factory_sees_an_edit() {
         .unwrap();
     let captured_factory = host.render_factory();
     assert!(captured_factory(&()).unwrap().is_some());
-    assert_eq!(*rendered_values.borrow(), [(initial.revision, "before".into())]);
+    assert_eq!(
+        *rendered_values.borrow(),
+        [(initial.revision, "before".into())]
+    );
 
     let updated = host
         .edit(

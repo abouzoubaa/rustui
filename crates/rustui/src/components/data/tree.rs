@@ -547,11 +547,7 @@ impl View for TreeView {
                 &tree,
                 move |_ix, entry, _selected, _window, _cx| {
                     let marker = if entry.is_folder() {
-                        if entry.is_expanded() {
-                            "▾ "
-                        } else {
-                            "▸ "
-                        }
+                        if entry.is_expanded() { "▾ " } else { "▸ " }
                     } else {
                         "  "
                     };
@@ -680,10 +676,12 @@ mod tests {
         fn write(_: &mut Owner, _: Option<String>) {}
 
         for height in [f32::INFINITY, f32::NEG_INFINITY, f32::NAN] {
-            assert!(std::panic::catch_unwind(|| {
-                TreeView::new([], Binding::new(None, read, write)).height(height)
-            })
-            .is_err());
+            assert!(
+                std::panic::catch_unwind(|| {
+                    TreeView::new([], Binding::new(None, read, write)).height(height)
+                })
+                .is_err()
+            );
         }
     }
 

@@ -244,5 +244,4 @@ mod tests {
         assert!(set_open_if_changed(&mut open, false));
         assert!(!open);
     }
-
 }

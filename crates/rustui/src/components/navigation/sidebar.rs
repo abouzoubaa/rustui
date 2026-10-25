@@ -697,8 +697,7 @@ mod tests {
             item("inbox", "Inbox"),
             item("settings", "Settings").disabled(true),
             item("projects", "Projects"),
-            item("localized-components", "Components")
-                .localized("lab-navigation-components"),
+            item("localized-components", "Components").localized("lab-navigation-components"),
             item("missing-label-fallback", "Fallback sample").localized("lab-sidebar-missing"),
         ];
         let rows: Vec<_> = items
@@ -706,20 +705,11 @@ mod tests {
             .map(|item| (item.id.clone(), item.disabled))
             .collect();
 
-        let fallback = selection_after_key(
-            &rows,
-            Some("localized-components"),
-            SidebarKey::End,
-        );
+        let fallback = selection_after_key(&rows, Some("localized-components"), SidebarKey::End);
         assert_eq!(fallback.as_deref(), Some("missing-label-fallback"));
         assert_eq!(selected_index(&items, fallback.as_deref()), Some(4));
         assert_eq!(
-            selection_after_key(
-                &rows,
-                fallback.as_deref(),
-                SidebarKey::Down
-            )
-            .as_deref(),
+            selection_after_key(&rows, fallback.as_deref(), SidebarKey::Down).as_deref(),
             Some("missing-label-fallback")
         );
         assert!(should_update_selection(

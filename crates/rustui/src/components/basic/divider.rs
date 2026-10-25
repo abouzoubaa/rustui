@@ -71,11 +71,17 @@ mod tests {
         let mut horizontal = divider_line(div(), false);
         assert_eq!(horizontal.style().flex_shrink, Some(0.0));
         assert_eq!(horizontal.style().size.height, Some(px(1.).into()));
-        assert_eq!(horizontal.style().size.width, Some(gpui::relative(1.).into()));
+        assert_eq!(
+            horizontal.style().size.width,
+            Some(gpui::relative(1.).into())
+        );
 
         let mut vertical = divider_line(div(), true);
         assert_eq!(vertical.style().flex_shrink, Some(0.0));
         assert_eq!(vertical.style().size.width, Some(px(1.).into()));
-        assert_eq!(vertical.style().size.height, Some(gpui::relative(1.).into()));
+        assert_eq!(
+            vertical.style().size.height,
+            Some(gpui::relative(1.).into())
+        );
     }
 }

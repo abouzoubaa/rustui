@@ -67,14 +67,11 @@ impl View for WindowControlsGallery {
                 "zoom" => Self::select_zoom,
                 _ => unreachable!("traffic-light ID is declared in TRAFFIC_LIGHTS"),
             };
-            Button(
-                Self::light_label(name, color, active),
-                self.action(action),
-            )
-            .id(format!("window-control-{id}"))
-            .button_style(ButtonStyle::Plain)
-            .toggled(active)
-            .accessibility_label(Self::light_accessibility_label(name, active))
+            Button(Self::light_label(name, color, active), self.action(action))
+                .id(format!("window-control-{id}"))
+                .button_style(ButtonStyle::Plain)
+                .toggled(active)
+                .accessibility_label(Self::light_accessibility_label(name, active))
         });
 
         VStack::new()
@@ -147,7 +144,10 @@ mod tests {
         gallery.select_close();
         assert!(gallery.active());
         assert_eq!(gallery.last_control(), "Close");
-        assert_eq!(gallery.last_control_feedback(), "Last selected control: Close");
+        assert_eq!(
+            gallery.last_control_feedback(),
+            "Last selected control: Close"
+        );
         gallery.simulate_inactive();
         gallery.select_minimize();
         assert!(gallery.active());
@@ -160,7 +160,10 @@ mod tests {
         gallery.select_zoom();
         assert!(gallery.active());
         assert_eq!(gallery.last_control(), "Zoom");
-        assert_eq!(gallery.last_control_feedback(), "Last selected control: Zoom");
+        assert_eq!(
+            gallery.last_control_feedback(),
+            "Last selected control: Zoom"
+        );
     }
 
     #[test]
@@ -175,7 +178,12 @@ mod tests {
         for (action, expected) in actions {
             gallery.simulate_inactive();
             assert!(!gallery.active());
-            assert!(gallery.action(action).dispatch(&mut gallery).should_notify());
+            assert!(
+                gallery
+                    .action(action)
+                    .dispatch(&mut gallery)
+                    .should_notify()
+            );
             assert!(gallery.active());
             assert_eq!(gallery.last_control(), expected);
             assert_eq!(

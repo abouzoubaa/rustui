@@ -33,8 +33,8 @@ mod dialog_gallery;
 mod disclosure_gallery;
 mod event_inspector;
 mod feedback_gallery;
-mod form_accessories_gallery;
 mod focus_gallery;
+mod form_accessories_gallery;
 mod foundation_additions;
 mod foundation_demos;
 mod frame_gallery;
@@ -44,8 +44,8 @@ mod layout_inspector;
 mod lazy_grid_gallery;
 mod locale_selector;
 mod localization_gallery;
-mod menu_gallery;
 mod menu_bar_reference_gallery;
+mod menu_gallery;
 mod navigation_split_gallery;
 mod offset_gallery;
 mod owner_callbacks;
@@ -60,14 +60,14 @@ mod sidebar_gallery;
 mod split_view_gallery;
 mod spring_gallery;
 mod supplementary_gallery;
+mod tab_bar_reference_gallery;
 mod table_reconciliation_gallery;
 mod task_release;
 mod test_runner;
-mod theme_inspector;
-mod toolbar_gallery;
-mod tab_bar_reference_gallery;
 mod text_specimen_gallery;
 mod text_style_gallery;
+mod theme_inspector;
+mod toolbar_gallery;
 mod tooltip_gallery;
 mod tree_reconciliation_gallery;
 mod utility_window_gallery;
@@ -195,7 +195,10 @@ mod catalog_demo_tests {
     #[test]
     fn primitive_composition_catalog_entries_reach_previews() {
         for key in ["utility_window", "form", "menu_bar", "window_controls"] {
-            assert!(catalog_demo(key).is_some(), "missing composition preview: {key}");
+            assert!(
+                catalog_demo(key).is_some(),
+                "missing composition preview: {key}"
+            );
         }
     }
 

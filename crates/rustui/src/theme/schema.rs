@@ -92,7 +92,9 @@ where
 }
 
 fn parse_integral_json_number(raw: &str) -> Option<u64> {
-    let (negative, raw) = raw.strip_prefix('-').map_or((false, raw), |raw| (true, raw));
+    let (negative, raw) = raw
+        .strip_prefix('-')
+        .map_or((false, raw), |raw| (true, raw));
     let (mantissa, exponent) = raw
         .split_once(['e', 'E'])
         .map_or((raw, 0_i64), |(mantissa, exponent)| {
@@ -115,7 +117,11 @@ fn parse_integral_json_number(raw: &str) -> Option<u64> {
     let decimal_places = i64::try_from(fraction.len()).ok()?.checked_sub(exponent)?;
     if decimal_places > 0 {
         let places = usize::try_from(decimal_places).ok()?;
-        if places > digits.len() || !digits.as_bytes()[digits.len() - places..].iter().all(|b| *b == b'0') {
+        if places > digits.len()
+            || !digits.as_bytes()[digits.len() - places..]
+                .iter()
+                .all(|b| *b == b'0')
+        {
             return None;
         }
         digits.truncate(digits.len() - places);
@@ -143,7 +149,10 @@ fn validate_slider_theme_roles(
 
     for role in ["track", "thumb", "disabled"] {
         let color_role = roles.get(role).and_then(serde_json::Value::as_str);
-        if !matches!(color_role, Some("secondary" | "primary" | "muted_foreground")) {
+        if !matches!(
+            color_role,
+            Some("secondary" | "primary" | "muted_foreground")
+        ) {
             return Err(format!(
                 "slider theme_roles.{role} must name a supported profile color role"
             ));
@@ -1520,10 +1529,8 @@ mod tests {
 
     #[test]
     fn theme_roles_must_not_be_empty() {
-        let mut document: ThemeDocument = crate::theme::parse_theme(include_str!(
-            "../../../../themes/macos27.json"
-        ))
-        .unwrap();
+        let mut document: ThemeDocument =
+            crate::theme::parse_theme(include_str!("../../../../themes/macos27.json")).unwrap();
         document.theme_roles.clear();
 
         assert_eq!(
@@ -1534,25 +1541,23 @@ mod tests {
 
     #[test]
     fn slider_theme_roles_must_be_supported_by_runtime() {
-        let mut document: ThemeDocument = crate::theme::parse_theme(include_str!(
-            "../../../../themes/macos27.json"
-        ))
-        .unwrap();
+        let mut document: ThemeDocument =
+            crate::theme::parse_theme(include_str!("../../../../themes/macos27.json")).unwrap();
         document.components.get_mut("slider").unwrap()["theme_roles"]["thumb"] =
             serde_json::json!("unsupported");
 
-        assert!(document
-            .validate()
-            .unwrap_err()
-            .contains("slider theme_roles.thumb"));
+        assert!(
+            document
+                .validate()
+                .unwrap_err()
+                .contains("slider theme_roles.thumb")
+        );
     }
 
     #[test]
     fn text_theme_requires_renderer_foreground_role() {
-        let mut document: ThemeDocument = crate::theme::parse_theme(include_str!(
-            "../../../../themes/macos27.json"
-        ))
-        .unwrap();
+        let mut document: ThemeDocument =
+            crate::theme::parse_theme(include_str!("../../../../themes/macos27.json")).unwrap();
         let styles = document.components.get_mut("text").unwrap()["styles"]
             .as_array_mut()
             .unwrap();
@@ -1565,19 +1570,19 @@ mod tests {
             .unwrap()
             .remove("foreground");
 
-        assert!(document
-            .validate()
-            .unwrap_err()
-            .contains("text style rule 0 is missing renderer-required `foreground` role"));
+        assert!(
+            document
+                .validate()
+                .unwrap_err()
+                .contains("text style rule 0 is missing renderer-required `foreground` role")
+        );
     }
 
     #[test]
     fn link_theme_requires_renderer_foreground_and_typography() {
         for property in ["foreground", "typography"] {
-            let mut document: ThemeDocument = crate::theme::parse_theme(include_str!(
-                "../../../../themes/macos27.json"
-            ))
-            .unwrap();
+            let mut document: ThemeDocument =
+                crate::theme::parse_theme(include_str!("../../../../themes/macos27.json")).unwrap();
             let styles = document.components.get_mut("link").unwrap()["styles"]
                 .as_array_mut()
                 .unwrap();
@@ -1599,10 +1604,8 @@ mod tests {
     #[test]
     fn label_theme_requires_renderer_foreground_and_typography() {
         for property in ["foreground", "typography"] {
-            let mut document: ThemeDocument = crate::theme::parse_theme(include_str!(
-                "../../../../themes/macos27.json"
-            ))
-            .unwrap();
+            let mut document: ThemeDocument =
+                crate::theme::parse_theme(include_str!("../../../../themes/macos27.json")).unwrap();
             let styles = document.components.get_mut("label").unwrap()["styles"]
                 .as_array_mut()
                 .unwrap();
@@ -1623,10 +1626,8 @@ mod tests {
 
     #[test]
     fn menu_body_theme_requires_renderer_background() {
-        let mut document: ThemeDocument = crate::theme::parse_theme(include_str!(
-            "../../../../themes/macos27.json"
-        ))
-        .unwrap();
+        let mut document: ThemeDocument =
+            crate::theme::parse_theme(include_str!("../../../../themes/macos27.json")).unwrap();
         let styles = document.components.get_mut("menu").unwrap()["styles"]
             .as_array_mut()
             .unwrap();
@@ -1639,17 +1640,18 @@ mod tests {
             .unwrap()
             .remove("background");
 
-        assert!(document.validate().unwrap_err().contains(
-            "menu style rule 0 is missing renderer-required `background` property"
-        ));
+        assert!(
+            document
+                .validate()
+                .unwrap_err()
+                .contains("menu style rule 0 is missing renderer-required `background` property")
+        );
     }
 
     #[test]
     fn text_field_theme_requires_each_renderer_appearance_and_size_rule() {
-        let mut document: ThemeDocument = crate::theme::parse_theme(include_str!(
-            "../../../../themes/macos27.json"
-        ))
-        .unwrap();
+        let mut document: ThemeDocument =
+            crate::theme::parse_theme(include_str!("../../../../themes/macos27.json")).unwrap();
         document.components.get_mut("text_field").unwrap()["styles"]
             .as_array_mut()
             .unwrap()
@@ -1671,10 +1673,12 @@ mod tests {
         document.components.get_mut("text_field").unwrap()["styles"][0]["when"]["interaction"] =
             serde_json::json!(" ");
 
-        assert!(document
-            .validate()
-            .unwrap_err()
-            .contains("text_field style rule 0 has an empty `interaction` selector"));
+        assert!(
+            document
+                .validate()
+                .unwrap_err()
+                .contains("text_field style rule 0 has an empty `interaction` selector")
+        );
     }
 
     #[test]
@@ -1684,18 +1688,18 @@ mod tests {
         document.components.get_mut("divider").unwrap()["styles"][0]["when"]["appearance"] =
             serde_json::json!("system");
 
-        assert!(document
-            .validate()
-            .unwrap_err()
-            .contains("style rule 0 has unsupported appearance selector `system`"));
+        assert!(
+            document
+                .validate()
+                .unwrap_err()
+                .contains("style rule 0 has unsupported appearance selector `system`")
+        );
     }
 
     #[test]
     fn search_field_theme_requires_renderer_rules_and_properties() {
-        let mut missing_rule: ThemeDocument = crate::theme::parse_theme(include_str!(
-            "../../../../themes/macos27.json"
-        ))
-        .unwrap();
+        let mut missing_rule: ThemeDocument =
+            crate::theme::parse_theme(include_str!("../../../../themes/macos27.json")).unwrap();
         missing_rule.components.get_mut("search_field").unwrap()["styles"]
             .as_array_mut()
             .unwrap()
@@ -1706,10 +1710,8 @@ mod tests {
             "search_field is missing renderer-required `list_search` style rule for appearance `light` and size `small`"
         ));
 
-        let mut missing_property: ThemeDocument = crate::theme::parse_theme(include_str!(
-            "../../../../themes/macos27.json"
-        ))
-        .unwrap();
+        let mut missing_property: ThemeDocument =
+            crate::theme::parse_theme(include_str!("../../../../themes/macos27.json")).unwrap();
         missing_property.components.get_mut("search_field").unwrap()["styles"]
             .as_array_mut()
             .unwrap()
@@ -1719,18 +1721,17 @@ mod tests {
             .as_object_mut()
             .unwrap()
             .remove("height");
-        assert!(missing_property
-            .validate()
-            .unwrap_err()
-            .contains("search_field style rule 3 is missing renderer-required `height` property"));
+        assert!(
+            missing_property.validate().unwrap_err().contains(
+                "search_field style rule 3 is missing renderer-required `height` property"
+            )
+        );
     }
 
     #[test]
     fn stepper_theme_requires_renderer_rules_for_both_appearances() {
-        let mut document: ThemeDocument = crate::theme::parse_theme(include_str!(
-            "../../../../themes/macos27.json"
-        ))
-        .unwrap();
+        let mut document: ThemeDocument =
+            crate::theme::parse_theme(include_str!("../../../../themes/macos27.json")).unwrap();
         document.components.get_mut("stepper").unwrap()["styles"]
             .as_array_mut()
             .unwrap()
@@ -1745,10 +1746,8 @@ mod tests {
 
     #[test]
     fn outline_view_theme_requires_renderer_style_for_both_appearances() {
-        let mut document: ThemeDocument = crate::theme::parse_theme(include_str!(
-            "../../../../themes/macos27.json"
-        ))
-        .unwrap();
+        let mut document: ThemeDocument =
+            crate::theme::parse_theme(include_str!("../../../../themes/macos27.json")).unwrap();
         document.components.get_mut("outline_view").unwrap()["styles"]
             .as_array_mut()
             .unwrap()
@@ -1763,10 +1762,8 @@ mod tests {
 
     #[test]
     fn checkbox_theme_requires_renderer_background_color() {
-        let mut document: ThemeDocument = crate::theme::parse_theme(include_str!(
-            "../../../../themes/macos27.json"
-        ))
-        .unwrap();
+        let mut document: ThemeDocument =
+            crate::theme::parse_theme(include_str!("../../../../themes/macos27.json")).unwrap();
         let styles = document.components.get_mut("checkbox").unwrap()["styles"]
             .as_array_mut()
             .unwrap();
@@ -1779,18 +1776,17 @@ mod tests {
             .unwrap()
             .remove("background");
 
-        assert!(document
-            .validate()
-            .unwrap_err()
-            .contains("checkbox style rule 0 is missing renderer-required `background` property"));
+        assert!(
+            document.validate().unwrap_err().contains(
+                "checkbox style rule 0 is missing renderer-required `background` property"
+            )
+        );
     }
 
     #[test]
     fn toggle_theme_requires_renderer_geometry() {
-        let mut document: ThemeDocument = crate::theme::parse_theme(include_str!(
-            "../../../../themes/macos27.json"
-        ))
-        .unwrap();
+        let mut document: ThemeDocument =
+            crate::theme::parse_theme(include_str!("../../../../themes/macos27.json")).unwrap();
         let styles = document.components.get_mut("toggle").unwrap()["styles"]
             .as_array_mut()
             .unwrap();
@@ -1803,35 +1799,34 @@ mod tests {
             .unwrap()
             .remove("corner_radius");
 
-        assert!(document
-            .validate()
-            .unwrap_err()
-            .contains("toggle style rule 0 is missing renderer-required `corner_radius` property"));
+        assert!(
+            document.validate().unwrap_err().contains(
+                "toggle style rule 0 is missing renderer-required `corner_radius` property"
+            )
+        );
     }
 
     #[test]
     fn icon_theme_requires_a_renderer_clear_style_rule() {
-        let mut document: ThemeDocument = crate::theme::parse_theme(include_str!(
-            "../../../../themes/macos27.json"
-        ))
-        .unwrap();
+        let mut document: ThemeDocument =
+            crate::theme::parse_theme(include_str!("../../../../themes/macos27.json")).unwrap();
         document.components.get_mut("icon").unwrap()["styles"]
             .as_array_mut()
             .unwrap()
             .retain(|rule| rule["part"] != "clear");
 
-        assert!(document
-            .validate()
-            .unwrap_err()
-            .contains("missing renderer-required `clear` style rule"));
+        assert!(
+            document
+                .validate()
+                .unwrap_err()
+                .contains("missing renderer-required `clear` style rule")
+        );
     }
 
     #[test]
     fn icon_clear_theme_requires_renderer_path_data() {
-        let document: ThemeDocument = crate::theme::parse_theme(include_str!(
-            "../../../../themes/macos27.json"
-        ))
-        .unwrap();
+        let document: ThemeDocument =
+            crate::theme::parse_theme(include_str!("../../../../themes/macos27.json")).unwrap();
 
         for path in [None, Some(serde_json::json!({"value": {"data": " "}}))] {
             let mut invalid = document.clone();
@@ -1856,10 +1851,8 @@ mod tests {
 
     #[test]
     fn radio_theme_requires_renderer_geometry() {
-        let mut document: ThemeDocument = crate::theme::parse_theme(include_str!(
-            "../../../../themes/macos27.json"
-        ))
-        .unwrap();
+        let mut document: ThemeDocument =
+            crate::theme::parse_theme(include_str!("../../../../themes/macos27.json")).unwrap();
         let styles = document.components.get_mut("radio_button").unwrap()["styles"]
             .as_array_mut()
             .unwrap();
@@ -1872,10 +1865,9 @@ mod tests {
             .unwrap()
             .remove("corner_radius");
 
-        assert!(document
-            .validate()
-            .unwrap_err()
-            .contains("radio_button style rule 0 is missing renderer-required `corner_radius` property"));
+        assert!(document.validate().unwrap_err().contains(
+            "radio_button style rule 0 is missing renderer-required `corner_radius` property"
+        ));
     }
 
     #[test]
@@ -1915,10 +1907,9 @@ mod tests {
                 .unwrap()
                 .retain(|rule| rule["part"] != "body");
 
-            assert!(invalid
-                .validate()
-                .unwrap_err()
-                .contains(&format!("{component} is missing renderer-required `body` style rule")));
+            assert!(invalid.validate().unwrap_err().contains(&format!(
+                "{component} is missing renderer-required `body` style rule"
+            )));
         }
     }
 
@@ -1982,20 +1973,20 @@ mod tests {
                     .unwrap();
                 body["style"]["properties"]["vector_path"] = artwork.clone();
 
-                assert!(invalid
-                    .validate()
-                    .unwrap_err()
-                    .contains("renderer `vector_path`"));
+                assert!(
+                    invalid
+                        .validate()
+                        .unwrap_err()
+                        .contains("renderer `vector_path`")
+                );
             }
         }
     }
 
     #[test]
     fn color_picker_theme_requires_renderer_dimensions() {
-        let mut document: ThemeDocument = crate::theme::parse_theme(include_str!(
-            "../../../../themes/macos27.json"
-        ))
-        .unwrap();
+        let mut document: ThemeDocument =
+            crate::theme::parse_theme(include_str!("../../../../themes/macos27.json")).unwrap();
         let styles = document.components.get_mut("color_picker").unwrap()["styles"]
             .as_array_mut()
             .unwrap();
@@ -2008,10 +1999,11 @@ mod tests {
             .unwrap()
             .remove("height");
 
-        assert!(document
-            .validate()
-            .unwrap_err()
-            .contains("color_picker style rule 1 is missing renderer-required `height` property"));
+        assert!(
+            document.validate().unwrap_err().contains(
+                "color_picker style rule 1 is missing renderer-required `height` property"
+            )
+        );
     }
 
     #[test]
@@ -2054,9 +2046,12 @@ mod tests {
             Err(crate::theme::ThemeResolveError::Invalid(message))
                 if message.contains("ambiguous body styles")
         ));
-        assert!(document.validate().unwrap_err().contains(
-            "button style rules 0 and 1 have ambiguous selectors"
-        ));
+        assert!(
+            document
+                .validate()
+                .unwrap_err()
+                .contains("button style rules 0 and 1 have ambiguous selectors")
+        );
     }
 
     #[test]
@@ -2066,16 +2061,18 @@ mod tests {
         document.components.get_mut("button").unwrap()["styles"][0]["when"]["appearance"] =
             serde_json::json!("system");
 
-        assert!(document
-            .validate()
-            .unwrap_err()
-            .contains("button style rule has unsupported appearance selector `system`"));
+        assert!(
+            document
+                .validate()
+                .unwrap_err()
+                .contains("button style rule has unsupported appearance selector `system`")
+        );
 
         let schema: serde_json::Value =
             serde_json::from_str(include_str!("../../../../themes/theme.schema.json")).unwrap();
         assert_eq!(
-            schema["$defs"]["buttonTheme"]["properties"]["styles"]["items"]["properties"]
-                ["when"]["properties"]["appearance"]["enum"],
+            schema["$defs"]["buttonTheme"]["properties"]["styles"]["items"]["properties"]["when"]["properties"]
+                ["appearance"]["enum"],
             serde_json::json!(["any", "light", "dark"])
         );
     }
@@ -2133,10 +2130,8 @@ mod tests {
 
     #[test]
     fn metadata_fields_must_be_objects() {
-        let document: ThemeDocument = crate::theme::parse_theme(include_str!(
-            "../../../../themes/macos27.json"
-        ))
-        .unwrap();
+        let document: ThemeDocument =
+            crate::theme::parse_theme(include_str!("../../../../themes/macos27.json")).unwrap();
 
         for field in ["source", "token_sources", "derivation"] {
             let mut invalid = document.clone();
@@ -2170,15 +2165,20 @@ mod tests {
     fn theme_schema_rejects_whitespace_only_profile_ids_like_runtime() {
         let schema: serde_json::Value =
             serde_json::from_str(include_str!("../../../../themes/theme.schema.json")).unwrap();
-        assert_eq!(schema["$defs"]["profile"]["properties"]["id"]["pattern"], "\\S");
+        assert_eq!(
+            schema["$defs"]["profile"]["properties"]["id"]["pattern"],
+            "\\S"
+        );
 
         let source = include_str!("../../../../themes/macos27.json")
             .replace("\"profile\": \"macos27\"", "\"profile\": \"   \"")
             .replace("\"id\": \"macos27\"", "\"id\": \"   \"");
-        assert!(crate::theme::parse_theme(&source)
-            .unwrap_err()
-            .to_string()
-            .contains("profile id must not be empty"));
+        assert!(
+            crate::theme::parse_theme(&source)
+                .unwrap_err()
+                .to_string()
+                .contains("profile id must not be empty")
+        );
     }
 
     #[test]
@@ -2217,8 +2217,8 @@ mod tests {
                 "min_version" => format!("\"{field}\": 27.0000000000000000001"),
                 _ => format!("\"{field}\": 400.0000000000000000001"),
             };
-            let source = include_str!("../../../../themes/macos27.json")
-                .replace(&integer, &fractional);
+            let source =
+                include_str!("../../../../themes/macos27.json").replace(&integer, &fractional);
             assert!(
                 crate::theme::parse_theme(&source).is_err(),
                 "fractional {field} must not round to an integer"

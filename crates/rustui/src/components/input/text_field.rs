@@ -423,8 +423,8 @@ impl View for TextFieldView {
                 state.set_placeholder(placeholder, window, cx);
             });
         }
-        let (retained_value, retained_masked, marked_range, current_selection) =
-            context.update_entity(&state, |state, window, cx| {
+        let (retained_value, retained_masked, marked_range, current_selection) = context
+            .update_entity(&state, |state, window, cx| {
                 (
                     state.value().to_string(),
                     state.presentation().is_masked(),
@@ -446,8 +446,7 @@ impl View for TextFieldView {
                 &previous_owner_value,
                 &retained_value,
                 marked_range.clone(),
-            )
-        {
+            ) {
             selection_before_preedit.clone()
         } else {
             None
@@ -472,9 +471,8 @@ impl View for TextFieldView {
         let selection_after_sync =
             context.update_entity(&state, |state, _, _| state.selected_range());
         let next_selection_before_preedit = if marked_range.is_some() && owner_unchanged {
-            selection_before_preedit.or_else(|| {
-                last_selection.or_else(|| Some(current_selection.clone()))
-            })
+            selection_before_preedit
+                .or_else(|| last_selection.or_else(|| Some(current_selection.clone())))
         } else {
             None
         };

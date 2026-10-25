@@ -1,7 +1,4 @@
-use rustui::{
-    HStack, VStack,
-    components::basic::text::Text,
-};
+use rustui::{HStack, VStack, components::basic::text::Text};
 
 #[test]
 fn block_bodied_optional_child_with_nested_closure_typechecks() {

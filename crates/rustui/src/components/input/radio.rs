@@ -221,14 +221,18 @@ mod accessibility_tests {
 
         assert!(radio.label.is_empty());
         assert_eq!(
-            radio.resolved_accessibility_label(|_| unreachable!()).as_ref(),
+            radio
+                .resolved_accessibility_label(|_| unreachable!())
+                .as_ref(),
             "Choose monthly"
         );
 
-        assert!(std::panic::catch_unwind(|| {
-            Radio(" \t", binding()).resolved_accessibility_label(|_| unreachable!());
-        })
-        .is_err());
+        assert!(
+            std::panic::catch_unwind(|| {
+                Radio(" \t", binding()).resolved_accessibility_label(|_| unreachable!());
+            })
+            .is_err()
+        );
     }
 
     #[test]

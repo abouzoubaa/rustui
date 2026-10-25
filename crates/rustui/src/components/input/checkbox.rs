@@ -284,7 +284,9 @@ mod accessibility_tests {
         assert!(checkbox.label.is_empty());
         assert_eq!(
             checkbox.accessibility_label,
-            Some(CheckboxAccessibilityLabel::Literal("Accept the terms".into()))
+            Some(CheckboxAccessibilityLabel::Literal(
+                "Accept the terms".into()
+            ))
         );
     }
 
@@ -335,7 +337,6 @@ mod accessibility_tests {
     fn localized_accessible_name_rejects_blank_message_id() {
         Checkbox("Accepted", binding()).localized_accessibility_label(" \t ");
     }
-
 }
 
 #[cfg(test)]

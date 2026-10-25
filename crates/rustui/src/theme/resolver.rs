@@ -888,10 +888,12 @@ mod component_tests {
             .unwrap()
             .remove("width");
 
-        assert!(document
-            .validate()
-            .unwrap_err()
-            .contains("slider style rule 0 is missing renderer-required `width` property"));
+        assert!(
+            document
+                .validate()
+                .unwrap_err()
+                .contains("slider style rule 0 is missing renderer-required `width` property")
+        );
     }
 
     #[test]

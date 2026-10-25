@@ -1,7 +1,4 @@
-use rustui::{
-    HStack, VStack,
-    components::basic::text::Text,
-};
+use rustui::{HStack, VStack, components::basic::text::Text};
 
 #[test]
 fn indexed_constructor_keeps_adjacent_siblings() {

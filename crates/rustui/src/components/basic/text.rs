@@ -1,6 +1,6 @@
 use gpui::{
-    div, px, AnyElement, FontWeight, InteractiveElement as _, IntoElement, ParentElement, Role,
-    SharedString, StatefulInteractiveElement, Styled,
+    AnyElement, FontWeight, InteractiveElement as _, IntoElement, ParentElement, Role,
+    SharedString, StatefulInteractiveElement, Styled, div, px,
 };
 
 use crate::text::font_policy::FontFallbackPolicy;

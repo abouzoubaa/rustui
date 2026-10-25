@@ -504,9 +504,9 @@ fn main() {
                 window_bounds: Some(WindowBounds::Windowed(bounds)),
                 ..Default::default()
             },
-        move |window, cx| {
+            move |window, cx| {
                 schedule(window, window_state);
-            cx.new(|cx| gpui_component::Root::new(root.clone(), window, cx))
+                cx.new(|cx| gpui_component::Root::new(root.clone(), window, cx))
             },
         )
         .expect("comparison window");

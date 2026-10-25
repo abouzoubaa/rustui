@@ -1,4 +1,7 @@
-use rustui::{HStack, components::basic::text::{Text, TextView}};
+use rustui::{
+    HStack,
+    components::basic::text::{Text, TextView},
+};
 
 #[test]
 fn conditional_turbofish_optional_child_typechecks_through_public_hstack_macro() {

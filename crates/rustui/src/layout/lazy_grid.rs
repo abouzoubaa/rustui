@@ -346,27 +346,24 @@ mod tests {
             LazyGridItem::new("b", 1),
             LazyGridItem::new("c", 2),
         ]);
-        assert!(catch_unwind(AssertUnwindSafe(|| {
-            LazyGrid::new(
-                "grid",
-                too_many_rows,
-                columns,
-                100.0,
-                f32::MAX / 2.0,
-                |_, _| crate::view::EmptyView,
-            )
-        }))
-        .is_err());
+        assert!(
+            catch_unwind(AssertUnwindSafe(|| {
+                LazyGrid::new(
+                    "grid",
+                    too_many_rows,
+                    columns,
+                    100.0,
+                    f32::MAX / 2.0,
+                    |_, _| crate::view::EmptyView,
+                )
+            }))
+            .is_err()
+        );
 
         let two_rows = Rc::from([LazyGridItem::new("a", 0), LazyGridItem::new("b", 1)]);
-        let grid = LazyGrid::new(
-            "grid",
-            two_rows,
-            columns,
-            100.0,
-            f32::MAX * 0.4,
-            |_, _| crate::view::EmptyView,
-        );
+        let grid = LazyGrid::new("grid", two_rows, columns, 100.0, f32::MAX * 0.4, |_, _| {
+            crate::view::EmptyView
+        });
         assert!(catch_unwind(AssertUnwindSafe(|| grid.row_gap(f32::MAX * 0.2))).is_err());
     }
 

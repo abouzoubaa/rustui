@@ -923,7 +923,7 @@ impl Default for CompiledPreviewGallery {
                         max_length: None,
                         allowed_values: vec![],
                     },
-                )
+                ),
             ]),
             events: BTreeMap::new(),
         };
@@ -931,15 +931,15 @@ impl Default for CompiledPreviewGallery {
             .register(progress_schema, |snapshot, _context: &FactoryContext| {
                 let label = property_string(snapshot, "label").expect("validated progress label");
                 let value = property_number(snapshot, "value").expect("validated progress value");
-            let indeterminate = property_boolean(snapshot, "indeterminate")
-                .expect("validated progress mode");
+                let indeterminate =
+                    property_boolean(snapshot, "indeterminate").expect("validated progress mode");
                 AnyView::new(
                     Progress(
                         format!("compiled-preview-progress-{}", snapshot.stamp.generation),
                         progress_control_value(value),
                     )
                     .indeterminate(indeterminate)
-                .accessibility_label(label),
+                    .accessibility_label(label),
                 )
             })
             .unwrap();
@@ -2024,8 +2024,8 @@ impl Default for CompiledPreviewGallery {
                 |snapshot, _context: &FactoryContext| {
                     let accessibility_label = property_string(snapshot, "accessibility_label")
                         .expect("validated icon accessible name");
-                    let size = property_number(snapshot, "size")
-                        .expect("validated icon size") as f32;
+                    let size =
+                        property_number(snapshot, "size").expect("validated icon size") as f32;
                     let accessibility_label = if accessibility_label.trim().is_empty() {
                         "Search".to_owned()
                     } else {
@@ -3902,7 +3902,7 @@ impl Default for CompiledPreviewGallery {
                             .collect(),
                     },
                 ),
-            (
+                (
                     PropertyId::new("padding").unwrap(),
                     PropertySchema {
                         kind: PropertyKind::Number,
@@ -3916,7 +3916,7 @@ impl Default for CompiledPreviewGallery {
                         allowed_values: vec![],
                     },
                 ),
-                ]),
+            ]),
             events: BTreeMap::new(),
         };
         registry
@@ -3926,8 +3926,9 @@ impl Default for CompiledPreviewGallery {
                     let label =
                         property_string(snapshot, "label").expect("validated Container label");
                     let padding = property_number(snapshot, "padding")
-                .expect("validated Container padding") as f32;
-            let surface = match property_string(snapshot, "surface")
+                        .expect("validated Container padding")
+                        as f32;
+                    let surface = match property_string(snapshot, "surface")
                         .expect("validated Container surface")
                         .as_str()
                     {
@@ -6637,17 +6638,9 @@ impl CompiledPreviewGallery {
         property_boolean(&snapshot, context.property.as_str()).unwrap_or(self.enabled)
     }
 
-    fn preview_inspector_boolean_binding(
-        &self,
-        context: PropertyBindingContext,
-    ) -> Binding<bool> {
+    fn preview_inspector_boolean_binding(&self, context: PropertyBindingContext) -> Binding<bool> {
         let initial = self.read_enabled(&context);
-        Binding::new_with(
-            initial,
-            context,
-            Self::read_enabled,
-            Self::write_enabled,
-        )
+        Binding::new_with(initial, context, Self::read_enabled, Self::write_enabled)
     }
 
     fn read_date_value(&self, context: &PropertyBindingContext) -> Option<NaiveDate> {
@@ -6702,11 +6695,7 @@ impl CompiledPreviewGallery {
             .unwrap_or(false)
     }
 
-    fn write_color_presence(
-        &mut self,
-        context: &PropertyBindingContext,
-        has_color: bool,
-    ) -> bool {
+    fn write_color_presence(&mut self, context: &PropertyBindingContext, has_color: bool) -> bool {
         let color = self
             .preview_snapshot_for_component(context, "color-picker-specimen")
             .and_then(|snapshot| {
@@ -6718,10 +6707,10 @@ impl CompiledPreviewGallery {
                 })
             })
             .unwrap_or_else(|| Hsla {
-            h: PREVIEW_COLOR_HUE as f32,
-            s: PREVIEW_COLOR_SATURATION as f32,
-            l: PREVIEW_COLOR_LIGHTNESS as f32,
-            a: PREVIEW_COLOR_ALPHA as f32,
+                h: PREVIEW_COLOR_HUE as f32,
+                s: PREVIEW_COLOR_SATURATION as f32,
+                l: PREVIEW_COLOR_LIGHTNESS as f32,
+                a: PREVIEW_COLOR_ALPHA as f32,
             });
         self.write_color_value(context, has_color.then_some(color))
     }
@@ -7136,10 +7125,7 @@ impl View for CompiledPreviewGallery {
                             PropertyKind::String => {
                                 let snapshot = self.host.snapshot();
                                 let value = Binding::new_with(
-                                    preview_inspector_string_initial_value(
-                                        snapshot,
-                                        id.as_str(),
-                                    ),
+                                    preview_inspector_string_initial_value(snapshot, id.as_str()),
                                     context,
                                     Self::read_text,
                                     Self::write_text,
@@ -7856,9 +7842,11 @@ mod tests {
             &mut gallery,
             vec!["Atlas".into(), "Atlas".into(), "Research".into()]
         ));
-        assert!(gallery
-            .text_binding()
-            .write_to(&mut gallery, "Design".into()));
+        assert!(
+            gallery
+                .text_binding()
+                .write_to(&mut gallery, "Design".into())
+        );
         let placeholder = PropertyBindingContext {
             property: placeholder_id.clone(),
             stamp: gallery.stamp_lease.clone(),
@@ -7898,16 +7886,22 @@ mod tests {
             stamp: gallery.stamp_lease.clone(),
         };
         assert!(!gallery.write_text(&invalid_context, "not a JSON array".into()));
-        assert_eq!(gallery.host.snapshot().unwrap().preview.properties[&tokens_id], accepted);
+        assert_eq!(
+            gallery.host.snapshot().unwrap().preview.properties[&tokens_id],
+            accepted
+        );
 
         let mut invalid_document = imported.preview.document.clone();
-        invalid_document.properties.insert(
-            tokens_id,
-            PropertyValue::String("not a JSON array".into()),
-        );
-        gallery.descriptor_json = encode_preview(&invalid_document, gallery.host.catalog()).unwrap();
+        invalid_document
+            .properties
+            .insert(tokens_id, PropertyValue::String("not a JSON array".into()));
+        gallery.descriptor_json =
+            encode_preview(&invalid_document, gallery.host.catalog()).unwrap();
         gallery.import_descriptor();
-        assert_eq!(gallery.host.snapshot().unwrap().stamp.generation, generation + 1);
+        assert_eq!(
+            gallery.host.snapshot().unwrap().stamp.generation,
+            generation + 1
+        );
         assert_eq!(gallery.token_values, ["Atlas", "Atlas", "Research"]);
         assert!(
             gallery
@@ -8622,7 +8616,10 @@ mod tests {
             schema.properties[&value_id].default,
             Some(PropertyValue::Number(PREVIEW_PROGRESS_DEFAULT))
         );
-        assert_eq!(schema.properties[&indeterminate_id].kind, PropertyKind::Boolean);
+        assert_eq!(
+            schema.properties[&indeterminate_id].kind,
+            PropertyKind::Boolean
+        );
         assert_eq!(
             schema.properties[&indeterminate_id].default,
             Some(PropertyValue::Boolean(false))
@@ -9555,7 +9552,14 @@ mod tests {
             .collect::<Vec<_>>();
         assert_eq!(
             visible,
-            ["alpha", "has_color", "hue", "label", "lightness", "saturation"]
+            [
+                "alpha",
+                "has_color",
+                "hue",
+                "label",
+                "lightness",
+                "saturation"
+            ]
         );
 
         let context = PropertyBindingContext {
@@ -9680,7 +9684,10 @@ mod tests {
             stamp: gallery.stamp_lease.clone(),
         };
         assert!(gallery.write_color_presence(&presence_context, true));
-        assert_eq!(property_color(gallery.host.snapshot().unwrap()), Some(Some(color)));
+        assert_eq!(
+            property_color(gallery.host.snapshot().unwrap()),
+            Some(Some(color))
+        );
 
         let mut invalid_document = gallery.host.snapshot().unwrap().preview.document.clone();
         invalid_document
@@ -9775,7 +9782,13 @@ mod tests {
         gallery.import_descriptor();
         assert!(gallery.secure_value.is_empty());
         assert_eq!(
-            gallery.host.snapshot().unwrap().preview.document.component_id,
+            gallery
+                .host
+                .snapshot()
+                .unwrap()
+                .preview
+                .document
+                .component_id,
             ComponentId::new("text-field-specimen").unwrap()
         );
     }
@@ -9977,10 +9990,9 @@ mod tests {
         );
 
         let mut blank = imported.preview.document.clone();
-        blank.properties.insert(
-            label_id.clone(),
-            PropertyValue::String(" \t".into()),
-        );
+        blank
+            .properties
+            .insert(label_id.clone(), PropertyValue::String(" \t".into()));
         gallery.descriptor_json = encode_preview(&blank, gallery.host.catalog()).unwrap();
         gallery.import_descriptor();
         assert!(gallery.status.contains("Imported descriptor"));
@@ -11468,7 +11480,10 @@ mod tests {
         assert_eq!(schema.properties[&label_id].min_length, Some(1));
         assert_eq!(schema.properties[&label_id].max_length, Some(80));
         assert_eq!(schema.properties[&size_id].kind, PropertyKind::Number);
-        assert_eq!(schema.properties[&size_id].default, Some(PropertyValue::Number(24.0)));
+        assert_eq!(
+            schema.properties[&size_id].default,
+            Some(PropertyValue::Number(24.0))
+        );
         assert_eq!(schema.properties[&size_id].minimum, Some(8.0));
         assert_eq!(schema.properties[&size_id].maximum, Some(64.0));
         assert!(schema.events.is_empty());
@@ -11524,10 +11539,7 @@ mod tests {
             exported.properties[&label_id],
             PropertyValue::String("Find item".into())
         );
-        assert_eq!(
-            exported.properties[&size_id],
-            PropertyValue::Number(36.0)
-        );
+        assert_eq!(exported.properties[&size_id], PropertyValue::Number(36.0));
     }
 
     #[test]
@@ -12775,9 +12787,18 @@ mod tests {
         assert!(schema.events.is_empty());
         assert_eq!(schema.properties.len(), 3);
         assert_eq!(schema.properties[&padding_id].kind, PropertyKind::Number);
-        assert_eq!(schema.properties[&padding_id].minimum, Some(PREVIEW_CONTAINER_PADDING_MIN));
-        assert_eq!(schema.properties[&padding_id].maximum, Some(PREVIEW_CONTAINER_PADDING_MAX));
-        assert_eq!(schema.properties[&padding_id].default, Some(PropertyValue::Number(PREVIEW_CONTAINER_PADDING_DEFAULT)));
+        assert_eq!(
+            schema.properties[&padding_id].minimum,
+            Some(PREVIEW_CONTAINER_PADDING_MIN)
+        );
+        assert_eq!(
+            schema.properties[&padding_id].maximum,
+            Some(PREVIEW_CONTAINER_PADDING_MAX)
+        );
+        assert_eq!(
+            schema.properties[&padding_id].default,
+            Some(PropertyValue::Number(PREVIEW_CONTAINER_PADDING_DEFAULT))
+        );
         assert_eq!(
             schema.properties[&surface_id].allowed_values,
             PREVIEW_CONTAINER_SURFACES
@@ -12854,10 +12875,9 @@ mod tests {
             orientation_id.clone(),
             PropertyValue::String("vertical".into()),
         );
-        customized.properties.insert(
-            first_size_id.clone(),
-            PropertyValue::Number(250.0),
-        );
+        customized
+            .properties
+            .insert(first_size_id.clone(), PropertyValue::Number(250.0));
         customized.properties.insert(
             first_label_id.clone(),
             PropertyValue::String("Projects".into()),
@@ -12921,10 +12941,9 @@ mod tests {
         customized
             .properties
             .insert(text_id.clone(), PropertyValue::String("Profile".into()));
-        customized.properties.insert(
-            secondary_id.clone(),
-            PropertyValue::String("⌥P".into()),
-        );
+        customized
+            .properties
+            .insert(secondary_id.clone(), PropertyValue::String("⌥P".into()));
         customized
             .properties
             .insert(vibrant_id.clone(), PropertyValue::Boolean(true));

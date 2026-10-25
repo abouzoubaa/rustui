@@ -303,9 +303,6 @@ mod tests {
 
     #[test]
     fn each_toast_dispatch_gets_a_distinct_announcement_identity() {
-        assert_ne!(
-            next_toast_announcement_id(),
-            next_toast_announcement_id()
-        );
+        assert_ne!(next_toast_announcement_id(), next_toast_announcement_id());
     }
 }

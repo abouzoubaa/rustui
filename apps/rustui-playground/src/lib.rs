@@ -134,55 +134,52 @@ impl Playground {
             .map(|index| CATALOG[index].coverage.message_id())
             .collect::<Vec<_>>();
         let mut sidebar = VStack::new()
-                    .child(
-                        Text("COMPONENTS")
-                            .font_size(12.0)
-                            .font_weight(TextWeight::Bold),
-                    )
-                    .child(
-                        TextField("Search components and stories", self.query_binding())
-                            .id("playground-search"),
-                    )
-                    .child(
-                        List(rows, self.catalog_binding())
-                            .localized_suffixes(coverage_messages)
-                            // Reset the virtualized viewport when filtering so a match cannot
-                            // remain hidden beyond the old scroll offset.
-                            .id(format!("playground-catalog:{}", self.query))
-                            .height(340.0),
-                    )
-                    .child(
-                        Text("FRAMEWORK DEMOS")
-                            .font_size(12.0)
-                            .font_weight(TextWeight::Bold),
-                    )
-                    .child(
-                        List(
-                            filtered_story_indices(&self.query)
-                                .into_iter()
-                                .map(|index| STORIES[index].id.label())
-                                .collect::<Vec<_>>(),
-                            self.story_binding(),
-                        )
-                        // Reset the virtualized viewport so filtered matches remain visible.
-                        .id(format!("playground-stories:{}", self.query))
-                        .height(220.0),
-                    );
+            .child(
+                Text("COMPONENTS")
+                    .font_size(12.0)
+                    .font_weight(TextWeight::Bold),
+            )
+            .child(
+                TextField("Search components and stories", self.query_binding())
+                    .id("playground-search"),
+            )
+            .child(
+                List(rows, self.catalog_binding())
+                    .localized_suffixes(coverage_messages)
+                    // Reset the virtualized viewport when filtering so a match cannot
+                    // remain hidden beyond the old scroll offset.
+                    .id(format!("playground-catalog:{}", self.query))
+                    .height(340.0),
+            )
+            .child(
+                Text("FRAMEWORK DEMOS")
+                    .font_size(12.0)
+                    .font_weight(TextWeight::Bold),
+            )
+            .child(
+                List(
+                    filtered_story_indices(&self.query)
+                        .into_iter()
+                        .map(|index| STORIES[index].id.label())
+                        .collect::<Vec<_>>(),
+                    self.story_binding(),
+                )
+                // Reset the virtualized viewport so filtered matches remain visible.
+                .id(format!("playground-stories:{}", self.query))
+                .height(220.0),
+            );
         if !self.query.trim().is_empty() && !search_has_results(&self.query) {
             sidebar = sidebar.child(
                 Text("No matches. Clear the search to show all components and demos.")
                     .font_size(12.0),
             );
         }
-        Container(
-            ScrollView(sidebar.spacing(12.0))
-            .id("playground-sidebar-scroll"),
-        )
-        .fill()
-        .width(250.0)
-        .padding(12.0)
-        .background(Surface::Sidebar)
-        .border()
+        Container(ScrollView(sidebar.spacing(12.0)).id("playground-sidebar-scroll"))
+            .fill()
+            .width(250.0)
+            .padding(12.0)
+            .background(Surface::Sidebar)
+            .border()
     }
 
     fn preview(&self) -> impl View {
@@ -195,9 +192,10 @@ impl Playground {
             .map(|story| story.title)
             .or_else(|| item.map(|item| item.key))
             .unwrap_or("Choose a component or demo");
-        let coverage = item.map_or_else(|| Text(""), |item| {
-            LocalizedText(item.coverage.message_id())
-        });
+        let coverage = item.map_or_else(
+            || Text(""),
+            |item| LocalizedText(item.coverage.message_id()),
+        );
         let note = selected_story.map_or_else(
             || {
                 item.map_or_else(
@@ -248,8 +246,7 @@ impl Playground {
             if cfg!(target_family = "wasm") {
                 for source in item.sources.split('|') {
                     let name = reference_filename(source);
-                    panel =
-                        panel.child(Link(format!("Open {name}"), reference_route(source)));
+                    panel = panel.child(Link(format!("Open {name}"), reference_route(source)));
                 }
             } else {
                 for source in item.sources.split('|') {
@@ -611,10 +608,7 @@ mod tests {
         std::fs::write(&nested, "<svg/>").expect("write nested packaged reference");
 
         assert_eq!(
-            reference_path_from_root(
-                &temporary.0,
-                "docs/ui/macos-27/Text Styles/Header.svg"
-            ),
+            reference_path_from_root(&temporary.0, "docs/ui/macos-27/Text Styles/Header.svg"),
             nested
         );
     }
@@ -654,7 +648,7 @@ mod tests {
     }
 
     #[test]
-fn localized_coverage_label_filters_and_selects_catalog_row() {
+    fn localized_coverage_label_filters_and_selects_catalog_row() {
         let catalogs = catalog_search_catalogs();
         let french = rustui::localization::Locale::parse("fr").expect("French locale");
         let query = catalogs.resolve(&french, Coverage::Partial.message_id());
@@ -688,29 +682,29 @@ fn localized_coverage_label_filters_and_selects_catalog_row() {
         assert!(app.catalog_binding().write_to(&mut app, Some(slider_row)));
         assert_eq!(app.item().map(|item| item.key), Some("slider"));
 
-    let arabic = rustui::localization::Locale::parse("ar").expect("Arabic locale");
-    let query = catalogs.resolve(&arabic, Coverage::Partial.message_id());
-    assert_eq!(query, "جزئي");
-    assert!(filtered_indices(query).is_empty());
+        let arabic = rustui::localization::Locale::parse("ar").expect("Arabic locale");
+        let query = catalogs.resolve(&arabic, Coverage::Partial.message_id());
+        assert_eq!(query, "جزئي");
+        assert!(filtered_indices(query).is_empty());
 
-    let rows = filtered_catalog_indices(query);
-    let button_row = rows
-        .iter()
-        .position(|index| *index == button_index)
-        .expect("Arabic coverage search should include the button row");
-    let slider_row = rows
-        .iter()
-        .position(|index| *index == slider_index)
-        .expect("Arabic coverage search should include the slider row");
-    let mut app = Playground {
-        query: query.into(),
-        ..Playground::default()
-    };
+        let rows = filtered_catalog_indices(query);
+        let button_row = rows
+            .iter()
+            .position(|index| *index == button_index)
+            .expect("Arabic coverage search should include the button row");
+        let slider_row = rows
+            .iter()
+            .position(|index| *index == slider_index)
+            .expect("Arabic coverage search should include the slider row");
+        let mut app = Playground {
+            query: query.into(),
+            ..Playground::default()
+        };
 
-    assert!(app.catalog_binding().write_to(&mut app, Some(button_row)));
-    assert_eq!(app.item().map(|item| item.key), Some("button"));
-    assert!(app.catalog_binding().write_to(&mut app, Some(slider_row)));
-    assert_eq!(app.item().map(|item| item.key), Some("slider"));
+        assert!(app.catalog_binding().write_to(&mut app, Some(button_row)));
+        assert_eq!(app.item().map(|item| item.key), Some("button"));
+        assert!(app.catalog_binding().write_to(&mut app, Some(slider_row)));
+        assert_eq!(app.item().map(|item| item.key), Some("slider"));
     }
 
     #[test]

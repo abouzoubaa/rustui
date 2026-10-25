@@ -168,11 +168,7 @@ impl View for ToolbarView {
             let label = match &item.label {
                 ToolbarLabel::Literal(label) => label.clone(),
                 ToolbarLabel::Message { id, fallback } => {
-                resolved_message_label(
-                    id,
-                    context.localized_message(id.as_ref()),
-                    fallback,
-                )
+                    resolved_message_label(id, context.localized_message(id.as_ref()), fallback)
                 }
             };
             assert!(
@@ -264,11 +260,7 @@ mod tests {
             "Save"
         );
         assert_eq!(
-            resolved_message_label(
-                &"toolbar.save".into(),
-                "Enregistrer".into(),
-                &"Save".into(),
-            ),
+            resolved_message_label(&"toolbar.save".into(), "Enregistrer".into(), &"Save".into(),),
             "Enregistrer"
         );
     }

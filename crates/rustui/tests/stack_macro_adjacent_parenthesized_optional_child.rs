@@ -1,7 +1,4 @@
-use rustui::{
-    HStack, VStack,
-    components::basic::text::Text,
-};
+use rustui::{HStack, VStack, components::basic::text::Text};
 
 #[test]
 fn adjacent_parenthesized_optional_children_remain_separate() {

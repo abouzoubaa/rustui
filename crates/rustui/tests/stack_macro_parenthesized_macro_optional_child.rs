@@ -1,7 +1,4 @@
-use rustui::{
-    HStack, VStack,
-    components::basic::text::Text,
-};
+use rustui::{HStack, VStack, components::basic::text::Text};
 
 macro_rules! make_view {
     () => {

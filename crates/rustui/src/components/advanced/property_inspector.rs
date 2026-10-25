@@ -156,9 +156,7 @@ fn with_current_writer<T: Clone, Writer: Clone, Result>(
 fn editor_has_visible_label(editor: &PropertyEditor) -> bool {
     matches!(
         editor,
-        PropertyEditor::Choice { .. }
-            | PropertyEditor::Toggle(_)
-            | PropertyEditor::Integer(_)
+        PropertyEditor::Choice { .. } | PropertyEditor::Toggle(_) | PropertyEditor::Integer(_)
     )
 }
 

@@ -309,10 +309,12 @@ mod tests {
     #[test]
     fn rejects_blank_explicit_identity() {
         for id in ["", " \t\n"] {
-            assert!(std::panic::catch_unwind(|| {
-                Badge(crate::components::basic::text::TextView::new("Inbox")).id(id)
-            })
-            .is_err());
+            assert!(
+                std::panic::catch_unwind(|| {
+                    Badge(crate::components::basic::text::TextView::new("Inbox")).id(id)
+                })
+                .is_err()
+            );
         }
     }
 

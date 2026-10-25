@@ -460,6 +460,9 @@ mod whitespace_accessible_name_contract_regression {
             require_accessible_name(SharedString::from(" \t\n"));
         }));
 
-        assert!(result.is_err(), "whitespace-only accessible names must be rejected");
+        assert!(
+            result.is_err(),
+            "whitespace-only accessible names must be rejected"
+        );
     }
 }

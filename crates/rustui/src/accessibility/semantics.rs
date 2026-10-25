@@ -186,13 +186,10 @@ impl<V: View> SemanticsView<V> {
                 .description
                 .as_ref()
                 .and_then(|text| text.resolve(|key| context.localized_message(key))),
-            live_value: self
-                .live_value
-                .as_ref()
-                .and_then(|(text, politeness)| {
-                    text.resolve(|key| context.localized_message(key))
-                        .map(|value| (value, *politeness))
-                }),
+            live_value: self.live_value.as_ref().and_then(|(text, politeness)| {
+                text.resolve(|key| context.localized_message(key))
+                    .map(|value| (value, *politeness))
+            }),
         })
     }
 }

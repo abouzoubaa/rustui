@@ -491,7 +491,10 @@ mod tests {
             } else if key == "search_field_examples" {
                 assert!(item.note.contains("shared Text inputs story"));
                 assert!(item.note.contains("all six Dark Search Field combinations"));
-                assert!(item.note.contains("native visual and accessibility acceptance"));
+                assert!(
+                    item.note
+                        .contains("native visual and accessibility acceptance")
+                );
             } else {
                 assert!(!item.note.trim().is_empty(), "missing note for {key}");
             }
@@ -502,8 +505,8 @@ mod tests {
     #[test]
     fn catalog_notes_and_coverage_resolve_in_each_playground_locale() {
         let catalogs = crate::stories::catalogs();
-        let english = rustui::localization::Locale::parse("en")
-            .expect("English catalog locale should parse");
+        let english =
+            rustui::localization::Locale::parse("en").expect("English catalog locale should parse");
         for (identifier, partial, missing) in [
             ("en", "Partial", "Missing"),
             ("fr", "Partiel", "Manquant"),
@@ -522,10 +525,22 @@ mod tests {
             for item in &CATALOG {
                 let note = catalogs.resolve(&locale, item.note_message_id);
                 let english_note = catalogs.resolve(&english, item.note_message_id);
-                assert!(!note.trim().is_empty(), "empty note for {} in {identifier}", item.key);
-                assert_ne!(note, item.note_message_id, "missing note for {} in {identifier}", item.key);
+                assert!(
+                    !note.trim().is_empty(),
+                    "empty note for {} in {identifier}",
+                    item.key
+                );
+                assert_ne!(
+                    note, item.note_message_id,
+                    "missing note for {} in {identifier}",
+                    item.key
+                );
                 if identifier != "en" {
-                    assert_ne!(note, english_note, "untranslated note for {} in {identifier}", item.key);
+                    assert_ne!(
+                        note, english_note,
+                        "untranslated note for {} in {identifier}",
+                        item.key
+                    );
                 }
             }
         }
@@ -546,7 +561,10 @@ mod tests {
         assert_eq!(item.coverage, Coverage::Partial);
         assert!(item.note.contains("shared Text inputs story"));
         assert!(item.note.contains("all six Dark Search Field combinations"));
-        assert!(item.note.contains("native visual and accessibility acceptance"));
+        assert!(
+            item.note
+                .contains("native visual and accessibility acceptance")
+        );
         assert_eq!(
             crate::story_for(item.key),
             Some(crate::stories::StoryId::Input)
@@ -618,7 +636,10 @@ mod tests {
         assert!(item.note.contains("MenuItem actions, separators"));
         assert!(item.note.contains("disabled-item handling"));
         assert!(item.note.contains("removing/restoring the menu owner"));
-        assert!(item.note.contains("native visual and accessibility acceptance remain pending"));
+        assert!(
+            item.note
+                .contains("native visual and accessibility acceptance remain pending")
+        );
         assert!(crate::stories::catalog_demo(item.key).is_some());
     }
 
@@ -633,7 +654,10 @@ mod tests {
         assert!(item.note.contains("Public RustUI feedback gallery"));
         assert!(item.note.contains("action and kind-specific Toasts"));
         assert!(item.note.contains("EmptyState, ErrorState, and Skeleton"));
-        assert!(item.note.contains("native visual and accessibility acceptance remain pending"));
+        assert!(
+            item.note
+                .contains("native visual and accessibility acceptance remain pending")
+        );
         assert!(crate::stories::catalog_demo(item.key).is_some());
     }
 
@@ -689,7 +713,10 @@ mod tests {
         assert!(item.note.contains("Public RustUI ColorPicker"));
         assert!(item.note.contains("retained color binding"));
         assert!(item.note.contains("shared Text inputs story"));
-        assert!(item.note.contains("native visual, keyboard, and accessibility acceptance remain pending"));
+        assert!(
+            item.note
+                .contains("native visual, keyboard, and accessibility acceptance remain pending")
+        );
         assert_eq!(
             crate::story_for(item.key),
             Some(crate::stories::StoryId::Input)
@@ -708,8 +735,14 @@ mod tests {
         assert!(item.note.contains("controlled stable-ID hierarchy"));
         assert!(item.note.contains("branch removal/restoration"));
         assert!(item.note.contains("reorder/relabel controls"));
-        assert!(item.note.contains("native interaction and accessibility acceptance remain pending"));
-        assert_eq!(crate::story_for(item.key), Some(crate::stories::StoryId::Tree));
+        assert!(
+            item.note
+                .contains("native interaction and accessibility acceptance remain pending")
+        );
+        assert_eq!(
+            crate::story_for(item.key),
+            Some(crate::stories::StoryId::Tree)
+        );
     }
 
     #[test]
@@ -724,8 +757,14 @@ mod tests {
         assert!(item.note.contains("controlled row selection, reordering"));
         assert!(item.note.contains("removal/restoration"));
         assert!(item.note.contains("DataGrid accessibility example"));
-        assert!(item.note.contains("native visual, keyboard, and accessibility acceptance remain pending"));
-        assert_eq!(crate::story_for(item.key), Some(crate::stories::StoryId::Table));
+        assert!(
+            item.note
+                .contains("native visual, keyboard, and accessibility acceptance remain pending")
+        );
+        assert_eq!(
+            crate::story_for(item.key),
+            Some(crate::stories::StoryId::Table)
+        );
     }
 
     #[test]
@@ -740,8 +779,14 @@ mod tests {
         assert!(item.note.contains("active red/yellow/green"));
         assert!(item.note.contains("inactive traffic-light states"));
         assert!(item.note.contains("clicks only change the preview state"));
-        assert!(item.note.contains("no public native window-control/titlebar renderer"));
-        assert!(item.note.contains("system actions and native chrome are not represented"));
+        assert!(
+            item.note
+                .contains("no public native window-control/titlebar renderer")
+        );
+        assert!(
+            item.note
+                .contains("system actions and native chrome are not represented")
+        );
     }
 
     #[test]
@@ -756,7 +801,10 @@ mod tests {
             item.note
                 .contains("mutually exclusive public Button controls")
         );
-        assert!(item.note.contains("no dedicated Segmented Control renderer"));
+        assert!(
+            item.note
+                .contains("no dedicated Segmented Control renderer")
+        );
         assert!(
             item.note
                 .contains("native visual/accessibility acceptance remains pending")

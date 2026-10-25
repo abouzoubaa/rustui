@@ -682,10 +682,7 @@ const DARK_SEARCH_FIELD_CASES: [DarkSearchFieldCase; 6] = [
     },
 ];
 
-fn dark_search_field_specimen(
-    case: DarkSearchFieldCase,
-    value: Binding<String>,
-) -> impl View {
+fn dark_search_field_specimen(case: DarkSearchFieldCase, value: Binding<String>) -> impl View {
     let state_label = match case.state {
         DarkSearchFieldState::Disabled => "Disabled",
         DarkSearchFieldState::Focused => "Focused",

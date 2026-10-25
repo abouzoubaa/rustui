@@ -1,7 +1,4 @@
-use rustui::{
-    HStack, VStack,
-    components::basic::text::Text,
-};
+use rustui::{HStack, VStack, components::basic::text::Text};
 
 #[test]
 fn child_attributes_gate_generated_stack_builder_calls() {

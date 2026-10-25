@@ -228,7 +228,12 @@ mod button_group_tests {
             (ButtonGroupGallery::choose_more, "More"),
         ];
         for (action, expected) in actions {
-            assert!(gallery.action(action).dispatch(&mut gallery).should_notify());
+            assert!(
+                gallery
+                    .action(action)
+                    .dispatch(&mut gallery)
+                    .should_notify()
+            );
             assert_eq!(gallery.last_action(), expected);
         }
     }

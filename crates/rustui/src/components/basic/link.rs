@@ -1,9 +1,9 @@
 //! Accessible link activation through the pinned GPUI Components Button.
 
-use gpui::{px, AnyElement, FontWeight, IntoElement, SharedString, Styled as _};
+use gpui::{AnyElement, FontWeight, IntoElement, SharedString, Styled as _, px};
 use gpui_component::{
-    button::{Button as GpuiButton, ButtonVariant, ButtonVariants as _},
     Disableable as _,
+    button::{Button as GpuiButton, ButtonVariant, ButtonVariants as _},
 };
 use rustui_core::Identity;
 
@@ -37,7 +37,10 @@ enum LinkAccessibilityLabel {
 impl LinkView {
     pub fn new(label: impl Into<SharedString>, href: impl Into<SharedString>) -> Self {
         let href = href.into();
-        assert!(!href.trim().is_empty(), "Link destination must not be empty");
+        assert!(
+            !href.trim().is_empty(),
+            "Link destination must not be empty"
+        );
         Self {
             label: label.into(),
             href,

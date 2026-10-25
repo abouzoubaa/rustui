@@ -2,11 +2,10 @@ use proc_macro::TokenStream;
 use proc_macro2::{Delimiter, Ident, Span, TokenStream as TokenStream2, TokenTree};
 use quote::quote;
 use syn::{
-    braced,
+    Attribute, Expr, Result, Token, braced,
     parse::{Parse, ParseStream},
     parse_quote,
     visit_mut::VisitMut,
-    Attribute, Expr, Result, Token,
 };
 
 struct ShorthandButtonAction;
@@ -974,8 +973,11 @@ mod tests {
         assert!(actual.contains(
             &quote!(Keyed("editor", TextEditor("Edit", binding()).id("shared"))).to_string()
         ));
-        assert!(actual
-            .contains(&quote!(Keyed("action", Button("Hit", self.action(Self::hit)))).to_string()));
+        assert!(
+            actual.contains(
+                &quote!(Keyed("action", Button("Hit", self.action(Self::hit)))).to_string()
+            )
+        );
         // The nested proc macro expands itself; its input must remain intact.
         assert!(
             actual.contains(&quote!(VStack! { if nested { Button("Nested", hit) } }).to_string())

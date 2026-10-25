@@ -171,10 +171,9 @@ mod tests {
 
     #[test]
     fn rejects_finite_spacing_when_grid_gap_span_overflows() {
-        assert!(std::panic::catch_unwind(|| {
-            super::validate_gap_span(f32::MAX * 0.6, 2)
-        })
-        .is_err());
+        assert!(
+            std::panic::catch_unwind(|| { super::validate_gap_span(f32::MAX * 0.6, 2) }).is_err()
+        );
         super::validate_gap_span(f32::MAX * 0.6, 1);
     }
 }

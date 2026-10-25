@@ -479,12 +479,10 @@ mod tests {
 
     #[test]
     fn unresolved_action_names_use_english_fallbacks() {
-        let missing = action_accessibility_labels("Quantity", None, |id, _| {
-            Ok::<_, ()>(id.to_owned())
-        });
-        let blank = action_accessibility_labels("Quantity", None, |_, _| {
-            Ok::<_, ()>(" \t ".to_owned())
-        });
+        let missing =
+            action_accessibility_labels("Quantity", None, |id, _| Ok::<_, ()>(id.to_owned()));
+        let blank =
+            action_accessibility_labels("Quantity", None, |_, _| Ok::<_, ()>(" \t ".to_owned()));
 
         assert_eq!(
             missing,

@@ -48,80 +48,89 @@ struct UtilityWindowGallery {
 
 impl View for UtilityWindowGallery {
     fn body(&self) -> impl View {
-        VStack::new().spacing(8.0).child(Text(UTILITY_WINDOW_TITLE)).child(
-            TabView(
-                UTILITY_WINDOW_TABS
-                    .iter()
-                    .map(|(id, label, panel)| match panel {
-                        UtilityWindowPanel::ColorWheel => TabItem::new(
-                            *id,
-                            *label,
-                            VStack::new()
-                                .spacing(8.0)
-                                .child(Text("Color Wheel"))
-                                .child(ColorPicker("Color", self.wheel_color_binding())),
-                        ),
-                        UtilityWindowPanel::Sliders => TabItem::new(
-                            *id,
-                            *label,
-                            VStack::new()
-                                .spacing(8.0)
-                                .child(Text("Color channels"))
-                                .child(
-                                    Slider(self.red_binding(), 0.0..=1.0)
-                                        .accessibility_label(UTILITY_WINDOW_CHANNEL_LABELS[0]),
-                                )
-                                .child(
-                                    Slider(self.green_binding(), 0.0..=1.0)
-                                        .accessibility_label(UTILITY_WINDOW_CHANNEL_LABELS[1]),
-                                )
-                                .child(
-                                    Slider(self.blue_binding(), 0.0..=1.0)
-                                        .accessibility_label(UTILITY_WINDOW_CHANNEL_LABELS[2]),
-                                ),
-                        ),
-                        UtilityWindowPanel::Swatches => TabItem::new(
-                            *id,
-                            *label,
-                            VStack::new()
-                                .spacing(8.0)
-                                .child(Text("Featured colors"))
-                                .child(ColorPicker("Featured color", self.swatch_color_binding())),
-                        ),
-                        UtilityWindowPanel::Images => TabItem::new(
-                            *id,
-                            *label,
-                            VStack::new().spacing(8.0).child(Text("Images")).child(
-                                Image("assets/playground-sample.png")
-                                    .size(180.0, 120.0)
-                                    .fit(ImageFit::Contain)
-                                    .id("utility-window-sample-image")
-                                    .accessibility_label(UTILITY_WINDOW_SAMPLE_IMAGE_LABEL),
+        VStack::new()
+            .spacing(8.0)
+            .child(Text(UTILITY_WINDOW_TITLE))
+            .child(
+                TabView(
+                    UTILITY_WINDOW_TABS
+                        .iter()
+                        .map(|(id, label, panel)| match panel {
+                            UtilityWindowPanel::ColorWheel => TabItem::new(
+                                *id,
+                                *label,
+                                VStack::new()
+                                    .spacing(8.0)
+                                    .child(Text("Color Wheel"))
+                                    .child(ColorPicker("Color", self.wheel_color_binding())),
                             ),
-                        ),
-                        UtilityWindowPanel::Crayons => TabItem::new(
-                            *id,
-                            *label,
-                            VStack::new()
-                                .spacing(8.0)
-                                .child(Text("Crayon colors"))
-                                .child(ColorPicker("Crayon color", self.crayon_color_binding())),
-                        ),
-                    }),
-                self.selected_tab_binding(),
+                            UtilityWindowPanel::Sliders => TabItem::new(
+                                *id,
+                                *label,
+                                VStack::new()
+                                    .spacing(8.0)
+                                    .child(Text("Color channels"))
+                                    .child(
+                                        Slider(self.red_binding(), 0.0..=1.0)
+                                            .accessibility_label(UTILITY_WINDOW_CHANNEL_LABELS[0]),
+                                    )
+                                    .child(
+                                        Slider(self.green_binding(), 0.0..=1.0)
+                                            .accessibility_label(UTILITY_WINDOW_CHANNEL_LABELS[1]),
+                                    )
+                                    .child(
+                                        Slider(self.blue_binding(), 0.0..=1.0)
+                                            .accessibility_label(UTILITY_WINDOW_CHANNEL_LABELS[2]),
+                                    ),
+                            ),
+                            UtilityWindowPanel::Swatches => TabItem::new(
+                                *id,
+                                *label,
+                                VStack::new()
+                                    .spacing(8.0)
+                                    .child(Text("Featured colors"))
+                                    .child(ColorPicker(
+                                        "Featured color",
+                                        self.swatch_color_binding(),
+                                    )),
+                            ),
+                            UtilityWindowPanel::Images => TabItem::new(
+                                *id,
+                                *label,
+                                VStack::new().spacing(8.0).child(Text("Images")).child(
+                                    Image("assets/playground-sample.png")
+                                        .size(180.0, 120.0)
+                                        .fit(ImageFit::Contain)
+                                        .id("utility-window-sample-image")
+                                        .accessibility_label(UTILITY_WINDOW_SAMPLE_IMAGE_LABEL),
+                                ),
+                            ),
+                            UtilityWindowPanel::Crayons => TabItem::new(
+                                *id,
+                                *label,
+                                VStack::new()
+                                    .spacing(8.0)
+                                    .child(Text("Crayon colors"))
+                                    .child(ColorPicker(
+                                        "Crayon color",
+                                        self.crayon_color_binding(),
+                                    )),
+                            ),
+                        }),
+                    self.selected_tab_binding(),
+                )
+                .id("utility-window-tabs")
+                .style(TabViewStyle::Segmented)
+                .accessibility_label("Utility palette categories"),
             )
-            .id("utility-window-tabs")
-            .style(TabViewStyle::Segmented)
-            .accessibility_label("Utility palette categories"),
-        )
     }
 }
 
 #[cfg(test)]
 mod tests {
     use super::{
-        UtilityWindowGallery, UtilityWindowPanel, UTILITY_WINDOW_CHANNEL_LABELS,
-        UTILITY_WINDOW_SAMPLE_IMAGE_LABEL, UTILITY_WINDOW_TABS, UTILITY_WINDOW_TITLE,
+        UTILITY_WINDOW_CHANNEL_LABELS, UTILITY_WINDOW_SAMPLE_IMAGE_LABEL, UTILITY_WINDOW_TABS,
+        UTILITY_WINDOW_TITLE, UtilityWindowGallery, UtilityWindowPanel,
     };
 
     #[test]

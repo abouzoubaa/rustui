@@ -1,7 +1,4 @@
-use rustui::{
-    HStack, VStack,
-    components::basic::text::Text,
-};
+use rustui::{HStack, VStack, components::basic::text::Text};
 
 #[test]
 fn nested_conditional_branches_typecheck_through_public_stack_macros() {

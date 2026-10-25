@@ -534,9 +534,9 @@ impl View for NavigationSplitView {
 mod tests {
     use super::{
         NARROW_BREAKPOINT, NavigationSplitItem, NavigationSplitNarrowState, NavigationSplitView,
-        detail_accessibility_label, detail_semantics_identity, is_narrow_width,
-        open_narrow_detail, resolved_message_label, resolved_navigation_tree_label,
-        return_to_narrow_list, selected_index, update_narrow_state, validate_items,
+        detail_accessibility_label, detail_semantics_identity, is_narrow_width, open_narrow_detail,
+        resolved_message_label, resolved_navigation_tree_label, return_to_narrow_list,
+        selected_index, update_narrow_state, validate_items,
     };
     use crate::view::EmptyView;
     use rustui_core::{Binding, Identity};

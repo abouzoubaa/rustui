@@ -12,7 +12,7 @@
 //! are CLDR integer rules for English, French, and Arabic; other languages use
 //! `other` unless an exact `=integer` branch matches.
 
-use crate::{direction::explicit_script, Locale};
+use crate::{Locale, direction::explicit_script};
 use std::{
     collections::{BTreeMap, BTreeSet},
     error::Error,
@@ -1257,7 +1257,10 @@ mod tests {
     fn ignores_extra_interpolation_arguments() {
         let arguments = MessageArguments::new().with("unused", "ignored");
 
-        assert_eq!(interpolate("No placeholders", &arguments).unwrap(), "No placeholders");
+        assert_eq!(
+            interpolate("No placeholders", &arguments).unwrap(),
+            "No placeholders"
+        );
     }
 
     #[test]
@@ -1366,7 +1369,10 @@ mod tests {
         );
 
         let us_region_override = Locale::parse("en-IN-u-rg-uszzzz").unwrap();
-        assert_eq!(format_integer(12_345_678, &us_region_override), "12,345,678");
+        assert_eq!(
+            format_integer(12_345_678, &us_region_override),
+            "12,345,678"
+        );
         assert_eq!(
             format_decimal("12345678.5", &us_region_override),
             "12,345,678.5"
@@ -1561,10 +1567,8 @@ mod expression_tests {
     fn malformed_decimal_arguments_fall_back_to_other_plural_category() {
         let template = "{count, plural, zero {zero} one {one} other {other}}";
         for (value, tag) in [("0e--", "ar"), ("1e-", "fr")] {
-            let arguments = MessageArguments::new().with(
-                "count",
-                MessageArgument::Decimal(value.to_owned()),
-            );
+            let arguments =
+                MessageArguments::new().with("count", MessageArgument::Decimal(value.to_owned()));
             assert_eq!(
                 interpolate_with_locale(template, &arguments, &locale(tag)),
                 Ok("other".to_owned()),
@@ -1611,10 +1615,7 @@ mod expression_tests {
         assert_eq!(
             interpolate_with_locale(
                 message,
-                &MessageArguments::new().with(
-                    "count",
-                    MessageArgument::Decimal("100e-2".into()),
-                ),
+                &MessageArguments::new().with("count", MessageArgument::Decimal("100e-2".into()),),
                 &Locale::parse("fr").unwrap()
             ),
             Ok("exact".to_owned())

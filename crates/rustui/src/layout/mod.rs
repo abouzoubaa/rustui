@@ -31,10 +31,12 @@ mod tests {
         let gap = f32::from_bits(0x737f_ffff);
         let child_count = 16_777_218;
 
-        assert!(std::panic::catch_unwind(|| {
-            validate_gap_span(gap, child_count, "Stack");
-        })
-        .is_err());
+        assert!(
+            std::panic::catch_unwind(|| {
+                validate_gap_span(gap, child_count, "Stack");
+            })
+            .is_err()
+        );
     }
 }
 

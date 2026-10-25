@@ -199,10 +199,12 @@ mod accessibility_tests {
     #[test]
     fn visible_name_must_not_be_blank_when_no_override_is_provided() {
         let toggle = Toggle(" \t", binding());
-        assert!(std::panic::catch_unwind(|| {
-            resolved_toggle_accessibility_label(&toggle.label, None, |_| unreachable!());
-        })
-        .is_err());
+        assert!(
+            std::panic::catch_unwind(|| {
+                resolved_toggle_accessibility_label(&toggle.label, None, |_| unreachable!());
+            })
+            .is_err()
+        );
     }
 
     #[test]

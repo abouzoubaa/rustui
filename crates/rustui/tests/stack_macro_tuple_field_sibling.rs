@@ -8,7 +8,9 @@ struct ViewSource {
 }
 
 fn make_views() -> (ViewSource,) {
-    (ViewSource { view: Text("first") },)
+    (ViewSource {
+        view: Text("first"),
+    },)
 }
 
 #[test]

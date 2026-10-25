@@ -62,8 +62,8 @@ impl Locale {
             }
 
             if !extension_subtag {
-                let is_extlang = subtag.len() == 3
-                    && subtag.bytes().all(|byte| byte.is_ascii_alphabetic());
+                let is_extlang =
+                    subtag.len() == 3 && subtag.bytes().all(|byte| byte.is_ascii_alphabetic());
                 if is_extlang {
                     if !extlangs_open || extlangs_seen == 3 {
                         return Err(LocaleError::new(value));
@@ -288,7 +288,6 @@ mod tests {
         assert_eq!(Locale::parse("ABCD-Latn").unwrap().as_str(), "abcd-Latn");
     }
 
-
     #[test]
     fn allows_extlangs_only_before_script_region_and_variants() {
         for tag in [
@@ -376,7 +375,10 @@ mod tests {
             "en-419",
             "en-a-12",
         ] {
-            assert!(Locale::parse(tag).is_ok(), "rejected valid boundary tag: {tag}");
+            assert!(
+                Locale::parse(tag).is_ok(),
+                "rejected valid boundary tag: {tag}"
+            );
         }
         for tag in [
             "abcdefghi",
@@ -389,7 +391,10 @@ mod tests {
             "éé",
             "en-Å",
         ] {
-            assert!(Locale::parse(tag).is_err(), "accepted invalid boundary tag: {tag}");
+            assert!(
+                Locale::parse(tag).is_err(),
+                "accepted invalid boundary tag: {tag}"
+            );
         }
     }
 
@@ -431,5 +436,4 @@ mod tests {
             );
         }
     }
-
 }

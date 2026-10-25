@@ -168,10 +168,12 @@ mod tests {
         let mut gallery = OffsetGallery::default();
         assert_eq!(gallery.reference_action_label(), "Reference action");
 
-        assert!(gallery
-            .action(OffsetGallery::activate_reference_action)
-            .dispatch(&mut gallery)
-            .should_notify());
+        assert!(
+            gallery
+                .action(OffsetGallery::activate_reference_action)
+                .dispatch(&mut gallery)
+                .should_notify()
+        );
 
         assert_eq!(
             gallery.reference_action_label(),
