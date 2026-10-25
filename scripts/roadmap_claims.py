@@ -801,6 +801,147 @@ def cmd_audit(args: argparse.Namespace, root: Path, db: sqlite3.Connection) -> N
                       "milestone": row[5], "next_action": row[6], "history": history}))
 
 
+def cmd_baseline(args: argparse.Namespace, root: Path, db: sqlite3.Connection) -> None:
+    claim = db.execute(
+        """SELECT worktree,thread,branch,task,stage,milestone,next_action,base_head
+           FROM claims WHERE id=? AND state='active'""",
+        (args.claim_id,),
+    ).fetchone()
+    if claim is None or claim[1] != args.thread:
+        raise ValueError("claim is missing, released, or owned by another thread")
+    if Path(claim[0]).resolve() != root:
+        raise ValueError("run baseline in the worktree recorded by the claim")
+    if git(root, "branch", "--show-current") != claim[2]:
+        raise ValueError("current branch differs from branch recorded by claim")
+
+    paths = sorted({normalized_path(root, raw) for raw in args.paths})
+    if any(path.startswith("@shared/") for path in paths):
+        raise ValueError("baseline accepts repository files, not shared resources")
+
+    db.execute("BEGIN IMMEDIATE")
+    try:
+        current = db.execute(
+            """SELECT worktree,thread,branch,task,stage,milestone,next_action,base_head
+               FROM claims WHERE id=? AND state='active'""",
+            (args.claim_id,),
+        ).fetchone()
+        if current != claim:
+            raise ValueError("claim ownership changed while preparing baseline")
+        owned_paths = [
+            row[0]
+            for row in db.execute(
+                "SELECT path FROM claimed_paths WHERE claim_id=?", (args.claim_id,)
+            )
+        ]
+        if any(overlaps(path, owned) for path in paths for owned in owned_paths):
+            raise ValueError("claimed paths cannot also be recorded as background baseline")
+
+        changes = {normalized_path(root, raw) for raw in changed_paths(root)}
+        missing = [path for path in paths if path not in changes]
+        if missing:
+            raise ValueError("baseline paths must already be changed: " + json.dumps(missing))
+
+        active_paths = db.execute(
+            """SELECT c.id,c.thread,p.path FROM claims c
+               JOIN claimed_paths p ON p.claim_id=c.id
+               WHERE c.state='active' AND c.id<>?""",
+            (args.claim_id,),
+        ).fetchall()
+        conflicts = [
+            {"claim_id": claim_id, "thread": thread, "path": claimed}
+            for path in paths
+            for claim_id, thread, claimed in active_paths
+            if overlaps(path, claimed)
+        ]
+        if conflicts:
+            raise ValueError("baseline conflicts with active claim: " + json.dumps(conflicts))
+
+        existing = dict(
+            db.execute(
+                "SELECT path,fingerprint FROM claim_baselines WHERE claim_id=?",
+                (args.claim_id,),
+            )
+        )
+        fingerprints = {path: path_fingerprint(root, path) for path in paths}
+        changed_existing = [
+            path for path in paths if path in existing and existing[path] != fingerprints[path]
+        ]
+        if changed_existing:
+            raise ValueError(
+                "existing baseline fingerprints differ: " + json.dumps(changed_existing)
+            )
+        added = [path for path in paths if path not in existing]
+        db.executemany(
+            "INSERT INTO claim_baselines(claim_id,path,fingerprint) VALUES(?,?,?)",
+            [(args.claim_id, path, fingerprints[path]) for path in added],
+        )
+        if added:
+            record_transition(
+                db,
+                args.claim_id,
+                "baseline",
+                claim[3],
+                claim[3],
+                args.thread,
+                args.thread,
+                claim[4],
+                claim[4],
+                claim[5],
+                claim[5],
+                added,
+                claim[6],
+                int(time.time()),
+                claim[7],
+                claim[7],
+                evidence=args.evidence,
+            )
+        else:
+            baseline_event = db.execute(
+                """SELECT evidence FROM claim_transitions
+                   WHERE claim_id=? AND kind='baseline' AND added_paths_json=?
+                   ORDER BY sequence DESC LIMIT 1""",
+                (args.claim_id, json.dumps(paths)),
+            ).fetchone()
+            confirmation = f"{args.evidence}; verified paths: {json.dumps(paths)}"
+            if baseline_event is not None and baseline_event[0] is None:
+                db.execute(
+                    """UPDATE claim_transitions SET evidence=?
+                       WHERE claim_id=? AND kind='baseline' AND added_paths_json=?
+                         AND evidence IS NULL""",
+                    (args.evidence, args.claim_id, json.dumps(paths)),
+                )
+            elif baseline_event is None and db.execute(
+                """SELECT 1 FROM claim_transitions
+                   WHERE claim_id=? AND kind='baseline-confirmed' AND evidence=?""",
+                (args.claim_id, confirmation),
+            ).fetchone() is None:
+                record_transition(
+                    db,
+                    args.claim_id,
+                    "baseline-confirmed",
+                    claim[3],
+                    claim[3],
+                    args.thread,
+                    args.thread,
+                    claim[4],
+                    claim[4],
+                    claim[5],
+                    claim[5],
+                    [],
+                    claim[6],
+                    int(time.time()),
+                    claim[7],
+                    claim[7],
+                    evidence=confirmation,
+                )
+        db.execute("COMMIT")
+    except BaseException:
+        db.execute("ROLLBACK")
+        raise
+
+    print(json.dumps({"claim_id": args.claim_id, "baseline_paths": added}))
+
+
 def cmd_list(args: argparse.Namespace, db: sqlite3.Connection) -> None:
     now = int(time.time())
     rows = db.execute("""
@@ -912,10 +1053,19 @@ def main() -> int:
     audit = sub.add_parser("audit", help="ensure all worktree changes stay within the active claim")
     audit.add_argument("--claim-id", required=True)
     audit.add_argument("--thread", required=True)
+    baseline = sub.add_parser(
+        "baseline", help="fingerprint explicit pre-existing changes outside an owner-held claim"
+    )
+    baseline.add_argument("--claim-id", required=True)
+    baseline.add_argument("--thread", required=True)
+    baseline.add_argument("--evidence", required=True, help="why these changes predate the claim")
+    baseline.add_argument("paths", nargs="+", help="currently changed repository paths to preserve")
     listing = sub.add_parser("list", help="list active, suspect, and released claims")
     listing.add_argument("--verbose", action="store_true", help="include every baseline path")
     args = parser.parse_args()
     try:
+        if args.command == "baseline" and not args.evidence.strip():
+            raise ValueError("baseline evidence must not be empty")
         for name in ("task", "thread", "stage", "milestone", "next_action") if args.command in ("claim", "adopt") else ():
             if not getattr(args, name).strip():
                 raise ValueError(f"{name} must not be empty")
@@ -973,6 +1123,8 @@ def main() -> int:
             if args.lease_seconds < 60:
                 raise ValueError("lease must be at least 60 seconds")
             cmd_handoff(args, common, db)
+        elif args.command == "baseline":
+            cmd_baseline(args, root, db)
         elif args.command == "audit":
             cmd_audit(args, root, db)
         else:

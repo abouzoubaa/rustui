@@ -164,6 +164,63 @@ class RoadmapClaimsTests(unittest.TestCase):
         self.assertNotEqual(changed.returncode, 0)
         self.assertIn("outside this claim", changed.stderr)
 
+    def test_baseline_preserves_only_unchanged_preexisting_paths(self) -> None:
+        claim = self.run_claim(self.wt1, "thread-baseline", "src/owned.rs")
+        self.assertEqual(claim.returncode, 0, claim.stderr)
+        claim_id = json.loads(claim.stdout)["claim_id"]
+        sidecar = self.wt1 / "graft" / "cache.json"
+        sidecar.parent.mkdir()
+        sidecar.write_text('{"cached":true}\n', encoding="utf-8")
+
+        baseline = subprocess.run(
+            [sys.executable, str(SCRIPT), "baseline", "--claim-id", claim_id,
+             "--thread", "thread-baseline", "--evidence", "present before baseline", "graft/cache.json"],
+            cwd=self.wt1, env=self.env, text=True, capture_output=True,
+        )
+        self.assertEqual(baseline.returncode, 0, baseline.stderr)
+        self.assertEqual(json.loads(baseline.stdout)["baseline_paths"], ["graft/cache.json"])
+        repeated = subprocess.run(
+            [sys.executable, str(SCRIPT), "baseline", "--claim-id", claim_id,
+             "--thread", "thread-baseline", "--evidence", "present before baseline",
+             "graft/cache.json"],
+            cwd=self.wt1, env=self.env, text=True, capture_output=True,
+        )
+        self.assertEqual(repeated.returncode, 0, repeated.stderr)
+
+        audit = [sys.executable, str(SCRIPT), "audit", "--claim-id", claim_id,
+                 "--thread", "thread-baseline"]
+        unchanged = subprocess.run(audit, cwd=self.wt1, env=self.env, text=True, capture_output=True)
+        self.assertEqual(unchanged.returncode, 0, unchanged.stderr)
+        history = json.loads(unchanged.stdout)["history"]
+        self.assertEqual(len(history), 1)
+        self.assertEqual(history[-1]["kind"], "baseline")
+        self.assertEqual(history[-1]["added_paths"], ["graft/cache.json"])
+        self.assertEqual(history[-1]["evidence"], "present before baseline")
+
+        sidecar.write_text('{"cached":false}\n', encoding="utf-8")
+        changed = subprocess.run(audit, cwd=self.wt1, env=self.env, text=True, capture_output=True)
+        self.assertNotEqual(changed.returncode, 0)
+        self.assertIn("outside this claim", changed.stderr)
+
+    def test_baseline_rejects_paths_owned_by_another_active_claim(self) -> None:
+        claim = self.run_claim(self.wt1, "thread-baseline-conflict", "src/owned.rs")
+        self.assertEqual(claim.returncode, 0, claim.stderr)
+        claim_id = json.loads(claim.stdout)["claim_id"]
+        other = self.run_claim(self.wt2, "thread-path-owner", "graft/cache.json", task="M-other")
+        self.assertEqual(other.returncode, 0, other.stderr)
+        sidecar = self.wt1 / "graft" / "cache.json"
+        sidecar.parent.mkdir()
+        sidecar.write_text("preserve\n", encoding="utf-8")
+
+        baseline = subprocess.run(
+            [sys.executable, str(SCRIPT), "baseline", "--claim-id", claim_id,
+             "--thread", "thread-baseline-conflict", "--evidence", "present before baseline",
+             "graft/cache.json"],
+            cwd=self.wt1, env=self.env, text=True, capture_output=True,
+        )
+        self.assertNotEqual(baseline.returncode, 0)
+        self.assertIn("conflicts with active claim", baseline.stderr)
+
     def test_rescope_releases_clean_paths_atomically_and_records_history(self) -> None:
         claim = self.run_claim(self.wt1, "thread-rescope", "old/file.rs")
         self.assertEqual(claim.returncode, 0, claim.stderr)
@@ -253,6 +310,35 @@ class RoadmapClaimsTests(unittest.TestCase):
         listing = subprocess.run([sys.executable, str(SCRIPT), "list"], cwd=self.wt1,
                                  env=self.env, text=True, capture_output=True, check=True)
         self.assertEqual(json.loads(listing.stdout)[0]["state"], "suspect")
+
+    def test_handoff_transfers_identity_without_dropping_old_worktree_changes(self) -> None:
+        claim = self.run_claim(self.wt1, "thread-handoff-old", "src/owned.rs")
+        self.assertEqual(claim.returncode, 0, claim.stderr)
+        claim_id = json.loads(claim.stdout)["claim_id"]
+        old_change = self.wt1 / "src" / "owned.rs"
+        old_change.parent.mkdir()
+        old_change.write_text("old session work\n", encoding="utf-8")
+
+        handoff = subprocess.run(
+            [sys.executable, str(SCRIPT), "handoff", "--claim-id", claim_id,
+             "--old-thread", "thread-handoff-old", "--new-thread", "thread-handoff-new",
+             "--new-worktree", str(self.wt2), "--stage", "Stage 2", "--milestone", "M-next",
+             "--next-action", "continue owned work", "--terminal-state", "superseded",
+             "--confirmed-terminal", "--evidence", "old thread confirmed terminal"],
+            cwd=self.wt1, env=self.env, text=True, capture_output=True,
+        )
+        self.assertEqual(handoff.returncode, 0, handoff.stderr)
+        self.assertTrue(old_change.exists(), "handoff must preserve old worktree changes")
+
+        audit = subprocess.run(
+            [sys.executable, str(SCRIPT), "audit", "--claim-id", claim_id,
+             "--thread", "thread-handoff-new"],
+            cwd=self.wt2, env=self.env, text=True, capture_output=True,
+        )
+        self.assertEqual(audit.returncode, 0, audit.stderr)
+        history = json.loads(audit.stdout)["history"]
+        self.assertEqual(history[-1]["kind"], "handoff")
+        self.assertEqual(history[-1]["to_base_head"], self.git(self.wt2, "rev-parse", "HEAD"))
 
     def test_legacy_claim_gets_branch_identity_backfilled(self) -> None:
         claim = self.run_claim(self.wt1, "thread-legacy", "src")

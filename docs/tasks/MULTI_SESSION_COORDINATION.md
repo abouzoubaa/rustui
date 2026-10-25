@@ -148,3 +148,37 @@ The database prevents collisions only among cooperating sessions. It cannot
 stop an unregistered process from writing. Therefore each assignment must
 include its claim ID, exact paths, branch, and next action; the coordinator must
 check claims before assignment and review audit output before integration.
+
+## Assigning parallel writers
+
+Every writer must be a distinct Codex thread with its own literal thread ID,
+registered clean worktree, unique `codex/` branch, and claim. Do not assign
+repository edits to a nested agent unless that agent can independently satisfy
+and verify all four requirements; otherwise use it for read-only discovery and
+have the registered thread make the change. Before opening a parallel task,
+check every active and suspect claim for overlapping paths, task IDs, threads,
+worktrees, or branches. `suspect`, idle, and not-loaded are not terminal states
+and never free ownership. A completed milestone can be followed by a new task
+only through the same owner's atomic `advance`, or through a verified terminal
+handoff to a new thread and clean worktree.
+
+## Preserving pre-existing work in an active claim
+
+`advance` and `rescope` reject adding files that already contain changes. If an
+active claim's audit discovers unrelated work that was already present in its
+worktree, the owner may record those exact changed files as a fingerprinted
+baseline. This does not add them to the owner's write scope. The command is
+owner-only, accepts only currently changed repository paths outside the claim,
+rejects paths overlapping any other active claim, and makes later edits fail
+audit. Do not baseline work created after the claim or use a directory-wide
+baseline when exact files are available.
+
+```sh
+python3 /Users/Abium/.codex/worktrees/session-coordination/rustui/scripts/roadmap_claims.py baseline \
+  --claim-id <claim-id> --thread <codex-thread-id> \
+  --evidence "present before the claim; independently confirmed" \
+  graft/.cache/existing-file.json graft/.graph/existing-file.json
+```
+
+After baseline, run `audit` and inspect its output before continuing. Baseline
+fingerprints are preserved in the shared registry and shown by `list --verbose`.
