@@ -746,6 +746,18 @@ mod tests {
             crate::story_for(item.key),
             Some(crate::stories::StoryId::Outline)
         );
+        let catalogs = crate::stories::catalogs();
+        for identifier in ["en", "fr", "ar"] {
+            let locale = rustui::localization::Locale::parse(identifier).unwrap();
+            let note = catalogs.resolve(&locale, item.note_message_id);
+            assert!(
+                note.contains("Outline"),
+                "stale Outline note in {identifier}"
+            );
+            if identifier == "en" {
+                assert_eq!(note, item.note);
+            }
+        }
     }
 
     #[test]

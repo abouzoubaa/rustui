@@ -12,6 +12,7 @@ use gpui::{
 };
 use gpui_base::actions::{Confirm, SelectDown, SelectLeft, SelectRight, SelectUp};
 use gpui_component::{
+    Icon, IconName, Sizable as _,
     list::ListItem,
     tree::{Tree as GpuiTree, TreeEntry, TreeItem, TreeState},
 };
@@ -759,17 +760,29 @@ impl View for TreeView {
                 &tree,
                 move |_ix, entry, _selected, _window, _cx| {
                     let marker = if entry.is_folder() {
-                        if entry.is_expanded() { "▾ " } else { "▸ " }
+                        Icon::new(if entry.is_expanded() {
+                            IconName::ChevronDown
+                        } else {
+                            IconName::ChevronRight
+                        })
+                        .with_size(px(12.0))
+                        .into_any_element()
                     } else {
-                        "  "
+                        div().w(px(12.0)).flex_none().into_any_element()
                     };
-                    let label = SharedString::from(format!("{marker}{}", entry.item().label));
                     let mut row = ListItem::new(ElementId::Name(
                         format!("rustui-tree-row-{}", entry.item().id).into(),
                     ))
                     .pl(px(8.0 + entry.depth() as f32 * 16.0))
                     .accessibility_label(entry.item().label.clone())
-                    .child(label);
+                    .child(
+                        div()
+                            .flex()
+                            .items_center()
+                            .gap_1()
+                            .child(marker)
+                            .child(entry.item().label.clone()),
+                    );
                     if let Some(activation) = click_activation
                         .clone()
                         .filter(|_| !entry.is_folder() && !entry.is_disabled())

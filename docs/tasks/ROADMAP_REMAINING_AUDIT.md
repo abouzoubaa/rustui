@@ -175,6 +175,17 @@ keyboard/visual/locale/RTL, native AX/VoiceOver and browser acceptance remain op
 upstream Tree accessible-name and hierarchy-level limitations remain explicit in
 `docs/tasks/OUTLINE_IMPLEMENTATION.md`.
 
+The rebuilt Web checkpoint at `bd18f238` rendered Outline and passed bounded
+pointer checks for hidden-heading selection, expand-all and collapse-all while
+preserving selection. Evidence: `/tmp/rustui-preservation-20261025/web-outline/`.
+It exposed stale runtime locale notes and missing text-triangle glyphs. The en/fr/ar
+notes now describe Outline; the English resolved note is checked against catalog
+metadata. Tree now draws disclosure chevrons from the already-embedded SVG assets.
+Focused source checks passed **20 catalog tests** and **25 Tree/Outline tests**.
+These corrections still need a fresh browser rebuild and observation. Browser AX
+continues to expose only a canvas image and unnamed textarea; native/browser
+semantic, IME, screen-reader, full glyph and visual acceptance remain open.
+
 ## Dependency notice capture checkpoint — 2026-10-25
 
 `scripts/collect_dependency_notices.py` now collects verbatim files from packages
@@ -201,6 +212,12 @@ Logs: `/tmp/rustui-outline-notices-source-check-20261025.log` and
 `/tmp/rustui-notice-collector-tests-20261025.log`. Collection evidence is under
 `target/headstart/evidence/native-dependency-notices-reviewed-20261025/`; it records
 the retained build and metadata hashes and does not certify the newer native UI.
+
+OSV was queried for the **18 newly restored locked test-support packages** and
+returned no advisories for that set. The query, timestamp and lockfile hash are in
+`/tmp/rustui-preservation-20261025/security/test-support-osv-20261025.json`.
+This does not supersede the earlier whole-lockfile findings or establish runtime
+closure, absence of undisclosed vulnerabilities, or release security clearance.
 
 ## Initial requirement inventory (provisional)
 
