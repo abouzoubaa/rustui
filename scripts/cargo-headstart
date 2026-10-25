@@ -31,6 +31,12 @@ fi
 if [ "${RUSTDOC+x}" != x ] && [ -x "$rustdoc_bin" ]; then
     RUSTDOC="$rustdoc_bin"
     export RUSTDOC
+elif [ "${RUSTDOC+x}" != x ] && [ "$RUSTC" = "$rustc_bin" ] &&
+     [ -x "${headstart_root}/rustc/build/${rustc_host}/stage1-tools-bin/rustdoc-tool-binary" ]; then
+    # The bootstrap tree can install rustdoc as a tool rather than stage1/bin.
+    # Use a subprocess wrapper because Cargo rewrites dynamic-library paths.
+    RUSTDOC="$(CDPATH= cd -- "$(dirname -- "$0")" && pwd)/rustdoc-headstart"
+    export RUSTDOC
 fi
 
 # Keep candidate snapshots from sharing the accepted workspace cache. Candidate

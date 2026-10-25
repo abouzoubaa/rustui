@@ -4,6 +4,7 @@ import json
 import os
 import re
 import subprocess
+import sys
 import tempfile
 import unittest
 from pathlib import Path
@@ -14,6 +15,49 @@ LAUNCHER = ROOT / "scripts" / "cargo-headstart"
 
 
 class CargoHeadstartTests(unittest.TestCase):
+    def test_tool_rustdoc_restores_library_path_and_preserves_caller_override(self) -> None:
+        with tempfile.TemporaryDirectory(prefix="headstart docs ") as temporary:
+            root = Path(temporary)
+            host = re.search(r"^host: (.+)$", subprocess.check_output(
+                ["rustc", "-vV"], text=True), re.MULTILINE)[1]
+            stage = root / "rustc/build" / host
+            rustc = stage / "stage1/bin/rustc"
+            rustc.parent.mkdir(parents=True)
+            rustc.write_text("#!/bin/sh\nexit 0\n")
+            rustc.chmod(0o755)
+            rustdoc = stage / "stage1-tools-bin/rustdoc-tool-binary"
+            rustdoc.parent.mkdir(parents=True)
+            rustdoc.write_text(
+                f"#!{sys.executable}\nimport json, os, sys\n"
+                "print(json.dumps({'library': os.environ.get('DYLD_LIBRARY_PATH'), 'args': sys.argv[1:]}))\n"
+            )
+            rustdoc.chmod(0o755)
+            caller = root / "caller-rustdoc"
+            caller.write_text("#!/bin/sh\nprintf '%s\\n' '{\"caller\": true}'\n")
+            caller.chmod(0o755)
+            cargo = root / "cargo/target/release/cargo"
+            cargo.parent.mkdir(parents=True)
+            cargo.write_text(
+                "#!/usr/bin/env python3\nimport os, subprocess\n"
+                "env = os.environ.copy()\nenv.pop('DYLD_LIBRARY_PATH', None)\n"
+                "print(subprocess.check_output([env['RUSTDOC'], 'space argument'], env=env, text=True))\n"
+            )
+            cargo.chmod(0o755)
+            env = os.environ.copy()
+            for name in ("RUSTC", "RUSTDOC", "DYLD_LIBRARY_PATH"):
+                env.pop(name, None)
+            env["RUSTUI_HEADSTART_ROOT"] = str(root)
+            env["CARGO_TARGET_DIR"] = str(root / "target")
+            result = subprocess.run([str(LAUNCHER), "test", "--doc"], env=env,
+                                    capture_output=True, text=True, check=True)
+            payload = json.loads(result.stdout)
+            self.assertEqual(payload["library"], str(stage / "stage1/lib"))
+            self.assertEqual(payload["args"], ["space argument"])
+            env["RUSTDOC"] = str(caller)
+            result = subprocess.run([str(LAUNCHER), "test", "--doc"], env=env,
+                                    capture_output=True, text=True, check=True)
+            self.assertEqual(json.loads(result.stdout), {"caller": True})
+
     def test_explicit_rustc_is_preserved_and_default_stays_headstart(self) -> None:
         with tempfile.TemporaryDirectory() as temporary:
             base = Path(temporary)
