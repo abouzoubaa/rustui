@@ -83,6 +83,7 @@ impl RenderOnce for DatePicker {
         let handler = self.on_open_change;
         self.base
             .role(Role::ComboBox)
+            .aria_disabled(disabled)
             .aria_expanded(open)
             .track_focus(&self.focus_handle.tab_stop(!disabled))
             .on_action({
@@ -108,5 +109,33 @@ impl RenderOnce for DatePicker {
             })
             .refine_style(&self.style)
             .children(self.children)
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use gpui::{Element as _, IntoElement as _, TestAppContext, accesskit};
+
+    #[gpui::test]
+    fn projects_disabled_state_to_accessibility(cx: &mut TestAppContext) {
+        let window = cx.add_empty_window();
+        window.update(|window, cx| {
+            let focus_handle = cx.focus_handle();
+            let mut enabled = accesskit::Node::new(Role::ComboBox);
+            DatePicker::new("enabled", &focus_handle)
+                .render(window, cx)
+                .into_element()
+                .write_a11y_info(&mut enabled);
+            let mut disabled = accesskit::Node::new(Role::ComboBox);
+            DatePicker::new("disabled", &focus_handle)
+                .disabled(true)
+                .render(window, cx)
+                .into_element()
+                .write_a11y_info(&mut disabled);
+
+            assert!(!enabled.is_disabled());
+            assert!(disabled.is_disabled());
+        });
     }
 }

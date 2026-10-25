@@ -1,0 +1,11 @@
+{
+  "source": "vendor/gpui-base-0.7.3/src/button.rs",
+  "pre": "ff3026d04f12afe3e6aeb3cc3d95b25c5ea6eb65884258fea1b973ad6d08255e",
+  "post": "c7ccd3d57eb17efe3ed2d032abbf8c84bc7ba2b1c284859a1e64b320fc7c9720",
+  "patch": "patches/approved/gpui-base-button-disabled-accessibility-v1.patch",
+  "patch_sha256": "bf222a4f13ab7faf090a0afbb4972308b2cc5a017a795ff7134844b0dc97da9c",
+  "prerequisite": {
+    "path": "vendor/gpui-pre-0.3.9/src/elements/div.rs",
+    "sha256": "de8298ce4e48f055984742a18f18206e385786f64ff495f2d5b176481033b84e"
+  }
+}

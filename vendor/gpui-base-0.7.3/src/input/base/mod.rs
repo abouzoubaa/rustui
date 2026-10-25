@@ -234,7 +234,7 @@ impl RenderOnce for InputBase {
         let style = self.resolved_style();
         self.base
             .when_some(self.role.resolve(|| Role::TextInput), |this, role| {
-                this.role(role)
+                this.role(role).aria_disabled(self.disabled)
             })
             .children(self.children)
             .refine_style(&style)
@@ -257,6 +257,31 @@ mod tests {
             })
             .child("value")
             .opacity(0.8);
+    }
+
+    #[gpui::test]
+    fn projects_disabled_state_to_accessibility(cx: &mut gpui::TestAppContext) {
+        use gpui::{Element as _, IntoElement as _, accesskit};
+
+        let window = cx.add_empty_window();
+        window.update(|window, cx| {
+            let mut enabled = accesskit::Node::new(Role::TextInput);
+            InputBase::new("enabled")
+                .role(Role::TextInput)
+                .render(window, cx)
+                .into_element()
+                .write_a11y_info(&mut enabled);
+            let mut disabled = accesskit::Node::new(Role::TextInput);
+            InputBase::new("disabled")
+                .role(Role::TextInput)
+                .disabled(true)
+                .render(window, cx)
+                .into_element()
+                .write_a11y_info(&mut disabled);
+
+            assert!(!enabled.is_disabled());
+            assert!(disabled.is_disabled());
+        });
     }
 
     #[test]

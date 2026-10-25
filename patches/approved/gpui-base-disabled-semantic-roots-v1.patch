@@ -1,0 +1,104 @@
+--- a/vendor/gpui-base-0.7.3/src/select.rs
++++ b/vendor/gpui-base-0.7.3/src/select.rs
+@@ -194,6 +194,7 @@
+ 
+         self.base
+             .role(Role::ComboBox)
++            .aria_disabled(disabled)
+             .aria_expanded(open)
+             .when_some(self.accessibility_label, |this, label| {
+                 this.aria_label(label)
+@@ -495,6 +496,8 @@
+             assert_eq!(enabled.label(), Some("Programming language"));
+             assert_eq!(enabled.value(), Some("Rust"));
+             assert_eq!(enabled.is_expanded(), Some(true));
++            assert!(!enabled.is_disabled());
++            assert!(disabled.is_disabled());
+             assert_eq!(
+                 disabled.is_expanded(),
+                 Some(true),
+--- a/vendor/gpui-base-0.7.3/src/date_picker.rs
++++ b/vendor/gpui-base-0.7.3/src/date_picker.rs
+@@ -83,6 +83,7 @@
+         let handler = self.on_open_change;
+         self.base
+             .role(Role::ComboBox)
++            .aria_disabled(disabled)
+             .aria_expanded(open)
+             .track_focus(&self.focus_handle.tab_stop(!disabled))
+             .on_action({
+@@ -110,3 +111,31 @@
+             .children(self.children)
+     }
+ }
++
++#[cfg(test)]
++mod tests {
++    use super::*;
++    use gpui::{Element as _, IntoElement as _, TestAppContext, accesskit};
++
++    #[gpui::test]
++    fn projects_disabled_state_to_accessibility(cx: &mut TestAppContext) {
++        let window = cx.add_empty_window();
++        window.update(|window, cx| {
++            let focus_handle = cx.focus_handle();
++            let mut enabled = accesskit::Node::new(Role::ComboBox);
++            DatePicker::new("enabled", &focus_handle)
++                .render(window, cx)
++                .into_element()
++                .write_a11y_info(&mut enabled);
++            let mut disabled = accesskit::Node::new(Role::ComboBox);
++            DatePicker::new("disabled", &focus_handle)
++                .disabled(true)
++                .render(window, cx)
++                .into_element()
++                .write_a11y_info(&mut disabled);
++
++            assert!(!enabled.is_disabled());
++            assert!(disabled.is_disabled());
++        });
++    }
++}
+--- a/vendor/gpui-base-0.7.3/src/input/base/mod.rs
++++ b/vendor/gpui-base-0.7.3/src/input/base/mod.rs
+@@ -234,7 +234,7 @@
+         let style = self.resolved_style();
+         self.base
+             .when_some(self.role.resolve(|| Role::TextInput), |this, role| {
+-                this.role(role)
++                this.role(role).aria_disabled(self.disabled)
+             })
+             .children(self.children)
+             .refine_style(&style)
+@@ -259,6 +259,31 @@
+             .opacity(0.8);
+     }
+ 
++    #[gpui::test]
++    fn projects_disabled_state_to_accessibility(cx: &mut gpui::TestAppContext) {
++        use gpui::{Element as _, IntoElement as _, accesskit};
++
++        let window = cx.add_empty_window();
++        window.update(|window, cx| {
++            let mut enabled = accesskit::Node::new(Role::TextInput);
++            InputBase::new("enabled")
++                .role(Role::TextInput)
++                .render(window, cx)
++                .into_element()
++                .write_a11y_info(&mut enabled);
++            let mut disabled = accesskit::Node::new(Role::TextInput);
++            InputBase::new("disabled")
++                .role(Role::TextInput)
++                .disabled(true)
++                .render(window, cx)
++                .into_element()
++                .write_a11y_info(&mut disabled);
++
++            assert!(!enabled.is_disabled());
++            assert!(disabled.is_disabled());
++        });
++    }
++
+     #[test]
+     fn semantic_state_styles_override_the_normal_style() {
+         let focused = InputBase::new("focused")
