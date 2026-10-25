@@ -131,7 +131,32 @@
               }
             }
           }
+        },
+      {
+        "part": "body",
+        "when": {
+          "appearance": "light",
+          "material": "any",
+          "interaction": "any",
+          "text_presence": "any",
+          "size": "any",
+          "orientation": "any",
+          "chrome": "any",
+          "modality": "any"
+        },
+        "style": {
+          "properties": {
+            "foreground": {
+              "kind": "color",
+              "value": { "rgba": { "r": 0, "g": 0.4, "b": 0.8, "a": 1 } }
+            },
+            "typography": {
+              "kind": "typography",
+              "value": { "family": "SF Pro", "size": 28, "weight": 400 }
+            }
+          }
         }
+      }
       ]
     },
     "button": {

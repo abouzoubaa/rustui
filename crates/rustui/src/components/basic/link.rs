@@ -364,6 +364,77 @@ mod tests {
     }
 
     #[test]
+    fn web_reference_link_theme_has_readable_light_contrast_and_preserves_dark_color() {
+        fn from_hex(hex: &str) -> RgbaValue {
+            let channel =
+                |offset| u8::from_str_radix(&hex[offset..offset + 2], 16).unwrap() as f32 / 255.0;
+            RgbaValue {
+                r: channel(1),
+                g: channel(3),
+                b: channel(5),
+                a: 1.0,
+            }
+        }
+        fn luminance(color: RgbaValue) -> f32 {
+            let linear = |channel: f32| {
+                if channel <= 0.04045 {
+                    channel / 12.92
+                } else {
+                    ((channel + 0.055) / 1.055).powf(2.4)
+                }
+            };
+            0.2126 * linear(color.r) + 0.7152 * linear(color.g) + 0.0722 * linear(color.b)
+        }
+        fn contrast_ratio(foreground: RgbaValue, background: RgbaValue) -> f32 {
+            let (lighter, darker) = match (luminance(foreground), luminance(background)) {
+                (fg, bg) if fg >= bg => (fg, bg),
+                (fg, bg) => (bg, fg),
+            };
+            (lighter + 0.05) / (darker + 0.05)
+        }
+
+        let document =
+            crate::theme::parse_theme(include_str!("../../../../../themes/macos27.json")).unwrap();
+        for (mode, expected) in [
+            (crate::theme::AppearanceMode::Light, (0.0, 0.4, 0.8)),
+            (crate::theme::AppearanceMode::Dark, (0.596078, 0.8, 1.0)),
+        ] {
+            let selector = crate::components::theme::selector_for_mode(mode);
+            let style = crate::theme::resolve_component_style_with(
+                &document,
+                "link",
+                "body",
+                &selector,
+                &[],
+            )
+            .unwrap();
+            let foreground = style.colors["foreground"];
+            assert_eq!((foreground.r, foreground.g, foreground.b), expected);
+            assert_eq!(foreground.a, 1.0);
+
+            let button = crate::theme::resolve_button(&document, Some(mode)).unwrap();
+            assert_eq!(
+                link_foreground(foreground, button.disabled_foreground, false),
+                foreground
+            );
+            assert_eq!(
+                link_foreground(foreground, button.disabled_foreground, true),
+                button.disabled_foreground,
+            );
+
+            if mode == crate::theme::AppearanceMode::Light {
+                let background = from_hex(
+                    &document
+                        .platform_snapshot
+                        .colors(Some(mode))
+                        .content_background,
+                );
+                assert!(contrast_ratio(foreground, background) >= 4.5);
+            }
+        }
+    }
+
+    #[test]
     fn disabled_link_uses_platform_disabled_text_color() {
         let document =
             crate::theme::parse_theme(include_str!("../../../../../themes/macos27.json")).unwrap();

@@ -947,7 +947,7 @@ mod component_tests {
             &capabilities,
         );
         assert_eq!(report.total_records, 41);
-        assert_eq!(report.total_rules, 419);
+        assert_eq!(report.total_rules, 420);
         assert_eq!(
             report.covered_rules
                 + report.uncovered_rules.len()
