@@ -175,6 +175,33 @@ keyboard/visual/locale/RTL, native AX/VoiceOver and browser acceptance remain op
 upstream Tree accessible-name and hierarchy-level limitations remain explicit in
 `docs/tasks/OUTLINE_IMPLEMENTATION.md`.
 
+## Dependency notice capture checkpoint — 2026-10-25
+
+`scripts/collect_dependency_notices.py` now collects verbatim files from packages
+observed in successful Cargo JSON. It distinguishes actual workspace members from
+path-patched upstream packages, rejects source symlinks and source/output overlap,
+never replaces an existing output directory, and verifies copied bytes and stable
+input hashes. Its **19 focused tests pass**, including the public CLI. Versioned
+supplements in `docs/release/dependency-notices/` bind **38 package mappings to 16
+distinct texts** by exact upstream revision, package manifest hash and source URL.
+
+The retained native build observed **417 packages**, including build dependencies.
+The initial collection had **43 packages without notice files**; reviewed
+supplements reduce that to **5**: block 0.1.6, mac 0.1.1, malloc_buf 0.0.6,
+pathfinder_geometry 0.5.1 and seahash 4.1.0. This is notice-file capture coverage,
+not legal completeness. Eighteen mapped packages retain explicit review notes;
+some captured material is guidance/links instead of complete permission texts.
+Compatibility, MPL source obligations, exact runtime closure and distribution
+packaging remain open. No pinned revision, vendor code or license text was edited.
+
+The source release driver passed **536 Python tests**, packaging fixtures, the CI
+checkout regression, locale validation and static theme checks. The subsequent
+unbuilt-source output-overlap guard passed the 19-test focused collector suite.
+Logs: `/tmp/rustui-outline-notices-source-check-20261025.log` and
+`/tmp/rustui-notice-collector-tests-20261025.log`. Collection evidence is under
+`target/headstart/evidence/native-dependency-notices-reviewed-20261025/`; it records
+the retained build and metadata hashes and does not certify the newer native UI.
+
 ## Initial requirement inventory (provisional)
 
 The current inventory has **37 provisional audit requirements**. Four source

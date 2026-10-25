@@ -97,6 +97,15 @@ tests and compilation are not substitutes.
 
 ## Distribution checkpoint
 
+Collect dependency notices from successful Cargo build JSON with
+[`collect_dependency_notices.py`](../scripts/collect_dependency_notices.py) and the
+[versioned supplements](release/dependency-notices/README.md). The collector binds
+verbatim files to package identities and hashes and preserves explicit gaps and
+review notes. It includes observed build dependencies; it does not establish an
+exact runtime closure or legal completeness. It writes only a fresh output
+directory. Include reviewed notices and required source material in distribution
+artifacts after the remaining licensing and packaging work is complete.
+
 Complete security and dependency/license review, notices for all distributed
 code/assets, supported macOS/browser versions, native signing/notarization,
 artifact checksums and a rollback plan before requesting publication approval.

@@ -1,0 +1,829 @@
+{
+  "packages": [
+    {
+      "files": [
+        {
+          "path": "texts/62c7a1e35f56406896d7aa7ca52d0cc0d272ac022b5d2796e7d6905db8a3636a.txt",
+          "sha256": "62c7a1e35f56406896d7aa7ca52d0cc0d272ac022b5d2796e7d6905db8a3636a",
+          "upstream_path": "LICENSE-APACHE",
+          "url": "https://raw.githubusercontent.com/AccessKit/accesskit/a55d3e1a18bb9ef0e4bccc9083fb13c3e0ad8969/LICENSE-APACHE"
+        },
+        {
+          "path": "texts/23f18e03dc49df91622fe2a76176497404e46ced8a715d9d2b67a7446571cca3.txt",
+          "sha256": "23f18e03dc49df91622fe2a76176497404e46ced8a715d9d2b67a7446571cca3",
+          "upstream_path": "LICENSE-MIT",
+          "url": "https://raw.githubusercontent.com/AccessKit/accesskit/a55d3e1a18bb9ef0e4bccc9083fb13c3e0ad8969/LICENSE-MIT"
+        },
+        {
+          "path": "texts/845022e0c1db1abb41a6ba4cd3c4b674ec290f3359d9d3c78ae558d4c0ed9308.txt",
+          "sha256": "845022e0c1db1abb41a6ba4cd3c4b674ec290f3359d9d3c78ae558d4c0ed9308",
+          "upstream_path": "LICENSE.chromium",
+          "url": "https://raw.githubusercontent.com/AccessKit/accesskit/a55d3e1a18bb9ef0e4bccc9083fb13c3e0ad8969/LICENSE.chromium"
+        }
+      ],
+      "manifest_sha256": "cd01e2e0c169f5d6c72fdb42e77cf707608dbbb615455676518eba33e8f5bc02",
+      "name": "accesskit",
+      "source": "registry+https://github.com/rust-lang/crates.io-index",
+      "upstream": {
+        "package_path": "common",
+        "repository": "AccessKit/accesskit",
+        "revision": "a55d3e1a18bb9ef0e4bccc9083fb13c3e0ad8969"
+      },
+      "version": "0.24.1"
+    },
+    {
+      "files": [
+        {
+          "path": "texts/62c7a1e35f56406896d7aa7ca52d0cc0d272ac022b5d2796e7d6905db8a3636a.txt",
+          "sha256": "62c7a1e35f56406896d7aa7ca52d0cc0d272ac022b5d2796e7d6905db8a3636a",
+          "upstream_path": "LICENSE-APACHE",
+          "url": "https://raw.githubusercontent.com/AccessKit/accesskit/c88605b96d04431f9c3c792464a0f2f253480e94/LICENSE-APACHE"
+        },
+        {
+          "path": "texts/23f18e03dc49df91622fe2a76176497404e46ced8a715d9d2b67a7446571cca3.txt",
+          "sha256": "23f18e03dc49df91622fe2a76176497404e46ced8a715d9d2b67a7446571cca3",
+          "upstream_path": "LICENSE-MIT",
+          "url": "https://raw.githubusercontent.com/AccessKit/accesskit/c88605b96d04431f9c3c792464a0f2f253480e94/LICENSE-MIT"
+        },
+        {
+          "path": "texts/845022e0c1db1abb41a6ba4cd3c4b674ec290f3359d9d3c78ae558d4c0ed9308.txt",
+          "sha256": "845022e0c1db1abb41a6ba4cd3c4b674ec290f3359d9d3c78ae558d4c0ed9308",
+          "upstream_path": "LICENSE.chromium",
+          "url": "https://raw.githubusercontent.com/AccessKit/accesskit/c88605b96d04431f9c3c792464a0f2f253480e94/LICENSE.chromium"
+        }
+      ],
+      "manifest_sha256": "f75c77dc052103040d9ff95469fe50f94cd327b147fec851a8cb709c8a379774",
+      "name": "accesskit_consumer",
+      "source": "registry+https://github.com/rust-lang/crates.io-index",
+      "upstream": {
+        "package_path": "consumer",
+        "repository": "AccessKit/accesskit",
+        "revision": "c88605b96d04431f9c3c792464a0f2f253480e94"
+      },
+      "version": "0.38.0"
+    },
+    {
+      "files": [
+        {
+          "path": "texts/62c7a1e35f56406896d7aa7ca52d0cc0d272ac022b5d2796e7d6905db8a3636a.txt",
+          "sha256": "62c7a1e35f56406896d7aa7ca52d0cc0d272ac022b5d2796e7d6905db8a3636a",
+          "upstream_path": "LICENSE-APACHE",
+          "url": "https://raw.githubusercontent.com/AccessKit/accesskit/c88605b96d04431f9c3c792464a0f2f253480e94/LICENSE-APACHE"
+        },
+        {
+          "path": "texts/23f18e03dc49df91622fe2a76176497404e46ced8a715d9d2b67a7446571cca3.txt",
+          "sha256": "23f18e03dc49df91622fe2a76176497404e46ced8a715d9d2b67a7446571cca3",
+          "upstream_path": "LICENSE-MIT",
+          "url": "https://raw.githubusercontent.com/AccessKit/accesskit/c88605b96d04431f9c3c792464a0f2f253480e94/LICENSE-MIT"
+        },
+        {
+          "path": "texts/845022e0c1db1abb41a6ba4cd3c4b674ec290f3359d9d3c78ae558d4c0ed9308.txt",
+          "sha256": "845022e0c1db1abb41a6ba4cd3c4b674ec290f3359d9d3c78ae558d4c0ed9308",
+          "upstream_path": "LICENSE.chromium",
+          "url": "https://raw.githubusercontent.com/AccessKit/accesskit/c88605b96d04431f9c3c792464a0f2f253480e94/LICENSE.chromium"
+        }
+      ],
+      "manifest_sha256": "d058a7a5616e7373b1b9dda303650ed6baf31aaf99e801fc5d2e080e253caf0d",
+      "name": "accesskit_macos",
+      "source": "registry+https://github.com/rust-lang/crates.io-index",
+      "upstream": {
+        "package_path": "platforms/macos",
+        "repository": "AccessKit/accesskit",
+        "revision": "c88605b96d04431f9c3c792464a0f2f253480e94"
+      },
+      "version": "0.26.3"
+    },
+    {
+      "files": [
+        {
+          "path": "texts/7f976f7e9cb2d87df7230606feb932c3f21ac0e664045a775b600046ff850c54.txt",
+          "sha256": "7f976f7e9cb2d87df7230606feb932c3f21ac0e664045a775b600046ff850c54",
+          "upstream_path": "LICENSE.md",
+          "url": "https://raw.githubusercontent.com/madsmtm/objc2/b4167b582b2f75f9a1be75495c41b765344fd03c/LICENSE.md"
+        }
+      ],
+      "manifest_sha256": "e325c51f01145af3e11f2ee5ce7c47f10697d936c1d90b9ee81a0cf4f700f6d7",
+      "name": "block2",
+      "note": "The exact revision provides licensing guidance and external license links, without full standalone permission texts. It also records Apple SDK derivation concerns. License-text and compatibility review remain open.",
+      "source": "registry+https://github.com/rust-lang/crates.io-index",
+      "upstream": {
+        "package_path": "crates/block2",
+        "repository": "madsmtm/objc2",
+        "revision": "b4167b582b2f75f9a1be75495c41b765344fd03c"
+      },
+      "version": "0.6.2"
+    },
+    {
+      "files": [
+        {
+          "path": "texts/7f976f7e9cb2d87df7230606feb932c3f21ac0e664045a775b600046ff850c54.txt",
+          "sha256": "7f976f7e9cb2d87df7230606feb932c3f21ac0e664045a775b600046ff850c54",
+          "upstream_path": "LICENSE.md",
+          "url": "https://raw.githubusercontent.com/madsmtm/objc2/8852b424193ca41602281b3d7540d7c8ed51e49a/LICENSE.md"
+        }
+      ],
+      "manifest_sha256": "f246cf8997c346fdcabb8925ad5be967f397fd8b92630ef7bcc9bdce5d33f775",
+      "name": "dispatch2",
+      "note": "The exact revision provides licensing guidance and external license links, without full standalone permission texts. It also records Apple SDK derivation concerns. License-text and compatibility review remain open.",
+      "source": "registry+https://github.com/rust-lang/crates.io-index",
+      "upstream": {
+        "package_path": "crates/dispatch2",
+        "repository": "madsmtm/objc2",
+        "revision": "8852b424193ca41602281b3d7540d7c8ed51e49a"
+      },
+      "version": "0.3.1"
+    },
+    {
+      "files": [
+        {
+          "path": "texts/216486f29671a4262efe32af6d84a75bef398127f8c5f369b5c8305983887a06.txt",
+          "sha256": "216486f29671a4262efe32af6d84a75bef398127f8c5f369b5c8305983887a06",
+          "upstream_path": "LICENSE-APACHE",
+          "url": "https://raw.githubusercontent.com/nical/lyon/56219c95c658d4f39de7b190d98e57d5773ba241/LICENSE-APACHE"
+        },
+        {
+          "path": "texts/80f275e90d799911ed3830a7f242a2ef5a4ade2092fe0aa07bfb2d2cf2f2b95e.txt",
+          "sha256": "80f275e90d799911ed3830a7f242a2ef5a4ade2092fe0aa07bfb2d2cf2f2b95e",
+          "upstream_path": "LICENSE-MIT",
+          "url": "https://raw.githubusercontent.com/nical/lyon/56219c95c658d4f39de7b190d98e57d5773ba241/LICENSE-MIT"
+        }
+      ],
+      "manifest_sha256": "d0247358d21759f525010d1732021c966e3937d17723896c6d40291aaccf2b4a",
+      "name": "lyon",
+      "source": "registry+https://github.com/rust-lang/crates.io-index",
+      "upstream": {
+        "package_path": "crates/lyon",
+        "repository": "nical/lyon",
+        "revision": "56219c95c658d4f39de7b190d98e57d5773ba241"
+      },
+      "version": "1.0.19"
+    },
+    {
+      "files": [
+        {
+          "path": "texts/216486f29671a4262efe32af6d84a75bef398127f8c5f369b5c8305983887a06.txt",
+          "sha256": "216486f29671a4262efe32af6d84a75bef398127f8c5f369b5c8305983887a06",
+          "upstream_path": "LICENSE-APACHE",
+          "url": "https://raw.githubusercontent.com/nical/lyon/994526f2766c7e9bc5bb16687232fd7e8999dbdf/LICENSE-APACHE"
+        },
+        {
+          "path": "texts/80f275e90d799911ed3830a7f242a2ef5a4ade2092fe0aa07bfb2d2cf2f2b95e.txt",
+          "sha256": "80f275e90d799911ed3830a7f242a2ef5a4ade2092fe0aa07bfb2d2cf2f2b95e",
+          "upstream_path": "LICENSE-MIT",
+          "url": "https://raw.githubusercontent.com/nical/lyon/994526f2766c7e9bc5bb16687232fd7e8999dbdf/LICENSE-MIT"
+        }
+      ],
+      "manifest_sha256": "720190ce4c5bc91da57325dc7a51d3ac968352616272f3b036f4d16cc2166d0c",
+      "name": "lyon_algorithms",
+      "source": "registry+https://github.com/rust-lang/crates.io-index",
+      "upstream": {
+        "package_path": "crates/algorithms",
+        "repository": "nical/lyon",
+        "revision": "994526f2766c7e9bc5bb16687232fd7e8999dbdf"
+      },
+      "version": "1.0.21"
+    },
+    {
+      "files": [
+        {
+          "path": "texts/216486f29671a4262efe32af6d84a75bef398127f8c5f369b5c8305983887a06.txt",
+          "sha256": "216486f29671a4262efe32af6d84a75bef398127f8c5f369b5c8305983887a06",
+          "upstream_path": "LICENSE-APACHE",
+          "url": "https://raw.githubusercontent.com/nical/lyon/56219c95c658d4f39de7b190d98e57d5773ba241/LICENSE-APACHE"
+        },
+        {
+          "path": "texts/80f275e90d799911ed3830a7f242a2ef5a4ade2092fe0aa07bfb2d2cf2f2b95e.txt",
+          "sha256": "80f275e90d799911ed3830a7f242a2ef5a4ade2092fe0aa07bfb2d2cf2f2b95e",
+          "upstream_path": "LICENSE-MIT",
+          "url": "https://raw.githubusercontent.com/nical/lyon/56219c95c658d4f39de7b190d98e57d5773ba241/LICENSE-MIT"
+        }
+      ],
+      "manifest_sha256": "873e9c04bf5e64dd91c893b930bd79d5b6670e5147e8db896edee2038fc88b36",
+      "name": "lyon_geom",
+      "source": "registry+https://github.com/rust-lang/crates.io-index",
+      "upstream": {
+        "package_path": "crates/geom",
+        "repository": "nical/lyon",
+        "revision": "56219c95c658d4f39de7b190d98e57d5773ba241"
+      },
+      "version": "1.0.19"
+    },
+    {
+      "files": [
+        {
+          "path": "texts/216486f29671a4262efe32af6d84a75bef398127f8c5f369b5c8305983887a06.txt",
+          "sha256": "216486f29671a4262efe32af6d84a75bef398127f8c5f369b5c8305983887a06",
+          "upstream_path": "LICENSE-APACHE",
+          "url": "https://raw.githubusercontent.com/nical/lyon/56219c95c658d4f39de7b190d98e57d5773ba241/LICENSE-APACHE"
+        },
+        {
+          "path": "texts/80f275e90d799911ed3830a7f242a2ef5a4ade2092fe0aa07bfb2d2cf2f2b95e.txt",
+          "sha256": "80f275e90d799911ed3830a7f242a2ef5a4ade2092fe0aa07bfb2d2cf2f2b95e",
+          "upstream_path": "LICENSE-MIT",
+          "url": "https://raw.githubusercontent.com/nical/lyon/56219c95c658d4f39de7b190d98e57d5773ba241/LICENSE-MIT"
+        }
+      ],
+      "manifest_sha256": "f37569f37541593a26986d3fa5fa6d62a0a2ceb9793607bd88ec0a909bbc17ec",
+      "name": "lyon_path",
+      "source": "registry+https://github.com/rust-lang/crates.io-index",
+      "upstream": {
+        "package_path": "crates/path",
+        "repository": "nical/lyon",
+        "revision": "56219c95c658d4f39de7b190d98e57d5773ba241"
+      },
+      "version": "1.0.19"
+    },
+    {
+      "files": [
+        {
+          "path": "texts/216486f29671a4262efe32af6d84a75bef398127f8c5f369b5c8305983887a06.txt",
+          "sha256": "216486f29671a4262efe32af6d84a75bef398127f8c5f369b5c8305983887a06",
+          "upstream_path": "LICENSE-APACHE",
+          "url": "https://raw.githubusercontent.com/nical/lyon/b456b143215a1942a617c4672776b68b9a30feee/LICENSE-APACHE"
+        },
+        {
+          "path": "texts/80f275e90d799911ed3830a7f242a2ef5a4ade2092fe0aa07bfb2d2cf2f2b95e.txt",
+          "sha256": "80f275e90d799911ed3830a7f242a2ef5a4ade2092fe0aa07bfb2d2cf2f2b95e",
+          "upstream_path": "LICENSE-MIT",
+          "url": "https://raw.githubusercontent.com/nical/lyon/b456b143215a1942a617c4672776b68b9a30feee/LICENSE-MIT"
+        }
+      ],
+      "manifest_sha256": "065dd83441c47b65e0dc80ea496d3da8c1f91d4bde141d2e42947f7741ff0f3e",
+      "name": "lyon_tessellation",
+      "source": "registry+https://github.com/rust-lang/crates.io-index",
+      "upstream": {
+        "package_path": "crates/tessellation",
+        "repository": "nical/lyon",
+        "revision": "b456b143215a1942a617c4672776b68b9a30feee"
+      },
+      "version": "1.0.22"
+    },
+    {
+      "files": [
+        {
+          "path": "texts/e353f37b12aefbb9f9b29490e837cfee05d9bda70804b3562839a3285c1df1e5.txt",
+          "sha256": "e353f37b12aefbb9f9b29490e837cfee05d9bda70804b3562839a3285c1df1e5",
+          "upstream_path": "LICENSE.txt",
+          "url": "https://raw.githubusercontent.com/madsmtm/objc2/4fc083f1c6d6784577e38b0ee8dbd344481e2fd2/LICENSE.txt"
+        }
+      ],
+      "manifest_sha256": "a53c0faf4873ad69640d01b1d64a32b4fa7a75a12b8b7980f6f2de9c1308a865",
+      "name": "objc-sys",
+      "source": "registry+https://github.com/rust-lang/crates.io-index",
+      "upstream": {
+        "package_path": "crates/objc-sys",
+        "repository": "madsmtm/objc2",
+        "revision": "4fc083f1c6d6784577e38b0ee8dbd344481e2fd2"
+      },
+      "version": "0.3.5"
+    },
+    {
+      "files": [
+        {
+          "path": "texts/e353f37b12aefbb9f9b29490e837cfee05d9bda70804b3562839a3285c1df1e5.txt",
+          "sha256": "e353f37b12aefbb9f9b29490e837cfee05d9bda70804b3562839a3285c1df1e5",
+          "upstream_path": "LICENSE.txt",
+          "url": "https://raw.githubusercontent.com/madsmtm/objc2/5237cbf081d04ef75a1f6a207b4018e7c1ae7438/LICENSE.txt"
+        }
+      ],
+      "manifest_sha256": "4260f0dabe9357f8f2be6cccd12876d8950bc8f74edf59f82609a62e8d19c260",
+      "name": "objc2",
+      "source": "registry+https://github.com/rust-lang/crates.io-index",
+      "upstream": {
+        "package_path": "crates/objc2",
+        "repository": "madsmtm/objc2",
+        "revision": "5237cbf081d04ef75a1f6a207b4018e7c1ae7438"
+      },
+      "version": "0.5.3"
+    },
+    {
+      "files": [
+        {
+          "path": "texts/7f976f7e9cb2d87df7230606feb932c3f21ac0e664045a775b600046ff850c54.txt",
+          "sha256": "7f976f7e9cb2d87df7230606feb932c3f21ac0e664045a775b600046ff850c54",
+          "upstream_path": "LICENSE.md",
+          "url": "https://raw.githubusercontent.com/madsmtm/objc2/d7d2fa23ceaa5e6096c923b081040e5d81b3b9df/LICENSE.md"
+        }
+      ],
+      "manifest_sha256": "5556dba493fc18e98ebf82f587011f76df6c8c26532613e4c8f904ee586d7cf0",
+      "name": "objc2",
+      "note": "The exact revision provides licensing guidance and external license links, without full standalone permission texts. It also records Apple SDK derivation concerns. License-text and compatibility review remain open.",
+      "source": "registry+https://github.com/rust-lang/crates.io-index",
+      "upstream": {
+        "package_path": "crates/objc2",
+        "repository": "madsmtm/objc2",
+        "revision": "d7d2fa23ceaa5e6096c923b081040e5d81b3b9df"
+      },
+      "version": "0.6.5"
+    },
+    {
+      "files": [
+        {
+          "path": "texts/e353f37b12aefbb9f9b29490e837cfee05d9bda70804b3562839a3285c1df1e5.txt",
+          "sha256": "e353f37b12aefbb9f9b29490e837cfee05d9bda70804b3562839a3285c1df1e5",
+          "upstream_path": "LICENSE.txt",
+          "url": "https://raw.githubusercontent.com/madsmtm/objc2/e282618be4c3a3b9542957e0c8540e9588472ce8/LICENSE.txt"
+        }
+      ],
+      "manifest_sha256": "3ae36868a6318fb30bc564f207821b311ee1fb0081d29294266440be29b08280",
+      "name": "objc2-app-kit",
+      "source": "registry+https://github.com/rust-lang/crates.io-index",
+      "upstream": {
+        "package_path": "framework-crates/objc2-app-kit",
+        "repository": "madsmtm/objc2",
+        "revision": "e282618be4c3a3b9542957e0c8540e9588472ce8"
+      },
+      "version": "0.2.2"
+    },
+    {
+      "files": [
+        {
+          "path": "texts/7f976f7e9cb2d87df7230606feb932c3f21ac0e664045a775b600046ff850c54.txt",
+          "sha256": "7f976f7e9cb2d87df7230606feb932c3f21ac0e664045a775b600046ff850c54",
+          "upstream_path": "LICENSE.md",
+          "url": "https://raw.githubusercontent.com/madsmtm/objc2/7b1abfd750a2cacaea71d6a56ecfb83cb7de560b/LICENSE.md"
+        }
+      ],
+      "manifest_sha256": "11a761a52774ed9738fb854ba3eecb48fa360b6ce43dddc00c338346853717b5",
+      "name": "objc2-app-kit",
+      "note": "The exact revision provides licensing guidance and external license links, without full standalone permission texts. It also records Apple SDK derivation concerns. License-text and compatibility review remain open.",
+      "source": "registry+https://github.com/rust-lang/crates.io-index",
+      "upstream": {
+        "package_path": "framework-crates/objc2-app-kit",
+        "repository": "madsmtm/objc2",
+        "revision": "7b1abfd750a2cacaea71d6a56ecfb83cb7de560b"
+      },
+      "version": "0.3.2"
+    },
+    {
+      "files": [
+        {
+          "path": "texts/7f976f7e9cb2d87df7230606feb932c3f21ac0e664045a775b600046ff850c54.txt",
+          "sha256": "7f976f7e9cb2d87df7230606feb932c3f21ac0e664045a775b600046ff850c54",
+          "upstream_path": "LICENSE.md",
+          "url": "https://raw.githubusercontent.com/madsmtm/objc2/7b1abfd750a2cacaea71d6a56ecfb83cb7de560b/LICENSE.md"
+        }
+      ],
+      "manifest_sha256": "64e059344995e74ca1d22cee17edd17dde101cc3e37eb4bd7c7967a54f54a6f5",
+      "name": "objc2-cloud-kit",
+      "note": "The exact revision provides licensing guidance and external license links, without full standalone permission texts. It also records Apple SDK derivation concerns. License-text and compatibility review remain open.",
+      "source": "registry+https://github.com/rust-lang/crates.io-index",
+      "upstream": {
+        "package_path": "framework-crates/objc2-cloud-kit",
+        "repository": "madsmtm/objc2",
+        "revision": "7b1abfd750a2cacaea71d6a56ecfb83cb7de560b"
+      },
+      "version": "0.3.2"
+    },
+    {
+      "files": [
+        {
+          "path": "texts/7f976f7e9cb2d87df7230606feb932c3f21ac0e664045a775b600046ff850c54.txt",
+          "sha256": "7f976f7e9cb2d87df7230606feb932c3f21ac0e664045a775b600046ff850c54",
+          "upstream_path": "LICENSE.md",
+          "url": "https://raw.githubusercontent.com/madsmtm/objc2/7b1abfd750a2cacaea71d6a56ecfb83cb7de560b/LICENSE.md"
+        }
+      ],
+      "manifest_sha256": "cac3cd4dd382310e930b39f922ea650c83688bbb65a680b5b8fa76d9e2db674c",
+      "name": "objc2-core-data",
+      "note": "The exact revision provides licensing guidance and external license links, without full standalone permission texts. It also records Apple SDK derivation concerns. License-text and compatibility review remain open.",
+      "source": "registry+https://github.com/rust-lang/crates.io-index",
+      "upstream": {
+        "package_path": "framework-crates/objc2-core-data",
+        "repository": "madsmtm/objc2",
+        "revision": "7b1abfd750a2cacaea71d6a56ecfb83cb7de560b"
+      },
+      "version": "0.3.2"
+    },
+    {
+      "files": [
+        {
+          "path": "texts/7f976f7e9cb2d87df7230606feb932c3f21ac0e664045a775b600046ff850c54.txt",
+          "sha256": "7f976f7e9cb2d87df7230606feb932c3f21ac0e664045a775b600046ff850c54",
+          "upstream_path": "LICENSE.md",
+          "url": "https://raw.githubusercontent.com/madsmtm/objc2/7b1abfd750a2cacaea71d6a56ecfb83cb7de560b/LICENSE.md"
+        }
+      ],
+      "manifest_sha256": "c0f54260fa1396923f2db4edf1e2d54e8ab09dea214af4b8ce37aaefa7185e60",
+      "name": "objc2-core-foundation",
+      "note": "The exact revision provides licensing guidance and external license links, without full standalone permission texts. It also records Apple SDK derivation concerns. License-text and compatibility review remain open.",
+      "source": "registry+https://github.com/rust-lang/crates.io-index",
+      "upstream": {
+        "package_path": "framework-crates/objc2-core-foundation",
+        "repository": "madsmtm/objc2",
+        "revision": "7b1abfd750a2cacaea71d6a56ecfb83cb7de560b"
+      },
+      "version": "0.3.2"
+    },
+    {
+      "files": [
+        {
+          "path": "texts/7f976f7e9cb2d87df7230606feb932c3f21ac0e664045a775b600046ff850c54.txt",
+          "sha256": "7f976f7e9cb2d87df7230606feb932c3f21ac0e664045a775b600046ff850c54",
+          "upstream_path": "LICENSE.md",
+          "url": "https://raw.githubusercontent.com/madsmtm/objc2/7b1abfd750a2cacaea71d6a56ecfb83cb7de560b/LICENSE.md"
+        }
+      ],
+      "manifest_sha256": "9756d343dc626faf07cdef1cdef29a2b3efed0f6a2fc44ae35fd828e2f482dc1",
+      "name": "objc2-core-graphics",
+      "note": "The exact revision provides licensing guidance and external license links, without full standalone permission texts. It also records Apple SDK derivation concerns. License-text and compatibility review remain open.",
+      "source": "registry+https://github.com/rust-lang/crates.io-index",
+      "upstream": {
+        "package_path": "framework-crates/objc2-core-graphics",
+        "repository": "madsmtm/objc2",
+        "revision": "7b1abfd750a2cacaea71d6a56ecfb83cb7de560b"
+      },
+      "version": "0.3.2"
+    },
+    {
+      "files": [
+        {
+          "path": "texts/7f976f7e9cb2d87df7230606feb932c3f21ac0e664045a775b600046ff850c54.txt",
+          "sha256": "7f976f7e9cb2d87df7230606feb932c3f21ac0e664045a775b600046ff850c54",
+          "upstream_path": "LICENSE.md",
+          "url": "https://raw.githubusercontent.com/madsmtm/objc2/7b1abfd750a2cacaea71d6a56ecfb83cb7de560b/LICENSE.md"
+        }
+      ],
+      "manifest_sha256": "11e6de07b724221273af1609c9833d06c9c7623354ee7f5821da0846f0b988b8",
+      "name": "objc2-core-image",
+      "note": "The exact revision provides licensing guidance and external license links, without full standalone permission texts. It also records Apple SDK derivation concerns. License-text and compatibility review remain open.",
+      "source": "registry+https://github.com/rust-lang/crates.io-index",
+      "upstream": {
+        "package_path": "framework-crates/objc2-core-image",
+        "repository": "madsmtm/objc2",
+        "revision": "7b1abfd750a2cacaea71d6a56ecfb83cb7de560b"
+      },
+      "version": "0.3.2"
+    },
+    {
+      "files": [
+        {
+          "path": "texts/7f976f7e9cb2d87df7230606feb932c3f21ac0e664045a775b600046ff850c54.txt",
+          "sha256": "7f976f7e9cb2d87df7230606feb932c3f21ac0e664045a775b600046ff850c54",
+          "upstream_path": "LICENSE.md",
+          "url": "https://raw.githubusercontent.com/madsmtm/objc2/7b1abfd750a2cacaea71d6a56ecfb83cb7de560b/LICENSE.md"
+        }
+      ],
+      "manifest_sha256": "ee9c5dd4f36414afdf971820df60d8b4ea4f0767f93c6ea7fdbcf71e6cbab250",
+      "name": "objc2-core-text",
+      "note": "The exact revision provides licensing guidance and external license links, without full standalone permission texts. It also records Apple SDK derivation concerns. License-text and compatibility review remain open.",
+      "source": "registry+https://github.com/rust-lang/crates.io-index",
+      "upstream": {
+        "package_path": "framework-crates/objc2-core-text",
+        "repository": "madsmtm/objc2",
+        "revision": "7b1abfd750a2cacaea71d6a56ecfb83cb7de560b"
+      },
+      "version": "0.3.2"
+    },
+    {
+      "files": [
+        {
+          "path": "texts/7f976f7e9cb2d87df7230606feb932c3f21ac0e664045a775b600046ff850c54.txt",
+          "sha256": "7f976f7e9cb2d87df7230606feb932c3f21ac0e664045a775b600046ff850c54",
+          "upstream_path": "LICENSE.md",
+          "url": "https://raw.githubusercontent.com/madsmtm/objc2/7b1abfd750a2cacaea71d6a56ecfb83cb7de560b/LICENSE.md"
+        }
+      ],
+      "manifest_sha256": "9d19223267d245d2258aa63244090345c16e0099e6e828841abd72e2e1e4d880",
+      "name": "objc2-core-video",
+      "note": "The exact revision provides licensing guidance and external license links, without full standalone permission texts. It also records Apple SDK derivation concerns. License-text and compatibility review remain open.",
+      "source": "registry+https://github.com/rust-lang/crates.io-index",
+      "upstream": {
+        "package_path": "framework-crates/objc2-core-video",
+        "repository": "madsmtm/objc2",
+        "revision": "7b1abfd750a2cacaea71d6a56ecfb83cb7de560b"
+      },
+      "version": "0.3.2"
+    },
+    {
+      "files": [
+        {
+          "path": "texts/7f976f7e9cb2d87df7230606feb932c3f21ac0e664045a775b600046ff850c54.txt",
+          "sha256": "7f976f7e9cb2d87df7230606feb932c3f21ac0e664045a775b600046ff850c54",
+          "upstream_path": "LICENSE.md",
+          "url": "https://raw.githubusercontent.com/madsmtm/objc2/8d214f5477365ffcbcbb7de058c86ed9a518efb7/LICENSE.md"
+        }
+      ],
+      "manifest_sha256": "cf9a8cc812710344d7fe618a5e615530baeeceae5c2826b9d5bb557dc419f159",
+      "name": "objc2-encode",
+      "note": "The exact revision provides licensing guidance and external license links, without full standalone permission texts. It also records Apple SDK derivation concerns. License-text and compatibility review remain open.",
+      "source": "registry+https://github.com/rust-lang/crates.io-index",
+      "upstream": {
+        "package_path": "crates/objc2-encode",
+        "repository": "madsmtm/objc2",
+        "revision": "8d214f5477365ffcbcbb7de058c86ed9a518efb7"
+      },
+      "version": "4.1.0"
+    },
+    {
+      "files": [
+        {
+          "path": "texts/e353f37b12aefbb9f9b29490e837cfee05d9bda70804b3562839a3285c1df1e5.txt",
+          "sha256": "e353f37b12aefbb9f9b29490e837cfee05d9bda70804b3562839a3285c1df1e5",
+          "upstream_path": "LICENSE.txt",
+          "url": "https://raw.githubusercontent.com/madsmtm/objc2/e282618be4c3a3b9542957e0c8540e9588472ce8/LICENSE.txt"
+        }
+      ],
+      "manifest_sha256": "32e045ebbc4c009b67f63070744b1a443958eb5807f4a8facdc4de2754e1bfa9",
+      "name": "objc2-foundation",
+      "source": "registry+https://github.com/rust-lang/crates.io-index",
+      "upstream": {
+        "package_path": "framework-crates/objc2-foundation",
+        "repository": "madsmtm/objc2",
+        "revision": "e282618be4c3a3b9542957e0c8540e9588472ce8"
+      },
+      "version": "0.2.2"
+    },
+    {
+      "files": [
+        {
+          "path": "texts/7f976f7e9cb2d87df7230606feb932c3f21ac0e664045a775b600046ff850c54.txt",
+          "sha256": "7f976f7e9cb2d87df7230606feb932c3f21ac0e664045a775b600046ff850c54",
+          "upstream_path": "LICENSE.md",
+          "url": "https://raw.githubusercontent.com/madsmtm/objc2/7b1abfd750a2cacaea71d6a56ecfb83cb7de560b/LICENSE.md"
+        }
+      ],
+      "manifest_sha256": "eabbe24e325c7b474c6f5de2e955f4f942ecd385608e4b6609b89a1f68ef39cc",
+      "name": "objc2-foundation",
+      "note": "The exact revision provides licensing guidance and external license links, without full standalone permission texts. It also records Apple SDK derivation concerns. License-text and compatibility review remain open.",
+      "source": "registry+https://github.com/rust-lang/crates.io-index",
+      "upstream": {
+        "package_path": "framework-crates/objc2-foundation",
+        "repository": "madsmtm/objc2",
+        "revision": "7b1abfd750a2cacaea71d6a56ecfb83cb7de560b"
+      },
+      "version": "0.3.2"
+    },
+    {
+      "files": [
+        {
+          "path": "texts/7f976f7e9cb2d87df7230606feb932c3f21ac0e664045a775b600046ff850c54.txt",
+          "sha256": "7f976f7e9cb2d87df7230606feb932c3f21ac0e664045a775b600046ff850c54",
+          "upstream_path": "LICENSE.md",
+          "url": "https://raw.githubusercontent.com/madsmtm/objc2/7b1abfd750a2cacaea71d6a56ecfb83cb7de560b/LICENSE.md"
+        }
+      ],
+      "manifest_sha256": "8ea9d2d00d2e462d2f1e0a5bb242ccc8753c2bcd3441edd1d2cf05cba69092ff",
+      "name": "objc2-metal",
+      "note": "The exact revision provides licensing guidance and external license links, without full standalone permission texts. It also records Apple SDK derivation concerns. License-text and compatibility review remain open.",
+      "source": "registry+https://github.com/rust-lang/crates.io-index",
+      "upstream": {
+        "package_path": "framework-crates/objc2-metal",
+        "repository": "madsmtm/objc2",
+        "revision": "7b1abfd750a2cacaea71d6a56ecfb83cb7de560b"
+      },
+      "version": "0.3.2"
+    },
+    {
+      "files": [
+        {
+          "path": "texts/7f976f7e9cb2d87df7230606feb932c3f21ac0e664045a775b600046ff850c54.txt",
+          "sha256": "7f976f7e9cb2d87df7230606feb932c3f21ac0e664045a775b600046ff850c54",
+          "upstream_path": "LICENSE.md",
+          "url": "https://raw.githubusercontent.com/madsmtm/objc2/7b1abfd750a2cacaea71d6a56ecfb83cb7de560b/LICENSE.md"
+        }
+      ],
+      "manifest_sha256": "7af27150fadd5ac0b3e86ec173b4e3e2b0dd42d614de963a0c9f0bf55cc7b4d9",
+      "name": "objc2-quartz-core",
+      "note": "The exact revision provides licensing guidance and external license links, without full standalone permission texts. It also records Apple SDK derivation concerns. License-text and compatibility review remain open.",
+      "source": "registry+https://github.com/rust-lang/crates.io-index",
+      "upstream": {
+        "package_path": "framework-crates/objc2-quartz-core",
+        "repository": "madsmtm/objc2",
+        "revision": "7b1abfd750a2cacaea71d6a56ecfb83cb7de560b"
+      },
+      "version": "0.3.2"
+    },
+    {
+      "files": [
+        {
+          "path": "texts/7f976f7e9cb2d87df7230606feb932c3f21ac0e664045a775b600046ff850c54.txt",
+          "sha256": "7f976f7e9cb2d87df7230606feb932c3f21ac0e664045a775b600046ff850c54",
+          "upstream_path": "LICENSE.md",
+          "url": "https://raw.githubusercontent.com/madsmtm/objc2/7b1abfd750a2cacaea71d6a56ecfb83cb7de560b/LICENSE.md"
+        }
+      ],
+      "manifest_sha256": "8012c9d7a498779cffd3aa16775d98c3c75dba1af51b3e6b2bd3739e8a4dcb24",
+      "name": "objc2-security",
+      "note": "The exact revision provides licensing guidance and external license links, without full standalone permission texts. It also records Apple SDK derivation concerns. License-text and compatibility review remain open.",
+      "source": "registry+https://github.com/rust-lang/crates.io-index",
+      "upstream": {
+        "package_path": "framework-crates/objc2-security",
+        "repository": "madsmtm/objc2",
+        "revision": "7b1abfd750a2cacaea71d6a56ecfb83cb7de560b"
+      },
+      "version": "0.3.2"
+    },
+    {
+      "files": [
+        {
+          "path": "texts/7f976f7e9cb2d87df7230606feb932c3f21ac0e664045a775b600046ff850c54.txt",
+          "sha256": "7f976f7e9cb2d87df7230606feb932c3f21ac0e664045a775b600046ff850c54",
+          "upstream_path": "LICENSE.md",
+          "url": "https://raw.githubusercontent.com/madsmtm/objc2/7b1abfd750a2cacaea71d6a56ecfb83cb7de560b/LICENSE.md"
+        }
+      ],
+      "manifest_sha256": "77124f44646539c01cbf5e523fe51b3fef7892c114f06ee9b98df9cd88cf5236",
+      "name": "objc2-user-notifications",
+      "note": "The exact revision provides licensing guidance and external license links, without full standalone permission texts. It also records Apple SDK derivation concerns. License-text and compatibility review remain open.",
+      "source": "registry+https://github.com/rust-lang/crates.io-index",
+      "upstream": {
+        "package_path": "framework-crates/objc2-user-notifications",
+        "repository": "madsmtm/objc2",
+        "revision": "7b1abfd750a2cacaea71d6a56ecfb83cb7de560b"
+      },
+      "version": "0.3.2"
+    },
+    {
+      "files": [
+        {
+          "path": "texts/a60eea817514531668d7e00765731449fe14d059d3249e0bc93b36de45f759f2.txt",
+          "sha256": "a60eea817514531668d7e00765731449fe14d059d3249e0bc93b36de45f759f2",
+          "upstream_path": "LICENSE-APACHE",
+          "url": "https://raw.githubusercontent.com/servo/pathfinder/6c3c0466f451c5bd2007087728cd168798cd64e8/LICENSE-APACHE"
+        },
+        {
+          "path": "texts/0621878e61f0d0fda054bcbe02df75192c28bde1ecc8289cbd86aeba2dd72720.txt",
+          "sha256": "0621878e61f0d0fda054bcbe02df75192c28bde1ecc8289cbd86aeba2dd72720",
+          "upstream_path": "LICENSE-MIT",
+          "url": "https://raw.githubusercontent.com/servo/pathfinder/6c3c0466f451c5bd2007087728cd168798cd64e8/LICENSE-MIT"
+        }
+      ],
+      "manifest_sha256": "8c786fc7a21f92ef487513268e52c99a4d889550670a2ec0e1277619e7127bfd",
+      "name": "pathfinder_simd",
+      "source": "registry+https://github.com/rust-lang/crates.io-index",
+      "upstream": {
+        "package_path": "simd",
+        "repository": "servo/pathfinder",
+        "revision": "6c3c0466f451c5bd2007087728cd168798cd64e8"
+      },
+      "version": "0.5.6"
+    },
+    {
+      "files": [
+        {
+          "path": "texts/10d30a673cd5e9349bdc02aeb48f14b3386d27d0da32df8f0a555d4aa16aa551.txt",
+          "sha256": "10d30a673cd5e9349bdc02aeb48f14b3386d27d0da32df8f0a555d4aa16aa551",
+          "upstream_path": "LICENSE-APACHE",
+          "url": "https://raw.githubusercontent.com/aclysma/profiling/8271551172eb6fa4cba47369aedd93790c623df9/LICENSE-APACHE"
+        },
+        {
+          "path": "texts/c8167fdeeed46d3f244d3f85c5bf998ce889343691c32be2c61a8bc4b5c08333.txt",
+          "sha256": "c8167fdeeed46d3f244d3f85c5bf998ce889343691c32be2c61a8bc4b5c08333",
+          "upstream_path": "LICENSE-MIT",
+          "url": "https://raw.githubusercontent.com/aclysma/profiling/8271551172eb6fa4cba47369aedd93790c623df9/LICENSE-MIT"
+        }
+      ],
+      "manifest_sha256": "00c84a390cdb283f2fea80bb6ccbfef8af8cd2005e79309057af1b5030d3e6a5",
+      "name": "profiling",
+      "source": "registry+https://github.com/rust-lang/crates.io-index",
+      "upstream": {
+        "package_path": "profiling",
+        "repository": "aclysma/profiling",
+        "revision": "8271551172eb6fa4cba47369aedd93790c623df9"
+      },
+      "version": "1.0.18"
+    },
+    {
+      "files": [
+        {
+          "path": "texts/10d30a673cd5e9349bdc02aeb48f14b3386d27d0da32df8f0a555d4aa16aa551.txt",
+          "sha256": "10d30a673cd5e9349bdc02aeb48f14b3386d27d0da32df8f0a555d4aa16aa551",
+          "upstream_path": "LICENSE-APACHE",
+          "url": "https://raw.githubusercontent.com/aclysma/profiling/8271551172eb6fa4cba47369aedd93790c623df9/LICENSE-APACHE"
+        },
+        {
+          "path": "texts/c8167fdeeed46d3f244d3f85c5bf998ce889343691c32be2c61a8bc4b5c08333.txt",
+          "sha256": "c8167fdeeed46d3f244d3f85c5bf998ce889343691c32be2c61a8bc4b5c08333",
+          "upstream_path": "LICENSE-MIT",
+          "url": "https://raw.githubusercontent.com/aclysma/profiling/8271551172eb6fa4cba47369aedd93790c623df9/LICENSE-MIT"
+        }
+      ],
+      "manifest_sha256": "bd4fef29709a44e6769efb66e2f65bf555557b86516deb249ef3dd9907f597c1",
+      "name": "profiling-procmacros",
+      "source": "registry+https://github.com/rust-lang/crates.io-index",
+      "upstream": {
+        "package_path": "profiling-procmacros",
+        "repository": "aclysma/profiling",
+        "revision": "8271551172eb6fa4cba47369aedd93790c623df9"
+      },
+      "version": "1.0.18"
+    },
+    {
+      "files": [
+        {
+          "path": "texts/d64f878c89bd5f1e5ada7e4aad57690b122727cf5229b7b87ea1980c188da1d9.txt",
+          "sha256": "d64f878c89bd5f1e5ada7e4aad57690b122727cf5229b7b87ea1980c188da1d9",
+          "upstream_path": "LICENSE",
+          "url": "https://raw.githubusercontent.com/sarah-quinones/pulp/5eb07fd7b68edf0a5e19f71737d315f72a510295/LICENSE"
+        }
+      ],
+      "manifest_sha256": "54146b6fcfec790328d3a093fc789a209dde6ef387b711f98a5374a5436b2b9f",
+      "name": "pulp-wasm-simd-flag",
+      "source": "registry+https://github.com/rust-lang/crates.io-index",
+      "upstream": {
+        "package_path": "pulp-wasm-simd-flag",
+        "repository": "sarah-quinones/pulp",
+        "revision": "5eb07fd7b68edf0a5e19f71737d315f72a510295"
+      },
+      "version": "0.1.1"
+    },
+    {
+      "files": [
+        {
+          "path": "texts/d6fde6c28ecbccfc7f6d97c0badbb14bbea2cc8f5e81a8c1537204bdfed9a6d5.txt",
+          "sha256": "d6fde6c28ecbccfc7f6d97c0badbb14bbea2cc8f5e81a8c1537204bdfed9a6d5",
+          "upstream_path": "LICENSE",
+          "url": "https://raw.githubusercontent.com/longbridge/rust-i18n/5f3ea5ba03395f2f2908e3587e01788cfdfd3555/LICENSE"
+        }
+      ],
+      "manifest_sha256": "1cab173f78833ee0655e0ce0c899348c7742a7ef033662950e43816c404fb107",
+      "name": "rust-i18n-macro",
+      "source": "registry+https://github.com/rust-lang/crates.io-index",
+      "upstream": {
+        "package_path": "crates/macro",
+        "repository": "longbridge/rust-i18n",
+        "revision": "5f3ea5ba03395f2f2908e3587e01788cfdfd3555"
+      },
+      "version": "4.2.4"
+    },
+    {
+      "files": [
+        {
+          "path": "texts/d6fde6c28ecbccfc7f6d97c0badbb14bbea2cc8f5e81a8c1537204bdfed9a6d5.txt",
+          "sha256": "d6fde6c28ecbccfc7f6d97c0badbb14bbea2cc8f5e81a8c1537204bdfed9a6d5",
+          "upstream_path": "LICENSE",
+          "url": "https://raw.githubusercontent.com/longbridge/rust-i18n/5f3ea5ba03395f2f2908e3587e01788cfdfd3555/LICENSE"
+        }
+      ],
+      "manifest_sha256": "7ed1997bfc8dc41301469a6c8060ce3d98d6f78553a3809740292bbc5a196cab",
+      "name": "rust-i18n-support",
+      "source": "registry+https://github.com/rust-lang/crates.io-index",
+      "upstream": {
+        "package_path": "crates/support",
+        "repository": "longbridge/rust-i18n",
+        "revision": "5f3ea5ba03395f2f2908e3587e01788cfdfd3555"
+      },
+      "version": "4.2.4"
+    },
+    {
+      "files": [
+        {
+          "path": "texts/7e98bed7f100747aaae7d82ab94fbe6b76fd6b84b09a3aaa413bff8196d0fbb1.txt",
+          "sha256": "7e98bed7f100747aaae7d82ab94fbe6b76fd6b84b09a3aaa413bff8196d0fbb1",
+          "upstream_path": "LICENSE",
+          "url": "https://raw.githubusercontent.com/nical/rust_debug/93f414cd572b5c2781df93dbdc068ed13443d05a/LICENSE"
+        }
+      ],
+      "manifest_sha256": "84650d018d4259c31ab944439b642665668367ed4312a64a735ee2654d1056e5",
+      "name": "svg_fmt",
+      "source": "registry+https://github.com/rust-lang/crates.io-index",
+      "upstream": {
+        "package_path": "svg_fmt",
+        "repository": "nical/rust_debug",
+        "revision": "93f414cd572b5c2781df93dbdc068ed13443d05a"
+      },
+      "version": "0.4.5"
+    },
+    {
+      "files": [
+        {
+          "path": "texts/f97daf1a0124413dccf399a4e6626b4b74acd05282f80b6d64ac82225650b77a.txt",
+          "sha256": "f97daf1a0124413dccf399a4e6626b4b74acd05282f80b6d64ac82225650b77a",
+          "upstream_path": "LICENSE",
+          "url": "https://raw.githubusercontent.com/DioxusLabs/taffy/45a56299d366ddb383e593a1f0372158d00e8530/LICENSE"
+        }
+      ],
+      "manifest_sha256": "b5f726d2bd6269550f37f6c87697958ed7f43d18c104350211a7b3a6cedcf5d7",
+      "name": "taffy",
+      "source": "registry+https://github.com/rust-lang/crates.io-index",
+      "upstream": {
+        "package_path": "",
+        "repository": "DioxusLabs/taffy",
+        "revision": "45a56299d366ddb383e593a1f0372158d00e8530"
+      },
+      "version": "0.13.0"
+    },
+    {
+      "files": [
+        {
+          "path": "texts/7fa429541e55b1509909e058f2d21a37467e4958ec713b357f6e0cf9dc4ee352.txt",
+          "sha256": "7fa429541e55b1509909e058f2d21a37467e4958ec713b357f6e0cf9dc4ee352",
+          "upstream_path": "LICENSE-ZLIB",
+          "url": "https://raw.githubusercontent.com/etemesi254/zune-image/69502ce83fdfecdd0beefd677e2abb3781b29d98/LICENSE-ZLIB"
+        }
+      ],
+      "manifest_sha256": "f3da162dd3818fcdf23c9ce34930d66064106873a692d6994abd49b80e60ea66",
+      "name": "zune-inflate",
+      "note": "The exact source provides full Zlib text. Referenced Apache/MIT alternatives are absent; no alternative text is reconstructed.",
+      "source": "registry+https://github.com/rust-lang/crates.io-index",
+      "upstream": {
+        "package_path": "zune-inflate",
+        "repository": "etemesi254/zune-image",
+        "revision": "69502ce83fdfecdd0beefd677e2abb3781b29d98"
+      },
+      "version": "0.2.54"
+    }
+  ],
+  "schema_version": 1
+}
