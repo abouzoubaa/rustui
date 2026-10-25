@@ -9,10 +9,26 @@ verify_tree_accessibility_series() {
   python3 scripts/apply_gpui_tree_aria_disabled_patch.py --check
 }
 
+# Exercise the actual dependency-free Web edit planner on the host toolchain.
+# GPUI/Wasm compilation and browser acceptance remain separate checks.
+verify_web_ime_edit_plan() (
+  binary_dir="$repository_root/target/headstart/verification/web-ime-edit-plan"
+  mkdir -p "$binary_dir"
+  test_binary="$binary_dir/ime_edit_tests"
+  trap 'rm -f "$test_binary"' EXIT
+  rustup run 1.97.1 rustc --edition 2024 --test \
+    vendor/gpui-pre-web-0.3.9/src/ime_edit.rs -o "$test_binary"
+  "$test_binary"
+)
+
 case "${1:-}" in
   source)
     verify_tree_accessibility_series
+    python3 scripts/apply_gpui_web_semantic_adapter.py --verify
+  python3 scripts/apply_gpui_base_button_disabled_patch.py --verify
+  python3 scripts/apply_gpui_base_disabled_semantic_roots.py --verify
     python3 -m unittest discover -s scripts/tests -p 'test_*.py'
+    node --test scripts/tests/test_gpui_web_semantic_dom.mjs
     sh scripts/tests/test_package_playground_app.sh
     sh scripts/tests/test_build_playground_web.sh
     sh scripts/tests/test_verify_ci_checkout.sh
@@ -22,6 +38,7 @@ case "${1:-}" in
     ;;
   macos)
     verify_tree_accessibility_series
+    python3 scripts/apply_gpui_web_semantic_adapter.py --verify
     if [[ "$(uname -s)" != Darwin ]]; then
       echo 'The macos release check requires a macOS host.' >&2
       exit 2
@@ -69,6 +86,8 @@ PY
     ;;
   web)
     verify_tree_accessibility_series
+    verify_web_ime_edit_plan
+    python3 scripts/apply_gpui_web_semantic_adapter.py --verify
     RUSTUI_HEADSTART_ROOT="${RUSTUI_WASM_HEADSTART_ROOT:-$repository_root/target/headstart/wasm-root}" \
     CARGO_TARGET_DIR="${RUSTUI_WASM_TARGET_DIR:-$repository_root/target/headstart/x1a-wasm}" \
       ./scripts/build-playground-web.sh

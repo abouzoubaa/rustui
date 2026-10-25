@@ -8,6 +8,7 @@ import hashlib
 import os
 from pathlib import Path
 import subprocess
+import sys
 import tempfile
 import tomllib
 
@@ -94,15 +95,20 @@ def install(root: Path, files: dict[Path, bytes]) -> None:
 def run(root: Path, reverse: bool, check: bool) -> None:
     root = root.resolve()
     verify_identity(root)
-    expected_index = 1 if (reverse or check) else 0
+    if check and any(digest(root / relative) != hashes[1] for relative, hashes in FILES.items()):
+        result = subprocess.run([sys.executable,str(root / "scripts/apply_gpui_web_semantic_adapter.py"),"--verify-installed","--root",str(root)],capture_output=True,text=True)
+        if result.returncode:raise ValueError(f"composed Web verification failed: {result.stdout}{result.stderr}")
+        print("approved M855 keyboard baseline and exact composed Web stack verified; checkout unchanged")
+        return
+    expected_index = 1 if reverse or check else 0
     for relative, hashes in FILES.items():
-        if digest(root / relative) != hashes[expected_index]:
-            raise ValueError(f"unexpected source SHA-256: {relative}")
+        if digest(root / relative) != hashes[expected_index]:raise ValueError(f"unexpected source SHA-256: {relative}")
     if check:
         print("approved GPUI Web keyboard patch and pristine checksums verified")
         return
     install(root, stage_patch(root, reverse))
-    print(f"GPUI Web keyboard patch {'reversed' if reverse else 'applied'}; source hashes verified")
+    print(f"approved GPUI Web keyboard patch {'reversed' if reverse else 'applied'}")
+
 
 
 def main() -> int:

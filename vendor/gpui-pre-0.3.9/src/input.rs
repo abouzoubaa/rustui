@@ -11,6 +11,11 @@ use std::ops::Range;
 ///
 /// See [`InputHandler`] for details on how to implement each method.
 pub trait EntityInputHandler: 'static + Sized {
+    /// Whether the native input owner requires protected-value semantics.
+    fn is_secure_input(&mut self, _window: &mut Window, _cx: &mut Context<Self>) -> bool {
+        false
+    }
+
     /// See [`InputHandler::text_for_range`] for details
     fn text_for_range(
         &mut self,
@@ -143,6 +148,23 @@ impl<V: 'static> ElementInputHandler<V> {
 }
 
 impl<V: EntityInputHandler> InputHandler for ElementInputHandler<V> {
+    fn is_secure_input(&mut self, window: &mut Window, cx: &mut App) -> bool {
+        self.view
+            .update(cx, |view, cx| view.is_secure_input(window, cx))
+    }
+
+    fn input_lifecycle(&self) -> Option<crate::InputHandlerLifecycle> {
+        let owner = self.view.entity_id();
+        let weak = self.view.downgrade();
+        Some(crate::InputHandlerLifecycle {
+            owner,
+            cancel_composition: std::rc::Rc::new(move |window, cx| {
+                weak.update(cx, |view, cx| view.unmark_text(window, cx))
+                    .ok();
+            }),
+        })
+    }
+
     fn selected_text_range(
         &mut self,
         ignore_disabled_input: bool,

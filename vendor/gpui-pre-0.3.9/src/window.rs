@@ -71,7 +71,6 @@ mod prompts;
 pub use a11y::A11ySubtreeBuilder;
 
 use self::a11y::A11y;
-#[cfg(not(target_family = "wasm"))]
 use self::a11y::ROOT_NODE_ID;
 use crate::util::{
     atomic_incr_if_not_zero, ceil_to_device_pixel, floor_to_device_pixel, round_half_toward_zero,
@@ -1245,6 +1244,9 @@ pub struct Window {
     /// window, so that only actual changes are forwarded (reconfiguring a live
     /// input session can restart the IME connection).
     last_text_input_configuration: Option<TextInputConfiguration>,
+    last_secure_input: bool,
+    #[cfg(target_family = "wasm")]
+    last_input_lifecycle: Option<crate::InputHandlerLifecycle>,
     focused_text_input_active: bool,
     pub(crate) image_cache_stack: Vec<AnyImageCache>,
     pub(crate) rendered_frame: Frame,
@@ -1664,9 +1666,10 @@ impl Window {
         }
 
         let accessibility_force_disabled = cx.accessibility_force_disabled;
-        let a11y_active_flag = Arc::new(AtomicBool::new(false));
+        let a11y_active_flag = Arc::new(AtomicBool::new(
+            cfg!(target_family = "wasm") && !accessibility_force_disabled,
+        ));
 
-        #[cfg(not(target_family = "wasm"))]
         if !accessibility_force_disabled {
             let mut initial_root_node = accesskit::Node::new(accesskit::Role::Window);
             if let Some(title) = &initial_window_title {
@@ -1689,19 +1692,34 @@ impl Window {
                     Box::new(move || {
                         log::info!("Accessibility activated");
                         active_flag.store(true, SeqCst);
+                        #[cfg(not(target_family = "wasm"))]
                         activation_sender.send_blocking(()).log_err();
+                        #[cfg(target_family = "wasm")]
+                        if activation_sender.try_send(()).is_err() {
+                            log::warn!("Web accessibility activation channel closed");
+                        }
                         Some(initial_tree.clone())
                     })
                 },
                 action: Box::new(move |request| {
+                    #[cfg(not(target_family = "wasm"))]
                     action_sender.send_blocking(request).log_err();
+                    #[cfg(target_family = "wasm")]
+                    if action_sender.try_send(request).is_err() {
+                        log::warn!("Web accessibility action channel closed");
+                    }
                 }),
                 deactivation: {
                     let active_flag = a11y_active_flag.clone();
                     Box::new(move || {
                         log::info!("Accessibility deactivated");
                         active_flag.store(false, SeqCst);
+                        #[cfg(not(target_family = "wasm"))]
                         deactivation_sender.send_blocking(()).log_err();
+                        #[cfg(target_family = "wasm")]
+                        if deactivation_sender.try_send(()).is_err() {
+                            log::warn!("Web accessibility deactivation channel closed");
+                        }
                     })
                 },
             });
@@ -2146,6 +2164,9 @@ impl Window {
             element_opacity: 1.0,
             requested_autoscroll: None,
             last_text_input_configuration: None,
+            last_secure_input: false,
+            #[cfg(target_family = "wasm")]
+            last_input_lifecycle: None,
             focused_text_input_active: false,
             rendered_frame: Frame::new(DispatchTree::new(cx.keymap.clone(), cx.actions.clone())),
             next_frame: Frame::new(DispatchTree::new(cx.keymap.clone(), cx.actions.clone())),
@@ -3479,20 +3500,13 @@ impl Window {
         // paint_range indices remain valid for reuse_paint on the next frame.
         // Search backwards to find the last Some entry, since reuse_paint may
         // have copied None slots from the previous frame. (Fixes #50456)
-        let focused_text_input_active = if let Some(mut input_handler) = self
+        let input_handler = self
             .next_frame
             .input_handlers
             .iter_mut()
             .rev()
-            .find_map(|h| h.take())
-        {
-            let accepts_text_input = input_handler.accepts_text_input(self, cx);
-            self.platform_window.set_input_handler(input_handler);
-            accepts_text_input
-        } else {
-            false
-        };
-        self.apply_text_input_configuration(cx);
+            .find_map(|handler| handler.take());
+        let focused_text_input_active = self.install_platform_input_handler(input_handler, cx);
         if focused_text_input_active != self.focused_text_input_active {
             self.focused_text_input_active = focused_text_input_active;
             self.platform_window
@@ -5408,20 +5422,52 @@ impl Window {
     /// platform window when it differs from the last forwarded value. With no
     /// input handler the default configuration applies, so a field's
     /// preferences don't outlive its focus.
-    fn apply_text_input_configuration(&mut self, cx: &mut App) {
-        let configuration = match self.platform_window.take_input_handler() {
-            Some(mut input_handler) => {
-                let configuration = input_handler.text_input_configuration(self, cx);
-                self.platform_window.set_input_handler(input_handler);
-                configuration
-            }
-            None => TextInputConfiguration::default(),
+    fn install_platform_input_handler(
+        &mut self,
+        mut handler: Option<PlatformInputHandler>,
+        cx: &mut App,
+    ) -> bool {
+        let (accepts, configuration, secure) = match handler.as_mut() {
+            Some(handler) => (
+                handler.accepts_text_input(self, cx),
+                handler.text_input_configuration(self, cx),
+                handler.is_secure_input(self, cx),
+            ),
+            None => (false, TextInputConfiguration::default(), false),
         };
+        #[cfg(target_family = "wasm")]
+        {
+            let lifecycle = handler
+                .as_ref()
+                .and_then(PlatformInputHandler::input_lifecycle);
+            let previous = self.last_input_lifecycle.as_ref().map(|owner| owner.owner);
+            let next = lifecycle.as_ref().map(|owner| owner.owner);
+            let security_changed = self.last_secure_input != secure;
+            if previous != next || security_changed || (self.focused_text_input_active && !accepts)
+            {
+                if let Some(old) = self.last_input_lifecycle.take() {
+                    (old.cancel_composition)(self, cx);
+                }
+                self.platform_window.text_input_owner_changed();
+            }
+            self.last_input_lifecycle = lifecycle;
+        }
+        if let Some(handler) = handler {
+            self.platform_window.set_input_handler(handler);
+        }
+        if self.last_secure_input != secure {
+            self.platform_window.set_secure_input(secure);
+            self.last_secure_input = secure;
+        }
         if self.last_text_input_configuration.as_ref() != Some(&configuration) {
             self.platform_window
                 .set_text_input_configuration(configuration.clone());
             self.last_text_input_configuration = Some(configuration);
         }
+        // draw_roots has already queued this frame's AccessKit tree.
+        // Commit even when no text input is focused; no redraw is required.
+        self.platform_window.text_input_owner_ready();
+        accepts
     }
 
     /// Register a mouse event listener on the window for the next frame. The type of event
@@ -7030,7 +7076,6 @@ impl Window {
             .push((action, Box::new(listener)));
     }
 
-    #[cfg(not(target_family = "wasm"))]
     pub(crate) fn handle_a11y_action(&mut self, request: accesskit::ActionRequest, cx: &mut App) {
         // Take listeners out temporarily so the closures can borrow Window
         // mutably, then restore them afterward.

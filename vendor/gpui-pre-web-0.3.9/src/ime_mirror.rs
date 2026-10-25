@@ -54,7 +54,8 @@ const MIN_EDGE_CHARS: usize = 64;
 /// module; other code interacts through read accessors, focus and
 /// virtual-keyboard control, and [`ImeMirror::schedule_sync`].
 pub(crate) struct ImeMirror {
-    element: web_sys::HtmlTextAreaElement,
+    pub(crate) element: crate::a11y_dom::ImeHost,
+    event_target: web_sys::EventTarget,
     /// The mirror text most recently synced to (or observed in) the hidden
     /// element. `input` events diff the element's new value against this to
     /// recover what edit the IME performed.
@@ -89,41 +90,12 @@ impl ImeMirror {
         body: &web_sys::HtmlElement,
         touch_input: bool,
     ) -> anyhow::Result<Self> {
-        // A textarea rather than an input: single-line inputs silently strip
-        // newlines from assigned values, which would make the mirror text
-        // disagree with what was written into it.
-        let element: web_sys::HtmlTextAreaElement = document
-            .create_element("textarea")
-            .map_err(|e| anyhow::anyhow!("Failed to create textarea element: {e:?}"))?
-            .dyn_into()
-            .map_err(|e| anyhow::anyhow!("Created element is not a textarea: {e:?}"))?;
-        let style = element.style();
-        style.set_property("position", "fixed").ok();
-        style.set_property("top", "0").ok();
-        style.set_property("left", "0").ok();
-        style.set_property("width", "1px").ok();
-        style.set_property("height", "1px").ok();
-        style.set_property("opacity", "0").ok();
-        // Android Chrome zooms the visual viewport onto a focused text input
-        // whose font is smaller than 16px; with page zoom disabled the user
-        // can never zoom back out, so keep the hidden IME input at 16px.
-        style.set_property("font-size", "16px").ok();
-        body.append_child(&element)
-            .map_err(|e| anyhow::anyhow!("Failed to append input to body: {e:?}"))?;
-        Self::focus_element(&element);
-        // The element must stay focused to receive hardware-key and IME
-        // events, but on touch-first devices a focused *editable* element
-        // invites the browser to summon the virtual keyboard on the next
-        // user gesture — including a scroll. Suppress the virtual keyboard
-        // until an editable tap, without disabling hardware IME composition.
-        if touch_input {
-            element
-                .set_attribute("inputmode", "none")
-                .map_err(|error| anyhow::anyhow!("Failed to configure input mode: {error:?}"))?;
-        }
-
+        let element = crate::a11y_dom::create_ime_host(document, body, touch_input)
+            .map_err(|error| anyhow::anyhow!("Failed to create IME host: {error:?}"))?;
+        let event_target = element.event_target();
         let this = Self {
             element,
+            event_target,
             text: RefCell::new(String::new()),
             selection: Cell::new((0, 0)),
             window_hint: Cell::new(0),
@@ -142,7 +114,7 @@ impl ImeMirror {
     /// changes (GPUI diffs before forwarding): mutating the focused element
     /// can restart the IME's input connection.
     pub(crate) fn apply_configuration(&self, configuration: &TextInputConfiguration) {
-        let element: &web_sys::Element = self.element.as_ref();
+        let element = &self.element;
         self.element.set_spellcheck(configuration.suggestions);
         let on_off = |enabled: bool| if enabled { "on" } else { "off" };
         element
@@ -179,29 +151,19 @@ impl ImeMirror {
     }
 
     pub(crate) fn event_target(&self) -> &web_sys::EventTarget {
-        self.element.as_ref()
+        &self.event_target
     }
 
     pub(crate) fn focus(&self) {
         Self::focus_element(&self.element);
     }
 
-    fn focus_element(element: &web_sys::HtmlTextAreaElement) {
-        // The hidden mirror is not a scroll target: revealing its caret can
-        // pan Android Chrome's visual viewport when the keyboard opens.
-        let options = web_sys::FocusOptions::new();
-        options.set_prevent_scroll(true);
-        if let Err(error) = element.focus_with_options(&options) {
-            log::warn!("Failed to focus IME mirror: {error:?}");
-        }
+    fn focus_element(element: &crate::a11y_dom::ImeHost) {
+        element.focus();
     }
 
     pub(crate) fn is_focused(&self) -> bool {
-        let element: &web_sys::Element = self.element.as_ref();
-        web_sys::window()
-            .and_then(|window| window.document())
-            .and_then(|document| document.active_element())
-            .is_some_and(|active| &active == element)
+        self.element.is_focused()
     }
 
     pub(crate) fn blur(&self) {
@@ -225,9 +187,32 @@ impl ImeMirror {
         }
     }
 
+    pub(crate) fn set_accessible_label(&self, label: Option<&str>) {
+        let result = match label {
+            Some(label) => self
+                .element
+                .active_element()
+                .set_attribute("aria-label", label),
+            None => self.element.active_element().remove_attribute("aria-label"),
+        };
+        if let Err(error) = result {
+            log::warn!("Failed to update accessible input label: {error:?}");
+        }
+    }
+
     pub(crate) fn remove(&self) {
-        let element: &web_sys::Element = self.element.as_ref();
-        element.remove();
+        self.element.remove();
+    }
+
+    pub(crate) fn contains_target(&self, target: &web_sys::EventTarget) -> bool {
+        self.element.contains_target(target)
+    }
+    pub(crate) fn owner_changed(&self) {
+        self.element.owner_changed();
+        self.text.borrow_mut().clear();
+        self.selection.set((0, 0));
+        self.window_hint.set(0);
+        self.selection_import_rejected.set(false);
     }
 
     pub(crate) fn value(&self) -> String {
@@ -270,6 +255,10 @@ impl ImeMirror {
     /// Records that an element selection move could not be imported, so
     /// the next sync reasserts the app's state rather than deferring to an
     /// import that is no longer coming.
+    pub(crate) fn window_start(&self) -> usize {
+        self.window_hint.get()
+    }
+
     pub(crate) fn reject_selection_import(&self) {
         self.selection_import_rejected.set(true);
     }
@@ -344,6 +333,9 @@ impl ImeMirror {
             // schedules a fresh sync when it cannot adopt the move.
             if !mirror.selection_import_rejected.replace(false)
                 && *mirror.text.borrow() == mirror.element.value()
+                && window.with_input_handler(|handler| {
+                    text_window_matches(handler, mirror.window_hint.get(), &mirror.text.borrow())
+                }) == Some(true)
             {
                 let live_start = mirror.selection_start().unwrap_or(0);
                 let live_end = mirror.element_selection_end().unwrap_or(live_start);
@@ -355,7 +347,7 @@ impl ImeMirror {
                 .with_input_handler(|handler| handler.selected_text_range(false))
                 .flatten();
             let Some(selection) = selection else {
-                if !mirror.text.borrow().is_empty() {
+                if !mirror.text.borrow().is_empty() || !mirror.element.value().is_empty() {
                     mirror.element.set_value("");
                     mirror.text.borrow_mut().clear();
                 }
@@ -615,4 +607,94 @@ fn is_consistent(
     }
     // The element selection corresponds to the app selection end too?
     app_selection.end.checked_sub(app_window_start) == Some(element_selection_end)
+}
+
+/// Check the exact text behind a DOM window before using its edit/selection.
+pub(crate) fn text_window_matches(
+    handler: &mut gpui::PlatformInputHandler,
+    start: usize,
+    expected: &str,
+) -> bool {
+    let Some(end) = start.checked_add(expected.encode_utf16().count()) else {
+        return false;
+    };
+    let range = start..end;
+    let mut adjusted = None;
+    let actual = handler.text_for_range(range.clone(), &mut adjusted);
+    actual.as_deref() == Some(expected)
+        && adjusted.as_ref().is_none_or(|adjusted| *adjusted == range)
+}
+
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub(crate) enum SelectionImport {
+    Current,
+    ApplicationNewer,
+    Rejected,
+}
+
+/// Import a newer native selection before a key or editing intent consumes it.
+/// A newer application selection wins over an unchanged native baseline.
+pub(crate) fn import_current_selection(window: &WebWindowInner) -> SelectionImport {
+    let mirror = &window.ime_mirror;
+    if window.is_composing.get() || !mirror.is_focused() {
+        return SelectionImport::Current;
+    }
+    let baseline = mirror.stored_text();
+    if mirror.value() != baseline {
+        mirror.reject_selection_import();
+        return SelectionImport::Rejected;
+    }
+    let Some(left) = mirror.selection_start() else {
+        mirror.reject_selection_import();
+        return SelectionImport::Rejected;
+    };
+    let right = mirror.element_selection_end().unwrap_or(left);
+    let mut adopt = false;
+    let result = window
+        .with_input_handler(|handler| {
+            if !text_window_matches(handler, mirror.window_start(), &baseline) {
+                // A prior GPUI key may have edited the model before the coalesced
+                // mirror write. Further keys must operate on that latest model;
+                // stale native beforeinput defaults must wait for reconciliation.
+                return SelectionImport::ApplicationNewer;
+            }
+            let Some(application) = handler.selected_text_range(false) else {
+                return SelectionImport::Rejected;
+            };
+            match crate::ime_edit::plan_ime_selection(
+                &baseline,
+                mirror.window_start(),
+                mirror.stored_selection(),
+                (left, right),
+                application.range,
+            ) {
+                crate::ime_edit::SelectionPlan::KeepApplication => {
+                    SelectionImport::ApplicationNewer
+                }
+                crate::ime_edit::SelectionPlan::Import(range) => {
+                    handler.set_selected_text_range(range.clone());
+                    if handler
+                        .selected_text_range(false)
+                        .is_some_and(|accepted| accepted.range == range)
+                    {
+                        adopt = true;
+                        SelectionImport::Current
+                    } else {
+                        // EntityInputHandler's default setter may be a no-op;
+                        // do not bless a native range the model never accepted.
+                        SelectionImport::Rejected
+                    }
+                }
+                crate::ime_edit::SelectionPlan::Reject => SelectionImport::Rejected,
+            }
+        })
+        .unwrap_or(SelectionImport::Rejected);
+    if result == SelectionImport::Current {
+        if adopt {
+            mirror.adopt_element_state();
+        }
+    } else {
+        mirror.reject_selection_import();
+    }
+    result
 }

@@ -8,11 +8,12 @@ import hashlib
 import os
 from pathlib import Path
 import subprocess
+import sys
 import tempfile
 import tomllib
 
 
-PATCH = Path("patches/proposed/gpui-pre-web-accessible-name-v1.patch")
+PATCH = Path("patches/approved/gpui-pre-web-accessible-name-v1.patch")
 PATCH_SHA256 = "8fbb44e848e423978c7a216dcd3e814fdf477e520657dba7a7a8bd8653ed9881"
 PACKAGES = {
     "vendor/gpui-pre-0.3.9": {
@@ -103,15 +104,17 @@ def install(root: Path, files: dict[Path, bytes]) -> None:
 def run(root: Path, apply: bool) -> None:
     root = root.resolve()
     verify_identity(root)
+    if not apply and any(digest(root / relative) != hashes[0] for relative, hashes in FILES.items()):
+        result = subprocess.run([sys.executable,str(root / "scripts/apply_gpui_web_semantic_adapter.py"),"--verify-installed","--root",str(root)],capture_output=True,text=True)
+        if result.returncode:raise ValueError(f"composed Web verification failed: {result.stdout}{result.stderr}")
+        print("approved accessible-name patch and exact composed Web stack verified; checkout unchanged")
+        return
     for relative, hashes in FILES.items():
-        if digest(root / relative) != hashes[0]:
-            raise ValueError(f"unexpected source SHA-256: {relative}")
-    staged = stage_patch(root)
-    if apply:
-        install(root, staged)
-        print("proposed GPUI Web accessible-name patch applied; verify source selection separately")
-    else:
-        print("proposed GPUI Web accessible-name patch and exact staged postimages verified")
+        if digest(root / relative) != hashes[0]:raise ValueError(f"unexpected source SHA-256: {relative}")
+    staged=stage_patch(root)
+    if apply:install(root,staged);print("approved GPUI Web accessible-name patch applied")
+    else:print("approved GPUI Web accessible-name PRE round trip verified; checkout unchanged")
+
 
 
 def main() -> int:

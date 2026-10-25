@@ -686,6 +686,13 @@ impl RenderOnce for Input {
         let input_focused =
             presentation.focus_handle().is_focused(window) && !presentation.is_disabled();
         if input_focused {
+            state.sync_platform_secure_input(
+                matches!(
+                    content_type,
+                    Some(InputContentType::Password | InputContentType::NewPassword)
+                ),
+                cx,
+            );
             sync_native_content_type(window, content_type, presentation.is_editable());
         }
         let frame_focus_handle = window

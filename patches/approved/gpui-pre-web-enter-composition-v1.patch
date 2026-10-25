@@ -1,0 +1,86 @@
+diff --git a/vendor/gpui-pre-web-0.3.9/src/events.rs b/vendor/gpui-pre-web-0.3.9/src/events.rs
+--- a/vendor/gpui-pre-web-0.3.9/src/events.rs
++++ b/vendor/gpui-pre-web-0.3.9/src/events.rs
+@@ -553,7 +553,7 @@
+         let keystroke = Keystroke {
+             modifiers,
+             key: key.to_string(),
+-            key_char: None,
++            key_char: command_key_char(key),
+         };
+         self.dispatch_input(PlatformInput::KeyDown(KeyDownEvent {
+             keystroke: keystroke.clone(),
+@@ -727,6 +727,17 @@
+                     }));
+                 }
+ 
++                // Composition belongs to the browser/IME lifecycle, including
++                // the Enter which commits marked text. Do not dispatch command
++                // handlers (or cancel the browser default) before this check.
++                if dom_key_event_is_composing(
++                    this.is_composing.get(),
++                    event.is_composing(),
++                    event.key_code(),
++                ) {
++                    return;
++                }
++
+                 let key = dom_key_to_gpui_key(&event);
+ 
+                 if is_modifier_only_key(&key) {
+@@ -771,11 +782,6 @@
+                     }
+                 }
+ 
+-                if this.is_composing.get() || event.is_composing() {
+-                    event.prevent_default();
+-                    return;
+-                }
+-
+                 if keystroke_inserts_text(&modifiers, this.is_mac)
+                     && let Some(text) = key_char
+                 {
+@@ -812,6 +818,14 @@
+                         modifiers,
+                         capslock,
+                     }));
++                }
++
++                if dom_key_event_is_composing(
++                    this.is_composing.get(),
++                    event.is_composing(),
++                    event.key_code(),
++                ) {
++                    return;
+                 }
+ 
+                 let key = dom_key_to_gpui_key(&event);
+@@ -1365,6 +1379,11 @@
+     gpui_key: &str,
+     modifiers: &Modifiers,
+ ) -> Option<String> {
++    // Match the native macOS Enter metadata. A missing key_char makes the
++    // shared GPUI heuristic mistake ordinary Enter for incomplete IME input.
++    if let Some(key_char) = command_key_char(gpui_key) {
++        return Some(key_char);
++    }
+     // AltGr arrives as control+alt with the composed character in
+     // `event.key()`; bare Command/Control combinations are not text.
+     if (modifiers.platform || modifiers.control) && !(modifiers.control && modifiers.alt) {
+@@ -1475,3 +1494,16 @@
+         assert_ne!(reused, concurrent);
+     }
+ }
++
++// DOM keyCode 229 identifies IME-owned input on browsers which expose
++// isComposing=false for a composition transition. No GPUI command may run.
++fn dom_key_event_is_composing(adapter_composing: bool, dom_composing: bool, key_code: u32) -> bool {
++    adapter_composing || dom_composing || key_code == 229
++}
++
++fn command_key_char(key: &str) -> Option<String> {
++    match key {
++        "enter" => Some("\n".to_string()),
++        _ => None,
++    }
++}
