@@ -14,6 +14,10 @@ Integration target verified from the primary checkout:
 `567f933c76b90fde3fcdda4ff45dc660df1eb217`; it descends from `main`.
 Reverify its HEAD and dirty state before integration. Do not overwrite its work.
 
+## Approval and integration update — 2026-10-25
+
+The user approved all pending prepared upstream patches and locale architecture/dependencies ("I approve everything just proceed"). Pinned GPUI 0.3.9 and Components 0.7.3 remain unchanged. Tree root/name/level series is installed through the reproducible helper and its exact POST verification passes; focused tests are being repaired/run. ICU4X/Fluent candidate passed ten preimage checks; 29 new dependency archives were verified and vendored, with minimal lockfile resolution. ICU Provider sync fixes the concurrent-memoizer integration. Locale tests pass 101/101 (82 unit, 9 legacy catalog, 10 Fluent/ICU). The source release driver passes 552 Python tests plus packaging/static checks. Component checkpoint now passes 937/937 after correcting a stale theme-count fixture. The approved default Headstart incremental path hit an ICU def_span fingerprint ICE on reuse; a per-command rustui-i18n-only nonincremental diagnostic passes without changing repository compiler configuration or other packages incremental policy. Current native/browser acceptance and default-cache reliability remain separate gates. The exact Tree series is committed as `016c938b`; its in-memory rendered Tree regression is source evidence, not native AX. The locale API doctest passes 1/1, and the existing Playground localization story passes 3/3 including new Fluent/ICU samples for English/French/Arabic. Fresh isolated validation with the unchanged approved incremental configuration also passes all 102 locale tests/doctest, confirming a reused-cache compiler defect. Two new dependencies (`fluent-langneg`, `intl_pluralrules`) need upstream notice supplements; all 29 new packages declare SPDX license metadata. Browser semantic/secure-input candidate remains detached pending verification. No new native/browser acceptance claimed.
+
 ## Ownership and preservation
 
 - Dispatcher `rustui-roadmap-coordination-sweep` is PAUSED.
@@ -301,7 +305,7 @@ recovery leads, not permission to rebuild existing work.
 | --- | --- | --- |
 | R00 | 0: independence and dependency boundary | Closed: current dependency guard passes; retain zero Chorus/Allui dependency and pinned GPUI/Components versions. |
 | R01 | 0: one writer and preserved integration | Closed: dispatcher paused, 11 prior claims superseded with explicit evidence, one isolated writing scope; originals retained. |
-| R02 | 0: reproducible approved patch selection | Closed for the three existing approved patch sets: exact helpers apply/verify and pristine checksum manifests match. New promotions remain gated. |
+| R02 | 0: reproducible approved patch selection | Closed for current approved selection, including the exact Tree root/name/level series: replay/reversal fixtures and source postimages pass; provenance/checksum manifests remain unchanged. |
 | R03 | 0: architecture, registry, public documentation | Audit all exported APIs and planned/scaffold claims; reconcile stale lifecycle/animation/tooling status. |
 | R04 | 1: application/window bootstrap | Present; current library checkpoint passed. Native launch/error/close and packaging acceptance remain. |
 | R05 | 1: lifecycle, owner actions, subscriptions | Present; F1E/M16 native ownership acceptance open. Picker obsolete-subscription runtime fix and focused handle-lifetime test integrated; ten full lifecycle event-path tests now pass; native ownership acceptance remains. |
@@ -313,11 +317,11 @@ recovery leads, not permission to rebuild existing work.
 | R11 | 4: basic components and semantics | Present; audit source contracts and current native visual/focus/AX behavior. |
 | R12 | 5: theme states, metrics and fallbacks | Static coverage passes for 139 roles/24 styled records; runtime pack validation, light/dark/locale visuals and unapplied radio blend-mode requirement remain. |
 | R13 | 6: bounded locale/catalog contract | Three runtime locale records validate; current locale unit tests pass. Native/Web locale switching, fallback and RTL acceptance remain. |
-| R14 | 6: full CLDR/ICU/Fluent runtime | Missing approved runtime/data strategy and dependency versions; choose cross-target strategy before adding dependencies. Bounded handwritten rules are not full coverage. |
+| R14 | 6: full CLDR/ICU/Fluent runtime | Strategy A implemented: 29 verified vendored packages, 102 locale tests/doctest and 3 Playground localization checks pass. macOS/Web, RTL, notices and size/performance acceptance remain open. |
 | R15 | 7: persistent inputs, selection, disabled behavior | Present; audit disabled focus/activation/AX, replacement subscriptions and event paths. Test-support sources and ownership harness are now integrated; focused event tests pass. |
 | R16 | 7/9: text selection and active IME | Source preservation logic and delayed no-blur preview trigger present in recovered primary; native active composition and Web IME still unverified. |
 | R17 | 8: collections/navigation synchronization | Present; verify keyed replacement, route recovery, keyboard/RTL and virtualization behavior with current source. |
-| R18 | 8: Tree row accessibility | aria-disabled approved patch reproduced; outer-row aria-level is a prepared, exact-hash proposed upstream patch requiring approval. Native AX/VoiceOver open. |
+| R18 | 8: Tree row accessibility | Approved root-name/one-based row-level/TestWindow series promoted reproducibly; ten helper fixtures and rendered source regressions pass. Native AX/VoiceOver and browser acceptance remain open. |
 | R19 | 8: overlays and focus containment | Present within bounded wrappers; inspect focus-trap upstream proposal and verify modal keyboard/AX/dismissal contracts. |
 | R20 | 9: async ownership, cancellation, error paths | Present; audit generation/cleanup guarantees and bind native release evidence to current runtime source. |
 | R21 | 9: accessibility and keyboard across public controls | Partial; semantic projection, action handling, disabled state and actual VoiceOver need current evidence on both targets. |

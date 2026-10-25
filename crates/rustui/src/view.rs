@@ -583,7 +583,11 @@ impl<'a> RenderContext<'a> {
     pub fn localized_message(&self, identifier: &str) -> String {
         self.localization.as_ref().map_or_else(
             || identifier.to_owned(),
-            |active| active.message(identifier).to_owned(),
+            |active| {
+                active
+                    .formatted_message(identifier)
+                    .unwrap_or_else(|_| identifier.to_owned())
+            },
         )
     }
 

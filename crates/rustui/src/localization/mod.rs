@@ -10,9 +10,11 @@ use gpui::{App, Global};
 
 use crate::runtime::AppAction;
 pub use rustui_i18n::{
-    Catalog, CatalogError, CatalogValidation, Catalogs, InterpolationError, LayoutDirection,
-    Locale, LocaleError, MessageArgument, MessageArguments, MessageId, MessageIdError,
-    format_integer, interpolate, interpolate_with_locale, validate_catalogs,
+    Catalog, CatalogError, CatalogValidation, Catalogs, CivilDate, CivilDateTime, CivilTime,
+    DateLength, FluentFormatError, InterpolationError, LayoutDirection, Locale, LocaleError,
+    LocaleFormatError, LocaleFormatter, MessageArgument, MessageArguments, MessageId,
+    MessageIdError, TimeFields, format_integer, interpolate, interpolate_with_locale,
+    validate_catalogs,
 };
 
 #[derive(Clone, Debug)]
@@ -36,17 +38,23 @@ impl ActiveLocalization {
         self.generation
     }
 
+    /// Borrowed legacy lookup; use `formatted_message` for Fluent resources.
     pub fn message<'a>(&'a self, identifier: &'a str) -> &'a str {
         self.catalogs.resolve(&self.locale, identifier)
     }
 
-    /// Resolves a catalog message for the active locale, then interpolates its named arguments.
+    /// Evaluates the selected resource's declared syntax with no arguments.
+    pub fn formatted_message(&self, identifier: &str) -> Result<String, InterpolationError> {
+        self.catalogs.format_message(&self.locale, identifier)
+    }
+
+    /// Resolves and evaluates a legacy or Fluent message using the active locale.
     pub fn message_with_arguments(
         &self,
         identifier: &str,
         arguments: &MessageArguments,
     ) -> Result<String, InterpolationError> {
-        interpolate_with_locale(self.message(identifier), arguments, &self.locale)
+        self.catalogs.format(&self.locale, identifier, arguments)
     }
 }
 
@@ -254,4 +262,40 @@ pub fn set_locale(locale: Locale, cx: &mut App) {
 
 pub fn set_locale_action(locale: Locale) -> AppAction {
     AppAction::new(move |cx| set_locale(locale.clone(), cx))
+}
+
+#[cfg(test)]
+mod fluent_integration_tests {
+    use super::*;
+    #[test]
+    fn active_coordinator_evaluates_fluent_without_exposing_raw_syntax() {
+        let locale = Locale::parse("en-US-u-nu-thai").unwrap();
+        let mut catalogs = Catalogs::new(Locale::parse("en").unwrap());
+        catalogs.insert(Catalog::parse_fluent(Locale::parse("en").unwrap(), "-brand = RustUI\nheading = Welcome to { -brand }\nlabel = Open { $target }\n    .help = Open the selected item").unwrap()).unwrap();
+        let active = ActiveLocalization {
+            direction: LayoutDirection::for_locale(&locale),
+            locale,
+            catalogs,
+            generation: 0,
+        };
+        assert_eq!(active.message("heading"), "heading");
+        let heading = active.formatted_message("heading").unwrap();
+        assert!(heading.contains("RustUI"));
+        assert!(!heading.contains("-brand"));
+        assert_eq!(
+            active.formatted_message("label.help").unwrap(),
+            "Open the selected item"
+        );
+        assert!(
+            active
+                .message_with_arguments("label", &MessageArguments::new())
+                .is_err()
+        );
+        assert!(
+            active
+                .message_with_arguments("label", &MessageArguments::new().with("target", "file"))
+                .unwrap()
+                .contains("file")
+        );
+    }
 }

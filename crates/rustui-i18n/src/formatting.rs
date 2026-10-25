@@ -68,6 +68,10 @@ impl From<f32> for MessageArgument {
 }
 
 impl MessageArguments {
+    pub(crate) fn iter(&self) -> impl Iterator<Item = (&str, &MessageArgument)> {
+        self.0.iter().map(|(name, value)| (name.as_str(), value))
+    }
+
     pub fn new() -> Self {
         Self::default()
     }
@@ -85,6 +89,7 @@ impl MessageArguments {
 /// Failure to parse a message or find/type-check its required argument.
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub enum InterpolationError {
+    Fluent(crate::FluentFormatError),
     InvalidPlaceholder(String),
     MissingArgument(String),
     InvalidMessage(String),
@@ -96,6 +101,7 @@ pub enum InterpolationError {
 impl fmt::Display for InterpolationError {
     fn fmt(&self, formatter: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
+            Self::Fluent(error) => error.fmt(formatter),
             Self::InvalidPlaceholder(name) => write!(formatter, "invalid placeholder `{{{name}}}`"),
             Self::MissingArgument(name) => write!(formatter, "missing message argument `{name}`"),
             Self::InvalidMessage(reason) => {
@@ -226,6 +232,9 @@ pub(crate) struct MessageContract {
 }
 
 impl MessageContract {
+    pub(crate) fn argument_names(&self) -> BTreeSet<String> {
+        self.arguments.clone()
+    }
     pub(crate) fn arguments_match(&self, other: &Self) -> bool {
         self.arguments == other.arguments
     }

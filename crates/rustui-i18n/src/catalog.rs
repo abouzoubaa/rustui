@@ -1,6 +1,6 @@
 //! Parser and lookup for RustUI's initial Fluent-compatible catalog subset.
 
-use std::{collections::BTreeMap, error::Error, fmt};
+use std::{collections::BTreeMap, error::Error, fmt, sync::Arc};
 
 use crate::{Locale, MessageId};
 
@@ -8,6 +8,7 @@ use crate::{Locale, MessageId};
 pub struct Catalog {
     locale: Locale,
     messages: BTreeMap<MessageId, String>,
+    fluent: Option<Arc<crate::fluent::FluentCatalog>>,
 }
 
 impl Catalog {
@@ -50,7 +51,28 @@ impl Catalog {
             }
         }
 
-        Ok(Self { locale, messages })
+        Ok(Self {
+            locale,
+            messages,
+            fluent: None,
+        })
+    }
+
+    /// Parses full Project Fluent syntax. Legacy `parse` retains its original
+    /// placeholder grammar. Fluent values are evaluated through `Catalogs::format`;
+    /// borrowed `get`/`resolve` never expose unevaluated FTL patterns.
+    pub fn parse_fluent(locale: Locale, source: &str) -> Result<Self, crate::FluentFormatError> {
+        let fluent = Arc::new(crate::fluent::FluentCatalog::parse(&locale, source)?);
+        let messages = fluent.message_ids().map(|id| (id, String::new())).collect();
+        Ok(Self {
+            locale,
+            messages,
+            fluent: Some(fluent),
+        })
+    }
+
+    pub fn is_fluent(&self) -> bool {
+        self.fluent.is_some()
     }
 
     pub fn locale(&self) -> &Locale {
@@ -58,7 +80,24 @@ impl Catalog {
     }
 
     pub fn get(&self, identifier: &str) -> Option<&str> {
+        if self.is_fluent() {
+            return None;
+        }
         self.messages.get(identifier).map(String::as_str)
+    }
+
+    pub(crate) fn fluent_arguments(
+        &self,
+        identifier: &str,
+    ) -> Option<std::collections::BTreeSet<String>> {
+        self.fluent.as_ref()?.arguments(identifier)
+    }
+
+    fn contains(&self, identifier: &str) -> bool {
+        self.fluent.as_ref().map_or_else(
+            || self.messages.contains_key(identifier),
+            |fluent| fluent.contains(identifier),
+        )
     }
 
     pub fn message_ids(&self) -> impl Iterator<Item = &MessageId> {
@@ -104,22 +143,71 @@ impl Catalogs {
         self.catalogs.iter()
     }
 
-    pub fn resolve<'a>(&'a self, locale: &Locale, identifier: &'a str) -> &'a str {
+    fn selected_catalog(&self, locale: &Locale, identifier: &str) -> Option<&Catalog> {
         let mut candidates = vec![locale.clone()];
         push_extension_free_fallbacks(&mut candidates, locale);
         candidates.push(self.fallback.clone());
         push_extension_free_fallbacks(&mut candidates, &self.fallback);
+        candidates.into_iter().find_map(|candidate| {
+            self.catalogs
+                .get(&candidate)
+                .filter(|catalog| catalog.contains(identifier))
+        })
+    }
 
-        for candidate in &candidates {
-            if let Some(value) = self
-                .catalogs
-                .get(candidate)
-                .and_then(|catalog| catalog.get(identifier))
-            {
-                return value;
-            }
+    /// Resolves plain UI text. Legacy catalogs preserve borrowed lookup
+    /// semantics, including literal placeholder text; Fluent catalogs evaluate
+    /// the selected pattern with an empty argument set.
+    pub fn format_message(
+        &self,
+        locale: &Locale,
+        identifier: &str,
+    ) -> Result<String, crate::InterpolationError> {
+        let Some(catalog) = self.selected_catalog(locale, identifier) else {
+            return Ok(identifier.to_owned());
+        };
+        match &catalog.fluent {
+            Some(fluent) => fluent
+                .format(identifier, &crate::MessageArguments::new())
+                .map_err(crate::InterpolationError::Fluent),
+            None => Ok(catalog
+                .get(identifier)
+                .expect("legacy message exists")
+                .to_owned()),
         }
-        identifier
+    }
+
+    /// Resolves the locale fallback chain and evaluates the selected catalog's
+    /// declared syntax. Fluent errors return no partially formatted output.
+    /// Legacy interpolation uses the active locale; Fluent NUMBER uses the
+    /// resource locale without Unicode extensions.
+    pub fn format(
+        &self,
+        locale: &Locale,
+        identifier: &str,
+        arguments: &crate::MessageArguments,
+    ) -> Result<String, crate::InterpolationError> {
+        match self.selected_catalog(locale, identifier) {
+            Some(catalog) => match &catalog.fluent {
+                Some(fluent) => fluent
+                    .format(identifier, arguments)
+                    .map_err(crate::InterpolationError::Fluent),
+                None => crate::interpolate_with_locale(
+                    catalog.get(identifier).expect("legacy message exists"),
+                    arguments,
+                    locale,
+                ),
+            },
+            None => crate::interpolate_with_locale(identifier, arguments, locale),
+        }
+    }
+
+    /// Borrowed legacy lookup. A selected Fluent resource returns the identifier
+    /// here; use `format_message` or `format` to obtain evaluated Fluent text.
+    pub fn resolve<'a>(&'a self, locale: &Locale, identifier: &'a str) -> &'a str {
+        self.selected_catalog(locale, identifier)
+            .and_then(|catalog| catalog.get(identifier))
+            .unwrap_or(identifier)
     }
 }
 

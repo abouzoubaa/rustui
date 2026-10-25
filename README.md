@@ -32,10 +32,11 @@ breadcrumb presentation.
 `NavigationStack` uses a bound route path, heterogeneous destinations, and GPUI
 Components buttons for forward and back navigation.
 
-Named interpolation, bounded cardinal/ordinal plural and select expressions, and
-locale-aware integer/decimal formatting are implemented. Full CLDR coverage,
-date formatting, broader locale support, most component families, and advanced
-Playground inspectors remain incomplete. RustUI has no direct,
+Localization preserves legacy interpolation and adds explicit Project Fluent resources,
+ICU4X decimal and civil date/time formatting, and Unicode locale preferences.
+See [the locale runtime contract](docs/tasks/STAGE6_LOCALE_RUNTIME_IMPLEMENTATION.md)
+for supported functions, data versions and current acceptance limits. Native and
+browser accessibility, broader platform acceptance and release gates remain open. RustUI has no direct,
 transitive, optional, or public API dependency on Allui. GPUI and GPUI Components
 are the upstream implementation sources.
 

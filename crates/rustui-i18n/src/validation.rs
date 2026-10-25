@@ -53,6 +53,28 @@ pub fn validate_catalogs(catalogs: &Catalogs) -> CatalogValidation {
         let mut expression_mismatches = Vec::new();
         let mut invalid_patterns = Vec::new();
         for identifier in expected.intersection(&actual) {
+            if reference.is_fluent() || catalog.is_fluent() {
+                let contract = |catalog: &crate::Catalog| {
+                    if catalog.is_fluent() {
+                        catalog.fluent_arguments(identifier.as_str())
+                    } else {
+                        catalog
+                            .get(identifier.as_str())
+                            .and_then(|value| message_contract(value).ok())
+                            .map(|contract| contract.argument_names())
+                    }
+                };
+                match (contract(reference), contract(catalog)) {
+                    (Some(expected), Some(actual)) => {
+                        if expected != actual {
+                            argument_mismatches.push(identifier.clone());
+                        }
+                    }
+                    _ => invalid_patterns.push(identifier.clone()),
+                }
+                continue;
+            }
+
             let expected_contract = reference
                 .get(identifier.as_str())
                 .and_then(|value| message_contract(value).ok());
@@ -72,6 +94,13 @@ pub fn validate_catalogs(catalogs: &Catalogs) -> CatalogValidation {
             }
         }
         for identifier in actual.difference(&expected) {
+            if catalog.is_fluent() {
+                if catalog.fluent_arguments(identifier.as_str()).is_none() {
+                    invalid_patterns.push(identifier.clone());
+                }
+                continue;
+            }
+
             if catalog
                 .get(identifier.as_str())
                 .and_then(|value| message_contract(value).ok())

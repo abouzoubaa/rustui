@@ -2,6 +2,10 @@
 
 Date: 2026-10-23
 
+## Superseding implementation — 2026-10-25
+
+The user approved Strategy A and the exact ICU4X/Fluent dependencies. The runtime is now implemented; 82 unit tests, 9 legacy catalog integration tests and 10 Fluent/ICU conformance tests pass with Headstart, locked/offline dependencies. See `STAGE6_LOCALE_RUNTIME_IMPLEMENTATION.md` for the current contract and remaining macOS/Web, RTL, licensing, size/performance acceptance. The original audit below is historical and does not describe current source.
+
 ## Finding
 
 Full CLDR/ICU/Fluent behavior cannot be completed faithfully within the current

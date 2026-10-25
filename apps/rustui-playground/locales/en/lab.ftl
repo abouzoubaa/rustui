@@ -65,3 +65,5 @@ lab-catalog-note-offset = Signed relative positioning demo; native interaction a
 lab-catalog-note-collection = Virtualized stable-ID row demo; native interaction and lifecycle acceptance pending.
 lab-catalog-note-sheet = Trigger-opened GPUI Components side sheet with optional title and body; native GUI acceptance pending.
 lab-catalog-note-drag_drop = Typed same-process Copy and Transfer gallery; M142 verified keyboard alternatives and M148 verified target removal during a held drag on macOS.
+
+lab-i18n-runtime-examples = Fluent messages and locale-aware numbers and dates

@@ -2,7 +2,13 @@
 
 Date: 2026-10-23
 
-## Decision needed
+## Recorded decision — 2026-10-25
+
+The user explicitly approved the pending proposals: "I approve everything just proceed." This approves prepared Strategy A: Rust-owned ICU4X 2.4.0 compiled data and Fluent Bundle 0.16.0 behind `rustui-i18n`, on macOS and Web/Wasm, including the inspected exact direct dependencies and lockfile/vendor updates. Public formatting uses RustUI-owned civil date/time and decimal types; no host runtime or second rendering/reactive runtime is added. GPUI and Components remain pinned.
+
+Formatting data is CLDR 49 / Unicode 18. Fluent selector tables in `intl_pluralrules` 7.0.2 declare CLDR 37; its README says CLDR 36. Preserve this documented subsystem split; do not claim aligned plural data or full data provenance. Native/browser, RTL, licensing, size/performance and release acceptance remain evidence requirements.
+
+## Original decision needed
 
 Stage 6 already has a bounded locale parser, catalog/fallback support, logical
 direction, and a RustUI-owned message formatter. Completing the roadmap's full
@@ -77,6 +83,6 @@ bounded formatter and would not complete Stage 6.
 
 ## Status
 
-Decision pending. This memo records options and repository constraints only; it
+Decision approved; implementation and acceptance in progress. This memo records options and repository constraints only; it
 does not change dependencies, runtime behavior, roadmap summaries, or acceptance
 status.
