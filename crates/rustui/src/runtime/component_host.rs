@@ -356,6 +356,20 @@ impl<V: View> ComponentHost<V> {
         &self.component
     }
 
+    /// Reads an exact slot without marking it visited. GPUI's test windows do not project AX trees.
+    #[cfg(test)]
+    pub(crate) fn retained_entity_for_test<T: 'static>(
+        &self,
+        scope: Vec<RetentionScope>,
+        id: Identity,
+    ) -> Option<Entity<T>> {
+        self.retained
+            .entries
+            .get(&RetainedKey { scope, id })
+            .and_then(|entry| entry.entity.downcast_ref::<Entity<T>>())
+            .cloned()
+    }
+
     pub fn component_mut(&mut self) -> &mut V {
         &mut self.component
     }
@@ -816,3 +830,7 @@ mod collection_eviction_tests {
         assert_eq!(released.get(), 6);
     }
 }
+
+#[cfg(test)]
+#[path = "component_host_tests.rs"]
+mod component_lifecycle_tests;

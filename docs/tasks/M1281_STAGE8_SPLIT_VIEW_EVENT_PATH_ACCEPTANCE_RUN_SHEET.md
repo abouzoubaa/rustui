@@ -1,5 +1,14 @@
 # M1281 — Stage 8 SplitView divider event-path acceptance run sheet
 
+Current status (2026-10-25): the sole-session production objective supersedes
+the agent-authored test-support investigation gate below. The exact pinned
+GPUI feature graph is now available, with 18 additive, checksum-verified registry
+packages and no default application dependency-tree change. Ownership tests ran;
+the SplitView event-path regression passed all LTR/RTL horizontal and vertical
+cases, clamping and ignored-key propagation. The historical
+approval wording is retained as provenance, not a new human restriction. Native
+AX/VoiceOver and the independent proposed Tree patch remain separate gates.
+
 **Status: preparation only.** This run sheet does not enable GPUI test support,
 change Cargo inputs, implement a test, or claim runtime/native acceptance.
 M1281 remains gated on approval and validation of the test-support dependency

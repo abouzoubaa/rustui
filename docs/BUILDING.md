@@ -416,3 +416,23 @@ See `tasks/P2E_W1_ACCEPTANCE_BASELINE.md` for exact inputs, results and limitati
 ## P3D paired cache comparison compile validation — 2026-10-18
 
 - The final comparison-tool suite passed 21 Python tests (`target/headstart/p3d-final-python-tests.log`); its final guards exclude runs when accessibility or native drag is detected, including late observations. No native comparison or benchmark measurement has run; these checks make no performance claim. See `docs/tasks/P3D_CACHE_COMPARISON.md` for the native protocol and its remaining documentation refresh.
+## GPUI ownership and event-path tests
+
+RustUI's test-only GPUI dependency enables the pinned upstream `test-support`
+feature. Eighteen additional registry packages were restored from the retained
+worktree after verifying official registry checksums, archive contents, source
+checksums and license files. No existing package versions or checksums changed.
+The macOS and Wasm Playground normal/build dependency trees were compared before
+and after this addition and are unchanged; the application does not enable the
+test harness. All sources remain under `vendor/`.
+
+```sh
+./scripts/cargo-headstart test -p rustui --lib component_lifecycle_tests --profile headstart --locked --offline
+./scripts/cargo-headstart test -p rustui --lib focused_divider_routes --profile headstart --locked --offline
+```
+
+These tests use GPUI's fake windows and production render/event/owner paths. They
+do not launch Playground or establish native/browser accessibility, VoiceOver,
+IME or visual acceptance. The fake backend does not project AX trees; the
+SplitView event test observes the retained native `ResizableState` after key
+dispatch. Its read-only retained-slot inspector is compiled only for tests.

@@ -430,6 +430,10 @@ impl View for SplitView {
 }
 
 #[cfg(test)]
+#[path = "split_view_tests.rs"]
+mod event_tests;
+
+#[cfg(test)]
 mod tests {
     use super::*;
 
