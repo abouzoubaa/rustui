@@ -56,7 +56,7 @@ Environment(display_mode, child_stack)
         StoryId::Input => {
             r#"VStack!
     TextField("Name", self.input_text_binding()).id("name")
-    SecureField("Password", self.input_text_binding()).id("password")
+    SecureField("Password", self.secure_text_binding()).id("password")
     SearchField("Search", self.input_text_binding()).id("search")
     TextEditor("Notes", self.input_text_binding()).id("notes")
     Toggle("Enabled", self.toggle_value_binding()).id("enabled")

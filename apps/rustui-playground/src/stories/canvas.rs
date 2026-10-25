@@ -47,6 +47,7 @@ pub struct StoryCanvas {
     button: ButtonProperties,
     input_text: String,
     input_binding: Binding<String>,
+    secure_binding: Binding<String>,
     toggle_binding: Binding<bool>,
     checkbox_binding: Binding<bool>,
     radio_binding: Binding<bool>,
@@ -79,6 +80,7 @@ impl StoryCanvas {
         button: ButtonProperties,
         input_text: String,
         input_binding: Binding<String>,
+        secure_binding: Binding<String>,
         toggle_binding: Binding<bool>,
         checkbox_binding: Binding<bool>,
         radio_binding: Binding<bool>,
@@ -108,6 +110,7 @@ impl StoryCanvas {
             button,
             input_text,
             input_binding,
+            secure_binding,
             toggle_binding,
             checkbox_binding,
             radio_binding,
@@ -313,7 +316,7 @@ impl View for StoryCanvas {
                         .accessibility_label("Name"),
                 )
                 .child(
-                    SecureField("Password", self.input_binding.clone())
+                    SecureField("Password", self.secure_binding.clone())
                         .id("story-input-password")
                         .accessibility_label("Password"),
                 )

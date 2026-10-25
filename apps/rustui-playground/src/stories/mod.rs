@@ -254,6 +254,8 @@ pub struct StoryHost {
     button_properties: ButtonProperties,
     #[state(String::new())]
     input_text: String,
+    #[state(String::new())]
+    secure_text: String,
     #[state(false)]
     toggle_value: bool,
     #[state(false)]
@@ -723,6 +725,7 @@ impl View for StoryHost {
             button_properties,
             self.input_text(),
             self.input_text_binding(),
+            self.secure_text_binding(),
             self.toggle_value_binding(),
             self.checkbox_value_binding(),
             self.radio_value_binding(),
