@@ -66,6 +66,15 @@ includes their names for a detailed audit.
 `progress` also renews the lease; use `heartbeat` during long work between
 milestone updates.
 
+Renew before starting any operation likely to outlast the lease, and confirm
+the returned claim state is `active` before editing again. An expired lease is
+displayed as `suspect`; it does **not** release the claim or its paths. The
+shared database still treats that claim as active, so another session cannot
+acquire those paths until the owner renews, or the coordinator verifies the
+owner has stopped and performs an explicit release or handoff. Never work
+around a `suspect` claim by changing the thread ID or editing without an active
+claim.
+
 Use `advance` when the same session moves to another task ID or needs additional
 paths. It extends the existing claim; it never drops prior paths or releases the
 owner. The task update, new paths, transition history, and lease renewal are one
