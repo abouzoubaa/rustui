@@ -137,6 +137,7 @@ fn require_accessible_name(label: SharedString) -> SharedString {
 /// A RustUI button that dispatches an action on its owning component.
 pub struct ButtonView {
     label: SharedString,
+    localized_label_key: Option<SharedString>,
     action: ControlAction,
     id: Option<Identity>,
     style: ButtonStyle,
@@ -152,6 +153,7 @@ impl ButtonView {
     pub fn new(label: impl Into<SharedString>, action: impl Into<ControlAction>) -> Self {
         Self {
             label: label.into(),
+            localized_label_key: None,
             action: action.into(),
             id: None,
             style: ButtonStyle::Automatic,
@@ -162,6 +164,18 @@ impl ButtonView {
             tab_index: 0,
             focusable: true,
         }
+    }
+
+    /// Resolves the visible label from the active catalog while retaining the
+    /// constructor label as a stable fallback and identity seed.
+    pub fn localized_label(mut self, message_key: impl Into<SharedString>) -> Self {
+        let key = message_key.into();
+        assert!(
+            !key.trim().is_empty(),
+            "Button label localization key must not be blank"
+        );
+        self.localized_label_key = Some(key);
+        self
     }
 
     /// Sets an explicit GPUI element ID when labels are repeated.
@@ -242,12 +256,18 @@ impl ButtonView {
         self
     }
 
-    fn resolved_accessibility_label(&self, context: &RenderContext<'_>) -> SharedString {
-        require_accessible_name(
-            self.accessibility_label
-                .as_ref()
-                .map_or_else(|| self.label.clone(), |label| label.resolve(context)),
+    fn resolved_label(&self, context: &RenderContext<'_>) -> SharedString {
+        self.localized_label_key.as_ref().map_or_else(
+            || self.label.clone(),
+            |key| resolved_message_label(context.localized_message(key.as_ref()), key, &self.label),
         )
+    }
+
+    fn resolved_accessibility_label(&self, context: &RenderContext<'_>) -> SharedString {
+        require_accessible_name(self.accessibility_label.as_ref().map_or_else(
+            || self.resolved_label(context),
+            |label| label.resolve(context),
+        ))
     }
 
     fn identity(&self, context: &mut RenderContext<'_>) -> Identity {
@@ -325,6 +345,23 @@ mod tests {
     #[should_panic(expected = "Button accessibility label must not be empty")]
     fn accessible_name_rejects_blank_override() {
         Button("Save", crate::runtime::Action::new::<()>(|_| {})).accessibility_label(" \t\n ");
+    }
+
+    #[test]
+    #[should_panic(expected = "Button label localization key must not be blank")]
+    fn localized_visible_label_rejects_blank_key() {
+        Button("Save", crate::runtime::Action::new::<()>(|_| {})).localized_label(" \t\n ");
+    }
+
+    #[test]
+    fn localized_visible_label_keeps_stable_identity_seed() {
+        let button = Button("Save", crate::runtime::Action::new::<()>(|_| {}))
+            .localized_label("button.save");
+        assert_eq!(button.identity_with(|id| id).as_str(), "button:Save");
+        assert_eq!(
+            button.localized_label_key.as_ref().unwrap().as_ref(),
+            "button.save"
+        );
     }
 
     #[test]
@@ -422,7 +459,7 @@ impl View for ButtonView {
 
     fn into_element(&self, context: &mut RenderContext<'_>) -> AnyElement {
         let id = SharedString::from(self.identity(context).to_string());
-        let label = self.label.clone();
+        let label = self.resolved_label(context);
         let accessibility_label = self.resolved_accessibility_label(context);
         let mut button = themed_button(
             context,

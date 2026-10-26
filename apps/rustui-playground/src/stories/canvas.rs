@@ -1,5 +1,6 @@
 //! Isolated rendering for the stories currently supported by RustUI Playground.
 
+use rustui::localization::MessageArguments;
 use rustui::{
     component,
     prelude::{
@@ -141,12 +142,16 @@ impl View for StoryCanvas {
     fn body(&self) -> impl View {
         match self.story {
             StoryId::Button => VStack::new()
-                .child(Text(format!("Count: {}", self.count)))
+                .child(
+                    LocalizedText("lab-button-count")
+                        .with_arguments(MessageArguments::new().with("count", self.count)),
+                )
                 .child(
                     HStack::new()
                         .child(
                             Button("Increment", self.increment.clone())
                                 .id("story-button-increment")
+                                .localized_label("lab-button-increment-visible")
                                 .localized_accessibility_label("lab-button-increment-accessibility")
                                 .button_style(self.button.style)
                                 .disabled(self.button.disabled),
@@ -154,6 +159,7 @@ impl View for StoryCanvas {
                         .child(
                             Button("Reset", self.reset.clone())
                                 .id("story-button-reset")
+                                .localized_label("lab-button-reset-visible")
                                 .button_style(self.button.style)
                                 .disabled(self.button.disabled),
                         )
@@ -163,6 +169,7 @@ impl View for StoryCanvas {
                 .child(
                     Button("Unavailable", self.reset.clone())
                         .id("story-button-disabled")
+                        .localized_label("lab-button-unavailable-visible")
                         .button_style(self.button.style)
                         .disabled(true),
                 )

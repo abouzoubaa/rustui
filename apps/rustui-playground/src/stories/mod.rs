@@ -695,11 +695,13 @@ impl View for StoryHost {
             HStack::new()
                 .child(
                     Button("Cycle button style", self.action(Self::cycle_button_style))
-                        .id("lab-cycle-style"),
+                        .id("lab-cycle-style")
+                        .localized_label("lab-button-cycle-style-visible"),
                 )
                 .child(
                     Button("Toggle disabled", self.action(Self::toggle_button_disabled))
-                        .id("lab-toggle-disabled"),
+                        .id("lab-toggle-disabled")
+                        .localized_label("lab-button-toggle-disabled-visible"),
                 )
         } else {
             HStack::new()

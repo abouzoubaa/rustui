@@ -9,6 +9,19 @@ Reverify live HEAD and dirty state before subsequent integration; preserve unrel
 
 ## Current checkpoint — 2026-10-26
 
+- **Stage 6/11 Button story visible labels, 2026-10-26:** Public RustUI
+  `ButtonView::localized_label` now resolves the visible label at render time
+  with a stable literal fallback and identity seed; the default accessible
+  name follows that visible label. The canonical Button story supplies
+  English, French and Arabic count/control messages. Locale validation and
+  Playground all-target checking pass; **2/2** focused Button tests pass.
+  An optimized Web build from the working source produced **770/770** verified
+  bundle files (source SHA-256
+  `42b283241e3bba666bb9e24c74042f6029361f223727220f8d80360f1c95fc64`).
+  Chromium showed French and Arabic visible labels and Arabic digits; the
+  Arabic increment action updated the retained count ٠→١. This is bounded
+  Button-story acceptance, not full Playground translation or cross-browser
+  localization acceptance. Final integrated-source release checks remain next.
 - **Integrated macOS/Web release checkpoint, 2026-10-26:** On integrated
   commit `f428a8b8`, `./scripts/verify-release.sh macos` exited 0 on macOS
   27 arm64 using local Headstart: 1,339 passing test cases across 39 reported

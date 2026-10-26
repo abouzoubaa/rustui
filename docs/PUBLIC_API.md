@@ -80,6 +80,11 @@ Button pointer, Enter/Space keyboard activation, focus-ring, and accessibility b
 `ViewHost` retains a root component in a GPUI entity and dispatches component
 mutation methods through GPUI listeners.
 
+`Button("Save", action).localized_label("button.save")` resolves its visible
+label from the active catalog at render time. The constructor label remains the
+fallback and stable identity seed. Without a separate accessibility override,
+the announced name follows the resolved visible label.
+
 ## Avatars and badges
 
 `Avatar` and `Badge` support explicit or localized accessible names through
