@@ -19,6 +19,15 @@ the focused Playground catalog test passed **1/1**, and
 `target/headstart/evidence/foundation-tab-*-20261026.log`. This is source
 coverage; native visual locale-switch acceptance remains open.
 
+On integrated `9ed62d4d`, the Web release driver passed **18/18** host
+IME-plan tests and built the optimized bundle with three unresolved dependency
+notice gaps. All **2,934/2,934** source and **770/770** bundle hashes verified.
+One in-app Chromium profile showed live English, French, and Arabic Foundation
+Demos tab names; the Arabic tab strip remained horizontally scrollable. This
+does not close wider RTL layout, keyboard, cross-browser, or deferred
+screen-reader acceptance. Evidence:
+`target/headstart/evidence/web-foundation-tab-locales-20261026.md`.
+
 The Utility Panel story now resolves its visible title, five tab names,
 section headings, and three ColorPicker labels from the English, French, and
 Arabic catalogs. `TabItem::localized_label` and
