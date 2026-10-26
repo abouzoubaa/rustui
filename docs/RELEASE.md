@@ -86,3 +86,22 @@ signed package on a clean target, publish its checksums, and retain the previous
 verified artifact plus rollback instructions. Record the exact candidate and
 distribution destination for the user's final publication approval. Pushing a
 reviewable branch does not authorize publishing a release.
+
+## Current reproduction checkpoint — 2026-10-26
+
+The native optimized release command now enables `RUSTUI_REMAP_BUILD_PATHS=1`.
+Two independent target directories, each with 555 Cargo artifacts reported rebuilt
+and none fresh, produced the same executable SHA-256:
+`d857e6b5b687951bcb20fd4fff0e1be2abecf7e2eb3b0c8ff696186e8acbffcf`.
+The installed compiler and SDK 26.1 were held fixed. This fixes absolute generated
+source paths affecting native binary identity; it does not prove compiler
+bootstrap, cross-machine, Web or complete archive reproduction.
+
+An unsigned local candidate is retained at
+`target/headstart/release-artifacts/RustUI-Playground-macos-arm64-unsigned-repro-d857e6b5b687.tar.gz`,
+with its adjacent JSON file manifest and checksum. The exact candidate passed one
+W1 functional smoke cycle (seven expected states). Its CPU/RSS performance is not
+substituted for the separate 90-cycle baseline on executable `15c71ff4…`.
+Five native dependency-notice gaps remain. The bundle declares macOS 13.0 as its
+minimum; current native runtime evidence covers macOS 27 arm64. A supported-version
+policy and acceptance across its declared versions are still required.

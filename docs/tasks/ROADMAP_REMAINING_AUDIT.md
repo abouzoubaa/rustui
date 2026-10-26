@@ -9,6 +9,29 @@ subsequent integration and preserve unrelated work.
 
 ## Current checkpoint — 2026-10-26
 
+- Native reproduction defect fixed: html5ever embedded an absolute generated
+  source path, changing the executable between target directories. The opt-in
+  `RUSTUI_REMAP_BUILD_PATHS=1` launcher mode and native optimized release gate
+  normalize paths while preserving caller flags and approved compiler behavior.
+  **Two independent builds are byte-identical**, each with 555 rebuilt / 0 fresh
+  Cargo artifact records. Seven reporter/launcher tests pass; the exact remapped
+  candidate passes **7/7 functional smoke states**, is archived unsigned with a
+  file manifest, and its test app is cleaned up. Evidence:
+  `target/headstart/evidence/native-clean-reproduction-20261026/`.
+  Compiler bootstrap, cross-machine, Web/archive reproduction, version policy,
+  licensing and signed distribution remain open. No upstream source changed.
+
+- Stage 10 release W1 baseline: **3 fresh app test runs, 90/90 measured cycles,
+  630/630 functional child-state observations** pass. Median gross CPU is
+  0.807667 CPU seconds/cycle, median RSS is about 125 MiB, and between-run CPU
+  range is 4.664%. These are CPU/RSS observations with automation pauses, not
+  response time, FPS, leak freedom or an optimization benefit. Raw records,
+  verified hashes and cleanup are under
+  `target/headstart/performance/w1-release-20261026-4e00ad14/`.
+  The W1 reporter's profile/protocol bug is fixed with five focused regressions;
+  historical measurement values remain unchanged. Frame/latency and broader
+  workload acceptance remain open; accessibility remains undone/deferred.
+
 - Source CI passes on `11a28da7`: [run 40295976901](https://github.com/abouzoubaa/rustui/actions/runs/40295976901).
   Its Ubuntu source job passed; the manually dispatched Mac/Web compiled job was
   skipped. This does not establish Linux product support or compiled CI.
@@ -558,10 +581,10 @@ or acceptance percentage has not been recomputed against every contract.
 | R24 | 9: structural composition editing | Approved descriptor-first composition implemented: versioned stable-identity graph/slots, compiled recursive factories, atomic structure/property edits, bounded codec and node-scoped local signals. Focused preview 43/43 and Playground 1/1 pass including property edits, source reload and codec. Native/browser/performance acceptance open. |
 | R25 | 9: D1d external consumer adapter | RustUI Playground Browser Preview Host v1 specified and implemented: 10/10 reference contracts, same-origin postMessage, generic registered preview/composition hosts, explicit owner action policy and protected state boundary. Rust/JS fixtures and bounded real-browser roundtrips pass; broader browser/platform acceptance remains open. See D1D_BROWSER_PREVIEW_HOST.md. |
 | R26 | 9: live theme/data reload | Present, distinct from Rust source hot reload; verify invalid-update recovery and owner-release cleanup. |
-| R27 | 10: performance, provenance and candidate workflow | Extensive bounded tooling present; current-source GUI/performance evidence and candidate review/promotion open. No optimization speed claim or GPU phase acceptance. |
+| R27 | 10: performance, provenance and candidate workflow | Extensive bounded tooling present; current-source GUI/performance evidence and candidate review/promotion open. No optimization speed claim or GPU phase acceptance. Current release W1 CPU/RSS baseline passes 90 measured cycles/630 states across three fresh app launches; frame/latency and broader workloads remain open. |
 | R28 | 11: Web reproducible build/package/assets | Source tooling present; rebuild current source and bind browser observations to exact bundle manifest. |
 | R29 | 11: browser keyboard/AX/IME/fonts | Selected approved semantic/IME adapter v9 builds and passes bounded real-browser edit/selection/action checks. Current D1d preview/composition iframe roundtrips also pass. Full cross-browser, real OS IME/clipboard, glyph and screen-reader acceptance remain. |
-| R30 | Release: CI and reproducible release builds | Actual GitHub source CI passes on 6ad24006, including 581 Python tests and JS/packaging gates. Local macOS Headstart checkpoint passes 1,282 library and 53 integration tests, all-target checks and optimized packaging; Web build and bounded browser checks pass. Macro doctests contain zero cases. No trusted macOS/Web runner is registered; compiled CI, compiler/bootstrap reproduction and independent clean-build artifact comparison remain open. |
+| R30 | Release: CI and reproducible release builds | Actual GitHub source CI passes on 6ad24006, including 581 Python tests and JS/packaging gates. Local macOS Headstart checkpoint passes 1,282 library and 53 integration tests, all-target checks and optimized packaging; Web build and bounded browser checks pass. Macro doctests contain zero cases. No trusted macOS/Web runner is registered; compiled CI, compiler/bootstrap reproduction and independent clean-build artifact comparison remain open. Same-host native executable reproduction now passes across two initially absent targets after generated-path normalization (555 rebuilt / 0 fresh each); compiler bootstrap, cross-machine and Web/archive reproduction remain open. |
 | R31 | Release: security, licensing, performance budgets, packaging/instructions | Complete threat/error audit, dependency/license and font notices, supported-version matrix, reproducibility, package signing/distribution plan and release instructions. Publication requires approval. |
 | R32 | 8: Outline | Source implemented: controlled single-column hierarchy over the existing Tree engine, explicit identity and group name, selected/expanded bindings, public-API Playground story and compiled-preview descriptor. Approved Tree naming/one-based levels are source-implemented. The shared Home/End repair passes 30/30 Tree/Outline tests and real native/Web Tree checks. Outline-specific native/browser, AX/VoiceOver and visual/locale/RTL acceptance remains open. See `docs/tasks/OUTLINE_IMPLEMENTATION.md`. Bounded Web functional acceptance passes 12/12 checks (2026-10-26); native and wider visual/locale checks remain. Accessibility deferred. |
 | R33 | 8: Drawer | Source implemented: controlled visibility, four physical edges, window-owned hosting, current-owner content/bindings, guarded dismissal/unmount, restored focus, named Close, public Playground story and compiled-preview factory. Seven real-Root/validation tests passed; Playground library tests and all-target check passed. Native/browser/AX/VoiceOver, popup stacking and independent modal text-selection isolation remain open. See `docs/tasks/DRAWER_IMPLEMENTATION.md`. Bounded Web functional acceptance passes 13/13 checks (2026-10-26), including all physical edges, caller edits, dismissal and release/remount; native, popup/text-selection and wider checks remain. Accessibility deferred. |

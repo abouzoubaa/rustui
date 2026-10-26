@@ -436,3 +436,22 @@ do not launch Playground or establish native/browser accessibility, VoiceOver,
 IME or visual acceptance. The fake backend does not project AX trees; the
 SplitView event test observes the retained native `ResizableState` after key
 dispatch. Its read-only retained-slot inspector is compiled only for tests.
+
+## Stable generated-source paths for native release artifacts
+
+`RUSTUI_REMAP_BUILD_PATHS=1` opts the Headstart launcher into stable source/build
+path mappings. It maps the physical repository root to `/rustui/src` and the
+selected target directory to `/rustui/build`, preserving caller flags and the
+approved `-Zmetadata-crate-hash=no` workaround. Encoded caller flags retain
+precedence over unencoded `RUSTFLAGS`; paths containing spaces remain single
+encoded arguments. Python 3 is required for this opt-in mode. Development defaults
+are unchanged. Values other than `0` and `1` are rejected.
+
+The native optimized build in `scripts/verify-release.sh macos` enables the mode.
+Select and record the same installed SDK and toolchain when comparing builds.
+Two initially absent native target directories on the current Mac produced
+byte-identical executables after this mapping. Without it, html5ever embeds its
+absolute generated `OUT_DIR/rules.rs` filename and changes executable bytes.
+This establishes same-host, same-toolchain native target-directory reproduction;
+compiler bootstrap, cross-machine, archive and Web reproduction remain separate.
+Evidence: `target/headstart/evidence/native-clean-reproduction-20261026/`.
