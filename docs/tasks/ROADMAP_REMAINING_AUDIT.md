@@ -9,6 +9,16 @@ Reverify live HEAD and dirty state before subsequent integration; preserve unrel
 
 ## Current checkpoint — 2026-10-26
 
+- **Release source gate after approved RTL wrapping, 2026-10-26:** The Web
+  semantic adapter's exact postimage predates the RTL wrapped-row patch on one
+  shared GPUI Web file. A read-only stack verifier now proves the selected RTL
+  postimage, virtually reverses it, then replays the semantic adapter proof on
+  the approved intermediate image. Its lifecycle test fixture uses that same
+  intermediate image. The focused semantic suite passed **7/7**; the complete
+  `./scripts/verify-release.sh source` gate passed **589 Python tests**, its
+  JavaScript checks, packaging/CI fixtures, locale validation, and static theme
+  checks. Log: `target/headstart/evidence/release-source-20261026.log`. This
+  repairs release-tooling composition; it adds no native/browser acceptance.
 - **Stage 11 RTL story canvas, 2026-10-26:** RustUI `ScrollView` now anchors
   horizontal RTL content at its logical start on initial render and locale
   changes. GPUI ignores `window.refresh()` during a draw, so the offset uses a

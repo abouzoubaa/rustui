@@ -24,9 +24,9 @@ verify_web_ime_edit_plan() (
 case "${1:-}" in
   source)
     verify_tree_accessibility_series
-    python3 scripts/apply_gpui_web_semantic_adapter.py --verify
-  python3 scripts/apply_gpui_base_button_disabled_patch.py --verify
-  python3 scripts/apply_gpui_base_disabled_semantic_roots.py --verify
+    python3 scripts/verify_gpui_web_patch_stack.py
+    python3 scripts/apply_gpui_base_button_disabled_patch.py --verify
+    python3 scripts/apply_gpui_base_disabled_semantic_roots.py --verify
     python3 -m unittest discover -s scripts/tests -p 'test_*.py'
     node --test scripts/tests/test_gpui_web_semantic_dom.mjs
     node --test apps/rustui-playground/web/tests/preview-transport.test.mjs
@@ -39,7 +39,7 @@ case "${1:-}" in
     ;;
   macos)
     verify_tree_accessibility_series
-    python3 scripts/apply_gpui_web_semantic_adapter.py --verify
+    python3 scripts/verify_gpui_web_patch_stack.py
     python3 scripts/apply_gpui_macos_focused_element_patch.py --verify
     if [[ "$(uname -s)" != Darwin ]]; then
       echo 'The macos release check requires a macOS host.' >&2
@@ -90,7 +90,7 @@ PY
   web)
     verify_tree_accessibility_series
     verify_web_ime_edit_plan
-    python3 scripts/apply_gpui_web_semantic_adapter.py --verify
+    python3 scripts/verify_gpui_web_patch_stack.py
     RUSTUI_HEADSTART_ROOT="${RUSTUI_WASM_HEADSTART_ROOT:-$repository_root/target/headstart/wasm-root}" \
     CARGO_TARGET_DIR="${RUSTUI_WASM_TARGET_DIR:-$repository_root/target/headstart/x1a-wasm}" \
       ./scripts/build-playground-web.sh

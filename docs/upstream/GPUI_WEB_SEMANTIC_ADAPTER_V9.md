@@ -30,9 +30,14 @@ python3 scripts/apply_gpui_web_semantic_adapter.py --apply
 python3 scripts/apply_gpui_web_semantic_adapter.py --verify
 ```
 
-For an already installed checkout, run only `--verify`. `--reverse` returns to
-the exact prerequisite image; `--reverse-prerequisites` returns from there to
-the original image. The helper checks preimages, patch digests, postimages,
+The selected checkout also applies the approved RTL wrapped-row patch to a
+shared Web source file. Verify that installed stack with
+`python3 scripts/verify_gpui_web_patch_stack.py`; it reverses the RTL layer
+only in a temporary image before proving the semantic layer. The `--verify`
+command above applies to the intermediate semantic-only image. `--reverse`
+returns that intermediate image to the exact prerequisite image;
+`--reverse-prerequisites` returns from there to the original image. The helper
+checks preimages, patch digests, postimages,
 upstream checksums/licenses and the composed keyboard baseline. It stages
 multi-file replacement and rolls back failed writes. Unknown source images
 are rejected. Keep the separate Tree and disabled-state patch selections.

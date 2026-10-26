@@ -6,6 +6,8 @@ from unittest.mock import patch
 ROOT=Path(__file__).resolve().parents[2]
 SPEC=importlib.util.spec_from_file_location('semantic_adapter',ROOT/'scripts/apply_gpui_web_semantic_adapter.py')
 ADAPTER=importlib.util.module_from_spec(SPEC);SPEC.loader.exec_module(ADAPTER)
+BIDI_SPEC=importlib.util.spec_from_file_location('bidi_patch',ROOT/'scripts/apply_gpui_bidi_wrapped_rows_patch.py')
+BIDI=importlib.util.module_from_spec(BIDI_SPEC);BIDI_SPEC.loader.exec_module(BIDI)
 class SemanticLifecycle(unittest.TestCase):
  def setUp(self):
   self.temp=tempfile.TemporaryDirectory();self.addCleanup(self.temp.cleanup)
@@ -16,6 +18,11 @@ class SemanticLifecycle(unittest.TestCase):
   for path in paths:
    src=ROOT/path;dest=self.root/path
    if src.exists():dest.parent.mkdir(parents=True,exist_ok=True);shutil.copy2(src,dest)
+  bidi_meta=BIDI.load_manifest()
+  state,current=BIDI.current_images(bidi_meta)
+  self.assertEqual(state,'post')
+  for path,data in BIDI.staged_images(bidi_meta,current,reverse=True).items():
+   if path in paths:(self.root/path).write_bytes(data)
   self.meta=ADAPTER.load(self.root,self.art)
   self.assertEqual(ADAPTER.identify(ADAPTER.sources(self.root,self.meta),self.meta),'post')
  def run_mode(self,mode):
