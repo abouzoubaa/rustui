@@ -316,11 +316,16 @@ impl View for StoryCanvas {
                     "search-field-reference-gallery",
                     SearchFieldReferenceGallery::default,
                 ))
-                .child(Text(format!("Bound value: {}", self.input_text)))
+                .child(
+                    LocalizedText("lab-input-bound-value").with_arguments(
+                        MessageArguments::new().with("value", self.input_text.clone()),
+                    ),
+                )
                 .child(
                     TextField("Name", self.input_binding.clone())
                         .id("story-input-name")
-                        .accessibility_label("Name"),
+                        .localized_placeholder("lab-input-name")
+                        .localized_accessibility_label("lab-input-name"),
                 )
                 .child(
                     SecureField("Password", self.secure_binding.clone())

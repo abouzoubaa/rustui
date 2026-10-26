@@ -71,17 +71,25 @@ fn clear_invalid_selection(current: &mut Option<usize>, invalid: usize) -> bool 
 
 fn resolve_list_items(
     items: &[String],
+    localized_labels: &[String],
     localized_suffixes: &[String],
     mut resolve: impl FnMut(&str) -> String,
 ) -> Vec<String> {
-    if localized_suffixes.is_empty() {
-        return items.to_vec();
-    }
-    debug_assert_eq!(items.len(), localized_suffixes.len());
+    debug_assert!(localized_labels.is_empty() || items.len() == localized_labels.len());
+    debug_assert!(localized_suffixes.is_empty() || items.len() == localized_suffixes.len());
     items
         .iter()
-        .zip(localized_suffixes)
-        .map(|(item, message_id)| format!("{item} · {}", resolve(message_id)))
+        .enumerate()
+        .map(|(index, item)| {
+            let label = localized_labels
+                .get(index)
+                .map_or_else(|| item.clone(), |message_id| resolve(message_id));
+            if let Some(message_id) = localized_suffixes.get(index) {
+                format!("{label} · {}", resolve(message_id))
+            } else {
+                label
+            }
+        })
         .collect()
 }
 
@@ -217,6 +225,7 @@ impl ListDelegate for StringListDelegate {
 /// A virtualized string list with controlled source-index selection.
 pub struct ListView {
     items: Vec<String>,
+    localized_labels: Vec<String>,
     localized_suffixes: Vec<String>,
     selection: Binding<Option<usize>>,
     id: Option<Identity>,
@@ -242,6 +251,7 @@ impl ListView {
 
         Self {
             items,
+            localized_labels: Vec::new(),
             localized_suffixes: Vec::new(),
             selection,
             id: None,
@@ -296,6 +306,25 @@ impl ListView {
         self
     }
 
+    /// Replaces each displayed item with an active-locale message while keeping
+    /// source-index selection stable.
+    pub fn localized_labels<I, S>(mut self, message_ids: I) -> Self
+    where
+        I: IntoIterator<Item = S>,
+        S: Into<String>,
+    {
+        self.localized_labels = message_ids.into_iter().map(Into::into).collect();
+        assert!(
+            self.localized_labels.is_empty() || self.localized_labels.len() == self.items.len(),
+            "Localized list labels must match item count"
+        );
+        assert!(
+            self.localized_labels.iter().all(|id| !id.trim().is_empty()),
+            "Localized list label IDs must be nonempty"
+        );
+        self
+    }
+
     /// Appends the active-locale message for each corresponding item.
     pub fn localized_suffixes<I, S>(mut self, message_ids: I) -> Self
     where
@@ -343,9 +372,12 @@ impl View for ListView {
 
     fn into_element(&self, context: &mut RenderContext<'_>) -> AnyElement {
         let identity = self.identity_with(|base| context.next_implicit_retained_identity(base));
-        let items = resolve_list_items(&self.items, &self.localized_suffixes, |message_id| {
-            context.localized_message(message_id)
-        });
+        let items = resolve_list_items(
+            &self.items,
+            &self.localized_labels,
+            &self.localized_suffixes,
+            |message_id| context.localized_message(message_id),
+        );
         let initial_selection = self.selection.value();
         let row_height = self.row_height;
         let searchable = self.searchable;
@@ -522,6 +554,20 @@ mod tests {
     }
 
     #[test]
+    fn localized_labels_replace_rows_and_trigger_retained_list_update() {
+        let view = ListView::new(["Text inputs"], selection_binding())
+            .localized_labels(["lab-story-input-title"]);
+        let english = resolve_list_items(&view.items, &view.localized_labels, &[], |_| {
+            String::from("Text inputs")
+        });
+        let french = resolve_list_items(&view.items, &view.localized_labels, &[], |_| {
+            String::from("Champs de texte")
+        });
+        assert_eq!(french, ["Champs de texte"]);
+        assert!(list_data_changed(&english, 36.0, &french, 36.0));
+    }
+
+    #[test]
     fn localized_suffixes_preserve_item_prefixes_and_resolve_by_active_locale() {
         let message_id = "lab-catalog-coverage-partial";
         let view = ListView::new(["slider"], selection_binding()).localized_suffixes([message_id]);
@@ -545,9 +591,10 @@ mod tests {
             ("ar", "slider · جزئي"),
         ] {
             let locale = rustui_i18n::Locale::parse(locale).expect("test locale");
-            let label = resolve_list_items(&view.items, &view.localized_suffixes, |message_id| {
-                catalogs.resolve(&locale, message_id).to_owned()
-            });
+            let label =
+                resolve_list_items(&view.items, &[], &view.localized_suffixes, |message_id| {
+                    catalogs.resolve(&locale, message_id).to_owned()
+                });
             assert_eq!(label, [expected]);
         }
     }
@@ -556,8 +603,8 @@ mod tests {
     fn localized_rows_remain_stable_until_the_resolved_locale_changes() {
         let items = vec![String::from("slider")];
         let suffixes = vec![String::from("coverage-partial")];
-        let english = resolve_list_items(&items, &suffixes, |_| String::from("Partial"));
-        let french = resolve_list_items(&items, &suffixes, |_| String::from("Partiel"));
+        let english = resolve_list_items(&items, &[], &suffixes, |_| String::from("Partial"));
+        let french = resolve_list_items(&items, &[], &suffixes, |_| String::from("Partiel"));
 
         assert!(!list_data_changed(&english, 36.0, &english, 36.0));
         assert!(list_data_changed(&english, 36.0, &french, 36.0));

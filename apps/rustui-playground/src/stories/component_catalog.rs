@@ -21,6 +21,34 @@ pub enum StoryId {
 }
 
 impl StoryId {
+    pub const fn message_slug(self) -> &'static str {
+        match self {
+            Self::Button => "button",
+            Self::Text => "text",
+            Self::Layout => "layout",
+            Self::Input => "input",
+            Self::List => "list",
+            Self::Table => "table",
+            Self::Tree => "tree",
+            Self::Drawer => "drawer",
+            Self::GraphView => "graph-view",
+            Self::NodeEditor => "node-editor",
+            Self::SplitView => "split-view",
+            Self::Outline => "outline",
+            Self::Tabs => "tabs",
+            Self::Breadcrumb => "breadcrumb",
+            Self::Navigation => "navigation",
+        }
+    }
+
+    pub fn title_message_id(self) -> String {
+        format!("lab-story-{}-title", self.message_slug())
+    }
+
+    pub fn summary_message_id(self) -> String {
+        format!("lab-story-{}-summary", self.message_slug())
+    }
+
     pub const fn label(self) -> &'static str {
         match self {
             Self::Button => "Button",

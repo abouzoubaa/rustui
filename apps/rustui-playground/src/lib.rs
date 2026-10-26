@@ -65,7 +65,7 @@ impl Playground {
     }
 
     fn story_binding(&self) -> Binding<Option<usize>> {
-        let rows = filtered_story_indices(&self.query);
+        let rows = filtered_story_indices_localized(&self.query);
         Binding::new_with(
             self.story_selection
                 .and_then(|selected| rows.iter().position(|index| *index == selected)),
@@ -165,6 +165,15 @@ impl Playground {
 
     fn sidebar(&self) -> impl View {
         let catalog_indices = filtered_catalog_indices(&self.query);
+        let story_indices = filtered_story_indices_localized(&self.query);
+        let story_labels = story_indices
+            .iter()
+            .map(|&index| STORIES[index].id.label())
+            .collect::<Vec<_>>();
+        let story_messages = story_indices
+            .iter()
+            .map(|&index| STORIES[index].id.title_message_id())
+            .collect::<Vec<_>>();
         let rows = catalog_indices
             .iter()
             .map(|&index| CATALOG[index].key)
@@ -198,16 +207,11 @@ impl Playground {
                     .font_weight(TextWeight::Bold),
             )
             .child(
-                List(
-                    filtered_story_indices(&self.query)
-                        .into_iter()
-                        .map(|index| STORIES[index].id.label())
-                        .collect::<Vec<_>>(),
-                    self.story_binding(),
-                )
-                // Reset the virtualized viewport so filtered matches remain visible.
-                .id(format!("playground-stories:{}", self.query))
-                .height(220.0),
+                List(story_labels, self.story_binding())
+                    .localized_labels(story_messages)
+                    // Reset the virtualized viewport so filtered matches remain visible.
+                    .id(format!("playground-stories:{}", self.query))
+                    .height(220.0),
             );
         if !self.query.trim().is_empty() && !search_has_results(&self.query) {
             sidebar = sidebar.child(LocalizedText("lab-search-no-matches").font_size(12.0));
@@ -241,7 +245,7 @@ impl Playground {
                     |item| LocalizedText(item.note_message_id),
                 )
             },
-            |story| Text(story.summary),
+            |story| LocalizedText(story.id.summary_message_id()),
         );
         let catalog_demo = self
             .item()
@@ -259,7 +263,15 @@ impl Playground {
         Container(
             ScrollView(
                 VStack::new()
-                    .child(Text(title).font_size(20.0).font_weight(TextWeight::Bold))
+                    .child(
+                        selected_story
+                            .map_or_else(
+                                || Text(title),
+                                |story| LocalizedText(story.id.title_message_id()),
+                            )
+                            .font_size(20.0)
+                            .font_weight(TextWeight::Bold),
+                    )
                     .child(coverage.font_size(12.0))
                     .child(note.font_size(13.0))
                     .child(active_story.map(|_| {
@@ -382,8 +394,35 @@ fn filtered_catalog_indices(query: &str) -> Vec<usize> {
     matches
 }
 
+fn filtered_story_indices_localized(query: &str) -> Vec<usize> {
+    let query = query.trim().to_lowercase();
+    let mut matches = filtered_story_indices(&query);
+    if query.is_empty() {
+        return matches;
+    }
+    let catalogs = catalog_search_catalogs();
+    for (index, story) in STORIES.iter().enumerate() {
+        if catalogs.iter().any(|(locale, _)| {
+            [story.id.title_message_id(), story.id.summary_message_id()]
+                .iter()
+                .any(|message_id| {
+                    catalogs
+                        .resolve(locale, message_id)
+                        .to_lowercase()
+                        .contains(&query)
+                })
+        }) {
+            matches.push(index);
+        }
+    }
+    matches.sort_unstable();
+    matches.dedup();
+    matches
+}
+
 fn search_has_results(query: &str) -> bool {
-    !filtered_catalog_indices(query).is_empty() || !filtered_story_indices(query).is_empty()
+    !filtered_catalog_indices(query).is_empty()
+        || !filtered_story_indices_localized(query).is_empty()
 }
 
 impl View for Playground {
@@ -896,6 +935,14 @@ mod tests {
         assert_eq!(app.item().map(|item| item.key), Some("button"));
         assert!(app.catalog_binding().write_to(&mut app, Some(slider_row)));
         assert_eq!(app.item().map(|item| item.key), Some("slider"));
+    }
+
+    #[test]
+    fn localized_story_search_preserves_source_index_mapping() {
+        let rows = filtered_story_indices_localized("champs de texte");
+        assert_eq!(rows, [3]);
+        assert_eq!(STORIES[rows[0]].id, StoryId::Input);
+        assert_eq!(filtered_story_indices_localized("حقول النص"), rows);
     }
 
     #[test]
