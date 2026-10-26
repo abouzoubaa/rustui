@@ -55,9 +55,9 @@ were observed, but exact protected replacement is not claimed.
 
 Real OS IME composition, clipboard roundtrips, screen readers, broader browser
 coverage and final performance acceptance remain open. Native AX actions are
-separate evidence: coordinate input still reports `noWindowsAvailable`, focus
-export needs its own native patch, and rendered captures disagree with current
-AX state. Do not infer native visual or VoiceOver acceptance from these tests.
+separate evidence: coordinate input still reports `noWindowsAvailable` and rendered captures
+disagree with current AX state. The separately selected native focus-forwarder
+patch passes its named-field AX retest; physical/visual/VoiceOver gates stay open. Do not infer native visual or VoiceOver acceptance from these tests.
 
 Historical development artifacts and failed-build evidence are preserved under
 `/tmp/rustui-preservation-20261025` and the frozen `/tmp/rustui-web-semantic-adapter-*`

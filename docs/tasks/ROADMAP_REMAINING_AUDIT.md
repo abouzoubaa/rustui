@@ -1,40 +1,104 @@
-# Production consolidation — 2026-10-25
+# Production consolidation — 2026-10-26
 
-This is the canonical current remaining-work record. The historical entries
-below are evidence leads; their old milestones and approval assertions are not
-current acceptance decisions. Scope: macOS and Web/Wasm browser. No additional
-platform, GPUI Fast, or advanced GPU/native composition support is claimed.
+## Current checkpoint — 2026-10-26
 
-Sole writer: thread `01a172cd-8a21-73f1-82cd-62d451c71ec9`, claim
-`c44f414bfbf4ef4c4f30`, branch
-`codex/production-consolidation-01a172cd`, registered worktree
-`/Users/Abium/.codex/worktrees/rustui-production-consolidation/rustui`.
-Integration target verified from the primary checkout:
-`work/m118-diagnostics-provenance` at
-`567f933c76b90fde3fcdda4ff45dc660df1eb217`; it descends from `main`.
-Reverify its HEAD and dirty state before integration. Do not overwrite its work.
+- Implementation fixes are committed: security `0e1f39a7`, isolated secure-story
+  state `5fce25d3`, disabled semantic controls `7914ecda`, selected Web adapter v9
+  `9d10622e`, and same-version native focus export/local selection `84f3a477`.
+  GPUI-pre 0.3.9 and Components/Base 0.7.3 remain pinned.
+- Current checks pass: **581 Python tests**, **1,274 workspace library tests**
+  (948 RustUI), **53 public integration tests**, workspace all-target checking,
+  and optimized native packaging. Macro doctests ran with zero cases.
+  Web v9 also passed its optimized build, **18 Rust planner tests**, **19
+  JavaScript fixtures**, and 13 bounded real-browser checks.
+- Native focus implementation is complete and its named-field AX retest passes.
+  **5/8 bounded native acceptance checks pass**: focused named field, search
+  clearing, Space activation, Enter reset, and forward/reverse Tab skipping the
+  disabled button. Coordinate input still returns `noWindowsAvailable`; a joint
+  capture shows AX Count:2 while the image shows Count:0; VoiceOver was not run.
+  These three gates remain open. The capture/service-versus-product cause is
+  unconfirmed. No speculative renderer or protected-input repair was made.
+- The native patch verifier requires Cargo's local path selection: registry
+  packages are treated as immutable and can reuse an original artifact after
+  patching. Metadata, actual local backend compilation and a changed executable
+  hash establish the tested source. Six empty-Cargo-cache fixture tests pass.
+- Playground's password field uses separate secure state. Its rebuilt browser
+  owner is password-type and public labels/inputs do not echo that value.
+  Protected replacement moved selection and cleared, but value inspection was
+  inconclusive; real OS IME, clipboard and screen-reader acceptance remain open.
+- Rustls-webpki 0.103.16 fixes RUSTSEC-2026-0382 with unchanged dependencies and
+  verified official source. A fresh OSV query reports no advisories for it.
+  Native dependency notices still have **5 gaps** (Web **4**); packaging success
+  does not close licensing or publication gates.
+- Primary integration is prepared but not performed. Its **1,116 dirty paths**
+  are archived with hashes/modes. Source changes are retained or superseded;
+  four missing Trail documents were restored. **24 unrelated private/generated
+  paths will be preserved unchanged**, including private config and probes.
+  Related staged/index state will remain recoverable before integration.
+- Whole-project inventory: **37 provisional requirements**. Full coding and
+  acceptance percentages have not been recomputed from every contract; the
+  bounded counts above are not project completion percentages. D1d consumer/
+  transport, remaining native/browser/locale/RTL/font and IME acceptance,
+  performance, reproducibility, notices and signing/distribution remain open.
 
-## Approval and integration update — 2026-10-25
+Evidence: `/tmp/rustui-preservation-20261025/browser/semantic-v9`,
+`/tmp/rustui-preservation-20261025/native-focused-element-v1`,
+`/tmp/rustui-primary-exclusions-analysis`, and current checkpoint logs under
+`/tmp/rustui-production-*-checkpoint-20261026.log`. No test app is running;
+owned disposable GUI bundles/executables were cleaned up and the slot released.
 
-The user approved all pending prepared upstream patches and locale architecture/dependencies ("I approve everything just proceed"). Pinned GPUI 0.3.9 and Components 0.7.3 remain unchanged. Tree root/name/level series is installed through the reproducible helper and its exact POST verification passes; focused tests are being repaired/run. ICU4X/Fluent candidate passed ten preimage checks; 29 new dependency archives were verified and vendored, with minimal lockfile resolution. ICU Provider sync fixes the concurrent-memoizer integration. Locale tests pass 101/101 (82 unit, 9 legacy catalog, 10 Fluent/ICU). The source release driver passes 552 Python tests plus packaging/static checks. Component checkpoint now passes 937/937 after correcting a stale theme-count fixture. The approved default Headstart incremental path hit an ICU def_span fingerprint ICE on reuse; a per-command rustui-i18n-only nonincremental diagnostic passes without changing repository compiler configuration or other packages incremental policy. Current native/browser acceptance and default-cache reliability remain separate gates. The exact Tree series is committed as `016c938b`; its in-memory rendered Tree regression is source evidence, not native AX. The locale API doctest passes 1/1, and the existing Playground localization story passes 3/3 including new Fluent/ICU samples for English/French/Arabic. Fresh isolated validation with the unchanged approved incremental configuration also passes all 102 locale tests/doctest, confirming a reused-cache compiler defect. All 29 new packages declare SPDX metadata; four verbatim upstream MIT/Apache notices for the two incomplete archives are captured by exact-revision supplements. The manifest now validates 40 package mappings, with final distribution compatibility still open. Browser semantic/secure-input candidate remains detached pending verification. No new native/browser acceptance claimed.
+## Approval and current integration — 2026-10-25
 
-## Current source milestone — 2026-10-25
+The user approved pending upstream patches and locale strategy/dependencies.
+Same-version repairs use exact, reversible, versioned patch helpers. GPUI 0.3.9
+and Components 0.7.3 remain pinned; upstream license/checksum metadata is preserved.
 
-Inventory remains 37 required areas; whole-project coding/acceptance percentages
-remain provisional. This milestone implements the six explicit composition source
-contracts recorded in `STAGE9_DESCRIPTOR_COMPOSITION_IMPLEMENTATION.md` (6/6
-coded in commit `986141fd`; three target/performance acceptance groups remain 0/3 closed). The browser
-semantic/protected-input series is installed reproducibly and its 14 actual-JS
-fixtures pass. Native all-targets checking passes; Wasm compilation found seven
-platform-configuration errors now being repaired through a revised exact patch.
-No browser semantic/IME/screen-reader or native AX/VoiceOver acceptance is claimed.
+Coding remains a 37-area provisional inventory. Tree root/name/levels, locale,
+graph controls, link contrast and descriptor composition are implemented. Six
+composition source contracts are coded (6/6); native/browser/performance acceptance
+remains 0/3 closed. Existing animations were preserved, not rebuilt.
 
-A fresh OSV query covers 834 registry packages: eight maintenance notices and
-RUSTSEC-2026-0382 for rustls-webpki 0.103.15. Default macOS and Wasm reverse trees
-select no such package; all-target dependency selection does. Fixed version is
-0.103.16. Raw current evidence is under `target/headstart/evidence/osv-*20261025.json`.
-No dependency revision was silently changed; feature-specific release selection
-must be checked before distribution.
+Current source evidence: 948 RustUI library tests; 53 public integration tests
+across 32 groups; 102 locale tests/doctest; 3 Playground localization checks and
+1 composition check. v4 release source checks passed 571 Python tests and 17 JS
+fixtures plus packaging/static checks. Newer Web source receives focused checks
+before the final source rerun. An ICU incremental fingerprint ICE affects reused
+state; fresh isolated validation and an i18n-only per-command diagnostic pass.
+Repository compiler settings and shared caches are unchanged.
+
+Actual browser Enter/Space/Reset actions work. Disabled Button is disabled in AX
+and skipped by Tab. Equivalent flags were repaired in Select, DatePicker and
+InputBase. One named native text owner, Retina CSS bounds, ordinary typing and
+selection now work. Testing found empty replacement and rapid selection/deletion
+desynchronization. v5 fixed empty replacement; v6 adds shared absolute selection
+import before keys, beforeinput and selectionchange (16 Rust cases pass). Actual
+Mac-browser testing found missing Command bindings: Wasm used only the non-Mac
+Control keymap. v7 enables Command A/C/X/V alongside Control; browser validation
+is in progress.
+Evidence/manifests: /tmp/rustui-preservation-20261025/browser/.
+Real IME composition, protected input, VoiceOver, other controls and cross-browser
+acceptance remain open. No source/mock check substitutes for these gates.
+
+Native optimized build succeeded with executable SHA-256
+0f3c4550132ebe4a425fa76250ce0d6d038f4d02b1cd10b37e9a3f3734fffe7e.
+The owned disposable bundle rendered on macOS 27.0 arm64. CUA exposed only window
+chrome, then actions failed with noWindowsAvailable and Dock control timed out.
+Native interaction/AX/VoiceOver is not passed. Desktop availability was requested;
+browser/source work continues. The owned test process, bundle and standalone executable were cleaned up;
+evidence and shared caches remain.
+
+Remaining release gates include D1d consumer/transport specification, target and
+accessibility/performance acceptance, clean-build reproduction and CI, licensing
+and distribution closure. Native notices cover 441 observed packages with 5 gaps;
+Web notices cover 403 with 4 gaps. Four exact-revision Fluent notices are captured;
+all 29 new locale packages declare SPDX metadata. Zero valid local signing
+identities are configured. Developer ID/notarization requires provisioning and
+final distribution authorization. No production readiness or publication claimed.
+
+Fresh OSV query covers 834 registry packages: eight maintenance notices and
+RUSTSEC-2026-0382 (rustls-webpki 0.103.15; fixed 0.103.16). Default macOS/Wasm
+graphs do not select it; the all-target graph does. No silent dependency update.
+Raw responses are under target/headstart/evidence/osv-*20261025.json.
 
 ## Ownership and preservation
 
@@ -303,21 +367,12 @@ removed, and no test app remains running. Full native keyboard/AX/VoiceOver is o
 
 ## Initial requirement inventory (provisional)
 
-The current inventory has **37 provisional audit requirements**. Four source
-contracts and three acceptance contracts have been fully audited and closed;
-most other rows already contain substantial implementation but remain under
-review. These counts measure audit closure, not code written or overall roadmap
-completion. The previously quoted 11%/8% figures are withdrawn as project
-progress estimates because the inventory is incomplete and the requirements
-have unequal scope. A reliable implementation/acceptance percentage requires
-verification against all preserved work before assigning complete/partial/missing
-states. Do not restart implemented components to improve this count.
+This is a provisional inventory of **37 release requirements**. Implemented
+source does not establish acceptance. Closed coordination/source-selection
+rows do not count as component acceptance. Use the current checkpoint above
+for bounded implementation and executed-check counts; a whole-project coding
+or acceptance percentage has not been recomputed against every contract.
 
-The user explicitly reiterated on 2026-10-25 that components have already been
-coded. Before new component feature work, inspect all retained worktrees and
-branches for useful implementations; recover/integrate them first. The five
-scaffold observations below describe the consolidation checkout and remain
-recovery leads, not permission to rebuild existing work.
 
 | ID | Stage / required capability | Current implementation and remaining release work |
 | --- | --- | --- |
@@ -329,7 +384,7 @@ recovery leads, not permission to rebuild existing work.
 | R05 | 1: lifecycle, owner actions, subscriptions | Present; F1E/M16 native ownership acceptance open. Picker obsolete-subscription runtime fix and focused handle-lifetime test integrated; ten full lifecycle event-path tests now pass; native ownership acceptance remains. |
 | R06 | 2: state, identity, binding, observation, environment | Present within documented GPUI/render-time contracts; audit invalidation, retention and error boundaries against F1 contracts. |
 | R07 | 2: layout, geometry and animation identity | Present; current-source native geometry, RTL and reduced-motion observations remain. |
-| R08 | 2/9: timing/animation API | Opacity/spring present; timing curves implemented and source-checked; transition/animator scaffolds need scoped contract review. No second scheduler. |
+| R08 | 2/9: timing/animation API | Defined behavior is implemented: four timing curves, mount opacity and state-driven opacity/X/Y springs over GPUI. Current contract review found no additional consumer for the reserved Animator/Transition modules; those files are not counted as capabilities. Native motion/reduced-motion acceptance remains open. |
 | R09 | 3: Playground catalog, stories, events, source examples | Present; current library tests passed. Validate reachability, examples and visual/keyboard behavior in the canonical app. |
 | R10 | 4: macro grammar and public integration tests | Implemented; current macOS checkpoint passes all 43 workspace integration tests plus library/all-target checks. Matching-toolchain macro doctest target runs with zero cases. Historical M69/E0463 failure is not reproduced in the persistent verification target; native declarative-layout acceptance remains separate. |
 | R11 | 4: basic components and semantics | Present; audit source contracts and current native visual/focus/AX behavior. |

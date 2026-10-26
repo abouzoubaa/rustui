@@ -6,10 +6,12 @@ GPUI Components. It is MIT licensed and under active development.
 ## Current status
 
 
-Stages 0–8 have baseline implementations through Stage 8G. Stage 9 has partial
-compiled-preview support through D1a–D1c; catalog breadth and runtime acceptance
-remain incomplete. Behavioral, visual, accessibility, performance, and platform
-acceptance also remain open. Stage 8 includes retained, virtualized `List`,
+Core source includes retained components, inputs, collections, navigation,
+overlays, graph/node editing, ICU4X/Fluent localization and descriptor-first
+compiled composition editing. The canonical Playground exercises the public API.
+External preview-host integration and release acceptance remain incomplete.
+Behavioral, visual, accessibility, performance, and platform acceptance also
+remain open. Stage 8 includes retained, virtualized `List`,
 `Table`, and `Tree` controls with controlled selection.
 
 `ComponentHost` retains keyed GPUI entities and subscriptions. `TextField`,
@@ -84,7 +86,7 @@ Approved upstream stack:
 | `rustui` | Public declarative API, component adapters, layout, theme and GPUI integration | Partial |
 | `rustui-core` | Action, identity, state, binding, invalidation and environment contracts | Initial implementation |
 | `rustui-macros` | `#[component]`, `VStack!`, and `HStack!` | Initial implementation |
-| `rustui-i18n` | Locale, catalog, fallback, direction, bounded formatting and validation | Bounded implementation; full CLDR and date formatting remain open |
+| `rustui-i18n` | Legacy/Fluent catalogs, ICU4X number/date/time formatting, locale preferences and validation | Runtime implemented; locale/RTL/font acceptance pending |
 | `rustui-rgpe` | Performance diagnostics and approved optimization integration | Scaffold |
 | `rustui-playground` | Canonical component development app and macOS 27 reference catalog | GUI acceptance pending |
 | `rustui-lab` | Compatibility launcher delegating to RustUI Playground | Compatibility |

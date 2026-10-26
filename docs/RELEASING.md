@@ -22,7 +22,8 @@ The source checks run Python tooling regressions, packaging fixtures, locale
 records, theme plans and static adapter coverage. They do not compile Rust.
 The macOS checks use host rustfmt 1.97.1 and the approved Headstart launcher
 for the dependency boundary, all targets, library and public integration
-tests, macro doctests, and an optimized Playground package. The Web check
+tests, macro doctests, and an optimized Playground package. The Web check first
+runs the dependency-free edit-planner regressions with host Rust 1.97.1, then
 produces the optimized JavaScript/Wasm bundle, SVG references and font/icon
 license notices. Fixture packaging tests use stubs and are separate evidence
 from the real target builds.
