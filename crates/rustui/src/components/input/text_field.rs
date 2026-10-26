@@ -136,12 +136,6 @@ impl TextFieldView {
             !id.trim().is_empty(),
             "TextField placeholder localization key must not be blank"
         );
-        if self.accessibility_label.is_none() {
-            self.accessibility_label = Some(TextFieldAccessibilityLabel::Message {
-                id: id.clone(),
-                fallback: self.default_accessibility_label(),
-            });
-        }
         self.placeholder_message_id = Some(id);
         self
     }
@@ -243,7 +237,14 @@ impl TextFieldView {
             Some(TextFieldAccessibilityLabel::Message { id, fallback }) => {
                 resolved_message_label(id.as_ref(), localized_message(id.as_ref()), fallback)
             }
-            None => self.default_accessibility_label(),
+            None => {
+                let placeholder = self.resolved_placeholder(localized_message);
+                if placeholder.trim().is_empty() {
+                    DEFAULT_ACCESSIBILITY_LABEL.into()
+                } else {
+                    placeholder
+                }
+            }
         }
     }
 
@@ -983,6 +984,19 @@ mod tests {
                 .resolved_accessibility_label(|_| "Rechercher".into())
                 .as_ref(),
             "Find items"
+        );
+
+        let replaced = TextField("Search", binding())
+            .localized_placeholder("field.old")
+            .localized_placeholder("field.new");
+        assert_eq!(
+            replaced
+                .resolved_accessibility_label(|id| {
+                    assert_eq!(id, "field.new");
+                    "Chercher".into()
+                })
+                .as_ref(),
+            "Chercher"
         );
     }
 

@@ -83,6 +83,15 @@ Reverify live HEAD and dirty state before subsequent integration; preserve unrel
   `target/headstart/evidence/release-web-localized-search-20261026.log`.
   This closes the bounded search-placeholder locale behavior, not full
   Playground localization or wider OS/browser acceptance.
+- **TextField locale-key replacement follow-up, 2026-10-26:** The default
+  accessible name now resolves from the current placeholder key at render
+  time, so a later `localized_placeholder` call cannot leave it tied to an
+  earlier key. Explicit accessibility names remain authoritative. The focused
+  TextField group passed **39/39** and Playground all-target check passed.
+  Evidence: `target/headstart/evidence/text-field-locale-regressions-20261026.log`
+  and `target/headstart/evidence/playground-text-field-chain-check-20261026.log`.
+  The full release drivers above ran before this narrow follow-up; they are
+  current for the preceding commit, while this change has focused validation.
 - **Integrated macOS/Web release checkpoint, 2026-10-26:** On integrated
   commit `f428a8b8`, `./scripts/verify-release.sh macos` exited 0 on macOS
   27 arm64 using local Headstart: 1,339 passing test cases across 39 reported
