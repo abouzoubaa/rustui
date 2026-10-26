@@ -1,6 +1,7 @@
 """Focused tests for caller-declared build provenance fields."""
 
 import json
+import os
 from pathlib import Path
 import subprocess
 import sys
@@ -70,6 +71,7 @@ class RecordBuildProvenanceTests(unittest.TestCase):
                     sys.executable, str(SCRIPT), str(log), "--workspace", str(root),
                     "--output", str(missing_output), "--binary", "missing-binary",
                 ],
+                env={**os.environ, "RUSTUI_HEADSTART_ROOT": str(root / "no-compiler")},
                 capture_output=True,
                 text=True,
             )
@@ -77,6 +79,7 @@ class RecordBuildProvenanceTests(unittest.TestCase):
             self.assertEqual(missing.stdout.strip(), str(missing_output))
             missing_record = json.loads(missing_output.read_text(encoding="utf-8"))
             self.assertEqual(missing_record["selected_binary"]["status"], "missing")
+            self.assertIsNone(missing_record["compiler_identity"])
 
     def test_force_rejects_output_hard_link_to_build_log(self):
         with tempfile.TemporaryDirectory() as temporary:

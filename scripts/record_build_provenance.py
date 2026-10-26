@@ -383,7 +383,11 @@ def main():
         "purpose": "build provenance capture; not build, correctness, reuse, or performance verdict",
         "build_log": {"path": str(args.log), "sha256": log_hash, "size_bytes": log_size, "parsed_for_success": False},
         "selected_binary": binary_record,
-        "compiler_identity": compiler_identity() if binary_relative else None,
+        "compiler_identity": (
+            compiler_identity()
+            if binary_record and binary_record["status"] == "captured"
+            else None
+        ),
         "build_facts_declared_by_caller": {
             "command": args.command,
             "profile": args.profile,

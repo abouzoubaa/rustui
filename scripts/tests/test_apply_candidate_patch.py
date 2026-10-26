@@ -3,6 +3,7 @@
 
 from __future__ import annotations
 
+from contextlib import ExitStack
 import hashlib
 import json
 import os
@@ -88,8 +89,11 @@ class CopyDirectoryDescriptorTests(unittest.TestCase):
     def test_copy_deep_directory_chain_with_bounded_descriptors(self) -> None:
         depth = 1100
         directory_flags = os.O_RDONLY | os.O_DIRECTORY | os.O_NOFOLLOW
-        with tempfile.TemporaryDirectory() as temporary:
+        with tempfile.TemporaryDirectory() as temporary, ExitStack() as cleanup:
             root = Path(temporary)
+            pinned = cleanup.enter_context(PinnedDir.open_root(root))
+            cleanup.callback(pinned.remove_tree, "source")
+            cleanup.callback(pinned.remove_tree, "destination")
             source = root / "source"
             destination = root / "destination"
             source.mkdir()
@@ -143,31 +147,6 @@ class CopyDirectoryDescriptorTests(unittest.TestCase):
                     resource.setrlimit(resource.RLIMIT_NOFILE, (original_soft, hard_limit))
                 os.close(source_fd)
                 os.close(destination_fd)
-
-            def remove_deep_tree(path: Path) -> None:
-                root_fd = os.open(path, directory_flags)
-                current = os.dup(root_fd)
-                levels = 0
-                try:
-                    while True:
-                        try:
-                            child = os.open("d", directory_flags, dir_fd=current)
-                        except FileNotFoundError:
-                            break
-                        os.close(current)
-                        current = child
-                        levels += 1
-                    os.unlink("leaf", dir_fd=current)
-                    for _ in range(levels):
-                        parent = os.open("..", directory_flags, dir_fd=current)
-                        os.rmdir("d", dir_fd=parent)
-                        os.close(current)
-                        current = parent
-                finally:
-                    os.close(current)
-                    os.close(root_fd)
-
-            remove_deep_tree(destination)
 
     def test_rollback_removes_deep_tree_with_bounded_descriptors(self) -> None:
         depth = 1100
@@ -361,8 +340,10 @@ class CopyDirectoryDescriptorTests(unittest.TestCase):
     def test_inventory_handles_deep_directory_chain_with_bounded_descriptors(self) -> None:
         depth = 1100
         directory_flags = os.O_RDONLY | os.O_DIRECTORY | os.O_NOFOLLOW
-        with tempfile.TemporaryDirectory() as temporary:
+        with tempfile.TemporaryDirectory() as temporary, ExitStack() as cleanup:
             root = Path(temporary)
+            pinned = cleanup.enter_context(PinnedDir.open_root(root))
+            cleanup.callback(pinned.remove_tree, "source")
             source = root / "source"
             source.mkdir()
             active_fd = os.open(source, directory_flags)

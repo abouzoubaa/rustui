@@ -4,7 +4,7 @@ Writing session: thread `01a172cd-8a21-73f1-82cd-62d451c71ec9`, claim
 `c44f414bfbf4ef4c4f30`, branch `codex/production-consolidation-01a172cd`,
 worktree `/Users/Abium/.codex/worktrees/rustui-production-consolidation/rustui`.
 The verified primary integration branch is `work/m118-diagnostics-provenance`;
-checkpoint `1ec22c6b` is integrated. Reverify live HEAD and dirty state before
+checkpoint `2f64e5a8` is integrated. Reverify live HEAD and dirty state before
 subsequent integration and preserve unrelated work.
 
 ## Current checkpoint — 2026-10-26
@@ -84,6 +84,14 @@ subsequent integration and preserve unrelated work.
   sources/versions and the independent source-consumer compile remain valid.
   This is approximate horizontal grapheme fallback, not full script/vertical
   typography acceptance. Evidence: `/tmp/rustui-preservation-20261025/browser/locale-cjk-v1`.
+- Branch `codex/production-consolidation-01a172cd` is pushed. Its first actual
+  GitHub source run (`40270606296`, Ubuntu 24.04) exposed three Python 3.12
+  recursive fixture-cleanup errors, a filesystem-case assumption, and an
+  unnecessary compiler probe for a missing binary. Those repairs pass eight
+  focused local tests; remote rerun is pending. This Ubuntu job validates source
+  tooling, not Linux product support. The repository has **zero registered
+  self-hosted runners**, so its separately gated macOS/Web Headstart CI job
+  cannot run. Local macOS Headstart and Wasm results above remain valid evidence.
 - Whole-project inventory: **37 provisional requirements**. Full coding and
   acceptance percentages have not been recomputed from every contract; the
   bounded counts above are not project completion percentages. Remaining

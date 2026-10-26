@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+from contextlib import ExitStack
 import hashlib
 import json
 import os
@@ -289,8 +290,11 @@ class CandidatePipelineTests(unittest.TestCase):
     def test_copy_source_handles_deep_tree_with_bounded_descriptors(self) -> None:
         depth = 1100
         directory_flags = os.O_RDONLY | os.O_DIRECTORY | os.O_NOFOLLOW
-        with tempfile.TemporaryDirectory() as tmp:
+        with tempfile.TemporaryDirectory() as tmp, ExitStack() as cleanup:
             root = Path(tmp)
+            pinned = cleanup.enter_context(pipeline.PinnedDir.open_root(root))
+            cleanup.callback(pinned.remove_tree, "source")
+            cleanup.callback(pinned.remove_tree, "candidate")
             source = root / "source"
             destination = root / "candidate/source"
             source.mkdir()

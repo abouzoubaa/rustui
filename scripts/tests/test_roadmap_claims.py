@@ -350,7 +350,8 @@ class RoadmapClaimsTests(unittest.TestCase):
         self.assertEqual(adopted.returncode, 0, adopted.stderr)
         result = json.loads(adopted.stdout)
         self.assertEqual(result["adopted_paths"], ["@shared/target/headstart/evidence/m-adopt.log", "src"])
-        self.assertEqual(result["baseline_paths"], ["readme.md"])
+        # Canonical key casing follows the checkout filesystem.
+        self.assertEqual([path.casefold() for path in result["baseline_paths"]], ["readme.md"])
         compact = subprocess.run([sys.executable, str(SCRIPT), "list"], cwd=self.wt1,
                                  env=self.env, text=True, capture_output=True, check=True)
         compact_row = next(item for item in json.loads(compact.stdout)
