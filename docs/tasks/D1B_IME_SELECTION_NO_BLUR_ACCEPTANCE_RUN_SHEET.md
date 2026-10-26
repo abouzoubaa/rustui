@@ -171,3 +171,21 @@ standard Playground package.
   retention/commit evidence; it does not close the deferred Japanese case B.
 - Lost focus or unobservable required behavior leaves the corresponding case
   open. A deferred language is not counted as accepted.
+
+## Exact-path current candidate focus check — 2026-10-26
+
+The disposable bundle from this writing worktree, SHA-256
+`32382ba3031f31b7a5c2f927d673954a14042b50b237756188b7bb99ea6bbbaf`,
+exposed the five-second owner update control on macOS 27. After scheduling it,
+the Name field accepted `abc`; the timer then replaced its value with
+`External owner update 3`. Typing `z` without another click changed the Name
+field and shared binding to `External owner update 3z`. This is bounded focus
+and subsequent typing evidence. It does not prove active OS IME composition or
+precise ordering of the earlier `abc` keystrokes against the timer.
+
+App-name lookup initially opened an older `c611` candidate with 10 demos.
+That instance was quit and excluded. Binding the exact current bundle path
+selected the 15-demo candidate. Both session-launched app processes were quit,
+the disposable bundle and standalone executable were removed, and the GUI slot
+was released. The raw observation and provenance record is at
+`target/headstart/evidence/native-owner-update-current-20261026/result.json`.

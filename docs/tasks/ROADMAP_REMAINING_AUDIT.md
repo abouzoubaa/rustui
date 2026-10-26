@@ -9,6 +9,17 @@ Reverify live HEAD and dirty state before subsequent integration; preserve unrel
 
 ## Current checkpoint — 2026-10-26
 
+- **Current source CI:** GitHub runs `40336215259` and `40336202405` both
+  completed successfully at integrated commit `8459aea8`. Compiled macOS/Web
+  CI jobs were skipped without the trusted self-hosted Mac runner; this does
+  not close compiled CI or runtime acceptance.
+- **Current native owner update:** exact-path macOS 27 Playground candidate
+  kept the Name field editable through a five-second external owner-value
+  replacement; typing `z` without another click updated the Name field and
+  shared binding. Active OS IME composition and exact timer/keystroke order
+  remain open. Evidence and app-provenance correction:
+  `target/headstart/evidence/native-owner-update-current-20261026/result.json`.
+
 - **Current local release entry points:** `./scripts/verify-release.sh macos`
   and `./scripts/verify-release.sh web` both exited 0 on commit `6d93147e`.
   The macOS command passed workspace checks, **1,285 library tests** and **53
@@ -173,7 +184,7 @@ Reverify live HEAD and dirty state before subsequent integration; preserve unrel
   approved tool identities, with explicit `RUSTUI_REMAP_BUILD_PATHS=1`.
   Evidence: `target/headstart/evidence/web-clean-reproduction-20261026/`.
   This establishes same-host/same-toolchain reproduction, with no new browser
-  acceptance for these candidates. Wider acceptance and four Web notice gaps remain.
+  acceptance for these candidates. Wider acceptance and three Web notice gaps remain.
   Normalized archives from both packages also match, with all 770 files checked;
   retained archive SHA-256 is
   `f479c2d07e774af5b5dba5d799a47e8981e28644fd1aa841ec9f202c6e420b27`.

@@ -75,7 +75,7 @@ composition; Web OS IME acceptance remains open. See
 `target/headstart/evidence/web-en-fr-ar-input-20261026/` for raw observations,
 manifest hashes and cleanup.
 
-Dependency notice collection currently has five native and four Web gaps.
+Dependency notice collection currently has five native and three Web gaps.
 See the [notice provenance and limitations](release/dependency-notices/README.md).
 Complete the license/notice and compatibility review, including runtime and
 build-only attribution, before claiming the distribution is cleared. Do not
@@ -110,6 +110,21 @@ reviewable branch does not authorize publishing a release.
 
 ## Current reproduction checkpoint — 2026-10-26
 
+`./scripts/verify-release.sh source` passed at `a4d1613c`; the later macOS and Web
+release entry points passed at source commit `6d93147e`. The macOS run
+executed 1,285 library tests and 53 integration tests; the Web entry point
+executed 18 host IME-plan tests. Its optimized macOS bundle executable is
+`target/headstart/debug/RustUI Playground.app/Contents/MacOS/rustui-playground`
+(SHA-256 `32382ba3031f31b7a5c2f927d673954a14042b50b237756188b7bb99ea6bbbaf`).
+The current Web bundle manifest verifies 770/770 files. Evidence is in
+`target/headstart/evidence/release-macos-6d93147e-20261026/` and
+`target/headstart/evidence/release-web-6d93147e-20261026/`. A targeted
+`rustui-i18n` incremental-cache quarantine was needed after a Headstart ICE;
+the subsequent exact macOS command passed. Both GitHub source CI runs for
+integrated commit `8459aea8` completed successfully (runs `40336215259` and
+`40336202405`). Compiled CI, signing, broader runtime acceptance, and notice
+sufficiency remain open.
+
 The native optimized release command now enables `RUSTUI_REMAP_BUILD_PATHS=1`.
 Two independent target directories, each with 555 Cargo artifacts reported rebuilt
 and none fresh, produced the same executable SHA-256:
@@ -139,7 +154,7 @@ processed Wasm SHA-256:
 `f12e4eee03a7392c37d14f822eab2899542a9102034aa5334262c7972591d078`.
 Evidence: `target/headstart/evidence/web-clean-reproduction-20261026/`.
 This is same-host, same-toolchain reproduction, with no new browser acceptance
-claimed for these candidates. Four Web dependency-notice gaps remain.
+claimed for these candidates. Three Web dependency-notice gaps remain.
 
 Normalized archives independently produced from both Web packages also match.
 Each archive contains 770 verified files, with sorted paths, fixed modes and
