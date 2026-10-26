@@ -9,6 +9,33 @@ Reverify live HEAD and dirty state before subsequent integration; preserve unrel
 
 ## Current checkpoint — 2026-10-26
 
+- **Stage 11 current Web bundle:** `./scripts/build-playground-web.sh` passed
+  using the approved Wasm Headstart compiler and `wasm-bindgen 0.2.129` copied
+  from the existing RustUI tool cache into this worktree's cache. The manifest
+  names `a4d1613c`; all **770/770** listed files match their hashes. Its
+  SHA-256 is `7d410bd772680868970ba5aec5244df2b4897359e8f77df89b368e5a0c41cb72`.
+  In the in-app Chromium browser, the public-API Text inputs story changed
+  bound value after the five-second task while Name stayed focused, and a
+  subsequent `e` updated owner and Name to `External owner update 2e`.
+  This is a bounded browser check with synthetic key input, not real OS IME
+  acceptance. Three Web dependency-notice file gaps remain. The owned tab
+  and server were closed and the GUI slot released. Evidence:
+  `target/headstart/evidence/web-owner-update-a4d1613c-20261026/`.
+- **Stage 9 live theme reload:** local Mac Headstart ran seven watcher tests;
+  **7/7 passed** including invalid-file recovery and failed activation
+  preserving the last good theme. This is source acceptance; native
+  owner-release and live application acceptance remain open. Evidence:
+  `target/headstart/evidence/theme-watcher-a4d1613c-20261026/headstart-test.log`.
+
+- Source release checkpoint at integrated commit `a4d1613c` passed:
+  `./scripts/verify-release.sh source` exited 0. This covers the source,
+  packaging-fixture, locale, theme-adapter, patch-verification, and script
+  checks in that target. Log:
+  `target/headstart/evidence/release-source-a4d1613c-20261026/verify-release-source.log`.
+  It does not execute compiled macOS/Web, GUI, browser, accessibility,
+  or performance gates. Output still identifies the unapplied dark-radio
+  `plus-lighter` renderer property.
+
 - **Stage 9 D1b external owner update:** The public-API Playground Text inputs
   story now exposes a five-second owner-value change. Headstart locked/offline
   check and build passed; the packaged macOS 27 binary had SHA-256
@@ -796,14 +823,20 @@ No dependency revision was changed by this audit.
 
 ## Next work
 
-1. Finish integration of unique retained work and inspect stale approval gates
-   against original human/repository authority.
-2. Validate the Picker event path and full lifecycle suite; resolve the optional
-   test-support graph without changing upstream revisions.
-3. Run affected public integration targets, package/doc checks and stage-level
-   native/browser acceptance with current provenance.
-4. Resolve the prepared upstream/localization/composition decisions while
-   continuing independent release work. Production readiness remains open.
+1. Resolve the six unique missing dependency-notice versions with exact
+   provenance and rerun native/Web collectors. The upstream package trees for
+   `hexf-parse 0.2.1`, `mac 0.1.1`, and `seahash 4.1.0` expose no
+   LICENSE/COPYING/NOTICE file at their package revisions. Collector coverage
+   and legal license determination remain distinct.
+2. Investigate the inconclusive mixed typing/timer overlap in D1b. Extend
+   native and real-OS Web input checks with controlled event order.
+3. Close current-scope English/French/Arabic functional, theme, font/glyph,
+   RTL, lifecycle, and performance acceptance on source-bound artifacts.
+   Accessibility and VoiceOver remain undone/deferred by user scope.
+4. Establish trusted compiled macOS/Web CI, supported OS/browser versions,
+   signing/notarization, and release packaging evidence. Resolve dark-radio
+   blend mode through the approved upstream patch process. Production
+   readiness remains open.
 
 ---
 
