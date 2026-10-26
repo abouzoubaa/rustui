@@ -9,6 +9,8 @@ Reverify live HEAD and dirty state before subsequent integration; preserve unrel
 
 ## Current checkpoint — 2026-10-26
 
+- **Stage 6 native French dead-key check:** On source HEAD `9ca086b00f798116699d0df765b2dccda7a64fb4`, `./scripts/verify-release.sh macos` exited 0 with **1,345 passing tests across 39 groups** and packaged the Playground. The bundled and standalone executable SHA-256 both matched `fb1f5768e8a5e826b80431f1a45cce6d424eb78fbd2ebde9a8d908c9ee1a662e`. In the macOS 27 app, the Text inputs story was set to Français; the focused Name field showed `´` after `alt+e` while the owner-bound value remained empty, then both field and bound value showed `é` after `e`. This is bounded dead-key commit evidence; CUA did not expose the native marked-text range, so active-composition acceptance remains open. The owned app exited, its verified disposable bundle and standalone executable were removed, and the shared GUI slot was released. Build log: `target/headstart/evidence/release-macos-marked-input-20261026.log`.
+
 - **Dependency-notice gap classification:** Target-filtered, `--edges normal`
   reverse trees from the current locked Playground show all five native gap
   versions (`block 0.1.6`, `mac 0.1.1`, `malloc_buf 0.0.6`,
