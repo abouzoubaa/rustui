@@ -47,7 +47,11 @@ subsequent integration and preserve unrelated work.
   adapter, selecting enabled visible edges and preserving modified/IME input.
   Outline inherits the repair. **30/30 focused Tree/Outline tests pass**,
   including real rendered keyboard events and disabled/hidden-row cases.
-  Native rebuilt-bundle verification is pending. No vendored source was changed.
+  The rebuilt native app now passes **2/2 Home/End checks**: End selected Tree,
+  then Home selected Controls. Its optimized Web build and **769** packaged
+  hashes pass; browser keyboard acceptance of this repair remains separate.
+  Evidence: `target/headstart/evidence/native-tree-home-end-20261026/`.
+  No vendored source was changed.
 - The native patch verifier requires Cargo's local path selection: registry
   packages are treated as immutable and can reuse an original artifact after
   patching. Metadata, actual local backend compilation and a changed executable
@@ -92,12 +96,18 @@ subsequent integration and preserve unrelated work.
   texts for the five remaining gaps. Exact published-source/revision evidence is
   retained in `/tmp/rustui-remaining-notices-upstream-audit`; no partial header or
   generic license template is represented as an upstream notice.
-- Current unsigned native candidate is archived as
+- Previous unsigned native candidate is archived as
   `target/headstart/release-artifacts/RustUI-Playground-macos-arm64-unsigned-1ec22c6b.tar.gz`;
   its JSON manifest records binary/archive hashes and five notice gaps. No
   current-candidate native GUI acceptance is claimed. The generated app bundle
   was removed after archiving; no RustUI test app remains running. Normalized
   archive timestamps do not establish independent compiler reproducibility.
+- The newer unsigned native candidate includes the Tree keyboard repair:
+  `target/headstart/release-artifacts/RustUI-Playground-macos-arm64-unsigned-1e25994d.tar.gz`.
+  Its manifest records **816** packaged file hashes and **5** unresolved notice
+  gaps. Native Home/End acceptance is recorded for this binary; broader native
+  acceptance remains open. The disposable bundle/executable were removed and
+  shared caches preserved. No signing or external publication was performed.
 - Current Chromium locale checks pass for English/French/Arabic live switching,
   decimal/plural/ordinal output, localized accessible names and mirrored RTL
   layout, including bounded Arabic light/dark screenshots. They exposed missing

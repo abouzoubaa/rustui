@@ -41,13 +41,15 @@ from keyboard input and activates enabled leaves only.
 
 The existing Tree input path handles enabled visible-row Up/Down traversal,
 Left/Right expansion and Enter activation. Disabled-row and disabled-folder
-guards remain in that shared path. No Home/End shortcut is promised here.
+guards remain in that shared path. Ordinary Home/End select the first/last
+enabled visible row; collapsed descendants and disabled edges are skipped.
+Modified shortcuts and active character/IME input keep their existing handling.
 
-The required accessible label names an outer `Group` that contains the upstream
-semantic Tree and rows. The pinned Components wrapper exposes no Tree name setter;
-this slice does not name that inner node. Hierarchy levels are not provided by
-an unapproved vendor patch. Native AX, VoiceOver, Web accessibility, focus display,
-locale/RTL, visual and cross-platform acceptance require separate runtime checks.
+The required accessible label names an outer `Group` that contains the semantic
+Tree and rows. The approved, reproducible Tree series now supplies the inner
+Tree name and one-based row hierarchy levels; rendered regressions verify them.
+Native AX, VoiceOver, Web accessibility, focus display, locale/RTL and visual
+acceptance require separate runtime checks on the declared macOS/Web targets.
 Source code and test-support event simulation do not establish that acceptance.
 
 ## Canonical Playground and checks
@@ -79,4 +81,11 @@ rendered-keyboard Outline tests. Logs: `/tmp/rustui-outline-tree-tests-20261025.
 Playground passed 189 library tests and all-target checking; logs are
 `/tmp/rustui-outline-playground-tests-20261025.log` and
 `/tmp/rustui-outline-all-targets-20261025.log`.
-Native and browser acceptance have not been performed for this source change.
+That 2026-10-25 checkpoint did not include native or browser acceptance.
+
+On 2026-10-26 the shared adapter's focused suite passed **30/30** tests. Its
+Home/End regression uses rendered Outline keyboard events and checks controlled
+owner selection, disabled edges, collapsed descendants, modified shortcuts and
+an all-disabled tree. Rebuilt native Tree Home/End checks pass through real
+CUA keyboard input; Outline-specific native acceptance remains separate.
+Evidence: `target/headstart/evidence/native-tree-home-end-20261026/`.
