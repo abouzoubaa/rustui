@@ -29,7 +29,7 @@ widget support. A reference asset or baseline adapter is not visual acceptance.
 
 ## Live stories
 
-The app provides ten live RustUI story routes:
+The app currently provides 15 live RustUI story routes:
 
 - Button
 - Text
@@ -41,6 +41,15 @@ The app provides ten live RustUI story routes:
 - Tabs
 - Breadcrumb
 - Navigation
+- Outline
+- Drawer
+- GraphView
+- NodeEditor
+- SplitView + ResizablePanel
+
+The shell currently lists 46 catalog rows. Search matches story labels, titles,
+and summaries; searching either `SplitView` or `ResizablePanel` opens the shared
+public-API split gallery directly, as well as its original Stacks foundation tab.
 
 The selected story can show RustUI source and recent event activity. Locale controls
 switch among English, French, and Arabic. These views exercise the current public
@@ -118,3 +127,14 @@ three warm-up cycles and 30 measured cycles each: **90 cycles / 630 state
 observations passed**. CPU/RSS calibration and its limits are recorded in
 `tasks/P2E_W1_ACCEPTANCE_BASELINE.md`. This supersedes the earlier pending W1
 acceptance/baseline notes; it does not establish blanket application acceptance.
+
+## Current functional checkpoint — 2026-10-26
+
+The production-consolidation run records 55 bounded Web functional checks across
+Outline, Drawer, GraphView, NodeEditor and SplitView/ResizablePanel, plus 11 native
+SplitView/ResizablePanel checks. These are named state/lifecycle/interaction cases,
+not full component or application acceptance. The canonical
+[remaining-work record](tasks/ROADMAP_REMAINING_AUDIT.md) links per-component
+contracts, exact build-input and executable provenance, excluded attempts, and
+cleanup records. Accessibility and VoiceOver are explicitly undone and deferred
+by user direction; existing behavior and previously gathered evidence remain.

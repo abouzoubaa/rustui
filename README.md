@@ -55,9 +55,10 @@ are the upstream implementation sources.
 ```
 
 RustUI Playground is the canonical component development and manual acceptance
-application. It contains ten live stories—Button, Text, Layout, Input, List,
-Table, Tree, Tabs, Breadcrumb, and Navigation—plus the 41-row macOS 27 reference
-catalog. Story source, events, English/French/Arabic locales, and Light/Dark
+application. It currently exposes 15 live framework demos and 46 catalog rows, including
+Outline, Drawer, GraphView, NodeEditor, and a directly searchable
+SplitView/ResizablePanel gallery. The original theme-reference catalog remains
+available alongside the additional public-API entries. Story source, events, English/French/Arabic locales, and Light/Dark
 appearance controls are available. Layout and performance inspection remain
 incomplete, and GUI acceptance is pending.
 
@@ -106,7 +107,12 @@ Approved upstream stack:
 - [RustUI Playground](docs/RUSTUI_PLAYGROUND.md)
 - [RustUI Lab compatibility](docs/RUSTUI_LAB.md)
 - [Build and dependency reuse](docs/BUILDING.md)
+- [Release verification and packaging](docs/RELEASE.md)
 
 Implementation proceeds by coherent capabilities. An authorized capability may
 change all related files needed to complete and validate it; unrelated work and
 dependency revisions remain outside that scope.
+
+Accessibility and VoiceOver acceptance are explicitly undone and deferred by
+user direction. Functional and release work continues; see the
+[canonical remaining-work record](docs/tasks/ROADMAP_REMAINING_AUDIT.md).

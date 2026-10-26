@@ -4,10 +4,17 @@ Writing session: thread `01a172cd-8a21-73f1-82cd-62d451c71ec9`, claim
 `c44f414bfbf4ef4c4f30`, branch `codex/production-consolidation-01a172cd`,
 worktree `/Users/Abium/.codex/worktrees/rustui-production-consolidation/rustui`.
 The verified primary integration branch is `work/m118-diagnostics-provenance`;
-checkpoint `a47cec88` is integrated. Reverify live HEAD and dirty state before
+source checkpoint `11a28da7` is integrated. Reverify live HEAD and dirty state before
 subsequent integration and preserve unrelated work.
 
 ## Current checkpoint — 2026-10-26
+
+- Source CI passes on `11a28da7`: [run 40295976901](https://github.com/abouzoubaa/rustui/actions/runs/40295976901).
+  Its Ubuntu source job passed; the manually dispatched Mac/Web compiled job was
+  skipped. This does not establish Linux product support or compiled CI.
+  Root/Playground guidance now matches 15 demos and 46 catalog rows; release
+  commands, target evidence, candidate provenance, cleanup and outstanding
+  distribution gates are documented in `docs/RELEASE.md`.
 
 - SplitView/ResizablePanel now has a directly searchable public-API Playground
   story reusing the existing gallery. Six focused tests, optimized Mac/Web builds
