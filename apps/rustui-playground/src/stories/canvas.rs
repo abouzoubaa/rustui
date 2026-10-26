@@ -929,7 +929,8 @@ impl View for SearchFieldReferenceGallery {
                                     self.recipient_tokens_binding(),
                                     self.token_query_binding(),
                                 )
-                                .id("search-field-reference-token-query"),
+                                .id("search-field-reference-token-query")
+                                .localized_placeholder("lab-input-token-recipients"),
                             ),
                     ))
                     .child(Card(

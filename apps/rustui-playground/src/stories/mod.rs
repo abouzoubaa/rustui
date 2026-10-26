@@ -780,6 +780,7 @@ impl View for StoryHost {
                             ),
                         )
                         .id("story-input-external-owner-update")
+                        .localized_label("lab-input-owner-update")
                     }))
                     .child(Text(self.external_input_status()))
                     .spacing(8.0)

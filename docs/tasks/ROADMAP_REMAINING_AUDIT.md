@@ -287,6 +287,20 @@ Reverify live HEAD and dirty state before subsequent integration; preserve unrel
   and `target/headstart/evidence/release-web-input-story-locales-20261026.log`.
   Other controls and explanatory copy in this story still appear in English;
   wider locale, input, RTL, native, and browser acceptance remain open.
+- **Stage 6 token-field locale follow-up, 2026-10-26:** The public
+  `TokenField::localized_placeholder` now passes the active locale key to its
+  contained `TextField`; the input story also localizes its owner-update
+  action. Locale validation and Rust formatting passed, six focused token-field
+  tests passed, and Playground all-target check passed. A current-source Web
+  bundle verified **770/770** manifest files with source SHA-256
+  `22d5b6439c7c0f60c151df755a8e13685a8248b3274c789f3425f74cd4437978`.
+  One browser profile showed both controls in English, French, and Arabic;
+  the temporary tab and owned port 8766 server were closed. Evidence:
+  `target/headstart/evidence/token-field-locale-20261026.log`,
+  `target/headstart/evidence/playground-token-field-locale-check-20261026.log`,
+  and `target/headstart/evidence/web-token-field-locale-build-20261026.log`.
+  Native behavior for this follow-up and remaining English input-story copy
+  still need acceptance.
 - **Current-source cache workload calibration, 2026-10-26:** The existing
   `cache_benchmark` example built with Headstart and the existing calibration
   runner completed **18/18 valid fresh-process records** on local macOS 27

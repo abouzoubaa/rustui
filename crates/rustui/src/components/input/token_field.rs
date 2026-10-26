@@ -78,6 +78,7 @@ fn remove_accessible_label(
 /// verbatim, including duplicates.
 pub struct TokenFieldView {
     placeholder: SharedString,
+    placeholder_message_id: Option<SharedString>,
     tokens: Binding<Vec<String>>,
     draft: Binding<String>,
     id: Option<Identity>,
@@ -92,6 +93,7 @@ impl TokenFieldView {
     ) -> Self {
         Self {
             placeholder: placeholder.into(),
+            placeholder_message_id: None,
             tokens,
             draft,
             id: None,
@@ -112,6 +114,17 @@ impl TokenFieldView {
 
     pub fn disabled(mut self, disabled: bool) -> Self {
         self.disabled = disabled;
+        self
+    }
+
+    /// Resolves the entry placeholder through the active locale catalog.
+    pub fn localized_placeholder(mut self, message_id: impl Into<SharedString>) -> Self {
+        let id = message_id.into();
+        assert!(
+            !id.trim().is_empty(),
+            "TokenField placeholder localization key must not be blank"
+        );
+        self.placeholder_message_id = Some(id);
         self
     }
 
@@ -178,13 +191,16 @@ impl View for TokenFieldView {
             field = field.child(chip);
         }
 
-        let mut input = crate::components::input::text_field::TextField(
+        let mut input_view = crate::components::input::text_field::TextField(
             self.placeholder.clone(),
             self.draft.clone(),
         )
         .id(format!("{identity}-input"))
-        .disabled(self.disabled)
-        .into_element(context);
+        .disabled(self.disabled);
+        if let Some(message_id) = &self.placeholder_message_id {
+            input_view = input_view.localized_placeholder(message_id.clone());
+        }
+        let mut input = input_view.into_element(context);
         // Keep a useful minimum target as chips wrap around the entry field.
         input = div().min_w(gpui::px(120.0)).child(input).into_any_element();
         field = field.child(input);
