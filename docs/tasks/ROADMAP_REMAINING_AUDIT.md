@@ -100,8 +100,19 @@ Reverify live HEAD and dirty state before subsequent integration; preserve unrel
   validation, formatting, and Playground all-target check passed; evidence:
   `target/headstart/evidence/playground-shell-locales-check-20261026.log`.
   Dynamic status, catalog/reference filenames and link labels, and other story
-  text remain to audit. No current-source GUI observation or broad release
-  checkpoint has run for this follow-up yet.
+  text remain to audit. On integrated `d3dbeea5`, the Web release driver
+  exited 0 with **18 host IME-plan tests** and **770/770** manifest files
+  matching (source SHA-256
+  `8f628241ebffa2a43afd6f72587aa87063562accd6e4592fd58739e5a02c7fc8`,
+  manifest SHA-256
+  `2cdfafc88c274c2c1e6452021f2484c5ba11bcb459c07c846bffc4bffdef43e9`).
+  One Chromium profile showed the app heading, appearance controls,
+  references heading, and source-gap note in French and Arabic. In Arabic,
+  Light and Dark actions visibly switched the theme and preserved the locale.
+  The test tab and owned port 8000 server were closed. Evidence:
+  `target/headstart/evidence/release-web-shell-locales-20261026.log`.
+  This is bounded Web behavior; native and wider browser acceptance for these
+  new shell strings remain open.
 - **Current-source cache workload calibration, 2026-10-26:** The existing
   `cache_benchmark` example built with Headstart and the existing calibration
   runner completed **18/18 valid fresh-process records** on local macOS 27
