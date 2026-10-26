@@ -13,9 +13,10 @@
     "patch_applicability": "git apply --check passed against current tracked source",
     "format": "Rust 1.97.1 rustfmt --check passed on disposable patched source",
     "compile": "passed: isolated path-patched gpui-pre-wgpu selected by wasm32-unknown-unknown rustui-playground; Headstart check --profile headstart --locked --offline completed using the pinned Web toolchain in 1m 17s. This only type-checks the private shaping seam, not wrapped-row behavior. Cargo.lock was restored byte-for-byte afterward. Evidence: target/headstart/candidates/rtl-seam-source/wasm-toolchain-check.log",
+    "row_probe": "passed: ./scripts/cargo-headstart test --manifest-path patches/proposed/cosmic-wrapped-rows-probe/Cargo.toml --locked --offline --lib (1/1 on macOS). The probe confirms multi-row retention and right-aligned glyph coordinates within the requested width; it tests Cosmic directly, not GPUI painting or hit testing.",
     "browser": "not run; patch is not selected by Cargo and changes no current runtime behavior"
   },
-  "next_step": "Resolve candidate compilation without changing pinned package revision, then add backend wrapped-row geometry and shared paint/hit-test acceptance before promotion.",
+  "next_step": "Connect backend wrapped-row geometry to GPUI painting and hit testing, then verify the source-matched Arabic browser result before promotion.",
   "compatibility": "Private helper only; current no-width Wrap::None caller and public API unchanged.",
   "fallback": "Leave this patch unselected; current runtime remains pinned and unchanged.",
   "removal_condition": "Replace with an upstream GPUI release that provides verified mixed-bidi wrapped-row geometry, painting, and hit-testing.",
