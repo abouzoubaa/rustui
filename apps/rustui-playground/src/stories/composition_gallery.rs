@@ -1,9 +1,25 @@
 //! Structural composition editing through RustUI's public compiled-factory API.
-use rustui::{component, prelude::*, preview::*};
+use rustui::{component, prelude::*, preview::*, view::EmptyView};
 use std::collections::{BTreeMap, BTreeSet};
 
 pub fn demo() -> impl View {
     Component("composition-gallery", CompositionGallery::new)
+}
+
+#[cfg(target_family = "wasm")]
+pub(crate) fn reference_demo() -> impl View {
+    Component("browser-composition-reference", || {
+        let mut owner = CompositionGallery::new();
+        if let Some(Ok(model)) = &mut owner.model {
+            model.host.unmount();
+        }
+        owner.reference_session = Some(crate::preview_transport::Session::default());
+        owner.reference_bridge = Some(crate::preview_transport_web::Bridge::new(
+            CompositionGallery::reference_request,
+            CompositionGallery::reference_close,
+        ));
+        owner
+    })
 }
 
 struct Model {
@@ -183,13 +199,69 @@ impl Model {
 
 #[component]
 struct CompositionGallery {
+    reference_session: Option<crate::preview_transport::Session>,
+    #[cfg(target_family = "wasm")]
+    reference_bridge: Option<crate::preview_transport_web::Bridge<Self>>,
     model: Option<Result<Model, PreviewError>>,
     #[state(0_u64)]
     revision: u64,
 }
 impl CompositionGallery {
+    fn reference_owner_binding(&self) -> AnyView {
+        #[cfg(target_family = "wasm")]
+        if let Some(bridge) = self.reference_bridge.clone() {
+            return AnyView::new(OwnerActionReader(move |owner: OwnerAction<Self>| {
+                bridge.bind_owner(owner);
+                EmptyView
+            }));
+        }
+        AnyView::new(EmptyView)
+    }
+    fn reference_close(&mut self) -> bool {
+        if let Some(mut session) = self.reference_session.take() {
+            if let Some(Ok(model)) = &mut self.model {
+                session.close(crate::preview_transport::Host::Composition(&mut model.host));
+            }
+        }
+        true
+    }
+
+    fn reference_request(
+        &mut self,
+        delivery: crate::preview_transport::Delivery,
+    ) -> (crate::preview_transport::Reply, bool) {
+        use crate::preview_transport::{Host, Reply};
+        let Some(mut session) = self.reference_session.take() else {
+            return (Reply::unavailable(&delivery.request), false);
+        };
+        let Some(Ok(model)) = &mut self.model else {
+            self.reference_session = Some(session);
+            return (Reply::unavailable(&delivery.request), false);
+        };
+        // This actual registered catalog has no action targets; future owners
+        // opt in with a compiled action map rather than trusting wire names.
+        let actions = std::collections::BTreeSet::new();
+        let outcome = session.handle(
+            delivery.request,
+            Host::Composition(&mut model.host),
+            &actions,
+            &delivery.fresh,
+        );
+        self.reference_session = Some(session);
+        if let Some(stamp) = model.host.stamp().cloned() {
+            model.stamp = stamp;
+        }
+        if outcome.changed {
+            model.status = "Browser reference request accepted".into();
+            self.revision = self.revision.saturating_add(1);
+        }
+        (outcome.reply, outcome.changed)
+    }
     fn new() -> Self {
         Self {
+            reference_session: None,
+            #[cfg(target_family = "wasm")]
+            reference_bridge: None,
             model: Some(Model::new()),
             revision: 0,
         }
@@ -217,6 +289,25 @@ impl CompositionGallery {
     }
 }
 impl View for CompositionGallery {
+    fn on_mount(&mut self, cx: &mut rustui::App) {
+        #[cfg(target_family = "wasm")]
+        if let Some(bridge) = &self.reference_bridge {
+            bridge.install(cx);
+        }
+        #[cfg(not(target_family = "wasm"))]
+        let _ = cx;
+    }
+    fn on_unmount(&mut self, _cx: &mut rustui::App) {
+        if let Some(mut session) = self.reference_session.take() {
+            if let Some(Ok(model)) = &mut self.model {
+                session.close(crate::preview_transport::Host::Composition(&mut model.host));
+            }
+        }
+        #[cfg(target_family = "wasm")]
+        if let Some(bridge) = self.reference_bridge.take() {
+            bridge.close();
+        }
+    }
     fn body(&self) -> impl View {
         let _revision = self.revision();
         let (view, status, count) = match self.model.as_ref() {
@@ -238,6 +329,7 @@ impl View for CompositionGallery {
         };
         VStack::new()
             .spacing(8.0)
+            .child(self.reference_owner_binding())
             .child(LocalizedText("lab-composition-title"))
             .child(
                 HStack::new()

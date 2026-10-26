@@ -1,6 +1,9 @@
 //! RustUI's component playground, implemented through the public framework API.
 
 mod catalog;
+mod preview_transport;
+#[cfg(target_family = "wasm")]
+mod preview_transport_web;
 mod stories;
 
 use catalog::{CATALOG, CatalogItem, MISSING_REFERENCES, filtered_indices};
@@ -504,7 +507,7 @@ pub fn run() {
         )),
     );
 
-    RustUI::new()
+    let app = RustUI::new()
         .assets(assets)
         .window_size(1320.0, 820.0)
         .blurred_window()
@@ -513,8 +516,14 @@ pub fn run() {
             activate_theme(&startup_theme, Some(AppearanceMode::Dark), cx)
                 .expect("macOS 27 theme must resolve and apply");
             rustui::localization::activate_localization(catalogs, initial_locale, cx);
-        })
-        .run(playground);
+        });
+    #[cfg(target_family = "wasm")]
+    if let Some(reference) = stories::browser_reference(&preview_transport_web::requested_profile())
+    {
+        app.run(reference);
+        return;
+    }
+    app.run(playground);
 }
 
 #[cfg(test)]

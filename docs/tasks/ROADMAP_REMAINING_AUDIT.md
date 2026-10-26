@@ -13,11 +13,12 @@ subsequent integration and preserve unrelated work.
   state `5fce25d3`, disabled semantic controls `7914ecda`, selected Web adapter v9
   `9d10622e`, and same-version native focus export/local selection `84f3a477`.
   GPUI-pre 0.3.9 and Components/Base 0.7.3 remain pinned.
-- Latest full checkpoints pass: **581 Python tests**, **1,274 workspace library tests**
-  (948 RustUI), **53 public integration tests**, workspace all-target checking,
+- Latest full checkpoints pass: **581 Python tests**, **1,282 workspace library tests**
+  (950 RustUI), **53 public integration tests**, workspace all-target checking,
   and optimized native packaging. Macro doctests ran with zero cases.
   Web v9 also passed its optimized build, **18 Rust planner tests**, **19
-  JavaScript fixtures**, and 13 bounded real-browser checks.
+  JavaScript semantic fixtures**, **6 D1d transport fixtures**, and the bounded
+  real-browser checks recorded in the D1d and Web v9 evidence.
 - Native focus implementation is complete and its named-field AX retest passes.
   **5/8 bounded native acceptance checks pass**: focused named field, search
   clearing, Space activation, Enter reset, and forward/reverse Tab skipping the
@@ -54,16 +55,21 @@ subsequent integration and preserve unrelated work.
   `OwnerAction::dispatch_with` reuses the weak foreground owner updater and
   distinguishes unavailable owners from valid no-notify replies. Two focused
   real-GPUI owner tests pass, including distinct owners and released-owner
-  inertness. The generic consumer-owned browser transport/reference host remains
-  in progress; this API addition does not close D1d.
+  inertness. D1d now has a specified, implemented consumer-owned browser reference
+  host: [contract and evidence](D1D_BROWSER_PREVIEW_HOST.md), **10/10 implementation
+  contracts**. Both real-browser profiles pass canonical roundtrips, stale-stamp
+  rejection and disconnect/reconnect. Actual owner increment/default-deny and
+  protected export checks pass. Broader browser/platform acceptance remains open.
+  The integration also fixes conditional macro defaults referencing unavailable
+  platform types; its compile regression and 40 macro unit tests pass.
 - The exhaustive upstream notice audit recovered no complete authoritative
   texts for the five remaining gaps. Exact published-source/revision evidence is
   retained in `/tmp/rustui-remaining-notices-upstream-audit`; no partial header or
   generic license template is represented as an upstream notice.
 - Whole-project inventory: **37 provisional requirements**. Full coding and
   acceptance percentages have not been recomputed from every contract; the
-  bounded counts above are not project completion percentages. D1d consumer/
-  transport, remaining native/browser/locale/RTL/font and IME acceptance,
+  bounded counts above are not project completion percentages. Remaining
+  native/browser/locale/RTL/font and IME acceptance,
   performance, reproducibility, notices and signing/distribution remain open.
 
 Evidence: `/tmp/rustui-preservation-20261025/browser/semantic-v9`,
@@ -426,11 +432,11 @@ or acceptance percentage has not been recomputed against every contract.
 | R22 | 9: descriptor/schema/codec validation | Present; recovered additional registry/schema/codec tests pass in current library checkpoint. Full contract review remains. |
 | R23 | 9: compiled preview/inspector | Present; inspect edit/rejection/remount/generation behavior and run current native inspector acceptance. |
 | R24 | 9: structural composition editing | Approved descriptor-first composition implemented: versioned stable-identity graph/slots, compiled recursive factories, atomic structure/property edits, bounded codec and node-scoped local signals. Focused preview 43/43 and Playground 1/1 pass including property edits, source reload and codec. Native/browser/performance acceptance open. |
-| R25 | 9: D1d external consumer adapter | No named external consumer/transport. Define host/version/action/disconnect policy before implementation. Keep RustUI independent. |
+| R25 | 9: D1d external consumer adapter | RustUI Playground Browser Preview Host v1 specified and implemented: 10/10 reference contracts, same-origin postMessage, generic registered preview/composition hosts, explicit owner action policy and protected state boundary. Rust/JS fixtures and bounded real-browser roundtrips pass; broader browser/platform acceptance remains open. See D1D_BROWSER_PREVIEW_HOST.md. |
 | R26 | 9: live theme/data reload | Present, distinct from Rust source hot reload; verify invalid-update recovery and owner-release cleanup. |
 | R27 | 10: performance, provenance and candidate workflow | Extensive bounded tooling present; current-source GUI/performance evidence and candidate review/promotion open. No optimization speed claim or GPU phase acceptance. |
 | R28 | 11: Web reproducible build/package/assets | Source tooling present; rebuild current source and bind browser observations to exact bundle manifest. |
-| R29 | 11: browser keyboard/AX/IME/fonts | M855 approved patch reproduced; focused-input accessible-name patch prepared but not approved. Full semantic controls/action routing, IME, glyph and screen-reader acceptance remain. |
+| R29 | 11: browser keyboard/AX/IME/fonts | Selected approved semantic/IME adapter v9 builds and passes bounded real-browser edit/selection/action checks. Current D1d preview/composition iframe roundtrips also pass. Full cross-browser, real OS IME/clipboard, glyph and screen-reader acceptance remain. |
 | R30 | Release: CI and reproducible release builds | CI workflow and trusted-runner/clean-checkout policy are implemented; source fixtures pass. Current local macOS checkpoint passes 1,250 library and 43 integration tests, all-target checks and optimized packaging. Macro doctests contain zero cases. Actual remote CI execution, compiler/bootstrap reproduction and clean-build artifact comparison remain unverified. |
 | R31 | Release: security, licensing, performance budgets, packaging/instructions | Complete threat/error audit, dependency/license and font notices, supported-version matrix, reproducibility, package signing/distribution plan and release instructions. Publication requires approval. |
 | R32 | 8: Outline | Source implemented: controlled single-column hierarchy over the existing Tree engine, explicit identity and group name, selected/expanded bindings, public-API Playground story and compiled-preview descriptor. Focused Tree/Outline 25/25 and Playground 189/189 tests passed, with all-target checking. Native/browser, AX/VoiceOver, visual/locale/RTL acceptance and upstream Tree naming/hierarchy-level limitations remain open. See `docs/tasks/OUTLINE_IMPLEMENTATION.md`. |

@@ -29,6 +29,7 @@ case "${1:-}" in
   python3 scripts/apply_gpui_base_disabled_semantic_roots.py --verify
     python3 -m unittest discover -s scripts/tests -p 'test_*.py'
     node --test scripts/tests/test_gpui_web_semantic_dom.mjs
+    node --test apps/rustui-playground/web/tests/preview-transport.test.mjs
     sh scripts/tests/test_package_playground_app.sh
     sh scripts/tests/test_build_playground_web.sh
     sh scripts/tests/test_verify_ci_checkout.sh

@@ -1,9 +1,23 @@
 //! D1c schema-driven local preview inspector; all controls use public RustUI APIs.
-use rustui::{prelude::*, preview::*};
+use rustui::{prelude::*, preview::*, view::EmptyView};
 use std::{cell::RefCell, collections::BTreeMap, rc::Rc, time::Duration};
 
 pub fn demo() -> impl View {
     Component("compiled-preview-gallery", CompiledPreviewGallery::default)
+}
+
+#[cfg(target_family = "wasm")]
+pub(crate) fn reference_demo() -> impl View {
+    Component("browser-compiled-preview-reference", || {
+        let mut owner = CompiledPreviewGallery::default();
+        owner.teardown();
+        owner.reference_session = Some(crate::preview_transport::Session::default());
+        owner.reference_bridge = Some(crate::preview_transport_web::Bridge::new(
+            CompiledPreviewGallery::reference_request,
+            CompiledPreviewGallery::reference_close,
+        ));
+        owner
+    })
 }
 
 struct FactoryContext {
@@ -267,6 +281,9 @@ fn progress_control_value(value: f64) -> f32 {
 }
 
 struct CompiledPreviewGallery {
+    reference_session: Option<crate::preview_transport::Session>,
+    #[cfg(target_family = "wasm")]
+    reference_bridge: Option<crate::preview_transport_web::Bridge<Self>>,
     host: PreviewHost<FactoryContext>,
     stamp_lease: Rc<RefCell<Option<PreviewStamp>>>,
     text: String,
@@ -4883,6 +4900,9 @@ impl Default for CompiledPreviewGallery {
             .register_action(ActionRef::new("toast_show").unwrap())
             .unwrap();
         let mut result = Self {
+            reference_session: None,
+            #[cfg(target_family = "wasm")]
+            reference_bridge: None,
             host: PreviewHost::new(registry),
             stamp_lease: Rc::new(RefCell::new(None)),
             text: "Preview text".into(),
@@ -4911,6 +4931,80 @@ impl Default for CompiledPreviewGallery {
 }
 
 impl CompiledPreviewGallery {
+    fn reference_owner_binding(&self) -> AnyView {
+        #[cfg(target_family = "wasm")]
+        if let Some(bridge) = self.reference_bridge.clone() {
+            return AnyView::new(OwnerActionReader(move |owner: OwnerAction<Self>| {
+                bridge.bind_owner(owner);
+                EmptyView
+            }));
+        }
+        AnyView::new(EmptyView)
+    }
+
+    fn reference_close(&mut self) -> bool {
+        if let Some(mut session) = self.reference_session.take() {
+            session.close(crate::preview_transport::Host::Preview(&mut self.host));
+        }
+        *self.stamp_lease.borrow_mut() = None;
+        self.secure_value.clear();
+        self.descriptor_json.clear();
+        true
+    }
+
+    fn reference_increment(owner: &mut Self) -> bool {
+        owner.activations += 1;
+        true
+    }
+
+    fn reference_request(
+        &mut self,
+        delivery: crate::preview_transport::Delivery,
+    ) -> (crate::preview_transport::Reply, bool) {
+        use crate::preview_transport::{Host, Reply};
+        let Some(mut session) = self.reference_session.take() else {
+            return (Reply::unavailable(&delivery.request), false);
+        };
+        let policy: BTreeMap<ActionRef, fn(&mut Self) -> bool> = BTreeMap::from([(
+            ActionRef::new("increment").unwrap(),
+            Self::reference_increment as fn(&mut Self) -> bool,
+        )]);
+        let actions = policy.keys().cloned().collect();
+        let before = self.host.snapshot().map(|snapshot| snapshot.stamp.clone());
+        let mut outcome = session.handle(
+            delivery.request,
+            Host::Preview(&mut self.host),
+            &actions,
+            &delivery.fresh,
+        );
+        self.reference_session = Some(session);
+        if let Some(action) = outcome.action.take() {
+            outcome.changed |= policy
+                .get(&action)
+                .expect("transport checked action policy")(self);
+        }
+        let after = self.host.snapshot().map(|snapshot| snapshot.stamp.clone());
+        if before != after {
+            if before.as_ref().map(|s| s.generation) != after.as_ref().map(|s| s.generation) {
+                self.secure_value.clear();
+                self.stamp_lease = Rc::new(RefCell::new(after));
+            } else {
+                *self.stamp_lease.borrow_mut() = after;
+            }
+            self.refresh_number_drafts();
+            self.descriptor_json = self
+                .host
+                .snapshot()
+                .and_then(|snapshot| {
+                    encode_preview(&snapshot.preview.document, self.host.catalog()).ok()
+                })
+                .unwrap_or_default();
+        }
+        if outcome.changed {
+            self.status = "Browser reference request accepted".into();
+        }
+        (outcome.reply, outcome.changed)
+    }
     fn mount(&mut self, component: &str) {
         // Secure values are ephemeral and never enter the serializable preview
         // document. A remount clears the previous field value.
@@ -7316,6 +7410,25 @@ impl CompiledPreviewGallery {
 }
 
 impl View for CompiledPreviewGallery {
+    fn on_mount(&mut self, cx: &mut rustui::App) {
+        #[cfg(target_family = "wasm")]
+        if let Some(bridge) = &self.reference_bridge {
+            bridge.install(cx);
+        }
+        #[cfg(not(target_family = "wasm"))]
+        let _ = cx;
+    }
+    fn on_unmount(&mut self, _cx: &mut rustui::App) {
+        if let Some(mut session) = self.reference_session.take() {
+            session.close(crate::preview_transport::Host::Preview(&mut self.host));
+            *self.stamp_lease.borrow_mut() = None;
+            self.secure_value.clear();
+        }
+        #[cfg(target_family = "wasm")]
+        if let Some(bridge) = self.reference_bridge.take() {
+            bridge.close();
+        }
+    }
     fn body(&self) -> impl View {
         let render_preview = self.host.render_factory();
         let inspector_rows = self
@@ -7531,6 +7644,7 @@ impl View for CompiledPreviewGallery {
 
         VStack::new()
             .spacing(8.0)
+            .child(self.reference_owner_binding())
             .child(Text("Compiled preview host"))
             .child(Text(owner_summary))
             .child(
@@ -9931,6 +10045,88 @@ mod tests {
             .properties
             .insert(hue_id, PropertyValue::Number(1.1));
         assert!(gallery.host.mount(invalid_document).is_err());
+    }
+
+    #[test]
+    fn browser_reference_exports_full_catalog_and_keeps_protected_owner_value_private() {
+        use crate::preview_transport::{CONSUMER, Delivery, PROTOCOL, Session, decode};
+        fn send(
+            owner: &mut CompiledPreviewGallery,
+            token: Option<&str>,
+            sequence: u64,
+            command: serde_json::Value,
+        ) -> crate::preview_transport::Reply {
+            let request = decode(
+                &serde_json::json!({
+                    "protocol": PROTOCOL, "version": 1, "client": CONSUMER,
+                    "request": format!("privacy-{sequence}"), "session": token,
+                    "sequence": sequence.to_string(), "command": command,
+                })
+                .to_string(),
+            )
+            .unwrap();
+            owner
+                .reference_request(Delivery {
+                    request,
+                    fresh: "a".repeat(32),
+                })
+                .0
+        }
+        let mut owner = CompiledPreviewGallery::default();
+        owner.teardown();
+        owner.reference_session = Some(Session::default());
+        let reply = send(
+            &mut owner,
+            None,
+            0,
+            serde_json::json!({"kind":"connect", "nonce":"b".repeat(32)}),
+        );
+        let token = reply.session.unwrap();
+        let reply = send(
+            &mut owner,
+            Some(&token),
+            1,
+            serde_json::json!({"kind":"catalog"}),
+        );
+        let source = reply.result.unwrap()["source"].as_str().unwrap().to_owned();
+        let catalog = decode_catalog(&source).unwrap();
+        assert_eq!(
+            catalog.components.len(),
+            owner.host.catalog().components.len()
+        );
+        assert!(catalog.components.len() > 20);
+        let secure = &catalog.components[&ComponentId::new("secure-field-specimen").unwrap()];
+        assert_eq!(secure.properties.len(), 1);
+        assert!(
+            secure
+                .properties
+                .contains_key(&PropertyId::new("placeholder").unwrap())
+        );
+        owner.mount_secure_field_specimen();
+        owner.secure_value = "owner-private-value-9223372036854775807".into();
+        let stamp = owner.host.snapshot().unwrap().stamp.clone();
+        let stamp = serde_json::json!({"preview_id":stamp.preview_id,"generation":stamp.generation.to_string(),"revision":stamp.revision.to_string()});
+        let rejected = send(
+            &mut owner,
+            Some(&token),
+            2,
+            serde_json::json!({"kind":"edit_properties", "stamp":stamp, "updates_source":"[[\"value\",\"remote secret\"]]"}),
+        );
+        assert_eq!(rejected.error, Some("invalid_edit"));
+        let reply = send(
+            &mut owner,
+            Some(&token),
+            3,
+            serde_json::json!({"kind":"export", "stamp":stamp}),
+        );
+        assert_eq!(reply.error, None);
+        let wire = reply.encode();
+        assert!(!wire.contains(&owner.secure_value));
+        assert!(!wire.contains("remote secret"));
+        assert_eq!(
+            owner.secure_value,
+            "owner-private-value-9223372036854775807"
+        );
     }
 
     #[test]

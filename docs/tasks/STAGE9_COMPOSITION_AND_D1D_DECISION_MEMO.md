@@ -1,6 +1,10 @@
 # Stage 9 composition editing and D1d decision memo
 
-**Status: Strategy A approved and implemented on 2026-10-25; external D1d consumer/transport still needs specification.**
+**Status: Strategy A implemented on 2026-10-25; the D1d browser reference consumer is specified and implemented on 2026-10-26.**
+
+Current D1d contract and evidence: [RustUI Playground Browser Preview Host](D1D_BROWSER_PREVIEW_HOST.md).
+The historical alternatives and decisions below do not reopen its implementation
+gate. Broader browser/platform acceptance remains open.
 
 The user approved the pending proposals ("I approve everything just proceed"). See `STAGE9_DESCRIPTOR_COMPOSITION_IMPLEMENTATION.md` for the implemented additive factory/slot/document contract and current evidence. The original alternatives below remain design history, not a new generic approval gate. D1a–D1c
 already provide the versioned descriptor/codec, local compiled preview host, and

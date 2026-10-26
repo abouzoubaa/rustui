@@ -27,6 +27,9 @@ cp -R "$repository_root/docs/release/dependency-notices/." \
     "$fixture/docs/release/dependency-notices/"
 cp "$repository_root/apps/rustui-playground/web/index.html" \
     "$fixture/apps/rustui-playground/web/"
+for asset in reference-host.html reference-host.js reference-client.js; do
+    cp "$repository_root/apps/rustui-playground/web/$asset" "$fixture/apps/rustui-playground/web/$asset"
+done
 cp -R "$repository_root/apps/rustui-playground/references/." \
     "$fixture/apps/rustui-playground/references/"
 cp "$repository_root"/crates/rustui/assets/fonts/*-LICENSE \
@@ -106,6 +109,9 @@ RUSTUI_HEADSTART_ROOT="$temporary_root/unused-headstart" \
 
 bundle="$fixture/target/headstart/playground-web"
 test -f "$bundle/index.html"
+for asset in reference-host.html reference-host.js reference-client.js; do
+    cmp "$fixture/apps/rustui-playground/web/$asset" "$bundle/$asset"
+done
 test -f "$bundle/rustui_playground.js"
 test -f "$bundle/rustui_playground_bg.wasm"
 test -f "$bundle/references/Form.svg"
@@ -118,7 +124,7 @@ bundle = Path(sys.argv[2])
 manifest = json.loads(Path(sys.argv[1]).read_text())
 assert len(manifest["source"]["sha256"]) == 64
 files = {item["path"]: item["sha256"] for item in manifest["bundle"]["files"]}
-for name in ("index.html", "rustui_playground.js", "rustui_playground_bg.wasm"):
+for name in ("index.html", "rustui_playground.js", "rustui_playground_bg.wasm", "reference-host.html", "reference-host.js", "reference-client.js"):
     assert hashlib.sha256((bundle / name).read_bytes()).hexdigest() == files[name]
 notice_report_path = bundle / "licenses/release/dependency-notices/report.json"
 notice_report = json.loads(notice_report_path.read_text())

@@ -621,6 +621,11 @@ impl<C> PreviewRegistry<C> {
         self.catalog.register_action(action)
     }
 
+    /// Read-only slot contracts for this registry's compiled composition factories.
+    pub fn composition_slots(&self) -> &BTreeMap<ComponentId, BTreeMap<SlotId, SlotSchema>> {
+        &self.slot_contracts
+    }
+
     pub fn catalog(&self) -> &ComponentCatalog {
         &self.catalog
     }

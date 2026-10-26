@@ -5870,6 +5870,7 @@ name = "rustui-playground"
 version = "0.1.0"
 dependencies = [
  "rustui",
+ "serde",
  "serde_json",
  "wasm-bindgen",
 ]

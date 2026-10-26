@@ -15,6 +15,19 @@ const MENU_BAR_REFERENCE_LABELS: [&str; 9] = [
 ];
 
 mod compiled_preview_gallery;
+
+#[cfg(target_family = "wasm")]
+pub(crate) fn browser_reference(profile: &str) -> Option<rustui::view::AnyView> {
+    match profile {
+        "preview" => Some(rustui::view::AnyView::new(
+            compiled_preview_gallery::reference_demo(),
+        )),
+        "composition" => Some(rustui::view::AnyView::new(
+            composition_gallery::reference_demo(),
+        )),
+        _ => None,
+    }
+}
 mod composition_gallery;
 
 mod alert_gallery;

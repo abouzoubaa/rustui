@@ -365,6 +365,16 @@ impl<C> CompositionHost<C> {
             generation: 0,
         }
     }
+    /// Registered schemas used by this compiled composition host.
+    pub fn catalog(&self) -> &super::ComponentCatalog {
+        self.registry.catalog()
+    }
+
+    /// Registered composition slot contracts; no component state is exposed.
+    pub fn composition_slots(&self) -> &BTreeMap<ComponentId, BTreeMap<SlotId, SlotSchema>> {
+        self.registry.composition_slots()
+    }
+
     pub fn mount(&mut self, d: CompositionDocument) -> Result<CompositionStamp, PreviewError> {
         validate_composition(&self.registry, &d)?;
         let generation = self
@@ -382,6 +392,10 @@ impl<C> CompositionHost<C> {
     }
     pub fn document(&self) -> Option<&CompositionDocument> {
         self.mounted.as_ref().map(|(_, d)| d)
+    }
+    /// Exact revision of the current mounted composition, if any.
+    pub fn stamp(&self) -> Option<&CompositionStamp> {
+        self.mounted.as_ref().map(|(stamp, _)| stamp)
     }
 
     pub fn unmount(&mut self) {
@@ -639,6 +653,21 @@ mod tests {
         view::{AnyView, EmptyView},
     };
     use std::collections::BTreeMap;
+    #[test]
+    fn consumer_metadata_preserves_registered_catalog_and_slot_contracts() {
+        let (registry, document) = fixture();
+        let catalog = registry.catalog().clone();
+        let slots = registry.composition_slots().clone();
+        assert!(!slots.is_empty());
+        let mut host = CompositionHost::new(registry);
+        assert_eq!(host.catalog(), &catalog);
+        assert_eq!(host.composition_slots(), &slots);
+        host.mount(document).unwrap();
+        host.unmount();
+        assert_eq!(host.catalog(), &catalog);
+        assert_eq!(host.composition_slots(), &slots);
+    }
+
     fn fixture() -> (PreviewRegistry<()>, CompositionDocument) {
         let mut r = PreviewRegistry::new();
         let container = ComponentId::new("container").unwrap();

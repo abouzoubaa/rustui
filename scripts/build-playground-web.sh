@@ -103,6 +103,13 @@ for artifact in rustui_playground.js rustui_playground_bg.wasm; do
   fi
 done
 cp "$REPO_ROOT/apps/rustui-playground/web/index.html" "$STAGING_DIR/index.html"
+for asset in reference-host.html reference-host.js reference-client.js; do
+    cp "$REPO_ROOT/apps/rustui-playground/web/$asset" "$STAGING_DIR/$asset"
+    if [[ ! -s "$STAGING_DIR/$asset" ]]; then
+        echo "Web reference host asset is empty: $asset; preserving existing Web bundle." >&2
+        exit 1
+    fi
+done
 if [[ ! -s "$STAGING_DIR/index.html" ]]; then
   echo "Web browser shell is empty; preserving the existing Web bundle." >&2
   exit 1
