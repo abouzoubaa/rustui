@@ -1,5 +1,27 @@
 # P3B: Fixed-bounds retained child cache pilot
 
+## Production consolidation — props freshness, 2026-10-26
+
+The current no-AX props workload completed all **3/3 scenarios**, retaining
+1, 8 and 32 children per side. After 10 warmups, 100 parent-only updates caused
+0 cached lowerings and respectively 100, 800 and 3,200 uncached lowerings.
+The subsequent 100 changed-props updates caused respectively 100, 800 and
+3,200 lowerings on each side. Both paths observed every value from 1 through
+100 and finished at 100; all runs recorded `ax_active_seen: false`.
+
+Source HEAD, binary hash, raw workload paths and their hashes are preserved in
+`target/headstart/evidence/stage10-production-20261026/props-acceptance.json`.
+The follow-up `props-evidence-verification.json` records verification of all
+three raw artifact hashes, exact workload identity, sequential values and
+lowering counts. The initial verifier read props fields at the wrong JSON
+level; its preserved error record is an orchestration error, not a failed
+RustUI run. The valid small workload was reused.
+
+This closes the bounded logical props-freshness workload. It does not measure
+frame/GPU/presentation latency or close native visual, interaction, drag,
+theme/locale, lifecycle or accessibility acceptance. The disposable app bundle
+and standalone executable were removed; shared build caches were preserved.
+
 ## M923 — Prepare no-focus parent-only measurements
 
 The Playground gallery now uses keyboard shortcuts to tick the parent, clear
