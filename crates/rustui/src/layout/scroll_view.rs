@@ -9,6 +9,8 @@ use gpui_component::{
     scroll::{Scrollbar, ScrollbarAxis},
 };
 use rustui_core::Identity;
+use rustui_i18n::LayoutDirection;
+use std::{cell::Cell, rc::Rc};
 
 use crate::components::theme::{required_style, selector};
 use crate::view::{EmptyView, RenderContext, RetentionScope, View};
@@ -91,19 +93,38 @@ impl<V: View> ScrollViewView<V> {
 struct ScrollState {
     handle: ScrollHandle,
     axis: ScrollAxis,
+    direction: LayoutDirection,
+    anchor_rtl: Rc<Cell<bool>>,
 }
 
 impl ScrollState {
-    fn handle_for_axis(&mut self, axis: ScrollAxis) -> ScrollHandle {
+    fn handle_for_layout(
+        &mut self,
+        axis: ScrollAxis,
+        direction: LayoutDirection,
+    ) -> (ScrollHandle, Rc<Cell<bool>>) {
+        if self.direction != direction {
+            self.direction = direction;
+            self.anchor_rtl
+                .set(direction == LayoutDirection::RightToLeft);
+            if direction == LayoutDirection::LeftToRight {
+                let mut offset = self.handle.offset();
+                offset.x = px(0.0);
+                self.handle.set_offset(offset);
+            }
+        }
         if self.axis != axis {
             let previous = self.handle.offset();
             let next = enabled_offset(previous, axis);
             if next != previous {
                 self.handle.set_offset(next);
             }
+            if self.axis == ScrollAxis::Vertical && direction == LayoutDirection::RightToLeft {
+                self.anchor_rtl.set(true);
+            }
             self.axis = axis;
         }
-        self.handle.clone()
+        (self.handle.clone(), self.anchor_rtl.clone())
     }
 }
 
@@ -255,13 +276,17 @@ impl<V: View> View for ScrollViewView<V> {
 
     fn into_element(&self, context: &mut RenderContext<'_>) -> AnyElement {
         context.with_element_scope(RetentionScope::ScrollView(self.id.clone()), |context| {
+            let direction = context.layout_direction();
             let (state, _) =
                 context.retained_entity(Identity::from("scroll-state"), |_, _| ScrollState {
                     handle: ScrollHandle::default(),
                     axis: self.axis,
+                    direction,
+                    anchor_rtl: Rc::new(Cell::new(direction == LayoutDirection::RightToLeft)),
                 });
-            let handle =
-                context.update_entity(&state, |state, _, _| state.handle_for_axis(self.axis));
+            let (handle, anchor_rtl) = context.update_entity(&state, |state, _, _| {
+                state.handle_for_layout(self.axis, direction)
+            });
             let content = context
                 .with_element_scope(RetentionScope::ScrollViewContent, |context| {
                     self.content.into_element(context)
@@ -309,6 +334,25 @@ impl<V: View> View for ScrollViewView<V> {
                 root = root.flex_grow_0().h(px(height));
             }
             let root = root.child(viewport).child(overlay);
+            let root = if direction == LayoutDirection::RightToLeft
+                && self.axis != ScrollAxis::Vertical
+            {
+                let scroll_handle = handle.clone();
+                root.on_prepaint(move |_, window, cx| {
+                    if anchor_rtl.get() && scroll_handle.max_offset().x > px(0.0) {
+                        let mut offset = scroll_handle.offset();
+                        offset.x = -scroll_handle.max_offset().x;
+                        scroll_handle.set_offset(offset);
+                        anchor_rtl.set(false);
+                        let window_handle = window.window_handle();
+                        cx.defer(move |cx| {
+                            let _ = window_handle.update(cx, |_, window, _| window.refresh());
+                        });
+                    }
+                })
+            } else {
+                root
+            };
             if diagnostics {
                 let id = self.id.clone();
                 let axis = self.axis;
@@ -435,9 +479,16 @@ mod rendered_overflow_tests {
                 assert!((leaf.size.width.as_f32() - 948.0).abs() < 0.5);
                 assert!((viewport.size.width.as_f32() - 240.0).abs() < 0.5);
                 if axis == ScrollAxis::Both {
-                    assert!(relative_x >= -0.5, "wide content starts outside its scrollable area");
                     assert!(handle.max_offset().x.as_f32() >= 708.0 - 0.5,
                         "declared width must be reachable by horizontal scrolling");
+                    if locale == "ar" {
+                        assert!((relative_x + 708.0).abs() < 0.5,
+                            "RTL content must initially show its logical leading edge");
+                        assert!((handle.offset().x.as_f32() + 708.0).abs() < 0.5);
+                    } else {
+                        assert!(relative_x.abs() < 0.5);
+                        assert!(handle.offset().x.as_f32().abs() < 0.5);
+                    }
                 } else if locale == "ar" {
                     assert!(relative_x < -600.0, "control must reproduce clipped RTL content");
                 } else {
@@ -586,12 +637,16 @@ mod tests {
         let mut state = ScrollState {
             handle: ScrollHandle::default(),
             axis: ScrollAxis::Both,
+            direction: LayoutDirection::LeftToRight,
+            anchor_rtl: Rc::new(Cell::new(false)),
         };
         state.handle.set_offset(Point {
             x: px(-23.0),
             y: px(-47.0),
         });
-        let copy = state.handle_for_axis(ScrollAxis::Both);
+        let copy = state
+            .handle_for_layout(ScrollAxis::Both, LayoutDirection::LeftToRight)
+            .0;
         assert_eq!(
             copy.offset(),
             Point {
@@ -599,7 +654,9 @@ mod tests {
                 y: px(-47.0)
             }
         );
-        let vertical = state.handle_for_axis(ScrollAxis::Vertical);
+        let vertical = state
+            .handle_for_layout(ScrollAxis::Vertical, LayoutDirection::LeftToRight)
+            .0;
         assert_eq!(
             vertical.offset(),
             Point {
@@ -612,15 +669,26 @@ mod tests {
             y: px(-80.0),
         });
         assert_eq!(
-            state.handle_for_axis(ScrollAxis::Vertical).offset().y,
+            state
+                .handle_for_layout(ScrollAxis::Vertical, LayoutDirection::LeftToRight)
+                .0
+                .offset()
+                .y,
             px(-80.0)
         );
         assert_eq!(
-            state.handle_for_axis(ScrollAxis::Both).offset().y,
+            state
+                .handle_for_layout(ScrollAxis::Both, LayoutDirection::LeftToRight)
+                .0
+                .offset()
+                .y,
             px(-80.0)
         );
         assert_eq!(
-            state.handle_for_axis(ScrollAxis::Horizontal).offset(),
+            state
+                .handle_for_layout(ScrollAxis::Horizontal, LayoutDirection::LeftToRight)
+                .0
+                .offset(),
             Point::default()
         );
     }

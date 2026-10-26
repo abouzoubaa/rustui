@@ -9,6 +9,18 @@ Reverify live HEAD and dirty state before subsequent integration; preserve unrel
 
 ## Current checkpoint — 2026-10-26
 
+- **Stage 11 RTL story canvas, 2026-10-26:** RustUI `ScrollView` now anchors
+  horizontal RTL content at its logical start on initial render and locale
+  changes. GPUI ignores `window.refresh()` during a draw, so the offset uses a
+  deferred repaint. The focused macOS Headstart regression passed **1/1**.
+  The source-bound Web bundle passed **770/770** file hashes (source SHA-256
+  `dafc9b584ec5077c93c2bcc9cc74a333746391bb656c293a0e11ef1d80e24ed4`).
+  In Chromium at 1280×720, the Arabic Text inputs owner-update button moved
+  from clipped x=1007 to fully visible x=714–1001. Manual horizontal scrolling
+  remained available; French reset to x=279 and Arabic reselected x=714.
+  Evidence: `target/headstart/evidence/web-rtl-scroll-20261026/`. This closes
+  that canvas starting-position defect, not wider RTL, native visual, real IME,
+  or accessibility acceptance.
 - **Stage 11 bidirectional Web wrapping selected, 2026-10-26:** The user-approved
   five-file same-version patch is selected through the exact-image helper and
   local `gpui-pre-wgpu 0.3.9` Cargo path. No GPUI revision or dependency version
