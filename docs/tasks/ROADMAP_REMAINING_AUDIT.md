@@ -9,6 +9,20 @@ Reverify live HEAD and dirty state before subsequent integration; preserve unrel
 
 ## Current checkpoint — 2026-10-26
 
+- **Stage 11 Arabic Web text:** the browser paints only a tiny fragment of the
+  long Button and Text catalog notes although their complete Arabic labels are
+  in the semantic overlay. An existing-font-fallback candidate compiled but
+  did not change the painting, so it was reverted. A temporary short Arabic
+  note painted fully in the same panel. A Headstart probe of the pinned Cosmic
+  text system produced descending glyph x positions for the 302-byte mixed
+  Arabic note (`1003.38` to `917.80` across the first 16 glyphs), while
+  GPUI's wrap-boundary calculation at
+  `vendor/gpui-pre-0.3.9/src/text_system/line_layout.rs:245` uses increasing x
+  deltas. This is a source-level cause candidate, not a repaired browser
+  result. Temporary source and lockfile changes were restored; logs and the
+  diagnostic record are in `target/headstart/evidence/web-arabic-note-20261026/`.
+  Arabic long-text Web visual acceptance remains open.
+
 - **Current source CI:** GitHub runs `40336215259` and `40336202405` both
   completed successfully at integrated commit `8459aea8`. Compiled macOS/Web
   CI jobs were skipped without the trusted self-hosted Mac runner; this does
