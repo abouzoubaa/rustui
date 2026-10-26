@@ -92,6 +92,16 @@ Reverify live HEAD and dirty state before subsequent integration; preserve unrel
   and `target/headstart/evidence/playground-text-field-chain-check-20261026.log`.
   The full release drivers above ran before this narrow follow-up; they are
   current for the preceding commit, while this change has focused validation.
+- **Stage 6 Playground shell locale follow-up, 2026-10-26:** More static
+  shell copy now resolves through the three current runtime catalogs: search
+  empty state, preview/demonstration fallback, references headings and action,
+  source-gap labels, app heading, and Light/Dark controls. The existing public
+  `LocalizedText` and `ButtonView::localized_label` paths were reused. Locale
+  validation, formatting, and Playground all-target check passed; evidence:
+  `target/headstart/evidence/playground-shell-locales-check-20261026.log`.
+  Dynamic status, catalog/reference filenames and link labels, and other story
+  text remain to audit. No current-source GUI observation or broad release
+  checkpoint has run for this follow-up yet.
 - **Integrated macOS/Web release checkpoint, 2026-10-26:** On integrated
   commit `f428a8b8`, `./scripts/verify-release.sh macos` exited 0 on macOS
   27 arm64 using local Headstart: 1,339 passing test cases across 39 reported

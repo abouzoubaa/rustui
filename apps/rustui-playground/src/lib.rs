@@ -173,10 +173,7 @@ impl Playground {
                 .height(220.0),
             );
         if !self.query.trim().is_empty() && !search_has_results(&self.query) {
-            sidebar = sidebar.child(
-                Text("No matches. Clear the search to show all components and demos.")
-                    .font_size(12.0),
-            );
+            sidebar = sidebar.child(LocalizedText("lab-search-no-matches").font_size(12.0));
         }
         Container(ScrollView(sidebar.spacing(12.0)).id("playground-sidebar-scroll"))
             .fill()
@@ -203,7 +200,7 @@ impl Playground {
         let note = selected_story.map_or_else(
             || {
                 item.map_or_else(
-                    || Text("Use the Playground sidebar to select a preview."),
+                    || LocalizedText("lab-select-preview"),
                     |item| LocalizedText(item.note_message_id),
                 )
             },
@@ -220,9 +217,7 @@ impl Playground {
                 Component("playground-story-host", move || StoryHost::new(story))
                     .props(story, StoryHost::apply_story),
             ),
-            (None, None) => AnyView::new(Text(
-                "A RustUI demonstration for this catalog item is still pending.",
-            )),
+            (None, None) => AnyView::new(LocalizedText("lab-demo-pending")),
         };
         Container(
             ScrollView(
@@ -258,7 +253,7 @@ impl Playground {
 
     fn references(&self) -> impl View {
         let mut panel = VStack::new().child(
-            Text("macOS 27 references")
+            LocalizedText("lab-macos-references")
                 .font_size(16.0)
                 .font_weight(TextWeight::Bold),
         );
@@ -287,20 +282,18 @@ impl Playground {
                 panel = panel.child(
                     Button("Open references", self.action(Self::open_references))
                         .id("playground-open-references")
+                        .localized_label("lab-open-references")
                         .disabled(!available),
                 );
             }
         } else {
-            panel = panel.child(
-                Text("Select a component catalog row to inspect its SVG references.")
-                    .font_size(12.0),
-            );
+            panel = panel.child(LocalizedText("lab-select-reference").font_size(12.0));
         }
         if MISSING_REFERENCES.is_empty() {
-            panel = panel.child(Text("No known source gaps recorded.").font_size(11.0));
+            panel = panel.child(LocalizedText("lab-no-source-gaps").font_size(11.0));
         } else {
             panel = panel.child(
-                Text("Known source gaps")
+                LocalizedText("lab-known-source-gaps")
                     .font_size(13.0)
                     .font_weight(TextWeight::Semibold),
             );
@@ -359,7 +352,7 @@ impl View for Playground {
                                 Container(
                                     VStack::new()
                                         .child(
-                                            Text("RustUI Component Playground")
+                                            LocalizedText("lab-component-playground-title")
                                                 .font_size(20.0)
                                                 .font_weight(TextWeight::Bold),
                                         )
@@ -377,11 +370,13 @@ impl View for Playground {
                             )
                             .child(
                                 Button("Light", self.appearance(AppearanceMode::Light))
-                                    .id("playground-light"),
+                                    .id("playground-light")
+                                    .localized_label("lab-appearance-light"),
                             )
                             .child(
                                 Button("Dark", self.appearance(AppearanceMode::Dark))
-                                    .id("playground-dark"),
+                                    .id("playground-dark")
+                                    .localized_label("lab-appearance-dark"),
                             )
                             .spacing(8.0)
                             .alignment(VerticalAlignment::Center),
