@@ -11,6 +11,15 @@ Reverify live HEAD and dirty state before subsequent integration; preserve unrel
 
 ### Source release checkpoint — 2026-10-26
 
+On `665e62e0`, `./scripts/verify-release.sh macos` exited **0** with
+**1,355/1,355** passing Rust tests across **40** groups and an optimized
+Playground package. The packaged executable byte-matches the release build
+(SHA-256 `39a54cd2a9fc7da33fc844fa5c407fee78e10b86b04634d4b55078ab1e2fe3fa`).
+Dependency notices were collected for **441** observed packages with **five**
+unresolved gaps; no licensing completeness claim follows. Build log:
+`target/headstart/evidence/release-macos-current-20261026.log`. This is build
+and source-test evidence, not native GUI acceptance.
+
 The first `verify-release.sh source` run stopped after **589 Python tests** with
 seven setup errors in the semantic-adapter lifecycle fixture. That fixture
 expected the bidirectional wrapping patch to be the final image, but the
