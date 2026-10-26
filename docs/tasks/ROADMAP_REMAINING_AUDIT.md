@@ -16,7 +16,19 @@ Reverify live HEAD and dirty state before subsequent integration; preserve unrel
   all-target Headstart checking passed. Evidence:
   `target/headstart/evidence/playground-reference-states-locale-test-20261026.log`
   and `target/headstart/evidence/playground-reference-states-check-20261026.log`.
-  Native visual acceptance and current-source release packaging remain open.
+  On integrated `7d7cb280`, `./scripts/verify-release.sh macos` exited 0 on
+  local macOS 27 arm64 with **1,344 passing tests across 39 reported groups**,
+  zero failures, and an optimized Playground package. The source-bound app
+  showed `Disponible · Form.svg` in French and `متوفر · Form.svg` in Arabic,
+  with translated footer text after switching locale. Bundled executable
+  SHA-256: `7f41a2ba446a4995096ea460bf9dcc137f40ce41cb281ed558f963b99d91eba2`.
+  The owned process exited; its verified disposable bundle and standalone
+  executable were removed; the GUI slot was released. Evidence:
+  `target/headstart/evidence/release-macos-reference-states-20261026.log`.
+  GitHub run `40397609648` passed source CI on this commit; compiled CI was
+  skipped on the push. These checks close the bounded local native reference
+  state case, not macOS 13, missing-reference visual behavior, broader RTL,
+  input, accessibility, signing, or distribution acceptance.
 
 - **Stage 6/11 reference-link locale follow-up:** Public RustUI
   `LinkView::localized_label_with_arguments` resolves the visible label at
