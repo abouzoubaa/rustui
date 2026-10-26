@@ -58,6 +58,7 @@ const HEX_INPUT_ACCESSIBILITY_FALLBACK: &str = "Hex color value";
 /// Controlled optional color selection with a retained GPUI picker state.
 pub struct ColorPickerView {
     label: SharedString,
+    localized_label_key: Option<SharedString>,
     value: Binding<Option<Hsla>>,
     id: Option<Identity>,
     compact: bool,
@@ -122,6 +123,7 @@ impl ColorPickerView {
         );
         Self {
             label,
+            localized_label_key: None,
             value,
             id: None,
             compact: false,
@@ -143,6 +145,25 @@ impl ColorPickerView {
     pub fn compact(mut self, compact: bool) -> Self {
         self.compact = compact;
         self
+    }
+
+    /// Resolve the visible label from the active catalog, keeping the constructor
+    /// label as a fallback when the message is unavailable.
+    pub fn localized_label(mut self, message_id: impl Into<SharedString>) -> Self {
+        let id = message_id.into();
+        assert!(
+            !id.trim().is_empty(),
+            "ColorPicker label localization key must not be blank"
+        );
+        self.localized_label_key = Some(id);
+        self
+    }
+
+    fn visible_label(&self, localized_message: impl FnOnce(&str) -> String) -> SharedString {
+        self.localized_label_key.as_ref().map_or_else(
+            || self.label.clone(),
+            |id| resolved_message_label(localized_message(id.as_ref()), id, &self.label),
+        )
     }
 
     pub fn featured_colors(mut self, colors: impl Into<Vec<Hsla>>) -> Self {
@@ -506,6 +527,29 @@ mod tests {
     }
 
     #[test]
+    fn localized_visible_label_uses_catalog_value_or_constructor_fallback() {
+        let picker = ColorPicker("Accent color", binding()).localized_label("color_picker.accent");
+        assert_eq!(
+            picker
+                .visible_label(|_| "Couleur d’accent".to_owned())
+                .as_ref(),
+            "Couleur d’accent"
+        );
+        assert_eq!(
+            picker
+                .visible_label(|_| "color_picker.accent".to_owned())
+                .as_ref(),
+            "Accent color"
+        );
+    }
+
+    #[test]
+    #[should_panic(expected = "ColorPicker label localization key must not be blank")]
+    fn rejects_blank_localized_visible_label_key() {
+        ColorPicker("Accent color", binding()).localized_label(" \t ");
+    }
+
+    #[test]
     fn hex_input_accessible_name_uses_catalog_translation_or_english_fallback() {
         let id = SharedString::from(HEX_INPUT_ACCESSIBILITY_MESSAGE_ID);
         let fallback = SharedString::from(HEX_INPUT_ACCESSIBILITY_FALLBACK);
@@ -660,10 +704,11 @@ impl View for ColorPickerView {
 
         let selector = Self::theme_selector(context);
         let open = state.read(context.app()).is_open();
+        let visible_label = self.visible_label(|id| context.localized_message(id));
         let label = self
             .accessibility_label
             .as_ref()
-            .map_or_else(|| self.label.clone(), |label| label.resolve(context));
+            .map_or_else(|| visible_label.clone(), |label| label.resolve(context));
         let popup_state = state.clone();
         let root_state = state.clone();
 
@@ -694,10 +739,11 @@ impl View for ColorPickerView {
                     .gap_2()
                     .child(trigger_swatch)
                     .child(if self.compact {
-                        self.label.clone()
+                        visible_label.clone()
                     } else {
                         SharedString::from(
-                            selected.map_or_else(|| self.label.to_string(), |value| value.to_hex()),
+                            selected
+                                .map_or_else(|| visible_label.to_string(), |value| value.to_hex()),
                         )
                     })
                     .child("⌄"),

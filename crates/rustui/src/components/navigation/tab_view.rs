@@ -22,6 +22,7 @@ use crate::{
 pub struct TabItem {
     id: String,
     label: String,
+    localized_label_key: Option<String>,
     accessibility_label: Option<TabAccessibilityLabel>,
     content: AnyView,
     disabled: bool,
@@ -47,10 +48,23 @@ impl TabItem {
         Self {
             id,
             label,
+            localized_label_key: None,
             accessibility_label: None,
             content: AnyView::new(content),
             disabled: false,
         }
+    }
+
+    /// Resolves the visible tab label from the active catalog at render time.
+    /// The constructor label remains the fallback and stable identity seed.
+    pub fn localized_label(mut self, message_key: impl Into<String>) -> Self {
+        let key = message_key.into();
+        assert!(
+            !key.trim().is_empty(),
+            "TabItem label localization key must not be blank"
+        );
+        self.localized_label_key = Some(key);
+        self
     }
 
     /// Overrides the accessible name without changing the visible tab label.
@@ -192,6 +206,11 @@ impl View for TabViewControl {
     fn into_element(&self, context: &mut RenderContext<'_>) -> AnyElement {
         let selected = self.selection.value();
         let selected_index = self.tabs.iter().position(|tab| tab.id == selected);
+        let tab_visible_labels = self
+            .tabs
+            .iter()
+            .map(|tab| tab_visible_label(tab, |id| context.localized_message(id)))
+            .collect::<Vec<_>>();
         let tab_accessible_names = self
             .tabs
             .iter()
@@ -289,7 +308,7 @@ impl View for TabViewControl {
         let tabs = self.tabs.iter().enumerate().map(|(index, tab)| {
             with_tab_set_position(
                 GpuiTab::new()
-                    .label(tab.label.clone())
+                    .label(tab_visible_labels[index].clone())
                     .aria_label(tab_accessible_names[index].clone())
                     .disabled(tab.disabled)
                     .track_focus(&tab_focus_handles[index])
@@ -438,6 +457,20 @@ fn resolved_localized_group_label<'a>(message_id: &str, localized: &'a str) -> O
     (!localized.trim().is_empty() && localized.trim() != message_id.trim()).then_some(localized)
 }
 
+fn tab_visible_label(tab: &TabItem, localized_message: impl FnOnce(&str) -> String) -> String {
+    tab.localized_label_key.as_ref().map_or_else(
+        || tab.label.clone(),
+        |key| {
+            let localized = localized_message(key);
+            if localized.trim().is_empty() || localized.trim() == key.trim() {
+                tab.label.clone()
+            } else {
+                localized
+            }
+        },
+    )
+}
+
 fn tab_accessibility_label(
     tab: &TabItem,
     localized_message: impl FnOnce(&str) -> String,
@@ -452,7 +485,7 @@ fn tab_accessibility_label(
                 localized
             }
         }
-        None => tab.label.clone(),
+        None => tab_visible_label(tab, localized_message),
     }
 }
 
@@ -808,6 +841,23 @@ mod tests {
         assert_eq!(
             tab_accessibility_label(&localized, |id| format!("{id} traduit")),
             "tab.settings traduit"
+        );
+    }
+
+    #[test]
+    fn localized_visible_tab_label_updates_default_accessible_name() {
+        let tab = TabItem::new("colors", "Colors", EmptyView).localized_label("tab.colors");
+        assert_eq!(
+            tab_visible_label(&tab, |_| "Couleurs".to_owned()),
+            "Couleurs"
+        );
+        assert_eq!(
+            tab_accessibility_label(&tab, |_| "ألوان".to_owned()),
+            "ألوان"
+        );
+        assert_eq!(
+            tab_visible_label(&tab, |_| "tab.colors".to_owned()),
+            "Colors"
         );
     }
 

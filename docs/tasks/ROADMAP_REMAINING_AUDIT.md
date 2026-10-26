@@ -11,6 +11,16 @@ Reverify live HEAD and dirty state before subsequent integration; preserve unrel
 
 ### Stage 6 Playground copy — 2026-10-26
 
+The Utility Panel story now resolves its visible title, five tab names,
+section headings, and three ColorPicker labels from the English, French, and
+Arabic catalogs. `TabItem::localized_label` and
+`ColorPickerView::localized_label` retain constructor fallbacks and resolve at
+render time. Three runtime locale catalog groups validated; the focused
+ColorPicker and Utility Panel tests passed **1/1 each**, and
+`cargo-headstart check -p rustui-playground` passed. Logs are in
+`target/headstart/evidence/utility-*-20261026.log`. Native visual and live
+locale-switch acceptance for this story remain open.
+
 The Hover Gallery now resolves its visible instructions, placeholder, controls,
 and changing status from English, French, and Arabic catalogs. The localization
 story's explanatory sentence also follows the active locale. `validate_locales.py`
@@ -22,6 +32,18 @@ source coverage for those two stories only. Other story literals, native visual
 and live locale-switch checks, real Arabic input, and broader RTL/font acceptance
 remain open. The Hover Gallery's accessibility live value still uses its English
 fallback pending the deferred accessibility work.
+
+The 2026-10-26 source-bound native run on `88f744b2` confirmed live English,
+French, and Arabic Hover Gallery AX text and controls. The first app-name CUA
+binding accidentally opened an older c611 binary, so its English-only result
+was discarded; the current-source window was selected by absolute bundle path
+and verified by executable SHA-256. Native visual acceptance remains **open**:
+the current Arabic inner canvas at a scrolled position displayed clipped
+story copy and large blank regions; English also overflowed horizontally.
+See `target/headstart/evidence/native-hover-locales-20261026.md`. Both test
+processes quit, the current-source disposable artifacts were removed, and the
+shared GUI slot was released. The RTL layout failure needs a focused repair
+and rerun before release.
 
 - **Stage 6 bounded native Arabic pointer acceptance:** On integrated source
   `cc11658d`, the packaged macOS 27 Playground executable matched its
