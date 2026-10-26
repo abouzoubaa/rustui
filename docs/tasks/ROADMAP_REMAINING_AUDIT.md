@@ -9,6 +9,8 @@ Reverify live HEAD and dirty state before subsequent integration; preserve unrel
 
 ## Current checkpoint — 2026-10-26
 
+- **Stage 6 framework-story localization:** Commit `c37e0408` reuses the active RustUI catalogs for all 15 Playground demo titles and summaries in English, French, and Arabic. `ListView::localized_labels` resolves display text at render time while retaining source-index selection; localized search maps back to the same story. The bound-value label and Name field in the Text inputs story also resolve through the catalog. Three runtime locale records validated, focused list and Playground search tests passed **1/1 each**, and the changed-source macOS release driver exited 0 with **1,347 passing tests across 39 groups** and an optimized package. The bundled and standalone executable SHA-256 both matched `75c328047addb4667f2c56113bb3d43549ecfd0ef3d6f95b1243028b23ce114f`. In the owned macOS 27 app, the story list, selected title and summary changed to French and Arabic; the input bound-value/Name labels changed with them. Searching for Arabic `حقول النص` returned the selected Text inputs story. The owned app exited, its verified disposable bundle and standalone executable were removed, and the GUI slot was released. Evidence: `target/headstart/evidence/list-localized-label-test-20261026.log`, `target/headstart/evidence/playground-story-locale-test-20261026.log`, and `target/headstart/evidence/release-macos-story-locale-20261026.log`. Other literals inside stories still show English in French/Arabic, and current-source Web plus wider native locale acceptance remain open.
+
 - **Stage 6 native French dead-key check:** On source HEAD `9ca086b00f798116699d0df765b2dccda7a64fb4`, `./scripts/verify-release.sh macos` exited 0 with **1,345 passing tests across 39 groups** and packaged the Playground. The bundled and standalone executable SHA-256 both matched `fb1f5768e8a5e826b80431f1a45cce6d424eb78fbd2ebde9a8d908c9ee1a662e`. In the macOS 27 app, the Text inputs story was set to Français; the focused Name field showed `´` after `alt+e` while the owner-bound value remained empty, then both field and bound value showed `é` after `e`. This is bounded dead-key commit evidence; CUA did not expose the native marked-text range, so active-composition acceptance remains open. The owned app exited, its verified disposable bundle and standalone executable were removed, and the shared GUI slot was released. Build log: `target/headstart/evidence/release-macos-marked-input-20261026.log`.
 
 - **Dependency-notice gap classification:** Target-filtered, `--edges normal`
@@ -1238,8 +1240,9 @@ No dependency revision was changed by this audit.
    including active composition where applicable. D1b's ordinary typing/timer
    overlap has an ordered native observation; unsampled concurrent events remain
    outside that bounded result.
-3. Close current-scope English/French/Arabic functional, theme, font/glyph,
-   RTL, lifecycle, and performance acceptance on source-bound artifacts.
+3. Finish remaining Playground story copy in English/French/Arabic and close
+   functional, theme, font/glyph, RTL, lifecycle, and performance acceptance
+   on source-bound artifacts.
    Accessibility and VoiceOver remain undone/deferred by user scope.
 4. Establish trusted compiled macOS/Web CI, supported OS/browser versions,
    signing/notarization, and release packaging evidence. Resolve dark-radio
