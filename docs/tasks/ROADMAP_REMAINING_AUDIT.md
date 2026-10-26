@@ -9,6 +9,15 @@ Reverify live HEAD and dirty state before subsequent integration; preserve unrel
 
 ## Current checkpoint — 2026-10-26
 
+- **Stage 6 bounded native Arabic pointer acceptance:** On integrated source
+  `cc11658d`, the packaged macOS 27 Playground executable matched its
+  optimized Headstart artifact (SHA-256 `e0ea58deffb199ed48952d247f95dbf3ae1d52ed3c0449d55db666e129d780b3`).
+  Arabic Text inputs accepted mixed text by paste; pointer drag selected a
+  subset, and replacement updated Name, Search, Notes and the owner label.
+  Exact selected range and real Arabic keyboard composition were not observed.
+  The sole test app quit, disposable app/executable were removed, and the
+  shared GUI slot was released. Evidence:
+  `target/headstart/evidence/native-arabic-pointer-20261026.md`.
 - **Stage 11 mixed Arabic pointer hit, current milestone:** A same-version,
   exact-image GPUI patch now carries Cosmic bidirectional glyph clusters into
   single-line caret/hit mapping; pinned package revisions and upstream checksum
