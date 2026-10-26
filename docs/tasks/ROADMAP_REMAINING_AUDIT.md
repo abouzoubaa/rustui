@@ -42,6 +42,16 @@ Reverify live HEAD and dirty state before subsequent integration; preserve unrel
   bundle and standalone executable were removed. This is one local macOS 27
   native session and one Chromium browser profile; broader macOS 13 and Web
   locale, keyboard, IME, visual, and performance acceptance remains open.
+- **Stage 6/11 Button story chrome locale follow-up, 2026-10-26:** The
+  Button story now resolves its clear-log label, layout summary, bounded-test
+  status, and illustrative-source disclaimer through the English, French, and
+  Arabic runtime catalogs. Locale validation, Playground all-target check,
+  formatting, and the source release gate passed; the gate ran **589 Python
+  tests** plus its JavaScript, packaging, locale, and static-theme checks.
+  Evidence: `target/headstart/evidence/release-source-button-chrome-20261026.log`.
+  Dynamic event-history messages and other Playground chrome are still in
+  English; this checkpoint does not close full Playground localization. The
+  earlier native and Web bundles predate this source change.
 - **Integrated macOS/Web release checkpoint, 2026-10-26:** On integrated
   commit `f428a8b8`, `./scripts/verify-release.sh macos` exited 0 on macOS
   27 arm64 using local Headstart: 1,339 passing test cases across 39 reported
