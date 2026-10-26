@@ -21,7 +21,11 @@ Reverify live HEAD and dirty state before subsequent integration; preserve unrel
   deltas. This is a source-level cause candidate, not a repaired browser
   result. Temporary source and lockfile changes were restored; logs and the
   diagnostic record are in `target/headstart/evidence/web-arabic-note-20261026/`.
-  Arabic long-text Web visual acceptance remains open.
+  A private Cosmic row-shaping seam is prepared in
+  `patches/proposed/gpui-cosmic-wrapped-rows-seam-v1.patch`; it changes no
+  selected runtime source. Its patch applicability and formatting pass, but a
+  candidate compile is unverified because Headstart Cargo panicked selecting
+  the path-patched package. Arabic long-text Web visual acceptance remains open.
 
 - **Current source CI:** GitHub runs `40336215259` and `40336202405` both
   completed successfully at integrated commit `8459aea8`. Compiled macOS/Web

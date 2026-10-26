@@ -1,0 +1,23 @@
+{
+  "schema_version": 1,
+  "status": "proposed; no vendored source selected or modified",
+  "package": "gpui-pre-wgpu 0.3.9",
+  "upstream_snapshot_revision": "93d745668805029476e6d7fbb19652116fed51de",
+  "source": "vendor/gpui-pre-wgpu-0.3.9/src/cosmic_text_system.rs",
+  "source_sha256": "d88929c80c8c4bf00eac0ff5aa8180985e982bf9880b668a962532139b175f63",
+  "postimage_sha256": "194d883fb97f3ef71976ed5f7a928d05bd6a9b13bb0443c5d1285a2dc67ac1d6",
+  "patch": "patches/proposed/gpui-cosmic-wrapped-rows-seam-v1.patch",
+  "patch_sha256": "c8a24eab3cff956d57d91d9d4cdf3d0f8a7c58869212844ee11d1acee97b0895",
+  "purpose": "Extract private width/wrap-parameterized Cosmic row shaping while preserving the legacy unwrapped call; prerequisite to coherent mixed-bidi wrapped-row layout.",
+  "checks": {
+    "patch_applicability": "git apply --check passed against current tracked source",
+    "format": "Rust 1.97.1 rustfmt --check passed on disposable patched source",
+    "compile": "not verified: Headstart Cargo panicked in resolver/features.rs:326 selecting a path-patched gpui-pre-wgpu; standalone candidate also lacked an approved vendored optional gpui-pre-bench-metrics dependency",
+    "browser": "not run; patch is not selected by Cargo and changes no current runtime behavior"
+  },
+  "next_step": "Resolve candidate compilation without changing pinned package revision, then add backend wrapped-row geometry and shared paint/hit-test acceptance before promotion.",
+  "compatibility": "Private helper only; current no-width Wrap::None caller and public API unchanged.",
+  "fallback": "Leave this patch unselected; current runtime remains pinned and unchanged.",
+  "removal_condition": "Replace with an upstream GPUI release that provides verified mixed-bidi wrapped-row geometry, painting, and hit-testing.",
+  "evidence_dir": "target/headstart/candidates/rtl-seam-source/"
+}
