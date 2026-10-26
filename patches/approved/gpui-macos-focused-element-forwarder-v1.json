@@ -1,0 +1,48 @@
+{
+  "candidate_id": "native-focused-element-forwarder-20261025a",
+  "approval_state": "prepared_pending_native_retest_and_owner_promotion",
+  "source": "vendor/gpui-pre-macos-0.3.9/src/window.rs",
+  "pre": "2f17e4e9cdc2696388c7a3d4d546e82601b5dc3b5114255cc2579e3fe28e2c39",
+  "post": "12d18266972087f25e876a97751af1903401ad2f9b8d9c84eab7fad9495fbd00",
+  "patch": "patches/approved/gpui-macos-focused-element-forwarder-v1.patch",
+  "patch_sha256": "b33399aff2eeaa4be09d8394a4c35f598a3a09059c75528532f2d319407357fe",
+  "gpui": {
+    "name": "gpui-pre-macos",
+    "version": "0.3.9",
+    "zed_revision": "93d745668805029476e6d7fbb19652116fed51de",
+    "cargo_checksum": "c7c988b7e49775cc8542dbe48d5a10e073d8e898a023ef3ff3d24f33363e9863",
+    "checksum_file_sha256": "f36d6644791f6084418ac6923e092ce8da4aee7749372a69f8c272fc74150048",
+    "license": "Apache-2.0",
+    "license_path": "vendor/gpui-pre-macos-0.3.9/LICENSE-APACHE",
+    "license_sha256": "752daf2fb234ca4a1fa372c073fe127f44b7b90fd2529ae44273a64f9d53da7a",
+    "accesskit_dependency_requirement": "0.26.0",
+    "package_tree_sha256": "b67327d1c5dcbc045fa217e82111c90c2427af2ec77f3889baf926d4facc4217",
+    "cargo_path": "vendor/gpui-pre-macos-0.3.9",
+    "cargo_source_selection": "[patch.crates-io].gpui-pre-macos local path; Cargo.lock package entry has no source/checksum"
+  },
+  "accesskit_macos": {
+    "name": "accesskit_macos",
+    "version": "0.26.3",
+    "revision": "c88605b96d04431f9c3c792464a0f2f253480e94",
+    "cargo_checksum": "ce02dc63b43f0c9296af9ac946312a2dc8814427d7a64d2d600971dac55b6076",
+    "license": "MIT OR Apache-2.0",
+    "repository": "https://github.com/AccessKit/accesskit",
+    "crate_manifest_sha256": "d058a7a5616e7373b1b9dda303650ed6baf31aaf99e801fc5d2e080e253caf0d",
+    "vcs_info_sha256": "a78a4422501108a7d1091ec6781c65b5a839a7035f18607a446ff2bf3fdce6e4",
+    "forwarder_source_sha256": "66cd13504699cb38789cdb07f7cb2c7878c0ef0f867a4f6040b3d014ef63d7d6",
+    "license_files": [
+      {
+        "path": "patches/approved/licenses/accesskit_macos-0.26.3/LICENSE-APACHE",
+        "sha256": "62c7a1e35f56406896d7aa7ca52d0cc0d272ac022b5d2796e7d6905db8a3636a"
+      },
+      {
+        "path": "patches/approved/licenses/accesskit_macos-0.26.3/LICENSE-MIT",
+        "sha256": "23f18e03dc49df91622fe2a76176497404e46ced8a715d9d2b67a7446571cca3"
+      }
+    ],
+    "license_source": "https://github.com/AccessKit/accesskit/tree/c88605b96d04431f9c3c792464a0f2f253480e94",
+    "vendored_source": "vendor/accesskit_macos-0.26.3",
+    "checksum_file_sha256": "1dc1626a9a63b3a1ed3ef9c157f3d2ac01cc23e930f744d461c2608c15fef610"
+  },
+  "change": "Two AccessKit focus-forwarder registrations immediately after GPUIWindow and GPUIPanel class registration."
+}

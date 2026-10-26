@@ -39,6 +39,7 @@ case "${1:-}" in
   macos)
     verify_tree_accessibility_series
     python3 scripts/apply_gpui_web_semantic_adapter.py --verify
+    python3 scripts/apply_gpui_macos_focused_element_patch.py --verify
     if [[ "$(uname -s)" != Darwin ]]; then
       echo 'The macos release check requires a macOS host.' >&2
       exit 2
