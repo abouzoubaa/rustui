@@ -45,6 +45,16 @@ processes quit, the current-source disposable artifacts were removed, and the
 shared GUI slot was released. The RTL layout failure needs a focused repair
 and rerun before release.
 
+The current-source `fb6399ca` native replay reproduced the Arabic Stacks >
+Focus inner-canvas clipping after a two-page scroll. French at the same
+position was readable from the left, though horizontal overflow remained.
+Two bounded repair probes did not close the defect: logical-start alignment
+still clipped content; tracking a changed RTL scroll extent exposed rightmost
+controls but left large blank regions and clipped mid-canvas text. Both edits
+were reverted. The focused extent helper test passed **1/1** for its candidate,
+which is not release evidence. Exact candidate diff and observations:
+`target/headstart/evidence/native-rtl-layout-probes-20261026.md`.
+
 - **Stage 6 bounded native Arabic pointer acceptance:** On integrated source
   `cc11658d`, the packaged macOS 27 Playground executable matched its
   optimized Headstart artifact (SHA-256 `e0ea58deffb199ed48952d247f95dbf3ae1d52ed3c0449d55db666e129d780b3`).
