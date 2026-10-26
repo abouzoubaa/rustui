@@ -256,6 +256,7 @@ fn expand_tokens(item: proc_macro2::TokenStream) -> syn::Result<proc_macro2::Tok
     });
 
     let mut default_generics = generics.clone();
+    let (impl_generics, type_generics, where_clause) = generics.split_for_impl();
     let mut conditional_default_requirements = Vec::new();
     for (index, (_, ty, attributes)) in default_fields.iter().enumerate() {
         if let Some(presence) = cfg_presence(attributes)? {
@@ -263,12 +264,15 @@ fn expand_tokens(item: proc_macro2::TokenStream) -> syn::Result<proc_macro2::Tok
             default_generics
                 .make_where_clause()
                 .predicates
-                .push(parse_quote!(#requirement<#ty>: ::core::default::Default));
+                .push(parse_quote!(<Self as #requirement>::Field: ::core::default::Default));
             conditional_default_requirements.push(quote! {
-                #[cfg(#presence)]
-                type #requirement<T> = T;
-                #[cfg(not(#presence))]
-                type #requirement<T> = ::core::marker::PhantomData<T>;
+                trait #requirement { type Field; }
+                impl #impl_generics #requirement for #name #type_generics #where_clause {
+                    #[cfg(#presence)]
+                    type Field = #ty;
+                    #[cfg(not(#presence))]
+                    type Field = ();
+                }
             });
         } else {
             default_generics
@@ -279,7 +283,6 @@ fn expand_tokens(item: proc_macro2::TokenStream) -> syn::Result<proc_macro2::Tok
     }
     let (default_impl_generics, default_type_generics, default_where_clause) =
         default_generics.split_for_impl();
-    let (impl_generics, type_generics, where_clause) = generics.split_for_impl();
 
     let default_impl = quote! {
         impl #default_impl_generics ::core::default::Default for #name #default_type_generics

@@ -21,6 +21,19 @@ use rustui_macros::component;
 struct NoDefault;
 
 #[component]
+struct CfgUnavailable {
+    #[cfg(any())]
+    conditional: unavailable::Type<Self>,
+    value: usize,
+}
+
+#[component]
+struct CfgSelfReference {
+    #[cfg(all())]
+    recursive: Option<Box<Self>>,
+}
+
+#[component]
 struct CfgDisabled<T> {
     #[cfg(any())]
     conditional: T,
@@ -61,6 +74,8 @@ fn default_with_enabled_field<T: Default>() {
 
 #[test]
 fn cfg_removed_default_fields_do_not_bound_generic_type() {
+    assert_eq!(CfgUnavailable::default().value, 0);
+    assert!(CfgSelfReference::default().recursive.is_none());
     let _: CfgDisabled<NoDefault> = Default::default();
     let _: CfgAttrDisabled<NoDefault> = Default::default();
     let _: NestedCfgAttrDisabled<NoDefault> = Default::default();
