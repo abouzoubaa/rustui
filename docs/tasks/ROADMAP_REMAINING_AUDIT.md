@@ -9,6 +9,24 @@ Reverify live HEAD and dirty state before subsequent integration; preserve unrel
 
 ## Current checkpoint — 2026-10-26
 
+- **Stage 11 mixed Arabic pointer hit, current milestone:** A same-version,
+  exact-image GPUI patch now carries Cosmic bidirectional glyph clusters into
+  single-line caret/hit mapping; pinned package revisions and upstream checksum
+  files stay unchanged. RustUI's focused public GPUI regression passed **1/1**;
+  macOS Playground all-target Headstart check and optimized Web build passed.
+  Current macOS release driver passed **1,349 tests across 40 groups** and
+  packaged Playground; Web release driver passed **18/18** host IME-plan tests.
+  Native/Web dependency notices still have **5/3** unresolved file gaps.
+  The rebuilt bundle verified **2,934/2,934** source hashes and **770/770**
+  package hashes. In one in-app Chromium profile, Arabic Text inputs Name
+  accepted `مرحبا RustUI عالم`; pointer clicks reached intermediate caret
+  positions, a drag selected only UTF-16 range 6..11, and replacement updated
+  the owner-backed value. Before the patch, the same clicks reached only start
+  or end. Evidence: `target/headstart/evidence/bidi-input-hit-20261026/README.md`.
+  The pinned GPUI library-test target still stops before execution on missing
+  upstream font fixtures and `util_macros`. Real OS Web IME, native macOS,
+  cross-browser, wider font/performance and screen-reader acceptance remain
+  open; accessibility is user-deferred.
 - **Integrated Stage 6 input and code-editor locales:** Through `5bada9f8`,
   Playground uses the English, French, and Arabic catalogs for its main input
   and code-editor controls. The current macOS release driver passed 1,348 tests

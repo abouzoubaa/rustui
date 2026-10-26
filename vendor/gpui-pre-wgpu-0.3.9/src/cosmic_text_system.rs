@@ -808,6 +808,8 @@ impl CosmicTextSystemState {
                 descent: Pixels::ZERO,
                 runs: Vec::new(),
                 len: text.len(),
+
+                bidi_clusters: None,
             };
         };
 
@@ -967,6 +969,22 @@ impl CosmicTextSystemState {
             descent: layout.max_descent.into(),
             runs,
             len: text.len(),
+
+            bidi_clusters: Some(
+                layout
+                    .glyphs
+                    .iter()
+                    .map(|glyph| WrappedGlyphCluster {
+                        bytes: glyph.start..glyph.end,
+                        x: glyph.x.into(),
+                        width: glyph.w.into(),
+                        rtl: glyph.level.is_rtl(),
+                    })
+                    .collect(),
+            )
+            .filter(|_: &Vec<WrappedGlyphCluster>| {
+                layout.glyphs.iter().any(|glyph| glyph.level.is_rtl())
+            }),
         }
     }
 

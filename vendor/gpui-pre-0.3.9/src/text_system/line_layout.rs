@@ -29,6 +29,8 @@ pub struct LineLayout {
     pub runs: Vec<ShapedRun>,
     /// The length of the line in utf-8 bytes
     pub len: usize,
+    /// Cosmic glyph clusters for bidirectional single-line hit testing.
+    pub bidi_clusters: Option<Vec<WrappedGlyphCluster>>,
 }
 
 /// A run of text that has been shaped .
@@ -129,9 +131,65 @@ impl BackendWrappedRow {
     }
 }
 
+fn cluster_index_for_x(clusters: &[WrappedGlyphCluster], x: Pixels, closest: bool) -> usize {
+    let x = f32::from(x);
+    let mut nearest = (f32::INFINITY, 0);
+    for cluster in clusters {
+        let left = f32::from(cluster.x);
+        let right = left + f32::from(cluster.width);
+        let (left_index, right_index) = if cluster.rtl {
+            (cluster.bytes.end, cluster.bytes.start)
+        } else {
+            (cluster.bytes.start, cluster.bytes.end)
+        };
+        if x >= left && x < right {
+            return if closest {
+                if x < (left + right) / 2.0 {
+                    left_index
+                } else {
+                    right_index
+                }
+            } else {
+                cluster.bytes.start
+            };
+        }
+        for (edge, index) in [(left, left_index), (right, right_index)] {
+            let distance = (x - edge).abs();
+            if distance < nearest.0 {
+                nearest = (distance, index);
+            }
+        }
+    }
+    nearest.1
+}
+
+fn cluster_x_for_index(clusters: &[WrappedGlyphCluster], index: usize) -> Pixels {
+    let mut nearest = (usize::MAX, Pixels::ZERO);
+    for cluster in clusters {
+        let (start_x, end_x) = if cluster.rtl {
+            (cluster.x + cluster.width, cluster.x)
+        } else {
+            (cluster.x, cluster.x + cluster.width)
+        };
+        if cluster.bytes.start <= index && index < cluster.bytes.end {
+            return start_x;
+        }
+        for (byte, x) in [(cluster.bytes.start, start_x), (cluster.bytes.end, end_x)] {
+            let distance = byte.abs_diff(index);
+            if distance < nearest.0 {
+                nearest = (distance, x);
+            }
+        }
+    }
+    nearest.1
+}
+
 impl LineLayout {
     /// The index for the character at the given x coordinate
     pub fn index_for_x(&self, x: Pixels) -> Option<usize> {
+        if let Some(clusters) = &self.bidi_clusters {
+            return (x < self.width).then(|| cluster_index_for_x(clusters, x, false));
+        }
         if x >= self.width {
             None
         } else {
@@ -149,6 +207,9 @@ impl LineLayout {
     /// closest_index_for_x returns the character boundary closest to the given x coordinate
     /// (e.g. to handle aligning up/down arrow keys)
     pub fn closest_index_for_x(&self, x: Pixels) -> usize {
+        if let Some(clusters) = &self.bidi_clusters {
+            return cluster_index_for_x(clusters, x, true);
+        }
         let mut prev_index = 0;
         let mut prev_x = px(0.);
 
@@ -179,6 +240,9 @@ impl LineLayout {
 
     /// The x position of the character at the given index
     pub fn x_for_index(&self, index: usize) -> Pixels {
+        if let Some(clusters) = &self.bidi_clusters {
+            return cluster_x_for_index(clusters, index);
+        }
         for run in &self.runs {
             for glyph in &run.glyphs {
                 if glyph.index >= index {
@@ -249,6 +313,8 @@ impl LineLayout {
             descent: self.descent,
             runs: left_runs,
             len: byte_index,
+
+            bidi_clusters: None,
         };
 
         let right = LineLayout {
@@ -258,6 +324,8 @@ impl LineLayout {
             descent: self.descent,
             runs: right_runs,
             len: self.len - byte_index,
+
+            bidi_clusters: None,
         };
 
         (left, right)
@@ -1205,6 +1273,8 @@ mod tests {
                 glyphs,
             }],
             len: 0,
+
+            bidi_clusters: None,
         }
     }
 
@@ -1351,5 +1421,50 @@ mod tests {
 
         let positions = glyph_x_positions(&layout);
         assert_eq!(positions, vec![0.5, 0.5]);
+    }
+
+    #[test]
+    fn bidi_single_line_pointer_hits_follow_visual_clusters() {
+        let mut layout = make_layout(Vec::new());
+        layout.len = 7;
+        layout.width = px(40.);
+        layout.bidi_clusters = Some(vec![
+            WrappedGlyphCluster {
+                bytes: 4..6,
+                x: px(0.),
+                width: px(10.),
+                rtl: true,
+            },
+            WrappedGlyphCluster {
+                bytes: 2..4,
+                x: px(10.),
+                width: px(10.),
+                rtl: true,
+            },
+            WrappedGlyphCluster {
+                bytes: 0..2,
+                x: px(20.),
+                width: px(10.),
+                rtl: true,
+            },
+            WrappedGlyphCluster {
+                bytes: 6..7,
+                x: px(30.),
+                width: px(10.),
+                rtl: false,
+            },
+        ]);
+        assert_eq!(layout.closest_index_for_x(px(1.)), 6);
+        assert_eq!(layout.closest_index_for_x(px(9.)), 4);
+        assert_eq!(layout.closest_index_for_x(px(11.)), 4);
+        assert_eq!(layout.closest_index_for_x(px(19.)), 2);
+        assert_eq!(layout.closest_index_for_x(px(21.)), 2);
+        assert_eq!(layout.closest_index_for_x(px(29.)), 0);
+        assert_eq!(layout.closest_index_for_x(px(31.)), 6);
+        assert_eq!(layout.closest_index_for_x(px(39.)), 7);
+        assert_eq!(layout.x_for_index(0), px(30.));
+        assert_eq!(layout.x_for_index(2), px(20.));
+        assert_eq!(layout.x_for_index(4), px(10.));
+        assert_eq!(layout.index_for_x(px(25.)), Some(0));
     }
 }

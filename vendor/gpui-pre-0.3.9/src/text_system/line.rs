@@ -100,6 +100,8 @@ impl ShapedLine {
             descent: layout.descent,
             runs: layout.runs.clone(),
             len,
+
+            bidi_clusters: self.layout.bidi_clusters.clone(),
         });
         self
     }
@@ -367,6 +369,8 @@ impl<'a> ShapedLineCursor<'a> {
                 descent: self.line.layout.descent,
                 runs,
                 len: byte_index - previous_index,
+
+                bidi_clusters: None,
             }),
             text: SharedString::new(&self.line.text[previous_index..byte_index]),
             decoration_runs: decorations,
@@ -1081,6 +1085,8 @@ mod tests {
                     glyphs: shaped_glyphs,
                 }],
                 len: text.len(),
+
+                bidi_clusters: None,
             }),
             text: SharedString::new(text),
             decoration_runs: SmallVec::from(decorations.to_vec()),
@@ -1572,6 +1578,8 @@ mod tests {
                     },
                 ],
                 len: 6,
+
+                bidi_clusters: None,
             }),
             text: "abcdef".into(),
             decoration_runs: SmallVec::new(),
@@ -1744,6 +1752,8 @@ mod tests {
             descent: layout.descent,
             runs,
             len: layout.len,
+
+            bidi_clusters: None,
         });
         line
     }
@@ -1812,6 +1822,8 @@ mod tests {
                     },
                 ],
                 len: 10,
+
+                bidi_clusters: None,
             }),
             text: "a😀bcdef".into(),
             decoration_runs: SmallVec::new(),

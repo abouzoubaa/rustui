@@ -14,6 +14,26 @@ fail on incompatible patches and preserve the last accepted source lock.
 
 ## Applied patches
 
+### GPUI bidirectional single-line pointer hits, v1
+
+- Approved exact-image patch: `approved/gpui-bidi-input-hit-v1.patch`; metadata and
+  pristine package checksums are in `approved/gpui-bidi-input-hit-v1.json`.
+  It composes after the approved bidirectional wrapped-row patch without changing
+  the pinned GPUI or GPUI Components versions.
+- Cosmic provides logical byte ranges, visual positions, and direction for each
+  glyph cluster. The patched GPUI line layout uses those clusters to place
+  single-line carets and resolve pointer hits inside mixed Arabic/Latin text.
+  Ordinary left-to-right lines retain their existing path. RustUI continues to
+  use GPUI Components' public input implementation.
+- Apply or verify with `python3 scripts/apply_gpui_bidi_input_hit_patch.py
+  --apply` or `--verify`; `--reverse` restores the exact preimages. The helper
+  rejects mixed or unknown images and preserves upstream checksum files.
+- A focused RustUI integration regression passed 1/1. Mac and Web release
+  drivers passed; current Chromium resolved intermediate mixed-script pointer
+  carets and partial drag selection in the public RustUI input story. The
+  pinned GPUI library test target stops before test execution on missing
+  upstream font fixtures and `util_macros`. Wider input acceptance remains.
+
 ### GPUI bidirectional wrapped rows, v1
 
 - Approved patch: `approved/gpui-bidi-wrapped-rows-v1.patch` (SHA-256
