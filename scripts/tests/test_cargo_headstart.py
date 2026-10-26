@@ -67,7 +67,7 @@ class CargoHeadstartTests(unittest.TestCase):
             cargo.write_text(
                 "#!/usr/bin/env python3\n"
                 "import json, os, sys\n"
-                "print(json.dumps({'rustc': os.environ.get('RUSTC'), 'args': sys.argv[1:]}))\n",
+                "print(json.dumps({'rustc': os.environ.get('RUSTC'), 'args': sys.argv[1:], 'encoded': os.environ.get('CARGO_ENCODED_RUSTFLAGS'), 'rustflags': os.environ.get('RUSTFLAGS')}))\n",
                 encoding="utf-8",
             )
             cargo.chmod(0o755)
@@ -112,6 +112,37 @@ class CargoHeadstartTests(unittest.TestCase):
                 self.assertEqual(payload["rustc"], expected_rustc)
                 self.assertIn("-Zheadstart", payload["args"])
                 self.assertEqual(payload["args"][-3:], ["check", "-p", "rustui"])
+
+
+            # Opt-in release remapping must retain caller flag precedence and
+            # one encoded argument for paths containing spaces.
+            env["RUSTUI_REMAP_BUILD_PATHS"] = "1"
+            env["CARGO_TARGET_DIR"] = str(base / "repro target with spaces")
+            mappings = [
+                "--remap-path-prefix=" + str(ROOT.resolve()) + "=/rustui/src",
+                "--remap-path-prefix=" + str(Path(env["CARGO_TARGET_DIR"]).resolve()) + "=/rustui/build",
+            ]
+            for encoded, raw, expected in (
+                ("--cfg\x1fencoded_caller", "--cfg ignored_raw", ["--cfg", "encoded_caller"]),
+                (None, "-C opt-level=2", ["-C", "opt-level=2"]),
+                ("", "--cfg ignored_raw", []),
+            ):
+                if encoded is None:
+                    env.pop("CARGO_ENCODED_RUSTFLAGS", None)
+                else:
+                    env["CARGO_ENCODED_RUSTFLAGS"] = encoded
+                env["RUSTFLAGS"] = raw
+                result = subprocess.run([str(LAUNCHER), "build", "--release"], env=env,
+                                        text=True, capture_output=True, check=True)
+                payload = json.loads(result.stdout)
+                self.assertEqual(payload["encoded"].split("\x1f"),
+                                 expected + mappings + ["-Zmetadata-crate-hash=no"])
+                self.assertEqual(payload["rustflags"], raw)
+            env["RUSTUI_REMAP_BUILD_PATHS"] = "2"
+            result = subprocess.run([str(LAUNCHER), "check"], env=env,
+                                    text=True, capture_output=True)
+            self.assertEqual(result.returncode, 2)
+            self.assertIn("must be 0 or 1", result.stderr)
 
 
 if __name__ == "__main__":

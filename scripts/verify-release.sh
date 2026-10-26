@@ -55,7 +55,7 @@ case "${1:-}" in
     evidence="$repository_root/target/headstart/evidence/release-checks"
     mkdir -p "$evidence"
     ./scripts/cargo-headstart metadata --format-version 1 --locked --offline > "$evidence/native-metadata.json"
-    ./scripts/cargo-headstart build -p rustui-playground --release --locked --offline \
+    RUSTUI_REMAP_BUILD_PATHS=1 ./scripts/cargo-headstart build -p rustui-playground --release --locked --offline \
       --message-format=json > "$evidence/native-build.jsonl"
     notices="$repository_root/target/headstart/evidence/native-dependency-notices-checked-$(date -u +%Y%m%dT%H%M%SZ)-$$"
     cargo_home="${CARGO_HOME:-$HOME/.cargo}"

@@ -95,6 +95,34 @@ case "$working_dir" in
         ;;
 esac
 
+# Release artifacts must not embed machine-specific generated-source paths.
+# Keep development defaults unchanged; the native release gate opts in.
+case "${RUSTUI_REMAP_BUILD_PATHS:-0}" in
+    0) ;;
+    1)
+        rustui_repro_root="$(CDPATH= cd -- "$(dirname -- "$0")/.." && pwd -P)"
+        CARGO_ENCODED_RUSTFLAGS="$(python3 -c '
+import os
+from pathlib import Path
+import sys
+
+if "CARGO_ENCODED_RUSTFLAGS" in os.environ:
+    flags = os.environ["CARGO_ENCODED_RUSTFLAGS"].split("\x1f") if os.environ["CARGO_ENCODED_RUSTFLAGS"] else []
+else:
+    # Match the whitespace splitting that Cargo applies to unencoded flags.
+    flags = os.environ.get("RUSTFLAGS", "").split()
+flags += ["--remap-path-prefix=" + str(Path(sys.argv[1]).resolve()) + "=/rustui/src",
+          "--remap-path-prefix=" + str(Path(sys.argv[2]).resolve()) + "=/rustui/build"]
+print("\x1f".join(flags))
+' "$rustui_repro_root" "$CARGO_TARGET_DIR")"
+        export CARGO_ENCODED_RUSTFLAGS
+        ;;
+    *)
+        printf '%s\n' 'RUSTUI_REMAP_BUILD_PATHS must be 0 or 1.' >&2
+        exit 2
+        ;;
+esac
+
 # Workaround for Headstart's early/full metadata SVH mismatch. These flags are
 # visible to Cargo so they participate in artifact fingerprints.
 metadata_flag="-Zmetadata-crate-hash=no"
