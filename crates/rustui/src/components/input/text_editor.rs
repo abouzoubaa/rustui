@@ -87,6 +87,7 @@ fn placeholder_changed(retained_placeholder: &str, requested_placeholder: &str) 
 /// A controlled multiline text editor whose editing state survives body rebuilds.
 pub struct TextEditorView {
     placeholder: SharedString,
+    placeholder_message_id: Option<SharedString>,
     value: Binding<String>,
     id: Option<Identity>,
     height: f32,
@@ -100,6 +101,7 @@ impl TextEditorView {
     pub fn new(placeholder: impl Into<SharedString>, value: Binding<String>) -> Self {
         Self {
             placeholder: placeholder.into(),
+            placeholder_message_id: None,
             value,
             id: None,
             height: 120.0,
@@ -133,6 +135,18 @@ impl TextEditorView {
 
     pub fn readonly(mut self, readonly: bool) -> Self {
         self.readonly = readonly;
+        self
+    }
+
+    /// Resolve the visible placeholder through the active RustUI catalog.
+    /// The constructor value remains the fallback when the key is missing.
+    pub fn localized_placeholder(mut self, message_id: impl Into<SharedString>) -> Self {
+        let id = message_id.into();
+        assert!(
+            !id.trim().is_empty(),
+            "TextEditor placeholder localization key must not be blank"
+        );
+        self.placeholder_message_id = Some(id);
         self
     }
 
@@ -175,6 +189,17 @@ impl TextEditorView {
         }
     }
 
+    fn resolved_placeholder(&self, localized_message: impl FnOnce(&str) -> String) -> SharedString {
+        match &self.placeholder_message_id {
+            Some(id) => resolved_message_label(
+                id.as_ref(),
+                localized_message(id.as_ref()),
+                &self.placeholder,
+            ),
+            None => self.placeholder.clone(),
+        }
+    }
+
     fn resolved_accessibility_label(
         &self,
         localized_message: impl FnOnce(&str) -> String,
@@ -184,7 +209,14 @@ impl TextEditorView {
             Some(TextEditorLabel::Message { id, fallback }) => {
                 resolved_message_label(id.as_ref(), localized_message(id.as_ref()), fallback)
             }
-            None => self.default_accessibility_label(),
+            None => {
+                let placeholder = self.resolved_placeholder(localized_message);
+                if placeholder.trim().is_empty() {
+                    DEFAULT_ACCESSIBILITY_LABEL.into()
+                } else {
+                    placeholder
+                }
+            }
         }
     }
 
@@ -221,12 +253,13 @@ impl View for TextEditorView {
     fn into_element(&self, context: &mut RenderContext<'_>) -> AnyElement {
         let identity = self.identity(context);
         let initial_value = self.value.value();
-        let placeholder = self.placeholder.clone();
+        let placeholder = self.resolved_placeholder(|id| context.localized_message(id));
+        let initial_placeholder = placeholder.clone();
         let (retained, created) =
             context.retained_entity(identity.clone(), move |window, cx| RetainedTextEditor {
                 state: cx.new(|cx| {
                     TextareaState::new(window, cx)
-                        .placeholder(placeholder)
+                        .placeholder(initial_placeholder)
                         .default_value(initial_value.clone())
                 }),
                 owner_value: initial_value,
@@ -239,8 +272,7 @@ impl View for TextEditorView {
             .presentation()
             .placeholder()
             .to_string();
-        if placeholder_changed(&retained_placeholder, &self.placeholder) {
-            let placeholder = self.placeholder.clone();
+        if placeholder_changed(&retained_placeholder, &placeholder) {
             context.update_entity(&state, move |state, window, cx| {
                 state.set_placeholder(placeholder, window, cx);
             });
@@ -410,6 +442,28 @@ mod tests {
                 .as_ref(),
             " Notes for today "
         );
+    }
+
+    #[test]
+    fn localized_placeholder_updates_visible_text_and_default_accessible_name() {
+        let editor = TextEditor("Notes", binding()).localized_placeholder("editor.notes");
+        assert_eq!(
+            editor
+                .resolved_placeholder(|_| "ملاحظات".to_owned())
+                .as_ref(),
+            "ملاحظات"
+        );
+        assert_eq!(
+            editor
+                .resolved_accessibility_label(|_| "ملاحظات".to_owned())
+                .as_ref(),
+            "ملاحظات"
+        );
+        assert_eq!(
+            editor.resolved_placeholder(|id| id.to_owned()).as_ref(),
+            "Notes"
+        );
+        assert!(placeholder_changed("Notes", "ملاحظات"));
     }
 
     #[test]

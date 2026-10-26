@@ -264,6 +264,29 @@ Reverify live HEAD and dirty state before subsequent integration; preserve unrel
   `target/headstart/evidence/release-web-shell-locales-20261026.log`.
   This is bounded Web behavior; native and wider browser acceptance for these
   new shell strings remain open.
+- **Stage 6 input-story locale follow-up, 2026-10-26:** Playground's input
+  story now uses the English, French, and Arabic catalogs for its principal
+  labels and placeholders. `TextEditor::localized_placeholder` resolves the
+  visible placeholder and fallback accessible name from the active catalog.
+  Locale validation, Playground all-target check, the dark-search matrix
+  regression (1/1), and localized-placeholder regressions (2/2) passed.
+  The current-source macOS release driver exited 0 with **1,348 tests across
+  39 groups** and five unresolved native dependency-notice gaps. The packaged
+  executable and standalone release executable both had SHA-256
+  `860da0684a2d8b841eb5480fd96295acdf0eb389e541af40e7c2c5ef3cf2f0fa`.
+  In that exact app, French and Arabic input labels appeared in the native
+  accessibility tree. Its owned process exited; only the verified disposable
+  bundle and standalone executable were removed, and the GUI slot was released.
+  The Web release driver exited 0 with **18/18 host IME-plan tests** and three
+  unresolved Web dependency-notice gaps. The bundle manifest's **770/770**
+  files matched their SHA-256 entries; the source SHA-256 was
+  `c1dfff5820a2bdc5d9e8e34d9b656bbf5117edaffd8fa88e1db694a392821a3e`.
+  One browser profile showed the new French and Arabic input labels. The
+  temporary tab and owned port 8766 server were closed. Evidence:
+  `target/headstart/evidence/release-macos-input-story-locales-20261026.log`
+  and `target/headstart/evidence/release-web-input-story-locales-20261026.log`.
+  Other controls and explanatory copy in this story still appear in English;
+  wider locale, input, RTL, native, and browser acceptance remain open.
 - **Current-source cache workload calibration, 2026-10-26:** The existing
   `cache_benchmark` example built with Headstart and the existing calibration
   runner completed **18/18 valid fresh-process records** on local macOS 27

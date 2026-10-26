@@ -330,18 +330,21 @@ impl View for StoryCanvas {
                 .child(
                     SecureField("Password", self.secure_binding.clone())
                         .id("story-input-password")
-                        .accessibility_label("Password"),
+                        .localized_placeholder("lab-input-password")
+                        .localized_accessibility_label("lab-input-password"),
                 )
                 .child(
                     SearchField("Search", self.input_binding.clone())
                         .id("story-input-search")
-                        .accessibility_label("Search"),
+                        .localized_placeholder("lab-input-search")
+                        .localized_accessibility_label("lab-input-search"),
                 )
                 .child(
                     TextEditor("Notes", self.input_binding.clone())
                         .id("story-input-notes")
                         .height(96.0)
-                        .accessibility_label("Notes"),
+                        .localized_placeholder("lab-input-notes")
+                        .localized_accessibility_label("lab-input-notes"),
                 )
                 .child(
                     HStack::new()
@@ -703,31 +706,29 @@ const DARK_SEARCH_FIELD_CASES: [DarkSearchFieldCase; 6] = [
 ];
 
 fn dark_search_field_specimen(case: DarkSearchFieldCase, value: Binding<String>) -> impl View {
-    let state_label = match case.state {
-        DarkSearchFieldState::Disabled => "Disabled",
-        DarkSearchFieldState::Focused => "Focused",
-        DarkSearchFieldState::Idle => "Idle",
-    };
-    let text_label = if case.text_present {
-        "Text present"
-    } else {
-        "Text absent"
-    };
-    let description = if case.state == DarkSearchFieldState::Focused {
-        "Click this field to show its focused appearance."
-    } else {
-        ""
+    let title_message = match (case.state, case.text_present) {
+        (DarkSearchFieldState::Disabled, false) => "lab-search-gallery-dark-disabled-empty",
+        (DarkSearchFieldState::Disabled, true) => "lab-search-gallery-dark-disabled-populated",
+        (DarkSearchFieldState::Focused, false) => "lab-search-gallery-dark-focused-empty",
+        (DarkSearchFieldState::Focused, true) => "lab-search-gallery-dark-focused-populated",
+        (DarkSearchFieldState::Idle, false) => "lab-search-gallery-dark-idle-empty",
+        (DarkSearchFieldState::Idle, true) => "lab-search-gallery-dark-idle-populated",
     };
     Card(
         format!("{}-card", case.id),
         VStack::new()
             .spacing(6.0)
-            .child(Text(format!("{state_label} · {text_label}")))
-            .child(Text(description))
+            .child(LocalizedText(title_message))
+            .child(if case.state == DarkSearchFieldState::Focused {
+                LocalizedText("lab-search-gallery-dark-focus-help")
+            } else {
+                Text("")
+            })
             .child(
                 SearchField("Search components...", value)
                     .id(case.id)
-                    .accessibility_label(format!("Dark Search Field, {state_label}, {text_label}"))
+                    .localized_placeholder("lab-search-gallery-placeholder")
+                    .localized_accessibility_label(title_message)
                     .disabled(case.state == DarkSearchFieldState::Disabled),
             ),
     )
@@ -812,54 +813,59 @@ impl View for SearchFieldReferenceGallery {
                         "search-field-empty",
                         VStack::new()
                             .spacing(6.0)
-                            .child(Text("Search field (empty)"))
-                            .child(Text("Basic search input with placeholder."))
+                            .child(LocalizedText("lab-search-gallery-empty-title"))
+                            .child(LocalizedText("lab-search-gallery-empty-summary"))
                             .child(
                                 SearchField("Search components...", self.empty_query_binding())
                                     .id("search-field-reference-empty")
-                                    .accessibility_label("Search components"),
+                                    .localized_placeholder("lab-search-gallery-placeholder")
+                                    .localized_accessibility_label("lab-search-gallery-label"),
                             ),
                     ))
                     .child(Card(
                         "search-field-active",
                         VStack::new()
                             .spacing(6.0)
-                            .child(Text("Search field (active)"))
-                            .child(Text("Query text with clear action."))
+                            .child(LocalizedText("lab-search-gallery-active-title"))
+                            .child(LocalizedText("lab-search-gallery-active-summary"))
                             .child(
                                 SearchField("Search components...", self.active_query_binding())
                                     .id("search-field-reference-active")
-                                    .accessibility_label("Search components"),
+                                    .localized_placeholder("lab-search-gallery-placeholder")
+                                    .localized_accessibility_label("lab-search-gallery-label"),
                             ),
                     ))
                     .child(Card(
                         "search-field-recent-searches",
                         VStack::new()
                             .spacing(6.0)
-                            .child(Text("Search field (recent searches)"))
-                            .child(Text("Recent searches menu."))
+                            .child(LocalizedText("lab-search-gallery-recent-title"))
+                            .child(LocalizedText("lab-search-gallery-recent-summary"))
                             .child(
                                 SearchField("Search components...", self.recent_query_binding())
                                     .id("search-field-reference-recent")
-                                    .accessibility_label("Search components"),
+                                    .localized_placeholder("lab-search-gallery-placeholder")
+                                    .localized_accessibility_label("lab-search-gallery-label"),
                             )
-                            .child(Popover(
-                                "search-field-reference-recent-menu",
-                                "Recent Searches",
-                                self.recent_menu_open_binding(),
-                                VStack::new().spacing(6.0).child(recent_rows).child(
-                                    Button(
-                                        "Clear Recent Searches",
-                                        self.action(Self::clear_recent_searches),
-                                    )
-                                    .id("search-field-reference-clear-recent"),
-                                ),
-                            )),
+                            .child(
+                                Popover(
+                                    "search-field-reference-recent-menu",
+                                    "Recent Searches",
+                                    self.recent_menu_open_binding(),
+                                    VStack::new().spacing(6.0).child(recent_rows).child(
+                                        Button(
+                                            "Clear Recent Searches",
+                                            self.action(Self::clear_recent_searches),
+                                        )
+                                        .id("search-field-reference-clear-recent")
+                                        .localized_label("lab-search-gallery-clear-recent"),
+                                    ),
+                                )
+                                .localized_label("lab-search-gallery-recent-menu"),
+                            ),
                     )),
             )
-            .child(Text(
-                "Dark Search Field states · switch Playground appearance to Dark; focus the two focused examples manually.",
-            ))
+            .child(LocalizedText("lab-search-gallery-dark-note"))
             .child(
                 VStack::new()
                     .spacing(8.0)
@@ -868,7 +874,11 @@ impl View for SearchFieldReferenceGallery {
                             .spacing(8.0)
                             .child(dark_search_field_specimen(
                                 DARK_SEARCH_FIELD_CASES[0],
-                                Binding::new(String::new(), |value: &String| value.clone(), |_, _| {}),
+                                Binding::new(
+                                    String::new(),
+                                    |value: &String| value.clone(),
+                                    |_, _| {},
+                                ),
                             ))
                             .child(dark_search_field_specimen(
                                 DARK_SEARCH_FIELD_CASES[1],
@@ -911,8 +921,8 @@ impl View for SearchFieldReferenceGallery {
                         "search-field-token-recipients",
                         VStack::new()
                             .spacing(6.0)
-                            .child(Text("Token input (recipients)"))
-                            .child(Text("Add recipients and remove selected tokens."))
+                            .child(LocalizedText("lab-search-gallery-token-title"))
+                            .child(LocalizedText("lab-search-gallery-token-summary"))
                             .child(
                                 TokenField(
                                     "Add recipients",
@@ -926,8 +936,8 @@ impl View for SearchFieldReferenceGallery {
                         "search-field-editable-combo-box",
                         VStack::new()
                             .spacing(6.0)
-                            .child(Text("Combo box (editable)"))
-                            .child(Text("Editable field with suggestions."))
+                            .child(LocalizedText("lab-search-gallery-combo-title"))
+                            .child(LocalizedText("lab-search-gallery-combo-summary"))
                             .child(
                                 ComboBox(
                                     "Framework",
@@ -942,8 +952,8 @@ impl View for SearchFieldReferenceGallery {
                         "search-field-disabled-examples",
                         VStack::new()
                             .spacing(6.0)
-                            .child(Text("Disabled examples"))
-                    .child(Text("Disabled combo box and count."))
+                            .child(LocalizedText("lab-search-gallery-disabled-title"))
+                            .child(LocalizedText("lab-search-gallery-disabled-summary"))
                             .child(
                                 ComboBox(
                                     "Framework",
