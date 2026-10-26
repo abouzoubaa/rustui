@@ -4,7 +4,7 @@ Writing session: thread `01a172cd-8a21-73f1-82cd-62d451c71ec9`, claim
 `c44f414bfbf4ef4c4f30`, branch `codex/production-consolidation-01a172cd`,
 worktree `/Users/Abium/.codex/worktrees/rustui-production-consolidation/rustui`.
 The verified primary integration branch is `work/m118-diagnostics-provenance`;
-checkpoint `2f64e5a8` is integrated. Reverify live HEAD and dirty state before
+checkpoint `6ad24006` is integrated. Reverify live HEAD and dirty state before
 subsequent integration and preserve unrelated work.
 
 ## Current checkpoint — 2026-10-26
@@ -84,14 +84,17 @@ subsequent integration and preserve unrelated work.
   sources/versions and the independent source-consumer compile remain valid.
   This is approximate horizontal grapheme fallback, not full script/vertical
   typography acceptance. Evidence: `/tmp/rustui-preservation-20261025/browser/locale-cjk-v1`.
-- Branch `codex/production-consolidation-01a172cd` is pushed. Its first actual
-  GitHub source run (`40270606296`, Ubuntu 24.04) exposed three Python 3.12
-  recursive fixture-cleanup errors, a filesystem-case assumption, and an
-  unnecessary compiler probe for a missing binary. Those repairs pass eight
-  focused local tests; remote rerun is pending. This Ubuntu job validates source
-  tooling, not Linux product support. The repository has **zero registered
-  self-hosted runners**, so its separately gated macOS/Web Headstart CI job
-  cannot run. Local macOS Headstart and Wasm results above remain valid evidence.
+- Branch `codex/production-consolidation-01a172cd` is pushed. Actual GitHub source
+  CI now **passes on `6ad24006`**: [run 40271375045](https://github.com/abouzoubaa/rustui/actions/runs/40271375045),
+  including all 581 Python tests, semantic/transport JS fixtures and packaging
+  gates on Ubuntu 24.04. This exposed and resolved Python 3.12 deep-fixture
+  cleanup errors, filesystem-case assumptions and an unnecessary compiler probe
+  for a missing binary. The repairs retain depth/descriptor/security checks and
+  also pass eight focused local tests. Guarded integration to `6ad24006` retained
+  all 24 unrelated files and 326 ignored cache files exactly. This Ubuntu job
+  validates tooling, not Linux product support. The repository has **zero
+  registered self-hosted runners**, so its separately gated macOS/Web Headstart
+  CI job cannot run. Local macOS Headstart and Wasm results remain separate.
 - Whole-project inventory: **37 provisional requirements**. Full coding and
   acceptance percentages have not been recomputed from every contract; the
   bounded counts above are not project completion percentages. Remaining
@@ -463,7 +466,7 @@ or acceptance percentage has not been recomputed against every contract.
 | R27 | 10: performance, provenance and candidate workflow | Extensive bounded tooling present; current-source GUI/performance evidence and candidate review/promotion open. No optimization speed claim or GPU phase acceptance. |
 | R28 | 11: Web reproducible build/package/assets | Source tooling present; rebuild current source and bind browser observations to exact bundle manifest. |
 | R29 | 11: browser keyboard/AX/IME/fonts | Selected approved semantic/IME adapter v9 builds and passes bounded real-browser edit/selection/action checks. Current D1d preview/composition iframe roundtrips also pass. Full cross-browser, real OS IME/clipboard, glyph and screen-reader acceptance remain. |
-| R30 | Release: CI and reproducible release builds | CI workflow and trusted-runner/clean-checkout policy are implemented; source fixtures pass. Current local macOS checkpoint passes 1,250 library and 43 integration tests, all-target checks and optimized packaging. Macro doctests contain zero cases. Actual remote CI execution, compiler/bootstrap reproduction and clean-build artifact comparison remain unverified. |
+| R30 | Release: CI and reproducible release builds | Actual GitHub source CI passes on 6ad24006, including 581 Python tests and JS/packaging gates. Local macOS Headstart checkpoint passes 1,282 library and 53 integration tests, all-target checks and optimized packaging; Web build and bounded browser checks pass. Macro doctests contain zero cases. No trusted macOS/Web runner is registered; compiled CI, compiler/bootstrap reproduction and independent clean-build artifact comparison remain open. |
 | R31 | Release: security, licensing, performance budgets, packaging/instructions | Complete threat/error audit, dependency/license and font notices, supported-version matrix, reproducibility, package signing/distribution plan and release instructions. Publication requires approval. |
 | R32 | 8: Outline | Source implemented: controlled single-column hierarchy over the existing Tree engine, explicit identity and group name, selected/expanded bindings, public-API Playground story and compiled-preview descriptor. Focused Tree/Outline 25/25 and Playground 189/189 tests passed, with all-target checking. Native/browser, AX/VoiceOver, visual/locale/RTL acceptance and upstream Tree naming/hierarchy-level limitations remain open. See `docs/tasks/OUTLINE_IMPLEMENTATION.md`. |
 | R33 | 8: Drawer | Source implemented: controlled visibility, four physical edges, window-owned hosting, current-owner content/bindings, guarded dismissal/unmount, restored focus, named Close, public Playground story and compiled-preview factory. Seven real-Root/validation tests passed; Playground library tests and all-target check passed. Native/browser/AX/VoiceOver, popup stacking and independent modal text-selection isolation remain open. See `docs/tasks/DRAWER_IMPLEMENTATION.md`. |

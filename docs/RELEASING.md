@@ -30,8 +30,10 @@ from the real target builds.
 
 CI runs source checks on Ubuntu. The manual build job requires a dedicated,
 trusted self-hosted macOS ARM64 runner labeled `rustui-headstart`, provisioned
-with the approved compiler, SDK and matching Wasm sysroot. The workflow is
-prepared; runner availability and a successful remote CI run remain unverified.
+with the approved compiler, SDK and matching Wasm sysroot. Source CI
+passed on `6ad24006` ([run 40271375045](https://github.com/abouzoubaa/rustui/actions/runs/40271375045)).
+The runner inventory on 2026-10-26 contained zero registered self-hosted runners,
+so compiled macOS/Web CI remains open despite passing local Headstart checks.
 Do not automatically run untrusted pull-request code on this runner. The
 checkout preserves the runner's caches; use a dedicated checkout and never
 point it at a user's dirty development tree. The build job verifies the selected
