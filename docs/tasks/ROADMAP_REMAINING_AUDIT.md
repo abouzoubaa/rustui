@@ -9,6 +9,17 @@ Reverify live HEAD and dirty state before subsequent integration; preserve unrel
 
 ## Current checkpoint — 2026-10-26
 
+- Picker source event/lifecycle gate: local Mac Headstart ran
+  `./scripts/cargo-headstart test -p rustui picker --lib` with **45/45 pass**,
+  then the retained subscription replacement/owner-removal test with **1/1
+  pass**. This covers the focused source paths, not native Picker interaction
+  or broader owner lifecycle acceptance. Logs:
+  `target/headstart/evidence/picker-headstart-20261026.log` and
+  `target/headstart/evidence/picker-subscription-headstart-20261026.log`.
+  Headstart also reports future incompatibility in pinned `block 0.1.6`:
+  uninhabited static at `vendor/block-0.1.6/src/lib.rs:64`. Current tests
+  pass; the future compiler compatibility policy remains open. Diagnostic:
+  `target/headstart/evidence/picker-future-incompat-20261026.log`.
 - Source CI for `3fd14804` passed in runs
   [40325714173](https://github.com/abouzoubaa/rustui/actions/runs/40325714173),
   [40325705931](https://github.com/abouzoubaa/rustui/actions/runs/40325705931), and
