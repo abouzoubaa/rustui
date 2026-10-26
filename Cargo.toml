@@ -36,11 +36,12 @@ gpui-kit-assets = "=0.7.3"
 
 [patch.crates-io]
 # Keep upstream package versions pinned while reproducibly applying the
-# approved GPUI accessibility patches; see patches/README.md.
+# approved GPUI patches; see patches/README.md.
 gpui-pre = { path = "vendor/gpui-pre-0.3.9" }
 gpui-base = { path = "vendor/gpui-base-0.7.3" }
 gpui-component = { path = "vendor/gpui-component-0.7.3" }
 gpui-pre-web = { path = "vendor/gpui-pre-web-0.3.9" }
+gpui-pre-wgpu = { path = "vendor/gpui-pre-wgpu-0.3.9" }
 gpui-pre-macos = { path = "vendor/gpui-pre-macos-0.3.9" }
 
 [profile.headstart]

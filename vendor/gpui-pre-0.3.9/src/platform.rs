@@ -36,10 +36,10 @@ pub(crate) type PlatformScreenCaptureFrame =
     objc2_core_foundation::CFRetained<objc2_core_video::CVImageBuffer>;
 
 use crate::{
-    Action, AnyWindowHandle, App, AsyncWindowContext, BackgroundExecutor, Bounds,
-    DEFAULT_WINDOW_SIZE, DevicePixels, DispatchEventResult, Edges, ExternalDragPayload, Font,
-    FontId, FontMetrics, FontRun, ForegroundExecutor, GlyphId, GpuSpecs, Hsla, ImageSource, Keymap,
-    LineLayout, MissingGlyphSink, Pixels, PlatformGestures, PlatformInput, Point, Priority,
+    Action, AnyWindowHandle, App, AsyncWindowContext, BackendWrappedRow, BackgroundExecutor,
+    Bounds, DEFAULT_WINDOW_SIZE, DevicePixels, DispatchEventResult, Edges, ExternalDragPayload,
+    Font, FontId, FontMetrics, FontRun, ForegroundExecutor, GlyphId, GpuSpecs, Hsla, ImageSource,
+    Keymap, LineLayout, MissingGlyphSink, Pixels, PlatformGestures, PlatformInput, Point, Priority,
     RenderGlyphParams, RenderImage, RenderImageParams, RenderSvgParams, Scene, ShapedGlyph,
     ShapedRun, SharedString, Size, SvgRenderer, SystemWindowTab, Task, Window, WindowControlArea,
     hash, point, px, size,
@@ -1525,6 +1525,19 @@ pub trait PlatformTextSystem: Send + Sync {
     ) -> Result<(Size<DevicePixels>, Vec<u8>)>;
     /// Layout a line of text with the given font runs.
     fn layout_line(&self, text: &str, font_size: Pixels, runs: &[FontRun]) -> LineLayout;
+
+    /// Returns backend-shaped rows when the backend can wrap bidirectional text
+    /// using its own glyph geometry. Other backends retain GPUI's legacy path.
+    fn layout_line_wrapped(
+        &self,
+        _text: &str,
+        _font_size: Pixels,
+        _runs: &[FontRun],
+        _width: Pixels,
+        _max_lines: Option<usize>,
+    ) -> Option<Vec<BackendWrappedRow>> {
+        None
+    }
     /// Returns the recommended text rendering mode for the given font and size.
     fn recommended_rendering_mode(&self, _font_id: FontId, _font_size: Pixels)
     -> TextRenderingMode;

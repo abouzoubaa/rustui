@@ -14,6 +14,31 @@ fail on incompatible patches and preserve the last accepted source lock.
 
 ## Applied patches
 
+### GPUI bidirectional wrapped rows, v1
+
+- Approved patch: `approved/gpui-bidi-wrapped-rows-v1.patch` (SHA-256
+  `5a593507ff8e5db732ca012cf6c4832d69a98054b97df8cc1698548ab488468d`).
+  The proposal remains at `proposed/gpui-bidi-wrapped-rows-v1.patch`.
+- Sources: pinned `gpui-pre`, `gpui-pre-web`, and `gpui-pre-wgpu` 0.3.9 from
+  Zed snapshot `93d745668805029476e6d7fbb19652116fed51de`. The five exact
+  source images and unchanged package checksum metadata are recorded in
+  `approved/gpui-bidi-wrapped-rows-v1.json`. Cargo selects the local WGPU
+  package without changing the package version or upstream revision.
+- Cosmic shapes bidirectional rows at the final width; GPUI uses the same row
+  geometry for painting and byte-position mapping. Ordinary left-to-right
+  text, max-lines callers, and native CoreText retain their prior layout path.
+- Apply, verify, or reverse with
+  `python3 scripts/apply_gpui_bidi_wrapped_rows_patch.py --apply`, `--verify`,
+  or `--reverse`. The helper rejects unknown source or checksum images and
+  checks the exact staged patch before replacing files.
+- Focused Cosmic width checks passed 2/2 in a fresh target; an isolated GPUI
+  caret/hit geometry fixture passed 1/1. Native and Web Playground checks and
+  a source-matched optimized candidate Web build passed. Chromium painted the
+  complete Arabic Button note across two rows and Increment advanced 0 to 1.
+  The pinned GPUI library-test target remains blocked by its existing missing
+  test-support fonts and `util_macros`; broader browser input, glyph, native
+  visual, and performance acceptance are separate release gates.
+
 ### gpui-pre-web keyboard focus and activation, v3
 
 - Approved patch: `approved/gpui-pre-web-keyboard-focus-activation-v3.patch`; proposal retained at `proposed/gpui-pre-web-keyboard-focus-activation-v3.patch`.

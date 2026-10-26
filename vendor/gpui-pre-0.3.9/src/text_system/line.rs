@@ -471,6 +471,26 @@ impl WrappedLine {
             None => self.layout.wrap_width,
         };
 
+        if let Some(rows) = &self.layout.backend_rows {
+            for (index, row) in rows.iter().enumerate() {
+                paint_line(
+                    point(origin.x, origin.y + line_height * index),
+                    &row.layout,
+                    line_height,
+                    TextAlign::Left,
+                    align_width,
+                    &self.decoration_runs,
+                    &[],
+                    window,
+                    cx,
+                    &mut |_, origin, width, style, window| {
+                        window.paint_underline(origin, width, style)
+                    },
+                )?;
+            }
+            return Ok(());
+        }
+
         paint_line(
             origin,
             &self.layout.unwrapped_layout,
@@ -501,6 +521,23 @@ impl WrappedLine {
             Some(bounds) => Some(bounds.size.width),
             None => self.layout.wrap_width,
         };
+
+        if let Some(rows) = &self.layout.backend_rows {
+            for (index, row) in rows.iter().enumerate() {
+                paint_line_background(
+                    point(origin.x, origin.y + line_height * index),
+                    &row.layout,
+                    line_height,
+                    TextAlign::Left,
+                    align_width,
+                    &self.decoration_runs,
+                    &[],
+                    window,
+                    cx,
+                )?;
+            }
+            return Ok(());
+        }
 
         paint_line_background(
             origin,
@@ -1377,6 +1414,7 @@ mod tests {
                             glyph_ix: 2,
                         }]),
                         wrap_width: Some(px(16.)),
+                        backend_rows: None,
                     }),
                     text: line.text,
                     decoration_runs: line.decoration_runs.into_vec(),

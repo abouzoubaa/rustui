@@ -56,6 +56,79 @@ pub struct ShapedGlyph {
     pub is_emoji: bool,
 }
 
+/// A glyph cluster in a backend-shaped visual row. The byte range remains in
+/// the original logical line; `x` is measured within the requested row width.
+#[derive(Clone, Debug)]
+pub struct WrappedGlyphCluster {
+    pub bytes: Range<usize>,
+    pub x: Pixels,
+    pub width: Pixels,
+    pub rtl: bool,
+}
+
+/// One visual row from a text backend that shapes with the final wrap width.
+#[derive(Debug)]
+pub struct BackendWrappedRow {
+    pub layout: LineLayout,
+    pub bytes: Range<usize>,
+    pub clusters: Vec<WrappedGlyphCluster>,
+}
+
+impl BackendWrappedRow {
+    fn index_for_x(&self, x: Pixels, closest: bool) -> Result<usize, usize> {
+        let x = f32::from(x);
+        let mut nearest = (f32::INFINITY, self.bytes.start);
+        for cluster in &self.clusters {
+            let left = f32::from(cluster.x);
+            let right = left + f32::from(cluster.width);
+            let (left_index, right_index) = if cluster.rtl {
+                (cluster.bytes.end, cluster.bytes.start)
+            } else {
+                (cluster.bytes.start, cluster.bytes.end)
+            };
+            if x >= left && x < right {
+                return Ok(if closest {
+                    if x < (left + right) / 2.0 {
+                        left_index
+                    } else {
+                        right_index
+                    }
+                } else {
+                    cluster.bytes.start
+                });
+            }
+            for (edge, index) in [(left, left_index), (right, right_index)] {
+                let distance = (x - edge).abs();
+                if distance < nearest.0 {
+                    nearest = (distance, index);
+                }
+            }
+        }
+        Err(nearest.1)
+    }
+
+    fn x_for_index(&self, index: usize) -> Pixels {
+        let mut nearest = (usize::MAX, Pixels::ZERO);
+        for cluster in &self.clusters {
+            let (start_x, end_x) = if cluster.rtl {
+                (cluster.x + cluster.width, cluster.x)
+            } else {
+                (cluster.x, cluster.x + cluster.width)
+            };
+            if cluster.bytes.start <= index && index < cluster.bytes.end {
+                return start_x;
+            }
+            for (byte, x) in [(cluster.bytes.start, start_x), (cluster.bytes.end, end_x)] {
+                let distance = byte.abs_diff(index);
+                if distance < nearest.0 {
+                    nearest = (distance, x);
+                }
+            }
+        }
+        nearest.1
+    }
+}
+
 impl LineLayout {
     /// The index for the character at the given x coordinate
     pub fn index_for_x(&self, x: Pixels) -> Option<usize> {
@@ -283,6 +356,8 @@ pub struct WrappedLineLayout {
 
     /// The width of the line, if it was wrapped
     pub wrap_width: Option<Pixels>,
+    /// Backend-shaped rows whose glyph positions already include wrapping.
+    pub backend_rows: Option<Vec<BackendWrappedRow>>,
 }
 
 /// A boundary at which a line was wrapped
@@ -313,7 +388,11 @@ impl WrappedLineLayout {
     pub fn size(&self, line_height: Pixels) -> Size<Pixels> {
         Size {
             width: self.width(),
-            height: line_height * (self.wrap_boundaries.len() + 1),
+            height: line_height
+                * self
+                    .backend_rows
+                    .as_ref()
+                    .map_or(self.wrap_boundaries.len() + 1, Vec::len),
         }
     }
 
@@ -372,6 +451,15 @@ impl WrappedLineLayout {
         line_height: Pixels,
         closest: bool,
     ) -> Result<usize, usize> {
+        if let Some(rows) = &self.backend_rows {
+            if position.y < Pixels::ZERO {
+                return Err(0);
+            }
+            let row_index = (position.y / line_height) as usize;
+            return rows
+                .get(row_index)
+                .map_or(Err(self.len()), |row| row.index_for_x(position.x, closest));
+        }
         let wrapped_line_ix = (position.y / line_height) as usize;
 
         let wrapped_line_start_index;
@@ -426,6 +514,17 @@ impl WrappedLineLayout {
 
     /// Returns the pixel position for the given byte index.
     pub fn position_for_index(&self, index: usize, line_height: Pixels) -> Option<Point<Pixels>> {
+        if let Some(rows) = &self.backend_rows {
+            if index > self.len() {
+                return None;
+            }
+            let row_index = rows
+                .iter()
+                .position(|row| index < row.bytes.end)
+                .unwrap_or(rows.len().checked_sub(1)?);
+            let row = &rows[row_index];
+            return Some(point(row.x_for_index(index), line_height * row_index));
+        }
         let mut line_start_ix = 0;
         let mut line_end_indices = self
             .wrap_boundaries
@@ -637,7 +736,18 @@ impl LineLayoutCache {
             drop(current_frame);
             let text = SharedString::from(text);
             let unwrapped_layout = self.layout_line::<&SharedString>(&text, font_size, runs, None);
-            let wrap_boundaries = if let Some(wrap_width) = wrap_width {
+            let backend_rows = wrap_width.and_then(|width| {
+                self.platform_text_system.layout_line_wrapped(
+                    text.as_ref(),
+                    font_size,
+                    runs,
+                    width,
+                    max_lines,
+                )
+            });
+            let wrap_boundaries = if backend_rows.is_none()
+                && let Some(wrap_width) = wrap_width
+            {
                 unwrapped_layout.compute_wrap_boundaries(text.as_ref(), wrap_width, max_lines)
             } else {
                 SmallVec::new()
@@ -646,6 +756,7 @@ impl LineLayoutCache {
                 unwrapped_layout,
                 wrap_boundaries,
                 wrap_width,
+                backend_rows,
             });
             let key = Arc::new(CacheKey {
                 text,
@@ -1103,6 +1214,60 @@ mod tests {
             .iter()
             .map(|g| f32::from(g.position.x))
             .collect()
+    }
+
+    #[test]
+    fn backend_wrapped_rows_use_row_local_bidi_geometry_for_caret_and_hits() {
+        let mut unwrapped = make_layout(vec![]);
+        unwrapped.len = 12;
+        let layout = WrappedLineLayout {
+            unwrapped_layout: Arc::new(unwrapped),
+            wrap_boundaries: SmallVec::new(),
+            wrap_width: Some(px(100.)),
+            backend_rows: Some(vec![
+                BackendWrappedRow {
+                    layout: make_layout(vec![]),
+                    bytes: 0..6,
+                    clusters: vec![WrappedGlyphCluster {
+                        bytes: 0..6,
+                        x: px(80.),
+                        width: px(20.),
+                        rtl: true,
+                    }],
+                },
+                BackendWrappedRow {
+                    layout: make_layout(vec![]),
+                    bytes: 6..12,
+                    clusters: vec![WrappedGlyphCluster {
+                        bytes: 6..12,
+                        x: px(0.),
+                        width: px(20.),
+                        rtl: false,
+                    }],
+                },
+            ]),
+        };
+        assert_eq!(layout.size(px(20.)).height, px(40.));
+        assert_eq!(
+            layout.position_for_index(0, px(20.)),
+            Some(point(px(100.), px(0.)))
+        );
+        assert_eq!(
+            layout.position_for_index(6, px(20.)),
+            Some(point(px(0.), px(20.)))
+        );
+        assert_eq!(
+            layout.closest_index_for_position(point(px(82.), px(0.)), px(20.)),
+            Ok(6)
+        );
+        assert_eq!(
+            layout.closest_index_for_position(point(px(98.), px(0.)), px(20.)),
+            Ok(0)
+        );
+        assert_eq!(
+            layout.closest_index_for_position(point(px(18.), px(20.)), px(20.)),
+            Ok(12)
+        );
     }
 
     #[test]
