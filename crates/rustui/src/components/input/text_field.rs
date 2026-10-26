@@ -95,6 +95,7 @@ impl TextFieldSize {
 /// A controlled single-line text field whose editing state survives body rebuilds.
 pub struct TextFieldView {
     placeholder: SharedString,
+    placeholder_message_id: Option<SharedString>,
     value: Binding<String>,
     id: Option<Identity>,
     kind: TextFieldKind,
@@ -112,6 +113,7 @@ impl TextFieldView {
     pub fn new(placeholder: impl Into<SharedString>, value: Binding<String>) -> Self {
         Self {
             placeholder: placeholder.into(),
+            placeholder_message_id: None,
             value,
             id: None,
             kind: TextFieldKind::Plain,
@@ -124,6 +126,24 @@ impl TextFieldView {
             password_visibility_accessibility_label: None,
             tab_index: 0,
         }
+    }
+
+    /// Resolves the visible placeholder from the active RustUI catalog.
+    /// The constructor's placeholder remains the fallback if the key is missing.
+    pub fn localized_placeholder(mut self, message_id: impl Into<SharedString>) -> Self {
+        let id = message_id.into();
+        assert!(
+            !id.trim().is_empty(),
+            "TextField placeholder localization key must not be blank"
+        );
+        if self.accessibility_label.is_none() {
+            self.accessibility_label = Some(TextFieldAccessibilityLabel::Message {
+                id: id.clone(),
+                fallback: self.default_accessibility_label(),
+            });
+        }
+        self.placeholder_message_id = Some(id);
+        self
     }
 
     pub(crate) fn with_kind(mut self, kind: TextFieldKind) -> Self {
@@ -200,6 +220,17 @@ impl TextFieldView {
             DEFAULT_ACCESSIBILITY_LABEL.into()
         } else {
             self.placeholder.clone()
+        }
+    }
+
+    fn resolved_placeholder(&self, localized_message: impl FnOnce(&str) -> String) -> SharedString {
+        match &self.placeholder_message_id {
+            Some(id) => resolved_message_label(
+                id.as_ref(),
+                localized_message(id.as_ref()),
+                &self.placeholder,
+            ),
+            None => self.placeholder.clone(),
         }
     }
 
@@ -388,12 +419,13 @@ impl View for TextFieldView {
     fn into_element(&self, context: &mut RenderContext<'_>) -> AnyElement {
         let identity = self.identity(context);
         let initial_value = self.value.value();
-        let placeholder = self.placeholder.clone();
+        let placeholder = self.resolved_placeholder(|id| context.localized_message(id));
+        let initial_placeholder = placeholder.clone();
         let secure = self.kind == TextFieldKind::Secure;
         let (retained, created) = context.retained_entity(identity.clone(), move |window, cx| {
             let state = cx.new(|cx| {
                 InputState::new(window, cx)
-                    .placeholder(placeholder)
+                    .placeholder(initial_placeholder)
                     .default_value(initial_value.clone())
                     .masked(secure)
             });
@@ -417,8 +449,8 @@ impl View for TextFieldView {
             .presentation()
             .placeholder()
             .to_string();
-        if placeholder_changed(&retained_placeholder, &self.placeholder) {
-            let placeholder = self.placeholder.clone();
+        if placeholder_changed(&retained_placeholder, &placeholder) {
+            let placeholder = placeholder.clone();
             context.update_entity(&state, move |state, window, cx| {
                 state.set_placeholder(placeholder, window, cx);
             });
@@ -922,6 +954,35 @@ mod tests {
         assert_eq!(
             blank.resolved_accessibility_label(|id| id.into()).as_ref(),
             "Text field"
+        );
+    }
+
+    #[test]
+    fn localized_placeholder_updates_visible_text_and_default_accessible_name() {
+        let field = TextField("Search", binding()).localized_placeholder("field.search");
+        assert_eq!(
+            field.resolved_placeholder(|_| "Rechercher".into()).as_ref(),
+            "Rechercher"
+        );
+        assert_eq!(
+            field
+                .resolved_accessibility_label(|_| "Rechercher".into())
+                .as_ref(),
+            "Rechercher"
+        );
+        assert_eq!(
+            field.resolved_placeholder(|id| id.into()).as_ref(),
+            "Search"
+        );
+
+        let explicitly_named = TextField("Search", binding())
+            .accessibility_label("Find items")
+            .localized_placeholder("field.search");
+        assert_eq!(
+            explicitly_named
+                .resolved_accessibility_label(|_| "Rechercher".into())
+                .as_ref(),
+            "Find items"
         );
     }
 

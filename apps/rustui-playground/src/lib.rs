@@ -138,13 +138,14 @@ impl Playground {
             .collect::<Vec<_>>();
         let mut sidebar = VStack::new()
             .child(
-                Text("COMPONENTS")
+                LocalizedText("lab-sidebar-components")
                     .font_size(12.0)
                     .font_weight(TextWeight::Bold),
             )
             .child(
                 TextField("Search components and stories", self.query_binding())
-                    .id("playground-search"),
+                    .id("playground-search")
+                    .localized_placeholder("lab-search-placeholder"),
             )
             .child(
                 List(rows, self.catalog_binding())
@@ -155,7 +156,7 @@ impl Playground {
                     .height(340.0),
             )
             .child(
-                Text("FRAMEWORK DEMOS")
+                LocalizedText("lab-sidebar-framework-demos")
                     .font_size(12.0)
                     .font_weight(TextWeight::Bold),
             )

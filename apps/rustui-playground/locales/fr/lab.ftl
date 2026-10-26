@@ -1,4 +1,7 @@
 lab-title = Terrain de jeu RustUI
+lab-sidebar-components = COMPOSANTS
+lab-sidebar-framework-demos = DÉMOS DU FRAMEWORK
+lab-search-placeholder = Rechercher des composants et des exemples
 lab-navigation-components = Composants
 lab-navigation-themes = Thèmes
 lab-navigation-locales = Langues

@@ -52,6 +52,17 @@ Reverify live HEAD and dirty state before subsequent integration; preserve unrel
   Dynamic event-history messages and other Playground chrome are still in
   English; this checkpoint does not close full Playground localization. The
   earlier native and Web bundles predate this source change.
+- **Stage 6 Playground search placeholder, 2026-10-26:** Public
+  `TextFieldView::localized_placeholder` resolves the visible placeholder from
+  the active RustUI catalog on each render, retains its constructor fallback,
+  updates retained input presentation after locale changes, and makes the
+  default accessible name follow that visible placeholder. An explicit name
+  remains authoritative. Playground uses it for search and localizes the two
+  sidebar headings in English, French, and Arabic. The focused TextField test
+  passed **1/1**; Playground all-target check, locale validation, and formatting
+  passed. Logs: `target/headstart/evidence/text-field-localized-placeholder-test-20261026.log`
+  and `target/headstart/evidence/playground-localized-search-check-20261026.log`.
+  Native and browser behavior of this source change still requires observation.
 - **Integrated macOS/Web release checkpoint, 2026-10-26:** On integrated
   commit `f428a8b8`, `./scripts/verify-release.sh macos` exited 0 on macOS
   27 arm64 using local Headstart: 1,339 passing test cases across 39 reported

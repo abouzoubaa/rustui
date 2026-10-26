@@ -1,4 +1,7 @@
 lab-title = ساحة تجارب RustUI
+lab-sidebar-components = المكوّنات
+lab-sidebar-framework-demos = أمثلة إطار العمل
+lab-search-placeholder = ابحث عن المكوّنات والأمثلة
 lab-navigation-components = المكونات
 lab-navigation-themes = السمات
 lab-navigation-locales = اللغات
