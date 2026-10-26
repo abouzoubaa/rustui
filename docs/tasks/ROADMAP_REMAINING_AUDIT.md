@@ -40,7 +40,9 @@ subsequent integration and preserve unrelated work.
   Enter reset, forward/reverse Tab skipping the disabled button, coordinate
   activation and matching AX/rendered Count:1. The earlier `noWindowsAvailable`
   and AX/pixel mismatch did not reproduce in this run; no root cause is claimed.
-  VoiceOver remains untested. Evidence:
+  VoiceOver is **undone**, explicitly left for later by the user on 2026-10-26.
+  This postpones the check; it does not establish screen-reader acceptance or
+  waive the production gate. Evidence:
   `target/headstart/evidence/native-input-retest-20261026/`.
 - Native Tree testing found missing Home/End navigation; arrows, collapse and
   expansion worked. RustUI now handles ordinary Home/End in the shared Tree
