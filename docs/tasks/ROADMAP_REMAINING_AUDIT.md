@@ -38,8 +38,11 @@ Reverify live HEAD and dirty state before subsequent integration; preserve unrel
   `72fdd17238b20a30e65114f3064d92df337e848d603088f55210a9581d5997ba`).
   One browser profile showed Arabic increment event `زيد العداد إلى ١`,
   retained it across a switch to French as `Compteur augmenté à 1`, and
-  showed the French empty state after clearing. The disposable tab and server
-  were closed. Evidence:
+  showed the French empty state after clearing. A follow-up on the same
+  source-bound bundle dispatched six increments: the log retained exactly
+  events 2–6, showed total 6, and translated all five retained entries and
+  the total into Arabic after a locale switch. Scrolling the preview exposed
+  the rendered entries. The disposable tabs and servers were closed. Evidence:
   `target/headstart/evidence/release-web-localized-event-log-20261026.log`.
   GitHub run `40399810275` passed source CI on the evidence commit; compiled
   CI was skipped on the push. Native and wider story-copy localization
