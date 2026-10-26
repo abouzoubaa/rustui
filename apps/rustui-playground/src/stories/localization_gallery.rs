@@ -46,9 +46,7 @@ pub fn demo() -> impl View {
 
     let mut content = VStack::new()
         .child(LocalizedText("lab-i18n-title"))
-        .child(Text(
-            "Messages follow the active locale and interpolate named arguments.",
-        ))
+        .child(LocalizedText("lab-i18n-description"))
         .child(LocalizedText("lab-i18n-sample").with_arguments(arguments))
         .child(LocalizedText("lab-i18n-plural").with_arguments(plural_arguments))
         .child(LocalizedText("lab-i18n-decimal-plural").with_arguments(decimal_plural_arguments))

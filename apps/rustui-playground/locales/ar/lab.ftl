@@ -208,3 +208,14 @@ lab-catalog-note-drag_drop = معرض لعمليتي النسخ والنقل ا�
 lab-i18n-runtime-examples = رسائل Fluent والأرقام والتواريخ حسب اللغة
 
 lab-composition-title = التركيب: إضافة العناصر وحذفها وإعادة ترتيبها
+
+lab-hover-region = منطقة التحويم
+lab-hover-instructions = حرّك المؤشر إلى داخل هذه المنطقة ثم أخرجه منها.
+lab-hover-input = حقل منطقة التحويم
+lab-hover-count-click = عدّ نقرات العنصر الفرعي
+lab-hover-hide = إخفاء أثناء التحويم
+lab-hover-restore = استعادة المنطقة
+lab-hover-status-hovered = قيد التحويم · الدخول: {enters} · الخروج: {exits} · نقرات العنصر الفرعي: {clicks}
+lab-hover-status-idle = خارج التحويم · الدخول: {enters} · الخروج: {exits} · نقرات العنصر الفرعي: {clicks}
+lab-hover-note = يؤدي الإخفاء إلى مسح حالة التحويم صراحةً. الدخول والخروج حدثان للمؤشر، ويبقى الحقل والأزرار قابلين للاستخدام بلوحة المفاتيح.
+lab-i18n-description = تتبع الرسائل اللغة النشطة وتُدرج قيم الوسائط المسمّاة.

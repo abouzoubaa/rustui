@@ -9,6 +9,20 @@ Reverify live HEAD and dirty state before subsequent integration; preserve unrel
 
 ## Current checkpoint — 2026-10-26
 
+### Stage 6 Playground copy — 2026-10-26
+
+The Hover Gallery now resolves its visible instructions, placeholder, controls,
+and changing status from English, French, and Arabic catalogs. The localization
+story's explanatory sentence also follows the active locale. `validate_locales.py`
+passed for three catalog groups; the two focused Playground catalog tests passed
+1/1 each (logs in `target/headstart/evidence/hover-story-locales-20261026.log`
+and `target/headstart/evidence/i18n-description-20261026.log`), and
+`cargo-headstart check -p rustui-playground` passed. This closes
+source coverage for those two stories only. Other story literals, native visual
+and live locale-switch checks, real Arabic input, and broader RTL/font acceptance
+remain open. The Hover Gallery's accessibility live value still uses its English
+fallback pending the deferred accessibility work.
+
 - **Stage 6 bounded native Arabic pointer acceptance:** On integrated source
   `cc11658d`, the packaged macOS 27 Playground executable matched its
   optimized Headstart artifact (SHA-256 `e0ea58deffb199ed48952d247f95dbf3ae1d52ed3c0449d55db666e129d780b3`).

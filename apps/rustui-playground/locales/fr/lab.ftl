@@ -208,3 +208,14 @@ lab-catalog-note-drag_drop = Galerie de transfert et de copie typés au sein du 
 lab-i18n-runtime-examples = Messages Fluent, nombres et dates selon la langue
 
 lab-composition-title = Composition : ajouter, supprimer et réordonner les enfants
+
+lab-hover-region = Zone de survol
+lab-hover-instructions = Placez le pointeur dans cette zone, puis retirez-le.
+lab-hover-input = Saisie dans la zone de survol
+lab-hover-count-click = Compter le clic sur l'enfant
+lab-hover-hide = Masquer pendant le survol
+lab-hover-restore = Restaurer la zone
+lab-hover-status-hovered = Survolée · Entrées : {enters} · Sorties : {exits} · Clics sur l'enfant : {clicks}
+lab-hover-status-idle = Non survolée · Entrées : {enters} · Sorties : {exits} · Clics sur l'enfant : {clicks}
+lab-hover-note = Le masquage efface explicitement l'état de survol. L'entrée et la sortie sont des événements de pointeur ; la saisie et les boutons restent accessibles au clavier.
+lab-i18n-description = Les messages suivent la langue active et insèrent les arguments nommés.

@@ -159,6 +159,7 @@ mod tests {
                 .expect("Playground locale should be registered");
             for message in [
                 "lab-i18n-title",
+                "lab-i18n-description",
                 "lab-i18n-sample",
                 "lab-i18n-plural",
                 "lab-i18n-select",

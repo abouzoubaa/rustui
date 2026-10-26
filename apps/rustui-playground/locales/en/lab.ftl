@@ -208,3 +208,14 @@ lab-catalog-note-drag_drop = Typed same-process Copy and Transfer gallery; M142 
 lab-i18n-runtime-examples = Fluent messages and locale-aware numbers and dates
 
 lab-composition-title = Composition: add, remove and reorder children
+
+lab-hover-region = Hover region
+lab-hover-instructions = Move the pointer into this region and out again.
+lab-hover-input = Hover region input
+lab-hover-count-click = Count child click
+lab-hover-hide = Hide while hovered
+lab-hover-restore = Restore region
+lab-hover-status-hovered = Hovered · Enters: {enters} · Exits: {exits} · Child clicks: {clicks}
+lab-hover-status-idle = Not hovered · Enters: {enters} · Exits: {exits} · Child clicks: {clicks}
+lab-hover-note = Hiding clears the owner's hover flag explicitly. Enter and exit are pointer events; the input and buttons remain usable by keyboard.
+lab-i18n-description = Messages follow the active locale and interpolate named arguments.
