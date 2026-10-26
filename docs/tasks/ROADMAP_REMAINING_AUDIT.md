@@ -18,8 +18,17 @@ Reverify live HEAD and dirty state before subsequent integration; preserve unrel
   passed. Evidence:
   `target/headstart/evidence/playground-localized-event-log-test-20261026.log`
   and `target/headstart/evidence/playground-localized-event-log-check-20261026.log`.
-  Source-bound browser/native behavior and wider story-copy localization remain
-  open.
+  On integrated `c52460f4`, the Web release driver exited 0 with **18/18**
+  host IME-plan tests and **770/770** verified package files (source SHA-256
+  `d4f64fd65bfa5737f82d94a07da67b0e46445d68aac21dc6a511ce4af6327605`,
+  manifest SHA-256
+  `72fdd17238b20a30e65114f3064d92df337e848d603088f55210a9581d5997ba`).
+  One browser profile showed Arabic increment event `زيد العداد إلى ١`,
+  retained it across a switch to French as `Compteur augmenté à 1`, and
+  showed the French empty state after clearing. The disposable tab and server
+  were closed. Evidence:
+  `target/headstart/evidence/release-web-localized-event-log-20261026.log`.
+  Native and wider story-copy localization acceptance remain open.
 
 - **Stage 6 Playground catalog summary:** The header now formats catalog and
   demo counts through the active English, French, or Arabic message catalog,
