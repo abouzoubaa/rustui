@@ -17,6 +17,16 @@ Do not infer Windows, Linux, mobile, or other platform support from GPUI's APIs.
 Accessibility acceptance and VoiceOver are **undone and deferred** by the user.
 Keep existing behavior and evidence; the deferral is not a passed check.
 
+## Current language scope
+
+The user selected **English, French and Arabic** for the current release scope
+on 2026-10-26. Validate their input, text rendering, translations and locale
+behavior on the declared macOS and Web targets, including French accents and
+Arabic RTL/mixed-direction text. Japanese and all other languages/scripts are
+**undone and deferred** for a later release. Native Japanese IME acceptance is
+unrun/deferred; it is not counted as a passed check. Preserve existing code,
+fonts and evidence without claiming broader acceptance.
+
 ## Build the reviewed source
 
 Use a clean registered isolated worktree, its verified owner claim, and the

@@ -2,6 +2,13 @@
 
 ## Scope
 
+**Current user scope, 2026-10-26:** English, French and Arabic only. Japanese and
+other languages/scripts, including case B below, are undone/deferred for later.
+Do not enable Japanese or run case B under the current release scope. Preserve
+this procedure for a later explicitly resumed language expansion. The temporary
+Japanese keyboard/dictation setup was removed and original settings restored.
+Ordinary focused-selection retention in case A remains in scope.
+
 Run two bounded macOS 27 checks in the canonical RustUI Playground: ordinary
 selection retention and active Japanese IME composition across a parent rerender
 while the compiled-preview TextField stays focused. Source tests and the M599

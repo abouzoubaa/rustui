@@ -9,6 +9,16 @@ subsequent integration and preserve unrelated work.
 
 ## Current checkpoint — 2026-10-26
 
+- **User release-scope decision, 2026-10-26:** English, French and Arabic are the
+  current required languages. Japanese and every other language/script are
+  undone/deferred for later, including native Japanese IME acceptance. Continue
+  French accents, English input, Arabic RTL/mixed-direction text, locale and font
+  verification. The temporary Japanese keyboard and automatically added dictation
+  entry were removed; original enabled/selected input sources and ABC layout
+  match the before-snapshot, and the pre-existing Settings page was restored.
+  No Japanese composition acceptance ran. Existing language/font implementations
+  are preserved; the deferral does not establish their acceptance.
+
 - Native GraphView/NodeEditor acceptance passes **11/11 + 16/16 bounded checks** on the verified reproducible `d857e6b5…` candidate. Existing implementation is reused; no component repair was needed. Checks cover current-owner topology edits, drag/key movement, both connection orders, invalid-direction feedback, incident-edge deletion, viewport behavior, disabled rejection and omission/remount. Inconclusive initial disconnect/reconnect attempts are excluded and replaced by visible pointer removal verified empty before reconnect. Evidence: `target/headstart/evidence/native-graph-editor-20261026/`. Owned app/bundle cleaned; GUI slot released. Wider focus, IME, locale/RTL, release-outside-surface and workload acceptance remain open; accessibility/VoiceOver undone/deferred.
 
 - Native component acceptance: **13/13 Outline + 18/18 Drawer** bounded functional
