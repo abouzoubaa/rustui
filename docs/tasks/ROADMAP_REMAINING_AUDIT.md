@@ -318,6 +318,18 @@ Reverify live HEAD and dirty state before subsequent integration; preserve unrel
   `target/headstart/evidence/playground-code-editor-locale-check-20261026.log`,
   and `target/headstart/evidence/web-code-editor-locale-build-20261026.log`.
   Dynamic code-editor status strings and native acceptance remain open.
+- **Code-editor locale native integration, 2026-10-26:** The release macOS
+  driver on integrated `e41ea35d` exited 0 with **1,348 tests across 39
+  groups** and five unresolved native dependency-notice gaps. The packaged
+  app and standalone release executable had matching SHA-256
+  `cd0e8b48a344504328a34ea2ce38a67b133ea854e48564654c2e8e0a32dadfb9`.
+  In that exact app, French and Arabic headings, instructions, action labels,
+  editor accessible names, and placeholders appeared in the native
+  accessibility tree. The editor was offscreen for direct input, so editing
+  and focus retention remain unverified in this run. The owned app exited;
+  only its hash-verified disposable bundle and executable were removed, and
+  the GUI slot was released. Evidence:
+  `target/headstart/evidence/release-macos-code-editor-locales-20261026.log`.
 - **Current-source cache workload calibration, 2026-10-26:** The existing
   `cache_benchmark` example built with Headstart and the existing calibration
   runner completed **18/18 valid fresh-process records** on local macOS 27
