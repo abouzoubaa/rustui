@@ -258,6 +258,7 @@ struct OwnerActionProbe {
 }
 
 struct CapturedOwnerActions {
+    direct: crate::view::OwnerAction<OwnerActionProbe>,
     action: AppAction,
     action_with: AppAction,
     action_if_changed: AppAction,
@@ -286,6 +287,7 @@ impl View for OwnerActionProbe {
         let slot = self.captured_actions.clone();
         OwnerActionReader::<Self, _, _>(move |owner| OwnerActionCapture {
             actions: CapturedOwnerActions {
+                direct: owner.clone(),
                 action: owner.action(increment_owner_action),
                 action_with: owner
                     .action_with("captured value".to_owned(), capture_owner_action_value),
@@ -332,6 +334,7 @@ impl View for OwnerActionCapture {
 
     fn into_element(&self, context: &mut RenderContext<'_>) -> gpui::AnyElement {
         *self.slot.borrow_mut() = Some(CapturedOwnerActions {
+            direct: self.actions.direct.clone(),
             action: self.actions.action.clone(),
             action_with: self.actions.action_with.clone(),
             action_if_changed: self.actions.action_if_changed.clone(),
@@ -843,6 +846,78 @@ fn local_actions_and_bindings_update_only_their_same_type_owner(cx: &mut gpui::T
     drop(parent);
 }
 
+fn external_owner_request(owner: &mut OwnerActionProbe, value: String) -> (String, bool) {
+    owner.state.lock().unwrap().captured = Some(value.clone());
+    (value, true)
+}
+
+fn external_owner_read(_owner: &mut OwnerActionProbe, value: u64) -> (u64, bool) {
+    (value, false)
+}
+
+#[gpui::test]
+fn external_owner_dispatch_distinguishes_same_type_owners_and_unchanged_reply(
+    cx: &mut gpui::TestAppContext,
+) {
+    cx.update(gpui_component::init);
+    let first_state = Arc::new(Mutex::new(OwnerActionState::default()));
+    let second_state = Arc::new(Mutex::new(OwnerActionState::default()));
+    let first_slot = Rc::new(std::cell::RefCell::new(None));
+    let second_slot = Rc::new(std::cell::RefCell::new(None));
+    let releases = Arc::new(AtomicUsize::new(0));
+    let first = {
+        let (_, window_cx) = cx.add_window_view(|_, cx| {
+            ComponentHost::new(
+                OwnerActionProbe {
+                    state: first_state.clone(),
+                    captured_actions: first_slot.clone(),
+                    releases: releases.clone(),
+                },
+                cx,
+            )
+        });
+        window_cx.cx.run_until_parked();
+        first_slot.borrow_mut().take().unwrap()
+    };
+    let (_, window_cx) = cx.add_window_view(|_, cx| {
+        ComponentHost::new(
+            OwnerActionProbe {
+                state: second_state.clone(),
+                captured_actions: second_slot.clone(),
+                releases: releases.clone(),
+            },
+            cx,
+        )
+    });
+    let second = second_slot.borrow_mut().take().unwrap();
+    window_cx.update(|_, app| {
+        assert_eq!(
+            first
+                .direct
+                .dispatch_with("first".to_owned(), external_owner_request, app),
+            Some("first".to_owned())
+        );
+        assert_eq!(
+            second
+                .direct
+                .dispatch_with("second".to_owned(), external_owner_request, app),
+            Some("second".to_owned())
+        );
+        assert_eq!(
+            first.direct.dispatch_with(42, external_owner_read, app),
+            Some(42)
+        );
+    });
+    assert_eq!(
+        first_state.lock().unwrap().captured.as_deref(),
+        Some("first")
+    );
+    assert_eq!(
+        second_state.lock().unwrap().captured.as_deref(),
+        Some("second")
+    );
+}
+
 #[gpui::test]
 fn owner_action_reader_dispatches_each_callback_to_its_host(cx: &mut gpui::TestAppContext) {
     let state = Arc::new(Mutex::new(OwnerActionState::default()));
@@ -925,6 +1000,18 @@ fn escaped_owner_action_callbacks_are_inert_after_host_release(cx: &mut gpui::Te
     });
     window_cx.cx.run_until_parked();
 
+    window_cx.update(|_, app| {
+        assert_eq!(
+            actions
+                .direct
+                .dispatch_with("released".to_owned(), external_owner_request, app),
+            None
+        );
+        assert_eq!(
+            actions.direct.dispatch_with(42, external_owner_read, app),
+            None
+        );
+    });
     assert_eq!(*state.lock().unwrap(), OwnerActionState::default());
     drop(parent);
 }

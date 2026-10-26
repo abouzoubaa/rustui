@@ -97,6 +97,35 @@ impl<C: 'static> OwnerAction<C> {
         })
     }
 
+    /// Dispatch a typed mutation from an existing RustUI foreground callback.
+    ///
+    /// Enter GPUI's foreground/application context before calling this method.
+    /// `None` means the weak owner is unavailable. `Some` carries the handler's
+    /// reply even when its notification flag is false (for example an export).
+    /// The existing weak component updater keeps released owners inert.
+    pub fn dispatch_with<T: 'static, R: 'static>(
+        &self,
+        value: T,
+        handler: fn(&mut C, T) -> (R, bool),
+        cx: &mut App,
+    ) -> Option<R> {
+        let result = Rc::new(std::cell::RefCell::new(None));
+        let output = result.clone();
+        (self.update_component)(
+            Box::new(move |owner| {
+                let owner = owner
+                    .downcast_mut::<C>()
+                    .expect("OwnerAction target has the wrong component type");
+                let (reply, changed) = handler(owner, value);
+                *output.borrow_mut() = Some(reply);
+                changed
+            }),
+            cx,
+        );
+        let reply = result.borrow_mut().take();
+        reply
+    }
+
     /// Notify the owner only when its mutation reports a change.
     pub fn action_if_changed(&self, handler: fn(&mut C) -> bool) -> AppAction {
         let update_component = self.update_component.clone();
