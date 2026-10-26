@@ -1,5 +1,6 @@
 //! Stateful RustUI stories embedded in the canonical Playground.
 
+use rustui::localization::MessageArguments;
 use rustui::prelude::*;
 use std::time::Duration;
 
@@ -389,55 +390,56 @@ impl StoryHost {
         if !self.details_tab_present && self.tab_selection == "details" {
             self.tab_selection = String::from("overview");
         }
-        self.events.record(if self.details_tab_present {
-            "Restored Details tab"
+        self.events.record_simple(if self.details_tab_present {
+            "lab-event-details-restored"
         } else {
-            "Removed Details tab"
+            "lab-event-details-removed"
         });
     }
 
     fn toggle_tab_conditional_editor(&mut self) {
         self.tab_conditional_visible = !self.tab_conditional_visible;
-        self.events.record(if self.tab_conditional_visible {
-            "Shown Tabs conditional editor"
+        self.events.record_simple(if self.tab_conditional_visible {
+            "lab-event-tabs-editor-shown"
         } else {
-            "Hidden Tabs conditional editor"
+            "lab-event-tabs-editor-hidden"
         });
     }
 
     fn toggle_navigation_conditional_editor(&mut self) {
         self.navigation_conditional_visible = !self.navigation_conditional_visible;
-        self.events.record(if self.navigation_conditional_visible {
-            "Shown Navigation conditional editor"
-        } else {
-            "Hidden Navigation conditional editor"
-        });
+        self.events
+            .record_simple(if self.navigation_conditional_visible {
+                "lab-event-navigation-editor-shown"
+            } else {
+                "lab-event-navigation-editor-hidden"
+            });
     }
 
     fn toggle_keyed_order(&mut self) {
         self.keyed_rows_reversed = !self.keyed_rows_reversed;
-        self.events.record(if self.keyed_rows_reversed {
-            "Reversed keyed rows"
+        self.events.record_simple(if self.keyed_rows_reversed {
+            "lab-event-rows-reversed"
         } else {
-            "Restored keyed row order"
+            "lab-event-rows-restored"
         });
     }
 
     fn toggle_keyed_beta(&mut self) {
         self.keyed_beta_present = !self.keyed_beta_present;
-        self.events.record(if self.keyed_beta_present {
-            "Restored keyed Beta row"
+        self.events.record_simple(if self.keyed_beta_present {
+            "lab-event-beta-restored"
         } else {
-            "Removed keyed Beta row"
+            "lab-event-beta-removed"
         });
     }
 
     fn toggle_child_titles(&mut self) {
         self.child_titles_prefixed = !self.child_titles_prefixed;
-        self.events.record(if self.child_titles_prefixed {
-            "Applied parent title prefix to child components"
+        self.events.record_simple(if self.child_titles_prefixed {
+            "lab-event-titles-prefixed"
         } else {
-            "Restored child component titles"
+            "lab-event-titles-restored"
         });
     }
 
@@ -460,8 +462,10 @@ impl StoryHost {
         self.child_titles_prefixed = false;
         self.keyed_alpha_text = String::from("Alpha row");
         self.keyed_beta_text = String::from("Beta row");
-        self.events
-            .record(format!("W1 reset dispatched; run {}", self.w1_epoch));
+        self.events.record(
+            "lab-event-w1-reset",
+            MessageArguments::new().with("run", self.w1_epoch as i64),
+        );
         println!(
             r#"{{"kind":"rustui_w1","run":{},"step":0,"event":"reset_dispatched","visual":"not_checked"}}"#,
             self.w1_epoch
@@ -470,8 +474,7 @@ impl StoryHost {
 
     fn next_w1_step(&mut self) {
         if !self.w1_parent_matches() {
-            self.events
-                .record("W1 parent state mismatch; reset W1 before continuing");
+            self.events.record_simple("lab-event-w1-parent-mismatch");
             println!(
                 r#"{{"kind":"rustui_w1","run":{},"step":{},"event":"parent_state_mismatch"}}"#,
                 self.w1_epoch,
@@ -479,38 +482,38 @@ impl StoryHost {
             );
             return;
         }
-        let (action, event) = match self.w1_step {
+        let (message, event) = match self.w1_step {
             1 => {
                 self.w1_alpha_increment = 1;
-                ("Alpha increment requested", "increment_alpha_dispatched")
+                ("lab-event-w1-alpha-increment", "increment_alpha_dispatched")
             }
             2 => {
                 self.w1_beta_increment = 1;
-                ("Beta increment requested", "increment_beta_dispatched")
+                ("lab-event-w1-beta-increment", "increment_beta_dispatched")
             }
             3 => {
                 self.child_titles_prefixed = true;
-                ("Title prefix enabled", "prefix_enabled")
+                ("lab-event-w1-prefix-enabled", "prefix_enabled")
             }
             4 => {
                 self.child_titles_prefixed = false;
-                ("Title prefix disabled", "prefix_disabled")
+                ("lab-event-w1-prefix-disabled", "prefix_disabled")
             }
             5 => {
                 self.keyed_rows_reversed = true;
-                ("Keyed order reversed", "order_reversed")
+                ("lab-event-w1-order-reversed", "order_reversed")
             }
             6 => {
                 self.keyed_rows_reversed = false;
-                ("Keyed order restored", "order_restored")
+                ("lab-event-w1-order-restored", "order_restored")
             }
             _ => return,
         };
         self.w1_step += 1;
-        self.events.record(format!(
-            "W1 step {}/6 dispatched: {action}",
-            self.w1_step - 1
-        ));
+        self.events.record(
+            message,
+            MessageArguments::new().with("step", (self.w1_step - 1) as i64),
+        );
         println!(
             r#"{{"kind":"rustui_w1","run":{},"step":{},"event":"{}","sequence_dispatched":{},"visual":"not_checked"}}"#,
             self.w1_epoch,
@@ -523,10 +526,10 @@ impl StoryHost {
     fn pass_w1_manual_check(&mut self) {
         if self.w1_step == 7 && self.w1_parent_matches() {
             self.w1_manual_result = 1;
-            self.events.record(format!(
-                "W1 run {} visual check marked pass by operator",
-                self.w1_epoch
-            ));
+            self.events.record(
+                "lab-event-w1-pass",
+                MessageArguments::new().with("run", self.w1_epoch as i64),
+            );
             println!(
                 r#"{{"kind":"rustui_w1","run":{},"step":6,"event":"visual_check","visual":"pass"}}"#,
                 self.w1_epoch
@@ -537,10 +540,10 @@ impl StoryHost {
     fn fail_w1_manual_check(&mut self) {
         if self.w1_step == 7 {
             self.w1_manual_result = 2;
-            self.events.record(format!(
-                "W1 run {} visual check marked fail by operator",
-                self.w1_epoch
-            ));
+            self.events.record(
+                "lab-event-w1-fail",
+                MessageArguments::new().with("run", self.w1_epoch as i64),
+            );
             println!(
                 r#"{{"kind":"rustui_w1","run":{},"step":6,"event":"visual_check","visual":"fail"}}"#,
                 self.w1_epoch
@@ -550,52 +553,56 @@ impl StoryHost {
 
     fn toggle_environment_display_mode(&mut self) {
         self.environment_display_mode.toggle();
-        self.events.record(format!(
-            "RustUI environment display mode set to {}",
-            self.environment_display_mode.label()
-        ));
+        self.events
+            .record_simple(match self.environment_display_mode {
+                DemoDisplayMode::Compact => "lab-event-display-compact",
+                DemoDisplayMode::Detailed => "lab-event-display-detailed",
+            });
     }
 
     fn breadcrumb_overview(&mut self) {
         self.breadcrumb_page = String::from("Overview");
-        self.events.record("Breadcrumb navigated to Overview");
+        self.events.record_simple("lab-event-breadcrumb-overview");
     }
 
     fn breadcrumb_components(&mut self) {
         self.breadcrumb_page = String::from("Components");
-        self.events.record("Breadcrumb navigated to Components");
+        self.events.record_simple("lab-event-breadcrumb-components");
     }
 
     fn increment(&mut self) {
         self.count += 1;
-        self.events
-            .record(format!("Incremented count to {}", self.count));
+        self.events.record(
+            "lab-event-count-incremented",
+            MessageArguments::new().with("count", self.count),
+        );
     }
 
     fn reset(&mut self) {
         self.count = 0;
-        self.events.record("Reset story state");
+        self.events.record_simple("lab-event-story-reset");
     }
     fn set_picker_kotlin(&mut self) {
         self.picker_value = String::from("Kotlin");
-        self.events.record("Picker owner value set to Kotlin");
+        self.events.record_simple("lab-event-picker-kotlin");
     }
 
     fn cycle_button_style(&mut self) {
         self.button_properties.cycle_style();
-        self.events.record(format!(
-            "Button style changed to {:?}",
-            self.button_properties.style
-        ));
+        self.events.record(
+            "lab-event-button-style",
+            MessageArguments::new().with("style", format!("{:?}", self.button_properties.style)),
+        );
     }
 
     fn toggle_button_disabled(&mut self) {
         self.button_properties.disabled = !self.button_properties.disabled;
-        self.events.record(if self.button_properties.disabled {
-            "Button story disabled"
-        } else {
-            "Button story enabled"
-        });
+        self.events
+            .record_simple(if self.button_properties.disabled {
+                "lab-event-button-disabled"
+            } else {
+                "lab-event-button-enabled"
+            });
     }
 
     fn clear_events(&mut self) {
@@ -845,7 +852,7 @@ impl View for StoryHost {
             (selected == StoryId::Button).then(|| LocalizedText("lab-button-source-disclaimer"))
             (selected != StoryId::Button).then(|| Text("Illustrative source · not compiled"))
         Text(code_preview::source_for(selected))
-        Text(self.events.summary())
+        self.events.view()
         }
         .spacing(12.0)
         .alignment(HorizontalAlignment::Start)

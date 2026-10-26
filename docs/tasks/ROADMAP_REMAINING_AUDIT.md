@@ -9,6 +9,18 @@ Reverify live HEAD and dirty state before subsequent integration; preserve unrel
 
 ## Current checkpoint — 2026-10-26
 
+- **Stage 6 Playground event history:** The bounded five-entry log now retains
+  message keys and arguments so existing entries render in the active English,
+  French, or Arabic locale after a switch. Empty state, total count, and all
+  StoryHost event messages use the same runtime catalogs; machine-readable W1
+  diagnostic events remain unchanged. Event-log ownership/order tests **2/2**,
+  three locale records validated, and Playground all-target Headstart check
+  passed. Evidence:
+  `target/headstart/evidence/playground-localized-event-log-test-20261026.log`
+  and `target/headstart/evidence/playground-localized-event-log-check-20261026.log`.
+  Source-bound browser/native behavior and wider story-copy localization remain
+  open.
+
 - **Stage 6 Playground catalog summary:** The header now formats catalog and
   demo counts through the active English, French, or Arabic message catalog,
   including locale-aware numerals. Focused runtime catalog test **1/1**,
