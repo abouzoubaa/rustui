@@ -8,6 +8,7 @@ mod stories;
 
 use catalog::{CATALOG, CatalogItem, MISSING_REFERENCES, filtered_indices};
 use rustui::{
+    localization::MessageArguments,
     prelude::*,
     theme::{AppearanceMode, ThemeDocument, activate_theme, parse_theme},
 };
@@ -20,6 +21,14 @@ use stories::{STORIES, StoryHost, StoryId, filtered_story_indices};
 
 const REPOSITORY_ROOT: &str = concat!(env!("CARGO_MANIFEST_DIR"), "/../..");
 
+#[derive(Clone, PartialEq)]
+enum PlaygroundStatus {
+    Ready,
+    NoReferences,
+    Opened { count: usize, key: String },
+    OpenFailed { path: String, error: String },
+}
+
 #[component]
 struct Playground {
     #[state(String::new())]
@@ -28,8 +37,8 @@ struct Playground {
     catalog_selection: Option<usize>,
     #[state(None)]
     story_selection: Option<usize>,
-    #[state(String::from("Ready · macOS 27 · new RustUI framework"))]
-    status: String,
+    #[state(PlaygroundStatus::Ready)]
+    status: PlaygroundStatus,
     theme: Option<Arc<ThemeDocument>>,
 }
 
@@ -114,16 +123,44 @@ impl Playground {
             match Command::new("open").arg(&path).spawn() {
                 Ok(_) => opened += 1,
                 Err(error) => {
-                    self.status = format!("Could not open {}: {error}", path.display());
+                    self.status = PlaygroundStatus::OpenFailed {
+                        path: path.display().to_string(),
+                        error: error.to_string(),
+                    };
                     return;
                 }
             }
         }
         self.status = if opened == 0 {
-            "No local SVG references available".into()
+            PlaygroundStatus::NoReferences
         } else {
-            format!("Requested opening {opened} reference(s) for {}", item.key)
+            PlaygroundStatus::Opened {
+                count: opened,
+                key: item.key.to_owned(),
+            }
         };
+    }
+
+    fn status_view(&self) -> impl View {
+        let (message, arguments) = match self.status() {
+            PlaygroundStatus::Ready => ("lab-status-ready", MessageArguments::new()),
+            PlaygroundStatus::NoReferences => ("lab-status-no-references", MessageArguments::new()),
+            PlaygroundStatus::Opened { count, key } => (
+                "lab-status-opened",
+                MessageArguments::new()
+                    .with("count", count as i64)
+                    .with("key", key.clone()),
+            ),
+            PlaygroundStatus::OpenFailed { path, error } => (
+                "lab-status-open-failed",
+                MessageArguments::new()
+                    .with("path", path.clone())
+                    .with("error", error.clone()),
+            ),
+        };
+        LocalizedText(message)
+            .with_arguments(arguments)
+            .font_size(12.0)
     }
 
     fn sidebar(&self) -> impl View {
@@ -391,11 +428,7 @@ impl View for Playground {
                         .child(self.references())
                         .grow(),
                 )
-                .child(
-                    Container(Text(self.status()).font_size(12.0))
-                        .padding(8.0)
-                        .border(),
-                )
+                .child(Container(self.status_view()).padding(8.0).border())
                 .fill(),
         )
         .fill()
@@ -527,6 +560,49 @@ mod tests {
     use super::*;
     use catalog::Coverage;
     use std::sync::atomic::{AtomicUsize, Ordering};
+
+    #[test]
+    fn dynamic_status_messages_resolve_in_supported_locales() {
+        let catalogs = stories::catalogs();
+        for (tag, ready, missing) in [
+            ("en", "Ready", "No local SVG"),
+            ("fr", "Prêt", "Aucune référence SVG"),
+            ("ar", "جاهز", "لا تتوفر مراجع SVG"),
+        ] {
+            let locale = rustui::localization::Locale::parse(tag).expect("supported locale");
+            assert!(
+                catalogs
+                    .resolve(&locale, "lab-status-ready")
+                    .contains(ready)
+            );
+            assert!(
+                catalogs
+                    .resolve(&locale, "lab-status-no-references")
+                    .contains(missing)
+            );
+            let opened = catalogs
+                .format(
+                    &locale,
+                    "lab-status-opened",
+                    &MessageArguments::new()
+                        .with("count", 2_i64)
+                        .with("key", "button"),
+                )
+                .expect("opening status formats");
+            assert!(opened.contains("button"));
+            let failed = catalogs
+                .format(
+                    &locale,
+                    "lab-status-open-failed",
+                    &MessageArguments::new()
+                        .with("path", "/tmp/reference.svg")
+                        .with("error", "unavailable"),
+                )
+                .expect("error status formats");
+            assert!(failed.contains("/tmp/reference.svg"));
+            assert!(failed.contains("unavailable"));
+        }
+    }
 
     static NEXT_TEMP_DIRECTORY: AtomicUsize = AtomicUsize::new(0);
 

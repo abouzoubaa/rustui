@@ -9,6 +9,33 @@ Reverify live HEAD and dirty state before subsequent integration; preserve unrel
 
 ## Current checkpoint — 2026-10-26
 
+- **Stage 6/11 dynamic Playground status:** The footer now resolves ready,
+  missing-reference, requested-open, and open-error messages from the active
+  English, French, or Arabic catalog. It keeps the reference count, key, path,
+  and operating-system error as message arguments. The ready message no longer
+  names macOS in the Web build. Focused catalog test **1/1**, three runtime
+  locale records validated, and Playground all-target Headstart check passed.
+  Evidence: `target/headstart/evidence/playground-localized-status-test-20261026.log`
+  and `target/headstart/evidence/playground-localized-status-check-20261026.log`.
+  Native and browser visual acceptance for this footer remains open.
+- **Source CI:** GitHub run `40393859519` on `c8ef9d6b` completed successfully:
+  source job passed. The compiled macOS/Web job was skipped because this push
+  was not a manual `workflow_dispatch` run. No trusted self-hosted Mac runner
+  is registered, so compiled CI remains open.
+
+- **Current integrated macOS release and native shell checkpoint:** On clean
+  commit `c8ef9d6b`, `./scripts/verify-release.sh macos` exited 0 on local
+  macOS 27 arm64: **1,342 passing tests across 39 reported groups**, zero
+  failures, and an optimized Playground package. The source-bound disposable
+  app showed French and Arabic shell labels; Arabic Light and Dark actions
+  visibly changed the theme while retaining Arabic. Bundled executable
+  SHA-256: `e5656928109762e8bda81ce8246d475ed9e5de7bbc37ab00c268899317938949`.
+  Evidence: `target/headstart/evidence/release-macos-shell-locales-20261026.log`.
+  The app was quit, its disposable bundle and standalone executable removed,
+  and the shared GUI slot released. This is one local native session; macOS 13,
+  wider input/RTL, accessibility, signing, and distribution acceptance remain
+  open.
+
 - **Stage 6/11 Button story visible labels, 2026-10-26:** Public RustUI
   `ButtonView::localized_label` now resolves the visible label at render time
   with a stable literal fallback and identity seed; the default accessible
