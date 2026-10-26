@@ -9,8 +9,8 @@ exercise does not close unrelated requirements.
 
 | Target | Current evidence | Outstanding release scope |
 | --- | --- | --- |
-| macOS native | Optimized arm64 builds and disposable Playground packages; bounded functional checks on macOS 27 | Supported OS/version policy, wider functional/visual/IME/theme/RTL/workload checks, clean build reproduction, compiled CI, signing and notarization |
-| Web/Wasm browser | Optimized Playground bundle, hashed build inputs/assets, bounded functional checks in one Chromium profile | Supported browser/version policy, wider browser/IME/clipboard/font/theme/RTL/workload checks, clean build reproduction and compiled CI |
+| macOS native | Optimized arm64 builds, same-host executable reproduction and disposable Playground packages; bounded functional and 8/8 English/French/Arabic input checks on macOS 27 | Supported OS/version policy, wider functional/visual/theme/RTL/workload checks, cross-machine/archive reproduction, compiled CI, signing and notarization |
+| Web/Wasm browser | Optimized Playground bundle, hashed build inputs/assets, bounded functional and 6/6 English/French/Arabic input checks in one Chromium profile | Supported browser/version policy, wider browser/real OS IME/clipboard/font/theme/RTL/workload checks and compiled CI |
 
 Linux CI checks the source tooling. It does not establish a Linux product target.
 Do not infer Windows, Linux, mobile, or other platform support from GPUI's APIs.
@@ -65,6 +65,15 @@ error/recovery, ownership, keyboard/IME, theme/RTL, localization, browser and
 representative workload checks against the exact candidate. Record actual
 results and exclusions separately for macOS, browser, source tests and
 performance. Keep accessibility and VoiceOver marked undone while deferred.
+
+The `a8290b24` candidate passed 8/8 bounded native and 6/6 bounded Web
+English/French/Arabic input checks in the live compiled preview. Native French
+marked accent and Arabic keyboard entry passed. Web `typeText` checked Unicode
+entry and selection, while browser automation did not supply real macOS dead-key
+composition; Web OS IME acceptance remains open. See
+`target/headstart/evidence/native-en-fr-ar-selection-20261026/` and
+`target/headstart/evidence/web-en-fr-ar-input-20261026/` for raw observations,
+manifest hashes and cleanup.
 
 Dependency notice collection currently has five native and four Web gaps.
 See the [notice provenance and limitations](release/dependency-notices/README.md).

@@ -9,6 +9,22 @@ subsequent integration and preserve unrelated work.
 
 ## Current checkpoint — 2026-10-26
 
+- Web English/French/Arabic input acceptance: **6/6 bounded cases pass** in
+  one 1280×720 in-app Chromium profile using the manifest-verified Web bundle
+  from application code `a8290b24` (**769/769 package files**). The live mounted
+  preview field and owner agree after `Café`, mixed `سلام 123 Café`, logical-end
+  deletion, locale switching and full mixed selection across a focused delayed
+  parent update. Generation 2 stays mounted; the update advances rerenders
+  0→1 and selected replacement advances revision 19→20. Arabic mirrors the
+  layout and renders joined labels. Evidence:
+  `target/headstart/evidence/web-en-fr-ar-input-20261026/`. The owned tab and
+  local server were closed; package/caches retained. Browser text input was
+  synthetic; real OS dead-key/IME, other browser engines and full typography
+  remain open. A browser Option+E probe entered plain `e`, so it is excluded
+  from acceptance rather than called a RustUI defect. **Coding:** existing
+  implementation reused; **acceptance:** 6/6 cases for this milestone within
+  the provisional 37-area inventory.
+
 - Native English/French/Arabic input acceptance: **8/8 bounded cases pass** on
   application code `a8290b24`, executable `60cc18a69b09…`, macOS 27 arm64.
   Ordinary and mixed Arabic/Latin selection survive focused delayed parent
@@ -634,7 +650,7 @@ or acceptance percentage has not been recomputed against every contract.
 | R13 | 6: bounded locale/catalog contract | Three runtime locale records validate; current locale unit tests pass. Bounded current-Chromium English/French/Arabic switching, accessible names and RTL layout pass; native owner/locale retention and Arabic RTL switching now pass in the 8-case input exercise. Full locale/fallback, typography and cross-browser acceptance remain. Other languages/scripts are undone/deferred. |
 | R14 | 6: full CLDR/ICU/Fluent runtime | Strategy A implemented: 29 verified vendored packages, 102 locale tests/doctest and 3 Playground localization checks pass. Current Chromium decimal/plural/ordinal output and RTL switching pass; native, complete browser/RTL, notices and size/performance acceptance remain open. |
 | R15 | 7: persistent inputs, selection, disabled behavior | Present; audit disabled focus/activation/AX, replacement subscriptions and event paths. Test-support sources and ownership harness are now integrated; focused event tests pass. |
-| R16 | 7/9: text selection and active IME | Existing source preservation and delayed trigger pass current native ordinary/mixed selection, French marked-accent retention/commit and Arabic keyboard editing within 8/8 bounded language/input checks. External owner-value updates during composition, broader controls and Web native input remain open. Japanese and all other languages/scripts are undone/deferred; only English/French/Arabic are current release scope. |
+| R16 | 7/9: text selection and active IME | Existing source preservation and delayed trigger pass current native ordinary/mixed selection, French marked-accent retention/commit and Arabic keyboard editing within 8/8 bounded language/input checks. The Web bundle passes 6/6 synthetic text/selection/locale checks, including mixed selection across focused parent update. External owner-value updates during composition, broader controls and real OS Web IME remain open. Japanese and all other languages/scripts are undone/deferred; only English/French/Arabic are current release scope. |
 | R17 | 8: collections/navigation synchronization | Present; verify keyed replacement, route recovery, keyboard/RTL and virtualization behavior with current source. |
 | R18 | 8: Tree row accessibility | Approved root-name/one-based row-level/TestWindow series promoted reproducibly; ten helper fixtures and rendered source regressions pass. Native AX/VoiceOver and browser acceptance remain open. |
 | R19 | 8: overlays and focus containment | Present within bounded wrappers; inspect focus-trap upstream proposal and verify modal keyboard/AX/dismissal contracts. |
@@ -647,7 +663,7 @@ or acceptance percentage has not been recomputed against every contract.
 | R26 | 9: live theme/data reload | Present, distinct from Rust source hot reload; verify invalid-update recovery and owner-release cleanup. |
 | R27 | 10: performance, provenance and candidate workflow | Extensive bounded tooling present; current-source GUI/performance evidence and candidate review/promotion open. No optimization speed claim or GPU phase acceptance. Current release W1 CPU/RSS baseline passes 90 measured cycles/630 states across three fresh app launches; frame/latency and broader workloads remain open. |
 | R28 | 11: Web reproducible build/package/assets | Two fresh-target builds of 39da1d7b pass with 496 rebuilt / 0 fresh Cargo artifacts each; raw/processed Wasm and all 770 package files (including manifest) are byte-identical on the same host/toolchain. Bounded browser observations remain tied to their original bundles; wider runtime/version acceptance remains. |
-| R29 | 11: browser keyboard/AX/IME/fonts | Selected approved semantic/IME adapter v9 builds and passes bounded real-browser edit/selection/action checks. Current D1d preview/composition iframe roundtrips also pass. Full cross-browser, real OS IME/clipboard, glyph and screen-reader acceptance remain. |
+| R29 | 11: browser keyboard/AX/IME/fonts | Selected approved semantic/IME adapter v9 builds and passes bounded real-browser edit/selection/action checks. Current D1d preview/composition iframe roundtrips also pass. Current manifest-verified bundle passes 6/6 English/French/Arabic synthetic input, mixed editing, locale and focused selection checks in one in-app Chromium profile. Full cross-browser, real OS IME/clipboard and glyph acceptance remain; screen-reader work is undone/deferred. |
 | R30 | Release: CI and reproducible release builds | Actual GitHub source CI passes on 4636ee53 (run 40310616581). Local macOS Headstart checkpoint passes 1,282 library and 53 integration tests, all-target checks and optimized packaging; Web build and bounded browser checks pass. Macro doctests contain zero cases. No trusted macOS/Web runner is registered; compiled CI remains open. Same-host native executable reproduction passes in two initially absent targets after generated-path normalization (555 rebuilt / 0 fresh each); Web raw/processed Wasm and all 770 package files also match across two fresh targets (496 rebuilt / 0 fresh each). Cross-machine and complete native archive reproduction remain unverified. Compiler-source binding/bootstrap is a disclosed follow-up, not an original release gate. |
 | R31 | Release: security, licensing, performance budgets, packaging/instructions | Complete threat/error audit, dependency/license and font notices, supported-version matrix, reproducibility, package signing/distribution plan and release instructions. Publication requires approval. |
 | R32 | 8: Outline | Source implemented: controlled single-column hierarchy over the existing Tree engine, explicit identity and group name, selected/expanded bindings, public-API Playground story and compiled-preview descriptor. Approved Tree naming/one-based levels are source-implemented. The shared Home/End repair passes 30/30 Tree/Outline tests and real native/Web Tree checks. Outline-specific native/browser, AX/VoiceOver and visual/locale/RTL acceptance remains open. See `docs/tasks/OUTLINE_IMPLEMENTATION.md`. Bounded Web functional acceptance passes 12/12 checks and native passes 13/13 (2026-10-26); wider visual/locale checks remain. Accessibility deferred. |
