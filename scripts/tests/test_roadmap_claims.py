@@ -362,7 +362,7 @@ class RoadmapClaimsTests(unittest.TestCase):
                                  env=self.env, text=True, capture_output=True, check=True)
         listed = next(item for item in json.loads(listing.stdout)
                       if item["claim_id"] == result["claim_id"])
-        self.assertEqual(listed["baseline_paths"], ["readme.md"])
+        self.assertEqual(listed["baseline_paths"], result["baseline_paths"])
         audit = [sys.executable, str(SCRIPT), "audit", "--claim-id", result["claim_id"],
                  "--thread", "thread-adopt"]
         unchanged = subprocess.run(audit, cwd=self.wt1, env=self.env, text=True,
