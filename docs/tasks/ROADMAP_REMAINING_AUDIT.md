@@ -11,6 +11,14 @@ Reverify live HEAD and dirty state before subsequent integration; preserve unrel
 
 ### Stage 6 Playground copy — 2026-10-26
 
+The Foundation Demos tab group now resolves all 15 visible tab labels from
+English, French, and Arabic catalogs using the public
+`TabItem::localized_label` API. The three runtime catalog groups validated,
+the focused Playground catalog test passed **1/1**, and
+`cargo-headstart check -p rustui-playground` passed. Logs:
+`target/headstart/evidence/foundation-tab-*-20261026.log`. This is source
+coverage; native visual locale-switch acceptance remains open.
+
 The Utility Panel story now resolves its visible title, five tab names,
 section headings, and three ColorPicker labels from the English, French, and
 Arabic catalogs. `TabItem::localized_label` and
