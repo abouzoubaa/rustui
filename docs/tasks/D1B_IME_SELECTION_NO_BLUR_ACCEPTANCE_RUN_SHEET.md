@@ -83,6 +83,39 @@ parent update, with unchanged focus and mount generation. Owner value and
 revision stay at their pre-composition values until commit. Commit then updates
 field and owner and advances revision. Do not infer counters from source alone.
 
+## External owner-value update in the Text inputs story — 2026-10-26
+
+The public-API Playground Text inputs story now schedules a distinct owner
+value after five seconds. This exercises the mounted Name `TextField`, its
+binding, and the other controls sharing that binding. The native app was built
+with `./scripts/cargo-headstart build -p rustui-playground --locked --offline`
+on macOS 27, packaged as `dev.rustui.playground`, and bound to executable
+SHA-256 `4add853a5a23e3cac1f445065acf3393123c87c27a3a15ad013e51a1b40bf5e3`.
+The selected macOS keyboard source was ABC; the Playground locale was French.
+
+- **Focused update:** Name was the focused accessibility element before and
+  after the delayed callback. The owner, Name, Search, and Notes values all
+  changed to `External owner update 3` without a focus change. This is a
+  bounded no-blur external-value pass.
+- **French dead-key update:** With Name focused, ABC Option+E showed a marked
+  acute accent in the field while the owner stayed `External owner update 3`.
+  Clicking the update button left Name focused. After the timer, the owner and
+  all bound fields showed `External owner update 4`, Name remained focused,
+  and pressing E produced `External owner update 4é` in the owner and fields.
+  This is a bounded external-value synchronization and next-key pass. It does
+  not establish candidate-window or Japanese IME behavior.
+- An earlier attempt typed `été` across the timer boundary and ended with
+  `External owner uptdate 2`. The exact keystroke/callback order was not
+  captured, so this remains **inconclusive** and needs a controlled mixed-
+  typing test before claiming that behavior.
+
+The owned app process exited. The disposable bundle and standalone binary were
+removed; shared Cargo caches remain. The GUI-slot claim was released. This
+run's source check, build, package, native AX observations, and screenshot
+inspection are distinct evidence; no saved screenshot or marked-range counter
+was captured for the new case. Wider macOS input, browser IME, and the deferred
+accessibility/VoiceOver and additional-language cases remain open.
+
 ## Evidence and cleanup
 
 The current result is

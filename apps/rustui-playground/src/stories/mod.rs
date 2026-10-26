@@ -1,6 +1,7 @@
 //! Stateful RustUI stories embedded in the canonical Playground.
 
 use rustui::prelude::*;
+use std::time::Duration;
 
 const MENU_BAR_REFERENCE_LABELS: [&str; 9] = [
     "Finder",
@@ -267,6 +268,10 @@ pub struct StoryHost {
     button_properties: ButtonProperties,
     #[state(String::new())]
     input_text: String,
+    #[state(0)]
+    external_input_updates: u32,
+    #[state(String::new())]
+    external_input_status: String,
     #[state(String::new())]
     secure_text: String,
     #[state(false)]
@@ -358,6 +363,25 @@ impl StoryHost {
 
     pub fn apply_story(&mut self, story: &StoryId) {
         self.select_story(*story);
+    }
+
+    fn finish_external_input_update(&mut self, state: AsyncState<(), String>) -> bool {
+        match state {
+            AsyncState::Success(()) => {
+                self.external_input_updates += 1;
+                self.input_text = format!("External owner update {}", self.external_input_updates);
+                self.external_input_status = format!(
+                    "Owner changed the bound value to {:?}; check the focused field and composition",
+                    self.input_text
+                );
+                true
+            }
+            AsyncState::Error(error) => {
+                self.external_input_status = format!("Owner update failed: {error}");
+                true
+            }
+            AsyncState::Idle | AsyncState::Loading => false,
+        }
     }
 
     fn toggle_details_tab(&mut self) {
@@ -729,6 +753,28 @@ impl View for StoryHost {
         VStack! {
         retention_controls.spacing(8.0)
             w1_controls.spacing(8.0)
+            (selected == StoryId::Input).then(|| {
+                VStack::new()
+                    .child(OwnerTaskReader(|tasks: OwnerTask<StoryHost>| {
+                        Button(
+                            "Change bound text from owner in 5 seconds",
+                            tasks.start_with_executor(
+                                "story-input-external-owner-update",
+                                |executor| {
+                                    let timer = executor.timer(Duration::from_secs(5));
+                                    async move {
+                                        timer.await;
+                                        Ok::<(), String>(())
+                                    }
+                                },
+                                StoryHost::finish_external_input_update,
+                            ),
+                        )
+                        .id("story-input-external-owner-update")
+                    }))
+                    .child(Text(self.external_input_status()))
+                    .spacing(8.0)
+            })
             (selected == StoryId::Layout && self.w1_step() == 0).then(|| Component("foundation-demos", foundation_demos::FoundationDemos::default))
             (selected == StoryId::Layout && self.w1_step() == 0).then(compiled_preview_gallery::demo)
             (selected == StoryId::Layout && self.w1_step() == 0).then(composition_gallery::demo)

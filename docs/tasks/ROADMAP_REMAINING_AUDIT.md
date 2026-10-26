@@ -9,6 +9,18 @@ Reverify live HEAD and dirty state before subsequent integration; preserve unrel
 
 ## Current checkpoint — 2026-10-26
 
+- **Stage 9 D1b external owner update:** The public-API Playground Text inputs
+  story now exposes a five-second owner-value change. Headstart locked/offline
+  check and build passed; the packaged macOS 27 binary had SHA-256
+  `4add853a5a23e3cac1f445065acf3393123c87c27a3a15ad013e51a1b40bf5e3`.
+  Native AX/visual observation verified Name focus and shared bound values
+  across a delayed update, then ABC Option+E marked input followed by an
+  external owner update and E producing `é`. One typing/timer overlap produced
+  a mixed value without captured event order and remains inconclusive. This
+  closes the bounded focused external-value case, not all IME acceptance.
+  The owned app/bundle/binary were cleaned and the GUI slot released. Detail:
+  `docs/tasks/D1B_IME_SELECTION_NO_BLUR_ACCEPTANCE_RUN_SHEET.md`.
+
 - Picker source event/lifecycle gate: local Mac Headstart ran
   `./scripts/cargo-headstart test -p rustui picker --lib` with **45/45 pass**,
   then the retained subscription replacement/owner-removal test with **1/1
