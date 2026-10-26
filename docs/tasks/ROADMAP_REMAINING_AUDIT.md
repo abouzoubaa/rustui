@@ -9,6 +9,14 @@ subsequent integration and preserve unrelated work.
 
 ## Current checkpoint — 2026-10-26
 
+- Stage 1 M16 native owner-task acceptance passes **3/3 bounded cases** on
+  source `e50b6ff0`: cancellable timer stops on unmount; noninterruptible native
+  work finishes without delivery to the removed owner; restored owner completes
+  normally. Both restorations start Idle, with exactly one release per removal.
+  Evidence: `target/headstart/evidence/native-owner-lifecycle-20261026/acceptance.json`.
+  Focused probe tests **2/2**, optimized native and Web builds passed. This closes
+  the M16 exercise, not the wider F1E acceptance or VoiceOver, which remains undone.
+
 - Stage 9 D1d client teardown now defaults to the latest accepted reply stamp;
   previously an omitted stamp sent null and rejected teardown after mounting.
   Both profiles retain explicit stale-stamp rejection. **8/8 JavaScript
@@ -493,7 +501,7 @@ or acceptance percentage has not been recomputed against every contract.
 | R02 | 0: reproducible approved patch selection | Closed for current approved selection, including the exact Tree root/name/level series: replay/reversal fixtures and source postimages pass; provenance/checksum manifests remain unchanged. |
 | R03 | 0: architecture, registry, public documentation | Audit all exported APIs and planned/scaffold claims; reconcile stale lifecycle/animation/tooling status. |
 | R04 | 1: application/window bootstrap | Present; current library checkpoint passed. Native launch/error/close and packaging acceptance remain. |
-| R05 | 1: lifecycle, owner actions, subscriptions | Present; F1E/M16 native ownership acceptance open. Picker obsolete-subscription runtime fix and focused handle-lifetime test integrated; ten full lifecycle event-path tests now pass; native ownership acceptance remains. |
+| R05 | 1: lifecycle, owner actions, subscriptions | Present; M16 native owner-task acceptance passes 3/3 bounded cases; broader F1E acceptance remains open. Picker obsolete-subscription runtime fix and focused handle-lifetime test integrated; ten full lifecycle event-path tests now pass; broader native lifecycle acceptance remains. |
 | R06 | 2: state, identity, binding, observation, environment | Present within documented GPUI/render-time contracts; audit invalidation, retention and error boundaries against F1 contracts. |
 | R07 | 2: layout, geometry and animation identity | Present; current-source native geometry, RTL and reduced-motion observations remain. |
 | R08 | 2/9: timing/animation API | Defined behavior is implemented: four timing curves, mount opacity and state-driven opacity/X/Y springs over GPUI. Current contract review found no additional consumer for the reserved Animator/Transition modules; those files are not counted as capabilities. Native motion/reduced-motion acceptance remains open. |

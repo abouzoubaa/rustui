@@ -35,8 +35,20 @@ The ordinary delayed future uses GPUI's executor timer on both targets. The
 additional native-only acceptance probe performs a bounded blocking sleep on
 GPUI's background executor; it creates no thread or second scheduler and is
 compiled out on Web/Wasm. No framework runtime or vendor code is changed.
-Native acceptance of the current two-case exercise remains pending until run
-and recorded; arbitrary future interruption is not promised.
+Native acceptance of the current exercise passed **3/3 cases** on 2026-10-26,
+using optimized macOS source `e50b6ff0141317b61f44c4a42ee52eb3d136ea0b`.
+The timer was removed after 1.394 seconds and produced no result or delivery;
+the native blocking probe was removed after 1.144 seconds and finished with no
+owner delivery. Each release incremented exactly once. Restoring each child
+produced `Idle`; a third mounted owner completed with one delivered result.
+Cumulative counters were started 3 / results 2 / delivered 1 / mounts 3 /
+releases 2. Evidence: `target/headstart/evidence/native-owner-lifecycle-20261026/acceptance.json`
+and the adjacent source, binary, build, host, and packaging provenance.
+The owned validation app (PID 54520), disposable bundle, and standalone test
+executable were removed after the run; the shared GUI slot was released. Cargo
+dependency caches and evidence were preserved.
+Arbitrary future interruption is not promised. VoiceOver is undone and deferred
+by user direction; this lifecycle check establishes no screen-reader acceptance.
 
 ## Historical native acceptance (M25, original blocking probe)
 
