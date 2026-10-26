@@ -62,7 +62,27 @@ Reverify live HEAD and dirty state before subsequent integration; preserve unrel
   passed **1/1**; Playground all-target check, locale validation, and formatting
   passed. Logs: `target/headstart/evidence/text-field-localized-placeholder-test-20261026.log`
   and `target/headstart/evidence/playground-localized-search-check-20261026.log`.
-  Native and browser behavior of this source change still requires observation.
+  On integrated commit `439a442c`, `./scripts/verify-release.sh source`
+  passed **589 Python tests** and its other source gates;
+  `./scripts/verify-release.sh macos` passed **1,342 test cases across 39
+  reported groups** with zero failures and packaged an optimized app;
+  `./scripts/verify-release.sh web` passed **18 host IME-plan tests** and
+  packaged a Web bundle with **770/770** manifest hashes matching. The Web
+  source SHA-256 is
+  `e8262b7d6833b52d83e3fcdd7607c29247b7e024b56b3f43c118a8da3d51c27f`;
+  manifest SHA-256 is
+  `c634091909d4717ecacdad3536312ddbaefac1c9d6c7a8fa171197fea8428192`.
+  Chromium and native macOS 27 both showed the sidebar headings and search
+  placeholder switching from English to French and Arabic. Native bundled
+  executable SHA-256 was
+  `160df5a40b008a65e5f9e453a43eda065ede37e88ab66abb57ebfcd6660b46c1`.
+  The native app and source-bound browser tabs were closed, disposable bundle
+  removed, and GUI slot released. Logs:
+  `target/headstart/evidence/release-source-localized-search-20261026.log`,
+  `target/headstart/evidence/release-macos-localized-search-20261026.log`, and
+  `target/headstart/evidence/release-web-localized-search-20261026.log`.
+  This closes the bounded search-placeholder locale behavior, not full
+  Playground localization or wider OS/browser acceptance.
 - **Integrated macOS/Web release checkpoint, 2026-10-26:** On integrated
   commit `f428a8b8`, `./scripts/verify-release.sh macos` exited 0 on macOS
   27 arm64 using local Headstart: 1,339 passing test cases across 39 reported
