@@ -413,6 +413,7 @@ impl View for StoryCanvas {
                 .alignment(rustui::prelude::HorizontalAlignment::Start),
             StoryId::Outline => VStack::new().child(super::outline_gallery::demo()),
             StoryId::Drawer => VStack::new().child(super::drawer_gallery::demo()),
+            StoryId::SplitView => VStack::new().child(super::split_view_gallery::demo()),
             StoryId::GraphView => VStack::new().child(super::graph_gallery::graph_demo()),
             StoryId::NodeEditor => VStack::new().child(super::graph_gallery::editor_demo()),
             StoryId::Tree => VStack::new()

@@ -13,6 +13,7 @@ pub enum StoryId {
     Drawer,
     GraphView,
     NodeEditor,
+    SplitView,
     Outline,
     Tabs,
     Breadcrumb,
@@ -32,6 +33,7 @@ impl StoryId {
             Self::Drawer => "Drawer",
             Self::GraphView => "GraphView",
             Self::NodeEditor => "NodeEditor",
+            Self::SplitView => "SplitView + ResizablePanel",
             Self::Outline => "Outline",
             Self::Tabs => "Tabs",
             Self::Breadcrumb => "Breadcrumb",
@@ -47,7 +49,7 @@ pub struct StoryDefinition {
     pub summary: &'static str,
 }
 
-pub const STORIES: [StoryDefinition; 14] = [
+pub const STORIES: [StoryDefinition; 15] = [
     StoryDefinition {
         id: StoryId::Button,
         title: "Button",
@@ -117,6 +119,11 @@ pub const STORIES: [StoryDefinition; 14] = [
         id: StoryId::NodeEditor,
         title: "NodeEditor",
         summary: "Controlled graph editing with typed ports, node dragging, keyboard movement and connection controls.",
+    },
+    StoryDefinition {
+        id: StoryId::SplitView,
+        title: "SplitView + ResizablePanel",
+        summary: "ResizablePanel panes with stable child identity, divider dragging, axis changes, reorder, insertion, removal and size limits.",
     },
 ];
 
@@ -188,5 +195,19 @@ mod tests {
                 crate::stories::test_runner::VerificationStatus::InteractionAndVisualPending
             );
         }
+    }
+
+    #[test]
+    fn resizable_panels_are_directly_searchable_with_the_existing_split_gallery() {
+        let index = super::STORIES
+            .iter()
+            .position(|story| story.id == super::StoryId::SplitView)
+            .expect("standalone split story");
+        for query in [" SplitView ", " rEsIzAbLePaNeL "] {
+            assert_eq!(filtered_story_indices(query), vec![index]);
+        }
+        let source = crate::stories::code_preview::source_for(super::StoryId::SplitView);
+        assert!(source.contains("SplitView::horizontal"));
+        assert!(source.contains("ResizablePanel::new"));
     }
 }

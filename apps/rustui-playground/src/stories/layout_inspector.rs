@@ -17,6 +17,9 @@ pub fn summary_for(story: StoryId) -> &'static str {
         StoryId::NodeEditor => {
             "Layout: shared positioned graph surface with node dragging and focusable port/connection controls"
         }
+        StoryId::SplitView => {
+            "Layout: bounded GPUI resizable panel group with stable RustUI child identities"
+        }
         StoryId::Drawer => {
             "Layout: window-hosted modal sheet with an owner-controlled physical edge"
         }

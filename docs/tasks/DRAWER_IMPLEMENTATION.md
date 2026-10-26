@@ -99,3 +99,17 @@ Focused verification commands:
 ./scripts/cargo-headstart test --profile headstart --locked --offline -p rustui-playground --lib drawer
 ./scripts/cargo-headstart check --profile headstart --locked --offline -p rustui-playground --all-targets
 ```
+
+## Bounded Web functional acceptance — 2026-10-26
+
+Current optimized Web source `e50b6ff0` passes **13/13 functional checks** in one
+Chromium profile at 1280×720: open, edit caller-owned notes, live title/size refresh,
+caller action, Escape, reopen retaining notes, owner close, all four physical
+edges, release/remount from owner state, and backdrop dismissal. The visible
+Close control also dismissed each edge case. Updated 420-point sizing produced
+Right (860,0,420,720), Bottom (0,300,1280,420), Left (0,0,420,720), and Top
+(0,0,1280,420) CSS bounds.
+Evidence: `target/headstart/evidence/web-outline-drawer-20261026/acceptance.json`.
+Native, broader browser, independent text-selection scope, popup stacking,
+visual/locale/RTL and workload checks remain open. Accessibility and VoiceOver
+are undone and deferred by user direction.

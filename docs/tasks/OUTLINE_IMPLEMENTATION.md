@@ -89,3 +89,14 @@ owner selection, disabled edges, collapsed descendants, modified shortcuts and
 an all-disabled tree. Rebuilt native Tree Home/End checks pass through real
 CUA keyboard input; Outline-specific native acceptance remains separate.
 Evidence: `target/headstart/evidence/native-tree-home-end-20261026/`.
+
+## Bounded Web functional acceptance — 2026-10-26
+
+Current optimized Web source `e50b6ff0` passes **12/12 functional checks** in one
+Chromium profile at 1280×720: collapse, hidden selection, expansion, stable-ID
+reorder/relabel, unmount/remount, removal normalization, restoration without
+resurrecting removed state, pointer selection, Home/End and Enter activation.
+Evidence: `target/headstart/evidence/web-outline-drawer-20261026/acceptance.json`.
+This establishes the named state/interaction cases only. Native, broader browser,
+visual/locale/RTL and workload acceptance remain open. Accessibility and VoiceOver
+are explicitly undone and deferred by user direction.

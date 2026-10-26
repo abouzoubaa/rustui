@@ -37,6 +37,7 @@ pub const fn status_for(story: StoryId) -> VerificationStatus {
         | StoryId::Outline
         | StoryId::GraphView
         | StoryId::NodeEditor
+        | StoryId::SplitView
         | StoryId::Drawer => VerificationStatus::InteractionAndVisualPending,
     }
 }

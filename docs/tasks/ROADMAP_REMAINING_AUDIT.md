@@ -9,6 +9,24 @@ subsequent integration and preserve unrelated work.
 
 ## Current checkpoint — 2026-10-26
 
+- Functional Web checkpoint on source `e50b6ff0`: **44/44 bounded checks** pass
+  across Outline (12), Drawer (13), GraphView (9), and NodeEditor (10). These
+  exercise owner state, controlled edits, dismissal, lifecycle, viewport, and
+  disabled behavior. Manifest verification matched all 769 bundle files and
+  2,932 build-input files. Early unsettled/offscreen/uncleared-state attempts
+  were excluded and affected checks repeated from verified states. Evidence:
+  `target/headstart/evidence/web-outline-drawer-20261026/acceptance.json`.
+  This is one Chromium profile at 1280×720; native, broader browser, performance,
+  and visual/locale coverage remain open. Accessibility is undone and deferred.
+
+- **User priority decision, 2026-10-26:** accessibility acceptance and further
+  accessibility implementation/patch promotion are deferred alongside VoiceOver.
+  Mark these checks **undone**; retain existing accessibility behavior and
+  previously gathered evidence. Prioritize functional correctness, lifecycle,
+  state synchronization, builds, packaging, and performance. The prepared row
+  patches stay unapplied; their promotion decision is deferred. This priority
+  decision does not establish accessibility acceptance or full production readiness.
+
 - Stage 1 M16 native owner-task acceptance passes **3/3 bounded cases** on
   source `e50b6ff0`: cancellable timer stops on unmount; noninterruptible native
   work finishes without delivery to the removed owner; restored owner completes
@@ -528,11 +546,11 @@ or acceptance percentage has not been recomputed against every contract.
 | R29 | 11: browser keyboard/AX/IME/fonts | Selected approved semantic/IME adapter v9 builds and passes bounded real-browser edit/selection/action checks. Current D1d preview/composition iframe roundtrips also pass. Full cross-browser, real OS IME/clipboard, glyph and screen-reader acceptance remain. |
 | R30 | Release: CI and reproducible release builds | Actual GitHub source CI passes on 6ad24006, including 581 Python tests and JS/packaging gates. Local macOS Headstart checkpoint passes 1,282 library and 53 integration tests, all-target checks and optimized packaging; Web build and bounded browser checks pass. Macro doctests contain zero cases. No trusted macOS/Web runner is registered; compiled CI, compiler/bootstrap reproduction and independent clean-build artifact comparison remain open. |
 | R31 | Release: security, licensing, performance budgets, packaging/instructions | Complete threat/error audit, dependency/license and font notices, supported-version matrix, reproducibility, package signing/distribution plan and release instructions. Publication requires approval. |
-| R32 | 8: Outline | Source implemented: controlled single-column hierarchy over the existing Tree engine, explicit identity and group name, selected/expanded bindings, public-API Playground story and compiled-preview descriptor. Approved Tree naming/one-based levels are source-implemented. The shared Home/End repair passes 30/30 Tree/Outline tests and real native/Web Tree checks. Outline-specific native/browser, AX/VoiceOver and visual/locale/RTL acceptance remains open. See `docs/tasks/OUTLINE_IMPLEMENTATION.md`. |
-| R33 | 8: Drawer | Source implemented: controlled visibility, four physical edges, window-owned hosting, current-owner content/bindings, guarded dismissal/unmount, restored focus, named Close, public Playground story and compiled-preview factory. Seven real-Root/validation tests passed; Playground library tests and all-target check passed. Native/browser/AX/VoiceOver, popup stacking and independent modal text-selection isolation remain open. See `docs/tasks/DRAWER_IMPLEMENTATION.md`. |
+| R32 | 8: Outline | Source implemented: controlled single-column hierarchy over the existing Tree engine, explicit identity and group name, selected/expanded bindings, public-API Playground story and compiled-preview descriptor. Approved Tree naming/one-based levels are source-implemented. The shared Home/End repair passes 30/30 Tree/Outline tests and real native/Web Tree checks. Outline-specific native/browser, AX/VoiceOver and visual/locale/RTL acceptance remains open. See `docs/tasks/OUTLINE_IMPLEMENTATION.md`. Bounded Web functional acceptance passes 12/12 checks (2026-10-26); native and wider visual/locale checks remain. Accessibility deferred. |
+| R33 | 8: Drawer | Source implemented: controlled visibility, four physical edges, window-owned hosting, current-owner content/bindings, guarded dismissal/unmount, restored focus, named Close, public Playground story and compiled-preview factory. Seven real-Root/validation tests passed; Playground library tests and all-target check passed. Native/browser/AX/VoiceOver, popup stacking and independent modal text-selection isolation remain open. See `docs/tasks/DRAWER_IMPLEMENTATION.md`. Bounded Web functional acceptance passes 13/13 checks (2026-10-26), including all physical edges, caller edits, dismissal and release/remount; native, popup/text-selection and wider checks remain. Accessibility deferred. |
 | R34 | 9: ResizablePanel | Coding closed for the host-owned panel adapter: public ResizablePanel reuses SplitPanel directly, with the same size/identity/lifecycle contract and no second resize runtime. Canonical SplitView story uses the public name; rendered focus/key/clamp/RTL event test and Playground check pass. Native/browser visual, AX and screen-reader acceptance remain open. |
-| R35 | 9: GraphView | Source implemented: validated positioned node/port/edge model, controlled viewport/selection, named native controls, activation, theme defaults and lifecycle guards. Standalone searchable Playground story and compiled-preview factory use the public API. Focused regressions and full macOS source/build checkpoint pass; native/browser/AX/VoiceOver, locale/RTL and representative workloads remain open. See `docs/tasks/GRAPH_COMPONENTS_IMPLEMENTATION.md`. |
-| R36 | 9: NodeEditor | Source implemented over GraphView: atomic controlled graph edits, node drag/move/remove, typed port connections and named Disconnect controls, current-owner keyboard events, disabled focus and stale-callback guards. Standalone story and preview factory are integrated. Source/build checks pass; native/browser interaction, accessibility and performance acceptance remain open. See `docs/tasks/GRAPH_COMPONENTS_IMPLEMENTATION.md`. |
+| R35 | 9: GraphView | Source implemented: validated positioned node/port/edge model, controlled viewport/selection, named native controls, activation, theme defaults and lifecycle guards. Standalone searchable Playground story and compiled-preview factory use the public API. Focused regressions and full macOS source/build checkpoint pass; native/browser/AX/VoiceOver, locale/RTL and representative workloads remain open. See `docs/tasks/GRAPH_COMPONENTS_IMPLEMENTATION.md`. Bounded Web functional acceptance passes 9/9 checks (2026-10-26), including viewport and disabled/lifecycle behavior; representative workloads and native/wider checks remain. Accessibility deferred. |
+| R36 | 9: NodeEditor | Source implemented over GraphView: atomic controlled graph edits, node drag/move/remove, typed port connections and named Disconnect controls, current-owner keyboard events, disabled focus and stale-callback guards. Standalone story and preview factory are integrated. Source/build checks pass; native/browser interaction, accessibility and performance acceptance remain open. See `docs/tasks/GRAPH_COMPONENTS_IMPLEMENTATION.md`. Bounded Web functional acceptance passes 10/10 checks (2026-10-26), including document edits, connections, pointer/key movement, disabled and lifecycle behavior; native/wider checks remain. Accessibility deferred. |
 
 ## Current executed evidence
 

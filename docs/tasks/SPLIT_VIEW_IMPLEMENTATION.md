@@ -134,3 +134,12 @@ Narrowing and restoring A’s range did not change panel mounts. Exact AX frame
 bounds, VoiceOver announcements, locale switching, complete focus traversal,
 and broader visual/platform acceptance remain open. Evidence:
 `target/headstart/evidence/m586-splitter-native-interaction-20261021.json`.
+
+## Direct Playground route — 2026-10-26
+
+The existing public-API gallery is now directly reachable as **SplitView +
+ResizablePanel** in Framework Demos. Search matches either API name; the Stacks
+foundation tab continues to reuse the same gallery. No panel implementation or
+state owner is duplicated. The source example shows both APIs. Six focused
+registry/search regressions and the optimized Web build passed; browser/native
+functional acceptance of this direct route is recorded separately.

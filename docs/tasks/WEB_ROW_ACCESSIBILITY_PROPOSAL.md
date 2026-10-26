@@ -4,6 +4,10 @@ Status: prepared and validated in isolated copies; **not promoted**. Current
 selected vendor sources remain unchanged. The source manifest is
 [`gpui-row-accessibility-series-v1.json`](../../patches/proposed/gpui-row-accessibility-series-v1.json).
 
+User direction on 2026-10-26 defers accessibility work alongside VoiceOver.
+Promotion and runtime accessibility acceptance are **undone and deferred**.
+Keep this prepared proposal unapplied while functional release work proceeds.
+
 ## Observed problem and prepared repair
 
 | Source | Current behavior | Proposed behavior |

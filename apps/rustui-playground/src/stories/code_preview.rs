@@ -118,6 +118,11 @@ Environment(display_mode, child_stack)
 .accessibility_label("Node editor")
 .on_activate(self.action(Self::activate))"#
         }
+        StoryId::SplitView => {
+            r#"SplitView::horizontal("editor")
+    .panel(ResizablePanel::new("sidebar", Text("Files")).initial_size(180.0))
+    .panel(ResizablePanel::new("document", Text("Document")))"#
+        }
         StoryId::Drawer => {
             r#"Drawer("details", self.visible_binding())
     .title("Details")

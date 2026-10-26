@@ -121,3 +121,20 @@ event therefore affects a subsequent command even before a redraw. Detached owne
 and IDs missing from the current document do not activate or edit. Relative movement
 still applies against the latest document inside the binding updater. This covers
 component and application activation actions without a new runtime.
+
+## Bounded Web functional acceptance — 2026-10-26
+
+Current optimized Web source `e50b6ff0` passes **9/9 GraphView** and **10/10
+NodeEditor** functional checks in one Chromium profile at 1280×720. GraphView
+covers pointer/key selection, activation, disabled rejection, unmount/remount,
+zoom, reset and pan. NodeEditor covers add/rename/remove, visible disconnect,
+connection from cleared pending state, drag, keyboard movement, disabled rejection,
+and unmount/remount preserving the document. Graph zoom changed the source node
+from 150×100 to 187.5×125 CSS pixels; Home restored it and D panned by −40 pixels.
+Node drag moved by (60,30), then Right moved by (10,0); a verified disabled editor
+rejected both drag and Right with unchanged geometry.
+Evidence: `target/headstart/evidence/web-outline-drawer-20261026/acceptance.json`.
+Unsettled snapshots, offscreen-control attempts and uncleared pending-port
+sequences are excluded, with the accepted cases repeated from verified states.
+Native, wider browser/visual/locale/RTL and representative workload checks remain
+open. Accessibility and VoiceOver are undone and deferred by user direction.
