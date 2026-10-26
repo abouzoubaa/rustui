@@ -9,6 +9,22 @@ Reverify live HEAD and dirty state before subsequent integration; preserve unrel
 
 ## Current checkpoint — 2026-10-26
 
+### Source release checkpoint — 2026-10-26
+
+The first `verify-release.sh source` run stopped after **589 Python tests** with
+seven setup errors in the semantic-adapter lifecycle fixture. That fixture
+expected the bidirectional wrapping patch to be the final image, but the
+approved input-hit patch now sits above it. The fixture now reverses the
+input-hit image in its temporary copy before replaying the older patch; no
+vendored source changed. Its focused **7/7** tests passed. The full source
+driver then exited **0**: **589/589** Python tests, **19/19** Web semantic DOM
+tests, **8/8** preview transport tests, packaging/CI fixture checks, runtime
+locale validation, and theme source validators passed. Logs:
+`target/headstart/evidence/release-source-locales-20261026.log`,
+`semantic-adapter-stack-test-20261026.log`, and
+`release-source-semantic-fixture-fixed-20261026.log`. Native/browser visual,
+accessibility, performance, and dependency-notice acceptance remain separate.
+
 ### Stage 6 Playground copy — 2026-10-26
 
 The Foundation Demos tab group now resolves all 15 visible tab labels from

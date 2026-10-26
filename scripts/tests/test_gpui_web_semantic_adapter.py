@@ -8,6 +8,8 @@ SPEC=importlib.util.spec_from_file_location('semantic_adapter',ROOT/'scripts/app
 ADAPTER=importlib.util.module_from_spec(SPEC);SPEC.loader.exec_module(ADAPTER)
 BIDI_SPEC=importlib.util.spec_from_file_location('bidi_patch',ROOT/'scripts/apply_gpui_bidi_wrapped_rows_patch.py')
 BIDI=importlib.util.module_from_spec(BIDI_SPEC);BIDI_SPEC.loader.exec_module(BIDI)
+INPUT_SPEC=importlib.util.spec_from_file_location('input_patch',ROOT/'scripts/apply_gpui_bidi_input_hit_patch.py')
+INPUT=importlib.util.module_from_spec(INPUT_SPEC);INPUT_SPEC.loader.exec_module(INPUT)
 class SemanticLifecycle(unittest.TestCase):
  def setUp(self):
   self.temp=tempfile.TemporaryDirectory();self.addCleanup(self.temp.cleanup)
@@ -18,10 +20,18 @@ class SemanticLifecycle(unittest.TestCase):
   for path in paths:
    src=ROOT/path;dest=self.root/path
    if src.exists():dest.parent.mkdir(parents=True,exist_ok=True);shutil.copy2(src,dest)
-  bidi_meta=BIDI.load_manifest()
-  state,current=BIDI.current_images(bidi_meta)
+  input_meta=INPUT.load_manifest()
+  state,current_input=INPUT.current_images(input_meta)
   self.assertEqual(state,'post')
-  for path,data in BIDI.staged_images(bidi_meta,current,reverse=True).items():
+  before_input=INPUT.staged_images(input_meta,current_input,reverse=True)
+  for path,data in before_input.items():
+   if path in paths:(self.root/path).write_bytes(data)
+  bidi_meta=BIDI.load_manifest()
+  current_bidi={path:(ROOT/path).read_bytes() for path in BIDI.EXPECTED_FILES}
+  current_bidi.update((path,data) for path,data in before_input.items() if path in current_bidi)
+  for path,image in bidi_meta['images'].items():
+   self.assertEqual(BIDI.digest(current_bidi[path]),image['post_sha256'])
+  for path,data in BIDI.staged_images(bidi_meta,current_bidi,reverse=True).items():
    if path in paths:(self.root/path).write_bytes(data)
   self.meta=ADAPTER.load(self.root,self.art)
   self.assertEqual(ADAPTER.identify(ADAPTER.sources(self.root,self.meta),self.meta),'post')
