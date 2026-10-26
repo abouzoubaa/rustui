@@ -17,7 +17,22 @@ Reverify live HEAD and dirty state before subsequent integration; preserve unrel
   locale records validated, and Playground all-target Headstart check passed.
   Evidence: `target/headstart/evidence/playground-localized-status-test-20261026.log`
   and `target/headstart/evidence/playground-localized-status-check-20261026.log`.
-  Native and browser visual acceptance for this footer remains open.
+  On integrated `b87d6671`, `./scripts/verify-release.sh source` exited 0
+  with **589 Python tests** plus JavaScript, locale, theme, and package source
+  checks. `./scripts/verify-release.sh web` exited 0 using the documented
+  matching Wasm Headstart root: **18/18 host IME-plan tests**, optimized bundle,
+  and **770/770** package files matching size and SHA-256. Web source SHA-256:
+  `0cd6560403dae0beeef37c217783631fd4fe8a42cc8685c8d22ef9f6a8e12757`;
+  manifest SHA-256:
+  `1d62695d83a4895da7325f0358db15d10ceb828f6c0051ef3ee81588f8cc0600`.
+  One local browser profile visibly showed the correct footer after switching
+  English, French, and Arabic. The disposable tab and server were closed.
+  Evidence: `target/headstart/evidence/release-source-localized-status-20261026.log`
+  and `target/headstart/evidence/release-web-localized-status-20261026.log`.
+  Native and wider browser acceptance for this footer remain open. English
+  reference-link and event-history text still appears in the Arabic view.
+- **Latest source CI:** GitHub run `40395608527` on `b87d6671` passed its
+  source job; compiled macOS/Web CI remains unrun.
 - **Source CI:** GitHub run `40393859519` on `c8ef9d6b` completed successfully:
   source job passed. The compiled macOS/Web job was skipped because this push
   was not a manual `workflow_dispatch` run. No trusted self-hosted Mac runner
