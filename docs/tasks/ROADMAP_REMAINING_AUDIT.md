@@ -9,15 +9,35 @@ Reverify live HEAD and dirty state before subsequent integration; preserve unrel
 
 ## Current checkpoint — 2026-10-26
 
+- **Stage 11 bidirectional Web wrapping selected, 2026-10-26:** The user-approved
+  five-file same-version patch is selected through the exact-image helper and
+  local `gpui-pre-wgpu 0.3.9` Cargo path. No GPUI revision or dependency version
+  changed; pristine checksum metadata remains intact. The approved manifest
+  records pre/post hashes and the helper verifies the applied image. Rustfmt,
+  selected native Playground check, optimized Web bundle build, **770/770**
+  bundle hashes, **2/2** fresh-target Cosmic row tests and **1/1** selected
+  GPUI geometry fixture pass. In Chromium at 1280×720, the selected bundle
+  painted the complete 302-byte Arabic Button note on two visible rows and
+  the long Arabic Text note on three rows; Increment changed count 0→1.
+  Bundle manifest SHA-256 is
+  `446198a6ba65675a2a0955bf2514bfa3e3f8d33c61e9d82a6aab30b6ad917150`;
+  its source SHA-256 is
+  `80a8be5cf0d40d2f81730baad12eef7b5126242b843f35c922123cc6b4d110d3`.
+  This closes the specific Arabic catalog painting defect. Wider browser text
+  selection, real IME, glyph/font, performance and native visual acceptance
+  remain. GPUI's own lib-test target still fails before this test on its
+  existing missing test fonts and `util_macros` plus unrelated `aria_disabled`
+  test errors. The default Headstart row-probe target reused a stale one-test
+  executable after a source edit; a fresh target ran both tests successfully.
+
 - **Stage 11 Arabic wrapped-row probe, 2026-10-26:** The reproducible
   `patches/proposed/cosmic-wrapped-rows-probe/` fixture passed 1/1 with
   `./scripts/cargo-headstart test --manifest-path patches/proposed/cosmic-wrapped-rows-probe/Cargo.toml --locked --offline --lib`.
   Cosmic retained early and late bytes across multiple rows and placed each
   glyph within the requested 180 px width. Arabic rows are right aligned in
-  that width: glyph X can exceed the row's own reported `w`. The proposed
-  backend seam still leaves GPUI paint and hit testing on the old single-row
-  geometry, so current browser rendering remains a release blocker. Coding
-  and acceptance completion counts are unchanged.
+  that width: glyph X can exceed the row's own reported `w`. The earlier
+  private backend seam left GPUI paint and hit testing on the old single-row
+  geometry; the approved five-file patch above addresses those paths and is selected. Coding and acceptance completion counts are unchanged.
 
 - **Current Web inspector/Arabic check, 2026-10-26:** The Web build passed on commit `94789925` using the preserved matching Headstart Wasm toolchain read-only from worktree 4adc; build outputs stayed under this worktree's `target/headstart`. The current bundle manifest verified **770/770** file hashes and source SHA-256 `9815b4c1bfddcead0a197d84e405281334b7b013c69121d9ceb169eb41473b76`. Chromium showed the schema amount and text editors wholly inside the visible pane. Physical clicks focused both controls; replacing amount with `0.625` updated its editor, owner summary, and compiled preview value; replacing text with `Web inspector` updated its editor, owner summary, and compiled preview text field. The same current bundle still paints only a tiny fragment of the long Arabic Button catalog note while the semantic description contains the full Arabic sentence. Thus the inspector behavior passes this bounded browser check; Arabic long-text visual acceptance remains a release blocker. Source CI push and PR runs `40359612677` and `40359627869` passed on this commit; compiled Mac/Web CI remains skipped without a trusted runner.
 

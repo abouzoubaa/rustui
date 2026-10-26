@@ -71,4 +71,41 @@ mod tests {
             );
         }
     }
+
+    #[test]
+    fn mixed_arabic_wrap_preserves_glyphs_at_edge_widths() {
+        let text = "مثال RustUI لـ Button يتضمن عدادًا مباشرًا وإجرائي Increment وReset وحالة Unavailable معطلة؛ زال القبول المرئي واختبارات لوحة المفاتيح وإمكانية الوصول بحاجة إلى التحقق الأصلي.";
+        let mut fonts = FontSystem::new();
+        let attrs = AttrsList::new(&Attrs::new());
+        let line = ShapeLine::new(&mut fonts, text, &attrs, Shaping::Advanced, 4);
+        let mut scratch = ShapeBuffer::default();
+        for width in [96.0, 350.0, 698.0] {
+            let mut rows = Vec::new();
+            line.layout_to_buffer(
+                &mut scratch,
+                14.0,
+                Some(width),
+                Wrap::WordOrGlyph,
+                Ellipsize::None,
+                None,
+                &mut rows,
+                None,
+                Hinting::Disabled,
+            );
+            assert!(!rows.is_empty(), "no rows at width {width}");
+            let glyphs: Vec<_> = rows.iter().flat_map(|row| &row.glyphs).collect();
+            assert!(
+                glyphs.iter().all(|g| g.x >= -1.0 && g.x + g.w <= width + 1.0),
+                "glyph escaped width {width}"
+            );
+            for (index, ch) in text.char_indices() {
+                if !ch.is_whitespace() {
+                    assert!(
+                        glyphs.iter().any(|g| g.start <= index && index < g.end),
+                        "byte {index} lost at width {width}"
+                    );
+                }
+            }
+        }
+    }
 }
