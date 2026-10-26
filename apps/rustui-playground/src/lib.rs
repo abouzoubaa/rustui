@@ -311,10 +311,12 @@ impl Playground {
                     let name = reference_filename(source);
                     let available = reference_path(source).is_file();
                     panel = panel.child(
-                        Text(format!(
-                            "{} · {name}",
-                            if available { "Available" } else { "Missing" }
-                        ))
+                        LocalizedText(if available {
+                            "lab-reference-available"
+                        } else {
+                            "lab-reference-missing"
+                        })
+                        .with_arguments(MessageArguments::new().with("name", name))
                         .font_size(12.0),
                     );
                 }
@@ -568,12 +570,33 @@ mod tests {
     use std::sync::atomic::{AtomicUsize, Ordering};
 
     #[test]
-    fn dynamic_status_messages_resolve_in_supported_locales() {
+    fn reference_and_status_messages_resolve_in_supported_locales() {
         let catalogs = stories::catalogs();
-        for (tag, ready, missing, open_reference) in [
-            ("en", "Ready", "No local SVG", "Open Form.svg"),
-            ("fr", "Prêt", "Aucune référence SVG", "Ouvrir Form.svg"),
-            ("ar", "جاهز", "لا تتوفر مراجع SVG", "فتح Form.svg"),
+        for (tag, ready, missing, open_reference, available, absent) in [
+            (
+                "en",
+                "Ready",
+                "No local SVG",
+                "Open Form.svg",
+                "Available · Form.svg",
+                "Missing · Form.svg",
+            ),
+            (
+                "fr",
+                "Prêt",
+                "Aucune référence SVG",
+                "Ouvrir Form.svg",
+                "Disponible · Form.svg",
+                "Manquant · Form.svg",
+            ),
+            (
+                "ar",
+                "جاهز",
+                "لا تتوفر مراجع SVG",
+                "فتح Form.svg",
+                "متوفر · Form.svg",
+                "غير متوفر · Form.svg",
+            ),
         ] {
             let locale = rustui::localization::Locale::parse(tag).expect("supported locale");
             assert!(
@@ -617,6 +640,21 @@ mod tests {
                     .expect("reference link formats"),
                 open_reference
             );
+            for (message, expected) in [
+                ("lab-reference-available", available),
+                ("lab-reference-missing", absent),
+            ] {
+                assert_eq!(
+                    catalogs
+                        .format(
+                            &locale,
+                            message,
+                            &MessageArguments::new().with("name", "Form.svg"),
+                        )
+                        .expect("reference state formats"),
+                    expected
+                );
+            }
         }
     }
 

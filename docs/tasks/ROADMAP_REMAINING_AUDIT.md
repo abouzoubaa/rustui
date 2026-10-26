@@ -9,6 +9,15 @@ Reverify live HEAD and dirty state before subsequent integration; preserve unrel
 
 ## Current checkpoint — 2026-10-26
 
+- **Stage 6 native reference-state locale follow-up:** Playground reference
+  rows now format available and missing states with the filename through the
+  active English, French, or Arabic catalog. The focused catalog interpolation
+  test passed **1/1**, three runtime locale records validated, and Playground
+  all-target Headstart checking passed. Evidence:
+  `target/headstart/evidence/playground-reference-states-locale-test-20261026.log`
+  and `target/headstart/evidence/playground-reference-states-check-20261026.log`.
+  Native visual acceptance and current-source release packaging remain open.
+
 - **Stage 6/11 reference-link locale follow-up:** Public RustUI
   `LinkView::localized_label_with_arguments` resolves the visible label at
   render time with a stable literal fallback and accessible name that follows
@@ -20,7 +29,18 @@ Reverify live HEAD and dirty state before subsequent integration; preserve unrel
   `target/headstart/evidence/link-localized-regressions-20261026.log`,
   `target/headstart/evidence/playground-link-locale-test-20261026.log`, and
   `target/headstart/evidence/link-localized-all-targets-20261026.log`.
-  Current-source browser rendering and release checkpoints remain open.
+  On integrated `e43c8e2b`, the Web release driver exited 0: **18/18** host
+  IME-plan tests and **770/770** verified bundle files. Source SHA-256:
+  `04e7b722808c80b1bad95f597c2b253123804f31f7582517795d1aa0f256edb5`;
+  manifest SHA-256:
+  `b18d9faebb26100de1e9f7213dd35e53150d0335c7ace89936fa94f0fda8d343`.
+  One browser profile showed the visible and named link as `Ouvrir Form.svg`
+  in French and `فتح Form.svg` in Arabic. The disposable tab and server were
+  closed. Evidence:
+  `target/headstart/evidence/release-web-localized-reference-link-20261026.log`.
+  This closes the bounded Web reference-link locale check; wider browser and
+  native reference behavior remain open. GitHub run `40397191576` passed its
+  source job on this commit; compiled CI was skipped on the push.
 
 - **Stage 6/11 dynamic Playground status:** The footer now resolves ready,
   missing-reference, requested-open, and open-error messages from the active
