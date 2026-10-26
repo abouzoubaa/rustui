@@ -12,7 +12,7 @@
   "checks": {
     "patch_applicability": "git apply --check passed against current tracked source",
     "format": "Rust 1.97.1 rustfmt --check passed on disposable patched source",
-    "compile": "not verified: Headstart Cargo panicked in resolver/features.rs:326 selecting a path-patched gpui-pre-wgpu; standalone candidate also lacked an approved vendored optional gpui-pre-bench-metrics dependency",
+    "compile": "passed: isolated path-patched gpui-pre-wgpu selected by wasm32-unknown-unknown rustui-playground; Headstart check --profile headstart --locked --offline completed using the pinned Web toolchain in 1m 17s. This only type-checks the private shaping seam, not wrapped-row behavior. Cargo.lock was restored byte-for-byte afterward. Evidence: target/headstart/candidates/rtl-seam-source/wasm-toolchain-check.log",
     "browser": "not run; patch is not selected by Cargo and changes no current runtime behavior"
   },
   "next_step": "Resolve candidate compilation without changing pinned package revision, then add backend wrapped-row geometry and shared paint/hit-test acceptance before promotion.",

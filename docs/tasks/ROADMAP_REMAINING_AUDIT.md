@@ -25,9 +25,13 @@ Reverify live HEAD and dirty state before subsequent integration; preserve unrel
   diagnostic record are in `target/headstart/evidence/web-arabic-note-20261026/`.
   A private Cosmic row-shaping seam is prepared in
   `patches/proposed/gpui-cosmic-wrapped-rows-seam-v1.patch`; it changes no
-  selected runtime source. Its patch applicability and formatting pass, but a
-  candidate compile is unverified because Headstart Cargo panicked selecting
-  the path-patched package. Arabic long-text Web visual acceptance remains open.
+  selected runtime source. Patch applicability and formatting pass. The
+  isolated path-patched package now type-checks for `wasm32-unknown-unknown`
+  with the pinned Web Headstart toolchain
+  (`target/headstart/candidates/rtl-seam-source/wasm-toolchain-check.log`). The
+  prior panic occurred on the host selection path. The original lockfile was
+  restored byte-for-byte. This seam does not yet implement wrapped-row painting
+  or hit testing; Arabic long-text Web visual acceptance remains open.
 
 - **Current source CI:** GitHub runs `40336215259` and `40336202405` both
   completed successfully at integrated commit `8459aea8`. Compiled macOS/Web
