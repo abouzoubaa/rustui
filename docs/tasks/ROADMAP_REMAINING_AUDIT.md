@@ -9,6 +9,19 @@ Reverify live HEAD and dirty state before subsequent integration; preserve unrel
 
 ## Current checkpoint — 2026-10-26
 
+- **Dependency-notice gap classification:** Target-filtered, `--edges normal`
+  reverse trees from the current locked Playground show all five native gap
+  versions (`block 0.1.6`, `mac 0.1.1`, `malloc_buf 0.0.6`,
+  `pathfinder_geometry 0.5.1`, `seahash 4.1.0`) and all three Web gap versions
+  (`hexf-parse 0.2.1`, `mac 0.1.1`, `seahash 4.1.0`) reaching
+  `rustui-playground`. Exact command output is retained in
+  `target/headstart/evidence/notice-runtime-trees-20261026/`. A normal-edge
+  path does not prove each crate contributes bytes to the final executable,
+  but these gaps cannot be dismissed as build-only from the current graph.
+  The exact published archives/upstream revisions reviewed so far provide no
+  complete authoritative notice text; do not fabricate attribution or mark
+  license distribution complete.
+
 - **Stage 6 Playground event history:** The bounded five-entry log now retains
   message keys and arguments so existing entries render in the active English,
   French, or Arabic locale after a switch. Empty state, total count, and all
@@ -28,7 +41,9 @@ Reverify live HEAD and dirty state before subsequent integration; preserve unrel
   showed the French empty state after clearing. The disposable tab and server
   were closed. Evidence:
   `target/headstart/evidence/release-web-localized-event-log-20261026.log`.
-  Native and wider story-copy localization acceptance remain open.
+  GitHub run `40399810275` passed source CI on the evidence commit; compiled
+  CI was skipped on the push. Native and wider story-copy localization
+  acceptance remain open.
 
 - **Stage 6 Playground catalog summary:** The header now formats catalog and
   demo counts through the active English, French, or Arabic message catalog,
