@@ -26,7 +26,7 @@ def analyze(root):
         if step == 5:
             children.reverse()
         expected_trace.append({'step': step, 'children': children})
-    if native.get('unique_observed_traces') != [expected_trace]:
+    if json.dumps(native.get('unique_observed_traces'), sort_keys=True) != json.dumps([expected_trace], sort_keys=True):
         raise ValueError('native child observations do not match W1')
     sessions = []
     identities = []
@@ -36,9 +36,17 @@ def analyze(root):
         active_path = root / f'process-w1-calibration-active{number}.json'
         idle_path = root / f'process-w1-calibration-idle{number}.json'
         manifest = read_record(manifest_path)
+        if manifest.get('profile') not in ('dev', 'headstart', 'release'):
+            raise ValueError('unsupported W1 build profile')
+        for field, expected in (('session', number), ('warmup_cycles', 3), ('measured_cycles', 30)):
+            if type(manifest.get(field)) is not int or manifest[field] != expected:
+                raise ValueError('manifest W1 protocol mismatch: ' + field)
         active_record, idle_record = read_record(active_path), read_record(idle_path)
         active, idle = summarize_record(active_record), summarize_record(idle_record)
         execution = next(s for s in native['sessions'] if s['session'] == number)
+        for field in ('session', 'warmup_cycles', 'measured_cycles', 'verified_states'):
+            if type(execution.get(field)) is not int:
+                raise ValueError('native W1 protocol requires integer ' + field)
         if (execution['warmup_cycles'] != 3 or execution['measured_cycles'] != 30
                 or execution['verified_states'] != 210
                 or execution['all_cycles_match_unique_trace'] is not True):
@@ -81,19 +89,19 @@ def analyze(root):
             'cpu_seconds_per_cycle_median': median,
             'cpu_seconds_per_cycle_min': min(values),
             'cpu_seconds_per_cycle_max': max(values),
-            'cpu_range_percent_of_median': (max(values)-min(values)) / median * 100,
-            'cpu_sample_cv_percent': statistics.stdev(values) / statistics.mean(values) * 100,
+            'cpu_range_percent_of_median': (max(values)-min(values)) / median * 100 if median > 0 else None,
+            'cpu_sample_cv_percent': statistics.stdev(values) / statistics.mean(values) * 100 if statistics.mean(values) > 0 else None,
             'idle_adjusted_cpu_seconds_per_cycle_median_estimate': statistics.median(adjusted),
-            'idle_adjusted_range_percent_of_median_estimate': (max(adjusted)-min(adjusted))/statistics.median(adjusted)*100,
+            'idle_adjusted_range_percent_of_median_estimate': (max(adjusted)-min(adjusted))/statistics.median(adjusted)*100 if statistics.median(adjusted) > 0 else None,
         },
         'limitations': [
-            'Development build; same Mac session on AC power with existing background apps.',
+            f"Build profile: {identities[0]['profile']}; host, power and background context are recorded in each session manifest.",
             'Gross CPU includes inter-batch idle. The separately labeled idle-adjusted estimate subtracts each launch idle CPU rate across the full capture; it assumes stationary background cost and is not an exact measurement.',
             'Native automation durations include tool/AX overhead and are not application cycle or frame latency.',
             'ps CPU display resolution is 10 ms here; converted ns do not imply ns precision.',
             'RSS is resident memory, not physical footprint or GPU memory.',
             'Three-launch spread is descriptive, not a confidence interval or approved regression threshold.',
-            'Frame, main-thread, GPU, presentation, release-build and optimized-candidate metrics are not measured.',
+            'Frame, main-thread, GPU and presentation timing and optimized-candidate comparisons are not measured.',
             'Native execution summary is an exported observation record; this script does not rerun the GUI.',
         ],
         'evidence_sha256': {str(p): hashlib.sha256(p.read_bytes()).hexdigest() for p in evidence},
