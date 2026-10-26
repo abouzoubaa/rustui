@@ -12,8 +12,10 @@ Reverify live HEAD and dirty state before subsequent integration; preserve unrel
 - **Integrated Stage 6 input and code-editor locales:** Through `5bada9f8`,
   Playground uses the English, French, and Arabic catalogs for its main input
   and code-editor controls. The current macOS release driver passed 1,348 tests
-  across 39 groups; focused Web bundles verified 770/770 files, with bounded
-  French and Arabic browser and native observations recorded below. Coding and
+  across 39 groups. The Web release driver on `eea0b203` passed 18/18 host
+  IME-plan tests and verified 770/770 bundle files, with three unresolved Web
+  notice gaps. Bounded French and Arabic browser and native observations are
+  recorded below. Coding and
   acceptance remain distinct: other story copy, native input/focus, RTL, wider
   browser coverage, and dependency notices are still open.
 
@@ -338,6 +340,13 @@ Reverify live HEAD and dirty state before subsequent integration; preserve unrel
   only its hash-verified disposable bundle and executable were removed, and
   the GUI slot was released. Evidence:
   `target/headstart/evidence/release-macos-code-editor-locales-20261026.log`.
+- **Stage 6 Web release integration, 2026-10-26:** The Web release driver on
+  `eea0b203` exited 0 with **18/18** host IME-plan tests, **770/770** bundle
+  manifest files matching SHA-256, and three unresolved dependency-notice
+  gaps. The manifest records source SHA-256
+  `91bd2d618a75ad43da69bed7291de1cc9f53c8215a49eb3459cbb883673c677f`.
+  No additional browser acceptance was inferred from this build. Evidence:
+  `target/headstart/evidence/release-web-stage6-integration-20261026.log`.
 - **Current-source cache workload calibration, 2026-10-26:** The existing
   `cache_benchmark` example built with Headstart and the existing calibration
   runner completed **18/18 valid fresh-process records** on local macOS 27
