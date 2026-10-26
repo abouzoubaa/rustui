@@ -9,6 +9,30 @@ Reverify live HEAD and dirty state before subsequent integration; preserve unrel
 
 ## Current checkpoint — 2026-10-26
 
+- **Current local release entry points:** `./scripts/verify-release.sh macos`
+  and `./scripts/verify-release.sh web` both exited 0 on commit `6d93147e`.
+  The macOS command passed workspace checks, **1,285 library tests** and **53
+  integration tests**, built an arm64 optimized Playground, collected 441
+  observed-package notices, and packaged the binary at SHA-256
+  `32382ba3031f31b7a5c2f927d673954a14042b50b237756188b7bb99ea6bbbaf`.
+  The Web command passed 18 host IME-plan tests and produced a **770/770**
+  hash-verified manifest at SHA-256
+  `f45efa83fc5d468db2b9618be478780eaab8b588b98d20b03ce75734b86d87c6`.
+  Native notice gaps remain **5**, Web notice gaps **3**; the macOS bundle has
+  only an ad hoc signature and no team ID or sealed resources. Neither entry
+  point proves GUI/browser/AX/performance or distribution acceptance. Evidence:
+  `target/headstart/evidence/release-macos-6d93147e-20261026/` and
+  `target/headstart/evidence/release-web-6d93147e-20261026/`.
+- **Headstart incremental recovery:** the first macOS entry-point run and two
+  workspace-library reproductions hit an ICE in `rustui-i18n` at
+  `icu_decimal::preferences::DecimalFormatterPreferences`. The isolated
+  i18n suite passed 82/82. Moving only the refreshed 38 MiB
+  `rustui_i18n-2fqxt6404tk53` incremental directory into
+  `target/headstart/evidence/compiler-incremental-quarantine-20261026/`
+  let the exact workspace and macOS commands pass. No broad cache cleaning
+  or dependency change occurred. The compiler defect remains a reproducibility
+  risk until the incremental path is stable across future builds.
+
 - **Stage 11 current Web bundle:** `./scripts/build-playground-web.sh` passed
   using the approved Wasm Headstart compiler and `wasm-bindgen 0.2.129` copied
   from the existing RustUI tool cache into this worktree's cache. The manifest
