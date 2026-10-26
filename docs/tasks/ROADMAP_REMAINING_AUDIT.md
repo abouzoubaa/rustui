@@ -9,6 +9,8 @@ Reverify live HEAD and dirty state before subsequent integration; preserve unrel
 
 ## Current checkpoint — 2026-10-26
 
+- **Stage 9 compiled preview native acceptance (bounded, 2026-10-26):** Source-matched optimized Playground executable and disposable bundle both had SHA-256 `32382ba3031f31b7a5c2f927d673954a14042b50b237756188b7bb99ea6bbbaf`. In the VStack + HStack story, editing the schema inspector text to `Schema roundtrip 2026` updated the owner and live compiled TextField; Export normalized descriptor included that value; Import remounted the preview at generation 2 with the value retained. Importing malformed `{` reported `invalid preview JSON: EOF while parsing an object at line 1 column 1` and left the generation-2 preview mounted. The owned PID 24855 was terminated after UI quit did not exit it; its disposable bundle and standalone debug executable are absent. A separate Playground process from worktree c611 was observed afterward and is not this test's cleanup target. This closes only the exercised round-trip and malformed-input behavior, not all preview, native, accessibility, or release acceptance.
+
 - **Stage 11 Arabic Web text:** the browser paints only a tiny fragment of the
   long Button and Text catalog notes although their complete Arabic labels are
   in the semantic overlay. An existing-font-fallback candidate compiled but
