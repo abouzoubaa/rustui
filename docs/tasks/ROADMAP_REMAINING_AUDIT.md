@@ -9,6 +9,21 @@ Reverify live HEAD and dirty state before subsequent integration; preserve unrel
 
 ## Current checkpoint — 2026-10-26
 
+- **Integrated macOS/Web release checkpoint, 2026-10-26:** On integrated
+  commit `f428a8b8`, `./scripts/verify-release.sh macos` exited 0 on macOS
+  27 arm64 using local Headstart: 1,339 passing test cases across 39 reported
+  test-result groups, zero failures, optimized Playground build and app
+  packaging. `./scripts/verify-release.sh web` exited 0 with the preserved
+  matching Wasm Headstart root supplied through `RUSTUI_WASM_HEADSTART_ROOT`:
+  18 host IME-plan tests, optimized Web build and package. The new Web manifest
+  binds commit `f428a8b8`, source SHA-256
+  `dafc9b584ec5077c93c2bcc9cc74a333746391bb656c293a0e11ef1d80e24ed4`,
+  and **770/770** files verified against their hashes. The source digest is
+  unchanged from the prior RTL browser observation; this run did not repeat
+  browser input or visual acceptance. The native notice collector still has
+  **5 gaps** and Web has **3**. Logs:
+  `target/headstart/evidence/release-macos-20261026.log` and
+  `target/headstart/evidence/release-web-20261026-matched-headstart.log`.
 - **Release source gate after approved RTL wrapping, 2026-10-26:** The Web
   semantic adapter's exact postimage predates the RTL wrapped-row patch on one
   shared GPUI Web file. A read-only stack verifier now proves the selected RTL
