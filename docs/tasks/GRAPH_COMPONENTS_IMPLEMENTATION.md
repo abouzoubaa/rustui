@@ -1,8 +1,6 @@
 # Stage 9 / R35 GraphView and R36 NodeEditor implementation contract
 
-Prepared implementation; parent integration and build/test validation are pending.
-No native, browser, AX-tree, VoiceOver, localization/RTL, cross-platform or
-performance acceptance is claimed.
+Source implementation is integrated and has passed the recorded source/build checkpoints. Bounded native and Web functional acceptance is recorded below; wider visual, locale/RTL and workload acceptance remains open. Accessibility and VoiceOver are undone/deferred.
 
 ## Authority and architectural scope
 
@@ -138,3 +136,15 @@ Unsettled snapshots, offscreen-control attempts and uncleared pending-port
 sequences are excluded, with the accepted cases repeated from verified states.
 Native, wider browser/visual/locale/RTL and representative workload checks remain
 open. Accessibility and VoiceOver are undone and deferred by user direction.
+
+## Bounded native functional acceptance — 2026-10-26
+
+The verified reproducible native executable `d857e6b5b687951bcb20fd4fff0e1be2abecf7e2eb3b0c8ff696186e8acbffcf` passes **11/11 GraphView** and **16/16 NodeEditor** bounded functional checks on macOS 27 arm64 at 1320×820 logical pixels. Application/runtime inputs are unchanged from controlled release build `4e00ad14`.
+
+GraphView covers initial topology, pointer/arrow selection, Enter activation, Escape, zoom, Home reset, pan/clipping, disabled pointer/keyboard rejection and omission/remount. NodeEditor covers owner add/rename/remove/reset, stable selection, drag, keyboard movement, invalid-direction feedback, input-first and output-first connections, deletion with incident-edge cleanup, disabled drag/movement/deletion rejection and omission/remount.
+
+Rendered geometry observations at 2× scale: GraphView Source grows approximately 300×200 → 375×250 image pixels on PageUp; Home restores default scale; D moves Transform left approximately 80 image pixels. NodeEditor drag moves Source approximately (+120,+60) image pixels and Right adds (+20,0), consistent with (+60,+30) and (+10,0) world points. Disabled geometry remains unchanged. These are bounded screenshot observations, not latency/FPS metrics.
+
+The first AX-index Disconnect snapshot did not prove removal, so that attempt and the subsequent inconclusive reconnect assertion are excluded. Accepted pointer disconnection verifies zero connections in both rendered and owner evidence before reconnection. No AX action-delivery acceptance or root cause is claimed.
+
+Evidence: `target/headstart/evidence/native-graph-editor-20261026/`, including full state records, screenshots, exclusions, binary/archive hashes and cleanup. The owned test app and disposable bundle are removed; caches and the archive are retained. Release outside the surface, exhaustive focus traversal, IME, locale/RTL, broader visual and representative large-graph workloads remain open. Accessibility and VoiceOver remain undone/deferred.
