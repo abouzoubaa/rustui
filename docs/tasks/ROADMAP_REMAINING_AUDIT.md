@@ -16,7 +16,17 @@ Reverify live HEAD and dirty state before subsequent integration; preserve unrel
   passed. Evidence:
   `target/headstart/evidence/playground-catalog-summary-locale-test-20261026.log`
   and `target/headstart/evidence/playground-catalog-summary-check-20261026.log`.
-  Source-bound native/browser visual acceptance remains open.
+  On integrated `974c34d4`, the Web release driver exited 0 with **18/18**
+  host IME-plan tests and **770/770** verified bundle files (source SHA-256
+  `c940b5b0492bab5a6130f72f53b69fd7cb59ab3fdaf2cb1467f3f7efefdee13d`,
+  manifest SHA-256
+  `764a09fd367147b38e4ceaa8d777dadedf5949fbf07238d743d7979ce12d232a`).
+  One browser profile visibly showed `46 éléments du catalogue · 15
+  démonstrations du framework` in French and Arabic `٤٦`/`١٥` with translated
+  labels. The disposable tab and server were closed. Evidence:
+  `target/headstart/evidence/release-web-catalog-summary-20261026.log`.
+  GitHub run `40398644371` passed source CI; compiled CI was skipped on the
+  push. Native and wider browser acceptance remain open.
 
 - **Stage 6 native reference-state locale follow-up:** Playground reference
   rows now format available and missing states with the filename through the
