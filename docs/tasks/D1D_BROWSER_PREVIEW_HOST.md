@@ -44,10 +44,18 @@ catalog; canonical Text/Button fixtures are not its implementation ceiling.
 Inspect the iframe render separately because transport success alone is not
 rendering acceptance. Reconnect after a disconnect or iframe reload.
 
+`ReferenceClient.disconnect()` uses the last stamp accepted from a successful
+reply, including mount, property/composition edits, export and capabilities.
+Replies without a stamp and rejected requests preserve that value; disposal
+clears it. Passing an explicit stale stamp still rejects without disposing the
+client. If local iframe interaction advances the revision independently, request
+capabilities to obtain its current stamp before retrying a stale disconnect.
+
 Focused checks run on 2026-10-26:
 
 - Rust protocol tests: 5/5; actual gallery privacy/catalog: 1/1; composition
-  metadata: 1/1; JS transport/client fixtures: 6/6.
+  metadata: 1/1; JS transport/client fixtures: 8/8, including default teardown
+  after stamped replies in both profiles and preservation after stale errors.
 - Conditional component default regression: 1/1; macro unit tests: 40/40.
 - Native Playground all-target check, optimized Web build and Web packaging
   shell fixture passed. Cargo used locked/offline approved sources.

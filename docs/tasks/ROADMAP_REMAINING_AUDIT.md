@@ -9,6 +9,17 @@ subsequent integration and preserve unrelated work.
 
 ## Current checkpoint — 2026-10-26
 
+- Stage 9 D1d client teardown now defaults to the latest accepted reply stamp;
+  previously an omitted stamp sent null and rejected teardown after mounting.
+  Both profiles retain explicit stale-stamp rejection. **8/8 JavaScript
+  transport/client fixtures pass**. Rebuilt-bundle browser verification is
+  pending; this source fix does not close broader browser acceptance.
+- Stage 10 props freshness completed **3/3 native logical workload scenarios**
+  (1/8/32 children): every changed props value 1–100 was observed on each side,
+  with expected cache-hit and changed-props lowering counts and inactive AX.
+  Raw artifact hashes and contents were independently rechecked in
+  `target/headstart/evidence/stage10-production-20261026/props-evidence-verification.json`.
+  This is lowering/freshness evidence, not visual or latency acceptance.
 - Implementation fixes are committed: security `0e1f39a7`, isolated secure-story
   state `5fce25d3`, disabled semantic controls `7914ecda`, selected Web adapter v9
   `9d10622e`, and same-version native focus export/local selection `84f3a477`.

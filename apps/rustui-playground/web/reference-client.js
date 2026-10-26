@@ -9,7 +9,7 @@ export class ReferenceClient {
   constructor(frame, profile, browser = window, timeout = 15000) {
     if (!['preview', 'composition'].includes(profile) || browser.location.origin === 'null') throw new Error('invalid host');
     this.frame = frame; this.profile = profile; this.browser = browser; this.origin = browser.location.origin;
-    this.target = frame.contentWindow; this.timeout = timeout; this.session = null; this.sequence = 1n;
+    this.target = frame.contentWindow; this.timeout = timeout; this.session = null; this.stamp = null; this.sequence = 1n;
     this.serial = 0; this.pending = null; this.alive = true; this.loaded = false; this.readySeen = false;
     const bytes = new Uint8Array(16); browser.crypto.getRandomValues(bytes);
     this.nonce = Array.from(bytes, n => n.toString(16).padStart(2, '0')).join('');
@@ -47,6 +47,7 @@ export class ReferenceClient {
     } else if (reply.session !== this.session) return;
     if ((reply.error !== null && typeof reply.error !== 'string') || (reply.error === null && (reply.result === null || typeof reply.result !== 'object'))) return;
     this.browser.clearTimeout(pending.timer); this.pending = null;
+    if (reply.error === null && Object.hasOwn(reply.result, 'stamp')) this.stamp = reply.result.stamp;
     if (reply.error) { const error = new Error(reply.error); error.code = reply.error; pending.reject(error); }
     else pending.resolve(reply.result);
   }
@@ -67,7 +68,7 @@ export class ReferenceClient {
       try { this.target.postMessage(wire, this.origin); } catch { this.dispose('postMessage failed'); }
     });
   }
-  async disconnect(stamp = null) {
+  async disconnect(stamp = this.stamp) {
     const reply = await this.send({ kind: 'disconnect', stamp });
     this.dispose('disconnected'); return reply;
   }
@@ -78,6 +79,6 @@ export class ReferenceClient {
     this.frame.removeEventListener('load', this.load); this.observer?.disconnect();
     this.readyReject(new Error(reason));
     if (this.pending) { this.browser.clearTimeout(this.pending.timer); this.pending.reject(new Error(reason)); this.pending = null; }
-    this.session = null;
+    this.session = null; this.stamp = null;
   }
 }

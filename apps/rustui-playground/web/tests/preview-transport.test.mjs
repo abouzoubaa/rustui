@@ -17,9 +17,9 @@ function surface() {
   };
   return value;
 }
-function setupClient() {
+function setupClient(profile = 'preview') {
   const browser = surface(), child = surface(), frame = surface(); frame.contentWindow = child; frame.isConnected = true;
-  const client = new ReferenceClient(frame, 'preview', browser, 1000);
+  const client = new ReferenceClient(frame, profile, browser, 1000);
   const receive = value => browser.emit('message', { source: child, origin: browser.location.origin, data: JSON.stringify({ protocol: PROTOCOL, version: VERSION, ...value }) });
   return { browser, child, frame, client, receive };
 }
@@ -88,3 +88,30 @@ test('client validates echoed handshake nonce and version', async () => {
   env.receive({ event: 'ready', profile: 'preview' }); const promise = env.client.connect(); await Promise.resolve();
   respond(env, { nonce: 'b'.repeat(32), profile: 'preview' }); await assert.rejects(promise, /handshake/);
 });
+
+for (const profile of ['preview', 'composition']) {
+  test(`${profile} disconnect uses latest accepted stamp and retains it after stale errors`, async () => {
+    const env = setupClient(profile);
+    env.receive({ event: 'ready', profile });
+    const connecting = env.client.connect(); await Promise.resolve();
+    respond(env, { nonce: env.client.nonce, profile, stamp: null }); await connecting;
+    assert.equal(env.client.stamp, null);
+    let stamp;
+    for (const [index, kind] of ['capabilities', 'mount', profile === 'preview' ? 'edit_properties' : 'edit_composition', 'export'].entries()) {
+      stamp = { preview_id: `reference-${profile}`, generation: '4', revision: String(index + 1) };
+      const pending = env.client.send({ kind }); respond(env, { stamp }); await pending;
+      assert.deepEqual(env.client.stamp, stamp);
+    }
+    const catalog = env.client.send({ kind: 'catalog' }); respond(env, { source: '{}' }); await catalog;
+    assert.deepEqual(env.client.stamp, stamp);
+    const stale = { ...stamp, revision: '0' };
+    const rejected = env.client.disconnect(stale);
+    assert.deepEqual(JSON.parse(env.child.sent.at(-1).data).command.stamp, stale);
+    respond(env, { stamp: stale }, { error: 'stale_stamp' }); await assert.rejects(rejected, { code: 'stale_stamp' });
+    assert.deepEqual(env.client.stamp, stamp); assert.equal(env.client.alive, true);
+    const disconnected = env.client.disconnect();
+    assert.deepEqual(JSON.parse(env.child.sent.at(-1).data).command.stamp, stamp);
+    respond(env, { disconnected: true }); await disconnected;
+    assert.equal(env.client.stamp, null); assert.equal(env.client.alive, false);
+  });
+}
