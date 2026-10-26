@@ -95,10 +95,14 @@ an explicit literal name is retained as the fallback when supplied.
 
 ## Links
 
-`Link` supports literal or localized accessible names. Use
-`.localized_accessibility_label("rustui-link-open-fixture")` to resolve a name
-from the active message catalog; a missing, blank, or key-echo result falls
-back to the explicit name or visible link label.
+`Link` resolves its visible label from the active catalog at render time with
+`.localized_label(key)` or `.localized_label_with_arguments(key, arguments)`.
+For example, `MessageArguments::new().with("name", "Form.svg")` supplies a
+filename to the latter. The constructor label remains the fallback and stable
+identity seed. Without a separate accessibility override, the accessible name
+follows the resolved visible label. Literal and localized accessibility
+overrides remain available; an unresolved override falls back to the
+constructor label.
 
 ## Tooltips
 
