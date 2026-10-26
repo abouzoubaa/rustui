@@ -7715,25 +7715,6 @@ impl View for CompiledPreviewGallery {
                         "Rerender preview parent",
                         rustui::runtime::Action::new(Self::rerender),
                     ))
-                    .child(OwnerTaskReader(
-                        |tasks: OwnerTask<CompiledPreviewGallery>| {
-                            Button(
-                                "Schedule no-blur parent rerender (5 seconds)",
-                                tasks.start_with_executor(
-                                    "preview-parent-rerender",
-                                    |executor| {
-                                        let timer = executor.timer(Duration::from_secs(5));
-                                        async move {
-                                            timer.await;
-                                            Ok::<(), String>(())
-                                        }
-                                    },
-                                    CompiledPreviewGallery::finish_delayed_rerender,
-                                ),
-                            )
-                            .id("compiled-preview-no-blur-rerender")
-                        },
-                    ))
                     .child(Button(
                         "Preview TextField specimen",
                         rustui::runtime::Action::new(Self::mount_text_field_specimen),
@@ -8041,6 +8022,25 @@ impl View for CompiledPreviewGallery {
                         rustui::runtime::Action::new(Self::reject_wrong_type),
                     )),
             )
+            .child(OwnerTaskReader(
+                |tasks: OwnerTask<CompiledPreviewGallery>| {
+                    Button(
+                        "Schedule no-blur parent rerender (5 seconds)",
+                        tasks.start_with_executor(
+                            "preview-parent-rerender",
+                            |executor| {
+                                let timer = executor.timer(Duration::from_secs(5));
+                                async move {
+                                    timer.await;
+                                    Ok::<(), String>(())
+                                }
+                            },
+                            CompiledPreviewGallery::finish_delayed_rerender,
+                        ),
+                    )
+                    .id("compiled-preview-no-blur-rerender")
+                },
+            ))
             .child(OwnerActionReader(
                 move |owner: OwnerAction<CompiledPreviewGallery>| {
                     render_preview(&FactoryContext {

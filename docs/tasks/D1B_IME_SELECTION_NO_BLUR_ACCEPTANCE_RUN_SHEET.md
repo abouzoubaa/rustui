@@ -8,17 +8,18 @@ while the compiled-preview TextField stays focused. Source tests and the M599
 selection observation are useful context; they do not replace recording this
 run against the current validation app.
 
-The ordinary `Rerender preview parent` button transfers focus and cannot be used
-for either no-blur check. A five-second delayed owner-task rerender is the
-approved focus-preserving trigger. However, the current worktree's
-`compiled_preview_gallery.rs` exposes only the focus-moving button; it does not
-contain **Schedule no-blur parent rerender (5 seconds)**. Do not start either
-no-blur case with this build. The case steps below apply only when that trigger
-is present in the exact app under test and has been verified to run without
-moving focus. Otherwise record the trigger as unavailable and leave both
-no-blur steps unrun. M599 remains the recorded pass for ordinary selection
-retention; the native IME gate remains open. That historical result does not add
-this trigger to the current build.
+The ordinary `Rerender preview parent` button transfers focus and cannot establish
+no-blur behavior. Use the existing five-second delayed owner-task rerender. Its
+control is now placed immediately above the live compiled preview, after the
+specimen catalog, so it can be scheduled before focusing the actual mounted
+TextField. This is a layout repair in the Playground; the owner task and field
+implementation are unchanged. Runtime acceptance for the rebuilt candidate must
+still be recorded; the old missing-trigger statement was stale.
+
+Schedule the delayed update first, then focus the live field and prepare the
+selection or composition before five seconds expires. Capture the prepared state
+before the update and do not change focus until the update has fired. Do not use
+the schema inspector's `text` property editor as the mounted runtime TextField.
 
 ## Before the run
 
@@ -26,7 +27,7 @@ this trigger to the current build.
   verify this session is its sole active owner. If it is occupied, do not launch
   the app.
 - Use the canonical disposable validation app and bundle identifier
-  `dev.rustui.playground.validation`; do not create another app. Record the
+  `dev.rustui.playground`; do not create another app. Record the
   bundle path, executable SHA-256, macOS version, and input source in the result.
 - Confirm a Japanese input source is enabled and can show its candidate UI. If
   it is unavailable, run the selection check only and leave native IME
@@ -41,46 +42,38 @@ this trigger to the current build.
 
 ## A. Selection retention while focused
 
-1. Set the compiled TextField and owner to `abcdef`.
-2. Focus the field and select exactly `cd` (Home, Right twice, Shift+Right
-   twice). Record the selected range and confirm the field owns focus.
-3. Schedule the verified focus-preserving five-second owner-task rerender. Do
-   not click or use focus traversal after returning to the TextField. Keep focus
-   in the field until the delayed update has fired; record the rerender count
-   and focus state.
+1. Mount the runtime TextField and set its value and owner to `abcdef`.
+2. Schedule the adjacent five-second rerender. Immediately focus the runtime
+   field and select exactly `cd` (Home, Right twice, Shift+Right twice), before
+   the delayed task completes. Record the selection, focus and starting counters.
+3. Keep focus in that field without clicking or traversing until the delayed
+   update fires. Record the updated rerender count, unchanged mount generation,
+   selected range and focus state.
 4. Type `x` while the field remains focused.
 
-**Pass:** the selection survives the parent update; typing replaces `cd`, and
-both field and owner show `abxef`. Mount generation is unchanged, the parent
-rerender count advances once, and the accepted edit advances revision. Record
-the observed counters; if the UI does not expose a counter, mark it unavailable
-rather than infer it.
+**Pass:** typing replaces `cd`; field and owner show `abxef`. Mount generation
+is unchanged, the rerender count advances once, and the accepted edit advances
+revision. Record observed counters; mark unavailable counters as unavailable.
 
 ## B. Active IME composition while focused
 
-1. Reset the mounted field and owner to a known value, such as `base`. Focus the
-   TextField and start Japanese composition. Before the delayed update fires,
-   record the active input source, visible marked preedit, candidate UI, field
-   focus, field value, owner value, generation, revision, and rerender count.
-2. Schedule the verified focus-preserving five-second owner-task rerender while
-   composition is active. Keep the field focused and composition uncommitted
-   until the delayed parent update has fired. Record the same observations
-   immediately after it fires.
-3. Commit the composition without leaving the field. Record the committed text
-   and verify that field and owner converge to that text.
-4. If a separate owner-update trigger can run without moving focus, repeat with
-   active composition and apply a distinct external owner value during
-   composition. Verify the field adopts that external value rather than stale
-   preedit. Record its trigger and observations. If no focus-preserving owner
-   update is available, mark this subcase open; do not use a click or focus
-   traversal and call it no-blur evidence.
+1. Reset the same mounted field and owner to a known value, such as `base`.
+2. Schedule the adjacent five-second rerender, immediately focus the runtime
+   TextField and begin Japanese composition before the task completes. Record
+   the input source, marked preedit, candidate UI, focus, field/owner values,
+   generation, revision and rerender count while composition is uncommitted.
+3. Keep that field focused and composition uncommitted through the delayed
+   parent update. Record the same observations after the task fires.
+4. Commit without leaving the field; verify field and owner converge and record
+   the revision advance.
+5. If a separate owner-value update can run without moving focus, repeat with
+   active composition and apply a distinct external owner value. Otherwise leave
+   this subcase open. A click or focus traversal is not no-blur evidence.
 
-**Pass for the rerender case:** marked preedit and candidate UI remain visible
-through the parent update; focus and mount generation remain unchanged; owner
-value remains the pre-composition value and revision does not advance for
-uncommitted preedit. Committing then updates both field and owner, with revision
-advancing for accepted committed input. Record the observed values and counters;
-do not infer unavailable accessibility-tree counters.
+**Pass for the rerender case:** marked preedit and candidate UI survive the
+parent update, with unchanged focus and mount generation. Owner value and
+revision stay at their pre-composition values until commit. Commit then updates
+field and owner and advances revision. Do not infer counters from source alone.
 
 ## Evidence and cleanup
 
