@@ -7191,8 +7191,7 @@ impl CompiledPreviewGallery {
             PropertyValue::Number(value),
         ) {
             Ok(next) => {
-                if (component_id == "property-inspector-specimen"
-                    && context.property.as_str() == "amount")
+                if context.property.as_str() == "amount"
                     || (matches!(component_id.as_str(), "slider" | "progress")
                         && context.property.as_str() == "value")
                 {
@@ -8777,6 +8776,23 @@ mod tests {
         assert_eq!(
             preview_inspector_rejection_live_region_value("Exported normalized preview descriptor"),
             None
+        );
+    }
+
+    #[test]
+    fn schema_amount_editor_updates_preview_owner() {
+        let mut gallery = CompiledPreviewGallery::default();
+        let amount = PropertyId::new("amount").unwrap();
+        let context = PropertyBindingContext {
+            property: amount.clone(),
+            stamp: gallery.stamp_lease.clone(),
+        };
+
+        assert!(gallery.write_number_draft(&context, "0.625".into()));
+        assert_eq!(gallery.amount, 0.625);
+        assert_eq!(
+            gallery.host.snapshot().unwrap().preview.properties[&amount],
+            PropertyValue::Number(0.625)
         );
     }
 

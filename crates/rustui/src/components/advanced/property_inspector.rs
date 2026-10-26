@@ -3,7 +3,7 @@
 use std::{cell::RefCell, collections::HashSet, rc::Rc};
 
 use gpui::{
-    AnyElement, App, AppContext, Entity, IntoElement, ParentElement, SharedString, Styled, div,
+    AnyElement, App, AppContext, Entity, IntoElement, ParentElement, SharedString, Styled, div, px,
 };
 use gpui_component::{
     Sizable as _,
@@ -210,7 +210,9 @@ impl View for PropertyInspectorView {
         context.with_element_scope(
             RetentionScope::PropertyInspector(self.id.clone()),
             |context| {
-                let mut inspector = div().flex().flex_col().gap_2();
+                // A wide preview sibling must not push the row editors beyond
+                // the visible inspector pane through `justify_between`.
+                let mut inspector = div().flex().flex_col().gap_2().w_full().max_w(px(600.0));
                 for row in &self.rows {
                     let rendered_row = context.with_element_scope(
                         RetentionScope::Key(Identity::from(row.id.clone())),
