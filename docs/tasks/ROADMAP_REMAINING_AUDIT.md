@@ -4,7 +4,7 @@ Writing session: thread `01a172cd-8a21-73f1-82cd-62d451c71ec9`, claim
 `c44f414bfbf4ef4c4f30`, branch `codex/production-consolidation-01a172cd`,
 worktree `/Users/Abium/.codex/worktrees/rustui-production-consolidation/rustui`.
 The verified primary integration branch is `work/m118-diagnostics-provenance`;
-checkpoint `6ad24006` is integrated. Reverify live HEAD and dirty state before
+checkpoint `a47cec88` is integrated. Reverify live HEAD and dirty state before
 subsequent integration and preserve unrelated work.
 
 ## Current checkpoint — 2026-10-26
@@ -49,9 +49,21 @@ subsequent integration and preserve unrelated work.
   including real rendered keyboard events and disabled/hidden-row cases.
   The rebuilt native app now passes **2/2 Home/End checks**: End selected Tree,
   then Home selected Controls. Its optimized Web build and **769** packaged
-  hashes pass; browser keyboard acceptance of this repair remains separate.
+  hashes pass; bounded browser keyboard results are recorded below.
   Evidence: `target/headstart/evidence/native-tree-home-end-20261026/`.
   No vendored source was changed.
+- The source-bound in-app browser also passes **2/2 Tree Home/End checks** and
+  projects hierarchy levels 1/2 with a focusable Tree root. Separate semantic
+  activation gaps remain: primary-mousedown-only Tree rows advertise no Click,
+  and selectable Lists project list/listitem with selected state. Two exact
+  same-version upstream patches are prepared, **not promoted**: **4/4 isolated
+  candidate tests** and **3/3 checker regressions pass**. Selected vendor sources
+  are unchanged. See `WEB_ROW_ACCESSIBILITY_PROPOSAL.md`; runtime semantic and
+  actual screen-reader acceptance remains open.
+- The row-proposal source checkpoint passes **584 Python tests**, **27
+  JavaScript semantic/client fixtures**, packaging fixtures and source guards.
+  The selected Rust workspace was not recompiled by this source-only check;
+  candidate probe results remain separate from production acceptance.
 - The native patch verifier requires Cargo's local path selection: registry
   packages are treated as immutable and can reuse an original artifact after
   patching. Metadata, actual local backend compilation and a changed executable
@@ -127,6 +139,12 @@ subsequent integration and preserve unrelated work.
   validates tooling, not Linux product support. The repository has **zero
   registered self-hosted runners**, so its separately gated macOS/Web Headstart
   CI job cannot run. Local macOS Headstart and Wasm results remain separate.
+- The later source CI run also passes on `a47cec88`:
+  [run 40281866505](https://github.com/abouzoubaa/rustui/actions/runs/40281866505).
+  Guarded integration of the preview teardown, verified props record and Tree
+  keyboard repair retains all **24** unrelated and **326** ignored files exactly
+  (bytes and modes), with a clean tracked primary tree. Evidence:
+  `/tmp/rustui-primary-integration-20261026/tree-preview-integration.json`.
 - Whole-project inventory: **37 provisional requirements**. Full coding and
   acceptance percentages have not been recomputed from every contract; the
   bounded counts above are not project completion percentages. Remaining
@@ -489,7 +507,7 @@ or acceptance percentage has not been recomputed against every contract.
 | R18 | 8: Tree row accessibility | Approved root-name/one-based row-level/TestWindow series promoted reproducibly; ten helper fixtures and rendered source regressions pass. Native AX/VoiceOver and browser acceptance remain open. |
 | R19 | 8: overlays and focus containment | Present within bounded wrappers; inspect focus-trap upstream proposal and verify modal keyboard/AX/dismissal contracts. |
 | R20 | 9: async ownership, cancellation, error paths | Present; audit generation/cleanup guarantees and bind native release evidence to current runtime source. |
-| R21 | 9: accessibility and keyboard across public controls | Partial; semantic projection, action handling, disabled state and actual VoiceOver need current evidence on both targets. |
+| R21 | 9: accessibility and keyboard across public controls | Partial; current native input/keyboard checks pass 7/8 with VoiceOver untested. Native and Web Tree Home/End pass after the shared-adapter fix. Browser semantic row Click advertisement and selectable List roles have isolated candidate repairs (4/4 tests), not promoted. Disabled behavior, semantic action acceptance and actual screen-reader evidence remain required on both targets. |
 | R22 | 9: descriptor/schema/codec validation | Present; recovered additional registry/schema/codec tests pass in current library checkpoint. Full contract review remains. |
 | R23 | 9: compiled preview/inspector | Present; inspect edit/rejection/remount/generation behavior and run current native inspector acceptance. |
 | R24 | 9: structural composition editing | Approved descriptor-first composition implemented: versioned stable-identity graph/slots, compiled recursive factories, atomic structure/property edits, bounded codec and node-scoped local signals. Focused preview 43/43 and Playground 1/1 pass including property edits, source reload and codec. Native/browser/performance acceptance open. |
@@ -500,7 +518,7 @@ or acceptance percentage has not been recomputed against every contract.
 | R29 | 11: browser keyboard/AX/IME/fonts | Selected approved semantic/IME adapter v9 builds and passes bounded real-browser edit/selection/action checks. Current D1d preview/composition iframe roundtrips also pass. Full cross-browser, real OS IME/clipboard, glyph and screen-reader acceptance remain. |
 | R30 | Release: CI and reproducible release builds | Actual GitHub source CI passes on 6ad24006, including 581 Python tests and JS/packaging gates. Local macOS Headstart checkpoint passes 1,282 library and 53 integration tests, all-target checks and optimized packaging; Web build and bounded browser checks pass. Macro doctests contain zero cases. No trusted macOS/Web runner is registered; compiled CI, compiler/bootstrap reproduction and independent clean-build artifact comparison remain open. |
 | R31 | Release: security, licensing, performance budgets, packaging/instructions | Complete threat/error audit, dependency/license and font notices, supported-version matrix, reproducibility, package signing/distribution plan and release instructions. Publication requires approval. |
-| R32 | 8: Outline | Source implemented: controlled single-column hierarchy over the existing Tree engine, explicit identity and group name, selected/expanded bindings, public-API Playground story and compiled-preview descriptor. Focused Tree/Outline 25/25 and Playground 189/189 tests passed, with all-target checking. Native/browser, AX/VoiceOver, visual/locale/RTL acceptance and upstream Tree naming/hierarchy-level limitations remain open. See `docs/tasks/OUTLINE_IMPLEMENTATION.md`. |
+| R32 | 8: Outline | Source implemented: controlled single-column hierarchy over the existing Tree engine, explicit identity and group name, selected/expanded bindings, public-API Playground story and compiled-preview descriptor. Approved Tree naming/one-based levels are source-implemented. The shared Home/End repair passes 30/30 Tree/Outline tests and real native/Web Tree checks. Outline-specific native/browser, AX/VoiceOver and visual/locale/RTL acceptance remains open. See `docs/tasks/OUTLINE_IMPLEMENTATION.md`. |
 | R33 | 8: Drawer | Source implemented: controlled visibility, four physical edges, window-owned hosting, current-owner content/bindings, guarded dismissal/unmount, restored focus, named Close, public Playground story and compiled-preview factory. Seven real-Root/validation tests passed; Playground library tests and all-target check passed. Native/browser/AX/VoiceOver, popup stacking and independent modal text-selection isolation remain open. See `docs/tasks/DRAWER_IMPLEMENTATION.md`. |
 | R34 | 9: ResizablePanel | Coding closed for the host-owned panel adapter: public ResizablePanel reuses SplitPanel directly, with the same size/identity/lifecycle contract and no second resize runtime. Canonical SplitView story uses the public name; rendered focus/key/clamp/RTL event test and Playground check pass. Native/browser visual, AX and screen-reader acceptance remain open. |
 | R35 | 9: GraphView | Source implemented: validated positioned node/port/edge model, controlled viewport/selection, named native controls, activation, theme defaults and lifecycle guards. Standalone searchable Playground story and compiled-preview factory use the public API. Focused regressions and full macOS source/build checkpoint pass; native/browser/AX/VoiceOver, locale/RTL and representative workloads remain open. See `docs/tasks/GRAPH_COMPONENTS_IMPLEMENTATION.md`. |

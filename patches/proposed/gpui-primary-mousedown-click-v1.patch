@@ -1,0 +1,27 @@
+--- a/vendor/gpui-pre-0.3.9/src/elements/div.rs
++++ b/vendor/gpui-pre-0.3.9/src/elements/div.rs
+@@ -128,6 +128,7 @@
+         button: MouseButton,
+         listener: impl Fn(&MouseDownEvent, &mut Window, &mut App) + 'static,
+     ) {
++        self.has_primary_mouse_down_listener |= button == MouseButton::Left;
+         self.mouse_down_listeners
+             .push(Box::new(move |event, phase, hitbox, window, cx| {
+                 if phase == DispatchPhase::Bubble
+@@ -2171,6 +2172,7 @@
+     )>,
+     pub(crate) group_drag_over_styles: Vec<(TypeId, GroupStyle)>,
+     pub(crate) mouse_down_listeners: Vec<MouseDownListener>,
++    pub(crate) has_primary_mouse_down_listener: bool,
+     pub(crate) mouse_up_listeners: Vec<MouseUpListener>,
+     pub(crate) mouse_pressure_listeners: Vec<MousePressureListener>,
+     pub(crate) mouse_move_listeners: Vec<MouseMoveListener>,
+@@ -3605,7 +3607,7 @@
+         if let Some(count) = self.aria.column_count {
+             node.set_column_count(count);
+         }
+-        if !self.click_listeners.is_empty() {
++        if !self.click_listeners.is_empty() || self.has_primary_mouse_down_listener {
+             node.add_action(accesskit::Action::Click);
+         }
+         if self.tracked_focus_handle.is_some() || self.focusable {
