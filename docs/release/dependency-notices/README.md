@@ -6,7 +6,10 @@ each package name/version and Cargo source to its vendored Cargo manifest hash,
 upstream repository/revision, original file URL and file SHA-256. Text files are
 deduplicated by content hash. No dependency or vendored source is changed.
 
-The current 40 mappings cover 18 distinct files. Four verbatim MIT/Apache
+The current 41 mappings cover 19 distinct files. The Harfrust 0.5.2 MIT
+notice comes from its crate-recorded upstream revision and removes one Web
+collector gap; three Web and five native package notice gaps remain.
+Four verbatim MIT/Apache
 notices for Fluent Langneg 0.13.1 and Intl Pluralrules 7.0.2 were added at their
 crate-recorded exact revisions; two distinct texts reuse existing content hashes.
 The initial 38 mappings covered 16 distinct files. The imported revision was checked

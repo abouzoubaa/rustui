@@ -4,11 +4,26 @@ Writing session: thread `01a172cd-8a21-73f1-82cd-62d451c71ec9`, claim
 `c44f414bfbf4ef4c4f30`, branch `codex/production-consolidation-01a172cd`,
 worktree `/Users/Abium/.codex/worktrees/rustui-production-consolidation/rustui`.
 The verified primary integration branch is `work/m118-diagnostics-provenance`;
-source checkpoint `f3b18e7a` is integrated. Reverify live HEAD and dirty state before
+source checkpoint `16591402` is integrated. Reverify live HEAD and dirty state before
 subsequent integration and preserve unrelated work.
 
 ## Current checkpoint — 2026-10-26
 
+- Dependency notice progress: captured Harfrust 0.5.2's verbatim MIT notice
+  from its crate-recorded upstream revision `efdae314` with URL and SHA-256
+  bound to the vendored manifest. A fresh Web collector run covers 403 observed
+  packages and reduces missing notice files from 4 to 3 (hexf-parse, mac,
+  seahash). Five native gaps remain; the unique missing-version count is six.
+  This is provenance evidence, not a complete license or compatibility claim.
+  Evidence: `target/headstart/evidence/web-dependency-notices-harfrust-20261026/`.
+- Web SecureField browser check: **4/4 bounded observations pass** against the
+  manifest-verified `a8290b24` bundle: nine entered characters rendered as
+  bullets; the browser accessibility value stayed `<redacted>`; select-all and
+  replacement left one bullet; reveal showed only the replacement `x`, and
+  hiding restored a bullet while the accessibility value stayed redacted.
+  This used synthetic browser input, not real OS IME. The owned tab and server
+  were closed, port 8766 was freed, and the shared GUI slot was released.
+  Evidence: `target/headstart/evidence/web-secure-field-20261026/RESULT.md`.
 - Web English/French/Arabic input acceptance: **6/6 bounded cases pass** in
   one 1280×720 in-app Chromium profile using the manifest-verified Web bundle
   from application code `a8290b24` (**769/769 package files**). The live mounted
