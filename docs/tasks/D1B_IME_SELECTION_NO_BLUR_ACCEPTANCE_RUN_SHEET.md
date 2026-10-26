@@ -9,19 +9,19 @@ this procedure for a later explicitly resumed language expansion. The temporary
 Japanese keyboard/dictation setup was removed and original settings restored.
 Ordinary focused-selection retention in case A remains in scope.
 
-Run two bounded macOS 27 checks in the canonical RustUI Playground: ordinary
-selection retention and active Japanese IME composition across a parent rerender
-while the compiled-preview TextField stays focused. Source tests and the M599
-selection observation are useful context; they do not replace recording this
-run against the current validation app.
+The current macOS 27 run covers ordinary selection, French dead-key composition,
+Arabic keyboard entry, mixed-direction editing and locale retention in the
+canonical RustUI Playground. Case B preserves the future Japanese procedure;
+it is outside the current release scope. Source tests and the M599 observation
+do not replace current native evidence.
 
 The ordinary `Rerender preview parent` button transfers focus and cannot establish
 no-blur behavior. Use the existing five-second delayed owner-task rerender. Its
 control is now placed immediately above the live compiled preview, after the
 specimen catalog, so it can be scheduled before focusing the actual mounted
 TextField. This is a layout repair in the Playground; the owner task and field
-implementation are unchanged. Runtime acceptance for the rebuilt candidate must
-still be recorded; the old missing-trigger statement was stale.
+implementation are unchanged. The rebuilt candidate's bounded native results
+are recorded below; the old missing-trigger statement was stale.
 
 Schedule the delayed update first, then focus the live field and prepare the
 selection or composition before five seconds expires. Capture the prepared state
@@ -36,9 +36,10 @@ the schema inspector's `text` property editor as the mounted runtime TextField.
 - Use the canonical disposable validation app and bundle identifier
   `dev.rustui.playground`; do not create another app. Record the
   bundle path, executable SHA-256, macOS version, and input source in the result.
-- Confirm a Japanese input source is enabled and can show its candidate UI. If
-  it is unavailable, run the selection check only and leave native IME
-  acceptance open; ordinary Japanese text entry is not composition evidence.
+- For current English/French/Arabic checks, use the existing ABC and Arabic
+  input sources and restore the original configuration afterward. Do not enable
+  Japanese. If case B is explicitly resumed later, first verify its Japanese
+  input source and candidate UI; plain Japanese text is not composition evidence.
 - Confirm the tested app exposes the focus-preserving delayed owner-task
   rerender. If not, stop before the no-blur steps; do not substitute the
   focus-moving button, a click, or keyboard focus traversal. M599 remains the
@@ -84,8 +85,9 @@ field and owner and advances revision. Do not infer counters from source alone.
 
 ## Evidence and cleanup
 
-Save one result at
-`target/headstart/evidence/d1b-ime-selection-no-blur-acceptance-20261025.json`.
+The current result is
+`target/headstart/evidence/native-en-fr-ar-selection-20261026/acceptance.json`.
+Use a separately dated result for any later test run.
 Include app identity and hash, OS/input source, exact trigger sequence, before
 and after observations for each case, pass/open result, and cleanup results.
 Capture enough visible evidence to show the selection or marked preedit,
@@ -99,12 +101,40 @@ standard Playground package.
 
 ## Existing evidence and limits
 
+- Current candidate: application code `a8290b2465aa18de987e55da27367357ad9fec85`,
+  executable SHA-256
+  `60cc18a69b09b3c02ac68b1a11f347cf6b82c226be8b4955f91e42dfbc422ba1`.
+  **8/8 bounded native cases pass** on macOS 27 arm64. No component code was
+  rewritten for these checks.
+- Case A: `cd` remains selected across the delayed update, then `x` produces
+  `abxef` in field/owner; generation 2 stays mounted, revision 6→7 and parent
+  rerenders 0→1. Preparation took 494 ms of the five-second delay.
+- French: Option+E marked `Caf´` survives the focused parent update, then E
+  commits `Café` in field/owner; generation 2 stays mounted, revision 12→13 and
+  rerenders 1→2. Preparation took 338 ms. This is Latin dead-key evidence,
+  not Japanese candidate-UI acceptance.
+- Arabic: existing Arabic keyboard keys produce `سلام`; Backspace produces
+  `سلا`. Switching back to ABC and entering Latin/digits produces
+  `سلام 123 Café`; Backspace removes the logical final `é`. The bound owner
+  receives the exact value. English/French/Arabic switching retains generation
+  2/revision 30 and the mixed value; root layout mirrors for Arabic.
+- Full mixed-text selection remains focused/highlighted across another delayed
+  update, then `x` replaces the whole value; generation 2 remains, revision
+  30→31 and rerenders 2→3. Preparation took 327 ms. Observation intervals
+  include automation and are not latency measurements.
+- Owned PID 82483 is absent, disposable bundle removed, archive/caches retained,
+  and enabled/selected/current keyboard configuration matches the original.
+  Screenshots, full owner snapshots, checks and hashes accompany the result.
+- These checks cover one preview TextField. Exhaustive bidirectional caret,
+  typography, other control/browser behavior and external owner-value changes
+  during active composition remain separate. Japanese/other languages/scripts,
+  accessibility and VoiceOver are undone/deferred.
+
 - M599 recorded `cd` replacement as `abxef` in field and owner after a
   five-second no-blur parent rerender. It did not expose generation, revision,
   or rerender counters.
-- M147 tests cover owner-value reconciliation but do not exercise a native
-  input method or focused TextField. Native active-composition retention and
-  commit propagation remain open until this run is recorded.
-- A missing Japanese input source, unavailable focus-preserving trigger, lost
-  focus, or unobservable required behavior leaves the corresponding native gate
-  open.
+- M147 tests cover owner-value reconciliation but do not establish native input
+  acceptance. The current French marked-accent observation adds bounded native
+  retention/commit evidence; it does not close the deferred Japanese case B.
+- Lost focus or unobservable required behavior leaves the corresponding case
+  open. A deferred language is not counted as accepted.

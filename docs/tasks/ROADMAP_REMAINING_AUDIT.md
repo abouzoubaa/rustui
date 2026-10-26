@@ -4,10 +4,30 @@ Writing session: thread `01a172cd-8a21-73f1-82cd-62d451c71ec9`, claim
 `c44f414bfbf4ef4c4f30`, branch `codex/production-consolidation-01a172cd`,
 worktree `/Users/Abium/.codex/worktrees/rustui-production-consolidation/rustui`.
 The verified primary integration branch is `work/m118-diagnostics-provenance`;
-source checkpoint `4636ee53` is integrated. Reverify live HEAD and dirty state before
+source checkpoint `f3b18e7a` is integrated. Reverify live HEAD and dirty state before
 subsequent integration and preserve unrelated work.
 
 ## Current checkpoint — 2026-10-26
+
+- Native English/French/Arabic input acceptance: **8/8 bounded cases pass** on
+  application code `a8290b24`, executable `60cc18a69b09…`, macOS 27 arm64.
+  Ordinary and mixed Arabic/Latin selection survive focused delayed parent
+  updates; French marked accent survives and commits; existing Arabic keyboard
+  entry/deletion and bound mixed-text editing pass. All three locale switches
+  retain owner value and mounted generation/revision. Existing implementation
+  is reused. Evidence: `target/headstart/evidence/native-en-fr-ar-selection-20261026/`.
+  Original keyboard configuration restored; owned PID/bundle cleaned and GUI
+  slot released. This closes case A and the bounded French dead-key exercise,
+  not exhaustive text, typography, browser or external-value-during-composition
+  acceptance. Japanese/other languages/scripts and accessibility/VoiceOver
+  remain undone/deferred. **Coding:** no new component work; **acceptance:**
+  8/8 cases for this milestone, within the still-provisional 37-area inventory.
+
+- Source CI on `f3b18e7a` is complete and successful: runs
+  [40317935732](https://github.com/abouzoubaa/rustui/actions/runs/40317935732),
+  [40317926088](https://github.com/abouzoubaa/rustui/actions/runs/40317926088), and
+  [40317923839](https://github.com/abouzoubaa/rustui/actions/runs/40317923839).
+  This is source CI evidence; trusted compiled Mac/Web CI remains open.
 
 - **User release-scope decision, 2026-10-26:** English, French and Arabic are the
   current required languages. Japanese and every other language/script are
@@ -611,10 +631,10 @@ or acceptance percentage has not been recomputed against every contract.
 | R10 | 4: macro grammar and public integration tests | Implemented; current macOS checkpoint passes all 43 workspace integration tests plus library/all-target checks. Matching-toolchain macro doctest target runs with zero cases. Historical M69/E0463 failure is not reproduced in the persistent verification target; native declarative-layout acceptance remains separate. |
 | R11 | 4: basic components and semantics | Present; audit source contracts and current native visual/focus/AX behavior. |
 | R12 | 5: theme states, metrics and fallbacks | Static coverage passes for 139 roles/24 styled records; runtime pack validation, light/dark/locale visuals and unapplied radio blend-mode requirement remain. |
-| R13 | 6: bounded locale/catalog contract | Three runtime locale records validate; current locale unit tests pass. Bounded current-Chromium English/French/Arabic switching, accessible names and RTL layout pass. Native, full locale/fallback and cross-browser acceptance remain. |
+| R13 | 6: bounded locale/catalog contract | Three runtime locale records validate; current locale unit tests pass. Bounded current-Chromium English/French/Arabic switching, accessible names and RTL layout pass; native owner/locale retention and Arabic RTL switching now pass in the 8-case input exercise. Full locale/fallback, typography and cross-browser acceptance remain. Other languages/scripts are undone/deferred. |
 | R14 | 6: full CLDR/ICU/Fluent runtime | Strategy A implemented: 29 verified vendored packages, 102 locale tests/doctest and 3 Playground localization checks pass. Current Chromium decimal/plural/ordinal output and RTL switching pass; native, complete browser/RTL, notices and size/performance acceptance remain open. |
 | R15 | 7: persistent inputs, selection, disabled behavior | Present; audit disabled focus/activation/AX, replacement subscriptions and event paths. Test-support sources and ownership harness are now integrated; focused event tests pass. |
-| R16 | 7/9: text selection and active IME | Source preservation logic and delayed no-blur preview trigger present in recovered primary; native active composition and Web IME still unverified. |
+| R16 | 7/9: text selection and active IME | Existing source preservation and delayed trigger pass current native ordinary/mixed selection, French marked-accent retention/commit and Arabic keyboard editing within 8/8 bounded language/input checks. External owner-value updates during composition, broader controls and Web native input remain open. Japanese and all other languages/scripts are undone/deferred; only English/French/Arabic are current release scope. |
 | R17 | 8: collections/navigation synchronization | Present; verify keyed replacement, route recovery, keyboard/RTL and virtualization behavior with current source. |
 | R18 | 8: Tree row accessibility | Approved root-name/one-based row-level/TestWindow series promoted reproducibly; ten helper fixtures and rendered source regressions pass. Native AX/VoiceOver and browser acceptance remain open. |
 | R19 | 8: overlays and focus containment | Present within bounded wrappers; inspect focus-trap upstream proposal and verify modal keyboard/AX/dismissal contracts. |
