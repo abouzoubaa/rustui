@@ -14,6 +14,10 @@ Behavioral, visual, accessibility, performance, and platform acceptance also
 remain open. Stage 8 includes retained, virtualized `List`,
 `Table`, and `Tree` controls with controlled selection.
 
+For an independent application consuming this checkout, see
+[Consuming RustUI from source](docs/CONSUMING_FROM_SOURCE.md). The standalone
+example owns its required dependency patches and uses only the public RustUI API.
+
 `ComponentHost` retains keyed GPUI entities and subscriptions. `TextField`,
 `SecureField`, `SearchField`, and `TextEditor` preserve editor state across
 body rebuilds. `Toggle`, `Checkbox`, and `Radio` use typed `Binding<bool>` values.

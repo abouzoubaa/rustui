@@ -1,0 +1,42 @@
+[workspace]
+resolver = "3"
+members = ["."]
+
+[workspace.package]
+version = "0.1.0"
+edition = "2024"
+rust-version = "1.97.1"
+license = "MIT"
+publish = false
+
+[package]
+name = "rustui-external-consumer-example"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+publish.workspace = true
+
+[dependencies]
+rustui = { path = "../../crates/rustui" }
+
+# The SDK workspace's patches are not inherited by this independent app.
+[patch.crates-io]
+gpui-pre = { path = "../../vendor/gpui-pre-0.3.9" }
+gpui-base = { path = "../../vendor/gpui-base-0.7.3" }
+gpui-component = { path = "../../vendor/gpui-component-0.7.3" }
+gpui-pre-web = { path = "../../vendor/gpui-pre-web-0.3.9" }
+gpui-pre-macos = { path = "../../vendor/gpui-pre-macos-0.3.9" }
+
+# Carry the SDK's scoped workaround; profile settings are not inherited across
+# workspace boundaries, and the macro crate still needs this setting.
+[profile.dev.package.rustui-macros]
+incremental = false
+
+[profile.headstart]
+inherits = "dev"
+debug = 1
+incremental = true
+
+[profile.headstart.package.rustui-macros]
+incremental = false

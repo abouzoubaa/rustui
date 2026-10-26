@@ -47,6 +47,7 @@ case "${1:-}" in
     rustup run 1.97.1 cargo fmt --all -- --check
     python3 scripts/verify_dependency_boundary.py
     ./scripts/cargo-headstart check --workspace --all-targets --profile headstart --locked --offline
+    ./scripts/cargo-headstart check --manifest-path examples/external-consumer/Cargo.toml --profile headstart --locked --offline
     ./scripts/cargo-headstart test --workspace --lib --profile headstart --locked --offline
     ./scripts/cargo-headstart test --workspace --test '*' --profile headstart --locked --offline
     ./scripts/cargo-headstart test -p rustui-macros --doc --profile headstart --locked --offline

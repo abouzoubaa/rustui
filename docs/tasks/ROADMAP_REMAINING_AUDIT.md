@@ -30,11 +30,19 @@
   verified official source. A fresh OSV query reports no advisories for it.
   Native dependency notices still have **5 gaps** (Web **4**); packaging success
   does not close licensing or publication gates.
-- Primary integration is prepared but not performed. Its **1,116 dirty paths**
-  are archived with hashes/modes. Source changes are retained or superseded;
-  four missing Trail documents were restored. **24 unrelated private/generated
-  paths will be preserved unchanged**, including private config and probes.
-  Related staged/index state will remain recoverable before integration.
+- Primary project branch `work/m118-diagnostics-provenance` was fast-forwarded
+  from `567f933c` to checkpoint `3d078e7a`. All **1,092 related dirty source
+  blobs** and the original staged index were verified in recoverable snapshot
+  `codex/preserved-primary-20261026` before integration. **24 unrelated paths**
+  and **326 existing ignored Trail cache files** retain exact bytes/modes; the
+  primary tracked tree is clean. Four missing Trail documents were restored.
+  Integration evidence: `/tmp/rustui-primary-integration-20261026`.
+- Independent source consumption is now covered by a standalone workspace
+  example using only the public RustUI API. Its locked offline compile passed;
+  metadata confirms all five approved local GPUI packages and no new dependency
+  versions. The example's own root carries the required patches and scoped
+  Headstart macro profile settings. This is compile evidence, not GUI acceptance
+  or a crates.io publication claim.
 - Whole-project inventory: **37 provisional requirements**. Full coding and
   acceptance percentages have not been recomputed from every contract; the
   bounded counts above are not project completion percentages. D1d consumer/
