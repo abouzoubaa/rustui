@@ -2,7 +2,7 @@
 
 use rustui::{
     component,
-    prelude::{AnyView, Button, CodeEditor, Component, HStack, Text, VStack, View},
+    prelude::{AnyView, Button, CodeEditor, Component, HStack, LocalizedText, Text, VStack, View},
 };
 
 const RUST_SOURCE: &str = "fn main() {\n    println!(\"Hello, RustUI\");\n}\n";
@@ -80,32 +80,81 @@ impl View for CodeEditorGallery {
                     .line_numbers(self.line_numbers())
                     .height(180.0)
                     .placeholder("Enter source code")
+                    .localized_placeholder("lab-code-editor-placeholder")
                     .readonly(self.readonly())
                     .disabled(self.disabled())
                     .accessibility_label("Source code")
+                    .localized_accessibility_label("lab-code-editor-title")
                     .tab_index(0),
             )
         } else {
-            AnyView::new(Text(
-                "Source editor omitted; the bound value remains in its owner.",
-            ))
+            AnyView::new(LocalizedText("lab-code-editor-omitted"))
         };
         let source = self.source();
-        VStack::new().spacing(8.0)
-            .child(Text("Source code"))
-            .child(Text("Syntax grammars are disabled; syntax highlighting awaits dependency approval."))
-            .child(Text(format!("Language: {} · lines: {} · readonly: {} · disabled: {} · mounted: {}", language, self.line_numbers(), self.readonly(), self.disabled(), self.mounted())))
-            .child(HStack::new().spacing(6.0)
-                .child(Button("Rust / JSON setting", self.action(Self::toggle_language)).id("code-editor-language"))
-                .child(Button("Toggle line numbers", self.action(Self::toggle_line_numbers)).id("code-editor-lines"))
-                .child(Button("Toggle readonly", self.action(Self::toggle_readonly)).id("code-editor-readonly")))
-            .child(HStack::new().spacing(6.0)
-                .child(Button("Toggle disabled", self.action(Self::toggle_disabled)).id("code-editor-disabled"))
-                .child(Button("Reset source", self.action(Self::reset)).id("code-editor-reset"))
-                .child(Button("Replace externally", self.action(Self::replace_external)).id("code-editor-replace"))
-                .child(Button("Omit / remount", self.action(Self::toggle_mount)).id("code-editor-mount")))
+        VStack::new()
+            .spacing(8.0)
+            .child(LocalizedText("lab-code-editor-title"))
+            .child(LocalizedText("lab-code-editor-syntax-status"))
+            .child(Text(format!(
+                "Language: {} · lines: {} · readonly: {} · disabled: {} · mounted: {}",
+                language,
+                self.line_numbers(),
+                self.readonly(),
+                self.disabled(),
+                self.mounted()
+            )))
+            .child(
+                HStack::new()
+                    .spacing(6.0)
+                    .child(
+                        Button("Rust / JSON setting", self.action(Self::toggle_language))
+                            .id("code-editor-language")
+                            .localized_label("lab-code-editor-language-action"),
+                    )
+                    .child(
+                        Button(
+                            "Toggle line numbers",
+                            self.action(Self::toggle_line_numbers),
+                        )
+                        .id("code-editor-lines")
+                        .localized_label("lab-code-editor-lines-action"),
+                    )
+                    .child(
+                        Button("Toggle readonly", self.action(Self::toggle_readonly))
+                            .id("code-editor-readonly")
+                            .localized_label("lab-code-editor-readonly-action"),
+                    ),
+            )
+            .child(
+                HStack::new()
+                    .spacing(6.0)
+                    .child(
+                        Button("Toggle disabled", self.action(Self::toggle_disabled))
+                            .id("code-editor-disabled")
+                            .localized_label("lab-code-editor-disabled-action"),
+                    )
+                    .child(
+                        Button("Reset source", self.action(Self::reset))
+                            .id("code-editor-reset")
+                            .localized_label("lab-code-editor-reset-action"),
+                    )
+                    .child(
+                        Button("Replace externally", self.action(Self::replace_external))
+                            .id("code-editor-replace")
+                            .localized_label("lab-code-editor-replace-action"),
+                    )
+                    .child(
+                        Button("Omit / remount", self.action(Self::toggle_mount))
+                            .id("code-editor-mount")
+                            .localized_label("lab-code-editor-mount-action"),
+                    ),
+            )
             .child(editor)
-            .child(Text(format!("Bound source ({} characters):\n{}", source.chars().count(), source)))
-            .child(Text("Changing language keeps the buffer. Reset uses the selected language's sample. Omission retains the owner value; remount creates fresh native editing state."))
+            .child(Text(format!(
+                "Bound source ({} characters):\n{}",
+                source.chars().count(),
+                source
+            )))
+            .child(LocalizedText("lab-code-editor-lifecycle-note"))
     }
 }

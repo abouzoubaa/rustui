@@ -8,6 +8,14 @@ use rustui_core::{Binding, Identity};
 
 use crate::view::{EmptyView, RenderContext, View};
 
+fn resolved_message_label(id: &str, localized: String, fallback: &SharedString) -> SharedString {
+    if !localized.trim().is_empty() && localized.trim() != id.trim() {
+        SharedString::from(localized)
+    } else {
+        fallback.clone()
+    }
+}
+
 type EventWriter<Value, Context> = Rc<dyn Fn(Value, &mut Context)>;
 
 fn replace_event_writer<Value, Context>(
@@ -44,11 +52,13 @@ pub struct CodeEditorView {
     value: Binding<String>,
     language: SharedString,
     placeholder: SharedString,
+    placeholder_message_id: Option<SharedString>,
     line_numbers: bool,
     height: f32,
     disabled: bool,
     readonly: bool,
     accessibility_label: Option<SharedString>,
+    accessibility_label_message_id: Option<SharedString>,
     tab_index: isize,
 }
 
@@ -75,11 +85,13 @@ impl CodeEditorView {
             value,
             language: "text".into(),
             placeholder: SharedString::default(),
+            placeholder_message_id: None,
             line_numbers: true,
             height: 240.0,
             disabled: false,
             readonly: false,
             accessibility_label: None,
+            accessibility_label_message_id: None,
             tab_index: 0,
         }
     }
@@ -115,6 +127,18 @@ impl CodeEditorView {
 
     pub fn placeholder(mut self, placeholder: impl Into<SharedString>) -> Self {
         self.placeholder = placeholder.into();
+        self.placeholder_message_id = None;
+        self
+    }
+
+    /// Resolves the placeholder through the active locale catalog.
+    pub fn localized_placeholder(mut self, message_id: impl Into<SharedString>) -> Self {
+        let id = message_id.into();
+        assert!(
+            !id.trim().is_empty(),
+            "CodeEditor placeholder localization key must not be blank"
+        );
+        self.placeholder_message_id = Some(id);
         self
     }
 
@@ -136,6 +160,18 @@ impl CodeEditorView {
             "CodeEditor accessibility label must not be empty"
         );
         self.accessibility_label = Some(label);
+        self.accessibility_label_message_id = None;
+        self
+    }
+
+    /// Resolves the editor's accessible name through the active locale catalog.
+    pub fn localized_accessibility_label(mut self, message_id: impl Into<SharedString>) -> Self {
+        let id = message_id.into();
+        assert!(
+            !id.trim().is_empty(),
+            "CodeEditor accessibility localization key must not be blank"
+        );
+        self.accessibility_label_message_id = Some(id);
         self
     }
 
@@ -152,12 +188,30 @@ impl View for CodeEditorView {
 
     fn into_element(&self, context: &mut RenderContext<'_>) -> AnyElement {
         let current_value = self.value.value();
+        let resolved_placeholder = match &self.placeholder_message_id {
+            Some(id) => resolved_message_label(
+                id.as_ref(),
+                context.localized_message(id.as_ref()),
+                &self.placeholder,
+            ),
+            None => self.placeholder.clone(),
+        };
+        let resolved_accessibility_label = match &self.accessibility_label_message_id {
+            Some(id) => resolved_message_label(
+                id.as_ref(),
+                context.localized_message(id.as_ref()),
+                self.accessibility_label
+                    .as_ref()
+                    .unwrap_or(&self.placeholder),
+            ),
+            None => self.accessibility_label.clone().unwrap_or_default(),
+        };
         let (retained, created) =
             context.retained_entity(self.id.clone(), |window, cx| RetainedCodeEditor {
                 editor: cx.new(|cx| {
                     EditorState::new(window, cx)
                         .language(self.language.clone())
-                        .placeholder(self.placeholder.clone())
+                        .placeholder(resolved_placeholder.clone())
                         .line_number(self.line_numbers)
                         .default_value(current_value.clone())
                 }),
@@ -170,7 +224,7 @@ impl View for CodeEditorView {
         let native = editor.read(context.app());
         let value_changed = native.value().to_string() != current_value;
         let language_changed = native.language_name() != self.language;
-        let placeholder_changed = native.presentation().placeholder() != &self.placeholder;
+        let placeholder_changed = native.presentation().placeholder() != &resolved_placeholder;
         if value_changed || language_changed || placeholder_changed || line_numbers_changed {
             context.update_entity(&editor, |native, window, cx| {
                 if value_changed {
@@ -180,7 +234,7 @@ impl View for CodeEditorView {
                     native.set_highlighter(self.language.clone(), cx);
                 }
                 if placeholder_changed {
-                    native.set_placeholder(self.placeholder.clone(), window, cx);
+                    native.set_placeholder(resolved_placeholder.clone(), window, cx);
                 }
                 if line_numbers_changed {
                     native.set_line_number(self.line_numbers, window, cx);
@@ -207,8 +261,8 @@ impl View for CodeEditorView {
             .disabled(self.disabled)
             .readonly(self.readonly)
             .tab_index(self.tab_index);
-        if let Some(label) = &self.accessibility_label {
-            editor_view = editor_view.aria_label(label.clone());
+        if !resolved_accessibility_label.is_empty() {
+            editor_view = editor_view.aria_label(resolved_accessibility_label);
         }
         editor_view.into_any_element()
     }

@@ -301,6 +301,23 @@ Reverify live HEAD and dirty state before subsequent integration; preserve unrel
   and `target/headstart/evidence/web-token-field-locale-build-20261026.log`.
   Native behavior for this follow-up and remaining English input-story copy
   still need acceptance.
+- **Stage 6 code-editor locale follow-up, 2026-10-26:** The input story's
+  code-editor heading, instructions, lifecycle note, and seven actions now use
+  the English, French, and Arabic catalogs. Public `CodeEditor` options resolve
+  its placeholder and accessible name through the active catalog, with the
+  supplied literal values as fallbacks. Locale validation, Rust formatting,
+  five focused code-editor tests, and Playground all-target check passed.
+  The current-source Web bundle verified **770/770** manifest files with
+  source SHA-256
+  `91bd2d618a75ad43da69bed7291de1cc9f53c8215a49eb3459cbb883673c677f`.
+  One browser profile showed the translated heading, instructions, action
+  labels, and editor accessible name in French and Arabic. The placeholder
+  was not visually exercised because the editor contained sample text. The
+  temporary tab and owned port 8766 server were closed. Evidence:
+  `target/headstart/evidence/code-editor-locale-tests-20261026.log`,
+  `target/headstart/evidence/playground-code-editor-locale-check-20261026.log`,
+  and `target/headstart/evidence/web-code-editor-locale-build-20261026.log`.
+  Dynamic code-editor status strings and native acceptance remain open.
 - **Current-source cache workload calibration, 2026-10-26:** The existing
   `cache_benchmark` example built with Headstart and the existing calibration
   runner completed **18/18 valid fresh-process records** on local macOS 27
