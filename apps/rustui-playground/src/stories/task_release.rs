@@ -131,6 +131,24 @@ impl View for PendingTaskChild {
         let can_start = matches!(self.result(), AsyncState::Idle);
 
         OwnerTaskReader(move |tasks: OwnerTask<PendingTaskChild>| {
+            #[cfg(not(target_arch = "wasm32"))]
+            let native_work = {
+                let probe = probe.clone();
+                Some(
+                    Button(
+                        "Start non-cancellable native work",
+                        tasks.start(
+                            "pending-release",
+                            move || native_result(probe.clone(), Duration::from_secs(3)),
+                            PendingTaskChild::apply_result,
+                        ),
+                    )
+                    .id("task-release-native-start")
+                    .disabled(!can_start),
+                )
+            };
+            #[cfg(target_arch = "wasm32")]
+            let native_work = None::<rustui::view::EmptyView>;
             VStack::new()
                 .child(Text(format!("Child task state: {result}")))
                 .child(
@@ -153,6 +171,7 @@ impl View for PendingTaskChild {
                     .id("task-release-start")
                     .disabled(!can_start),
                 )
+                .child(native_work)
                 .spacing(8.0)
         })
     }
@@ -178,6 +197,21 @@ fn delayed_result(
     }
 }
 
+#[cfg(not(target_arch = "wasm32"))]
+fn native_result(
+    probe: Arc<TaskReleaseProbe>,
+    delay: Duration,
+) -> impl Future<Output = Result<String, String>> + Send {
+    async move {
+        probe.background_started.fetch_add(1, Ordering::SeqCst);
+        // A bounded acceptance probe on GPUI's background executor. Unlike the
+        // timer case, dropping the task cannot interrupt this in-flight poll.
+        std::thread::sleep(delay);
+        probe.background_finished.fetch_add(1, Ordering::SeqCst);
+        Ok(String::from("native work finished after child removal"))
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use std::task::{Context, Poll, Waker};
@@ -194,5 +228,21 @@ mod tests {
         assert!(matches!(result.as_mut().poll(&mut context), Poll::Pending));
         assert_eq!(probe.background_started.load(Ordering::SeqCst), 1);
         assert_eq!(probe.background_finished.load(Ordering::SeqCst), 0);
+    }
+
+    #[cfg(not(target_arch = "wasm32"))]
+    #[test]
+    fn native_probe_records_work_without_claiming_owner_delivery() {
+        let probe = Arc::new(TaskReleaseProbe::default());
+        let mut result = Box::pin(native_result(probe.clone(), Duration::ZERO));
+        let waker = Waker::noop();
+        let mut context = Context::from_waker(waker);
+        assert!(matches!(
+            result.as_mut().poll(&mut context),
+            Poll::Ready(Ok(_))
+        ));
+        assert_eq!(probe.background_started.load(Ordering::SeqCst), 1);
+        assert_eq!(probe.background_finished.load(Ordering::SeqCst), 1);
+        assert_eq!(probe.completion_delivered.load(Ordering::SeqCst), 0);
     }
 }
