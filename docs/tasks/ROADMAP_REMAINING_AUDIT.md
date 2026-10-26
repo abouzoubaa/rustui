@@ -102,6 +102,23 @@ Reverify live HEAD and dirty state before subsequent integration; preserve unrel
   Dynamic status, catalog/reference filenames and link labels, and other story
   text remain to audit. No current-source GUI observation or broad release
   checkpoint has run for this follow-up yet.
+- **Current-source cache workload calibration, 2026-10-26:** The existing
+  `cache_benchmark` example built with Headstart and the existing calibration
+  runner completed **18/18 valid fresh-process records** on local macOS 27
+  arm64: one warmup and five measured processes for each small, medium, and
+  large scenario. Whole-process CPU medians were **3.898 s**, **4.052 s**,
+  and **4.697 s**; peak RSS medians were **126,418,944 B**, **127,090,688 B**,
+  and **127,975,424 B**. The measured binary SHA-256 was
+  `bd15274869fff11c5fd78566135e5619f4c4c9fbbc4c485a5086e807e38e38ff`.
+  It exited; its disposable executable was removed and the GUI slot released.
+  Raw records and provenance:
+  `target/headstart/evidence/cache-calibration-current-20261026.json` and
+  `target/headstart/evidence/cache-calibration-current-20261026.log`.
+  The older 2026-10-19 CPU medians are much lower, but its example source,
+  compiler binary, lockfile, launcher, and calibration-runner hashes differ;
+  this is not an apples-to-apples regression measurement. The difference
+  requires investigation before performance acceptance. These values include
+  startup and teardown, not frame/GPU timing or input-to-display latency.
 - **Integrated macOS/Web release checkpoint, 2026-10-26:** On integrated
   commit `f428a8b8`, `./scripts/verify-release.sh macos` exited 0 on macOS
   27 arm64 using local Headstart: 1,339 passing test cases across 39 reported
