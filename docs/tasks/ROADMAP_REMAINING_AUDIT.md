@@ -140,6 +140,14 @@ Reverify live HEAD and dirty state before subsequent integration; preserve unrel
   closes the bounded focused external-value case, not all IME acceptance.
   The owned app/bundle/binary were cleaned and the GUI slot released. Detail:
   `docs/tasks/D1B_IME_SELECTION_NO_BLUR_ACCEPTANCE_RUN_SHEET.md`.
+- **Stage 9 D1b ordered overlap:** exact-path macOS 27 release bundle from
+  `3f0f1e5e` passed a controlled 13-character sequence spanning the five-second
+  owner callback. AX snapshots show `abcde` before replacement, then
+  `External owner update 1f` and later suffixes through `...1fghijklm`;
+  owner and Name agreed at each sample. Subsequent typing needed no refocus.
+  This resolves the prior mixed-value observation for the sampled sequence,
+  while active OS IME composition and wider locale acceptance remain open.
+  Evidence: `target/headstart/evidence/native-owner-update-ordered-20261026/`.
 
 - Picker source event/lifecycle gate: local Mac Headstart ran
   `./scripts/cargo-headstart test -p rustui picker --lib` with **45/45 pass**,
@@ -921,8 +929,10 @@ No dependency revision was changed by this audit.
    `hexf-parse 0.2.1`, `mac 0.1.1`, and `seahash 4.1.0` expose no
    LICENSE/COPYING/NOTICE file at their package revisions. Collector coverage
    and legal license determination remain distinct.
-2. Investigate the inconclusive mixed typing/timer overlap in D1b. Extend
-   native and real-OS Web input checks with controlled event order.
+2. Extend current-scope French/Arabic native and real-OS Web input checks,
+   including active composition where applicable. D1b's ordinary typing/timer
+   overlap has an ordered native observation; unsampled concurrent events remain
+   outside that bounded result.
 3. Close current-scope English/French/Arabic functional, theme, font/glyph,
    RTL, lifecycle, and performance acceptance on source-bound artifacts.
    Accessibility and VoiceOver remain undone/deferred by user scope.

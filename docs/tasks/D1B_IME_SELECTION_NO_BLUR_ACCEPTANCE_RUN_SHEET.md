@@ -189,3 +189,29 @@ selected the 15-demo candidate. Both session-launched app processes were quit,
 the disposable bundle and standalone executable were removed, and the GUI slot
 was released. The raw observation and provenance record is at
 `target/headstart/evidence/native-owner-update-current-20261026/result.json`.
+
+## Ordered typing across the owner timer — 2026-10-26
+
+The exact-path macOS 27 Playground release bundle from commit `3f0f1e5e` had
+executable SHA-256
+`74f09782afd5ab22beba3f56eab2e2c9bc24eca33cb34617352ce163eae64440`.
+`./scripts/cargo-headstart build --locked --offline --release -p rustui-playground`
+passed. The bundle exposed 15 framework demos and the
+five-second owner-update control. A name-based app lookup also launched the
+older `c611` bundle with 10 demos; it was stopped, and its UI observations
+were excluded. The subsequent test used only the exact current bundle path.
+
+The first controlled pass captured owner and Name value `abc` before the
+timer, `External owner update 2` after it, and
+`External owner update 2X` after typing `X` without refocusing Name. A second
+pass typed continuously across a new timer. AX snapshots showed `a` through
+`abcde` before replacement (the `e` snapshot was 5,197 ms after starting the
+sequence), then `External owner update 1f` at 6,009 ms, followed by successive
+suffixes through `External owner update 1fghijklm`. At each sampled step the
+owner and Name field agreed. The timed callback intentionally replaced the
+earlier text, and later keystrokes appended to the new value. This resolves
+the earlier mixed-value observation for this ordered native input sequence;
+it does not establish active OS IME composition or unsampled concurrent event
+ordering. The app quit, no Playground process remained, and the disposable
+bundle was removed. The transcribed observation sequence is retained at
+`target/headstart/evidence/native-owner-update-ordered-20261026/result.json`.
