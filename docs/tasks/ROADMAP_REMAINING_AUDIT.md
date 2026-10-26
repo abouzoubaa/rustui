@@ -21,7 +21,27 @@ Reverify live HEAD and dirty state before subsequent integration; preserve unrel
   Chromium showed French and Arabic visible labels and Arabic digits; the
   Arabic increment action updated the retained count ٠→١. This is bounded
   Button-story acceptance, not full Playground translation or cross-browser
-  localization acceptance. Final integrated-source release checks remain next.
+  localization acceptance. The integrated-source release and bounded native
+  checks below have since run; wider localization acceptance remains open.
+- **Stage 6/11 Button integrated release and native locale checkpoint, 2026-10-26:**
+  On commit `6f8ce90b`, `./scripts/verify-release.sh macos` exited 0 on local
+  macOS 27 arm64 with **1,341 passing test cases across 39 reported groups**,
+  zero failures, and an optimized Playground package. `./scripts/verify-release.sh
+  web` exited 0 with **18 host IME-plan tests** and **770/770** bundle files
+  matching its manifest (source SHA-256
+  `2da78de2c3f48f48475593d41730738d2d655f5921ab9a5709c6668a43a1afa6`,
+  manifest SHA-256
+  `986452b4ffe41b2d5c67fd36ec087a2e95bd9976b1883f0106f60ddfb6da4ac8`).
+  The current bundle showed the corrected Arabic note and localized controls in
+  Chromium. A source-bound native Playground package launched: French showed
+  translated controls and `Compteur : 0`; Arabic showed translated controls,
+  `العدد: ٠`, and clicking `زيادة العداد` changed it to `العدد: ١`. Its bundled
+  executable SHA-256 was
+  `936436b142b89e0014188d7acf75dde1af6011ee96f99424a664235026a94fd5`.
+  The test app was quit, no Playground process remained, and the disposable
+  bundle and standalone executable were removed. This is one local macOS 27
+  native session and one Chromium browser profile; broader macOS 13 and Web
+  locale, keyboard, IME, visual, and performance acceptance remains open.
 - **Integrated macOS/Web release checkpoint, 2026-10-26:** On integrated
   commit `f428a8b8`, `./scripts/verify-release.sh macos` exited 0 on macOS
   27 arm64 using local Headstart: 1,339 passing test cases across 39 reported
