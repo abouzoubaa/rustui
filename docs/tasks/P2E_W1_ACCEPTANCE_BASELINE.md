@@ -155,5 +155,7 @@ a rejected nested output attempt did not modify measurement records.
 
 All three owned app processes stopped, the disposable bundle and standalone
 executable were removed, Cargo caches and evidence were preserved, and the GUI
-slot was released. Independent fresh-target compilation and compiler/bootstrap
-reproduction are separate release gates.
+slot was released. Independent fresh-target RustUI artifact reproduction is
+separate from these measurements. It subsequently passed for native executables
+and Web packages; see `docs/RELEASE.md`. Compiler-source binding/bootstrap is a
+disclosed provenance follow-up, not an original RustUI release requirement.

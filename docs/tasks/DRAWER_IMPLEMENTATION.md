@@ -113,3 +113,11 @@ Evidence: `target/headstart/evidence/web-outline-drawer-20261026/acceptance.json
 Native, broader browser, independent text-selection scope, popup stacking,
 visual/locale/RTL and workload checks remain open. Accessibility and VoiceOver
 are undone and deferred by user direction.
+
+## Bounded native functional acceptance — 2026-10-26
+
+The verified reproducible `d857e6b5…` native candidate passes **18/18 bounded functional checks** on macOS 27 arm64 at 1320×820 logical pixels: opening, caller-bound notes, caller action, live title refresh, owner close, retained notes/title after reopening, Escape, all four physical edges and Close, owner-retaining release/remount, and actual backdrop dismissal. Settled screenshots show each physical edge; these do not establish the wider visual/locale contract.
+
+The original contract preserves requested visibility on unmount. An initial test incorrectly expected it to clear; that sequence is excluded and the release/remount/backdrop sequence was rerun against the documented contract. An unsettled Top-edge image is superseded by `drawer-top-settled.jpg`. These are test-harness exclusions, not repaired implementation defects.
+
+Evidence: `target/headstart/evidence/native-outline-drawer-20261026/`, with full states, exclusions, screenshots, binary/archive hashes and cleanup. No owned test process or disposable bundle remains. Focus restoration, popup stacking, independent text-selection scope, locale/RTL, window insets and wider workloads remain open. Accessibility and VoiceOver are undone/deferred.

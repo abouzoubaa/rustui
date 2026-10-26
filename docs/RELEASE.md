@@ -66,7 +66,9 @@ Preserve candidate archives, executable/bundle hashes, notice reports, source
 provenance, validation results and a manifest together under
 `target/headstart/release-artifacts/`. A hash of one archive establishes its
 identity; it does not establish an independent reproducible build. Compare
-artifacts from the required clean compiler/bootstrap reproduction separately.
+artifacts from independent fresh-target RustUI builds separately. Rebuilding the
+compiler from source is a separate provenance follow-up, not an original RustUI
+release requirement; preserve and record the approved installed toolchain.
 
 After each GUI exercise, quit only the owned test application, verify its process
 is gone, remove its disposable bundle and standalone test executable, and release
@@ -95,7 +97,8 @@ and none fresh, produced the same executable SHA-256:
 `d857e6b5b687951bcb20fd4fff0e1be2abecf7e2eb3b0c8ff696186e8acbffcf`.
 The installed compiler and SDK 26.1 were held fixed. This fixes absolute generated
 source paths affecting native binary identity; it does not prove compiler
-bootstrap, cross-machine, Web or complete archive reproduction.
+bootstrap, cross-machine or complete native archive reproduction. Compiler-source
+binding remains disclosed separately from reproduction of RustUI artifacts.
 
 An unsigned local candidate is retained at
 `target/headstart/release-artifacts/RustUI-Playground-macos-arm64-unsigned-repro-d857e6b5b687.tar.gz`,
@@ -105,3 +108,25 @@ substituted for the separate 90-cycle baseline on executable `15c71ff4…`.
 Five native dependency-notice gaps remain. The bundle declares macOS 13.0 as its
 minimum; current native runtime evidence covers macOS 27 arm64. A supported-version
 policy and acceptance across its declared versions are still required.
+
+Two independent Web builds of source `39da1d7b`, each in an initially absent
+target directory with 496 rebuilt / 0 fresh Cargo artifacts, produced identical
+raw Wasm, processed Wasm, JavaScript, assets and manifest: **770/770 packaged
+files match** (769 payload files plus the manifest). Both builds explicitly used
+`RUSTUI_REMAP_BUILD_PATHS=1` and the same approved Wasm compiler, Cargo and
+wasm-bindgen 0.2.129. Raw Wasm SHA-256:
+`8bfd3ffc6057d7fe845449f8509cbc547d9639f8cc841a7b780337737325a449`;
+processed Wasm SHA-256:
+`f12e4eee03a7392c37d14f822eab2899542a9102034aa5334262c7972591d078`.
+Evidence: `target/headstart/evidence/web-clean-reproduction-20261026/`.
+This is same-host, same-toolchain reproduction, with no new browser acceptance
+claimed for these candidates. Four Web dependency-notice gaps remain.
+
+Normalized archives independently produced from both Web packages also match.
+Each archive contains 770 verified files, with sorted paths, fixed modes and
+ownership, zero tar/gzip timestamps, and the same package-root name. The retained
+candidate is
+`target/headstart/release-artifacts/RustUI-Playground-web-unsigned-repro-f479c2d07e77.tar.gz`;
+SHA-256 `f479c2d07e774af5b5dba5d799a47e8981e28644fd1aa841ec9f202c6e420b27`.
+Its adjacent JSON records provenance and open gates. This artifact is local and
+has not been published.

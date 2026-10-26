@@ -453,5 +453,16 @@ Two initially absent native target directories on the current Mac produced
 byte-identical executables after this mapping. Without it, html5ever embeds its
 absolute generated `OUT_DIR/rules.rs` filename and changes executable bytes.
 This establishes same-host, same-toolchain native target-directory reproduction;
-compiler bootstrap, cross-machine, archive and Web reproduction remain separate.
+cross-machine and complete native archive reproduction remain separate. The
+approved installed compiler is identified by its binary hash and configuration;
+binding that binary to an exact source snapshot or reproducing its bootstrap is
+a disclosed provenance follow-up, not an original RustUI release requirement.
 Evidence: `target/headstart/evidence/native-clean-reproduction-20261026/`.
+
+Web reproduction was also checked on source `39da1d7b` using two initially absent
+`RUSTUI_WASM_TARGET_DIR` directories, the same approved Wasm compiler and
+wasm-bindgen, and explicit `RUSTUI_REMAP_BUILD_PATHS=1`. Each build recorded 496
+rebuilt / 0 fresh Cargo artifacts. Raw Wasm, processed Wasm and all 770 package
+files (including the manifest) match byte-for-byte. Keep each copied bundle before
+the next build replaces `target/headstart/playground-web`.
+Evidence: `target/headstart/evidence/web-clean-reproduction-20261026/`.

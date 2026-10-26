@@ -100,3 +100,9 @@ Evidence: `target/headstart/evidence/web-outline-drawer-20261026/acceptance.json
 This establishes the named state/interaction cases only. Native, broader browser,
 visual/locale/RTL and workload acceptance remain open. Accessibility and VoiceOver
 are explicitly undone and deferred by user direction.
+
+## Bounded native functional acceptance — 2026-10-26
+
+The reproducible native executable `d857e6b5b687951bcb20fd4fff0e1be2abecf7e2eb3b0c8ff696186e8acbffcf` passes **13/13 bounded functional checks** on macOS 27 arm64 at 1320×820 logical pixels. Application/runtime inputs are unchanged from the controlled release build at `4e00ad14`. Checks cover initial owner state, parent selection, collapsed hidden-selection retention, expansion, pointer selection, arrow navigation, stable IDs through reorder/relabel, removed-ID normalization, restoration and unmount/remount.
+
+Evidence: `target/headstart/evidence/native-outline-drawer-20261026/`, including full state records, a rendered snapshot, preflight hashes and verified cleanup. Incorrect initial harness coordinates/count formatting were corrected and excluded; no component defect is claimed. The owned app and disposable bundle are removed. Broader visual, locale/RTL, focus and workload acceptance remain open. Accessibility and VoiceOver are undone/deferred.
