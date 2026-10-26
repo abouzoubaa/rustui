@@ -1,12 +1,19 @@
 # Production consolidation — 2026-10-26
 
+Writing session: thread `01a172cd-8a21-73f1-82cd-62d451c71ec9`, claim
+`c44f414bfbf4ef4c4f30`, branch `codex/production-consolidation-01a172cd`,
+worktree `/Users/Abium/.codex/worktrees/rustui-production-consolidation/rustui`.
+The verified primary integration branch is `work/m118-diagnostics-provenance`;
+checkpoint `3d078e7a` is integrated. Reverify live HEAD and dirty state before
+subsequent integration and preserve unrelated work.
+
 ## Current checkpoint — 2026-10-26
 
 - Implementation fixes are committed: security `0e1f39a7`, isolated secure-story
   state `5fce25d3`, disabled semantic controls `7914ecda`, selected Web adapter v9
   `9d10622e`, and same-version native focus export/local selection `84f3a477`.
   GPUI-pre 0.3.9 and Components/Base 0.7.3 remain pinned.
-- Current checks pass: **581 Python tests**, **1,274 workspace library tests**
+- Latest full checkpoints pass: **581 Python tests**, **1,274 workspace library tests**
   (948 RustUI), **53 public integration tests**, workspace all-target checking,
   and optimized native packaging. Macro doctests ran with zero cases.
   Web v9 also passed its optimized build, **18 Rust planner tests**, **19
@@ -43,6 +50,16 @@
   versions. The example's own root carries the required patches and scoped
   Headstart macro profile settings. This is compile evidence, not GUI acceptance
   or a crates.io publication claim.
+- Stage 9 callback preparation is committed as `5b0c57f9`:
+  `OwnerAction::dispatch_with` reuses the weak foreground owner updater and
+  distinguishes unavailable owners from valid no-notify replies. Two focused
+  real-GPUI owner tests pass, including distinct owners and released-owner
+  inertness. The generic consumer-owned browser transport/reference host remains
+  in progress; this API addition does not close D1d.
+- The exhaustive upstream notice audit recovered no complete authoritative
+  texts for the five remaining gaps. Exact published-source/revision evidence is
+  retained in `/tmp/rustui-remaining-notices-upstream-audit`; no partial header or
+  generic license template is represented as an upstream notice.
 - Whole-project inventory: **37 provisional requirements**. Full coding and
   acceptance percentages have not been recomputed from every contract; the
   bounded counts above are not project completion percentages. D1d consumer/
