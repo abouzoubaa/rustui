@@ -12,8 +12,12 @@ subsequent integration and preserve unrelated work.
 - Stage 9 D1d client teardown now defaults to the latest accepted reply stamp;
   previously an omitted stamp sent null and rejected teardown after mounting.
   Both profiles retain explicit stale-stamp rejection. **8/8 JavaScript
-  transport/client fixtures pass**. Rebuilt-bundle browser verification is
-  pending; this source fix does not close broader browser acceptance.
+  transport/client fixtures pass**; combined semantic/transport fixtures pass
+  **27/27**. The optimized local Mac Headstart Web build passes, all **769**
+  packaged file hashes match, and real Chromium preview/composition edit/export,
+  stale disconnect rejection and default teardown pass **2/2 profiles**.
+  Evidence: `target/headstart/evidence/d1d-default-disconnect-20261026/`.
+  Broader browser, visual and screen-reader acceptance remains open.
 - Stage 10 props freshness completed **3/3 native logical workload scenarios**
   (1/8/32 children): every changed props value 1–100 was observed on each side,
   with expected cache-hit and changed-props lowering counts and inactive AX.

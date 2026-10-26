@@ -62,6 +62,13 @@ Focused checks run on 2026-10-26:
 - Browser observations came from the in-app Chromium browser and current
   packaged iframe. Evidence/logs: `/tmp/rustui-preservation-20261025/browser/d1d-reference-v1`
   and `/tmp/rustui-d1d-*.log`.
+- Default-stamp teardown follow-up: optimized local Mac Headstart Web rebuild,
+  27/27 combined semantic/client fixtures, packaging shell fixture and all 769
+  packaged file hashes pass. Real Chromium edit/export, explicit stale
+  disconnect rejection and default disconnect pass for both profiles; the
+  composition case also refreshes capabilities before disconnecting. Evidence:
+  `target/headstart/evidence/d1d-default-disconnect-20261026/`, source `e306ea73`.
+  The owned browser tab and local validation server were closed afterward.
 
 Full supported-browser, screen-reader, real OS IME/clipboard, locale/RTL/font
 and performance acceptance remain open. Native IPC and arbitrary Rust
