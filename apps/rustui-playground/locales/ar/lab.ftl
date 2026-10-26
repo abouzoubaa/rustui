@@ -7,6 +7,7 @@ lab-select-preview = اختر معاينة من الشريط الجانبي لس
 lab-demo-pending = لا يزال المثال التوضيحي لهذا العنصر من دليل RustUI قيد الإعداد.
 lab-macos-references = مراجع macOS 27
 lab-open-references = فتح المراجع
+lab-open-reference = فتح {name}
 lab-status-ready = جاهز · ساحة تجارب RustUI
 lab-status-no-references = لا تتوفر مراجع SVG محلية
 lab-status-opened = طُلب فتح {count} من المراجع لـ {key}

@@ -298,7 +298,13 @@ impl Playground {
             if cfg!(target_family = "wasm") {
                 for source in item.sources.split('|') {
                     let name = reference_filename(source);
-                    panel = panel.child(Link(format!("Open {name}"), reference_route(source)));
+                    panel = panel.child(
+                        Link(format!("Open {name}"), reference_route(source))
+                            .localized_label_with_arguments(
+                                "lab-open-reference",
+                                MessageArguments::new().with("name", name),
+                            ),
+                    );
                 }
             } else {
                 for source in item.sources.split('|') {
@@ -564,10 +570,10 @@ mod tests {
     #[test]
     fn dynamic_status_messages_resolve_in_supported_locales() {
         let catalogs = stories::catalogs();
-        for (tag, ready, missing) in [
-            ("en", "Ready", "No local SVG"),
-            ("fr", "Prêt", "Aucune référence SVG"),
-            ("ar", "جاهز", "لا تتوفر مراجع SVG"),
+        for (tag, ready, missing, open_reference) in [
+            ("en", "Ready", "No local SVG", "Open Form.svg"),
+            ("fr", "Prêt", "Aucune référence SVG", "Ouvrir Form.svg"),
+            ("ar", "جاهز", "لا تتوفر مراجع SVG", "فتح Form.svg"),
         ] {
             let locale = rustui::localization::Locale::parse(tag).expect("supported locale");
             assert!(
@@ -601,6 +607,16 @@ mod tests {
                 .expect("error status formats");
             assert!(failed.contains("/tmp/reference.svg"));
             assert!(failed.contains("unavailable"));
+            assert_eq!(
+                catalogs
+                    .format(
+                        &locale,
+                        "lab-open-reference",
+                        &MessageArguments::new().with("name", "Form.svg"),
+                    )
+                    .expect("reference link formats"),
+                open_reference
+            );
         }
     }
 

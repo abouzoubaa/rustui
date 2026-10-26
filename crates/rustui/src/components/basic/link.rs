@@ -9,6 +9,7 @@ use rustui_core::Identity;
 
 use crate::{
     components::theme::{required_style, selector},
+    localization::MessageArguments,
     theme::RgbaValue,
     view::{ControlAction, EmptyView, RenderContext, View},
 };
@@ -17,6 +18,7 @@ use crate::{
 #[derive(Clone)]
 pub struct LinkView {
     label: SharedString,
+    localized_label: Option<(SharedString, MessageArguments)>,
     href: SharedString,
     id: Option<Identity>,
     accessibility_label: Option<LinkAccessibilityLabel>,
@@ -43,6 +45,7 @@ impl LinkView {
         );
         Self {
             label: label.into(),
+            localized_label: None,
             href,
             id: None,
             accessibility_label: None,
@@ -60,6 +63,27 @@ impl LinkView {
             "Link identity must not be blank"
         );
         self.id = Some(id);
+        self
+    }
+
+    /// Resolves the visible label from the active catalog, retaining the
+    /// constructor label as a fallback and stable identity seed.
+    pub fn localized_label(self, message_id: impl Into<SharedString>) -> Self {
+        self.localized_label_with_arguments(message_id, MessageArguments::new())
+    }
+
+    /// Resolves a visible label with named catalog arguments at render time.
+    pub fn localized_label_with_arguments(
+        mut self,
+        message_id: impl Into<SharedString>,
+        arguments: MessageArguments,
+    ) -> Self {
+        let id = message_id.into();
+        assert!(
+            !id.trim().is_empty(),
+            "Link label localization key must not be blank"
+        );
+        self.localized_label = Some((id, arguments));
         self
     }
 
@@ -129,6 +153,21 @@ impl LinkView {
         })
     }
 
+    fn resolved_label(
+        &self,
+        localized_message: impl FnOnce(&str, &MessageArguments) -> String,
+    ) -> SharedString {
+        let Some((id, arguments)) = &self.localized_label else {
+            return self.label.clone();
+        };
+        let localized = localized_message(id, arguments);
+        if localized.trim().is_empty() || localized.trim() == id.trim() {
+            self.label.clone()
+        } else {
+            localized.into()
+        }
+    }
+
     fn resolved_accessibility_label(
         &self,
         localized_message: impl FnOnce(&str) -> String,
@@ -184,8 +223,20 @@ impl View for LinkView {
             .activation
             .as_ref()
             .map(|action| context.bind_control_action(action.clone()));
-        let accessibility_label =
-            self.resolved_accessibility_label(|id| context.localized_message(id));
+        let label = self.resolved_label(|id, arguments| {
+            context
+                .localized_message_with_arguments(id, arguments)
+                .unwrap_or_default()
+        });
+        let accessibility_label = if self.accessibility_label.is_some() {
+            self.resolved_accessibility_label(|id| context.localized_message(id))
+        } else {
+            label.clone()
+        };
+        assert!(
+            !accessibility_label.trim().is_empty(),
+            "Link must provide a non-empty accessible name"
+        );
 
         let typography = style
             .typography
@@ -196,7 +247,7 @@ impl View for LinkView {
             .expect("link requires an active RustUI theme")
             .disabled_foreground;
         GpuiButton::new(self.identity().to_string())
-            .label(self.label.clone())
+            .label(label)
             .accessibility_label(accessibility_label)
             .with_variant(ButtonVariant::Link)
             .text_color(crate::theme::registry::hsla(link_foreground(
@@ -227,6 +278,31 @@ impl View for LinkView {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn localized_visible_label_uses_catalog_arguments_and_literal_fallback() {
+        let link = Link("Open Form.svg", "https://example.com/form.svg")
+            .localized_label_with_arguments(
+                "playground.open-reference",
+                MessageArguments::new().with("name", "Form.svg"),
+            );
+        assert_eq!(
+            link.resolved_label(|id, _| {
+                assert_eq!(id, "playground.open-reference");
+                "Ouvrir Form.svg".to_owned()
+            })
+            .as_ref(),
+            "Ouvrir Form.svg"
+        );
+        assert_eq!(
+            link.resolved_label(|_, _| String::new()).as_ref(),
+            "Open Form.svg"
+        );
+        assert_eq!(
+            link.resolved_label(|id, _| id.to_owned()).as_ref(),
+            "Open Form.svg"
+        );
+    }
 
     #[test]
     fn link_defaults_enabled_and_uses_visible_label_as_accessible_name() {

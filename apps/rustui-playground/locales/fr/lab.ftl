@@ -7,6 +7,7 @@ lab-select-preview = Sélectionnez un aperçu dans la barre latérale du Playgro
 lab-demo-pending = La démonstration RustUI de cet élément du catalogue reste à réaliser.
 lab-macos-references = Références macOS 27
 lab-open-references = Ouvrir les références
+lab-open-reference = Ouvrir {name}
 lab-status-ready = Prêt · Terrain de jeu RustUI
 lab-status-no-references = Aucune référence SVG locale disponible
 lab-status-opened = Ouverture demandée pour {count} référence(s) de {key}

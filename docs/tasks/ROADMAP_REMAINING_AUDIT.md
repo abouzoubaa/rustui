@@ -9,6 +9,19 @@ Reverify live HEAD and dirty state before subsequent integration; preserve unrel
 
 ## Current checkpoint — 2026-10-26
 
+- **Stage 6/11 reference-link locale follow-up:** Public RustUI
+  `LinkView::localized_label_with_arguments` resolves the visible label at
+  render time with a stable literal fallback and accessible name that follows
+  the visible label unless explicitly overridden. Playground Web reference
+  links use it for filename interpolation in English, French, and Arabic.
+  Link regressions **17/17**, focused Playground locale interpolation **1/1**,
+  three runtime locale records validated, and RustUI/Playground all-target
+  Headstart check passed. Evidence:
+  `target/headstart/evidence/link-localized-regressions-20261026.log`,
+  `target/headstart/evidence/playground-link-locale-test-20261026.log`, and
+  `target/headstart/evidence/link-localized-all-targets-20261026.log`.
+  Current-source browser rendering and release checkpoints remain open.
+
 - **Stage 6/11 dynamic Playground status:** The footer now resolves ready,
   missing-reference, requested-open, and open-error messages from the active
   English, French, or Arabic catalog. It keeps the reference count, key, path,

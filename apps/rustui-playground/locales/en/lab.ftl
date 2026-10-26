@@ -7,6 +7,7 @@ lab-select-preview = Use the Playground sidebar to select a preview.
 lab-demo-pending = A RustUI demonstration for this catalog item is still pending.
 lab-macos-references = macOS 27 references
 lab-open-references = Open references
+lab-open-reference = Open {name}
 lab-status-ready = Ready · RustUI Playground
 lab-status-no-references = No local SVG references available
 lab-status-opened = Requested {count} reference(s) for {key}
