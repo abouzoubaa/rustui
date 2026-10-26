@@ -35,12 +35,19 @@ subsequent integration and preserve unrelated work.
   JavaScript semantic fixtures**, **6 D1d transport fixtures**, and the bounded
   real-browser checks recorded in the D1d and Web v9 evidence.
 - Native focus implementation is complete and its named-field AX retest passes.
-  **5/8 bounded native acceptance checks pass**: focused named field, search
-  clearing, Space activation, Enter reset, and forward/reverse Tab skipping the
-  disabled button. Coordinate input still returns `noWindowsAvailable`; a joint
-  capture shows AX Count:2 while the image shows Count:0; VoiceOver was not run.
-  These three gates remain open. The capture/service-versus-product cause is
-  unconfirmed. No speculative renderer or protected-input repair was made.
+  **7/8 bounded native acceptance checks pass** in the current-source retest:
+  focused named field, search clearing, keyboard-focused Space activation,
+  Enter reset, forward/reverse Tab skipping the disabled button, coordinate
+  activation and matching AX/rendered Count:1. The earlier `noWindowsAvailable`
+  and AX/pixel mismatch did not reproduce in this run; no root cause is claimed.
+  VoiceOver remains untested. Evidence:
+  `target/headstart/evidence/native-input-retest-20261026/`.
+- Native Tree testing found missing Home/End navigation; arrows, collapse and
+  expansion worked. RustUI now handles ordinary Home/End in the shared Tree
+  adapter, selecting enabled visible edges and preserving modified/IME input.
+  Outline inherits the repair. **30/30 focused Tree/Outline tests pass**,
+  including real rendered keyboard events and disabled/hidden-row cases.
+  Native rebuilt-bundle verification is pending. No vendored source was changed.
 - The native patch verifier requires Cargo's local path selection: registry
   packages are treated as immutable and can reuse an original artifact after
   patching. Metadata, actual local backend compilation and a changed executable

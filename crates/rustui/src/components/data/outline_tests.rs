@@ -56,6 +56,7 @@ fn queued_expansion_rejects_stale_owner_state_and_does_not_repeat_an_update() {
 }
 
 struct OutlineProbe {
+    items: Vec<TreeNode>,
     selected: Option<String>,
     expanded: HashSet<String>,
     replacement_expanded: HashSet<String>,
@@ -68,6 +69,7 @@ struct OutlineProbe {
 impl OutlineProbe {
     fn new() -> Self {
         Self {
+            items: nodes(),
             selected: Some("root".into()),
             expanded: HashSet::new(),
             replacement_expanded: HashSet::new(),
@@ -112,7 +114,7 @@ impl View for OutlineProbe {
         let mut frame = div().w(px(320.0)).h(px(280.0));
         if self.visible {
             frame = frame.child(
-                Outline("outline-event", nodes(), selected, expanded)
+                Outline("outline-event", self.items.clone(), selected, expanded)
                     .accessibility_label("Document outline")
                     .height(260.0)
                     .into_element(context),
@@ -186,6 +188,57 @@ fn physical_outline_keys_update_the_latest_expansion_binding_once(cx: &mut gpui:
         assert!(probe.replacement_expanded.is_empty());
         assert_eq!(probe.replacement_writes, 1);
         assert!(!native.read(app).entry(0).unwrap().is_expanded());
+    });
+}
+
+#[gpui::test]
+fn home_end_select_enabled_visible_edges_and_ignore_modified_keys(cx: &mut gpui::TestAppContext) {
+    init(cx);
+    let mut probe = OutlineProbe::new();
+    probe.items = vec![
+        TreeNode::new("disabled-first", "Disabled first").disabled(true),
+        TreeNode::new("root", "Document").child(TreeNode::new("middle", "Section")),
+        TreeNode::new("last", "Last folder").child(TreeNode::new("hidden", "Hidden child")),
+        TreeNode::new("disabled-last", "Disabled last").disabled(true),
+    ];
+    probe.expanded = ids(&["root"]);
+    let (owner, window) = cx.add_window_view(|_, app| ComponentHost::new(probe, app));
+    let native = native_tree(&owner, window);
+    window.update(|window, app| native.update(app, |tree, cx| tree.focus(window, cx)));
+    for (key, expected) in [
+        ("end", "last"),
+        ("ctrl-home", "last"),
+        ("home", "root"),
+        ("ctrl-end", "root"),
+    ] {
+        window.simulate_keystrokes(key);
+        window.update(|window, app| {
+            let _ = window.draw(app);
+            assert_eq!(
+                owner.read(app).component().selected.as_deref(),
+                Some(expected),
+                "{key}"
+            );
+            assert_eq!(
+                native.read(app).selected_item().unwrap().id.as_ref(),
+                expected,
+                "{key}"
+            );
+        });
+    }
+    window.update(|window, app| {
+        owner.update(app, |host, cx| {
+            host.component_mut().items = vec![TreeNode::new("disabled", "Disabled").disabled(true)];
+            host.component_mut().selected = None;
+            cx.notify();
+        });
+        let _ = window.draw(app);
+    });
+    window.simulate_keystrokes("home end");
+    window.update(|window, app| {
+        let _ = window.draw(app);
+        assert!(native.read(app).selected_item().is_none());
+        assert!(owner.read(app).component().selected.is_none());
     });
 }
 

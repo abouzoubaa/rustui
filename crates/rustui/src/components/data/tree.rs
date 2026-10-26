@@ -275,11 +275,15 @@ fn next_enabled_index(
         .find(|index| enabled[*index])
 }
 
-fn next_enabled_tree_index(state: &TreeState, direction: isize) -> Option<usize> {
+fn enabled_tree_index(
+    state: &TreeState,
+    selected: Option<usize>,
+    direction: isize,
+) -> Option<usize> {
     let enabled = (0..)
         .map_while(|index| state.entry(index).map(|entry| !entry.is_disabled()))
         .collect::<Vec<_>>();
-    next_enabled_index(&enabled, state.selected_index(), direction)
+    next_enabled_index(&enabled, selected, direction)
 }
 
 fn should_consume_tree_arrow() -> bool {
@@ -389,6 +393,9 @@ struct RetainedTree {
 }
 
 /// A virtualized hierarchy with controlled stable-ID selection.
+///
+/// Home/End select the first/last enabled visible row. Modified shortcuts and
+/// active character/IME input are left to their existing handlers.
 pub struct TreeView {
     nodes: Vec<TreeNode>,
     selection: Binding<Option<String>>,
@@ -763,6 +770,34 @@ impl View for TreeView {
             container = container.h(px(height));
         }
         let mut tree_container = div().size_full();
+        let keyboard_tree = tree.clone();
+        tree_container = tree_container.on_key_down(move |event, _, cx| {
+            if event.prefer_character_input
+                || event.keystroke.is_ime_in_progress()
+                || event.keystroke.modifiers.modified()
+            {
+                return;
+            }
+            let direction = match event.keystroke.key.as_str() {
+                "home" => 1,
+                "end" => -1,
+                _ => return,
+            };
+            if let Some(index) = enabled_tree_index(keyboard_tree.read(cx), None, direction) {
+                keyboard_tree.update(cx, |state, cx| {
+                    state.set_selected_index(Some(index), cx);
+                    state.scroll_to_item(
+                        index,
+                        if direction > 0 {
+                            gpui::ScrollStrategy::Top
+                        } else {
+                            gpui::ScrollStrategy::Bottom
+                        },
+                    );
+                });
+                cx.stop_propagation();
+            }
+        });
         // Preserve disabled-folder keyboard navigation without forwarding expansion actions.
         let keyboard_tree = tree.clone();
         tree_container = tree_container.capture_action(move |_: &Confirm, window, cx| {
@@ -797,7 +832,8 @@ impl View for TreeView {
         });
         let keyboard_tree = tree.clone();
         tree_container = tree_container.capture_action(move |_: &SelectUp, _, cx| {
-            let next = next_enabled_tree_index(keyboard_tree.read(cx), -1);
+            let state = keyboard_tree.read(cx);
+            let next = enabled_tree_index(state, state.selected_index(), -1);
             if let Some(index) = next {
                 keyboard_tree.update(cx, |state, cx| {
                     state.set_selected_index(Some(index), cx);
@@ -810,7 +846,8 @@ impl View for TreeView {
         });
         let keyboard_tree = tree.clone();
         tree_container = tree_container.capture_action(move |_: &SelectDown, _, cx| {
-            let next = next_enabled_tree_index(keyboard_tree.read(cx), 1);
+            let state = keyboard_tree.read(cx);
+            let next = enabled_tree_index(state, state.selected_index(), 1);
             if let Some(index) = next {
                 keyboard_tree.update(cx, |state, cx| {
                     state.set_selected_index(Some(index), cx);

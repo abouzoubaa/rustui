@@ -19,8 +19,9 @@ use crate::view::{ControlAction, EmptyView, RenderContext, View};
 /// its ancestors. Per-node `TreeNode::expanded` declarations are ignored.
 ///
 /// Call [`Self::accessibility_label`] before rendering. The name labels the outer
-/// group; pinned upstream Tree owns row roles and selected/expanded semantics.
-/// This does not label the upstream Tree node itself or provide hierarchy levels.
+/// group; the shared Tree adapter supplies the named tree, row hierarchy levels
+/// and selected/expanded semantics. Home/End select the first/last enabled
+/// visible row, matching the Tree keyboard contract.
 pub struct OutlineView {
     tree: TreeView,
     id: Identity,
