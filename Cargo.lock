@@ -5823,6 +5823,7 @@ dependencies = [
  "gpui-kit-assets",
  "gpui-pre",
  "gpui-pre-platform",
+ "gpui-pre-web",
  "rustui-core",
  "rustui-i18n",
  "rustui-macros",

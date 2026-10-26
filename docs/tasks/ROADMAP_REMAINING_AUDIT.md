@@ -4,7 +4,7 @@ Writing session: thread `01a172cd-8a21-73f1-82cd-62d451c71ec9`, claim
 `c44f414bfbf4ef4c4f30`, branch `codex/production-consolidation-01a172cd`,
 worktree `/Users/Abium/.codex/worktrees/rustui-production-consolidation/rustui`.
 The verified primary integration branch is `work/m118-diagnostics-provenance`;
-checkpoint `3d078e7a` is integrated. Reverify live HEAD and dirty state before
+checkpoint `1ec22c6b` is integrated. Reverify live HEAD and dirty state before
 subsequent integration and preserve unrelated work.
 
 ## Current checkpoint — 2026-10-26
@@ -45,6 +45,10 @@ subsequent integration and preserve unrelated work.
   and **326 existing ignored Trail cache files** retain exact bytes/modes; the
   primary tracked tree is clean. Four missing Trail documents were restored.
   Integration evidence: `/tmp/rustui-primary-integration-20261026`.
+  The later guarded fast-forward to `1ec22c6b` integrates the independent source
+  consumer, owner callback API, conditional-macro fix and D1d host. All 24/326
+  preserved paths were rehashed and their modes rechecked; tracked tree remains
+  clean. See `d1d-integration.json` in the same evidence directory.
 - Independent source consumption is now covered by a standalone workspace
   example using only the public RustUI API. Its locked offline compile passed;
   metadata confirms all five approved local GPUI packages and no new dependency
@@ -66,6 +70,20 @@ subsequent integration and preserve unrelated work.
   texts for the five remaining gaps. Exact published-source/revision evidence is
   retained in `/tmp/rustui-remaining-notices-upstream-audit`; no partial header or
   generic license template is represented as an upstream notice.
+- Current unsigned native candidate is archived as
+  `target/headstart/release-artifacts/RustUI-Playground-macos-arm64-unsigned-1ec22c6b.tar.gz`;
+  its JSON manifest records binary/archive hashes and five notice gaps. No
+  current-candidate native GUI acceptance is claimed. The generated app bundle
+  was removed after archiving; no RustUI test app remains running. Normalized
+  archive timestamps do not establish independent compiler reproducibility.
+- Current Chromium locale checks pass for English/French/Arabic live switching,
+  decimal/plural/ordinal output, localized accessible names and mirrored RTL
+  layout, including bounded Arabic light/dark screenshots. They exposed missing
+  Chinese glyphs in the existing Text sample. Selecting GPUI's existing
+  `EmojiAndCjk` fallback repairs that sample in the rebuilt Wasm bundle; locked
+  sources/versions and the independent source-consumer compile remain valid.
+  This is approximate horizontal grapheme fallback, not full script/vertical
+  typography acceptance. Evidence: `/tmp/rustui-preservation-20261025/browser/locale-cjk-v1`.
 - Whole-project inventory: **37 provisional requirements**. Full coding and
   acceptance percentages have not been recomputed from every contract; the
   bounded counts above are not project completion percentages. Remaining
@@ -420,8 +438,8 @@ or acceptance percentage has not been recomputed against every contract.
 | R10 | 4: macro grammar and public integration tests | Implemented; current macOS checkpoint passes all 43 workspace integration tests plus library/all-target checks. Matching-toolchain macro doctest target runs with zero cases. Historical M69/E0463 failure is not reproduced in the persistent verification target; native declarative-layout acceptance remains separate. |
 | R11 | 4: basic components and semantics | Present; audit source contracts and current native visual/focus/AX behavior. |
 | R12 | 5: theme states, metrics and fallbacks | Static coverage passes for 139 roles/24 styled records; runtime pack validation, light/dark/locale visuals and unapplied radio blend-mode requirement remain. |
-| R13 | 6: bounded locale/catalog contract | Three runtime locale records validate; current locale unit tests pass. Native/Web locale switching, fallback and RTL acceptance remain. |
-| R14 | 6: full CLDR/ICU/Fluent runtime | Strategy A implemented: 29 verified vendored packages, 102 locale tests/doctest and 3 Playground localization checks pass. macOS/Web, RTL, notices and size/performance acceptance remain open. |
+| R13 | 6: bounded locale/catalog contract | Three runtime locale records validate; current locale unit tests pass. Bounded current-Chromium English/French/Arabic switching, accessible names and RTL layout pass. Native, full locale/fallback and cross-browser acceptance remain. |
+| R14 | 6: full CLDR/ICU/Fluent runtime | Strategy A implemented: 29 verified vendored packages, 102 locale tests/doctest and 3 Playground localization checks pass. Current Chromium decimal/plural/ordinal output and RTL switching pass; native, complete browser/RTL, notices and size/performance acceptance remain open. |
 | R15 | 7: persistent inputs, selection, disabled behavior | Present; audit disabled focus/activation/AX, replacement subscriptions and event paths. Test-support sources and ownership harness are now integrated; focused event tests pass. |
 | R16 | 7/9: text selection and active IME | Source preservation logic and delayed no-blur preview trigger present in recovered primary; native active composition and Web IME still unverified. |
 | R17 | 8: collections/navigation synchronization | Present; verify keyed replacement, route recovery, keyboard/RTL and virtualization behavior with current source. |

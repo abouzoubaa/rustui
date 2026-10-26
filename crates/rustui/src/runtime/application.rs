@@ -14,6 +14,19 @@ use crate::view::View;
 type LaunchHook = Box<dyn FnOnce(&mut App)>;
 type AssetSetup = Box<dyn FnOnce(gpui::Application) -> gpui::Application>;
 
+#[cfg(target_family = "wasm")]
+fn web_application() -> gpui::Application {
+    // Keep loaded fonts preferred, then use GPUI's bounded browser fallback for
+    // eligible horizontal CJK glyphs absent from the embedded font database.
+    let platform = std::rc::Rc::new(gpui_web::WebPlatform::new_with_backend_and_font_fallback(
+        true,
+        gpui_web::WebBackendPreference::Auto,
+        gpui_web::CanvasFontFallback::EmojiAndCjk,
+    ));
+    let http_client = std::sync::Arc::new(platform.fetch_http_client());
+    gpui::Application::with_platform(platform).with_http_client(http_client)
+}
+
 #[cfg(any(test, target_family = "wasm"))]
 fn web_font_assets() -> Vec<std::borrow::Cow<'static, [u8]>> {
     vec![
@@ -303,6 +316,9 @@ impl RustUI {
 
         #[cfg(target_family = "wasm")]
         gpui_platform::web_init();
+        #[cfg(target_family = "wasm")]
+        let app = web_application();
+        #[cfg(not(target_family = "wasm"))]
         let app = gpui_platform::application();
         let app = match self.asset_setup.take() {
             Some(setup) => setup(app),

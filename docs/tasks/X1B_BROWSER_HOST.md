@@ -2,6 +2,14 @@
 
 ## Browser font defaults
 
+RustUI selects the pinned GPUI Web platform's `EmojiAndCjk` browser fallback
+policy at construction. Loaded fonts remain preferred. This repairs missing
+eligible horizontal CJK glyphs without adding font assets or changing the pinned
+packages. The upstream fallback renders eligible graphemes independently and is
+approximate; it does not establish complete script shaping, vertical text,
+variation-sequence coverage or cross-browser font fidelity. The public font
+family policy still does not guarantee that a caller-named system face exists.
+
 The Web bootstrap registers Inter Variable, Noto Sans, Noto Sans Arabic, Noto
 Sans Hebrew, and Fira Mono Medium before component initialization. Inter and
 Noto Sans Hebrew were added at M781; the other assets were copied unchanged
