@@ -9,6 +9,15 @@ Reverify live HEAD and dirty state before subsequent integration; preserve unrel
 
 ## Current checkpoint — 2026-10-26
 
+- **Stage 6 Playground catalog summary:** The header now formats catalog and
+  demo counts through the active English, French, or Arabic message catalog,
+  including locale-aware numerals. Focused runtime catalog test **1/1**,
+  three locale records validated, and Playground all-target Headstart check
+  passed. Evidence:
+  `target/headstart/evidence/playground-catalog-summary-locale-test-20261026.log`
+  and `target/headstart/evidence/playground-catalog-summary-check-20261026.log`.
+  Source-bound native/browser visual acceptance remains open.
+
 - **Stage 6 native reference-state locale follow-up:** Playground reference
   rows now format available and missing states with the filename through the
   active English, French, or Arabic catalog. The focused catalog interpolation

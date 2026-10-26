@@ -402,12 +402,13 @@ impl View for Playground {
                                                 .font_weight(TextWeight::Bold),
                                         )
                                         .child(
-                                            Text(format!(
-                                                "{} catalog rows · {} framework demos · macOS 27",
-                                                CATALOG.len(),
-                                                STORIES.len()
-                                            ))
-                                            .font_size(12.0),
+                                            LocalizedText("lab-catalog-summary")
+                                                .with_arguments(
+                                                    MessageArguments::new()
+                                                        .with("catalog_count", CATALOG.len() as i64)
+                                                        .with("demo_count", STORIES.len() as i64),
+                                                )
+                                                .font_size(12.0),
                                         )
                                         .spacing(4.0),
                                 )
@@ -655,6 +656,42 @@ mod tests {
                     expected
                 );
             }
+        }
+    }
+
+    #[test]
+    fn catalog_summary_formats_counts_in_supported_locales() {
+        let catalogs = stories::catalogs();
+        for (tag, label) in [
+            ("en", "catalog rows"),
+            ("fr", "éléments du catalogue"),
+            ("ar", "صفًا في الدليل"),
+        ] {
+            let locale = rustui::localization::Locale::parse(tag).expect("supported locale");
+            let summary = catalogs
+                .format(
+                    &locale,
+                    "lab-catalog-summary",
+                    &MessageArguments::new()
+                        .with("catalog_count", CATALOG.len() as i64)
+                        .with("demo_count", STORIES.len() as i64),
+                )
+                .expect("catalog summary formats");
+            assert!(
+                summary.contains(&rustui::localization::format_integer(
+                    CATALOG.len() as i64,
+                    &locale
+                )),
+                "{tag}: {summary}"
+            );
+            assert!(
+                summary.contains(&rustui::localization::format_integer(
+                    STORIES.len() as i64,
+                    &locale
+                )),
+                "{tag}: {summary}"
+            );
+            assert!(summary.contains(label), "{tag}: {summary}");
         }
     }
 

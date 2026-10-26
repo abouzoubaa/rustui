@@ -18,6 +18,7 @@ lab-select-reference = Select a component catalog row to inspect its SVG referen
 lab-no-source-gaps = No known source gaps recorded.
 lab-known-source-gaps = Known source gaps
 lab-component-playground-title = RustUI Component Playground
+lab-catalog-summary = {catalog_count} catalog rows · {demo_count} framework demos · macOS 27
 lab-appearance-light = Light
 lab-appearance-dark = Dark
 lab-navigation-components = Components

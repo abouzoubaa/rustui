@@ -18,6 +18,7 @@ lab-select-reference = Sélectionnez un composant du catalogue pour voir ses ré
 lab-no-source-gaps = Aucune lacune connue du code source.
 lab-known-source-gaps = Lacunes connues du code source
 lab-component-playground-title = Terrain de jeu des composants RustUI
+lab-catalog-summary = {catalog_count} éléments du catalogue · {demo_count} démonstrations du framework · macOS 27
 lab-appearance-light = Clair
 lab-appearance-dark = Sombre
 lab-navigation-components = Composants
