@@ -95,6 +95,7 @@ struct ScrollState {
     axis: ScrollAxis,
     direction: LayoutDirection,
     anchor_rtl: Rc<Cell<bool>>,
+    last_horizontal_extent: Rc<Cell<Pixels>>,
 }
 
 impl ScrollState {
@@ -102,7 +103,7 @@ impl ScrollState {
         &mut self,
         axis: ScrollAxis,
         direction: LayoutDirection,
-    ) -> (ScrollHandle, Rc<Cell<bool>>) {
+    ) -> (ScrollHandle, Rc<Cell<bool>>, Rc<Cell<Pixels>>) {
         if self.direction != direction {
             self.direction = direction;
             self.anchor_rtl
@@ -124,8 +125,23 @@ impl ScrollState {
             }
             self.axis = axis;
         }
-        (self.handle.clone(), self.anchor_rtl.clone())
+        (
+            self.handle.clone(),
+            self.anchor_rtl.clone(),
+            self.last_horizontal_extent.clone(),
+        )
     }
+}
+
+fn rtl_leading_offset(
+    offset: Pixels,
+    previous_extent: Pixels,
+    current_extent: Pixels,
+    pending: bool,
+) -> Option<Pixels> {
+    (current_extent > px(0.0)
+        && (pending || (current_extent != previous_extent && offset == -previous_extent)))
+        .then_some(-current_extent)
 }
 
 fn enabled_offset(mut offset: Point<Pixels>, axis: ScrollAxis) -> Point<Pixels> {
@@ -283,8 +299,9 @@ impl<V: View> View for ScrollViewView<V> {
                     axis: self.axis,
                     direction,
                     anchor_rtl: Rc::new(Cell::new(direction == LayoutDirection::RightToLeft)),
+                    last_horizontal_extent: Rc::new(Cell::new(px(0.0))),
                 });
-            let (handle, anchor_rtl) = context.update_entity(&state, |state, _, _| {
+            let (handle, anchor_rtl, last_horizontal_extent) = context.update_entity(&state, |state, _, _| {
                 state.handle_for_layout(self.axis, direction)
             });
             let content = context
@@ -339,9 +356,20 @@ impl<V: View> View for ScrollViewView<V> {
             {
                 let scroll_handle = handle.clone();
                 root.on_prepaint(move |_, window, cx| {
-                    if anchor_rtl.get() && scroll_handle.max_offset().x > px(0.0) {
+                let extent = scroll_handle.max_offset().x;
+                let offset = scroll_handle.offset().x;
+                let next = rtl_leading_offset(
+                    offset,
+                    last_horizontal_extent.get(),
+                    extent,
+                    anchor_rtl.get(),
+                );
+                if extent > px(0.0) {
+                    last_horizontal_extent.set(extent);
+                }
+                if let Some(next) = next {
                         let mut offset = scroll_handle.offset();
-                        offset.x = -scroll_handle.max_offset().x;
+                    offset.x = next;
                         scroll_handle.set_offset(offset);
                         anchor_rtl.set(false);
                         let window_handle = window.window_handle();
@@ -504,6 +532,26 @@ mod tests {
     use super::*;
 
     #[test]
+    fn rtl_leading_edge_tracks_new_content_width_without_overriding_manual_scroll() {
+        assert_eq!(
+            rtl_leading_offset(px(0.0), px(0.0), px(600.0), true),
+            Some(px(-600.0))
+        );
+        assert_eq!(
+            rtl_leading_offset(px(-600.0), px(600.0), px(1_200.0), false),
+            Some(px(-1_200.0))
+        );
+        assert_eq!(
+            rtl_leading_offset(px(-400.0), px(600.0), px(1_200.0), false),
+            None
+        );
+        assert_eq!(
+            rtl_leading_offset(px(-600.0), px(600.0), px(600.0), false),
+            None
+        );
+    }
+
+    #[test]
     fn scrollbar_dimensions_fall_back_from_zero_but_opacity_and_radius_allow_zero() {
         let measurements = serde_json::json!({
             "thumb_thickness_px": 0.0,
@@ -639,6 +687,7 @@ mod tests {
             axis: ScrollAxis::Both,
             direction: LayoutDirection::LeftToRight,
             anchor_rtl: Rc::new(Cell::new(false)),
+            last_horizontal_extent: Rc::new(Cell::new(px(0.0))),
         };
         state.handle.set_offset(Point {
             x: px(-23.0),
