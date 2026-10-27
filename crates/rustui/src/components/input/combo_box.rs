@@ -360,8 +360,13 @@ impl View for ComboBoxView {
         if let Some(width) = self.menu_width {
             combo_box = combo_box.menu_width(px(width));
         }
+        // GPUI Select fills its outer element; size the wrapper as well as the input.
+        let mut root = div().relative();
+        if let Some(width) = self.width {
+            root = root.w(px(width));
+        }
         if !self.appearance {
-            return combo_box.into_any_element();
+            return root.child(combo_box).into_any_element();
         }
 
         // Keep GPUI Select's searchable menu and focus behavior. Theme only
@@ -377,8 +382,7 @@ impl View for ComboBoxView {
             affordance = affordance.opacity(0.5);
         }
         let affordance = affordance.child(Icon::new(IconName::ChevronDown).with_size(Size::XSmall));
-        div()
-            .relative()
+        root
             .child(combo_box.icon(Icon::empty()))
             .child(affordance)
             .into_any_element()
