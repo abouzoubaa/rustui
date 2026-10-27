@@ -56,6 +56,18 @@ Reverify live HEAD and dirty state before subsequent integration; preserve unrel
 
 ## Current checkpoint — 2026-10-27
 
+### Card story English, French, Arabic copy
+
+- **Coding:** The Card Playground story now resolves its title, controls, placeholders,
+  omitted-card message, and bound-value summary from the active locale catalog. Empty
+  initial field values expose translated placeholders while preserving user-entered
+  values across locale changes and keyed child retention. This is a Stage 6 / R13
+  source improvement, not completion of all Playground copy.
+- **Source checks:** Three runtime locale records validated; focused Headstart
+  Playground check and formatting passed. Native and browser visual, input, and RTL
+  acceptance for this story remain open. The 37-requirement inventory and strict
+  3/37 coding and 3/37 acceptance lower bounds are unchanged.
+
 ### Narrow Web Playground layout
 
 - **Coding:** At 480×720, the fixed catalog and reference columns clipped French
