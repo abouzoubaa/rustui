@@ -17,6 +17,9 @@ Reverify live HEAD and dirty state before subsequent integration; preserve unrel
 - **Compiled CI:** [run 40440397456](https://github.com/abouzoubaa/rustui/actions/runs/40440397456)
   passed `source` and `macos-and-web-builds` on exact commit `a2ec04b0`.
   Its dedicated ephemeral macOS ARM64 runner exited and removed credentials.
+  [run 40441478568](https://github.com/abouzoubaa/rustui/actions/runs/40441478568)
+  passed both jobs on exact commit `24bf5451`; its runner exited and removed
+  credentials.
 - **Reproducibility:** after a committed local rebuild, its bundle and the
   independent CI checkout matched byte for byte for all **774 files**, including
   the manifest (source SHA-256 `dd6c921caeaa535b04bbf3ebde730dd4cc0183b22a8ca4a1986f95775ac87752`).
@@ -24,12 +27,18 @@ Reverify live HEAD and dirty state before subsequent integration; preserve unrel
   unsigned local archive was stream-verified for all 774 members: SHA-256
   `e635217042b42906662c36c47ef647e5f375976d5bfd9bc55cde9295c8922344`.
   See `target/headstart/evidence/web-portable-repro-a2ec04b0-20261027.json`.
+  The `24bf5451` local and CI bundles also match all 774 files byte for byte.
+  Its unsigned candidate archive was stream-verified for all 774 files:
+  SHA-256 `4d7d9683dfd124ab52a853ce14777762e1e63125a86ff96e8cc3f4e1d247151b`.
+  See `target/headstart/evidence/web-portable-repro-24bf5451-20261027.json`.
 - **Browser, bounded:** the current bundle displayed the packaged PNG in the
   in-app Chromium browser and Safari 27 on macOS 27. Safari opened the packaged
   Link fixture at `/assets/link-fixture.html`. Temporary tabs and servers were
   closed; the user's other Safari tabs were preserved. A misleading disabled
-  Link story label found during that check has been corrected; browser
-  confirmation of that correction remains open.
+  Link story label found during that check has been corrected. Safari 27 on
+  macOS 27 opened the packaged local Link fixture from the current `24bf5451`
+  build; returning to Playground showed the disabled Link still labelled
+  `Disabled link fixture` and the enabled Link activation count at 1.
 - **Release state:** the provisional inventory has 37 requirements. The strict
   confirmed lower bounds are **3/37 coding complete and 3/37 acceptance
   complete** (R00–R02); most other rows have substantial source implementation
