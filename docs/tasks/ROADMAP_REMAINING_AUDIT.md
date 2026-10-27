@@ -9,6 +9,26 @@ Reverify live HEAD and dirty state before subsequent integration; preserve unrel
 
 ## Current checkpoint — 2026-10-27
 
+### Narrow Web Playground layout
+
+- **Coding:** At 480×720, the fixed catalog and reference columns clipped French
+  Stacks notes and controls. References now appear below the story in its
+  existing scrollable preview, leaving the catalog and story as the two main
+  columns. No reference links or catalog behavior were removed.
+- **Source/build:** `cargo-headstart fmt -p rustui-playground`, focused
+  `cargo-headstart check -p rustui-playground --locked --offline`,
+  `build-playground-web.sh`, and `git diff --check` exited 0 on macOS. The Web
+  manifest records source commit `9a3e29d9` plus the working-tree source
+  snapshot SHA-256 `8d024418c37c9cd76c9eb5366149df128e48a6658800c302fcb228617f657172`
+  and 770 packaged files. Packaging still reports three unresolved notices.
+- **Browser acceptance, bounded:** In the current-source in-app Chromium bundle,
+  French and Arabic Stacks labels, notes, and controls were visible at 480×720.
+  At 1280×720, scrolling the selected `button` catalog preview exposed its
+  `Form.svg` and `Form-1.svg` reference links below the story. The temporary
+  tab and server on port 8769 were closed. This does not establish Safari
+  narrow-window behavior, other stories, native layout, screen-reader, or
+  performance acceptance.
+
 ### Stacks layout copy and compiled CI — `3d1b4d01`
 
 - **Coding (Stage 6 / R13):** Reused `LocalizedText` and the existing localized

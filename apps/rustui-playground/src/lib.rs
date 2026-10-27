@@ -288,6 +288,7 @@ impl Playground {
                             .height(360.0)
                             .id(format!("playground-component-canvas-{title}")),
                     )
+                    .child(self.references())
                     .spacing(12.0),
             )
             .axis(ScrollAxis::Vertical)
@@ -358,10 +359,9 @@ impl Playground {
                 panel = panel.child(Text(missing).font_size(11.0));
             }
         }
-        Container(ScrollView(panel.spacing(12.0)).id("playground-references-scroll"))
-            .fill()
-            .width(300.0)
+        Container(panel.spacing(12.0))
             .padding(12.0)
+            .border()
             .background(Surface::Background)
     }
 }
@@ -473,7 +473,6 @@ impl View for Playground {
                     HStack::new()
                         .child(self.sidebar())
                         .child(self.preview())
-                        .child(self.references())
                         .grow(),
                 )
                 .child(Container(self.status_view()).padding(8.0).border())
