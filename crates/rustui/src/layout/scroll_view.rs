@@ -135,10 +135,11 @@ impl ScrollState {
 
 fn rtl_leading_offset(
     offset: Pixels,
-    previous_extent: Pixels,
+    last_extent: &Cell<Pixels>,
     current_extent: Pixels,
     pending: bool,
 ) -> Option<Pixels> {
+    let previous_extent = last_extent.replace(current_extent);
     (current_extent > px(0.0)
         && (pending || (current_extent != previous_extent && offset == -previous_extent)))
         .then_some(-current_extent)
@@ -360,13 +361,10 @@ impl<V: View> View for ScrollViewView<V> {
                 let offset = scroll_handle.offset().x;
                 let next = rtl_leading_offset(
                     offset,
-                    last_horizontal_extent.get(),
+                    &last_horizontal_extent,
                     extent,
                     anchor_rtl.get(),
                 );
-                if extent > px(0.0) {
-                    last_horizontal_extent.set(extent);
-                }
                 if let Some(next) = next {
                         let mut offset = scroll_handle.offset();
                     offset.x = next;
@@ -533,21 +531,26 @@ mod tests {
 
     #[test]
     fn rtl_leading_edge_tracks_new_content_width_without_overriding_manual_scroll() {
+        let extent = Cell::new(px(0.0));
         assert_eq!(
-            rtl_leading_offset(px(0.0), px(0.0), px(600.0), true),
+            rtl_leading_offset(px(0.0), &extent, px(600.0), true),
             Some(px(-600.0))
         );
         assert_eq!(
-            rtl_leading_offset(px(-600.0), px(600.0), px(1_200.0), false),
+            rtl_leading_offset(px(-600.0), &extent, px(1_200.0), false),
             Some(px(-1_200.0))
         );
         assert_eq!(
-            rtl_leading_offset(px(-400.0), px(600.0), px(1_200.0), false),
+            rtl_leading_offset(px(-400.0), &extent, px(1_500.0), false),
             None
         );
         assert_eq!(
-            rtl_leading_offset(px(-600.0), px(600.0), px(600.0), false),
+            rtl_leading_offset(px(-1_500.0), &extent, px(0.0), false),
             None
+        );
+        assert_eq!(
+            rtl_leading_offset(px(0.0), &extent, px(800.0), false),
+            Some(px(-800.0))
         );
     }
 

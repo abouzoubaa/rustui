@@ -9,6 +9,24 @@ Reverify live HEAD and dirty state before subsequent integration; preserve unrel
 
 ## Current checkpoint — 2026-10-26
 
+### Integrated ScrollView checkpoint — 2026-10-27
+
+On integrated `3fd612ce`, `./scripts/verify-release.sh macos` exited **0**:
+**1,356/1,356** Rust tests across **40** result groups, the all-target check,
+and optimized Playground packaging passed. The notice collector still reports
+**5** native gaps. `./scripts/verify-release.sh source` and `web` also exited
+**0** on the ScrollView source change (`46c46a25`); the Web bundle still has
+**3** notice gaps. Logs: `target/headstart/evidence/release-{macos,source,web}-rtl-extent-20261027.log`.
+These checks establish source/build status, not RTL visual acceptance.
+
+The RTL ScrollView extent tracker now records a zero horizontal extent when
+content shrinks to fit. Without that transition, later expansion compared
+against the old width and could leave a newly scrollable RTL view at the wrong
+edge. The focused state-transition test passed **1/1** using Headstart; log:
+`target/headstart/evidence/rtl-zero-extent-20261027.log`. Native and browser
+interaction for this new shrink/expand case remain open. The observed Arabic
+Stacks > Focus text clipping and sparse canvas remain unresolved.
+
 ### Source release checkpoint — 2026-10-26
 
 On `665e62e0`, `./scripts/verify-release.sh macos` exited **0** with
