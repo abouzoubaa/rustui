@@ -250,3 +250,8 @@ lab-foundation-tab-tasks = المهام
 lab-foundation-tab-release = التحرير
 lab-foundation-tab-theme = السمة
 lab-foundation-tab-split = التقسيم
+
+lab-grid-demo-title = شبكة · ٣ أعمدة · تتبع اللغة النشطة
+lab-zstack-demo-title = تكديس الطبقات · في الوسط · يظهر العنصر الأخير في الأعلى
+lab-zstack-back-layer = الطبقة الخلفية
+lab-zstack-front-layer = الطبقة الأمامية

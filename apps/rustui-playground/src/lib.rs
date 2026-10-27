@@ -283,7 +283,7 @@ impl Playground {
                     }))
                     .child(
                         ScrollView(Container(content).padding(12.0).radius(10.0).border())
-                            .axis(ScrollAxis::Both)
+                            .axis(ScrollAxis::Vertical)
                             .scrollbars(true)
                             .height(360.0)
                             .id(format!("playground-component-canvas-{title}")),

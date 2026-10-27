@@ -250,3 +250,8 @@ lab-foundation-tab-tasks = Tâches
 lab-foundation-tab-release = Libération
 lab-foundation-tab-theme = Thème
 lab-foundation-tab-split = Division
+
+lab-grid-demo-title = Grille · 3 colonnes · suit la langue active
+lab-zstack-demo-title = ZStack · centré · le dernier élément apparaît au-dessus
+lab-zstack-back-layer = Couche arrière
+lab-zstack-front-layer = Couche avant

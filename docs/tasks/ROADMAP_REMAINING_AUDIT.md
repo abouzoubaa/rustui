@@ -9,6 +9,23 @@ Reverify live HEAD and dirty state before subsequent integration; preserve unrel
 
 ## Current checkpoint — 2026-10-26
 
+### Playground Grid RTL and locale candidate — 2026-10-27
+
+The shared specimen canvas now scrolls vertically; the Grid demonstration uses
+RustUI's existing direction-aware `HStack` so its fixed-width card starts at
+the leading edge, and its four visible labels resolve from English, French, or
+Arabic catalogs. The focused Playground Headstart check, locale validator, and
+Web release build exited 0. The Web manifest binds the current Grid source
+SHA-256 `72056ee7f1bf2016f905eb3505e0407c234a4498e437d1bb5e1b6129904f1c5e`
+and records 770 packaged files. In the current in-app browser tab, English
+Grid remained left-aligned; Arabic Grid moved to the right, reversed 01–03 and
+04–06, and rendered the new Arabic labels. Logs:
+`target/headstart/evidence/grid-rtl-locale-check-20261027.log` and
+`target/headstart/evidence/release-web-grid-rtl-locale-20261027.log`.
+The attempted shared-canvas alignment wrapper clipped long Arabic Stacks text
+and was reverted before this build. Compiled-preview RTL text/wrapping, broader
+native and browser acceptance, and release notices remain open.
+
 ### Integrated ScrollView checkpoint — 2026-10-27
 
 On integrated `3fd612ce`, `./scripts/verify-release.sh macos` exited **0**:

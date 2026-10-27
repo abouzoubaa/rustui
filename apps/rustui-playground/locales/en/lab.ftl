@@ -250,3 +250,8 @@ lab-foundation-tab-tasks = Tasks
 lab-foundation-tab-release = Release
 lab-foundation-tab-theme = Theme
 lab-foundation-tab-split = Split
+
+lab-grid-demo-title = Grid · 3 columns · follows active locale
+lab-zstack-demo-title = ZStack · centered · later child paints above
+lab-zstack-back-layer = Back layer
+lab-zstack-front-layer = Front layer
