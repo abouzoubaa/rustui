@@ -616,106 +616,128 @@ impl View for StoryHost {
         let button_properties = self.button_properties();
 
         let retention_controls = match selected {
-            StoryId::Layout => HStack::new()
+            StoryId::Layout => VStack::new()
                 .child(
-                    Button(
-                        if self.keyed_rows_reversed() {
-                            "Restore row order"
-                        } else {
-                            "Reverse keyed rows"
-                        },
-                        self.action(Self::toggle_keyed_order),
-                    )
-                    .id("lab-toggle-keyed-order")
-                    .localized_label(if self.keyed_rows_reversed() {
-                        "lab-layout-restore-row-order"
-                    } else {
-                        "lab-layout-reverse-keyed-rows"
-                    }),
+                    HStack::new()
+                        .child(
+                            Button(
+                                if self.keyed_rows_reversed() {
+                                    "Restore row order"
+                                } else {
+                                    "Reverse keyed rows"
+                                },
+                                self.action(Self::toggle_keyed_order),
+                            )
+                            .id("lab-toggle-keyed-order")
+                            .localized_label(
+                                if self.keyed_rows_reversed() {
+                                    "lab-layout-restore-row-order"
+                                } else {
+                                    "lab-layout-reverse-keyed-rows"
+                                },
+                            ),
+                        )
+                        .child(
+                            Button(
+                                if self.keyed_beta_present() {
+                                    "Remove Beta row"
+                                } else {
+                                    "Restore Beta row"
+                                },
+                                self.action(Self::toggle_keyed_beta),
+                            )
+                            .id("lab-toggle-keyed-beta")
+                            .localized_label(
+                                if self.keyed_beta_present() {
+                                    "lab-layout-remove-beta-row"
+                                } else {
+                                    "lab-layout-restore-beta-row"
+                                },
+                            ),
+                        ),
                 )
                 .child(
-                    Button(
-                        if self.keyed_beta_present() {
-                            "Remove Beta row"
-                        } else {
-                            "Restore Beta row"
-                        },
-                        self.action(Self::toggle_keyed_beta),
-                    )
-                    .id("lab-toggle-keyed-beta")
-                    .localized_label(if self.keyed_beta_present() {
-                        "lab-layout-remove-beta-row"
-                    } else {
-                        "lab-layout-restore-beta-row"
-                    }),
-                )
-                .child(
-                    Button(
-                        if self.child_titles_prefixed() {
-                            "Restore child titles"
-                        } else {
-                            "Prefix child titles"
-                        },
-                        self.action(Self::toggle_child_titles),
-                    )
-                    .id("lab-toggle-child-titles")
-                    .localized_label(if self.child_titles_prefixed() {
-                        "lab-layout-restore-child-titles"
-                    } else {
-                        "lab-layout-prefix-child-titles"
-                    }),
-                )
-                .child(
-                    Button(
-                        match self.environment_display_mode() {
-                            DemoDisplayMode::Compact => "Use detailed environment",
-                            DemoDisplayMode::Detailed => "Use compact environment",
-                        },
-                        self.action(Self::toggle_environment_display_mode),
-                    )
-                    .id("lab-toggle-environment-display-mode")
-                    .localized_label(match self.environment_display_mode() {
-                        DemoDisplayMode::Compact => "lab-layout-use-detailed-environment",
-                        DemoDisplayMode::Detailed => "lab-layout-use-compact-environment",
-                    }),
+                    HStack::new()
+                        .child(
+                            Button(
+                                if self.child_titles_prefixed() {
+                                    "Restore child titles"
+                                } else {
+                                    "Prefix child titles"
+                                },
+                                self.action(Self::toggle_child_titles),
+                            )
+                            .id("lab-toggle-child-titles")
+                            .localized_label(
+                                if self.child_titles_prefixed() {
+                                    "lab-layout-restore-child-titles"
+                                } else {
+                                    "lab-layout-prefix-child-titles"
+                                },
+                            ),
+                        )
+                        .child(
+                            Button(
+                                match self.environment_display_mode() {
+                                    DemoDisplayMode::Compact => "Use detailed environment",
+                                    DemoDisplayMode::Detailed => "Use compact environment",
+                                },
+                                self.action(Self::toggle_environment_display_mode),
+                            )
+                            .id("lab-toggle-environment-display-mode")
+                            .localized_label(
+                                match self.environment_display_mode() {
+                                    DemoDisplayMode::Compact => {
+                                        "lab-layout-use-detailed-environment"
+                                    }
+                                    DemoDisplayMode::Detailed => {
+                                        "lab-layout-use-compact-environment"
+                                    }
+                                },
+                            ),
+                        ),
                 ),
-            StoryId::Tabs => HStack::new()
-                .child(
-                    Button(
-                        if self.details_tab_present() {
-                            "Remove Details tab"
-                        } else {
-                            "Restore Details tab"
-                        },
-                        self.action(Self::toggle_details_tab),
+            StoryId::Tabs => VStack::new().child(
+                HStack::new()
+                    .child(
+                        Button(
+                            if self.details_tab_present() {
+                                "Remove Details tab"
+                            } else {
+                                "Restore Details tab"
+                            },
+                            self.action(Self::toggle_details_tab),
+                        )
+                        .id("lab-toggle-details-tab"),
                     )
-                    .id("lab-toggle-details-tab"),
-                )
-                .child(
-                    Button(
-                        if self.tab_conditional_visible() {
-                            "Hide extra Overview editor"
-                        } else {
-                            "Show extra Overview editor"
-                        },
-                        self.action(Self::toggle_tab_conditional_editor),
-                    )
-                    .id("lab-toggle-tab-editor")
-                    .disabled(self.tab_selection() != "overview"),
-                ),
-            StoryId::Navigation => HStack::new().child(
-                Button(
-                    if self.navigation_conditional_visible() {
-                        "Hide extra root editor"
-                    } else {
-                        "Show extra root editor"
-                    },
-                    self.action(Self::toggle_navigation_conditional_editor),
-                )
-                .id("lab-toggle-navigation-editor")
-                .disabled(!self.navigation_path().is_empty()),
+                    .child(
+                        Button(
+                            if self.tab_conditional_visible() {
+                                "Hide extra Overview editor"
+                            } else {
+                                "Show extra Overview editor"
+                            },
+                            self.action(Self::toggle_tab_conditional_editor),
+                        )
+                        .id("lab-toggle-tab-editor")
+                        .disabled(self.tab_selection() != "overview"),
+                    ),
             ),
-            _ => HStack::new(),
+            StoryId::Navigation => VStack::new().child(
+                HStack::new().child(
+                    Button(
+                        if self.navigation_conditional_visible() {
+                            "Hide extra root editor"
+                        } else {
+                            "Show extra root editor"
+                        },
+                        self.action(Self::toggle_navigation_conditional_editor),
+                    )
+                    .id("lab-toggle-navigation-editor")
+                    .disabled(!self.navigation_path().is_empty()),
+                ),
+            ),
+            _ => VStack::new(),
         };
         let button_controls = if selected == StoryId::Button {
             HStack::new()
