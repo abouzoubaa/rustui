@@ -9,7 +9,7 @@ Reverify live HEAD and dirty state before subsequent integration; preserve unrel
 
 ## Current checkpoint — 2026-10-26
 
-### Playground Grid RTL and locale candidate — 2026-10-27
+### Integrated Playground Grid RTL and locale — 2026-10-27
 
 The shared specimen canvas now scrolls vertically; the Grid demonstration uses
 RustUI's existing direction-aware `HStack` so its fixed-width card starts at
@@ -24,7 +24,22 @@ Grid remained left-aligned; Arabic Grid moved to the right, reversed 01–03 and
 `target/headstart/evidence/release-web-grid-rtl-locale-20261027.log`.
 The attempted shared-canvas alignment wrapper clipped long Arabic Stacks text
 and was reverted before this build. Compiled-preview RTL text/wrapping, broader
-native and browser acceptance, and release notices remain open.
+native and browser acceptance, and release notices remain open. In the same
+Arabic Web tab, scrolling to compiled preview still showed specimen button
+labels cut at the canvas's left edge; the source of that overflow is unconfirmed.
+Commit `b4cec6a5` is fast-forwarded into the verified project branch and pushed.
+On this commit, the source release script exited 0 and the macOS release
+script exited 0: 1,356 Rust tests passed across 40 result groups, all-target
+checking and optimized Playground packaging passed. The native bundle and
+standalone executable both hashed to SHA-256
+`4f87011f8cda21ad9f1cd44b2e9fbd89f3505de0bb4c3e56ee05aaae68988732`.
+In the owned macOS 27 app, Arabic Grid occupied the right edge with mirrored
+cells and Arabic labels; switching to French changed its visible labels and
+native accessibility text. The app quit; the disposable bundle and executable
+were removed, and no test app remains running. The source CI job passed on
+`b4cec6a5` (runs `40427386465`, `40427378319`); compiled CI was skipped.
+Logs: `target/headstart/evidence/release-source-grid-rtl-20261027.log` and
+`target/headstart/evidence/release-macos-grid-rtl-20261027.log`.
 
 ### Integrated ScrollView checkpoint — 2026-10-27
 
