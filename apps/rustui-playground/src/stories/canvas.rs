@@ -408,7 +408,8 @@ impl View for StoryCanvas {
                     .id("story-input-combo-box")
                     .localized_placeholder("lab-input-combo-placeholder")
                     .search_placeholder("Find an engine")
-                    .localized_search_placeholder("lab-input-combo-search"),
+                    .localized_search_placeholder("lab-input-combo-search")
+                    .menu_width(220.0),
                 )
                 .child(
                     DatePicker("Choose a date", self.date_binding.clone()).id("story-input-date"),

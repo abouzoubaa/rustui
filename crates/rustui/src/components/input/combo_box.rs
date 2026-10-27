@@ -66,6 +66,7 @@ pub struct ComboBoxView {
     disabled: bool,
     search_placeholder: Option<SharedString>,
     search_placeholder_message_id: Option<SharedString>,
+    menu_width: Option<f32>,
     accessibility_label: Option<ComboBoxAccessibilityLabel>,
     appearance: bool,
 }
@@ -85,6 +86,7 @@ impl ComboBoxView {
             disabled: false,
             search_placeholder: None,
             search_placeholder_message_id: None,
+            menu_width: None,
             accessibility_label: None,
             appearance: true,
         }
@@ -118,6 +120,16 @@ impl ComboBoxView {
             "ComboBox search placeholder localization key must not be blank"
         );
         self.search_placeholder_message_id = Some(id);
+        self
+    }
+
+    /// Sets the searchable menu width in logical pixels.
+    pub fn menu_width(mut self, width: f32) -> Self {
+        assert!(
+            width.is_finite() && width > 0.0,
+            "ComboBox menu width must be positive and finite"
+        );
+        self.menu_width = Some(width);
         self
     }
 
@@ -330,6 +342,9 @@ impl View for ComboBoxView {
         {
             combo_box = combo_box.search_placeholder(placeholder);
         }
+        if let Some(width) = self.menu_width {
+            combo_box = combo_box.menu_width(px(width));
+        }
         if !self.appearance {
             return combo_box.into_any_element();
         }
@@ -461,6 +476,22 @@ mod tests {
                 .resolved_search_placeholder(|id| id.into())
                 .as_deref(),
             Some("Find an engine")
+        );
+    }
+
+    #[test]
+    fn menu_width_is_explicit_and_validated() {
+        assert_eq!(
+            ComboBox("Rendering engine", binding(), ["GPUI"])
+                .menu_width(220.0)
+                .menu_width,
+            Some(220.0)
+        );
+        assert!(
+            std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| {
+                ComboBox("Rendering engine", binding(), ["GPUI"]).menu_width(f32::NAN)
+            }))
+            .is_err()
         );
     }
 
