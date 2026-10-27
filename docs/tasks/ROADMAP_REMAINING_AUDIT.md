@@ -68,7 +68,14 @@ Reverify live HEAD and dirty state before subsequent integration; preserve unrel
 - **Source checks:** Three runtime locale records validated; focused Headstart
   Playground check and formatting passed. Library tests ran 211/212; one search
   index assertion exposed the inserted row and passed 1/1 after correction.
-  Native and browser visual, input, and RTL acceptance for this story remain open.
+  A source-bound Web/Wasm bundle at `09ffc399` showed Card selectable and
+  English/French/Arabic copy in one in-app Chromium profile. French `Bonjour`
+  and Arabic `مرحبا` entered into separate fields survived parent update,
+  first-card removal/restoration, and locale switches. The Arabic screenshot
+  showed RTL placement without visible clipping at 1280×720. Evidence:
+  `target/headstart/evidence/card-story-web-09ffc399-20261027.json` and
+  `card-story-ar-09ffc399-20261027.png`. This is bounded Web acceptance;
+  native GUI, real OS IME, screen reader, and browser-version coverage remain open.
   The 37-requirement inventory and strict
   3/37 coding and 3/37 acceptance lower bounds are unchanged.
 
