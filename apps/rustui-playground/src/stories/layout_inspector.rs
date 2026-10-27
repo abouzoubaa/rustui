@@ -6,6 +6,7 @@ pub fn summary_for(story: StoryId) -> &'static str {
     match story {
         StoryId::Button => "Layout: VStack containing HStack button groups",
         StoryId::Text => "Layout: VStack of GPUI-backed text elements",
+        StoryId::Card => "Layout: themed cards with retained child text fields",
         StoryId::Layout => "Layout: nested VStack and HStack flex containers",
         StoryId::Input => "Layout: retained GPUI input entities inside a RustUI VStack",
         StoryId::List => "Layout: fixed-height GPUI virtual list inside RustUI VStack",

@@ -485,6 +485,7 @@ fn story_for(key: &str) -> Option<StoryId> {
     match key {
         "button" => Some(StoryId::Button),
         "text" | "text_style_guide" => Some(StoryId::Text),
+        "card" => Some(StoryId::Card),
         "button_group" | "scroll_view" => Some(StoryId::Layout),
         "checkbox"
         | "slider"
@@ -1039,7 +1040,7 @@ mod tests {
     #[test]
     fn localized_story_search_preserves_source_index_mapping() {
         let rows = filtered_story_indices_localized("champs de texte");
-        assert_eq!(rows, [3]);
+        assert_eq!(rows, [4]);
         assert_eq!(STORIES[rows[0]].id, StoryId::Input);
         assert_eq!(filtered_story_indices_localized("حقول النص"), rows);
     }

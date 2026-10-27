@@ -32,6 +32,7 @@ pub const fn status_for(story: StoryId) -> VerificationStatus {
             VerificationStatus::BoundedNativeChecksRecorded
         }
         StoryId::Text
+        | StoryId::Card
         | StoryId::Tabs
         | StoryId::Breadcrumb
         | StoryId::Outline
@@ -70,6 +71,7 @@ mod tests {
         }
         for story in [
             StoryId::Text,
+            StoryId::Card,
             StoryId::Tabs,
             StoryId::Breadcrumb,
             StoryId::Outline,

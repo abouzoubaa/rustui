@@ -61,11 +61,15 @@ Reverify live HEAD and dirty state before subsequent integration; preserve unrel
 - **Coding:** The Card Playground story now resolves its title, controls, placeholders,
   omitted-card message, and bound-value summary from the active locale catalog. Empty
   initial field values expose translated placeholders while preserving user-entered
-  values across locale changes and keyed child retention. This is a Stage 6 / R13
+  values across locale changes and keyed child retention. The previously compiled but
+  unreachable Card gallery is now a selectable sixteenth canonical Playground story,
+  with localized title and summary and a catalog-key route. This is a Stage 5/6 / R13
   source improvement, not completion of all Playground copy.
 - **Source checks:** Three runtime locale records validated; focused Headstart
-  Playground check and formatting passed. Native and browser visual, input, and RTL
-  acceptance for this story remain open. The 37-requirement inventory and strict
+  Playground check and formatting passed. Library tests ran 211/212; one search
+  index assertion exposed the inserted row and passed 1/1 after correction.
+  Native and browser visual, input, and RTL acceptance for this story remain open.
+  The 37-requirement inventory and strict
   3/37 coding and 3/37 acceptance lower bounds are unchanged.
 
 ### Narrow Web Playground layout

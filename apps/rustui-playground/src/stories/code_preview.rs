@@ -14,6 +14,9 @@ pub fn source_for(story: StoryId) -> &'static str {
 let arguments = MessageArguments::new().with("name", "Ada").with("count", 3);
 LocalizedText("lab-i18n-sample").with_arguments(arguments)"#
         }
+        StoryId::Card => {
+            r#"Card("sample", TextField("First card", value_binding).localized_placeholder("lab-card-first-placeholder"))"#
+        }
         StoryId::Layout => {
             r#"let alpha = Keyed(
     "alpha",

@@ -5,6 +5,7 @@ pub enum StoryId {
     #[default]
     Button,
     Text,
+    Card,
     Layout,
     Input,
     List,
@@ -25,6 +26,7 @@ impl StoryId {
         match self {
             Self::Button => "button",
             Self::Text => "text",
+            Self::Card => "card",
             Self::Layout => "layout",
             Self::Input => "input",
             Self::List => "list",
@@ -53,6 +55,7 @@ impl StoryId {
         match self {
             Self::Button => "Button",
             Self::Text => "Text",
+            Self::Card => "Card",
             Self::Layout => "VStack + HStack",
             Self::Input => "Text inputs",
             Self::List => "List",
@@ -77,7 +80,7 @@ pub struct StoryDefinition {
     pub summary: &'static str,
 }
 
-pub const STORIES: [StoryDefinition; 15] = [
+pub const STORIES: [StoryDefinition; 16] = [
     StoryDefinition {
         id: StoryId::Button,
         title: "Button",
@@ -87,6 +90,11 @@ pub const STORIES: [StoryDefinition; 15] = [
         id: StoryId::Text,
         title: "Text",
         summary: "String content lowered through RustUI into GPUI text.",
+    },
+    StoryDefinition {
+        id: StoryId::Card,
+        title: "Card",
+        summary: "Themed card surfaces with retained child input and appearance controls.",
     },
     StoryDefinition {
         id: StoryId::Layout,
@@ -176,8 +184,8 @@ mod tests {
 
     #[test]
     fn story_search_trims_query_and_ignores_ascii_case() {
-        assert_eq!(filtered_story_indices("  nAvIgAtIoNsTaCk  "), vec![9]);
-        assert_eq!(filtered_story_indices("  CONDITIONAL EDITOR "), vec![7]);
+        assert_eq!(filtered_story_indices("  nAvIgAtIoNsTaCk  "), vec![10]);
+        assert_eq!(filtered_story_indices("  CONDITIONAL EDITOR "), vec![8]);
     }
 
     #[test]
@@ -187,12 +195,12 @@ mod tests {
 
     #[test]
     fn story_search_preserves_original_registry_indices() {
-        assert_eq!(filtered_story_indices("selection"), vec![4, 5, 6]);
+        assert_eq!(filtered_story_indices("selection"), vec![5, 6, 7]);
     }
 
     #[test]
     fn story_search_matches_the_visible_story_label() {
-        assert_eq!(filtered_story_indices("HStack"), vec![2]);
+        assert_eq!(filtered_story_indices("HStack"), vec![3]);
     }
     #[test]
     fn graph_stories_are_individually_searchable_and_reachable() {

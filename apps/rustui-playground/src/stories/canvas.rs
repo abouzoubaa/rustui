@@ -418,6 +418,7 @@ impl View for StoryCanvas {
                 .child(super::code_editor_gallery::demo())
                 .spacing(8.0)
                 .alignment(rustui::prelude::HorizontalAlignment::Start),
+            StoryId::Card => VStack::new().child(super::card_gallery::demo()),
             StoryId::List => VStack::new().child(Component(
                 "list-reconciliation-gallery",
                 ListReconciliationGallery::default,
