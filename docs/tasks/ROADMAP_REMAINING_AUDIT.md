@@ -9,6 +9,24 @@ Reverify live HEAD and dirty state before subsequent integration; preserve unrel
 
 ## Current checkpoint — 2026-10-26
 
+### Final preview-action native check — 2026-10-27
+
+At clean `180265ce`, `./scripts/cargo-headstart build -p rustui-playground
+--release --locked --offline` exited 0. The disposable macOS Playground bundle
+contained the same executable bytes as the build artifact (SHA-256
+`4585b43b58fabad6a9a5f96e6e7e02af3da4815616ca4e8b5ebeaacc963e5766`).
+With the claimed GUI slot, the Arabic Stacks/Parents specimen showed the
+compiled-preview actions vertically inside the canvas; activating `Preview
+TextField specimen` mounted generation 2 with its text field. The Arabic
+Stacks/Focus first panel was readable at the observed wide native window, but
+this does not close narrow-window or full story acceptance. The native app
+quit, no RustUI test process remained, and its disposable bundle and standalone
+executable were removed. Build log:
+`target/headstart/evidence/native-preview-actions-180265ce-20261027.log`.
+The independent public-API source consumer also passed a focused Headstart
+check on this commit; the earlier full macOS checkpoint already included its
+locked, offline check. No production release gate changed from these checks.
+
 ### Integrated Playground Grid RTL and locale — 2026-10-27
 
 The shared specimen canvas now scrolls vertically; the Grid demonstration uses
