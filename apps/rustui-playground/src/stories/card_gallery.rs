@@ -104,27 +104,35 @@ impl View for CardGallery {
             .spacing(10.0)
             .child(LocalizedText("lab-card-title"))
             .child(
-                HStack::new()
-                    .spacing(8.0)
+                VStack::new()
+                    .spacing(4.0)
                     .child(
-                        Button("Default / custom", self.action(Self::toggle_custom))
-                            .id("card-custom")
-                            .localized_label("lab-card-custom"),
+                        HStack::new()
+                            .spacing(8.0)
+                            .child(
+                                Button("Default / custom", self.action(Self::toggle_custom))
+                                    .id("card-custom")
+                                    .localized_label("lab-card-custom"),
+                            )
+                            .child(
+                                Button("Toggle border", self.action(Self::toggle_border))
+                                    .id("card-border")
+                                    .localized_label("lab-card-border"),
+                            ),
                     )
                     .child(
-                        Button("Toggle border", self.action(Self::toggle_border))
-                            .id("card-border")
-                            .localized_label("lab-card-border"),
-                    )
-                    .child(
-                        Button("Omit / restore first", self.action(Self::toggle_a))
-                            .id("card-mount")
-                            .localized_label("lab-card-mount"),
-                    )
-                    .child(
-                        Button("Update parent", self.action(Self::update_parent))
-                            .id("card-parent")
-                            .localized_label("lab-card-parent"),
+                        HStack::new()
+                            .spacing(8.0)
+                            .child(
+                                Button("Omit / restore first", self.action(Self::toggle_a))
+                                    .id("card-mount")
+                                    .localized_label("lab-card-mount"),
+                            )
+                            .child(
+                                Button("Update parent", self.action(Self::update_parent))
+                                    .id("card-parent")
+                                    .localized_label("lab-card-parent"),
+                            ),
                     ),
             )
             .child(
