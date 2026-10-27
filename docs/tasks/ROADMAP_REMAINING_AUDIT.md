@@ -9,6 +9,9 @@ Reverify live HEAD and dirty state before subsequent integration; preserve unrel
 
 ## Current release evidence — 2026-10-27
 
+- **Native binary path provenance:** `RUSTUI_REMAP_BUILD_PATHS=1` release rebuild completed on `4058f18d`. The 40 MiB executable contains zero occurrences of this writing worktree and target directory. It still contains nine absolute Cargo registry paths: `gimli 0.34.0`, `addr2line 0.27.1`, `rustc-demangle 0.1.28`, and `hashbrown 0.17.1`. The build log compiled different `gimli 0.32.3` and `addr2line 0.25.1` versions, so these remaining strings are consistent with the prebuilt Headstart toolchain; the new Cargo-home remap cannot erase them. `scripts/verify-release.sh` now checks for the exact checkout path in the native executable after release build. Focused Headstart tests passed 2/2, shell syntax and diff checks passed. This is source/build provenance evidence, not native GUI acceptance or a fully path-free binary.
+- **Compiled CI retry needed:** run `40444741373` on `4058f18d` passed `source`; its Web job stopped before compilation because the temporary runner lacked `RUSTUI_HEADSTART_ROOT`. Recreate the ephemeral runner with approved root `/Users/Abium/Developer/rustui/target/headstart/wasm-root`, run the workflow on the next exact commit, and verify credential removal.
+
 - **Web implementation:** commit `a2ec04b0` packages the Playground image and
   link fixtures, uses browser asset URLs, remaps build paths, rejects checkout
   paths embedded in generated JS/Wasm, and gives path dependencies stable notice

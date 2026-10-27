@@ -118,9 +118,11 @@ class CargoHeadstartTests(unittest.TestCase):
             # one encoded argument for paths containing spaces.
             env["RUSTUI_REMAP_BUILD_PATHS"] = "1"
             env["CARGO_TARGET_DIR"] = str(base / "repro target with spaces")
+            env["CARGO_HOME"] = str(base / "cargo home with spaces")
             mappings = [
                 "--remap-path-prefix=" + str(ROOT.resolve()) + "=/rustui/src",
                 "--remap-path-prefix=" + str(Path(env["CARGO_TARGET_DIR"]).resolve()) + "=/rustui/build",
+                "--remap-path-prefix=" + str(Path(env["CARGO_HOME"]).resolve()) + "=/rustui/cargo",
             ]
             for encoded, raw, expected in (
                 ("--cfg\x1fencoded_caller", "--cfg ignored_raw", ["--cfg", "encoded_caller"]),

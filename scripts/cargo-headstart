@@ -111,8 +111,10 @@ if "CARGO_ENCODED_RUSTFLAGS" in os.environ:
 else:
     # Match the whitespace splitting that Cargo applies to unencoded flags.
     flags = os.environ.get("RUSTFLAGS", "").split()
+cargo_home = Path(os.environ.get("CARGO_HOME") or Path.home() / ".cargo").expanduser()
 flags += ["--remap-path-prefix=" + str(Path(sys.argv[1]).resolve()) + "=/rustui/src",
-          "--remap-path-prefix=" + str(Path(sys.argv[2]).resolve()) + "=/rustui/build"]
+          "--remap-path-prefix=" + str(Path(sys.argv[2]).resolve()) + "=/rustui/build",
+          "--remap-path-prefix=" + str(cargo_home.resolve()) + "=/rustui/cargo"]
 print("\x1f".join(flags))
 ' "$rustui_repro_root" "$CARGO_TARGET_DIR")"
         export CARGO_ENCODED_RUSTFLAGS
