@@ -212,13 +212,15 @@ impl View for StoryCanvas {
                     "alpha",
                     TextEditor("Alpha row", self.keyed_collection.alpha.clone())
                         .id("row-editor")
-                        .height(80.0),
+                        .height(80.0)
+                        .localized_placeholder("lab-layout-alpha-row"),
                 );
                 let beta = Keyed(
                     "beta",
                     TextEditor("Beta row", self.keyed_collection.beta.clone())
                         .id("row-editor")
-                        .height(80.0),
+                        .height(80.0)
+                        .localized_placeholder("lab-layout-beta-row"),
                 );
                 let beta = self.keyed_collection.beta_present.then_some(beta);
                 let rows = if self.keyed_collection.reversed {
@@ -289,26 +291,25 @@ impl View for StoryCanvas {
                     let child_stack = VStack::new().children(children);
 
                     VStack::new()
-                    .child(Text("Outer VStack"))
-                    .child(
-                        HStack::new()
-                            .child(Text("HStack item"))
-                            .child(
-                                Button("Layout action", self.increment.clone())
-                                    .id("story-layout-action")
-                                    .button_style(self.button.style),
-                            )
-                            .spacing(8.0)
-                            .alignment(rustui::prelude::VerticalAlignment::Center),
-                    )
-                    .child(Text(
-                        "Reorder keeps local cursor/undo by key; removal resets it; text stays bound",
-                    ))
-                    .children(rows)
-                    .child(Text("Retained child components: change parent titles without resetting counters or notes"))
-                    .child(Environment(self.keyed_collection.display_mode, child_stack))
-                    .spacing(8.0)
-                    .alignment(rustui::prelude::HorizontalAlignment::Start)
+                        .child(LocalizedText("lab-layout-outer-stack"))
+                        .child(
+                            HStack::new()
+                                .child(LocalizedText("lab-layout-row-item"))
+                                .child(
+                                    Button("Layout action", self.increment.clone())
+                                        .id("story-layout-action")
+                                        .button_style(self.button.style)
+                                        .localized_label("lab-layout-action"),
+                                )
+                                .spacing(8.0)
+                                .alignment(rustui::prelude::VerticalAlignment::Center),
+                        )
+                        .child(LocalizedText("lab-layout-keyed-retention-note"))
+                        .children(rows)
+                        .child(LocalizedText("lab-layout-child-retention-note"))
+                        .child(Environment(self.keyed_collection.display_mode, child_stack))
+                        .spacing(8.0)
+                        .alignment(rustui::prelude::HorizontalAlignment::Start)
                 }
             }
             StoryId::Input => VStack::new()
