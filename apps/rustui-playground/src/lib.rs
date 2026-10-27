@@ -19,8 +19,6 @@ use std::{
 };
 use stories::{STORIES, StoryHost, StoryId, filtered_story_indices};
 
-const REPOSITORY_ROOT: &str = concat!(env!("CARGO_MANIFEST_DIR"), "/../..");
-
 #[derive(Clone, PartialEq)]
 enum PlaygroundStatus {
     Ready,
@@ -517,7 +515,71 @@ fn reference_path(source: &str) -> PathBuf {
 
 fn reference_root() -> PathBuf {
     let executable = std::env::current_exe().ok();
-    reference_root_for_executable(executable.as_deref(), Path::new(REPOSITORY_ROOT))
+    let repository_root = checkout_root_for_executable(executable.as_deref()).unwrap_or_default();
+    reference_root_for_executable(executable.as_deref(), &repository_root)
+}
+
+fn checkout_root_for_executable(executable: Option<&Path>) -> Option<PathBuf> {
+    let starts = std::env::current_dir()
+        .ok()
+        .into_iter()
+        .chain(executable.and_then(Path::parent).map(Path::to_path_buf));
+    for start in starts {
+        for ancestor in start.ancestors() {
+            if ancestor.join("apps/rustui-playground/Cargo.toml").is_file()
+                && ancestor.join("assets/link-fixture.html").is_file()
+            {
+                return Some(ancestor.to_path_buf());
+            }
+        }
+    }
+    None
+}
+
+#[cfg(not(target_family = "wasm"))]
+pub(crate) fn playground_resource_path(relative: &str) -> PathBuf {
+    let executable = std::env::current_exe().ok();
+    let checkout_root = checkout_root_for_executable(executable.as_deref());
+    resource_path_from_executable(executable.as_deref(), checkout_root.as_deref(), relative)
+}
+
+#[cfg(not(target_family = "wasm"))]
+fn resource_path_from_executable(
+    executable: Option<&Path>,
+    checkout_root: Option<&Path>,
+    relative: &str,
+) -> PathBuf {
+    let packaged = executable
+        .and_then(Path::parent)
+        .map(|directory| directory.join("../Resources").join(relative));
+    if let Some(path) = packaged.as_ref().filter(|path| path.is_file()) {
+        return path.canonicalize().unwrap_or_else(|_| path.clone());
+    }
+    checkout_root
+        .map(|root| root.join(relative))
+        .or(packaged)
+        .unwrap_or_else(|| PathBuf::from(relative))
+}
+
+#[cfg(not(target_family = "wasm"))]
+pub(crate) fn file_url_for_resource(relative: &str) -> String {
+    let path = playground_resource_path(relative);
+    let absolute = path.canonicalize().unwrap_or_else(|_| {
+        if path.is_absolute() {
+            path
+        } else {
+            std::env::current_dir().unwrap_or_default().join(path)
+        }
+    });
+    let mut url = String::from("file://");
+    for byte in absolute.to_string_lossy().as_bytes() {
+        if byte.is_ascii_alphanumeric() || b"/-._~".contains(byte) {
+            url.push(*byte as char);
+        } else {
+            url.push_str(&format!("%{byte:02X}"));
+        }
+    }
+    url
 }
 
 fn reference_root_for_executable(executable: Option<&Path>, repository_root: &Path) -> PathBuf {
@@ -577,10 +639,7 @@ pub fn run() {
     let assets = rustui::with_embedded_asset(
         assets,
         "assets/playground-sample.png",
-        include_bytes!(concat!(
-            env!("CARGO_MANIFEST_DIR"),
-            "/../../assets/playground-sample.png"
-        )),
+        include_bytes!("../../../assets/playground-sample.png"),
     );
 
     let app = RustUI::new()
@@ -753,6 +812,47 @@ mod tests {
         fn drop(&mut self) {
             let _ = std::fs::remove_dir_all(&self.0);
         }
+    }
+
+    #[cfg(not(target_family = "wasm"))]
+    #[test]
+    fn packaged_resources_take_precedence_over_checkout_resources() {
+        let temporary = TempDirectory::new();
+        let executable = temporary
+            .0
+            .join("RustUI Playground.app/Contents/MacOS/rustui-playground");
+        let bundled = temporary
+            .0
+            .join("RustUI Playground.app/Contents/Resources/assets/link-fixture.html");
+        let checkout_root = temporary.0.join("checkout");
+        let checkout = checkout_root.join("assets/link-fixture.html");
+        std::fs::create_dir_all(executable.parent().expect("executable parent"))
+            .expect("create bundle executable directory");
+        std::fs::create_dir_all(bundled.parent().expect("bundle parent"))
+            .expect("create bundle resources");
+        std::fs::create_dir_all(checkout.parent().expect("checkout parent"))
+            .expect("create checkout resources");
+        std::fs::write(&bundled, "bundle").expect("write bundle fixture");
+        std::fs::write(&checkout, "checkout").expect("write checkout fixture");
+
+        assert_eq!(
+            resource_path_from_executable(
+                Some(&executable),
+                Some(&checkout_root),
+                "assets/link-fixture.html"
+            ),
+            bundled.canonicalize().expect("canonical bundled fixture")
+        );
+
+        std::fs::remove_file(&bundled).expect("remove bundle fixture");
+        assert_eq!(
+            resource_path_from_executable(
+                Some(&executable),
+                Some(&checkout_root),
+                "assets/link-fixture.html"
+            ),
+            checkout
+        );
     }
 
     #[test]

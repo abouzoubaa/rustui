@@ -40,8 +40,20 @@ if [ ! -d "$references_dir" ]; then
     printf '%s\n' "missing SVG references directory: $references_dir" >&2
     exit 1
 fi
+for resource in assets/link-fixture.html assets/link-disabled-fixture.html \
+    assets/playground-sample.png themes/macos27.json; do
+    if [ ! -f "$repository_root/$resource" ]; then
+        printf '%s\n' "missing Playground resource: $repository_root/$resource" >&2
+        exit 1
+    fi
+done
 
 mkdir -p "$bundle/Contents/MacOS" "$resources"
+mkdir -p "$resources/assets" "$resources/themes"
+cp "$repository_root/assets/link-fixture.html" "$resources/assets/link-fixture.html"
+cp "$repository_root/assets/link-disabled-fixture.html" "$resources/assets/link-disabled-fixture.html"
+cp "$repository_root/assets/playground-sample.png" "$resources/assets/playground-sample.png"
+cp "$repository_root/themes/macos27.json" "$resources/themes/macos27.json"
 mkdir -p "$resources/licenses/icons"
 cp "$repository_root/vendor/gpui-kit-assets-0.7.3/LICENSE-LUCIDE" \
     "$resources/licenses/icons/LICENSE-LUCIDE"

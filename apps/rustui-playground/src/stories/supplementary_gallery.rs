@@ -1,22 +1,16 @@
 //! Accessible supplementary components and observable link activation.
 use rustui::prelude::*;
 
-#[cfg(target_family = "wasm")]
-const LINK_FIXTURE_URL: &str = "./assets/link-fixture.html";
-#[cfg(not(target_family = "wasm"))]
-const LINK_FIXTURE_URL: &str = concat!(
-    "file://",
-    env!("CARGO_MANIFEST_DIR"),
-    "/../../assets/link-fixture.html"
-);
-#[cfg(target_family = "wasm")]
-const DISABLED_LINK_FIXTURE_URL: &str = "./assets/link-disabled-fixture.html";
-#[cfg(not(target_family = "wasm"))]
-const DISABLED_LINK_FIXTURE_URL: &str = concat!(
-    "file://",
-    env!("CARGO_MANIFEST_DIR"),
-    "/../../assets/link-disabled-fixture.html"
-);
+fn fixture_url(name: &str) -> String {
+    #[cfg(target_family = "wasm")]
+    {
+        format!("./assets/{name}")
+    }
+    #[cfg(not(target_family = "wasm"))]
+    {
+        crate::file_url_for_resource(&format!("assets/{name}"))
+    }
+}
 
 pub fn demo() -> impl View {
     Component("supplementary-gallery", SupplementaryGallery::default)
@@ -94,7 +88,7 @@ impl View for SupplementaryGallery {
                     .id("gallery-pointer-cursor-keyboard"),
                 )
                 .child(
-                    Link("Open link fixture", LINK_FIXTURE_URL)
+                    Link("Open link fixture", fixture_url("link-fixture.html"))
                         .id("gallery-enabled-link")
                         .accessibility_label(format!(
                             "Open link fixture, activated {} times",
@@ -104,11 +98,14 @@ impl View for SupplementaryGallery {
                         .on_activate(self.action(Self::activate_link)),
                 )
                 .child(
-                    Link("Disabled link fixture", DISABLED_LINK_FIXTURE_URL)
-                        .id("gallery-disabled-link")
-                        .disabled(true)
-                        .accessibility_label("Disabled link fixture")
-                        .on_activate(self.action(Self::activate_link)),
+                    Link(
+                        "Disabled link fixture",
+                        fixture_url("link-disabled-fixture.html"),
+                    )
+                    .id("gallery-disabled-link")
+                    .disabled(true)
+                    .accessibility_label("Disabled link fixture")
+                    .on_activate(self.action(Self::activate_link)),
                 )
                 .child(Text(format!(
                     "Link activations: {}",

@@ -2427,10 +2427,9 @@ impl Default for CompiledPreviewGallery {
                     #[cfg(target_family = "wasm")]
                     let image = Image("assets/playground-sample.png");
                     #[cfg(not(target_family = "wasm"))]
-                    let image = Image(
-                        std::path::PathBuf::from(env!("CARGO_MANIFEST_DIR"))
-                            .join("../../assets/playground-sample.png"),
-                    );
+                    let image = Image(crate::playground_resource_path(
+                        "assets/playground-sample.png",
+                    ));
                     AnyView::new(
                         image
                             .size(128.0, 96.0)

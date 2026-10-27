@@ -1,8 +1,6 @@
 //! Read-only preview of the public theme-document export boundary.
 
 #[cfg(not(target_family = "wasm"))]
-use std::path::Path;
-
 #[cfg(not(target_family = "wasm"))]
 use rustui::theme::load_theme;
 #[cfg(target_family = "wasm")]
@@ -48,7 +46,7 @@ fn inspect_theme() -> Result<(String, String), String> {
     let document = parse_theme(include_str!("../../../../themes/macos27.json"))
         .map_err(|error| error.to_string())?;
     #[cfg(not(target_family = "wasm"))]
-    let path = Path::new(env!("CARGO_MANIFEST_DIR")).join("../../themes/macos27.json");
+    let path = crate::playground_resource_path("themes/macos27.json");
     #[cfg(not(target_family = "wasm"))]
     let document = load_theme(path).map_err(|error| error.to_string())?;
     let json = serialize_theme(&document).map_err(|error| error.to_string())?;

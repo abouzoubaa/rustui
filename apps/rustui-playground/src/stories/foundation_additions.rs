@@ -113,11 +113,7 @@ impl FoundationAdditions {
         #[cfg(not(target_family = "wasm"))]
         let path = env::var_os(THEME_PATH_ENV)
             .map(PathBuf::from)
-            .unwrap_or_else(|| {
-                Path::new(env!("CARGO_MANIFEST_DIR"))
-                    .join("../..")
-                    .join("themes/macos27.json")
-            });
+            .unwrap_or_else(|| crate::playground_resource_path("themes/macos27.json"));
         let (theme_file, result) = match ThemeFile::open(&path) {
             Ok(theme_file) => (
                 Some(theme_file),

@@ -42,6 +42,10 @@ RUSTUI_PLAYGROUND_REFERENCES_DIR="$references_source" \
 
 test -x "$bundle/Contents/MacOS/rustui-playground"
 test -f "$bundle/Contents/Info.plist"
+for resource in assets/link-fixture.html assets/link-disabled-fixture.html \
+    assets/playground-sample.png themes/macos27.json; do
+    cmp "$repository_root/$resource" "$bundle/Contents/Resources/$resource"
+done
 cmp "$repository_root/vendor/gpui-kit-assets-0.7.3/LICENSE-LUCIDE" \
     "$bundle/Contents/Resources/licenses/icons/LICENSE-LUCIDE"
 cmp "$notice_source/notices/LICENSE" \
