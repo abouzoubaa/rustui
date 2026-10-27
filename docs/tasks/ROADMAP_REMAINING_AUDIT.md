@@ -44,6 +44,12 @@ Reverify live HEAD and dirty state before subsequent integration; preserve unrel
   were closed; the pre-existing tab on port 8766 was preserved. This does not
   establish cross-browser, narrow-viewport, IME, accessibility, or performance
   acceptance.
+- **Second browser engine, bounded:** The same manifest-bound bundle also loaded
+  in Safari 27.0 on macOS 27. In the tested wide Safari window, Stacks switched
+  to French and Arabic; the new labels and notes were visible, with Arabic RTL
+  placement. The temporary Safari tab was closed while the user's other 15
+  tabs remained open. This does not verify older Safari/WebKit versions or
+  narrower Safari windows.
 - **Release status:** The provisional inventory still has 37 requirements;
   project-wide coding and acceptance completion counts have not been recomputed.
   Five native and three Web dependency-notice gaps, the declared macOS 13
