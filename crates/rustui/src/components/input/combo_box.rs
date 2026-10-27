@@ -66,6 +66,7 @@ pub struct ComboBoxView {
     disabled: bool,
     search_placeholder: Option<SharedString>,
     search_placeholder_message_id: Option<SharedString>,
+    width: Option<f32>,
     menu_width: Option<f32>,
     accessibility_label: Option<ComboBoxAccessibilityLabel>,
     appearance: bool,
@@ -86,6 +87,7 @@ impl ComboBoxView {
             disabled: false,
             search_placeholder: None,
             search_placeholder_message_id: None,
+            width: None,
             menu_width: None,
             accessibility_label: None,
             appearance: true,
@@ -120,6 +122,16 @@ impl ComboBoxView {
             "ComboBox search placeholder localization key must not be blank"
         );
         self.search_placeholder_message_id = Some(id);
+        self
+    }
+
+    /// Sets the trigger width in logical pixels.
+    pub fn width(mut self, width: f32) -> Self {
+        assert!(
+            width.is_finite() && width > 0.0,
+            "ComboBox width must be positive and finite"
+        );
+        self.width = Some(width);
         self
     }
 
@@ -337,6 +349,9 @@ impl View for ComboBoxView {
             .accessibility_label(accessible_name)
             .disabled(self.disabled)
             .appearance(self.appearance);
+        if let Some(width) = self.width {
+            combo_box = combo_box.w(px(width));
+        }
         if let Some(placeholder) =
             self.resolved_search_placeholder(|id| context.localized_message(id))
         {
@@ -480,12 +495,19 @@ mod tests {
     }
 
     #[test]
-    fn menu_width_is_explicit_and_validated() {
+    fn trigger_and_menu_widths_are_explicit_and_validated() {
+        let combo_box = ComboBox("Rendering engine", binding(), ["GPUI"])
+            .width(220.0)
+            .menu_width(220.0);
         assert_eq!(
-            ComboBox("Rendering engine", binding(), ["GPUI"])
-                .menu_width(220.0)
-                .menu_width,
-            Some(220.0)
+            (combo_box.width, combo_box.menu_width),
+            (Some(220.0), Some(220.0))
+        );
+        assert!(
+            std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| {
+                ComboBox("Rendering engine", binding(), ["GPUI"]).width(0.0)
+            }))
+            .is_err()
         );
         assert!(
             std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| {

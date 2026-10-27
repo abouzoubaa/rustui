@@ -409,6 +409,7 @@ impl View for StoryCanvas {
                     .localized_placeholder("lab-input-combo-placeholder")
                     .search_placeholder("Find an engine")
                     .localized_search_placeholder("lab-input-combo-search")
+                    .width(220.0)
                     .menu_width(220.0),
                 )
                 .child(
