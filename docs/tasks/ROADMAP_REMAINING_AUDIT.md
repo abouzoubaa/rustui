@@ -74,7 +74,7 @@ Reverify live HEAD and dirty state before subsequent integration; preserve unrel
   first-card removal/restoration, and locale switches. The Arabic screenshot
   showed RTL placement without visible clipping at 1280×720. Evidence:
   `target/headstart/evidence/card-story-web-09ffc399-20261027.json` and
-  `card-story-ar-09ffc399-20261027.png`. This is bounded Web acceptance;
+  `card-story-ar-09ffc399-20261027.jpg`. This is bounded Web acceptance;
   browser-version coverage remains open.
 - **Native, bounded:** `./scripts/verify-release.sh macos` on `09ffc399` passed
   1,358 tests across 40 groups and packaged the executable with five unresolved
@@ -82,7 +82,7 @@ Reverify live HEAD and dirty state before subsequent integration; preserve unrel
   parent update, and retained `Bonjour` and `مرحبا` values after first-card
   removal/restoration. Arabic `typeText` sent no characters; focused paste
   entered `مرحبا`. Evidence: `target/headstart/evidence/card-story-native-09ffc399-20261027.json`
-  and `card-story-native-ar-09ffc399-20261027.png`. The app quit, its exact
+  and `card-story-native-ar-09ffc399-20261027.jpg`. The app quit, its exact
   bundle and standalone executable were removed, and the GUI slot was released.
   Real OS Arabic keyboard/IME, screen reader, other macOS versions, and wider
   workload acceptance remain open.
