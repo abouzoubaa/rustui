@@ -24,7 +24,7 @@ SOURCE_INPUTS = (
     "scripts/package_release_notices.py",
 )
 SOURCE_ROOTS = (
-    "crates", "apps", "themes", "locales",
+    "assets", "crates", "apps", "themes", "locales",
     "vendor/gpui-pre-0.3.9", "vendor/gpui-base-0.7.3",
     "vendor/gpui-component-0.7.3", "vendor/gpui-pre-web-0.3.9",
     "vendor/gpui-kit-assets-0.7.3",

@@ -1,8 +1,9 @@
 //! Playground examples for the current theme reload and layout primitives.
 
+#[cfg(not(target_family = "wasm"))]
+use std::env;
 use std::{
     cell::RefCell,
-    env,
     future::Future,
     path::{Path, PathBuf},
     pin::Pin,
@@ -16,6 +17,7 @@ use rustui::{
 };
 
 const RELOAD_INTERVAL: Duration = Duration::from_millis(350);
+#[cfg(not(target_family = "wasm"))]
 const THEME_PATH_ENV: &str = "RUSTUI_THEME_RELOAD_PATH";
 type WatchTask = Pin<Box<dyn Future<Output = ()>>>;
 
@@ -106,6 +108,9 @@ impl ReloadState {
 
 impl FoundationAdditions {
     fn new() -> Self {
+        #[cfg(target_family = "wasm")]
+        let path = PathBuf::from("themes/macos27.json");
+        #[cfg(not(target_family = "wasm"))]
         let path = env::var_os(THEME_PATH_ENV)
             .map(PathBuf::from)
             .unwrap_or_else(|| {

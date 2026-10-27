@@ -80,6 +80,20 @@ class CollectorTests(unittest.TestCase):
         self.args.supplement_manifest, self.args.supplement_root = manifest, root
         return record
 
+    def test_notice_directory_is_stable_across_checkout_paths(self):
+        package = self.packages[0]
+        other_root = self.base / "other-checkout"
+        other_root.mkdir()
+        other_manifest = other_root / "Cargo.toml"
+        other_manifest.write_bytes((self.repo / "Cargo.toml").read_bytes())
+        first = collector.package_directory(
+            "path+file:///first#rustui@1.0.0", package, self.repo / "Cargo.toml", self.repo
+        )
+        second = collector.package_directory(
+            "path+file:///second#rustui@1.0.0", package, other_manifest, other_root
+        )
+        self.assertEqual(first, second)
+
     def test_collects_only_observed_packages_and_verbatim_notice_bytes(self):
         report = collector.collect(self.args)
         self.assertEqual(report["status"], "notice_files_captured")

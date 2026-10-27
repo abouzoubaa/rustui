@@ -4,6 +4,7 @@ set -euo pipefail
 REPO_ROOT="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")/.." && pwd)"
 export CARGO_TARGET_DIR="${CARGO_TARGET_DIR:-$REPO_ROOT/target/headstart/x1a-wasm}"
 export RUSTUI_HEADSTART_ROOT="${RUSTUI_HEADSTART_ROOT:-$REPO_ROOT/target/headstart/wasm-root}"
+export RUSTUI_REMAP_BUILD_PATHS="${RUSTUI_REMAP_BUILD_PATHS:-1}"
 
 if [ -x "$REPO_ROOT/target/headstart/tools/bin/wasm-bindgen" ]; then
   export PATH="$REPO_ROOT/target/headstart/tools/bin:$PATH"
@@ -102,6 +103,15 @@ for artifact in rustui_playground.js rustui_playground_bg.wasm; do
     exit 1
   fi
 done
+python3 - "$STAGING_DIR" "$REPO_ROOT" <<'PY'
+from pathlib import Path
+import sys
+
+stage, root = Path(sys.argv[1]), sys.argv[2].encode()
+for name in ("rustui_playground.js", "rustui_playground_bg.wasm"):
+    if root in (stage / name).read_bytes():
+        raise SystemExit(f"{name} embeds the checkout path; preserving existing Web bundle")
+PY
 cp "$REPO_ROOT/apps/rustui-playground/web/index.html" "$STAGING_DIR/index.html"
 for asset in reference-host.html reference-host.js reference-client.js; do
     cp "$REPO_ROOT/apps/rustui-playground/web/$asset" "$STAGING_DIR/$asset"
@@ -257,6 +267,10 @@ if ! awk -v module_init="$MODULE_INIT" '
 fi
 mkdir "$STAGING_DIR/references"
 cp -R "$REPO_ROOT/apps/rustui-playground/references/." "$STAGING_DIR/references/"
+mkdir "$STAGING_DIR/assets"
+for asset in playground-sample.png link-fixture.html link-disabled-fixture.html; do
+  cp "$REPO_ROOT/assets/$asset" "$STAGING_DIR/assets/$asset"
+done
 mkdir -p "$STAGING_DIR/licenses/fonts"
 cp "$REPO_ROOT"/crates/rustui/assets/fonts/*-LICENSE "$STAGING_DIR/licenses/fonts/"
 mkdir -p "$STAGING_DIR/licenses/icons"

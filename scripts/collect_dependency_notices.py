@@ -30,6 +30,19 @@ def sha256(path: Path) -> str:
     return h.hexdigest()
 
 
+def package_directory(pid: str, pkg: dict, manifest_path: Path, repo_root: Path) -> str:
+    if pkg.get("source") is None:
+        try:
+            location = manifest_path.relative_to(repo_root).as_posix()
+        except ValueError:
+            location = f"external:{sha256(manifest_path)}"
+        identity = f"path:{location}#{pkg['name']}@{pkg['version']}"
+    else:
+        identity = pid
+    digest = hashlib.sha256(identity.encode()).hexdigest()[:12]
+    return f"{pkg['name']}-{pkg['version']}-{digest}"
+
+
 def inside(path: Path, root: Path) -> bool:
     try:
         path.relative_to(root)
@@ -279,6 +292,7 @@ def collect(args) -> dict:
     out.parent.mkdir(parents=True, exist_ok=True)
     stage = Path(tempfile.mkdtemp(prefix=f".{out.name}.next-", dir=out.parent))
     entries, gaps = [], []
+    used_package_dirs = set()
     try:
         (stage / "notices").mkdir()
         for pid, pkg, manifest_path, source_dir, sources in prepared:
@@ -286,7 +300,10 @@ def collect(args) -> dict:
                 gaps.append({"package_id": pid, "name": pkg["name"], "version": pkg["version"],
                              "reason": "no captured LICENSE/COPYING/NOTICE files"})
             package_entries = []
-            package_dir = f'{pkg["name"]}-{pkg["version"]}-{hashlib.sha256(pid.encode()).hexdigest()[:12]}'
+            package_dir = package_directory(pid, pkg, manifest_path, root)
+            if package_dir in used_package_dirs:
+                raise ValueError(f"duplicate portable notice directory: {package_dir}")
+            used_package_dirs.add(package_dir)
             for number, (source, provenance) in enumerate(sources, 1):
                 digest = sha256(source)
                 relative = Path("notices") / package_dir / f"{number:02d}-{source.name}"

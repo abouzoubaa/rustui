@@ -2424,10 +2424,15 @@ impl Default for CompiledPreviewGallery {
                         "none" => ImageFit::None,
                         _ => unreachable!("Image fit is schema-validated"),
                     };
-                    let source = std::path::PathBuf::from(env!("CARGO_MANIFEST_DIR"))
-                        .join("../../assets/playground-sample.png");
+                    #[cfg(target_family = "wasm")]
+                    let image = Image("assets/playground-sample.png");
+                    #[cfg(not(target_family = "wasm"))]
+                    let image = Image(
+                        std::path::PathBuf::from(env!("CARGO_MANIFEST_DIR"))
+                            .join("../../assets/playground-sample.png"),
+                    );
                     AnyView::new(
-                        Image(source)
+                        image
                             .size(128.0, 96.0)
                             .fit(fit)
                             .id(format!(

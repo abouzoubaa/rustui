@@ -13,6 +13,7 @@ mkdir -p \
     "$fixture/scripts" \
     "$fixture/apps/rustui-playground/web" \
     "$fixture/apps/rustui-playground/references" \
+    "$fixture/assets" \
     "$fixture/crates/rustui/assets/fonts" \
     "$fixture/vendor/gpui-kit-assets-0.7.3" \
     "$fixture/docs/release/dependency-notices" \
@@ -32,6 +33,9 @@ for asset in reference-host.html reference-host.js reference-client.js; do
 done
 cp -R "$repository_root/apps/rustui-playground/references/." \
     "$fixture/apps/rustui-playground/references/"
+for asset in playground-sample.png link-fixture.html link-disabled-fixture.html; do
+    cp "$repository_root/assets/$asset" "$fixture/assets/$asset"
+done
 cp "$repository_root"/crates/rustui/assets/fonts/*-LICENSE \
     "$fixture/crates/rustui/assets/fonts/"
 cp "$repository_root/vendor/gpui-kit-assets-0.7.3/LICENSE-LUCIDE" \
@@ -92,6 +96,9 @@ mkdir -p "$out_dir"
 printf '%s\n' 'export default async function init() {}' > "$out_dir/rustui_playground.js"
 if [ "${OMIT_WASM_BINDGEN_ARTIFACT:-0}" != 1 ]; then
     printf 'fixture wasm' > "$out_dir/rustui_playground_bg.wasm"
+    if [ "${EMBED_CHECKOUT_PATH:-0}" = 1 ]; then
+        (CDPATH= cd -- "$FIXTURE_ROOT" && pwd -P) >> "$out_dir/rustui_playground_bg.wasm"
+    fi
 fi
 EOF
 cat > "$fake_bin/rust-lld" <<'EOF'
@@ -115,6 +122,9 @@ done
 test -f "$bundle/rustui_playground.js"
 test -f "$bundle/rustui_playground_bg.wasm"
 test -f "$bundle/references/Form.svg"
+for asset in playground-sample.png link-fixture.html link-disabled-fixture.html; do
+    cmp "$fixture/assets/$asset" "$bundle/assets/$asset"
+done
 cmp "$repository_root/vendor/gpui-kit-assets-0.7.3/LICENSE-LUCIDE" \
     "$bundle/licenses/icons/LICENSE-LUCIDE"
 python3 - "$bundle/bundle-manifest.json" "$bundle" <<'PY_MANIFEST'
@@ -124,7 +134,7 @@ bundle = Path(sys.argv[2])
 manifest = json.loads(Path(sys.argv[1]).read_text())
 assert len(manifest["source"]["sha256"]) == 64
 files = {item["path"]: item["sha256"] for item in manifest["bundle"]["files"]}
-for name in ("index.html", "rustui_playground.js", "rustui_playground_bg.wasm", "reference-host.html", "reference-host.js", "reference-client.js"):
+for name in ("index.html", "rustui_playground.js", "rustui_playground_bg.wasm", "reference-host.html", "reference-host.js", "reference-client.js", "assets/playground-sample.png", "assets/link-fixture.html", "assets/link-disabled-fixture.html"):
     assert hashlib.sha256((bundle / name).read_bytes()).hexdigest() == files[name]
 notice_report_path = bundle / "licenses/release/dependency-notices/report.json"
 notice_report = json.loads(notice_report_path.read_text())
@@ -175,6 +185,16 @@ PATH="$fake_bin:$PATH" \
     RUSTUI_HEADSTART_ROOT="$temporary_root/unused-headstart" \
         "$fixture/scripts/build-playground-web.sh" >/dev/null
 printf '%s\n' 'existing bundle sentinel' >"$bundle/preserved-on-failure.txt"
+
+if PATH="$fake_bin:$PATH" CARGO_TARGET_DIR="$temporary_root/cargo-target" \
+    RUSTUI_HEADSTART_ROOT="$temporary_root/unused-headstart" \
+    EMBED_CHECKOUT_PATH=1 "$fixture/scripts/build-playground-web.sh" \
+    >"$temporary_root/embedded-path.out" 2>&1; then
+    printf '%s\n' 'packager accepted an embedded checkout path.' >&2
+    exit 1
+fi
+grep -Fq 'embeds the checkout path' "$temporary_root/embedded-path.out"
+test "$(cat "$bundle/preserved-on-failure.txt")" = 'existing bundle sentinel'
 
 cat > "$fixture/apps/rustui-playground/web/index.html" <<'EOF'
 <!doctype html><html><body><script data-type = 'module'>

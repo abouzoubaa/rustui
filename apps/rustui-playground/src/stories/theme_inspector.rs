@@ -1,10 +1,15 @@
 //! Read-only preview of the public theme-document export boundary.
 
+#[cfg(not(target_family = "wasm"))]
 use std::path::Path;
 
+#[cfg(not(target_family = "wasm"))]
+use rustui::theme::load_theme;
+#[cfg(target_family = "wasm")]
+use rustui::theme::parse_theme;
 use rustui::{
     prelude::*,
-    theme::{AppearanceMode, assess_theme_coverage, load_theme, resolve_button, serialize_theme},
+    theme::{AppearanceMode, assess_theme_coverage, resolve_button, serialize_theme},
 };
 
 pub fn demo() -> impl View {
@@ -39,7 +44,12 @@ impl ThemeInspector {
 }
 
 fn inspect_theme() -> Result<(String, String), String> {
+    #[cfg(target_family = "wasm")]
+    let document = parse_theme(include_str!("../../../../themes/macos27.json"))
+        .map_err(|error| error.to_string())?;
+    #[cfg(not(target_family = "wasm"))]
     let path = Path::new(env!("CARGO_MANIFEST_DIR")).join("../../themes/macos27.json");
+    #[cfg(not(target_family = "wasm"))]
     let document = load_theme(path).map_err(|error| error.to_string())?;
     let json = serialize_theme(&document).map_err(|error| error.to_string())?;
     let mut summary = format!(
