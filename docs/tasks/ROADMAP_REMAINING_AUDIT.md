@@ -24,9 +24,21 @@ Grid remained left-aligned; Arabic Grid moved to the right, reversed 01–03 and
 `target/headstart/evidence/release-web-grid-rtl-locale-20261027.log`.
 The attempted shared-canvas alignment wrapper clipped long Arabic Stacks text
 and was reverted before this build. Compiled-preview RTL text/wrapping, broader
-native and browser acceptance, and release notices remain open. In the same
-Arabic Web tab, scrolling to compiled preview still showed specimen button
-labels cut at the canvas's left edge; the source of that overflow is unconfirmed.
+native and browser acceptance, and release notices remain open. The same
+Arabic Web tab initially showed compiled-preview specimen buttons cut at the
+canvas's left edge. A four-button horizontal action row measured 778 pixels,
+wider than the approximately 700-pixel canvas. Replacing that row with a
+vertical RustUI stack reduced its intrinsic width without changing actions.
+The final macOS Playground check and Web release build exited 0; the latter's
+manifest binds compiled-preview source SHA-256
+`b4457d55c51c7d113a8089b59164a67182955e7edd948f27c036d9804be2f5f9`
+and records 770 packaged files. In the current Arabic browser tab, preview
+specimen buttons and all four actions begin at x=329 inside the canvas, and
+their labels are fully visible after scrolling. Logs:
+`target/headstart/evidence/compiled-preview-rtl-final-macos-check-20261027.log`
+and `target/headstart/evidence/release-web-compiled-preview-rtl-final-20261027.log`.
+This is a bounded layout repair; full RTL, accessibility and platform
+acceptance remain open.
 Commit `b4cec6a5` is fast-forwarded into the verified project branch and pushed.
 On this commit, the source release script exited 0 and the macOS release
 script exited 0: 1,356 Rust tests passed across 40 result groups, all-target

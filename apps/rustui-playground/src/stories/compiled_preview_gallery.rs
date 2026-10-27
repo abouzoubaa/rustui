@@ -8002,7 +8002,7 @@ impl View for CompiledPreviewGallery {
                 },
             ))
             .child(
-                HStack::new()
+                VStack::new()
                     .spacing(6.0)
                     .child(Button(
                         "Capture amount callback",
