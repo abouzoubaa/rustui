@@ -9,6 +9,25 @@ Reverify live HEAD and dirty state before subsequent integration; preserve unrel
 
 ## Current checkpoint — 2026-10-26
 
+### Stacks/Focus English, French, Arabic specimen — 2026-10-27
+
+The Focus specimen now resolves its visible heading, explanation, state,
+buttons, fields and child counters from the three active Playground catalogs.
+Short explanation rows use the existing direction-aware RustUI `HStack` so the
+Arabic copy starts at the leading edge without the earlier long-line clipping.
+The locale validator passed for **3/3** runtime catalogs and the focused
+Playground Headstart check and optimized build exited 0. In the source-bound
+native Playground, English, French and Arabic Focus labels changed with the
+locale, the Arabic focus action changed its translated state, and the Arabic
+counter rendered a localized zero. A wide-window native screenshot showed the
+three Arabic explanation rows complete and aligned to the right. The packaged
+executable matched its build artifact (SHA-256
+`c14be25282374090503e14aee16c52531d0d2a61b3ddeb24d59e8210b9663288`).
+The app quit, no test app remained, and its disposable bundle and executable
+were removed. Logs: `target/headstart/evidence/focus-gallery-locales-{check,release}-20261027.log`.
+Narrow-window, Web, other Stacks controls and general RTL text wrapping remain
+separate acceptance work.
+
 ### Final preview-action native check — 2026-10-27
 
 At clean `180265ce`, `./scripts/cargo-headstart build -p rustui-playground
