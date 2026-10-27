@@ -75,7 +75,17 @@ Reverify live HEAD and dirty state before subsequent integration; preserve unrel
   showed RTL placement without visible clipping at 1280×720. Evidence:
   `target/headstart/evidence/card-story-web-09ffc399-20261027.json` and
   `card-story-ar-09ffc399-20261027.png`. This is bounded Web acceptance;
-  native GUI, real OS IME, screen reader, and browser-version coverage remain open.
+  browser-version coverage remains open.
+- **Native, bounded:** `./scripts/verify-release.sh macos` on `09ffc399` passed
+  1,358 tests across 40 groups and packaged the executable with five unresolved
+  notice gaps. The disposable macOS 27 app showed the three locale copies,
+  parent update, and retained `Bonjour` and `مرحبا` values after first-card
+  removal/restoration. Arabic `typeText` sent no characters; focused paste
+  entered `مرحبا`. Evidence: `target/headstart/evidence/card-story-native-09ffc399-20261027.json`
+  and `card-story-native-ar-09ffc399-20261027.png`. The app quit, its exact
+  bundle and standalone executable were removed, and the GUI slot was released.
+  Real OS Arabic keyboard/IME, screen reader, other macOS versions, and wider
+  workload acceptance remain open.
   The 37-requirement inventory and strict
   3/37 coding and 3/37 acceptance lower bounds are unchanged.
 
