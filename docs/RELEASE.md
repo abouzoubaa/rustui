@@ -99,6 +99,12 @@ The workflow in `.github/workflows/ci.yml` runs source checks on GitHub-hosted
 Ubuntu. Compiled macOS/Web checks require an explicitly dispatched trusted
 self-hosted Mac runner with the approved compiler/cache. Green source CI is not
 compiled CI or runtime acceptance.
+Provision the native Headstart compiler at the runner's default
+`~/.local/opt/headstart`, including its matching rustdoc. Set
+`RUSTUI_WASM_HEADSTART_ROOT` in the runner environment to the approved Web
+compiler location. A runner-wide `RUSTUI_HEADSTART_ROOT` pointing at the Web
+compiler caused native macro doctests to invoke Homebrew rustc against
+Headstart-built dependencies (CI run `40445906850`, attempt 1).
 
 Before publication, resolve the supported-version matrix and all undeferred
 release blockers; retain the deferred requirements explicitly in the release
