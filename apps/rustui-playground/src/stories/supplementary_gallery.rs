@@ -107,10 +107,7 @@ impl View for SupplementaryGallery {
                     Link("Disabled link fixture", DISABLED_LINK_FIXTURE_URL)
                         .id("gallery-disabled-link")
                         .disabled(true)
-                        .accessibility_label(format!(
-                            "Disabled link fixture, activated {} times",
-                            self.link_activations()
-                        ))
+                        .accessibility_label("Disabled link fixture")
                         .on_activate(self.action(Self::activate_link)),
                 )
                 .child(Text(format!(

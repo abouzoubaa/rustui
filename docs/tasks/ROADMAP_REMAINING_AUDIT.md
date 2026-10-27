@@ -7,6 +7,39 @@ The verified primary integration branch is `work/m118-diagnostics-provenance`;
 The writing branch is fast-forward integrated through its latest completed commit.
 Reverify live HEAD and dirty state before subsequent integration; preserve unrelated work.
 
+## Current release evidence — 2026-10-27
+
+- **Web implementation:** commit `a2ec04b0` packages the Playground image and
+  link fixtures, uses browser asset URLs, remaps build paths, rejects checkout
+  paths embedded in generated JS/Wasm, and gives path dependencies stable notice
+  directories. Focused notice tests passed 20/20; the Web package fixture,
+  Playground Headstart check and whitespace check passed.
+- **Compiled CI:** [run 40440397456](https://github.com/abouzoubaa/rustui/actions/runs/40440397456)
+  passed `source` and `macos-and-web-builds` on exact commit `a2ec04b0`.
+  Its dedicated ephemeral macOS ARM64 runner exited and removed credentials.
+- **Reproducibility:** after a committed local rebuild, its bundle and the
+  independent CI checkout matched byte for byte for all **774 files**, including
+  the manifest (source SHA-256 `dd6c921caeaa535b04bbf3ebde730dd4cc0183b22a8ca4a1986f95775ac87752`).
+  This is same-host/toolchain evidence, not cross-machine reproduction. The
+  unsigned local archive was stream-verified for all 774 members: SHA-256
+  `e635217042b42906662c36c47ef647e5f375976d5bfd9bc55cde9295c8922344`.
+  See `target/headstart/evidence/web-portable-repro-a2ec04b0-20261027.json`.
+- **Browser, bounded:** the current bundle displayed the packaged PNG in the
+  in-app Chromium browser and Safari 27 on macOS 27. Safari opened the packaged
+  Link fixture at `/assets/link-fixture.html`. Temporary tabs and servers were
+  closed; the user's other Safari tabs were preserved. A misleading disabled
+  Link story label found during that check has been corrected; browser
+  confirmation of that correction remains open.
+- **Release state:** the provisional inventory has 37 requirements. The strict
+  confirmed lower bounds are **3/37 coding complete and 3/37 acceptance
+  complete** (R00–R02); most other rows have substantial source implementation
+  but retain an unverified contract or release gate. This milestone strengthens
+  R28 and R30 without closing either. Five native and
+  three Web dependency-notice gaps, supported OS/browser versions, wider
+  functional/locale/RTL and workload acceptance, and signed distribution remain
+  open. Accessibility and VoiceOver, Japanese and other languages are explicitly
+  undone/deferred under the current release scope.
+
 ## Current checkpoint — 2026-10-27
 
 ### Narrow Web Playground layout
