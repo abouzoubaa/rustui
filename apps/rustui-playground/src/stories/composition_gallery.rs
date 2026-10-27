@@ -120,6 +120,12 @@ impl Model {
     }
 
     fn add(&mut self) -> Result<(), PreviewError> {
+        let root = self
+            .host
+            .document()
+            .ok_or_else(|| PreviewError::Invalid("composition unmounted".into()))?
+            .root
+            .clone();
         let next_id = self
             .next_id
             .checked_add(1)
@@ -136,7 +142,7 @@ impl Model {
         self.stamp = self.host.edit(
             &self.stamp,
             &[CompositionEdit::Insert {
-                parent: NodeId::new("root")?,
+                parent: root,
                 slot: SlotId::new("body")?,
                 node: NodeId::new(format!("child-{}", self.next_id))?,
                 value: CompositionNode {
@@ -184,11 +190,17 @@ impl Model {
 
     fn move_first(&mut self) -> Result<(), PreviewError> {
         if let Some(node) = self.children().first() {
+            let root = self
+                .host
+                .document()
+                .ok_or_else(|| PreviewError::Invalid("composition unmounted".into()))?
+                .root
+                .clone();
             self.stamp = self.host.edit(
                 &self.stamp,
                 &[CompositionEdit::Move {
                     node: node.clone(),
-                    parent: NodeId::new("root")?,
+                    parent: root,
                     slot: SlotId::new("body")?,
                 }],
             )?;
@@ -327,6 +339,13 @@ impl View for CompositionGallery {
                 0,
             ),
         };
+        let can_add = self
+            .model
+            .as_ref()
+            .and_then(|model| model.as_ref().ok())
+            .and_then(|model| model.host.document())
+            .and_then(|document| document.nodes.get(&document.root))
+            .is_some_and(|root| root.preview.component_id.as_str() == "composition-column");
         VStack::new()
             .spacing(8.0)
             .child(self.reference_owner_binding())
@@ -337,7 +356,7 @@ impl View for CompositionGallery {
                     .child(
                         Button("Add child", self.action(Self::add))
                             .id("composition-add")
-                            .disabled(count >= 8),
+                            .disabled(!can_add || count >= 8),
                     )
                     .child(
                         Button("Rename first child", self.action(Self::rename))
@@ -363,6 +382,29 @@ impl View for CompositionGallery {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn composition_actions_follow_document_root_identity() {
+        let mut model = Model::new().unwrap();
+        let mut document = model.host.document().unwrap().clone();
+        let original_root = document.root.clone();
+        document.root = NodeId::new("custom-root").unwrap();
+        let root = document.nodes.remove(&original_root).unwrap();
+        document.nodes.insert(document.root.clone(), root);
+        model.stamp = model.host.mount(document).unwrap();
+
+        model.add().unwrap();
+        model.move_first().unwrap();
+        assert_eq!(
+            model
+                .children()
+                .iter()
+                .map(NodeId::as_str)
+                .collect::<Vec<_>>(),
+            ["child-2", "child-1"]
+        );
+    }
+
     #[test]
     fn public_factory_composition_add_move_remove_and_rejection_are_live() {
         let mut model = Model::new().unwrap();
