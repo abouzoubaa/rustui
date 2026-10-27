@@ -406,7 +406,9 @@ impl View for StoryCanvas {
                         ["GPUI", "AppKit", "Skia"],
                     )
                     .id("story-input-combo-box")
-                    .search_placeholder("Find an engine"),
+                    .localized_placeholder("lab-input-combo-placeholder")
+                    .search_placeholder("Find an engine")
+                    .localized_search_placeholder("lab-input-combo-search"),
                 )
                 .child(
                     DatePicker("Choose a date", self.date_binding.clone()).id("story-input-date"),

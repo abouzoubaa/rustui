@@ -59,11 +59,13 @@ fn with_current_writer<T: Clone, E, R>(
 /// A controlled searchable single-selection ComboBox.
 pub struct ComboBoxView {
     label: SharedString,
+    placeholder_message_id: Option<SharedString>,
     selection: Binding<String>,
     options: Vec<String>,
     id: Option<Identity>,
     disabled: bool,
     search_placeholder: Option<SharedString>,
+    search_placeholder_message_id: Option<SharedString>,
     accessibility_label: Option<ComboBoxAccessibilityLabel>,
     appearance: bool,
 }
@@ -76,11 +78,13 @@ impl ComboBoxView {
     {
         Self {
             label: label.into(),
+            placeholder_message_id: None,
             selection,
             options: collect_unique_options(options),
             id: None,
             disabled: false,
             search_placeholder: None,
+            search_placeholder_message_id: None,
             accessibility_label: None,
             appearance: true,
         }
@@ -104,6 +108,54 @@ impl ComboBoxView {
     pub fn search_placeholder(mut self, placeholder: impl Into<SharedString>) -> Self {
         self.search_placeholder = Some(placeholder.into());
         self
+    }
+
+    /// Resolves the searchable menu placeholder from the active catalog.
+    pub fn localized_search_placeholder(mut self, message_id: impl Into<SharedString>) -> Self {
+        let id = message_id.into();
+        assert!(
+            !id.trim().is_empty(),
+            "ComboBox search placeholder localization key must not be blank"
+        );
+        self.search_placeholder_message_id = Some(id);
+        self
+    }
+
+    /// Resolves the visible empty-selection placeholder from the active catalog.
+    /// The constructor label remains the fallback when the key is unavailable.
+    pub fn localized_placeholder(mut self, message_id: impl Into<SharedString>) -> Self {
+        let id = message_id.into();
+        assert!(
+            !id.trim().is_empty(),
+            "ComboBox placeholder localization key must not be blank"
+        );
+        self.placeholder_message_id = Some(id);
+        self
+    }
+
+    fn resolved_placeholder(&self, localized_message: impl FnOnce(&str) -> String) -> SharedString {
+        match &self.placeholder_message_id {
+            Some(id) => resolved_accessibility_label(
+                id.as_ref(),
+                localized_message(id.as_ref()),
+                &self.label,
+            ),
+            None => self.label.clone(),
+        }
+    }
+
+    fn resolved_search_placeholder(
+        &self,
+        localized_message: impl FnOnce(&str) -> String,
+    ) -> Option<SharedString> {
+        match &self.search_placeholder_message_id {
+            Some(id) => Some(resolved_accessibility_label(
+                id.as_ref(),
+                localized_message(id.as_ref()),
+                self.search_placeholder.as_ref().unwrap_or(&self.label),
+            )),
+            None => self.search_placeholder.clone(),
+        }
     }
 
     /// Sets an accessible name independently from the visible placeholder.
@@ -251,6 +303,7 @@ impl View for ComboBoxView {
             );
         }
 
+        let placeholder = self.resolved_placeholder(|id| context.localized_message(id));
         let accessible_name = match &self.accessibility_label {
             Some(ComboBoxAccessibilityLabel::Explicit(label)) => label.clone(),
             Some(ComboBoxAccessibilityLabel::Message { id, fallback }) => {
@@ -260,7 +313,7 @@ impl View for ComboBoxView {
                     fallback,
                 )
             }
-            None => self.label.clone(),
+            None => placeholder.clone(),
         };
         assert!(
             !accessible_name.trim().is_empty(),
@@ -268,12 +321,14 @@ impl View for ComboBoxView {
         );
         let mut combo_box = GpuiSelect::new(&select)
             .id(identity.to_string())
-            .placeholder(self.label.clone())
+            .placeholder(placeholder)
             .accessibility_label(accessible_name)
             .disabled(self.disabled)
             .appearance(self.appearance);
-        if let Some(placeholder) = &self.search_placeholder {
-            combo_box = combo_box.search_placeholder(placeholder.clone());
+        if let Some(placeholder) =
+            self.resolved_search_placeholder(|id| context.localized_message(id))
+        {
+            combo_box = combo_box.search_placeholder(placeholder);
         }
         if !self.appearance {
             return combo_box.into_any_element();
@@ -372,6 +427,41 @@ mod tests {
         let combo_box = ComboBox("  Choose a language  ", binding(), ["Rust"]);
 
         assert_eq!(combo_box.label.as_ref(), "  Choose a language  ");
+    }
+
+    #[test]
+    fn localized_placeholder_resolves_and_preserves_constructor_fallback() {
+        let combo_box = ComboBox("Choose a language", binding(), ["Rust"])
+            .localized_placeholder("combo_box.language");
+        assert_eq!(
+            combo_box
+                .resolved_placeholder(|_| "Choisir une langue".into())
+                .as_ref(),
+            "Choisir une langue"
+        );
+        assert_eq!(
+            combo_box.resolved_placeholder(|id| id.into()).as_ref(),
+            "Choose a language"
+        );
+    }
+
+    #[test]
+    fn localized_search_placeholder_resolves_and_preserves_explicit_fallback() {
+        let combo_box = ComboBox("Rendering engine", binding(), ["GPUI"])
+            .search_placeholder("Find an engine")
+            .localized_search_placeholder("combo_box.search");
+        assert_eq!(
+            combo_box
+                .resolved_search_placeholder(|_| "Rechercher un moteur".into())
+                .as_deref(),
+            Some("Rechercher un moteur")
+        );
+        assert_eq!(
+            combo_box
+                .resolved_search_placeholder(|id| id.into())
+                .as_deref(),
+            Some("Find an engine")
+        );
     }
 
     #[test]

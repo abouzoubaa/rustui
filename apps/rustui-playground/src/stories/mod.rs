@@ -287,7 +287,7 @@ pub struct StoryHost {
     stepper_value: i32,
     #[state(String::from("Rust"))]
     picker_value: String,
-    #[state(String::from("GPUI"))]
+    #[state(String::new())]
     combo_box_value: String,
     #[state(None)]
     date_value: Option<NaiveDate>,
