@@ -58,6 +58,15 @@ Reverify live HEAD and dirty state before subsequent integration; preserve unrel
 
 ### Card story English, French, Arabic copy
 
+- **Narrow Web repair:** At 480×720 in the `09ffc399` bundle, the French
+  `Mettre à jour le parent` control clipped at the right edge. Commit `e1fbcd24`
+  splits the existing four actions into two rows, retaining their identities
+  and callbacks. The `7adfba7c` Web bundle showed the full French label inside
+  the viewport (right edge 337.5 of 480 CSS pixels), visible Arabic controls,
+  and a working parent-count increment after the layout change. Source check,
+  optimized Web build, and whitespace check passed. Before/after screenshots
+  and source-bound evidence: `target/headstart/evidence/card-story-narrow-web-7adfba7c-20261027.json`.
+  Other viewport sizes and Safari remain open.
 - **Coding:** The Card Playground story now resolves its title, controls, placeholders,
   omitted-card message, and bound-value summary from the active locale catalog. Empty
   initial field values expose translated placeholders while preserving user-entered
