@@ -20,6 +20,10 @@ unresolved gaps; no licensing completeness claim follows. Build log:
 `target/headstart/evidence/release-macos-current-20261026.log`. This is build
 and source-test evidence, not native GUI acceptance.
 
+GitHub Actions runs `40421689969` and `40421676391` for integrated HEAD
+`011fffe9` both completed successfully. This closes the current CI execution
+check only; the native RTL and dependency-notice release blockers remain.
+
 The first `verify-release.sh source` run stopped after **589 Python tests** with
 seven setup errors in the semantic-adapter lifecycle fixture. That fixture
 expected the bidirectional wrapping patch to be the final image, but the
@@ -96,6 +100,28 @@ controls but left large blank regions and clipped mid-canvas text. Both edits
 were reverted. The focused extent helper test passed **1/1** for its candidate,
 which is not release evidence. Exact candidate diff and observations:
 `target/headstart/evidence/native-rtl-layout-probes-20261026.md`.
+
+A new source-bound diagnostic replay used the same release executable hash
+`39a54cd2a9fc7da33fc844fa5c407fee78e10b86b04634d4b55078ab1e2fe3fa`.
+At Arabic Stacks > Focus, the inner canvas reported a **738 px** viewport,
+**1,294 px** content width, horizontal offset **−331 px**, and maximum
+horizontal offset **556 px** after switching tabs. The old offset explains
+immediate clipping at the RTL leading edge; the earlier extent probe showed
+that reanchoring alone leaves additional blank and clipped areas. The native
+visual gate remains open. Raw diagnostics:
+`target/headstart/evidence/native-rtl-current-scroll-diagnostics-20261026.log`.
+The test app exited, its disposable bundle was removed, and the GUI slot was
+released.
+
+The retained ScrollView extent change passed its focused Rust test **1/1**.
+An optimized native build of that change (`c5f96f606456ceb05731e34d1d8039827e483fc775b3d43331f70e11a530c86d`)
+reanchored the Arabic Focus canvas to **−556 px**, exposing the right-side
+controls. After two inner-canvas pages, long English story text still clipped
+at the left, with sparse vertical regions. Two Focus-only frame-width probes
+(`max_width(720)` with Start and Stretch alignment) built but failed to restore
+readable wrapping; both were reverted. Their diagnostics are under
+`target/headstart/evidence/native-rtl-focus-*-probe-*-20261027.log`.
+This is partial coding progress; RTL native visual acceptance remains open.
 
 - **Stage 6 bounded native Arabic pointer acceptance:** On integrated source
   `cc11658d`, the packaged macOS 27 Playground executable matched its
