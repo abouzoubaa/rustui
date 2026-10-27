@@ -7,7 +7,50 @@ The verified primary integration branch is `work/m118-diagnostics-provenance`;
 The writing branch is fast-forward integrated through its latest completed commit.
 Reverify live HEAD and dirty state before subsequent integration; preserve unrelated work.
 
-## Current checkpoint — 2026-10-26
+## Current checkpoint — 2026-10-27
+
+### Stacks layout copy and compiled CI — `3d1b4d01`
+
+- **Coding (Stage 6 / R13):** Reused `LocalizedText` and the existing localized
+  control APIs for seven remaining Stacks layout labels, notes, and row editor
+  prompts in the active English, French, and Arabic catalogs. This is an
+  incremental source change within the **37-requirement provisional inventory**;
+  it does not establish full coding or acceptance completion for R13 or the
+  project. Japanese and other languages remain deferred.
+- **Source/build:** Three runtime locale records and catalog groups validate;
+  focused `cargo-headstart check -p rustui-playground --locked --offline`,
+  `cargo-headstart fmt --check -p rustui-playground`, `git diff --check`, and a
+  source-matched debug build passed. The disposable native executable and bundle
+  both had SHA-256 `a9b5694a21bbf3b55352a941f2b41045f226a4cc4a0e78987063b51b16cece59`.
+- **Compiled CI:** [run 40435013690](https://github.com/abouzoubaa/rustui/actions/runs/40435013690)
+  passed `source` and `macos-and-web-builds` on exact commit
+  `3d1b4d0149998dfee0a167192a986944f70b66bb`. The earlier
+  [run 40434628004](https://github.com/abouzoubaa/rustui/actions/runs/40434628004)
+  passed source and macOS but stopped before Web compilation because the
+  ephemeral runner lacked `RUSTUI_WASM_HEADSTART_ROOT`; the rerun supplied the
+  existing approved Wasm root and pinned `wasm-bindgen 0.2.129`. The runner
+  removed its credentials and exited after the successful job.
+- **Native acceptance, bounded:** On macOS 27, the source-matched Playground
+  showed English, French, and Arabic Stacks layout labels and notes. The French
+  note wrapped and the Arabic note remained visible in the tested wide window.
+  The app exited; its disposable bundle and standalone executable were removed.
+  Narrow windows, full W1 cycle, broader input and visual behavior remain open.
+- **Web acceptance, bounded:** The optimized bundle manifest names exact commit
+  `3d1b4d01` and source SHA-256
+  `3b586ced6b8b3c15d18da4321aa94f5962494835e4d8c22f5e11f8e5e728e06d`;
+  all **770/770** packaged file hashes matched. In one 1280×720 in-app Chromium
+  viewport, English and French notes wrapped inside the Stacks canvas and the
+  Arabic copy remained visible in RTL. The temporary tab and port 8768 server
+  were closed; the pre-existing tab on port 8766 was preserved. This does not
+  establish cross-browser, narrow-viewport, IME, accessibility, or performance
+  acceptance.
+- **Release status:** The provisional inventory still has 37 requirements;
+  project-wide coding and acceptance completion counts have not been recomputed.
+  Five native and three Web dependency-notice gaps, the declared macOS 13
+  minimum versus macOS 27 runtime evidence, supported browser versions, wider
+  platform behavior, performance, and packaging/distribution gates remain open.
+  VoiceOver/accessibility and languages beyond English/French/Arabic remain
+  explicitly undone or deferred under the current user direction.
 
 ### Compiled CI and Stacks/W1 localization — 2026-10-27
 
