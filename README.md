@@ -1,3 +1,5 @@
+WORK IN PROGRESS 
+
 # RustUI
 
 RustUI is a standalone, SwiftUI-inspired Rust GUI framework built on GPUI and
