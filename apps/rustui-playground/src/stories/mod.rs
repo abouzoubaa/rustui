@@ -626,7 +626,12 @@ impl View for StoryHost {
                         },
                         self.action(Self::toggle_keyed_order),
                     )
-                    .id("lab-toggle-keyed-order"),
+                    .id("lab-toggle-keyed-order")
+                    .localized_label(if self.keyed_rows_reversed() {
+                        "lab-layout-restore-row-order"
+                    } else {
+                        "lab-layout-reverse-keyed-rows"
+                    }),
                 )
                 .child(
                     Button(
@@ -637,7 +642,12 @@ impl View for StoryHost {
                         },
                         self.action(Self::toggle_keyed_beta),
                     )
-                    .id("lab-toggle-keyed-beta"),
+                    .id("lab-toggle-keyed-beta")
+                    .localized_label(if self.keyed_beta_present() {
+                        "lab-layout-remove-beta-row"
+                    } else {
+                        "lab-layout-restore-beta-row"
+                    }),
                 )
                 .child(
                     Button(
@@ -648,7 +658,12 @@ impl View for StoryHost {
                         },
                         self.action(Self::toggle_child_titles),
                     )
-                    .id("lab-toggle-child-titles"),
+                    .id("lab-toggle-child-titles")
+                    .localized_label(if self.child_titles_prefixed() {
+                        "lab-layout-restore-child-titles"
+                    } else {
+                        "lab-layout-prefix-child-titles"
+                    }),
                 )
                 .child(
                     Button(
@@ -658,7 +673,11 @@ impl View for StoryHost {
                         },
                         self.action(Self::toggle_environment_display_mode),
                     )
-                    .id("lab-toggle-environment-display-mode"),
+                    .id("lab-toggle-environment-display-mode")
+                    .localized_label(match self.environment_display_mode() {
+                        DemoDisplayMode::Compact => "lab-layout-use-detailed-environment",
+                        DemoDisplayMode::Detailed => "lab-layout-use-compact-environment",
+                    }),
                 ),
             StoryId::Tabs => HStack::new()
                 .child(
@@ -717,40 +736,63 @@ impl View for StoryHost {
         let w1_controls = if selected == StoryId::Layout {
             let step = self.w1_step();
             let parent_matches = self.w1_parent_matches();
-            let result = match self.w1_manual_result() {
-                1 => "operator marked pass",
-                2 => "operator marked fail",
-                _ => "visual check not recorded",
-            };
             VStack::new()
-                .child(Text(format!(
-                    "W1 run {} · {}/6 actions dispatched · parent state {} · {}. Child counts and presentation require visual check.",
-                    self.w1_epoch(),
-                    step.saturating_sub(1),
-                    if parent_matches { "matches expected" } else { "mismatch; reset required" },
-                    result,
-                )))
-                .child(Text(format!(
-                    "Expected after this step: Alpha {}, Beta {}. Inspect each step; avoid other controls during W1. Reset clears child counters and notes.",
-                    u8::from(step >= 2),
-                    u8::from(step >= 3),
-                )))
+                .child(
+                    HStack::new().child(
+                        LocalizedText("lab-w1-progress").with_arguments(
+                            MessageArguments::new()
+                                .with("run", self.w1_epoch() as i64)
+                                .with("actions", step.saturating_sub(1) as i64),
+                        ),
+                    ),
+                )
+                .child(HStack::new().child(LocalizedText(if parent_matches {
+                    "lab-w1-parent-matches"
+                } else {
+                    "lab-w1-parent-mismatch"
+                })))
+                .child(
+                    HStack::new().child(LocalizedText(match self.w1_manual_result() {
+                        1 => "lab-w1-visual-pass-status",
+                        2 => "lab-w1-visual-fail-status",
+                        _ => "lab-w1-visual-pending-status",
+                    })),
+                )
+                .child(
+                    HStack::new().child(
+                        LocalizedText("lab-w1-expected-counts").with_arguments(
+                            MessageArguments::new()
+                                .with("alpha", u8::from(step >= 2) as i64)
+                                .with("beta", u8::from(step >= 3) as i64),
+                        ),
+                    ),
+                )
+                .child(HStack::new().child(LocalizedText("lab-w1-guidance-inspect")))
+                .child(HStack::new().child(LocalizedText("lab-w1-guidance-controls")))
+                .child(HStack::new().child(LocalizedText("lab-w1-guidance-reset")))
                 .child(
                     HStack::new()
-                        .child(Button("Reset W1", self.action(Self::reset_w1)).id("w1-reset"))
+                        .child(
+                            Button("Reset W1", self.action(Self::reset_w1))
+                                .id("w1-reset")
+                                .localized_label("lab-w1-reset"),
+                        )
                         .child(
                             Button("Next W1 step", self.action(Self::next_w1_step))
                                 .id("w1-next-step")
+                                .localized_label("lab-w1-next-step")
                                 .disabled(!(1..7).contains(&step) || !parent_matches),
                         )
                         .child(
                             Button("Mark visual pass", self.action(Self::pass_w1_manual_check))
                                 .id("w1-visual-pass")
+                                .localized_label("lab-w1-mark-pass")
                                 .disabled(step != 7 || !parent_matches),
                         )
                         .child(
                             Button("Mark visual fail", self.action(Self::fail_w1_manual_check))
                                 .id("w1-visual-fail")
+                                .localized_label("lab-w1-mark-fail")
                                 .disabled(step != 7),
                         ),
                 )
