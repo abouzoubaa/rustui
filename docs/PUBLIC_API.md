@@ -1050,6 +1050,8 @@ the collection from the application launch hook:
 
 ```rust
 let locale = Locale::parse("en").expect("valid locale");
+let theme = rustui::theme::parse_theme(include_str!("../themes/macos27.json"))
+    .expect("valid RustUI theme");
 let mut catalogs = rustui::localization::Catalogs::new(locale.clone());
 catalogs
     .insert(rustui::localization::Catalog::parse(
@@ -1060,6 +1062,8 @@ catalogs
 
 RustUI::new()
     .on_launch(move |cx| {
+        rustui::theme::activate_theme(&theme, None, cx)
+            .expect("RustUI theme activation succeeds");
         rustui::localization::activate_localization(catalogs, locale, cx);
     })
     .run(App::default());
