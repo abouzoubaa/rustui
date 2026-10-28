@@ -52,14 +52,18 @@ impl View for KeyboardGallery {
                         VStack::new()
                             .spacing(8.0)
                             .child(
-                                TextField("Inside scope", inside_text.clone())
-                                    .id("keyboard-inside-input")
-                                    .localized_placeholder("lab-keyboard-inside"),
+                                HStack::new().child(
+                                    TextField("Inside scope", inside_text.clone())
+                                        .id("keyboard-inside-input")
+                                        .localized_placeholder("lab-keyboard-inside"),
+                                ),
                             )
                             .child(
-                                Button("Focus here too", owner.action(Self::primary))
-                                    .id("keyboard-inside-button")
-                                    .localized_label("lab-keyboard-focus"),
+                                HStack::new().child(
+                                    Button("Focus here too", owner.action(Self::primary))
+                                        .id("keyboard-inside-button")
+                                        .localized_label("lab-keyboard-focus"),
+                                ),
                             )
                             .child(
                                 LocalizedText("lab-keyboard-counts").with_arguments(
@@ -84,25 +88,29 @@ impl View for KeyboardGallery {
                 },
             ))
             .child(
-                Button(
-                    if self.optional_enabled() {
-                        "Disable optional shortcut"
+                HStack::new().child(
+                    Button(
+                        if self.optional_enabled() {
+                            "Disable optional shortcut"
+                        } else {
+                            "Enable optional shortcut"
+                        },
+                        self.action(Self::toggle_optional),
+                    )
+                    .id("keyboard-toggle-optional")
+                    .localized_label(if optional_enabled {
+                        "lab-keyboard-disable"
                     } else {
-                        "Enable optional shortcut"
-                    },
-                    self.action(Self::toggle_optional),
-                )
-                .id("keyboard-toggle-optional")
-                .localized_label(if optional_enabled {
-                    "lab-keyboard-disable"
-                } else {
-                    "lab-keyboard-enable"
-                }),
+                        "lab-keyboard-enable"
+                    }),
+                ),
             )
             .child(
-                TextField("Outside scope", self.outside_text_binding())
-                    .id("keyboard-outside-input")
-                    .localized_placeholder("lab-keyboard-outside"),
+                HStack::new().child(
+                    TextField("Outside scope", self.outside_text_binding())
+                        .id("keyboard-outside-input")
+                        .localized_placeholder("lab-keyboard-outside"),
+                ),
             )
             .child(LocalizedText("lab-keyboard-typing-help"))
     }
