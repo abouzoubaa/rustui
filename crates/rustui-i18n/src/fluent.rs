@@ -107,6 +107,7 @@ impl fmt::Debug for FluentCatalog {
 struct Contract {
     variables: BTreeSet<String>,
     references: BTreeSet<String>,
+    terms: BTreeSet<String>,
 }
 impl FluentCatalog {
     pub(crate) fn parse(locale: &Locale, source: &str) -> Result<Self, FluentFormatError> {
@@ -248,20 +249,26 @@ impl FluentCatalog {
             id: &str,
             seen: &mut BTreeSet<String>,
             result: &mut BTreeSet<String>,
+            collect_variables: bool,
         ) -> Option<()> {
             if !seen.insert(id.to_owned()) {
                 return None;
             }
             let contract = catalog.contracts.get(id)?;
-            result.extend(contract.variables.iter().cloned());
+            if collect_variables {
+                result.extend(contract.variables.iter().cloned());
+            }
             for reference in &contract.references {
-                walk(catalog, reference, seen, result)?;
+                walk(catalog, reference, seen, result, collect_variables)?;
+            }
+            for term in &contract.terms {
+                walk(catalog, term, seen, result, false)?;
             }
             seen.remove(id);
             Some(())
         }
         let mut result = BTreeSet::new();
-        walk(self, id, &mut BTreeSet::new(), &mut result)?;
+        walk(self, id, &mut BTreeSet::new(), &mut result, true)?;
         Some(result)
     }
 }
@@ -344,7 +351,15 @@ fn visit_inline(
                 |attribute| format!("{}.{}", id.name, attribute.name),
             ));
         }
-        InlineExpression::TermReference { arguments, .. } => {
+        InlineExpression::TermReference {
+            id,
+            attribute,
+            arguments,
+        } => {
+            contract.terms.insert(attribute.as_ref().map_or_else(
+                || format!("-{}", id.name),
+                |attribute| format!("-{}.{}", id.name, attribute.name),
+            ));
             if let Some(arguments) = arguments {
                 visit_arguments(arguments, contract)?;
             }

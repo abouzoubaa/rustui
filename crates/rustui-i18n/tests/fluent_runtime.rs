@@ -197,6 +197,39 @@ fn fluent_contract_validation_compares_referenced_arguments_and_attributes() {
         .collect::<Vec<_>>();
     assert_eq!(mismatch, ["name", "welcome"]);
 }
+
+#[test]
+fn fluent_validation_rejects_missing_and_recursive_terms() {
+    for source in [
+        "welcome = { -missing }",
+        "-first = { -second }\n-second = { -first }\nwelcome = { -first }",
+    ] {
+        let report = validate_catalogs(&catalogs("en", source));
+        assert!(
+            report.invalid_patterns[&locale("en")]
+                .iter()
+                .any(|id| id.as_str() == "welcome")
+        );
+    }
+}
+
+#[test]
+fn fluent_validation_keeps_term_variables_local() {
+    let mut catalogs = catalogs(
+        "en",
+        "-brand = { $case }\nwelcome = { -brand(case: \"formal\") } { $name }",
+    );
+    catalogs
+        .insert(
+            Catalog::parse_fluent(
+                locale("fr"),
+                "-brand = { $style }\nwelcome = { -brand(style: \"formel\") } { $name }",
+            )
+            .unwrap(),
+        )
+        .unwrap();
+    assert!(validate_catalogs(&catalogs).is_valid());
+}
 #[test]
 fn icu_decimal_keeps_exact_digits_grouping_and_unicode_number_preferences() {
     let english = LocaleFormatter::try_new(&locale("en-US")).unwrap();
