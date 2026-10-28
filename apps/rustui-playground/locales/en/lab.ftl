@@ -400,3 +400,16 @@ lab-task-status-restarted = Current state: Success: restarted result
 lab-task-status-failure = Current state: Error: sample failure
 lab-task-status-success = Current state: Success: {value}
 lab-task-status-error = Current state: Error: {error}
+
+lab-toolbar-title = Toolbar review
+lab-toolbar-counts = Count: {count} · Disabled activations: {hits}
+lab-toolbar-order-reversed = Order: reversed
+lab-toolbar-order-normal = Order: normal
+lab-toolbar-disabled = Toolbar: disabled
+lab-toolbar-enabled = Toolbar: enabled
+lab-toolbar-increment = Increment
+lab-toolbar-reset = Reset
+lab-toolbar-unavailable = Unavailable
+lab-toolbar-reverse-action = Reverse order
+lab-toolbar-disabled-action = Toggle disabled
+lab-toolbar-help = Tab into the toolbar, then use arrow keys to move among actions. Change language to inspect Close.

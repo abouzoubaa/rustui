@@ -1,5 +1,6 @@
 //! Toolbar action, order, disabled, and localization review through public RustUI.
 
+use rustui::localization::MessageArguments;
 use rustui::prelude::*;
 
 pub fn demo() -> impl View {
@@ -300,14 +301,17 @@ impl ToolbarGallery {
 impl View for ToolbarGallery {
     fn body(&self) -> impl View {
         let mut items = vec![
-            ToolbarItem::action("increment", "Increment", self.action(Self::increment)),
-            ToolbarItem::action("reset", "Reset", self.action(Self::reset)),
+            ToolbarItem::action("increment", "Increment", self.action(Self::increment))
+                .localized("lab-toolbar-increment"),
+            ToolbarItem::action("reset", "Reset", self.action(Self::reset))
+                .localized("lab-toolbar-reset"),
             ToolbarItem::action(
                 "unavailable",
                 "Unavailable",
                 self.action(Self::disabled_hit),
             )
-            .disabled(true),
+            .disabled(true)
+            .localized("lab-toolbar-unavailable"),
             ToolbarItem::action("localized-close", "Close", self.action(Self::reset))
                 .localized("rustui-action-close"),
         ];
@@ -317,14 +321,35 @@ impl View for ToolbarGallery {
 
         VStack::new()
             .spacing(8.0)
-            .child(Text("Toolbar review"))
-            .child(Text(format!(
-                "Count: {} · order reversed: {} · disabled: {} · disabled hits: {}",
-                self.count(), self.reverse(), self.disabled(), self.disabled_hits()
-            )))
+            .child(LocalizedText("lab-toolbar-title"))
+            .child(
+                LocalizedText("lab-toolbar-counts").with_arguments(
+                    MessageArguments::new()
+                        .with("count", i64::from(self.count()))
+                        .with("hits", i64::from(self.disabled_hits())),
+                ),
+            )
+            .child(LocalizedText(if self.reverse() {
+                "lab-toolbar-order-reversed"
+            } else {
+                "lab-toolbar-order-normal"
+            }))
+            .child(LocalizedText(if self.disabled() {
+                "lab-toolbar-disabled"
+            } else {
+                "lab-toolbar-enabled"
+            }))
             .child(Toolbar("toolbar-gallery-actions", items).disabled(self.disabled()))
-            .child(Button("Reverse order", self.action(Self::toggle_order)).id("toolbar-reverse"))
-            .child(Button("Toggle disabled", self.action(Self::toggle_disabled)).id("toolbar-disabled"))
-            .child(Text("Tab into the toolbar, then use arrow keys to move among actions. Change locale to inspect Close."))
+            .child(
+                Button("Reverse order", self.action(Self::toggle_order))
+                    .id("toolbar-reverse")
+                    .localized_label("lab-toolbar-reverse-action"),
+            )
+            .child(
+                Button("Toggle disabled", self.action(Self::toggle_disabled))
+                    .id("toolbar-disabled")
+                    .localized_label("lab-toolbar-disabled-action"),
+            )
+            .child(LocalizedText("lab-toolbar-help"))
     }
 }

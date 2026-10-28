@@ -400,3 +400,16 @@ lab-task-status-restarted = الحالة الحالية: نجاح: نتيجة إ
 lab-task-status-failure = الحالة الحالية: خطأ: فشل تجريبي
 lab-task-status-success = الحالة الحالية: نجاح: {value}
 lab-task-status-error = الحالة الحالية: خطأ: {error}
+
+lab-toolbar-title = اختبار شريط الأدوات
+lab-toolbar-counts = العدد: {count} · مرات تفعيل العناصر المعطلة: {hits}
+lab-toolbar-order-reversed = الترتيب: معكوس
+lab-toolbar-order-normal = الترتيب: عادي
+lab-toolbar-disabled = شريط الأدوات: معطل
+lab-toolbar-enabled = شريط الأدوات: مفعّل
+lab-toolbar-increment = زيادة
+lab-toolbar-reset = إعادة الضبط
+lab-toolbar-unavailable = غير متاح
+lab-toolbar-reverse-action = عكس الترتيب
+lab-toolbar-disabled-action = تفعيل أو تعطيل
+lab-toolbar-help = استخدم مفتاح Tab للوصول إلى شريط الأدوات، ثم الأسهم للتنقل بين الإجراءات. غيّر اللغة للتحقق من زر الإغلاق.

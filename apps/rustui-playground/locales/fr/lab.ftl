@@ -400,3 +400,16 @@ lab-task-status-restarted = État actuel : réussite : résultat relancé
 lab-task-status-failure = État actuel : erreur : échec simulé
 lab-task-status-success = État actuel : réussite : {value}
 lab-task-status-error = État actuel : erreur : {error}
+
+lab-toolbar-title = Vérification de la barre d’outils
+lab-toolbar-counts = Compteur : {count} · Activations désactivées : {hits}
+lab-toolbar-order-reversed = Ordre : inversé
+lab-toolbar-order-normal = Ordre : normal
+lab-toolbar-disabled = Barre d’outils : désactivée
+lab-toolbar-enabled = Barre d’outils : activée
+lab-toolbar-increment = Incrémenter
+lab-toolbar-reset = Réinitialiser
+lab-toolbar-unavailable = Indisponible
+lab-toolbar-reverse-action = Inverser l’ordre
+lab-toolbar-disabled-action = Activer ou désactiver
+lab-toolbar-help = Utilisez Tab pour accéder à la barre d’outils, puis les flèches pour parcourir les actions. Changez de langue pour vérifier Fermer.
