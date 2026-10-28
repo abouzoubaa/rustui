@@ -19,6 +19,18 @@ are retained as historical records.
 
 ## Current release evidence — 2026-10-27
 
+- **R03/R30 workspace documentation build, 2026-10-28:** On clean commit
+  `4c127c2c`, an offline Headstart `cargo doc --workspace --no-deps` in the
+  persistent verification target succeeded on retry. The first attempt exited
+  unsuccessfully, but its exact diagnostics could not be recovered from the
+  compressed tool output; its cause is unverified. The successful log is
+  `target/headstart/evidence/doc-workspace-4c127c2c-20261028.log` (SHA-256
+  `ad7d16be6c9596a95d0b8a4eddee23475f4ddcc4143aead0b27ddd1d47846544`).
+  It contains 1,256 warning headers, including many upstream deprecations,
+  including 27 warnings attributed to the Playground library. Documentation
+  completeness, examples, doctests, warning review and release acceptance
+  remain open.
+
 - **R31 notice provenance, 2026-10-28:** Upstream version tags for three
   unresolved notice packages were compared byte-for-byte against all vendored
   `.rs` files: `block 0.1.6` tag commit `47178790cfc9d4a8b092051d8b413b78bd31254a`
