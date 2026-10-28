@@ -19,6 +19,17 @@ are retained as historical records.
 
 ## Current release evidence — 2026-10-27
 
+- **R26 oversized Web theme responses, 2026-10-28:** The browser loader now
+  cancels a response declaring an uncompressed body above 2 MiB before reading
+  it. Compressed responses continue through the existing decoded-stream limit,
+  since Content-Length describes encoded bytes; missing or unreliable lengths
+  do not replace the stream limit. Six focused Node tests passed, including
+  early cancellation, compressed headers, streaming limits and owner abort.
+  The optimized Web package built successfully (manifest SHA-256
+  `1abb6cfd895d88f18a58c8aa4b5b9de5a125a964994c43069d774713ce5237a5`),
+  and the packaged loader hash matches the source. This does not reduce the
+  repeated transfer of a valid theme or establish browser performance acceptance.
+
 - **R26 cache validation investigation, 2026-10-28:** The browser loader
   deliberately uses `no-store` and automatic reload requests the approximately
   821 KiB theme every 350 ms. A local Python HTTP server experiment changed a

@@ -7,9 +7,16 @@ export async function fetchTheme(fetcher = fetch, timeoutMs = 10_000, controller
     });
     if (!response.ok) throw new Error(`Theme request failed (${response.status})`);
     if (!response.body) throw new Error('Theme response has no body');
+    const limit = 2 * 1024 * 1024;
+    const length = response.headers.get('content-length');
+    const encoding = response.headers.get('content-encoding');
+    if ((!encoding || encoding.toLowerCase() === 'identity') &&
+        length && /^\d+$/.test(length) && Number(length) > limit) {
+      void response.body.cancel().catch(() => {});
+      throw new Error('Theme response exceeds 2 MiB');
+    }
     const reader = response.body.getReader();
     const decoder = new TextDecoder('utf-8', { fatal: true });
-    const limit = 2 * 1024 * 1024;
     let size = 0;
     let text = '';
     try {

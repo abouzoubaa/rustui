@@ -24,6 +24,20 @@ test('rejects failed, oversized, and invalid UTF-8 responses', async () => {
   assert.equal((await fetchTheme(async () => new Response(new Uint8Array(2 * 1024 * 1024)))).length, 2 * 1024 * 1024);
 });
 
+test('rejects a declared oversized uncompressed body without reading it', async () => {
+  let cancelled = false;
+  const body = new ReadableStream({ cancel() { cancelled = true; } });
+  await assert.rejects(fetchTheme(async () => new Response(body, {
+    headers: { 'content-length': String(2 * 1024 * 1024 + 1) },
+  })), /exceeds 2 MiB/);
+  assert.equal(cancelled, true);
+
+  // Content-Length describes compressed bytes, while the stream is decoded.
+  assert.equal(await fetchTheme(async () => new Response('ok', {
+    headers: { 'content-length': String(2 * 1024 * 1024 + 1), 'content-encoding': 'gzip' },
+  })), 'ok');
+});
+
 test('aborts a request that does not complete', async () => {
   await assert.rejects(fetchTheme((_url, { signal }) => new Promise((_resolve, reject) => {
     signal.addEventListener('abort', () => reject(new Error('timed out')), { once: true });
