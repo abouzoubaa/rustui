@@ -274,6 +274,7 @@ pub fn decode_composition<C>(
         ));
     }
     #[derive(Deserialize)]
+    #[serde(deny_unknown_fields)]
     struct RawDocument<'a> {
         format: String,
         format_version: u32,
@@ -283,6 +284,7 @@ pub fn decode_composition<C>(
         nodes: BTreeMap<NodeId, RawNode<'a>>,
     }
     #[derive(Deserialize)]
+    #[serde(deny_unknown_fields)]
     struct RawNode<'a> {
         #[serde(borrow)]
         preview: &'a serde_json::value::RawValue,
@@ -734,6 +736,21 @@ mod tests {
         let mut host = CompositionHost::new(r);
         assert_eq!(host.mount(d).unwrap().revision, 0);
         assert!(host.render(&()).unwrap().is_some());
+    }
+
+    #[test]
+    fn composition_decoder_rejects_unknown_document_and_node_fields() {
+        let (registry, document) = fixture();
+        let encoded = encode_composition(&document, &registry).unwrap();
+        let original: serde_json::Value = serde_json::from_str(&encoded).unwrap();
+
+        let mut extra_document = original.clone();
+        extra_document["unexpected"] = serde_json::json!(true);
+        assert!(decode_composition(&extra_document.to_string(), &registry).is_err());
+
+        let mut extra_node = original;
+        extra_node["nodes"][document.root.as_str()]["unexpected"] = serde_json::json!(true);
+        assert!(decode_composition(&extra_node.to_string(), &registry).is_err());
     }
     #[test]
     fn stale_and_invalid_edits_are_atomic() {
