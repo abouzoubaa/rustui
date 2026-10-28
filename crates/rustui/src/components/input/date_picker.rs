@@ -389,6 +389,71 @@ mod tests {
     }
 
     #[gpui::test]
+    fn public_date_picker_retains_owner_updates_at_both_limits(cx: &mut gpui::TestAppContext) {
+        use crate::runtime::component_host::ComponentHost;
+
+        struct Owner {
+            date: Option<NaiveDate>,
+        }
+        impl View for Owner {
+            fn body(&self) -> impl View {
+                DatePicker(
+                    "Choose date",
+                    Binding::new(
+                        self.date,
+                        |owner: &Owner| owner.date,
+                        |owner, value| {
+                            owner.date = value;
+                        },
+                    ),
+                )
+                .id("boundary-picker")
+            }
+        }
+        let theme = crate::theme::parse_theme(include_str!(concat!(
+            env!("CARGO_MANIFEST_DIR"),
+            "/../../themes/macos27.json"
+        )))
+        .unwrap();
+        cx.update(|app| {
+            gpui_component::init(app);
+            crate::theme::activate_theme(&theme, Some(crate::theme::AppearanceMode::Dark), app)
+                .unwrap();
+        });
+        let (owner, window) = cx.add_window_view(|_, cx| {
+            ComponentHost::new(
+                Owner {
+                    date: Some(NaiveDate::MIN),
+                },
+                cx,
+            )
+        });
+        let mut retained_id = None;
+        for date in [NaiveDate::MIN, NaiveDate::MAX, NaiveDate::MIN] {
+            window.update(|window, app| {
+                owner.update(app, |host, cx| {
+                    host.component_mut().date = Some(date);
+                    cx.notify();
+                });
+                let _ = window.draw(app);
+                let tree: serde_json::Value =
+                    serde_json::from_str(&window.debug_a11y_tree_json().expect("test window tree"))
+                        .unwrap();
+                let picker = tree["nodes"]
+                    .as_object()
+                    .unwrap()
+                    .values()
+                    .find(|node| node["aria"]["role"] == "ComboBox")
+                    .expect("date picker trigger");
+                assert_eq!(picker["aria"]["value"], date.format("%Y/%m/%d").to_string());
+                let id = picker["accesskit_id"].as_str().unwrap().to_owned();
+                assert_eq!(retained_id.get_or_insert(id.clone()), &id);
+                assert_eq!(owner.read(app).component().date, Some(date));
+            });
+        }
+    }
+
+    #[gpui::test]
     fn calendar_renders_and_navigates_at_both_date_limits(cx: &mut gpui::TestAppContext) {
         use gpui::{AppContext as _, Context, Entity, IntoElement as _, Render, Window};
         use gpui_base::{Calendar, CalendarItemKind, CalendarState, Date};
