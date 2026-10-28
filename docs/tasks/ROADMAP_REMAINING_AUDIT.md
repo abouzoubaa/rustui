@@ -19,6 +19,22 @@ are retained as historical records.
 
 ## Current release evidence — 2026-10-27
 
+- **R26 Safari strong-ETag watcher, 2026-10-28:** Safari 27.0 on macOS 27.0
+  loaded the source-matched Web bundle (manifest SHA-256
+  `8eb9b4088974c4e3588a819bd924a6913dfb1cf7060b784194f154b96de66aa7`;
+  all 2,943 captured source hashes match, although its Git field records the
+  parent because the build preceded commit `6dfbe56d`).
+  In one localhost session, the first automatic theme request transferred
+  821,287 body bytes and matching strong-ETag requests returned bodyless 304s.
+  Changing the ETag and adding JSON whitespace caused a fresh 821,288-byte
+  response followed by 304s. Stopping and restarting caused an unconditional
+  first fetch; removing the ETag caused subsequent full fetches. The watcher,
+  separate Safari window and owned server were stopped. Server log:
+  `target/headstart/evidence/theme-strong-etag-safari-20261028.log` (SHA-256
+  `1379916dd5969af22f95eb761410df9d1381e649c5c89f749dc82da3b68f4846`).
+  This is bounded network and UI evidence, not a semantic theme-change test,
+  browser-version matrix or full performance acceptance.
+
 - **R26 Web watcher cache generation, 2026-10-28:** A deterministic test
   transport that ignored cancellation reproduced a stale request overwriting
   a cleared and reused theme cache. Cache requests and clears now invalidate
