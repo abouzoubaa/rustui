@@ -22,6 +22,10 @@ This requires the already provisioned Headstart toolchain described in
 [`docs/BUILDING.md`](BUILDING.md); the launcher does not install it. Build
 artifacts stay in the SDK's `target/headstart/` tree.
 
+The example activates the SDK's bundled theme during `on_launch`, before its
+components render. Its `include_str!` path to `themes/macos27.json` must also
+be adjusted if the example is moved outside this checkout.
+
 The example has an independent `[workspace]` root. It repeats the approved
 same-version local patches because Cargo workspace `[patch.crates-io]` entries
 are not inherited from the SDK when consumed by an external root. It also copies
