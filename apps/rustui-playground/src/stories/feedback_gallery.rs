@@ -41,12 +41,15 @@ impl View for FeedbackGallery {
         let toast_action_activations = self.toast_action_activations();
         OwnerActionReader(move |target: OwnerAction<FeedbackGallery>| {
             let persistent_action_toast = Toast("Saved changes")
+                .localized_message("lab-feedback-toast-saved-body")
                 .title("Saved")
+                .localized_title("lab-feedback-toast-saved-title")
                 .kind(ToastKind::Success)
                 .id("feedback-action-toast")
                 .autohide(false)
                 .on_click(target.action(Self::record_toast_body_activation))
                 .action("Undo", target.action(Self::record_toast_action_activation))
+                .localized_action_label("lab-feedback-toast-undo")
                 .show();
 
             VStack::new()
@@ -61,10 +64,10 @@ impl View for FeedbackGallery {
                 .child(
                     HStack::new()
                         .spacing(6.0)
-                        .child(Button("Info", Toast("Info notice").id("feedback-kind-toast").kind(ToastKind::Info).show()).id("feedback-kind-info").localized_label("lab-feedback-kind-info"))
-                        .child(Button("Success", Toast("Success notice").id("feedback-kind-toast").kind(ToastKind::Success).show()).id("feedback-kind-success").localized_label("lab-feedback-kind-success"))
-                        .child(Button("Warning", Toast("Warning notice").id("feedback-kind-toast").kind(ToastKind::Warning).show()).id("feedback-kind-warning").localized_label("lab-feedback-kind-warning"))
-                        .child(Button("Error", Toast("Error notice").id("feedback-kind-toast").kind(ToastKind::Error).show()).id("feedback-kind-error").localized_label("lab-feedback-kind-error")),
+                        .child(Button("Info", Toast("Info notice").localized_message("lab-feedback-toast-info").id("feedback-kind-toast").kind(ToastKind::Info).show()).id("feedback-kind-info").localized_label("lab-feedback-kind-info"))
+                        .child(Button("Success", Toast("Success notice").localized_message("lab-feedback-toast-success").id("feedback-kind-toast").kind(ToastKind::Success).show()).id("feedback-kind-success").localized_label("lab-feedback-kind-success"))
+                        .child(Button("Warning", Toast("Warning notice").localized_message("lab-feedback-toast-warning").id("feedback-kind-toast").kind(ToastKind::Warning).show()).id("feedback-kind-warning").localized_label("lab-feedback-kind-warning"))
+                        .child(Button("Error", Toast("Error notice").localized_message("lab-feedback-toast-error").id("feedback-kind-toast").kind(ToastKind::Error).show()).id("feedback-kind-error").localized_label("lab-feedback-kind-error")),
                 )
                 .child(
                     HStack::new()

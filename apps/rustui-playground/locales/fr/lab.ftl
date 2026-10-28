@@ -443,3 +443,11 @@ lab-feedback-error-title = Impossible de charger les éléments
 lab-feedback-error-detail = Vérifiez votre connexion et réessayez.
 lab-feedback-empty-a11y = Aucun élément enregistré
 lab-feedback-error-a11y = Échec du chargement des éléments
+
+lab-feedback-toast-saved-body = Modifications enregistrées
+lab-feedback-toast-saved-title = Enregistré
+lab-feedback-toast-undo = Annuler
+lab-feedback-toast-info = Message d’information
+lab-feedback-toast-success = Message de réussite
+lab-feedback-toast-warning = Message d’avertissement
+lab-feedback-toast-error = Message d’erreur

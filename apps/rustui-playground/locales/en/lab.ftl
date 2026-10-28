@@ -443,3 +443,11 @@ lab-feedback-error-title = Could not load items
 lab-feedback-error-detail = Check your connection and retry.
 lab-feedback-empty-a11y = Saved items are empty
 lab-feedback-error-a11y = Item loading failed
+
+lab-feedback-toast-saved-body = Saved changes
+lab-feedback-toast-saved-title = Saved
+lab-feedback-toast-undo = Undo
+lab-feedback-toast-info = Info notice
+lab-feedback-toast-success = Success notice
+lab-feedback-toast-warning = Warning notice
+lab-feedback-toast-error = Error notice

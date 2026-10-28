@@ -1,3 +1,7 @@
+## Current checkpoint — 2026-10-28: localized toast content
+
+- **R13 partial source implementation:** RustUI Toast now resolves optional message, title and action-label keys when shown, using literal fallbacks for missing or blank translations; announcement text derives from resolved content. Playground's toast examples supply English, French and Arabic keys. Focused Headstart tests passed 9/9 toast, 44/44 feedback, and 1/1 Playground locale; the three runtime locale catalogs validated. This is source evidence only: displayed native/browser toast behavior, broader gallery copy and RTL acceptance remain open. R13 is not closed.
+
 ## Current checkpoint — 2026-10-28: localized feedback states
 
 - **R13 partial source implementation:** RustUI EmptyState and ErrorState now support localized visible titles and details, falling back to their supplied literal text for missing or blank translations. Default accessible names follow the resolved title; explicit names retain their existing precedence. Playground uses these APIs for its English, French and Arabic empty/error examples. The feedback component suite passed 44/44, the Playground locale test passed 1/1, and the locale validator passed. Native/browser rendered and RTL acceptance remain open; toast messages and other gallery copy still need localization. This does not close R13.

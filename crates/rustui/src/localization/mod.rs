@@ -299,3 +299,22 @@ mod fluent_integration_tests {
         );
     }
 }
+
+// Use literal text when a translation is missing, invalid, or blank.
+pub(crate) fn resolve_text(
+    fallback: &gpui::SharedString,
+    key: Option<&gpui::SharedString>,
+    resolve: impl FnOnce(&str) -> String,
+) -> gpui::SharedString {
+    match key {
+        Some(key) => {
+            let text = resolve(key.as_ref());
+            if text.trim().is_empty() || text.trim() == key.trim() {
+                fallback.clone()
+            } else {
+                text.into()
+            }
+        }
+        None => fallback.clone(),
+    }
+}

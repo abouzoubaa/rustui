@@ -443,3 +443,11 @@ lab-feedback-error-title = تعذر تحميل العناصر
 lab-feedback-error-detail = تحقق من اتصالك وحاول مجددًا.
 lab-feedback-empty-a11y = لا توجد عناصر محفوظة
 lab-feedback-error-a11y = فشل تحميل العناصر
+
+lab-feedback-toast-saved-body = تم حفظ التغييرات
+lab-feedback-toast-saved-title = تم الحفظ
+lab-feedback-toast-undo = تراجع
+lab-feedback-toast-info = إشعار معلومات
+lab-feedback-toast-success = إشعار نجاح
+lab-feedback-toast-warning = إشعار تحذير
+lab-feedback-toast-error = إشعار خطأ

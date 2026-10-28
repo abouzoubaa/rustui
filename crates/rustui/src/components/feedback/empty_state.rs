@@ -147,9 +147,10 @@ impl View for EmptyStateView {
         let theme = gpui_component::Theme::global(context.app());
         let foreground = theme.colors.foreground;
         let muted_foreground = theme.colors.muted_foreground;
-        let title = super::resolve_text(&self.title, self.title_key.as_ref(), |key| {
-            context.localized_message(key)
-        });
+        let title =
+            crate::localization::resolve_text(&self.title, self.title_key.as_ref(), |key| {
+                context.localized_message(key)
+            });
         let accessibility_label =
             if self.accessibility_label.is_none() && self.localized_accessibility_label.is_none() {
                 title.clone()
@@ -180,9 +181,10 @@ impl View for EmptyStateView {
                 .into_element(context),
         );
         if let Some(detail) = &self.detail {
-            let detail = super::resolve_text(detail, self.detail_key.as_ref(), |key| {
-                context.localized_message(key)
-            });
+            let detail =
+                crate::localization::resolve_text(detail, self.detail_key.as_ref(), |key| {
+                    context.localized_message(key)
+                });
             state = state.aria_description(detail.clone());
             state = state.child(
                 div()

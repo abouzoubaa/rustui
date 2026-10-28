@@ -154,9 +154,10 @@ impl View for ErrorStateView {
         let theme = gpui_component::Theme::global(context.app());
         let danger = theme.colors.danger;
         let muted_foreground = theme.colors.muted_foreground;
-        let title = super::resolve_text(&self.title, self.title_key.as_ref(), |key| {
-            context.localized_message(key)
-        });
+        let title =
+            crate::localization::resolve_text(&self.title, self.title_key.as_ref(), |key| {
+                context.localized_message(key)
+            });
         let accessibility_label = if self.accessibility_explicit {
             self.resolved_accessibility_label(|id| context.localized_message(id))
         } else {
@@ -177,9 +178,10 @@ impl View for ErrorStateView {
                 .into_element(context),
         );
         if let Some(detail) = &self.detail {
-            let detail = super::resolve_text(detail, self.detail_key.as_ref(), |key| {
-                context.localized_message(key)
-            });
+            let detail =
+                crate::localization::resolve_text(detail, self.detail_key.as_ref(), |key| {
+                    context.localized_message(key)
+                });
             state = state.aria_description(detail.clone());
             state = state.child(
                 div()

@@ -54,6 +54,9 @@ impl ToastKind {
 pub struct ToastBuilder {
     message: SharedString,
     title: Option<SharedString>,
+    message_key: Option<SharedString>,
+    title_key: Option<SharedString>,
+    action_key: Option<SharedString>,
     kind: ToastKind,
     id: Option<SharedString>,
     autohide: bool,
@@ -66,6 +69,9 @@ impl ToastBuilder {
         Self {
             message: message.into(),
             title: None,
+            message_key: None,
+            title_key: None,
+            action_key: None,
             kind: ToastKind::Info,
             id: None,
             autohide: true,
@@ -76,6 +82,39 @@ impl ToastBuilder {
 
     pub fn title(mut self, title: impl Into<SharedString>) -> Self {
         self.title = Some(title.into());
+        self
+    }
+
+    /// Resolves the toast message when it is shown, falling back to its literal message.
+    pub fn localized_message(mut self, key: impl Into<SharedString>) -> Self {
+        let key = key.into();
+        assert!(
+            !key.trim().is_empty(),
+            "toast localization key must not be empty"
+        );
+        self.message_key = Some(key);
+        self
+    }
+
+    /// Resolves the title when present, falling back to its literal title.
+    pub fn localized_title(mut self, key: impl Into<SharedString>) -> Self {
+        let key = key.into();
+        assert!(
+            !key.trim().is_empty(),
+            "toast localization key must not be empty"
+        );
+        self.title_key = Some(key);
+        self
+    }
+
+    /// Resolves the action label when an action is present.
+    pub fn localized_action_label(mut self, key: impl Into<SharedString>) -> Self {
+        let key = key.into();
+        assert!(
+            !key.trim().is_empty(),
+            "toast localization key must not be empty"
+        );
+        self.action_key = Some(key);
         self
     }
 
@@ -115,6 +154,21 @@ impl ToastBuilder {
         self
     }
 
+    fn resolved_content(
+        &self,
+        resolve: impl Fn(&str) -> String,
+    ) -> (SharedString, Option<SharedString>, Option<SharedString>) {
+        let message =
+            crate::localization::resolve_text(&self.message, self.message_key.as_ref(), &resolve);
+        let title = self.title.as_ref().map(|title| {
+            crate::localization::resolve_text(title, self.title_key.as_ref(), &resolve)
+        });
+        let action = self.action.as_ref().map(|(label, _)| {
+            crate::localization::resolve_text(label, self.action_key.as_ref(), &resolve)
+        });
+        (message, title, action)
+    }
+
     /// Returns an application action that pushes this toast through the active window root.
     pub fn show(self) -> AppAction {
         assert!(
@@ -124,16 +178,22 @@ impl ToastBuilder {
                 || !self.message.trim().is_empty(),
             "Toast title or message must provide a non-empty accessible name"
         );
-        let announcement_value = toast_announcement_value(self.title.as_deref(), &self.message);
         let announcement_kind = self.kind;
         AppAction::with_window_action(move |_, window, cx| {
+            let resolve = |key: &str| {
+                crate::localization::active_localization(cx)
+                    .and_then(|active| active.formatted_message(key).ok())
+                    .unwrap_or_else(|| key.to_owned())
+            };
+            let (message, title, action_label) = self.resolved_content(resolve);
+            let announcement_value = toast_announcement_value(title.as_deref(), &message);
             let style = required_app_style_with_artwork(cx, "notification", "body");
             let mut notification = Notification::new()
-                .message(self.message.clone())
+                .message(message)
                 .with_type(self.kind.notification_type())
                 .delivery(NotificationDelivery::InApp)
                 .autohide(self.autohide);
-            if let Some(title) = &self.title {
+            if let Some(title) = &title {
                 notification = notification.title(title.clone());
             }
             if let Some(id) = &self.id {
@@ -146,7 +206,7 @@ impl ToastBuilder {
                 });
             }
             if let Some((label, action)) = &self.action {
-                let label = label.clone();
+                let label = action_label.clone().unwrap_or_else(|| label.clone());
                 let action = action.clone();
                 notification = notification.action(move |_, _, _| {
                     let action = action.clone();
@@ -212,6 +272,29 @@ struct RustUiToast;
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn localized_content_resolves_and_falls_back() {
+        let toast = Toast("Saved changes")
+            .title("Saved")
+            .action("Undo", AppAction::new(|_| {}))
+            .localized_message("toast.body")
+            .localized_title("toast.title")
+            .localized_action_label("toast.action");
+        let (body, title, action) = toast.resolved_content(|key| match key {
+            "toast.body" => "Modifications enregistrées".into(),
+            "toast.title" => "Enregistré".into(),
+            "toast.action" => "Annuler".into(),
+            _ => key.into(),
+        });
+        assert_eq!(body.as_ref(), "Modifications enregistrées");
+        assert_eq!(title.as_deref(), Some("Enregistré"));
+        assert_eq!(action.as_deref(), Some("Annuler"));
+        let (body, title, action) = toast.resolved_content(|key| key.into());
+        assert_eq!(body.as_ref(), "Saved changes");
+        assert_eq!(title.as_deref(), Some("Saved"));
+        assert_eq!(action.as_deref(), Some("Undo"));
+    }
 
     #[test]
     fn toast_defaults_to_info_and_autohide() {
