@@ -297,14 +297,14 @@ def _inventory_fd(directory_fd: int, prefix: str = "",
                         after_info = os.fstat(source.fileno())
                         after_hash = (after_info.st_dev, after_info.st_ino, after_info.st_size,
                                       after_info.st_mtime_ns, after_info.st_ctime_ns)
-                        if after_hash != before_hash:
-                            raise SnapshotError(
-                                "regular file changed while hashing source snapshot: "
-                                f"{relative_path(name)}"
-                            )
                         if after_info.st_nlink != 1:
                             raise SnapshotError(
                                 "regular file multiple hard links in source snapshot: "
+                                f"{relative_path(name)}"
+                            )
+                        if after_hash != before_hash:
+                            raise SnapshotError(
+                                "regular file changed while hashing source snapshot: "
                                 f"{relative_path(name)}"
                             )
                     result[relative_path(name)] = digest.hexdigest()

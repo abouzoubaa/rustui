@@ -282,6 +282,7 @@ class ValidateCandidateSnapshotTests(unittest.TestCase):
         with mock.patch.object(VALIDATOR, "MAX_SNAPSHOT_BYTES", 4):
             self.assertEqual(len(VALIDATOR._inventory(source.resolve())), 2)
             (source / "a").write_bytes(b"abcde")
+            (source / "b").unlink()
             with (mock.patch.object(VALIDATOR.os, "fdopen") as fdopen,
                   self.assertRaisesRegex(
                       VALIDATOR.SnapshotError,
@@ -516,17 +517,21 @@ class ValidateCandidateSnapshotTests(unittest.TestCase):
     def test_rejects_hard_link_created_during_snapshot_hash(self) -> None:
         baseline = self.root / "baseline/source/apps/input.rs"
         outside = self.root / "outside-input-race.rs"
-        original_sha256 = VALIDATOR.hashlib.sha256
+        original_fdopen = VALIDATOR.os.fdopen
+        baseline_info = baseline.stat()
         linked = False
 
-        def link_before_hash(*args: Any, **kwargs: Any):
+        def link_before_read(fd: int, *args: Any, **kwargs: Any):
             nonlocal linked
-            if not linked:
+            info = os.fstat(fd)
+            if not linked and (info.st_dev, info.st_ino) == (
+                baseline_info.st_dev, baseline_info.st_ino
+            ):
                 os.link(baseline, outside)
                 linked = True
-            return original_sha256(*args, **kwargs)
+            return original_fdopen(fd, *args, **kwargs)
 
-        with mock.patch.object(VALIDATOR.hashlib, "sha256", side_effect=link_before_hash):
+        with mock.patch.object(VALIDATOR.os, "fdopen", side_effect=link_before_read):
             report = VALIDATOR.validate(self.manifest, self.root.resolve())
 
         self.assertTrue(linked)
