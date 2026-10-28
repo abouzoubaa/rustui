@@ -2,7 +2,7 @@
 use rustui::preview::*;
 use serde::{Deserialize, Serialize};
 use serde_json::{Value, json};
-use std::collections::BTreeSet;
+use std::collections::{BTreeMap, BTreeSet};
 
 pub(crate) const PROTOCOL: &str = "rustui.preview.postmessage";
 pub(crate) const VERSION: u32 = 1;
@@ -121,33 +121,96 @@ enum Edit {
         slot: SlotId,
     },
 }
-impl From<Edit> for CompositionEdit {
-    fn from(value: Edit) -> Self {
-        match value {
+fn decode_composition_edits<C>(
+    host: &CompositionHost<C>,
+    edits: Vec<Box<serde_json::value::RawValue>>,
+) -> Result<Vec<CompositionEdit>, &'static str> {
+    let mut components: BTreeMap<NodeId, ComponentId> = host
+        .document()
+        .ok_or("invalid_edit")?
+        .nodes
+        .iter()
+        .map(|(id, node)| (id.clone(), node.preview.component_id.clone()))
+        .collect();
+    let mut decoded = Vec::with_capacity(edits.len());
+    for source in edits {
+        #[derive(Deserialize)]
+        struct RawEdit<'a> {
+            #[serde(borrow)]
+            value: Option<&'a serde_json::value::RawValue>,
+        }
+        let raw: RawEdit<'_> = serde_json::from_str(source.get()).map_err(|_| "invalid_edit")?;
+        let edit: Edit = serde_json::from_str(source.get()).map_err(|_| "invalid_edit")?;
+        decoded.push(match edit {
             Edit::SetProperty {
                 node,
                 property,
-                value,
-            } => Self::SetProperty {
-                node,
-                property,
-                value,
-            },
+                value: _,
+            } => {
+                let component = components.get(&node).ok_or("invalid_edit")?;
+                let schema = host
+                    .catalog()
+                    .components
+                    .get(component)
+                    .and_then(|c| c.properties.get(&property))
+                    .ok_or("invalid_edit")?;
+                let value = decode_property_value(
+                    raw.value.ok_or("invalid_edit")?.get(),
+                    &property,
+                    schema,
+                )
+                .map_err(|_| "invalid_edit")?;
+                CompositionEdit::SetProperty {
+                    node,
+                    property,
+                    value,
+                }
+            }
             Edit::Insert {
                 parent,
                 slot,
                 node,
-                value,
-            } => Self::Insert {
-                parent,
-                slot,
-                node,
-                value,
-            },
-            Edit::RemoveSubtree { node } => Self::RemoveSubtree { node },
-            Edit::Move { node, parent, slot } => Self::Move { node, parent, slot },
-        }
+                mut value,
+            } => {
+                #[derive(Deserialize)]
+                struct PreviewSource<'a> {
+                    #[serde(borrow)]
+                    preview: &'a serde_json::value::RawValue,
+                }
+                let source: PreviewSource<'_> =
+                    serde_json::from_str(raw.value.ok_or("invalid_edit")?.get())
+                        .map_err(|_| "invalid_edit")?;
+                #[derive(Deserialize)]
+                struct RawProperties<'a> {
+                    #[serde(borrow, default)]
+                    properties: BTreeMap<PropertyId, &'a serde_json::value::RawValue>,
+                }
+                let raw_properties: RawProperties<'_> =
+                    serde_json::from_str(source.preview.get()).map_err(|_| "invalid_edit")?;
+                let component = host
+                    .catalog()
+                    .components
+                    .get(&value.preview.component_id)
+                    .ok_or("invalid_edit")?;
+                for (id, raw) in raw_properties.properties {
+                    let schema = component.properties.get(&id).ok_or("invalid_edit")?;
+                    let property = decode_property_value(raw.get(), &id, schema)
+                        .map_err(|_| "invalid_edit")?;
+                    value.preview.properties.insert(id, property);
+                }
+                components.insert(node.clone(), value.preview.component_id.clone());
+                CompositionEdit::Insert {
+                    parent,
+                    slot,
+                    node,
+                    value,
+                }
+            }
+            Edit::RemoveSubtree { node } => CompositionEdit::RemoveSubtree { node },
+            Edit::Move { node, parent, slot } => CompositionEdit::Move { node, parent, slot },
+        });
     }
+    Ok(decoded)
 }
 #[derive(Debug, Serialize)]
 pub(crate) struct Reply {
@@ -445,11 +508,31 @@ impl Session {
                 updates_source,
             } => match &mut host {
                 Host::Preview(host) => {
-                    let updates: Vec<(PropertyId, PropertyValue)> =
+                    let updates: Vec<(PropertyId, Box<serde_json::value::RawValue>)> =
                         serde_json::from_str(&updates_source).map_err(|_| "invalid_edit")?;
                     if updates.len() > 256 {
                         return Err("edit_limit");
                     }
+                    let component = &host
+                        .snapshot()
+                        .ok_or("invalid_edit")?
+                        .preview
+                        .document
+                        .component_id;
+                    let schema = host
+                        .catalog()
+                        .components
+                        .get(component)
+                        .ok_or("invalid_edit")?;
+                    let updates = updates
+                        .into_iter()
+                        .map(|(id, raw)| {
+                            let property = schema.properties.get(&id).ok_or("invalid_edit")?;
+                            let value = decode_property_value(raw.get(), &id, property)
+                                .map_err(|_| "invalid_edit")?;
+                            Ok((id, value))
+                        })
+                        .collect::<Result<Vec<_>, &'static str>>()?;
                     let stamp = host
                         .edit(&stamp.as_preview().ok_or("invalid_stamp")?, updates)
                         .map_err(|_| "invalid_edit")?;
@@ -464,12 +547,12 @@ impl Session {
                 edits_source,
             } => match &mut host {
                 Host::Composition(host) => {
-                    let edits: Vec<Edit> =
+                    let edits: Vec<Box<serde_json::value::RawValue>> =
                         serde_json::from_str(&edits_source).map_err(|_| "invalid_edit")?;
                     if edits.len() > MAX_COMPOSITION_EDITS {
                         return Err("edit_limit");
                     }
-                    let edits: Vec<_> = edits.into_iter().map(CompositionEdit::from).collect();
+                    let edits = decode_composition_edits(host, edits)?;
                     let stamp = host
                         .edit(&stamp.as_composition().ok_or("invalid_stamp")?, &edits)
                         .map_err(|_| "invalid_edit")?;
@@ -679,6 +762,169 @@ mod tests {
             decode(&request.to_string()).unwrap_err(),
             "invalid_identity"
         );
+    }
+
+    fn number_registry() -> PreviewRegistry<()> {
+        let mut registry = PreviewRegistry::new();
+        registry
+            .register(
+                ComponentSchema {
+                    id: ComponentId::new("number").unwrap(),
+                    version: 1,
+                    display_name: "Number".into(),
+                    properties: BTreeMap::from([(
+                        PropertyId::new("amount").unwrap(),
+                        PropertySchema {
+                            kind: PropertyKind::Number,
+                            default: Some(PropertyValue::Number(0.0)),
+                            required: false,
+                            editable: true,
+                            minimum: None,
+                            maximum: None,
+                            min_length: None,
+                            max_length: None,
+                            allowed_values: vec![],
+                        },
+                    )]),
+                    events: BTreeMap::new(),
+                },
+                |_, _| AnyView::new(EmptyView),
+            )
+            .unwrap();
+        registry
+            .register_composable(
+                ComponentSchema {
+                    id: ComponentId::new("column").unwrap(),
+                    version: 1,
+                    display_name: "Column".into(),
+                    properties: BTreeMap::new(),
+                    events: BTreeMap::new(),
+                },
+                BTreeMap::from([(
+                    SlotId::new("body").unwrap(),
+                    SlotSchema {
+                        allowed_children: BTreeSet::from([ComponentId::new("number").unwrap()]),
+                        min_children: 0,
+                        max_children: 8,
+                    },
+                )]),
+                |_, _, _| AnyView::new(EmptyView),
+            )
+            .unwrap();
+        registry
+    }
+
+    #[test]
+    fn numeric_edit_accepts_exact_integer_json_token() {
+        let mut host = PreviewHost::new(number_registry());
+        let mut session = Session::default();
+        let token = connect(&mut session, Host::Preview(&mut host));
+        let document = PreviewDocument::new(
+            PreviewId::new("external-preview").unwrap(),
+            ComponentId::new("number").unwrap(),
+            1,
+        );
+        let source = encode_preview(&document, host.catalog()).unwrap();
+        assert!(
+            session
+                .handle(
+                    wire(Some(&token), 1, json!({"kind":"mount", "source":source})),
+                    Host::Preview(&mut host),
+                    &BTreeSet::new(),
+                    ""
+                )
+                .reply
+                .error
+                .is_none()
+        );
+        let stamp = Stamp::preview(&host.snapshot().unwrap().stamp);
+        let reply = session.handle(wire(Some(&token), 2, json!({"kind":"edit_properties", "stamp":stamp, "updates_source":"[[\"amount\",1]]"})), Host::Preview(&mut host), &BTreeSet::new(), "").reply;
+        assert_eq!(reply.error, None);
+        assert_eq!(
+            host.snapshot().unwrap().preview.properties[&PropertyId::new("amount").unwrap()],
+            PropertyValue::Number(1.0)
+        );
+        let stamp = Stamp::preview(&host.snapshot().unwrap().stamp);
+        for (sequence, token_value) in [(3, "9007199254740993"), (4, "18446744073709551615")] {
+            let updates = format!("[[\"amount\",{token_value}]]");
+            let reply = session
+                .handle(
+                    wire(
+                        Some(&token),
+                        sequence,
+                        json!({"kind":"edit_properties", "stamp":stamp, "updates_source":updates}),
+                    ),
+                    Host::Preview(&mut host),
+                    &BTreeSet::new(),
+                    "",
+                )
+                .reply;
+            assert_eq!(reply.error, Some("invalid_edit"));
+            assert_eq!(Stamp::preview(&host.snapshot().unwrap().stamp), stamp);
+        }
+    }
+
+    #[test]
+    fn composition_numeric_edits_preserve_precision_and_are_atomic() {
+        let mut host = CompositionHost::new(number_registry());
+        let mut session = Session::default();
+        let token = connect(&mut session, Host::Composition(&mut host));
+        let source = json!({"format":COMPOSITION_FORMAT,"format_version":COMPOSITION_FORMAT_VERSION,"preview_id":"external-preview","root":"root","nodes":{"root":{"preview":{"format":"rustui.preview","format_version":1,"preview_id":"external-preview","component_id":"column","component_version":1,"properties":{},"actions":{}},"slots":{}}}}).to_string();
+        assert!(
+            session
+                .handle(
+                    wire(Some(&token), 1, json!({"kind":"mount","source":source})),
+                    Host::Composition(&mut host),
+                    &BTreeSet::new(),
+                    ""
+                )
+                .reply
+                .error
+                .is_none()
+        );
+        let stamp = Stamp::composition(host.stamp().unwrap());
+        let edits = r#"[{"kind":"insert","parent":"root","slot":"body","node":"child","value":{"preview":{"format":"rustui.preview","format_version":1,"preview_id":"external-preview","component_id":"number","component_version":1,"properties":{"amount":1},"actions":{}},"slots":{}}},{"kind":"set_property","node":"child","property":"amount","value":2}]"#;
+        let reply = session
+            .handle(
+                wire(
+                    Some(&token),
+                    2,
+                    json!({"kind":"edit_composition","stamp":stamp,"edits_source":edits}),
+                ),
+                Host::Composition(&mut host),
+                &BTreeSet::new(),
+                "",
+            )
+            .reply;
+        assert_eq!(reply.error, None);
+        let stamp = Stamp::composition(host.stamp().unwrap());
+        let original = host.document().unwrap().clone();
+        for (sequence, edits) in [
+            (
+                3,
+                r#"[{"kind":"set_property","node":"child","property":"amount","value":9007199254740993}]"#,
+            ),
+            (
+                4,
+                r#"[{"kind":"insert","parent":"root","slot":"body","node":"other","value":{"preview":{"format":"rustui.preview","format_version":1,"preview_id":"external-preview","component_id":"number","component_version":1,"properties":{"amount":18446744073709551615},"actions":{}},"slots":{}}}]"#,
+            ),
+        ] {
+            let reply = session
+                .handle(
+                    wire(
+                        Some(&token),
+                        sequence,
+                        json!({"kind":"edit_composition","stamp":stamp,"edits_source":edits}),
+                    ),
+                    Host::Composition(&mut host),
+                    &BTreeSet::new(),
+                    "",
+                )
+                .reply;
+            assert_eq!(reply.error, Some("invalid_edit"));
+            assert_eq!(Stamp::composition(host.stamp().unwrap()), stamp);
+            assert_eq!(host.document(), Some(&original));
+        }
     }
 
     #[test]

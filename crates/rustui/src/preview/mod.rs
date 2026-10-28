@@ -10,7 +10,9 @@ mod model;
 mod registry;
 mod schema;
 
-pub use codec::{decode_catalog, decode_preview, encode_catalog, encode_preview};
+pub use codec::{
+    decode_catalog, decode_preview, decode_property_value, encode_catalog, encode_preview,
+};
 pub use composition::{
     COMPOSITION_FORMAT, COMPOSITION_FORMAT_VERSION, CompositionDocument, CompositionEdit,
     CompositionHost, CompositionNode, CompositionNodeSnapshot, CompositionSignal, CompositionSlots,

@@ -34,6 +34,25 @@ pub fn decode_preview(
     validate_preview(catalog, document)
 }
 
+/// Decodes one JSON edit value using the property's declared numeric kind.
+/// Integer tokens for Number properties must be exactly representable as f64.
+pub fn decode_property_value(
+    source: &str,
+    id: &PropertyId,
+    schema: &PropertySchema,
+) -> Result<PropertyValue, PreviewError> {
+    check_size(source)?;
+    let raw: &serde_json::value::RawValue = serde_json::from_str(source)?;
+    validate_raw_number(id, schema.kind, Some(raw))?;
+    let value: PropertyValue = serde_json::from_str(source)?;
+    if let (PropertyKind::Number, PropertyValue::Integer(integer)) = (schema.kind, &value) {
+        return Ok(PropertyValue::Number(exact_integer_as_number(
+            *integer, id,
+        )?));
+    }
+    Ok(value)
+}
+
 /// Encodes a preview descriptor only after validating its full schema contract.
 pub fn encode_preview(
     document: &PreviewDocument,
