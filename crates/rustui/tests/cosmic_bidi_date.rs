@@ -67,3 +67,46 @@ fn unwrapped_bidi_dates_preserve_initial_digits_and_width() {
             .any(|glyph| glyph.start == '٢'.len_utf8())
     );
 }
+
+#[test]
+fn unwrapped_mixed_direction_initial_spans_keep_all_digits() {
+    let mut fonts = FontSystem::new_with_locale_and_db("en-US".into(), Default::default());
+    fonts
+        .db_mut()
+        .load_font_data(include_bytes!("../assets/fonts/NotoSans-Regular.ttf").to_vec());
+    let attrs = AttrsList::new(&Attrs::new().family(Family::Name("Noto Sans")));
+    for (marked, plain, prefix) in [
+        ("7\u{200f}/10/2026", "7/10/2026", 1),
+        ("1234\u{200f}/10/2026", "1234/10/2026", 4),
+        ("42\u{200f} text", "42 text", 2),
+    ] {
+        let mut widths = Vec::new();
+        for text in [marked, plain] {
+            let line = ShapeLine::new(&mut fonts, text, &attrs, Shaping::Advanced, 4);
+            let mut rows = Vec::new();
+            line.layout_to_buffer(
+                &mut ShapeBuffer::default(),
+                14.0,
+                None,
+                Wrap::None,
+                Ellipsize::None,
+                None,
+                &mut rows,
+                None,
+                Hinting::Disabled,
+            );
+            assert_eq!(rows.len(), 1);
+            for index in 0..prefix {
+                assert!(
+                    rows[0].glyphs.iter().any(|glyph| glyph.start == index),
+                    "missing initial digit {index} in {text:?}"
+                );
+            }
+            widths.push(rows[0].w);
+        }
+        assert!(
+            (widths[0] - widths[1]).abs() < 0.01,
+            "direction mark changed width for {marked:?}: {widths:?}"
+        );
+    }
+}
