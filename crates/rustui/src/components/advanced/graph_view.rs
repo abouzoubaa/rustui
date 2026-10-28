@@ -85,6 +85,13 @@ fn localized_graph_message(
     resolved_localized_message(id, localized, fallback)
 }
 
+fn graph_display_label(context: &RenderContext<'_>, key: Option<&str>, fallback: &str) -> String {
+    match key {
+        Some(key) => localized_graph_message(context, key, &MessageArguments::new(), fallback),
+        None => fallback.to_owned(),
+    }
+}
+
 impl GraphError {
     /// Message identifier for resolving this error through RustUI's locale catalogs.
     pub fn localization_key(&self) -> &'static str {
@@ -118,6 +125,7 @@ pub enum GraphPortDirection {
 pub struct GraphPort {
     id: String,
     label: String,
+    label_key: Option<String>,
     direction: GraphPortDirection,
 }
 impl GraphPort {
@@ -129,6 +137,7 @@ impl GraphPort {
         let port = Self {
             id: id.into(),
             label: name.into(),
+            label_key: None,
             direction,
         };
         identity(&port.id)?;
@@ -141,6 +150,11 @@ impl GraphPort {
     pub fn label(&self) -> &str {
         &self.label
     }
+    /// Resolve a display label at render time, falling back to the supplied label.
+    pub fn localized_label(mut self, key: impl Into<String>) -> Self {
+        self.label_key = Some(key.into());
+        self
+    }
     pub fn direction(&self) -> GraphPortDirection {
         self.direction
     }
@@ -150,6 +164,7 @@ impl GraphPort {
 pub struct GraphNode {
     id: String,
     label: String,
+    label_key: Option<String>,
     rect: CanvasRect,
     ports: Vec<GraphPort>,
 }
@@ -163,6 +178,7 @@ impl GraphNode {
         let node = Self {
             id: id.into(),
             label: name.into(),
+            label_key: None,
             rect,
             ports: ports.into_iter().collect(),
         };
@@ -189,6 +205,11 @@ impl GraphNode {
     }
     pub fn label(&self) -> &str {
         &self.label
+    }
+    /// Resolve a display label at render time, falling back to the supplied label.
+    pub fn localized_label(mut self, key: impl Into<String>) -> Self {
+        self.label_key = Some(key.into());
+        self
     }
     pub fn rect(&self) -> CanvasRect {
         self.rect
@@ -320,11 +341,13 @@ impl GraphDocument {
             GraphEdit::AddNode(node) => next.nodes.push(node),
             GraphEdit::RenameNode { id, label: name } => {
                 label(&name)?;
-                next.nodes
+                let node = next
+                    .nodes
                     .iter_mut()
                     .find(|n| n.id == id)
-                    .ok_or(GraphError::MissingNode)?
-                    .label = name;
+                    .ok_or(GraphError::MissingNode)?;
+                node.label = name;
+                node.label_key = None;
             }
             GraphEdit::MoveNode { id, x, y } => {
                 let n = next
@@ -352,6 +375,27 @@ impl GraphDocument {
             }
         }
         next.validate()?;
+        Ok(next)
+    }
+
+    /// Rename a node with a locale-dependent display label and literal fallback.
+    pub fn renamed_node_localized(
+        &self,
+        id: impl Into<String>,
+        label: impl Into<String>,
+        key: impl Into<String>,
+    ) -> Result<Self, GraphError> {
+        let id = id.into();
+        let name = label.into();
+        self::label(&name)?;
+        let mut next = self.clone();
+        let node = next
+            .nodes
+            .iter_mut()
+            .find(|node| node.id == id)
+            .ok_or(GraphError::MissingNode)?;
+        node.label = name;
+        node.label_key = Some(key.into());
         Ok(next)
     }
 }
@@ -792,15 +836,20 @@ pub(super) fn render_graph(
                 let to = graph.endpoint(&edge.to).unwrap();
                 format!(
                     "{} {} to {} {}",
-                    from.0.label, from.1.label, to.0.label, to.1.label
+                    graph_display_label(context, from.0.label_key.as_deref(), &from.0.label),
+                    graph_display_label(context, from.1.label_key.as_deref(), &from.1.label),
+                    graph_display_label(context, to.0.label_key.as_deref(), &to.0.label),
+                    graph_display_label(context, to.1.label_key.as_deref(), &to.1.label),
                 )
             })
             .collect::<Vec<_>>()
             .join("; ");
+        let display_node_label =
+            graph_display_label(context, node.label_key.as_deref(), &node.label);
         let node_label = if relationships.is_empty() {
-            node.label.clone()
+            display_node_label.clone()
         } else {
-            format!("{}; {}", node.label, relationships)
+            format!("{}; {}", display_node_label, relationships)
         };
         let pointer_activate = view
             .activate
@@ -878,7 +927,7 @@ pub(super) fn render_graph(
                 div()
                     .h(px(row_height))
                     .overflow_hidden()
-                    .child(node.label.clone()),
+                    .child(display_node_label.clone()),
             );
         if !view.disabled {
             card = card
@@ -952,13 +1001,18 @@ pub(super) fn render_graph(
                     GraphPortDirection::Input => ("rustui-graph-port-input", "input"),
                     GraphPortDirection::Output => ("rustui-graph-port-output", "output"),
                 };
+                let display_port_label =
+                    graph_display_label(context, port.label_key.as_deref(), &port.label);
                 let port_label = localized_graph_message(
                     context,
                     message_id,
                     &MessageArguments::new()
-                        .with("node", node.label.clone())
-                        .with("port", port.label.clone()),
-                    &format!("{} {} {}", node.label, direction, port.label),
+                        .with("node", display_node_label.clone())
+                        .with("port", display_port_label.clone()),
+                    &format!(
+                        "{} {} {}",
+                        display_node_label, direction, display_port_label
+                    ),
                 );
                 let port_control = div()
                     .id(graph_element_id(
@@ -1001,7 +1055,7 @@ pub(super) fn render_graph(
                         } else {
                             "→"
                         },
-                        port.label
+                        display_port_label
                     ));
                 card = card.child(port_control);
             }
@@ -1015,7 +1069,7 @@ pub(super) fn render_graph(
                     } else {
                         "→"
                     },
-                    port.label
+                    graph_display_label(context, port.label_key.as_deref(), &port.label)
                 )));
             }
         }
@@ -1026,17 +1080,25 @@ pub(super) fn render_graph(
     for edge in &graph.edges {
         let source = graph.endpoint(&edge.from).unwrap();
         let target = graph.endpoint(&edge.to).unwrap();
+        let source_node =
+            graph_display_label(context, source.0.label_key.as_deref(), &source.0.label);
+        let source_port =
+            graph_display_label(context, source.1.label_key.as_deref(), &source.1.label);
+        let target_node =
+            graph_display_label(context, target.0.label_key.as_deref(), &target.0.label);
+        let target_port =
+            graph_display_label(context, target.1.label_key.as_deref(), &target.1.label);
         let description = localized_graph_message(
             context,
             "rustui-graph-disconnect",
             &MessageArguments::new()
-                .with("source_node", source.0.label.clone())
-                .with("source_port", source.1.label.clone())
-                .with("target_node", target.0.label.clone())
-                .with("target_port", target.1.label.clone()),
+                .with("source_node", source_node.clone())
+                .with("source_port", source_port.clone())
+                .with("target_node", target_node.clone())
+                .with("target_port", target_port.clone()),
             &format!(
                 "Disconnect {} {} to {} {}",
-                source.0.label, source.1.label, target.0.label, target.1.label
+                source_node, source_port, target_node, target_port
             ),
         );
         if let Some(binding) = editor.as_ref().filter(|_| !view.disabled) {
@@ -1638,6 +1700,31 @@ mod tests {
             .unwrap();
         assert_eq!(renamed.node("a").unwrap().label(), "Renamed");
     }
+    #[test]
+    fn localized_node_labels_follow_explicit_renames() {
+        let original =
+            GraphDocument::new([node("a", 10.0).localized_label("sample-original")], []).unwrap();
+        let localized = original
+            .renamed_node_localized("a", "Renamed", "sample-renamed")
+            .unwrap();
+        assert_eq!(
+            localized.node("a").unwrap().label_key.as_deref(),
+            Some("sample-renamed")
+        );
+        assert_eq!(
+            original.node("a").unwrap().label_key.as_deref(),
+            Some("sample-original")
+        );
+        let literal = localized
+            .edited(GraphEdit::RenameNode {
+                id: "a".into(),
+                label: "User text".into(),
+            })
+            .unwrap();
+        assert_eq!(literal.node("a").unwrap().label(), "User text");
+        assert_eq!(literal.node("a").unwrap().label_key, None);
+    }
+
     #[test]
     fn event_edits_apply_to_latest_document_and_stale_edits_are_noops() {
         let mut latest = graph()

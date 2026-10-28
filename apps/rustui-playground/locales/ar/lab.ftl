@@ -375,6 +375,12 @@ lab-alert-warning = تحذير
 lab-alert-error = خطأ
 
 lab-graph-omitted = الرسم البياني مخفي
+lab-graph-node-source = المصدر
+lab-graph-node-transform = التحويل
+lab-graph-node-new = عقدة جديدة
+lab-graph-node-renamed = عقدة أعيدت تسميتها
+lab-graph-port-input = إدخال
+lab-graph-port-output = إخراج
 lab-graph-selected = المحدد: {selection}
 lab-graph-no-selection = المحدد: لا شيء
 lab-graph-activations = مرات التفعيل: {count}

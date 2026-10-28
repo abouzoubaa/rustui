@@ -375,6 +375,12 @@ lab-alert-warning = Avertissement
 lab-alert-error = Erreur
 
 lab-graph-omitted = Graphe masqué
+lab-graph-node-source = Source
+lab-graph-node-transform = Transformation
+lab-graph-node-new = Nouveau nœud
+lab-graph-node-renamed = Nœud renommé
+lab-graph-port-input = Entrée
+lab-graph-port-output = Sortie
 lab-graph-selected = Sélection : {selection}
 lab-graph-no-selection = Sélection : aucune
 lab-graph-activations = Activations : {count}

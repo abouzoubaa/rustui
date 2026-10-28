@@ -9,11 +9,20 @@ pub fn sample_document() -> GraphDocument {
             name,
             CanvasRect::new(x, y, 150.0, 100.0).unwrap(),
             [
-                GraphPort::new("in", "Input", GraphPortDirection::Input).unwrap(),
-                GraphPort::new("out", "Output", GraphPortDirection::Output).unwrap(),
+                GraphPort::new("in", "Input", GraphPortDirection::Input)
+                    .unwrap()
+                    .localized_label("lab-graph-port-input"),
+                GraphPort::new("out", "Output", GraphPortDirection::Output)
+                    .unwrap()
+                    .localized_label("lab-graph-port-output"),
             ],
         )
         .unwrap()
+        .localized_label(if id == "source" {
+            "lab-graph-node-source"
+        } else {
+            "lab-graph-node-transform"
+        })
     };
     GraphDocument::new(
         [
@@ -88,19 +97,30 @@ impl GraphGallery {
                 "New node",
                 CanvasRect::new(180.0, 30.0, 150.0, 100.0).unwrap(),
                 [
-                    GraphPort::new("in", "Input", GraphPortDirection::Input).unwrap(),
-                    GraphPort::new("out", "Output", GraphPortDirection::Output).unwrap(),
+                    GraphPort::new("in", "Input", GraphPortDirection::Input)
+                        .unwrap()
+                        .localized_label("lab-graph-port-input"),
+                    GraphPort::new("out", "Output", GraphPortDirection::Output)
+                        .unwrap()
+                        .localized_label("lab-graph-port-output"),
                 ],
             )
-            .unwrap(),
+            .unwrap()
+            .localized_label("lab-graph-node-new"),
         ));
     }
     fn rename(&mut self) {
         if let Some(id) = self.selection.clone() {
-            self.edit(GraphEdit::RenameNode {
-                id,
-                label: "Renamed node".into(),
-            });
+            match self
+                .document
+                .renamed_node_localized(id, "Renamed node", "lab-graph-node-renamed")
+            {
+                Ok(next) => {
+                    self.document = next;
+                    self.status = None;
+                }
+                Err(error) => self.status = Some(error),
+            }
         }
     }
     fn remove(&mut self) {
@@ -248,6 +268,30 @@ mod tests {
         assert!(gallery.document.edges().is_empty());
         gallery.reset();
         assert_eq!(gallery.document, sample_document());
+    }
+
+    #[test]
+    fn graph_example_labels_exist_in_each_runtime_catalog() {
+        let catalogs = super::super::locale_selector::catalogs();
+        for (language, expected) in [("en", "Output"), ("fr", "Sortie"), ("ar", "إخراج")] {
+            let locale = rustui::localization::Locale::parse(language).unwrap();
+            let catalog = catalogs.get(&locale).unwrap();
+            assert_eq!(catalog.get("lab-graph-port-output"), Some(expected));
+            for key in [
+                "lab-graph-node-source",
+                "lab-graph-node-transform",
+                "lab-graph-node-new",
+                "lab-graph-node-renamed",
+                "lab-graph-port-input",
+            ] {
+                assert!(
+                    catalog
+                        .get(key)
+                        .is_some_and(|value| !value.trim().is_empty()),
+                    "{language}: {key}"
+                );
+            }
+        }
     }
 
     #[test]
