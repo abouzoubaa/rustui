@@ -138,6 +138,7 @@ fn require_accessible_name(label: SharedString) -> SharedString {
 pub struct ButtonView {
     label: SharedString,
     localized_label_key: Option<SharedString>,
+    localized_label_arguments: Option<crate::localization::MessageArguments>,
     action: ControlAction,
     id: Option<Identity>,
     style: ButtonStyle,
@@ -154,6 +155,7 @@ impl ButtonView {
         Self {
             label: label.into(),
             localized_label_key: None,
+            localized_label_arguments: None,
             action: action.into(),
             id: None,
             style: ButtonStyle::Automatic,
@@ -175,7 +177,20 @@ impl ButtonView {
             "Button label localization key must not be blank"
         );
         self.localized_label_key = Some(key);
+        self.localized_label_arguments = None;
         self
+    }
+
+    /// Resolves the visible label with locale-aware arguments, retaining the
+    /// original literal label when the message is missing or invalid.
+    pub fn localized_label_with_arguments(
+        self,
+        message_key: impl Into<SharedString>,
+        arguments: crate::localization::MessageArguments,
+    ) -> Self {
+        let mut button = self.localized_label(message_key);
+        button.localized_label_arguments = Some(arguments);
+        button
     }
 
     /// Sets an explicit GPUI element ID when labels are repeated.
@@ -259,7 +274,15 @@ impl ButtonView {
     fn resolved_label(&self, context: &RenderContext<'_>) -> SharedString {
         self.localized_label_key.as_ref().map_or_else(
             || self.label.clone(),
-            |key| resolved_message_label(context.localized_message(key.as_ref()), key, &self.label),
+            |key| {
+                let resolved = match &self.localized_label_arguments {
+                    Some(arguments) => context
+                        .localized_message_with_arguments(key.as_ref(), arguments)
+                        .unwrap_or_else(|_| key.to_string()),
+                    None => context.localized_message(key.as_ref()),
+                };
+                resolved_message_label(resolved, key, &self.label)
+            },
         )
     }
 
@@ -362,6 +385,17 @@ mod tests {
             button.localized_label_key.as_ref().unwrap().as_ref(),
             "button.save"
         );
+    }
+
+    #[test]
+    fn localized_visible_label_arguments_can_be_replaced_by_a_static_label() {
+        let args = crate::localization::MessageArguments::new().with("count", 7_i64);
+        let button = Button("Count: 7", crate::runtime::Action::new::<()>(|_| {}))
+            .localized_label_with_arguments("button.count", args.clone());
+        assert_eq!(button.localized_label_arguments.as_ref(), Some(&args));
+        assert_eq!(button.identity_with(|id| id).as_str(), "button:Count: 7");
+        let button = button.localized_label("button.static");
+        assert_eq!(button.localized_label_arguments, None);
     }
 
     #[test]
