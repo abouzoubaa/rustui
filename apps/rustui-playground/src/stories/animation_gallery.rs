@@ -3,6 +3,7 @@
 use std::time::Duration;
 
 use rustui::animation::timing::TimingFunction;
+use rustui::localization::MessageArguments;
 use rustui::prelude::*;
 
 pub fn demo() -> impl View {
@@ -32,80 +33,109 @@ impl View for AnimationGallery {
 
         VStack::new()
             .spacing(10.0)
-            .child(Text("Opacity animation"))
-            .child(Text("Restart changes the view identity. GPUI owns the three-second fade and reduced-motion setting."))
-            .child(
-                HStack::new()
-                    .spacing(8.0)
-                    .child(Button("Restart fade", self.action(Self::restart)).id("animation-restart"))
-                    .child(Button("Reduce motion", AppAction::reduced_motion(true)).id("animation-reduce-motion"))
-                    .child(Button("Allow motion", AppAction::reduced_motion(false)).id("animation-allow-motion")),
-            )
-            .child(Text(format!("Animation generation: {}", self.generation())))
+            .child(LocalizedText("lab-animation-title"))
+            .child(LocalizedText("lab-animation-description"))
             .child(
                 HStack::new()
                     .spacing(8.0)
                     .child(
-                        Container(Text("Static opacity: 1.0"))
+                        Button("Restart fade", self.action(Self::restart))
+                            .id("animation-restart")
+                            .localized_label("lab-animation-restart"),
+                    )
+                    .child(
+                        Button("Reduce motion", AppAction::reduced_motion(true))
+                            .id("animation-reduce-motion")
+                            .localized_label("lab-motion-reduce"),
+                    )
+                    .child(
+                        Button("Allow motion", AppAction::reduced_motion(false))
+                            .id("animation-allow-motion")
+                            .localized_label("lab-motion-allow"),
+                    ),
+            )
+            .child(LocalizedText("lab-animation-generation").with_arguments(
+                MessageArguments::new().with("generation", i64::from(self.generation())),
+            ))
+            .child(
+                HStack::new()
+                    .spacing(8.0)
+                    .child(
+                        Container(LocalizedText("lab-animation-static-full"))
                             .padding(12.0)
                             .border()
                             .background(Surface::Panel)
                             .opacity(1.0),
                     )
                     .child(
-                        Container(Text("Static opacity: 0.5"))
+                        Container(LocalizedText("lab-animation-static-half"))
                             .padding(12.0)
                             .border()
                             .background(Surface::Panel)
                             .opacity(0.5),
                     ),
             )
-            .child(Text("Container shadow"))
+            .child(LocalizedText("lab-animation-shadow"))
             .child(
                 HStack::new()
                     .spacing(8.0)
                     .child(
-                        Container(Text("Without shadow"))
+                        Container(LocalizedText("lab-animation-no-shadow"))
                             .padding(12.0)
                             .border()
                             .background(Surface::Panel),
                     )
                     .child(
-                        Container(Text("Offset 0, 4; blur 8; spread -1"))
+                        Container(LocalizedText("lab-animation-shadow-values"))
                             .padding(12.0)
                             .border()
                             .background(Surface::Panel)
                             .shadow(0.0, 4.0, 8.0, -1.0, shadow_color),
                     ),
             )
-            .child(Keyed(
-                format!("fade-generation-{}", self.generation()),
-                AnimatedOpacity::new(
-                    "sample-fade",
-                    Container(Text("Animated content reaches full opacity."))
-                        .padding(12.0)
-                        .border()
-                        .background(Surface::Panel),
-                    0.0,
-                    1.0,
-                    Duration::from_secs(3),
-                )
-                .expect("fixed demo animation parameters are valid"),
-            ))
-            .child(Text("One-shot mount animation; changing a target on the same identity does not restart it. Reduced motion uses the endpoint immediately."))
+            .child(
+                HStack::new().child(Keyed(
+                    format!("fade-generation-{}", self.generation()),
+                    AnimatedOpacity::new(
+                        "sample-fade",
+                        Container(LocalizedText("lab-animation-content"))
+                            .padding(12.0)
+                            .border()
+                            .background(Surface::Panel),
+                        0.0,
+                        1.0,
+                        Duration::from_secs(3),
+                    )
+                    .expect("fixed demo animation parameters are valid"),
+                )),
+            )
+            .child(LocalizedText("lab-animation-help"))
             .child(Keyed(
                 format!("curve-generation-{}", self.generation()),
                 HStack::new().spacing(8.0).children(
-                    [TimingFunction::Linear, TimingFunction::EaseIn,
-                     TimingFunction::EaseOut, TimingFunction::EaseInOut]
-                        .into_iter().map(|curve| {
-                            AnimatedOpacity::new(
-                                format!("curve-{curve:?}"),
-                                Text(format!("{curve:?}")),
-                                0.0, 1.0, Duration::from_secs(3),
-                            ).expect("fixed demo animation parameters are valid")
-                                .timing_function(curve)
-                        }),
+                    [
+                        TimingFunction::Linear,
+                        TimingFunction::EaseIn,
+                        TimingFunction::EaseOut,
+                        TimingFunction::EaseInOut,
+                    ]
+                    .into_iter()
+                    .map(|curve| {
+                        AnimatedOpacity::new(
+                            format!("curve-{curve:?}"),
+                            LocalizedText(match curve {
+                                TimingFunction::Linear => "lab-animation-linear",
+                                TimingFunction::EaseIn => "lab-animation-ease-in",
+                                TimingFunction::EaseOut => "lab-animation-ease-out",
+                                TimingFunction::EaseInOut => "lab-animation-ease-in-out",
+                            }),
+                            0.0,
+                            1.0,
+                            Duration::from_secs(3),
+                        )
+                        .expect("fixed demo animation parameters are valid")
+                        .timing_function(curve)
+                    }),
                 ),
             ))
     }
