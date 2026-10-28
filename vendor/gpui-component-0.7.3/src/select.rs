@@ -91,6 +91,7 @@ struct SelectOptions {
     disabled: bool,
     appearance: bool,
     focus_ring_enabled: bool,
+    right_to_left: bool,
 }
 
 impl Default for SelectOptions {
@@ -108,6 +109,7 @@ impl Default for SelectOptions {
             disabled: false,
             appearance: true,
             focus_ring_enabled: true,
+            right_to_left: false,
             search_placeholder: None,
         }
     }
@@ -129,6 +131,7 @@ where
     icon: Option<Icon>,
     title_prefix: Option<SharedString>,
     focus_ring_enabled: bool,
+    right_to_left: bool,
 }
 
 /// A Select element.
@@ -294,6 +297,7 @@ where
             icon: None,
             title_prefix: None,
             focus_ring_enabled: true,
+            right_to_left: false,
         }
     }
 
@@ -628,7 +632,11 @@ where
                                     this.escape(&Cancel, window, cx);
                                 })),
                             cx,
-                        ))
+                        ).align(if self.right_to_left {
+                            gpui_base::Align::End
+                        } else {
+                            gpui_base::Align::Start
+                        }))
                         .with_priority(gpui_base::POPUP_PRIORITY),
                     )
                 }),
@@ -653,6 +661,12 @@ where
     /// Sets an explicit identity for the select root.
     pub fn id(mut self, id: impl Into<ElementId>) -> Self {
         self.id = id.into();
+        self
+    }
+
+    /// Align the popup with the logical start of a right-to-left trigger.
+    pub fn right_to_left(mut self, value: bool) -> Self {
+        self.options.right_to_left = value;
         self
     }
 
@@ -820,6 +834,7 @@ where
             this.state.disabled = opts.disabled;
             this.state.appearance = opts.appearance;
             this.focus_ring_enabled = opts.focus_ring_enabled;
+            this.right_to_left = opts.right_to_left;
             this.icon = opts.icon;
             this.title_prefix = opts.title_prefix;
 

@@ -370,6 +370,7 @@ impl View for ComboBoxView {
         );
         let mut combo_box = GpuiSelect::new(&select)
             .id(identity.to_string())
+            .right_to_left(context.layout_direction() == rustui_i18n::LayoutDirection::RightToLeft)
             .placeholder(placeholder)
             .accessibility_label(accessible_name)
             .disabled(self.disabled)

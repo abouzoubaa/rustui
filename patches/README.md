@@ -1,5 +1,13 @@
 # Approved upstream patches
 
+## GPUI Components 0.7.3 Select RTL alignment
+
+`approved/gpui-component-select-rtl-alignment-v1.patch` layers on the
+committed-title patch. It allows RustUI Picker and ComboBox to align their
+popups to the trigger's logical start while keeping LTR as the default.
+Run `python3 scripts/apply_gpui_select_rtl_patch.py --verify` to verify
+the composed image; `--apply` and `--reverse` replay the layer.
+
 ## GPUI Components 0.7.3 DatePicker RTL alignment
 
 `approved/gpui-component-date-picker-rtl-alignment-v1.patch` layers on the

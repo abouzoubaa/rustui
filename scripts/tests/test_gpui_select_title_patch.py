@@ -25,6 +25,13 @@ class SelectTitlePatchTests(unittest.TestCase):
                 target.parent.mkdir(parents=True, exist_ok=True)
                 shutil.copy2(ROOT / relative, target)
 
+            # Exercise the title patch independently of the later RTL layer.
+            subprocess.run(
+                ["git", "apply", "--reverse", str(ROOT / "patches/approved/gpui-component-select-rtl-alignment-v1.patch")],
+                cwd=root,
+                check=True,
+            )
+
             def run(action):
                 return subprocess.run(
                     [sys.executable, str(SCRIPT), "--root", str(root), action],

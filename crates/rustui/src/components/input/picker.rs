@@ -321,6 +321,7 @@ impl View for PickerView {
 
         let mut picker = GpuiSelect::new(&select)
             .id(identity.to_string())
+            .right_to_left(context.layout_direction() == rustui_i18n::LayoutDirection::RightToLeft)
             .placeholder(self.label.clone())
             .accessibility_label(match &self.accessibility_label {
                 Some(PickerLabel::Literal(label)) => label.clone(),
