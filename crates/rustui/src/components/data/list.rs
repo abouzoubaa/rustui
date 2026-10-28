@@ -519,6 +519,78 @@ impl View for ListView {
 mod tests {
     use super::*;
 
+    struct KeyboardListOwner {
+        selection: Option<usize>,
+        writes: usize,
+    }
+
+    impl View for KeyboardListOwner {
+        fn body(&self) -> impl View {
+            EmptyView
+        }
+
+        fn into_element(&self, context: &mut RenderContext<'_>) -> AnyElement {
+            let binding = Binding::new(
+                self.selection,
+                |owner: &Self| owner.selection,
+                |owner, value| {
+                    owner.selection = value;
+                    owner.writes += 1;
+                },
+            );
+            div()
+                .w(px(320.0))
+                .h(px(280.0))
+                .child(
+                    List(["first", "second", "third"], binding)
+                        .id("keyboard-list")
+                        .height(260.0)
+                        .into_element(context),
+                )
+                .into_any_element()
+        }
+    }
+
+    #[gpui::test]
+    fn keyboard_selection_updates_controlled_owner(cx: &mut gpui::TestAppContext) {
+        let theme = crate::theme::parse_theme(include_str!(concat!(
+            env!("CARGO_MANIFEST_DIR"),
+            "/../../themes/macos27.json"
+        )))
+        .unwrap();
+        cx.update(|app| {
+            gpui_component::init(app);
+            crate::theme::activate_theme(&theme, Some(crate::theme::AppearanceMode::Dark), app)
+                .unwrap();
+        });
+        let (owner, window) = cx.add_window_view(|_, app| {
+            crate::runtime::ComponentHost::new(
+                KeyboardListOwner {
+                    selection: Some(0),
+                    writes: 0,
+                },
+                app,
+            )
+        });
+        window.update(|window, app| {
+            let _ = window.draw(app);
+            let state = owner
+                .read(app)
+                .retained_entity_for_test::<ListState<StringListDelegate>>(
+                    vec![],
+                    Identity::from("keyboard-list"),
+                )
+                .expect("rendered List state");
+            state.update(app, |state, cx| state.focus(window, cx));
+        });
+        window.simulate_keystrokes("down");
+        window.update(|window, app| {
+            let _ = window.draw(app);
+            assert_eq!(owner.read(app).component().selection, Some(1));
+            assert_eq!(owner.read(app).component().writes, 1);
+        });
+    }
+
     struct Owner;
 
     fn selection_binding() -> Binding<Option<usize>> {
