@@ -19,6 +19,23 @@ are retained as historical records.
 
 ## Current release evidence — 2026-10-27
 
+- **R31 lockfile advisory refresh, 2026-10-28:** OSV batch queries for all
+  834 distinct registry package/version pairs in lockfile SHA-256
+  `553f12f725d6e74b6f20950308dca47c2d09df872d1286a2e9de8c9dfe30e27a`
+  returned nine advisory matches with no query errors or paginated results:
+  eight unmaintained-package notices and `GHSA-qwgh-2vcv-g2f7` for
+  `block-buffer 0.10.4`, describing panic-related buffer corruption. The
+  default-feature Playground reverse trees for `aarch64-apple-darwin` and
+  `wasm32-unknown-unknown` both reported no active path to that version; an
+  all-target tree includes a path through `gpui-pre-linux`. This does not clear
+  other feature selections or future targets. The previously recorded
+  `rustls-webpki 0.103.15` is no longer in the current lockfile, which has
+  `0.103.16`. Raw query responses, advisory details and trees are retained in
+  `target/headstart/evidence/osv-lockfile-20261028/`; report SHA-256 is
+  `8b6ac3b3eec5903e973632f857724dfa01aa96e6e97355c319f7dba620486b3b`.
+  Review of maintenance notices, license obligations and other feature
+  selections remains open; this is not a clean security bill.
+
 - **R13 Arabic catalog count wording, 2026-10-28:** The Playground header
   now labels the catalog and demo totals in Arabic without using an incorrect
   plural after the number 16. Locale validation, formatting, the focused
