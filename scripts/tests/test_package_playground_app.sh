@@ -118,4 +118,24 @@ cmp \
 test ! -e "$bundle/Contents/Resources/references/Failed Update/Failed.svg"
 test -z "$(find "$bundle/Contents/Resources" -maxdepth 1 -name '.references.next.*' -print -quit)"
 
+# A validation bundle can reuse Cargo artifacts while leaving the default bundle intact.
+fresh_bundle="$temporary_root/isolated output/RustUI Playground.app"
+printf '%s\n' 'existing bundle sentinel' > "$bundle/sentinel"
+CARGO_TARGET_DIR="$target_root" \
+RUSTUI_PLAYGROUND_BINARY="$headstart_binary" \
+RUSTUI_PLAYGROUND_BUNDLE_PATH="$fresh_bundle" \
+RUSTUI_PLAYGROUND_REFERENCES_DIR="$references_source" \
+    "$repository_root/apps/rustui-playground/package-app.sh" >/dev/null
+cmp "$headstart_binary" "$fresh_bundle/Contents/MacOS/rustui-playground"
+test "$(cat "$bundle/sentinel")" = 'existing bundle sentinel'
+if CARGO_TARGET_DIR="$target_root" \
+    RUSTUI_PLAYGROUND_BINARY="$headstart_binary" \
+    RUSTUI_PLAYGROUND_BUNDLE_PATH="$fresh_bundle" \
+    RUSTUI_PLAYGROUND_REFERENCES_DIR="$references_source" \
+    "$repository_root/apps/rustui-playground/package-app.sh" >/dev/null 2>&1; then
+    printf '%s\n' 'package unexpectedly reused an explicit existing bundle.' >&2
+    exit 1
+fi
+cmp "$headstart_binary" "$fresh_bundle/Contents/MacOS/rustui-playground"
+test "$(cat "$bundle/sentinel")" = 'existing bundle sentinel'
 printf '%s\n' "Playground package replaces stale SVG references and preserves them if promotion fails."

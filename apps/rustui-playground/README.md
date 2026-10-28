@@ -20,6 +20,11 @@ macOS bundle, build with `./scripts/cargo-headstart build -p rustui-playground
 --locked`, then run `apps/rustui-playground/package-app.sh`. The old `rustui-lab`
 package is a thin launcher for this same implementation.
 
+To package into a separate, fresh location without changing the default bundle,
+set `RUSTUI_PLAYGROUND_BUNDLE_PATH` to the desired `.app` path. The script
+refuses to reuse an existing explicit destination. For a nondefault Cargo
+artifact layout, also set `RUSTUI_PLAYGROUND_BINARY` to the built executable.
+
 See [the Playground guide](../../docs/RUSTUI_PLAYGROUND.md) and the consolidation
 record in [the roadmap](../../docs/IMPLEMENTATION_ROADMAP.md).
 

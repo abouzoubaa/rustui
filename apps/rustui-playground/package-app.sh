@@ -5,7 +5,7 @@ app_root=$(CDPATH= cd -- "$(dirname -- "$0")" && pwd)
 repository_root=$(CDPATH= cd -- "$app_root/../.." && pwd)
 target_root="${CARGO_TARGET_DIR:-$repository_root/target/headstart}"
 binary="${RUSTUI_PLAYGROUND_BINARY:-$target_root/debug/rustui-playground}"
-bundle="$target_root/debug/RustUI Playground.app"
+bundle="${RUSTUI_PLAYGROUND_BUNDLE_PATH:-$target_root/debug/RustUI Playground.app}"
 references_dir="${RUSTUI_PLAYGROUND_REFERENCES_DIR:-$app_root/references}"
 resources="$bundle/Contents/Resources"
 references_bundle="$resources/references"
@@ -48,6 +48,13 @@ for resource in assets/link-fixture.html assets/link-disabled-fixture.html \
     fi
 done
 
+if [ -n "${RUSTUI_PLAYGROUND_BUNDLE_PATH:-}" ]; then
+    mkdir -p "$(dirname -- "$bundle")"
+    if ! mkdir "$bundle"; then
+        printf '%s\n' "cannot create fresh Playground bundle: $bundle" >&2
+        exit 1
+    fi
+fi
 mkdir -p "$bundle/Contents/MacOS" "$resources"
 mkdir -p "$resources/assets" "$resources/themes"
 cp "$repository_root/assets/link-fixture.html" "$resources/assets/link-fixture.html"
