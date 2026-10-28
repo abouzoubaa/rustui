@@ -4,7 +4,7 @@ use gpui::{
     AnyElement, InteractiveElement as _, IntoElement, ParentElement as _, Role, SharedString,
     StatefulInteractiveElement as _, Styled as _, div,
 };
-use gpui_component::collapsible::Collapsible as GpuiCollapsible;
+use gpui_component::{Icon, IconName, Sizable, Size, collapsible::Collapsible as GpuiCollapsible};
 use rustui_core::{Binding, Identity};
 
 use crate::{
@@ -21,6 +21,16 @@ fn toggle_open_if_enabled(open: &mut bool, disabled: bool) -> bool {
     }
     *open = !*open;
     true
+}
+
+fn disclosure_icon(open: bool, direction: rustui_i18n::LayoutDirection) -> IconName {
+    if open {
+        IconName::ChevronDown
+    } else if direction.is_right_to_left() {
+        IconName::ChevronLeft
+    } else {
+        IconName::ChevronRight
+    }
 }
 
 /// A labeled, controlled disclosure whose hidden content is unmounted.
@@ -136,8 +146,7 @@ impl<V: View> View for DisclosureView<V> {
         let open = self.is_open.value();
         let label = self.resolved_label(|key| context.localized_message(key));
         let accessibility_label = self.resolved_accessibility_label(&label);
-        let visible_label =
-            SharedString::from(format!("{} {}", if open { "▾" } else { "▸" }, label));
+        let icon = disclosure_icon(open, context.layout_direction());
         let disabled = self.disabled;
         let update = context.binding_updater(self.is_open.clone(), move |current| {
             toggle_open_if_enabled(current, disabled)
@@ -146,13 +155,14 @@ impl<V: View> View for DisclosureView<V> {
             themed_button(
                 context,
                 SharedString::from(format!("{}:trigger", self.id)),
-                visible_label,
+                label,
                 accessibility_label,
                 ButtonStyle::Plain,
                 disabled,
                 0,
                 true,
-            ),
+            )
+            .icon(Icon::new(icon).with_size(Size::XSmall)),
             &style,
         )
         .on_click(move |_, _, cx| {
@@ -180,7 +190,7 @@ impl<V: View> View for DisclosureView<V> {
 
 #[cfg(test)]
 mod tests {
-    use super::{Disclosure, DisclosureView, toggle_open_if_enabled};
+    use super::{Disclosure, DisclosureView, disclosure_icon, toggle_open_if_enabled};
     use crate::view::EmptyView;
     use rustui_core::Binding;
 
@@ -203,6 +213,28 @@ mod tests {
             disclosure().resolved_accessibility_label(&"Details".into()),
             "Details"
         );
+    }
+
+    #[test]
+    fn indicator_follows_open_state_and_layout_direction() {
+        use gpui_component::IconName;
+        use rustui_i18n::LayoutDirection::{LeftToRight, RightToLeft};
+        assert!(matches!(
+            disclosure_icon(false, LeftToRight),
+            IconName::ChevronRight
+        ));
+        assert!(matches!(
+            disclosure_icon(false, RightToLeft),
+            IconName::ChevronLeft
+        ));
+        assert!(matches!(
+            disclosure_icon(true, LeftToRight),
+            IconName::ChevronDown
+        ));
+        assert!(matches!(
+            disclosure_icon(true, RightToLeft),
+            IconName::ChevronDown
+        ));
     }
 
     #[test]
