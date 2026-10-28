@@ -1,6 +1,11 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
+if [ "$#" -gt 1 ] || { [ "$#" -eq 1 ] && [ "$1" != "--check-bindgen" ]; }; then
+  echo "Usage: $0 [--check-bindgen]" >&2
+  exit 2
+fi
+
 REPO_ROOT="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")/.." && pwd)"
 export CARGO_TARGET_DIR="${CARGO_TARGET_DIR:-$REPO_ROOT/target/headstart/x1a-wasm}"
 export RUSTUI_HEADSTART_ROOT="${RUSTUI_HEADSTART_ROOT:-$REPO_ROOT/target/headstart/wasm-root}"
@@ -36,6 +41,10 @@ fi
 if [ "$(wasm-bindgen --version)" != "wasm-bindgen $WASM_BINDGEN_VERSION" ]; then
   echo "wasm-bindgen CLI $WASM_BINDGEN_VERSION is required; install the version matching Cargo.lock." >&2
   exit 1
+fi
+if [ "${1:-}" = "--check-bindgen" ]; then
+  echo "wasm-bindgen $WASM_BINDGEN_VERSION available"
+  exit 0
 fi
 
 HEADSTART_HOST="$(rustc -vV | sed -n 's/^host: //p')"

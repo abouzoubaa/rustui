@@ -109,6 +109,21 @@ exit 0
 EOF
 chmod +x "$fixture/scripts/cargo-headstart" "$fake_bin/wasm-bindgen" "$fake_bin/rust-lld"
 
+# CI must detect a missing or mismatched binding tool before starting builds.
+PATH="$fake_bin:$PATH" CARGO_TARGET_DIR="$temporary_root/cargo-target" \
+  "$fixture/scripts/build-playground-web.sh" --check-bindgen >/dev/null
+test ! -e "$temporary_root/cargo-target/wasm32-unknown-unknown/release/rustui-playground.wasm"
+test ! -e "$fixture/target/headstart/playground-web"
+mv "$fake_bin/wasm-bindgen" "$fake_bin/wasm-bindgen-good"
+printf '#!/bin/sh\nprintf "wasm-bindgen 0.2.128\\n"\n' > "$fake_bin/wasm-bindgen"
+chmod +x "$fake_bin/wasm-bindgen"
+if PATH="$fake_bin:$PATH" "$fixture/scripts/build-playground-web.sh" --check-bindgen >"$temporary_root/bindgen-check.log" 2>&1; then
+  printf '%s\n' 'preflight accepted a mismatched wasm-bindgen' >&2
+  exit 1
+fi
+grep -Fq 'wasm-bindgen CLI 0.2.129 is required' "$temporary_root/bindgen-check.log"
+mv "$fake_bin/wasm-bindgen-good" "$fake_bin/wasm-bindgen"
+
 PATH="$fake_bin:$PATH" \
 CARGO_HOME="$temporary_root/cargo-home" \
 FIXTURE_ROOT="$fixture" \
