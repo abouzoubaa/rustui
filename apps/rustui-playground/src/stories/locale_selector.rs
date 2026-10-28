@@ -190,6 +190,28 @@ mod tests {
     }
 
     #[test]
+    fn save_dialog_status_formats_in_each_locale() {
+        use rustui::localization::MessageArguments;
+
+        let catalogs = catalogs();
+        for (identifier, expected) in [
+            ("en", "Saved Notes as PDF."),
+            ("fr", "Notes enregistré au format PDF."),
+            ("ar", "حُفظ Notes بتنسيق PDF."),
+        ] {
+            let locale = locale(identifier);
+            let status = catalogs
+                .format(
+                    &locale,
+                    "lab-save-dialog-saved-pdf",
+                    &MessageArguments::new().with("name", "Notes"),
+                )
+                .expect("dialog status should format");
+            assert_eq!(status, expected);
+        }
+    }
+
+    #[test]
     fn interpolation_story_messages_exist_in_every_playground_catalog() {
         let catalogs = catalogs();
         for identifier in ["en", "fr", "ar"] {

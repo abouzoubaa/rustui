@@ -4,7 +4,7 @@ use std::rc::Rc;
 
 use gpui::{
     AnyElement, InteractiveElement as _, IntoElement as _, ParentElement as _, Role, SharedString,
-    StatefulInteractiveElement as _, Window, div,
+    StatefulInteractiveElement as _, Styled as _, Window, div, px,
 };
 use gpui_component::{
     WindowExt as _,
@@ -371,7 +371,9 @@ impl View for DialogView {
 
                 window.open_dialog(cx, move |mut dialog, _, _| {
                     if let Some(title) = title.clone() {
-                        dialog = dialog.title(title);
+                        // Components places its close button at the physical right edge.
+                        // Reserve room there even when localized text is right-aligned.
+                        dialog = dialog.title(div().pr(px(32.0)).child(title));
                     }
 
                     if let Some(body) = content.clone() {
