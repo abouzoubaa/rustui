@@ -38,6 +38,8 @@ jobs:
         env:
           EXPECTED_SHA: ${{ github.sha }}
         run: ./scripts/verify-ci-checkout.sh "$EXPECTED_SHA"
+      - name: Provision Web binding tool on the trusted runner
+        run: ./scripts/provision-ci-wasm-bindgen.sh
       - name: Check Web binding tool before builds
         run: ./scripts/build-playground-web.sh --check-bindgen
       - name: macOS checks and optimized package

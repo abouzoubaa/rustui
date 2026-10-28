@@ -72,6 +72,12 @@ libraries. The established bootstrap command and evidence are recorded in
 `RUSTUI_WASM_TARGET_DIR` for a persistent Web cache override. Keep all build
 artifacts under `target/headstart`.
 
+The trusted macOS ARM64 CI job provisions the exact `wasm-bindgen 0.2.129`
+upstream release if the Headstart tools directory has no tool at that path. It checks
+the archive against the pinned SHA-256 before installation and preserves an
+existing tool, failing if that tool reports a different version. The runner
+still requires the documented Wasm toolchain and `rust-lld`.
+
 ## Artifacts and acceptance
 
 The native package is `target/headstart/debug/RustUI Playground.app` (or the
