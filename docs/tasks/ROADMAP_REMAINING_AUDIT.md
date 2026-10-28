@@ -19,6 +19,8 @@ are retained as historical records.
 
 ## Current release evidence — 2026-10-27
 
+- **R24/R25 Safari composition rendering, 2026-10-28:** In Safari 27.0 on macOS 27.0, the same-origin reference host mounted a `composition-column`, accepted insertion of a `composition-text` child, and visibly rendered `Safari child one`. A `set_property` edit was accepted at the current stamp (revision advanced from 1 to 2), and the rendered label changed to `Safari child updated`; the browser semantic tree also reflected both labels. The host reported disconnected and unmounted before the owned Safari window and localhost server were closed. The bundle manifest SHA-256 was `8eb9b4088974c4e3588a819bd924a6913dfb1cf7060b784194f154b96de66aa7`; all 2,943 captured source hashes matched the checkout. This is a bounded insert/property-edit observation, not full composition or cross-browser acceptance.
+
 - **R24/R25 Safari preview transport, 2026-10-28:** In Safari 27.0 on macOS
   27.0, the same-origin reference host reported PASS for both canonical compiled
   preview and composition roundtrips, including stale-stamp rejection and
@@ -27,7 +29,7 @@ are retained as historical records.
   manifest SHA-256 `8eb9b4088974c4e3588a819bd924a6913dfb1cf7060b784194f154b96de66aa7`;
   all 2,943 captured source file hashes matched the current checkout. The
   separate Safari window and localhost server were closed. These are bounded
-  protocol and mount observations; rendered-child behavior, other browser
+  protocol and mount observations; the rendered-child check is recorded above. Other browser
   versions, keyboard/IME and broader preview acceptance remain open.
 
 - **R26 Safari strong-ETag watcher, 2026-10-28:** Safari 27.0 on macOS 27.0
