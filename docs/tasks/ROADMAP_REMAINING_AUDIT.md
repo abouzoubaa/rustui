@@ -19,6 +19,17 @@ are retained as historical records.
 
 ## Current release evidence — 2026-10-27
 
+- **R26 Safari theme reload, 2026-10-28:** Safari 27.0 on macOS 27.0
+  loaded a temporary copy of the Web bundle built from `ae736006` (manifest
+  SHA-256 `5e344dfc43942cf3bb625a31c64a8fd09f29290e8e2f3cdbc3707a366c3ff59e`).
+  The Divider foundation story reported successful Light reload, rejected
+  deliberately malformed theme JSON with a parse error, and reported successful
+  Dark reload after restoring the valid file. The probe changed only the
+  temporary copy, verified its restored data against the packaged original,
+  closed its separate Safari window, and stopped its localhost server. This
+  does not establish inspector error handling, automatic polling, visual theme
+  fidelity, or broader cross-browser acceptance.
+
 - **R13/R20 owner-task visible localization, 2026-10-28:** Playground's owner-task title, controls and visible idle/loading/success/error states now resolve through English, French and Arabic catalogs; unknown result/error values remain interpolated. Locale validation, two focused tests, formatting and Web build passed (manifest SHA-256 `5e344dfc43942cf3bb625a31c64a8fd09f29290e8e2f3cdbc3707a366c3ff59e`). In one in-app browser session a restarted success remained visible and translated after English-to-French-to-Arabic switches; an Arabic error action displayed the translated failure. The existing live-region and accessible button descriptions remain English and are undone/deferred accessibility work. Native and wider locale/RTL/browser acceptance remain open.
 - **R30 current native test integration, 2026-10-28:** On clean commit `ec114476`, locked/offline Headstart workspace library tests passed 1,326/1,326 across six result groups and integration tests passed 56/56 across 34 groups, with none ignored. Logs are `target/headstart/evidence/stage-integration-lib-ec114476-20261028.log` (SHA-256 `a379359b4ef17b5c64735d9d686794fa5f44cfbfdb379d831bf6d2574ed9e14b`) and `target/headstart/evidence/stage-integration-tests-ec114476-20261028.log` (SHA-256 `e8926e6eadc346859153637f16640a15032d289ea77a94095e5d2403e8d38dbd`). GitHub [run 40685391014](https://github.com/abouzoubaa/rustui/actions/runs/40685391014) passed source CI on the same commit; its compiled macOS/Web job was skipped. Native GUI, current compiled CI, notices, packaging/distribution and wider acceptance remain separate.
 - **R09 recent-search initial state, 2026-10-28:** The Playground Text inputs story now starts its recent-search popover closed, so it does not cover the story on entry. Five focused search-field tests and formatting passed; the Web bundle built (manifest SHA-256 `f75b1c8c5f7b933b082ad13cdcbd680e5a5c8b7db9d0fed9f853fc1827bfc261`). In one in-app browser session the menu was initially closed, opened on its button, and selecting `Studio` updated the field and dismissed the menu. Native, keyboard and cross-browser acceptance remain open.
