@@ -439,6 +439,11 @@ mod tests {
             let _ = window.draw(app);
             assert_eq!(state.read(app).value().as_ref(), "external");
             assert_eq!(owner.read(app).component().value, "external");
+            assert!(
+                state
+                    .update(app, |state, cx| state.marked_text_range(window, cx))
+                    .is_none()
+            );
             state
         });
         window.cx.run_until_parked();
@@ -446,6 +451,18 @@ mod tests {
             let _ = window.draw(app);
             assert_eq!(state.read(app).value().as_ref(), "external");
             assert_eq!(owner.read(app).component().value, "external");
+        });
+        window.update(|window, app| {
+            state.update(app, |state, cx| {
+                state.replace_text_in_range(None, "é", window, cx);
+            });
+        });
+        window.cx.run_until_parked();
+        window.update(|window, app| {
+            let _ = window.draw(app);
+            // The upstream multiline set_value contract resets selection to the start.
+            assert_eq!(state.read(app).value().as_ref(), "éexternal");
+            assert_eq!(owner.read(app).component().value, "éexternal");
         });
     }
 
