@@ -58,10 +58,35 @@ pub fn encode_preview(
     document: &PreviewDocument,
     catalog: &ComponentCatalog,
 ) -> Result<String, PreviewError> {
+    check_serialized_text_budget(
+        std::iter::once(document),
+        &format!("preview document exceeds {MAX_DOCUMENT_BYTES} byte limit"),
+    )?;
     let mut document = document.clone();
     normalize_numeric_properties(catalog, &mut document)?;
     let validated = validate_preview(catalog, document)?;
     encode_json(&validated.document)
+}
+
+// Every property string is emitted in the JSON output. Its UTF-8 length is a
+// lower bound: quoting and escaping can only increase the number of bytes.
+// Rejecting this bound before cloning cannot reject an output within the cap.
+pub(super) fn check_serialized_text_budget<'a>(
+    documents: impl IntoIterator<Item = &'a PreviewDocument>,
+    limit_message: &str,
+) -> Result<(), PreviewError> {
+    let mut bytes = 0usize;
+    for document in documents {
+        for value in document.properties.values() {
+            if let PropertyValue::String(text) = value {
+                bytes = bytes.saturating_add(text.len());
+                if bytes > MAX_DOCUMENT_BYTES {
+                    return Err(PreviewError::Invalid(limit_message.to_owned()));
+                }
+            }
+        }
+    }
+    Ok(())
 }
 
 fn normalize_numeric_defaults(catalog: &mut ComponentCatalog) -> Result<(), PreviewError> {
@@ -341,6 +366,31 @@ mod tests {
     use std::collections::BTreeMap;
 
     #[test]
+    fn serialized_text_budget_counts_utf8_across_documents() {
+        let mut first = build_document();
+        let mut second = build_document();
+        first.properties.clear();
+        second.properties.clear();
+        first.properties.insert(
+            PropertyId::new("label").unwrap(),
+            PropertyValue::String("é".repeat(MAX_DOCUMENT_BYTES / 4)),
+        );
+        second.properties.insert(
+            PropertyId::new("label").unwrap(),
+            PropertyValue::String("x".repeat(MAX_DOCUMENT_BYTES / 2)),
+        );
+        assert!(check_serialized_text_budget([&first, &second], "too large").is_ok());
+        second.properties.insert(
+            PropertyId::new("extra").unwrap(),
+            PropertyValue::String("x".to_owned()),
+        );
+        assert!(matches!(
+            check_serialized_text_budget([&first, &second], "too large"),
+            Err(PreviewError::Invalid(message)) if message == "too large"
+        ));
+    }
+
+    #[test]
     fn bounded_json_encoding_preserves_exact_limit_and_rejects_larger_output() {
         let at_limit = "x".repeat(MAX_DOCUMENT_BYTES - 2);
         let encoded = encode_json(&at_limit).expect("JSON at the byte limit is accepted");
@@ -439,6 +489,31 @@ mod tests {
             ActionRef::new("host.preview.report").unwrap(),
         );
         document
+    }
+
+    #[test]
+    fn encoding_rejects_valid_properties_whose_text_exceeds_the_document_limit() {
+        let mut catalog = build_catalog();
+        let mut document = build_document();
+        let schema = catalog.components.get_mut(&document.component_id).unwrap();
+        let mut property = schema.properties.values().next().unwrap().clone();
+        property.default = None;
+        property.max_length = None;
+        schema.properties.clear();
+        document.properties.clear();
+        for index in 0..65 {
+            let id = PropertyId::new(format!("field-{index}")).unwrap();
+            schema.properties.insert(id.clone(), property.clone());
+            document.properties.insert(
+                id,
+                PropertyValue::String("x".repeat(crate::preview::model::MAX_STRING_VALUE_BYTES)),
+            );
+        }
+        assert!(validate_preview(&catalog, document.clone()).is_ok());
+        assert!(matches!(
+            encode_preview(&document, &catalog),
+            Err(PreviewError::Invalid(_))
+        ));
     }
 
     #[test]

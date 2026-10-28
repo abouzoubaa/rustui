@@ -258,6 +258,10 @@ pub fn encode_composition<C>(
     d: &CompositionDocument,
     registry: &PreviewRegistry<C>,
 ) -> Result<String, PreviewError> {
+    super::codec::check_serialized_text_budget(
+        d.nodes.values().map(|node| &node.preview),
+        "composition document exceeds size limit",
+    )?;
     let mut d = d.clone();
     for node in d.nodes.values_mut() {
         super::codec::normalize_numeric_properties(registry.catalog(), &mut node.preview)?;
