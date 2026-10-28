@@ -66,6 +66,7 @@ struct RetainedDatePicker {
 /// A controlled optional date picker whose calendar state survives body rebuilds.
 pub struct DatePickerView {
     label: SharedString,
+    localized_label_key: Option<SharedString>,
     accessibility_label: Option<DatePickerLabel>,
     value: Binding<Option<NaiveDate>>,
     id: Option<Identity>,
@@ -79,6 +80,7 @@ impl DatePickerView {
     pub fn new(label: impl Into<SharedString>, value: Binding<Option<NaiveDate>>) -> Self {
         Self {
             label: label.into(),
+            localized_label_key: None,
             accessibility_label: None,
             value,
             id: None,
@@ -102,6 +104,27 @@ impl DatePickerView {
     pub fn disabled(mut self, disabled: bool) -> Self {
         self.disabled = disabled;
         self
+    }
+
+    /// Resolves the visible placeholder from the active catalog, falling back to the constructor label.
+    pub fn localized_label(mut self, message_id: impl Into<SharedString>) -> Self {
+        let id = message_id.into();
+        assert!(
+            !id.trim().is_empty(),
+            "DatePicker label localization key must not be blank"
+        );
+        self.localized_label_key = Some(id);
+        self
+    }
+
+    fn visible_label(&self, localized_message: impl FnOnce(&str) -> String) -> SharedString {
+        self.localized_label_key.as_ref().map_or_else(
+            || self.label.clone(),
+            |id| {
+                resolved_message_label(id.as_ref(), localized_message(id.as_ref()), &self.label)
+                    .unwrap_or_else(|| self.label.clone())
+            },
+        )
     }
 
     pub fn cleanable(mut self, cleanable: bool) -> Self {
@@ -160,7 +183,10 @@ impl DatePickerView {
             Some(DatePickerLabel::Message { id, fallback }) => {
                 resolved_message_label(id.as_ref(), localized_message(id.as_ref()), fallback)
             }
-            None => (!self.label.trim().is_empty()).then(|| self.label.clone()),
+            None => {
+                let label = self.visible_label(localized_message);
+                (!label.trim().is_empty()).then_some(label)
+            }
         }
     }
 
@@ -247,7 +273,7 @@ impl View for DatePickerView {
         }
 
         let mut picker = GpuiDatePicker::new(&state)
-            .placeholder(self.label.clone())
+            .placeholder(self.visible_label(|id| context.localized_message(id)))
             .cleanable(self.cleanable)
             .number_of_months(self.number_of_months)
             .appearance(self.appearance)
@@ -332,6 +358,38 @@ mod tests {
                 .as_deref(),
             Some("Choose a date")
         );
+    }
+
+    #[test]
+    fn localized_visible_label_drives_default_trigger_name_and_falls_back() {
+        let date = DatePicker("Choose a date", binding()).localized_label("date.choose");
+        assert_eq!(
+            date.visible_label(|_| "Choisir une date".into()).as_ref(),
+            "Choisir une date"
+        );
+        assert_eq!(
+            date.trigger_accessibility_label(|_| "Choisir une date".into())
+                .as_deref(),
+            Some("Choisir une date")
+        );
+        assert_eq!(date.visible_label(str::to_owned).as_ref(), "Choose a date");
+        assert_eq!(
+            date.trigger_accessibility_label(str::to_owned).as_deref(),
+            Some("Choose a date")
+        );
+        let overridden = date.accessibility_label("Start date");
+        assert_eq!(
+            overridden
+                .trigger_accessibility_label(|_| "Choisir une date".into())
+                .as_deref(),
+            Some("Start date")
+        );
+    }
+
+    #[test]
+    #[should_panic(expected = "DatePicker label localization key must not be blank")]
+    fn rejects_blank_visible_label_localization_key() {
+        DatePicker("Choose a date", binding()).localized_label(" \t ");
     }
 
     #[test]

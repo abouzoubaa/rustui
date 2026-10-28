@@ -58,6 +58,7 @@ lab-input-count-disabled = العدّاد (معطّل)
 lab-input-picker-owner-value = قيمة المحدّد: {value}
 lab-input-picker-set-kotlin = تعيين المحدّد إلى Kotlin
 lab-input-choose-color = اختر لونًا
+lab-input-choose-date = اختر تاريخًا
 lab-input-owner-update = غيّر النص المرتبط من المالك خلال ٥ ثوانٍ
 lab-input-token-recipients = أضف مستلمين
 lab-code-editor-title = الشيفرة المصدرية

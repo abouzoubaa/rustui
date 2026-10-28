@@ -58,6 +58,7 @@ lab-input-count-disabled = Count (disabled)
 lab-input-picker-owner-value = Picker owner value: {value}
 lab-input-picker-set-kotlin = Set Picker to Kotlin
 lab-input-choose-color = Choose a color
+lab-input-choose-date = Choose a date
 lab-input-owner-update = Change bound text from owner in 5 seconds
 lab-input-token-recipients = Add recipients
 lab-code-editor-title = Source code

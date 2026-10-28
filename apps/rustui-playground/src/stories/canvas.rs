@@ -425,7 +425,9 @@ impl View for StoryCanvas {
                     .menu_width(220.0),
                 )
                 .child(
-                    DatePicker("Choose a date", self.date_binding.clone()).id("story-input-date"),
+                    DatePicker("Choose a date", self.date_binding.clone())
+                        .id("story-input-date")
+                        .localized_label("lab-input-choose-date"),
                 )
                 .child(
                     ColorPicker("Choose a color", self.color_binding.clone())
