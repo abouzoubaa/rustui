@@ -19,6 +19,16 @@ are retained as historical records.
 
 ## Current release evidence — 2026-10-27
 
+- **R31 notice provenance, 2026-10-28:** Upstream version tags for three
+  unresolved notice packages were compared byte-for-byte against all vendored
+  `.rs` files: `block 0.1.6` tag commit `47178790cfc9d4a8b092051d8b413b78bd31254a`
+  matched 2/2 files; `malloc_buf 0.0.6` tag commit
+  `a7811e5f4c6f9685dd57ad9bfe34e9bf6b0ba4f9` matched 1/1; and `mac 0.1.1`
+  tag commit `66afc663b68a65633ea165c742b5a9c6734581c2` matched 8/8. The
+  respective upstream tag roots contain no license file. These comparisons
+  establish source correspondence only, not complete package identity or
+  permission-text coverage; all three notice gaps remain open.
+
 - **R26 Web reload error display, 2026-10-28:** A real-browser oversized
   response exposed a JavaScript stack and localhost URL in the visible reload
   status. RustUI's Playground now extracts the JavaScript error message and
