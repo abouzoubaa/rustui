@@ -193,6 +193,10 @@ impl LinkView {
 }
 
 /// Creates a platform-opened link.
+///
+/// Destinations are passed to the platform, including custom URL schemes;
+/// callers must validate destinations that originate from untrusted data.
+/// Web destinations open in a separate browsing context without an opener.
 #[allow(non_snake_case)]
 pub fn Link(label: impl Into<SharedString>, href: impl Into<SharedString>) -> LinkView {
     LinkView::new(label, href)

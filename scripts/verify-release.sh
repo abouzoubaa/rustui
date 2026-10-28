@@ -27,6 +27,7 @@ case "${1:-}" in
     python3 scripts/apply_gpui_component_calendar_locale_patch.py --check
     python3 scripts/apply_gpui_component_date_picker_patch.py --check
     python3 scripts/apply_gpui_component_select_title_patch.py --check
+    python3 scripts/apply_gpui_web_noopener_patch.py --check
     python3 scripts/apply_gpui_component_web_syntax_patch.py --check
     python3 scripts/apply_gpui_component_web_syntax_runtime_patch.py --check
     python3 scripts/apply_cosmic_bidi_initial_span_patch.py --check
@@ -51,6 +52,7 @@ case "${1:-}" in
     python3 scripts/apply_gpui_component_calendar_locale_patch.py --check
     python3 scripts/apply_gpui_component_date_picker_patch.py --check
     python3 scripts/apply_gpui_component_select_title_patch.py --check
+    python3 scripts/apply_gpui_web_noopener_patch.py --check
     python3 scripts/apply_gpui_component_web_syntax_patch.py --check
     python3 scripts/apply_gpui_component_web_syntax_runtime_patch.py --check
     python3 scripts/apply_cosmic_bidi_initial_span_patch.py --check
@@ -111,6 +113,7 @@ PY
     python3 scripts/apply_gpui_component_calendar_locale_patch.py --check
     python3 scripts/apply_gpui_component_date_picker_patch.py --check
     python3 scripts/apply_gpui_component_select_title_patch.py --check
+    python3 scripts/apply_gpui_web_noopener_patch.py --check
     python3 scripts/apply_gpui_component_web_syntax_patch.py --check
     python3 scripts/apply_gpui_component_web_syntax_runtime_patch.py --check
     python3 scripts/apply_cosmic_bidi_initial_span_patch.py --check

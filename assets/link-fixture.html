@@ -4,4 +4,9 @@
 <title>RustUI Link Acceptance</title>
 <h1>RustUI Link Acceptance</h1>
 <p>This local file verifies RustUI's platform URL activation.</p>
+<p id="opener-status">Opener check pending</p>
+<script>
+  document.getElementById("opener-status").textContent =
+    window.opener === null ? "Opener: none" : "Opener: present";
+</script>
 </html>
