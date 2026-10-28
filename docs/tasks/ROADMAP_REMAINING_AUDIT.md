@@ -1,3 +1,7 @@
+## Current checkpoint — 2026-10-28: feedback browser observation
+
+- **R13/R29 bounded Web observation:** Source `990bb72c` Web bundle (manifest SHA-256 `c622aa9fc6343899528e1064a11291ef20204008af88ed9e00b1214251f14aaa`) ran in the in-app browser at 1280×720. French feedback labels and empty/error text rendered; a persistent toast displayed its French title, message and action. Arabic feedback text and a localized toast also appeared. This is not full interaction, RTL or browser acceptance: the French error card overflowed its fixed height, and the Arabic toast overlapped the header area. The gallery's fixed card heights have now been removed; the correction still needs a fresh rendered check. The Arabic toast overlap remains open. The temporary browser tab and owned server were closed.
+
 ## Current checkpoint — 2026-10-28: isolated Web build output
 
 - **R28/R30 tooling:** The Web packaging script accepts an optional constrained `RUSTUI_WEB_OUTPUT_NAME` under `target/headstart`, allowing a separate validation bundle while an existing default bundle is served. The package fixture suite passed with checks for isolated output, preservation of the default bundle, and rejection of traversal names. Browser and release acceptance remain separate.

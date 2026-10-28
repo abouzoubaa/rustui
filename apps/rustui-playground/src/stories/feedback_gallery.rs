@@ -80,7 +80,6 @@ impl View for FeedbackGallery {
                                     .localized_accessibility_label("lab-feedback-empty-a11y"),
                             )
                             .width(196.0)
-                            .height(150.0)
                             .padding(10.0)
                             .border(),
                         )
@@ -104,7 +103,6 @@ impl View for FeedbackGallery {
                                     .child(LocalizedText("lab-feedback-retry-count").with_arguments(MessageArguments::new().with("count", retry_activations as i64))),
                             )
                             .width(196.0)
-                            .height(150.0)
                             .padding(10.0)
                             .border(),
                         )
@@ -128,7 +126,6 @@ impl View for FeedbackGallery {
                                     ),
                             )
                             .width(196.0)
-                            .height(150.0)
                             .padding(10.0)
                             .border(),
                         ),
