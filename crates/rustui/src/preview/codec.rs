@@ -60,8 +60,8 @@ pub fn encode_preview(
 ) -> Result<String, PreviewError> {
     let mut document = document.clone();
     normalize_numeric_properties(catalog, &mut document)?;
-    validate_preview(catalog, document.clone())?;
-    encode_json(&document)
+    let validated = validate_preview(catalog, document)?;
+    encode_json(&validated.document)
 }
 
 fn normalize_numeric_defaults(catalog: &mut ComponentCatalog) -> Result<(), PreviewError> {
