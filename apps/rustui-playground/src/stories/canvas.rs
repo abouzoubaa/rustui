@@ -392,13 +392,15 @@ impl View for StoryCanvas {
                         .localized_label("lab-input-quantity")
                         .range(0..=10),
                 )
-                .child(Text(format!(
-                    "Picker owner value: {}",
-                    self.picker_binding.value()
-                )))
+                .child(
+                    LocalizedText("lab-input-picker-owner-value").with_arguments(
+                        MessageArguments::new().with("value", self.picker_binding.value()),
+                    ),
+                )
                 .child(
                     Button("Set Picker to Kotlin", self.set_picker_kotlin.clone())
-                        .id("story-input-picker-set-kotlin"),
+                        .id("story-input-picker-set-kotlin")
+                        .localized_label("lab-input-picker-set-kotlin"),
                 )
                 .child(
                     Picker(
@@ -427,7 +429,8 @@ impl View for StoryCanvas {
                 )
                 .child(
                     ColorPicker("Choose a color", self.color_binding.clone())
-                        .id("story-input-color"),
+                        .id("story-input-color")
+                        .localized_label("lab-input-choose-color"),
                 )
                 .child(super::code_editor_gallery::demo())
                 .spacing(8.0)
