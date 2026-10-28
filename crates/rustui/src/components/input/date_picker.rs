@@ -388,6 +388,81 @@ mod tests {
         }
     }
 
+    #[gpui::test]
+    fn calendar_renders_and_navigates_at_both_date_limits(cx: &mut gpui::TestAppContext) {
+        use gpui::{AppContext as _, Context, Entity, IntoElement as _, Render, Window};
+        use gpui_base::{Calendar, CalendarItemKind, CalendarState, Date};
+
+        struct Probe {
+            calendar: Entity<CalendarState>,
+            items: Rc<RefCell<Vec<(CalendarItemKind, bool)>>>,
+            first_day: Weekday,
+        }
+        impl Render for Probe {
+            fn render(&mut self, _: &mut Window, _: &mut Context<Self>) -> impl gpui::IntoElement {
+                self.items.borrow_mut().clear();
+                let items = self.items.clone();
+                Calendar::new("date-limits", &self.calendar)
+                    .number_of_months(2)
+                    .first_day_of_week(self.first_day)
+                    .item(move |item, state, _, _| {
+                        items.borrow_mut().push((state.kind(), state.is_disabled()));
+                        item.into_any_element()
+                    })
+            }
+        }
+        let (probe, window) = cx.add_window_view(|window, cx| Probe {
+            calendar: cx.new(|cx| CalendarState::new(window, cx)),
+            items: Rc::new(RefCell::new(Vec::new())),
+            first_day: Weekday::Sun,
+        });
+        for date in [NaiveDate::MIN, NaiveDate::MAX] {
+            window.update(|window, app| {
+                let calendar = probe.read(app).calendar.clone();
+                calendar.update(app, |calendar, cx| {
+                    calendar.set_date(Date::Single(Some(date)), window, cx);
+                    if date == NaiveDate::MIN {
+                        calendar.prev_month();
+                    } else {
+                        calendar.next_month();
+                    }
+                    assert_eq!(
+                        (calendar.current_year(), calendar.current_month()),
+                        (date.year(), date.month() as u8)
+                    );
+                    assert!(calendar.days().iter().flatten().any(|day| *day == date));
+                });
+                let _ = window.draw(app);
+                let items = probe.read(app).items.borrow();
+                let disabled_kind = if date == NaiveDate::MIN {
+                    CalendarItemKind::Previous
+                } else {
+                    CalendarItemKind::Next
+                };
+                assert!(
+                    items
+                        .iter()
+                        .any(|(kind, disabled)| *kind == disabled_kind && *disabled)
+                );
+            });
+        }
+        for first_day in [Weekday::Mon, Weekday::Sat] {
+            window.update(|window, app| {
+                probe.update(app, |probe, cx| {
+                    probe.first_day = first_day;
+                    cx.notify();
+                });
+                let _ = window.draw(app);
+                let items = probe.read(app).items.borrow();
+                assert!(
+                    items
+                        .iter()
+                        .any(|(kind, disabled)| *kind == CalendarItemKind::Next && *disabled)
+                );
+            });
+        }
+    }
+
     #[test]
     #[should_panic(expected = "DatePicker identity must not be blank")]
     fn rejects_blank_explicit_identity() {

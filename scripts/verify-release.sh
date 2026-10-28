@@ -32,6 +32,7 @@ case "${1:-}" in
     python3 scripts/verify_gpui_web_patch_stack.py
     python3 scripts/apply_gpui_base_button_disabled_patch.py --verify
     python3 scripts/apply_gpui_base_disabled_semantic_roots.py --verify
+    python3 scripts/apply_gpui_base_calendar_date_limits.py --verify
     python3 -m unittest discover -s scripts/tests -p 'test_*.py'
     node --test scripts/tests/test_gpui_web_semantic_dom.mjs
     node --test apps/rustui-playground/web/tests/preview-transport.test.mjs
