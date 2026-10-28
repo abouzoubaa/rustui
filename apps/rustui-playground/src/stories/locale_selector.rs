@@ -155,12 +155,16 @@ mod tests {
         use rustui::localization::{MessageArguments, format_integer};
 
         let catalogs = catalogs();
-        for (identifier, mirror_label, visible_label) in [
-            ("en", "Spring mirrors", "A fields visible"),
-            ("fr", "Valeurs du ressort", "champs A visibles"),
-            ("ar", "قيم النابض", "حقول A ظاهرة"),
+        for (identifier, mirror_label, visible_label, field_label) in [
+            ("en", "Spring mirrors", "A fields visible", "Spring A"),
+            ("fr", "Valeurs du ressort", "champs A visibles", "Ressort A"),
+            ("ar", "قيم النابض", "حقول A ظاهرة", "النابض A"),
         ] {
             let locale = locale(identifier);
+            assert_eq!(
+                catalogs.resolve(&locale, "lab-identity-spring-a"),
+                field_label
+            );
             let mirror = catalogs
                 .format(
                     &locale,

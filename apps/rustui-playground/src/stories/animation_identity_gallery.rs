@@ -49,8 +49,12 @@ impl View for AnimationIdentityGallery {
             AnyView::new(
                 SpringOpacity::new(
                     "identity-a",
-                    Container(TextField("Spring A", self.spring_a_binding()).id(SHARED_CHILD_ID))
-                        .width(240.0),
+                    Container(
+                        TextField("Spring A", self.spring_a_binding())
+                            .id(SHARED_CHILD_ID)
+                            .localized_placeholder("lab-identity-spring-a"),
+                    )
+                    .width(240.0),
                     1.0,
                 )
                 .expect("fixed opacity is valid"),
@@ -62,8 +66,12 @@ impl View for AnimationIdentityGallery {
             AnyView::new(
                 AnimatedOpacity::new(
                     "identity-a",
-                    Container(TextField("Fade A", self.fade_a_binding()).id(SHARED_CHILD_ID))
-                        .width(240.0),
+                    Container(
+                        TextField("Fade A", self.fade_a_binding())
+                            .id(SHARED_CHILD_ID)
+                            .localized_placeholder("lab-identity-fade-a"),
+                    )
+                    .width(240.0),
                     0.65,
                     1.0,
                     Duration::from_secs(1),
@@ -106,13 +114,15 @@ impl View for AnimationIdentityGallery {
                     MessageArguments::new().with("count", self.parent_updates() as i64),
                 ),
             )
-            .child(Text("Spring A / Spring B"))
+            .child(LocalizedText("lab-identity-spring-fields"))
             .child(
                 HStack::new().spacing(8.0).child(spring_a).child(
                     SpringOpacity::new(
                         "identity-b",
                         Container(
-                            TextField("Spring B", self.spring_b_binding()).id(SHARED_CHILD_ID),
+                            TextField("Spring B", self.spring_b_binding())
+                                .id(SHARED_CHILD_ID)
+                                .localized_placeholder("lab-identity-spring-b"),
                         )
                         .width(240.0),
                         1.0,
@@ -127,13 +137,17 @@ impl View for AnimationIdentityGallery {
                         .with("b", self.spring_b()),
                 ),
             )
-            .child(Text("Fade A / Fade B"))
+            .child(LocalizedText("lab-identity-fade-fields"))
             .child(
                 HStack::new().spacing(8.0).child(fade_a).child(
                     AnimatedOpacity::new(
                         "identity-b",
-                        Container(TextField("Fade B", self.fade_b_binding()).id(SHARED_CHILD_ID))
-                            .width(240.0),
+                        Container(
+                            TextField("Fade B", self.fade_b_binding())
+                                .id(SHARED_CHILD_ID)
+                                .localized_placeholder("lab-identity-fade-b"),
+                        )
+                        .width(240.0),
                         0.65,
                         1.0,
                         Duration::from_secs(1),
