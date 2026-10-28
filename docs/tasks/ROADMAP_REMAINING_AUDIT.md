@@ -19,6 +19,17 @@ are retained as historical records.
 
 ## Current release evidence — 2026-10-27
 
+- **R24/R25 Safari preview transport, 2026-10-28:** In Safari 27.0 on macOS
+  27.0, the same-origin reference host reported PASS for both canonical compiled
+  preview and composition roundtrips, including stale-stamp rejection and
+  disconnect/reconnect. A separately drafted composition mount was accepted,
+  then explicitly disconnected and unmounted. The test used the Web bundle
+  manifest SHA-256 `8eb9b4088974c4e3588a819bd924a6913dfb1cf7060b784194f154b96de66aa7`;
+  all 2,943 captured source file hashes matched the current checkout. The
+  separate Safari window and localhost server were closed. These are bounded
+  protocol and mount observations; rendered-child behavior, other browser
+  versions, keyboard/IME and broader preview acceptance remain open.
+
 - **R26 Safari strong-ETag watcher, 2026-10-28:** Safari 27.0 on macOS 27.0
   loaded the source-matched Web bundle (manifest SHA-256
   `8eb9b4088974c4e3588a819bd924a6913dfb1cf7060b784194f154b96de66aa7`;
