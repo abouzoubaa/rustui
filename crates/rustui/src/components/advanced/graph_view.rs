@@ -12,7 +12,7 @@ use gpui::{
 use rustui_core::{Binding, Identity};
 use std::{
     cell::Cell,
-    collections::HashSet,
+    collections::{HashMap, HashSet},
     error::Error,
     fmt,
     rc::{Rc, Weak},
@@ -304,13 +304,20 @@ impl GraphDocument {
         ))
     }
     fn validate(&self) -> Result<(), GraphError> {
-        let mut ids = HashSet::new();
+        let mut nodes = HashMap::with_capacity(self.nodes.len());
         for node in &self.nodes {
             node.validate()?;
-            if !ids.insert(&node.id) {
+            if nodes.insert(&node.id, node).is_some() {
                 return Err(GraphError::DuplicateNode);
             }
         }
+        let endpoint = |endpoint: &GraphEndpoint| {
+            let node = nodes.get(&endpoint.node).ok_or(GraphError::MissingNode)?;
+            node.ports
+                .iter()
+                .find(|port| port.id == endpoint.port)
+                .ok_or(GraphError::MissingPort)
+        };
         let mut ids = HashSet::new();
         let mut endpoints = HashSet::new();
         for edge in &self.edges {
@@ -326,8 +333,8 @@ impl GraphDocument {
             )) {
                 return Err(GraphError::DuplicateConnection);
             }
-            if self.endpoint(&edge.from)?.1.direction != GraphPortDirection::Output
-                || self.endpoint(&edge.to)?.1.direction != GraphPortDirection::Input
+            if endpoint(&edge.from)?.direction != GraphPortDirection::Output
+                || endpoint(&edge.to)?.direction != GraphPortDirection::Input
             {
                 return Err(GraphError::PortDirection);
             }
@@ -1396,6 +1403,36 @@ mod tests {
     }
     fn graph() -> GraphDocument {
         GraphDocument::new([node("a", 10.0), node("b", 240.0)], []).unwrap()
+    }
+
+    #[test]
+    fn validates_large_graph_and_rejects_missing_late_endpoint() {
+        let nodes: Vec<_> = (0..512)
+            .map(|index| node(&format!("node-{index}"), index as f32))
+            .collect();
+        let mut edges: Vec<_> = (0..511)
+            .map(|index| {
+                GraphEdge::new(
+                    format!("edge-{index}"),
+                    GraphEndpoint::new(format!("node-{index}"), "out"),
+                    GraphEndpoint::new(format!("node-{}", index + 1), "in"),
+                )
+                .unwrap()
+            })
+            .collect();
+        assert!(GraphDocument::new(nodes.clone(), edges.clone()).is_ok());
+        edges.push(
+            GraphEdge::new(
+                "missing-last",
+                GraphEndpoint::new("node-511", "out"),
+                GraphEndpoint::new("missing", "in"),
+            )
+            .unwrap(),
+        );
+        assert_eq!(
+            GraphDocument::new(nodes, edges),
+            Err(GraphError::MissingNode)
+        );
     }
 
     fn test_binding<T: Clone + 'static>(value: T) -> Binding<T> {
