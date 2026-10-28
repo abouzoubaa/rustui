@@ -530,16 +530,16 @@ impl LanguageRegistry {
 
     /// The browser executor uses one thread; each WebAssembly thread owns its registry.
     #[cfg(target_family = "wasm")]
-    pub fn singleton() -> &'static LanguageRegistry {
+    pub fn singleton() -> std::rc::Rc<LanguageRegistry> {
         thread_local! {
-            static INSTANCE: &'static LanguageRegistry = Box::leak(Box::new(LanguageRegistry {
+            static INSTANCE: std::rc::Rc<LanguageRegistry> = std::rc::Rc::new(LanguageRegistry {
                 languages: Mutex::new(languages::Language::all()
                     .map(|language| (language.name().into(), language.config())).collect()),
                 parser_factories: Mutex::new(HashMap::new()),
                 generation: AtomicU64::new(0),
-            }));
+            });
         }
-        INSTANCE.with(|instance| *instance)
+        INSTANCE.with(std::rc::Rc::clone)
     }
 
     /// Registers a new language configuration to the registry.

@@ -3,7 +3,7 @@
 ## GPUI Components 0.7.3 Web CodeEditor syntax
 
 - `approved/gpui-component-web-syntax-v1.patch` (SHA-256 `efdd5e4121c9f2d13b03de76d79e8840734e057b3c3f210750b237b653e4150a`) enables the existing Rust and JSON grammar dependencies on Web and selects Tree-sitter 0.27.1. Its crates.io archive SHA-256 is `a5129de2ccc97808c4583d48f1fb44576d015cf241e432800572bda11ef30c3b`; `web-time` 1.1.0 was already locked.
-- `approved/gpui-component-web-syntax-runtime-v1.patch` (SHA-256 `0cc251760dca3dfeb2ad83dee941248699dd2fe4ae72c487afcac2d177df55d0`) adapts query access, uses a Web-compatible clock, keeps the browser registry thread-local, and prepares Web diff presentation on the browser executor. Large-file responsiveness and threaded Web behavior require separate validation.
+- Version 2 supersedes the retained version 1 runtime patch. `approved/gpui-component-web-syntax-runtime-v2.patch` (SHA-256 `0a74b16135624db6f93f42c70e9499c927e52e34dd78b23944e608181607d977`) adapts query access, uses a Web-compatible clock, uses a reference-counted thread-local browser registry without leaking it, and prepares Web diff presentation on the browser executor. Large-file responsiveness and threaded Web behavior require separate validation.
 - Apply, reverse, or verify with `scripts/apply_gpui_component_web_syntax_patch.py` and `scripts/apply_gpui_component_web_syntax_runtime_patch.py` using `--apply`, `--reverse`, or `--check`; apply the manifest first and reverse the runtime first. `scripts/tests/test_gpui_web_syntax_patch.py` checks exact replay and tamper rejection.
 
 ## Cosmic Text 0.19.0 initial bidirectional span

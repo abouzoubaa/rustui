@@ -16,7 +16,7 @@ FILES = (
     "vendor/gpui-component-0.7.3/src/highlighter/highlighter.rs",
     "vendor/gpui-component-0.7.3/src/diff/state.rs",
     "patches/approved/gpui-component-web-syntax-v1.patch",
-    "patches/approved/gpui-component-web-syntax-runtime-v1.patch",
+    "patches/approved/gpui-component-web-syntax-runtime-v2.patch",
 )
 
 

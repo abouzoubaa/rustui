@@ -6,11 +6,11 @@ from pathlib import Path
 import subprocess
 import tomllib
 
-PATCH = Path("patches/approved/gpui-component-web-syntax-runtime-v1.patch")
+PATCH = Path("patches/approved/gpui-component-web-syntax-runtime-v2.patch")
 PACKAGE = Path("vendor/gpui-component-0.7.3")
-PATCH_HASH = "0cc251760dca3dfeb2ad83dee941248699dd2fe4ae72c487afcac2d177df55d0"
+PATCH_HASH = "0a74b16135624db6f93f42c70e9499c927e52e34dd78b23944e608181607d977"
 CHECKSUM_HASH = "d5b533efba197cc15bcb6756b935a786e846463c1ee431f876e8c334a7e638c6"
-HASHES = {'src/highlighter/registry.rs': ['237d83124bb55031b8d16293bd6e64e590b41dce617a393f39b98c856e32ab31', '0ad43cec4e6d91dca3e2efdf457930ec129e3e32d532253326944661bb43235f'], 'src/highlighter/highlighter.rs': ['ffea07b48800410e7a093d7615fc1cacf8481374d3ce155d601930bd8bcf234b', '62b126fb587498bdcf5ae17b0a054d6811a3f14ada2068aabf25d6a52648bb38'], 'src/diff/state.rs': ['a24a4e5846501ec65ca2319c8d26be53c8aa5384058495254c38dddab132c9e3', '4ad6e94eb04cc58946575c183d2f3ecf7d51d1635083074a43941ae0d9dd7ad4']}
+HASHES = {'src/highlighter/registry.rs': ['237d83124bb55031b8d16293bd6e64e590b41dce617a393f39b98c856e32ab31', '1c40eabb10a5bb9b35679f20e84ff11aafadc1f3d6cf4d0a415ca1cfad86acca'], 'src/highlighter/highlighter.rs': ['ffea07b48800410e7a093d7615fc1cacf8481374d3ce155d601930bd8bcf234b', '62b126fb587498bdcf5ae17b0a054d6811a3f14ada2068aabf25d6a52648bb38'], 'src/diff/state.rs': ['a24a4e5846501ec65ca2319c8d26be53c8aa5384058495254c38dddab132c9e3', '4ad6e94eb04cc58946575c183d2f3ecf7d51d1635083074a43941ae0d9dd7ad4']}
 
 def digest(path):
     return hashlib.sha256(path.read_bytes()).hexdigest()
