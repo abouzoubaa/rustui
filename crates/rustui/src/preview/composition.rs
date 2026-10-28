@@ -258,6 +258,11 @@ pub fn encode_composition<C>(
     d: &CompositionDocument,
     registry: &PreviewRegistry<C>,
 ) -> Result<String, PreviewError> {
+    if d.nodes.len() > MAX_COMPOSITION_NODES {
+        return Err(PreviewError::Invalid(
+            "composition requires one registered root and a bounded nonempty node map".into(),
+        ));
+    }
     super::codec::check_serialized_text_budget(
         d.nodes.values().map(|node| &node.preview),
         "composition document exceeds size limit",
@@ -936,6 +941,15 @@ mod tests {
             d.nodes.insert(id, node.clone());
         }
         assert!(validate_shape(&d).is_err());
+        d.nodes.get_mut(&root).unwrap().preview.properties.insert(
+            PropertyId::new("oversized").unwrap(),
+            PropertyValue::String("x".repeat(MAX_DOCUMENT_BYTES + 1)),
+        );
+        assert!(matches!(
+            encode_composition(&d, &r),
+            Err(PreviewError::Invalid(message))
+                if message == "composition requires one registered root and a bounded nonempty node map"
+        ));
     }
 
     #[test]
