@@ -151,6 +151,41 @@ mod tests {
     }
 
     #[test]
+    fn animation_identity_messages_format_values_in_each_locale() {
+        use rustui::localization::{MessageArguments, format_integer};
+
+        let catalogs = catalogs();
+        for (identifier, mirror_label, visible_label) in [
+            ("en", "Spring mirrors", "A fields visible"),
+            ("fr", "Valeurs du ressort", "champs A visibles"),
+            ("ar", "قيم النابض", "حقول A ظاهرة"),
+        ] {
+            let locale = locale(identifier);
+            let mirror = catalogs
+                .format(
+                    &locale,
+                    "lab-identity-spring-mirrors",
+                    &MessageArguments::new().with("a", "alpha").with("b", "beta"),
+                )
+                .expect("identity values should format");
+            assert!(mirror.contains(mirror_label), "{identifier}: {mirror}");
+            assert!(mirror.contains("alpha") && mirror.contains("beta"));
+            let status = catalogs
+                .format(
+                    &locale,
+                    "lab-identity-visible",
+                    &MessageArguments::new().with("count", 12_i64),
+                )
+                .expect("identity status should format");
+            assert!(status.contains(visible_label), "{identifier}: {status}");
+            assert!(
+                status.contains(&format_integer(12, &locale)),
+                "{identifier}: {status}"
+            );
+        }
+    }
+
+    #[test]
     fn interpolation_story_messages_exist_in_every_playground_catalog() {
         let catalogs = catalogs();
         for identifier in ["en", "fr", "ar"] {

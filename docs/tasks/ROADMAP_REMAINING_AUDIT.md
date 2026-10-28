@@ -1,5 +1,8 @@
 ## Animation identity localization — 2026-10-28
 
+A focused runtime formatting regression now verifies that the animation identity story resolves localized mirror labels, both field values, and the locale-formatted update count in English, French and Arabic. It passed 1/1 via locked offline Headstart on the current source (log `target/headstart/evidence/identity-message-format-20261028.log`, SHA-256 `21ac0c1a9c994ad9ba29a57b58802a684c176809960a4d252a79781fcbc8c50b`). This does not establish rendered layout or interaction.
+
+
 The existing animation child-identity story now localizes its instructions, action labels, visibility status, omitted-field messages and value mirrors in English, French and Arabic; the existing field identities, initial values and actions are unchanged. A locked offline macOS Headstart Playground check passed (log `target/headstart/evidence/identity-locales-check-20261028.log`, SHA-256 `d84eb101257dc30fb969bb43ac5d9f48403fc16d25b63a887ba77951c9a59a46`), all three catalog groups passed `validate_locales.py`, and the Playground library catalog-filtered suite passed 58/58 (log `target/headstart/evidence/identity-locales-catalog-tests-20261028.log`, SHA-256 `e4691efbe218eaa7b1f1bf9c31a23fd1afee5c2fc5a82a938becba7effd8d29d`). An initial test exposed invalid interpolation syntax; corrected messages passed the runtime catalog checks. Native and Web rendering, RTL layout and interaction for this new change remain unverified. The disposable GUI bundle cleanup rejection and held GUI slot are recorded below.
 
 ## Native motion and locale observation — 2026-10-28
