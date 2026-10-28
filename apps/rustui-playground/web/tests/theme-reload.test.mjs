@@ -1,0 +1,31 @@
+import test from 'node:test';
+import assert from 'node:assert/strict';
+import { readFile } from 'node:fs/promises';
+
+const source = await readFile(new URL('../theme-reload.js', import.meta.url));
+const { fetchTheme } = await import(`data:text/javascript;base64,${source.toString('base64')}`);
+
+test('fetches uncached same-origin UTF-8 theme data', async () => {
+  const result = await fetchTheme(async (url, options) => {
+    assert.equal(url, 'assets/macos27.json');
+    assert.equal(options.cache, 'no-store');
+    assert.equal(options.credentials, 'same-origin');
+    assert.equal(options.redirect, 'error');
+    assert.ok(options.signal instanceof AbortSignal);
+    return new Response('{"name":"عربي"}');
+  });
+  assert.equal(result, '{"name":"عربي"}');
+});
+
+test('rejects failed, oversized, and invalid UTF-8 responses', async () => {
+  await assert.rejects(fetchTheme(async () => new Response('', { status: 404 })), /404/);
+  await assert.rejects(fetchTheme(async () => new Response(new Uint8Array(2 * 1024 * 1024 + 1))), /exceeds/);
+  await assert.rejects(fetchTheme(async () => new Response(new Uint8Array([0xff]))), /encoded data/);
+  assert.equal((await fetchTheme(async () => new Response(new Uint8Array(2 * 1024 * 1024)))).length, 2 * 1024 * 1024);
+});
+
+test('aborts a request that does not complete', async () => {
+  await assert.rejects(fetchTheme((_url, { signal }) => new Promise((_resolve, reject) => {
+    signal.addEventListener('abort', () => reject(new Error('timed out')), { once: true });
+  }), 5), /timed out/);
+});

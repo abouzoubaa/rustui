@@ -280,6 +280,7 @@ mkdir "$STAGING_DIR/assets"
 for asset in playground-sample.png link-fixture.html link-disabled-fixture.html; do
   cp "$REPO_ROOT/assets/$asset" "$STAGING_DIR/assets/$asset"
 done
+cp "$REPO_ROOT/themes/macos27.json" "$STAGING_DIR/assets/macos27.json"
 mkdir -p "$STAGING_DIR/licenses/fonts"
 cp "$REPO_ROOT"/crates/rustui/assets/fonts/*-LICENSE "$STAGING_DIR/licenses/fonts/"
 mkdir -p "$STAGING_DIR/licenses/icons"

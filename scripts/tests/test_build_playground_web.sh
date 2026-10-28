@@ -14,6 +14,7 @@ mkdir -p \
     "$fixture/apps/rustui-playground/web" \
     "$fixture/apps/rustui-playground/references" \
     "$fixture/assets" \
+    "$fixture/themes" \
     "$fixture/crates/rustui/assets/fonts" \
     "$fixture/vendor/gpui-kit-assets-0.7.3" \
     "$fixture/docs/release/dependency-notices" \
@@ -36,6 +37,7 @@ cp -R "$repository_root/apps/rustui-playground/references/." \
 for asset in playground-sample.png link-fixture.html link-disabled-fixture.html; do
     cp "$repository_root/assets/$asset" "$fixture/assets/$asset"
 done
+cp "$repository_root/themes/macos27.json" "$fixture/themes/macos27.json"
 cp "$repository_root"/crates/rustui/assets/fonts/*-LICENSE \
     "$fixture/crates/rustui/assets/fonts/"
 cp "$repository_root/vendor/gpui-kit-assets-0.7.3/LICENSE-LUCIDE" \
@@ -115,6 +117,7 @@ RUSTUI_HEADSTART_ROOT="$temporary_root/unused-headstart" \
     "$fixture/scripts/build-playground-web.sh" >/dev/null
 
 bundle="$fixture/target/headstart/playground-web"
+cmp "$fixture/themes/macos27.json" "$bundle/assets/macos27.json"
 test -f "$bundle/index.html"
 for asset in reference-host.html reference-host.js reference-client.js; do
     cmp "$fixture/apps/rustui-playground/web/$asset" "$bundle/$asset"

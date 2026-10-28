@@ -5868,10 +5868,12 @@ dependencies = [
 name = "rustui-playground"
 version = "0.1.0"
 dependencies = [
+ "js-sys",
  "rustui",
  "serde",
  "serde_json",
  "wasm-bindgen",
+ "wasm-bindgen-futures",
 ]
 
 [[package]]
