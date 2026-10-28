@@ -127,6 +127,7 @@ impl MenuItem {
 /// A named button that opens a controlled RustUI action menu.
 pub struct MenuView {
     label: SharedString,
+    label_key: Option<SharedString>,
     items: Vec<MenuItem>,
     id: Option<Identity>,
 }
@@ -143,8 +144,27 @@ impl MenuView {
         );
         Self {
             label,
+            label_key: None,
             items: validated_items(items),
             id: None,
+        }
+    }
+
+    /// Resolves the trigger label from the active catalog, retaining its literal fallback.
+    pub fn localized_label(mut self, key: impl Into<SharedString>) -> Self {
+        let key = key.into();
+        assert!(
+            !key.trim().is_empty(),
+            "Menu label localization key must not be blank"
+        );
+        self.label_key = Some(key);
+        self
+    }
+
+    fn resolved_label(&self, localized: impl FnOnce(&str) -> String) -> SharedString {
+        match &self.label_key {
+            Some(key) => localized_action_label(localized(key).into(), key, &self.label),
+            None => self.label.clone(),
         }
     }
 
@@ -324,11 +344,12 @@ impl View for MenuView {
 
         let items = bind_items(&self.items, context);
 
+        let label = self.resolved_label(|key| context.localized_message(key));
         let trigger = themed_button(
             context,
             id,
-            self.label.clone(),
-            self.label.clone(),
+            label.clone(),
+            label,
             ButtonStyle::Automatic,
             false,
             0,
@@ -345,6 +366,17 @@ impl View for MenuView {
 mod tests {
     use super::*;
     use crate::runtime::AppAction;
+
+    #[test]
+    fn localized_trigger_uses_literal_for_missing_or_blank_messages() {
+        let menu = Menu("Options", []).localized_label("menu.label");
+        assert_eq!(menu.resolved_label(|_| "menu.label".into()), "Options");
+        assert_eq!(menu.resolved_label(|_| " ".into()), "Options");
+        assert_eq!(
+            menu.resolved_label(|_| "Options françaises".into()),
+            "Options françaises"
+        );
+    }
 
     fn empty_handler() -> Rc<ActionHandler> {
         Rc::new(Box::new(|_, _, _| {}))

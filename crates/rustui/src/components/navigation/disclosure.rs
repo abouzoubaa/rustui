@@ -27,6 +27,7 @@ fn toggle_open_if_enabled(open: &mut bool, disabled: bool) -> bool {
 pub struct DisclosureView<V> {
     id: Identity,
     label: SharedString,
+    label_key: Option<SharedString>,
     accessibility_label: Option<SharedString>,
     is_open: Binding<bool>,
     content: V,
@@ -53,6 +54,7 @@ impl<V: View> DisclosureView<V> {
         Self {
             id,
             label,
+            label_key: None,
             accessibility_label: None,
             is_open,
             content,
@@ -66,10 +68,35 @@ impl<V: View> DisclosureView<V> {
         self
     }
 
-    fn resolved_accessibility_label(&self) -> SharedString {
+    /// Resolves the trigger label from the active catalog, retaining its literal fallback.
+    pub fn localized_label(mut self, key: impl Into<SharedString>) -> Self {
+        let key = key.into();
+        assert!(
+            !key.trim().is_empty(),
+            "Disclosure label localization key must not be blank"
+        );
+        self.label_key = Some(key);
+        self
+    }
+
+    fn resolved_label(&self, localized: impl FnOnce(&str) -> String) -> SharedString {
+        match &self.label_key {
+            Some(key) => {
+                let value = localized(key);
+                if value.trim().is_empty() || value.trim() == key.trim() {
+                    self.label.clone()
+                } else {
+                    value.into()
+                }
+            }
+            None => self.label.clone(),
+        }
+    }
+
+    fn resolved_accessibility_label(&self, visible_label: &SharedString) -> SharedString {
         self.accessibility_label
             .clone()
-            .unwrap_or_else(|| self.label.clone())
+            .unwrap_or_else(|| visible_label.clone())
     }
 
     /// Overrides the visible label used as the trigger's accessible name.
@@ -107,8 +134,8 @@ impl<V: View> View for DisclosureView<V> {
             &selector(context),
         );
         let open = self.is_open.value();
-        let label = self.label.clone();
-        let accessibility_label = self.resolved_accessibility_label();
+        let label = self.resolved_label(|key| context.localized_message(key));
+        let accessibility_label = self.resolved_accessibility_label(&label);
         let visible_label =
             SharedString::from(format!("{} {}", if open { "▾" } else { "▸" }, label));
         let disabled = self.disabled;
@@ -172,7 +199,21 @@ mod tests {
 
     #[test]
     fn visible_label_is_the_default_accessible_name() {
-        assert_eq!(disclosure().resolved_accessibility_label(), "Details");
+        assert_eq!(
+            disclosure().resolved_accessibility_label(&"Details".into()),
+            "Details"
+        );
+    }
+
+    #[test]
+    fn localized_trigger_uses_fallback_and_respects_explicit_accessible_name() {
+        let control = disclosure().localized_label("detail.label");
+        assert_eq!(control.resolved_label(|_| "detail.label".into()), "Details");
+        assert_eq!(control.resolved_label(|_| " ".into()), "Details");
+        let translated = control.resolved_label(|_| "Détails".into());
+        assert_eq!(control.resolved_accessibility_label(&translated), "Détails");
+        let explicit = control.accessibility_label("Custom");
+        assert_eq!(explicit.resolved_accessibility_label(&translated), "Custom");
     }
 
     #[test]

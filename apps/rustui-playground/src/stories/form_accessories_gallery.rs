@@ -189,7 +189,8 @@ impl FormAccessoriesGallery {
                         "Label",
                         self.detail_disclosure_open_binding(),
                         rustui::view::EmptyView,
-                    ),
+                    )
+                    .localized_label("lab-form-control-label"),
                 )),
             ),
             (
@@ -221,7 +222,11 @@ impl FormAccessoriesGallery {
                     FORM_ITEMS[6],
                     HStack::new()
                         .spacing(8.0)
-                        .child(Menu("Label", []).id("form-accessories-detail-menu"))
+                        .child(
+                            Menu("Label", [])
+                                .localized_label("lab-form-control-label")
+                                .id("form-accessories-detail-menu"),
+                        )
                         .child(Icon(IconName::Ellipsis)),
                 )),
             ),
