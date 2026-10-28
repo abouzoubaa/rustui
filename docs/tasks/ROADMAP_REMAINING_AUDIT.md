@@ -1,3 +1,7 @@
+## Current checkpoint — 2026-10-28: compiled CI in progress
+
+- **R30:** GitHub Actions run `40726542190` is pinned to `12747eeb`. Attempt 1 passed source CI and the macOS checks and optimized package, but its Web build failed because the fresh runner lacked `wasm-bindgen 0.2.129`. Its full log is retained in `target/headstart/evidence/ci-40726542190-attempt1-20261028.log` (SHA-256 `f00fb357752d4ad2b4415616174bd088b4dabe0965ff9f7e98ae1a535ed82eb4`). The isolated runner was supplied the matching existing executable (SHA-256 `caa8f16f89f285066715f68725b7b52aa7becd9e557b5021ff8f5dddb34d25c6`). The overall run completed successfully: the source job passed in attempt 1 and the compiled macOS/Web job passed in attempt 2; its log SHA-256 is `5c775be5d20c625f7ece308cf473bab8ea67974fe07f67754df44882264f4d70`, and the Web bundle manifest SHA-256 is `069d3c92460f4cadfd2e089997c711f93cd249aa58e4b7ed9572cbdb87b437be`. Both attempt logs are retained in `target/headstart/evidence/`; the first attempt's package is preserved in the runner's `target/headstart/evidence/ci-40726542190-attempt1/`. The ephemeral runner deregistered and removed its credentials. This passes the compiled CI jobs for that revision; GUI/browser, notices, performance and release acceptance remain separate.
+
 ## Current requirement inventory — 2026-10-28
 
 This is a **provisional classification of all 37 ledger groups**, not a
