@@ -7,8 +7,18 @@ The verified primary integration branch is `work/m118-diagnostics-provenance`;
 The writing branch is fast-forward integrated through its latest completed commit.
 Reverify live HEAD and dirty state before subsequent integration; preserve unrelated work.
 
+## User-selected current scope
+
+English, French, and Arabic remain in scope. The user explicitly set aside
+VoiceOver and broader accessibility work, plus Japanese and other languages
+and scripts, for later. Keep these items marked undone; do not count them as
+passed or imply accessibility or language support beyond the evidence. The
+37-group counts below are historical provisional lower bounds and do not
+measure the amount of code completed or an adjusted-scope release percentage.
+
 ## Current release evidence — 2026-10-27
 
+- **R20 independent owner tasks, 2026-10-28:** A GPUI TestAppContext regression starts two pending tasks under distinct identities, cancels the first, verifies only its future is dropped and the second remains Loading, then wakes the second and verifies its successful completion and registry cleanup. The focused Headstart test and workspace formatting passed. This is simulated runtime evidence; stale-completion races and native acceptance remain open.
 - **R20 owner task release regression, 2026-10-28:** A GPUI TestAppContext test starts pending work on an independent component host, releases the last strong owner handle, processes GPUI deferred entity cleanup, and verifies the pending future is dropped. A retained action does not resurrect the owner or start new work. The focused Headstart test passed (1/1) and workspace formatting passed. This is simulated GPUI lifecycle evidence; native acceptance and broader concurrency cases remain open.
 - **R20 owner task action regression, 2026-10-28:** A GPUI TestAppContext test now exercises actual owner actions: starting pending work, replacing it with a successful task, canceling another pending task, and delivering an error. Drop probes confirm replaced and canceled work is dropped, and successful/error completion empties the task registry. The focused Headstart test passed (1/1) and workspace formatting passed. This is simulated GPUI runtime evidence; owner release, native acceptance, and broader concurrency cases remain open.
 - **R15 Web shortcut regression, 2026-10-28:** The Web input key bindings now come from a shared testable helper. A focused native GPUI keymap test passed for six representative undo, redo, movement, selection, and deletion bindings, including their Input-only context; the Web bundle and workspace formatting checks passed. GitHub reported successful checks for prior commit `3146f961`. This source test complements, but does not replace, physical macOS keyboard, cross-browser, RTL, and IME acceptance.

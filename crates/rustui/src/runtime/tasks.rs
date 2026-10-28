@@ -212,6 +212,7 @@ mod tests {
     #[derive(Default)]
     struct TaskProbe {
         state: AsyncState<String, String>,
+        other_state: AsyncState<String, String>,
     }
 
     impl View for TaskProbe {
@@ -287,6 +288,95 @@ mod tests {
             AsyncState::Error("failed".to_owned())
         );
         assert!(window.update(|_, cx| host.read(cx).tasks.running.is_empty()));
+    }
+
+    #[gpui::test]
+    fn canceling_one_owner_task_keeps_another_running(cx: &mut gpui::TestAppContext) {
+        use std::sync::{
+            Arc,
+            atomic::{AtomicUsize, Ordering},
+        };
+
+        fn apply_other(probe: &mut TaskProbe, state: AsyncState<String, String>) -> bool {
+            probe.other_state = state;
+            true
+        }
+        cx.update(gpui_component::init);
+        let (host, window) =
+            cx.add_window_view(|_, cx| ComponentHost::new(TaskProbe::default(), cx));
+        let owner = OwnerTask::new(host.downgrade());
+        let first_dropped = Arc::new(AtomicUsize::new(0));
+        let second_dropped = Arc::new(AtomicUsize::new(0));
+        let first_work = first_dropped.clone();
+        let second_work = second_dropped.clone();
+        let gate = Arc::new(std::sync::Mutex::new((false, None::<std::task::Waker>)));
+        let work_gate = gate.clone();
+        let first = owner.start(
+            "first",
+            move || {
+                let guard = DropProbe(first_work.clone());
+                async move {
+                    let _guard = guard;
+                    std::future::pending::<Result<String, String>>().await
+                }
+            },
+            apply_probe,
+        );
+        let second = owner.start(
+            "second",
+            move || {
+                let guard = DropProbe(second_work.clone());
+                let gate = work_gate.clone();
+                async move {
+                    let _guard = guard;
+                    std::future::poll_fn(|cx| {
+                        let mut state = gate.lock().unwrap();
+                        if state.0 {
+                            std::task::Poll::Ready(Ok::<_, String>("finished".to_owned()))
+                        } else {
+                            state.1 = Some(cx.waker().clone());
+                            std::task::Poll::Pending
+                        }
+                    })
+                    .await
+                }
+            },
+            apply_other,
+        );
+        window.update(|window, cx| {
+            first.dispatch_keyboard(window, cx);
+            second.dispatch_keyboard(window, cx);
+        });
+        window.cx.run_until_parked();
+        let cancel_first = owner.cancel("first", apply_probe);
+        window.update(|window, cx| cancel_first.dispatch_keyboard(window, cx));
+        window.cx.run_until_parked();
+        assert_eq!(first_dropped.load(Ordering::SeqCst), 1);
+        assert_eq!(second_dropped.load(Ordering::SeqCst), 0);
+        window.update(|_, cx| {
+            let host = host.read(cx);
+            assert_eq!(host.component().state, AsyncState::Idle);
+            assert_eq!(host.component().other_state, AsyncState::Loading);
+            assert_eq!(host.tasks.running.len(), 1);
+            assert!(host.tasks.running.contains_key(&Identity::from("second")));
+        });
+        let wake = {
+            let mut state = gate.lock().unwrap();
+            state.0 = true;
+            state.1.take().expect("second task was polled")
+        };
+        wake.wake();
+        window.cx.run_until_parked();
+        assert_eq!(second_dropped.load(Ordering::SeqCst), 1);
+        window.update(|_, cx| {
+            let host = host.read(cx);
+            assert_eq!(host.component().state, AsyncState::Idle);
+            assert_eq!(
+                host.component().other_state,
+                AsyncState::Success("finished".to_owned())
+            );
+            assert!(host.tasks.running.is_empty());
+        });
     }
 
     #[gpui::test]
