@@ -10,7 +10,9 @@ use gpui_component::{
     date_picker::{DatePicker as GpuiDatePicker, DatePickerEvent, DatePickerState, DateTime},
 };
 use rustui_core::{Binding, Identity};
-use rustui_i18n::{CivilDate, DateLength, Locale, LocaleFormatter, Weekday as LocaleWeekday};
+use rustui_i18n::{
+    CivilDate, DateLength, LayoutDirection, Locale, LocaleFormatter, Weekday as LocaleWeekday,
+};
 
 use crate::view::{EmptyView, RenderContext, View};
 
@@ -315,6 +317,7 @@ impl View for DatePickerView {
 
         let mut picker = GpuiDatePicker::new(&state)
             .placeholder(self.visible_label(|id| context.localized_message(id)))
+            .right_to_left(context.layout_direction() == LayoutDirection::RightToLeft)
             .cleanable(self.cleanable)
             .number_of_months(self.number_of_months)
             .appearance(self.appearance)

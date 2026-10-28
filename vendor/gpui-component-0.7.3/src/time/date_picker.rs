@@ -566,6 +566,7 @@ pub struct DatePicker {
     disabled: bool,
     accessibility_label: Option<SharedString>,
     display_value: Option<SharedString>,
+    right_to_left: bool,
 }
 
 impl Sizable for DatePicker {
@@ -627,12 +628,19 @@ impl DatePicker {
             disabled: false,
             accessibility_label: None,
             display_value: None,
+            right_to_left: false,
         }
     }
 
     /// Set an accessible name for the date picker.
     pub fn accessibility_label(mut self, label: impl Into<SharedString>) -> Self {
         self.accessibility_label = Some(label.into());
+        self
+    }
+
+    /// Align the calendar with the logical start of a right-to-left trigger.
+    pub fn right_to_left(mut self, value: bool) -> Self {
+        self.right_to_left = value;
         self
     }
 
@@ -880,7 +888,11 @@ impl RenderOnce for DatePicker {
                                     ),
                             ),
                         cx,
-                    ))
+                    ).align(if self.right_to_left {
+                        gpui_base::Align::End
+                    } else {
+                        gpui_base::Align::Start
+                    }))
                     .with_priority(gpui_base::POPUP_PRIORITY),
                 )
             })

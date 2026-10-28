@@ -27,6 +27,7 @@ case "${1:-}" in
     python3 scripts/apply_block_stack_symbol_patch.py --verify
     python3 scripts/apply_gpui_component_calendar_locale_patch.py --check
     python3 scripts/apply_gpui_component_date_picker_patch.py --check
+    python3 scripts/apply_gpui_date_picker_rtl_patch.py --verify
     python3 scripts/apply_gpui_component_select_title_patch.py --check
     python3 scripts/apply_gpui_web_noopener_patch.py --check
     python3 scripts/apply_gpui_component_web_syntax_patch.py --check
@@ -53,6 +54,7 @@ case "${1:-}" in
     python3 scripts/apply_block_stack_symbol_patch.py --verify
     python3 scripts/apply_gpui_component_calendar_locale_patch.py --check
     python3 scripts/apply_gpui_component_date_picker_patch.py --check
+    python3 scripts/apply_gpui_date_picker_rtl_patch.py --verify
     python3 scripts/apply_gpui_component_select_title_patch.py --check
     python3 scripts/apply_gpui_web_noopener_patch.py --check
     python3 scripts/apply_gpui_component_web_syntax_patch.py --check
@@ -115,6 +117,7 @@ PY
     python3 scripts/apply_block_stack_symbol_patch.py --verify
     python3 scripts/apply_gpui_component_calendar_locale_patch.py --check
     python3 scripts/apply_gpui_component_date_picker_patch.py --check
+    python3 scripts/apply_gpui_date_picker_rtl_patch.py --verify
     python3 scripts/apply_gpui_component_select_title_patch.py --check
     python3 scripts/apply_gpui_web_noopener_patch.py --check
     python3 scripts/apply_gpui_component_web_syntax_patch.py --check

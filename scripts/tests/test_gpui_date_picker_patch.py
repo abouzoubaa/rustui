@@ -25,6 +25,13 @@ class DatePickerPatchTests(unittest.TestCase):
                 target.parent.mkdir(parents=True, exist_ok=True)
                 shutil.copy2(ROOT / relative, target)
 
+            # Exercise the original patch independently of the later RTL layer.
+            subprocess.run(
+                ["git", "apply", "--reverse", str(ROOT / "patches/approved/gpui-component-date-picker-rtl-alignment-v1.patch")],
+                cwd=root,
+                check=True,
+            )
+
             def run(action):
                 return subprocess.run(
                     [sys.executable, str(SCRIPT), "--root", str(root), action],

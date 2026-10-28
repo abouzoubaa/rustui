@@ -18,6 +18,7 @@ CHECKSUM_FILE = PACKAGE / ".cargo-checksum.json"
 PATCH_SHA256 = "dbd34e41cfbb720a361f69cb2ddda89298fe7c80cbcd9eb36749153787c4b9dd"
 PREIMAGE_SHA256 = "e7c8c87c76b253703a955c578f28278212d54545d9c9a62a76892a3140095248"
 POSTIMAGE_SHA256 = "83e639bbaf3194f81c33864f8e885f683faa403154e40253454215ed8462467d"
+COMPOSED_RTL_SHA256 = "7a887f3f139ba9a658d3a42de45a768e7c4def7406bea7ddd540dc88ef0d1df0"
 CHECKSUM_SHA256 = "d5b533efba197cc15bcb6756b935a786e846463c1ee431f876e8c334a7e638c6"
 
 
@@ -76,7 +77,7 @@ def main() -> int:
     if args.check:
         _, source, _ = verify_identity(root)
         actual = sha256(source)
-        if actual != POSTIMAGE_SHA256:
+        if actual not in (POSTIMAGE_SHA256, COMPOSED_RTL_SHA256):
             raise ValueError(f"patched source SHA-256 mismatch: {actual}")
         print(f"verified patched source: {actual}")
         return 0

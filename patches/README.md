@@ -1,5 +1,14 @@
 # Approved upstream patches
 
+## GPUI Components 0.7.3 DatePicker RTL alignment
+
+`approved/gpui-component-date-picker-rtl-alignment-v1.patch` layers on the
+DatePicker localization patch. It adds an opt-in right-to-left alignment for
+the calendar while retaining the existing left-to-right default and shared
+dropdown behavior. RustUI supplies the active layout direction. Verify the
+composed image with `python3 scripts/apply_gpui_date_picker_rtl_patch.py
+--verify`; `--apply` and `--reverse` replay the layer against exact hashes.
+
 ## block 0.1.6 stack symbol
 
 `approved/block-0.1.6-stack-symbol-v1.patch` replaces the uninhabited external
