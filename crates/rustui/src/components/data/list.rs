@@ -589,6 +589,32 @@ mod tests {
             assert_eq!(owner.read(app).component().selection, Some(1));
             assert_eq!(owner.read(app).component().writes, 1);
         });
+
+        window.update(|window, app| {
+            let state = owner
+                .read(app)
+                .retained_entity_for_test::<ListState<StringListDelegate>>(
+                    vec![],
+                    Identity::from("keyboard-list"),
+                )
+                .unwrap();
+            state.update(app, |state, cx| {
+                state.delegate_mut().query = "ir".to_owned();
+                state.delegate_mut().apply_query();
+                cx.notify();
+            });
+            let _ = window.draw(app);
+        });
+        window.simulate_keystrokes("down");
+        window.update(|window, app| {
+            let _ = window.draw(app);
+            assert_eq!(owner.read(app).component().selection, Some(0));
+        });
+        window.simulate_keystrokes("down");
+        window.update(|window, app| {
+            let _ = window.draw(app);
+            assert_eq!(owner.read(app).component().selection, Some(2));
+        });
     }
 
     struct Owner;
