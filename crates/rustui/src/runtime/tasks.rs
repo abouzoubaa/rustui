@@ -383,6 +383,72 @@ mod tests {
     }
 
     #[gpui::test]
+    fn canceled_completed_work_cannot_deliver_a_stale_result(cx: &mut gpui::TestAppContext) {
+        use std::sync::{
+            Arc, Mutex,
+            atomic::{AtomicBool, Ordering},
+        };
+        use std::task::{Poll, Waker};
+
+        cx.update(gpui_component::init);
+        let (host, window) =
+            cx.add_window_view(|_, cx| ComponentHost::new(RaceProbe::default(), cx));
+        let owner = OwnerTask::new(host.downgrade());
+        let gate = Arc::new(Mutex::new((false, None::<Waker>)));
+        let completed = Arc::new(AtomicBool::new(false));
+        let work_gate = gate.clone();
+        let work_completed = completed.clone();
+        let start = owner.start(
+            "request",
+            move || {
+                let gate = work_gate.clone();
+                let completed = work_completed.clone();
+                async move {
+                    std::future::poll_fn(|cx| {
+                        let mut state = gate.lock().unwrap();
+                        if state.0 {
+                            completed.store(true, Ordering::SeqCst);
+                            Poll::Ready(Ok::<_, String>("stale".to_owned()))
+                        } else {
+                            state.1 = Some(cx.waker().clone());
+                            Poll::Pending
+                        }
+                    })
+                    .await
+                }
+            },
+            apply_race,
+        );
+        window.update(|window, cx| start.dispatch_keyboard(window, cx));
+        window.cx.run_until_parked();
+        let wake = {
+            let mut state = gate.lock().unwrap();
+            state.0 = true;
+            state.1.take().expect("background task was polled")
+        };
+        wake.wake();
+        for _ in 0..100 {
+            if completed.load(Ordering::SeqCst) {
+                break;
+            }
+            assert!(window.cx.executor().tick(), "background task must run");
+        }
+        assert!(completed.load(Ordering::SeqCst));
+        assert_eq!(
+            window.update(|_, cx| host.read(cx).component().events.clone()),
+            vec![AsyncState::Loading]
+        );
+        let cancel = owner.cancel("request", apply_race);
+        window.update(|window, cx| cancel.dispatch_keyboard(window, cx));
+        window.cx.run_until_parked();
+        assert_eq!(
+            window.update(|_, cx| host.read(cx).component().events.clone()),
+            vec![AsyncState::Loading, AsyncState::Idle]
+        );
+        assert!(window.update(|_, cx| host.read(cx).tasks.running.is_empty()));
+    }
+
+    #[gpui::test]
     fn canceling_one_owner_task_keeps_another_running(cx: &mut gpui::TestAppContext) {
         use std::sync::{
             Arc,

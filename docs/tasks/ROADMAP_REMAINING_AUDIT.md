@@ -1,3 +1,7 @@
+## Current checkpoint — 2026-10-28: owner task cancellation race
+
+- **R20:** A GPUI test-window regression completes background work, cancels the task before foreground delivery, and confirms the owner receives Idle without the stale success. The full owner-task suite passed 7/7; log `target/headstart/evidence/owner-cancel-completed-race-20261028.log` SHA-256 `dac888a8a9c202695e6cfa6ee6c9a24f2ca27c228f2109707a5b712226a36218`. This tests one simulated scheduling order; native and broader concurrency acceptance remain open. The macOS host workspace all-target check also passed on clean source `ea79fd1e`; the existing `block 0.1.6` future-incompatibility warning remains. Log: `target/headstart/evidence/all-targets-ea79fd1e-20261028.log`.
+
 ## Current checkpoint — 2026-10-28: graph display labels
 
 - **R13/R35/R36 rename check:** In another 1280×720 in-app browser session using manifest `fb1cb2b0cf37382118bfbf8968c8e5de90856784f574b22f100670c4c0cfa259`, selecting the source node and invoking Rename displayed “Nœud renommé” after switching to French and “عقدة أعيدت تسميتها” after switching to Arabic; selection remained on the source node. This closes only that bounded rename/locale interaction. The owned browser tab and server were closed. Source CI run `40732345495` passed on `d528380e`; its compiled macOS/Web job was skipped.
