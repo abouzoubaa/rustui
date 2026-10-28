@@ -66,9 +66,14 @@ impl View for FocusGallery {
                             VStack::new()
                                 .spacing(6.0)
                                 .child(
-                                    TextField("Scope A text field", self.scope_a_text_binding())
+                                    HStack::new().child(
+                                        TextField(
+                                            "Scope A text field",
+                                            self.scope_a_text_binding(),
+                                        )
                                         .localized_placeholder("lab-focus-field-a")
                                         .id("focus-a-text-field"),
+                                    ),
                                 )
                                 .child(Component("focus-a-counter", || ScopeCounter::named("A"))),
                         )
@@ -76,9 +81,11 @@ impl View for FocusGallery {
                         .label("Programmatic focus target: Scope A container"),
                     )
                     .child(
-                        Button("Remove Scope A", self.action(Self::remove_a))
-                            .localized_label("lab-focus-remove-a")
-                            .id("focus-remove-a"),
+                        HStack::new().child(
+                            Button("Remove Scope A", self.action(Self::remove_a))
+                                .localized_label("lab-focus-remove-a")
+                                .id("focus-remove-a"),
+                        ),
                     ),
             )
         } else {
@@ -87,9 +94,11 @@ impl View for FocusGallery {
                     .spacing(6.0)
                     .child(LocalizedText("lab-focus-removed-a"))
                     .child(
-                        Button("Restore Scope A", self.action(Self::restore_a))
-                            .localized_label("lab-focus-restore-a")
-                            .id("focus-restore-a"),
+                        HStack::new().child(
+                            Button("Restore Scope A", self.action(Self::restore_a))
+                                .localized_label("lab-focus-restore-a")
+                                .id("focus-restore-a"),
+                        ),
                     ),
             )
         };
@@ -132,9 +141,14 @@ impl View for FocusGallery {
                             VStack::new()
                                 .spacing(6.0)
                                 .child(
-                                    TextField("Scope B text field", self.scope_b_text_binding())
+                                    HStack::new().child(
+                                        TextField(
+                                            "Scope B text field",
+                                            self.scope_b_text_binding(),
+                                        )
                                         .localized_placeholder("lab-focus-field-b")
                                         .id("focus-b-text-field"),
+                                    ),
                                 )
                                 .child(Component("focus-b-counter", || ScopeCounter::named("B"))),
                         )
@@ -144,9 +158,11 @@ impl View for FocusGallery {
             )
             .child(LocalizedText("lab-focus-outside-label"))
             .child(
-                TextField("Outside focus test", self.outside_text_binding())
-                    .localized_placeholder("lab-focus-outside-field")
-                    .id("focus-outside-text-field"),
+                HStack::new().child(
+                    TextField("Outside focus test", self.outside_text_binding())
+                        .localized_placeholder("lab-focus-outside-field")
+                        .id("focus-outside-text-field"),
+                ),
             )
     }
 }
