@@ -1,0 +1,18 @@
+{
+  "patch": "patches/approved/gpui-toolbar-rtl-v1.patch",
+  "patch_sha256": "a768222d0f47688f6da0bcf59e967f8cb41aa9dfb1871006ac04853be7480863",
+  "pre": {
+    "vendor/gpui-base-0.7.3/src/toolbar.rs": "7059ec38f372f0b3c7721ca776b5df817bdbddcee370c3bf054855805492221e",
+    "vendor/gpui-component-0.7.3/src/toolbar.rs": "06ea2b221f168814edc6ac22649218ed2f0fef308e11e5624308ce09cf007fc0"
+  },
+  "post": {
+    "vendor/gpui-base-0.7.3/src/toolbar.rs": "448b2b9c12137520ea680baa87d81e74ea1f8ccdd41580e14a269b6371698c4e",
+    "vendor/gpui-component-0.7.3/src/toolbar.rs": "e5e5834747966632935d64c0f02f7ffbb74019a94921147311aceb6e3b2c7a6a"
+  },
+  "preserved": {
+    "vendor/gpui-base-0.7.3/.cargo-checksum.json": "9e96d55b0071b60576bc6ac18c3e9c48e6d0de5ff848821af7623bd151f7c3ed",
+    "vendor/gpui-base-0.7.3/LICENSE-APACHE": "d1b0449e5478c574ba4f686c2656df7fe77d66821a61f8b6ed3378a58ed9a811",
+    "vendor/gpui-component-0.7.3/.cargo-checksum.json": "d5b533efba197cc15bcb6756b935a786e846463c1ee431f876e8c334a7e638c6",
+    "vendor/gpui-component-0.7.3/LICENSE-APACHE": "d1b0449e5478c574ba4f686c2656df7fe77d66821a61f8b6ed3378a58ed9a811"
+  }
+}

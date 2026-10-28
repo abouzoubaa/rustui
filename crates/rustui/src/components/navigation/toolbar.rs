@@ -5,6 +5,7 @@ use std::collections::HashSet;
 use gpui::{AnyElement, IntoElement, SharedString, Styled as _, px};
 use gpui_component::toolbar::Toolbar as GpuiToolbar;
 use rustui_core::Identity;
+use rustui_i18n::LayoutDirection;
 
 use crate::{
     components::basic::button::{ButtonStyle, themed_button},
@@ -158,7 +159,9 @@ impl View for ToolbarView {
     }
 
     fn into_element(&self, context: &mut RenderContext<'_>) -> AnyElement {
-        let mut toolbar = GpuiToolbar::new(self.id.to_string()).disabled(self.disabled);
+        let mut toolbar = GpuiToolbar::new(self.id.to_string())
+            .disabled(self.disabled)
+            .right_to_left(context.layout_direction() == LayoutDirection::RightToLeft);
         if let Some(theme) = active_theme(context.app()) {
             // The toolbar record has no body artwork; its profile owns shell geometry.
             let (height, spacing) = shell_metrics(&theme.profile);
@@ -277,5 +280,49 @@ mod tests {
         );
         assert!(bar.items[1].disabled);
         assert!(bar.disabled);
+    }
+
+    #[gpui::test]
+    fn toolbar_arrows_follow_visual_direction(cx: &mut gpui::TestAppContext) {
+        use gpui::{
+            Context, FocusHandle, InteractiveElement as _, ParentElement as _, Render, Window, div,
+            px,
+        };
+
+        struct Harness {
+            items: [FocusHandle; 3],
+            rtl: bool,
+        }
+        impl Render for Harness {
+            fn render(&mut self, _: &mut Window, _: &mut Context<Self>) -> impl gpui::IntoElement {
+                let mut toolbar = gpui_base::Toolbar::new("toolbar-direction")
+                    .right_to_left(self.rtl)
+                    .flex();
+                if self.rtl {
+                    toolbar = toolbar.flex_row_reverse();
+                }
+                for (index, focus) in self.items.iter().enumerate() {
+                    toolbar = toolbar.child(div().id(index).size(px(20.0)).track_focus(focus));
+                }
+                toolbar
+            }
+        }
+        for rtl in [false, true] {
+            let (view, window) = cx.add_window_view(|window, cx| {
+                let items = [
+                    cx.focus_handle().tab_stop(true),
+                    cx.focus_handle().tab_stop(true),
+                    cx.focus_handle().tab_stop(true),
+                ];
+                items[0].focus(window, cx);
+                Harness { items, rtl }
+            });
+            let handles = view.read_with(window, |view, _| view.items.clone());
+            window.update(|window, app| window.draw(app).clear(app));
+            window.simulate_keystrokes(if rtl { "left" } else { "right" });
+            window.update(|window, _| assert!(handles[1].is_focused(window)));
+            window.simulate_keystrokes(if rtl { "right" } else { "left" });
+            window.update(|window, _| assert!(handles[0].is_focused(window)));
+        }
     }
 }
