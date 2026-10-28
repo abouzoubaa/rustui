@@ -14,6 +14,43 @@
 //!
 //! let _view = greeting();
 //! ```
+//!
+//! A component can own state and expose an action that updates it. Applications
+//! using themed controls must activate a theme during startup; provide a valid
+//! RustUI theme file at the path used below.
+//!
+//! ```no_run
+//! use rustui::prelude::*;
+//! use rustui::theme::{activate_theme, load_theme};
+//!
+//! #[component]
+//! struct Counter {
+//!     #[state(0)]
+//!     count: i32,
+//! }
+//!
+//! impl Counter {
+//!     fn increment(&mut self) {
+//!         self.count += 1;
+//!     }
+//! }
+//!
+//! impl View for Counter {
+//!     fn body(&self) -> impl View {
+//!         VStack::new()
+//!             .child(Text(format!("Count: {}", self.count())))
+//!             .child(Button("Increment", self.action(Self::increment)))
+//!     }
+//! }
+//!
+//! let theme = load_theme("themes/macos27.json").expect("load application theme");
+//! RustUI::new()
+//!     .title("Counter")
+//!     .on_launch(move |cx| {
+//!         activate_theme(&theme, None, cx).expect("activate application theme");
+//!     })
+//!     .run(Counter::default());
+//! ```
 
 extern crate self as rustui;
 
