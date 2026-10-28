@@ -763,7 +763,7 @@ mod tests {
         for (tag, label) in [
             ("en", "catalog rows"),
             ("fr", "éléments du catalogue"),
-            ("ar", "صفًا في الدليل"),
+            ("ar", "عدد صفوف الدليل"),
         ] {
             let locale = rustui::localization::Locale::parse(tag).expect("supported locale");
             let summary = catalogs
@@ -790,6 +790,9 @@ mod tests {
                 "{tag}: {summary}"
             );
             assert!(summary.contains(label), "{tag}: {summary}");
+            if tag == "ar" {
+                assert!(summary.contains("عدد أمثلة إطار العمل"), "{summary}");
+            }
         }
     }
 

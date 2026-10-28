@@ -19,6 +19,16 @@ are retained as historical records.
 
 ## Current release evidence — 2026-10-27
 
+- **R13 Arabic catalog count wording, 2026-10-28:** The Playground header
+  now labels the catalog and demo totals in Arabic without using an incorrect
+  plural after the number 16. Locale validation, formatting, the focused
+  catalog-summary test (1/1), and an optimized Web build passed. In one in-app
+  Chromium session, the rebuilt bundle displayed `عدد صفوف الدليل: ٤٦ · عدد
+  أمثلة إطار العمل: ١٦ · macOS 27`; its manifest SHA-256 is
+  `5320af3fd0f78f0983411ce08936a9fbbbc37ba26d13dc8bd33ecedc95532b65`.
+  The test tab and server were closed. Native, wider browser, and complete
+  Arabic/RTL acceptance remain open.
+
 - **R03 RustUI public doctest, 2026-10-28:** On clean `eead9002`, the offline
   Headstart workspace doctest run passed one `rustui-i18n` example; the other
   five crates had zero doctests. RustUI's crate documentation now includes a
