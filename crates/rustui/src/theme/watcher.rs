@@ -320,6 +320,22 @@ mod tests {
             &parse_theme(&initial).expect("original theme")
         );
 
+        let ambiguous = initial.replacen(
+            "\"background\": \"surface\",",
+            "\"background\": \"ignored\",\n    \"background\": \"surface\",",
+            1,
+        );
+        assert_ne!(ambiguous, initial);
+        assert!(
+            theme
+                .reload_source(ambiguous, None, false, activate_ok)
+                .is_err()
+        );
+        assert_eq!(
+            theme.theme(),
+            &parse_theme(&initial).expect("original theme")
+        );
+
         file.write(&initial);
         let repaired = fs::read_to_string(&file.0).expect("read repaired fixture");
         assert!(

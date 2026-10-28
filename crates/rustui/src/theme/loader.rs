@@ -1,14 +1,67 @@
 //! Loading and validating RustUI theme documents.
 
-use std::{error::Error, fmt, fs, io, path::Path};
+use std::{collections::BTreeSet, error::Error, fmt, fs, io, path::Path};
+
+use serde::de::{self, Deserialize, Deserializer, MapAccess, SeqAccess, Visitor};
 
 use crate::theme::schema::ThemeDocument;
 
 /// Load and validate a RustUI theme document from JSON text.
 pub fn parse_theme(source: &str) -> Result<ThemeDocument, ThemeLoadError> {
+    serde_json::from_str::<UniqueJson>(source)?;
     let document: ThemeDocument = serde_json::from_str(source)?;
     document.validate().map_err(ThemeLoadError::Invalid)?;
     Ok(document)
+}
+
+// Preserve the original JSON for the typed parser, which validates raw numeric
+// tokens, while rejecting ambiguous object keys at every depth.
+struct UniqueJson;
+
+impl<'de> Deserialize<'de> for UniqueJson {
+    fn deserialize<D: Deserializer<'de>>(deserializer: D) -> Result<Self, D::Error> {
+        struct UniqueVisitor;
+        impl<'de> Visitor<'de> for UniqueVisitor {
+            type Value = UniqueJson;
+
+            fn expecting(&self, formatter: &mut fmt::Formatter<'_>) -> fmt::Result {
+                formatter.write_str("JSON with unique object keys")
+            }
+            fn visit_bool<E: de::Error>(self, _: bool) -> Result<Self::Value, E> {
+                Ok(UniqueJson)
+            }
+            fn visit_i64<E: de::Error>(self, _: i64) -> Result<Self::Value, E> {
+                Ok(UniqueJson)
+            }
+            fn visit_u64<E: de::Error>(self, _: u64) -> Result<Self::Value, E> {
+                Ok(UniqueJson)
+            }
+            fn visit_f64<E: de::Error>(self, _: f64) -> Result<Self::Value, E> {
+                Ok(UniqueJson)
+            }
+            fn visit_str<E: de::Error>(self, _: &str) -> Result<Self::Value, E> {
+                Ok(UniqueJson)
+            }
+            fn visit_unit<E: de::Error>(self) -> Result<Self::Value, E> {
+                Ok(UniqueJson)
+            }
+            fn visit_seq<A: SeqAccess<'de>>(self, mut seq: A) -> Result<Self::Value, A::Error> {
+                while seq.next_element::<UniqueJson>()?.is_some() {}
+                Ok(UniqueJson)
+            }
+            fn visit_map<A: MapAccess<'de>>(self, mut map: A) -> Result<Self::Value, A::Error> {
+                let mut keys = BTreeSet::new();
+                while let Some(key) = map.next_key::<String>()? {
+                    if !keys.insert(key.clone()) {
+                        return Err(de::Error::custom(format!("duplicate object key `{key}`")));
+                    }
+                    map.next_value::<UniqueJson>()?;
+                }
+                Ok(UniqueJson)
+            }
+        }
+        deserializer.deserialize_any(UniqueVisitor)
+    }
 }
 
 /// Serialize a validated theme document as normalized, pretty-printed JSON.
@@ -293,5 +346,22 @@ mod tests {
         );
 
         assert!(matches!(parse_theme(&source), Err(ThemeLoadError::Json(_))));
+    }
+
+    #[test]
+    fn parser_rejects_duplicate_nested_object_keys() {
+        let source = THEME_SOURCE.replacen(
+            "\"background\": \"surface\",",
+            "\"background\": \"ignored\",\n    \"background\": \"surface\",",
+            1,
+        );
+        assert_ne!(source, THEME_SOURCE);
+        assert!(matches!(parse_theme(&source), Err(ThemeLoadError::Json(_))));
+        assert!(
+            serde_json::from_str::<super::UniqueJson>(r#"[{"name":1,"\u006eame":2}]"#).is_err()
+        );
+        assert!(
+            serde_json::from_str::<super::UniqueJson>(r#"[{"name":null},{"name":true}]"#).is_ok()
+        );
     }
 }
