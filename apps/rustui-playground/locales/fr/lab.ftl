@@ -562,3 +562,16 @@ lab-spring-help = GPUI gère la durée et la vitesse conservée. Le dépassement
 lab-spring-initial-status = Identité de l'exemple initial : {generation} (de 0 à {target})
 lab-spring-remount = Remonter depuis zéro
 lab-spring-initial-sample = Exemple de ressort à valeur initiale
+
+lab-identity-title = Identité des éléments enfants animés
+lab-identity-description = Quatre champs partagent volontairement le même identifiant enfant. Chaque animation possède sa propre portée d’identité typée.
+lab-identity-update = Mettre à jour le parent
+lab-identity-mount = Masquer / restaurer les champs A
+lab-identity-replace = Remplacer les valeurs A depuis l’extérieur
+lab-identity-visible = Mises à jour du parent : {count} · champs A visibles
+lab-identity-hidden = Mises à jour du parent : {count} · champs A masqués
+lab-identity-spring-omitted = Ressort A masqué
+lab-identity-fade-omitted = Fondu A masqué
+lab-identity-spring-mirrors = Valeurs du ressort : A [{a}] · B [{b}]
+lab-identity-fade-mirrors = Valeurs du fondu : A [{a}] · B [{b}]
+lab-identity-help = Modifiez chaque champ avec une valeur distincte, puis mettez à jour le parent : les valeurs doivent rester séparées. Masquer puis restaurer A conserve son texte ; B reste monté. Le remplacement externe ne change que A. La fin de l’animation ne doit pas réinitialiser les champs.

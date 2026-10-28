@@ -562,3 +562,16 @@ lab-spring-help = يدير GPUI التوقيت والسرعة المحفوظة. 
 lab-spring-initial-status = هوية نموذج القيمة الأولية: {generation} (من ٠ إلى {target})
 lab-spring-remount = إعادة التركيب من الصفر
 lab-spring-initial-sample = نموذج نابض بقيمة أولية
+
+lab-identity-title = هوية العناصر الفرعية المتحركة
+lab-identity-description = تشترك أربعة حقول عمدًا في معرّف فرعي واحد. لكل حركة نطاق هوية مميز.
+lab-identity-update = تحديث العنصر الأب
+lab-identity-mount = إخفاء حقول A أو استعادتها
+lab-identity-replace = استبدال قيم A من الخارج
+lab-identity-visible = تحديثات الأب: {count} · حقول A ظاهرة
+lab-identity-hidden = تحديثات الأب: {count} · حقول A مخفية
+lab-identity-spring-omitted = النابض A مخفي
+lab-identity-fade-omitted = التلاشي A مخفي
+lab-identity-spring-mirrors = قيم النابض: A [{a}] · B [{b}]
+lab-identity-fade-mirrors = قيم التلاشي: A [{a}] · B [{b}]
+lab-identity-help = أدخل قيمة مختلفة في كل حقل ثم حدّث الأب: يجب أن تبقى القيم منفصلة. إخفاء A واستعادته يحفظ نصه، ويبقى B مركّبًا. لا يغيّر الاستبدال الخارجي إلا A. يجب ألا تعيد نهاية الحركة ضبط الحقول.

@@ -562,3 +562,16 @@ lab-spring-help = GPUI owns timing and retained velocity. Spring overshoot is cl
 lab-spring-initial-status = Initial-value sample identity: {generation} (from 0 to {target})
 lab-spring-remount = Remount from zero
 lab-spring-initial-sample = Initial-value spring sample
+
+lab-identity-title = Animation child identity acceptance
+lab-identity-description = Four fields intentionally share one explicit child ID. Each wrapper has its own typed identity scope.
+lab-identity-update = Update parent
+lab-identity-mount = Omit / restore A fields
+lab-identity-replace = Replace A values externally
+lab-identity-visible = Parent updates {count} · A fields visible
+lab-identity-hidden = Parent updates {count} · A fields hidden
+lab-identity-spring-omitted = Spring A omitted
+lab-identity-fade-omitted = Fade A omitted
+lab-identity-spring-mirrors = Spring mirrors: A [{a}] · B [{b}]
+lab-identity-fade-mirrors = Fade mirrors: A [{a}] · B [{b}]
+lab-identity-help = Edit each field with a distinct value, then update parent: all mirrors must remain separate. Omit/restore A retains root-bound text; B remains mounted. External replacement changes only A. Animation completion must not reset input state.
