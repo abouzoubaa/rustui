@@ -19,6 +19,18 @@ are retained as historical records.
 
 ## Current release evidence — 2026-10-27
 
+- **R03 RustUI public doctest, 2026-10-28:** On clean `eead9002`, the offline
+  Headstart workspace doctest run passed one `rustui-i18n` example; the other
+  five crates had zero doctests. RustUI's crate documentation now includes a
+  public `View`, `VStack` and `Text` composition example, and the focused
+  `rustui` doctest passed 1/1. Logs:
+  `target/headstart/evidence/doctest-workspace-eead9002-20261028.log` (SHA-256
+  `c1d32496790c7acdfe6eee0d3a94f9e5958665f986917f8fd2ddd024a79fe870`)
+  and `target/headstart/evidence/doctest-public-example-20261028.log`
+  (SHA-256 `70d68cf3b1a96fce75a24c8912c3a9f00b7d43b85eb12e97d77b0e00b424c767`).
+  One composition example does not establish complete API documentation or
+  coverage of the remaining public examples.
+
 - **R03/R30 workspace documentation build, 2026-10-28:** On clean commit
   `4c127c2c`, an offline Headstart `cargo doc --workspace --no-deps` in the
   persistent verification target succeeded on retry. The first attempt exited

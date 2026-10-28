@@ -1,4 +1,19 @@
 //! Standalone declarative Rust UI framework built on GPUI.
+//!
+//! Compose views through the public prelude:
+//!
+//! ```
+//! use rustui::prelude::{Text, VStack, View};
+//!
+//! fn greeting() -> impl View {
+//!     VStack::new()
+//!         .spacing(8.0)
+//!         .child(Text("Hello"))
+//!         .child(Text("Welcome to RustUI"))
+//! }
+//!
+//! let _view = greeting();
+//! ```
 
 extern crate self as rustui;
 
