@@ -122,6 +122,38 @@ fn set(
 }
 
 #[gpui::test]
+fn drawer_keeps_keyboard_focus_inside_modal(cx: &mut gpui::TestAppContext) {
+    setup(cx);
+    let (owner, window) = window(cx);
+    draw(window);
+    set(&owner, window, |owner| owner.visible = true);
+    for key in ["tab", "shift-tab"] {
+        let mut visited = Vec::new();
+        for _ in 0..5 {
+            window.simulate_keystrokes(key);
+            draw(window);
+            let focus = window.update(|window, app| {
+                let overlay = host(window, app).unwrap();
+                let overlay = overlay.read(app);
+                let active = overlay.active.as_ref().expect("drawer remains open");
+                assert!(
+                    active.focus.contains_focused(window, app),
+                    "focus escaped the open drawer"
+                );
+                window.focused(app).expect("drawer has focused control")
+            });
+            if !visited.contains(&focus) {
+                visited.push(focus);
+            }
+        }
+        assert!(
+            visited.len() >= 2,
+            "{key} did not traverse the drawer controls"
+        );
+    }
+}
+
+#[gpui::test]
 fn real_root_escape_restores_focus_and_does_not_repeat_visibility_updates(
     cx: &mut gpui::TestAppContext,
 ) {
