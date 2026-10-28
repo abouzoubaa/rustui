@@ -87,7 +87,10 @@ fn write_with_current_writer<Value, Context>(
 }
 
 fn year_range_around(date: NaiveDate) -> (i32, i32) {
-    (date.year() - 50, date.year() + 51)
+    (
+        (date.year() - 50).max(NaiveDate::MIN.year()),
+        (date.year() + 51).min(NaiveDate::MAX.year() + 1),
+    )
 }
 
 struct RetainedDatePicker {
@@ -373,6 +376,16 @@ mod tests {
         let date = NaiveDate::from_ymd_opt(1900, 6, 15).unwrap();
 
         assert_eq!(year_range_around(date), (1850, 1951));
+    }
+
+    #[test]
+    fn year_range_stays_within_chronos_representable_years() {
+        for date in [NaiveDate::MIN, NaiveDate::MAX] {
+            let (start, end) = year_range_around(date);
+            assert!(start >= NaiveDate::MIN.year());
+            assert!(end <= NaiveDate::MAX.year() + 1);
+            assert!((start..end).contains(&date.year()));
+        }
     }
 
     #[test]
