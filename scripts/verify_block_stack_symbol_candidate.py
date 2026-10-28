@@ -11,8 +11,8 @@ import tempfile
 ROOT = Path(__file__).resolve().parents[1]
 SOURCE = Path("vendor/block-0.1.6/src/lib.rs")
 PATCH = Path("patches/proposed/block-0.1.6-stack-symbol.patch")
+PRE = "eb31678adf63b53109d9b94eba23699fd5f9ebfdb950f6e1a57ad51bb6a146fa"
 EXPECTED = {
-    SOURCE: "eb31678adf63b53109d9b94eba23699fd5f9ebfdb950f6e1a57ad51bb6a146fa",
     Path("vendor/block-0.1.6/.cargo-checksum.json"): "436ff3319faf156bd9a969481c9b0bf0cbebe3b22719c1353a3513447bab4fbf",
     PATCH: "d0fc7338cf3e8cc97477157e1cff3719257566105909a2a3f2af788c03e5fac6",
     Path("patches/proposed/block-stack-symbol-probe.rs"): "e7af5377afaa2eb2fdf5be3e25a4d2e1787dcac7faa20146cf645109c6c3d469",
@@ -28,6 +28,8 @@ def digest(path):
 def verify(root):
     if sys.platform != "darwin":
         raise ValueError("candidate FFI probe requires macOS")
+    if digest(root / SOURCE) not in (PRE, POST):
+        raise ValueError(f"unexpected input hash: {SOURCE}")
     for path, expected in EXPECTED.items():
         if digest(root / path) != expected:
             raise ValueError(f"unexpected input hash: {path}")
@@ -41,10 +43,14 @@ def verify(root):
         staged = work / SOURCE
         staged.parent.mkdir(parents=True)
         shutil.copyfile(root / SOURCE, staged)
-        original = staged.read_bytes()
         patch = str(root / PATCH)
         def apply(*args):
             subprocess.run(["git", "apply", *args, patch], cwd=work, check=True)
+        if digest(staged) == POST:
+            apply("--reverse")
+        if digest(staged) != PRE:
+            raise ValueError("candidate preimage mismatch")
+        original = staged.read_bytes()
         apply("--check")
         apply()
         if digest(staged) != POST:

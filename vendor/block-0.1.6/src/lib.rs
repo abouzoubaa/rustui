@@ -61,7 +61,7 @@ enum Class { }
 #[cfg_attr(not(any(target_os = "macos", target_os = "ios")),
            link(name = "BlocksRuntime", kind = "dylib"))]
 extern {
-    static _NSConcreteStackBlock: Class;
+    static _NSConcreteStackBlock: u8;
 
     fn _Block_copy(block: *const c_void) -> *mut c_void;
     fn _Block_release(block: *const c_void);
@@ -258,7 +258,7 @@ impl<A, R, F> ConcreteBlock<A, R, F> {
             closure: F) -> Self {
         ConcreteBlock {
             base: BlockBase {
-                isa: &_NSConcreteStackBlock,
+                isa: ptr::addr_of!(_NSConcreteStackBlock).cast::<Class>(),
                 // 1 << 25 = BLOCK_HAS_COPY_DISPOSE
                 flags: 1 << 25,
                 _reserved: 0,

@@ -24,6 +24,7 @@ verify_web_ime_edit_plan() (
 case "${1:-}" in
   source)
     verify_tree_accessibility_series
+    python3 scripts/apply_block_stack_symbol_patch.py --verify
     python3 scripts/apply_gpui_component_calendar_locale_patch.py --check
     python3 scripts/apply_gpui_component_date_picker_patch.py --check
     python3 scripts/apply_gpui_component_select_title_patch.py --check
@@ -49,6 +50,7 @@ case "${1:-}" in
     ;;
   macos)
     verify_tree_accessibility_series
+    python3 scripts/apply_block_stack_symbol_patch.py --verify
     python3 scripts/apply_gpui_component_calendar_locale_patch.py --check
     python3 scripts/apply_gpui_component_date_picker_patch.py --check
     python3 scripts/apply_gpui_component_select_title_patch.py --check
@@ -110,6 +112,7 @@ PY
     ;;
   web)
     verify_tree_accessibility_series
+    python3 scripts/apply_block_stack_symbol_patch.py --verify
     python3 scripts/apply_gpui_component_calendar_locale_patch.py --check
     python3 scripts/apply_gpui_component_date_picker_patch.py --check
     python3 scripts/apply_gpui_component_select_title_patch.py --check

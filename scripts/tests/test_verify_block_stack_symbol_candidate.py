@@ -18,7 +18,7 @@ class CandidateIntegrityTest(unittest.TestCase):
     def test_rejects_tampered_source_and_patch_before_running_probe(self):
         with tempfile.TemporaryDirectory() as folder:
             root = Path(folder)
-            for path in candidate.EXPECTED:
+            for path in (candidate.SOURCE, *candidate.EXPECTED):
                 destination = root / path
                 destination.parent.mkdir(parents=True, exist_ok=True)
                 shutil.copyfile(ROOT / path, destination)

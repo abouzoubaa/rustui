@@ -1,5 +1,17 @@
 # Approved upstream patches
 
+## block 0.1.6 stack symbol
+
+`approved/block-0.1.6-stack-symbol-v1.patch` replaces the uninhabited external
+static declaration with a byte declaration and takes its address as an opaque
+pointer. The dependency remains at version 0.1.6; workspace and external
+consumer select the local package. Upstream Cargo metadata and checksum files
+remain unchanged. Use `python3 scripts/apply_block_stack_symbol_patch.py
+--verify` to verify the selected postimage, or `--apply` and `--reverse` for
+hash-checked replay. `scripts/verify_block_stack_symbol_candidate.py` also
+exercises the patch in a temporary copy with a macOS C/Rust block FFI probe.
+The separate missing upstream notice remains a release gap.
+
 ## GPUI Components 0.7.3 select committed title
 
 `approved/gpui-component-select-committed-title-v1.patch` (SHA-256
