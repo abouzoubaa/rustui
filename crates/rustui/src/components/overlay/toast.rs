@@ -57,6 +57,7 @@ pub struct ToastBuilder {
     message_key: Option<SharedString>,
     title_key: Option<SharedString>,
     action_key: Option<SharedString>,
+    logical_placement: bool,
     kind: ToastKind,
     id: Option<SharedString>,
     autohide: bool,
@@ -72,6 +73,7 @@ impl ToastBuilder {
             message_key: None,
             title_key: None,
             action_key: None,
+            logical_placement: false,
             kind: ToastKind::Info,
             id: None,
             autohide: true,
@@ -115,6 +117,13 @@ impl ToastBuilder {
             "toast localization key must not be empty"
         );
         self.action_key = Some(key);
+        self
+    }
+
+    /// Mirrors the configured notification placement in right-to-left locales.
+    /// The default keeps the application-configured physical placement unchanged.
+    pub fn logical_placement(mut self) -> Self {
+        self.logical_placement = true;
         self
     }
 
@@ -193,6 +202,15 @@ impl ToastBuilder {
                 .with_type(self.kind.notification_type())
                 .delivery(NotificationDelivery::InApp)
                 .autohide(self.autohide);
+            if self.logical_placement
+                && crate::localization::active_localization(cx).is_some_and(|locale| {
+                    locale.direction() == crate::localization::LayoutDirection::RightToLeft
+                })
+            {
+                notification = notification.placement(mirror_anchor(
+                    gpui_component::Theme::global(cx).notification.placement,
+                ));
+            }
             if let Some(title) = &title {
                 notification = notification.title(title.clone());
             }
@@ -233,6 +251,20 @@ impl ToastBuilder {
             });
             window.push_notification(styled_element(notification, &style), cx);
         })
+    }
+}
+
+fn mirror_anchor(anchor: gpui::Anchor) -> gpui::Anchor {
+    use gpui::Anchor::*;
+    match anchor {
+        TopLeft => TopRight,
+        TopRight => TopLeft,
+        BottomLeft => BottomRight,
+        BottomRight => BottomLeft,
+        LeftCenter => RightCenter,
+        RightCenter => LeftCenter,
+        TopCenter => TopCenter,
+        BottomCenter => BottomCenter,
     }
 }
 
@@ -294,6 +326,23 @@ mod tests {
         assert_eq!(body.as_ref(), "Saved changes");
         assert_eq!(title.as_deref(), Some("Saved"));
         assert_eq!(action.as_deref(), Some("Undo"));
+    }
+
+    #[test]
+    fn logical_placement_mirrors_horizontal_anchors_only() {
+        use gpui::Anchor::*;
+        for (left, right) in [
+            (TopLeft, TopRight),
+            (BottomLeft, BottomRight),
+            (LeftCenter, RightCenter),
+        ] {
+            assert_eq!(mirror_anchor(left), right);
+            assert_eq!(mirror_anchor(right), left);
+        }
+        assert_eq!(mirror_anchor(TopCenter), TopCenter);
+        assert_eq!(mirror_anchor(BottomCenter), BottomCenter);
+        assert!(!Toast("Message").logical_placement);
+        assert!(Toast("Message").logical_placement().logical_placement);
     }
 
     #[test]
