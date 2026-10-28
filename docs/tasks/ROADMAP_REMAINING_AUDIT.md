@@ -1,3 +1,33 @@
+## Current requirement inventory — 2026-10-28
+
+This is a **provisional classification of all 37 ledger groups**, not a
+percentage of RustUI completed. It summarizes the existing ledger evidence, not
+a new requirement-by-requirement source audit. The groups vary greatly in size and contain
+both product capabilities and release-process work. “Implemented portions”
+means the named capability exists in source; it does not assert that its full
+roadmap contract has been audited or accepted.
+
+| Implementation status | Groups | Meaning and remaining work |
+| --- | --- | --- |
+| Coding recorded complete | 4: R00–R02, R34 | Dependency boundaries, single-writer coordination, approved patch selection, and the ResizablePanel adapter. R34 still needs broader acceptance. |
+| Implemented portions, full contract or acceptance open | 28: R04–R20, R22–R26, R28–R29, R32–R33, R35–R36 | Bootstrap, lifecycle, state/layout, animations, Playground, macros, components, themes, localization, collections, overlays, async ownership, preview/composition, Web, Outline, Drawer, GraphView, and NodeEditor have substantial source implementations. Some still have known missing behavior; others need contract review, integration or runtime evidence. These 28 are not 28 fully coded groups. |
+| Cross-cutting work or deferred work requiring separate assessment | 5: R03, R21, R27, R30–R31 | Public documentation/contract audit; keyboard and accessibility; performance and candidate workflow; CI/reproducibility; security, notices, packaging and release preparation. Each has existing work and open requirements. Keyboard remains in scope; broader accessibility and VoiceOver are explicitly deferred. |
+
+Acceptance remains **3 of 37 groups recorded fully accepted** (R00–R02), not
+3 of 37 features tested. The other 34 include passing focused tests and bounded
+native/browser observations, alongside missing or deferred evidence. They have
+not been exhaustively reclassified as fully accepted. Current test evidence
+includes the 1,343 workspace library and 60 integration tests on `d7a9c4d0`,
+and subsequent focused menu and browser checks; these cover different source
+revisions and do not by themselves close whole-group acceptance.
+
+Release priorities: resolve the six dependency-notice versions and review
+license obligations; complete in-scope English/French/Arabic and RTL behavior;
+finish current-source native and browser input, lifecycle and functional checks;
+measure representative performance and validate budgets; establish compiled
+CI, supported-version scope, reproducibility and distribution. Accessibility,
+VoiceOver and languages beyond the three selected remain undone/deferred.
+
 ## Current checkpoint — 2026-10-28: consumer and all-target compilation
 
 - **R30 current-source compilation:** On source `2a1b5d25`, `./scripts/cargo-headstart check --manifest-path examples/external-consumer/Cargo.toml --profile headstart --locked --offline` and `./scripts/cargo-headstart check --workspace --all-targets --profile headstart --locked --offline` both passed on the macOS host. The latter covers Cargo targets, not additional operating systems. Retained logs under `target/headstart/evidence/` are `external-consumer-2a1b5d25-20261028.log` (SHA-256 `1bd0d7dcdfb7ec0ecb1fff6d0690ff2ae101f37c08a96980cc12bd7d035851b5`) and `all-targets-2a1b5d25-20261028.log` (SHA-256 `d194cf7aebce025d592cd1332cb8e89b50f371d635ccae066c5d9716152d6060`). The known `block 0.1.6` future-incompatibility warning remains. These checks do not establish GUI, browser, compiled CI, packaging or performance acceptance.
