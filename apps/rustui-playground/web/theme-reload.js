@@ -24,7 +24,10 @@ export async function fetchTheme(fetcher = fetch, timeoutMs = 10_000, controller
       clearThemeCache(cache);
       generation = cache.generation;
     }
-    if (!response.ok) throw new Error(`Theme request failed (${response.status})`);
+    if (!response.ok) {
+      if (response.body) void response.body.cancel().catch(() => {});
+      throw new Error(`Theme request failed (${response.status})`);
+    }
     if (!response.body) throw new Error('Theme response has no body');
     const limit = 2 * 1024 * 1024;
     const length = response.headers.get('content-length');

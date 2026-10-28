@@ -24,6 +24,23 @@ test('invalid streamed data fails even when stream cancellation stalls', async (
   assert.equal(cancelled, true);
 });
 
+test('HTTP errors cancel their body without waiting for cancellation', async () => {
+  let cancelled = false;
+  const body = new ReadableStream({
+    cancel() { cancelled = true; return new Promise(() => {}); },
+  });
+  let timer;
+  try {
+    await assert.rejects(Promise.race([
+      fetchTheme(async () => new Response(body, { status: 503 })),
+      new Promise((_, reject) => { timer = setTimeout(() => reject(new Error('error response stalled')), 1000); }),
+    ]), /Theme request failed \(503\)/);
+  } finally {
+    clearTimeout(timer);
+  }
+  assert.equal(cancelled, true);
+});
+
 test('fetches uncached same-origin UTF-8 theme data', async () => {
   const result = await fetchTheme(async (url, options) => {
     assert.equal(url, 'assets/macos27.json');
