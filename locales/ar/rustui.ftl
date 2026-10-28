@@ -30,6 +30,7 @@ rustui-graph-error-port-direction = صِل منفذ إخراج بمنفذ إدخ
 rustui-graph-error-duplicate-connection = هذا الاتصال موجود بالفعل.
 rustui-graph-error-invalid-geometry = يجب أن تكون هندسة المخطط محدودة وقابلة للتمثيل.
 rustui-token-field-add = إضافة رمز
+rustui-token-field-add-button = إضافة
 rustui-token-field-remove = إزالة {token}
 rustui-token-field-remove-empty = إزالة الرمز
 rustui-graph-view = مخطط

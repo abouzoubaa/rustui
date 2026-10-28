@@ -30,6 +30,7 @@ rustui-graph-error-port-direction = connect an output port to an input port
 rustui-graph-error-duplicate-connection = connection already exists
 rustui-graph-error-invalid-geometry = graph geometry must be finite and representable
 rustui-token-field-add = Add token
+rustui-token-field-add-button = Add
 rustui-token-field-remove = Remove {token}
 rustui-token-field-remove-empty = Remove token
 rustui-graph-view = Graph

@@ -44,6 +44,11 @@ fn add_accessible_label(localized: impl FnOnce(&str) -> String) -> SharedString 
     resolved_accessible_label(id, localized(id), "Add token".to_owned())
 }
 
+fn add_button_label(localized: impl FnOnce(&str) -> String) -> SharedString {
+    let id = "rustui-token-field-add-button";
+    resolved_accessible_label(id, localized(id), "Add".to_owned())
+}
+
 fn remove_accessible_label(
     token: &str,
     localized: impl FnOnce(
@@ -207,7 +212,7 @@ impl View for TokenFieldView {
 
         let add_enabled = !self.disabled && !draft.trim().is_empty();
         let add = GpuiButton::new(format!("{identity}-add"))
-            .child("Add")
+            .child(add_button_label(|id| context.localized_message(id)))
             .disabled(!add_enabled)
             .accessibility_label(add_accessible_label(|id| context.localized_message(id)))
             .on_click(move |_, _, cx| {
@@ -223,8 +228,8 @@ impl View for TokenFieldView {
 #[cfg(test)]
 mod tests {
     use super::{
-        TokenField, TokenFieldView, add_accessible_label, remove_accessible_label, token_after_add,
-        token_after_remove,
+        TokenField, TokenFieldView, add_accessible_label, add_button_label,
+        remove_accessible_label, token_after_add, token_after_remove,
     };
     use rustui_core::Binding;
 
@@ -265,6 +270,14 @@ mod tests {
 
     #[test]
     fn token_field_action_names_use_localized_catalog_messages_with_fallbacks() {
+        assert_eq!(
+            add_button_label(|id| {
+                assert_eq!(id, "rustui-token-field-add-button");
+                "Ajouter".to_owned()
+            }),
+            "Ajouter"
+        );
+        assert_eq!(add_button_label(|id| id.to_owned()), "Add");
         assert_eq!(
             add_accessible_label(|id| {
                 assert_eq!(id, "rustui-token-field-add");

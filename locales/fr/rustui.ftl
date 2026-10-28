@@ -30,6 +30,7 @@ rustui-graph-error-port-direction = Connectez un port de sortie à un port d’e
 rustui-graph-error-duplicate-connection = Cette connexion existe déjà.
 rustui-graph-error-invalid-geometry = La géométrie du graphe doit être finie et représentable.
 rustui-token-field-add = Ajouter un jeton
+rustui-token-field-add-button = Ajouter
 rustui-token-field-remove = Supprimer {token}
 rustui-token-field-remove-empty = Supprimer le jeton
 rustui-graph-view = Graphe
