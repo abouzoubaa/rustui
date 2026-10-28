@@ -271,17 +271,20 @@ impl GraphEdge {
 pub struct GraphDocument {
     nodes: Vec<GraphNode>,
     edges: Vec<GraphEdge>,
+    node_index: HashMap<String, usize>,
 }
 impl GraphDocument {
     pub fn new(
         nodes: impl IntoIterator<Item = GraphNode>,
         edges: impl IntoIterator<Item = GraphEdge>,
     ) -> Result<Self, GraphError> {
-        let graph = Self {
+        let mut graph = Self {
             nodes: nodes.into_iter().collect(),
             edges: edges.into_iter().collect(),
+            node_index: HashMap::new(),
         };
         graph.validate()?;
+        graph.rebuild_node_index();
         Ok(graph)
     }
     pub fn nodes(&self) -> &[GraphNode] {
@@ -291,7 +294,16 @@ impl GraphDocument {
         &self.edges
     }
     pub fn node(&self, id: &str) -> Option<&GraphNode> {
-        self.nodes.iter().find(|node| node.id == id)
+        self.node_index.get(id).map(|&index| &self.nodes[index])
+    }
+
+    fn rebuild_node_index(&mut self) {
+        self.node_index = self
+            .nodes
+            .iter()
+            .enumerate()
+            .map(|(index, node)| (node.id.clone(), index))
+            .collect();
     }
     fn endpoint(&self, endpoint: &GraphEndpoint) -> Result<(&GraphNode, &GraphPort), GraphError> {
         let node = self.node(&endpoint.node).ok_or(GraphError::MissingNode)?;
@@ -382,6 +394,7 @@ impl GraphDocument {
             }
         }
         next.validate()?;
+        next.rebuild_node_index();
         Ok(next)
     }
 
@@ -1433,6 +1446,18 @@ mod tests {
             GraphDocument::new(nodes, edges),
             Err(GraphError::MissingNode)
         );
+    }
+
+    #[test]
+    fn node_lookup_tracks_removal_and_reinsertion() {
+        let original = graph();
+        let removed = original.edited(GraphEdit::RemoveNode("a".into())).unwrap();
+        assert!(removed.node("a").is_none());
+        assert_eq!(removed.node("b").unwrap().id(), "b");
+        assert!(original.node("a").is_some());
+        let restored = removed.edited(GraphEdit::AddNode(node("a", 50.0))).unwrap();
+        assert_eq!(restored.node("a").unwrap().rect().x, 50.0);
+        assert_eq!(restored.node("b").unwrap().id(), "b");
     }
 
     fn test_binding<T: Clone + 'static>(value: T) -> Binding<T> {
