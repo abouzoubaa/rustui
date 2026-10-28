@@ -1,3 +1,7 @@
+## Current source release gate — 2026-10-28
+
+On clean commit `8b065450`, `./scripts/verify-release.sh source` exited 0. It ran 625 Python tests and three Node suites with 20, 8 and 15 passing tests, plus the configured patch-stack verifiers, packaging and Web build fixtures, locale validation, planning-theme validation and theme adapter coverage. Log: `target/headstart/evidence/source-gate-8b065450-20261028.log`, SHA-256 `baa82041bde4a9b16a3bcc3cbe5be7a68d05d6ebfb7d4996282ebb4d16f4c939`. The source gate does not establish compiled macOS/Web CI, native/browser interaction, license clearance, signing or release readiness; the GUI cleanup rejection and existing protected-bundle incident remain open.
+
 ## Animation identity localization — 2026-10-28
 
 A focused runtime formatting regression now verifies that the animation identity story resolves localized mirror labels, both field values, and the locale-formatted update count in English, French and Arabic. It passed 1/1 via locked offline Headstart on the current source (log `target/headstart/evidence/identity-message-format-20261028.log`, SHA-256 `21ac0c1a9c994ad9ba29a57b58802a684c176809960a4d252a79781fcbc8c50b`). This does not establish rendered layout or interaction.
