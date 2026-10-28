@@ -336,6 +336,56 @@ impl RustUI {
             cx.bind_keys([
                 KeyBinding::new("cmd-z", gpui_base::input::Undo, Some("Input")),
                 KeyBinding::new("cmd-shift-z", gpui_base::input::Redo, Some("Input")),
+                KeyBinding::new("cmd-left", gpui_base::input::MoveHome, Some("Input")),
+                KeyBinding::new("cmd-right", gpui_base::input::MoveEnd, Some("Input")),
+                KeyBinding::new("cmd-up", gpui_base::input::MoveToStart, Some("Input")),
+                KeyBinding::new("cmd-down", gpui_base::input::MoveToEnd, Some("Input")),
+                KeyBinding::new(
+                    "shift-cmd-left",
+                    gpui_base::input::SelectToStartOfLine,
+                    Some("Input"),
+                ),
+                KeyBinding::new(
+                    "shift-cmd-right",
+                    gpui_base::input::SelectToEndOfLine,
+                    Some("Input"),
+                ),
+                KeyBinding::new(
+                    "cmd-shift-up",
+                    gpui_base::input::SelectToStart,
+                    Some("Input"),
+                ),
+                KeyBinding::new(
+                    "cmd-shift-down",
+                    gpui_base::input::SelectToEnd,
+                    Some("Input"),
+                ),
+                KeyBinding::new(
+                    "alt-left",
+                    gpui_base::input::MoveToPreviousWord,
+                    Some("Input"),
+                ),
+                KeyBinding::new("alt-right", gpui_base::input::MoveToNextWord, Some("Input")),
+                KeyBinding::new(
+                    "cmd-backspace",
+                    gpui_base::input::DeleteToBeginningOfLine,
+                    Some("Input"),
+                ),
+                KeyBinding::new(
+                    "cmd-delete",
+                    gpui_base::input::DeleteToEndOfLine,
+                    Some("Input"),
+                ),
+                KeyBinding::new(
+                    "alt-backspace",
+                    gpui_base::input::DeleteToPreviousWordStart,
+                    Some("Input"),
+                ),
+                KeyBinding::new(
+                    "alt-delete",
+                    gpui_base::input::DeleteToNextWordEnd,
+                    Some("Input"),
+                ),
             ]);
             crate::components::overlay::drawer::init(cx);
             // Set the Web default before caller launch/theme customization.
