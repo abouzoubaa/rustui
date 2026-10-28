@@ -341,14 +341,18 @@ impl View for ToolbarGallery {
             }))
             .child(Toolbar("toolbar-gallery-actions", items).disabled(self.disabled()))
             .child(
-                Button("Reverse order", self.action(Self::toggle_order))
-                    .id("toolbar-reverse")
-                    .localized_label("lab-toolbar-reverse-action"),
+                HStack::new().child(
+                    Button("Reverse order", self.action(Self::toggle_order))
+                        .id("toolbar-reverse")
+                        .localized_label("lab-toolbar-reverse-action"),
+                ),
             )
             .child(
-                Button("Toggle disabled", self.action(Self::toggle_disabled))
-                    .id("toolbar-disabled")
-                    .localized_label("lab-toolbar-disabled-action"),
+                HStack::new().child(
+                    Button("Toggle disabled", self.action(Self::toggle_disabled))
+                        .id("toolbar-disabled")
+                        .localized_label("lab-toolbar-disabled-action"),
+                ),
             )
             .child(LocalizedText("lab-toolbar-help"))
     }
