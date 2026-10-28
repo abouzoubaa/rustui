@@ -330,6 +330,13 @@ impl RustUI {
                 .add_fonts(web_font_assets())
                 .expect("bundled Web fonts must register");
             gpui_component::init(cx);
+            // The Web target is not macOS at compile time, but browsers on
+            // macOS still use Command for editing shortcuts.
+            #[cfg(target_family = "wasm")]
+            cx.bind_keys([
+                KeyBinding::new("cmd-z", gpui_base::input::Undo, Some("Input")),
+                KeyBinding::new("cmd-shift-z", gpui_base::input::Redo, Some("Input")),
+            ]);
             crate::components::overlay::drawer::init(cx);
             // Set the Web default before caller launch/theme customization.
             #[cfg(target_family = "wasm")]
