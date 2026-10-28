@@ -1,6 +1,6 @@
 ## Current checkpoint — 2026-10-28: context-menu gallery locale copy
 
-- **R13 partial source implementation:** The context-menu gallery's owner state and controls, menu labels, help text and numeric status now resolve in English, French and Arabic. The Playground Headstart check, three-catalog validator and focused locale-resolution test passed. Rendered menu interaction and native/browser RTL acceptance remain open; this does not close R13.
+- **R13 partial source implementation:** The context-menu gallery's owner state and controls, menu labels, help text and numeric status now resolve in English, French and Arabic. The Playground Headstart check, three-catalog validator and focused locale-resolution test passed. A 1280×720 in-app browser check of source `7ed298a5` (Web manifest SHA-256 `30810011083695a2384451ed4d0de0318f631a6e2d956e60caaa88701c70ddc0`) displayed French menu labels; Increment changed 0 to 1, the disabled item left its count at 0, and Remove owner dismissed the menu and hid the target until restored. Arabic labels rendered, but its two surrounding buttons were left-aligned and the popup labels appeared left-aligned. Direction-aware button containers are now implemented and need a fresh rendered check; popup RTL alignment and broader native/browser acceptance remain open. This does not close R13.
 
 ## Current checkpoint — 2026-10-28: local Headstart workspace tests
 

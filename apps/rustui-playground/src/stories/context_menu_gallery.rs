@@ -42,12 +42,14 @@ impl View for ContextMenuGallery {
                 })
             }))
             .child(
-                Button(
-                    "Remove or restore target owner",
-                    self.action(Self::toggle_visible),
-                )
-                .id("context-gallery-visible")
-                .localized_label("lab-context-toggle-owner"),
+                HStack::new().child(
+                    Button(
+                        "Remove or restore target owner",
+                        self.action(Self::toggle_visible),
+                    )
+                    .id("context-gallery-visible")
+                    .localized_label("lab-context-toggle-owner"),
+                ),
             )
             .child(LocalizedText("lab-context-help"))
     }
@@ -143,9 +145,11 @@ impl View for ContextTarget {
                 items,
             ))
             .child(
-                Button("Reverse item order", self.action(Self::toggle_order))
-                    .id("context-gallery-reverse")
-                    .localized_label("lab-context-reverse"),
+                HStack::new().child(
+                    Button("Reverse item order", self.action(Self::toggle_order))
+                        .id("context-gallery-reverse")
+                        .localized_label("lab-context-reverse"),
+                ),
             )
     }
 }
