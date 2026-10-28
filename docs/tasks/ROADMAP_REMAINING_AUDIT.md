@@ -13,8 +13,9 @@ English, French, and Arabic remain in scope. The user explicitly set aside
 VoiceOver and broader accessibility work, plus Japanese and other languages
 and scripts, for later. Keep these items marked undone; do not count them as
 passed or imply accessibility or language support beyond the evidence. The
-37-group counts below are historical provisional lower bounds and do not
-measure the amount of code completed or an adjusted-scope release percentage.
+37-group counts are provisional lower bounds and do not measure the amount of
+code completed or an adjusted-scope release percentage. Older checkpoint counts
+are retained as historical records.
 
 ## Current release evidence — 2026-10-27
 
@@ -89,9 +90,11 @@ measure the amount of code completed or an adjusted-scope release percentage.
   macOS 27 opened the packaged local Link fixture from the current `24bf5451`
   build; returning to Playground showed the disabled Link still labelled
   `Disabled link fixture` and the enabled Link activation count at 1.
-- **Release state:** the provisional inventory has 37 requirements. The strict
-  confirmed lower bounds are **3/37 coding complete and 3/37 acceptance
-  complete** (R00–R02); most other rows have substantial source implementation
+- **Release state:** the provisional inventory has 37 requirements. The current
+  recorded lower bounds are **4/37 coding complete** (R00–R02 and R34) and
+  **3/37 acceptance complete** (R00–R02). R34's coding closure was omitted from
+  the previous coding count; these bounds are not an exhaustive reclassification
+  of all groups. Most other rows have substantial source implementation
   but retain an unverified contract or release gate. This milestone strengthens
   R28 and R30 without closing either. Five native and
   three Web dependency-notice gaps, supported OS/browser versions, wider
