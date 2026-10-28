@@ -7,37 +7,103 @@ use rustui::theme::load_theme;
 use rustui::theme::parse_theme;
 use rustui::{
     prelude::*,
-    theme::{AppearanceMode, assess_theme_coverage, resolve_button, serialize_theme},
+    theme::{
+        AppearanceMode, ThemeDocument, assess_theme_coverage, resolve_button, serialize_theme,
+    },
 };
+use std::{cell::RefCell, rc::Rc};
+#[cfg(target_family = "wasm")]
+use std::{future::Future, pin::Pin};
 
 pub fn demo() -> impl View {
     Component("theme-document-inspector", ThemeInspector::new)
 }
 
-#[component]
 struct ThemeInspector {
+    state: Rc<RefCell<InspectorState>>,
+}
+
+#[derive(Default)]
+struct InspectorState {
     summary: String,
     preview: String,
+    error: Option<String>,
+    epoch: u64,
+    #[cfg(target_family = "wasm")]
+    task: Option<Pin<Box<dyn Future<Output = ()>>>>,
+}
+
+impl InspectorState {
+    fn apply(&mut self, result: Result<(String, String), String>) {
+        match result {
+            Ok((summary, preview)) => {
+                self.summary = summary;
+                self.preview = preview;
+                self.error = None;
+            }
+            Err(error) => {
+                self.error = Some(format!("Theme inspection failed: {error}"));
+            }
+        }
+    }
 }
 
 impl ThemeInspector {
     fn new() -> Self {
-        let mut inspector = Self::default();
-        inspector.reload();
-        inspector
+        let mut state = InspectorState::default();
+        state.apply(inspect_theme());
+        Self {
+            state: Rc::new(RefCell::new(state)),
+        }
     }
 
-    fn reload(&mut self) {
-        match inspect_theme() {
-            Ok((summary, preview)) => {
-                self.summary = summary;
-                self.preview = preview;
+    fn reload_action(&self) -> AppAction {
+        let weak = Rc::downgrade(&self.state);
+        let epoch = self.state.borrow().epoch;
+        AppAction::new(move |cx| {
+            let Some(state) = weak.upgrade() else {
+                return;
+            };
+            if state.borrow().epoch != epoch {
+                return;
             }
-            Err(error) => {
-                self.summary = format!("Theme inspection failed: {error}");
-                self.preview.clear();
+            #[cfg(not(target_family = "wasm"))]
+            {
+                state.borrow_mut().apply(inspect_theme());
+                cx.refresh_windows();
             }
-        }
+            #[cfg(target_family = "wasm")]
+            {
+                let generation = {
+                    let mut state = state.borrow_mut();
+                    state.epoch = state
+                        .epoch
+                        .checked_add(1)
+                        .expect("theme inspector epoch exhausted");
+                    state.epoch
+                };
+                let weak = Rc::downgrade(&state);
+                let task = cx.spawn(async move |cx| {
+                    let result = super::foundation_additions::load_web_theme()
+                        .await
+                        .and_then(|source| parse_theme(&source).map_err(|error| error.to_string()))
+                        .and_then(inspect_document);
+                    let Some(state) = weak.upgrade() else {
+                        return;
+                    };
+                    cx.update(|cx| {
+                        let mut state = state.borrow_mut();
+                        if state.epoch != generation {
+                            return;
+                        }
+                        state.apply(result);
+                        cx.refresh_windows();
+                    });
+                });
+                state.borrow_mut().task = Some(Box::pin(task));
+                cx.refresh_windows();
+            }
+        })
     }
 }
 
@@ -49,6 +115,10 @@ fn inspect_theme() -> Result<(String, String), String> {
     let path = crate::playground_resource_path("themes/macos27.json");
     #[cfg(not(target_family = "wasm"))]
     let document = load_theme(path).map_err(|error| error.to_string())?;
+    inspect_document(document)
+}
+
+fn inspect_document(document: ThemeDocument) -> Result<(String, String), String> {
     let json = serialize_theme(&document).map_err(|error| error.to_string())?;
     let mut summary = format!(
         "Profile {} · format {} · {} component records · {} exported bytes",
@@ -88,25 +158,55 @@ fn inspect_theme() -> Result<(String, String), String> {
 }
 
 impl View for ThemeInspector {
+    fn on_unmount(&mut self, _: &mut rustui::App) {
+        let mut state = self.state.borrow_mut();
+        state.epoch = state
+            .epoch
+            .checked_add(1)
+            .expect("theme inspector epoch exhausted");
+        #[cfg(target_family = "wasm")]
+        state.task.take();
+    }
+
     fn body(&self) -> impl View {
+        let state = self.state.borrow();
+        let summary = state.summary.clone();
+        let preview = state.preview.clone();
+        let error = state.error.clone().unwrap_or_default();
+        drop(state);
         VStack::new()
             .spacing(8.0)
             .child(Text("Theme document inspector").font_weight(TextWeight::Semibold))
-            .child(Text("Read-only normalized export preview. Reload reads the file; it does not apply a theme."))
+            .child(Text("Read-only normalized export preview. Reload reads theme data; it does not apply a theme."))
             .child(
-                Button("Reload theme inspection", self.action(Self::reload))
+                Button("Reload theme inspection", self.reload_action())
                     .id("theme-inspector-reload")
-                    .accessibility_label(format!("Reload theme inspection. {}", self.summary)),
+                    .accessibility_label(format!("Reload theme inspection. {summary}")),
             )
-            .child(Text(self.summary.clone()).font_size(12.0))
+            .child(Text(error).font_size(12.0))
+            .child(Text(summary).font_size(12.0))
             .child(Text("First 18 lines of normalized JSON"))
-            .child(Text(self.preview.clone()).font_size(11.0))
+            .child(Text(preview).font_size(11.0))
     }
 }
 
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn invalid_inspection_preserves_last_valid_preview_and_recovers() {
+        let mut state = InspectorState::default();
+        state.apply(Ok(("valid summary".into(), "valid preview".into())));
+        state.apply(Err("invalid JSON".into()));
+        assert_eq!(state.summary, "valid summary");
+        assert_eq!(state.preview, "valid preview");
+        assert!(state.error.as_deref().unwrap().contains("invalid JSON"));
+        state.apply(Ok(("recovered".into(), "new preview".into())));
+        assert_eq!(state.summary, "recovered");
+        assert_eq!(state.preview, "new preview");
+        assert!(state.error.is_none());
+    }
 
     #[test]
     fn inspection_loads_current_theme_and_resolves_both_appearances() {

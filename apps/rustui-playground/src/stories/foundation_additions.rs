@@ -42,7 +42,7 @@ impl Drop for ThemeRequestGuard {
 }
 
 #[cfg(target_family = "wasm")]
-async fn load_web_theme() -> Result<String, String> {
+pub(super) async fn load_web_theme() -> Result<String, String> {
     let request = ThemeRequestGuard(start_theme_fetch());
     wasm_bindgen_futures::JsFuture::from(request.0.promise())
         .await
