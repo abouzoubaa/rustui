@@ -210,6 +210,7 @@ fn write_result(result: &Value) -> std::io::Result<()> {
 pub(super) fn run(reduce_motion: bool) {
     gpui_platform::application().run(move |cx| {
         gpui_component::init(cx);
+        super::init_probe_theme(cx);
         cx.set_reduce_motion(reduce_motion);
         enable_render_diagnostics(cx);
 
