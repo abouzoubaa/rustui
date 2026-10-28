@@ -1,6 +1,6 @@
 ## Current checkpoint — 2026-10-28: feedback button direction
 
-- **R13/R15 source correction:** The two standalone feedback actions now sit in direction-aware RustUI horizontal stacks, addressing the left-aligned Arabic controls observed in the prior Web check. The focused Playground locale test passed 1/1; a fresh rendered check is needed before treating the layout as verified.
+- **R13/R15 source correction:** The two standalone feedback actions now sit in direction-aware RustUI horizontal stacks, addressing the left-aligned Arabic controls observed in the prior Web check. The focused Playground locale test passed 1/1. At 1280×720, a fresh in-app browser check of source `699f97c3` (Web bundle-manifest SHA-256 `641c1a8a86d6bc9902c1a074c23b653f115b416511ac60de74618fa779a2cf88`) showed both actions aligned to the Arabic content; Retry changed its count to 1 and the notification action opened the toast. This bounded observation does not close broader RTL or native acceptance.
 
 ## Current checkpoint — 2026-10-28: feedback browser observation
 
