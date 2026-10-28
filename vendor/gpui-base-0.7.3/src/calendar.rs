@@ -170,6 +170,7 @@ pub struct CalendarState {
     pub focus_handle: FocusHandle,
     view: CalendarView,
     date: Date,
+    keyboard_cursor: Option<NaiveDate>,
     current_year: i32,
     current_month: u8,
     years: Vec<Vec<i32>>,
@@ -186,6 +187,7 @@ impl CalendarState {
             focus_handle: cx.focus_handle(),
             view: CalendarView::Day,
             date: Date::Single(None),
+            keyboard_cursor: None,
             current_year: today.year(),
             current_month: today.month() as u8,
             years: vec![],
@@ -214,6 +216,21 @@ impl CalendarState {
     pub fn disabled_matcher_ref(&self) -> Option<&Matcher> {
         self.disabled_matcher.as_deref()
     }
+    /// Current uncommitted keyboard navigation target, if any.
+    pub fn keyboard_cursor(&self) -> Option<NaiveDate> {
+        self.keyboard_cursor
+    }
+
+    /// Move the visible calendar without changing its committed selection.
+    pub fn set_keyboard_cursor(&mut self, date: Option<NaiveDate>, cx: &mut Context<Self>) {
+        self.keyboard_cursor = date;
+        if let Some(date) = date {
+            self.current_year = date.year();
+            self.current_month = date.month() as u8;
+        }
+        cx.notify();
+    }
+
     pub fn set_date(&mut self, date: impl Into<Date>, _: &mut Window, cx: &mut Context<Self>) {
         if self.apply_date(date.into()) {
             cx.notify();
@@ -798,7 +815,7 @@ impl RenderOnce for Calendar {
                             let disabled =
                                 s.disabled_matcher_ref().is_some_and(|x| x.matched(&date));
                             CalendarItemState::new(CalendarItemKind::Day)
-                                .active(s.date().is_active(&date))
+                                .active(s.keyboard_cursor().map_or_else(|| s.date().is_active(&date), |cursor| cursor == date))
                                 .in_range(s.date().is_in_range(&date))
                                 .muted(date.month() != m || disabled)
                                 .disabled(disabled)

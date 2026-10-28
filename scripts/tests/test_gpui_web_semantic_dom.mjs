@@ -99,3 +99,16 @@ test('repeated native replacement and empty input never rebuild or append the ow
   dom.frameReady();assert.equal(ime.activeElement(),owner);assert.equal(ime.value(),replacement);assert.equal(ime.selectionStart(),replacement.length);
  }
 });
+
+// A combobox uses a native button element for semantics, but Enter must reach
+// GPUI's key bindings; ordinary buttons still use native activation.
+test('combobox Enter is routed to GPUI while ordinary buttons stay native',()=>{
+  const {dom}=fixture();
+  dom.update(snapshot([node('combo',{kind:'button',attrs:{role:'combobox','aria-expanded':'true'},focusable:true}),node('button',{kind:'button',attrs:{role:'button'},focusable:true})]),false);
+  const combo=dom.elements.get('combo');
+  const button=dom.elements.get('button');
+  assert.equal(dom.nativeKeyboard({target:combo,key:'Enter'}),false);
+  assert.equal(dom.nativeKeyboard({target:combo,key:' '}),true);
+  assert.equal(dom.nativeKeyboard({target:button,key:'Enter'}),true);
+  assert.equal(dom.nativeKeyboard({target:button,key:' '}),true);
+});

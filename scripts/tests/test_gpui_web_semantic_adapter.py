@@ -8,6 +8,8 @@ SPEC=importlib.util.spec_from_file_location('semantic_adapter',ROOT/'scripts/app
 ADAPTER=importlib.util.module_from_spec(SPEC);SPEC.loader.exec_module(ADAPTER)
 BIDI_SPEC=importlib.util.spec_from_file_location('bidi_patch',ROOT/'scripts/apply_gpui_bidi_wrapped_rows_patch.py')
 BIDI=importlib.util.module_from_spec(BIDI_SPEC);BIDI_SPEC.loader.exec_module(BIDI)
+COMBO_SPEC=importlib.util.spec_from_file_location('combo_patch',ROOT/'scripts/apply_gpui_web_combobox_enter_patch.py')
+COMBO=importlib.util.module_from_spec(COMBO_SPEC);COMBO_SPEC.loader.exec_module(COMBO)
 INPUT_SPEC=importlib.util.spec_from_file_location('input_patch',ROOT/'scripts/apply_gpui_bidi_input_hit_patch.py')
 INPUT=importlib.util.module_from_spec(INPUT_SPEC);INPUT_SPEC.loader.exec_module(INPUT)
 class SemanticLifecycle(unittest.TestCase):
@@ -33,6 +35,7 @@ class SemanticLifecycle(unittest.TestCase):
    self.assertEqual(BIDI.digest(current_bidi[path]),image['post_sha256'])
   for path,data in BIDI.staged_images(bidi_meta,current_bidi,reverse=True).items():
    if path in paths:(self.root/path).write_bytes(data)
+  COMBO.run(self.root,self.art,'--reverse')
   self.meta=ADAPTER.load(self.root,self.art)
   self.assertEqual(ADAPTER.identify(ADAPTER.sources(self.root,self.meta),self.meta),'post')
  def run_mode(self,mode):

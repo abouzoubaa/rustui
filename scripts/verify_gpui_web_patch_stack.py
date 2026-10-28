@@ -2,6 +2,9 @@
 """Verify the approved Web patches as one exact, read-only source stack."""
 
 from pathlib import Path
+import shutil
+import tempfile
+import apply_gpui_web_combobox_enter_patch as combo
 
 import apply_gpui_bidi_wrapped_rows_patch as bidi
 import apply_gpui_bidi_input_hit_patch as input_hit
@@ -28,8 +31,18 @@ def main() -> None:
         raise ValueError("approved bidirectional wrapping patch is not applied")
     before_bidi = bidi.staged_images(bidi_meta, current_bidi, reverse=True)
 
+    combo.run(root, root, "--verify")
+    with tempfile.TemporaryDirectory(prefix="rustui-web-combobox-stack-") as folder:
+        stage = Path(folder)
+        for relative in [Path("Cargo.toml"), combo.SOURCE, *map(Path, combo.PRESERVED)]:
+            target = stage / relative
+            target.parent.mkdir(parents=True, exist_ok=True)
+            shutil.copy2(root / relative, target)
+        combo.run(stage, root, "--reverse")
+        before_combo = (stage / combo.SOURCE).read_bytes()
     semantic_meta = semantic.load(root, root)
     before_bidi_stack = semantic.sources(root, semantic_meta)
+    before_bidi_stack[str(combo.SOURCE)] = before_combo
     before_bidi_stack.update(
         (path, data) for path, data in before_bidi.items() if path in before_bidi_stack
     )

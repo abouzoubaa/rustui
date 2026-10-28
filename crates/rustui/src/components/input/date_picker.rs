@@ -359,6 +359,292 @@ mod tests {
         assert_eq!(localized_calendar(None, Some(date)), (Weekday::Sun, None));
     }
 
+    #[gpui::test]
+    fn keyboard_can_select_the_next_day(cx: &mut gpui::TestAppContext) {
+        use gpui::Focusable as _;
+
+        struct Owner {
+            date: Option<NaiveDate>,
+        }
+        impl View for Owner {
+            fn body(&self) -> impl View {
+                DatePicker(
+                    "Choose a date",
+                    Binding::new(
+                        self.date,
+                        |owner: &Owner| owner.date,
+                        |owner, value| {
+                            owner.date = value;
+                        },
+                    ),
+                )
+                .id("keyboard-date")
+            }
+        }
+
+        let theme = crate::theme::parse_theme(include_str!(concat!(
+            env!("CARGO_MANIFEST_DIR"),
+            "/../../themes/macos27.json"
+        )))
+        .unwrap();
+        cx.update(|app| {
+            gpui_component::init(app);
+            crate::theme::activate_theme(&theme, Some(crate::theme::AppearanceMode::Dark), app)
+                .unwrap();
+        });
+        let date = NaiveDate::from_ymd_opt(2026, 10, 28).unwrap();
+        let (owner, window) = cx.add_window_view(|_, app| {
+            crate::runtime::ComponentHost::new(Owner { date: Some(date) }, app)
+        });
+        window.update(|window, app| {
+            let _ = window.draw(app);
+            let retained = owner
+                .read(app)
+                .retained_entity_for_test::<RetainedDatePicker>(
+                    vec![],
+                    Identity::from("keyboard-date"),
+                )
+                .unwrap();
+            let state = retained.read(app).state.clone();
+            state.read(app).focus_handle(app).focus(window, app);
+        });
+        window.simulate_keystrokes("enter");
+        window.update(|window, app| {
+            let _ = window.draw(app);
+        });
+        window.simulate_keystrokes("right");
+        window.update(|window, app| {
+            let _ = window.draw(app);
+            assert_eq!(owner.read(app).component().date, Some(date));
+        });
+        window.simulate_keystrokes("escape");
+        window.update(|window, app| {
+            let _ = window.draw(app);
+            assert_eq!(owner.read(app).component().date, Some(date));
+        });
+        window.simulate_keystrokes("enter");
+        window.update(|window, app| {
+            let _ = window.draw(app);
+        });
+        window.simulate_keystrokes("right");
+        window.update(|window, app| {
+            let _ = window.draw(app);
+        });
+        window.simulate_keystrokes("enter");
+        window.update(|window, app| {
+            let _ = window.draw(app);
+            assert_eq!(
+                owner.read(app).component().date,
+                NaiveDate::from_ymd_opt(2026, 10, 29)
+            );
+        });
+        for (limit, direction) in [(NaiveDate::MIN, "left"), (NaiveDate::MAX, "right")] {
+            window.update(|window, app| {
+                owner.update(app, |host, cx| {
+                    host.component_mut().date = Some(limit);
+                    cx.notify();
+                });
+                let _ = window.draw(app);
+            });
+            window.simulate_keystrokes("enter");
+            window.update(|window, app| {
+                let _ = window.draw(app);
+            });
+            window.simulate_keystrokes(direction);
+            window.update(|window, app| {
+                let _ = window.draw(app);
+            });
+            window.simulate_keystrokes("enter");
+            window.update(|window, app| {
+                let _ = window.draw(app);
+                assert_eq!(owner.read(app).component().date, Some(limit));
+            });
+        }
+    }
+
+    #[gpui::test]
+    fn keyboard_can_move_past_a_disabled_date(cx: &mut gpui::TestAppContext) {
+        use gpui::{AppContext as _, Context, Entity, Focusable as _, Render, Window};
+        use gpui_component::calendar::Matcher;
+
+        struct Probe {
+            state: Entity<DatePickerState>,
+        }
+        impl Render for Probe {
+            fn render(&mut self, _: &mut Window, _: &mut Context<Self>) -> impl IntoElement {
+                GpuiDatePicker::new(&self.state).right_to_left(true)
+            }
+        }
+        let initial = NaiveDate::from_ymd_opt(2026, 10, 28).unwrap();
+        let disabled = initial.succ_opt().unwrap();
+        let theme = crate::theme::parse_theme(include_str!(concat!(
+            env!("CARGO_MANIFEST_DIR"),
+            "/../../themes/macos27.json"
+        )))
+        .unwrap();
+        cx.update(|app| {
+            gpui_component::init(app);
+            crate::theme::activate_theme(&theme, Some(crate::theme::AppearanceMode::Dark), app)
+                .unwrap();
+        });
+        let (probe, window) = cx.add_window_view(|window, cx| {
+            let state = cx.new(|cx| {
+                DatePickerState::new(window, cx)
+                    .disabled_matcher(Matcher::custom(move |day| *day == disabled))
+            });
+            state.update(cx, |state, cx| state.set_date(initial, window, cx));
+            Probe { state }
+        });
+        window.update(|window, app| {
+            let _ = window.draw(app);
+            probe
+                .read(app)
+                .state
+                .read(app)
+                .focus_handle(app)
+                .focus(window, app);
+        });
+        for key in ["enter", "right", "enter"] {
+            window.simulate_keystrokes(key);
+            window.update(|window, app| {
+                let _ = window.draw(app);
+            });
+        }
+        window.update(|_, app| {
+            assert_eq!(
+                probe.read(app).state.read(app).date(),
+                CalendarDate::Single(Some(initial))
+            );
+        });
+        for key in ["right", "enter"] {
+            window.simulate_keystrokes(key);
+            window.update(|window, app| {
+                let _ = window.draw(app);
+            });
+        }
+        window.update(|_, app| {
+            assert_eq!(
+                probe.read(app).state.read(app).date(),
+                CalendarDate::Single(initial.succ_opt().unwrap().succ_opt())
+            );
+        });
+    }
+
+    #[gpui::test]
+    fn keyboard_range_cancel_then_confirm(cx: &mut gpui::TestAppContext) {
+        use gpui::{AppContext as _, Context, Entity, Focusable as _, Render, Window};
+
+        struct Probe {
+            state: Entity<DatePickerState>,
+        }
+        impl Render for Probe {
+            fn render(&mut self, _: &mut Window, _: &mut Context<Self>) -> impl IntoElement {
+                GpuiDatePicker::new(&self.state)
+            }
+        }
+        let start = NaiveDate::from_ymd_opt(2026, 10, 28).unwrap();
+        let initial = CalendarDate::Range(Some(start), Some(start.succ_opt().unwrap()));
+        let theme = crate::theme::parse_theme(include_str!(concat!(
+            env!("CARGO_MANIFEST_DIR"),
+            "/../../themes/macos27.json"
+        )))
+        .unwrap();
+        cx.update(|app| {
+            gpui_component::init(app);
+            crate::theme::activate_theme(&theme, Some(crate::theme::AppearanceMode::Dark), app)
+                .unwrap();
+        });
+        let (probe, window) = cx.add_window_view(|window, cx| {
+            let state = cx.new(|cx| DatePickerState::range(window, cx));
+            state.update(cx, |state, cx| state.set_date(initial, window, cx));
+            Probe { state }
+        });
+        window.update(|window, app| {
+            let _ = window.draw(app);
+            probe
+                .read(app)
+                .state
+                .read(app)
+                .focus_handle(app)
+                .focus(window, app);
+        });
+        for key in ["enter", "right", "enter", "escape"] {
+            window.simulate_keystrokes(key);
+            window.update(|window, app| {
+                let _ = window.draw(app);
+            });
+        }
+        window.update(|_, app| assert_eq!(probe.read(app).state.read(app).date(), initial));
+        for key in ["enter", "right", "enter", "right", "enter"] {
+            window.simulate_keystrokes(key);
+            window.update(|window, app| {
+                let _ = window.draw(app);
+            });
+        }
+        window.update(|_, app| {
+            assert_eq!(
+                probe.read(app).state.read(app).date(),
+                CalendarDate::Range(start.succ_opt(), start.succ_opt().unwrap().succ_opt())
+            )
+        });
+    }
+
+    #[gpui::test]
+    fn keyboard_date_selection_preserves_time(cx: &mut gpui::TestAppContext) {
+        use gpui::{AppContext as _, Context, Entity, Focusable as _, Render, Window};
+        use gpui_component::time_field::TimePrecision;
+
+        struct Probe {
+            state: Entity<DatePickerState>,
+        }
+        impl Render for Probe {
+            fn render(&mut self, _: &mut Window, _: &mut Context<Self>) -> impl IntoElement {
+                GpuiDatePicker::new(&self.state)
+            }
+        }
+        let initial = NaiveDate::from_ymd_opt(2026, 10, 28)
+            .unwrap()
+            .and_hms_opt(13, 45, 0)
+            .unwrap();
+        let theme = crate::theme::parse_theme(include_str!(concat!(
+            env!("CARGO_MANIFEST_DIR"),
+            "/../../themes/macos27.json"
+        )))
+        .unwrap();
+        cx.update(|app| {
+            gpui_component::init(app);
+            crate::theme::activate_theme(&theme, Some(crate::theme::AppearanceMode::Dark), app)
+                .unwrap();
+        });
+        let (probe, window) = cx.add_window_view(|window, cx| {
+            let state =
+                cx.new(|cx| DatePickerState::new(window, cx).time_precision(TimePrecision::Minute));
+            state.update(cx, |state, cx| state.set_date_time(initial, window, cx));
+            Probe { state }
+        });
+        window.update(|window, app| {
+            let _ = window.draw(app);
+            probe
+                .read(app)
+                .state
+                .read(app)
+                .focus_handle(app)
+                .focus(window, app);
+        });
+        for key in ["enter", "right", "enter"] {
+            window.simulate_keystrokes(key);
+            window.update(|window, app| {
+                let _ = window.draw(app);
+            });
+        }
+        window.update(|_, app| {
+            assert_eq!(
+                probe.read(app).state.read(app).date_time(),
+                DateTime::Single(Some(initial + chrono::Duration::days(1)))
+            )
+        });
+    }
+
     fn binding() -> Binding<Option<NaiveDate>> {
         Binding::new(
             None,

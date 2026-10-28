@@ -162,6 +162,8 @@ export class GpuiSemanticDom {
   nativeKeyboard(event) {
     const node=this.eventNode(event);if(!node || node.disabled) return false;
     if(event.altKey || event.ctrlKey || event.metaKey || event.isComposing || event.keyCode===229) return false;
+    // Combobox Enter belongs to GPUI: native button activation bypasses its key bindings.
+    if(node.attrs.role==="combobox" && event.key==="Enter") return false;
     return ((node.kind==="button" || node.kind==="checkbox" || node.kind==="radio") && ["Enter"," "].includes(event.key)) ||
       (node.kind==="range" && ["ArrowLeft","ArrowRight","ArrowUp","ArrowDown","Home","End","PageUp","PageDown"].includes(event.key));
   }

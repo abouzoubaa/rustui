@@ -1,4 +1,6 @@
 """Check reproducibility and source identity of the DatePicker patch."""
+from scripts.tests.calendar_patch_fixture import reverse_keyboard_layer
+
 from pathlib import Path
 import shutil
 import subprocess
@@ -25,6 +27,7 @@ class DatePickerPatchTests(unittest.TestCase):
                 target.parent.mkdir(parents=True, exist_ok=True)
                 shutil.copy2(ROOT / relative, target)
 
+            reverse_keyboard_layer(root, FILES[2])
             # Exercise the original patch independently of the later RTL layer.
             subprocess.run(
                 ["git", "apply", "--reverse", str(ROOT / "patches/approved/gpui-component-date-picker-rtl-alignment-v1.patch")],

@@ -1,3 +1,4 @@
+from scripts.tests.calendar_patch_fixture import reverse_keyboard_layer
 import shutil
 import subprocess
 import sys
@@ -21,6 +22,8 @@ class CalendarPatchTests(unittest.TestCase):
             dest = self.root / path
             dest.parent.mkdir(parents=True, exist_ok=True)
             shutil.copyfile(ROOT / path, dest)
+
+        reverse_keyboard_layer(self.root, SOURCE)
 
     def run_patch(self, mode):
         return subprocess.run([sys.executable, str(SCRIPT), '--root', str(self.root),

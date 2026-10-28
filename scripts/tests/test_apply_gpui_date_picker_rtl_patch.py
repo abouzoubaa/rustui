@@ -1,3 +1,4 @@
+from scripts.tests.calendar_patch_fixture import reverse_keyboard_layer
 import importlib.util
 from pathlib import Path
 import shutil
@@ -20,6 +21,7 @@ class DatePickerRtlPatchTest(unittest.TestCase):
             target.parent.mkdir(parents=True, exist_ok=True)
             shutil.copyfile(ROOT / relative, target)
         (self.root / "Cargo.toml").write_text('[patch.crates-io]\ngpui-component = { path = "vendor/gpui-component-0.7.3" }\n')
+        reverse_keyboard_layer(self.root, patch.SOURCE)
         if patch.digest((self.root / patch.SOURCE).read_bytes()) == patch.POST:
             patch.run(self.root, ROOT, "--reverse")
 

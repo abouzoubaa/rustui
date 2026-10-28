@@ -434,6 +434,7 @@ impl DatePickerState {
         self.date = date;
         self.calendar.update(cx, |view, cx| {
             view.set_date(date, window, cx);
+            view.set_keyboard_cursor(None, cx);
         });
         self.open = false;
         if emit {
@@ -457,9 +458,52 @@ impl DatePickerState {
     fn set_open(&mut self, open: bool, window: &mut Window, cx: &mut Context<Self>) {
         if !open {
             self.focus_back_if_need(window, cx);
+            self.calendar.update(cx, |calendar, cx| {
+                calendar.set_date(self.date, window, cx);
+                calendar.set_keyboard_cursor(None, cx);
+            });
         }
         self.open = open;
         cx.notify();
+    }
+
+    fn on_calendar_key_down(
+        &mut self,
+        event: &gpui::KeyDownEvent,
+        window: &mut Window,
+        cx: &mut Context<Self>,
+    ) {
+        if !self.open || !self.focus_handle.is_focused(window)
+            || event.prefer_character_input || event.keystroke.is_ime_in_progress()
+            || event.keystroke.modifiers.modified()
+            || !self.calendar.read(cx).view().is_day()
+        {
+            return;
+        }
+        let current = self.calendar.read(cx).keyboard_cursor()
+            .or_else(|| self.date.start())
+            .unwrap_or_else(|| self.calendar.read(cx).today());
+        let delta = match event.keystroke.key.as_str() {
+            // The current calendar rows are physically left-to-right in all locales.
+            "left" => -1,
+            "right" => 1,
+            "up" => -7,
+            "down" => 7,
+            _ => return,
+        };
+        if let Some(next) = current.checked_add_signed(chrono::Duration::days(delta)) {
+            self.calendar.update(cx, |calendar, cx| calendar.set_keyboard_cursor(Some(next), cx));
+        }
+        cx.stop_propagation();
+    }
+
+    fn on_calendar_confirm(&mut self, _: &Confirm, window: &mut Window, cx: &mut Context<Self>) {
+        if self.open && self.focus_handle.is_focused(window) && self.calendar.read(cx).view().is_day() {
+            if let Some(date) = self.calendar.read(cx).keyboard_cursor() {
+                self.calendar.update(cx, |calendar, cx| { calendar.activate_date(date, cx); });
+                cx.stop_propagation();
+            }
+        }
     }
 
     fn on_escape(&mut self, _: &Cancel, window: &mut Window, cx: &mut Context<Self>) {
@@ -743,6 +787,8 @@ impl RenderOnce for DatePicker {
                 picker_state.update(cx, |state, cx| state.set_open(open, window, cx));
             })
             .key_context(CONTEXT)
+            .on_key_down(window.listener_for(&self.state, DatePickerState::on_calendar_key_down))
+            .capture_action(window.listener_for(&self.state, DatePickerState::on_calendar_confirm))
             .on_action(window.listener_for(&self.state, DatePickerState::on_delete))
             .flex_none()
             .w_full()

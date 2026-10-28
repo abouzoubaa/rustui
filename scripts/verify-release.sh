@@ -26,8 +26,7 @@ case "${1:-}" in
     verify_tree_accessibility_series
     python3 scripts/apply_block_stack_symbol_patch.py --verify
     python3 scripts/apply_gpui_component_calendar_locale_patch.py --check
-    python3 scripts/apply_gpui_component_date_picker_patch.py --check
-    python3 scripts/apply_gpui_date_picker_rtl_patch.py --verify
+    python3 scripts/verify_gpui_calendar_patch_stack.py
     python3 scripts/apply_gpui_component_select_title_patch.py --check
     python3 scripts/apply_gpui_select_rtl_patch.py --verify
     python3 scripts/apply_gpui_web_noopener_patch.py --check
@@ -37,7 +36,6 @@ case "${1:-}" in
     python3 scripts/verify_gpui_web_patch_stack.py
     python3 scripts/apply_gpui_base_button_disabled_patch.py --verify
     python3 scripts/apply_gpui_base_disabled_semantic_roots.py --verify
-    python3 scripts/apply_gpui_base_calendar_date_limits.py --verify
     python3 scripts/apply_gpui_toolbar_rtl.py --verify
     python3 -m unittest discover -s scripts/tests -p 'test_*.py'
     node --test scripts/tests/test_gpui_web_semantic_dom.mjs
@@ -54,8 +52,7 @@ case "${1:-}" in
     verify_tree_accessibility_series
     python3 scripts/apply_block_stack_symbol_patch.py --verify
     python3 scripts/apply_gpui_component_calendar_locale_patch.py --check
-    python3 scripts/apply_gpui_component_date_picker_patch.py --check
-    python3 scripts/apply_gpui_date_picker_rtl_patch.py --verify
+    python3 scripts/verify_gpui_calendar_patch_stack.py
     python3 scripts/apply_gpui_component_select_title_patch.py --check
     python3 scripts/apply_gpui_select_rtl_patch.py --verify
     python3 scripts/apply_gpui_web_noopener_patch.py --check
@@ -118,8 +115,7 @@ PY
     verify_tree_accessibility_series
     python3 scripts/apply_block_stack_symbol_patch.py --verify
     python3 scripts/apply_gpui_component_calendar_locale_patch.py --check
-    python3 scripts/apply_gpui_component_date_picker_patch.py --check
-    python3 scripts/apply_gpui_date_picker_rtl_patch.py --verify
+    python3 scripts/verify_gpui_calendar_patch_stack.py
     python3 scripts/apply_gpui_component_select_title_patch.py --check
     python3 scripts/apply_gpui_select_rtl_patch.py --verify
     python3 scripts/apply_gpui_web_noopener_patch.py --check
