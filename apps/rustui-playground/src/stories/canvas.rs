@@ -988,6 +988,7 @@ impl View for SearchFieldReferenceGallery {
                             )
                             .child(
                                 Stepper("Count (disabled)", self.disabled_count_binding())
+                                    .localized_label("lab-input-count-disabled")
                                     .id("search-field-reference-disabled-count")
                                     .range(0..=10)
                                     .disabled(true),

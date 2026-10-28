@@ -54,6 +54,7 @@ lab-input-checkbox-reference-label = تسمية
 lab-input-checkbox-reference-checked = مربع اختيار مرجعي محدّد
 lab-input-checkbox-reference-unchecked = مربع اختيار مرجعي غير محدّد
 lab-input-quantity = الكمية
+lab-input-count-disabled = العدّاد (معطّل)
 lab-input-owner-update = غيّر النص المرتبط من المالك خلال ٥ ثوانٍ
 lab-input-token-recipients = أضف مستلمين
 lab-code-editor-title = الشيفرة المصدرية

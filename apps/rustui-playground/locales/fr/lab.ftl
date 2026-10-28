@@ -54,6 +54,7 @@ lab-input-checkbox-reference-label = Libellé
 lab-input-checkbox-reference-checked = Case de référence cochée
 lab-input-checkbox-reference-unchecked = Case de référence non cochée
 lab-input-quantity = Quantité
+lab-input-count-disabled = Compteur (désactivé)
 lab-input-owner-update = Modifier le texte lié depuis le propriétaire dans 5 secondes
 lab-input-token-recipients = Ajouter des destinataires
 lab-code-editor-title = Code source
