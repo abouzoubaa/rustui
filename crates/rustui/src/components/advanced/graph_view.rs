@@ -476,6 +476,17 @@ impl GraphViewport {
 
 const DISCONNECT_CONTROL_SIZE: f32 = 24.0;
 
+fn incident_edges(graph: &GraphDocument) -> HashMap<&str, Vec<&GraphEdge>> {
+    let mut incident: HashMap<&str, Vec<&GraphEdge>> = HashMap::new();
+    for edge in &graph.edges {
+        incident.entry(&edge.from.node).or_default().push(edge);
+        if edge.from.node != edge.to.node {
+            incident.entry(&edge.to.node).or_default().push(edge);
+        }
+    }
+    incident
+}
+
 fn projected_port_endpoint(
     graph: &GraphDocument,
     viewport: GraphViewport,
@@ -833,6 +844,7 @@ pub(super) fn render_graph(
             .track_focus(&focus)
             .focus_visible(move |style_ref| style_ref.border_color(style.selection));
     }
+    let incident = incident_edges(graph);
     for (node, rect) in graph.nodes.iter().zip(rects) {
         let writer = context.binding_writer(view.selection.clone());
         let id = node.id.clone();
@@ -847,10 +859,10 @@ pub(super) fn render_graph(
         let ax_id = node.id.clone();
         let ax_guard = lease.clone();
         let ax_focus = focus.clone();
-        let relationships = graph
-            .edges
-            .iter()
-            .filter(|edge| edge.from.node == node.id || edge.to.node == node.id)
+        let relationships = incident
+            .get(node.id.as_str())
+            .into_iter()
+            .flatten()
             .map(|edge| {
                 let from = graph.endpoint(&edge.from).unwrap();
                 let to = graph.endpoint(&edge.to).unwrap();
@@ -1458,6 +1470,34 @@ mod tests {
         let restored = removed.edited(GraphEdit::AddNode(node("a", 50.0))).unwrap();
         assert_eq!(restored.node("a").unwrap().rect().x, 50.0);
         assert_eq!(restored.node("b").unwrap().id(), "b");
+    }
+
+    #[test]
+    fn incident_edge_index_preserves_order_and_counts_self_edges_once() {
+        let self_edge = GraphEdge::new(
+            "self",
+            GraphEndpoint::new("a", "out"),
+            GraphEndpoint::new("a", "in"),
+        )
+        .unwrap();
+        let graph =
+            GraphDocument::new([node("a", 0.0), node("b", 1.0)], [edge(), self_edge]).unwrap();
+        let incident = incident_edges(&graph);
+        assert_eq!(
+            incident["a"]
+                .iter()
+                .map(|edge| edge.id())
+                .collect::<Vec<_>>(),
+            ["ab", "self"]
+        );
+        assert_eq!(
+            incident["b"]
+                .iter()
+                .map(|edge| edge.id())
+                .collect::<Vec<_>>(),
+            ["ab"]
+        );
+        assert!(incident.get("missing").is_none());
     }
 
     fn test_binding<T: Clone + 'static>(value: T) -> Binding<T> {
