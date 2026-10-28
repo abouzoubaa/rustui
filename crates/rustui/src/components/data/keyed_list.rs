@@ -314,6 +314,7 @@ impl KeyedListView {
         self.row_height = height.max(1.0);
         self
     }
+    /// Shows a search field. Turning search off clears its filter while retaining selection.
     pub fn searchable(mut self, enabled: bool) -> Self {
         self.searchable = enabled;
         self
@@ -447,10 +448,13 @@ impl View for KeyedListView {
         if flags_changed {
             let searchable = self.searchable;
             let selectable = self.selectable;
-            context.update_entity(&state, move |state, _window, cx| {
+            context.update_entity(&state, move |state, window, cx| {
                 if state.delegate().searchable != searchable {
                     state.set_searchable(searchable, cx);
                     state.delegate_mut().searchable = searchable;
+                    if !searchable {
+                        state.set_query("", window, cx);
+                    }
                 }
                 if state.delegate().selectable != selectable {
                     state.set_selectable(selectable, cx);
@@ -509,6 +513,101 @@ impl View for KeyedListView {
 mod tests {
     use super::*;
     use gpui_component::IndexPath;
+
+    struct SearchOwner {
+        selection: Option<String>,
+        searchable: bool,
+        writes: usize,
+    }
+
+    impl View for SearchOwner {
+        fn body(&self) -> impl View {
+            EmptyView
+        }
+
+        fn into_element(&self, context: &mut RenderContext<'_>) -> AnyElement {
+            let selection = Binding::new(
+                self.selection.clone(),
+                |owner: &Self| owner.selection.clone(),
+                |owner, value| {
+                    owner.selection = value;
+                    owner.writes += 1;
+                },
+            );
+            div()
+                .w(px(320.0))
+                .h(px(280.0))
+                .child(
+                    KeyedList(
+                        "keyed-search",
+                        [
+                            KeyedListItem::new("a", "Alpha"),
+                            KeyedListItem::new("b", "Beta"),
+                        ],
+                        selection,
+                    )
+                    .searchable(self.searchable)
+                    .into_element(context),
+                )
+                .into_any_element()
+        }
+    }
+
+    #[gpui::test]
+    fn disabling_search_clears_filter_and_preserves_keyed_selection(cx: &mut gpui::TestAppContext) {
+        let theme = crate::theme::parse_theme(include_str!(concat!(
+            env!("CARGO_MANIFEST_DIR"),
+            "/../../themes/macos27.json"
+        )))
+        .unwrap();
+        cx.update(|app| {
+            gpui_component::init(app);
+            crate::theme::activate_theme(&theme, Some(crate::theme::AppearanceMode::Dark), app)
+                .unwrap();
+        });
+        let (owner, window) = cx.add_window_view(|_, app| {
+            crate::runtime::ComponentHost::new(
+                SearchOwner {
+                    selection: Some("a".into()),
+                    searchable: true,
+                    writes: 0,
+                },
+                app,
+            )
+        });
+        let state = window.update(|window, app| {
+            let _ = window.draw(app);
+            let state = owner
+                .read(app)
+                .retained_entity_for_test::<ListState<KeyedListDelegate>>(
+                    vec![],
+                    Identity::from("keyed-search"),
+                )
+                .unwrap();
+            state.update(app, |state, cx| state.set_query("Beta", window, cx));
+            assert_eq!(state.read(app).delegate().visible, [1]);
+            state
+        });
+        window.update(|window, app| {
+            owner.update(app, |host, cx| {
+                host.component_mut().searchable = false;
+                cx.notify();
+            });
+            let _ = window.draw(app);
+            assert_eq!(state.read(app).delegate().visible, [0, 1]);
+            assert!(state.read(app).delegate().query.is_empty());
+            assert_eq!(owner.read(app).component().selection.as_deref(), Some("a"));
+            assert_eq!(owner.read(app).component().writes, 0);
+            owner.update(app, |host, cx| {
+                host.component_mut().searchable = true;
+                cx.notify();
+            });
+            let _ = window.draw(app);
+            assert_eq!(state.read(app).delegate().visible, [0, 1]);
+            assert!(state.read(app).delegate().query.is_empty());
+            assert_eq!(state.read(app).selected_index(), Some(IndexPath::new(0)));
+        });
+    }
 
     struct Owner(Option<String>);
 
