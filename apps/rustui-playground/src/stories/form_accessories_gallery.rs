@@ -177,6 +177,7 @@ impl FormAccessoriesGallery {
                 AnyView::new(reference_row(
                     FORM_ITEMS[2],
                     ComboBox("Label", self.combo_selection_binding(), ["Label"])
+                        .localized_option("Label", "lab-form-control-label")
                         .id("form-accessories-combo-box"),
                 )),
             ),
@@ -235,6 +236,7 @@ impl FormAccessoriesGallery {
                 AnyView::new(reference_row(
                     FORM_ITEMS[7],
                     Picker("Label", self.combo_selection_binding(), ["Label"])
+                        .localized_option("Label", "lab-form-control-label")
                         .id("form-accessories-pop-up-button"),
                 )),
             ),

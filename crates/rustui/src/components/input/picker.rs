@@ -17,7 +17,7 @@ use crate::{
     view::{EmptyView, RenderContext, View},
 };
 
-type PickerSelectState = SelectState<SearchableVec<String>>;
+type PickerSelectState = SelectState<SearchableVec<super::SelectOption>>;
 type PickerSelectionWriter = Rc<dyn Fn(String, &mut App)>;
 
 #[derive(Clone, Debug, PartialEq, Eq)]
@@ -43,7 +43,7 @@ fn resolved_message_label(
 
 struct RetainedPicker {
     select: Entity<PickerSelectState>,
-    options: Vec<String>,
+    options: Vec<super::SelectOption>,
     owner_value: String,
     searchable: bool,
     selection_writer: Rc<RefCell<PickerSelectionWriter>>,
@@ -63,6 +63,7 @@ pub struct PickerView {
     label: SharedString,
     selection: Binding<String>,
     options: Vec<String>,
+    option_keys: std::collections::HashMap<String, SharedString>,
     id: Option<Identity>,
     disabled: bool,
     searchable: bool,
@@ -83,6 +84,7 @@ impl PickerView {
             label,
             selection,
             options: collect_unique_options(options),
+            option_keys: std::collections::HashMap::new(),
             id: None,
             disabled: false,
             searchable: false,
@@ -90,6 +92,26 @@ impl PickerView {
             accessibility_label: None,
             appearance: true,
         }
+    }
+
+    /// Localize an option's displayed title without changing its binding value.
+    pub fn localized_option(
+        mut self,
+        value: impl Into<String>,
+        key: impl Into<SharedString>,
+    ) -> Self {
+        let value = value.into();
+        let key = key.into();
+        assert!(
+            self.options.contains(&value),
+            "Picker localized option must exist"
+        );
+        assert!(
+            !key.trim().is_empty(),
+            "Picker option localization key must not be blank"
+        );
+        self.option_keys.insert(value, key);
+        self
     }
 
     pub fn id(mut self, id: impl Into<Identity>) -> Self {
@@ -184,9 +206,12 @@ impl View for PickerView {
 
     fn into_element(&self, context: &mut RenderContext<'_>) -> AnyElement {
         let identity = self.identity(context);
-        let options = self.options.clone();
+        let options = super::select_options(&self.options, &self.option_keys, |key| {
+            context.localized_message(key)
+        });
         let initial_value = self.selection.value();
-        let initial_index = option_index(&options, &initial_value);
+        let initial_index = option_index(&self.options, &initial_value);
+        let initial_options = options.clone();
         let searchable = self.searchable;
         let selection_writer = context.binding_writer(self.selection.clone());
         let initial_selection_writer = selection_writer.clone();
@@ -194,14 +219,14 @@ impl View for PickerView {
             context.retained_entity(identity.clone(), move |window, cx| RetainedPicker {
                 select: cx.new(|cx| {
                     SelectState::new(
-                        SearchableVec::new(options.clone()),
+                        SearchableVec::new(initial_options.clone()),
                         initial_index,
                         window,
                         cx,
                     )
                     .searchable(searchable)
                 }),
-                options,
+                options: initial_options,
                 owner_value: initial_value,
                 searchable,
                 selection_writer: Rc::new(RefCell::new(initial_selection_writer)),
@@ -228,9 +253,9 @@ impl View for PickerView {
         let current = self.selection.value();
         let searchable_changed = picker_searchable_changed(retained_searchable, self.searchable);
         if searchable_changed {
-            let options = self.options.clone();
+            let options = options.clone();
             let selection = current.clone();
-            let initial_index = option_index(&options, &selection);
+            let initial_index = option_index(&self.options, &selection);
             let searchable = self.searchable;
             select = context.update_entity(&retained, move |retained, window, cx| {
                 let next = cx.new(|cx| {
@@ -243,9 +268,9 @@ impl View for PickerView {
             });
         }
 
-        let options_changed = retained_options != self.options;
+        let options_changed = retained_options != options;
         if options_changed {
-            let options = self.options.clone();
+            let options = options.clone();
             context.update_entity(&select, |state, window, cx| {
                 state.set_items(SearchableVec::new(options.clone()), window, cx);
             });
@@ -274,7 +299,7 @@ impl View for PickerView {
                 &identity,
                 Identity::from("picker-select-state-events"),
                 &select,
-                move |state, event: &SelectEvent<SearchableVec<String>>, cx| {
+                move |state, event: &SelectEvent<SearchableVec<super::SelectOption>>, cx| {
                     if state.entity_id() != retained_picker.read(cx).select.entity_id() {
                         return;
                     }

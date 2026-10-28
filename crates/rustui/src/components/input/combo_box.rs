@@ -17,7 +17,7 @@ use crate::{
     view::{EmptyView, RenderContext, View},
 };
 
-type RetainedComboBoxState = SelectState<SearchableVec<String>>;
+type RetainedComboBoxState = SelectState<SearchableVec<super::SelectOption>>;
 
 #[derive(Clone, Debug, PartialEq, Eq)]
 enum ComboBoxAccessibilityLabel {
@@ -42,7 +42,7 @@ fn resolved_accessibility_label(
 
 struct RetainedComboBox {
     select: Entity<RetainedComboBoxState>,
-    options: Vec<String>,
+    options: Vec<super::SelectOption>,
     owner_value: String,
     binding_writer: Rc<RefCell<Option<Rc<dyn Fn(String, &mut App)>>>>,
 }
@@ -62,6 +62,7 @@ pub struct ComboBoxView {
     placeholder_message_id: Option<SharedString>,
     selection: Binding<String>,
     options: Vec<String>,
+    option_keys: std::collections::HashMap<String, SharedString>,
     id: Option<Identity>,
     disabled: bool,
     search_placeholder: Option<SharedString>,
@@ -83,6 +84,7 @@ impl ComboBoxView {
             placeholder_message_id: None,
             selection,
             options: collect_unique_options(options),
+            option_keys: std::collections::HashMap::new(),
             id: None,
             disabled: false,
             search_placeholder: None,
@@ -92,6 +94,26 @@ impl ComboBoxView {
             accessibility_label: None,
             appearance: true,
         }
+    }
+
+    /// Localize an option's displayed title without changing its binding value.
+    pub fn localized_option(
+        mut self,
+        value: impl Into<String>,
+        key: impl Into<SharedString>,
+    ) -> Self {
+        let value = value.into();
+        let key = key.into();
+        assert!(
+            self.options.contains(&value),
+            "ComboBox localized option must exist"
+        );
+        assert!(
+            !key.trim().is_empty(),
+            "ComboBox option localization key must not be blank"
+        );
+        self.option_keys.insert(value, key);
+        self
     }
 
     pub fn id(mut self, id: impl Into<Identity>) -> Self {
@@ -248,22 +270,25 @@ impl View for ComboBoxView {
 
     fn into_element(&self, context: &mut RenderContext<'_>) -> AnyElement {
         let identity = self.identity(context);
-        let options = self.options.clone();
+        let options = super::select_options(&self.options, &self.option_keys, |key| {
+            context.localized_message(key)
+        });
         let initial_value = self.selection.value();
-        let initial_index = option_index(&options, &initial_value);
+        let initial_index = option_index(&self.options, &initial_value);
+        let initial_options = options.clone();
         let binding_writer = Rc::new(RefCell::new(None));
         let (retained, created) =
             context.retained_entity(identity.clone(), move |window, cx| RetainedComboBox {
                 select: cx.new(|cx| {
                     SelectState::new(
-                        SearchableVec::new(options.clone()),
+                        SearchableVec::new(initial_options.clone()),
                         initial_index,
                         window,
                         cx,
                     )
                     .searchable(true)
                 }),
-                options,
+                options: initial_options,
                 owner_value: initial_value,
                 binding_writer: binding_writer.clone(),
             });
@@ -282,9 +307,9 @@ impl View for ComboBoxView {
             context.binding_writer(self.selection.clone()),
         );
 
-        let options_changed = retained_options != self.options;
+        let options_changed = retained_options != options;
         if options_changed {
-            let options = self.options.clone();
+            let options = options.clone();
             context.update_entity(&select, |state, window, cx| {
                 state.set_items(SearchableVec::new(options.clone()), window, cx);
             });
@@ -310,7 +335,7 @@ impl View for ComboBoxView {
             context.subscribe_retained(
                 &identity,
                 &select,
-                move |_state, event: &SelectEvent<SearchableVec<String>>, cx| {
+                move |_state, event: &SelectEvent<SearchableVec<super::SelectOption>>, cx| {
                     let SelectEvent::Confirm(value) = event;
                     if let Some(value) = value {
                         let confirmed_value = value.clone();
