@@ -413,3 +413,6 @@ lab-toolbar-unavailable = غير متاح
 lab-toolbar-reverse-action = عكس الترتيب
 lab-toolbar-disabled-action = تفعيل أو تعطيل
 lab-toolbar-help = استخدم مفتاح Tab للوصول إلى شريط الأدوات، ثم الأسهم للتنقل بين الإجراءات. غيّر اللغة للتحقق من زر الإغلاق.
+lab-supplementary-open-link = فتح رابط الاختبار
+lab-supplementary-disabled-link = رابط الاختبار معطّل
+lab-supplementary-link-activations = عدد مرات تفعيل الرابط: {count}

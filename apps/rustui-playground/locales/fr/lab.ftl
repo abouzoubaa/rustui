@@ -413,3 +413,6 @@ lab-toolbar-unavailable = Indisponible
 lab-toolbar-reverse-action = Inverser l’ordre
 lab-toolbar-disabled-action = Activer ou désactiver
 lab-toolbar-help = Utilisez Tab pour accéder à la barre d’outils, puis les flèches pour parcourir les actions. Changez de langue pour vérifier Fermer.
+lab-supplementary-open-link = Ouvrir le lien de test
+lab-supplementary-disabled-link = Lien de test désactivé
+lab-supplementary-link-activations = Activations du lien : {count}

@@ -413,3 +413,6 @@ lab-toolbar-unavailable = Unavailable
 lab-toolbar-reverse-action = Reverse order
 lab-toolbar-disabled-action = Toggle disabled
 lab-toolbar-help = Tab into the toolbar, then use arrow keys to move among actions. Change language to inspect Close.
+lab-supplementary-open-link = Open link fixture
+lab-supplementary-disabled-link = Disabled link fixture
+lab-supplementary-link-activations = Link activations: {count}

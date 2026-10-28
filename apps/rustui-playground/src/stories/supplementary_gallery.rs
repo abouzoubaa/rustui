@@ -1,4 +1,5 @@
 //! Accessible supplementary components and observable link activation.
+use rustui::localization::MessageArguments;
 use rustui::prelude::*;
 
 fn fixture_url(name: &str) -> String {
@@ -90,6 +91,7 @@ impl View for SupplementaryGallery {
                 .child(
                     Link("Open link fixture", fixture_url("link-fixture.html"))
                         .id("gallery-enabled-link")
+                        .localized_label("lab-supplementary-open-link")
                         .accessibility_label(format!(
                             "Open link fixture, activated {} times",
                             self.link_activations()
@@ -103,14 +105,17 @@ impl View for SupplementaryGallery {
                         fixture_url("link-disabled-fixture.html"),
                     )
                     .id("gallery-disabled-link")
+                    .localized_label("lab-supplementary-disabled-link")
                     .disabled(true)
                     .accessibility_label("Disabled link fixture")
+                    .localized_accessibility_label("lab-supplementary-disabled-link")
                     .on_activate(self.action(Self::activate_link)),
                 )
-                .child(Text(format!(
-                    "Link activations: {}",
-                    self.link_activations()
-                )))
+                .child(
+                    LocalizedText("lab-supplementary-link-activations").with_arguments(
+                        MessageArguments::new().with("count", self.link_activations()),
+                    ),
+                )
                 .spacing(8.0),
         )
         .width(300.0)
