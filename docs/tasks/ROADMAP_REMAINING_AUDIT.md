@@ -19,6 +19,17 @@ are retained as historical records.
 
 ## Current release evidence — 2026-10-27
 
+- **R26 cache validation investigation, 2026-10-28:** The browser loader
+  deliberately uses `no-store` and automatic reload requests the approximately
+  821 KiB theme every 350 ms. A local Python HTTP server experiment changed a
+  file while preserving the same whole-second modification time: an
+  `If-Modified-Since` request returned 304 even though an unconditional fetch
+  returned the changed bytes. Switching blindly to conditional browser cache
+  revalidation can therefore miss rapid edits on such servers. Preserve the
+  current freshness behavior while investigating bandwidth improvements that
+  work without reliable strong validators. This is a local protocol experiment,
+  not a browser performance benchmark or release acceptance.
+
 - **R26 Safari theme reload, 2026-10-28:** Safari 27.0 on macOS 27.0
   loaded a temporary copy of the Web bundle built from `ae736006` (manifest
   SHA-256 `5e344dfc43942cf3bb625a31c64a8fd09f29290e8e2f3cdbc3707a366c3ff59e`).
