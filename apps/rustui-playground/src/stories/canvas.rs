@@ -429,6 +429,12 @@ impl View for StoryCanvas {
                             .localized_label("lab-input-choose-date"),
                     )
                     .child(
+                        DatePicker("Choose a date (two months)", self.date_binding.clone())
+                            .id("story-input-date-two-months")
+                            .localized_label("lab-input-choose-date-two-months")
+                            .number_of_months(2),
+                    )
+                    .child(
                         ColorPicker("Choose a color", self.color_binding.clone())
                             .id("story-input-color")
                             .localized_label("lab-input-choose-color"),

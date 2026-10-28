@@ -14,10 +14,13 @@ SPEC.loader.exec_module(keyboard)
 RTL_SPEC = importlib.util.spec_from_file_location('calendar_rtl', ROOT / 'scripts/apply_gpui_calendar_rtl_patch.py')
 rtl = importlib.util.module_from_spec(RTL_SPEC)
 RTL_SPEC.loader.exec_module(rtl)
+HEADING_SPEC = importlib.util.spec_from_file_location('calendar_heading', ROOT / 'scripts/apply_gpui_calendar_heading_patch.py')
+heading = importlib.util.module_from_spec(HEADING_SPEC)
+HEADING_SPEC.loader.exec_module(heading)
 
 
 def main():
-    rtl.run(ROOT, ROOT, '--verify')
+    heading.run(ROOT, ROOT, '--verify')
     with tempfile.TemporaryDirectory(prefix='rustui-calendar-stack-') as folder:
         staged = Path(folder)
         files = [Path('Cargo.toml'), *rtl.IMAGES, *map(Path, keyboard.PRESERVED)]
@@ -28,6 +31,8 @@ def main():
             target = staged / relative
             target.parent.mkdir(parents=True, exist_ok=True)
             shutil.copyfile(ROOT / relative, target)
+        heading.run(staged, ROOT, '--reverse')
+        rtl.run(staged, ROOT, '--verify')
         rtl.run(staged, ROOT, '--reverse')
         keyboard.run(staged, ROOT, '--verify')
         keyboard.run(staged, ROOT, '--reverse')

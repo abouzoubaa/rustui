@@ -60,6 +60,7 @@ lab-input-picker-owner-value = Picker owner value: {value}
 lab-input-picker-set-kotlin = Set Picker to Kotlin
 lab-input-choose-color = Choose a color
 lab-input-choose-date = Choose a date
+lab-input-choose-date-two-months = Choose a date (two months)
 lab-input-owner-update = Change bound text from owner in 5 seconds
 lab-input-token-recipients = Add recipients
 lab-code-editor-language = Language: {language}

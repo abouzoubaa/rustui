@@ -1,3 +1,4 @@
+from scripts.tests.calendar_patch_fixture import reverse_heading_layer
 import importlib.util
 from pathlib import Path
 import shutil
@@ -28,6 +29,8 @@ class CalendarRtlPatchTest(unittest.TestCase):
             '[patch.crates-io]\ngpui-base = { path = "vendor/gpui-base-0.7.3" }\n'
             'gpui-component = { path = "vendor/gpui-component-0.7.3" }\n'
         )
+        for path in rtl.IMAGES:
+            reverse_heading_layer(self.root, path)
         rtl.run(self.root, ROOT, '--reverse')
 
     def test_replay_and_reject_tampering(self):

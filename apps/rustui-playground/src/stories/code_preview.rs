@@ -70,6 +70,7 @@ Environment(display_mode, child_stack)
     Picker("Language", self.picker_value_binding(), ["Rust", "Swift"])
     ComboBox("Rendering", self.combo_box_value_binding(), ["GPUI", "AppKit"])
     DatePicker("Choose a date", self.date_value_binding())
+    DatePicker("Two months", self.date_value_binding()).number_of_months(2)
     ColorPicker("Choose a color", self.color_value_binding())"#
         }
         StoryId::List => {

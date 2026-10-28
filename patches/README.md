@@ -4,9 +4,13 @@
 
 `approved/gpui-web-combobox-enter-v1.patch` layers on the Web semantic adapter. The semantic mirror represents combo boxes with HTML buttons; the bridge now forwards Enter on those buttons to GPUI instead of treating it as native button activation. Other button and Space handling is unchanged. `scripts/apply_gpui_web_combobox_enter_patch.py` verifies, applies, or reverses the exact image, and `scripts/verify_gpui_web_patch_stack.py` validates the composed stack. One bounded browser interaction and source checks passed; broader browser acceptance remains open.
 
+## Calendar multi-month heading alignment
+
+`approved/gpui-calendar-multi-month-heading-v1.patch` layers on the Calendar RTL patch. It centers each multi-month heading over its grid while keeping previous/next arrows at the popup edges. Reverse this layer before the RTL and keyboard layers. `scripts/apply_gpui_calendar_heading_patch.py` verifies the exact image; `scripts/verify_gpui_calendar_patch_stack.py` verifies the complete composed stack. Broader runtime and narrow-window acceptance remains open.
+
 ## Calendar RTL layer
 
-`approved/gpui-calendar-rtl-v1.patch` layers on the Calendar keyboard patch and mirrors day, month, year and multi-month layout and navigation direction. `scripts/apply_gpui_calendar_rtl_patch.py` verifies, applies and reverses its exact three-source image. Reverse this layer before the keyboard layer; `scripts/verify_gpui_calendar_patch_stack.py` verifies the combined stack. Broader runtime and locale acceptance remains open.
+`approved/gpui-calendar-rtl-v1.patch` layers on the Calendar keyboard patch and mirrors day, month, year and multi-month layout and navigation direction. `scripts/apply_gpui_calendar_rtl_patch.py` verifies, applies and reverses its exact three-source image. Reverse the later multi-month heading layer before this layer, and reverse this layer before the keyboard layer; `scripts/verify_gpui_calendar_patch_stack.py` verifies the combined stack. Broader runtime and locale acceptance remains open.
 
 ## Calendar keyboard layer
 

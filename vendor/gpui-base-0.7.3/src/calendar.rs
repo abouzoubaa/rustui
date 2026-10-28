@@ -692,7 +692,7 @@ impl RenderOnce for Calendar {
             .update(cx, |s, cx| s.set_number_of_months(count, window, cx));
         let view = self.state.read(cx).view();
         let rtl = self.state.read(cx).right_to_left();
-        let mut header = h_flex().when(rtl, |row| row.flex_row_reverse()).items_center().justify_between().child({
+        let mut header = h_flex().when(rtl, |row| row.flex_row_reverse()).when(count > 1, |row| row.relative()).items_center().justify_between().child({
             let st = CalendarItemState::new(CalendarItemKind::Previous).disabled(
                 view.is_month()
                     || (view.is_year() && !self.state.read(cx).has_prev_year_page())
@@ -715,7 +715,10 @@ impl RenderOnce for Calendar {
                     })
                 });
             }
-            (self.item)(item, st, window, cx)
+            let item = (self.item)(item, st, window, cx);
+            if count > 1 {
+                div().absolute().top_0().when(rtl, |el| el.right_0()).when(!rtl, |el| el.left_0()).child(item).into_any_element()
+            } else { item }
         });
         if count == 1 {
             let (month, year) = {
@@ -756,7 +759,7 @@ impl RenderOnce for Calendar {
             for offset in 0..count {
                 let (y, m) = self.state.read(cx).offset_year_month(offset);
                 header = header.child(
-                    div().text_sm().font_medium().child(
+                    div().flex_1().text_sm().font_medium().child(
                         v_flex()
                             .items_center()
                             .child((self.label)(CalendarItemKind::MonthToggle, m as i32))
@@ -788,7 +791,10 @@ impl RenderOnce for Calendar {
                     })
                 });
             }
-            (self.item)(item, st, window, cx)
+            let item = (self.item)(item, st, window, cx);
+            if count > 1 {
+                div().absolute().top_0().when(rtl, |el| el.left_0()).when(!rtl, |el| el.right_0()).child(item).into_any_element()
+            } else { item }
         });
 
         let mut body = match picker_grid_layout(view) {
