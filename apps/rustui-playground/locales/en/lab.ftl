@@ -425,3 +425,8 @@ lab-supplementary-cursor-target = Tap region cursor target
 lab-supplementary-cursor-child = This child does not set a cursor style
 lab-supplementary-pointer-taps = Pointer target taps: {count}
 lab-supplementary-cursor-keyboard = Keyboard alternative: tap cursor target
+
+lab-feedback-heading = Feedback states
+lab-feedback-show-toast = Show persistent action toast
+lab-feedback-toast-counts = Toast body activations: {body}; action activations: {action}
+lab-feedback-retry-count = Retry activations: {count}

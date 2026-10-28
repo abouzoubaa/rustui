@@ -1,6 +1,6 @@
 //! Compact gallery for empty, error, and loading feedback.
 
-use rustui::prelude::*;
+use rustui::{localization::MessageArguments, prelude::*};
 
 pub fn demo() -> impl View {
     Container(Component("feedback-gallery", FeedbackGallery::default))
@@ -51,14 +51,13 @@ impl View for FeedbackGallery {
 
             VStack::new()
                 .spacing(10.0)
-                .child(Text("Feedback states").font_weight(TextWeight::Semibold))
+                .child(LocalizedText("lab-feedback-heading").font_weight(TextWeight::Semibold))
                 .child(
                     Button("Show persistent action toast", persistent_action_toast)
-                        .id("feedback-show-toast"),
+                        .id("feedback-show-toast")
+                    .localized_label("lab-feedback-show-toast"),
                 )
-                .child(Text(format!(
-                    "Toast body activations: {toast_body_activations}; action activations: {toast_action_activations}"
-                )))
+                .child(LocalizedText("lab-feedback-toast-counts").with_arguments(MessageArguments::new().with("body", toast_body_activations as i64).with("action", toast_action_activations as i64)))
                 .child(
                     HStack::new()
                         .spacing(6.0)
@@ -99,9 +98,7 @@ impl View for FeedbackGallery {
                                                 "Retry loading items; activated {retry_activations} times"
                                             )),
                                     )
-                                    .child(Text(format!(
-                                        "Retry activations: {retry_activations}"
-                                    ))),
+                                    .child(LocalizedText("lab-feedback-retry-count").with_arguments(MessageArguments::new().with("count", retry_activations as i64))),
                             )
                             .width(196.0)
                             .height(150.0)
@@ -134,5 +131,40 @@ impl View for FeedbackGallery {
                         ),
                 )
         })
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use rustui::localization::{Locale, MessageArguments, format_integer};
+
+    #[test]
+    fn feedback_counts_format_in_all_supported_locales() {
+        let catalogs = super::super::catalogs();
+        for tag in ["en", "fr", "ar"] {
+            let locale = Locale::parse(tag).unwrap();
+            let text = catalogs
+                .format(
+                    &locale,
+                    "lab-feedback-toast-counts",
+                    &MessageArguments::new()
+                        .with("body", 12_i64)
+                        .with("action", 34_i64),
+                )
+                .unwrap();
+            assert!(text.contains(&format_integer(12, &locale)), "{tag}: {text}");
+            assert!(text.contains(&format_integer(34, &locale)), "{tag}: {text}");
+            let retry = catalogs
+                .format(
+                    &locale,
+                    "lab-feedback-retry-count",
+                    &MessageArguments::new().with("count", 56_i64),
+                )
+                .unwrap();
+            assert!(
+                retry.contains(&format_integer(56, &locale)),
+                "{tag}: {retry}"
+            );
+        }
     }
 }

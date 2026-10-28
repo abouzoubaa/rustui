@@ -1,3 +1,7 @@
+## Current checkpoint — 2026-10-28: feedback gallery locale copy
+
+- **R13 partial source implementation:** The feedback gallery heading, persistent-toast button and two activation counters now resolve in English, French and Arabic. A focused test passed 1/1 for numeric interpolation in all three locales; the Playground Headstart check and runtime locale validator passed. Remaining feedback content, including toast and empty/error messages, is still English. Native/browser presentation and RTL acceptance remain open; this does not close R13.
+
 ## Current checkpoint — 2026-10-28: theme parser measurement
 
 - **R26, bounded local performance evidence:** In a release-profile, locked, offline Headstart run at source commit `3028f2b1`, the 821,287-byte bundled macOS theme was parsed and validated 20 times per path, alternating execution order after one warmup each. Baseline median/p95 were 237,706/240,669 µs; the duplicate-key-checking parser median/p95 were 240,013/244,667 µs. This is a single-machine micro-measurement, not an app responsiveness benchmark or performance acceptance; no general overhead guarantee follows from it.

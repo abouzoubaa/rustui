@@ -425,3 +425,8 @@ lab-supplementary-cursor-target = Zone cible du curseur
 lab-supplementary-cursor-child = Cet élément enfant ne définit pas de style de curseur
 lab-supplementary-pointer-taps = Appuis sur la cible du curseur : {count}
 lab-supplementary-cursor-keyboard = Alternative clavier : activer la cible du curseur
+
+lab-feedback-heading = États de retour
+lab-feedback-show-toast = Afficher la notification persistante
+lab-feedback-toast-counts = Activations de la notification : {body} ; activations de l’action : {action}
+lab-feedback-retry-count = Activations de réessai : {count}

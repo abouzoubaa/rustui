@@ -425,3 +425,8 @@ lab-supplementary-cursor-target = منطقة النقر المستهدفة با�
 lab-supplementary-cursor-child = لا يحدّد هذا العنصر الفرعي نمطًا للمؤشّر
 lab-supplementary-pointer-taps = عدد النقرات على الهدف: {count}
 lab-supplementary-cursor-keyboard = بديل لوحة المفاتيح: تفعيل هدف المؤشّر
+
+lab-feedback-heading = حالات التنبيه
+lab-feedback-show-toast = إظهار الإشعار الدائم
+lab-feedback-toast-counts = مرات تنشيط الإشعار: {body}؛ مرات تنشيط الإجراء: {action}
+lab-feedback-retry-count = مرات إعادة المحاولة: {count}
