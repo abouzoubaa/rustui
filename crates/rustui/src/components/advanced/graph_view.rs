@@ -85,24 +85,27 @@ fn localized_graph_message(
     resolved_localized_message(id, localized, fallback)
 }
 
-fn graph_error_message_id(error: &GraphError) -> &'static str {
-    match error {
-        GraphError::BlankIdentity => "rustui-graph-error-blank-identity",
-        GraphError::BlankLabel => "rustui-graph-error-blank-label",
-        GraphError::DuplicateNode => "rustui-graph-error-duplicate-node",
-        GraphError::DuplicatePort => "rustui-graph-error-duplicate-port",
-        GraphError::DuplicateEdge => "rustui-graph-error-duplicate-edge",
-        GraphError::MissingNode => "rustui-graph-error-missing-node",
-        GraphError::MissingEdge => "rustui-graph-error-missing-edge",
-        GraphError::MissingPort => "rustui-graph-error-missing-port",
-        GraphError::PortDirection => "rustui-graph-error-port-direction",
-        GraphError::DuplicateConnection => "rustui-graph-error-duplicate-connection",
-        GraphError::InvalidGeometry => "rustui-graph-error-invalid-geometry",
+impl GraphError {
+    /// Message identifier for resolving this error through RustUI's locale catalogs.
+    pub fn localization_key(&self) -> &'static str {
+        match self {
+            GraphError::BlankIdentity => "rustui-graph-error-blank-identity",
+            GraphError::BlankLabel => "rustui-graph-error-blank-label",
+            GraphError::DuplicateNode => "rustui-graph-error-duplicate-node",
+            GraphError::DuplicatePort => "rustui-graph-error-duplicate-port",
+            GraphError::DuplicateEdge => "rustui-graph-error-duplicate-edge",
+            GraphError::MissingNode => "rustui-graph-error-missing-node",
+            GraphError::MissingEdge => "rustui-graph-error-missing-edge",
+            GraphError::MissingPort => "rustui-graph-error-missing-port",
+            GraphError::PortDirection => "rustui-graph-error-port-direction",
+            GraphError::DuplicateConnection => "rustui-graph-error-duplicate-connection",
+            GraphError::InvalidGeometry => "rustui-graph-error-invalid-geometry",
+        }
     }
 }
 
 fn localized_graph_error(context: &RenderContext<'_>, error: &GraphError) -> String {
-    let id = graph_error_message_id(error);
+    let id = error.localization_key();
     localized_graph_message(context, id, &MessageArguments::new(), &error.to_string())
 }
 
@@ -1432,7 +1435,7 @@ mod tests {
         );
 
         let error = GraphError::MissingNode;
-        let error_id = graph_error_message_id(&error);
+        let error_id = error.localization_key();
         assert_eq!(error.to_string(), "graph node does not exist");
         let english_locale = crate::localization::Locale::parse("en").unwrap();
         let english_catalog = crate::localization::Catalog::parse(

@@ -66,17 +66,17 @@ struct GraphGallery {
     next_id: u64,
     #[state(0_u64)]
     activations: u64,
-    #[state(String::new())]
-    status: String,
+    #[state(None)]
+    status: Option<GraphError>,
 }
 impl GraphGallery {
     fn edit(&mut self, edit: GraphEdit) {
         match self.document.edited(edit) {
             Ok(next) => {
                 self.document = next;
-                self.status.clear();
+                self.status = None;
             }
-            Err(error) => self.status = error.to_string(),
+            Err(error) => self.status = Some(error),
         }
     }
     fn add(&mut self) {
@@ -112,7 +112,7 @@ impl GraphGallery {
         self.document = sample_document();
         self.selection = None;
         self.viewport = viewport();
-        self.status.clear();
+        self.status = None;
     }
     fn toggle_disabled(&mut self) {
         self.disabled = !self.disabled;
@@ -217,7 +217,11 @@ impl View for GraphGallery {
             }))
             .child(LocalizedText("lab-graph-viewport-help"))
             .child(surface)
-            .child(Text(self.status().clone()))
+            .child(if let Some(error) = self.status() {
+                AnyView::new(LocalizedText(error.localization_key()))
+            } else {
+                AnyView::new(Text(""))
+            })
     }
 }
 
@@ -244,5 +248,27 @@ mod tests {
         assert!(gallery.document.edges().is_empty());
         gallery.reset();
         assert_eq!(gallery.document, sample_document());
+    }
+
+    #[test]
+    fn edit_error_retains_localizable_identity_until_success() {
+        let mut gallery = GraphGallery::default();
+        gallery.edit(GraphEdit::RemoveNode("missing".into()));
+        let error = gallery.status.expect("missing node should be reported");
+        assert_eq!(error, GraphError::MissingNode);
+        let catalogs = super::super::locale_selector::catalogs();
+        for (language, expected) in [
+            ("en", "graph node does not exist"),
+            ("fr", "Le nœud du graphe est introuvable."),
+            ("ar", "عقدة المخطط غير موجودة."),
+        ] {
+            let locale = rustui::localization::Locale::parse(language).unwrap();
+            assert_eq!(
+                catalogs.get(&locale).unwrap().get(error.localization_key()),
+                Some(expected)
+            );
+        }
+        gallery.add();
+        assert_eq!(gallery.status, None);
     }
 }
