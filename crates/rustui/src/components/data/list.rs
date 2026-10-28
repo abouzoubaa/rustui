@@ -286,6 +286,7 @@ impl ListView {
         self
     }
 
+    /// Shows a search field. Turning search off clears its filter while retaining selection.
     pub fn searchable(mut self, searchable: bool) -> Self {
         self.searchable = searchable;
         self
@@ -480,10 +481,13 @@ impl View for ListView {
             .delegate()
             .options_match(searchable, selectable);
         if !options_match {
-            context.update_entity(&state, move |state, _window, cx| {
+            context.update_entity(&state, move |state, window, cx| {
                 if state.delegate().searchable != searchable {
                     state.set_searchable(searchable, cx);
                     state.delegate_mut().searchable = searchable;
+                    if !searchable {
+                        state.set_query("", window, cx);
+                    }
                 }
                 if state.delegate().selectable != selectable {
                     state.set_selectable(selectable, cx);
@@ -522,6 +526,7 @@ mod tests {
     struct KeyboardListOwner {
         selection: Option<usize>,
         writes: usize,
+        searchable: bool,
     }
 
     impl View for KeyboardListOwner {
@@ -544,6 +549,7 @@ mod tests {
                 .child(
                     List(["first", "second", "third"], binding)
                         .id("keyboard-list")
+                        .searchable(self.searchable)
                         .height(260.0)
                         .into_element(context),
                 )
@@ -568,6 +574,7 @@ mod tests {
                 KeyboardListOwner {
                     selection: Some(0),
                     writes: 0,
+                    searchable: false,
                 },
                 app,
             )
@@ -614,6 +621,62 @@ mod tests {
         window.update(|window, app| {
             let _ = window.draw(app);
             assert_eq!(owner.read(app).component().selection, Some(2));
+        });
+    }
+
+    #[gpui::test]
+    fn disabling_search_clears_hidden_filter(cx: &mut gpui::TestAppContext) {
+        let theme = crate::theme::parse_theme(include_str!(concat!(
+            env!("CARGO_MANIFEST_DIR"),
+            "/../../themes/macos27.json"
+        )))
+        .unwrap();
+        cx.update(|app| {
+            gpui_component::init(app);
+            crate::theme::activate_theme(&theme, Some(crate::theme::AppearanceMode::Dark), app)
+                .unwrap();
+        });
+        let (owner, window) = cx.add_window_view(|_, app| {
+            crate::runtime::ComponentHost::new(
+                KeyboardListOwner {
+                    selection: Some(2),
+                    writes: 0,
+                    searchable: true,
+                },
+                app,
+            )
+        });
+        let state = window.update(|window, app| {
+            let _ = window.draw(app);
+            let state = owner
+                .read(app)
+                .retained_entity_for_test::<ListState<StringListDelegate>>(
+                    vec![],
+                    Identity::from("keyboard-list"),
+                )
+                .unwrap();
+            state.update(app, |state, cx| state.set_query("second", window, cx));
+            assert_eq!(state.read(app).delegate().visible, [1]);
+            state
+        });
+        window.update(|window, app| {
+            owner.update(app, |host, cx| {
+                host.component_mut().searchable = false;
+                cx.notify();
+            });
+            let _ = window.draw(app);
+            assert_eq!(state.read(app).delegate().visible, [0, 1, 2]);
+            assert!(state.read(app).delegate().query.is_empty());
+            assert_eq!(owner.read(app).component().selection, Some(2));
+            assert_eq!(owner.read(app).component().writes, 0);
+            owner.update(app, |host, cx| {
+                host.component_mut().searchable = true;
+                cx.notify();
+            });
+            let _ = window.draw(app);
+            assert_eq!(state.read(app).delegate().visible, [0, 1, 2]);
+            assert!(state.read(app).delegate().query.is_empty());
+            assert_eq!(state.read(app).selected_index(), Some(IndexPath::new(2)));
         });
     }
 
