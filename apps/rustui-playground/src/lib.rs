@@ -623,12 +623,23 @@ fn reference_route(source: &str) -> String {
     route
 }
 
+fn bundled_theme() -> Result<Arc<ThemeDocument>, &'static str> {
+    static THEME: std::sync::OnceLock<Result<Arc<ThemeDocument>, String>> =
+        std::sync::OnceLock::new();
+    THEME
+        .get_or_init(|| {
+            parse_theme(include_str!("../../../themes/macos27.json"))
+                .map(Arc::new)
+                .map_err(|error| error.to_string())
+        })
+        .as_ref()
+        .map(Arc::clone)
+        .map_err(String::as_str)
+}
+
 /// Run the canonical component playground through RustUI's application runtime.
 pub fn run() {
-    let theme = Arc::new(
-        parse_theme(include_str!("../../../themes/macos27.json"))
-            .expect("RustUI macOS 27 theme must be valid"),
-    );
+    let theme = bundled_theme().expect("RustUI macOS 27 theme must be valid");
     let startup_theme = theme.clone();
     let catalogs = stories::catalogs();
     let initial_locale = stories::initial_locale();
@@ -667,6 +678,13 @@ mod tests {
     use super::*;
     use catalog::Coverage;
     use std::sync::atomic::{AtomicUsize, Ordering};
+
+    #[test]
+    fn bundled_theme_is_shared_across_appearance_actions() {
+        let first = bundled_theme().expect("bundled theme parses");
+        let second = bundled_theme().expect("bundled theme parses again");
+        assert!(Arc::ptr_eq(&first, &second));
+    }
 
     #[test]
     fn reference_and_status_messages_resolve_in_supported_locales() {

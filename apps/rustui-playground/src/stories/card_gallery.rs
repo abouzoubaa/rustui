@@ -4,7 +4,7 @@ use rustui::{
     component,
     localization::MessageArguments,
     prelude::*,
-    theme::{AppearanceMode, activate_theme, parse_theme},
+    theme::{AppearanceMode, activate_theme},
 };
 
 const SHARED_CHILD_ID: &str = "card-shared-input";
@@ -58,8 +58,7 @@ impl View for CardGallery {
 
         let appearance = |mode| {
             AppAction::new(move |cx| {
-                let document = parse_theme(include_str!("../../../../themes/macos27.json"))
-                    .expect("checked-in theme is valid");
+                let document = crate::bundled_theme().expect("checked-in theme is valid");
                 activate_theme(&document, mode, cx).expect("theme activation succeeds");
             })
         };
