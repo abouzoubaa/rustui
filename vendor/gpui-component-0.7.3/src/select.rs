@@ -456,18 +456,13 @@ where
                 .unwrap_or_else(|| t!("Select.placeholder").into()),
         );
 
-        let Some(selected_index) = self.selected_index(cx) else {
-            return default_title;
-        };
-
+        // The list cursor may move while filtering. Only confirmation changes
+        // the value shown by the trigger.
         let Some(title) = self
             .state
-            .list
-            .read(cx)
-            .delegate()
-            .delegate
-            .item(selected_index)
-            .map(|item| {
+            .selection
+            .first()
+            .map(|(_, item)| {
                 if let Some(el) = item.display_title() {
                     el
                 } else if let Some(prefix) = self.title_prefix.as_ref() {

@@ -1,0 +1,19 @@
+--- a/vendor/gpui-component-0.7.3/src/select.rs
++++ b/vendor/gpui-component-0.7.3/src/select.rs
+@@ -459,4 +459,2 @@
+-        let Some(selected_index) = self.selected_index(cx) else {
+-            return default_title;
+-        };
+-
++        // The list cursor may move while filtering. Only confirmation changes
++        // the value shown by the trigger.
+@@ -465,6 +463,3 @@
+-            .list
+-            .read(cx)
+-            .delegate()
+-            .delegate
+-            .item(selected_index)
+-            .map(|item| {
++            .selection
++            .first()
++            .map(|(_, item)| {

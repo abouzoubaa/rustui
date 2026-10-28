@@ -1,5 +1,15 @@
 # Approved upstream patches
 
+## GPUI Components 0.7.3 select committed title
+
+`approved/gpui-component-select-committed-title-v1.patch` (SHA-256
+`422921c1eccc8940abb941af6e890b1c7a759996bbaae57d9ff4819c47126631`)
+renders the committed selection snapshot in a Select trigger instead of the
+search result cursor. Filtering can move that cursor without confirming a new
+value. Apply or verify with `scripts/apply_gpui_component_select_title_patch.py`
+using `--apply` or `--check`; `--reverse` restores the exact preimage. The
+pinned package version and upstream checksum file remain unchanged.
+
 ## GPUI Components 0.7.3 Web CodeEditor syntax
 
 - `approved/gpui-component-web-syntax-v1.patch` (SHA-256 `efdd5e4121c9f2d13b03de76d79e8840734e057b3c3f210750b237b653e4150a`) enables the existing Rust and JSON grammar dependencies on Web and selects Tree-sitter 0.27.1. Its crates.io archive SHA-256 is `a5129de2ccc97808c4583d48f1fb44576d015cf241e432800572bda11ef30c3b`; `web-time` 1.1.0 was already locked.

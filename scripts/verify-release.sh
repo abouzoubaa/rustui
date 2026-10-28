@@ -26,6 +26,7 @@ case "${1:-}" in
     verify_tree_accessibility_series
     python3 scripts/apply_gpui_component_calendar_locale_patch.py --check
     python3 scripts/apply_gpui_component_date_picker_patch.py --check
+    python3 scripts/apply_gpui_component_select_title_patch.py --check
     python3 scripts/apply_gpui_component_web_syntax_patch.py --check
     python3 scripts/apply_gpui_component_web_syntax_runtime_patch.py --check
     python3 scripts/apply_cosmic_bidi_initial_span_patch.py --check
@@ -49,6 +50,7 @@ case "${1:-}" in
     verify_tree_accessibility_series
     python3 scripts/apply_gpui_component_calendar_locale_patch.py --check
     python3 scripts/apply_gpui_component_date_picker_patch.py --check
+    python3 scripts/apply_gpui_component_select_title_patch.py --check
     python3 scripts/apply_gpui_component_web_syntax_patch.py --check
     python3 scripts/apply_gpui_component_web_syntax_runtime_patch.py --check
     python3 scripts/apply_cosmic_bidi_initial_span_patch.py --check
@@ -108,6 +110,7 @@ PY
     verify_tree_accessibility_series
     python3 scripts/apply_gpui_component_calendar_locale_patch.py --check
     python3 scripts/apply_gpui_component_date_picker_patch.py --check
+    python3 scripts/apply_gpui_component_select_title_patch.py --check
     python3 scripts/apply_gpui_component_web_syntax_patch.py --check
     python3 scripts/apply_gpui_component_web_syntax_runtime_patch.py --check
     python3 scripts/apply_cosmic_bidi_initial_span_patch.py --check

@@ -383,6 +383,7 @@ lab-graph-port-input = Input
 lab-graph-port-output = Output
 lab-form-heading = Form Accessories
 lab-form-control-label = Label
+lab-form-control-alternate = Alternate
 lab-form-action-none = Last activated: None
 lab-form-action-button = Last activated: Button
 lab-form-action-detail = Last activated: Detail

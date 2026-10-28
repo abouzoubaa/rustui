@@ -383,6 +383,7 @@ lab-graph-port-input = Entrée
 lab-graph-port-output = Sortie
 lab-form-heading = Accessoires de formulaire
 lab-form-control-label = Libellé
+lab-form-control-alternate = Autre
 lab-form-action-none = Dernière activation : aucune
 lab-form-action-button = Dernière activation : bouton
 lab-form-action-detail = Dernière activation : détail

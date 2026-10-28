@@ -176,9 +176,14 @@ impl FormAccessoriesGallery {
                 FORM_ITEMS[2],
                 AnyView::new(reference_row(
                     FORM_ITEMS[2],
-                    ComboBox("Label", self.combo_selection_binding(), ["Label"])
-                        .localized_option("Label", "lab-form-control-label")
-                        .id("form-accessories-combo-box"),
+                    ComboBox(
+                        "Label",
+                        self.combo_selection_binding(),
+                        ["Label", "Alternate"],
+                    )
+                    .localized_option("Label", "lab-form-control-label")
+                    .localized_option("Alternate", "lab-form-control-alternate")
+                    .id("form-accessories-combo-box"),
                 )),
             ),
             (
@@ -235,9 +240,14 @@ impl FormAccessoriesGallery {
                 FORM_ITEMS[7],
                 AnyView::new(reference_row(
                     FORM_ITEMS[7],
-                    Picker("Label", self.combo_selection_binding(), ["Label"])
-                        .localized_option("Label", "lab-form-control-label")
-                        .id("form-accessories-pop-up-button"),
+                    Picker(
+                        "Label",
+                        self.combo_selection_binding(),
+                        ["Label", "Alternate"],
+                    )
+                    .localized_option("Label", "lab-form-control-label")
+                    .localized_option("Alternate", "lab-form-control-alternate")
+                    .id("form-accessories-pop-up-button"),
                 )),
             ),
             (
@@ -340,6 +350,9 @@ mod tests {
         assert!(gallery.checked_checkbox());
         assert!(!gallery.unchecked_checkbox());
         assert_eq!(gallery.combo_selection(), "Label");
+        let selection = gallery.combo_selection_binding();
+        assert!(selection.write_to(&mut gallery, "Alternate".into()));
+        assert_eq!(gallery.combo_selection(), "Alternate");
         assert!(!gallery.detail_disclosure_open());
         assert!(gallery.radio_binding("first").value());
         assert!(!gallery.radio_binding("second").value());

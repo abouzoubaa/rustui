@@ -383,6 +383,7 @@ lab-graph-port-input = إدخال
 lab-graph-port-output = إخراج
 lab-form-heading = ملحقات النموذج
 lab-form-control-label = تسمية
+lab-form-control-alternate = بديل
 lab-form-action-none = آخر عنصر مُفعّل: لا شيء
 lab-form-action-button = آخر عنصر مُفعّل: زر
 lab-form-action-detail = آخر عنصر مُفعّل: التفاصيل
