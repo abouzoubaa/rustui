@@ -655,7 +655,7 @@ struct SearchFieldReferenceGallery {
     dark_idle_populated_query: String,
     #[state(String::new())]
     recent_query: String,
-    #[state(true)]
+    #[state(false)]
     recent_menu_open: bool,
     #[state(initial_recent_searches())]
     recent_searches: Vec<String>,
@@ -1023,7 +1023,7 @@ mod search_field_reference_tests {
             ["Design", "Studio", "Atlas", "Notes"]
         );
         assert_eq!(gallery.recipient_tokens, ["Atlas", "Studio", "Notes"]);
-        assert!(gallery.recent_menu_open);
+        assert!(!gallery.recent_menu_open);
         assert_eq!(gallery.combo_selection, "Studio");
         assert_eq!(gallery.disabled_combo_selection, "Atlas");
         assert_eq!(gallery.disabled_count, 3);
