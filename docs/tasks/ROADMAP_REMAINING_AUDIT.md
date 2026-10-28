@@ -2127,3 +2127,32 @@ inventory file type/link count/identity around hashing to close a replacement
 race. Each change has a focused regression passing 1/1. These strengthen local
 evidence intake and consistency; they do not establish candidate build,
 correctness, GUI, performance, review, approval, or promotion gates.
+
+## Refresh 2026-10-28 — R13–R15 primary input label localization
+
+Checkbox, Toggle, and Radio now expose `localized_label` through the public
+RustUI API. The Text inputs Playground story supplies English, French, and
+Arabic catalog entries; a missing entry retains the constructor label. This
+slice is **coded 3/3** and has bounded **native and Web acceptance 3/3** for
+visible labels and control names in those three locales. The focused Headstart
+regression passed 3/3, rustfmt and `git diff --check` passed, and the current
+Web release bundle built successfully. Its manifest was independently
+recomputed with 773/773 bundle entries matching and source SHA-256
+`e47294d7dc6cf0d208b8126b543fa7103bf2f8dfe76dd6fae3f84334b1467823`.
+
+Native validation used the exact production-consolidation Playground bundle,
+distinguished by its 16 framework demos from the retired c611 bundle with 10.
+French rendered `Activé`, `Accepté`, `Sélectionné`; Arabic rendered `مفعّل`,
+`مقبول`, `محدّد`. Native AX names matched, including the disabled Checkbox's
+localized name. Clicking the Arabic Checkbox changed its value to on; switching
+to French retained on. The disposable bundle and test processes were removed.
+The same names appeared in the current Web bundle's semantic tree and rendered
+Arabic story; its Checkbox also retained value 1 across the Arabic-to-French
+switch. The local Web tab and server were closed.
+
+This accepts only the primary input label slice. It does not close remaining
+story copy, generic locale runtime, VoiceOver or screen-reader acceptance,
+broader keyboard/IME behavior, or roadmap-wide production gates. The matching
+Wasm Headstart toolchain was read-only from worktree 4adc; outputs stayed in
+this worktree. A release candidate needs a fresh source-bound bundle after
+further source or documentation changes.

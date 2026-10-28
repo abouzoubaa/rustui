@@ -68,6 +68,7 @@ fn resolved_toggle_accessibility_label(
 
 pub struct ToggleView {
     label: SharedString,
+    label_message_id: Option<SharedString>,
     checked: Binding<bool>,
     id: Option<Identity>,
     disabled: bool,
@@ -81,6 +82,7 @@ impl ToggleView {
         let label = label.into();
         Self {
             label,
+            label_message_id: None,
             checked,
             id: None,
             disabled: false,
@@ -103,6 +105,24 @@ impl ToggleView {
     pub fn disabled(mut self, disabled: bool) -> Self {
         self.disabled = disabled;
         self
+    }
+
+    /// Resolves the visible label from the active catalog, retaining the constructor label as fallback.
+    pub fn localized_label(mut self, message_id: impl Into<SharedString>) -> Self {
+        let id = message_id.into();
+        assert!(
+            !id.trim().is_empty(),
+            "toggle label localization key must not be blank"
+        );
+        self.label_message_id = Some(id);
+        self
+    }
+
+    fn resolved_label(&self, localized_message: impl FnOnce(&str) -> String) -> SharedString {
+        self.label_message_id.as_ref().map_or_else(
+            || self.label.clone(),
+            |id| resolved_message_label(id, localized_message(id), &self.label),
+        )
     }
 
     pub fn accessibility_label(mut self, label: impl Into<SharedString>) -> Self {
@@ -137,9 +157,11 @@ impl ToggleView {
     }
 
     fn resolved_accessibility_label(&self, context: &RenderContext<'_>) -> SharedString {
-        resolved_toggle_accessibility_label(&self.label, self.accessibility_label.as_ref(), |id| {
-            context.localized_message(id)
-        })
+        resolved_toggle_accessibility_label(
+            &self.resolved_label(|id| context.localized_message(id)),
+            self.accessibility_label.as_ref(),
+            |id| context.localized_message(id),
+        )
     }
 
     pub fn tab_index(mut self, tab_index: isize) -> Self {
@@ -354,7 +376,7 @@ impl View for ToggleView {
         ThemedSwitch {
             id: identity.to_string(),
             base,
-            label: self.label.clone(),
+            label: self.resolved_label(|id| context.localized_message(id)),
             checked,
             disabled: self.disabled,
             width,
@@ -455,5 +477,21 @@ impl RenderOnce for ThemedSwitch {
             .gap(px(self.label_gap))
             .child(track)
             .child(div().text_color(self.label_color).child(self.label))
+    }
+}
+
+#[cfg(test)]
+mod visible_label_localization_tests {
+    use super::*;
+
+    #[test]
+    fn translated_label_uses_catalog_or_constructor_fallback() {
+        let binding = Binding::new(false, |value: &bool| *value, |value, next| *value = next);
+        let control = Toggle("Enabled", binding).localized_label("input.visible");
+        assert_eq!(
+            control.resolved_label(|_| "Activé".to_owned()).as_ref(),
+            "Activé"
+        );
+        assert_eq!(control.resolved_label(str::to_owned).as_ref(), "Enabled");
     }
 }

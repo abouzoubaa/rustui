@@ -350,22 +350,31 @@ impl View for StoryCanvas {
                 .child(
                     HStack::new()
                         .child(
-                            Toggle("Enabled", self.toggle_binding.clone()).id("story-input-toggle"),
+                            Toggle("Enabled", self.toggle_binding.clone())
+                                .id("story-input-toggle")
+                                .localized_label("lab-input-enabled"),
                         )
                         .child(
                             Checkbox("Accepted", self.checkbox_binding.clone())
-                                .id("story-input-checkbox"),
+                                .id("story-input-checkbox")
+                                .localized_label("lab-input-accepted"),
                         )
                         // Native acceptance probe: sharing the value makes an
                         // accidental disabled activation visible on both controls.
                         .child(
                             Checkbox("Accepted (disabled)", self.checkbox_binding.clone())
                                 .id("story-input-checkbox-disabled")
+                                .localized_label("lab-input-accepted-disabled")
                                 .accessibility_label("Accepted option (disabled)")
+                                .localized_accessibility_label(
+                                    "lab-input-accepted-disabled-accessibility",
+                                )
                                 .disabled(true),
                         )
                         .child(
-                            Radio("Selected", self.radio_binding.clone()).id("story-input-radio"),
+                            Radio("Selected", self.radio_binding.clone())
+                                .id("story-input-radio")
+                                .localized_label("lab-input-selected"),
                         )
                         .spacing(12.0)
                         .alignment(rustui::prelude::VerticalAlignment::Center),

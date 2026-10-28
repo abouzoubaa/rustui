@@ -155,6 +155,7 @@ fn resolved_message_label(id: &str, localized: String, fallback: &SharedString) 
 
 pub struct CheckboxView {
     label: SharedString,
+    label_message_id: Option<SharedString>,
     checked: Binding<bool>,
     id: Option<Identity>,
     disabled: bool,
@@ -170,6 +171,7 @@ impl CheckboxView {
         let label = label.into();
         Self {
             label,
+            label_message_id: None,
             checked,
             id: None,
             disabled: false,
@@ -192,6 +194,24 @@ impl CheckboxView {
     pub fn disabled(mut self, disabled: bool) -> Self {
         self.disabled = disabled;
         self
+    }
+
+    /// Resolves the visible label from the active catalog, retaining the constructor label as fallback.
+    pub fn localized_label(mut self, message_id: impl Into<SharedString>) -> Self {
+        let id = message_id.into();
+        assert!(
+            !id.trim().is_empty(),
+            "checkbox label localization key must not be blank"
+        );
+        self.label_message_id = Some(id);
+        self
+    }
+
+    fn resolved_label(&self, localized_message: impl FnOnce(&str) -> String) -> SharedString {
+        self.label_message_id.as_ref().map_or_else(
+            || self.label.clone(),
+            |id| resolved_message_label(id, localized_message(id), &self.label),
+        )
     }
 
     /// Overrides the accessible name with a non-empty label.
@@ -231,7 +251,7 @@ impl CheckboxView {
                 context.localized_message(id.as_ref()),
                 fallback,
             ),
-            None => self.label.clone(),
+            None => self.resolved_label(|id| context.localized_message(id)),
         };
         assert!(
             !label.trim().is_empty(),
@@ -411,7 +431,7 @@ impl View for CheckboxView {
             .when(checked, |this| {
                 this.child(div().text_color(foreground).text_size(px(12.0)).child("✓"))
             });
-        let mut label = div().child(self.label.clone());
+        let mut label = div().child(self.resolved_label(|id| context.localized_message(id)));
         if let Some(color) = label_disabled_color {
             label = label.text_color(color);
         } else if let Some(color) = style.colors.get("foreground") {
@@ -442,5 +462,21 @@ impl View for CheckboxView {
             })
             .on_change(move |state, _event, _window, cx| write(state == CheckboxState::Checked, cx))
             .into_any_element()
+    }
+}
+
+#[cfg(test)]
+mod visible_label_localization_tests {
+    use super::*;
+
+    #[test]
+    fn translated_label_uses_catalog_or_constructor_fallback() {
+        let binding = Binding::new(false, |value: &bool| *value, |value, next| *value = next);
+        let control = Checkbox("Accepted", binding).localized_label("input.visible");
+        assert_eq!(
+            control.resolved_label(|_| "Accepté".to_owned()).as_ref(),
+            "Accepté"
+        );
+        assert_eq!(control.resolved_label(str::to_owned).as_ref(), "Accepted");
     }
 }

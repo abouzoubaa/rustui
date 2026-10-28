@@ -53,6 +53,7 @@ fn resolved_message_label(
 
 pub struct RadioView {
     label: SharedString,
+    label_message_id: Option<SharedString>,
     selected: Binding<bool>,
     id: Option<Identity>,
     disabled: bool,
@@ -66,6 +67,7 @@ impl RadioView {
         let label = label.into();
         Self {
             label,
+            label_message_id: None,
             selected,
             id: None,
             disabled: false,
@@ -85,6 +87,24 @@ impl RadioView {
     pub fn disabled(mut self, disabled: bool) -> Self {
         self.disabled = disabled;
         self
+    }
+
+    /// Resolves the visible label from the active catalog, retaining the constructor label as fallback.
+    pub fn localized_label(mut self, message_id: impl Into<SharedString>) -> Self {
+        let id = message_id.into();
+        assert!(
+            !id.trim().is_empty(),
+            "radio label localization key must not be blank"
+        );
+        self.label_message_id = Some(id);
+        self
+    }
+
+    fn resolved_label(&self, localized_message: impl FnOnce(&str) -> String) -> SharedString {
+        self.label_message_id.as_ref().map_or_else(
+            || self.label.clone(),
+            |id| resolved_message_label(localized_message(id).into(), id, &self.label),
+        )
     }
 
     pub fn accessibility_label(mut self, label: impl Into<SharedString>) -> Self {
@@ -124,7 +144,7 @@ impl RadioView {
             Some(RadioAccessibilityLabel::Message { id, fallback }) => {
                 resolved_message_label(localized_message(id.as_ref()).into(), id, fallback)
             }
-            None => self.label.clone(),
+            None => self.resolved_label(localized_message),
         };
         assert!(
             !label.trim().is_empty(),
@@ -370,7 +390,7 @@ impl View for RadioView {
             .when(selected, |this| {
                 this.child(div().size(px(6.0)).rounded(px(3.0)).bg(foreground))
             });
-        let mut label = div().child(self.label.clone());
+        let mut label = div().child(self.resolved_label(|id| context.localized_message(id)));
         if let Some(color) = label_color {
             label = label.text_color(color);
         }
@@ -401,5 +421,23 @@ impl View for RadioView {
             })
             .on_change(move |selected, _event, _window, cx| write(selected, cx))
             .into_any_element()
+    }
+}
+
+#[cfg(test)]
+mod visible_label_localization_tests {
+    use super::*;
+
+    #[test]
+    fn translated_label_uses_catalog_or_constructor_fallback() {
+        let binding = Binding::new(false, |value: &bool| *value, |value, next| *value = next);
+        let control = Radio("Selected", binding).localized_label("input.visible");
+        assert_eq!(
+            control
+                .resolved_label(|_| "Sélectionné".to_owned())
+                .as_ref(),
+            "Sélectionné"
+        );
+        assert_eq!(control.resolved_label(str::to_owned).as_ref(), "Selected");
     }
 }
