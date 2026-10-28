@@ -1100,6 +1100,8 @@ struct ListReconciliationGallery {
     rows: Vec<String>,
     #[state(None)]
     selection: Option<usize>,
+    #[state(true)]
+    searchable: bool,
 }
 
 fn list_rows() -> Vec<String> {
@@ -1125,6 +1127,10 @@ impl ListReconciliationGallery {
     fn restore_rows(&mut self) {
         self.rows = list_rows();
     }
+
+    fn toggle_search(&mut self) {
+        self.searchable = !self.searchable;
+    }
 }
 
 impl View for ListReconciliationGallery {
@@ -1143,10 +1149,15 @@ impl View for ListReconciliationGallery {
                     .id("list-reconciliation-restore-rows"),
             )
             .child(
+                Button("Toggle search", self.action(Self::toggle_search))
+                    .id("list-reconciliation-toggle-search")
+                    .localized_label("lab-list-toggle-search"),
+            )
+            .child(
                 List(self.rows().clone(), self.selection_binding())
                     .id("story-list-components")
                     .height(260.0)
-                    .searchable(true)
+                    .searchable(self.searchable())
                     .search_placeholder("Find a component"),
             )
     }

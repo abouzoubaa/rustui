@@ -1,4 +1,5 @@
 lab-title = Terrain de jeu RustUI
+lab-list-toggle-search = Activer ou désactiver la recherche
 lab-sidebar-components = COMPOSANTS
 lab-sidebar-framework-demos = DÉMOS DU FRAMEWORK
 lab-search-placeholder = Rechercher des composants et des exemples

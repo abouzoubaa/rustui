@@ -1,4 +1,5 @@
 lab-title = ساحة تجارب RustUI
+lab-list-toggle-search = تبديل البحث
 lab-sidebar-components = المكوّنات
 lab-sidebar-framework-demos = أمثلة إطار العمل
 lab-search-placeholder = ابحث عن المكوّنات والأمثلة

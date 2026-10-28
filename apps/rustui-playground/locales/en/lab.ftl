@@ -1,4 +1,5 @@
 lab-title = RustUI Playground
+lab-list-toggle-search = Toggle search
 lab-sidebar-components = COMPONENTS
 lab-sidebar-framework-demos = FRAMEWORK DEMOS
 lab-search-placeholder = Search components and stories
