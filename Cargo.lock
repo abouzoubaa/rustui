@@ -5835,6 +5835,7 @@ version = "0.1.0"
 dependencies = [
  "fluent-bundle",
  "fluent-syntax",
+ "icu_calendar",
  "icu_datetime",
  "icu_decimal",
  "icu_locale_core",

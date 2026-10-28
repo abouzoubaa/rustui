@@ -14,6 +14,7 @@ fluent-syntax = "=0.12.0"
 intl-memoizer = "=0.5.3"
 unic-langid = "=0.9.6"
 icu_locale_core = { version = "=2.4.0", default-features = false }
+icu_calendar = { version = "=2.4.0", default-features = false, features = ["compiled_data"] }
 icu_decimal = { version = "=2.4.0", default-features = false, features = ["compiled_data", "ryu"] }
 icu_datetime = { version = "=2.4.0", default-features = false, features = ["compiled_data"] }
 # Fluent's concurrent memoizer requires ICU data payloads to use Arc.

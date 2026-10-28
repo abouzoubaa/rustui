@@ -4,6 +4,7 @@
 //! This data contract is independent of Fluent's plural-selector data.
 use std::{error::Error, fmt, str::FromStr};
 
+use icu_calendar::{types::Weekday as IcuWeekday, week::WeekInformation};
 use icu_datetime::{
     DateTimeFormatter, NoCalendarFormatter, fieldsets,
     input::{Date, DateTime, Time},
@@ -33,6 +34,37 @@ pub struct CivilDate {
     pub year: i32,
     pub month: u8,
     pub day: u8,
+}
+
+/// The first day of a locale's week, independent of a rendering backend.
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub enum Weekday {
+    Monday,
+    Tuesday,
+    Wednesday,
+    Thursday,
+    Friday,
+    Saturday,
+    Sunday,
+}
+
+#[cfg(test)]
+mod week_tests {
+    use super::*;
+
+    #[test]
+    fn week_start_follows_region_and_unicode_override() {
+        for (locale, expected) in [
+            ("en-US", Weekday::Sunday),
+            ("fr-FR", Weekday::Monday),
+            ("ar-EG", Weekday::Saturday),
+            ("en-US-u-fw-wed", Weekday::Wednesday),
+        ] {
+            let locale = Locale::parse(locale).unwrap();
+            let formatter = LocaleFormatter::try_new(&locale).unwrap();
+            assert_eq!(formatter.first_weekday().unwrap(), expected, "{locale}");
+        }
+    }
 }
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub struct CivilTime {
@@ -67,6 +99,19 @@ pub struct LocaleFormatter {
     decimal: DecimalFormatter,
 }
 impl LocaleFormatter {
+    /// Returns the CLDR week start, respecting locale region and Unicode overrides.
+    pub fn first_weekday(&self) -> Result<Weekday, LocaleFormatError> {
+        let info = WeekInformation::try_new(self.locale.clone().into()).map_err(error)?;
+        Ok(match info.first_weekday {
+            IcuWeekday::Monday => Weekday::Monday,
+            IcuWeekday::Tuesday => Weekday::Tuesday,
+            IcuWeekday::Wednesday => Weekday::Wednesday,
+            IcuWeekday::Thursday => Weekday::Thursday,
+            IcuWeekday::Friday => Weekday::Friday,
+            IcuWeekday::Saturday => Weekday::Saturday,
+            IcuWeekday::Sunday => Weekday::Sunday,
+        })
+    }
     pub fn try_new(locale: &Locale) -> Result<Self, LocaleFormatError> {
         let locale = IcuLocale::from_str(locale.as_str()).map_err(error)?;
         icu_decimal::DecimalFormatterPreferences::from_locale_strict(&locale)

@@ -42,5 +42,6 @@ pub use validation::{CatalogValidation, validate_catalogs};
 
 pub use fluent::FluentFormatError;
 pub use locale_runtime::{
-    CivilDate, CivilDateTime, CivilTime, DateLength, LocaleFormatError, LocaleFormatter, TimeFields,
+    CivilDate, CivilDateTime, CivilTime, DateLength, LocaleFormatError, LocaleFormatter,
+    TimeFields, Weekday,
 };
