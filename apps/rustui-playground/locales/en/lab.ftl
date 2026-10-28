@@ -436,3 +436,10 @@ lab-feedback-kind-success = Success
 lab-feedback-kind-warning = Warning
 lab-feedback-kind-error = Error
 lab-feedback-retry = Retry
+
+lab-feedback-empty-title = No saved items
+lab-feedback-empty-detail = Saved items will appear here.
+lab-feedback-error-title = Could not load items
+lab-feedback-error-detail = Check your connection and retry.
+lab-feedback-empty-a11y = Saved items are empty
+lab-feedback-error-a11y = Item loading failed

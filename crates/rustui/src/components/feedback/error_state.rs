@@ -16,8 +16,11 @@ use crate::{
 pub struct ErrorStateView {
     title: SharedString,
     detail: Option<SharedString>,
+    title_key: Option<SharedString>,
+    detail_key: Option<SharedString>,
     id: Option<Identity>,
     accessibility_label: ErrorStateAccessibilityLabel,
+    accessibility_explicit: bool,
 }
 
 #[derive(Clone)]
@@ -39,14 +42,33 @@ impl ErrorStateView {
         Self {
             title: title.clone(),
             detail: None,
+            title_key: None,
+            detail_key: None,
             id: None,
             accessibility_label: ErrorStateAccessibilityLabel::Literal(title),
+            accessibility_explicit: false,
         }
     }
 
     /// Adds supporting error information beneath the title.
     pub fn detail(mut self, detail: impl Into<SharedString>) -> Self {
         self.detail = Some(detail.into());
+        self
+    }
+
+    /// Resolves the visible title in the active locale, falling back to the literal title.
+    pub fn localized_title(mut self, key: impl Into<SharedString>) -> Self {
+        let key = key.into();
+        assert!(!key.trim().is_empty(), "localization key must not be empty");
+        self.title_key = Some(key);
+        self
+    }
+
+    /// Resolves the supporting detail in the active locale when detail is present.
+    pub fn localized_detail(mut self, key: impl Into<SharedString>) -> Self {
+        let key = key.into();
+        assert!(!key.trim().is_empty(), "localization key must not be empty");
+        self.detail_key = Some(key);
         self
     }
 
@@ -63,6 +85,7 @@ impl ErrorStateView {
             !label.trim().is_empty(),
             "ErrorState accessibility label must not be empty"
         );
+        self.accessibility_explicit = true;
         self.accessibility_label = ErrorStateAccessibilityLabel::Literal(label);
         self
     }
@@ -80,6 +103,7 @@ impl ErrorStateView {
                 fallback: label, ..
             } => label.clone(),
         };
+        self.accessibility_explicit = true;
         self.accessibility_label = ErrorStateAccessibilityLabel::Message { id, fallback };
         self
     }
@@ -130,8 +154,14 @@ impl View for ErrorStateView {
         let theme = gpui_component::Theme::global(context.app());
         let danger = theme.colors.danger;
         let muted_foreground = theme.colors.muted_foreground;
-        let accessibility_label =
-            self.resolved_accessibility_label(|id| context.localized_message(id));
+        let title = super::resolve_text(&self.title, self.title_key.as_ref(), |key| {
+            context.localized_message(key)
+        });
+        let accessibility_label = if self.accessibility_explicit {
+            self.resolved_accessibility_label(|id| context.localized_message(id))
+        } else {
+            title.clone()
+        };
         let mut state = div()
             .id(self.identity().to_string())
             .role(gpui::Role::Alert)
@@ -142,11 +172,14 @@ impl View for ErrorStateView {
             .text_color(danger);
 
         state = state.child(
-            Text(self.title.clone())
+            Text(title)
                 .font_weight(TextWeight::Semibold)
                 .into_element(context),
         );
         if let Some(detail) = &self.detail {
+            let detail = super::resolve_text(detail, self.detail_key.as_ref(), |key| {
+                context.localized_message(key)
+            });
             state = state.aria_description(detail.clone());
             state = state.child(
                 div()

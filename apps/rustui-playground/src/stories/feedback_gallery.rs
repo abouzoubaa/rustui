@@ -71,10 +71,10 @@ impl View for FeedbackGallery {
                         .spacing(10.0)
                         .child(
                             Container(
-                                EmptyState("No saved items")
-                                    .detail("Saved items will appear here.")
+                                EmptyState("No saved items").localized_title("lab-feedback-empty-title")
+                                    .detail("Saved items will appear here.").localized_detail("lab-feedback-empty-detail")
                                     .id("feedback-empty-state")
-                                    .accessibility_label("Saved items are empty"),
+                                    .localized_accessibility_label("lab-feedback-empty-a11y"),
                             )
                             .width(196.0)
                             .height(150.0)
@@ -86,10 +86,10 @@ impl View for FeedbackGallery {
                                 VStack::new()
                                     .spacing(8.0)
                                     .child(
-                                        ErrorState("Could not load items")
-                                            .detail("Check your connection and retry.")
+                                        ErrorState("Could not load items").localized_title("lab-feedback-error-title")
+                                            .detail("Check your connection and retry.").localized_detail("lab-feedback-error-detail")
                                             .id("feedback-error-state")
-                                            .accessibility_label("Item loading failed"),
+                                            .localized_accessibility_label("lab-feedback-error-a11y"),
                                     )
                                     .child(
                                         Button("Retry", target.action(Self::retry))

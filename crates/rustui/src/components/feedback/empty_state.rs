@@ -16,6 +16,8 @@ use crate::{
 pub struct EmptyStateView {
     title: SharedString,
     detail: Option<SharedString>,
+    title_key: Option<SharedString>,
+    detail_key: Option<SharedString>,
     id: Option<Identity>,
     accessibility_label: Option<SharedString>,
     localized_accessibility_label: Option<(SharedString, SharedString)>,
@@ -26,6 +28,8 @@ impl EmptyStateView {
         Self {
             title: title.into(),
             detail: None,
+            title_key: None,
+            detail_key: None,
             id: None,
             accessibility_label: None,
             localized_accessibility_label: None,
@@ -35,6 +39,22 @@ impl EmptyStateView {
     /// Adds supporting text beneath the title.
     pub fn detail(mut self, detail: impl Into<SharedString>) -> Self {
         self.detail = Some(detail.into());
+        self
+    }
+
+    /// Resolves the visible title in the active locale, falling back to the literal title.
+    pub fn localized_title(mut self, key: impl Into<SharedString>) -> Self {
+        let key = key.into();
+        assert!(!key.trim().is_empty(), "localization key must not be empty");
+        self.title_key = Some(key);
+        self
+    }
+
+    /// Resolves the supporting detail in the active locale when detail is present.
+    pub fn localized_detail(mut self, key: impl Into<SharedString>) -> Self {
+        let key = key.into();
+        assert!(!key.trim().is_empty(), "localization key must not be empty");
+        self.detail_key = Some(key);
         self
     }
 
@@ -127,8 +147,19 @@ impl View for EmptyStateView {
         let theme = gpui_component::Theme::global(context.app());
         let foreground = theme.colors.foreground;
         let muted_foreground = theme.colors.muted_foreground;
+        let title = super::resolve_text(&self.title, self.title_key.as_ref(), |key| {
+            context.localized_message(key)
+        });
         let accessibility_label =
-            self.resolved_accessibility_label(|id| context.localized_message(id));
+            if self.accessibility_label.is_none() && self.localized_accessibility_label.is_none() {
+                title.clone()
+            } else {
+                self.resolved_accessibility_label(|id| context.localized_message(id))
+            };
+        assert!(
+            !accessibility_label.trim().is_empty(),
+            "EmptyState must provide a non-empty accessible name"
+        );
         let mut state = div()
             .id(self.identity().to_string())
             .role(gpui::Role::Status)
@@ -144,11 +175,14 @@ impl View for EmptyStateView {
             .text_color(foreground);
 
         state = state.child(
-            Text(self.title.clone())
+            Text(title)
                 .font_weight(TextWeight::Semibold)
                 .into_element(context),
         );
         if let Some(detail) = &self.detail {
+            let detail = super::resolve_text(detail, self.detail_key.as_ref(), |key| {
+                context.localized_message(key)
+            });
             state = state.aria_description(detail.clone());
             state = state.child(
                 div()

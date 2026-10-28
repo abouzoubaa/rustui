@@ -1,3 +1,7 @@
+## Current checkpoint — 2026-10-28: localized feedback states
+
+- **R13 partial source implementation:** RustUI EmptyState and ErrorState now support localized visible titles and details, falling back to their supplied literal text for missing or blank translations. Default accessible names follow the resolved title; explicit names retain their existing precedence. Playground uses these APIs for its English, French and Arabic empty/error examples. The feedback component suite passed 44/44, the Playground locale test passed 1/1, and the locale validator passed. Native/browser rendered and RTL acceptance remain open; toast messages and other gallery copy still need localization. This does not close R13.
+
 ## Current checkpoint — 2026-10-28: feedback gallery locale copy
 
 - **R13 partial source implementation:** The feedback gallery heading, persistent-toast button, five kind/retry buttons and two activation counters now resolve in English, French and Arabic. A focused test passed 1/1 for numeric interpolation in all three locales; the Playground Headstart check and runtime locale validator passed. Remaining feedback content, including toast and empty/error messages, is still English. Native/browser presentation and RTL acceptance remain open; this does not close R13.

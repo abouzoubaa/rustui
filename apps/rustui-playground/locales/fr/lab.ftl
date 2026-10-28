@@ -436,3 +436,10 @@ lab-feedback-kind-success = Réussite
 lab-feedback-kind-warning = Avertissement
 lab-feedback-kind-error = Erreur
 lab-feedback-retry = Réessayer
+
+lab-feedback-empty-title = Aucun élément enregistré
+lab-feedback-empty-detail = Les éléments enregistrés apparaîtront ici.
+lab-feedback-error-title = Impossible de charger les éléments
+lab-feedback-error-detail = Vérifiez votre connexion et réessayez.
+lab-feedback-empty-a11y = Aucun élément enregistré
+lab-feedback-error-a11y = Échec du chargement des éléments

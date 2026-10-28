@@ -436,3 +436,10 @@ lab-feedback-kind-success = نجاح
 lab-feedback-kind-warning = تحذير
 lab-feedback-kind-error = خطأ
 lab-feedback-retry = إعادة المحاولة
+
+lab-feedback-empty-title = لا توجد عناصر محفوظة
+lab-feedback-empty-detail = ستظهر العناصر المحفوظة هنا.
+lab-feedback-error-title = تعذر تحميل العناصر
+lab-feedback-error-detail = تحقق من اتصالك وحاول مجددًا.
+lab-feedback-empty-a11y = لا توجد عناصر محفوظة
+lab-feedback-error-a11y = فشل تحميل العناصر
