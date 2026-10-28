@@ -3,7 +3,7 @@ import assert from 'node:assert/strict';
 import { readFile } from 'node:fs/promises';
 
 const source = await readFile(new URL('../theme-reload.js', import.meta.url));
-const { fetchTheme } = await import(`data:text/javascript;base64,${source.toString('base64')}`);
+const { fetchTheme, startThemeFetch } = await import(`data:text/javascript;base64,${source.toString('base64')}`);
 
 test('fetches uncached same-origin UTF-8 theme data', async () => {
   const result = await fetchTheme(async (url, options) => {
@@ -28,4 +28,19 @@ test('aborts a request that does not complete', async () => {
   await assert.rejects(fetchTheme((_url, { signal }) => new Promise((_resolve, reject) => {
     signal.addEventListener('abort', () => reject(new Error('timed out')), { once: true });
   }), 5), /timed out/);
+});
+
+test('owner cancellation aborts a pending request immediately', async () => {
+  let signal;
+  const request = startThemeFetch((_url, options) => {
+    signal = options.signal;
+    return new Promise((_resolve, reject) => {
+      signal.addEventListener('abort', () => reject(new Error('canceled')), { once: true });
+    });
+  });
+  assert.equal(signal.aborted, false);
+  request.cancel();
+  assert.equal(signal.aborted, true);
+  await assert.rejects(request.promise, /canceled/);
+  request.cancel();
 });

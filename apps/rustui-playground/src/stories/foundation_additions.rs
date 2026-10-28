@@ -22,13 +22,29 @@ use rustui::theme::{activate_theme, parse_theme};
 #[cfg(target_family = "wasm")]
 #[wasm_bindgen::prelude::wasm_bindgen(module = "/web/theme-reload.js")]
 extern "C" {
-    #[wasm_bindgen::prelude::wasm_bindgen(js_name = fetchTheme)]
-    fn fetch_theme() -> js_sys::Promise;
+    type WebThemeRequest;
+    #[wasm_bindgen::prelude::wasm_bindgen(js_name = startThemeFetch)]
+    fn start_theme_fetch() -> WebThemeRequest;
+    #[wasm_bindgen::prelude::wasm_bindgen(method, getter)]
+    fn promise(this: &WebThemeRequest) -> js_sys::Promise;
+    #[wasm_bindgen::prelude::wasm_bindgen(method)]
+    fn cancel(this: &WebThemeRequest);
+}
+
+#[cfg(target_family = "wasm")]
+struct ThemeRequestGuard(WebThemeRequest);
+
+#[cfg(target_family = "wasm")]
+impl Drop for ThemeRequestGuard {
+    fn drop(&mut self) {
+        self.0.cancel();
+    }
 }
 
 #[cfg(target_family = "wasm")]
 async fn load_web_theme() -> Result<String, String> {
-    wasm_bindgen_futures::JsFuture::from(fetch_theme())
+    let request = ThemeRequestGuard(start_theme_fetch());
+    wasm_bindgen_futures::JsFuture::from(request.0.promise())
         .await
         .map_err(|error| error.as_string().unwrap_or_else(|| format!("{error:?}")))?
         .as_string()

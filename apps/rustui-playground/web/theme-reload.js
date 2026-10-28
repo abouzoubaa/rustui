@@ -1,6 +1,5 @@
 // Theme data is same-origin and bounded before it reaches the Rust parser.
-export async function fetchTheme(fetcher = fetch, timeoutMs = 10_000) {
-  const controller = new AbortController();
+export async function fetchTheme(fetcher = fetch, timeoutMs = 10_000, controller = new AbortController()) {
   const timeout = setTimeout(() => controller.abort(), timeoutMs);
   try {
     const response = await fetcher('assets/macos27.json', {
@@ -31,4 +30,13 @@ export async function fetchTheme(fetcher = fetch, timeoutMs = 10_000) {
   } finally {
     clearTimeout(timeout);
   }
+}
+
+// The Rust task owns this handle and cancels it when the task is dropped.
+export function startThemeFetch(fetcher = fetch, timeoutMs = 10_000) {
+  const controller = new AbortController();
+  return {
+    promise: fetchTheme(fetcher, timeoutMs, controller),
+    cancel() { controller.abort(); },
+  };
 }
