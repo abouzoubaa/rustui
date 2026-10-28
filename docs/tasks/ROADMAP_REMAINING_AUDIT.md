@@ -1,3 +1,8 @@
+## Current checkpoint — 2026-10-28: theme parser measurement
+
+- **R26, bounded local performance evidence:** In a release-profile, locked, offline Headstart run at source commit `3028f2b1`, the 821,287-byte bundled macOS theme was parsed and validated 20 times per path, alternating execution order after one warmup each. Baseline median/p95 were 237,706/240,669 µs; the duplicate-key-checking parser median/p95 were 240,013/244,667 µs. This is a single-machine micro-measurement, not an app responsiveness benchmark or performance acceptance; no general overhead guarantee follows from it.
+- Full build/run log, input hashes, and the temporary measurement source are retained under `target/headstart/evidence/theme-parse-measurement-*20261028*`. The temporary example was removed after preserving its source. Broader theme and release performance gates remain open.
+
 # Production consolidation — 2026-10-26
 
 Writing session: thread `01a172cd-8a21-73f1-82cd-62d451c71ec9`, claim
