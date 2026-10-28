@@ -44,3 +44,27 @@ test('owner cancellation aborts a pending request immediately', async () => {
   await assert.rejects(request.promise, /canceled/);
   request.cancel();
 });
+
+test('decodes split UTF-8 and cancels while the response body is stalled', async () => {
+  const bytes = new TextEncoder().encode('عربي');
+  const chunks = new ReadableStream({
+    start(controller) {
+      for (const byte of bytes) controller.enqueue(Uint8Array.of(byte));
+      controller.close();
+    },
+  });
+  assert.equal(await fetchTheme(async () => new Response(chunks)), 'عربي');
+
+  let started;
+  const reading = new Promise(resolve => { started = resolve; });
+  const request = startThemeFetch(async (_url, { signal }) => new Response(new ReadableStream({
+    start(controller) {
+      controller.enqueue(Uint8Array.of(65));
+      signal.addEventListener('abort', () => controller.error(new Error('body canceled')), { once: true });
+    },
+    pull() { started(); },
+  })));
+  await reading;
+  request.cancel();
+  await assert.rejects(request.promise, /body canceled/);
+});
