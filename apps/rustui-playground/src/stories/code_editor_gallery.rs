@@ -94,11 +94,7 @@ impl View for CodeEditorGallery {
         VStack::new()
             .spacing(8.0)
             .child(LocalizedText("lab-code-editor-title"))
-            .child(LocalizedText(if cfg!(target_family = "wasm") {
-                "lab-code-editor-syntax-status"
-            } else {
-                "lab-code-editor-syntax-native"
-            }))
+            .child(LocalizedText("lab-code-editor-syntax-native"))
             .child(Text(format!(
                 "Language: {} · lines: {} · readonly: {} · disabled: {} · mounted: {}",
                 language,

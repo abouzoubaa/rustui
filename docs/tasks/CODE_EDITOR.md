@@ -2,12 +2,14 @@
 
 ## Current syntax support — 2026-10-28
 
-Native RustUI builds enable the pinned Components Rust and JSON grammars. A
-focused test parses representative Rust and JSON and verifies their highlight
-queries return styles; this is source evidence, not a native visual acceptance
-result. The Web build keeps syntax highlighting disabled and reports that
-limitation in Playground. No language server is configured. The earlier proposal
-and no-highlighting observations below describe the previous configuration.
+RustUI enables the pinned Components Rust and JSON grammars on native and Web.
+A focused native test parses both languages and verifies highlight styles. The
+Web Playground displayed colored Rust and JSON, and retained coloring after an
+edit, in one browser run. This is bounded evidence; broader editor acceptance,
+large-file responsiveness, and native visual acceptance remain open. The Web
+parser uses a thread-local registry and performs diff preparation on the browser
+executor. No language server is configured. The earlier proposal and
+no-highlighting observations below describe the previous configuration.
 
 `CodeEditor(id, Binding<String>)` adapts the pinned GPUI Components `Editor`
 and `EditorState`. It uses the enclosing component's retained registry and

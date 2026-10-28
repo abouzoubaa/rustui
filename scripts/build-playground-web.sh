@@ -5,6 +5,15 @@ REPO_ROOT="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")/.." && pwd)"
 export CARGO_TARGET_DIR="${CARGO_TARGET_DIR:-$REPO_ROOT/target/headstart/x1a-wasm}"
 export RUSTUI_HEADSTART_ROOT="${RUSTUI_HEADSTART_ROOT:-$REPO_ROOT/target/headstart/wasm-root}"
 export RUSTUI_REMAP_BUILD_PATHS="${RUSTUI_REMAP_BUILD_PATHS:-1}"
+# The grammar C sources use the headers shipped by tree-sitter-language.
+# Apple Clang does not include a WebAssembly backend; prefer an installed LLVM.
+if [ -z "${CC_wasm32_unknown_unknown:-}" ] && command -v brew >/dev/null 2>&1; then
+  LLVM_CLANG="$(brew --prefix llvm@22 2>/dev/null || true)/bin/clang"
+  if [ -x "$LLVM_CLANG" ]; then
+    export CC_wasm32_unknown_unknown="$LLVM_CLANG"
+  fi
+fi
+export CFLAGS_wasm32_unknown_unknown="${CFLAGS_wasm32_unknown_unknown:-} -I$REPO_ROOT/vendor/tree-sitter-language-0.1.9/wasm/include"
 
 if [ -x "$REPO_ROOT/target/headstart/tools/bin/wasm-bindgen" ]; then
   export PATH="$REPO_ROOT/target/headstart/tools/bin:$PATH"

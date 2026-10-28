@@ -13,15 +13,12 @@ rustui-i18n.workspace = true
 rustui-macros.workspace = true
 gpui.workspace = true
 gpui_platform.workspace = true
-gpui-component.workspace = true
+gpui-component = { workspace = true, features = ["tree-sitter-rust"] }
 gpui-base.workspace = true
 gpui-kit-assets.workspace = true
 serde.workspace = true
 serde_json.workspace = true
 chrono.workspace = true
-
-[target.'cfg(not(target_family = "wasm"))'.dependencies]
-gpui-component = { workspace = true, features = ["tree-sitter-rust"] }
 
 [target.'cfg(target_family = "wasm")'.dependencies]
 gpui_web = { package = "gpui-pre-web", version = "=0.3.9", default-features = false }
