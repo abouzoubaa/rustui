@@ -650,6 +650,38 @@ mod tests {
         assert_eq!(decode(&session.to_string()).unwrap_err(), "invalid_session");
     }
     #[test]
+    fn request_limits_count_utf8_bytes_and_accept_exact_boundaries() {
+        let mut request = json!({
+            "protocol": PROTOCOL,
+            "version": VERSION,
+            "client": CONSUMER,
+            "request": "r".repeat(128),
+            "session": null,
+            "sequence": u64::MAX.to_string(),
+            "command": {"kind": "mount", "source": "é".repeat(500_000)}
+        });
+        let mut wire = request.to_string();
+        assert!(wire.len() < MAX_MESSAGE_BYTES);
+        wire.push_str(&" ".repeat(MAX_MESSAGE_BYTES - wire.len()));
+        assert!(decode(&wire).is_ok(), "the exact byte limit is accepted");
+        wire.push(' ');
+        assert_eq!(decode(&wire).unwrap_err(), "message_too_large");
+
+        request["command"]["source"] = json!("");
+        request["request"] = json!("r".repeat(129));
+        assert_eq!(
+            decode(&request.to_string()).unwrap_err(),
+            "invalid_identity"
+        );
+        request["request"] = json!("r");
+        request["sequence"] = json!("18446744073709551616");
+        assert_eq!(
+            decode(&request.to_string()).unwrap_err(),
+            "invalid_identity"
+        );
+    }
+
+    #[test]
     fn generic_catalog_mount_edit_export_and_replays_use_existing_host() {
         let mut host = PreviewHost::new(registry());
         let mut session = Session::default();
