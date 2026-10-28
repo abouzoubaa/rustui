@@ -290,6 +290,98 @@ mod tests {
         assert!(window.update(|_, cx| host.read(cx).tasks.running.is_empty()));
     }
 
+    #[derive(Default)]
+    struct RaceProbe {
+        events: Vec<AsyncState<String, String>>,
+    }
+
+    impl View for RaceProbe {
+        fn body(&self) -> impl View {
+            crate::view::EmptyView
+        }
+    }
+
+    fn apply_race(probe: &mut RaceProbe, state: AsyncState<String, String>) -> bool {
+        probe.events.push(state);
+        true
+    }
+
+    #[gpui::test]
+    fn completed_old_work_cannot_overwrite_a_replacement(cx: &mut gpui::TestAppContext) {
+        use std::sync::{
+            Arc, Mutex,
+            atomic::{AtomicBool, Ordering},
+        };
+        use std::task::{Poll, Waker};
+
+        cx.update(gpui_component::init);
+        let (host, window) =
+            cx.add_window_view(|_, cx| ComponentHost::new(RaceProbe::default(), cx));
+        let owner = OwnerTask::new(host.downgrade());
+        let gate = Arc::new(Mutex::new((false, None::<Waker>)));
+        let completed = Arc::new(AtomicBool::new(false));
+        let work_gate = gate.clone();
+        let work_completed = completed.clone();
+        let old = owner.start(
+            "request",
+            move || {
+                let gate = work_gate.clone();
+                let completed = work_completed.clone();
+                async move {
+                    std::future::poll_fn(|cx| {
+                        let mut state = gate.lock().unwrap();
+                        if state.0 {
+                            completed.store(true, Ordering::SeqCst);
+                            Poll::Ready(Ok::<_, String>("old".to_owned()))
+                        } else {
+                            state.1 = Some(cx.waker().clone());
+                            Poll::Pending
+                        }
+                    })
+                    .await
+                }
+            },
+            apply_race,
+        );
+        window.update(|window, cx| old.dispatch_keyboard(window, cx));
+        window.cx.run_until_parked();
+        let wake = {
+            let mut state = gate.lock().unwrap();
+            state.0 = true;
+            state.1.take().expect("old task was polled")
+        };
+        wake.wake();
+        // Poll only until the background result exists; do not run the queued
+        // foreground completion before the replacement action starts.
+        for _ in 0..100 {
+            if completed.load(Ordering::SeqCst) {
+                break;
+            }
+            assert!(window.cx.executor().tick(), "old background task must run");
+        }
+        assert!(completed.load(Ordering::SeqCst));
+        assert_eq!(
+            window.update(|_, cx| host.read(cx).component().events.clone()),
+            vec![AsyncState::Loading]
+        );
+        let replacement = owner.start(
+            "request",
+            || async { Ok::<_, String>("new".to_owned()) },
+            apply_race,
+        );
+        window.update(|window, cx| replacement.dispatch_keyboard(window, cx));
+        window.cx.run_until_parked();
+        assert_eq!(
+            window.update(|_, cx| host.read(cx).component().events.clone()),
+            vec![
+                AsyncState::Loading,
+                AsyncState::Loading,
+                AsyncState::Success("new".to_owned())
+            ]
+        );
+        assert!(window.update(|_, cx| host.read(cx).tasks.running.is_empty()));
+    }
+
     #[gpui::test]
     fn canceling_one_owner_task_keeps_another_running(cx: &mut gpui::TestAppContext) {
         use std::sync::{
