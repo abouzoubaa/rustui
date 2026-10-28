@@ -2,6 +2,7 @@
 export async function fetchTheme(fetcher = fetch, timeoutMs = 10_000, controller = new AbortController(), cache = null) {
   const timeout = setTimeout(() => controller.abort(), timeoutMs);
   try {
+    let generation = cache ? (cache.generation = {}) : null;
     const previous = cache && cache.etag ? { etag: cache.etag, text: cache.text } : null;
     const options = {
       cache: cache ? 'reload' : 'no-store', credentials: 'same-origin', redirect: 'error', signal: controller.signal,
@@ -13,11 +14,15 @@ export async function fetchTheme(fetcher = fetch, timeoutMs = 10_000, controller
           !/\bno-store\b/i.test(response.headers.get('cache-control') || '')) {
         return previous.text;
       }
-      if (cache) clearThemeCache(cache);
+      if (cache && cache.generation === generation) {
+        clearThemeCache(cache);
+        generation = cache.generation;
+      }
       response = await fetcher('assets/macos27.json', { ...options, headers: {} });
     }
-    if (cache && /\bno-store\b/i.test(response.headers.get('cache-control') || '')) {
+    if (cache && cache.generation === generation && /\bno-store\b/i.test(response.headers.get('cache-control') || '')) {
       clearThemeCache(cache);
+      generation = cache.generation;
     }
     if (!response.ok) throw new Error(`Theme request failed (${response.status})`);
     if (!response.body) throw new Error('Theme response has no body');
@@ -42,7 +47,7 @@ export async function fetchTheme(fetcher = fetch, timeoutMs = 10_000, controller
         text += decoder.decode(value, { stream: true });
       }
       text += decoder.decode();
-      if (cache) {
+      if (cache && cache.generation === generation) {
         const etag = response.headers.get('etag');
         const noStore = /\bno-store\b/i.test(response.headers.get('cache-control') || '');
         if (!noStore && etag && /^"[\x21\x23-\x7e\x80-\xff]*"$/.test(etag)) {
@@ -74,10 +79,11 @@ export function startThemeFetch(fetcher = fetch, timeoutMs = 10_000) {
 }
 
 export function createThemeCache() {
-  return { etag: null, text: null };
+  return { etag: null, text: null, generation: {} };
 }
 
 export function clearThemeCache(cache) {
+  cache.generation = {};
   cache.etag = null;
   cache.text = null;
 }

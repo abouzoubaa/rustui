@@ -98,6 +98,48 @@ test('clears the cached body before rejecting a no-store oversized response', as
   assert.equal(cache.text, null);
 });
 
+test('a late request cannot repopulate a cleared and reused owner cache', async () => {
+  const cache = createThemeCache();
+  let finishOld;
+  const old = startCachedThemeFetch(cache, () => new Promise(resolve => { finishOld = resolve; }));
+  old.cancel();
+  clearThemeCache(cache);
+  await startCachedThemeFetch(cache, async () => new Response('new', {
+    headers: { etag: '"new"' },
+  })).promise;
+  finishOld(new Response('old', { headers: { etag: '"old"' } }));
+  await old.promise;
+  assert.equal(cache.etag, '"new"');
+  assert.equal(cache.text, 'new');
+});
+
+test('a stale no-store response cannot clear a newer cache', async () => {
+  const cache = createThemeCache();
+  let finishOld;
+  const old = startCachedThemeFetch(cache, () => new Promise(resolve => { finishOld = resolve; }));
+  clearThemeCache(cache);
+  await startCachedThemeFetch(cache, async () => new Response('new', {
+    headers: { etag: '"new"' },
+  })).promise;
+  finishOld(new Response('old', { headers: { 'cache-control': 'no-store' } }));
+  await old.promise;
+  assert.equal(cache.etag, '"new"');
+  assert.equal(cache.text, 'new');
+});
+
+test('a newer concurrent request owns the cache', async () => {
+  const cache = createThemeCache();
+  let finishOld;
+  const old = startCachedThemeFetch(cache, () => new Promise(resolve => { finishOld = resolve; }));
+  await startCachedThemeFetch(cache, async () => new Response('new', {
+    headers: { etag: '"new"' },
+  })).promise;
+  finishOld(new Response('old', { headers: { etag: '"old"' } }));
+  await old.promise;
+  assert.equal(cache.etag, '"new"');
+  assert.equal(cache.text, 'new');
+});
+
 test('aborts a request that does not complete', async () => {
   await assert.rejects(fetchTheme((_url, { signal }) => new Promise((_resolve, reject) => {
     signal.addEventListener('abort', () => reject(new Error('timed out')), { once: true });

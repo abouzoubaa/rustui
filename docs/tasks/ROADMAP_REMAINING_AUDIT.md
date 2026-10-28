@@ -19,6 +19,20 @@ are retained as historical records.
 
 ## Current release evidence — 2026-10-27
 
+- **R26 Web watcher cache generation, 2026-10-28:** A deterministic test
+  transport that ignored cancellation reproduced a stale request overwriting
+  a cleared and reused theme cache. Cache requests and clears now invalidate
+  older generations, preventing late responses from writing or clearing a
+  newer cache. The reproduction failed before the fix and all 13 loader tests
+  pass after it, including overlapping requests and stale `no-store` responses.
+  The first Web build correctly rejected a source change during packaging; a
+  stable retry succeeded (manifest SHA-256
+  `8eb9b4088974c4e3588a819bd924a6913dfb1cf7060b784194f154b96de66aa7`).
+  In one in-app Chromium session, that bundle fetched the theme once and
+  continued with empty-body 304s; the test tab and server were closed. The
+  browser check does not reproduce the late-response race. Test and browser
+  logs are under `target/headstart/evidence/theme-cache-*-20261028.log`.
+
 - **R26 Web automatic theme transfer, 2026-10-28:** The Playground watcher
   now keeps an owner-scoped response cache and conditionally revalidates only
   strong ETags. A matching 304 reuses the bounded prior response; absent or
