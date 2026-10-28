@@ -203,6 +203,7 @@ fn fluent_validation_rejects_missing_and_recursive_terms() {
     for source in [
         "welcome = { -missing }",
         "-first = { -second }\n-second = { -first }\nwelcome = { -first }",
+        "-first = { welcome }\nwelcome = { -first }",
     ] {
         let report = validate_catalogs(&catalogs("en", source));
         assert!(
@@ -229,6 +230,42 @@ fn fluent_validation_keeps_term_variables_local() {
         )
         .unwrap();
     assert!(validate_catalogs(&catalogs).is_valid());
+}
+
+#[test]
+fn fluent_validation_handles_deep_and_shared_reference_graphs() {
+    let mut source = String::from("m0 = { $name }\nm1 = { m0 }\n");
+    for index in 2..100 {
+        source.push_str(&format!(
+            "m{index} = {{ m{} }} {{ m{} }}\n",
+            index - 1,
+            index - 2
+        ));
+    }
+    assert!(validate_catalogs(&catalogs("en", &source)).is_valid());
+}
+
+#[test]
+fn fluent_validation_tracks_shared_references_in_both_scopes() {
+    let mut catalogs = catalogs(
+        "en",
+        "shared = { $name }\n-term = { shared }\nwelcome = { -term } { shared }",
+    );
+    catalogs
+        .insert(
+            Catalog::parse_fluent(
+                locale("fr"),
+                "shared = { $nom }\n-term = { shared }\nwelcome = { -term } { shared }",
+            )
+            .unwrap(),
+        )
+        .unwrap();
+    let validation = validate_catalogs(&catalogs);
+    assert!(
+        validation.argument_mismatches[&locale("fr")]
+            .iter()
+            .any(|id| id.as_str() == "welcome")
+    );
 }
 #[test]
 fn icu_decimal_keeps_exact_digits_grouping_and_unicode_number_preferences() {

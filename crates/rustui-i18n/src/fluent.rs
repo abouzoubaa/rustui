@@ -244,31 +244,41 @@ impl FluentCatalog {
     /// Direct variables including message references. Term variables belong to
     /// their term argument scope, so call-site arguments are visited separately.
     pub(crate) fn arguments(&self, id: &str) -> Option<BTreeSet<String>> {
-        fn walk(
-            catalog: &FluentCatalog,
-            id: &str,
-            seen: &mut BTreeSet<String>,
-            result: &mut BTreeSet<String>,
-            collect_variables: bool,
-        ) -> Option<()> {
-            if !seen.insert(id.to_owned()) {
+        let mut result = BTreeSet::new();
+        let mut active = BTreeSet::new();
+        let mut complete = BTreeSet::new();
+        let mut pending = vec![(id, true, false)];
+        while let Some((id, collect_variables, exiting)) = pending.pop() {
+            if exiting {
+                active.remove(id);
+                complete.insert((id, collect_variables));
+                continue;
+            }
+            if active.contains(id) {
                 return None;
             }
-            let contract = catalog.contracts.get(id)?;
+            if complete.contains(&(id, collect_variables)) {
+                continue;
+            }
+            let contract = self.contracts.get(id)?;
+            active.insert(id);
             if collect_variables {
                 result.extend(contract.variables.iter().cloned());
             }
-            for reference in &contract.references {
-                walk(catalog, reference, seen, result, collect_variables)?;
-            }
-            for term in &contract.terms {
-                walk(catalog, term, seen, result, false)?;
-            }
-            seen.remove(id);
-            Some(())
+            pending.push((id, collect_variables, true));
+            pending.extend(
+                contract
+                    .references
+                    .iter()
+                    .map(|reference| (reference.as_str(), collect_variables, false)),
+            );
+            pending.extend(
+                contract
+                    .terms
+                    .iter()
+                    .map(|term| (term.as_str(), false, false)),
+            );
         }
-        let mut result = BTreeSet::new();
-        walk(self, id, &mut BTreeSet::new(), &mut result, true)?;
         Some(result)
     }
 }
