@@ -525,3 +525,13 @@ lab-popover-child-count = Nombre de l’enfant : {count}
 lab-popover-close = Fermer la fenêtre contextuelle
 lab-popover-remove = Supprimer le propriétaire de la fenêtre contextuelle
 lab-popover-open = Ouvrir la fenêtre de modification
+
+lab-keyboard-heading = Raccourcis clavier locaux
+lab-keyboard-instructions = Donnez le focus à un contrôle dans la zone. Secondaire-Maj-K augmente le premier compteur ; Secondaire-Maj-J augmente le second uniquement si le raccourci est activé. Secondaire-Maj-A exécute une action composée et actualise les fenêtres.
+lab-keyboard-inside = Dans la zone
+lab-keyboard-focus = Donner aussi le focus ici
+lab-keyboard-counts = Activations principales : {primary} · Activations facultatives : {optional}
+lab-keyboard-disable = Désactiver le raccourci facultatif
+lab-keyboard-enable = Activer le raccourci facultatif
+lab-keyboard-outside = Hors de la zone
+lab-keyboard-typing-help = La saisie doit modifier le texte dans les deux champs. Le champ extérieur ne doit déclencher aucun des raccourcis locaux.

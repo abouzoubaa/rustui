@@ -525,3 +525,13 @@ lab-popover-child-count = عداد العنصر الفرعي: {count}
 lab-popover-close = إغلاق النافذة المنبثقة
 lab-popover-remove = إزالة مالك النافذة المنبثقة
 lab-popover-open = فتح نافذة التحرير
+
+lab-keyboard-heading = اختصارات لوحة المفاتيح ضمن النطاق
+lab-keyboard-instructions = انقل التركيز إلى عنصر داخل النطاق. يزيد مفتاح الثانوي مع العالي وK العداد الأول؛ ويزيد الثانوي مع العالي وJ العداد الثاني عند تفعيله فقط. ينفذ الثانوي مع العالي وA إجراءً مركبًا ويحدّث النوافذ.
+lab-keyboard-inside = داخل النطاق
+lab-keyboard-focus = انقل التركيز إلى هنا أيضًا
+lab-keyboard-counts = مرات التنفيذ الأساسية: {primary} · مرات التنفيذ الاختيارية: {optional}
+lab-keyboard-disable = تعطيل الاختصار الاختياري
+lab-keyboard-enable = تفعيل الاختصار الاختياري
+lab-keyboard-outside = خارج النطاق
+lab-keyboard-typing-help = يجب أن تعدّل الكتابة النص في كلا الحقلين. ويجب ألا يفعّل الحقل الخارجي أيًا من اختصاري النطاق.

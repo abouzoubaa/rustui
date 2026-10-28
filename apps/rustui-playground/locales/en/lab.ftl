@@ -525,3 +525,13 @@ lab-popover-child-count = Child count: {count}
 lab-popover-close = Close popover
 lab-popover-remove = Remove popover owner
 lab-popover-open = Open editor popover
+
+lab-keyboard-heading = Scoped keyboard shortcuts
+lab-keyboard-instructions = Focus a control inside the scope. Secondary-Shift-K increments the first count; Secondary-Shift-J increments the second only when enabled. Secondary-Shift-A runs a composed action and refreshes windows.
+lab-keyboard-inside = Inside scope
+lab-keyboard-focus = Focus here too
+lab-keyboard-counts = Primary hits: {primary} · Optional hits: {optional}
+lab-keyboard-disable = Disable optional shortcut
+lab-keyboard-enable = Enable optional shortcut
+lab-keyboard-outside = Outside scope
+lab-keyboard-typing-help = Typing in either field must still edit text. The outside field must not trigger either scoped shortcut.
