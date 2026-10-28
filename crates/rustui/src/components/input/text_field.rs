@@ -1090,6 +1090,87 @@ mod tests {
         ));
     }
 
+    #[gpui::test]
+    fn retained_input_syncs_external_owner_during_marked_text(cx: &mut gpui::TestAppContext) {
+        use super::RetainedTextField;
+        use crate::{runtime::component_host::ComponentHost, view::View};
+        use gpui::EntityInputHandler;
+
+        struct Owner {
+            value: String,
+        }
+        impl View for Owner {
+            fn body(&self) -> impl View {
+                TextField(
+                    "Name",
+                    Binding::new(
+                        self.value.clone(),
+                        |owner: &Owner| owner.value.clone(),
+                        |owner, next| owner.value = next,
+                    ),
+                )
+                .id("ime-owner-input")
+            }
+        }
+        let theme = parse_theme(include_str!(concat!(
+            env!("CARGO_MANIFEST_DIR"),
+            "/../../themes/macos27.json"
+        )))
+        .unwrap();
+        cx.update(|app| {
+            gpui_component::init(app);
+            crate::theme::activate_theme(&theme, Some(AppearanceMode::Dark), app).unwrap();
+        });
+        let (owner, window) = cx.add_window_view(|_, cx| {
+            ComponentHost::new(
+                Owner {
+                    value: "base".into(),
+                },
+                cx,
+            )
+        });
+        let state = window.update(|window, app| {
+            let _ = window.draw(app);
+            let retained = owner
+                .read(app)
+                .retained_entity_for_test::<RetainedTextField>(
+                    vec![],
+                    Identity::from("ime-owner-input"),
+                )
+                .unwrap();
+            let state = retained.read(app).state.clone();
+            state.update(app, |state, cx| {
+                state.replace_and_mark_text_in_range(Some(4..4), "é", Some(1..1), window, cx)
+            });
+            assert_eq!(state.read(app).value().as_ref(), "baseé");
+            assert!(
+                state
+                    .update(app, |state, cx| state.marked_text_range(window, cx))
+                    .is_some()
+            );
+            owner.update(app, |host, cx| {
+                host.component_mut().value = "external".into();
+                cx.notify();
+            });
+            let _ = window.draw(app);
+            assert_eq!(state.read(app).value().as_ref(), "external");
+            assert_eq!(owner.read(app).component().value, "external");
+            state
+        });
+        window.cx.run_until_parked();
+        window.update(|window, app| {
+            state.update(app, |state, cx| {
+                state.replace_text_in_range(None, "é", window, cx);
+            });
+        });
+        window.cx.run_until_parked();
+        window.update(|window, app| {
+            let _ = window.draw(app);
+            assert_eq!(state.read(app).value().as_ref(), "externalé");
+            assert_eq!(owner.read(app).component().value, "externalé");
+        });
+    }
+
     #[test]
     fn external_owner_update_without_preedit_is_synchronized() {
         assert!(should_sync_owner_value(
