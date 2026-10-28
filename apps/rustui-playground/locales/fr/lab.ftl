@@ -451,3 +451,17 @@ lab-feedback-toast-info = Message d’information
 lab-feedback-toast-success = Message de réussite
 lab-feedback-toast-warning = Message d’avertissement
 lab-feedback-toast-error = Message d’erreur
+
+lab-context-heading = Exemple de menu contextuel
+lab-context-visible = Propriétaire de la cible visible
+lab-context-hidden = Propriétaire de la cible masqué
+lab-context-help = Faites un clic droit sur la cible et choisissez Supprimer le propriétaire pour vérifier la fermeture du menu et les actions devenues obsolètes.
+lab-context-toggle-owner = Supprimer ou restaurer le propriétaire de la cible
+lab-context-target = Cible : clic gauche pour incrémenter ; clic droit pour ouvrir le menu
+lab-context-reverse = Inverser l’ordre des éléments
+lab-context-increment = Incrémenter
+lab-context-remove-owner = Supprimer le propriétaire
+lab-context-reset = Réinitialiser
+lab-context-unavailable = Indisponible
+lab-context-counts-normal = Nombre : {count} · activations désactivées : {disabled} · ordre normal
+lab-context-counts-reversed = Nombre : {count} · activations désactivées : {disabled} · ordre inversé

@@ -451,3 +451,17 @@ lab-feedback-toast-info = Info notice
 lab-feedback-toast-success = Success notice
 lab-feedback-toast-warning = Warning notice
 lab-feedback-toast-error = Error notice
+
+lab-context-heading = Context menu review
+lab-context-visible = Target owner visible
+lab-context-hidden = Target owner hidden
+lab-context-help = Right-click the target and choose Remove owner to inspect dismissal and stale-action behavior.
+lab-context-toggle-owner = Remove or restore target owner
+lab-context-target = Target: left-click increments; right-click opens menu
+lab-context-reverse = Reverse item order
+lab-context-increment = Increment
+lab-context-remove-owner = Remove owner
+lab-context-reset = Reset
+lab-context-unavailable = Unavailable
+lab-context-counts-normal = Count: {count} · disabled hits: {disabled} · normal order
+lab-context-counts-reversed = Count: {count} · disabled hits: {disabled} · reversed order

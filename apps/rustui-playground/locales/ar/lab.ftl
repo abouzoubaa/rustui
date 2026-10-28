@@ -451,3 +451,17 @@ lab-feedback-toast-info = إشعار معلومات
 lab-feedback-toast-success = إشعار نجاح
 lab-feedback-toast-warning = إشعار تحذير
 lab-feedback-toast-error = إشعار خطأ
+
+lab-context-heading = مثال القائمة السياقية
+lab-context-visible = مالك العنصر ظاهر
+lab-context-hidden = مالك العنصر مخفي
+lab-context-help = انقر بالزر الأيمن على العنصر واختر إزالة المالك للتحقق من إغلاق القائمة والإجراءات القديمة.
+lab-context-toggle-owner = إزالة مالك العنصر أو استعادته
+lab-context-target = العنصر: النقر الأيسر يزيد العدد والنقر الأيمن يفتح القائمة
+lab-context-reverse = عكس ترتيب العناصر
+lab-context-increment = زيادة
+lab-context-remove-owner = إزالة المالك
+lab-context-reset = إعادة التعيين
+lab-context-unavailable = غير متاح
+lab-context-counts-normal = العدد: {count} · محاولات العنصر المعطل: {disabled} · الترتيب العادي
+lab-context-counts-reversed = العدد: {count} · محاولات العنصر المعطل: {disabled} · الترتيب المعكوس

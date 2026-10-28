@@ -1,3 +1,7 @@
+## Current checkpoint — 2026-10-28: context-menu gallery locale copy
+
+- **R13 partial source implementation:** The context-menu gallery's owner state and controls, menu labels, help text and numeric status now resolve in English, French and Arabic. The Playground Headstart check, three-catalog validator and focused locale-resolution test passed. Rendered menu interaction and native/browser RTL acceptance remain open; this does not close R13.
+
 ## Current checkpoint — 2026-10-28: local Headstart workspace tests
 
 - **R30 current-source test evidence:** On clean source `d7a9c4d097c382422388f2434fa945549fe2ada7`, `./scripts/cargo-headstart test --workspace --lib --profile headstart --locked --offline` passed 1,343 tests across five nonempty suites, with no failures or ignored tests. `./scripts/cargo-headstart test --workspace --test '*' --profile headstart --locked --offline` passed 60 integration tests across 34 suites, with no failures or ignored tests. Logs are retained under `target/headstart/evidence/` as `workspace-lib-headstart-d7a9c4d0-20261028.log` (SHA-256 `fd859c497b76b1582d6f310e2b0195e729e24aad4c310561f5e03e5d422861ff`) and `workspace-integration-headstart-d7a9c4d0-20261028.log` (SHA-256 `bbdf6e9355661e7d29cb9fce2dda8953c07add7089bdae633229de4c6b67f669`). GitHub run `40721973539` passed source CI but skipped compiled macOS/Web jobs. No Playground test application remained running. These results do not close GUI, browser, packaging, compiled CI, or release acceptance.
