@@ -115,3 +115,23 @@ for (const profile of ['preview', 'composition']) {
     assert.equal(env.client.stamp, null); assert.equal(env.client.alive, false);
   });
 }
+
+test('client rejects a non-null empty error instead of reporting success', async () => {
+  const env = setupClient();
+  await connected(env);
+  const pending = env.client.send({ kind: 'export', stamp: null });
+  respond(env, null, { error: '' });
+  await assert.rejects(pending, error => error.code === '');
+  env.client.dispose();
+});
+
+test('handshake rejects a non-null empty error even with a valid result', async () => {
+  const env = setupClient();
+  env.receive({ event: 'ready', profile: 'preview' });
+  const pending = env.client.connect();
+  await Promise.resolve();
+  respond(env, { nonce: env.client.nonce, profile: 'preview' }, { error: '' });
+  await assert.rejects(pending, /invalid handshake/);
+  assert.equal(env.client.alive, false);
+  assert.equal(env.client.session, null);
+});

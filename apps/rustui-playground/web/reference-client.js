@@ -40,7 +40,7 @@ export class ReferenceClient {
     const pending = this.pending;
     if (!pending || reply.request !== pending.request || reply.sequence !== pending.sequence) return;
     if (pending.connect) {
-      if (reply.error || !token(reply.session) || reply.result?.nonce !== this.nonce || reply.result?.profile !== this.profile) {
+      if (reply.error !== null || !token(reply.session) || reply.result?.nonce !== this.nonce || reply.result?.profile !== this.profile) {
         this.dispose('invalid handshake'); return;
       }
       this.session = reply.session;
@@ -48,7 +48,7 @@ export class ReferenceClient {
     if ((reply.error !== null && typeof reply.error !== 'string') || (reply.error === null && (reply.result === null || typeof reply.result !== 'object'))) return;
     this.browser.clearTimeout(pending.timer); this.pending = null;
     if (reply.error === null && Object.hasOwn(reply.result, 'stamp')) this.stamp = reply.result.stamp;
-    if (reply.error) { const error = new Error(reply.error); error.code = reply.error; pending.reject(error); }
+    if (reply.error !== null) { const error = new Error(reply.error); error.code = reply.error; pending.reject(error); }
     else pending.resolve(reply.result);
   }
   async connect() {
