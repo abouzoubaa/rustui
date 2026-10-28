@@ -1084,8 +1084,6 @@ dependencies = [
 [[package]]
 name = "cosmic-text"
 version = "0.19.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "be17b688510d934ce13f48a2beba700e11583e281e0fda99c22bb256a14eda73"
 dependencies = [
  "bitflags 2.13.2",
  "fontdb",
@@ -2613,8 +2611,6 @@ dependencies = [
 [[package]]
 name = "gpui-pre-wgpu"
 version = "0.3.9"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "5b1cdb26c1503bf9662ee8fbc5ab0b44b2deeee4b5c12dc67491ba6fb5fc544b"
 dependencies = [
  "anyhow",
  "bytemuck",

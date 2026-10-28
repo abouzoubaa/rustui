@@ -22,7 +22,7 @@ This requires the already provisioned Headstart toolchain described in
 [`docs/BUILDING.md`](BUILDING.md); the launcher does not install it. Build
 artifacts stay in the SDK's `target/headstart/` tree.
 
-The example has an independent `[workspace]` root. It repeats all five approved
+The example has an independent `[workspace]` root. It repeats the approved
 same-version local patches because Cargo workspace `[patch.crates-io]` entries
 are not inherited from the SDK when consumed by an external root. It also copies
 the SDK's scoped `rustui-macros` incremental settings because profile settings
@@ -34,7 +34,7 @@ application dependencies on GPUI or GPUI Components.
 ## Copying this example outside the checkout
 
 The checked-in-relative paths deliberately target this SDK checkout. If copying
-the app elsewhere, change the `rustui` path and each five patch paths to the
+the app elsewhere, change the `rustui` path and each patch path to the
 corresponding paths in the complete SDK checkout, or place the app as a member
 of a chosen source workspace and retain that workspace root's explicit patch
 entries. Keep the approved vendor sources and patch series with the SDK. Do not
