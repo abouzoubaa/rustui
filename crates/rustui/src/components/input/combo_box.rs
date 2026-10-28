@@ -382,8 +382,7 @@ impl View for ComboBoxView {
             affordance = affordance.opacity(0.5);
         }
         let affordance = affordance.child(Icon::new(IconName::ChevronDown).with_size(Size::XSmall));
-        root
-            .child(combo_box.icon(Icon::empty()))
+        root.child(combo_box.icon(Icon::empty()))
             .child(affordance)
             .into_any_element()
     }

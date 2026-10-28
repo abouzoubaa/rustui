@@ -312,131 +312,131 @@ impl View for StoryCanvas {
                         .alignment(rustui::prelude::HorizontalAlignment::Start)
                 }
             }
-            StoryId::Input => VStack::new()
-                .child(Component(
-                    "search-field-reference-gallery",
-                    SearchFieldReferenceGallery::default,
-                ))
-                .child(
-                    LocalizedText("lab-input-bound-value").with_arguments(
+            StoryId::Input => {
+                VStack::new()
+                    .child(Component(
+                        "search-field-reference-gallery",
+                        SearchFieldReferenceGallery::default,
+                    ))
+                    .child(LocalizedText("lab-input-bound-value").with_arguments(
                         MessageArguments::new().with("value", self.input_text.clone()),
-                    ),
-                )
-                .child(
-                    TextField("Name", self.input_binding.clone())
-                        .id("story-input-name")
-                        .localized_placeholder("lab-input-name")
-                        .localized_accessibility_label("lab-input-name"),
-                )
-                .child(
-                    SecureField("Password", self.secure_binding.clone())
-                        .id("story-input-password")
-                        .localized_placeholder("lab-input-password")
-                        .localized_accessibility_label("lab-input-password"),
-                )
-                .child(
-                    SearchField("Search", self.input_binding.clone())
-                        .id("story-input-search")
-                        .localized_placeholder("lab-input-search")
-                        .localized_accessibility_label("lab-input-search"),
-                )
-                .child(
-                    TextEditor("Notes", self.input_binding.clone())
-                        .id("story-input-notes")
-                        .height(96.0)
-                        .localized_placeholder("lab-input-notes")
-                        .localized_accessibility_label("lab-input-notes"),
-                )
-                .child(
-                    HStack::new()
-                        .child(
-                            Toggle("Enabled", self.toggle_binding.clone())
-                                .id("story-input-toggle")
-                                .localized_label("lab-input-enabled"),
-                        )
-                        .child(
-                            Checkbox("Accepted", self.checkbox_binding.clone())
-                                .id("story-input-checkbox")
-                                .localized_label("lab-input-accepted"),
-                        )
-                        // Native acceptance probe: sharing the value makes an
-                        // accidental disabled activation visible on both controls.
-                        .child(
-                            Checkbox("Accepted (disabled)", self.checkbox_binding.clone())
-                                .id("story-input-checkbox-disabled")
-                                .localized_label("lab-input-accepted-disabled")
-                                .accessibility_label("Accepted option (disabled)")
-                                .localized_accessibility_label(
-                                    "lab-input-accepted-disabled-accessibility",
-                                )
-                                .disabled(true),
-                        )
-                        .child(
-                            Radio("Selected", self.radio_binding.clone())
-                                .id("story-input-radio")
-                                .localized_label("lab-input-selected"),
-                        )
-                        .spacing(12.0)
-                        .alignment(rustui::prelude::VerticalAlignment::Center),
-                )
-                .child(CheckboxReferenceGallery::default())
-                .child(
-                    Slider(self.slider_binding.clone(), 0.0..=100.0)
-                        .id("story-input-slider")
-                        .accessibility_label("Input value")
-                        .step(1.0),
-                )
-                .child(
-                    Stepper("Quantity", self.stepper_binding.clone())
-                        .id("story-input-stepper")
-                        .localized_label("lab-input-quantity")
-                        .range(0..=10),
-                )
-                .child(
-                    LocalizedText("lab-input-picker-owner-value").with_arguments(
-                        MessageArguments::new().with("value", self.picker_binding.value()),
-                    ),
-                )
-                .child(
-                    Button("Set Picker to Kotlin", self.set_picker_kotlin.clone())
-                        .id("story-input-picker-set-kotlin")
-                        .localized_label("lab-input-picker-set-kotlin"),
-                )
-                .child(
-                    Picker(
-                        "Framework",
-                        self.picker_binding.clone(),
-                        ["Rust", "Swift", "Kotlin"],
+                    ))
+                    .child(
+                        TextField("Name", self.input_binding.clone())
+                            .id("story-input-name")
+                            .localized_placeholder("lab-input-name")
+                            .localized_accessibility_label("lab-input-name"),
                     )
-                    .id("story-input-picker")
-                    .disabled(!self.toggle_binding.value()),
-                )
-                .child(
-                    ComboBox(
-                        "Rendering engine",
-                        self.combo_box_binding.clone(),
-                        ["GPUI", "AppKit", "Skia"],
+                    .child(
+                        SecureField("Password", self.secure_binding.clone())
+                            .id("story-input-password")
+                            .localized_placeholder("lab-input-password")
+                            .localized_accessibility_label("lab-input-password"),
                     )
-                    .id("story-input-combo-box")
-                    .localized_placeholder("lab-input-combo-placeholder")
-                    .search_placeholder("Find an engine")
-                    .localized_search_placeholder("lab-input-combo-search")
-                    .width(220.0)
-                    .menu_width(220.0),
-                )
-                .child(
-                    DatePicker("Choose a date", self.date_binding.clone())
-                        .id("story-input-date")
-                        .localized_label("lab-input-choose-date"),
-                )
-                .child(
-                    ColorPicker("Choose a color", self.color_binding.clone())
-                        .id("story-input-color")
-                        .localized_label("lab-input-choose-color"),
-                )
-                .child(super::code_editor_gallery::demo())
-                .spacing(8.0)
-                .alignment(rustui::prelude::HorizontalAlignment::Start),
+                    .child(
+                        SearchField("Search", self.input_binding.clone())
+                            .id("story-input-search")
+                            .localized_placeholder("lab-input-search")
+                            .localized_accessibility_label("lab-input-search"),
+                    )
+                    .child(
+                        TextEditor("Notes", self.input_binding.clone())
+                            .id("story-input-notes")
+                            .height(96.0)
+                            .localized_placeholder("lab-input-notes")
+                            .localized_accessibility_label("lab-input-notes"),
+                    )
+                    .child(
+                        HStack::new()
+                            .child(
+                                Toggle("Enabled", self.toggle_binding.clone())
+                                    .id("story-input-toggle")
+                                    .localized_label("lab-input-enabled"),
+                            )
+                            .child(
+                                Checkbox("Accepted", self.checkbox_binding.clone())
+                                    .id("story-input-checkbox")
+                                    .localized_label("lab-input-accepted"),
+                            )
+                            // Native acceptance probe: sharing the value makes an
+                            // accidental disabled activation visible on both controls.
+                            .child(
+                                Checkbox("Accepted (disabled)", self.checkbox_binding.clone())
+                                    .id("story-input-checkbox-disabled")
+                                    .localized_label("lab-input-accepted-disabled")
+                                    .accessibility_label("Accepted option (disabled)")
+                                    .localized_accessibility_label(
+                                        "lab-input-accepted-disabled-accessibility",
+                                    )
+                                    .disabled(true),
+                            )
+                            .child(
+                                Radio("Selected", self.radio_binding.clone())
+                                    .id("story-input-radio")
+                                    .localized_label("lab-input-selected"),
+                            )
+                            .spacing(12.0)
+                            .alignment(rustui::prelude::VerticalAlignment::Center),
+                    )
+                    .child(CheckboxReferenceGallery::default())
+                    .child(
+                        Slider(self.slider_binding.clone(), 0.0..=100.0)
+                            .id("story-input-slider")
+                            .accessibility_label("Input value")
+                            .step(1.0),
+                    )
+                    .child(
+                        Stepper("Quantity", self.stepper_binding.clone())
+                            .id("story-input-stepper")
+                            .localized_label("lab-input-quantity")
+                            .range(0..=10),
+                    )
+                    .child(
+                        LocalizedText("lab-input-picker-owner-value").with_arguments(
+                            MessageArguments::new().with("value", self.picker_binding.value()),
+                        ),
+                    )
+                    .child(
+                        Button("Set Picker to Kotlin", self.set_picker_kotlin.clone())
+                            .id("story-input-picker-set-kotlin")
+                            .localized_label("lab-input-picker-set-kotlin"),
+                    )
+                    .child(
+                        Picker(
+                            "Framework",
+                            self.picker_binding.clone(),
+                            ["Rust", "Swift", "Kotlin"],
+                        )
+                        .id("story-input-picker")
+                        .disabled(!self.toggle_binding.value()),
+                    )
+                    .child(
+                        ComboBox(
+                            "Rendering engine",
+                            self.combo_box_binding.clone(),
+                            ["GPUI", "AppKit", "Skia"],
+                        )
+                        .id("story-input-combo-box")
+                        .localized_placeholder("lab-input-combo-placeholder")
+                        .search_placeholder("Find an engine")
+                        .localized_search_placeholder("lab-input-combo-search")
+                        .width(220.0)
+                        .menu_width(220.0),
+                    )
+                    .child(
+                        DatePicker("Choose a date", self.date_binding.clone())
+                            .id("story-input-date")
+                            .localized_label("lab-input-choose-date"),
+                    )
+                    .child(
+                        ColorPicker("Choose a color", self.color_binding.clone())
+                            .id("story-input-color")
+                            .localized_label("lab-input-choose-color"),
+                    )
+                    .child(super::code_editor_gallery::demo())
+                    .spacing(8.0)
+                    .alignment(rustui::prelude::HorizontalAlignment::Start)
+            }
             StoryId::Card => VStack::new().child(super::card_gallery::demo()),
             StoryId::List => VStack::new().child(Component(
                 "list-reconciliation-gallery",
