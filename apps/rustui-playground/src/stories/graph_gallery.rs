@@ -1,4 +1,5 @@
 //! Positioned graph visualization and controlled topology editing through public RustUI.
+use rustui::localization::MessageArguments;
 use rustui::{component, prelude::*};
 
 pub fn sample_document() -> GraphDocument {
@@ -126,7 +127,7 @@ impl GraphGallery {
 impl View for GraphGallery {
     fn body(&self) -> impl View {
         let surface = if !self.mounted() {
-            AnyView::new(Text("Graph omitted"))
+            AnyView::new(LocalizedText("lab-graph-omitted"))
         } else if self.editable() {
             AnyView::new(
                 NodeEditor(
@@ -152,14 +153,71 @@ impl View for GraphGallery {
                 .accessibility_label("Example dependency graph"),
             )
         };
-        VStack::new().spacing(8.0)
-            .child(Text(if self.editable() {"NodeEditor"} else {"GraphView"}))
-            .child(Text(format!("Selected: {} · Activations: {}",self.selection().as_deref().unwrap_or("none"),self.activations())))
-            .child(HStack::new().spacing(8.0).child(Button("Reset",self.action(Self::reset))).child(Button("Toggle disabled",self.action(Self::toggle_disabled))).child(Button("Omit / remount",self.action(Self::toggle_mount))))
-            .child(if self.editable() {AnyView::new(HStack::new().spacing(8.0).child(Button("Add node",self.action(Self::add))).child(Button("Rename selected",self.action(Self::rename)).disabled(self.selection().is_none())).child(Button("Remove selected",self.action(Self::remove)).disabled(self.selection().is_none())))} else {AnyView::new(Text("Arrow keys select nodes. Enter activates the selection."))})
-            .child(Text(if self.editable() {"Drag nodes or use arrows to move. Brackets select. Delete removes. Select two ports to connect; × disconnects. Tab reaches nodes, ports and connections."} else {"Tab reaches graph nodes. Enter or Space selects and focuses the graph."}))
-            .child(Text("A/D/W/S pan · PageUp/PageDown zoom · Home resets view · Escape cancels"))
-            .child(surface).child(Text(self.status().clone()))
+        VStack::new()
+            .spacing(8.0)
+            .child(Text(if self.editable() {
+                "NodeEditor"
+            } else {
+                "GraphView"
+            }))
+            .child(if let Some(selection) = self.selection() {
+                AnyView::new(
+                    LocalizedText("lab-graph-selected").with_arguments(
+                        MessageArguments::new().with("selection", selection.clone()),
+                    ),
+                )
+            } else {
+                AnyView::new(LocalizedText("lab-graph-no-selection"))
+            })
+            .child(LocalizedText("lab-graph-activations").with_arguments(
+                MessageArguments::new().with("count", self.activations().to_string()),
+            ))
+            .child(
+                HStack::new()
+                    .spacing(8.0)
+                    .child(
+                        Button("Reset", self.action(Self::reset))
+                            .localized_label("lab-graph-reset"),
+                    )
+                    .child(
+                        Button("Toggle disabled", self.action(Self::toggle_disabled))
+                            .localized_label("lab-graph-toggle-disabled"),
+                    )
+                    .child(
+                        Button("Omit / remount", self.action(Self::toggle_mount))
+                            .localized_label("lab-graph-toggle-mount"),
+                    ),
+            )
+            .child(if self.editable() {
+                AnyView::new(
+                    HStack::new()
+                        .spacing(8.0)
+                        .child(
+                            Button("Add node", self.action(Self::add))
+                                .localized_label("lab-graph-add"),
+                        )
+                        .child(
+                            Button("Rename selected", self.action(Self::rename))
+                                .localized_label("lab-graph-rename")
+                                .disabled(self.selection().is_none()),
+                        )
+                        .child(
+                            Button("Remove selected", self.action(Self::remove))
+                                .localized_label("lab-graph-remove")
+                                .disabled(self.selection().is_none()),
+                        ),
+                )
+            } else {
+                AnyView::new(LocalizedText("lab-graph-selection-help"))
+            })
+            .child(LocalizedText(if self.editable() {
+                "lab-graph-editor-help"
+            } else {
+                "lab-graph-view-help"
+            }))
+            .child(LocalizedText("lab-graph-viewport-help"))
+            .child(surface)
+            .child(Text(self.status().clone()))
     }
 }
 
