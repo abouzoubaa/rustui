@@ -19,6 +19,8 @@ are retained as historical records.
 
 ## Current release evidence — 2026-10-27
 
+- **R26 stalled stream cancellation, 2026-10-28:** A focused JavaScript regression reproduced an invalid UTF-8 response hanging when the response stream's cancellation promise never settled. The browser theme loader now starts cancellation without awaiting it, then propagates the original decode or size error and releases the reader lock. All 14 theme-loader tests pass, including the stalled-cancellation regression; this is simulated stream evidence, not a real-browser or full reload acceptance result.
+
 - **R24/R25 Safari composition rendering, 2026-10-28:** In Safari 27.0 on macOS 27.0, the same-origin reference host mounted a `composition-column`, accepted insertion of a `composition-text` child, and visibly rendered `Safari child one`. A `set_property` edit was accepted at the current stamp (revision advanced from 1 to 2), and the rendered label changed to `Safari child updated`; the browser semantic tree also reflected both labels. The host reported disconnected and unmounted before the owned Safari window and localhost server were closed. The bundle manifest SHA-256 was `8eb9b4088974c4e3588a819bd924a6913dfb1cf7060b784194f154b96de66aa7`; all 2,943 captured source hashes matched the checkout. This is a bounded insert/property-edit observation, not full composition or cross-browser acceptance.
 
 - **R24/R25 Safari preview transport, 2026-10-28:** In Safari 27.0 on macOS

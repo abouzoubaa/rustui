@@ -59,7 +59,7 @@ export async function fetchTheme(fetcher = fetch, timeoutMs = 10_000, controller
       }
       return text;
     } catch (error) {
-      await reader.cancel().catch(() => {});
+      void reader.cancel().catch(() => {});
       throw error;
     } finally {
       reader.releaseLock();
