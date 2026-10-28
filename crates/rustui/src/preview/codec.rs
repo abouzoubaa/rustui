@@ -285,9 +285,50 @@ fn check_size(source: &str) -> Result<(), PreviewError> {
 }
 
 fn encode_json(value: &impl serde::Serialize) -> Result<String, PreviewError> {
-    let source = serde_json::to_string_pretty(value)?;
-    check_size(&source)?;
-    Ok(source)
+    encode_json_bounded(
+        value,
+        &format!("preview document exceeds {MAX_DOCUMENT_BYTES} byte limit"),
+    )
+}
+
+pub(super) fn encode_json_bounded(
+    value: &impl serde::Serialize,
+    limit_message: &str,
+) -> Result<String, PreviewError> {
+    use std::io::{self, Write};
+
+    struct BoundedOutput {
+        bytes: Vec<u8>,
+        exceeded: bool,
+    }
+    impl Write for BoundedOutput {
+        fn write(&mut self, bytes: &[u8]) -> io::Result<usize> {
+            if bytes.len() > MAX_DOCUMENT_BYTES - self.bytes.len() {
+                self.exceeded = true;
+                return Err(io::Error::other("preview output size limit exceeded"));
+            }
+            self.bytes.extend_from_slice(bytes);
+            Ok(bytes.len())
+        }
+
+        fn flush(&mut self) -> io::Result<()> {
+            Ok(())
+        }
+    }
+
+    let mut output = BoundedOutput {
+        bytes: Vec::new(),
+        exceeded: false,
+    };
+    if let Err(error) = serde_json::to_writer_pretty(&mut output, value) {
+        return if output.exceeded {
+            Err(PreviewError::Invalid(limit_message.to_owned()))
+        } else {
+            Err(error.into())
+        };
+    }
+    // serde_json emits UTF-8 when writing JSON.
+    Ok(String::from_utf8(output.bytes).expect("JSON output is UTF-8"))
 }
 
 #[cfg(test)]
@@ -298,6 +339,50 @@ mod tests {
         PREVIEW_FORMAT, PreviewId, PropertyId, PropertyKind, PropertySchema, PropertyValue,
     };
     use std::collections::BTreeMap;
+
+    #[test]
+    fn bounded_json_encoding_preserves_exact_limit_and_rejects_larger_output() {
+        let at_limit = "x".repeat(MAX_DOCUMENT_BYTES - 2);
+        let encoded = encode_json(&at_limit).expect("JSON at the byte limit is accepted");
+        assert_eq!(encoded.len(), MAX_DOCUMENT_BYTES);
+        assert_eq!(encoded, serde_json::to_string_pretty(&at_limit).unwrap());
+
+        let over_limit = "x".repeat(MAX_DOCUMENT_BYTES - 1);
+        assert!(matches!(
+            encode_json(&over_limit),
+            Err(PreviewError::Invalid(_))
+        ));
+        let unicode_over_limit = "é".repeat(MAX_DOCUMENT_BYTES / 2);
+        assert!(matches!(
+            encode_json(&unicode_over_limit),
+            Err(PreviewError::Invalid(_))
+        ));
+    }
+
+    #[test]
+    fn bounded_json_encoding_stops_serializing_when_limit_is_reached() {
+        use serde::ser::SerializeSeq;
+        use std::cell::Cell;
+
+        struct ManyValues<'a>(&'a Cell<usize>);
+        impl serde::Serialize for ManyValues<'_> {
+            fn serialize<S: serde::Serializer>(&self, serializer: S) -> Result<S::Ok, S::Error> {
+                let mut sequence = serializer.serialize_seq(None)?;
+                for _ in 0..MAX_DOCUMENT_BYTES {
+                    self.0.set(self.0.get() + 1);
+                    sequence.serialize_element(&"value")?;
+                }
+                sequence.end()
+            }
+        }
+
+        let serialized = Cell::new(0);
+        assert!(matches!(
+            encode_json(&ManyValues(&serialized)),
+            Err(PreviewError::Invalid(_))
+        ));
+        assert!(serialized.get() < MAX_DOCUMENT_BYTES);
+    }
 
     fn build_catalog() -> ComponentCatalog {
         let mut properties = BTreeMap::new();

@@ -256,13 +256,7 @@ pub fn encode_composition<C>(
         super::codec::normalize_numeric_properties(registry.catalog(), &mut node.preview)?;
     }
     validate_composition(registry, &d)?;
-    let text = serde_json::to_string_pretty(&d)?;
-    if text.len() > MAX_DOCUMENT_BYTES {
-        return Err(PreviewError::Invalid(
-            "composition document exceeds size limit".into(),
-        ));
-    }
-    Ok(text)
+    super::codec::encode_json_bounded(&d, "composition document exceeds size limit")
 }
 pub fn decode_composition<C>(
     source: &str,
