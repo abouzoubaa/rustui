@@ -504,7 +504,7 @@ mod tests {
                 .focus_handle(app)
                 .focus(window, app);
         });
-        for key in ["enter", "right", "enter"] {
+        for key in ["enter", "left", "enter"] {
             window.simulate_keystrokes(key);
             window.update(|window, app| {
                 let _ = window.draw(app);
@@ -516,7 +516,7 @@ mod tests {
                 CalendarDate::Single(Some(initial))
             );
         });
-        for key in ["right", "enter"] {
+        for key in ["left", "enter"] {
             window.simulate_keystrokes(key);
             window.update(|window, app| {
                 let _ = window.draw(app);
@@ -643,6 +643,98 @@ mod tests {
                 DateTime::Single(Some(initial + chrono::Duration::days(1)))
             )
         });
+    }
+
+    #[gpui::test]
+    fn calendar_mirrors_week_month_and_year_positions(cx: &mut gpui::TestAppContext) {
+        use gpui::{
+            AppContext as _, Context, Entity, ParentElement as _, Render, Styled as _, Window, div,
+            px,
+        };
+        use gpui_base::{Calendar, CalendarItemKind, CalendarState, CalendarView, ElementExt as _};
+        use std::cell::Cell;
+
+        type Record = (CalendarItemKind, i32, f32);
+        struct Probe {
+            state: Entity<CalendarState>,
+            records: Rc<RefCell<Vec<Record>>>,
+        }
+        impl Render for Probe {
+            fn render(&mut self, _: &mut Window, _: &mut Context<Self>) -> impl IntoElement {
+                self.records.borrow_mut().clear();
+                let last = Rc::new(Cell::new(0));
+                let label_value = last.clone();
+                let records = self.records.clone();
+                Calendar::new("rtl-layout", &self.state)
+                    .number_of_months(2)
+                    .label(move |_, value| {
+                        label_value.set(value);
+                        value.to_string().into()
+                    })
+                    .item(move |item, state, _, _| {
+                        let records = records.clone();
+                        let value = last.get();
+                        div()
+                            .w(px(24.))
+                            .h(px(24.))
+                            .on_prepaint(move |bounds, _, _| {
+                                records.borrow_mut().push((
+                                    state.kind(),
+                                    value,
+                                    bounds.origin.x.into(),
+                                ));
+                            })
+                            .child(item)
+                            .into_any_element()
+                    })
+            }
+        }
+        let (probe, window) = cx.add_window_view(|window, cx| Probe {
+            state: cx.new(|cx| CalendarState::new(window, cx)),
+            records: Rc::new(RefCell::new(Vec::new())),
+        });
+        for rtl in [false, true] {
+            for (view, kind, count) in [
+                (CalendarView::Day, CalendarItemKind::Weekday, 7),
+                (CalendarView::Month, CalendarItemKind::Month, 3),
+                (CalendarView::Year, CalendarItemKind::Year, 5),
+            ] {
+                window.update(|window, app| {
+                    let state = probe.read(app).state.clone();
+                    state.update(app, |state, cx| {
+                        state.set_right_to_left(rtl);
+                        state.set_view(view);
+                        cx.notify();
+                    });
+                    let _ = window.draw(app);
+                    let records = probe.read(app).records.borrow();
+                    let first_row: Vec<_> = records
+                        .iter()
+                        .filter(|(k, _, _)| *k == kind)
+                        .take(count)
+                        .collect();
+                    assert_eq!(first_row.len(), count);
+                    if kind == CalendarItemKind::Weekday {
+                        assert_eq!(
+                            first_row.iter().map(|r| r.1).collect::<Vec<_>>(),
+                            (0..7).collect::<Vec<_>>()
+                        );
+                        for pair in first_row.windows(2) {
+                            assert_eq!(pair[0].2 > pair[1].2, rtl);
+                        }
+                        let weekdays: Vec<_> =
+                            records.iter().filter(|(k, _, _)| *k == kind).collect();
+                        assert_eq!(weekdays.len(), 14);
+                        assert_eq!(weekdays[0].2 > weekdays[7].2, rtl);
+                    } else {
+                        for pair in first_row.windows(2) {
+                            assert!(pair[0].2 < pair[1].2);
+                            assert_eq!(pair[0].1 > pair[1].1, rtl, "view={view:?} pair={pair:?}");
+                        }
+                    }
+                });
+            }
+        }
     }
 
     fn binding() -> Binding<Option<NaiveDate>> {

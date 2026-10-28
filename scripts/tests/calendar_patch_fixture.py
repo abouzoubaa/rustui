@@ -7,10 +7,31 @@ ROOT = Path(__file__).resolve().parents[2]
 SPEC = importlib.util.spec_from_file_location('calendar_keyboard_fixture', ROOT / 'scripts/apply_gpui_calendar_keyboard_patch.py')
 keyboard = importlib.util.module_from_spec(SPEC)
 SPEC.loader.exec_module(keyboard)
+RTL_SPEC = importlib.util.spec_from_file_location('calendar_rtl_fixture', ROOT / 'scripts/apply_gpui_calendar_rtl_patch.py')
+rtl = importlib.util.module_from_spec(RTL_SPEC)
+RTL_SPEC.loader.exec_module(rtl)
+
+
+def reverse_rtl_layer(fixture, relative):
+    relative = Path(relative)
+    source = fixture / relative
+    pre, post = rtl.IMAGES[relative]
+    current = rtl.digest(source.read_bytes())
+    if current == pre:
+        return
+    if current != post:
+        raise ValueError(f'unexpected RTL fixture image: {relative}')
+    rtl.run(ROOT, ROOT, '--verify')
+    subprocess.run(['git', 'apply', '--reverse', '--whitespace=nowarn',
+                    f'--include={relative}', str(ROOT / rtl.PATCH)],
+                   cwd=fixture, check=True, capture_output=True)
+    if rtl.digest(source.read_bytes()) != pre:
+        raise ValueError(f'incorrect reversed RTL fixture image: {relative}')
 
 
 def reverse_keyboard_layer(fixture, relative):
     relative = Path(relative)
+    reverse_rtl_layer(fixture, relative)
     source = fixture / relative
     pre, post = keyboard.IMAGES[relative]
     current = keyboard.digest(source.read_bytes())
@@ -18,7 +39,6 @@ def reverse_keyboard_layer(fixture, relative):
         return
     if current != post:
         raise ValueError(f'unexpected keyboard fixture image: {relative}')
-    keyboard.run(ROOT, ROOT, '--verify')
     subprocess.run(['git', 'apply', '--reverse', '--whitespace=nowarn',
                     f'--include={relative}', str(ROOT / keyboard.PATCH)],
                    cwd=fixture, check=True, capture_output=True)

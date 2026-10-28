@@ -484,9 +484,8 @@ impl DatePickerState {
             .or_else(|| self.date.start())
             .unwrap_or_else(|| self.calendar.read(cx).today());
         let delta = match event.keystroke.key.as_str() {
-            // The current calendar rows are physically left-to-right in all locales.
-            "left" => -1,
-            "right" => 1,
+            "left" => if self.calendar.read(cx).right_to_left() { 1 } else { -1 },
+            "right" => if self.calendar.read(cx).right_to_left() { -1 } else { 1 },
             "up" => -7,
             "down" => 7,
             _ => return,
@@ -754,6 +753,7 @@ impl DatePicker {
 impl RenderOnce for DatePicker {
     fn render(self, window: &mut Window, cx: &mut App) -> impl IntoElement {
         self.state.update(cx, |state, cx| {
+            state.calendar.update(cx, |calendar, _| calendar.set_right_to_left(self.right_to_left));
             state.sync_children(window, cx);
         });
         let month_count = self.number_of_months.max(1) as f32;

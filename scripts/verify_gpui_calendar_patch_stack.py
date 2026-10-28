@@ -11,14 +11,16 @@ ROOT = Path(__file__).resolve().parents[1]
 SPEC = importlib.util.spec_from_file_location('calendar_keyboard', ROOT / 'scripts/apply_gpui_calendar_keyboard_patch.py')
 keyboard = importlib.util.module_from_spec(SPEC)
 SPEC.loader.exec_module(keyboard)
+RTL_SPEC = importlib.util.spec_from_file_location('calendar_rtl', ROOT / 'scripts/apply_gpui_calendar_rtl_patch.py')
+rtl = importlib.util.module_from_spec(RTL_SPEC)
+RTL_SPEC.loader.exec_module(rtl)
 
 
 def main():
-    # The keyboard verifier checks both live files, patch identity and reversal.
-    keyboard.run(ROOT, ROOT, '--verify')
+    rtl.run(ROOT, ROOT, '--verify')
     with tempfile.TemporaryDirectory(prefix='rustui-calendar-stack-') as folder:
         staged = Path(folder)
-        files = [Path('Cargo.toml'), *keyboard.IMAGES, *map(Path, keyboard.PRESERVED)]
+        files = [Path('Cargo.toml'), *rtl.IMAGES, *map(Path, keyboard.PRESERVED)]
         files += [Path(f'vendor/{name}-0.7.3/Cargo.toml') for name in ('gpui-base', 'gpui-component')]
         files += [Path('vendor/gpui-base-0.7.3/LICENSE-APACHE'),
                   Path('patches/approved/gpui-component-date-picker-localization-v2.patch')]
@@ -26,6 +28,8 @@ def main():
             target = staged / relative
             target.parent.mkdir(parents=True, exist_ok=True)
             shutil.copyfile(ROOT / relative, target)
+        rtl.run(staged, ROOT, '--reverse')
+        keyboard.run(staged, ROOT, '--verify')
         keyboard.run(staged, ROOT, '--reverse')
         commands = [
             ('apply_gpui_base_calendar_date_limits.py', '--verify', True),

@@ -4,9 +4,13 @@
 
 `approved/gpui-web-combobox-enter-v1.patch` layers on the Web semantic adapter. The semantic mirror represents combo boxes with HTML buttons; the bridge now forwards Enter on those buttons to GPUI instead of treating it as native button activation. Other button and Space handling is unchanged. `scripts/apply_gpui_web_combobox_enter_patch.py` verifies, applies, or reverses the exact image, and `scripts/verify_gpui_web_patch_stack.py` validates the composed stack. One bounded browser interaction and source checks passed; broader browser acceptance remains open.
 
+## Calendar RTL layer
+
+`approved/gpui-calendar-rtl-v1.patch` layers on the Calendar keyboard patch and mirrors day, month, year and multi-month layout and navigation direction. `scripts/apply_gpui_calendar_rtl_patch.py` verifies, applies and reverses its exact three-source image. Reverse this layer before the keyboard layer; `scripts/verify_gpui_calendar_patch_stack.py` verifies the combined stack. Broader runtime and locale acceptance remains open.
+
 ## Calendar keyboard layer
 
-`approved/gpui-calendar-keyboard-v1.patch` is a two-file layer over the base calendar date-limit and Components DatePicker localization and RTL-alignment patches. Apply those layers first and reverse the keyboard layer first. `python3 scripts/verify_gpui_calendar_patch_stack.py` verifies the current combined image and independently replays the earlier layers in a temporary copy. `scripts/apply_gpui_calendar_keyboard_patch.py` provides `--verify`, `--apply`, and `--reverse` with exact hashes. It stages both files before replacement and attempts rollback on write failure; a process interruption or failed rollback can leave mixed images requiring recovery to one of the recorded hash pairs. Mirrored RTL layout and broader runtime acceptance remain open.
+`approved/gpui-calendar-keyboard-v1.patch` is a two-file layer over the base calendar date-limit and Components DatePicker localization and RTL-alignment patches. Apply those layers first; reverse the later Calendar RTL layer before reversing the keyboard layer. `python3 scripts/verify_gpui_calendar_patch_stack.py` verifies the current combined image and independently replays the earlier layers in a temporary copy. With the later RTL layer reversed, `scripts/apply_gpui_calendar_keyboard_patch.py` provides `--verify`, `--apply`, and `--reverse` with exact hashes. It stages both files before replacement and attempts rollback on write failure; a process interruption or failed rollback can leave mixed images requiring recovery to one of the recorded hash pairs. Broader runtime acceptance remains open.
 
 ## GPUI Components 0.7.3 Select RTL alignment
 

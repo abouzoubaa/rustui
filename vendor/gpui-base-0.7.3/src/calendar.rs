@@ -3,6 +3,7 @@ use std::rc::Rc;
 
 use crate::{h_flex, styled::StyledExt as _, v_flex};
 use chrono::{Datelike, Local, NaiveDate, Weekday};
+use gpui::prelude::FluentBuilder as _;
 use gpui::{
     AnyElement, App, Context, ElementId, Empty, Entity, EventEmitter, FocusHandle,
     InteractiveElement, IntoElement, ParentElement, Render, RenderOnce, SharedString,
@@ -154,6 +155,17 @@ impl CalendarView {
     }
 }
 
+// RTL grids retain row order but place each row's first value on the right.
+fn calendar_grid_order(values: Vec<i32>, columns: usize, rtl: bool) -> Vec<Option<i32>> {
+    if !rtl { return values.into_iter().map(Some).collect(); }
+    let mut ordered = Vec::new();
+    for row in values.chunks(columns) {
+        ordered.extend(std::iter::repeat_n(None, columns - row.len()));
+        ordered.extend(row.iter().rev().copied().map(Some));
+    }
+    ordered
+}
+
 fn picker_grid_layout(view: CalendarView) -> Option<(u16, f32)> {
     match view {
         CalendarView::Day => None,
@@ -171,6 +183,7 @@ pub struct CalendarState {
     view: CalendarView,
     date: Date,
     keyboard_cursor: Option<NaiveDate>,
+    right_to_left: bool,
     current_year: i32,
     current_month: u8,
     years: Vec<Vec<i32>>,
@@ -188,6 +201,7 @@ impl CalendarState {
             view: CalendarView::Day,
             date: Date::Single(None),
             keyboard_cursor: None,
+            right_to_left: false,
             current_year: today.year(),
             current_month: today.month() as u8,
             years: vec![],
@@ -216,6 +230,12 @@ impl CalendarState {
     pub fn disabled_matcher_ref(&self) -> Option<&Matcher> {
         self.disabled_matcher.as_deref()
     }
+    /// Whether calendar columns run right to left.
+    pub fn right_to_left(&self) -> bool { self.right_to_left }
+
+    /// Set the direction used by all calendar views.
+    pub fn set_right_to_left(&mut self, value: bool) { self.right_to_left = value; }
+
     /// Current uncommitted keyboard navigation target, if any.
     pub fn keyboard_cursor(&self) -> Option<NaiveDate> {
         self.keyboard_cursor
@@ -671,7 +691,8 @@ impl RenderOnce for Calendar {
         self.state
             .update(cx, |s, cx| s.set_number_of_months(count, window, cx));
         let view = self.state.read(cx).view();
-        let mut header = h_flex().items_center().justify_between().child({
+        let rtl = self.state.read(cx).right_to_left();
+        let mut header = h_flex().when(rtl, |row| row.flex_row_reverse()).items_center().justify_between().child({
             let st = CalendarItemState::new(CalendarItemKind::Previous).disabled(
                 view.is_month()
                     || (view.is_year() && !self.state.read(cx).has_prev_year_page())
@@ -771,7 +792,7 @@ impl RenderOnce for Calendar {
         });
 
         let mut body = match picker_grid_layout(view) {
-            None => h_flex().justify_around(),
+            None => h_flex().when(rtl, |row| row.flex_row_reverse()).justify_around(),
             Some((columns, horizontal_gap)) => {
                 div().grid().grid_cols(columns).gap_x(px(horizontal_gap))
             }
@@ -781,7 +802,7 @@ impl RenderOnce for Calendar {
                 let (year, month_number) = self.state.read(cx).offset_year_month(offset);
                 let weeks = calendar_slots(year, month_number, self.first_day_of_week);
                 let mut month = v_flex();
-                let mut header_row = h_flex();
+                let mut header_row = h_flex().when(rtl, |row| row.flex_row_reverse());
                 for weekday in 0..7 {
                     let st = CalendarItemState::new(CalendarItemKind::Weekday)
                         .muted(true)
@@ -796,7 +817,7 @@ impl RenderOnce for Calendar {
                 }
                 month = month.child(header_row);
                 for (week_index, week) in weeks.iter().enumerate() {
-                    let mut week_row = h_flex();
+                    let mut week_row = h_flex().when(rtl, |row| row.flex_row_reverse());
                     for (column, date) in week.iter().enumerate() {
                         let Some(date) = *date else {
                             let st = CalendarItemState::new(CalendarItemKind::Weekday)
@@ -841,7 +862,9 @@ impl RenderOnce for Calendar {
             }
         } else if view.is_month() {
             let current = self.state.read(cx).current_month();
-            for month in 1..=12u8 {
+            for month in calendar_grid_order((1..=12).collect(), 3, rtl) {
+                let Some(month) = month else { body = body.child(div()); continue; };
+                let month = month as u8;
                 let st = CalendarItemState::new(CalendarItemKind::Month).active(month == current);
                 let entity = self.state.clone();
                 let item = CalendarItem::new(format!("calendar-month-{month}"), st)
@@ -857,7 +880,8 @@ impl RenderOnce for Calendar {
         } else {
             let current = self.state.read(cx).current_year();
             let years = self.state.read(cx).years_on_page().to_vec();
-            for year in years {
+            for year in calendar_grid_order(years, 5, rtl) {
+                let Some(year) = year else { body = body.child(div()); continue; };
                 let st = CalendarItemState::new(CalendarItemKind::Year).active(year == current);
                 let entity = self.state.clone();
                 let item = CalendarItem::new(format!("calendar-year-{year}"), st)

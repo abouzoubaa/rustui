@@ -1,3 +1,4 @@
+from scripts.tests.calendar_patch_fixture import reverse_rtl_layer
 import importlib.util
 from pathlib import Path
 import shutil
@@ -28,6 +29,8 @@ class CalendarKeyboardPatchTest(unittest.TestCase):
             '[patch.crates-io]\ngpui-base = { path = "vendor/gpui-base-0.7.3" }\n'
             'gpui-component = { path = "vendor/gpui-component-0.7.3" }\n'
         )
+        for path in keyboard.IMAGES:
+            reverse_rtl_layer(self.root, path)
         keyboard.run(self.root, ROOT, '--reverse')
 
     def test_replay_and_reject_tampering(self):
