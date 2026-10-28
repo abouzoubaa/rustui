@@ -49,7 +49,14 @@ if [ -x "$HEADSTART_RUSTC" ]; then
   fi
 fi
 
-OUT_DIR="$REPO_ROOT/target/headstart/playground-web"
+# An explicit, simple name permits parallel source-bound validation bundles while
+# keeping all generated output under the persistent Headstart directory.
+WEB_OUTPUT_NAME="${RUSTUI_WEB_OUTPUT_NAME:-playground-web}"
+if [[ ! "$WEB_OUTPUT_NAME" =~ ^playground-web(-[A-Za-z0-9_-]+)?$ ]]; then
+  echo "Invalid RUSTUI_WEB_OUTPUT_NAME: use playground-web or playground-web-<name>." >&2
+  exit 2
+fi
+OUT_DIR="$REPO_ROOT/target/headstart/$WEB_OUTPUT_NAME"
 STAGING_DIR=""
 PREVIOUS_DIR=""
 SOURCE_SNAPSHOT_DIR="$(mktemp -d "${TMPDIR:-/tmp}/rustui-playground-web-source.XXXXXX")"

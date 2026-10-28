@@ -117,6 +117,19 @@ RUSTUI_HEADSTART_ROOT="$temporary_root/unused-headstart" \
     "$fixture/scripts/build-playground-web.sh" >/dev/null
 
 bundle="$fixture/target/headstart/playground-web"
+printf '%s\n' 'default preserved' > "$bundle/output-name-sentinel.txt"
+PATH="$fake_bin:$PATH" CARGO_HOME="$temporary_root/cargo-home" \
+  FIXTURE_ROOT="$fixture" CARGO_TARGET_DIR="$temporary_root/cargo-target" \
+  RUSTUI_HEADSTART_ROOT="$temporary_root/unused-headstart" RUSTUI_WEB_OUTPUT_NAME=playground-web-validation \
+  "$fixture/scripts/build-playground-web.sh" >/dev/null
+test -f "$fixture/target/headstart/playground-web-validation/index.html"
+test "$(cat "$bundle/output-name-sentinel.txt")" = 'default preserved'
+if PATH="$fake_bin:$PATH" RUSTUI_WEB_OUTPUT_NAME='../outside' \
+  "$fixture/scripts/build-playground-web.sh" >"$temporary_root/invalid-output-name.log" 2>&1; then
+  printf '%s\n' 'packager accepted an invalid output name' >&2
+  exit 1
+fi
+grep -Fq 'Invalid RUSTUI_WEB_OUTPUT_NAME' "$temporary_root/invalid-output-name.log"
 cmp "$fixture/themes/macos27.json" "$bundle/assets/macos27.json"
 test -f "$bundle/index.html"
 for asset in reference-host.html reference-host.js reference-client.js; do

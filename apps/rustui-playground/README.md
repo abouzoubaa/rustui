@@ -25,4 +25,4 @@ record in [the roadmap](../../docs/IMPLEMENTATION_ROADMAP.md).
 
 ## WebAssembly browser smoke
 
-The canonical Playground has a browser start entry. With the matching `wasm-bindgen` CLI 0.2.129 installed, run `./scripts/build-playground-web.sh` from the repository root, then serve the generated `target/headstart/playground-web` directory with the printed Python HTTP server command. The browser smoke page uses GPUI's full-viewport canvas. Runtime and accessibility acceptance are still pending.
+The canonical Playground has a browser start entry. With the matching `wasm-bindgen` CLI 0.2.129 installed, run `./scripts/build-playground-web.sh` from the repository root, then serve the generated `target/headstart/playground-web` directory with the printed Python HTTP server command. For a separate validation bundle, set `RUSTUI_WEB_OUTPUT_NAME` to a name such as `playground-web-feedback`; the build writes under `target/headstart` and leaves the default bundle in place. Use a distinct name for each concurrent build. The browser smoke page uses GPUI's full-viewport canvas. Runtime and accessibility acceptance are still pending.

@@ -1,3 +1,7 @@
+## Current checkpoint — 2026-10-28: isolated Web build output
+
+- **R28/R30 tooling:** The Web packaging script accepts an optional constrained `RUSTUI_WEB_OUTPUT_NAME` under `target/headstart`, allowing a separate validation bundle while an existing default bundle is served. The package fixture suite passed with checks for isolated output, preservation of the default bundle, and rejection of traversal names. Browser and release acceptance remain separate.
+
 ## Current checkpoint — 2026-10-28: localized toast content
 
 - **R13 partial source implementation:** RustUI Toast now resolves optional message, title and action-label keys when shown, using literal fallbacks for missing or blank translations; announcement text derives from resolved content. Playground's toast examples supply English, French and Arabic keys. Focused Headstart tests passed 9/9 toast, 44/44 feedback, and 1/1 Playground locale; the three runtime locale catalogs validated. This is source evidence only: displayed native/browser toast behavior, broader gallery copy and RTL acceptance remain open. R13 is not closed.
