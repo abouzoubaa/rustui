@@ -128,6 +128,7 @@ impl MenuItem {
 pub struct MenuView {
     label: SharedString,
     label_key: Option<SharedString>,
+    label_arguments: Option<crate::localization::MessageArguments>,
     items: Vec<MenuItem>,
     id: Option<Identity>,
 }
@@ -145,6 +146,7 @@ impl MenuView {
         Self {
             label,
             label_key: None,
+            label_arguments: None,
             items: validated_items(items),
             id: None,
         }
@@ -158,7 +160,20 @@ impl MenuView {
             "Menu label localization key must not be blank"
         );
         self.label_key = Some(key);
+        self.label_arguments = None;
         self
+    }
+
+    /// Resolves the trigger label with locale-aware message arguments.
+    /// Missing or invalid messages retain the original literal label.
+    pub fn localized_label_with_arguments(
+        self,
+        key: impl Into<SharedString>,
+        arguments: crate::localization::MessageArguments,
+    ) -> Self {
+        let mut menu = self.localized_label(key);
+        menu.label_arguments = Some(arguments);
+        menu
     }
 
     fn resolved_label(&self, localized: impl FnOnce(&str) -> String) -> SharedString {
@@ -344,7 +359,12 @@ impl View for MenuView {
 
         let items = bind_items(&self.items, context);
 
-        let label = self.resolved_label(|key| context.localized_message(key));
+        let label = self.resolved_label(|key| match &self.label_arguments {
+            Some(arguments) => context
+                .localized_message_with_arguments(key, arguments)
+                .unwrap_or_else(|_| key.to_owned()),
+            None => context.localized_message(key),
+        });
         let trigger = themed_button(
             context,
             id,
@@ -376,6 +396,18 @@ mod tests {
             menu.resolved_label(|_| "Options françaises".into()),
             "Options françaises"
         );
+    }
+
+    #[test]
+    fn localized_trigger_arguments_replace_and_clear_without_losing_fallback() {
+        let args = crate::localization::MessageArguments::new().with("count", 7_i64);
+        let menu =
+            Menu("Actions: 7", []).localized_label_with_arguments("menu.count", args.clone());
+        assert_eq!(menu.label_arguments.as_ref(), Some(&args));
+        assert_eq!(menu.resolved_label(|_| "menu.count".into()), "Actions: 7");
+        let menu = menu.localized_label("menu.static");
+        assert_eq!(menu.label_arguments, None);
+        assert_eq!(menu.resolved_label(|_| " ".into()), "Actions: 7");
     }
 
     fn empty_handler() -> Rc<ActionHandler> {
