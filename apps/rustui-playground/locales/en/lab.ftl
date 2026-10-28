@@ -53,6 +53,7 @@ lab-input-checkbox-reference-states = Checkbox reference states
 lab-input-checkbox-reference-label = Label
 lab-input-checkbox-reference-checked = Checked checkbox reference state
 lab-input-checkbox-reference-unchecked = Unchecked checkbox reference state
+lab-input-quantity = Quantity
 lab-input-owner-update = Change bound text from owner in 5 seconds
 lab-input-token-recipients = Add recipients
 lab-code-editor-title = Source code

@@ -29,6 +29,7 @@ fn stepper_label_color(profile: &ThemeProfile, mode: AppearanceMode, disabled: b
 
 pub struct StepperView {
     label: SharedString,
+    label_message_id: Option<SharedString>,
     accessibility_label: Option<StepperAccessibilityLabel>,
     value: Binding<i32>,
     range: RangeInclusive<i32>,
@@ -119,6 +120,7 @@ impl StepperView {
         let label = label.into();
         Self {
             label,
+            label_message_id: None,
             accessibility_label: None,
             value,
             range: i32::MIN..=i32::MAX,
@@ -155,6 +157,17 @@ impl StepperView {
 
     pub fn disabled(mut self, disabled: bool) -> Self {
         self.disabled = disabled;
+        self
+    }
+
+    /// Resolves the visible label from RustUI's active message catalog.
+    pub fn localized_label(mut self, message_id: impl Into<SharedString>) -> Self {
+        let id = message_id.into();
+        assert!(
+            !id.trim().is_empty(),
+            "Stepper localization key must not be blank"
+        );
+        self.label_message_id = Some(id);
         self
     }
 
@@ -246,13 +259,17 @@ impl View for StepperView {
         let decrement_glyph = required_style(context, "stepper", "decrement_glyph", &selector);
         let active = active_theme(context.app()).expect("stepper requires an active RustUI theme");
         let label_color = stepper_label_color(&active.profile, active.mode, self.disabled);
+        let label = self.label_message_id.as_ref().map_or_else(
+            || self.label.clone(),
+            |id| resolved_message_label(context.localized_message(id.as_ref()), id, &self.label),
+        );
         let accessible_name = self
             .accessibility_label
             .as_ref()
             .map(|label| label.resolve(context));
         let (increment_accessibility_label, decrement_accessibility_label) =
             action_accessibility_labels(
-                self.label.as_ref(),
+                label.as_ref(),
                 accessible_name.as_deref(),
                 |id, arguments| context.localized_message_with_arguments(id, arguments),
             );
@@ -277,7 +294,7 @@ impl View for StepperView {
             .flex()
             .items_center()
             .gap_2()
-            .child(div().text_color(label_color).child(self.label.clone()))
+            .child(div().text_color(label_color).child(label))
             .child(current.to_string())
             .child(
                 div()

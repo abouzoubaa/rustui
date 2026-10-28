@@ -389,6 +389,7 @@ impl View for StoryCanvas {
                 .child(
                     Stepper("Quantity", self.stepper_binding.clone())
                         .id("story-input-stepper")
+                        .localized_label("lab-input-quantity")
                         .range(0..=10),
                 )
                 .child(Text(format!(
