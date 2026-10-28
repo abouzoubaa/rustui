@@ -7,7 +7,7 @@ use std::{
     future::Future,
     path::{Path, PathBuf},
     pin::Pin,
-    rc::Rc,
+    rc::{Rc, Weak},
     time::Duration,
 };
 
@@ -43,7 +43,21 @@ struct ReloadState {
     had_error: bool,
     enabled: bool,
     generation: u64,
+    action_epoch: u64,
     task: Option<WatchTask>,
+}
+
+struct ReloadLease {
+    state: Weak<RefCell<ReloadState>>,
+    epoch: u64,
+}
+
+impl ReloadLease {
+    fn current(&self) -> Option<Rc<RefCell<ReloadState>>> {
+        let state = self.state.upgrade()?;
+        let current = state.borrow().action_epoch == self.epoch;
+        current.then_some(state)
+    }
 }
 
 impl ReloadState {
@@ -104,6 +118,14 @@ impl ReloadState {
             .expect("theme watcher generation exhausted");
         self.task.take();
     }
+
+    fn unmount(&mut self) {
+        self.stop();
+        self.action_epoch = self
+            .action_epoch
+            .checked_add(1)
+            .expect("theme action epoch exhausted");
+    }
 }
 
 impl FoundationAdditions {
@@ -129,6 +151,7 @@ impl FoundationAdditions {
                 had_error,
                 enabled: false,
                 generation: 0,
+                action_epoch: 0,
                 task: None,
             })),
             path,
@@ -136,9 +159,12 @@ impl FoundationAdditions {
     }
 
     fn reload_action(&self, mode: AppearanceMode) -> AppAction {
-        let reload = Rc::clone(&self.reload);
+        let lease = self.reload_lease();
         let path = self.path.clone();
         AppAction::new(move |cx| {
+            let Some(reload) = lease.current() else {
+                return;
+            };
             if reload.borrow_mut().check(&path, mode, cx, true) {
                 cx.refresh_windows();
             }
@@ -146,9 +172,12 @@ impl FoundationAdditions {
     }
 
     fn toggle_auto_action(&self) -> AppAction {
-        let reload = Rc::clone(&self.reload);
+        let lease = self.reload_lease();
         let path = self.path.clone();
         AppAction::new(move |cx| {
+            let Some(reload) = lease.current() else {
+                return;
+            };
             let generation = {
                 let mut state = reload.borrow_mut();
                 if state.enabled {
@@ -195,11 +224,18 @@ impl FoundationAdditions {
             cx.refresh_windows();
         })
     }
+
+    fn reload_lease(&self) -> ReloadLease {
+        ReloadLease {
+            state: Rc::downgrade(&self.reload),
+            epoch: self.reload.borrow().action_epoch,
+        }
+    }
 }
 
 impl View for FoundationAdditions {
     fn on_unmount(&mut self, _: &mut rustui::App) {
-        self.reload.borrow_mut().stop();
+        self.reload.borrow_mut().unmount();
     }
 
     fn body(&self) -> impl View {
@@ -265,5 +301,28 @@ impl View for FoundationAdditions {
         .width(200.0)
         .padding(8.0)
         .border()
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn reload_actions_do_not_keep_owner_alive_or_survive_unmount() {
+        let owner = FoundationAdditions::new();
+        let weak = Rc::downgrade(&owner.reload);
+        let stale = owner.reload_lease();
+        let _manual = owner.reload_action(AppearanceMode::Light);
+        let _automatic = owner.toggle_auto_action();
+        assert_eq!(Rc::strong_count(&owner.reload), 1);
+        assert!(stale.current().is_some());
+
+        owner.reload.borrow_mut().unmount();
+        assert!(stale.current().is_none());
+        assert!(owner.reload_lease().current().is_some());
+
+        drop(owner);
+        assert!(weak.upgrade().is_none());
     }
 }
