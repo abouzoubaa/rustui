@@ -1,3 +1,9 @@
+## Core state and notice provenance — 2026-10-28
+
+On clean commit `e00096f0`, locked/offline `cargo-headstart test -p rustui-core --lib` passed 9/9 core library tests, including binding owner-type rejection and stale-context update behavior. Log `target/headstart/evidence/core-state-e00096f0-20261028.log`, SHA-256 `fbdeddf34ba901338f8c83042d8ad2ba01eaec6b8b375b0f4de62d2699c77e6a`. This source-level evidence does not close the broader owner lifecycle, invalidation or native acceptance requirements.
+
+The exact upstream root directory listings for `seahash` revision `94b632aeac099031c373599313d5b5f0acbbaec0` and `hexf` revision `4225763d744183d720f575ae96d04161b4d08ea0` contain no root LICENSE, COPYING or NOTICE file. The saved API responses are `target/headstart/evidence/seahash-upstream-root-20261028.json` (SHA-256 `4dbe2460db91bd3a4e7e7adb4d597d74331457bcab2e37c33b813169900b8ee0`) and `target/headstart/evidence/hexf-upstream-root-20261028.json` (SHA-256 `204e113907934b8c961947f7a837f52ced75ef9cfe7924e7ccc8378d52de73ef`). These listings do not establish absence of license text elsewhere or complete licensing obligations. Both notice gaps remain open.
+
 ## Identity field locale completion and CI runner status — 2026-10-28
 
 Animation identity field headings and placeholders now resolve in English, French and Arabic through the existing public TextField localization API; editable values and stable IDs are preserved. Three locale groups validate; the locked/offline Headstart Playground catalog-filtered suite passed 58/58 (log `target/headstart/evidence/identity-field-locales-20261028.log`, SHA-256 `f9568dbbdc4523aefcd06a4316df74f52031c8e08db572edaf2beb632b7f52f0`), and a focused locale value/label regression passed 1/1 (log `target/headstart/evidence/identity-field-labels-20261028.log`, SHA-256 `e273b86988772200e08b59ef9f14fa569c6f0f58be702a4febf8421e36646558`). Native and Web rendering and interaction remain unverified for this change.
