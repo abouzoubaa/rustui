@@ -44,9 +44,9 @@ struct RetainedCodeEditor {
 
 /// A controlled native code editor with stable caller-supplied identity.
 ///
-/// Language selection controls upstream editing behavior. Syntax highlighting
-/// additionally requires enabled upstream grammars; the current workspace does
-/// not enable them. This adapter does not configure a language server.
+/// Language selection controls upstream editing behavior. Native builds include
+/// Rust and JSON syntax grammars; Web grammars are not yet enabled. This
+/// adapter does not configure a language server.
 pub struct CodeEditorView {
     id: Identity,
     value: Binding<String>,
@@ -98,7 +98,7 @@ impl CodeEditorView {
 
     /// Selects upstream language editing rules without replacing the editor.
     /// Unknown language names use the upstream fallback rules. Panics for an
-    /// empty or whitespace-only name. This does not enable syntax grammars.
+    /// empty or whitespace-only name. Other grammar availability depends on features.
     pub fn language(mut self, language: impl Into<SharedString>) -> Self {
         let language = language.into();
         assert!(
@@ -271,6 +271,41 @@ impl View for CodeEditorView {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[cfg(not(target_family = "wasm"))]
+    #[test]
+    fn native_rust_and_json_highlighters_parse_source() {
+        use gpui_base::input::{HighlightStyleResolver, Rope};
+        use gpui_component::highlighter::SyntaxHighlighter;
+
+        struct AllStyles;
+        impl HighlightStyleResolver for AllStyles {
+            fn style(&self, _name: &str) -> Option<gpui::HighlightStyle> {
+                Some(gpui::HighlightStyle::default())
+            }
+        }
+        for (language, source) in [
+            ("rust", "fn main() { let answer = 42; }"),
+            ("json", r#"{"answer": 42}"#),
+        ] {
+            let mut highlighter = SyntaxHighlighter::new(language);
+            assert_eq!(highlighter.language().as_ref(), language);
+            assert!(highlighter.update(None, &Rope::from_str(source), None));
+            let tree = highlighter
+                .tree()
+                .expect("grammar must produce a syntax tree");
+            assert!(
+                !tree.root_node().has_error(),
+                "{language} source should parse"
+            );
+            assert!(
+                !highlighter
+                    .styles(&(0..source.len()), &AllStyles)
+                    .is_empty(),
+                "{language} highlight query should match source"
+            );
+        }
+    }
 
     #[test]
     fn retained_editor_event_uses_latest_owner_binding_writer() {

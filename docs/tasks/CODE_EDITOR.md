@@ -1,5 +1,14 @@
 # Controlled native CodeEditor adapter
 
+## Current syntax support — 2026-10-28
+
+Native RustUI builds enable the pinned Components Rust and JSON grammars. A
+focused test parses representative Rust and JSON and verifies their highlight
+queries return styles; this is source evidence, not a native visual acceptance
+result. The Web build keeps syntax highlighting disabled and reports that
+limitation in Playground. No language server is configured. The earlier proposal
+and no-highlighting observations below describe the previous configuration.
+
 `CodeEditor(id, Binding<String>)` adapts the pinned GPUI Components `Editor`
 and `EditorState`. It uses the enclosing component's retained registry and
 binding writer, matching the existing TextEditor ownership path.

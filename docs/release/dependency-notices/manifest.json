@@ -892,6 +892,44 @@
         "revision": "69502ce83fdfecdd0beefd677e2abb3781b29d98"
       },
       "version": "0.2.54"
+    },
+    {
+      "files": [
+        {
+          "path": "texts/2e0110e07abef7c2548b26ec9d6969775617ca539a0dc8dbeeb14d6452c711d1.txt",
+          "sha256": "2e0110e07abef7c2548b26ec9d6969775617ca539a0dc8dbeeb14d6452c711d1",
+          "upstream_path": "LICENSE",
+          "url": "https://raw.githubusercontent.com/tree-sitter/tree-sitter-json/ee35a6ebefcef0c5c416c0d1ccec7370cfca5a24/LICENSE"
+        }
+      ],
+      "manifest_sha256": "50f8e38f8a1f66a6f4a1d6572dd6e9839c667dc2264b20f729003d3ec1886114",
+      "name": "tree-sitter-json",
+      "source": "registry+https://github.com/rust-lang/crates.io-index",
+      "upstream": {
+        "package_path": "",
+        "repository": "tree-sitter/tree-sitter-json",
+        "revision": "ee35a6ebefcef0c5c416c0d1ccec7370cfca5a24"
+      },
+      "version": "0.24.8"
+    },
+    {
+      "files": [
+        {
+          "path": "texts/31d5b6f4243d5c7c6e1c4ebbbb9f6407bd1457a08bcc4f706521710341acba36.txt",
+          "sha256": "31d5b6f4243d5c7c6e1c4ebbbb9f6407bd1457a08bcc4f706521710341acba36",
+          "upstream_path": "LICENSE",
+          "url": "https://raw.githubusercontent.com/tree-sitter/tree-sitter-rust/18b0515fca567f5a10aee9978c6d2640e878671a/LICENSE"
+        }
+      ],
+      "manifest_sha256": "6ff87cd4d3a58c1fae4892983995cbb18184c8569938a29a9f2bbca918b57232",
+      "name": "tree-sitter-rust",
+      "source": "registry+https://github.com/rust-lang/crates.io-index",
+      "upstream": {
+        "package_path": "",
+        "repository": "tree-sitter/tree-sitter-rust",
+        "revision": "18b0515fca567f5a10aee9978c6d2640e878671a"
+      },
+      "version": "0.24.0"
     }
   ],
   "schema_version": 1
