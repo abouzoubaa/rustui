@@ -19,6 +19,17 @@ are retained as historical records.
 
 ## Current release evidence — 2026-10-27
 
+- **R26 Web reload error display, 2026-10-28:** A real-browser oversized
+  response exposed a JavaScript stack and localhost URL in the visible reload
+  status. RustUI's Playground now extracts the JavaScript error message and
+  uses a generic fallback for unknown rejection values. Formatting, six focused
+  loader tests and the optimized Web build passed. In the in-app Chromium
+  browser, a local server advertising a 3 MiB uncompressed theme produced the
+  concise `Reload error: Theme response exceeds 2 MiB`, without the stack or URL;
+  the owned tab and server were closed. The tested bundle manifest SHA-256 is
+  `6980e00c7b40b0bcb7a46ed9757468f74f970f56c3e027f3f2517faf9e788e58`.
+  This is a bounded browser check, not broader browser or bandwidth acceptance.
+
 - **R26 oversized Web theme responses, 2026-10-28:** The browser loader now
   cancels a response declaring an uncompressed body above 2 MiB before reading
   it. Compressed responses continue through the existing decoded-stream limit,

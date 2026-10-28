@@ -18,6 +18,8 @@ use rustui::{
 
 #[cfg(target_family = "wasm")]
 use rustui::theme::{activate_theme, parse_theme};
+#[cfg(target_family = "wasm")]
+use wasm_bindgen::JsCast;
 
 #[cfg(target_family = "wasm")]
 #[wasm_bindgen::prelude::wasm_bindgen(module = "/web/theme-reload.js")]
@@ -46,7 +48,16 @@ pub(super) async fn load_web_theme() -> Result<String, String> {
     let request = ThemeRequestGuard(start_theme_fetch());
     wasm_bindgen_futures::JsFuture::from(request.0.promise())
         .await
-        .map_err(|error| error.as_string().unwrap_or_else(|| format!("{error:?}")))?
+        .map_err(|error| {
+            error
+                .as_string()
+                .or_else(|| {
+                    error
+                        .dyn_ref::<js_sys::Error>()
+                        .and_then(|error| error.message().as_string())
+                })
+                .unwrap_or_else(|| "Theme request failed".to_owned())
+        })?
         .as_string()
         .ok_or_else(|| "Theme response is not text".to_owned())
 }
