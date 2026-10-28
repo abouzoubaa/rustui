@@ -201,6 +201,94 @@ impl<C: View> Eq for OwnerTask<C> {}
 mod tests {
     use super::*;
 
+    struct DropProbe(std::sync::Arc<std::sync::atomic::AtomicUsize>);
+
+    impl Drop for DropProbe {
+        fn drop(&mut self) {
+            self.0.fetch_add(1, std::sync::atomic::Ordering::SeqCst);
+        }
+    }
+
+    #[derive(Default)]
+    struct TaskProbe {
+        state: AsyncState<String, String>,
+    }
+
+    impl View for TaskProbe {
+        fn body(&self) -> impl View {
+            crate::view::EmptyView
+        }
+    }
+
+    fn apply_probe(probe: &mut TaskProbe, state: AsyncState<String, String>) -> bool {
+        probe.state = state;
+        true
+    }
+
+    #[gpui::test]
+    fn owner_actions_replace_cancel_and_complete_work(cx: &mut gpui::TestAppContext) {
+        cx.update(gpui_component::init);
+        let (host, window) =
+            cx.add_window_view(|_, cx| ComponentHost::new(TaskProbe::default(), cx));
+        let owner = OwnerTask::new(host.downgrade());
+        let dropped = std::sync::Arc::new(std::sync::atomic::AtomicUsize::new(0));
+        let work_dropped = dropped.clone();
+        let pending = owner.start(
+            "request",
+            move || {
+                let guard = DropProbe(work_dropped.clone());
+                async move {
+                    let _guard = guard;
+                    std::future::pending::<Result<String, String>>().await
+                }
+            },
+            apply_probe,
+        );
+        window.update(|window, cx| pending.dispatch_keyboard(window, cx));
+        window.cx.run_until_parked();
+        assert_eq!(
+            window.update(|_, cx| host.read(cx).component().state.clone()),
+            AsyncState::Loading
+        );
+
+        let replacement = owner.start(
+            "request",
+            || async { Ok::<_, String>("new".to_owned()) },
+            apply_probe,
+        );
+        window.update(|window, cx| replacement.dispatch_keyboard(window, cx));
+        window.cx.run_until_parked();
+        assert_eq!(
+            window.update(|_, cx| host.read(cx).component().state.clone()),
+            AsyncState::Success("new".to_owned())
+        );
+        assert_eq!(dropped.load(std::sync::atomic::Ordering::SeqCst), 1);
+        assert!(window.update(|_, cx| host.read(cx).tasks.running.is_empty()));
+
+        window.update(|window, cx| pending.dispatch_keyboard(window, cx));
+        let cancel = owner.cancel("request", apply_probe);
+        window.update(|window, cx| cancel.dispatch_keyboard(window, cx));
+        window.cx.run_until_parked();
+        assert_eq!(
+            window.update(|_, cx| host.read(cx).component().state.clone()),
+            AsyncState::Idle
+        );
+        assert_eq!(dropped.load(std::sync::atomic::Ordering::SeqCst), 2);
+
+        let failure = owner.start(
+            "request",
+            || async { Err::<String, _>("failed".to_owned()) },
+            apply_probe,
+        );
+        window.update(|window, cx| failure.dispatch_keyboard(window, cx));
+        window.cx.run_until_parked();
+        assert_eq!(
+            window.update(|_, cx| host.read(cx).component().state.clone()),
+            AsyncState::Error("failed".to_owned())
+        );
+        assert!(window.update(|_, cx| host.read(cx).tasks.running.is_empty()));
+    }
+
     #[test]
     fn replacement_and_cancel_invalidate_old_generations() {
         let mut tasks = TaskRegistry::default();
