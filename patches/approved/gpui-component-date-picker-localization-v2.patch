@@ -1,0 +1,77 @@
+--- a/vendor/gpui-component-0.7.3/src/time/date_picker.rs
++++ b/vendor/gpui-component-0.7.3/src/time/date_picker.rs
+@@ -304,6 +304,19 @@
+         self
+     }
+ 
++    /// Read the first day of the calendar week.
++    pub fn week_start(&self) -> Weekday {
++        self.first_day_of_week
++    }
++
++    /// Update the first day without replacing the retained picker state.
++    pub fn set_week_start(&mut self, day: Weekday, cx: &mut Context<Self>) {
++        if self.first_day_of_week != day {
++            self.first_day_of_week = day;
++            cx.notify();
++        }
++    }
++
+     /// Get the date part of the value.
+     pub fn date(&self) -> Date {
+         self.date
+@@ -551,6 +564,8 @@
+     appearance: bool,
+     focus_ring_enabled: bool,
+     disabled: bool,
++    accessibility_label: Option<SharedString>,
++    display_value: Option<SharedString>,
+ }
+ 
+ impl Sizable for DatePicker {
+@@ -610,7 +625,21 @@
+             appearance: true,
+             focus_ring_enabled: true,
+             disabled: false,
+-        }
++            accessibility_label: None,
++            display_value: None,
++        }
++    }
++
++    /// Set an accessible name for the date picker.
++    pub fn accessibility_label(mut self, label: impl Into<SharedString>) -> Self {
++        self.accessibility_label = Some(label.into());
++        self
++    }
++
++    /// Override the displayed value when a date is selected.
++    pub fn display_value(mut self, value: impl Into<SharedString>) -> Self {
++        self.display_value = Some(value.into());
++        self
+     }
+ 
+     /// Set the placeholder of the date picker, default: "".
+@@ -685,16 +714,18 @@
+             .placeholder
+             .clone()
+             .unwrap_or_else(|| t!("DatePicker.placeholder").into());
+-        let display_title = state
+-            .date_time()
+-            .format(&state.display_format())
+-            .unwrap_or(placeholder.clone());
++        let display_title = if state.date.is_some() {
++            self.display_value.clone().or_else(|| state.date_time().format(&state.display_format()))
++        } else {
++            None
++        }.unwrap_or(placeholder.clone());
+ 
+         let (bg, fg) = input_style(self.disabled, cx);
+ 
+         let picker_state = self.state.clone();
+ 
+         BaseDatePicker::new(self.id, &state.focus_handle)
++            .when_some(self.accessibility_label, |this, label| this.aria_label(label))
+             .open(state.open)
+             .when(state.date.is_some(), |this| {
+                 this.aria_value(display_title.clone())

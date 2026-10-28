@@ -304,6 +304,19 @@ impl DatePickerState {
         self
     }
 
+    /// Read the first day of the calendar week.
+    pub fn week_start(&self) -> Weekday {
+        self.first_day_of_week
+    }
+
+    /// Update the first day without replacing the retained picker state.
+    pub fn set_week_start(&mut self, day: Weekday, cx: &mut Context<Self>) {
+        if self.first_day_of_week != day {
+            self.first_day_of_week = day;
+            cx.notify();
+        }
+    }
+
     /// Get the date part of the value.
     pub fn date(&self) -> Date {
         self.date
@@ -552,6 +565,7 @@ pub struct DatePicker {
     focus_ring_enabled: bool,
     disabled: bool,
     accessibility_label: Option<SharedString>,
+    display_value: Option<SharedString>,
 }
 
 impl Sizable for DatePicker {
@@ -612,12 +626,19 @@ impl DatePicker {
             focus_ring_enabled: true,
             disabled: false,
             accessibility_label: None,
+            display_value: None,
         }
     }
 
     /// Set an accessible name for the date picker.
     pub fn accessibility_label(mut self, label: impl Into<SharedString>) -> Self {
         self.accessibility_label = Some(label.into());
+        self
+    }
+
+    /// Override the displayed value when a date is selected.
+    pub fn display_value(mut self, value: impl Into<SharedString>) -> Self {
+        self.display_value = Some(value.into());
         self
     }
 
@@ -693,10 +714,11 @@ impl RenderOnce for DatePicker {
             .placeholder
             .clone()
             .unwrap_or_else(|| t!("DatePicker.placeholder").into());
-        let display_title = state
-            .date_time()
-            .format(&state.display_format())
-            .unwrap_or(placeholder.clone());
+        let display_title = if state.date.is_some() {
+            self.display_value.clone().or_else(|| state.date_time().format(&state.display_format()))
+        } else {
+            None
+        }.unwrap_or(placeholder.clone());
 
         let (bg, fg) = input_style(self.disabled, cx);
 

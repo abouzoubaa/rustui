@@ -2,7 +2,7 @@
 
 use std::{cell::RefCell, rc::Rc};
 
-use chrono::{Datelike, NaiveDate};
+use chrono::{Datelike, NaiveDate, Weekday};
 use gpui::{AnyElement, AppContext as _, IntoElement, SharedString};
 use gpui_component::{
     Disableable as _,
@@ -10,10 +10,42 @@ use gpui_component::{
     date_picker::{DatePicker as GpuiDatePicker, DatePickerEvent, DatePickerState, DateTime},
 };
 use rustui_core::{Binding, Identity};
+use rustui_i18n::{CivilDate, DateLength, Locale, LocaleFormatter, Weekday as LocaleWeekday};
 
 use crate::view::{EmptyView, RenderContext, View};
 
 type EventWriter<Value, Context> = Rc<dyn Fn(Value, &mut Context)>;
+
+fn localized_calendar(
+    locale: Option<&Locale>,
+    value: Option<NaiveDate>,
+) -> (Weekday, Option<String>) {
+    let Some(formatter) = locale.and_then(|locale| LocaleFormatter::try_new(locale).ok()) else {
+        return (Weekday::Sun, None);
+    };
+    let week_start = match formatter.first_weekday() {
+        Ok(LocaleWeekday::Monday) => Weekday::Mon,
+        Ok(LocaleWeekday::Tuesday) => Weekday::Tue,
+        Ok(LocaleWeekday::Wednesday) => Weekday::Wed,
+        Ok(LocaleWeekday::Thursday) => Weekday::Thu,
+        Ok(LocaleWeekday::Friday) => Weekday::Fri,
+        Ok(LocaleWeekday::Saturday) => Weekday::Sat,
+        Ok(LocaleWeekday::Sunday) | Err(_) => Weekday::Sun,
+    };
+    let title = value.and_then(|date| {
+        formatter
+            .format_date(
+                CivilDate {
+                    year: date.year(),
+                    month: date.month() as u8,
+                    day: date.day() as u8,
+                },
+                DateLength::Short,
+            )
+            .ok()
+    });
+    (week_start, title)
+}
 
 #[derive(Clone, Debug, PartialEq, Eq)]
 enum DatePickerLabel {
@@ -235,6 +267,12 @@ impl View for DatePickerView {
 
         let state = bridge.read(context.app()).state.clone();
         let current = self.value.value();
+        let (week_start, display_value) = localized_calendar(context.locale(), current);
+        if state.read(context.app()).week_start() != week_start {
+            context.update_entity(&state, move |state, _window, cx| {
+                state.set_week_start(week_start, cx);
+            });
+        }
         let retained = match state.read(context.app()).date() {
             CalendarDate::Single(value) => value,
             CalendarDate::Range(_, _) => unreachable!("RustUI DatePicker retains one date"),
@@ -278,6 +316,9 @@ impl View for DatePickerView {
             .number_of_months(self.number_of_months)
             .appearance(self.appearance)
             .disabled(self.disabled);
+        if let Some(display_value) = display_value {
+            picker = picker.display_value(display_value);
+        }
         if let Some(label) = self.trigger_accessibility_label(|id| context.localized_message(id)) {
             picker = picker.accessibility_label(label);
         }
@@ -288,6 +329,29 @@ impl View for DatePickerView {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn calendar_uses_locale_week_rules_and_date_format() {
+        let date = NaiveDate::from_ymd_opt(2026, 10, 28).unwrap();
+        let french = Locale::parse("fr-FR").unwrap();
+        let arabic = Locale::parse("ar-EG").unwrap();
+        let english = Locale::parse("en-US").unwrap();
+        let (fr_week, fr_date) = localized_calendar(Some(&french), Some(date));
+        let (ar_week, ar_date) = localized_calendar(Some(&arabic), Some(date));
+        let (en_week, en_date) = localized_calendar(Some(&english), Some(date));
+        assert_eq!(
+            (fr_week, ar_week, en_week),
+            (Weekday::Mon, Weekday::Sat, Weekday::Sun)
+        );
+        let (fr_date, ar_date, en_date) = (fr_date.unwrap(), ar_date.unwrap(), en_date.unwrap());
+        assert_ne!(fr_date, en_date);
+        assert_ne!(ar_date, en_date);
+        assert_eq!(
+            localized_calendar(Some(&french), None),
+            (Weekday::Mon, None)
+        );
+        assert_eq!(localized_calendar(None, Some(date)), (Weekday::Sun, None));
+    }
 
     fn binding() -> Binding<Option<NaiveDate>> {
         Binding::new(

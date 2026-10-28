@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Apply or verify RustUI's exact gpui-component DatePicker accessibility patch."""
+"""Apply or verify RustUI's exact gpui-component DatePicker patch."""
 
 from __future__ import annotations
 
@@ -11,13 +11,13 @@ import subprocess
 import tomllib
 
 
-PATCH = Path("patches/approved/gpui-component-date-picker-accessibility-v1.patch")
+PATCH = Path("patches/approved/gpui-component-date-picker-localization-v2.patch")
 PACKAGE = Path("vendor/gpui-component-0.7.3")
 SOURCE = PACKAGE / "src/time/date_picker.rs"
 CHECKSUM_FILE = PACKAGE / ".cargo-checksum.json"
-PATCH_SHA256 = "ce1ae916fb402f940e2d1dbdd6c8f8ef3c60ee83ced8ad3890a5cce8a343239e"
+PATCH_SHA256 = "dbd34e41cfbb720a361f69cb2ddda89298fe7c80cbcd9eb36749153787c4b9dd"
 PREIMAGE_SHA256 = "e7c8c87c76b253703a955c578f28278212d54545d9c9a62a76892a3140095248"
-POSTIMAGE_SHA256 = "aedb052400ef31b2754e58820b54453d1f80c39c0f2ed4548d167b1b18bc3b79"
+POSTIMAGE_SHA256 = "83e639bbaf3194f81c33864f8e885f683faa403154e40253454215ed8462467d"
 CHECKSUM_SHA256 = "d5b533efba197cc15bcb6756b935a786e846463c1ee431f876e8c334a7e638c6"
 
 
