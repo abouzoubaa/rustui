@@ -27,6 +27,12 @@ extern "C" {
     type WebThemeRequest;
     #[wasm_bindgen::prelude::wasm_bindgen(js_name = startThemeFetch)]
     fn start_theme_fetch() -> WebThemeRequest;
+    #[wasm_bindgen::prelude::wasm_bindgen(js_name = createThemeCache)]
+    fn create_theme_cache() -> js_sys::Object;
+    #[wasm_bindgen::prelude::wasm_bindgen(js_name = clearThemeCache)]
+    fn clear_theme_cache(cache: &js_sys::Object);
+    #[wasm_bindgen::prelude::wasm_bindgen(js_name = startCachedThemeFetch)]
+    fn start_cached_theme_fetch(cache: &js_sys::Object) -> WebThemeRequest;
     #[wasm_bindgen::prelude::wasm_bindgen(method, getter)]
     fn promise(this: &WebThemeRequest) -> js_sys::Promise;
     #[wasm_bindgen::prelude::wasm_bindgen(method)]
@@ -45,7 +51,12 @@ impl Drop for ThemeRequestGuard {
 
 #[cfg(target_family = "wasm")]
 pub(super) async fn load_web_theme() -> Result<String, String> {
-    let request = ThemeRequestGuard(start_theme_fetch());
+    finish_web_theme_request(start_theme_fetch()).await
+}
+
+#[cfg(target_family = "wasm")]
+async fn finish_web_theme_request(request: WebThemeRequest) -> Result<String, String> {
+    let request = ThemeRequestGuard(request);
     wasm_bindgen_futures::JsFuture::from(request.0.promise())
         .await
         .map_err(|error| {
@@ -101,6 +112,8 @@ struct ReloadState {
     web_source: Option<String>,
     #[cfg(target_family = "wasm")]
     web_mode: Option<AppearanceMode>,
+    #[cfg(target_family = "wasm")]
+    web_cache: js_sys::Object,
 }
 
 struct ReloadLease {
@@ -179,6 +192,7 @@ impl ReloadState {
             self.manual_task.take();
             self.manual_pending = false;
             self.next_request();
+            clear_theme_cache(&self.web_cache);
         }
     }
 
@@ -286,6 +300,8 @@ impl FoundationAdditions {
                 web_source: None,
                 #[cfg(target_family = "wasm")]
                 web_mode: None,
+                #[cfg(target_family = "wasm")]
+                web_cache: create_theme_cache(),
             })),
             path,
         }
@@ -403,13 +419,14 @@ impl FoundationAdditions {
                                 return None;
                             }
                             let mode = active_theme(cx).map(|theme| theme.mode)?;
-                            Some((state.next_request(), mode))
+                            Some((state.next_request(), mode, state.web_cache.clone()))
                         });
                         drop(reload);
-                        let Some((request, _mode)) = next else {
+                        let Some((request, _mode, cache)) = next else {
                             continue;
                         };
-                        let source = load_web_theme().await;
+                        let source =
+                            finish_web_theme_request(start_cached_theme_fetch(&cache)).await;
                         let Some(reload) = weak.upgrade() else {
                             break;
                         };

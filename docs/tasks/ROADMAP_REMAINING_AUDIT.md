@@ -19,6 +19,25 @@ are retained as historical records.
 
 ## Current release evidence — 2026-10-27
 
+- **R26 Web automatic theme transfer, 2026-10-28:** The Playground watcher
+  now keeps an owner-scoped response cache and conditionally revalidates only
+  strong ETags. A matching 304 reuses the bounded prior response; absent or
+  weak validators use full fetches, invalid 304 validation retries without a
+  validator, and `no-store` clears the cache. Stop/unmount clears the cache;
+  manual and inspector reloads remain unconditional. Ten JavaScript tests,
+  the native owner-lifetime regression (1/1), formatting, and the optimized
+  Web build passed. In one in-app Chromium session, the final bundle (manifest
+  SHA-256 `85e68abcee56f3c8973e805c977b2c9d03c215e3b733408b7d5cf90c00b6d9f7`)
+  transferred 821,287 response-body bytes initially, then zero for matching
+  304s; a no-store 304 caused an unconditional 200 and later full fetches.
+  In earlier builds, changing the strong ETag transferred changed data,
+  and stopping/restarting the watcher caused a fresh first request. Browser
+  server logs are `target/headstart/evidence/theme-strong-etag-verified-browser-20261028.log`
+  and `theme-strong-etag-final-browser-20261028.log`. The test tabs and servers
+  were closed. These are bounded local observations; server correctness,
+  browser variants, CPU/memory measurements and wider performance acceptance
+  remain open. Servers without a strong ETag still transfer the full theme.
+
 - **R31 lockfile advisory refresh, 2026-10-28:** OSV batch queries for all
   834 distinct registry package/version pairs in lockfile SHA-256
   `553f12f725d6e74b6f20950308dca47c2d09df872d1286a2e9de8c9dfe30e27a`

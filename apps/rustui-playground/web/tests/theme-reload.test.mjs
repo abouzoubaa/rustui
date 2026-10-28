@@ -3,7 +3,7 @@ import assert from 'node:assert/strict';
 import { readFile } from 'node:fs/promises';
 
 const source = await readFile(new URL('../theme-reload.js', import.meta.url));
-const { fetchTheme, startThemeFetch } = await import(`data:text/javascript;base64,${source.toString('base64')}`);
+const { fetchTheme, startThemeFetch, createThemeCache, clearThemeCache, startCachedThemeFetch } = await import(`data:text/javascript;base64,${source.toString('base64')}`);
 
 test('fetches uncached same-origin UTF-8 theme data', async () => {
   const result = await fetchTheme(async (url, options) => {
@@ -36,6 +36,66 @@ test('rejects a declared oversized uncompressed body without reading it', async 
   assert.equal(await fetchTheme(async () => new Response('ok', {
     headers: { 'content-length': String(2 * 1024 * 1024 + 1), 'content-encoding': 'gzip' },
   })), 'ok');
+});
+
+test('revalidates strong ETags and falls back when validation is unavailable', async () => {
+  const cache = createThemeCache();
+  let calls = 0;
+  const fetcher = async (_url, options) => {
+    calls++;
+    assert.equal(options.cache, 'reload');
+    if (calls === 1) return new Response('first', { headers: { etag: '"one"' } });
+    if (calls === 2) {
+      assert.equal(options.headers['If-None-Match'], '"one"');
+      return new Response(null, { status: 304, headers: { etag: '"one"' } });
+    }
+    if (calls === 3) return new Response(null, { status: 304 });
+    assert.deepEqual(options.headers, {});
+    return new Response('second', { headers: { etag: 'W/"two"' } });
+  };
+  assert.equal(await startCachedThemeFetch(cache, fetcher).promise, 'first');
+  assert.equal(await startCachedThemeFetch(cache, fetcher).promise, 'first');
+  assert.equal(await startCachedThemeFetch(cache, fetcher).promise, 'second');
+  assert.equal(cache.etag, null);
+  clearThemeCache(cache);
+  assert.equal(cache.text, null);
+});
+
+test('does not retain a response that forbids storage', async () => {
+  const cache = createThemeCache();
+  await startCachedThemeFetch(cache, async () => new Response('private', {
+    headers: { etag: '"one"', 'cache-control': 'no-store' },
+  })).promise;
+  assert.equal(cache.etag, null);
+  assert.equal(cache.text, null);
+});
+
+test('clears the cached body when a 304 forbids storage even if retry fails', async () => {
+  const cache = createThemeCache();
+  await startCachedThemeFetch(cache, async () => new Response('old', {
+    headers: { etag: '"old"' },
+  })).promise;
+  let calls = 0;
+  await assert.rejects(startCachedThemeFetch(cache, async () => {
+    if (calls++ === 0) return new Response(null, {
+      status: 304, headers: { etag: '"old"', 'cache-control': 'no-store' },
+    });
+    throw new Error('retry failed');
+  }).promise, /retry failed/);
+  assert.equal(cache.etag, null);
+  assert.equal(cache.text, null);
+});
+
+test('clears the cached body before rejecting a no-store oversized response', async () => {
+  const cache = createThemeCache();
+  await startCachedThemeFetch(cache, async () => new Response('old', {
+    headers: { etag: '"old"' },
+  })).promise;
+  await assert.rejects(startCachedThemeFetch(cache, async () => new Response('large', {
+    headers: { 'content-length': String(2 * 1024 * 1024 + 1), 'cache-control': 'no-store' },
+  })).promise, /exceeds 2 MiB/);
+  assert.equal(cache.etag, null);
+  assert.equal(cache.text, null);
 });
 
 test('aborts a request that does not complete', async () => {
