@@ -6,6 +6,7 @@ use super::{
         PreviewError, PreviewId, PropertyId, PropertyValue, deserialize_unique_map,
     },
     registry::PreviewRegistry,
+    schema::validate_preview_with_validated_catalog,
     validate_preview,
 };
 use crate::view::{AnyView, Keyed};
@@ -209,6 +210,7 @@ fn validate_composition<C>(
     d: &CompositionDocument,
 ) -> Result<(), PreviewError> {
     validate_shape(d)?;
+    let mut catalog_validated = false;
     for n in d.nodes.values() {
         let component = &n.preview.component_id;
         if !registry.catalog().components.contains_key(component) {
@@ -242,7 +244,12 @@ fn validate_composition<C>(
                 )));
             }
         }
-        validate_preview(registry.catalog(), n.preview.clone())?;
+        if catalog_validated {
+            validate_preview_with_validated_catalog(registry.catalog(), n.preview.clone())?;
+        } else {
+            validate_preview(registry.catalog(), n.preview.clone())?;
+            catalog_validated = true;
+        }
     }
     Ok(())
 }
@@ -649,6 +656,20 @@ mod tests {
         view::{AnyView, EmptyView},
     };
     use std::collections::BTreeMap;
+
+    #[test]
+    fn validates_later_node_properties_after_catalog_reuse() {
+        let (registry, mut document) = fixture();
+        let root = document.nodes.get_mut(&document.root).unwrap();
+        root.preview.properties.insert(
+            PropertyId::new("unexpected").unwrap(),
+            PropertyValue::Boolean(true),
+        );
+        assert!(matches!(
+            validate_composition(&registry, &document),
+            Err(PreviewError::UnknownProperty { .. })
+        ));
+    }
     #[test]
     fn consumer_metadata_preserves_registered_catalog_and_slot_contracts() {
         let (registry, document) = fixture();

@@ -152,6 +152,15 @@ pub fn validate_preview(
     document: PreviewDocument,
 ) -> Result<ValidatedPreview, PreviewError> {
     validate_catalog(catalog)?;
+    validate_preview_with_validated_catalog(catalog, document)
+}
+
+// The caller must have successfully validated this unchanged catalog in the
+// current operation. Document-specific validation still runs for every node.
+pub(super) fn validate_preview_with_validated_catalog(
+    catalog: &ComponentCatalog,
+    document: PreviewDocument,
+) -> Result<ValidatedPreview, PreviewError> {
     if document.format != PREVIEW_FORMAT {
         return Err(PreviewError::UnsupportedPreviewFormat(document.format));
     }
