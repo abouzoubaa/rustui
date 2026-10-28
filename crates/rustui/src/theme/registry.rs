@@ -409,7 +409,7 @@ pub fn activate_theme(
         colors.button_secondary_foreground = foreground;
         colors.table_head = table_head;
         colors.table_head_foreground = table_head_foreground;
-        colors.popover = menu_popover;
+        colors.popover = opaque_popover_fallback(colors.popover, menu_popover);
     });
     cx.set_global(ActiveTheme {
         mode,
@@ -442,6 +442,14 @@ fn table_header_colors(
             ThemeResolveError::Invalid("table header style has no foreground".into())
         })?;
     Ok((hsla(background), hsla(foreground)))
+}
+
+fn opaque_popover_fallback(surface: Hsla, tint: Hsla) -> Hsla {
+    // Native backdrop blur is not available here; composite the material tint
+    // over the elevated surface so content behind a popup stays legible.
+    let mut base = Rgba::from(surface);
+    base.a = 1.0;
+    Hsla::from(base.blend(Rgba::from(tint)))
 }
 
 fn menu_background(
@@ -512,6 +520,28 @@ impl From<ThemeApplyError> for ThemeActivationError {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn popover_fallback_composites_tint_on_an_opaque_surface() {
+        let surface = Hsla::from(Rgba {
+            r: 0.1,
+            g: 0.2,
+            b: 0.3,
+            a: 0.5,
+        });
+        let tint = Hsla::from(Rgba {
+            r: 1.0,
+            g: 1.0,
+            b: 1.0,
+            a: 0.2,
+        });
+        let result = Rgba::from(opaque_popover_fallback(surface, tint));
+
+        assert!((result.r - 0.28).abs() < 0.0001);
+        assert!((result.g - 0.36).abs() < 0.0001);
+        assert!((result.b - 0.44).abs() < 0.0001);
+        assert_eq!(result.a, 1.0);
+    }
 
     #[test]
     fn table_header_colors_resolve_any_appearance_rules() {
