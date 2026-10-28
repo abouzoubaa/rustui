@@ -328,6 +328,7 @@ const RENDERER_CAPABILITIES: &[ComponentStyleCapability] = &[
 
 #[derive(Clone)]
 pub struct ActiveTheme {
+    revision: u64,
     /// Effective appearance used by the most recent successful activation.
     pub mode: AppearanceMode,
     /// Active platform profile supplying shared component metrics and tokens.
@@ -338,6 +339,12 @@ pub struct ActiveTheme {
 }
 
 impl ActiveTheme {
+    /// Identifies the successful theme activation currently owned by this app.
+    /// A new successful activation advances this value, even for the same mode.
+    pub fn revision(&self) -> u64 {
+        self.revision
+    }
+
     pub fn component_style(
         &self,
         component: &str,
@@ -373,6 +380,10 @@ pub fn activate_theme(
     mode: Option<AppearanceMode>,
     cx: &mut App,
 ) -> Result<(), ThemeActivationError> {
+    let revision = active_theme(cx)
+        .map_or(0, |theme| theme.revision)
+        .checked_add(1)
+        .expect("theme activation revision exhausted");
     document.validate().map_err(ThemeResolveError::Invalid)?;
     let button = resolve_button(document, mode)?;
     let mode = mode.unwrap_or(document.platform_snapshot.appearance.default);
@@ -412,6 +423,7 @@ pub fn activate_theme(
         colors.popover = opaque_popover_fallback(colors.popover, menu_popover);
     });
     cx.set_global(ActiveTheme {
+        revision,
         mode,
         profile: document.platform_snapshot.clone(),
         button,
@@ -520,6 +532,25 @@ impl From<ThemeApplyError> for ThemeActivationError {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[gpui::test]
+    fn successful_activations_advance_revision_and_failures_preserve_it(
+        cx: &mut gpui::TestAppContext,
+    ) {
+        let mut document =
+            crate::theme::parse_theme(include_str!("../../../../themes/macos27.json")).unwrap();
+        cx.update(|app| {
+            gpui_component::init(app);
+            activate_theme(&document, Some(AppearanceMode::Dark), app).unwrap();
+            let initial = active_theme(app).unwrap().revision();
+            activate_theme(&document, Some(AppearanceMode::Dark), app).unwrap();
+            let next = active_theme(app).unwrap().revision();
+            assert_eq!(next, initial + 1);
+            document.format = "invalid".into();
+            assert!(activate_theme(&document, None, app).is_err());
+            assert_eq!(active_theme(app).unwrap().revision(), next);
+        });
+    }
 
     #[test]
     fn popover_fallback_composites_tint_on_an_opaque_surface() {

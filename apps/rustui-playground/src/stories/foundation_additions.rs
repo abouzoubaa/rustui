@@ -293,6 +293,7 @@ impl FoundationAdditions {
             }
             #[cfg(target_family = "wasm")]
             {
+                let theme_revision = active_theme(cx).map(|theme| theme.revision());
                 let request = {
                     let mut state = reload.borrow_mut();
                     state.manual_pending = true;
@@ -311,6 +312,14 @@ impl FoundationAdditions {
                             return;
                         }
                         state.manual_pending = false;
+                        if active_theme(cx).map(|theme| theme.revision()) != theme_revision {
+                            if state.set_result(
+                                "Theme reload superseded by a newer appearance.".to_owned(),
+                            ) {
+                                cx.refresh_windows();
+                            }
+                            return;
+                        }
                         if state.apply_web(source, mode, cx, true) {
                             cx.refresh_windows();
                         }
