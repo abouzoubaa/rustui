@@ -222,6 +222,64 @@ impl<S: gpui::AssetSource> gpui::AssetSource for EmbeddedAssetSource<S> {
 
 gpui::actions!(rustui_runtime, [Quit]);
 
+#[cfg(any(test, target_family = "wasm"))]
+fn web_input_key_bindings() -> [KeyBinding; 16] {
+    [
+        KeyBinding::new("cmd-z", gpui_base::input::Undo, Some("Input")),
+        KeyBinding::new("cmd-shift-z", gpui_base::input::Redo, Some("Input")),
+        KeyBinding::new("cmd-left", gpui_base::input::MoveHome, Some("Input")),
+        KeyBinding::new("cmd-right", gpui_base::input::MoveEnd, Some("Input")),
+        KeyBinding::new("cmd-up", gpui_base::input::MoveToStart, Some("Input")),
+        KeyBinding::new("cmd-down", gpui_base::input::MoveToEnd, Some("Input")),
+        KeyBinding::new(
+            "shift-cmd-left",
+            gpui_base::input::SelectToStartOfLine,
+            Some("Input"),
+        ),
+        KeyBinding::new(
+            "shift-cmd-right",
+            gpui_base::input::SelectToEndOfLine,
+            Some("Input"),
+        ),
+        KeyBinding::new(
+            "cmd-shift-up",
+            gpui_base::input::SelectToStart,
+            Some("Input"),
+        ),
+        KeyBinding::new(
+            "cmd-shift-down",
+            gpui_base::input::SelectToEnd,
+            Some("Input"),
+        ),
+        KeyBinding::new(
+            "alt-left",
+            gpui_base::input::MoveToPreviousWord,
+            Some("Input"),
+        ),
+        KeyBinding::new("alt-right", gpui_base::input::MoveToNextWord, Some("Input")),
+        KeyBinding::new(
+            "cmd-backspace",
+            gpui_base::input::DeleteToBeginningOfLine,
+            Some("Input"),
+        ),
+        KeyBinding::new(
+            "cmd-delete",
+            gpui_base::input::DeleteToEndOfLine,
+            Some("Input"),
+        ),
+        KeyBinding::new(
+            "alt-backspace",
+            gpui_base::input::DeleteToPreviousWordStart,
+            Some("Input"),
+        ),
+        KeyBinding::new(
+            "alt-delete",
+            gpui_base::input::DeleteToNextWordEnd,
+            Some("Input"),
+        ),
+    ]
+}
+
 fn tree_confirm_key_binding() -> KeyBinding {
     KeyBinding::new(
         "enter",
@@ -333,60 +391,7 @@ impl RustUI {
             // The Web target is not macOS at compile time, but browsers on
             // macOS still use Command for editing shortcuts.
             #[cfg(target_family = "wasm")]
-            cx.bind_keys([
-                KeyBinding::new("cmd-z", gpui_base::input::Undo, Some("Input")),
-                KeyBinding::new("cmd-shift-z", gpui_base::input::Redo, Some("Input")),
-                KeyBinding::new("cmd-left", gpui_base::input::MoveHome, Some("Input")),
-                KeyBinding::new("cmd-right", gpui_base::input::MoveEnd, Some("Input")),
-                KeyBinding::new("cmd-up", gpui_base::input::MoveToStart, Some("Input")),
-                KeyBinding::new("cmd-down", gpui_base::input::MoveToEnd, Some("Input")),
-                KeyBinding::new(
-                    "shift-cmd-left",
-                    gpui_base::input::SelectToStartOfLine,
-                    Some("Input"),
-                ),
-                KeyBinding::new(
-                    "shift-cmd-right",
-                    gpui_base::input::SelectToEndOfLine,
-                    Some("Input"),
-                ),
-                KeyBinding::new(
-                    "cmd-shift-up",
-                    gpui_base::input::SelectToStart,
-                    Some("Input"),
-                ),
-                KeyBinding::new(
-                    "cmd-shift-down",
-                    gpui_base::input::SelectToEnd,
-                    Some("Input"),
-                ),
-                KeyBinding::new(
-                    "alt-left",
-                    gpui_base::input::MoveToPreviousWord,
-                    Some("Input"),
-                ),
-                KeyBinding::new("alt-right", gpui_base::input::MoveToNextWord, Some("Input")),
-                KeyBinding::new(
-                    "cmd-backspace",
-                    gpui_base::input::DeleteToBeginningOfLine,
-                    Some("Input"),
-                ),
-                KeyBinding::new(
-                    "cmd-delete",
-                    gpui_base::input::DeleteToEndOfLine,
-                    Some("Input"),
-                ),
-                KeyBinding::new(
-                    "alt-backspace",
-                    gpui_base::input::DeleteToPreviousWordStart,
-                    Some("Input"),
-                ),
-                KeyBinding::new(
-                    "alt-delete",
-                    gpui_base::input::DeleteToNextWordEnd,
-                    Some("Input"),
-                ),
-            ]);
+            cx.bind_keys(web_input_key_bindings());
             crate::components::overlay::drawer::init(cx);
             // Set the Web default before caller launch/theme customization.
             #[cfg(target_family = "wasm")]
@@ -522,6 +527,36 @@ mod tests {
                 .collect::<Vec<_>>(),
             ["base.png", "playground-sample.png"]
         );
+    }
+
+    #[test]
+    fn web_input_shortcuts_match_expected_actions() {
+        use super::web_input_key_bindings;
+        use gpui_base::input::{
+            DeleteToBeginningOfLine, MoveHome, MoveToPreviousWord, Redo, SelectToEndOfLine, Undo,
+        };
+
+        let bindings = web_input_key_bindings();
+        let cases: [(&str, &dyn gpui::Action); 6] = [
+            ("cmd-z", &Undo),
+            ("cmd-shift-z", &Redo),
+            ("cmd-left", &MoveHome),
+            ("alt-left", &MoveToPreviousWord),
+            ("shift-cmd-right", &SelectToEndOfLine),
+            ("cmd-backspace", &DeleteToBeginningOfLine),
+        ];
+        for (key, expected) in cases {
+            let strokes = [Keystroke::parse(key).unwrap()];
+            let matching: Vec<_> = bindings
+                .iter()
+                .filter(|binding| binding.match_keystrokes(&strokes) == Some(false))
+                .collect();
+            assert_eq!(matching.len(), 1, "{key}");
+            assert!(matching[0].action().partial_eq(expected), "{key}");
+            let predicate = matching[0].predicate().expect("input-scoped shortcut");
+            assert!(predicate.eval(&[gpui::KeyContext::parse("Input").unwrap()]));
+            assert!(!predicate.eval(&[gpui::KeyContext::parse("Other").unwrap()]));
+        }
     }
 
     #[test]
