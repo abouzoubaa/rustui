@@ -1,5 +1,31 @@
 # Approved upstream patches
 
+## Cosmic Text 0.19.0 initial bidirectional span
+
+- Source: crates.io `cosmic-text 0.19.0`, original package checksum
+  `be17b688510d934ce13f48a2beba700e11583e281e0fda99c22bb256a14eda73`.
+  Cargo selects the same version from the local vendor path; upstream checksum
+  metadata remains unchanged.
+- Patch: `approved/cosmic-text-initial-bidi-span-v1.patch` (SHA-256
+  `25e91c7a89f5963c4e93b8203bdf4a20025248e6d40f2858f9695599eb7e07ce`).
+  `src/shape.rs` changes from SHA-256
+  `d94983d9b811c8f7f8b3d3dd8e2dc118d260c28eca829aba9af036ee68582837`
+  to `6d183b0243467f7033d32ae61d7bba44c34da9fa4b3cecf514962e5207dc681b`.
+- The no-wrap layout must distinguish an absent starting position from an
+  explicit zero position. Otherwise an initial span opposite the paragraph
+  direction loses its glyphs and width. The change preserves explicit-start
+  handling and leaves the upstream version pinned.
+- Apply, reverse, and verify with
+  `python3 scripts/apply_cosmic_bidi_initial_span_patch.py --apply`, `--reverse`,
+  and `--check`. Patch replay/tamper and the bundled-font Rust regression pass;
+  the in-app Web Playground displayed the previously missing Arabic date digits.
+  Broader mixed-direction, native, and browser acceptance remains open. Remove
+  this local patch when an approved upstream revision includes an equivalent fix.
+
+The original DatePicker accessibility patch below is retained for history; its
+active successor is `approved/gpui-component-date-picker-localization-v2.patch`,
+verified by `scripts/apply_gpui_component_date_picker_patch.py`.
+
 GPUI and GPUI Components remain the pinned Longbridge snapshots of the official
 upstream sources. Approved patches are applied to the matching pristine source
 through a versioned patch file and an exact-identity helper; do not edit the

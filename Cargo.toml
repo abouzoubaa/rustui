@@ -35,6 +35,7 @@ gpui-base = { version = "=0.7.3", default-features = false }
 gpui-kit-assets = "=0.7.3"
 
 [patch.crates-io]
+cosmic-text = { path = "vendor/cosmic-text-0.19.0" }
 # Keep upstream package versions pinned while reproducibly applying the
 # approved GPUI patches; see patches/README.md.
 gpui-pre = { path = "vendor/gpui-pre-0.3.9" }
