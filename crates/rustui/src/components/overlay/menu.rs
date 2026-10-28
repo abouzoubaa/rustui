@@ -176,6 +176,7 @@ pub(crate) enum BoundMenuItem {
         disabled: bool,
         handler: Rc<ActionHandler>,
         style: crate::theme::ResolvedComponentStyle,
+        direction: rustui_i18n::LayoutDirection,
     },
     Separator,
 }
@@ -199,6 +200,7 @@ pub(crate) fn bind_items(
     context: &mut RenderContext<'_>,
 ) -> Vec<BoundMenuItem> {
     let style = required_style(context, "menu_item", "body", &selector(context));
+    let direction = context.layout_direction();
 
     // Bind before the native popup opens so callbacks keep only the existing
     // weak owner update path and retain its locale snapshot for this popup.
@@ -225,6 +227,7 @@ pub(crate) fn bind_items(
                     disabled: *disabled,
                     handler: Rc::new(context.bind_control_action(action.clone())),
                     style: style.clone(),
+                    direction,
                 }
             }
             MenuItemKind::Separator => BoundMenuItem::Separator,
@@ -241,6 +244,7 @@ pub(crate) fn append_menu_items(mut menu: PopupMenu, items: &[BoundMenuItem]) ->
                 disabled,
                 handler,
                 style,
+                direction,
                 ..
             } => {
                 menu = menu.item(popup_action_item(
@@ -249,6 +253,7 @@ pub(crate) fn append_menu_items(mut menu: PopupMenu, items: &[BoundMenuItem]) ->
                     *disabled,
                     handler.clone(),
                     style.clone(),
+                    *direction,
                 ));
             }
             BoundMenuItem::Separator => menu = menu.separator(),
@@ -263,6 +268,7 @@ fn popup_action_item(
     disabled: bool,
     handler: Rc<ActionHandler>,
     mut style: crate::theme::ResolvedComponentStyle,
+    direction: rustui_i18n::LayoutDirection,
 ) -> PopupMenuItem {
     assert!(
         !label.trim().is_empty(),
@@ -274,7 +280,13 @@ fn popup_action_item(
         style.colors.remove("foreground");
     }
     PopupMenuItem::element(move |_window, _cx| {
-        styled_container(div().child(label.clone()), &style)
+        let text = div().flex_1().child(label.clone());
+        let text = if direction == rustui_i18n::LayoutDirection::RightToLeft {
+            text.text_right()
+        } else {
+            text.text_left()
+        };
+        styled_container(text, &style)
             .id(label_id.clone())
             .aria_label(label.clone())
     })
@@ -364,6 +376,7 @@ mod tests {
                 disabled,
                 empty_handler(),
                 style.clone(),
+                rustui_i18n::LayoutDirection::LeftToRight,
             );
             let PopupMenuItem::ElementItem {
                 disabled: actual, ..
