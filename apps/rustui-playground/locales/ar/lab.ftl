@@ -430,3 +430,9 @@ lab-feedback-heading = حالات التنبيه
 lab-feedback-show-toast = إظهار الإشعار الدائم
 lab-feedback-toast-counts = مرات تنشيط الإشعار: {body}؛ مرات تنشيط الإجراء: {action}
 lab-feedback-retry-count = مرات إعادة المحاولة: {count}
+
+lab-feedback-kind-info = معلومات
+lab-feedback-kind-success = نجاح
+lab-feedback-kind-warning = تحذير
+lab-feedback-kind-error = خطأ
+lab-feedback-retry = إعادة المحاولة

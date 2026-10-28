@@ -430,3 +430,9 @@ lab-feedback-heading = États de retour
 lab-feedback-show-toast = Afficher la notification persistante
 lab-feedback-toast-counts = Activations de la notification : {body} ; activations de l’action : {action}
 lab-feedback-retry-count = Activations de réessai : {count}
+
+lab-feedback-kind-info = Information
+lab-feedback-kind-success = Réussite
+lab-feedback-kind-warning = Avertissement
+lab-feedback-kind-error = Erreur
+lab-feedback-retry = Réessayer

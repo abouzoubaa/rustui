@@ -430,3 +430,9 @@ lab-feedback-heading = Feedback states
 lab-feedback-show-toast = Show persistent action toast
 lab-feedback-toast-counts = Toast body activations: {body}; action activations: {action}
 lab-feedback-retry-count = Retry activations: {count}
+
+lab-feedback-kind-info = Info
+lab-feedback-kind-success = Success
+lab-feedback-kind-warning = Warning
+lab-feedback-kind-error = Error
+lab-feedback-retry = Retry

@@ -61,10 +61,10 @@ impl View for FeedbackGallery {
                 .child(
                     HStack::new()
                         .spacing(6.0)
-                        .child(Button("Info", Toast("Info notice").id("feedback-kind-toast").kind(ToastKind::Info).show()).id("feedback-kind-info"))
-                        .child(Button("Success", Toast("Success notice").id("feedback-kind-toast").kind(ToastKind::Success).show()).id("feedback-kind-success"))
-                        .child(Button("Warning", Toast("Warning notice").id("feedback-kind-toast").kind(ToastKind::Warning).show()).id("feedback-kind-warning"))
-                        .child(Button("Error", Toast("Error notice").id("feedback-kind-toast").kind(ToastKind::Error).show()).id("feedback-kind-error")),
+                        .child(Button("Info", Toast("Info notice").id("feedback-kind-toast").kind(ToastKind::Info).show()).id("feedback-kind-info").localized_label("lab-feedback-kind-info"))
+                        .child(Button("Success", Toast("Success notice").id("feedback-kind-toast").kind(ToastKind::Success).show()).id("feedback-kind-success").localized_label("lab-feedback-kind-success"))
+                        .child(Button("Warning", Toast("Warning notice").id("feedback-kind-toast").kind(ToastKind::Warning).show()).id("feedback-kind-warning").localized_label("lab-feedback-kind-warning"))
+                        .child(Button("Error", Toast("Error notice").id("feedback-kind-toast").kind(ToastKind::Error).show()).id("feedback-kind-error").localized_label("lab-feedback-kind-error")),
                 )
                 .child(
                     HStack::new()
@@ -93,7 +93,7 @@ impl View for FeedbackGallery {
                                     )
                                     .child(
                                         Button("Retry", target.action(Self::retry))
-                                            .id("feedback-retry-button")
+                                            .id("feedback-retry-button").localized_label("lab-feedback-retry")
                                             .accessibility_label(format!(
                                                 "Retry loading items; activated {retry_activations} times"
                                             )),

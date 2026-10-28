@@ -1,6 +1,6 @@
 ## Current checkpoint — 2026-10-28: feedback gallery locale copy
 
-- **R13 partial source implementation:** The feedback gallery heading, persistent-toast button and two activation counters now resolve in English, French and Arabic. A focused test passed 1/1 for numeric interpolation in all three locales; the Playground Headstart check and runtime locale validator passed. Remaining feedback content, including toast and empty/error messages, is still English. Native/browser presentation and RTL acceptance remain open; this does not close R13.
+- **R13 partial source implementation:** The feedback gallery heading, persistent-toast button, five kind/retry buttons and two activation counters now resolve in English, French and Arabic. A focused test passed 1/1 for numeric interpolation in all three locales; the Playground Headstart check and runtime locale validator passed. Remaining feedback content, including toast and empty/error messages, is still English. Native/browser presentation and RTL acceptance remain open; this does not close R13.
 
 ## Current checkpoint — 2026-10-28: theme parser measurement
 
