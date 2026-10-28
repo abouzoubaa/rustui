@@ -289,6 +289,51 @@ mod tests {
         assert!(window.update(|_, cx| host.read(cx).tasks.running.is_empty()));
     }
 
+    #[gpui::test]
+    fn releasing_owner_cancels_pending_work(cx: &mut gpui::TestAppContext) {
+        use gpui::AppContext as _;
+        use std::sync::{
+            Arc,
+            atomic::{AtomicUsize, Ordering},
+        };
+
+        cx.update(gpui_component::init);
+        let (_root, window) =
+            cx.add_window_view(|_, cx| ComponentHost::new(TaskProbe::default(), cx));
+        let host = window.update(|_, cx| cx.new(|cx| ComponentHost::new(TaskProbe::default(), cx)));
+        let weak = host.downgrade();
+        let owner = OwnerTask::new(weak.clone());
+        let dropped = Arc::new(AtomicUsize::new(0));
+        let work_dropped = dropped.clone();
+        let pending = owner.start(
+            "release",
+            move || {
+                let guard = DropProbe(work_dropped.clone());
+                async move {
+                    let _guard = guard;
+                    std::future::pending::<Result<String, String>>().await
+                }
+            },
+            apply_probe,
+        );
+        window.update(|window, cx| pending.dispatch_keyboard(window, cx));
+        window.cx.run_until_parked();
+        assert_eq!(dropped.load(Ordering::SeqCst), 0);
+        assert!(weak.upgrade().is_some());
+
+        drop(host);
+        window.update(|_, _| {});
+        window.cx.run_until_parked();
+        assert!(weak.upgrade().is_none());
+        assert_eq!(dropped.load(Ordering::SeqCst), 1);
+
+        // A retained action must not resurrect or update its released owner.
+        window.update(|window, cx| pending.dispatch_keyboard(window, cx));
+        window.cx.run_until_parked();
+        assert!(weak.upgrade().is_none());
+        assert_eq!(dropped.load(Ordering::SeqCst), 1);
+    }
+
     #[test]
     fn replacement_and_cancel_invalidate_old_generations() {
         let mut tasks = TaskRegistry::default();
