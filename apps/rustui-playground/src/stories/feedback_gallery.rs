@@ -57,10 +57,10 @@ impl View for FeedbackGallery {
                 .spacing(10.0)
                 .child(LocalizedText("lab-feedback-heading").font_weight(TextWeight::Semibold))
                 .child(
-                    Button("Show persistent action toast", persistent_action_toast)
+HStack::new().child(Button("Show persistent action toast", persistent_action_toast)
                         .id("feedback-show-toast")
-                    .localized_label("lab-feedback-show-toast"),
-                )
+                    .localized_label("lab-feedback-show-toast")),
+)
                 .child(LocalizedText("lab-feedback-toast-counts").with_arguments(MessageArguments::new().with("body", toast_body_activations as i64).with("action", toast_action_activations as i64)))
                 .child(
                     HStack::new()
@@ -95,12 +95,12 @@ impl View for FeedbackGallery {
                                             .localized_accessibility_label("lab-feedback-error-a11y"),
                                     )
                                     .child(
-                                        Button("Retry", target.action(Self::retry))
+HStack::new().child(Button("Retry", target.action(Self::retry))
                                             .id("feedback-retry-button").localized_label("lab-feedback-retry")
                                             .accessibility_label(format!(
                                                 "Retry loading items; activated {retry_activations} times"
-                                            )),
-                                    )
+                                            ))),
+)
                                     .child(LocalizedText("lab-feedback-retry-count").with_arguments(MessageArguments::new().with("count", retry_activations as i64))),
                             )
                             .width(196.0)
