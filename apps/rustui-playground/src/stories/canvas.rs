@@ -607,19 +607,25 @@ impl View for CheckboxReferenceGallery {
     fn body(&self) -> impl View {
         VStack::new()
             .spacing(6.0)
-            .child(Text("Checkbox reference states"))
+            .child(LocalizedText("lab-input-checkbox-reference-states"))
             .child(
                 HStack::new()
                     .spacing(12.0)
                     .child(
                         Checkbox("Label", self.checked_binding())
                             .id("checkbox-reference-checked")
-                            .accessibility_label("Checked checkbox reference state"),
+                            .localized_label("lab-input-checkbox-reference-label")
+                            .accessibility_label("Checked checkbox reference state")
+                            .localized_accessibility_label("lab-input-checkbox-reference-checked"),
                     )
                     .child(
                         Checkbox("Label", self.unchecked_binding())
                             .id("checkbox-reference-unchecked")
-                            .accessibility_label("Unchecked checkbox reference state"),
+                            .localized_label("lab-input-checkbox-reference-label")
+                            .accessibility_label("Unchecked checkbox reference state")
+                            .localized_accessibility_label(
+                                "lab-input-checkbox-reference-unchecked",
+                            ),
                     ),
             )
     }

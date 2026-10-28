@@ -2156,3 +2156,7 @@ broader keyboard/IME behavior, or roadmap-wide production gates. The matching
 Wasm Headstart toolchain was read-only from worktree 4adc; outputs stayed in
 this worktree. A release candidate needs a fresh source-bound bundle after
 further source or documentation changes.
+
+## Refresh 2026-10-28 — R13 Checkbox reference locale slice
+
+The Text inputs story's Checkbox reference heading, two visible labels, and distinct checked/unchecked control names now have English, French, and Arabic catalog entries. This focused slice is coded and accepted in native and Web Playground for those three locales; it does not change the roadmap-wide counts above. `validate_locales.py`, the Playground Headstart check, rustfmt, and `git diff --check` passed. The native bundle executable hash was `cdce492ecc152da758eeb574ecf05b357ee67e4e9a3fea8fa375147b14302b92`; its English, French, and Arabic names passed, and French and Arabic labels were visually observed. The exact source-bound native process was stopped and its disposable bundle and standalone executable were removed. The fresh Web bundle built with the matching Wasm Headstart root; manifest SHA-256 is `200d9c3ad158dc90d06e2127b4c263760caa4ddd1e7ed5f4369e33639f6ac5ff`. Browser observations showed the heading, labels, and checked/unchecked names in all three locales, with checked state retained across locale switches and no browser console errors. The validation tab and server were closed. Three Web dependency notice gaps remain open, alongside broader locale and release acceptance.
