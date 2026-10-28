@@ -1,8 +1,9 @@
 //! Retained native source editing through the public RustUI API.
 
+use rustui::localization::MessageArguments;
 use rustui::{
     component,
-    prelude::{AnyView, Button, CodeEditor, Component, HStack, LocalizedText, Text, VStack, View},
+    prelude::{AnyView, Button, CodeEditor, Component, HStack, LocalizedText, VStack, View},
 };
 
 const RUST_SOURCE: &str = "fn main() {\n    println!(\"Hello, RustUI\");\n}\n";
@@ -95,14 +96,30 @@ impl View for CodeEditorGallery {
             .spacing(8.0)
             .child(LocalizedText("lab-code-editor-title"))
             .child(LocalizedText("lab-code-editor-syntax-native"))
-            .child(Text(format!(
-                "Language: {} · lines: {} · readonly: {} · disabled: {} · mounted: {}",
-                language,
-                self.line_numbers(),
-                self.readonly(),
-                self.disabled(),
-                self.mounted()
-            )))
+            .child(
+                LocalizedText("lab-code-editor-language")
+                    .with_arguments(MessageArguments::new().with("language", language)),
+            )
+            .child(LocalizedText(if self.line_numbers() {
+                "lab-code-editor-lines-on"
+            } else {
+                "lab-code-editor-lines-off"
+            }))
+            .child(LocalizedText(if self.readonly() {
+                "lab-code-editor-readonly-on"
+            } else {
+                "lab-code-editor-readonly-off"
+            }))
+            .child(LocalizedText(if self.disabled() {
+                "lab-code-editor-disabled-on"
+            } else {
+                "lab-code-editor-disabled-off"
+            }))
+            .child(LocalizedText(if self.mounted() {
+                "lab-code-editor-mounted-on"
+            } else {
+                "lab-code-editor-mounted-off"
+            }))
             .child(
                 HStack::new()
                     .spacing(6.0)
@@ -150,11 +167,13 @@ impl View for CodeEditorGallery {
                     ),
             )
             .child(editor)
-            .child(Text(format!(
-                "Bound source ({} characters):\n{}",
-                source.chars().count(),
-                source
-            )))
+            .child(
+                LocalizedText("lab-code-editor-bound-source").with_arguments(
+                    MessageArguments::new()
+                        .with("count", source.chars().count().to_string())
+                        .with("source", source),
+                ),
+            )
             .child(LocalizedText("lab-code-editor-lifecycle-note"))
     }
 }
