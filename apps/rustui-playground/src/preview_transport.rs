@@ -857,6 +857,53 @@ mod tests {
         assert!(host.snapshot().is_none());
     }
     #[test]
+    fn rejected_composition_fields_preserve_mounted_document_and_stamp() {
+        let mut host = CompositionHost::new(registry());
+        let mut session = Session::default();
+        let token = connect(&mut session, Host::Composition(&mut host));
+        let original = json!({
+            "format": COMPOSITION_FORMAT,
+            "format_version": COMPOSITION_FORMAT_VERSION,
+            "preview_id": "external-preview",
+            "root": "root",
+            "nodes": {"root": {"preview": document("probe"), "slots": {}}}
+        });
+        let mount = session.handle(
+            wire(
+                Some(&token),
+                1,
+                json!({"kind":"mount", "source":original.to_string()}),
+            ),
+            Host::Composition(&mut host),
+            &BTreeSet::new(),
+            "",
+        );
+        assert!(mount.reply.error.is_none());
+        let stamp = host.stamp().unwrap().clone();
+        let document = host.document().unwrap().clone();
+
+        let mut unknown_document = original.clone();
+        unknown_document["unexpected"] = json!(true);
+        let mut unknown_node = original;
+        unknown_node["nodes"]["root"]["unexpected"] = json!(true);
+        for (sequence, source) in [(2, unknown_document), (3, unknown_node)] {
+            let rejected = session.handle(
+                wire(
+                    Some(&token),
+                    sequence,
+                    json!({"kind":"mount", "source":source.to_string()}),
+                ),
+                Host::Composition(&mut host),
+                &BTreeSet::new(),
+                "",
+            );
+            assert_eq!(rejected.reply.error, Some("invalid_document"));
+            assert_eq!(host.stamp(), Some(&stamp));
+            assert_eq!(host.document(), Some(&document));
+        }
+    }
+
+    #[test]
     fn composition_metadata_and_all_existing_edit_operations_delegate_to_host() {
         let mut host = CompositionHost::new(registry());
         let mut session = Session::default();
