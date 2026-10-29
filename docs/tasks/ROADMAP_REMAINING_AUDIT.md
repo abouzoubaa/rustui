@@ -2847,3 +2847,7 @@ On clean commit `be51d99282820dfae37dbc853ce5e55d7a1bba1e`, the locked offline H
 ### R15/R32: disabled Arabic Outline in browser (2026-10-29)
 
 In one in-app Chromium session on the `a847e83a` Tree RTL keyboard Web bundle (manifest SHA-256 `76969e24c356de662ae7930659f83062dea440bdebc12e0fab411b13950b3641`), clicking the disabled Arabic branch left it collapsed, with selection `none`, expansion `document`, and activation count zero. After selecting the enabled section, Down selected its heading and another Down wrapped to Document, skipping the disabled branch. The owned tab and server were closed. This bounded pointer and keyboard check does not prove native, other-browser, or broader disabled-control acceptance; accessibility is deferred.
+
+### R13/R32: retained Outline locale regression (2026-10-29)
+
+A GPUI test-window regression changes an existing Outline from English to French, checks the translated root label and literal fallback for a missing message, and verifies expansion and owner selection remain intact. The focused Headstart test passed 1/1 (`target/headstart/evidence/outline-locale-regression-20261029.log`, SHA-256 `447f4cad6843298a5ce4b54d98132eeacca744868f4e019277b0f451ccd12645`). This simulated test complements the bounded browser observations; native, wider RTL/browser and deferred accessibility acceptance remain open.

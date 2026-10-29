@@ -152,6 +152,58 @@ fn native_tree(
 }
 
 #[gpui::test]
+fn localized_outline_labels_reconcile_without_losing_state(cx: &mut gpui::TestAppContext) {
+    use crate::localization::{Catalog, Catalogs, Locale, activate_localization, set_locale};
+
+    init(cx);
+    let en = Locale::parse("en").unwrap();
+    let fr = Locale::parse("fr").unwrap();
+    let mut catalogs = Catalogs::new(en.clone());
+    catalogs
+        .insert(Catalog::parse(en.clone(), "outline-root = Document").unwrap())
+        .unwrap();
+    catalogs
+        .insert(Catalog::parse(fr.clone(), "outline-root = Dossier").unwrap())
+        .unwrap();
+    cx.update(|app| activate_localization(catalogs, en, app));
+    let (owner, window) = cx.add_window_view(|_, app| {
+        let mut probe = OutlineProbe::new();
+        probe.items = vec![
+            TreeNode::new("root", "Fallback")
+                .localized_label("outline-root")
+                .child(TreeNode::new("leaf", "Literal child").localized_label("missing-label")),
+        ];
+        probe.expanded = ids(&["root"]);
+        probe.selected = Some("leaf".into());
+        ComponentHost::new(probe, app)
+    });
+    let native = native_tree(&owner, window);
+    window.update(|_, app| {
+        let tree = native.read(app);
+        assert_eq!(tree.entry(0).unwrap().item().label.as_ref(), "Document");
+        assert_eq!(
+            tree.entry(1).unwrap().item().label.as_ref(),
+            "Literal child"
+        );
+        set_locale(fr, app);
+    });
+    window.update(|window, app| {
+        let _ = window.draw(app);
+        let tree = native.read(app);
+        assert_eq!(tree.entry(0).unwrap().item().label.as_ref(), "Dossier");
+        assert_eq!(
+            tree.entry(1).unwrap().item().label.as_ref(),
+            "Literal child"
+        );
+        assert!(tree.entry(0).unwrap().is_expanded());
+        assert_eq!(
+            owner.read(app).component().selected.as_deref(),
+            Some("leaf")
+        );
+    });
+}
+
+#[gpui::test]
 fn rtl_disabled_outline_branch_ignores_directional_keys(cx: &mut gpui::TestAppContext) {
     init(cx);
     cx.update(|app| {
