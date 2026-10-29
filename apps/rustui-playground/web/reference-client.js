@@ -59,7 +59,12 @@ export class ReferenceClient {
   send(command, connect = false) {
     if (!this.alive || this.pending || (!connect && !this.session)) return Promise.reject(new Error('client unavailable'));
     const request = `request-${++this.serial}`, sequence = connect ? '0' : this.sequence.toString();
-    const wire = JSON.stringify({ protocol: PROTOCOL, version: VERSION, client: CONSUMER, request, session: connect ? null : this.session, sequence, command });
+    let wire;
+    try {
+      wire = JSON.stringify({ protocol: PROTOCOL, version: VERSION, client: CONSUMER, request, session: connect ? null : this.session, sequence, command });
+    } catch {
+      return Promise.reject(new Error('invalid_command'));
+    }
     if (!bounded(wire)) return Promise.reject(new Error('message_too_large'));
     if (!connect) this.sequence += 1n;
     return new Promise((resolve, reject) => {

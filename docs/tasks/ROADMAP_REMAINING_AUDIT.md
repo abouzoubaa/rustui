@@ -2803,3 +2803,7 @@ Preview encoding now counts serialized format, identifiers, property strings, an
 ### R26: app theme registry recovery check (2026-10-29)
 
 A GPUI test exercises the public `ThemeFile::reload_if_changed` file path against the real app theme registry: an invalid update leaves the active theme revision unchanged, restoring the last good source avoids a redundant activation, and a subsequent valid changed source activates again. The focused Headstart test passed 1/1. This does not establish watcher dispatch or native/Web live-reload acceptance.
+
+### R25: browser client serialization errors (2026-10-29)
+
+The reference browser client rejects non-serializable commands through its promise interface rather than throwing synchronously. A focused Node regression covers circular references and BigInt, verifies that neither sends a message nor consumes the session sequence, and confirms a subsequent valid request succeeds. The preview transport test file passed 9/9. Browser runtime and broader external-consumer acceptance remain separate.

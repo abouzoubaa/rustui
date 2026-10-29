@@ -83,6 +83,21 @@ test('client rejects concurrent requests and disposes pending request on reload'
   env.frame.emit('load', {}); env.frame.emit('load', {}); await assert.rejects(pending, /reloaded/);
   assert.equal(env.client.alive, false);
 });
+
+test('client rejects non-serializable commands without consuming the session sequence', async () => {
+  const env = setupClient(); await connected(env);
+  const command = { kind: 'catalog' }; command.self = command;
+  const sequence = env.client.sequence, sent = env.child.sent.length;
+  await assert.rejects(env.client.send(command), /invalid_command/);
+  await assert.rejects(env.client.send({ kind: 'catalog', value: 1n }), /invalid_command/);
+  assert.equal(env.client.sequence, sequence);
+  assert.equal(env.child.sent.length, sent);
+  assert.equal(env.client.pending, null);
+  const request = env.client.send({ kind: 'catalog' });
+  respond(env, { ok: true });
+  assert.deepEqual(await request, { ok: true });
+  env.client.dispose();
+});
 test('client validates echoed handshake nonce and version', async () => {
   const env = setupClient(); env.receive({ event: 'ready', profile: 'preview', version: 2 }); assert.equal(env.client.readySeen, false);
   env.receive({ event: 'ready', profile: 'preview' }); const promise = env.client.connect(); await Promise.resolve();
