@@ -198,6 +198,64 @@ mod tests {
         Ok(())
     }
 
+    #[gpui::test]
+    fn file_reload_recovers_after_invalid_update_in_app(cx: &mut gpui::TestAppContext) {
+        let initial = valid_source();
+        let file = TempTheme::new(&initial);
+        let mut theme = ThemeFile::open(&file.0).expect("open theme");
+        cx.update(|app| {
+            gpui_component::init(app);
+            assert!(
+                theme
+                    .reload_if_changed(Some(AppearanceMode::Light), app)
+                    .unwrap()
+            );
+            let revision = crate::theme::registry::active_theme(app)
+                .unwrap()
+                .revision();
+
+            file.write("not json");
+            assert!(
+                theme
+                    .reload_if_changed(Some(AppearanceMode::Light), app)
+                    .is_err()
+            );
+            assert_eq!(
+                crate::theme::registry::active_theme(app)
+                    .unwrap()
+                    .revision(),
+                revision
+            );
+            assert_eq!(theme.theme(), &parse_theme(&initial).unwrap());
+
+            file.write(&initial);
+            assert!(
+                !theme
+                    .reload_if_changed(Some(AppearanceMode::Light), app)
+                    .unwrap()
+            );
+            assert_eq!(
+                crate::theme::registry::active_theme(app)
+                    .unwrap()
+                    .revision(),
+                revision
+            );
+
+            file.write(&format!("{initial}\n"));
+            assert!(
+                theme
+                    .reload_if_changed(Some(AppearanceMode::Light), app)
+                    .unwrap()
+            );
+            assert_eq!(
+                crate::theme::registry::active_theme(app)
+                    .unwrap()
+                    .revision(),
+                revision + 1
+            );
+        });
+    }
+
     #[test]
     fn reload_activates_changed_content_and_skips_identical_content() {
         let initial = valid_source();
