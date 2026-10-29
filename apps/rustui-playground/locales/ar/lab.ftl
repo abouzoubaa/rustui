@@ -645,3 +645,13 @@ lab-tree-toggle-declared = تبديل التوسيع المعلن
 lab-tree-status-expanded = التوسيع المعلن لمساحة العمل: نعم · المعرّف المحدد: {selection} · آخر عنصر منشّط: {last} ({count} مرة)
 lab-tree-status-collapsed = التوسيع المعلن لمساحة العمل: لا · المعرّف المحدد: {selection} · آخر عنصر منشّط: {last} ({count} مرة)
 lab-tree-demo-help = وسّع المجلدات المتداخلة ثم اطوِ مساحة العمل وغيّر الأسماء أو الترتيب. يعود الفرع المستعاد إلى حالته المعلنة.
+
+lab-basic-tree-selected = العنصر المحدد: {id}
+lab-basic-tree-none = العنصر المحدد: لا شيء
+lab-basic-tree-controls = عناصر التحكم
+lab-basic-tree-button = زر
+lab-basic-tree-text-field = حقل نصي
+lab-basic-tree-collections = المجموعات
+lab-basic-tree-list = قائمة
+lab-basic-tree-table = جدول
+lab-basic-tree-tree = شجرة

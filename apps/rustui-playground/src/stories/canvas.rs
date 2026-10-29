@@ -459,25 +459,33 @@ impl View for StoryCanvas {
             StoryId::GraphView => VStack::new().child(super::graph_gallery::graph_demo()),
             StoryId::NodeEditor => VStack::new().child(super::graph_gallery::editor_demo()),
             StoryId::Tree => VStack::new()
-                .child(Text(format!(
-                    "Selected node: {:?}",
-                    self.tree_binding.value()
-                )))
+                .child(match self.tree_binding.value() {
+                    Some(id) => LocalizedText("lab-basic-tree-selected")
+                        .with_arguments(MessageArguments::new().with("id", id)),
+                    None => LocalizedText("lab-basic-tree-none"),
+                })
                 .child(
                     Tree(
                         [
                             TreeNode::new("controls", "Controls")
+                                .localized_label("lab-basic-tree-controls")
                                 .expanded(true)
                                 .children([
-                                    TreeNode::new("button", "Button"),
-                                    TreeNode::new("text-field", "TextField"),
+                                    TreeNode::new("button", "Button")
+                                        .localized_label("lab-basic-tree-button"),
+                                    TreeNode::new("text-field", "TextField")
+                                        .localized_label("lab-basic-tree-text-field"),
                                 ]),
                             TreeNode::new("collections", "Collections")
+                                .localized_label("lab-basic-tree-collections")
                                 .expanded(true)
                                 .children([
-                                    TreeNode::new("list", "List"),
-                                    TreeNode::new("table", "Table"),
-                                    TreeNode::new("tree", "Tree"),
+                                    TreeNode::new("list", "List")
+                                        .localized_label("lab-basic-tree-list"),
+                                    TreeNode::new("table", "Table")
+                                        .localized_label("lab-basic-tree-table"),
+                                    TreeNode::new("tree", "Tree")
+                                        .localized_label("lab-basic-tree-tree"),
                                 ]),
                         ],
                         self.tree_binding.clone(),

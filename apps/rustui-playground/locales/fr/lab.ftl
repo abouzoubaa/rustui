@@ -645,3 +645,13 @@ lab-tree-toggle-declared = Changer le déploiement déclaré
 lab-tree-status-expanded = Déploiement déclaré de l’espace : oui · identifiant sélectionné : {selection} · dernier élément activé : {last} ({count} activations)
 lab-tree-status-collapsed = Déploiement déclaré de l’espace : non · identifiant sélectionné : {selection} · dernier élément activé : {last} ({count} activations)
 lab-tree-demo-help = Développez les dossiers imbriqués, puis réduisez l’espace et modifiez les noms ou l’ordre. Une branche restaurée reprend son état déclaré.
+
+lab-basic-tree-selected = Élément sélectionné : {id}
+lab-basic-tree-none = Élément sélectionné : aucun
+lab-basic-tree-controls = Commandes
+lab-basic-tree-button = Bouton
+lab-basic-tree-text-field = Champ de texte
+lab-basic-tree-collections = Collections
+lab-basic-tree-list = Liste
+lab-basic-tree-table = Tableau
+lab-basic-tree-tree = Arbre

@@ -645,3 +645,13 @@ lab-tree-toggle-declared = Toggle declared expansion
 lab-tree-status-expanded = Declared Workspace expansion: true · selected stable ID: {selection} · last activated leaf: {last} ({count} activations)
 lab-tree-status-collapsed = Declared Workspace expansion: false · selected stable ID: {selection} · last activated leaf: {last} ({count} activations)
 lab-tree-demo-help = Expand the nested folders, then collapse Workspace and update labels or order. Removing and restoring Branch starts it at its declared default.
+
+lab-basic-tree-selected = Selected node: {id}
+lab-basic-tree-none = Selected node: none
+lab-basic-tree-controls = Controls
+lab-basic-tree-button = Button
+lab-basic-tree-text-field = Text field
+lab-basic-tree-collections = Collections
+lab-basic-tree-list = List
+lab-basic-tree-table = Table
+lab-basic-tree-tree = Tree
