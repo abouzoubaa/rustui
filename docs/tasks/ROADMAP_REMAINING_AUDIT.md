@@ -2819,3 +2819,7 @@ On clean source commit `eb20bf545dd68d57750c6643e171b0849a876a5a`, the Web relea
 ### R25: browser roundtrips with preview-client fixes (2026-10-29)
 
 In an in-app Chromium session using the source-bound Web bundle from `eb20bf54` (manifest SHA-256 `c6c91e6e1860df8e9ea237ce4cd855a76613d1619f1c96f8be9795d347eb972a`), the reference host reported PASS for both preview and composition canonical roundtrips, including expected stale-stamp errors, disconnect, and reconnect. Each profile was disconnected; the owned tab and local server were closed. These checks do not exercise artificially malformed array replies in a browser, establish visual rendering, real OS IME, cross-browser behavior, or complete preview acceptance.
+
+### R32/R13: Outline Web interaction and localization gap (2026-10-29)
+
+On the `eb20bf54` Web bundle (manifest SHA-256 `c6c91e6e1860df8e9ea237ce4cd855a76613d1619f1c96f8be9795d347eb972a`), the Outline framework demo expanded Document and Section, selected Heading, retained its selection when collapsed and re-expanded, and cleared the selection and removed expansion ID after removing the Section branch. In the same in-app Chromium session, switching to French translated the surrounding Playground title and description but the Outline demo controls, status and node labels remained English. English/French/Arabic localization of the story remains open; native, keyboard, wider browser and RTL acceptance are separate. The owned browser tab and server were closed.
