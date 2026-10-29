@@ -56,6 +56,7 @@ impl DialogGallery {
                 )
                 .id("save-dialog-format")
                 .localized_placeholder("lab-save-dialog-format")
+                .localized_search_placeholder("lab-save-dialog-search-formats")
                 .localized_option("Rich Text Format", "lab-save-dialog-rich-text")
                 .localized_option("Plain Text", "lab-save-dialog-plain-text")
                 .localized_option("PDF", "lab-save-dialog-pdf"),

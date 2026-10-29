@@ -590,6 +590,7 @@ lab-save-dialog-accessibility = Confirmer l’enregistrement des modifications
 lab-save-dialog-name = Enregistrer sous
 lab-save-dialog-tags = Étiquettes
 lab-save-dialog-format = Format du fichier
+lab-save-dialog-search-formats = Rechercher un format...
 lab-save-dialog-rich-text = Format de texte enrichi
 lab-save-dialog-plain-text = Texte brut
 lab-save-dialog-pdf = PDF

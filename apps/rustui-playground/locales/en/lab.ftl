@@ -590,6 +590,7 @@ lab-save-dialog-accessibility = Confirm saving changes
 lab-save-dialog-name = Save As
 lab-save-dialog-tags = Tags
 lab-save-dialog-format = File Format
+lab-save-dialog-search-formats = Search formats...
 lab-save-dialog-rich-text = Rich Text Format
 lab-save-dialog-plain-text = Plain Text
 lab-save-dialog-pdf = PDF

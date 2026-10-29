@@ -590,6 +590,7 @@ lab-save-dialog-accessibility = تأكيد حفظ التغييرات
 lab-save-dialog-name = حفظ باسم
 lab-save-dialog-tags = الوسوم
 lab-save-dialog-format = تنسيق الملف
+lab-save-dialog-search-formats = البحث عن تنسيق...
 lab-save-dialog-rich-text = تنسيق نص منسق
 lab-save-dialog-plain-text = نص عادي
 lab-save-dialog-pdf = PDF
