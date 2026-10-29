@@ -2843,3 +2843,7 @@ A GPUI test-window regression explicitly selects a disabled collapsed branch, se
 ### R17/R32: Tree and Outline integration checkpoint (2026-10-29)
 
 On clean commit `be51d99282820dfae37dbc853ce5e55d7a1bba1e`, the locked offline Headstart Tree/Outline library suite passed 32/32, including the new RTL and disabled-branch regressions (`target/headstart/evidence/tree-outline-integration-be51-20261029.log`, SHA-256 `5dcc41554c56e98fa36756c3e217051026df54470a3bc7175976090d65bfe527`). GitHub Actions run `40926085934` passed its source job for that commit; its macOS/Web compiled job was skipped. This does not establish native or browser acceptance, compiled CI, or release readiness.
+
+### R15/R32: disabled Arabic Outline in browser (2026-10-29)
+
+In one in-app Chromium session on the `a847e83a` Tree RTL keyboard Web bundle (manifest SHA-256 `76969e24c356de662ae7930659f83062dea440bdebc12e0fab411b13950b3641`), clicking the disabled Arabic branch left it collapsed, with selection `none`, expansion `document`, and activation count zero. After selecting the enabled section, Down selected its heading and another Down wrapped to Document, skipping the disabled branch. The owned tab and server were closed. This bounded pointer and keyboard check does not prove native, other-browser, or broader disabled-control acceptance; accessibility is deferred.
