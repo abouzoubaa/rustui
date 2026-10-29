@@ -16,10 +16,55 @@ pub fn decode_catalog(source: &str) -> Result<ComponentCatalog, PreviewError> {
 
 /// Encodes a validated catalog with deterministic key ordering.
 pub fn encode_catalog(catalog: &ComponentCatalog) -> Result<String, PreviewError> {
+    check_catalog_text_budget(catalog)?;
     let mut catalog = catalog.clone();
     normalize_numeric_defaults(&mut catalog)?;
     validate_catalog(&catalog)?;
     encode_json(&catalog)
+}
+
+// Each counted string is emitted once in the catalog JSON. Quotes and escaping
+// can only increase its encoded length, so this lower bound rejects oversized
+// caller-owned catalogs before cloning them without excluding valid output.
+fn check_catalog_text_budget(catalog: &ComponentCatalog) -> Result<(), PreviewError> {
+    let mut bytes = 0usize;
+    let mut add = |text: &str| {
+        bytes = bytes.saturating_add(text.len()).saturating_add(2);
+        if bytes > MAX_DOCUMENT_BYTES {
+            Err(PreviewError::Invalid(format!(
+                "preview document exceeds {MAX_DOCUMENT_BYTES} byte limit"
+            )))
+        } else {
+            Ok(())
+        }
+    };
+    add(&catalog.format)?;
+    for action in &catalog.actions {
+        add(action.as_str())?;
+    }
+    for (id, component) in &catalog.components {
+        add(id.as_str())?;
+        add(component.id.as_str())?;
+        add(&component.display_name)?;
+        for (event_id, event) in &component.events {
+            add(event_id.as_str())?;
+            add(&event.display_name)?;
+        }
+        for properties in std::iter::once(&component.properties)
+            .chain(component.events.values().map(|event| &event.payload))
+        {
+            for (property_id, schema) in properties {
+                add(property_id.as_str())?;
+                if let Some(PropertyValue::String(value)) = &schema.default {
+                    add(value)?;
+                }
+                for value in &schema.allowed_values {
+                    add(value)?;
+                }
+            }
+        }
+    }
+    Ok(())
 }
 
 /// Decodes a preview descriptor and resolves its defaults against the catalog.
@@ -364,6 +409,36 @@ mod tests {
         PREVIEW_FORMAT, PreviewId, PropertyId, PropertyKind, PropertySchema, PropertyValue,
     };
     use std::collections::BTreeMap;
+
+    #[test]
+    fn oversized_valid_catalog_is_rejected_before_clone() {
+        let mut catalog = build_catalog();
+        let schema = catalog
+            .components
+            .values_mut()
+            .next()
+            .unwrap()
+            .properties
+            .values_mut()
+            .next()
+            .unwrap();
+        schema.default = None;
+        schema.max_length = None;
+        schema.allowed_values = (0..9_000)
+            .map(|index| format!("value_{index:05}{}", "x".repeat(110)))
+            .collect();
+
+        assert!(validate_catalog(&catalog).is_ok());
+        assert!(matches!(
+            check_catalog_text_budget(&catalog),
+            Err(PreviewError::Invalid(_))
+        ));
+        assert!(matches!(
+            encode_catalog(&catalog),
+            Err(PreviewError::Invalid(_))
+        ));
+        assert!(check_catalog_text_budget(&build_catalog()).is_ok());
+    }
 
     #[test]
     fn serialized_text_budget_counts_utf8_across_documents() {
