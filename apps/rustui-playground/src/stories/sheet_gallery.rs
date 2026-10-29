@@ -10,6 +10,14 @@ pub fn demo() -> impl View {
 struct SheetGallery {
     #[state(String::from("Owner value"))]
     owner_text: String,
+    #[state(0)]
+    owner_activations: u32,
+}
+
+impl SheetGallery {
+    fn activate_owner(&mut self) {
+        self.owner_activations += 1;
+    }
 }
 
 impl View for SheetGallery {
@@ -33,6 +41,11 @@ impl View for SheetGallery {
                                         .id("sheet-owner-field")
                                         .localized_placeholder("lab-sheet-owner-field"),
                                 )
+                                .child(
+                                    Button("Owner action", self.action(Self::activate_owner))
+                                        .id("sheet-owner-action")
+                                        .localized_label("lab-sheet-owner-action"),
+                                )
                                 .child(Component(
                                     "sheet-focus-content",
                                     SheetFocusContent::default,
@@ -42,7 +55,10 @@ impl View for SheetGallery {
                 .child(
                     LocalizedText("lab-sheet-owner-value")
                         .with_arguments(MessageArguments::new().with("value", self.owner_text())),
-                ),
+                )
+                .child(LocalizedText("lab-sheet-owner-activations").with_arguments(
+                    MessageArguments::new().with("count", i64::from(self.owner_activations())),
+                )),
         )
         .width(560.0)
         .padding(8.0)
