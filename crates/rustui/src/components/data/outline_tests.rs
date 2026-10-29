@@ -152,6 +152,37 @@ fn native_tree(
 }
 
 #[gpui::test]
+fn rtl_disabled_outline_branch_ignores_directional_keys(cx: &mut gpui::TestAppContext) {
+    init(cx);
+    cx.update(|app| {
+        crate::localization::set_locale(crate::localization::Locale::parse("ar").unwrap(), app);
+    });
+    let (owner, window) = cx.add_window_view(|_, app| {
+        let mut probe = OutlineProbe::new();
+        probe.items = vec![
+            TreeNode::new("root", "Disabled")
+                .disabled(true)
+                .child(TreeNode::new("leaf", "Child")),
+        ];
+        ComponentHost::new(probe, app)
+    });
+    let native = native_tree(&owner, window);
+    window.update(|window, app| {
+        native.update(app, |tree, cx| {
+            tree.set_selected_index(Some(0), cx);
+            tree.focus(window, cx);
+        });
+    });
+    window.simulate_keystrokes("left right enter");
+    window.update(|window, app| {
+        let _ = window.draw(app);
+        assert!(!native.read(app).entry(0).unwrap().is_expanded());
+        assert!(owner.read(app).component().expanded.is_empty());
+        assert_eq!(owner.read(app).component().expansion_writes, 0);
+    });
+}
+
+#[gpui::test]
 fn rtl_outline_arrow_keys_follow_mirrored_direction(cx: &mut gpui::TestAppContext) {
     init(cx);
     cx.update(|app| {
