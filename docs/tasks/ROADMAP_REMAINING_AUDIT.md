@@ -2811,3 +2811,7 @@ The reference browser client rejects non-serializable commands through its promi
 ### R25: malformed browser reply handling (2026-10-29)
 
 The reference client now ignores successful replies whose result is an array, retaining the pending request until a valid object reply arrives. The transport suite passed 12/12; log `target/headstart/evidence/preview-client-array-result-20261029.log`, SHA-256 `3786f9746694a71a9af5274ced18fc349db7822e3dc62cb6dcc68e611017d552`. This is a focused Node check, not full browser acceptance.
+
+### R25/R28: Web release build with preview-client fixes (2026-10-29)
+
+On clean source commit `eb20bf545dd68d57750c6643e171b0849a876a5a`, the Web release driver exited successfully and its host IME-plan suite passed 18/18. The bundled `reference-client.js` matches the source SHA-256 `a3f36b6c0790173ab7f167c81fae84d4b9d4fe865a50afd4b367dcad1231644a`. Build log `target/headstart/evidence/preview-replies-web-20261029.log` SHA-256 `0e13b4c404bd61870d3bf7a5ace2997845346cb885670d490564e5567c5023d1`; bundle manifest SHA-256 `c6c91e6e1860df8e9ea237ce4cd855a76613d1619f1c96f8be9795d347eb972a`. Dependency notices still have three gaps (`hexf-parse`, `mac`, `seahash`). This build does not establish interactive browser, IME, licensing, or release acceptance.
