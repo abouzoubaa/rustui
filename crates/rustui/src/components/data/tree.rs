@@ -1,7 +1,7 @@
 //! Controlled virtualized hierarchy backed by retained GPUI TreeState.
 
 use std::{
-    cell::RefCell,
+    cell::{Cell, RefCell},
     collections::{HashMap, HashSet},
     rc::Rc,
 };
@@ -799,6 +799,7 @@ impl View for TreeView {
         if let Some(height) = self.height {
             container = container.h(px(height));
         }
+        let right_to_left = context.layout_direction().is_right_to_left();
         let mut tree_container = div().size_full();
         let keyboard_tree = tree.clone();
         tree_container = tree_container.on_key_down(move |event, _, cx| {
@@ -848,15 +849,37 @@ impl View for TreeView {
                 }
             }
         });
+        let swapping_direction = Rc::new(Cell::new(false));
         let keyboard_tree = tree.clone();
-        tree_container = tree_container.capture_action(move |_: &SelectLeft, _, cx| {
+        let swapping_left = swapping_direction.clone();
+        tree_container = tree_container.capture_action(move |_: &SelectLeft, window, cx| {
+            if swapping_left.get() {
+                return;
+            }
             if selected_disabled_folder(keyboard_tree.read(cx).selected_entry()) {
+                cx.stop_propagation();
+            } else if right_to_left {
+                if let Some(focus) = window.focused(cx) {
+                    swapping_left.set(true);
+                    focus.dispatch_action(&SelectRight, window, cx);
+                    swapping_left.set(false);
+                }
                 cx.stop_propagation();
             }
         });
         let keyboard_tree = tree.clone();
-        tree_container = tree_container.capture_action(move |_: &SelectRight, _, cx| {
+        tree_container = tree_container.capture_action(move |_: &SelectRight, window, cx| {
+            if swapping_direction.get() {
+                return;
+            }
             if selected_disabled_folder(keyboard_tree.read(cx).selected_entry()) {
+                cx.stop_propagation();
+            } else if right_to_left {
+                if let Some(focus) = window.focused(cx) {
+                    swapping_direction.set(true);
+                    focus.dispatch_action(&SelectLeft, window, cx);
+                    swapping_direction.set(false);
+                }
                 cx.stop_propagation();
             }
         });
@@ -889,7 +912,6 @@ impl View for TreeView {
             }
         });
         let click_tree = tree.clone();
-        let right_to_left = context.layout_direction().is_right_to_left();
         container
             .child(
                 tree_container.child(

@@ -152,6 +152,29 @@ fn native_tree(
 }
 
 #[gpui::test]
+fn rtl_outline_arrow_keys_follow_mirrored_direction(cx: &mut gpui::TestAppContext) {
+    init(cx);
+    cx.update(|app| {
+        crate::localization::set_locale(crate::localization::Locale::parse("ar").unwrap(), app);
+    });
+    let (owner, window) = cx.add_window_view(|_, app| ComponentHost::new(OutlineProbe::new(), app));
+    let native = native_tree(&owner, window);
+    window.update(|window, app| native.update(app, |tree, cx| tree.focus(window, cx)));
+    window.simulate_keystrokes("left");
+    window.update(|window, app| {
+        let _ = window.draw(app);
+        assert_eq!(owner.read(app).component().expanded, ids(&["root"]));
+        assert_eq!(owner.read(app).component().expansion_writes, 1);
+    });
+    window.simulate_keystrokes("right");
+    window.update(|window, app| {
+        let _ = window.draw(app);
+        assert!(owner.read(app).component().expanded.is_empty());
+        assert_eq!(owner.read(app).component().expansion_writes, 2);
+    });
+}
+
+#[gpui::test]
 fn physical_outline_keys_update_the_latest_expansion_binding_once(cx: &mut gpui::TestAppContext) {
     init(cx);
     let (owner, window) = cx.add_window_view(|_, app| ComponentHost::new(OutlineProbe::new(), app));
