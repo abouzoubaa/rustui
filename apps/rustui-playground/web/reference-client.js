@@ -45,7 +45,7 @@ export class ReferenceClient {
       }
       this.session = reply.session;
     } else if (reply.session !== this.session) return;
-    if ((reply.error !== null && typeof reply.error !== 'string') || (reply.error === null && (reply.result === null || typeof reply.result !== 'object'))) return;
+    if ((reply.error !== null && typeof reply.error !== 'string') || (reply.error === null && (reply.result === null || typeof reply.result !== 'object' || Array.isArray(reply.result)))) return;
     this.browser.clearTimeout(pending.timer); this.pending = null;
     if (reply.error === null && Object.hasOwn(reply.result, 'stamp')) this.stamp = reply.result.stamp;
     if (reply.error !== null) { const error = new Error(reply.error); error.code = reply.error; pending.reject(error); }

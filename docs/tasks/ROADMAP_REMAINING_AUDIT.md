@@ -2806,4 +2806,8 @@ A GPUI test exercises the public `ThemeFile::reload_if_changed` file path agains
 
 ### R25: browser client serialization errors (2026-10-29)
 
-The reference browser client rejects non-serializable commands through its promise interface rather than throwing synchronously. A focused Node regression covers circular references and BigInt, verifies that neither sends a message nor consumes the session sequence, and confirms a subsequent valid request succeeds. The preview transport test file passed 9/9. Browser runtime and broader external-consumer acceptance remain separate.
+The reference browser client rejects non-serializable commands through its promise interface rather than throwing synchronously. A focused Node regression covers circular references and BigInt, verifies that neither sends a message nor consumes the session sequence, and confirms a subsequent valid request succeeds. The preview transport test file passed 11/11 (corrected from the previously recorded 9/9). Browser runtime and broader external-consumer acceptance remain separate.
+
+### R25: malformed browser reply handling (2026-10-29)
+
+The reference client now ignores successful replies whose result is an array, retaining the pending request until a valid object reply arrives. The transport suite passed 12/12; log `target/headstart/evidence/preview-client-array-result-20261029.log`, SHA-256 `3786f9746694a71a9af5274ced18fc349db7822e3dc62cb6dcc68e611017d552`. This is a focused Node check, not full browser acceptance.

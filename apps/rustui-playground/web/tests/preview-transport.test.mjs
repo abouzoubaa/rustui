@@ -98,6 +98,16 @@ test('client rejects non-serializable commands without consuming the session seq
   assert.deepEqual(await request, { ok: true });
   env.client.dispose();
 });
+
+test('client ignores array results and waits for a valid object reply', async () => {
+  const env = setupClient(); await connected(env);
+  const pending = env.client.send({ kind: 'catalog' });
+  respond(env, []);
+  assert.ok(env.client.pending);
+  respond(env, { source: '{}' });
+  assert.deepEqual(await pending, { source: '{}' });
+  env.client.dispose();
+});
 test('client validates echoed handshake nonce and version', async () => {
   const env = setupClient(); env.receive({ event: 'ready', profile: 'preview', version: 2 }); assert.equal(env.client.readySeen, false);
   env.receive({ event: 'ready', profile: 'preview' }); const promise = env.client.connect(); await Promise.resolve();
