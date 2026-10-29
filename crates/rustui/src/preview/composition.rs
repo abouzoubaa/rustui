@@ -254,6 +254,26 @@ fn validate_composition<C>(
     Ok(())
 }
 
+// Count the serialized identifiers and preview text before cloning the graph.
+fn check_composition_text_budget(document: &CompositionDocument) -> Result<(), PreviewError> {
+    let mut budget =
+        super::codec::SerializedTextBudget::new("composition document exceeds size limit");
+    budget.add(&document.format)?;
+    budget.add(document.preview_id.as_str())?;
+    budget.add(document.root.as_str())?;
+    for (node_id, node) in &document.nodes {
+        budget.add(node_id.as_str())?;
+        budget.add_preview(&node.preview)?;
+        for (slot_id, children) in &node.slots {
+            budget.add(slot_id.as_str())?;
+            for child in children {
+                budget.add(child.as_str())?;
+            }
+        }
+    }
+    Ok(())
+}
+
 pub fn encode_composition<C>(
     d: &CompositionDocument,
     registry: &PreviewRegistry<C>,
@@ -263,10 +283,7 @@ pub fn encode_composition<C>(
             "composition requires one registered root and a bounded nonempty node map".into(),
         ));
     }
-    super::codec::check_serialized_text_budget(
-        d.nodes.values().map(|node| &node.preview),
-        "composition document exceeds size limit",
-    )?;
+    check_composition_text_budget(d)?;
     let mut d = d.clone();
     for node in d.nodes.values_mut() {
         super::codec::normalize_numeric_properties(registry.catalog(), &mut node.preview)?;
@@ -760,6 +777,23 @@ mod tests {
         let mut host = CompositionHost::new(r);
         assert_eq!(host.mount(d).unwrap().revision, 0);
         assert!(host.render(&()).unwrap().is_some());
+    }
+
+    #[test]
+    fn oversized_child_identifiers_are_rejected_before_graph_clone() {
+        let (registry, mut document) = fixture();
+        let child = NodeId::new("n".repeat(MAX_ID_BYTES)).unwrap();
+        let root = document.nodes.get_mut(&document.root).unwrap();
+        root.slots
+            .insert(SlotId::new("body").unwrap(), vec![child; 9_000]);
+        assert!(matches!(
+            check_composition_text_budget(&document),
+            Err(PreviewError::Invalid(message)) if message == "composition document exceeds size limit"
+        ));
+        assert!(matches!(
+            encode_composition(&document, &registry),
+            Err(PreviewError::Invalid(message)) if message == "composition document exceeds size limit"
+        ));
     }
 
     #[test]

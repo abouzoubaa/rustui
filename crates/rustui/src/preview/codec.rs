@@ -113,23 +113,55 @@ pub fn encode_preview(
     encode_json(&validated.document)
 }
 
-// Every property string is emitted in the JSON output. Its UTF-8 length is a
-// lower bound: quoting and escaping can only increase the number of bytes.
-// Rejecting this bound before cloning cannot reject an output within the cap.
+// Count only strings emitted in JSON. Quoting and escaping can only increase
+// their UTF-8 length, so this is a conservative pre-clone bound.
+pub(super) struct SerializedTextBudget<'a> {
+    bytes: usize,
+    limit_message: &'a str,
+}
+
+impl<'a> SerializedTextBudget<'a> {
+    pub(super) fn new(limit_message: &'a str) -> Self {
+        Self {
+            bytes: 0,
+            limit_message,
+        }
+    }
+
+    pub(super) fn add(&mut self, text: &str) -> Result<(), PreviewError> {
+        self.bytes = self.bytes.saturating_add(text.len()).saturating_add(2);
+        if self.bytes > MAX_DOCUMENT_BYTES {
+            Err(PreviewError::Invalid(self.limit_message.to_owned()))
+        } else {
+            Ok(())
+        }
+    }
+
+    pub(super) fn add_preview(&mut self, document: &PreviewDocument) -> Result<(), PreviewError> {
+        self.add(&document.format)?;
+        self.add(document.preview_id.as_str())?;
+        self.add(document.component_id.as_str())?;
+        for (id, value) in &document.properties {
+            self.add(id.as_str())?;
+            if let PropertyValue::String(text) = value {
+                self.add(text)?;
+            }
+        }
+        for (id, action) in &document.actions {
+            self.add(id.as_str())?;
+            self.add(action.as_str())?;
+        }
+        Ok(())
+    }
+}
+
 pub(super) fn check_serialized_text_budget<'a>(
     documents: impl IntoIterator<Item = &'a PreviewDocument>,
     limit_message: &str,
 ) -> Result<(), PreviewError> {
-    let mut bytes = 0usize;
+    let mut budget = SerializedTextBudget::new(limit_message);
     for document in documents {
-        for value in document.properties.values() {
-            if let PropertyValue::String(text) = value {
-                bytes = bytes.saturating_add(text.len());
-                if bytes > MAX_DOCUMENT_BYTES {
-                    return Err(PreviewError::Invalid(limit_message.to_owned()));
-                }
-            }
-        }
+        budget.add_preview(document)?;
     }
     Ok(())
 }
@@ -411,6 +443,26 @@ mod tests {
     use std::collections::BTreeMap;
 
     #[test]
+    fn oversized_action_identifiers_are_rejected_before_preview_clone() {
+        let mut document = build_document();
+        let action = ActionRef::new("host.preview.report").unwrap();
+        document.actions = (0..9_000)
+            .map(|index| {
+                let id = format!("event_{index:05}{}", "x".repeat(110));
+                (EventId::new(id).unwrap(), action.clone())
+            })
+            .collect();
+        assert!(matches!(
+            check_serialized_text_budget([&document], "too large"),
+            Err(PreviewError::Invalid(message)) if message == "too large"
+        ));
+        assert!(matches!(
+            encode_preview(&document, &build_catalog()),
+            Err(PreviewError::Invalid(_))
+        ));
+    }
+
+    #[test]
     fn oversized_valid_catalog_is_rejected_before_clone() {
         let mut catalog = build_catalog();
         let schema = catalog
@@ -448,7 +500,7 @@ mod tests {
         second.properties.clear();
         first.properties.insert(
             PropertyId::new("label").unwrap(),
-            PropertyValue::String("é".repeat(MAX_DOCUMENT_BYTES / 4)),
+            PropertyValue::String("é".repeat(MAX_DOCUMENT_BYTES / 4 - 256)),
         );
         second.properties.insert(
             PropertyId::new("label").unwrap(),
@@ -457,7 +509,7 @@ mod tests {
         assert!(check_serialized_text_budget([&first, &second], "too large").is_ok());
         second.properties.insert(
             PropertyId::new("extra").unwrap(),
-            PropertyValue::String("x".to_owned()),
+            PropertyValue::String("x".repeat(1_024)),
         );
         assert!(matches!(
             check_serialized_text_budget([&first, &second], "too large"),
