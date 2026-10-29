@@ -14,7 +14,8 @@ SPEC.loader.exec_module(PROPOSAL)
 class RowAccessibilityProposalTests(unittest.TestCase):
     def fixture(self, root):
         manifest = json.loads((ROOT / PROPOSAL.MANIFEST).read_text())
-        paths = [PROPOSAL.MANIFEST]
+        paths = [PROPOSAL.MANIFEST, PROPOSAL.POPUP.PATCH, Path("Cargo.toml"),
+                 *PROPOSAL.POPUP.IMAGES, *map(Path, PROPOSAL.POPUP.PRESERVED)]
         for record in manifest["sources"]:
             package = Path("vendor") / record["package_directory"]
             paths.extend([Path(record["source"]), Path(record["patch"]), package / "Cargo.toml", package / ".cargo-checksum.json"])
@@ -32,12 +33,14 @@ class RowAccessibilityProposalTests(unittest.TestCase):
         with tempfile.TemporaryDirectory() as temporary:
             root = Path(temporary)
             manifest = self.fixture(root)
+            before = {record["source"]: PROPOSAL.digest(root / record["source"])
+                      for record in manifest["sources"]}
             patch = root / manifest["sources"][0]["patch"]
             patch.write_bytes(patch.read_bytes() + b"\n")
             with self.assertRaisesRegex(ValueError, "hash mismatch"):
                 PROPOSAL.verify(root)
             for record in manifest["sources"]:
-                self.assertEqual(PROPOSAL.digest(root / record["source"]), record["pre_sha256"])
+                self.assertEqual(PROPOSAL.digest(root / record["source"]), before[record["source"]])
 
     def test_partial_source_image_rejects_without_repair(self):
         with tempfile.TemporaryDirectory() as temporary:
@@ -47,6 +50,17 @@ class RowAccessibilityProposalTests(unittest.TestCase):
             source.write_bytes(source.read_bytes() + b"\n")
             before = source.read_bytes()
             with self.assertRaisesRegex(ValueError, "hash mismatch"):
+                PROPOSAL.verify(root)
+            self.assertEqual(source.read_bytes(), before)
+
+    def test_tampered_composed_popup_rejects_without_repair(self):
+        with tempfile.TemporaryDirectory() as temporary:
+            root = Path(temporary)
+            self.fixture(root)
+            source = root / next(path for path in PROPOSAL.POPUP.IMAGES if path.name == "adapter.rs")
+            source.write_bytes(source.read_bytes() + b"\n")
+            before = source.read_bytes()
+            with self.assertRaises(ValueError):
                 PROPOSAL.verify(root)
             self.assertEqual(source.read_bytes(), before)
 

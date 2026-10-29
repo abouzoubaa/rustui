@@ -27,7 +27,7 @@ class SelectTitlePatchTests(unittest.TestCase):
 
             # Exercise the title patch independently of the later RTL layer.
             subprocess.run(
-                ["git", "apply", "--reverse", str(ROOT / "patches/approved/gpui-component-select-rtl-alignment-v2.patch")],
+                ["git", "apply", "--reverse", str(ROOT / "patches/approved/gpui-component-select-rtl-alignment-v3.patch")],
                 cwd=root,
                 check=True,
             )

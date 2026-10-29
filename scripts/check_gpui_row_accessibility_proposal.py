@@ -4,7 +4,10 @@
 from __future__ import annotations
 
 import argparse
+import contextlib
 import hashlib
+import importlib.util
+import io
 import json
 from pathlib import Path
 import shutil
@@ -20,6 +23,13 @@ SOURCES = {
 }
 
 
+_POPUP_SPEC = importlib.util.spec_from_file_location(
+    "select_popup_rtl", Path(__file__).with_name("apply_gpui_select_popup_rtl_patch.py")
+)
+POPUP = importlib.util.module_from_spec(_POPUP_SPEC)
+_POPUP_SPEC.loader.exec_module(POPUP)
+
+
 def digest(path: Path) -> str:
     return hashlib.sha256(path.read_bytes()).hexdigest()
 
@@ -33,6 +43,7 @@ def verify(root: Path) -> dict:
     if [r["package_directory"] for r in records] != list(SOURCES):
         raise ValueError("unexpected proposal source set")
     before = {}
+    popup_applied = False
     for record in records:
         package = record["package_directory"]
         name, version, relative = SOURCES[package]
@@ -52,9 +63,14 @@ def verify(root: Path) -> dict:
                 raise ValueError("proposal input escapes the checkout")
             actual = digest(path)
             if actual != expected:
-                # The proposal pins the pristine manifest.  Accept only the
-                # independently verified, exact Web syntax manifest postimage.
-                if not (package == "gpui-component-0.7.3"
+                # Accept only exact, independently verified composed images.
+                rtl_image = POPUP.IMAGES.get(Path(record["source"]))
+                if (path == root / record["source"] and rtl_image
+                        and (expected, actual) == rtl_image):
+                    with contextlib.redirect_stdout(io.StringIO()):
+                        POPUP.run(root, root, "--verify")
+                    popup_applied = True
+                elif not (package == "gpui-component-0.7.3"
                         and path == directory / "Cargo.toml"
                         and expected == "bc3d39631970412dd2abbe1d5e34b0a0dbc65e6e995f13f3809895cda0ecc3c8"
                         and actual == "192f4156aee8738567c748d6b1c5bc44c80e4ba5369a41e5349e370d83b35026"):
@@ -73,6 +89,17 @@ def verify(root: Path) -> dict:
             source = stage / record["source"]
             source.parent.mkdir(parents=True, exist_ok=True)
             shutil.copyfile(root / record["source"], source)
+        if popup_applied:
+            for relative in POPUP.IMAGES:
+                target = stage / relative
+                target.parent.mkdir(parents=True, exist_ok=True)
+                shutil.copyfile(root / relative, target)
+                before[root / relative] = digest(root / relative)
+            before[root / POPUP.PATCH] = digest(root / POPUP.PATCH)
+            subprocess.run(
+                ["git", "apply", "--reverse", "--whitespace=nowarn", str(root / POPUP.PATCH)],
+                cwd=stage, check=True, capture_output=True,
+            )
         for reverse, ordered in [(False, records), (True, list(reversed(records)))]:
             for record in ordered:
                 command = ["git", "apply", "--whitespace=error-all"]

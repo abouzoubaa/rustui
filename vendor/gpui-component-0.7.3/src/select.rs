@@ -520,6 +520,8 @@ where
 
         self.state.list.update(cx, |list, cx| {
             list.set_searchable(searchable, cx);
+            list.set_right_to_left(self.right_to_left, cx);
+            list.delegate_mut().right_to_left = self.right_to_left;
             list.delegate_mut().size = self.state.size;
         });
 
