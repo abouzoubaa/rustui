@@ -9,10 +9,10 @@ import tempfile
 import tomllib
 
 SOURCE = Path("vendor/gpui-component-0.7.3/src/select.rs")
-PATCH = Path("patches/approved/gpui-component-select-rtl-alignment-v1.patch")
+PATCH = Path("patches/approved/gpui-component-select-rtl-alignment-v2.patch")
 PRE = "1a1559e6b46cfb562b565d85600bef7731c3015ae5354d0dcc10454e3bc51efe"
-POST = "8707f408205e28d3145e39b74d166eb4f9bbdb110a306d039eb96e1675231e01"
-PATCH_HASH = "d0689063a3f6e24de67527e9c83da5334f07667bf816a620e220d52dae0e5355"
+POST = "1c3b542d37aab8f1a977c579fde1fc735ce9e661461f5f06e96e23a936d59b49"
+PATCH_HASH = "dcf846cda52159bbffc2bd342027435dec8d415be3c99078936c0b5dfe4b5662"
 PRESERVED = {
     "vendor/gpui-component-0.7.3/Cargo.toml": "192f4156aee8738567c748d6b1c5bc44c80e4ba5369a41e5349e370d83b35026",
     "vendor/gpui-component-0.7.3/.cargo-checksum.json": "d5b533efba197cc15bcb6756b935a786e846463c1ee431f876e8c334a7e638c6",

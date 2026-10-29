@@ -570,6 +570,7 @@ where
                                 .items_center()
                                 .justify_between()
                                 .gap_1()
+                                .when(self.right_to_left, |this| this.flex_row_reverse())
                                 .child(
                                     div()
                                         .id("title")
@@ -578,6 +579,7 @@ where
                                         .overflow_hidden()
                                         .whitespace_nowrap()
                                         .truncate()
+                                        .when(self.right_to_left, |this| this.text_right())
                                         .child(self.display_title(window, cx)),
                                 )
                                 .when(show_clean, |this| {
