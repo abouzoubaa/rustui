@@ -1,5 +1,6 @@
 //! A public-API document outline with controlled expansion independent of node declarations.
 
+use rustui::localization::MessageArguments;
 use rustui::prelude::*;
 use std::collections::HashSet;
 
@@ -54,7 +55,8 @@ impl OutlineGallery {
 
 impl View for OutlineGallery {
     fn body(&self) -> impl View {
-        let mut children = vec![TreeNode::new("summary", "Summary")];
+        let mut children =
+            vec![TreeNode::new("summary", "Summary").localized_label("lab-outline-summary")];
         if self.branch_present() {
             children.push(
                 TreeNode::new(
@@ -65,39 +67,107 @@ impl View for OutlineGallery {
                         "Section"
                     },
                 )
-                .child(TreeNode::new("heading", "Heading")),
+                .localized_label(if self.relabeled() {
+                    "lab-outline-section-renamed"
+                } else {
+                    "lab-outline-section"
+                })
+                .child(
+                    TreeNode::new("heading", "Heading").localized_label("lab-outline-heading-node"),
+                ),
             );
         }
         children.push(
             TreeNode::new("disabled", "Disabled branch")
+                .localized_label("lab-outline-disabled-node")
                 .disabled(true)
-                .child(TreeNode::new("disabled-heading", "Unavailable heading")),
+                .child(
+                    TreeNode::new("disabled-heading", "Unavailable heading")
+                        .localized_label("lab-outline-unavailable-node"),
+                ),
         );
         if self.reversed() {
             children.reverse();
         }
-        let nodes = vec![TreeNode::new("document", "Document").children(children)];
+        let nodes = vec![
+            TreeNode::new("document", "Document")
+                .localized_label("lab-outline-document")
+                .children(children),
+        ];
         let mut expanded = self.expanded().iter().cloned().collect::<Vec<_>>();
         expanded.sort();
-        VStack::new().spacing(8.0)
-            .child(Text("Outline: owner-controlled document hierarchy"))
-            .child(HStack::new().spacing(6.0)
-                .child(Button("Collapse all", self.action(Self::collapse_all)).id("outline-collapse"))
-                .child(Button("Expand all", self.action(Self::expand_all)).id("outline-expand"))
-                .child(Button("Select heading", self.action(Self::select_heading)).id("outline-select")))
-            .child(HStack::new().spacing(6.0)
-                .child(Button("Remove/restore section", self.action(Self::toggle_branch)).id("outline-branch"))
-                .child(Button("Reverse order", self.action(Self::reverse)).id("outline-reverse"))
-                .child(Button("Relabel", self.action(Self::relabel)).id("outline-relabel"))
-                .child(Button("Unmount/remount", self.action(Self::toggle_visible)).id("outline-visible")))
-            .child(Text(format!("Selected: {} | Expanded IDs: {} | Activations: {}",
-                self.selected().as_deref().unwrap_or("none"), expanded.join(", "), self.activations())))
-            .child(Text("Collapse keeps a hidden selection without reopening ancestors. Removed branch IDs normalize away."))
+        VStack::new()
+            .spacing(8.0)
+            .child(LocalizedText("lab-outline-demo-heading"))
+            .child(
+                HStack::new()
+                    .spacing(6.0)
+                    .child(
+                        Button("Collapse all", self.action(Self::collapse_all))
+                            .localized_label("lab-outline-collapse")
+                            .id("outline-collapse"),
+                    )
+                    .child(
+                        Button("Expand all", self.action(Self::expand_all))
+                            .localized_label("lab-outline-expand")
+                            .id("outline-expand"),
+                    )
+                    .child(
+                        Button("Select heading", self.action(Self::select_heading))
+                            .localized_label("lab-outline-select")
+                            .id("outline-select"),
+                    ),
+            )
+            .child(
+                HStack::new()
+                    .spacing(6.0)
+                    .child(
+                        Button("Remove/restore section", self.action(Self::toggle_branch))
+                            .localized_label("lab-outline-branch")
+                            .id("outline-branch"),
+                    )
+                    .child(
+                        Button("Reverse order", self.action(Self::reverse))
+                            .localized_label("lab-outline-reverse")
+                            .id("outline-reverse"),
+                    )
+                    .child(
+                        Button("Relabel", self.action(Self::relabel))
+                            .localized_label("lab-outline-relabel")
+                            .id("outline-relabel"),
+                    )
+                    .child(
+                        Button("Unmount/remount", self.action(Self::toggle_visible))
+                            .localized_label("lab-outline-visible")
+                            .id("outline-visible"),
+                    ),
+            )
+            .child(
+                LocalizedText("lab-outline-status").with_arguments(
+                    MessageArguments::new()
+                        .with(
+                            "selection",
+                            self.selected().as_deref().unwrap_or("none").to_owned(),
+                        )
+                        .with("expanded", expanded.join(", "))
+                        .with("count", self.activations().to_string()),
+                ),
+            )
+            .child(LocalizedText("lab-outline-help"))
             .child(if self.visible() {
-                AnyView::new(Outline("document-outline", nodes, self.selected_binding(), self.expanded_binding())
-                    .accessibility_label("Document outline").height(280.0).on_activate(self.action(Self::activate)))
+                AnyView::new(
+                    Outline(
+                        "document-outline",
+                        nodes,
+                        self.selected_binding(),
+                        self.expanded_binding(),
+                    )
+                    .accessibility_label("Document outline")
+                    .height(280.0)
+                    .on_activate(self.action(Self::activate)),
+                )
             } else {
-                AnyView::new(Text("Outline unmounted; owner bindings are retained."))
+                AnyView::new(LocalizedText("lab-outline-unmounted"))
             })
     }
 }

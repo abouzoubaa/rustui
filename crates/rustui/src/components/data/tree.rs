@@ -92,6 +92,7 @@ fn apply_selection_updater<T>(slot: &RefCell<Option<SelectionUpdater<T>>>, conte
 pub struct TreeNode {
     id: String,
     label: String,
+    label_key: Option<String>,
     children: Vec<TreeNode>,
     expanded: bool,
     disabled: bool,
@@ -112,9 +113,33 @@ impl TreeNode {
         Self {
             id,
             label,
+            label_key: None,
             children: Vec::new(),
             expanded: false,
             disabled: false,
+        }
+    }
+
+    /// Resolve a catalog message for the visible label, falling back to the literal label.
+    pub fn localized_label(mut self, key: impl Into<String>) -> Self {
+        let key = key.into();
+        assert!(
+            !key.trim().is_empty(),
+            "Tree node localization key must be nonempty"
+        );
+        self.label_key = Some(key);
+        self
+    }
+
+    fn resolve_labels(&mut self, context: &RenderContext<'_>) {
+        if let Some(key) = &self.label_key {
+            let value = context.localized_message(key);
+            if !value.trim().is_empty() && value.trim() != key {
+                self.label = value.to_string();
+            }
+        }
+        for child in &mut self.children {
+            child.resolve_labels(context);
         }
     }
 
@@ -532,7 +557,11 @@ impl View for TreeView {
         let style = required_style(context, "outline_view", "outline_view", &selector(context));
         let identity = self.identity_with(|base| context.next_implicit_retained_identity(base));
         let root_accessibility_label = self.resolved_accessibility_label(context);
-        let nodes = self.nodes.clone();
+        let mut resolved_nodes = self.nodes.clone();
+        for node in &mut resolved_nodes {
+            node.resolve_labels(context);
+        }
+        let nodes = resolved_nodes.clone();
         let initial_selection = self.selection.value();
         let requested_expansion = self.expansion.as_ref().map(Binding::value);
         let desired_expansion = requested_expansion
@@ -704,7 +733,7 @@ impl View for TreeView {
             .read(context.app())
             .selected_item()
             .map(|item| item.id.to_string());
-        let data_changed = retained_nodes != self.nodes;
+        let data_changed = retained_nodes != resolved_nodes;
         let click_activation = self
             .on_activate
             .clone()
@@ -726,13 +755,13 @@ impl View for TreeView {
                     || {
                         reconcile_expansion(
                             &retained_nodes,
-                            &self.nodes,
+                            &resolved_nodes,
                             &current_expansion(&tree.read(context.app())),
                         )
                     },
-                    |expanded| controlled_expansion(&self.nodes, expanded),
+                    |expanded| controlled_expansion(&resolved_nodes, expanded),
                 );
-                self.nodes
+                resolved_nodes
                     .iter()
                     .map(|node| node.to_gpui_with_expansion(&expansion))
                     .collect::<Vec<_>>()
@@ -758,7 +787,7 @@ impl View for TreeView {
             });
 
             if data_changed {
-                let nodes = self.nodes.clone();
+                let nodes = resolved_nodes.clone();
                 context.update_entity(&retained, move |retained, _window, _cx| {
                     retained.nodes = nodes;
                 });
