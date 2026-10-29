@@ -1,25 +1,53 @@
 //! Trigger-driven side Sheet demonstration using only the public RustUI API.
 
-use rustui::{component, prelude::*};
+use rustui::{component, localization::MessageArguments, prelude::*};
 
 pub fn demo() -> impl View {
-    Container(
-        VStack::new()
-            .spacing(10.0)
-            .child(Text(
-                "Side sheet using the upstream default placement and size.",
-            ))
-            .child(
-                Sheet("playground-details-sheet", "Open sheet")
-                    .localized_trigger("lab-sheet-open")
-                    .localized_title("lab-sheet-title")
-                    .localized_accessibility_label("lab-sheet-name")
-                    .content(Component("sheet-focus-content", SheetFocusContent::default)),
-            ),
-    )
-    .width(560.0)
-    .padding(8.0)
-    .border()
+    Component("sheet-gallery", SheetGallery::default)
+}
+
+#[component]
+struct SheetGallery {
+    #[state(String::from("Owner value"))]
+    owner_text: String,
+}
+
+impl View for SheetGallery {
+    fn body(&self) -> impl View {
+        Container(
+            VStack::new()
+                .spacing(10.0)
+                .child(Text(
+                    "Side sheet using the upstream default placement and size.",
+                ))
+                .child(
+                    Sheet("playground-details-sheet", "Open sheet")
+                        .localized_trigger("lab-sheet-open")
+                        .localized_title("lab-sheet-title")
+                        .localized_accessibility_label("lab-sheet-name")
+                        .content(
+                            VStack::new()
+                                .spacing(8.0)
+                                .child(
+                                    TextField("Owner field", self.owner_text_binding())
+                                        .id("sheet-owner-field")
+                                        .localized_placeholder("lab-sheet-owner-field"),
+                                )
+                                .child(Component(
+                                    "sheet-focus-content",
+                                    SheetFocusContent::default,
+                                )),
+                        ),
+                )
+                .child(
+                    LocalizedText("lab-sheet-owner-value")
+                        .with_arguments(MessageArguments::new().with("value", self.owner_text())),
+                ),
+        )
+        .width(560.0)
+        .padding(8.0)
+        .border()
+    }
 }
 
 #[component]

@@ -12,7 +12,7 @@ use rustui_core::Identity;
 use crate::{
     components::basic::button::Button,
     runtime::AppAction,
-    view::{AnyView, EmptyView, RenderContext, RetentionScope, View},
+    view::{AnyView, EmptyView, RenderContext, RenderSeed, RetentionScope, View},
 };
 
 #[derive(Clone)]
@@ -62,12 +62,28 @@ fn resolved_localized_accessibility_candidate(
 /// Keeps arbitrary RustUI sheet content owned across native builder rerenders.
 struct SheetContent {
     content: Rc<AnyView>,
+    seed: RenderSeed,
     accessibility_id: SharedString,
     accessibility_label: SharedString,
 }
 
-fn update_sheet_accessibility_label(content: &mut SheetContent, label: &SharedString) {
-    content.accessibility_label = label.clone();
+#[derive(Clone)]
+struct SheetContentProps {
+    content: Rc<AnyView>,
+    seed: RenderSeed,
+    label: SharedString,
+}
+
+impl PartialEq for SheetContentProps {
+    fn eq(&self, other: &Self) -> bool {
+        Rc::ptr_eq(&self.content, &other.content) && self.label == other.label
+    }
+}
+
+fn update_sheet_content(content: &mut SheetContent, props: &SheetContentProps) {
+    content.content = props.content.clone();
+    content.seed = props.seed.clone();
+    content.accessibility_label = props.label.clone();
 }
 
 impl View for SheetContent {
@@ -79,11 +95,13 @@ impl View for SheetContent {
         // GPUI Components does not expose its Sheet surface element. Keep the
         // semantic dialog node around the RustUI body; this cannot assign a
         // role to the upstream Sheet host itself.
+        let body =
+            context.with_seed_owner(&self.seed, |context| self.content.into_element(context));
         div()
             .id(self.accessibility_id.clone())
             .role(Role::Dialog)
             .aria_label(self.accessibility_label.clone())
-            .child(self.content.into_element(context))
+            .child(body)
             .into_any_element()
     }
 }
@@ -235,16 +253,22 @@ impl View for SheetView {
             let accessibility_label = self.resolve_accessibility_label(context);
             let trigger = self.resolve_trigger_label(context);
             let content = self.content.as_ref().map(|content| {
+                let props = SheetContentProps {
+                    content: Rc::clone(content),
+                    seed: context.seed(),
+                    label: accessibility_label.clone(),
+                };
                 context
                     .retained_component_with_props(
                         Identity::from(format!("{}:content", self.id)),
                         || SheetContent {
                             content: Rc::clone(content),
+                            seed: props.seed.clone(),
                             accessibility_id: format!("{}:dialog", self.id).into(),
                             accessibility_label: accessibility_label.clone(),
                         },
-                        &accessibility_label,
-                        update_sheet_accessibility_label,
+                        &props,
+                        update_sheet_content,
                     )
                     .0
             });
@@ -352,17 +376,48 @@ mod tests {
         ));
     }
 
-    #[test]
-    fn retained_sheet_accessible_name_tracks_catalog_changes() {
-        let mut content = SheetContent {
-            content: Rc::new(AnyView::new(EmptyView)),
-            accessibility_id: "details:dialog".into(),
-            accessibility_label: "Details".into(),
-        };
+    #[gpui::test]
+    fn retained_sheet_reconciles_content_and_accessible_name(cx: &mut gpui::TestAppContext) {
+        use crate::runtime::component_host::RetainedEntities;
+        use std::any::TypeId;
 
-        update_sheet_accessibility_label(&mut content, &"Détails".into());
-
-        assert_eq!(content.accessibility_label.as_ref(), "Détails");
+        cx.update(gpui_component::init);
+        let (host, window) =
+            cx.add_window_view(|_, cx| crate::runtime::ComponentHost::new(EmptyView, cx));
+        window.update(|window, app| {
+            let environment = rustui_core::EnvironmentValues::default();
+            let mut retained = RetainedEntities::default();
+            let seed = RenderContext::new(
+                Rc::new(|_, _| {}),
+                host.entity_id(),
+                TypeId::of::<()>(),
+                Rc::new(()),
+                gpui::px(14.0),
+                &environment,
+                None,
+                None,
+                window,
+                app,
+                &mut retained,
+            )
+            .seed();
+            let old = Rc::new(AnyView::new(EmptyView));
+            let new = Rc::new(AnyView::new(EmptyView));
+            let mut content = SheetContent {
+                content: old.clone(),
+                seed: seed.clone(),
+                accessibility_id: "confirm:dialog".into(),
+                accessibility_label: "Confirm changes".into(),
+            };
+            let props = SheetContentProps {
+                content: new.clone(),
+                seed,
+                label: "Confirmer les changements".into(),
+            };
+            update_sheet_content(&mut content, &props);
+            assert!(Rc::ptr_eq(&content.content, &new));
+            assert_eq!(content.accessibility_label, props.label);
+        });
     }
 
     #[test]
