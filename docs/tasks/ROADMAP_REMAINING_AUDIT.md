@@ -2815,3 +2815,7 @@ The reference client now ignores successful replies whose result is an array, re
 ### R25/R28: Web release build with preview-client fixes (2026-10-29)
 
 On clean source commit `eb20bf545dd68d57750c6643e171b0849a876a5a`, the Web release driver exited successfully and its host IME-plan suite passed 18/18. The bundled `reference-client.js` matches the source SHA-256 `a3f36b6c0790173ab7f167c81fae84d4b9d4fe865a50afd4b367dcad1231644a`. Build log `target/headstart/evidence/preview-replies-web-20261029.log` SHA-256 `0e13b4c404bd61870d3bf7a5ace2997845346cb885670d490564e5567c5023d1`; bundle manifest SHA-256 `c6c91e6e1860df8e9ea237ce4cd855a76613d1619f1c96f8be9795d347eb972a`. Dependency notices still have three gaps (`hexf-parse`, `mac`, `seahash`). This build does not establish interactive browser, IME, licensing, or release acceptance.
+
+### R25: browser roundtrips with preview-client fixes (2026-10-29)
+
+In an in-app Chromium session using the source-bound Web bundle from `eb20bf54` (manifest SHA-256 `c6c91e6e1860df8e9ea237ce4cd855a76613d1619f1c96f8be9795d347eb972a`), the reference host reported PASS for both preview and composition canonical roundtrips, including expected stale-stamp errors, disconnect, and reconnect. Each profile was disconnected; the owned tab and local server were closed. These checks do not exercise artificially malformed array replies in a browser, establish visual rendering, real OS IME, cross-browser behavior, or complete preview acceptance.
