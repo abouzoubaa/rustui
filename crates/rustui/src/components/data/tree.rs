@@ -6,6 +6,7 @@ use std::{
     rc::Rc,
 };
 
+use gpui::prelude::FluentBuilder as _;
 use gpui::{
     AnyElement, App, AppContext as _, ElementId, InteractiveElement as _, IntoElement,
     ParentElement as _, SharedString, Styled as _, div, px,
@@ -888,6 +889,7 @@ impl View for TreeView {
             }
         });
         let click_tree = tree.clone();
+        let right_to_left = context.layout_direction().is_right_to_left();
         container
             .child(
                 tree_container.child(
@@ -895,6 +897,8 @@ impl View for TreeView {
                         let marker = if entry.is_folder() {
                             Icon::new(if entry.is_expanded() {
                                 IconName::ChevronDown
+                            } else if right_to_left {
+                                IconName::ChevronLeft
                             } else {
                                 IconName::ChevronRight
                             })
@@ -906,11 +910,18 @@ impl View for TreeView {
                         let mut row = ListItem::new(ElementId::Name(
                             format!("rustui-tree-row-{}", entry.item().id).into(),
                         ))
-                        .pl(px(8.0 + entry.depth() as f32 * 16.0))
+                        .when(right_to_left, |row| {
+                            row.pr(px(8.0 + entry.depth() as f32 * 16.0))
+                        })
+                        .when(!right_to_left, |row| {
+                            row.pl(px(8.0 + entry.depth() as f32 * 16.0))
+                        })
                         .accessibility_label(entry.item().label.clone())
                         .child(
                             div()
                                 .flex()
+                                .w_full()
+                                .when(right_to_left, |content| content.flex_row_reverse())
                                 .items_center()
                                 .gap_1()
                                 .child(marker)
