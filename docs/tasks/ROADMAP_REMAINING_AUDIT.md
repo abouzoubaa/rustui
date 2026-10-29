@@ -2839,3 +2839,7 @@ The shared Tree adapter reverses left/right expansion actions in RTL through the
 ### R15/R32: disabled Outline branch in RTL (2026-10-29)
 
 A GPUI test-window regression explicitly selects a disabled collapsed branch, sends Left, Right and Enter in Arabic, and verifies that the branch remains collapsed and the owner receives no expansion writes. The focused Headstart test passed 1/1 (`target/headstart/evidence/outline-disabled-rtl-20261029.log`, SHA-256 `8cfd37a7980f2e761e1bb25b480df8f1882843a423deb5926c5702643a7e56ab`). This is simulated event-path evidence, not native or browser keyboard acceptance; broader disabled-control coverage remains open.
+
+### R17/R32: Tree and Outline integration checkpoint (2026-10-29)
+
+On clean commit `be51d99282820dfae37dbc853ce5e55d7a1bba1e`, the locked offline Headstart Tree/Outline library suite passed 32/32, including the new RTL and disabled-branch regressions (`target/headstart/evidence/tree-outline-integration-be51-20261029.log`, SHA-256 `5dcc41554c56e98fa36756c3e217051026df54470a3bc7175976090d65bfe527`). GitHub Actions run `40926085934` passed its source job for that commit; its macOS/Web compiled job was skipped. This does not establish native or browser acceptance, compiled CI, or release readiness.
