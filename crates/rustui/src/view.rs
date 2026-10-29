@@ -31,6 +31,65 @@ pub(crate) type KeyboardActionHandler = Box<dyn Fn(&mut Window, &mut App)>;
 pub(crate) type ComponentMutation = Box<dyn FnOnce(&mut dyn Any) -> bool>;
 pub(crate) type ComponentUpdater = Rc<dyn Fn(ComponentMutation, &mut App)>;
 
+#[cfg(test)]
+mod overlay_owner_tests {
+    use super::*;
+    use std::cell::RefCell;
+
+    struct Owner(String);
+
+    #[gpui::test]
+    fn overlay_binding_writes_to_original_owner(cx: &mut gpui::TestAppContext) {
+        cx.update(gpui_component::init);
+        let (host, window) = cx.add_window_view(|_, cx| ComponentHost::new(EmptyView, cx));
+        let owner = Rc::new(RefCell::new(Owner("before".into())));
+        let target = owner.clone();
+        let updater: ComponentUpdater = Rc::new(move |mutation, _| {
+            mutation(&mut *target.borrow_mut());
+        });
+        window.update(|window, app| {
+            let environment = EnvironmentValues::default();
+            let mut retained = RetainedEntities::default();
+            let seed = RenderContext::new(
+                updater,
+                host.entity_id(),
+                TypeId::of::<Owner>(),
+                Rc::new(()),
+                px(14.0),
+                &environment,
+                None,
+                None,
+                window,
+                app,
+                &mut retained,
+            )
+            .seed();
+            let mut overlay_retained = RetainedEntities::default();
+            let mut overlay = RenderContext::new(
+                Rc::new(|_, _| {}),
+                host.entity_id(),
+                TypeId::of::<()>(),
+                Rc::new(()),
+                px(14.0),
+                &environment,
+                None,
+                None,
+                window,
+                app,
+                &mut overlay_retained,
+            );
+            let binding = Binding::new(
+                "before".to_string(),
+                |owner: &Owner| owner.0.clone(),
+                |owner, value| owner.0 = value,
+            );
+            let writer = overlay.with_seed_owner(&seed, |context| context.binding_writer(binding));
+            writer("after".into(), overlay.app);
+        });
+        assert_eq!(owner.borrow().0, "after");
+    }
+}
+
 /// An explicit callback target for the component that described a child view.
 ///
 /// Obtain this in the owner's body with [`OwnerActionReader`] and pass it to a
@@ -440,6 +499,34 @@ impl<'a> RenderContext<'a> {
             button_theme: self.button_theme.clone(),
             localization: self.localization.clone(),
         }
+    }
+
+    /// Render retained overlay content with the component that created it as owner.
+    pub(crate) fn with_seed_owner<R>(
+        &mut self,
+        seed: &RenderSeed,
+        render: impl FnOnce(&mut RenderContext<'_>) -> R,
+    ) -> R {
+        let mut scoped = RenderContext {
+            update_component: seed.update_component.clone(),
+            owner_id: seed.owner_id,
+            owner_type: seed.owner_type,
+            task_owner: seed.task_owner.clone(),
+            text_element_id_prefix: self.text_element_id_prefix.clone(),
+            text_element_slot: self.text_element_slot,
+            implicit_retained_identity_slots: self.implicit_retained_identity_slots.clone(),
+            control_font_size: self.control_font_size,
+            environment: self.environment,
+            button_theme: self.button_theme.clone(),
+            localization: self.localization.clone(),
+            window: &mut *self.window,
+            app: &mut *self.app,
+            retained: &mut *self.retained,
+        };
+        let result = render(&mut scoped);
+        self.text_element_slot = scoped.text_element_slot;
+        self.implicit_retained_identity_slots = scoped.implicit_retained_identity_slots;
+        result
     }
     pub(crate) fn new(
         update_component: ComponentUpdater,

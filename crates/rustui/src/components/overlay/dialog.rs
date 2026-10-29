@@ -16,7 +16,7 @@ use rustui_core::Identity;
 use crate::{
     components::basic::button::Button,
     runtime::AppAction,
-    view::{AnyView, ControlAction, EmptyView, RenderContext, RetentionScope, View},
+    view::{AnyView, ControlAction, EmptyView, RenderContext, RenderSeed, RetentionScope, View},
 };
 
 #[derive(Clone)]
@@ -66,12 +66,28 @@ fn resolved_localized_accessibility_candidate(
 /// Keeps arbitrary RustUI dialog content owned across native builder rerenders.
 struct DialogContent {
     content: Rc<AnyView>,
+    seed: RenderSeed,
     accessibility_id: SharedString,
     accessibility_label: SharedString,
 }
 
-fn update_dialog_accessibility_label(content: &mut DialogContent, label: &SharedString) {
-    content.accessibility_label = label.clone();
+#[derive(Clone)]
+struct DialogContentProps {
+    content: Rc<AnyView>,
+    seed: RenderSeed,
+    label: SharedString,
+}
+
+impl PartialEq for DialogContentProps {
+    fn eq(&self, other: &Self) -> bool {
+        Rc::ptr_eq(&self.content, &other.content) && self.label == other.label
+    }
+}
+
+fn update_dialog_content(content: &mut DialogContent, props: &DialogContentProps) {
+    content.content = props.content.clone();
+    content.seed = props.seed.clone();
+    content.accessibility_label = props.label.clone();
 }
 
 fn dialog_semantic_element(
@@ -95,10 +111,12 @@ impl View for DialogContent {
         // GPUI Components does not expose its native Dialog surface element.
         // Keep a semantic dialog node around the RustUI body; this cannot
         // assign a role or contain focus on the upstream Dialog host.
+        let body =
+            context.with_seed_owner(&self.seed, |context| self.content.into_element(context));
         dialog_semantic_element(
             self.accessibility_id.clone(),
             self.accessibility_label.clone(),
-            self.content.into_element(context),
+            body,
         )
         .into_any_element()
     }
@@ -323,16 +341,22 @@ impl View for DialogView {
         context.with_element_scope(RetentionScope::Key(self.id.clone()), |context| {
             let accessibility_label = self.resolve_accessibility_label(context);
             let content = self.content.as_ref().map(|content| {
+                let props = DialogContentProps {
+                    content: Rc::clone(content),
+                    seed: context.seed(),
+                    label: accessibility_label.clone(),
+                };
                 context
                     .retained_component_with_props(
                         Identity::from(format!("{}:content", self.id)),
                         || DialogContent {
                             content: Rc::clone(content),
+                            seed: props.seed.clone(),
                             accessibility_id: format!("{}:dialog", self.id).into(),
                             accessibility_label: accessibility_label.clone(),
                         },
-                        &accessibility_label,
-                        update_dialog_accessibility_label,
+                        &props,
+                        update_dialog_content,
                     )
                     .0
             });
@@ -511,42 +535,61 @@ mod tests {
     #[test]
     fn semantic_dialog_content_has_a_stable_id_and_accessible_name() {
         use gpui::Element as _;
-
-        let content = DialogContent {
-            content: Rc::new(AnyView::new(EmptyView)),
-            accessibility_id: "confirm:dialog".into(),
-            accessibility_label: "Confirm changes".into(),
-        };
-
-        assert_eq!(content.accessibility_id.as_ref(), "confirm:dialog");
-        assert_eq!(content.accessibility_label.as_ref(), "Confirm changes");
-
-        let element = dialog_semantic_element(
-            content.accessibility_id.clone(),
-            content.accessibility_label.clone(),
-            div().into_any_element(),
-        );
-        assert_eq!(element.a11y_role(), Some(Role::Dialog));
-
-        let mut node = gpui::accesskit::Node::new(Role::Dialog);
-        element.write_a11y_info(&mut node);
-        assert_eq!(node.label(), Some("Confirm changes"));
+        for label in ["Confirm changes", "Confirmer les changements"] {
+            let element = dialog_semantic_element(
+                "confirm:dialog".into(),
+                label.into(),
+                div().into_any_element(),
+            );
+            assert_eq!(element.a11y_role(), Some(Role::Dialog));
+            let mut node = gpui::accesskit::Node::new(Role::Dialog);
+            element.write_a11y_info(&mut node);
+            assert_eq!(node.label(), Some(label));
+        }
     }
 
-    #[test]
-    fn retained_dialog_accessible_name_tracks_catalog_changes() {
-        let mut content = DialogContent {
-            content: Rc::new(AnyView::new(EmptyView)),
-            accessibility_id: "confirm:dialog".into(),
-            accessibility_label: "Confirm changes".into(),
-        };
+    #[gpui::test]
+    fn retained_dialog_reconciles_content_and_accessible_name(cx: &mut gpui::TestAppContext) {
+        use crate::runtime::component_host::RetainedEntities;
+        use std::any::TypeId;
 
-        update_dialog_accessibility_label(&mut content, &"Confirmer les changements".into());
-
-        assert_eq!(
-            content.accessibility_label.as_ref(),
-            "Confirmer les changements"
-        );
+        cx.update(gpui_component::init);
+        let (host, window) =
+            cx.add_window_view(|_, cx| crate::runtime::ComponentHost::new(EmptyView, cx));
+        window.update(|window, app| {
+            let environment = rustui_core::EnvironmentValues::default();
+            let mut retained = RetainedEntities::default();
+            let seed = RenderContext::new(
+                Rc::new(|_, _| {}),
+                host.entity_id(),
+                TypeId::of::<()>(),
+                Rc::new(()),
+                px(14.0),
+                &environment,
+                None,
+                None,
+                window,
+                app,
+                &mut retained,
+            )
+            .seed();
+            let old = Rc::new(AnyView::new(EmptyView));
+            let new = Rc::new(AnyView::new(EmptyView));
+            let mut content = DialogContent {
+                content: old.clone(),
+                seed: seed.clone(),
+                accessibility_id: "confirm:dialog".into(),
+                accessibility_label: "Confirm changes".into(),
+            };
+            let props = DialogContentProps {
+                content: new.clone(),
+                seed,
+                label: "Confirmer les changements".into(),
+            };
+            update_dialog_content(&mut content, &props);
+            assert!(Rc::ptr_eq(&content.content, &new));
+            assert_eq!(content.accessibility_label, props.label);
+        });
     }
 
     #[test]
