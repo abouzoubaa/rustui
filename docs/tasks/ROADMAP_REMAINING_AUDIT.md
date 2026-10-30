@@ -2867,3 +2867,7 @@ The layout summaries for all 16 story types, generic verification status and ill
 ### R10/R30: current workspace test checkpoint (2026-10-30)
 
 On clean commit `bd0f9ea2838093058e5d48ccc3b536c99cc759f1`, `./scripts/cargo-headstart test --workspace --tests --locked --offline` passed 1,447 tests across 42 reported suites, with zero failures and zero ignored tests. Log: `target/headstart/evidence/workspace-integration-bd0f9ea2-20261030.log`, SHA-256 `cb9df2e1cd53ab5c32506e77c27999c437eddc1608ef5df627741ec230e99291`. This covers the command’s macOS host unit/integration test targets; it does not establish native GUI, browser, Web runtime, compiled CI, licensing, performance, or release acceptance.
+
+### R03/R10: workspace documentation tests (2026-10-30)
+
+On clean commit `f4766388`, locked offline Headstart workspace doctests passed 3/3 across six reported crate suites (`workspace-doc-f4766388-20261030.log`, SHA-256 `15a4584599f0886fe8a10bfeeea61af905a203e59cdbb9e16e3b5128045ec58f`). The small number of doctests does not establish comprehensive documentation or public API example coverage. TreeNode localized-label documentation now explains the literal fallback and stable-ID behavior and includes a public API example; the updated RustUI crate doctests passed 3/3, including that example (`tree-localized-doc-20261030.log`, SHA-256 `2b571e1531e86fd4dce6e048a02d9f8afa8b014c31e0f987f40abf2d81d26eab`). Native/browser acceptance and release gates remain open.

@@ -121,7 +121,17 @@ impl TreeNode {
         }
     }
 
-    /// Resolve a catalog message for the visible label, falling back to the literal label.
+    /// Resolve the visible label from the active catalog, falling back to the
+    /// literal label when the message is missing or blank. The stable node ID
+    /// is unchanged when the locale changes.
+    ///
+    /// ```
+    /// use rustui::prelude::TreeNode;
+    ///
+    /// let document = TreeNode::new("document", "Document")
+    ///     .localized_label("app-document")
+    ///     .child(TreeNode::new("summary", "Summary"));
+    /// ```
     pub fn localized_label(mut self, key: impl Into<String>) -> Self {
         let key = key.into();
         assert!(
