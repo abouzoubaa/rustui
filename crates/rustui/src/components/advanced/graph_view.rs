@@ -376,6 +376,8 @@ impl GraphDocument {
                     .ok_or(GraphError::MissingNode)?;
                 n.rect = CanvasRect::new(x, y, n.rect.width, n.rect.height)
                     .map_err(|_| GraphError::InvalidGeometry)?;
+                // Geometry cannot change topology or node indices in this validated document.
+                return Ok(next);
             }
             GraphEdit::RemoveNode(id) => {
                 if next.node(&id).is_none() {
@@ -1801,6 +1803,37 @@ mod tests {
             })
             .unwrap();
         assert_eq!(renamed.node("a").unwrap().label(), "Renamed");
+    }
+    #[test]
+    fn moved_connected_graph_retains_valid_topology_and_node_index() {
+        let original = graph().edited(GraphEdit::Connect(edge())).unwrap();
+        let moved = original
+            .edited(GraphEdit::MoveNode {
+                id: "a".into(),
+                x: 45.0,
+                y: -12.0,
+            })
+            .unwrap();
+        let rebuilt = GraphDocument::new(moved.nodes().to_vec(), moved.edges().to_vec()).unwrap();
+        assert_eq!(moved, rebuilt);
+        assert_eq!(moved.node("a").unwrap().rect().x, 45.0);
+        assert_eq!(original.node("a").unwrap().rect().x, 10.0);
+        assert_eq!(
+            moved
+                .edited(GraphEdit::RemoveNode("a".into()))
+                .unwrap()
+                .edges()
+                .len(),
+            0
+        );
+        assert_eq!(
+            moved.edited(GraphEdit::MoveNode {
+                id: "missing".into(),
+                x: 0.0,
+                y: 0.0
+            }),
+            Err(GraphError::MissingNode)
+        );
     }
     #[test]
     fn localized_node_labels_follow_explicit_renames() {
