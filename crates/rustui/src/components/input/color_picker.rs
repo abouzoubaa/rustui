@@ -1001,7 +1001,6 @@ mod rendered_locale_tests {
         runtime::ComponentHost,
         theme::{AppearanceMode, activate_theme, parse_theme},
     };
-    use gpui::AppContext as _;
     use gpui_component::Root;
 
     struct Owner {
@@ -1348,6 +1347,16 @@ mod rendered_locale_tests {
             let focus = state.read(app).hex_input().read(app).focus_handle(app);
             window.focus(&focus, app);
             let _ = window.draw(app);
+        });
+        window.simulate_keystrokes("cmd-a");
+        window.simulate_input("#00FF00");
+        window.update(|window, app| {
+            let _ = window.draw(app);
+            assert_eq!(
+                state.read(app).displayed_color().unwrap().to_rgb(),
+                hsla(1.0 / 3.0, 1.0, 0.5, 1.0).to_rgb()
+            );
+            assert_eq!(owner.read(app).component().color, Some(external));
         });
         window.simulate_keystrokes("cmd-a");
         window.simulate_input("#FF0000");
