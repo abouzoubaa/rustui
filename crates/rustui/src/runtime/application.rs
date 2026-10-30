@@ -12,6 +12,16 @@ use super::window::open_root_window;
 use crate::view::View;
 
 type LaunchHook = Box<dyn FnOnce(&mut App)>;
+type WindowErrorHook = Box<dyn FnOnce(String, &mut App)>;
+
+fn handle_window_error(error: String, handler: Option<WindowErrorHook>, cx: &mut App) {
+    if let Some(handler) = handler {
+        handler(error, cx);
+    } else {
+        eprintln!("RustUI could not open its root window: {error}");
+        cx.quit();
+    }
+}
 type AssetSetup = Box<dyn FnOnce(gpui::Application) -> gpui::Application>;
 
 #[cfg(target_family = "wasm")]
@@ -294,6 +304,7 @@ pub struct RustUI {
     window_options: WindowOptions,
     window_size: Option<(f32, f32)>,
     on_launch: Option<LaunchHook>,
+    on_window_error: Option<WindowErrorHook>,
     asset_setup: Option<AssetSetup>,
     environment: EnvironmentValues,
 }
@@ -343,6 +354,14 @@ impl RustUI {
         self
     }
 
+    /// Handles a failure to open the root window. Without a handler, RustUI
+    /// reports the error to standard error and quits the application.
+    /// A handler may report the error, open a recovery window, or quit.
+    pub fn on_window_error(mut self, handler: impl FnOnce(String, &mut App) + 'static) -> Self {
+        self.on_window_error = Some(Box::new(handler));
+        self
+    }
+
     /// Registers the application's asset source with GPUI before launch.
     ///
     /// Names passed to `Image` and upstream icon paths resolve through this source.
@@ -362,6 +381,7 @@ impl RustUI {
     /// then mounts the root component and activates the application.
     pub fn run<V: View>(mut self, root: V) {
         let on_launch = self.on_launch.take();
+        let on_window_error = self.on_window_error.take();
         let mut window_options = self.window_options;
         #[cfg(target_os = "macos")]
         let menu_title = window_options
@@ -422,8 +442,10 @@ impl RustUI {
                 window_options.window_bounds =
                     Some(WindowBounds::centered(size(px(width), px(height)), cx));
             }
-            open_root_window(root, environment, window_options, cx);
-            cx.activate(true);
+            match open_root_window(root, environment, window_options, cx) {
+                Ok(()) => cx.activate(true),
+                Err(error) => handle_window_error(error, on_window_error, cx),
+            }
         });
     }
 }
@@ -434,6 +456,7 @@ impl Default for RustUI {
             window_options: WindowOptions::default(),
             window_size: None,
             on_launch: None,
+            on_window_error: None,
             asset_setup: None,
             environment: EnvironmentValues::default(),
         }
@@ -442,6 +465,18 @@ impl Default for RustUI {
 
 #[cfg(test)]
 mod tests {
+    #[gpui::test]
+    fn root_window_error_is_delivered_to_the_configured_handler(cx: &mut gpui::TestAppContext) {
+        let received = std::rc::Rc::new(std::cell::RefCell::new(None));
+        let output = received.clone();
+        let mut app = super::RustUI::new().on_window_error(move |error, _| {
+            *output.borrow_mut() = Some(error);
+        });
+        cx.update(|cx| {
+            super::handle_window_error("window unavailable".into(), app.on_window_error.take(), cx);
+        });
+        assert_eq!(received.borrow().as_deref(), Some("window unavailable"));
+    }
     use gpui::{AssetSource as _, KeyBinding, Keystroke};
 
     use super::{component_assets, tree_confirm_key_binding, web_font_assets, with_embedded_asset};

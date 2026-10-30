@@ -11,10 +11,11 @@ pub(crate) fn open_root_window<V: View>(
     environment: EnvironmentValues,
     options: WindowOptions,
     cx: &mut App,
-) {
+) -> Result<(), String> {
     cx.open_window(options, |window, cx| {
         let content = cx.new(|cx| ComponentHost::with_environment(root, environment, cx));
         cx.new(|cx| gpui_component::Root::new(content, window, cx))
     })
-    .expect("RustUI root window should open");
+    .map(|_| ())
+    .map_err(|error| format!("{error:#}"))
 }

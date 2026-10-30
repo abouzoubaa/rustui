@@ -1062,6 +1062,12 @@ application and window lifecycle.
 `View::on_unmount` lifecycle hooks, so application code can name those callback
 types through RustUI without adding its own GPUI import.
 
+If the root window cannot be opened, RustUI reports the error to standard
+error and quits by default. Use `RustUI::on_window_error(|message, cx| ...)`
+to handle the failure instead, for example by showing a recovery window or
+calling `cx.quit()`. The handler runs on the application thread and owns the
+decision to quit or recover.
+
 ## Localization activation
 
 Parse catalogs with `Catalog::parse`, register them in `Catalogs`, then activate
