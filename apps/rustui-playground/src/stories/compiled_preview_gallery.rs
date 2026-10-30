@@ -7644,8 +7644,32 @@ impl View for CompiledPreviewGallery {
         );
         let rejection_announcement =
             preview_inspector_rejection_live_region_value(&self.status).unwrap_or_default();
+        let mounted_preview =
+            OwnerActionReader(move |owner: OwnerAction<CompiledPreviewGallery>| {
+                render_preview(&FactoryContext {
+                    owner,
+                    stamp_lease: stamp_lease.clone(),
+                    text: binding.clone(),
+                    secure_value: secure_value_binding.clone(),
+                    checked: checked_binding.clone(),
+                    slider_value: slider_binding.clone(),
+                    stepper_value: stepper_binding.clone(),
+                    color_value: color_value_binding.clone(),
+                    date_value: date_value_binding.clone(),
+                    token_values: token_values_binding.clone(),
+                })
+                .expect("registered compiled factory")
+            });
+        #[cfg(target_family = "wasm")]
+        if self.reference_bridge.is_some() {
+            return AnyView::new(
+                VStack::new()
+                    .child(self.reference_owner_binding())
+                    .child(mounted_preview),
+            );
+        }
 
-        VStack::new()
+        let view = VStack::new()
             .spacing(8.0)
             .child(self.reference_owner_binding())
             .child(Text("Compiled preview host"))
@@ -8044,23 +8068,8 @@ impl View for CompiledPreviewGallery {
                     .id("compiled-preview-no-blur-rerender")
                 },
             ))
-            .child(OwnerActionReader(
-                move |owner: OwnerAction<CompiledPreviewGallery>| {
-                    render_preview(&FactoryContext {
-                        owner,
-                        stamp_lease: stamp_lease.clone(),
-                        text: binding.clone(),
-                        secure_value: secure_value_binding.clone(),
-                        checked: checked_binding.clone(),
-                        slider_value: slider_binding.clone(),
-                        stepper_value: stepper_binding.clone(),
-                        color_value: color_value_binding.clone(),
-                        date_value: date_value_binding.clone(),
-                        token_values: token_values_binding.clone(),
-                    })
-                    .expect("registered compiled factory")
-                },
-            ))
+            .child(mounted_preview);
+        AnyView::new(view)
     }
 }
 
