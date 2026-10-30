@@ -1449,6 +1449,20 @@ fn next_node(graph: &GraphDocument, selected: Option<&str>, forward: bool) -> Op
 }
 
 fn apply_edit(current: &mut GraphDocument, edit: GraphEdit) -> bool {
+    if let GraphEdit::MoveNode { id, x, y } = &edit {
+        let Some(&index) = current.node_index.get(id) else {
+            return false;
+        };
+        let node = &mut current.nodes[index];
+        let Ok(rect) = CanvasRect::new(*x, *y, node.rect.width, node.rect.height) else {
+            return false;
+        };
+        if rect == node.rect {
+            return false;
+        }
+        node.rect = rect;
+        return true;
+    }
     match current.edited(edit) {
         Ok(next) if next != *current => {
             *current = next;
@@ -1461,6 +1475,52 @@ fn apply_edit(current: &mut GraphDocument, edit: GraphEdit) -> bool {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn in_place_node_moves_match_atomic_document_edits() {
+        for edit in [
+            GraphEdit::MoveNode {
+                id: "a".into(),
+                x: 20.0,
+                y: 30.0,
+            },
+            GraphEdit::MoveNode {
+                id: "a".into(),
+                x: 0.0,
+                y: 0.0,
+            },
+            GraphEdit::MoveNode {
+                id: "missing".into(),
+                x: 20.0,
+                y: 30.0,
+            },
+            GraphEdit::MoveNode {
+                id: "a".into(),
+                x: f32::NAN,
+                y: 0.0,
+            },
+            GraphEdit::MoveNode {
+                id: "a".into(),
+                x: f32::MAX,
+                y: f32::MAX,
+            },
+        ] {
+            let original = graph();
+            let expected = original.edited(edit.clone());
+            let mut actual = original.clone();
+            let changed = apply_edit(&mut actual, edit);
+            match expected {
+                Ok(expected) => {
+                    assert_eq!(changed, expected != original);
+                    assert_eq!(actual, expected);
+                }
+                Err(_) => {
+                    assert!(!changed);
+                    assert_eq!(actual, original);
+                }
+            }
+        }
+    }
 
     #[test]
     fn generated_connection_ids_fill_gaps_and_keep_exact_names() {
