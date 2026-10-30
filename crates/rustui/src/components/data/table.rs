@@ -705,6 +705,89 @@ mod tests {
     }
 
     struct TableGeometryProbe;
+
+    struct TableScrollCase {
+        rows: usize,
+        column_width: f32,
+    }
+
+    impl super::View for TableScrollCase {
+        fn body(&self) -> impl super::View {
+            super::EmptyView
+        }
+
+        fn into_element(&self, context: &mut super::RenderContext<'_>) -> gpui::AnyElement {
+            use gpui::{IntoElement as _, ParentElement as _, Styled as _, div, px};
+            let selection = super::Binding::new(None, |_: &Self| None, |_, _| {});
+            div()
+                .w(px(300.))
+                .h(px(240.))
+                .child(
+                    super::TableView::new(
+                        ["First", "Second"],
+                        vec![["A", "B"]; self.rows],
+                        selection,
+                    )
+                    .id("scroll-diagnostic")
+                    .column_width(self.column_width)
+                    .height(240.)
+                    .into_element(context),
+                )
+                .into_any_element()
+        }
+    }
+
+    #[gpui::test]
+    fn narrow_table_scroll_survives_wheel_events_and_draw(cx: &mut gpui::TestAppContext) {
+        use rustui_core::Identity;
+        let theme = crate::theme::parse_theme(include_str!(concat!(
+            env!("CARGO_MANIFEST_DIR"),
+            "/../../themes/macos27.json"
+        )))
+        .unwrap();
+        cx.update(|app| {
+            gpui_component::init(app);
+            crate::theme::activate_theme(&theme, Some(crate::theme::AppearanceMode::Dark), app)
+                .unwrap();
+        });
+        for rows in [1, 4] {
+            for column_width in [300., 700.] {
+                let (owner, window) = cx.add_window_view(|_, app| {
+                    crate::runtime::ComponentHost::new(TableScrollCase { rows, column_width }, app)
+                });
+                window.run_until_parked();
+                let state = window.update(|window, app| {
+                    let _ = window.draw(app);
+                    owner
+                        .read(app)
+                        .retained_entity_for_test::<super::TableState<super::StringTableDelegate>>(
+                            vec![],
+                            Identity::from("scroll-diagnostic"),
+                        )
+                        .unwrap()
+                });
+                window.run_until_parked();
+                for y in [10., 30., 50., 100.] {
+                    window.simulate_event(gpui::ScrollWheelEvent {
+                        position: gpui::point(gpui::px(100.), gpui::px(y)),
+                        delta: gpui::ScrollDelta::Pixels(gpui::point(gpui::px(-80.), gpui::px(0.))),
+                        ..Default::default()
+                    });
+                    window.update(|window, app| {
+                        let _ = window.draw(app);
+                    });
+                }
+                window.update(|window, app| {
+                    state.update(app, |table, cx| table.scroll_to_col(1, cx));
+                    let handle = state.read(app).horizontal_scroll_handle.clone();
+                    let before = handle.offset();
+                    let _ = window.draw(app);
+                    assert!(before.x < gpui::px(0.), "rows={rows} width={column_width}");
+                    assert_eq!(handle.offset(), before, "rows={rows} width={column_width}");
+                });
+            }
+        }
+    }
     impl super::View for TableGeometryProbe {
         fn body(&self) -> impl super::View {
             super::EmptyView
