@@ -6,7 +6,7 @@ pub fn demo() -> impl View {
         "drawer-gallery".into(),
         "Open Drawer".into(),
         "Details".into(),
-        "Editable owner notes".into(),
+        String::new(),
     )
 }
 pub fn specimen(id: String, trigger: String, title: String, body: String) -> impl View {
