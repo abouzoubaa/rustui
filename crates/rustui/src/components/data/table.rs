@@ -23,6 +23,7 @@ struct StringTableDelegate {
     columns: Vec<String>,
     rows: Vec<Vec<String>>,
     column_width: f32,
+    direction: LayoutDirection,
     row_style: ResolvedComponentStyle,
     header_style: ResolvedComponentStyle,
     last_owner_selection: Rc<Cell<Option<usize>>>,
@@ -113,6 +114,7 @@ impl StringTableDelegate {
         columns: Vec<String>,
         rows: Vec<Vec<String>>,
         column_width: f32,
+        direction: LayoutDirection,
         row_style: ResolvedComponentStyle,
         header_style: ResolvedComponentStyle,
         owner_selection: Option<usize>,
@@ -121,6 +123,7 @@ impl StringTableDelegate {
             columns,
             rows,
             column_width,
+            direction,
             row_style,
             header_style,
             last_owner_selection: Rc::new(Cell::new(owner_selection)),
@@ -234,6 +237,7 @@ impl TableDelegate for StringTableDelegate {
 ///
 /// Right-to-left locales display columns in reverse visual order while retaining
 /// each header's association with its cells and preserving source-row selection.
+/// On a direction change, the first logical column is brought into view.
 pub struct TableView {
     columns: Vec<String>,
     column_messages: Option<Vec<String>>,
@@ -389,6 +393,23 @@ fn presentation_data(
     (columns, rows)
 }
 
+fn leading_column_to_reveal(
+    created: bool,
+    previous: LayoutDirection,
+    direction: LayoutDirection,
+    previous_count: usize,
+    count: usize,
+) -> Option<usize> {
+    let rtl_initial = direction == LayoutDirection::RightToLeft && (created || previous_count == 0);
+    if previous == direction && !rtl_initial {
+        return None;
+    }
+    match direction {
+        LayoutDirection::LeftToRight => (count > 0).then_some(0),
+        LayoutDirection::RightToLeft => count.checked_sub(1),
+    }
+}
+
 fn selection_for_rows(selection: Option<usize>, row_count: usize) -> Option<usize> {
     selection.filter(|index| *index < row_count)
 }
@@ -439,10 +460,11 @@ impl View for TableView {
         let header_style =
             required_style_with_artwork(context, "table", "table_column_headers", &query);
         let identity = self.identity(context);
+        let direction = context.layout_direction();
         let (display_columns, display_rows) = presentation_data(
             self.resolved_columns(|id| context.localized_message(id)),
             self.rows.clone(),
-            context.layout_direction(),
+            direction,
         );
         let columns = display_columns.clone();
         let rows = display_rows.clone();
@@ -456,6 +478,7 @@ impl View for TableView {
                 columns,
                 rows,
                 column_width,
+                direction,
                 initial_row_style,
                 initial_header_style,
                 owner_selection,
@@ -472,6 +495,10 @@ impl View for TableView {
             state
         });
 
+        let (previous_direction, previous_count) = {
+            let state = state.read(context.app());
+            (state.delegate().direction, state.delegate().columns.len())
+        };
         let data_changed = {
             let state = state.read(context.app());
             let delegate = state.delegate();
@@ -494,6 +521,23 @@ impl View for TableView {
                 state.delegate_mut().row_style = row_style;
                 state.delegate_mut().header_style = header_style;
                 state.refresh(cx);
+            });
+        }
+
+        // Re-anchor on a direction change, while preserving user scroll on ordinary updates.
+        let leading = leading_column_to_reveal(
+            created,
+            previous_direction,
+            direction,
+            previous_count,
+            self.columns.len(),
+        );
+        if previous_direction != direction || leading.is_some() {
+            context.update_entity(&state, move |state, _window, cx| {
+                state.delegate_mut().direction = direction;
+                if let Some(column) = leading {
+                    state.scroll_to_col(column, cx);
+                }
             });
         }
 
@@ -708,6 +752,19 @@ mod tests {
         );
         assert_eq!(table.resolved_columns(|_| " ".into()), ["Index", "Row"]);
         assert_eq!(table.resolved_columns(|_| "صف".into()), ["صف", "صف"]);
+    }
+
+    #[test]
+    fn direction_changes_reveal_leading_column_without_resetting_owner_updates() {
+        use rustui_i18n::LayoutDirection::{LeftToRight as Ltr, RightToLeft as Rtl};
+        let leading = super::leading_column_to_reveal;
+        assert_eq!(leading(true, Ltr, Ltr, 3, 3), None);
+        assert_eq!(leading(true, Rtl, Rtl, 3, 3), Some(2));
+        assert_eq!(leading(false, Ltr, Rtl, 3, 3), Some(2));
+        assert_eq!(leading(false, Rtl, Ltr, 3, 3), Some(0));
+        assert_eq!(leading(false, Rtl, Rtl, 3, 3), None);
+        assert_eq!(leading(false, Rtl, Rtl, 0, 3), Some(2));
+        assert_eq!(leading(false, Ltr, Rtl, 0, 0), None);
     }
 
     #[test]
