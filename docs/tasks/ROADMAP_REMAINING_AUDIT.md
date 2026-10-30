@@ -1,6 +1,6 @@
 ## R35/R36 NodeEditor rendered drag — 2026-10-30
 
-The rendered NodeEditor regression now also drags a connected node by pointer, verifies the owner-bound position, and confirms pointer movement after release does not continue the drag. The existing test then moves and deletes the node by keyboard. The GraphView suite passed 21/21 (`target/headstart/evidence/native-node-editor-drag-20261030.log`, SHA-256 `9827aa70c0804efb519a1900082d74b1d0956fef2c4c1ad3fd12b17f08204084`). Node and port selectors are test-only. This simulated GPUI test-window result does not establish actual macOS Playground drag or broader graph acceptance.
+The rendered NodeEditor regression now also drags a connected node by pointer, verifies the owner-bound position, and confirms pointer movement after release does not continue the drag. The existing test then moves and deletes the node by keyboard. The GraphView suite passed 21/21 (`target/headstart/evidence/native-node-editor-drag-20261030.log`, SHA-256 `9827aa70c0804efb519a1900082d74b1d0956fef2c4c1ad3fd12b17f08204084`). A further held-drag test moved the pointer again after redraw and passed 1/1 (`target/headstart/evidence/native-node-editor-drag-redraw-20261030.log`, SHA-256 `b1f43c35bae9210942b1382401ab3ef22a1f6bf438439bb69dfa874a7f4e4bd9`). Node and port selectors are test-only. This simulated GPUI test-window result does not establish actual macOS Playground drag or broader graph acceptance.
 
 ## R35/R36 NodeEditor rendered port connection — 2026-10-30
 

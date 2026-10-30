@@ -2312,6 +2312,11 @@ mod current_selection_regressions {
         window.update(|window, app| {
             let _ = window.draw(app);
         });
+        let end = gpui::point(end.x + px(10.0), end.y + px(5.0));
+        window.simulate_mouse_move(end, MouseButton::Left, gpui::Modifiers::default());
+        window.update(|window, app| {
+            let _ = window.draw(app);
+        });
         window.simulate_mouse_up(end, MouseButton::Left, gpui::Modifiers::default());
         window.simulate_mouse_move(
             gpui::point(end.x + px(25.0), end.y + px(25.0)),
@@ -2321,7 +2326,7 @@ mod current_selection_regressions {
         window.update(|window, app| {
             let _ = window.draw(app);
             let rect = owner.read(app).component().graph.node("a").unwrap().rect();
-            assert_eq!((rect.x, rect.y), (30.0, 20.0));
+            assert_eq!((rect.x, rect.y), (40.0, 25.0));
         });
         window.update(|window, app| {
             let _ = window.draw(app);
@@ -2348,7 +2353,7 @@ mod current_selection_regressions {
                     .unwrap()
                     .rect()
                     .x,
-                40.0
+                50.0
             );
         });
         window.simulate_keystrokes("backspace");
