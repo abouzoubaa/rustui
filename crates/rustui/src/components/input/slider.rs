@@ -54,8 +54,13 @@ fn bounded_event_writer<Context: 'static>(
     writer: SliderEventWriter<Context>,
     min: f32,
     max: f32,
+    disabled: bool,
 ) -> SliderEventWriter<Context> {
-    Rc::new(move |value, cx| writer(bounded_value(value, min, max), cx))
+    Rc::new(move |value, cx| {
+        if !disabled {
+            writer(bounded_value(value, min, max), cx);
+        }
+    })
 }
 
 struct RetainedSlider {
@@ -260,7 +265,8 @@ impl View for SliderView {
         }
 
         let binding_writer = context.binding_writer(self.value.clone());
-        let bounded_writer = bounded_event_writer(binding_writer, min, max);
+        // Retained subscriptions can receive an event after the control is disabled.
+        let bounded_writer = bounded_event_writer(binding_writer, min, max, self.disabled);
         replace_event_writer(&writer, bounded_writer);
         if created {
             let current_writer = writer.clone();
@@ -730,6 +736,7 @@ mod tests {
                 }),
                 0.0,
                 10.0,
+                false,
             ),
         );
         write_with_current_writer(&writer, f32::INFINITY, &mut owner);
@@ -737,6 +744,25 @@ mod tests {
         assert_eq!(owner.current_value, 10.0);
         write_with_current_writer(&writer, f32::NAN, &mut owner);
         assert_eq!(owner.current_value, 0.0);
+    }
+
+    #[test]
+    fn retained_slider_events_do_not_write_while_disabled() {
+        let slot = RefCell::new(None);
+        let writer: super::SliderEventWriter<f32> = Rc::new(|value, owner| *owner = value);
+        let mut owner = 2.0;
+        replace_event_writer(
+            &slot,
+            bounded_event_writer(writer.clone(), 0.0, 10.0, false),
+        );
+        write_with_current_writer(&slot, 4.0, &mut owner);
+        assert_eq!(owner, 4.0);
+        replace_event_writer(&slot, bounded_event_writer(writer.clone(), 0.0, 10.0, true));
+        write_with_current_writer(&slot, 8.0, &mut owner);
+        assert_eq!(owner, 4.0);
+        replace_event_writer(&slot, bounded_event_writer(writer, 0.0, 5.0, false));
+        write_with_current_writer(&slot, 8.0, &mut owner);
+        assert_eq!(owner, 5.0);
     }
 
     #[test]
