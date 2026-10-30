@@ -1,3 +1,7 @@
+## R13/R15 native ColorPicker palette direction — 2026-10-30
+
+ColorPicker's trigger contents, featured-swatches row and individual crayon rows now use the existing logical input-row layout, applying GPUI Row in LTR and RowReverse in RTL. Swatch identities, color values and HSLA slider semantics are unchanged. On parent `abd5a0c1` plus this change, the focused native-hosted ColorPicker suite passed 18/18, including the retained-locale test and logical-row style checks (`target/headstart/evidence/native-color-picker-rtl-rows-20261030.log`, SHA-256 `306429fa3a84b6b09c1b21785d58b66a18a059b751d2e21b334796e206c7ea8f`). Native visual, pointer, narrow-width and broad RTL acceptance remain open.
+
 ## R13/R15 native ColorPicker retained locale transition — 2026-10-30
 
 A macOS-hosted GPUI Root/test window rendered a ColorPicker with owner-bound color; the test set its retained state open and selected HSLA mode, switched from English to Arabic, then verified the popup remained open, mode and owner/retained color were preserved, and the rendered test-window tree exposed the Arabic Palette tab label. The focused ColorPicker suite passed 18/18 on parent `8552deba` plus this regression (`target/headstart/evidence/native-color-picker-locale-suite-20261030.log`, SHA-256 `50c75171b902b4ce66bc25718786db764d374b65379692ff66faf5417323359c`). Programmatic state setup and the tree observation do not prove pointer or keyboard popup operation, visible text geometry, native Playground appearance, narrow widths or full locale acceptance.

@@ -295,6 +295,7 @@ impl ColorPickerView {
             &wheel_style,
         );
 
+        let direction = context.layout_direction();
         let featured = self
             .featured_colors
             .clone()
@@ -313,7 +314,7 @@ impl ColorPickerView {
             .into_iter()
             .enumerate()
             .map(|(family, colors)| {
-                gpui_component::h_flex()
+                super::logical_input_row(gpui_component::h_flex(), direction)
                     .id(("color-picker-crayon-row", family))
                     .gap_1()
                     .children(colors.into_iter().enumerate().map(|(index, color)| {
@@ -329,7 +330,6 @@ impl ColorPickerView {
             });
 
         let active_tab_state = state.clone();
-        let direction = context.layout_direction();
         let palette_label = popup_label(context, "rustui-color-picker-palette", "Palette");
         let mut panel = gpui_component::v_flex()
             .w(px(288.0))
@@ -349,7 +349,7 @@ impl ColorPickerView {
         if active_tab == 0 {
             panel = panel
                 .child(
-                    gpui_component::h_flex()
+                    super::logical_input_row(gpui_component::h_flex(), direction)
                         .flex_wrap()
                         .gap_1()
                         .children(swatches),
@@ -807,7 +807,7 @@ impl View for ColorPickerView {
             .open(open)
             .accessibility_label(label.clone())
             .child(
-                gpui_component::h_flex()
+                super::logical_input_row(gpui_component::h_flex(), context.layout_direction())
                     .items_center()
                     .gap_2()
                     .child(trigger_swatch)
