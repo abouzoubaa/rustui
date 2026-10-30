@@ -644,6 +644,24 @@ mod tests {
                 .id("keyboard-tabs")
             }
         }
+        use crate::localization::{Catalog, Catalogs, Locale, activate_localization, set_locale};
+        let en = Locale::parse("en").unwrap();
+        let ar = Locale::parse("ar").unwrap();
+        let mut catalogs = Catalogs::new(en.clone());
+        for (locale, source) in [
+            (
+                en.clone(),
+                include_str!("../../../../../locales/en/rustui.ftl"),
+            ),
+            (
+                ar.clone(),
+                include_str!("../../../../../locales/ar/rustui.ftl"),
+            ),
+        ] {
+            catalogs
+                .insert(Catalog::parse(locale, source).unwrap())
+                .unwrap();
+        }
         let theme = crate::theme::parse_theme(include_str!(concat!(
             env!("CARGO_MANIFEST_DIR"),
             "/../../themes/macos27.json"
@@ -651,6 +669,7 @@ mod tests {
         .unwrap();
         cx.update(|app| {
             gpui_component::init(app);
+            activate_localization(catalogs, en, app);
             crate::theme::activate_theme(&theme, Some(crate::theme::AppearanceMode::Dark), app)
                 .unwrap();
         });
@@ -682,6 +701,18 @@ mod tests {
         window.update(|window, app| {
             let _ = window.draw(app);
             assert_eq!(owner.read(app).component().selection, "first");
+            set_locale(ar, app);
+            let _ = window.draw(app);
+        });
+        window.simulate_keystrokes("left");
+        window.update(|window, app| {
+            let _ = window.draw(app);
+            assert_eq!(owner.read(app).component().selection, "first");
+        });
+        window.simulate_keystrokes("enter");
+        window.update(|window, app| {
+            let _ = window.draw(app);
+            assert_eq!(owner.read(app).component().selection, "third");
         });
     }
 

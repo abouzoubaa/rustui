@@ -1,3 +1,7 @@
+## R13/R17 native TabView RTL keyboard event — 2026-10-30
+
+On parent `f24c2168` plus this regression, the macOS-hosted GPUI TabView test switched from English to Arabic with the first tab selected. Left moved focus past a disabled middle tab without writing the owner, and Enter selected the third tab. The focused test passed 1/1 (`target/headstart/evidence/native-tab-view-rtl-20261030.log`, SHA-256 `45e612c2cdb4871029611447b5e4afe94820e52d84835936f441f6d459eabbaf`). This verifies the bounded direction-aware event path, not rendered RTL layout, native Playground or broader acceptance.
+
 ## R17 native TabView keyboard event path — 2026-10-30
 
 On parent `74369056` plus this regression, a macOS-hosted GPUI test window focused a controlled TabView with a disabled middle tab. Right moved focus past the disabled tab without writing the selection; Enter selected the third tab; Right wrapped and Space selected the first. The focused TabView suite passed 26/26 (`target/headstart/evidence/native-tab-view-suite-20261030.log`, SHA-256 `8ee14cb0f4be9c04a209e8ce4ea622f4a835303466cd4bf485c9b4c4b012bcb6`). This is bounded test-window evidence, not native Playground, RTL, visual or broader acceptance.
