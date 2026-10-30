@@ -400,27 +400,27 @@ impl View for RadioView {
                 .text_size(px(typography.size))
                 .font_weight(FontWeight(typography.weight));
         }
-        BaseRadio::new(identity.to_string())
-            .flex()
-            .gap_2()
-            .items_center()
-            .focus(move |style| style.border(px(focus_width)).border_color(focus_color))
-            .child(indicator)
-            .child(label)
-            .checked(selected)
-            .disabled(self.disabled)
-            .tab_index(self.tab_index)
-            .tab_stop(self.focusable)
-            .accessibility_label(
-                self.resolved_accessibility_label(|id| context.localized_message(id)),
-            )
-            .when(self.disabled, |control| {
-                control.a11y_synthetic_children(|builder| {
-                    super::mark_accessibility_node_disabled(builder.parent_node());
-                })
+        super::logical_input_row(
+            BaseRadio::new(identity.to_string()),
+            context.layout_direction(),
+        )
+        .gap_2()
+        .items_center()
+        .focus(move |style| style.border(px(focus_width)).border_color(focus_color))
+        .child(indicator)
+        .child(label)
+        .checked(selected)
+        .disabled(self.disabled)
+        .tab_index(self.tab_index)
+        .tab_stop(self.focusable)
+        .accessibility_label(self.resolved_accessibility_label(|id| context.localized_message(id)))
+        .when(self.disabled, |control| {
+            control.a11y_synthetic_children(|builder| {
+                super::mark_accessibility_node_disabled(builder.parent_node());
             })
-            .on_change(move |selected, _event, _window, cx| write(selected, cx))
-            .into_any_element()
+        })
+        .on_change(move |selected, _event, _window, cx| write(selected, cx))
+        .into_any_element()
     }
 }
 

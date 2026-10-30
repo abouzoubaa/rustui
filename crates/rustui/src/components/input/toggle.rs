@@ -391,6 +391,7 @@ impl View for ToggleView {
             focus_border_width,
             thumb_inset,
             label_gap: active_theme.profile.spacing.space_2 as f32,
+            direction: context.layout_direction(),
         }
         .into_any_element()
     }
@@ -415,6 +416,7 @@ struct ThemedSwitch {
     focus_border_width: f32,
     thumb_inset: f32,
     label_gap: f32,
+    direction: rustui_i18n::LayoutDirection,
 }
 
 impl RenderOnce for ThemedSwitch {
@@ -470,9 +472,7 @@ impl RenderOnce for ThemedSwitch {
             track.style().border_color = Some(self.focus_color);
         }
 
-        self.base
-            .track_focus(&focus)
-            .flex()
+        super::logical_input_row(self.base.track_focus(&focus), self.direction)
             .items_center()
             .gap(px(self.label_gap))
             .child(track)

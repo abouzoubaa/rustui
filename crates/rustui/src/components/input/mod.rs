@@ -15,6 +15,14 @@ pub mod text_field;
 pub mod toggle;
 pub mod token_field;
 
+fn logical_input_row<T: gpui::Styled>(control: T, direction: rustui_i18n::LayoutDirection) -> T {
+    let control = control.flex().flex_row();
+    match direction {
+        rustui_i18n::LayoutDirection::LeftToRight => control,
+        rustui_i18n::LayoutDirection::RightToLeft => control.flex_row_reverse(),
+    }
+}
+
 /// A select option keeps its stable binding value separate from its display title.
 #[derive(Clone, Debug, PartialEq, Eq)]
 struct SelectOption {
@@ -77,6 +85,23 @@ fn select_needs_reconciliation(
 
 #[cfg(test)]
 mod tests {
+    #[test]
+    fn checkable_rows_follow_active_layout_direction() {
+        use gpui::{FlexDirection, Styled};
+        use rustui_i18n::LayoutDirection;
+        for (direction, expected) in [
+            (LayoutDirection::LeftToRight, FlexDirection::Row),
+            (LayoutDirection::RightToLeft, FlexDirection::RowReverse),
+        ] {
+            let mut checkbox =
+                super::logical_input_row(gpui_base::Checkbox::new("check"), direction);
+            let mut radio = super::logical_input_row(gpui_base::Radio::new("radio"), direction);
+            let mut switch = super::logical_input_row(gpui_base::Switch::new("switch"), direction);
+            assert_eq!(checkbox.style().flex_direction, Some(expected));
+            assert_eq!(radio.style().flex_direction, Some(expected));
+            assert_eq!(switch.style().flex_direction, Some(expected));
+        }
+    }
     #[test]
     fn localized_select_titles_keep_stable_distinct_values_and_literal_fallbacks() {
         use super::select_options;
