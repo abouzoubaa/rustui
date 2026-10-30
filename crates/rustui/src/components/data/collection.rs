@@ -513,10 +513,17 @@ impl<T: 'static, V: View, F: Fn(usize, &T) -> V + 'static> View for Collection<T
                     state.scroll.clone(),
                 )
             });
-            if requested != selected {
-                if let Some(writer) = writer {
-                    context.update_entity(&state, |_, _, cx| cx.defer(move |cx| writer(None, cx)));
-                }
+            if requested != selected
+                && let (Some(missing), Some(writer)) = (requested, writer)
+            {
+                let current_state = state.clone();
+                context.update_entity(&state, |_, _, cx| {
+                    cx.defer(move |cx| {
+                        if !current_state.read(cx).ids.contains(&missing) {
+                            writer(None, cx);
+                        }
+                    })
+                });
             }
             let weak = state.downgrade();
             let keyboard_owner = weak.clone();
@@ -630,6 +637,87 @@ mod tests {
     use gpui::{Element, Modifiers, Role, accesskit::Node};
 
     use super::*;
+
+    struct RestoredCollectionOwner {
+        selection: Option<Identity>,
+        present: bool,
+        writes: usize,
+    }
+
+    impl View for RestoredCollectionOwner {
+        fn body(&self) -> impl View {
+            crate::view::EmptyView
+        }
+
+        fn into_element(&self, context: &mut RenderContext<'_>) -> AnyElement {
+            let selection = Binding::new(
+                self.selection.clone(),
+                |owner: &Self| owner.selection.clone(),
+                |owner, value| {
+                    owner.selection = value;
+                    owner.writes += 1;
+                },
+            );
+            let items: Rc<[CollectionItem<()>]> = self
+                .present
+                .then(|| CollectionItem::new("a", ()))
+                .into_iter()
+                .collect();
+            Collection::new("restored", items, 200.0, 40.0, |_, _| {
+                crate::view::EmptyView
+            })
+            .selection(selection)
+            .into_element(context)
+        }
+    }
+
+    #[gpui::test]
+    fn restored_collection_item_survives_deferred_clear(cx: &mut gpui::TestAppContext) {
+        cx.update(gpui_component::init);
+        let (owner, window) = cx.add_window_view(|_, app| {
+            crate::runtime::ComponentHost::new(
+                RestoredCollectionOwner {
+                    selection: Some(Identity::from("a")),
+                    present: true,
+                    writes: 0,
+                },
+                app,
+            )
+        });
+        window.update(|window, app| {
+            let _ = window.draw(app);
+            owner.update(app, |host, cx| {
+                host.component_mut().present = false;
+                cx.notify();
+            });
+            let _ = window.draw(app);
+            owner.update(app, |host, cx| {
+                host.component_mut().present = true;
+                cx.notify();
+            });
+            let _ = window.draw(app);
+        });
+        window.cx.run_until_parked();
+        window.update(|_, app| {
+            assert_eq!(
+                owner.read(app).component().selection,
+                Some(Identity::from("a"))
+            );
+            assert_eq!(owner.read(app).component().writes, 0);
+        });
+        window.update(|window, app| {
+            owner.update(app, |host, cx| {
+                host.component_mut().present = false;
+                cx.notify();
+            });
+            let _ = window.draw(app);
+        });
+        window.cx.run_until_parked();
+        window.update(|_, app| {
+            assert_eq!(owner.read(app).component().selection, None);
+            assert_eq!(owner.read(app).component().writes, 1);
+        });
+    }
 
     fn accesskit_node(element: &impl Element) -> Node {
         let role = element
