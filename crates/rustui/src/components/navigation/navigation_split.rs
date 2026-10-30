@@ -188,7 +188,8 @@ impl View for NavigationSplitDetail {
 /// At widths below 560 logical pixels, this view shows either the destination
 /// list or the selected detail in one column. Like [`SplitView`], this view
 /// requires a parent with bounded width and height. Use `Frame` or `Container`
-/// to set an explicit viewport inside an intrinsic stack.
+/// with stretch alignment, or `Container`, to set an explicit viewport inside
+/// an intrinsic stack.
 #[derive(Clone)]
 pub struct NavigationSplitView {
     id: Identity,
@@ -553,6 +554,113 @@ mod tests {
 
     fn item(id: &str) -> NavigationSplitItem {
         NavigationSplitItem::new(id, id, EmptyView)
+    }
+
+    impl crate::view::View for Owner {
+        fn body(&self) -> impl crate::view::View {
+            crate::modifiers::frame::Frame(super::NavigationSplit(
+                "narrow-test",
+                [item("files"), item("settings")],
+                Binding::new(self.0.clone(), read_selection, write_selection),
+            ))
+            .width(300.0)
+            .height(400.0)
+            .alignment(
+                crate::layout::HorizontalAlignment::Stretch,
+                crate::layout::VerticalAlignment::Stretch,
+            )
+        }
+    }
+
+    #[gpui::test]
+    fn narrow_back_and_reopen_preserve_selection(cx: &mut gpui::TestAppContext) {
+        use crate::localization::{Catalog, Catalogs, Locale, activate_localization};
+        use crate::{runtime::ComponentHost, view::RetentionScope};
+        let ar = Locale::parse("ar").unwrap();
+        let mut catalogs = Catalogs::new(ar.clone());
+        catalogs
+            .insert(
+                Catalog::parse(
+                    ar.clone(),
+                    include_str!("../../../../../locales/ar/rustui.ftl"),
+                )
+                .unwrap(),
+            )
+            .unwrap();
+
+        let theme = crate::theme::parse_theme(include_str!(concat!(
+            env!("CARGO_MANIFEST_DIR"),
+            "/../../themes/macos27.json"
+        )))
+        .unwrap();
+        cx.update(|app| {
+            gpui_component::init(app);
+            activate_localization(catalogs, ar, app);
+            crate::theme::activate_theme(&theme, Some(crate::theme::AppearanceMode::Dark), app)
+                .unwrap();
+        });
+        let (owner, window) =
+            cx.add_window_view(|_, cx| ComponentHost::new(Owner(Some("files".into())), cx));
+        window.update(|window, app| {
+            let _ = window.draw(app);
+            let _ = window.draw(app);
+            window.focus_next(app);
+            assert!(window.focused(app).is_some(), "Back must be focusable");
+            let _ = window.draw(app);
+        });
+        let back_focus = window.update(|window, app| window.focused(app).unwrap());
+        let key = gpui::Keystroke::parse("enter").unwrap();
+        window.simulate_event(gpui::KeyDownEvent {
+            keystroke: key.clone(),
+            is_held: false,
+            prefer_character_input: false,
+        });
+        window.simulate_event(gpui::KeyUpEvent { keystroke: key });
+        window.update(|window, app| {
+            let _ = window.draw(app);
+            assert_eq!(owner.read(app).component().0.as_deref(), Some("files"));
+            assert_ne!(
+                window.focused(app),
+                Some(back_focus),
+                "Back must restore focus to the sidebar"
+            );
+            assert!(window.focused(app).is_some());
+            let state = owner
+                .read(app)
+                .retained_entity_for_test::<NavigationSplitNarrowState>(
+                    vec![RetentionScope::NavigationSplit(Identity::from(
+                        "narrow-test",
+                    ))],
+                    Identity::from("narrow-presentation"),
+                )
+                .unwrap();
+            assert!(!state.read(app).show_detail, "Back must expose the sidebar");
+        });
+        window.update(|window, app| {
+            window.focus_prev(app);
+            let _ = window.draw(app);
+        });
+        let key = gpui::Keystroke::parse("enter").unwrap();
+        window.simulate_event(gpui::KeyDownEvent {
+            keystroke: key.clone(),
+            is_held: false,
+            prefer_character_input: false,
+        });
+        window.simulate_event(gpui::KeyUpEvent { keystroke: key });
+        window.update(|window, app| {
+            let _ = window.draw(app);
+            assert_eq!(owner.read(app).component().0.as_deref(), Some("files"));
+            let state = owner
+                .read(app)
+                .retained_entity_for_test::<NavigationSplitNarrowState>(
+                    vec![RetentionScope::NavigationSplit(Identity::from(
+                        "narrow-test",
+                    ))],
+                    Identity::from("narrow-presentation"),
+                )
+                .unwrap();
+            assert!(state.read(app).show_detail, "Open must expose the detail");
+        });
     }
 
     #[test]
