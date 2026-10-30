@@ -30,6 +30,14 @@ fn remove_matching_token(tokens: &mut Vec<String>, index: usize, expected: &str)
     true
 }
 
+fn clear_added_draft(draft: &mut String, added: &str) -> bool {
+    if draft != added {
+        return false;
+    }
+    draft.clear();
+    true
+}
+
 fn resolved_accessible_label(id: &str, localized: String, fallback: String) -> SharedString {
     if localized.trim().is_empty() || localized.trim() == id.trim() {
         fallback.into()
@@ -172,7 +180,10 @@ impl View for TokenFieldView {
                 }
             });
         let read_draft = context.binding_reader(self.draft.clone());
-        let write_draft = context.binding_writer(self.draft.clone());
+        let clear_draft = context
+            .binding_event_updater(self.draft.clone(), |draft, added: String| {
+                clear_added_draft(draft, &added)
+            });
 
         let mut field = div()
             .id(identity.to_string())
@@ -226,8 +237,8 @@ impl View for TokenFieldView {
             .accessibility_label(add_accessible_label(|id| context.localized_message(id)))
             .on_click(move |_, _, cx| {
                 if let Some(draft) = read_draft(cx).filter(|draft| !draft.trim().is_empty()) {
-                    if add_token(draft, cx) {
-                        write_draft(String::new(), cx);
+                    if add_token(draft.clone(), cx) {
+                        clear_draft(draft, cx);
                     }
                 }
             });
@@ -292,6 +303,25 @@ mod tests {
             true
         }));
         assert_eq!(latest, vec!["Atlas", "Notes", "New"]);
+    }
+
+    #[test]
+    fn adding_a_token_does_not_clear_a_newer_owner_draft() {
+        let draft = binding(String::from("original"));
+        let mut owner = String::from("new draft from token setter");
+        assert!(
+            !draft.update_on(&mut owner, |value| super::clear_added_draft(
+                value, "original"
+            ))
+        );
+        assert_eq!(owner, "new draft from token setter");
+        assert!(
+            draft.update_on(&mut owner, |value| super::clear_added_draft(
+                value,
+                "new draft from token setter"
+            ))
+        );
+        assert!(owner.is_empty());
     }
 
     #[test]

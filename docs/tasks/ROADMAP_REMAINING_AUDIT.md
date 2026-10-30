@@ -1,3 +1,7 @@
+## R15 TokenField owner-updated draft — 2026-10-30
+
+An accepted token update can itself replace the owner's draft. TokenField now clears the draft only if its current value still equals the text added, preserving newer owner state. Locked offline Headstart RustUI library TokenField tests passed 8/8, including a binding-level newer-draft regression (`target/headstart/evidence/native-token-preserve-new-draft-20261030.log`, SHA-256 `d98765875c1bc7643ad444cb1b0dad0990eb0cfe4c95bdeddcab8d4693ff4741`). Native click-path and broader input acceptance remain open.
+
 ## R15 TokenField rejected additions — 2026-10-30
 
 TokenField now clears its draft only when the current owner accepts the token addition. A synchronous binding event updater reports rejected or detached owner writes without changing the existing notification semantics. Locked offline Headstart RustUI library tests passed for TokenField (7/7, `native-token-rejected-add-20261030.log`, SHA-256 `68c50f4a3ef8f1c812007ac20640e12dc7759f4a9cad81325ce4871cb2e84e85`) and existing binding event rejection cases (2/2, `native-binding-rejection-20261030.log`, SHA-256 `27b73dcedb8fb00b520c72a13c692a0047296904332f23c538a63113ca62c7f7`), under `target/headstart/evidence/`. These checks do not directly exercise a rejected TokenField click or establish native GUI acceptance; that event path remains to validate.
