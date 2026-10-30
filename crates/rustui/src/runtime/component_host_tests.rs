@@ -45,7 +45,7 @@ fn owner_update_and_draw_workload(cx: &mut gpui::TestAppContext) {
         }
     }
 
-    println!("rows,sample,updates,render_calls,elapsed_ns,ns_per_update_and_draw");
+    println!("rows,mode,sample,updates,update_renders,draw_renders,elapsed_ns,ns_per_update");
     for rows in [10, 100, 1000] {
         let renders = Arc::new(AtomicUsize::new(0));
         let (owner, window) = cx.add_window_view(|_, app| {
@@ -62,29 +62,39 @@ fn owner_update_and_draw_workload(cx: &mut gpui::TestAppContext) {
             let _ = window.draw(app);
         });
         let mut total_updates = 0;
-        for sample in 0..=10 {
-            let before_renders = renders.load(Ordering::Relaxed);
-            let start = Instant::now();
-            for _ in 0..10 {
-                owner.update(window, |host, cx| {
-                    host.component_mut().value += 1;
-                    cx.notify();
-                });
-                window.update(|window, app| {
-                    window.refresh();
-                    let _ = window.draw(app);
-                });
-                total_updates += 1;
-            }
-            let elapsed = start.elapsed().as_nanos();
-            let render_calls = renders.load(Ordering::Relaxed) - before_renders;
-            assert!(render_calls >= 10);
-            window.update(|_, app| assert_eq!(owner.read(app).component().value, total_updates));
-            if sample > 0 {
-                println!(
-                    "{rows},{sample},10,{render_calls},{elapsed},{:.1}",
-                    elapsed as f64 / 10.0
-                );
+        for force_draw in [false, true] {
+            for sample in 0..=10 {
+                let mut update_renders = 0;
+                let mut draw_renders = 0;
+                let start = Instant::now();
+                for _ in 0..10 {
+                    let before_update = renders.load(Ordering::Relaxed);
+                    owner.update(window, |host, cx| {
+                        host.component_mut().value += 1;
+                        cx.notify();
+                    });
+                    let before_draw = renders.load(Ordering::Relaxed);
+                    update_renders += before_draw - before_update;
+                    if force_draw {
+                        window.update(|window, app| {
+                            window.refresh();
+                            let _ = window.draw(app);
+                        });
+                    }
+                    draw_renders += renders.load(Ordering::Relaxed) - before_draw;
+                    total_updates += 1;
+                }
+                let elapsed = start.elapsed().as_nanos();
+                assert!(update_renders + draw_renders >= 10);
+                window
+                    .update(|_, app| assert_eq!(owner.read(app).component().value, total_updates));
+                if sample > 0 {
+                    let mode = if force_draw { "forced_draw" } else { "update" };
+                    println!(
+                        "{rows},{mode},{sample},10,{update_renders},{draw_renders},{elapsed},{:.1}",
+                        elapsed as f64 / 10.0
+                    );
+                }
             }
         }
     }
