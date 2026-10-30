@@ -1,3 +1,7 @@
+## Native workspace doctest checkpoint — 2026-10-30
+
+On clean source commit `006d419e`, macOS `./scripts/cargo-headstart test --workspace --doc --profile headstart --locked --offline` passed four doctests across six targets: three in `rustui`, one in `rustui-i18n`, and zero in each of `rustui-core`, `rustui-macros`, `rustui-playground` and `rustui-rgpe`. No tests failed or were ignored. Evidence: `target/headstart/evidence/native-workspace-doctests-006d419e-20261030.log`, SHA-256 `ddbd371ef6b035008f8ac3533c33cc7dd41c83626600a7a2a527c1d54fc6656a`. This covers those examples, not the completeness of the public API documentation or native release acceptance.
+
 ## R17 same-label DataGrid siblings — 2026-10-30
 
 A GPUI test window renders two implicit DataGrids with the same label and independent controlled selections. Removing the selected row from the first clears only its selection; the second remains selected. The DataGrid suite passed 5/5 (`target/headstart/evidence/native-grid-siblings-20261030.log`, SHA-256 `0c7f126e5d25251afcbc9a5606c1814f06524ae8fdaf8569c5cbb89579e51d92`). DataGrid's ID documentation now recommends explicit identity when a grid's position may change. This is GPUI test-window evidence, not macOS Playground acceptance.
