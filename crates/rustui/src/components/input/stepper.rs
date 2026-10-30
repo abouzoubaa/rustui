@@ -79,6 +79,13 @@ fn resolved_message_label(
     }
 }
 
+fn displayed_value(value: i32, locale: Option<&crate::localization::Locale>) -> String {
+    locale.map_or_else(
+        || value.to_string(),
+        |locale| crate::localization::format_integer(i64::from(value), locale),
+    )
+}
+
 fn stepped_value(value: i32, minimum: i32, maximum: i32, step: i32, increment: bool) -> i32 {
     let value = value.clamp(minimum, maximum);
     let stepped = if increment {
@@ -295,7 +302,7 @@ impl View for StepperView {
             .items_center()
             .gap_2()
             .child(div().text_color(label_color).child(label))
-            .child(current.to_string())
+            .child(displayed_value(current, context.locale()))
             .child(
                 div()
                     .flex()
@@ -527,6 +534,24 @@ mod tests {
                 try_parse_color(&colors.primary_text).unwrap()
             );
         }
+    }
+
+    #[test]
+    fn displayed_integer_follows_locale_and_preserves_unlocalized_fallback() {
+        use crate::localization::Locale;
+        assert_eq!(super::displayed_value(1234, None), "1234");
+        assert_eq!(
+            super::displayed_value(1234, Some(&Locale::parse("en").unwrap())),
+            "1,234"
+        );
+        assert_eq!(
+            super::displayed_value(1234, Some(&Locale::parse("fr").unwrap())),
+            "1\u{202f}234"
+        );
+        assert_eq!(
+            super::displayed_value(-1234, Some(&Locale::parse("ar").unwrap())),
+            "\u{061c}-١\u{066c}٢٣٤"
+        );
     }
 
     #[test]
