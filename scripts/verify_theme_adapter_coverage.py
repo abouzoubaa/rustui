@@ -136,7 +136,7 @@ CONTROL_CONTRACTS = {
             "height": (r'style\s*\.\s*lengths\s*\.\s*get\s*\(\s*"height"', r'thumb_height\s*,', r'\.h\s*\(\s*px\(self\.thumb_height\)\s*\)'),
         },
         "roles_evidence": {
-            "track": (r'track_color\s*:\s*slider_role_color\s*\(', r'"track"', r'\.bg\s*\(\s*self\s*\.\s*track_color\s*\.\s*opacity', r'let\s+fill_color\s*=\s*if\s+self\.disabled\s*\{\s*self\.disabled_color.*?else\s*\{\s*self\.track_color', r'"secondary"\s*=>\s*&colors\.toolbar_background'),
+            "track": (r'track_color\s*:\s*slider_track_color\s*\(', r'"track"', r'let\s+track\s*=\s*slider_role_color\s*\(\s*style\s*,\s*role', r'if\s+track\s*==\s*background', r'try_parse_color\s*\(\s*&colors\.secondary_text\s*\)', r'\.bg\s*\(\s*self\s*\.\s*track_color\s*\.\s*opacity', r'let\s+fill_color\s*=\s*if\s+self\.disabled\s*\{\s*self\.disabled_color.*?else\s*\{\s*self\.track_color', r'"secondary"\s*=>\s*&colors\.toolbar_background'),
             "thumb": (r'thumb_color\s*:\s*slider_role_color\s*\(', r'"thumb"', r'\.bg\s*\(\s*thumb_color\s*\)', r'let\s+thumb_color\s*=\s*if\s+self\.disabled\s*\{\s*self\.disabled_color.*?else\s*\{\s*self\.thumb_color', r'"primary"\s*=>\s*&colors\.accent'),
             "disabled": (r'disabled_color\s*:\s*slider_role_color\s*\(', r'"disabled"', r'self\.disabled_color', r'"muted_foreground"\s*=>\s*&colors\.secondary_text'),
         },
