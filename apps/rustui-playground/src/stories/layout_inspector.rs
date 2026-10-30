@@ -1,32 +1,61 @@
-//! Readable layout facts for the selected story.
+//! Catalog keys for layout facts shown in the selected story.
 
 use super::component_catalog::StoryId;
 
-pub fn summary_for(story: StoryId) -> &'static str {
+pub fn summary_key_for(story: StoryId) -> &'static str {
     match story {
-        StoryId::Button => "Layout: VStack containing HStack button groups",
-        StoryId::Text => "Layout: VStack of GPUI-backed text elements",
-        StoryId::Card => "Layout: themed cards with retained child text fields",
-        StoryId::Layout => "Layout: nested VStack and HStack flex containers",
-        StoryId::Input => "Layout: retained GPUI input entities inside a RustUI VStack",
-        StoryId::List => "Layout: fixed-height GPUI virtual list inside RustUI VStack",
-        StoryId::Table => "Layout: fixed-height GPUI virtual table inside RustUI VStack",
-        StoryId::Outline => "Layout: named outline group containing a retained GPUI virtual tree",
-        StoryId::GraphView => {
-            "Layout: bounded Canvas edges and positioned named node groups in a controlled viewport"
+        StoryId::Button => "lab-layout-button",
+        StoryId::Text => "lab-layout-text",
+        StoryId::Card => "lab-layout-card",
+        StoryId::Layout => "lab-layout-layout",
+        StoryId::Input => "lab-layout-input",
+        StoryId::List => "lab-layout-list",
+        StoryId::Table => "lab-layout-table",
+        StoryId::Outline => "lab-layout-outline",
+        StoryId::GraphView => "lab-layout-graph-view",
+        StoryId::NodeEditor => "lab-layout-node-editor",
+        StoryId::SplitView => "lab-layout-split-view",
+        StoryId::Drawer => "lab-layout-drawer",
+        StoryId::Tree => "lab-layout-tree",
+        StoryId::Tabs => "lab-layout-tabs",
+        StoryId::Breadcrumb => "lab-layout-breadcrumb",
+        StoryId::Navigation => "lab-layout-navigation",
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn every_story_summary_exists_in_each_runtime_catalog() {
+        let catalogs = super::super::locale_selector::catalogs();
+        for language in ["en", "fr", "ar"] {
+            let locale = rustui::localization::Locale::parse(language).unwrap();
+            let catalog = catalogs.get(&locale).unwrap();
+            for story in [
+                StoryId::Button,
+                StoryId::Text,
+                StoryId::Card,
+                StoryId::Layout,
+                StoryId::Input,
+                StoryId::List,
+                StoryId::Table,
+                StoryId::Outline,
+                StoryId::GraphView,
+                StoryId::NodeEditor,
+                StoryId::SplitView,
+                StoryId::Drawer,
+                StoryId::Tree,
+                StoryId::Tabs,
+                StoryId::Breadcrumb,
+                StoryId::Navigation,
+            ] {
+                assert!(
+                    catalog.get(summary_key_for(story)).is_some(),
+                    "{language}: {story:?}"
+                );
+            }
         }
-        StoryId::NodeEditor => {
-            "Layout: shared positioned graph surface with node dragging and focusable port/connection controls"
-        }
-        StoryId::SplitView => {
-            "Layout: bounded GPUI resizable panel group with stable RustUI child identities"
-        }
-        StoryId::Drawer => {
-            "Layout: window-hosted modal sheet with an owner-controlled physical edge"
-        }
-        StoryId::Tree => "Layout: fixed-height GPUI virtual tree inside RustUI VStack",
-        StoryId::Tabs => "Layout: GPUI tab bar above the selected RustUI child",
-        StoryId::Breadcrumb => "Layout: ordered GPUI breadcrumb items with separators",
-        StoryId::Navigation => "Layout: back control above the selected route destination",
     }
 }

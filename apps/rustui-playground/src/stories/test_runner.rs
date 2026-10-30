@@ -10,6 +10,14 @@ pub enum VerificationStatus {
 }
 
 impl VerificationStatus {
+    pub const fn localization_key(self) -> &'static str {
+        match self {
+            Self::InteractionAndVisualPending => "lab-verification-interaction-pending",
+            Self::SomeNativeChecksRecorded => "lab-verification-some-native",
+            Self::BoundedNativeChecksRecorded => "lab-verification-bounded-native",
+        }
+    }
+
     pub const fn label(self) -> &'static str {
         match self {
             Self::InteractionAndVisualPending => {
