@@ -1,3 +1,7 @@
+## R13/R19 native Dialog default labels — 2026-10-30
+
+Dialog's default Confirm and Cancel actions now retain readable English labels when the active catalog is absent or returns a blank message; translated messages and explicit caller labels retain their existing behavior. The focused Dialog library suite passed 23/23 (`target/headstart/evidence/native-dialog-fallback-20261030.log`, SHA-256 `e4fb4c2daab36f606e31c64c2e17a43ba82180e44b0568debaadc35cf640d22d`). Native Playground interaction and broader locale and overlay acceptance remain open.
+
 ## R13 native navigation fallback — 2026-10-30
 
 NavigationStack now falls back to “Back” and “Destination unavailable” when the active catalog is missing or returns an empty value, and keeps translated values when present. NavigationStack and NavigationSplit share the existing fallback rule. The native navigation library suite passed 92/92 using Headstart (`target/headstart/evidence/native-navigation-fallback-suite-20261030.log`, SHA-256 `a2416708c9d9725e0fa953b2edc0e7461064fdc561ce66bfac5765d25db4dbe8`). This does not establish native Playground acceptance or close the locale requirement group.

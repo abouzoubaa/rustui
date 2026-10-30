@@ -25,6 +25,14 @@ enum DialogText {
     Message(SharedString),
 }
 
+fn default_action_label(localized: String, key: &str, fallback: &str) -> SharedString {
+    if localized.trim().is_empty() || localized.trim() == key {
+        fallback.into()
+    } else {
+        localized.into()
+    }
+}
+
 impl DialogText {
     fn resolve(&self, context: &RenderContext<'_>) -> SharedString {
         match self {
@@ -363,11 +371,23 @@ impl View for DialogView {
             let trigger = self.resolve_trigger_label(context);
             let title = self.title.as_ref().map(|title| title.resolve(context));
             let confirm_label = self.confirm_label.as_ref().map_or_else(
-                || SharedString::from(context.localized_message("rustui-action-confirm")),
+                || {
+                    default_action_label(
+                        context.localized_message("rustui-action-confirm"),
+                        "rustui-action-confirm",
+                        "Confirm",
+                    )
+                },
                 |label| label.resolve(context),
             );
             let cancel_label = self.cancel_label.as_ref().map_or_else(
-                || SharedString::from(context.localized_message("rustui-action-cancel")),
+                || {
+                    default_action_label(
+                        context.localized_message("rustui-action-cancel"),
+                        "rustui-action-cancel",
+                        "Cancel",
+                    )
+                },
                 |label| label.resolve(context),
             );
             let confirm_handler = self
@@ -445,6 +465,21 @@ impl View for DialogView {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn default_actions_keep_readable_labels_when_messages_are_missing() {
+        for (key, fallback) in [
+            ("rustui-action-confirm", "Confirm"),
+            ("rustui-action-cancel", "Cancel"),
+        ] {
+            assert_eq!(default_action_label(key.into(), key, fallback), fallback);
+            assert_eq!(default_action_label("  ".into(), key, fallback), fallback);
+        }
+        assert_eq!(
+            default_action_label("Confirmer".into(), "rustui-action-confirm", "Confirm"),
+            "Confirmer"
+        );
+    }
 
     #[test]
     #[should_panic(expected = "Dialog trigger requires a non-empty visible label")]
