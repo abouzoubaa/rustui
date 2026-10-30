@@ -1,3 +1,7 @@
+## R03 native input public contract documentation — 2026-10-30
+
+`docs/PUBLIC_API.md` now describes the current GPUI Base checkable controls, the RustUI-composed ColorPicker popup and retained GPUI color state instead of the old ColorSelect implementation, and the current Stepper range, displayed locale and direction behavior. The descriptions were checked against the source on parent `9f7db1c8`; `git diff --check` passed. This documentation correction does not close public API completeness, native visual/keyboard or release acceptance.
+
 ## R30 current GitHub source CI — 2026-10-30
 
 GitHub Actions push [run 41060841118](https://github.com/abouzoubaa/rustui/actions/runs/41060841118) completed successfully on exact commit `9028d57fd87779545b801730c83f6a0345c96712`: its `source` job passed, while `macos-and-web-builds` was skipped. Earlier runs were canceled as newer commits arrived. This confirms that source job only; it is not compiled macOS CI, native GUI acceptance, licensing clearance or release readiness. The local native test checkpoint remains recorded separately.

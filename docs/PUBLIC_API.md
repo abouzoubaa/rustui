@@ -380,8 +380,9 @@ TokenField("Add recipients", self.recipients_binding(), self.draft_binding())
 The caller owns both values and should keep the field ID stable across renders.
 
 `Toggle`, `Checkbox`, and `Radio` take `Binding<bool>` and stable IDs.
-They are controlled values: GPUI Components reports the requested value, RustUI
-writes it into the owning component, and the next body pass renders that value.
+They are controlled values: the GPUI Base control reports the requested value,
+RustUI writes it into the owning component, and the next body pass renders that
+value. Their indicator and label follow the active layout direction.
 
 `Slider` and `Stepper` use numeric bindings:
 
@@ -411,6 +412,11 @@ name through the active RustUI catalog and falls back to the explicit name or
 visible label (define `stepper.guests` in your application catalog). The button
 actions use `rustui-stepper-increment` and
 `rustui-stepper-decrement` catalog messages, each with a `{label}` argument.
+Its displayed integer uses the active locale, while the binding remains an
+`i32`; the label/value/control row follows layout direction. `.range(...)`
+requires ascending bounds and `.step(...)` requires a positive step. The
+rendered value is clamped to the range, and actions clamp the latest owner
+value before stepping.
 
 ## String selection
 
@@ -457,9 +463,22 @@ VStack! {
 }
 ```
 
-Both controls retain the upstream picker entity across body rebuilds and synchronize
-external binding changes without emitting user events. `DatePicker` is clearable by default. Give its trigger an explicit accessible name with `.accessibility_label(...)`, or resolve one from the active message catalog with `.localized_accessibility_label("date_picker.start")`; the explicit name or visible label remains the fallback. `ColorPicker` uses the upstream form-style `ColorSelect`; `.compact(true)`
-selects the toolbar-style swatch and label presentation.
+Both controls retain their GPUI picker state across body rebuilds and synchronize
+external binding changes without emitting user events. `DatePicker` is clearable
+by default. Give its trigger an explicit accessible name with
+`.accessibility_label(...)`, or resolve one from the active catalog with
+`.localized_accessibility_label("date_picker.start")`; the explicit name or
+visible label remains the fallback.
+
+`ColorPicker` uses GPUI's retained color state with a RustUI-composed popup.
+The default trigger fills its available width and displays the selected color's
+hex value, or the visible label when no color is selected. `.compact(true)` uses
+a smaller swatch-and-label trigger. `.localized_label(...)` resolves the visible
+label through the active catalog with the constructor label as fallback;
+`.featured_colors(...)` supplies swatches whose HSLA channels must be finite
+and between zero and one. The popup's Palette and HSLA channel captions use
+RustUI catalog messages with English fallbacks; the caption and swatch rows
+follow layout direction. These APIs do not establish native visual or keyboard acceptance.
 
 ## Virtualized string list
 
