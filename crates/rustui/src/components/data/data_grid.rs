@@ -31,7 +31,6 @@ impl DataGridView {
             !label.trim().is_empty(),
             "DataGrid accessible label must be nonempty"
         );
-        let table = table.id(table_identity(&label, None));
         Self {
             table,
             label,
@@ -42,18 +41,15 @@ impl DataGridView {
     /// Sets a stable unique identity when sibling grids can share a label.
     pub fn id(mut self, id: impl Into<SharedString>) -> Self {
         let id = id.into();
-        self.table = self.table.id(table_identity(&self.label, Some(&id)));
+        self.table = self.table.id(table_identity(&id));
         self.id = Some(id);
         self
     }
 }
 
-fn table_identity(label: &SharedString, id: Option<&SharedString>) -> Identity {
-    assert!(
-        id.is_none_or(|id| !id.trim().is_empty()),
-        "DataGrid IDs must be nonempty"
-    );
-    Identity::from(format!("rustui-data-grid-table:{}", id.unwrap_or(label)))
+fn table_identity(id: &SharedString) -> Identity {
+    assert!(!id.trim().is_empty(), "DataGrid IDs must be nonempty");
+    Identity::from(format!("rustui-data-grid-table:{id}"))
 }
 
 fn data_grid_element(
@@ -84,12 +80,13 @@ impl View for DataGridView {
     fn into_element(&self, context: &mut RenderContext<'_>) -> AnyElement {
         let row_count = self.table.aria_row_count();
         let column_count = self.table.aria_column_count();
+        let identity = match &self.id {
+            Some(id) => Identity::from(format!("rustui-data-grid:{id}")),
+            None => context.next_implicit_retained_identity(Identity::from("data-grid")),
+        };
 
         data_grid_element(
-            format!(
-                "rustui-data-grid:{}",
-                self.id.as_ref().unwrap_or(&self.label)
-            ),
+            identity.to_string(),
             self.label.clone(),
             row_count,
             column_count,
@@ -104,6 +101,81 @@ impl View for DataGridView {
 mod tests {
     use super::{data_grid_element, table_identity};
     use gpui::{Element, Role, SharedString, accesskit::Node};
+
+    #[gpui::test]
+    fn label_change_preserves_restored_grid_selection(cx: &mut gpui::TestAppContext) {
+        use super::{DataGrid, TableView};
+        use crate::runtime::{Binding, ComponentHost};
+        use crate::view::View;
+
+        struct Owner {
+            selection: Option<usize>,
+            rows: usize,
+            changed_label: bool,
+            writes: usize,
+        }
+        impl View for Owner {
+            fn body(&self) -> impl View {
+                let selection = Binding::new(
+                    self.selection,
+                    |owner: &Owner| owner.selection,
+                    |owner, value| {
+                        owner.selection = value;
+                        owner.writes += 1;
+                    },
+                );
+                let rows = (0..self.rows).map(|index| vec![index.to_string()]);
+                DataGrid(
+                    TableView::new(["Value"], rows, selection),
+                    if self.changed_label {
+                        "Updated"
+                    } else {
+                        "Initial"
+                    },
+                )
+            }
+        }
+        let theme = crate::theme::parse_theme(include_str!(concat!(
+            env!("CARGO_MANIFEST_DIR"),
+            "/../../themes/macos27.json"
+        )))
+        .unwrap();
+        cx.update(|app| {
+            gpui_component::init(app);
+            crate::theme::activate_theme(&theme, Some(crate::theme::AppearanceMode::Dark), app)
+                .unwrap();
+        });
+        let (owner, window) = cx.add_window_view(|_, app| {
+            ComponentHost::new(
+                Owner {
+                    selection: Some(1),
+                    rows: 2,
+                    changed_label: false,
+                    writes: 0,
+                },
+                app,
+            )
+        });
+        window.update(|window, app| {
+            let _ = window.draw(app);
+            owner.update(app, |host, cx| {
+                host.component_mut().rows = 1;
+                cx.notify();
+            });
+            let _ = window.draw(app);
+            owner.update(app, |host, cx| {
+                host.component_mut().rows = 2;
+                host.component_mut().changed_label = true;
+                cx.notify();
+            });
+            let _ = window.draw(app);
+        });
+        window.cx.run_until_parked();
+        window.update(|_, app| {
+            assert_eq!(owner.read(app).component().selection, Some(1));
+            assert_eq!(owner.read(app).component().writes, 0);
+        });
+    }
 
     #[test]
     fn grid_wrapper_emits_accesskit_table_metadata() {
@@ -121,26 +193,17 @@ mod tests {
 
     #[test]
     fn explicit_grid_ids_separate_the_retained_table_entities() {
-        let label = SharedString::from("Quarterly revenue");
         let first = SharedString::from("quarterly-a");
         let second = SharedString::from("quarterly-b");
 
-        assert_ne!(
-            table_identity(&label, Some(&first)),
-            table_identity(&label, Some(&second))
-        );
-        assert_ne!(
-            table_identity(&label, Some(&first)),
-            table_identity(&label, None)
-        );
+        assert_ne!(table_identity(&first), table_identity(&second));
     }
 
     #[test]
     #[should_panic(expected = "DataGrid IDs must be nonempty")]
     fn whitespace_only_grid_ids_are_rejected() {
-        let label = SharedString::from("Quarterly revenue");
         let id = SharedString::from("  \t");
 
-        table_identity(&label, Some(&id));
+        table_identity(&id);
     }
 }
