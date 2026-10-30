@@ -457,8 +457,7 @@ impl View for StoryCanvas {
             StoryId::Table => VStack::new()
                 .child(super::table_reconciliation_gallery::demo())
                 .child(super::data_grid_accessibility::demo())
-                .spacing(8.0)
-                .alignment(rustui::prelude::HorizontalAlignment::Start),
+                .spacing(8.0),
             StoryId::Outline => VStack::new().child(super::outline_gallery::demo()),
             StoryId::Drawer => VStack::new().child(super::drawer_gallery::demo()),
             StoryId::SplitView => VStack::new().child(super::split_view_gallery::demo()),

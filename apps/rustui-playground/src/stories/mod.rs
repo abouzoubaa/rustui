@@ -927,7 +927,12 @@ impl View for StoryHost {
         self.events.view()
         }
         .spacing(12.0)
-        .alignment(HorizontalAlignment::Start)
+        // A bounded cross axis lets wide tables use their own horizontal viewport.
+        .alignment(if selected == StoryId::Table {
+            HorizontalAlignment::Stretch
+        } else {
+            HorizontalAlignment::Start
+        })
     }
 }
 

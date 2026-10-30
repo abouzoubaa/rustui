@@ -75,7 +75,10 @@ impl View for TableReconciliationGallery {
         };
         VStack::new()
             .spacing(8.0)
-            .child(LocalizedText("lab-table-reconcile-title"))
+            .child(
+                Frame(LocalizedText("lab-table-reconcile-title"))
+                    .alignment(HorizontalAlignment::Start, VerticalAlignment::Start),
+            )
             .child(
                 HStack::new()
                     .spacing(6.0)
@@ -123,16 +126,26 @@ impl View for TableReconciliationGallery {
                     ),
             )
             .child(
-                LocalizedText("lab-table-rows")
-                    .with_arguments(MessageArguments::new().with("rows", self.rows().join(", "))),
+                Frame(
+                    LocalizedText("lab-table-rows").with_arguments(
+                        MessageArguments::new().with("rows", self.rows().join(", ")),
+                    ),
+                )
+                .alignment(HorizontalAlignment::Start, VerticalAlignment::Start),
             )
-            .child(LocalizedText(if self.reversed() {
-                "lab-table-reversed"
-            } else {
-                "lab-table-forward"
-            }))
-            .child(selection)
-            .child(LocalizedText("lab-table-reconcile-help"))
+            .child(
+                Frame(LocalizedText(if self.reversed() {
+                    "lab-table-reversed"
+                } else {
+                    "lab-table-forward"
+                }))
+                .alignment(HorizontalAlignment::Start, VerticalAlignment::Start),
+            )
+            .child(Frame(selection).alignment(HorizontalAlignment::Start, VerticalAlignment::Start))
+            .child(
+                Frame(LocalizedText("lab-table-reconcile-help"))
+                    .alignment(HorizontalAlignment::Start, VerticalAlignment::Start),
+            )
             .child(
                 Table(["Source index", "Row"], rows, self.selection_binding())
                     .localized_columns(["lab-table-index-header", "lab-table-row-header"])
