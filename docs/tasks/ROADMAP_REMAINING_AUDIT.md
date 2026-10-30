@@ -1,3 +1,7 @@
+## R13/R15 native ColorPicker retained locale transition — 2026-10-30
+
+A macOS-hosted GPUI Root/test window rendered a ColorPicker with owner-bound color; the test set its retained state open and selected HSLA mode, switched from English to Arabic, then verified the popup remained open, mode and owner/retained color were preserved, and the rendered test-window tree exposed the Arabic Palette tab label. The focused ColorPicker suite passed 18/18 on parent `8552deba` plus this regression (`target/headstart/evidence/native-color-picker-locale-suite-20261030.log`, SHA-256 `50c75171b902b4ce66bc25718786db764d374b65379692ff66faf5417323359c`). Programmatic state setup and the tree observation do not prove pointer or keyboard popup operation, visible text geometry, native Playground appearance, narrow widths or full locale acceptance.
+
 ## R30 current native workspace integration tests — 2026-10-30
 
 On clean commit `414c9d98` (only a validation-ledger change after library-tested source `64005a18`), local macOS `./scripts/cargo-headstart test --workspace --test '*' --profile headstart --locked --offline` exited 0: 60 tests passed across 34 suites, with zero failures or ignored tests. Log `target/headstart/evidence/native-workspace-integration-414c9d98-20261030.log`, SHA-256 `e161b6b7302a6fe52ef2da6f07d5fedd8e2325fb95d45428ca90db94e8572e8a`. Together with the preceding 1,395 library tests this is 1,455 passing native-hosted tests on the same code, not native Playground interaction, real IME, packaging, licensing or release acceptance.

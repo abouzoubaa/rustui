@@ -875,3 +875,99 @@ mod implicit_identity_tests {
         assert_eq!(first_sibling, first_after_locale_change);
     }
 }
+
+#[cfg(test)]
+mod rendered_locale_tests {
+    use super::*;
+    use crate::{
+        localization::{Catalog, Catalogs, Locale, activate_localization, set_locale},
+        runtime::ComponentHost,
+        theme::{AppearanceMode, activate_theme, parse_theme},
+    };
+    use gpui::AppContext as _;
+    use gpui_component::Root;
+
+    struct Owner {
+        color: Option<Hsla>,
+    }
+    impl View for Owner {
+        fn body(&self) -> impl View {
+            ColorPicker(
+                "Color",
+                Binding::new(self.color, |o: &Owner| o.color, |o, value| o.color = value),
+            )
+            .id("locale-color-picker")
+        }
+    }
+
+    #[gpui::test]
+    fn open_picker_retains_color_and_mode_across_locale_switch(cx: &mut gpui::TestAppContext) {
+        let en = Locale::parse("en").unwrap();
+        let ar = Locale::parse("ar").unwrap();
+        let mut catalogs = Catalogs::new(en.clone());
+        catalogs
+            .insert(
+                Catalog::parse(
+                    en.clone(),
+                    include_str!("../../../../../locales/en/rustui.ftl"),
+                )
+                .unwrap(),
+            )
+            .unwrap();
+        catalogs
+            .insert(
+                Catalog::parse(
+                    ar.clone(),
+                    include_str!("../../../../../locales/ar/rustui.ftl"),
+                )
+                .unwrap(),
+            )
+            .unwrap();
+        let theme = parse_theme(include_str!(concat!(
+            env!("CARGO_MANIFEST_DIR"),
+            "/../../themes/macos27.json"
+        )))
+        .unwrap();
+        cx.update(|app| {
+            gpui_component::init(app);
+            activate_theme(&theme, Some(AppearanceMode::Dark), app).unwrap();
+            activate_localization(catalogs, en, app);
+        });
+        let owner_slot = Rc::new(RefCell::new(None));
+        let saved = owner_slot.clone();
+        let color = hsla(0.25, 0.5, 0.4, 1.0);
+        let (_, window) = cx.add_window_view(|window, cx| {
+            let owner = cx.new(|cx| ComponentHost::new(Owner { color: Some(color) }, cx));
+            *saved.borrow_mut() = Some(owner.clone());
+            Root::new(owner, window, cx)
+        });
+        let owner = owner_slot.borrow().clone().unwrap();
+        let state = window.update(|window, app| {
+            let _ = window.draw(app);
+            let retained = owner
+                .read(app)
+                .retained_entity_for_test::<RetainedColorPicker>(
+                    vec![],
+                    Identity::from("locale-color-picker"),
+                )
+                .unwrap();
+            let state = retained.read(app).state.clone();
+            state.update(app, |state, cx| {
+                state.set_open(true, cx);
+                state.set_active_tab(1, cx);
+            });
+            let _ = window.draw(app);
+            state
+        });
+        window.update(|window, app| {
+            set_locale(ar, app);
+            let _ = window.draw(app);
+            assert!(state.read(app).is_open());
+            assert_eq!(state.read(app).active_tab(), 1);
+            let snapshot = window.debug_a11y_tree_json().expect("rendered picker tree");
+            assert!(snapshot.contains("لوحة الألوان"));
+            assert_eq!(state.read(app).value(), Some(color));
+            assert_eq!(owner.read(app).component().color, Some(color));
+        });
+    }
+}
