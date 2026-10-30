@@ -1,3 +1,7 @@
+## Current source release check — 2026-10-30
+
+On clean commit `93432e2a`, `./scripts/verify-release.sh source` exited 0: 628 Python tests and 47 Node tests passed, along with the configured patch and packaging checks. Log `target/headstart/evidence/source-gate-93432e2a-20261030.log`, SHA-256 `cb64e94a73b5fc099aebca27dfd194a0560e5412adf6a2a8d6063ead3fc9840a`. This is source-check evidence; macOS and Web runtime acceptance, compiled CI, licensing and release readiness remain open.
+
 ## Catalog encoding allocation bound — 2026-10-29
 
 Catalog encoding now counts a conservative lower bound of serialized text before cloning the caller's catalog. If the counted strings alone exceed the existing one-megabyte document limit, encoding rejects it before that clone; the bounded JSON writer still enforces the final byte limit. The focused codec suite passed 13/13, including an otherwise valid catalog with oversized allowed-value text (log `target/headstart/evidence/catalog-text-budget-tests-20261029.log`, SHA-256 `4ec657dadc19b9c22331f1d9ecd57c63d3d178a91d24597a33ec22a7b61e8030`). On parent `99167cee` plus this change, the Web release driver passed with 18/18 host IME-plan tests and three unresolved notice gaps (log `target/headstart/evidence/catalog-text-budget-web-20261029.log`, SHA-256 `8b8b8ffa6cd017ad83a055cc1d6f855c9d7bba4f950828b3778e5caa111acddf`; manifest SHA-256 `57505d02ecb121217725ea7b6994a082399b9b466730a9461f1d22fb9e2013da`). This bounds the counted text before the clone, not every possible allocation or the whole preview security review.
