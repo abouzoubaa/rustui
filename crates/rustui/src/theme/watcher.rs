@@ -199,6 +199,39 @@ mod tests {
     }
 
     #[gpui::test]
+    fn forced_reload_restores_file_after_another_theme_activation(cx: &mut gpui::TestAppContext) {
+        let source = valid_source();
+        let file = TempTheme::new(&source);
+        let mut theme = ThemeFile::open(&file.0).expect("open theme");
+        cx.update(|app| {
+            gpui_component::init(app);
+            assert!(
+                theme
+                    .reload_if_changed(Some(AppearanceMode::Light), app)
+                    .unwrap()
+            );
+            let document = parse_theme(&source).unwrap();
+            activate_theme(&document, Some(AppearanceMode::Dark), app).unwrap();
+            let revision = crate::theme::registry::active_theme(app)
+                .unwrap()
+                .revision();
+            assert_eq!(
+                crate::theme::registry::active_theme(app).unwrap().mode,
+                AppearanceMode::Dark
+            );
+            assert!(theme.reload(Some(AppearanceMode::Light), app).unwrap());
+            let active = crate::theme::registry::active_theme(app).unwrap();
+            assert_eq!(active.mode, AppearanceMode::Light);
+            assert_eq!(active.revision(), revision + 1);
+            file.write("not json");
+            assert!(theme.reload(Some(AppearanceMode::Dark), app).is_err());
+            let active = crate::theme::registry::active_theme(app).unwrap();
+            assert_eq!(active.mode, AppearanceMode::Light);
+            assert_eq!(active.revision(), revision + 1);
+        });
+    }
+
+    #[gpui::test]
     fn file_reload_recovers_after_invalid_update_in_app(cx: &mut gpui::TestAppContext) {
         let initial = valid_source();
         let file = TempTheme::new(&initial);
