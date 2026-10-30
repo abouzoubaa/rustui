@@ -3364,3 +3364,7 @@ On source `ba00bfe6`, the native Playground release binary SHA-256 `e79669cb105f
 ### R17 rendered unknown-route recovery — 2026-10-30
 
 Commit `264a71f1` adds a GPUI test-window regression starting with `[known, missing]`. The rendered Back control is clicked to recover the known route, then focused and activated with Space to return to root; owner path and exactly one write per action are asserted. Locked offline Headstart release test passed 1/1 (`target/headstart/evidence/native-route-recovery-20261030.log`), and RustUI package formatting passed. This is test-window event evidence, not a native Playground or broader keyboard/RTL acceptance pass.
+
+### R31 native binding microbenchmark — 2026-10-30
+
+Commit `3c680fbe` adds a dependency-free `rustui-core` owner-binding update benchmark, with warm-up, alternating changed/unchanged samples, and correctness assertions. On Apple M1 Max / macOS 27.0, Headstart Cargo 1.101.0 and rustc 1.101.0-dev, locked offline bench profile, ten samples of one million operations produced medians of 2.9615 ns changed and 1.673 ns unchanged. Raw CSV `target/headstart/evidence/native-binding-benchmark-20261030.csv` SHA-256 `92fc0260b91727282a5f249bd57f01868accd2cb5a3eff28e22602ff6e0b1cf8`; locked offline release rustui-core tests passed 9/9 (log SHA-256 `ce043310c85e7a126d16a3cdb4dbffdc2b4cfe71f3382e384ad574c55c28c535`). This optimized in-process microbenchmark is not notification, layout, frame-time, or release-budget evidence. Native performance acceptance remains open.
