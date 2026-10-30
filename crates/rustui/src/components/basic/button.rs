@@ -300,13 +300,73 @@ impl ButtonView {
     fn identity_with(&self, allocate_implicit: impl FnOnce(Identity) -> Identity) -> Identity {
         self.id
             .clone()
-            .unwrap_or_else(|| allocate_implicit(Identity::from(format!("button:{}", self.label))))
+            .unwrap_or_else(|| allocate_implicit(Identity::from("button")))
     }
 }
 
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[gpui::test]
+    fn changing_label_preserves_implicit_button_focus(cx: &mut gpui::TestAppContext) {
+        struct Owner {
+            changed: bool,
+            activations: usize,
+        }
+        impl View for Owner {
+            fn body(&self) -> impl View {
+                Button(
+                    if self.changed { "Updated" } else { "Initial" },
+                    crate::runtime::Action::new(|owner: &mut Owner| owner.activations += 1),
+                )
+            }
+        }
+        let theme = crate::theme::parse_theme(include_str!(concat!(
+            env!("CARGO_MANIFEST_DIR"),
+            "/../../themes/macos27.json"
+        )))
+        .unwrap();
+        cx.update(|app| {
+            gpui_component::init(app);
+            crate::theme::activate_theme(&theme, Some(crate::theme::AppearanceMode::Dark), app)
+                .unwrap();
+        });
+        let (owner, window) = cx.add_window_view(|_, app| {
+            crate::runtime::ComponentHost::new(
+                Owner {
+                    changed: false,
+                    activations: 0,
+                },
+                app,
+            )
+        });
+        window.update(|window, app| {
+            let _ = window.draw(app);
+            window.focus_next(app);
+            let _ = window.draw(app);
+        });
+        let press_space = |window: &mut gpui::VisualTestContext| {
+            let keystroke = gpui::Keystroke::parse("space").unwrap();
+            window.simulate_event(gpui::KeyDownEvent {
+                keystroke: keystroke.clone(),
+                is_held: false,
+                prefer_character_input: false,
+            });
+            window.simulate_event(gpui::KeyUpEvent { keystroke });
+        };
+        press_space(window);
+        window.update(|window, app| {
+            assert_eq!(owner.read(app).component().activations, 1);
+            owner.update(app, |host, cx| {
+                host.component_mut().changed = true;
+                cx.notify();
+            });
+            let _ = window.draw(app);
+        });
+        press_space(window);
+        window.update(|_, app| assert_eq!(owner.read(app).component().activations, 2));
+    }
 
     #[test]
     fn disabled_button_uses_resolved_disabled_background() {
@@ -380,7 +440,7 @@ mod tests {
     fn localized_visible_label_keeps_stable_identity_seed() {
         let button = Button("Save", crate::runtime::Action::new::<()>(|_| {}))
             .localized_label("button.save");
-        assert_eq!(button.identity_with(|id| id).as_str(), "button:Save");
+        assert_eq!(button.identity_with(|id| id).as_str(), "button");
         assert_eq!(
             button.localized_label_key.as_ref().unwrap().as_ref(),
             "button.save"
@@ -393,7 +453,7 @@ mod tests {
         let button = Button("Count: 7", crate::runtime::Action::new::<()>(|_| {}))
             .localized_label_with_arguments("button.count", args.clone());
         assert_eq!(button.localized_label_arguments.as_ref(), Some(&args));
-        assert_eq!(button.identity_with(|id| id).as_str(), "button:Count: 7");
+        assert_eq!(button.identity_with(|id| id).as_str(), "button");
         let button = button.localized_label("button.static");
         assert_eq!(button.localized_label_arguments, None);
     }
