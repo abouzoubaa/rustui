@@ -22,13 +22,12 @@ fn token_after_add(tokens: &[String], draft: &str) -> Option<(Vec<String>, Strin
     Some((next, String::new()))
 }
 
-fn token_after_remove(tokens: &[String], index: usize) -> Option<Vec<String>> {
-    if index >= tokens.len() {
-        return None;
+fn remove_matching_token(tokens: &mut Vec<String>, index: usize, expected: &str) -> bool {
+    if tokens.get(index).map(String::as_str) != Some(expected) {
+        return false;
     }
-    let mut next = tokens.to_vec();
-    next.remove(index);
-    Some(next)
+    tokens.remove(index);
+    true
 }
 
 fn resolved_accessible_label(id: &str, localized: String, fallback: String) -> SharedString {
@@ -163,7 +162,16 @@ impl View for TokenFieldView {
         let identity = self.identity(context);
         let tokens = self.tokens.value();
         let draft = self.draft.value();
-        let write_tokens = context.binding_writer(self.tokens.clone());
+        let add_token =
+            context.binding_event_updater(self.tokens.clone(), |tokens, draft: String| {
+                if let Some((next, _)) = token_after_add(tokens, &draft) {
+                    *tokens = next;
+                    true
+                } else {
+                    false
+                }
+            });
+        let read_draft = context.binding_reader(self.draft.clone());
         let write_draft = context.binding_writer(self.draft.clone());
 
         let mut field = div()
@@ -177,16 +185,17 @@ impl View for TokenFieldView {
             let remove_label = remove_accessible_label(token, |id, arguments| {
                 context.localized_message_with_arguments(id, arguments)
             });
-            let next_tokens = token_after_remove(&tokens, index)
-                .expect("token index comes from the current token list");
-            let write_tokens = write_tokens.clone();
+            let expected = token.clone();
+            let remove_token = context.binding_updater(self.tokens.clone(), move |tokens| {
+                remove_matching_token(tokens, index, &expected)
+            });
             let remove = GpuiButton::new(remove_id)
                 .icon(Icon::new(IconName::Close))
                 .xsmall()
                 .text()
                 .disabled(self.disabled)
                 .accessibility_label(remove_label)
-                .on_click(move |_, _, cx| write_tokens(next_tokens.clone(), cx));
+                .on_click(move |_, _, cx| remove_token(cx));
             let chip = div()
                 .flex()
                 .items_center()
@@ -216,9 +225,9 @@ impl View for TokenFieldView {
             .disabled(!add_enabled)
             .accessibility_label(add_accessible_label(|id| context.localized_message(id)))
             .on_click(move |_, _, cx| {
-                if let Some((next_tokens, cleared_draft)) = token_after_add(&tokens, &draft) {
-                    write_tokens(next_tokens, cx);
-                    write_draft(cleared_draft, cx);
+                if let Some(draft) = read_draft(cx).filter(|draft| !draft.trim().is_empty()) {
+                    add_token(draft, cx);
+                    write_draft(String::new(), cx);
                 }
             });
         field.child(add).into_any_element()
@@ -229,7 +238,7 @@ impl View for TokenFieldView {
 mod tests {
     use super::{
         TokenField, TokenFieldView, add_accessible_label, add_button_label,
-        remove_accessible_label, token_after_add, token_after_remove,
+        remove_accessible_label, token_after_add,
     };
     use rustui_core::Binding;
 
@@ -260,12 +269,28 @@ mod tests {
 
     #[test]
     fn token_field_removes_only_the_selected_token_and_ignores_stale_indices() {
-        let tokens = vec!["Atlas".into(), "Studio".into(), "Notes".into()];
-        assert_eq!(
-            token_after_remove(&tokens, 1),
-            Some(vec!["Atlas".into(), "Notes".into()])
-        );
-        assert_eq!(token_after_remove(&tokens, 3), None);
+        let mut tokens = vec!["Atlas".into(), "Studio".into(), "Notes".into()];
+        assert!(!super::remove_matching_token(&mut tokens, 3, "Notes"));
+        assert!(super::remove_matching_token(&mut tokens, 1, "Studio"));
+        assert_eq!(tokens, vec!["Atlas", "Notes"]);
+    }
+
+    #[test]
+    fn token_edits_preserve_latest_owner_values_and_ignore_stale_removal() {
+        let mut latest: Vec<String> = vec!["Atlas".into(), "Studio".into(), "Notes".into()];
+        let tokens = binding(vec!["Atlas".into(), "old token".into()]);
+        assert!(!tokens.update_on(&mut latest, |value| {
+            super::remove_matching_token(value, 1, "old token")
+        }));
+        assert!(tokens.update_on(&mut latest, |value| {
+            super::remove_matching_token(value, 1, "Studio")
+        }));
+        assert_eq!(latest, vec!["Atlas", "Notes"]);
+        assert!(tokens.update_on(&mut latest, |value| {
+            *value = token_after_add(value, " New ").unwrap().0;
+            true
+        }));
+        assert_eq!(latest, vec!["Atlas", "Notes", "New"]);
     }
 
     #[test]
