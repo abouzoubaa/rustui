@@ -10,6 +10,86 @@ use std::sync::{
     atomic::{AtomicUsize, Ordering},
 };
 
+/// Repeatable test-window workload, not a native frame or GPU benchmark.
+#[gpui::test]
+#[ignore = "manual performance workload"]
+fn owner_update_and_draw_workload(cx: &mut gpui::TestAppContext) {
+    use crate::prelude::{Text, VStack};
+    use std::time::Instant;
+
+    let theme = crate::theme::parse_theme(include_str!(concat!(
+        env!("CARGO_MANIFEST_DIR"),
+        "/../../themes/macos27.json"
+    )))
+    .unwrap();
+    cx.update(|app| {
+        gpui_component::init(app);
+        crate::theme::activate_theme(&theme, Some(crate::theme::AppearanceMode::Dark), app)
+            .unwrap();
+    });
+
+    struct Workload {
+        value: u64,
+        rows: usize,
+        renders: Arc<AtomicUsize>,
+    }
+
+    impl View for Workload {
+        fn body(&self) -> impl View {
+            self.renders.fetch_add(1, Ordering::Relaxed);
+            let mut stack = VStack::new();
+            for row in 0..self.rows {
+                stack = stack.child(Text(format!("row {row}: {}", self.value)));
+            }
+            stack
+        }
+    }
+
+    println!("rows,sample,updates,render_calls,elapsed_ns,ns_per_update_and_draw");
+    for rows in [10, 100, 1000] {
+        let renders = Arc::new(AtomicUsize::new(0));
+        let (owner, window) = cx.add_window_view(|_, app| {
+            ComponentHost::new(
+                Workload {
+                    value: 0,
+                    rows,
+                    renders: renders.clone(),
+                },
+                app,
+            )
+        });
+        window.update(|window, app| {
+            let _ = window.draw(app);
+        });
+        let mut total_updates = 0;
+        for sample in 0..=10 {
+            let before_renders = renders.load(Ordering::Relaxed);
+            let start = Instant::now();
+            for _ in 0..10 {
+                owner.update(window, |host, cx| {
+                    host.component_mut().value += 1;
+                    cx.notify();
+                });
+                window.update(|window, app| {
+                    window.refresh();
+                    let _ = window.draw(app);
+                });
+                total_updates += 1;
+            }
+            let elapsed = start.elapsed().as_nanos();
+            let render_calls = renders.load(Ordering::Relaxed) - before_renders;
+            assert!(render_calls >= 10);
+            window.update(|_, app| assert_eq!(owner.read(app).component().value, total_updates));
+            if sample > 0 {
+                println!(
+                    "{rows},{sample},10,{render_calls},{elapsed},{:.1}",
+                    elapsed as f64 / 10.0
+                );
+            }
+        }
+    }
+}
+
 struct LifecycleChild {
     mounts: Arc<AtomicUsize>,
     releases: Arc<AtomicUsize>,
