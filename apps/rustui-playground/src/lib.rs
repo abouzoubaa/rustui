@@ -262,23 +262,29 @@ impl Playground {
             ScrollView(
                 VStack::new()
                     .child(
-                        selected_story
-                            .map_or_else(
-                                || Text(title),
-                                |story| LocalizedText(story.id.title_message_id()),
+                        VStack::new()
+                            .child(
+                                selected_story
+                                    .map_or_else(
+                                        || Text(title),
+                                        |story| LocalizedText(story.id.title_message_id()),
+                                    )
+                                    .font_size(20.0)
+                                    .font_weight(TextWeight::Bold),
                             )
-                            .font_size(20.0)
-                            .font_weight(TextWeight::Bold),
+                            .child(coverage.font_size(12.0))
+                            .child(note.font_size(13.0))
+                            .child(active_story.map(|_| {
+                                VStack! {
+                                    LocalizedText("lab-navigation-locales")
+                                    stories::LocaleSelector::new()
+                                }
+                                .alignment(HorizontalAlignment::Start)
+                                .spacing(8.0)
+                            }))
+                            .alignment(HorizontalAlignment::Start)
+                            .spacing(12.0),
                     )
-                    .child(coverage.font_size(12.0))
-                    .child(note.font_size(13.0))
-                    .child(active_story.map(|_| {
-                        VStack! {
-                            LocalizedText("lab-navigation-locales")
-                            stories::LocaleSelector::new()
-                        }
-                        .spacing(8.0)
-                    }))
                     .child(
                         ScrollView(Container(content).padding(12.0).radius(10.0).border())
                             .axis(ScrollAxis::Vertical)
