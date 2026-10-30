@@ -28,6 +28,23 @@ fn write_with_current_writer<Value, Context>(
     }
 }
 
+fn set_picker_open(
+    state: &gpui::Entity<ColorPickerState>,
+    open: bool,
+    window: &mut gpui::Window,
+    app: &mut gpui::App,
+) {
+    state.update(app, |state, cx| {
+        if state.is_open() && !open {
+            match state.value() {
+                Some(value) => state.set_value(value, window, cx),
+                None => state.clear_value(window, cx),
+            }
+        }
+        state.set_open(open, cx);
+    });
+}
+
 struct RetainedColorPicker {
     state: gpui::Entity<ColorPickerState>,
     writer: Rc<RefCell<Option<EventWriter<Option<Hsla>, gpui::App>>>>,
@@ -898,8 +915,8 @@ impl View for ColorPickerView {
         let popup_change_state = popup_state.clone();
         let popup_element = GpuiPopover::new(format!("{identity}:popover"))
             .open(open)
-            .on_open_change(move |open: &bool, _, cx| {
-                popup_change_state.update(cx, |state, cx| state.set_open(*open, cx));
+            .on_open_change(move |open: &bool, window, cx| {
+                set_picker_open(&popup_change_state, *open, window, cx);
             })
             .trigger(trigger)
             .child(popup);
@@ -908,8 +925,8 @@ impl View for ColorPickerView {
             .open(open)
             .track_focus(&state.focus_handle(context.app()))
             .accessibility_label(label)
-            .on_open_change(move |open, _, cx| {
-                root_state.update(cx, |state, cx| state.set_open(open, cx));
+            .on_open_change(move |open, window, cx| {
+                set_picker_open(&root_state, open, window, cx);
             })
             .child(popup_element)
             .into_any_element()
@@ -1223,6 +1240,21 @@ mod rendered_locale_tests {
                 "incomplete hex must not close the picker"
             );
             assert_eq!(owner.read(app).component().color.unwrap().a, 0.0);
+        });
+        window.simulate_keystrokes("escape");
+        window.update(|window, app| {
+            let _ = window.draw(app);
+            assert!(!state.read(app).is_open());
+            assert_ne!(
+                state.read(app).hex_input().read(app).value().as_ref(),
+                "#FF"
+            );
+            assert_eq!(owner.read(app).component().color.unwrap().a, 0.0);
+            state.update(app, |state, cx| state.set_open(true, cx));
+            let _ = window.draw(app);
+            let focus = state.read(app).hex_input().read(app).focus_handle(app);
+            window.focus(&focus, app);
+            let _ = window.draw(app);
         });
         window.simulate_keystrokes("cmd-a");
         window.simulate_input("#FF0000");
