@@ -1,3 +1,7 @@
+## R19 native Dialog bounded focus traversal — 2026-10-30
+
+On parent `7527b54a` plus this regression, a macOS-hosted GPUI test window opened the RustUI Dialog and traversed with Tab and Shift-Tab six times each. Both directions visited at least two distinct controls, retained focus and did not reach the underlying Dialog trigger; the owner text and Escape/reopen checks also passed. The focused test passed 1/1 (`target/headstart/evidence/native-dialog-focus-traversal-20261030.log`, SHA-256 `a859fd24e18086e0f4ef6ed8b9b2bcafd08a44ee0b9a3c55b4f8b8887472e255`). This test covers one underlying trigger and one modal composition, not arbitrary outside controls, native Playground, OS input or broad modal focus acceptance.
+
 ## R19 native Dialog owner-bound text — 2026-10-30
 
 On parent `ffbe8e6b` plus this regression, a macOS-hosted GPUI Root/test window opened the public RustUI Dialog with Enter, typed into a TextField bound directly to the original owner, dismissed with Escape, reopened with Enter and appended text. The owner retained `RustUI` through dismissal and received `RustUI!` after reopening. The Dialog suite passed 22/22 (`target/headstart/evidence/native-dialog-owner-suite-20261030.log`, SHA-256 `94aeb2a2387a2a23969670cd469532edb42d24ba95c1c393c23149411bd5212e`). This verifies one synthetic native-hosted event path, not real OS IME, native Playground, focus containment or broader modal acceptance.

@@ -598,10 +598,11 @@ mod tests {
             gpui_component::Root::new(owner, window, cx)
         });
         let owner = slot.borrow().clone().unwrap();
-        window.update(|window, app| {
+        let trigger_focus = window.update(|window, app| {
             let _ = window.draw(app);
             window.focus_next(app);
             let _ = window.draw(app);
+            window.focused(app).expect("dialog trigger focus")
         });
         let key = gpui::Keystroke::parse("enter").unwrap();
         window.simulate_event(gpui::KeyDownEvent {
@@ -621,6 +622,23 @@ mod tests {
             let _ = window.draw(app);
             assert_eq!(owner.read(app).component().text, "RustUI");
         });
+        for key in ["tab", "shift-tab"] {
+            let mut visited = Vec::new();
+            for _ in 0..6 {
+                window.simulate_keystrokes(key);
+                let focus = window.update(|window, app| {
+                    let _ = window.draw(app);
+                    assert!(window.has_active_dialog(app));
+                    let focus = window.focused(app).expect("open dialog has focus");
+                    assert_ne!(focus, trigger_focus, "focus escaped to dialog trigger");
+                    focus
+                });
+                if !visited.contains(&focus) {
+                    visited.push(focus);
+                }
+            }
+            assert!(visited.len() >= 2, "{key} did not traverse dialog controls");
+        }
         window.simulate_keystrokes("escape");
         window.update(|window, app| {
             let _ = window.draw(app);
