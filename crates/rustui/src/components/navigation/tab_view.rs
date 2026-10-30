@@ -305,29 +305,39 @@ impl View for TabViewControl {
         let keyboard_roving_state = roving_state.clone();
         let keyboard_focus_handles = tab_focus_handles.clone();
 
-        let tabs = self.tabs.iter().enumerate().map(|(index, tab)| {
-            with_tab_set_position(
-                GpuiTab::new()
+        let mut tabs = self
+            .tabs
+            .iter()
+            .enumerate()
+            .map(|(index, tab)| {
+                let tab = GpuiTab::new()
                     .label(tab_visible_labels[index].clone())
                     .aria_label(tab_accessible_names[index].clone())
                     .disabled(tab.disabled)
                     .track_focus(&tab_focus_handles[index])
-                    .tab_stop(roving_tab_index == Some(index)),
-                index,
-                self.tabs.len(),
-            )
-        });
+                    .tab_stop(roving_tab_index == Some(index));
+                #[cfg(test)]
+                let tab = tab.debug_selector(move || format!("rustui-tab-test-{index}"));
+                with_tab_set_position(tab, index, self.tabs.len())
+            })
+            .collect::<Vec<_>>();
+        if direction == LayoutDirection::RightToLeft {
+            tabs.reverse();
+        }
         let mut tab_bar =
             TabBar::new(identity.to_string())
                 .children(tabs)
                 .on_click(move |index, window, cx| {
-                    if let Some(focus_handle) = click_focus_handles.get(*index) {
+                    let Some(index) = tab_visual_index(*index, ids.len(), direction) else {
+                        return;
+                    };
+                    if let Some(focus_handle) = click_focus_handles.get(index) {
                         for (tab_index, focus_handle) in click_focus_handles.iter().enumerate() {
-                            focus_handle.clone().tab_stop(tab_index == *index);
+                            focus_handle.clone().tab_stop(tab_index == index);
                         }
                         focus_handle.focus(window, cx);
                     }
-                    if let Some(id) = ids.get(*index) {
+                    if let Some(id) = ids.get(index) {
                         click_roving_state.update(cx, |state, _| {
                             state.selection = id.clone();
                             state.focused_tab = Some(id.clone());
@@ -335,7 +345,9 @@ impl View for TabViewControl {
                         write(id.clone(), cx);
                     }
                 });
-        if let Some(index) = selected_index {
+        if let Some(index) =
+            selected_index.and_then(|index| tab_visual_index(index, self.tabs.len(), direction))
+        {
             tab_bar = tab_bar.selected_index(index);
         }
         tab_bar = match self.style {
@@ -532,6 +544,17 @@ fn selected_tab_panel_element(
         .child(content)
 }
 
+// Logical and display indices use the same reversible mapping.
+fn tab_visual_index(index: usize, len: usize, direction: LayoutDirection) -> Option<usize> {
+    if index >= len {
+        return None;
+    }
+    Some(match direction {
+        LayoutDirection::LeftToRight => index,
+        LayoutDirection::RightToLeft => len - 1 - index,
+    })
+}
+
 fn navigation_key(key: &str, direction: LayoutDirection) -> Option<TabViewKey> {
     match key {
         "left" if direction == LayoutDirection::LeftToRight => Some(TabViewKey::Previous),
@@ -686,6 +709,9 @@ mod tests {
             window.focus_next(app);
             let _ = window.draw(app);
         });
+        let first = window.debug_bounds("rustui-tab-test-0").unwrap();
+        let third = window.debug_bounds("rustui-tab-test-2").unwrap();
+        assert!(first.center().x < third.center().x);
         window.simulate_keystrokes("right");
         window.update(|window, app| {
             let _ = window.draw(app);
@@ -703,13 +729,54 @@ mod tests {
             assert_eq!(owner.read(app).component().selection, "first");
             set_locale(ar, app);
             let _ = window.draw(app);
+            let tree: serde_json::Value =
+                serde_json::from_str(&window.debug_a11y_tree_json().unwrap()).unwrap();
+            let nodes = tree["nodes"].as_object().unwrap();
+            let tabs = nodes
+                .values()
+                .find(|node| node["aria"]["role"] == "TabList")
+                .unwrap();
+            let order: Vec<_> = tabs["children"]
+                .as_array()
+                .unwrap()
+                .iter()
+                .map(|id| {
+                    nodes[id.as_str().unwrap()]["aria"]["label"]
+                        .as_str()
+                        .unwrap()
+                })
+                .collect();
+            assert_eq!(order, ["Third", "Disabled", "First"]);
+            let first_id = tabs["children"][2].as_str().unwrap();
+            assert_eq!(nodes[first_id]["aria"]["selected"], true);
         });
+        let first = window.debug_bounds("rustui-tab-test-0").unwrap();
+        let third = window.debug_bounds("rustui-tab-test-2").unwrap();
+        assert!(third.center().x < first.center().x);
         window.simulate_keystrokes("left");
         window.update(|window, app| {
             let _ = window.draw(app);
             assert_eq!(owner.read(app).component().selection, "first");
         });
         window.simulate_keystrokes("enter");
+        window.update(|window, app| {
+            let _ = window.draw(app);
+            assert_eq!(owner.read(app).component().selection, "third");
+        });
+        let first = window.debug_bounds("rustui-tab-test-0").unwrap();
+        window.simulate_click(first.center(), gpui::Modifiers::default());
+        window.update(|window, app| {
+            let _ = window.draw(app);
+            assert_eq!(owner.read(app).component().selection, "first");
+        });
+        let disabled = window.debug_bounds("rustui-tab-test-1").unwrap();
+        window.simulate_click(disabled.center(), gpui::Modifiers::default());
+        window.update(|window, app| {
+            let _ = window.draw(app);
+            assert_eq!(owner.read(app).component().selection, "first");
+        });
+        let third = window.debug_bounds("rustui-tab-test-2").unwrap();
+        window.simulate_click(third.center(), gpui::Modifiers::default());
         window.update(|window, app| {
             let _ = window.draw(app);
             assert_eq!(owner.read(app).component().selection, "third");
@@ -1015,6 +1082,21 @@ mod tests {
             navigation_key("space", LayoutDirection::LeftToRight),
             Some(TabViewKey::Activate)
         );
+    }
+
+    #[test]
+    fn tab_display_indices_are_reversible_and_checked() {
+        for (direction, expected) in [
+            (LayoutDirection::LeftToRight, [0, 1, 2]),
+            (LayoutDirection::RightToLeft, [2, 1, 0]),
+        ] {
+            for (logical, visual) in expected.into_iter().enumerate() {
+                assert_eq!(tab_visual_index(logical, 3, direction), Some(visual));
+                assert_eq!(tab_visual_index(visual, 3, direction), Some(logical));
+            }
+            assert_eq!(tab_visual_index(0, 0, direction), None);
+            assert_eq!(tab_visual_index(3, 3, direction), None);
+        }
     }
 
     #[test]
