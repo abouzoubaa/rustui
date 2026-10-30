@@ -46,6 +46,7 @@ struct RetainedPicker {
     options: Vec<super::SelectOption>,
     owner_value: String,
     searchable: bool,
+    disabled: bool,
     selection_writer: Rc<RefCell<PickerSelectionWriter>>,
 }
 
@@ -213,6 +214,7 @@ impl View for PickerView {
         let initial_index = option_index(&self.options, &initial_value);
         let initial_options = options.clone();
         let searchable = self.searchable;
+        let disabled = self.disabled;
         let selection_writer = context.binding_writer(self.selection.clone());
         let initial_selection_writer = selection_writer.clone();
         let (retained, created) =
@@ -229,6 +231,7 @@ impl View for PickerView {
                 options: initial_options,
                 owner_value: initial_value,
                 searchable,
+                disabled,
                 selection_writer: Rc::new(RefCell::new(initial_selection_writer)),
             });
 
@@ -248,6 +251,12 @@ impl View for PickerView {
                 retained.selection_writer.clone(),
             )
         };
+        if retained.read(context.app()).disabled != self.disabled {
+            let disabled = self.disabled;
+            context.update_entity(&retained, move |retained, _, _| {
+                retained.disabled = disabled
+            });
+        }
         *current_selection_writer.borrow_mut() = selection_writer;
 
         let current = self.selection.value();
@@ -309,6 +318,10 @@ impl View for PickerView {
                         retained_picker.update(cx, |retained, _cx| {
                             record_confirmed_selection(&mut retained.owner_value, &confirmed_value);
                         });
+                        if retained_picker.read(cx).disabled {
+                            cx.refresh_windows();
+                            return;
+                        }
                         with_current_writer(
                             &current_selection_writer,
                             value.clone(),
@@ -397,6 +410,95 @@ fn record_confirmed_selection(owner_value: &mut String, confirmed_value: &str) {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[gpui::test]
+    fn disabled_confirmation_restores_owner_selection(cx: &mut gpui::TestAppContext) {
+        use crate::{runtime::component_host::ComponentHost, view::View};
+        struct Owner {
+            value: String,
+            disabled: bool,
+        }
+        impl View for Owner {
+            fn body(&self) -> impl View {
+                Picker(
+                    "Choice",
+                    Binding::new(
+                        self.value.clone(),
+                        |owner: &Owner| owner.value.clone(),
+                        |owner, value| owner.value = value,
+                    ),
+                    ["one", "two", "three"],
+                )
+                .id("select-guard")
+                .disabled(self.disabled)
+            }
+        }
+        let theme = crate::theme::parse_theme(include_str!(concat!(
+            env!("CARGO_MANIFEST_DIR"),
+            "/../../themes/macos27.json"
+        )))
+        .unwrap();
+        cx.update(|app| {
+            gpui_component::init(app);
+            crate::theme::activate_theme(&theme, Some(crate::theme::AppearanceMode::Dark), app)
+                .unwrap();
+        });
+        let (owner, window) = cx.add_window_view(|_, cx| {
+            ComponentHost::new(
+                Owner {
+                    value: "one".into(),
+                    disabled: false,
+                },
+                cx,
+            )
+        });
+        let select = window.update(|window, app| {
+            let _ = window.draw(app);
+            owner
+                .read(app)
+                .retained_entity_for_test::<RetainedPicker>(vec![], Identity::from("select-guard"))
+                .unwrap()
+                .read(app)
+                .select
+                .clone()
+        });
+        window.update(|window, app| {
+            owner.update(app, |host, cx| {
+                host.component_mut().disabled = true;
+                host.component_mut().value = "two".into();
+                cx.notify();
+            });
+            let _ = window.draw(app);
+            assert_eq!(
+                select.read(app).selected_value().map(String::as_str),
+                Some("two")
+            );
+            select.update(app, |select, cx| {
+                select.set_selected_value(&"three".to_owned(), window, cx);
+                cx.emit(SelectEvent::Confirm(Some("three".to_owned())));
+            });
+        });
+        window.cx.run_until_parked();
+        window.update(|window, app| {
+            assert_eq!(owner.read(app).component().value, "two");
+            let _ = window.draw(app);
+            assert_eq!(
+                select.read(app).selected_value().map(String::as_str),
+                Some("two")
+            );
+            owner.update(app, |host, cx| {
+                host.component_mut().disabled = false;
+                cx.notify();
+            });
+            let _ = window.draw(app);
+            select.update(app, |select, cx| {
+                select.set_selected_value(&"three".to_owned(), window, cx);
+                cx.emit(SelectEvent::Confirm(Some("three".to_owned())));
+            });
+        });
+        window.cx.run_until_parked();
+        window.update(|_, app| assert_eq!(owner.read(app).component().value, "three"));
+    }
 
     fn binding() -> Binding<String> {
         Binding::new(
