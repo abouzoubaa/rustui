@@ -233,12 +233,17 @@ impl ColorPickerView {
             .is_some_and(|value| same_picker_color(value, color));
         let preview_state = state.clone();
         let select_state = state.clone();
+        let keyboard_state = state.clone();
         let style = required_style(context, "color_picker", part, selector);
         let width = style.lengths["width"];
         let height = style.lengths["height"];
 
         styled_element(
             ColorSwatch::new(id, color)
+                .on_action(move |_: &gpui_base::actions::Confirm, window, cx| {
+                    cx.stop_propagation();
+                    keyboard_state.update(cx, |state, cx| state.select_color(color, window, cx));
+                })
                 .selected(selected)
                 .bg(color)
                 .border_1()
@@ -979,6 +984,61 @@ mod rendered_locale_tests {
             assert!(snapshot.contains("لوحة الألوان"));
             assert_eq!(state.read(app).value(), Some(color));
             assert_eq!(owner.read(app).component().color, Some(color));
+            state.update(app, |state, cx| state.set_active_tab(0, cx));
+            let _ = window.draw(app);
+            window.focus_next(app);
+            let _ = window.draw(app);
+            let tree: serde_json::Value =
+                serde_json::from_str(&window.debug_a11y_tree_json().expect("rendered picker tree"))
+                    .unwrap();
+            assert!(state.read(app).is_open(), "closed during focus traversal");
+            let focus = tree["gpui_focus"].as_str().unwrap();
+            assert_eq!(
+                tree["nodes"][focus]["element_id"],
+                "NamedInteger(\"color-picker-featured\", 0)"
+            );
+        });
+        let key = gpui::Keystroke::parse("space").unwrap();
+        window.simulate_event(gpui::KeyDownEvent {
+            keystroke: key.clone(),
+            is_held: false,
+            prefer_character_input: false,
+        });
+        window.simulate_event(gpui::KeyUpEvent { keystroke: key });
+        window.update(|window, app| {
+            let _ = window.draw(app);
+            let selected = default_swatch_colors()[0];
+            assert_eq!(owner.read(app).component().color, Some(selected));
+            assert_eq!(state.read(app).value(), Some(selected));
+            assert!(!state.read(app).is_open());
+            state.update(app, |state, cx| state.set_open(true, cx));
+            let _ = window.draw(app);
+            window.focus_next(app);
+            window.focus_next(app);
+            let _ = window.draw(app);
+            let tree: serde_json::Value =
+                serde_json::from_str(&window.debug_a11y_tree_json().expect("rendered picker tree"))
+                    .unwrap();
+            let focus = tree["gpui_focus"].as_str().unwrap();
+            assert_eq!(
+                tree["nodes"][focus]["element_id"],
+                "NamedInteger(\"color-picker-featured\", 1)"
+            );
+        });
+        let key = gpui::Keystroke::parse("enter").unwrap();
+        window.simulate_event(gpui::KeyDownEvent {
+            keystroke: key.clone(),
+            is_held: false,
+            prefer_character_input: false,
+        });
+        window.simulate_event(gpui::KeyUpEvent { keystroke: key });
+        window.update(|window, app| {
+            let _ = window.draw(app);
+            assert_eq!(
+                owner.read(app).component().color,
+                Some(default_swatch_colors()[1])
+            );
+            assert!(!state.read(app).is_open());
         });
     }
 }
