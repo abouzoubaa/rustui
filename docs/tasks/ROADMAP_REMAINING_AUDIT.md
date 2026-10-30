@@ -1,3 +1,7 @@
+## Native workspace library integration checkpoint — 2026-10-30
+
+On clean source commit `5f3b467e`, macOS `./scripts/cargo-headstart test --profile headstart --locked --offline --workspace --lib` passed 1,397 tests across six library targets (1,033 + 9 + 83 + 40 + 232 + 0); no tests failed or were ignored. Log: `target/headstart/evidence/native-workspace-lib-5f3b467e-20261030.log`, SHA-256 `d4ec8994f04f2828417beb45e428fc2f0702a218851e46812169b8b5f8834702`. Separately, the focused RustUI input group passed 222/222 on this commit (`native-input-integration-5f3b467e-20261030.log`, SHA-256 `7cfa4001bb5626a6dc6799999ff9066ee150544fa4a5f51694ca0e069e6df787`); those 222 are included in the workspace count. These tests do not establish native Playground, OS IME, accessibility, licensing or production acceptance.
+
 ## R15 native ColorPicker external owner update — 2026-10-30
 
 On parent `8e11a38b` plus the regression, a macOS-hosted GPUI test window edited incomplete hex text, then the owner cleared the color and supplied a different one while the popup was open. The retained value and hex field synchronized to each owner change; a subsequent unfinished edit and Escape preserved the new owner color, and a later valid hex commit still updated it. The focused test passed 1/1 (`target/headstart/evidence/native-color-picker-owner-update-20261030.log`, SHA-256 `2da3b6a7b3ed025d67244f98bffde7235b9dc568af3c944440967bf3eee24ce8`). This is test-window evidence for these transitions, not native Playground, concurrent updates, OS IME or broad acceptance.
