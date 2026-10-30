@@ -618,6 +618,73 @@ fn activation_selection(items: &[(String, bool)], focused_index: usize) -> Optio
 mod tests {
     use super::*;
 
+    #[gpui::test]
+    fn native_keyboard_skips_disabled_tabs_and_commits_only_on_activation(
+        cx: &mut gpui::TestAppContext,
+    ) {
+        use crate::runtime::ComponentHost;
+
+        struct Owner {
+            selection: String,
+        }
+        impl View for Owner {
+            fn body(&self) -> impl View {
+                TabView(
+                    [
+                        TabItem::new("first", "First", EmptyView),
+                        TabItem::new("disabled", "Disabled", EmptyView).disabled(true),
+                        TabItem::new("third", "Third", EmptyView),
+                    ],
+                    Binding::new(
+                        self.selection.clone(),
+                        |owner: &Owner| owner.selection.clone(),
+                        |owner, value| owner.selection = value,
+                    ),
+                )
+                .id("keyboard-tabs")
+            }
+        }
+        let theme = crate::theme::parse_theme(include_str!(concat!(
+            env!("CARGO_MANIFEST_DIR"),
+            "/../../themes/macos27.json"
+        )))
+        .unwrap();
+        cx.update(|app| {
+            gpui_component::init(app);
+            crate::theme::activate_theme(&theme, Some(crate::theme::AppearanceMode::Dark), app)
+                .unwrap();
+        });
+        let (owner, window) = cx.add_window_view(|_, cx| {
+            ComponentHost::new(
+                Owner {
+                    selection: "first".into(),
+                },
+                cx,
+            )
+        });
+        window.update(|window, app| {
+            let _ = window.draw(app);
+            window.focus_next(app);
+            let _ = window.draw(app);
+        });
+        window.simulate_keystrokes("right");
+        window.update(|window, app| {
+            let _ = window.draw(app);
+            assert_eq!(owner.read(app).component().selection, "first");
+        });
+        window.simulate_keystrokes("enter");
+        window.update(|window, app| {
+            let _ = window.draw(app);
+            assert_eq!(owner.read(app).component().selection, "third");
+        });
+        window.simulate_keystrokes("right");
+        window.simulate_keystrokes("space");
+        window.update(|window, app| {
+            let _ = window.draw(app);
+            assert_eq!(owner.read(app).component().selection, "first");
+        });
+    }
+
     #[test]
     fn tab_accessibility_metadata_reports_one_based_position_and_full_set_size() {
         use gpui::Element as _;

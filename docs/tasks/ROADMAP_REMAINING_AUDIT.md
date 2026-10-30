@@ -1,3 +1,7 @@
+## R17 native TabView keyboard event path — 2026-10-30
+
+On parent `74369056` plus this regression, a macOS-hosted GPUI test window focused a controlled TabView with a disabled middle tab. Right moved focus past the disabled tab without writing the selection; Enter selected the third tab; Right wrapped and Space selected the first. The focused TabView suite passed 26/26 (`target/headstart/evidence/native-tab-view-suite-20261030.log`, SHA-256 `8ee14cb0f4be9c04a209e8ce4ea622f4a835303466cd4bf485c9b4c4b012bcb6`). This is bounded test-window evidence, not native Playground, RTL, visual or broader acceptance.
+
 ## Native workspace library integration checkpoint — 2026-10-30
 
 On clean source commit `5f3b467e`, macOS `./scripts/cargo-headstart test --profile headstart --locked --offline --workspace --lib` passed 1,397 tests across six library targets (1,033 + 9 + 83 + 40 + 232 + 0); no tests failed or were ignored. Log: `target/headstart/evidence/native-workspace-lib-5f3b467e-20261030.log`, SHA-256 `d4ec8994f04f2828417beb45e428fc2f0702a218851e46812169b8b5f8834702`. Separately, the focused RustUI input group passed 222/222 on this commit (`native-input-integration-5f3b467e-20261030.log`, SHA-256 `7cfa4001bb5626a6dc6799999ff9066ee150544fa4a5f51694ca0e069e6df787`); those 222 are included in the workspace count. These tests do not establish native Playground, OS IME, accessibility, licensing or production acceptance.
