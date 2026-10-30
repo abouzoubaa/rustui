@@ -5,7 +5,7 @@ use std::{cell::RefCell, rc::Rc};
 use gpui::prelude::FluentBuilder as _;
 use gpui::{
     AnyElement, AppContext as _, Focusable as _, Hsla, InteractiveElement as _, IntoElement,
-    ParentElement as _, SharedString, Styled as _, div, hsla, px,
+    ParentElement as _, SharedString, StatefulInteractiveElement as _, Styled as _, div, hsla, px,
 };
 
 type EventWriter<Value, Context> = Rc<dyn Fn(Value, &mut Context)>;
@@ -39,7 +39,7 @@ use gpui_component::{
     color_picker::{ColorPickerEvent, ColorPickerState},
     input::Input,
     popover::Popover as GpuiPopover,
-    slider::Slider as GpuiSlider,
+    slider::{Slider as GpuiSlider, SliderEvent, SliderState, SliderValue},
     tab::{Tab, TabBar},
     theme::ColorName,
     theme::Colorize as _,
@@ -371,22 +371,22 @@ impl ColorPickerView {
             panel = panel
                 .child(slider_row(
                     popup_label(context, "rustui-color-picker-hue", "Hue"),
-                    GpuiSlider::new(sliders.hue()).flex_1(),
+                    keyboard_color_slider("hue", sliders.hue()),
                     direction,
                 ))
                 .child(slider_row(
                     popup_label(context, "rustui-color-picker-saturation", "Saturation"),
-                    GpuiSlider::new(sliders.saturation()).flex_1(),
+                    keyboard_color_slider("saturation", sliders.saturation()),
                     direction,
                 ))
                 .child(slider_row(
                     popup_label(context, "rustui-color-picker-lightness", "Lightness"),
-                    GpuiSlider::new(sliders.lightness()).flex_1(),
+                    keyboard_color_slider("lightness", sliders.lightness()),
                     direction,
                 ))
                 .child(slider_row(
                     popup_label(context, "rustui-color-picker-opacity", "Opacity"),
-                    GpuiSlider::new(sliders.alpha()).flex_1(),
+                    keyboard_color_slider("alpha", sliders.alpha()),
                     direction,
                 ))
                 .child(
@@ -666,6 +666,45 @@ fn popup_label(
     fallback: &'static str,
 ) -> SharedString {
     resolved_message_label(context.localized_message(id), &id.into(), &fallback.into())
+}
+
+// GPUI Components supplies pointer behavior; use the same keyboard policy as
+// RustUI's public Slider and emit the event that updates the retained color.
+fn keyboard_color_slider(id: &'static str, state: &gpui::Entity<SliderState>) -> impl IntoElement {
+    let keyboard_state = state.clone();
+    div()
+        .id(format!("color-picker-hsla-{id}"))
+        .flex_1()
+        .focusable()
+        .tab_stop(true)
+        .on_key_down(move |event, window, cx| {
+            if event.prefer_character_input
+                || event.keystroke.is_ime_in_progress()
+                || event.keystroke.modifiers.modified()
+            {
+                return;
+            }
+            let slider = keyboard_state.read(cx);
+            let current = slider.value().end();
+            let Some(value) = super::slider::slider_keyboard_value(
+                gpui::Axis::Horizontal,
+                event.keystroke.key.as_ref(),
+                current,
+                slider.min_value(),
+                slider.max_value(),
+                slider.step_value(),
+            ) else {
+                return;
+            };
+            if value != current {
+                keyboard_state.update(cx, |slider, cx| {
+                    slider.set_value(value, window, cx);
+                    cx.emit(SliderEvent::Change(SliderValue::Single(value)));
+                });
+            }
+            cx.stop_propagation();
+        })
+        .child(GpuiSlider::new(state).w_full())
 }
 
 fn slider_row(
@@ -1039,6 +1078,92 @@ mod rendered_locale_tests {
                 Some(default_swatch_colors()[1])
             );
             assert!(!state.read(app).is_open());
+        });
+    }
+    #[gpui::test]
+    fn hsla_slider_keyboard_updates_owner_and_clamps(cx: &mut gpui::TestAppContext) {
+        let theme = parse_theme(include_str!(concat!(
+            env!("CARGO_MANIFEST_DIR"),
+            "/../../themes/macos27.json"
+        )))
+        .unwrap();
+        cx.update(|app| {
+            gpui_component::init(app);
+            activate_theme(&theme, Some(AppearanceMode::Dark), app).unwrap();
+        });
+        let owner_slot = Rc::new(RefCell::new(None));
+        let saved = owner_slot.clone();
+        let color = hsla(0.25, 0.5, 0.4, 1.0);
+        let (_, window) = cx.add_window_view(|window, cx| {
+            let owner = cx.new(|cx| ComponentHost::new(Owner { color: Some(color) }, cx));
+            *saved.borrow_mut() = Some(owner.clone());
+            Root::new(owner, window, cx)
+        });
+        let owner = owner_slot.borrow().clone().unwrap();
+        let state = window.update(|window, app| {
+            let _ = window.draw(app);
+            let retained = owner
+                .read(app)
+                .retained_entity_for_test::<RetainedColorPicker>(
+                    vec![],
+                    Identity::from("locale-color-picker"),
+                )
+                .unwrap();
+            let state = retained.read(app).state.clone();
+            window.focus_next(app);
+            let _ = window.draw(app);
+            state
+        });
+        let key = gpui::Keystroke::parse("enter").unwrap();
+        window.simulate_event(gpui::KeyDownEvent {
+            keystroke: key.clone(),
+            is_held: false,
+            prefer_character_input: false,
+        });
+        window.simulate_event(gpui::KeyUpEvent { keystroke: key });
+        window.update(|window, app| {
+            let _ = window.draw(app);
+            assert!(state.read(app).is_open());
+            state.update(app, |state, cx| state.set_active_tab(1, cx));
+            let _ = window.draw(app);
+            window.focus_next(app);
+            let _ = window.draw(app);
+        });
+        window.simulate_keystrokes("right");
+        window.update(|window, app| {
+            let _ = window.draw(app);
+            assert!((owner.read(app).component().color.unwrap().h - 0.26).abs() < 0.0001);
+        });
+        window.simulate_keystrokes("end");
+        window.update(|window, app| {
+            let _ = window.draw(app);
+            assert_eq!(owner.read(app).component().color.unwrap().h, 1.0);
+        });
+        window.simulate_keystrokes("right");
+        window.update(|window, app| {
+            let _ = window.draw(app);
+            assert_eq!(owner.read(app).component().color.unwrap().h, 1.0);
+            window.focus_next(app);
+            let _ = window.draw(app);
+        });
+        window.simulate_keystrokes("home");
+        window.update(|window, app| {
+            let _ = window.draw(app);
+            assert_eq!(owner.read(app).component().color.unwrap().s, 0.0);
+            window.focus_next(app);
+            let _ = window.draw(app);
+        });
+        window.simulate_keystrokes("end");
+        window.update(|window, app| {
+            let _ = window.draw(app);
+            assert_eq!(owner.read(app).component().color.unwrap().l, 1.0);
+            window.focus_next(app);
+            let _ = window.draw(app);
+        });
+        window.simulate_keystrokes("home");
+        window.update(|window, app| {
+            let _ = window.draw(app);
+            assert_eq!(owner.read(app).component().color.unwrap().a, 0.0);
         });
     }
 }

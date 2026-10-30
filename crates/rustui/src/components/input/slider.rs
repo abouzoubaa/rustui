@@ -582,7 +582,7 @@ fn accessibility_set_value(
         .then(|| normalize_accessibility_value(*value as f32, min, max, step))
 }
 
-fn slider_keyboard_value(
+pub(super) fn slider_keyboard_value(
     axis: Axis,
     key: &str,
     current: f32,
