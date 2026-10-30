@@ -6,6 +6,7 @@ use rustui::theme::load_theme;
 #[cfg(target_family = "wasm")]
 use rustui::theme::parse_theme;
 use rustui::{
+    localization::MessageArguments,
     prelude::*,
     theme::{
         AppearanceMode, ThemeDocument, assess_theme_coverage, resolve_button, serialize_theme,
@@ -23,9 +24,16 @@ struct ThemeInspector {
     state: Rc<RefCell<InspectorState>>,
 }
 
+#[derive(Clone)]
+struct SummaryLine {
+    key: &'static str,
+    arguments: MessageArguments,
+}
+
 #[derive(Default)]
 struct InspectorState {
     summary: String,
+    localized_summary: Vec<SummaryLine>,
     preview: String,
     error: Option<String>,
     epoch: u64,
@@ -34,15 +42,16 @@ struct InspectorState {
 }
 
 impl InspectorState {
-    fn apply(&mut self, result: Result<(String, String), String>) {
+    fn apply(&mut self, result: Result<(String, Vec<SummaryLine>, String), String>) {
         match result {
-            Ok((summary, preview)) => {
+            Ok((summary, localized_summary, preview)) => {
                 self.summary = summary;
+                self.localized_summary = localized_summary;
                 self.preview = preview;
                 self.error = None;
             }
             Err(error) => {
-                self.error = Some(format!("Theme inspection failed: {error}"));
+                self.error = Some(error);
             }
         }
     }
@@ -107,7 +116,7 @@ impl ThemeInspector {
     }
 }
 
-fn inspect_theme() -> Result<(String, String), String> {
+fn inspect_theme() -> Result<(String, Vec<SummaryLine>, String), String> {
     #[cfg(target_family = "wasm")]
     let document = parse_theme(include_str!("../../../../themes/macos27.json"))
         .map_err(|error| error.to_string())?;
@@ -118,7 +127,7 @@ fn inspect_theme() -> Result<(String, String), String> {
     inspect_document(document)
 }
 
-fn inspect_document(document: ThemeDocument) -> Result<(String, String), String> {
+fn inspect_document(document: ThemeDocument) -> Result<(String, Vec<SummaryLine>, String), String> {
     let json = serialize_theme(&document).map_err(|error| error.to_string())?;
     let mut summary = format!(
         "Profile {} · format {} · {} component records · {} exported bytes",
@@ -127,6 +136,14 @@ fn inspect_document(document: ThemeDocument) -> Result<(String, String), String>
         document.components.len(),
         json.len(),
     );
+    let mut localized_summary = vec![SummaryLine {
+        key: "lab-theme-inspector-profile",
+        arguments: MessageArguments::new()
+            .with("profile", document.profile.to_string())
+            .with("format", document.format_version.to_string())
+            .with("components", document.components.len().to_string())
+            .with("bytes", json.len().to_string()),
+    }];
     let coverage = assess_theme_coverage(&document);
     summary.push_str(&format!(
         "\nRenderer coverage: {}/{} style rules · {} uncovered · {} reference-only records · {} not-applicable records",
@@ -136,11 +153,34 @@ fn inspect_document(document: ThemeDocument) -> Result<(String, String), String>
         coverage.reference_only_records.len(),
         coverage.not_applicable_records.len(),
     ));
+    localized_summary.push(SummaryLine {
+        key: "lab-theme-inspector-coverage",
+        arguments: MessageArguments::new()
+            .with("covered", coverage.covered_rules.to_string())
+            .with("total", coverage.total_rules.to_string())
+            .with("uncovered", coverage.uncovered_rules.len().to_string())
+            .with(
+                "reference",
+                coverage.reference_only_records.len().to_string(),
+            )
+            .with(
+                "inapplicable",
+                coverage.not_applicable_records.len().to_string(),
+            ),
+    });
     for uncovered in coverage.uncovered_rules.iter().take(8) {
         summary.push_str(&format!(
             "\nUncovered: {}/{} ({:?}) — {}",
             uncovered.component, uncovered.part, uncovered.appearance, uncovered.reason,
         ));
+        localized_summary.push(SummaryLine {
+            key: "lab-theme-inspector-uncovered",
+            arguments: MessageArguments::new()
+                .with("component", uncovered.component.to_string())
+                .with("part", uncovered.part.to_string())
+                .with("appearance", format!("{:?}", uncovered.appearance))
+                .with("reason", uncovered.reason.to_string()),
+        });
     }
     for mode in [AppearanceMode::Light, AppearanceMode::Dark] {
         let button = resolve_button(&document, Some(mode)).map_err(|error| error.to_string())?;
@@ -152,9 +192,21 @@ fn inspect_document(document: ThemeDocument) -> Result<(String, String), String>
             button.horizontal_padding,
             button.corner_radius,
         ));
+        localized_summary.push(SummaryLine {
+            key: match mode {
+                AppearanceMode::Light => "lab-theme-inspector-button-light",
+                AppearanceMode::Dark => "lab-theme-inspector-button-dark",
+            },
+            arguments: MessageArguments::new()
+                .with("width", button.width.to_string())
+                .with("height", button.height.to_string())
+                .with("font", button.font_size.to_string())
+                .with("padding", button.horizontal_padding.to_string())
+                .with("radius", button.corner_radius.to_string()),
+        });
     }
     let preview = json.lines().take(18).collect::<Vec<_>>().join("\n");
-    Ok((summary, preview))
+    Ok((summary, localized_summary, preview))
 }
 
 impl View for ThemeInspector {
@@ -171,10 +223,16 @@ impl View for ThemeInspector {
     fn body(&self) -> impl View {
         let state = self.state.borrow();
         let summary = state.summary.clone();
+        let localized_summary = state.localized_summary.clone();
         let preview = state.preview.clone();
-        let error = state.error.clone().unwrap_or_default();
+        let error = state.error.clone();
         drop(state);
-        VStack::new()
+        let error = match error {
+            Some(error) => LocalizedText("lab-theme-inspector-error")
+                .with_arguments(MessageArguments::new().with("error", error)),
+            None => Text(""),
+        };
+        let mut content = VStack::new()
             .spacing(8.0)
             .child(LocalizedText("lab-theme-inspector-title").font_weight(TextWeight::Semibold))
             .child(LocalizedText("lab-theme-inspector-description"))
@@ -184,8 +242,15 @@ impl View for ThemeInspector {
                     .id("theme-inspector-reload")
                     .accessibility_label(format!("Reload theme inspection. {summary}")),
             )
-            .child(Text(error).font_size(12.0))
-            .child(Text(summary).font_size(12.0))
+            .child(error.font_size(12.0));
+        for line in localized_summary {
+            content = content.child(
+                LocalizedText(line.key)
+                    .with_arguments(line.arguments)
+                    .font_size(12.0),
+            );
+        }
+        content
             .child(LocalizedText("lab-theme-inspector-preview"))
             .child(Text(preview).font_size(11.0))
     }
@@ -206,6 +271,12 @@ mod tests {
                 "lab-theme-inspector-description",
                 "lab-theme-inspector-reload",
                 "lab-theme-inspector-preview",
+                "lab-theme-inspector-profile",
+                "lab-theme-inspector-coverage",
+                "lab-theme-inspector-uncovered",
+                "lab-theme-inspector-button-light",
+                "lab-theme-inspector-button-dark",
+                "lab-theme-inspector-error",
             ] {
                 assert!(
                     catalog
@@ -220,12 +291,16 @@ mod tests {
     #[test]
     fn invalid_inspection_preserves_last_valid_preview_and_recovers() {
         let mut state = InspectorState::default();
-        state.apply(Ok(("valid summary".into(), "valid preview".into())));
+        state.apply(Ok((
+            "valid summary".into(),
+            Vec::new(),
+            "valid preview".into(),
+        )));
         state.apply(Err("invalid JSON".into()));
         assert_eq!(state.summary, "valid summary");
         assert_eq!(state.preview, "valid preview");
         assert!(state.error.as_deref().unwrap().contains("invalid JSON"));
-        state.apply(Ok(("recovered".into(), "new preview".into())));
+        state.apply(Ok(("recovered".into(), Vec::new(), "new preview".into())));
         assert_eq!(state.summary, "recovered");
         assert_eq!(state.preview, "new preview");
         assert!(state.error.is_none());
@@ -233,7 +308,18 @@ mod tests {
 
     #[test]
     fn inspection_loads_current_theme_and_resolves_both_appearances() {
-        let (summary, preview) = inspect_theme().expect("current theme is inspectable");
+        let (summary, localized_summary, preview) =
+            inspect_theme().expect("current theme is inspectable");
+        assert!(!localized_summary.is_empty());
+        let catalogs = super::super::locale_selector::catalogs();
+        for language in ["en", "fr", "ar"] {
+            let locale = rustui::localization::Locale::parse(language).unwrap();
+            let catalog = catalogs.get(&locale).unwrap();
+            for line in &localized_summary {
+                let template = catalog.get(line.key).unwrap();
+                rustui::localization::interpolate(template, &line.arguments).unwrap();
+            }
+        }
         assert!(summary.contains("Light Button:"));
         assert!(summary.contains("Dark Button:"));
         assert!(summary.contains("Renderer coverage:"));

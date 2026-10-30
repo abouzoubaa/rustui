@@ -744,3 +744,10 @@ lab-theme-inspector-title = Inspecteur du document de thème
 lab-theme-inspector-description = Aperçu en lecture seule de l’export normalisé. Recharger lit les données du thème sans appliquer celui-ci.
 lab-theme-inspector-reload = Recharger l’inspection du thème
 lab-theme-inspector-preview = 18 premières lignes du JSON normalisé
+
+lab-theme-inspector-profile = Profil {profile} · format {format} · {components} composants · {bytes} octets exportés
+lab-theme-inspector-coverage = Couverture du rendu : {covered}/{total} règles de style · {uncovered} non couvertes · {reference} composants de référence · {inapplicable} composants non applicables
+lab-theme-inspector-uncovered = Non couvert : {component}/{part} ({appearance}) — {reason}
+lab-theme-inspector-button-light = Bouton clair : {width} × {height} px · police {font} px · marge intérieure {padding} px · rayon {radius} px
+lab-theme-inspector-button-dark = Bouton sombre : {width} × {height} px · police {font} px · marge intérieure {padding} px · rayon {radius} px
+lab-theme-inspector-error = Échec de l’inspection du thème : {error}

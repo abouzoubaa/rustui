@@ -744,3 +744,10 @@ lab-theme-inspector-title = فاحص مستند السمة
 lab-theme-inspector-description = معاينة للقراءة فقط للتصدير الموحّد. تعيد إعادة التحميل قراءة بيانات السمة دون تطبيقها.
 lab-theme-inspector-reload = إعادة تحميل فحص السمة
 lab-theme-inspector-preview = أول ١٨ سطرًا من JSON الموحّد
+
+lab-theme-inspector-profile = الملف {profile} · التنسيق {format} · {components} من سجلات المكونات · {bytes} بايت مُصدّر
+lab-theme-inspector-coverage = تغطية الرسم: {covered}/{total} من قواعد النمط · {uncovered} غير مغطاة · {reference} من سجلات المرجع · {inapplicable} من السجلات غير المنطبقة
+lab-theme-inspector-uncovered = غير مغطى: {component}/{part} ({appearance}) — {reason}
+lab-theme-inspector-button-light = زر فاتح: {width} × {height} بكسل · الخط {font} بكسل · الحشو {padding} بكسل · نصف القطر {radius} بكسل
+lab-theme-inspector-button-dark = زر داكن: {width} × {height} بكسل · الخط {font} بكسل · الحشو {padding} بكسل · نصف القطر {radius} بكسل
+lab-theme-inspector-error = فشل فحص السمة: {error}
