@@ -372,3 +372,79 @@ impl View for NavigationStackView {
         })
     }
 }
+
+#[cfg(test)]
+mod route_recovery_tests {
+    use super::*;
+    use crate::components::basic::text::Text;
+    use crate::runtime::ComponentHost;
+    use gpui::{TestAppContext, px};
+
+    struct Owner {
+        path: Vec<String>,
+        writes: usize,
+    }
+
+    impl View for Owner {
+        fn body(&self) -> impl View {
+            NavigationStack(
+                Text("Root"),
+                [NavigationDestination::new("known", Text("Known"))],
+                Binding::new(
+                    self.path.clone(),
+                    |owner: &Owner| owner.path.clone(),
+                    |owner, path| {
+                        owner.path = path;
+                        owner.writes += 1;
+                    },
+                ),
+            )
+            .id("route-recovery")
+        }
+    }
+
+    #[gpui::test]
+    fn back_recovers_unknown_route_and_then_returns_to_root(cx: &mut TestAppContext) {
+        let theme = crate::theme::parse_theme(include_str!(concat!(
+            env!("CARGO_MANIFEST_DIR"),
+            "/../../themes/macos27.json"
+        )))
+        .unwrap();
+        cx.update(|app| {
+            gpui_component::init(app);
+            crate::theme::activate_theme(&theme, Some(crate::theme::AppearanceMode::Dark), app)
+                .unwrap();
+        });
+        let (owner, window) = cx.add_window_view(|_, app| {
+            ComponentHost::new(
+                Owner {
+                    path: vec!["known".into(), "missing".into()],
+                    writes: 0,
+                },
+                app,
+            )
+        });
+        window.update(|window, app| {
+            let _ = window.draw(app);
+        });
+        window.simulate_click(gpui::point(px(20.0), px(12.0)), Default::default());
+        window.update(|window, app| {
+            let _ = window.draw(app);
+            assert_eq!(owner.read(app).component().path, ["known"]);
+            assert_eq!(owner.read(app).component().writes, 1);
+        });
+        window.update(|window, app| window.focus_next(app));
+        let keystroke = gpui::Keystroke::parse("space").unwrap();
+        window.simulate_event(gpui::KeyDownEvent {
+            keystroke: keystroke.clone(),
+            is_held: false,
+            prefer_character_input: false,
+        });
+        window.simulate_event(gpui::KeyUpEvent { keystroke });
+        window.update(|window, app| {
+            let _ = window.draw(app);
+            assert!(owner.read(app).component().path.is_empty());
+            assert_eq!(owner.read(app).component().writes, 2);
+        });
+    }
+}
