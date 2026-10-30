@@ -24,17 +24,7 @@ enum SplitLabel {
     },
 }
 
-fn resolved_message_label(
-    localized: String,
-    message_id: &str,
-    fallback: &SharedString,
-) -> SharedString {
-    if localized.trim().is_empty() || localized.trim() == message_id.trim() {
-        fallback.clone()
-    } else {
-        SharedString::from(localized)
-    }
-}
+use super::resolved_message_label;
 
 fn resolved_navigation_tree_label(
     localized: String,

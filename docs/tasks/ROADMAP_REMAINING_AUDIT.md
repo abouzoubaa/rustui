@@ -1,3 +1,7 @@
+## R13 native navigation fallback — 2026-10-30
+
+NavigationStack now falls back to “Back” and “Destination unavailable” when the active catalog is missing or returns an empty value, and keeps translated values when present. NavigationStack and NavigationSplit share the existing fallback rule. The native navigation library suite passed 92/92 using Headstart (`target/headstart/evidence/native-navigation-fallback-suite-20261030.log`, SHA-256 `a2416708c9d9725e0fa953b2edc0e7461064fdc561ce66bfac5765d25db4dbe8`). This does not establish native Playground acceptance or close the locale requirement group.
+
 ## Native-first direction — 2026-10-30
 
 The user directed the session to finish its current Web/Wasm task, then prioritize native macOS. Further Web/Wasm work is deferred until requested. The embedded preview viewport task recorded below was completed before this direction. Web/Wasm release acceptance remains open; native progress alone does not establish readiness for the previously declared dual-platform scope. Accessibility and VoiceOver, Japanese, and languages beyond English, French and Arabic remain deferred as previously directed.

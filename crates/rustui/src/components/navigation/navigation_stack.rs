@@ -340,9 +340,11 @@ impl View for NavigationStackView {
                     None => div()
                         .flex()
                         .flex_col()
-                        .child(
+                        .child(super::resolved_message_label(
                             context.localized_message("rustui-navigation-unavailable-destination"),
-                        )
+                            "rustui-navigation-unavailable-destination",
+                            &"Destination unavailable".into(),
+                        ))
                         .child(route.clone())
                         .into_any_element(),
                 },
@@ -354,7 +356,11 @@ impl View for NavigationStackView {
                     context.binding_updater(self.path.clone(), |path| path.pop().is_some());
                 root = root.child(
                     Button(
-                        context.localized_message("rustui-navigation-back"),
+                        super::resolved_message_label(
+                            context.localized_message("rustui-navigation-back"),
+                            "rustui-navigation-back",
+                            &"Back".into(),
+                        ),
                         AppAction::new(move |cx| update(cx)),
                     )
                     .id(format!("{}-back", id))
