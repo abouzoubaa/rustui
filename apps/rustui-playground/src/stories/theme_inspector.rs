@@ -140,9 +140,9 @@ fn inspect_document(document: ThemeDocument) -> Result<(String, Vec<SummaryLine>
         key: "lab-theme-inspector-profile",
         arguments: MessageArguments::new()
             .with("profile", document.profile.to_string())
-            .with("format", document.format_version.to_string())
-            .with("components", document.components.len().to_string())
-            .with("bytes", json.len().to_string()),
+            .with("format", document.format_version as i64)
+            .with("components", document.components.len() as i64)
+            .with("bytes", json.len() as i64),
     }];
     let coverage = assess_theme_coverage(&document);
     summary.push_str(&format!(
@@ -156,17 +156,11 @@ fn inspect_document(document: ThemeDocument) -> Result<(String, Vec<SummaryLine>
     localized_summary.push(SummaryLine {
         key: "lab-theme-inspector-coverage",
         arguments: MessageArguments::new()
-            .with("covered", coverage.covered_rules.to_string())
-            .with("total", coverage.total_rules.to_string())
-            .with("uncovered", coverage.uncovered_rules.len().to_string())
-            .with(
-                "reference",
-                coverage.reference_only_records.len().to_string(),
-            )
-            .with(
-                "inapplicable",
-                coverage.not_applicable_records.len().to_string(),
-            ),
+            .with("covered", coverage.covered_rules as i64)
+            .with("total", coverage.total_rules as i64)
+            .with("uncovered", coverage.uncovered_rules.len() as i64)
+            .with("reference", coverage.reference_only_records.len() as i64)
+            .with("inapplicable", coverage.not_applicable_records.len() as i64),
     });
     for uncovered in coverage.uncovered_rules.iter().take(8) {
         summary.push_str(&format!(
@@ -208,11 +202,11 @@ fn inspect_document(document: ThemeDocument) -> Result<(String, Vec<SummaryLine>
                 AppearanceMode::Dark => "lab-theme-inspector-button-dark",
             },
             arguments: MessageArguments::new()
-                .with("width", button.width.to_string())
-                .with("height", button.height.to_string())
-                .with("font", button.font_size.to_string())
-                .with("padding", button.horizontal_padding.to_string())
-                .with("radius", button.corner_radius.to_string()),
+                .with("width", button.width)
+                .with("height", button.height)
+                .with("font", button.font_size)
+                .with("padding", button.horizontal_padding)
+                .with("radius", button.corner_radius),
         });
     }
     let preview = json.lines().take(18).collect::<Vec<_>>().join("\n");
@@ -244,6 +238,7 @@ impl View for ThemeInspector {
         };
         let mut content = VStack::new()
             .spacing(8.0)
+            .alignment(HorizontalAlignment::Start)
             .child(LocalizedText("lab-theme-inspector-title").font_weight(TextWeight::Semibold))
             .child(LocalizedText("lab-theme-inspector-description"))
             .child(
@@ -340,6 +335,13 @@ mod tests {
             for line in &localized_summary {
                 let template = catalog.get(line.key).unwrap();
                 rustui::localization::interpolate(template, &line.arguments).unwrap();
+                let rendered = catalogs.format(&locale, line.key, &line.arguments).unwrap();
+                if language == "ar" && line.key == "lab-theme-inspector-profile" {
+                    assert!(
+                        rendered.chars().any(|ch| ('٠'..='٩').contains(&ch)),
+                        "{rendered}"
+                    );
+                }
             }
         }
         assert!(summary.contains("Light Button:"));
