@@ -1013,7 +1013,7 @@ fn ordinal_category_decimal(value: &str, locale: &Locale) -> &'static str {
     }
 }
 
-fn arabic_latin_symbols(locale: &Locale) -> (char, char) {
+fn latin_number_symbols(locale: &Locale) -> (char, char) {
     thread_local! {
         static LAST: std::cell::RefCell<Option<(String, (char, char))>> = const { std::cell::RefCell::new(None) };
     }
@@ -1044,7 +1044,13 @@ fn arabic_latin_symbols(locale: &Locale) -> (char, char) {
                     _ => None,
                 }
             })
-            .unwrap_or((',', '.'));
+            .unwrap_or_else(|| {
+                if locale.primary_language() == "fr" {
+                    ('\u{202f}', ',')
+                } else {
+                    (',', '.')
+                }
+            });
         *cache.borrow_mut() = Some((locale.as_str().to_owned(), symbols));
         symbols
     })
@@ -1066,7 +1072,8 @@ pub fn format_integer(value: i64, locale: &Locale) -> String {
     };
     let separator = match numbering_system_override(locale) {
         Some("arab") => '\u{066c}',
-        Some("latn") if language == "ar" => arabic_latin_symbols(locale).0,
+        Some("latn") if language == "ar" => latin_number_symbols(locale).0,
+        _ if language == "fr" => latin_number_symbols(locale).0,
         _ => separator,
     };
 
@@ -1116,7 +1123,8 @@ pub fn format_decimal(value: &str, locale: &Locale) -> String {
     };
     let (group_separator, decimal_separator) = match numbering_system_override(locale) {
         Some("arab") => ('\u{066c}', '\u{066b}'),
-        Some("latn") if locale.primary_language() == "ar" => arabic_latin_symbols(locale),
+        Some("latn") if locale.primary_language() == "ar" => latin_number_symbols(locale),
+        _ if locale.primary_language() == "fr" => latin_number_symbols(locale),
         _ => (group_separator, decimal_separator),
     };
 
@@ -1367,7 +1375,7 @@ mod tests {
         );
         assert_eq!(
             format_integer(-1_234, &Locale::parse("fr-CA").unwrap()),
-            "-1\u{202f}234"
+            "-1\u{a0}234"
         );
         assert_eq!(
             format_integer(1_234, &Locale::parse("ar-EG").unwrap()),
@@ -1434,6 +1442,24 @@ mod tests {
     }
 
     #[test]
+    fn french_regional_number_symbols_match_icu() {
+        for tag in ["fr-CA", "fr-CA-u-nu-latn", "fr-FR", "fr-CH"] {
+            let locale = Locale::parse(tag).unwrap();
+            let formatter = crate::locale_runtime::LocaleFormatter::try_new(&locale).unwrap();
+            assert_eq!(
+                format_integer(1_234, &locale),
+                formatter.format_integer(1_234),
+                "{tag}"
+            );
+            assert_eq!(
+                format_decimal("1234.50", &locale),
+                formatter.format_decimal("1234.50").unwrap(),
+                "{tag}"
+            );
+        }
+    }
+
+    #[test]
     fn explicit_latin_script_uses_latin_symbols_for_arabic_numbers() {
         let locale = Locale::parse("ar-Latn").unwrap();
         assert_eq!(format_integer(-1_234, &locale), "\u{200e}-1,234");
@@ -1485,7 +1511,7 @@ mod tests {
         );
         assert_eq!(
             format_decimal("-1234.5", &Locale::parse("fr-CA").unwrap()),
-            "-1\u{202f}234,5"
+            "-1\u{a0}234,5"
         );
         assert_eq!(
             format_decimal("-1234.5", &Locale::parse("ar-EG").unwrap()),
@@ -1497,7 +1523,7 @@ mod tests {
         );
         assert_eq!(
             format_decimal("1234.5", &Locale::parse("fr-CA-u-nu-latn").unwrap()),
-            "1\u{202f}234,5"
+            "1\u{a0}234,5"
         );
         assert_eq!(
             format_decimal("1234.5", &Locale::parse("en-US-u-nu-arab").unwrap()),
