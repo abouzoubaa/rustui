@@ -107,7 +107,7 @@ pub const CATALOG: [CatalogItem; 46] = [
         "slider",
         "Input",
         Partial,
-        "RustUI baseline demo; interaction/visual acceptance pending.",
+        "Controlled Slider demo with shared value, reverse, step, and disabled state; broader acceptance pending.",
         "docs/ui/macos-27/Utility Window.svg"
     ),
     item!(

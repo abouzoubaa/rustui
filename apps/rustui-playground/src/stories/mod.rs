@@ -31,6 +31,7 @@ pub(crate) fn browser_reference(profile: &str) -> Option<rustui::view::AnyView> 
     }
 }
 mod composition_gallery;
+mod slider_gallery;
 
 mod alert_gallery;
 mod animation_gallery;
@@ -103,6 +104,7 @@ use properties_panel::ButtonProperties;
 /// Returns existing runtime demos for their catalog entries.
 pub(crate) fn catalog_demo(key: &str) -> Option<AnyView> {
     match key {
+        "slider" => Some(AnyView::new(slider_gallery::demo())),
         "text" => Some(AnyView::new(text_specimen_gallery::demo())),
         "text_style_guide" => Some(AnyView::new(text_style_gallery::demo())),
         "combo_box" => Some(AnyView::new(combo_box_reconciliation_gallery::demo())),
@@ -159,6 +161,11 @@ pub(crate) fn split_view_demo() -> impl View {
 #[cfg(test)]
 mod catalog_demo_tests {
     use super::{MENU_BAR_REFERENCE_LABELS, catalog_demo};
+
+    #[test]
+    fn slider_catalog_routes_to_a_focused_demo() {
+        assert!(catalog_demo("slider").is_some());
+    }
 
     #[test]
     fn divider_catalog_reaches_horizontal_and_vertical_demo() {

@@ -203,7 +203,7 @@ lab-catalog-note-checkbox = RustUI baseline demo; interaction and visual accepta
 lab-catalog-note-divider = Horizontal and vertical Divider implemented and visually checked.
 lab-catalog-note-icon = Named icon wrapper implemented; runtime asset registration and visual acceptance pending.
 lab-catalog-note-image = File and application-asset Image adapter implemented; local PNG visual check passed.
-lab-catalog-note-slider = RustUI baseline demo; interaction and visual acceptance pending.
+lab-catalog-note-slider = Controlled Slider demo with shared value, reverse, step, and disabled state; broader acceptance pending.
 lab-catalog-note-toggle = RustUI baseline demo; interaction and visual acceptance pending.
 lab-catalog-note-picker = RustUI baseline demo; interaction and visual acceptance pending.
 lab-catalog-note-stepper = RustUI baseline demo; interaction and visual acceptance pending.
@@ -754,3 +754,11 @@ lab-theme-inspector-error = Theme inspection failed: {error}
 
 lab-theme-inspector-uncovered-no-renderer = Uncovered: {component}/{part} ({appearance}) — no renderer capability for this rule
 lab-theme-inspector-uncovered-properties = Uncovered: {component}/{part} ({appearance}) — unapplied properties: {properties}
+
+lab-slider-gallery-title = Slider · controlled value
+lab-slider-gallery-help = Both sliders share one value and move in steps of five.
+lab-slider-gallery-value = Value: { $value }
+lab-slider-gallery-horizontal = Horizontal slider
+lab-slider-gallery-reverse = Reversed slider
+lab-slider-gallery-reset = Reset
+lab-slider-gallery-toggle-disabled = Toggle disabled

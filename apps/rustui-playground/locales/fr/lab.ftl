@@ -203,7 +203,7 @@ lab-catalog-note-checkbox = Démonstration de base RustUI ; les validations d’
 lab-catalog-note-divider = Les séparateurs horizontal et vertical sont implémentés et leur rendu a été vérifié visuellement.
 lab-catalog-note-icon = Enveloppe d’icône nommée implémentée ; l’enregistrement des ressources à l’exécution et la validation visuelle restent à effectuer.
 lab-catalog-note-image = Adaptateur Image pour fichiers et ressources de l’application implémenté ; le rendu d’un PNG local a été vérifié.
-lab-catalog-note-slider = Démonstration de base RustUI ; les validations d’interaction et visuelle restent à effectuer.
+lab-catalog-note-slider = Démonstration du curseur contrôlé avec valeur partagée, inversion, pas et désactivation ; validation complète en attente.
 lab-catalog-note-toggle = Démonstration de base RustUI ; les validations d’interaction et visuelle restent à effectuer.
 lab-catalog-note-picker = Démonstration de base RustUI ; les validations d’interaction et visuelle restent à effectuer.
 lab-catalog-note-stepper = Démonstration de base RustUI ; les validations d’interaction et visuelle restent à effectuer.
@@ -754,3 +754,11 @@ lab-theme-inspector-error = Échec de l’inspection du thème : {error}
 
 lab-theme-inspector-uncovered-no-renderer = Non couvert : {component}/{part} ({appearance}) — aucune capacité de rendu pour cette règle
 lab-theme-inspector-uncovered-properties = Non couvert : {component}/{part} ({appearance}) — propriétés non appliquées : {properties}
+
+lab-slider-gallery-title = Curseur · valeur contrôlée
+lab-slider-gallery-help = Les deux curseurs partagent une valeur et avancent par pas de cinq.
+lab-slider-gallery-value = Valeur : { $value }
+lab-slider-gallery-horizontal = Curseur horizontal
+lab-slider-gallery-reverse = Curseur inversé
+lab-slider-gallery-reset = Réinitialiser
+lab-slider-gallery-toggle-disabled = Activer ou désactiver
