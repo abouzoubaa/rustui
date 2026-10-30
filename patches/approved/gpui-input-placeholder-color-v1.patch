@@ -1,0 +1,95 @@
+--- a/vendor/gpui-base-0.7.3/src/input/editor/highlighting.rs
++++ b/vendor/gpui-base-0.7.3/src/input/editor/highlighting.rs
+@@ -109,6 +109,8 @@
+ pub struct InputEditorStyle {
+     pub foreground: Hsla,
+     pub muted_foreground: Hsla,
++    /// Optional placeholder ink; falls back to muted foreground.
++    pub placeholder_foreground: Option<Hsla>,
+     pub background: Hsla,
+     pub border: Hsla,
+     pub selection: Hsla,
+@@ -150,6 +152,7 @@
+         Self {
+             foreground,
+             muted_foreground: or(self.muted_foreground, colors.muted_foreground),
++            placeholder_foreground: self.placeholder_foreground,
+             background: or(self.background, colors.surface),
+             border: or(self.border, colors.border),
+             selection,
+@@ -164,6 +167,7 @@
+         Self {
+             foreground: Hsla::default(),
+             muted_foreground: Hsla::default(),
++            placeholder_foreground: None,
+             background: Hsla::default(),
+             border: Hsla::default(),
+             selection: Hsla::default(),
+@@ -193,6 +197,17 @@
+         tokens.colors.border = hsla(0., 0., 0.15, 1.0);
+         tokens.colors.accent = hsla(0.6, 0.5, 0.5, 1.0);
+         tokens
++    }
++
++    #[test]
++    fn placeholder_override_survives_palette_resolution() {
++        let color = hsla(0.2, 0.3, 0.4, 1.0);
++        let style = InputEditorStyle {
++            placeholder_foreground: Some(color),
++            ..Default::default()
++        };
++        assert_eq!(style.resolved(&dark()).placeholder_foreground, Some(color));
++        assert_eq!(InputEditorStyle::default().resolved(&dark()).placeholder_foreground, None);
+     }
+ 
+     #[test]
+--- a/vendor/gpui-base-0.7.3/src/input/base/element.rs
++++ b/vendor/gpui-base-0.7.3/src/input/base/element.rs
+@@ -2543,7 +2543,7 @@
+         let (display_text, text_color) = if is_empty {
+             (
+                 &Rope::from(placeholder.as_str()),
+-                dim(state.editor_style.muted_foreground),
++                dim(state.editor_style.placeholder_foreground.unwrap_or(state.editor_style.muted_foreground)),
+             )
+         } else if state.masked {
+             (
+--- a/vendor/gpui-component-0.7.3/src/input/input.rs
++++ b/vendor/gpui-component-0.7.3/src/input/input.rs
+@@ -132,6 +132,7 @@
+     role: RoleOverride,
+     accessibility_id: Option<SharedString>,
+     aria_label: Option<SharedString>,
++    placeholder_color: Option<Hsla>,
+ 
+     /// An optional context menu builder to allow a custom context menu on the input.
+     ///
+@@ -206,6 +207,12 @@
+     /// Sets the GPUI identity of the input frame. By default it uses the state entity ID.
+     pub fn id(mut self, id: impl Into<ElementId>) -> Self {
+         self.id = Some(id.into());
++        self
++    }
++
++    /// Override the color used for placeholder text.
++    pub fn placeholder_color(mut self, color: Hsla) -> Self {
++        self.placeholder_color = Some(color);
+         self
+     }
+ 
+@@ -244,6 +251,7 @@
+             role: RoleOverride::default(),
+             accessibility_id: None,
+             aria_label: None,
++            placeholder_color: None,
+             context_menu_builder: None,
+             paste_handler: None,
+             token_renderer: None,
+@@ -557,6 +565,7 @@
+             gpui_base::input::InputEditorStyle {
+                 foreground: cx.theme().foreground,
+                 muted_foreground: cx.theme().muted_foreground,
++                placeholder_foreground: self.placeholder_color,
+                 background: cx.theme().editor_background(),
+                 border: cx.theme().border,
+                 selection: cx.theme().selection,

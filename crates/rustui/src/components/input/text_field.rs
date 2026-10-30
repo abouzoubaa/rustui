@@ -666,7 +666,8 @@ impl View for TextFieldView {
             // uses the theme's primary text color for readability.
             let theme = crate::theme::registry::active_theme(context.app())
                 .expect("a RustUI component theme requires an active theme");
-            input = input.text_color(search_text_color(&theme.profile, theme.mode));
+            let color = search_text_color(&theme.profile, theme.mode);
+            input = input.text_color(color).placeholder_color(color);
         }
         input.into_any_element()
     }
@@ -674,6 +675,22 @@ impl View for TextFieldView {
 
 #[cfg(test)]
 mod tests {
+    #[test]
+    fn input_placeholder_override_survives_theme_resolution() {
+        let ink = gpui::hsla(0.2, 0.3, 0.4, 1.0);
+        let tokens = gpui_base::SemanticThemeTokens::default();
+        let style = gpui_base::input::InputEditorStyle {
+            placeholder_foreground: Some(ink),
+            ..Default::default()
+        };
+        assert_eq!(style.resolved(&tokens).placeholder_foreground, Some(ink));
+        assert_eq!(
+            gpui_base::input::InputEditorStyle::default()
+                .resolved(&tokens)
+                .placeholder_foreground,
+            None
+        );
+    }
     use super::{
         Binding, CLEAR_BUTTON_TAB_STOP, TextField, TextFieldKind, TextFieldSize,
         clear_accessibility_label, disabled_text_color, placeholder_changed,

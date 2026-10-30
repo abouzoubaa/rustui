@@ -26,6 +26,7 @@ case "${1:-}" in
     verify_tree_accessibility_series
     python3 scripts/apply_block_stack_symbol_patch.py --verify
     python3 scripts/apply_gpui_component_calendar_locale_patch.py --check
+    python3 scripts/apply_gpui_input_placeholder_color_patch.py --check
     python3 scripts/verify_gpui_calendar_patch_stack.py
     python3 scripts/apply_gpui_component_select_title_patch.py --check
     python3 scripts/apply_gpui_select_rtl_patch.py --verify
@@ -53,6 +54,7 @@ case "${1:-}" in
     verify_tree_accessibility_series
     python3 scripts/apply_block_stack_symbol_patch.py --verify
     python3 scripts/apply_gpui_component_calendar_locale_patch.py --check
+    python3 scripts/apply_gpui_input_placeholder_color_patch.py --check
     python3 scripts/verify_gpui_calendar_patch_stack.py
     python3 scripts/apply_gpui_component_select_title_patch.py --check
     python3 scripts/apply_gpui_select_rtl_patch.py --verify
@@ -117,6 +119,7 @@ PY
     verify_tree_accessibility_series
     python3 scripts/apply_block_stack_symbol_patch.py --verify
     python3 scripts/apply_gpui_component_calendar_locale_patch.py --check
+    python3 scripts/apply_gpui_input_placeholder_color_patch.py --check
     python3 scripts/verify_gpui_calendar_patch_stack.py
     python3 scripts/apply_gpui_component_select_title_patch.py --check
     python3 scripts/apply_gpui_select_rtl_patch.py --verify
