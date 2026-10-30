@@ -1,3 +1,7 @@
+## R19 native Dialog outside-field focus and restoration — 2026-10-30
+
+On parent `dbfe1b21` plus this regression, the macOS-hosted GPUI Dialog focus test included a separate editable field behind the modal as well as its trigger. Six Tab and six Shift-Tab presses visited multiple modal controls without reaching either outside focus handle. Escape restored focus to the trigger; the outside field stayed unchanged and owner-bound modal editing still survived reopening. The Dialog suite passed 22/22 (`target/headstart/evidence/native-dialog-outside-suite-20261030.log`, SHA-256 `38034abb352423411798552598989c268e88a392232425885e51e059aac7e06e`). This covers one modal composition, not native Playground, pointer focus, nested modals or complete focus acceptance.
+
 ## R19 native Dialog bounded focus traversal — 2026-10-30
 
 On parent `7527b54a` plus this regression, a macOS-hosted GPUI test window opened the RustUI Dialog and traversed with Tab and Shift-Tab six times each. Both directions visited at least two distinct controls, retained focus and did not reach the underlying Dialog trigger; the owner text and Escape/reopen checks also passed. The focused test passed 1/1 (`target/headstart/evidence/native-dialog-focus-traversal-20261030.log`, SHA-256 `a859fd24e18086e0f4ef6ed8b9b2bcafd08a44ee0b9a3c55b4f8b8887472e255`). This test covers one underlying trigger and one modal composition, not arbitrary outside controls, native Playground, OS input or broad modal focus acceptance.

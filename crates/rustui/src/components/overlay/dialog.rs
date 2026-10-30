@@ -557,20 +557,35 @@ mod tests {
 
         struct Owner {
             text: String,
+            outside: String,
         }
         impl View for Owner {
             fn body(&self) -> impl View {
-                Dialog("native-owner-dialog", "Open").content(
-                    TextField(
-                        "Name",
-                        Binding::new(
-                            self.text.clone(),
-                            |owner: &Owner| owner.text.clone(),
-                            |owner, value| owner.text = value,
+                crate::layout::VStack::new()
+                    .child(
+                        Dialog("native-owner-dialog", "Open").content(
+                            TextField(
+                                "Name",
+                                Binding::new(
+                                    self.text.clone(),
+                                    |owner: &Owner| owner.text.clone(),
+                                    |owner, value| owner.text = value,
+                                ),
+                            )
+                            .id("dialog-owner-field"),
                         ),
                     )
-                    .id("dialog-owner-field"),
-                )
+                    .child(
+                        TextField(
+                            "Outside",
+                            Binding::new(
+                                self.outside.clone(),
+                                |owner: &Owner| owner.outside.clone(),
+                                |owner, value| owner.outside = value,
+                            ),
+                        )
+                        .id("outside-field"),
+                    )
             }
         }
         let theme = crate::theme::parse_theme(include_str!(concat!(
@@ -590,6 +605,7 @@ mod tests {
                 ComponentHost::new(
                     Owner {
                         text: String::new(),
+                        outside: String::new(),
                     },
                     cx,
                 )
@@ -598,11 +614,18 @@ mod tests {
             gpui_component::Root::new(owner, window, cx)
         });
         let owner = slot.borrow().clone().unwrap();
-        let trigger_focus = window.update(|window, app| {
+        let (trigger_focus, outside_focus) = window.update(|window, app| {
             let _ = window.draw(app);
             window.focus_next(app);
             let _ = window.draw(app);
-            window.focused(app).expect("dialog trigger focus")
+            let trigger = window.focused(app).expect("dialog trigger focus");
+            window.focus_next(app);
+            let _ = window.draw(app);
+            let outside = window.focused(app).expect("outside field focus");
+            assert_ne!(trigger, outside);
+            window.focus(&trigger, app);
+            let _ = window.draw(app);
+            (trigger, outside)
         });
         let key = gpui::Keystroke::parse("enter").unwrap();
         window.simulate_event(gpui::KeyDownEvent {
@@ -631,6 +654,7 @@ mod tests {
                     assert!(window.has_active_dialog(app));
                     let focus = window.focused(app).expect("open dialog has focus");
                     assert_ne!(focus, trigger_focus, "focus escaped to dialog trigger");
+                    assert_ne!(focus, outside_focus, "focus escaped to outside field");
                     focus
                 });
                 if !visited.contains(&focus) {
@@ -643,7 +667,9 @@ mod tests {
         window.update(|window, app| {
             let _ = window.draw(app);
             assert!(!window.has_active_dialog(app));
+            assert_eq!(window.focused(app), Some(trigger_focus.clone()));
             assert_eq!(owner.read(app).component().text, "RustUI");
+            assert!(owner.read(app).component().outside.is_empty());
         });
         let key = gpui::Keystroke::parse("enter").unwrap();
         window.simulate_event(gpui::KeyDownEvent {
