@@ -1,3 +1,7 @@
+## Native Playground all-target check — 2026-10-30
+
+On clean commit `39c58f26`, macOS `./scripts/cargo-headstart check --profile headstart --locked --offline -p rustui-playground --all-targets` exited successfully. The log reports six warnings for the Playground library test target (`target/headstart/evidence/native-playground-check-39c58f26-20261030.log`, SHA-256 `39ed5159a121b9108d52b95c446b2807276d6bf53cd1f5f4e011f151de9d7020`). This checks compilation of native Playground targets after theme reload and localization changes; it does not execute them or establish runtime, visual, OS input or release acceptance.
+
 ## R13 native Playground theme reload status — 2026-10-30
 
 The native theme/layout story now keeps reload status as a message key and arguments, so ready, open/reload error, applied appearance, recovery and watcher state render in the current English, French or Arabic catalog; error details remain available. Direction readouts now use localized messages and numeric arguments. Existing English fallback strings remain for the deferred accessibility labels, and the Web-specific reload status remains outside this native milestone. Three runtime locale groups validated; focused Playground story tests passed 3/3 (`target/headstart/evidence/native-theme-status-locales-20261030.log`, SHA-256 `a6821853490bd41753fc97fdfb0ae51ef1eed17cb4598e8e3023b5f53204a628`) on parent `097cc013` plus this change. Native Playground visual, RTL, and live locale-switch acceptance remain open.
