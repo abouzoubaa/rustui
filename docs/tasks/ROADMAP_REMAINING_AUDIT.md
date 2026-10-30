@@ -1,3 +1,9 @@
+## Native-first direction — 2026-10-30
+
+The user directed the session to finish its current Web/Wasm task, then prioritize native macOS. Further Web/Wasm work is deferred until requested. The embedded preview viewport task recorded below was completed before this direction. Web/Wasm release acceptance remains open; native progress alone does not establish readiness for the previously declared dual-platform scope. Accessibility and VoiceOver, Japanese, and languages beyond English, French and Arabic remain deferred as previously directed.
+
+The next native investigation is narrow NavigationSplit keyboard navigation. An exploratory GPUI test-window attempt focused a control and sent Enter but did not change the retained detail state. The test did not establish that focus was on Back, so this is not yet evidence of a product defect. The experimental patch and test log are preserved at `/tmp/rustui-navigation-split-test-wip.patch` and `/tmp/rustui-navigation-split-test.log`. Verify the focused control and rendered geometry before deciding whether a fix is needed. No native GUI or OS-input acceptance is claimed by this experiment.
+
 ## R13 native Playground segmented and button-group stories — 2026-10-30
 
 The canonical Playground's segmented-control and button-group examples now resolve their headings, action labels and selected/last-action readouts from English, French and Arabic catalogs while preserving their existing stable IDs and owner actions. The readouts use RustUI's direction-aware HStack. Three locale groups validated and focused story tests passed 4/4 on parent `08eb01d9` plus this change (`target/headstart/evidence/native-navigation-story-locales-20261030.log`, SHA-256 `ca24b4d79cd87c31f01dfe1d8e38fe60d47536bcbd3daaf1cfd1670be5fc2409`). Actual native visual, narrow-width, live-switch and broader locale acceptance remain open.
