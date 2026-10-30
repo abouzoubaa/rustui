@@ -1,4 +1,9 @@
+## R13/R15 native ColorPicker keyboard trigger — 2026-10-30
+
+On parent `7d3999bd` plus this test change, a macOS-hosted GPUI test window focused the ColorPicker trigger and sent Enter key-down and key-up events; the picker opened and remained open through an English-to-Arabic locale switch after programmatic HSLA tab selection. The focused regression passed 1/1 (`target/headstart/evidence/native-color-picker-trigger-keyboard-20261030.log`, SHA-256 `db2a94648006ab9e578658ed1a8cd488c50329b70bafbc90b9bb48f6b7dec6ef`). This does not establish pointer interaction, native Playground visual behavior, OS input handling, or complete locale acceptance.
+
 ## R03 native input public contract documentation — 2026-10-30
+
 
 `docs/PUBLIC_API.md` now describes the current GPUI Base checkable controls, the RustUI-composed ColorPicker popup and retained GPUI color state instead of the old ColorSelect implementation, and the current Stepper range, displayed locale and direction behavior. The descriptions were checked against the source on parent `9f7db1c8`; `git diff --check` passed. This documentation correction does not close public API completeness, native visual/keyboard or release acceptance.
 

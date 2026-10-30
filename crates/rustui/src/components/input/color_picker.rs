@@ -952,14 +952,25 @@ mod rendered_locale_tests {
                 )
                 .unwrap();
             let state = retained.read(app).state.clone();
-            state.update(app, |state, cx| {
-                state.set_open(true, cx);
-                state.set_active_tab(1, cx);
-            });
+            window.focus_next(app);
             let _ = window.draw(app);
             state
         });
+        let key = gpui::Keystroke::parse("enter").unwrap();
+        window.simulate_event(gpui::KeyDownEvent {
+            keystroke: key.clone(),
+            is_held: false,
+            prefer_character_input: false,
+        });
+        window.simulate_event(gpui::KeyUpEvent { keystroke: key });
         window.update(|window, app| {
+            let _ = window.draw(app);
+            assert!(
+                state.read(app).is_open(),
+                "keyboard trigger did not open the picker"
+            );
+            state.update(app, |state, cx| state.set_active_tab(1, cx));
+            let _ = window.draw(app);
             set_locale(ar, app);
             let _ = window.draw(app);
             assert!(state.read(app).is_open());
