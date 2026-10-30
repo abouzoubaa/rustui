@@ -1061,6 +1061,117 @@ mod rendered_locale_tests {
     use gpui_component::Root;
 
     #[gpui::test]
+    fn disabled_picker_does_not_open_with_keyboard_and_can_be_reenabled(
+        cx: &mut gpui::TestAppContext,
+    ) {
+        struct KeyboardOwner {
+            color: Option<Hsla>,
+            disabled: bool,
+        }
+        impl View for KeyboardOwner {
+            fn body(&self) -> impl View {
+                ColorPicker(
+                    "Color",
+                    Binding::new(
+                        self.color,
+                        |owner: &KeyboardOwner| owner.color,
+                        |owner, color| owner.color = color,
+                    ),
+                )
+                .id("keyboard-color")
+                .disabled(self.disabled)
+            }
+        }
+        let theme = parse_theme(include_str!(concat!(
+            env!("CARGO_MANIFEST_DIR"),
+            "/../../themes/macos27.json"
+        )))
+        .unwrap();
+        cx.update(|app| {
+            gpui_component::init(app);
+            activate_theme(&theme, Some(AppearanceMode::Dark), app).unwrap();
+        });
+        let owner_slot = Rc::new(RefCell::new(None));
+        let saved = owner_slot.clone();
+        let (_, window) = cx.add_window_view(|window, cx| {
+            let owner = cx.new(|cx| {
+                ComponentHost::new(
+                    KeyboardOwner {
+                        color: None,
+                        disabled: false,
+                    },
+                    cx,
+                )
+            });
+            *saved.borrow_mut() = Some(owner.clone());
+            Root::new(owner, window, cx)
+        });
+        let owner = owner_slot.borrow().clone().unwrap();
+        let state = window.update(|window, app| {
+            let _ = window.draw(app);
+            let retained = owner
+                .read(app)
+                .retained_entity_for_test::<RetainedColorPicker>(
+                    vec![],
+                    Identity::from("keyboard-color"),
+                )
+                .unwrap();
+            let state = retained.read(app).state.clone();
+            window.focus_next(app);
+            let _ = window.draw(app);
+            state
+        });
+        let key = gpui::Keystroke::parse("enter").unwrap();
+        window.simulate_event(gpui::KeyDownEvent {
+            keystroke: key.clone(),
+            is_held: false,
+            prefer_character_input: false,
+        });
+        window.simulate_event(gpui::KeyUpEvent {
+            keystroke: key.clone(),
+        });
+        window.update(|window, app| {
+            let _ = window.draw(app);
+            assert!(state.read(app).is_open());
+            owner.update(app, |host, cx| {
+                host.component_mut().disabled = true;
+                cx.notify();
+            });
+            let _ = window.draw(app);
+            assert!(!state.read(app).is_open());
+        });
+        window.simulate_event(gpui::KeyDownEvent {
+            keystroke: key.clone(),
+            is_held: false,
+            prefer_character_input: false,
+        });
+        window.simulate_event(gpui::KeyUpEvent {
+            keystroke: key.clone(),
+        });
+        window.update(|window, app| {
+            let _ = window.draw(app);
+            assert!(!state.read(app).is_open());
+            owner.update(app, |host, cx| {
+                host.component_mut().disabled = false;
+                cx.notify();
+            });
+            let _ = window.draw(app);
+            window.focus_next(app);
+            let _ = window.draw(app);
+        });
+        window.simulate_event(gpui::KeyDownEvent {
+            keystroke: key.clone(),
+            is_held: false,
+            prefer_character_input: false,
+        });
+        window.simulate_event(gpui::KeyUpEvent { keystroke: key });
+        window.update(|window, app| {
+            let _ = window.draw(app);
+            assert!(state.read(app).is_open());
+        });
+    }
+
+    #[gpui::test]
     fn disabling_open_picker_closes_it_and_rejects_late_changes(cx: &mut gpui::TestAppContext) {
         struct DisabledOwner {
             color: Option<Hsla>,
