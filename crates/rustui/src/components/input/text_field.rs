@@ -1169,6 +1169,35 @@ mod tests {
             assert_eq!(state.read(app).value().as_ref(), "externalé");
             assert_eq!(owner.read(app).component().value, "externalé");
         });
+        window.update(|window, app| {
+            state.update(app, |state, cx| {
+                state.replace_and_mark_text_in_range(Some(9..9), "😀", Some(2..2), window, cx);
+            });
+            assert_eq!(state.read(app).value().as_ref(), "externalé😀");
+            assert!(
+                state
+                    .update(app, |state, cx| state.marked_text_range(window, cx))
+                    .is_some()
+            );
+            owner.update(app, |host, cx| {
+                host.component_mut().value = "جديد".into();
+                cx.notify();
+            });
+            let _ = window.draw(app);
+            assert_eq!(state.read(app).value().as_ref(), "جديد");
+        });
+        window.cx.run_until_parked();
+        window.update(|window, app| {
+            state.update(app, |state, cx| {
+                state.replace_text_in_range(None, "😀", window, cx);
+            });
+        });
+        window.cx.run_until_parked();
+        window.update(|window, app| {
+            let _ = window.draw(app);
+            assert_eq!(state.read(app).value().as_ref(), "جديد😀");
+            assert_eq!(owner.read(app).component().value, "جديد😀");
+        });
     }
 
     #[test]

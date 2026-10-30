@@ -1,3 +1,7 @@
+## R16 native owner updates during Unicode preedit — 2026-10-30
+
+Extended the existing GPUI event-path tests for TextField and multiline TextEditor with a supplementary Unicode preedit (UTF-16 surrogate pair), an external Arabic owner update, and a subsequent commit. Both focused tests passed, 1/1 each. Evidence: `target/headstart/evidence/native-text-field-ime-unicode-20261030.log` SHA-256 `98db3e3ee8cc7fc2759ae8b6cb0024a6b54d53084d8bff34ab81855525d62f17`; `target/headstart/evidence/native-text-editor-ime-unicode-20261030.log` SHA-256 `6e0b69e65225d53ddd907bc20003f472ca4acebaa946d1f5767c0f0ad03bf274`. This uses simulated GPUI input events; real macOS IME and wider text-input acceptance remain open.
+
 ## R13/R19 native Dialog default labels — 2026-10-30
 
 Dialog's default Confirm and Cancel actions now retain readable English labels when the active catalog is absent or returns a blank message; translated messages and explicit caller labels retain their existing behavior. The focused Dialog library suite passed 23/23 (`target/headstart/evidence/native-dialog-fallback-20261030.log`, SHA-256 `e4fb4c2daab36f606e31c64c2e17a43ba82180e44b0568debaadc35cf640d22d`). Native Playground interaction and broader locale and overlay acceptance remain open.
