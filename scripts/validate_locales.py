@@ -4,6 +4,7 @@
 import argparse
 import json
 import re
+import subprocess
 import sys
 from pathlib import Path
 
@@ -60,6 +61,10 @@ def main() -> int:
         type=Path,
         default=repository / "apps/rustui-playground/locales",
     )
+    parser.add_argument(
+        "--runtime", action="store_true",
+        help="also compile and run the bundled RustUI runtime catalog validation",
+    )
     args = parser.parse_args()
 
     try:
@@ -92,7 +97,30 @@ def main() -> int:
 
         validate_catalog_group(args.root, "rustui.ftl", runtime_locales)
         validate_catalog_group(args.lab_root, "lab.ftl", runtime_locales)
-        print(f"Validated {len(paths)} runtime locale records and catalog groups.")
+        print(
+            f"Validated {len(paths)} locale records and catalog ID groups; "
+            "message patterns require runtime validation."
+        )
+        if args.runtime:
+            if (args.root.resolve() != (repository / "locales").resolve()
+                    or args.lab_root.resolve() != (repository / "apps/rustui-playground/locales").resolve()):
+                raise ValueError("--runtime only validates the bundled repository catalogs")
+            command = [
+                str(repository / "scripts/cargo-headstart"), "test", "-p", "rustui-playground",
+                "--lib", "stories::locale_selector::tests::all_bundled_catalogs_pass_runtime_validation",
+                "--locked", "--offline", "--", "--exact",
+            ]
+            result = subprocess.run(command, cwd=repository, check=False, capture_output=True, text=True)
+            print(result.stdout, end="")
+            print(result.stderr, end="", file=sys.stderr)
+            if result.returncode:
+                raise ValueError(f"Runtime catalog validation failed (exit {result.returncode})")
+            if "test result: ok. 1 passed; 0 failed;" not in result.stdout:
+                raise ValueError("Runtime catalog validation did not execute its required test")
+            print(
+                "Validated bundled catalog contracts with RustUI runtime; "
+                "the intentional malformed demo is exempt."
+            )
         return 0
     except (OSError, ValueError, json.JSONDecodeError) as error:
         print(error, file=sys.stderr)

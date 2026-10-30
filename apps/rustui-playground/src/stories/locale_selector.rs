@@ -128,6 +128,26 @@ mod tests {
     use super::*;
 
     #[test]
+    fn all_bundled_catalogs_pass_runtime_validation() {
+        let _ = catalogs();
+    }
+
+    #[test]
+    fn runtime_validation_rejects_unsupported_interpolation_syntax() {
+        let language = locale("en");
+        let mut catalogs = Catalogs::new(language.clone());
+        catalogs
+            .insert(Catalog::parse(language.clone(), "value = Value: { $value }").unwrap())
+            .unwrap();
+        let report = validate_catalogs(&catalogs);
+        assert!(
+            report.invalid_patterns[&language]
+                .iter()
+                .any(|id| id.as_str() == "value")
+        );
+    }
+
+    #[test]
     fn slider_gallery_value_formats_in_every_runtime_locale() {
         use rustui::localization::{MessageArguments, format_integer};
         let catalogs = catalogs();

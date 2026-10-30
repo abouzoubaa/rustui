@@ -133,12 +133,15 @@ and feature set for warmup and normal development.
 ```sh
 python3 scripts/validate_themes.py --plans-only
 python3 scripts/validate_locales.py
+python3 scripts/validate_locales.py --runtime
 ```
 
-The theme command validates planning records only. The locale command validates the
-three runtime locale records, the supported catalog syntax, duplicate/empty messages,
-and matching message-ID sets across the framework and Playground catalog groups. It does not
-claim pluralization, interpolation, formatting, bidi, or visual acceptance.
+The theme command validates planning records only. The basic locale command checks
+the three runtime locale records, message lines, duplicate/empty messages, and
+matching message-ID sets. It does not parse message patterns. The `--runtime`
+option also runs RustUI's bundled-catalog validation through Headstart, with the
+intentional malformed-pattern demonstration exempted. Neither command establishes
+native visual, bidi, or accessibility acceptance.
 
 ## Structured dependency reuse evidence (P2b)
 
