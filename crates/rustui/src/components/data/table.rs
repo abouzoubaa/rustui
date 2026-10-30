@@ -767,6 +767,18 @@ mod tests {
                         .unwrap()
                 });
                 window.run_until_parked();
+                window.simulate_event(gpui::ScrollWheelEvent {
+                    position: gpui::point(gpui::px(100.), gpui::px(45.)),
+                    delta: gpui::ScrollDelta::Pixels(gpui::point(gpui::px(-80.), gpui::px(0.))),
+                    ..Default::default()
+                });
+                window.update(|window, app| {
+                    let _ = window.draw(app);
+                    assert!(
+                        state.read(app).horizontal_scroll_handle.offset().x < gpui::px(0.),
+                        "wheel did not scroll: rows={rows} width={column_width}"
+                    );
+                });
                 for y in [10., 30., 50., 100.] {
                     window.simulate_event(gpui::ScrollWheelEvent {
                         position: gpui::point(gpui::px(100.), gpui::px(y)),
