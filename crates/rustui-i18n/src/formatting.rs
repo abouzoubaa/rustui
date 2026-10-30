@@ -1013,6 +1013,43 @@ fn ordinal_category_decimal(value: &str, locale: &Locale) -> &'static str {
     }
 }
 
+fn arabic_latin_symbols(locale: &Locale) -> (char, char) {
+    thread_local! {
+        static LAST: std::cell::RefCell<Option<(String, (char, char))>> = const { std::cell::RefCell::new(None) };
+    }
+    LAST.with(|cache| {
+        if let Some((key, symbols)) = cache.borrow().as_ref()
+            && key == locale.as_str()
+        {
+            return *symbols;
+        }
+        use writeable::Writeable;
+        let symbols = locale
+            .as_str()
+            .parse::<icu_locale_core::Locale>()
+            .ok()
+            .and_then(|locale| {
+                icu_decimal::DecimalFormatter::try_new(locale.into(), Default::default()).ok()
+            })
+            .map(|formatter| {
+                formatter
+                    .format(&"1234.5".parse().expect("valid decimal sample"))
+                    .write_to_string()
+                    .into_owned()
+            })
+            .and_then(|sample| {
+                let mut symbols = sample.chars().filter(|ch| !ch.is_ascii_digit());
+                match (symbols.next(), symbols.next(), symbols.next()) {
+                    (Some(group), Some(decimal), None) => Some((group, decimal)),
+                    _ => None,
+                }
+            })
+            .unwrap_or((',', '.'));
+        *cache.borrow_mut() = Some((locale.as_str().to_owned(), symbols));
+        symbols
+    })
+}
+
 pub fn format_integer(value: i64, locale: &Locale) -> String {
     let language = locale.primary_language();
     let (separator, default_arabic_digits) = match language {
@@ -1029,7 +1066,7 @@ pub fn format_integer(value: i64, locale: &Locale) -> String {
     };
     let separator = match numbering_system_override(locale) {
         Some("arab") => '\u{066c}',
-        Some("latn") if language == "ar" => ',',
+        Some("latn") if language == "ar" => arabic_latin_symbols(locale).0,
         _ => separator,
     };
 
@@ -1079,7 +1116,7 @@ pub fn format_decimal(value: &str, locale: &Locale) -> String {
     };
     let (group_separator, decimal_separator) = match numbering_system_override(locale) {
         Some("arab") => ('\u{066c}', '\u{066b}'),
-        Some("latn") if locale.primary_language() == "ar" => (',', '.'),
+        Some("latn") if locale.primary_language() == "ar" => arabic_latin_symbols(locale),
         _ => (group_separator, decimal_separator),
     };
 
@@ -1373,6 +1410,27 @@ mod tests {
             assert_eq!(format_integer(1_234, locale), "١٬٢٣٤");
             assert_eq!(format_decimal("1234.5", locale), "١٬٢٣٤٫٥");
         }
+    }
+
+    #[test]
+    fn moroccan_arabic_latin_number_symbols_match_icu() {
+        let locale = Locale::parse("ar-MA-u-nu-latn").unwrap();
+        let formatter = crate::locale_runtime::LocaleFormatter::try_new(&locale).unwrap();
+        assert_eq!(formatter.format_decimal("1234.50").unwrap(), "1.234,50");
+        assert_eq!(
+            format_integer(1_234, &locale),
+            formatter.format_integer(1_234)
+        );
+        assert_eq!(
+            format_decimal("1234.50", &locale),
+            formatter.format_decimal("1234.50").unwrap()
+        );
+        let egypt = Locale::parse("ar-EG-u-nu-latn").unwrap();
+        assert_eq!(format_decimal("1234.5", &egypt), "1,234.5");
+        assert_eq!(format_decimal("1234.5", &locale), "1.234,5");
+        let unknown_calendar = Locale::parse("ar-MA-u-ca-unknown-nu-latn").unwrap();
+        assert_eq!(format_decimal("1234.5", &unknown_calendar), "1.234,5");
+        assert_eq!(format_decimal("1234.5e2", &locale), "1.234,5e2");
     }
 
     #[test]
