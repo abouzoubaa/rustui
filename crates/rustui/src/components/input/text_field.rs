@@ -531,7 +531,11 @@ impl View for TextFieldView {
         }
 
         let writer = retained.read(context.app()).writer.clone();
-        replace_event_writer(&writer, context.binding_writer(self.value.clone()));
+        if self.disabled || self.readonly {
+            *writer.borrow_mut() = None;
+        } else {
+            replace_event_writer(&writer, context.binding_writer(self.value.clone()));
+        }
         if created {
             let current_writer = writer.clone();
             context.subscribe_retained(&identity, &state, move |state, event: &InputEvent, cx| {
@@ -1198,6 +1202,104 @@ mod tests {
             assert_eq!(state.read(app).value().as_ref(), "جديد😀");
             assert_eq!(owner.read(app).component().value, "جديد😀");
         });
+    }
+
+    #[gpui::test]
+    fn disabled_retained_input_rejects_late_change_and_resumes(cx: &mut gpui::TestAppContext) {
+        use super::RetainedTextField;
+        use crate::{runtime::component_host::ComponentHost, view::View};
+
+        struct Owner {
+            value: String,
+            disabled: bool,
+            readonly: bool,
+        }
+        impl View for Owner {
+            fn body(&self) -> impl View {
+                TextField(
+                    "Name",
+                    Binding::new(
+                        self.value.clone(),
+                        |owner: &Owner| owner.value.clone(),
+                        |owner, next| owner.value = next,
+                    ),
+                )
+                .id("disabled-input")
+                .disabled(self.disabled)
+                .readonly(self.readonly)
+            }
+        }
+        let theme = parse_theme(include_str!(concat!(
+            env!("CARGO_MANIFEST_DIR"),
+            "/../../themes/macos27.json"
+        )))
+        .unwrap();
+        cx.update(|app| {
+            gpui_component::init(app);
+            crate::theme::activate_theme(&theme, Some(AppearanceMode::Dark), app).unwrap();
+        });
+        let (owner, window) = cx.add_window_view(|_, cx| {
+            ComponentHost::new(
+                Owner {
+                    value: "initial".into(),
+                    disabled: false,
+                    readonly: false,
+                },
+                cx,
+            )
+        });
+        let state = window.update(|window, app| {
+            let _ = window.draw(app);
+            let retained = owner
+                .read(app)
+                .retained_entity_for_test::<RetainedTextField>(
+                    vec![],
+                    Identity::from("disabled-input"),
+                )
+                .unwrap();
+            retained.read(app).state.clone()
+        });
+        window.update(|window, app| {
+            owner.update(app, |host, cx| {
+                host.component_mut().disabled = true;
+                host.component_mut().value = "external".into();
+                cx.notify();
+            });
+            let _ = window.draw(app);
+            assert_eq!(state.read(app).value().as_ref(), "external");
+            state.update(app, |state, cx| {
+                state.set_value("late", window, cx);
+                cx.emit(gpui_component::input::InputEvent::Change);
+            });
+        });
+        window.cx.run_until_parked();
+        window.update(|_, app| assert_eq!(owner.read(app).component().value, "external"));
+        window.update(|window, app| {
+            owner.update(app, |host, cx| {
+                host.component_mut().disabled = false;
+                cx.notify();
+            });
+            let _ = window.draw(app);
+            state.update(app, |state, cx| {
+                state.set_value("fresh", window, cx);
+                cx.emit(gpui_component::input::InputEvent::Change);
+            });
+        });
+        window.cx.run_until_parked();
+        window.update(|_, app| assert_eq!(owner.read(app).component().value, "fresh"));
+        window.update(|window, app| {
+            owner.update(app, |host, cx| {
+                host.component_mut().readonly = true;
+                cx.notify();
+            });
+            let _ = window.draw(app);
+            state.update(app, |state, cx| {
+                state.set_value("late readonly", window, cx);
+                cx.emit(gpui_component::input::InputEvent::Change);
+            });
+        });
+        window.cx.run_until_parked();
+        window.update(|_, app| assert_eq!(owner.read(app).component().value, "fresh"));
     }
 
     #[test]
