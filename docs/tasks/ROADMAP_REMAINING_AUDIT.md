@@ -1,6 +1,10 @@
+## R17 rendered keyed-list restoration — 2026-10-30
+
+A GPUI test window now draws the list, removes its selected item, redraws, restores the item and redraws before deferred owner updates run. Without the guard from `857fa073`, the test failed because the selection was cleared (`target/headstart/evidence/native-keyed-reinsert-before-20261030.log`, SHA-256 `ab5cdf906fc2f67b19bcae770e807d4e54f61442b98182bb3456dbfffea2a6c9`). With the guard, the full keyed-list suite passed 14/14 (`native-keyed-reinsert-rendered-suite-20261030.log`, SHA-256 `3f7c7a8503daf5b7c0eb7b209239acc812a48364d345ec56477d244b589c2f31`). This is GPUI test-window evidence; actual macOS Playground and broader collection acceptance remain open.
+
 ## R17 keyed-list deferred normalization — 2026-10-30
 
-A queued clear for a removed selected ID now checks the list's latest resolved selection before writing to the owner. If the same ID has become valid again after a later render, the old clear is rejected; an unchanged missing ID still clears, and a newer owner selection remains protected. The keyed-list suite passed 13/13 using `./scripts/cargo-headstart test -p rustui --lib --profile headstart --locked --offline components::data::keyed_list::tests::`. Evidence: `target/headstart/evidence/native-keyed-reinsert-20261030.log`, SHA-256 `af54003dc8cd4e2e336740e71cee67539a32256f14dbe624ff36a506a4647e53`. The restored-ID interleaving is covered at the normalization helper boundary; a rendered deferred-event regression and native Playground acceptance remain open.
+A queued clear for a removed selected ID now checks the list's latest resolved selection before writing to the owner. If the same ID has become valid again after a later render, the old clear is rejected; an unchanged missing ID still clears, and a newer owner selection remains protected. The keyed-list suite passed 13/13 using `./scripts/cargo-headstart test -p rustui --lib --profile headstart --locked --offline components::data::keyed_list::tests::`. Evidence: `target/headstart/evidence/native-keyed-reinsert-20261030.log`, SHA-256 `af54003dc8cd4e2e336740e71cee67539a32256f14dbe624ff36a506a4647e53`. The restored-ID interleaving was initially covered at the normalization helper boundary; the subsequent rendered regression is recorded above.
 
 ## R20 stale async error — 2026-10-30
 

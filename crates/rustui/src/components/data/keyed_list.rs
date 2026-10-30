@@ -522,6 +522,7 @@ mod tests {
     struct SearchOwner {
         selection: Option<String>,
         searchable: bool,
+        include_a: bool,
         writes: usize,
     }
 
@@ -546,9 +547,11 @@ mod tests {
                     KeyedList(
                         "keyed-search",
                         [
-                            KeyedListItem::new("a", "Alpha"),
-                            KeyedListItem::new("b", "Beta"),
-                        ],
+                            self.include_a.then(|| KeyedListItem::new("a", "Alpha")),
+                            Some(KeyedListItem::new("b", "Beta")),
+                        ]
+                        .into_iter()
+                        .flatten(),
                         selection,
                     )
                     .searchable(self.searchable)
@@ -556,6 +559,49 @@ mod tests {
                 )
                 .into_any_element()
         }
+    }
+
+    #[gpui::test]
+    fn restored_item_survives_queued_selection_clear(cx: &mut gpui::TestAppContext) {
+        let theme = crate::theme::parse_theme(include_str!(concat!(
+            env!("CARGO_MANIFEST_DIR"),
+            "/../../themes/macos27.json"
+        )))
+        .unwrap();
+        cx.update(|app| {
+            gpui_component::init(app);
+            crate::theme::activate_theme(&theme, Some(crate::theme::AppearanceMode::Dark), app)
+                .unwrap();
+        });
+        let (owner, window) = cx.add_window_view(|_, app| {
+            crate::runtime::ComponentHost::new(
+                SearchOwner {
+                    selection: Some("a".into()),
+                    searchable: false,
+                    include_a: true,
+                    writes: 0,
+                },
+                app,
+            )
+        });
+        window.update(|window, app| {
+            let _ = window.draw(app);
+            owner.update(app, |host, cx| {
+                host.component_mut().include_a = false;
+                cx.notify();
+            });
+            let _ = window.draw(app);
+            owner.update(app, |host, cx| {
+                host.component_mut().include_a = true;
+                cx.notify();
+            });
+            let _ = window.draw(app);
+        });
+        window.cx.run_until_parked();
+        window.update(|_, app| {
+            assert_eq!(owner.read(app).component().selection.as_deref(), Some("a"));
+            assert_eq!(owner.read(app).component().writes, 0);
+        });
     }
 
     #[gpui::test]
@@ -575,6 +621,7 @@ mod tests {
                 SearchOwner {
                     selection: Some("a".into()),
                     searchable: true,
+                    include_a: true,
                     writes: 0,
                 },
                 app,
