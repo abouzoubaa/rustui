@@ -2210,6 +2210,109 @@ fn current_keyboard_selection(
 #[cfg(test)]
 mod current_selection_regressions {
     use super::*;
+
+    #[gpui::test]
+    fn rendered_node_editor_moves_and_deletes_selected_node(cx: &mut gpui::TestAppContext) {
+        use crate::{components::advanced::node_editor::NodeEditor, runtime::ComponentHost};
+
+        struct EditorOwner {
+            graph: GraphDocument,
+            selected: Option<String>,
+            viewport: GraphViewport,
+        }
+        impl View for EditorOwner {
+            fn body(&self) -> impl View {
+                NodeEditor(
+                    "keyboard-editor",
+                    Binding::new(
+                        self.graph.clone(),
+                        |o: &Self| o.graph.clone(),
+                        |o, v| o.graph = v,
+                    ),
+                    Binding::new(
+                        self.selected.clone(),
+                        |o: &Self| o.selected.clone(),
+                        |o, v| o.selected = v,
+                    ),
+                    Binding::new(self.viewport, |o: &Self| o.viewport, |o, v| o.viewport = v),
+                )
+            }
+        }
+        let theme = crate::theme::parse_theme(include_str!(concat!(
+            env!("CARGO_MANIFEST_DIR"),
+            "/../../themes/macos27.json"
+        )))
+        .unwrap();
+        cx.update(|app| {
+            gpui_component::init(app);
+            crate::theme::activate_theme(&theme, Some(crate::theme::AppearanceMode::Dark), app)
+                .unwrap();
+        });
+        let rect = CanvasRect::new(0.0, 0.0, 100.0, 80.0).unwrap();
+        let output = GraphPort::new("out", "Output", GraphPortDirection::Output).unwrap();
+        let input = GraphPort::new("in", "Input", GraphPortDirection::Input).unwrap();
+        let graph = GraphDocument::new(
+            [
+                GraphNode::new("a", "A", rect, [output]).unwrap(),
+                GraphNode::new("b", "B", rect, [input]).unwrap(),
+            ],
+            [GraphEdge::new(
+                "edge",
+                GraphEndpoint::new("a", "out"),
+                GraphEndpoint::new("b", "in"),
+            )
+            .unwrap()],
+        )
+        .unwrap();
+        let viewport =
+            GraphViewport::new(CanvasSize::new(600.0, 400.0).unwrap(), 0.0, 0.0, 1.0).unwrap();
+        let (owner, window) = cx.add_window_view(|_, app| {
+            ComponentHost::new(
+                EditorOwner {
+                    graph,
+                    selected: Some("a".into()),
+                    viewport,
+                },
+                app,
+            )
+        });
+        window.update(|window, app| {
+            let _ = window.draw(app);
+            let state = owner
+                .read(app)
+                .retained_entity_for_test::<Interaction>(
+                    vec![],
+                    Identity::from("graph-interaction:keyboard-editor"),
+                )
+                .unwrap();
+            let focus = state.read(app).focus.clone();
+            focus.focus(window, app);
+            let _ = window.draw(app);
+        });
+        window.simulate_keystrokes("right");
+        window.update(|window, app| {
+            let _ = window.draw(app);
+            assert_eq!(
+                owner
+                    .read(app)
+                    .component()
+                    .graph
+                    .node("a")
+                    .unwrap()
+                    .rect()
+                    .x,
+                10.0
+            );
+        });
+        window.simulate_keystrokes("backspace");
+        window.update(|window, app| {
+            let _ = window.draw(app);
+            assert!(owner.read(app).component().graph.node("a").is_none());
+            assert!(owner.read(app).component().graph.node("b").is_some());
+            assert!(owner.read(app).component().graph.edges().is_empty());
+            assert_eq!(owner.read(app).component().selected, None);
+        });
+    }
     struct Owner {
         document: GraphDocument,
         selected: Option<String>,

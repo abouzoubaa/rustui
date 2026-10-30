@@ -1,3 +1,7 @@
+## R35/R36 rendered NodeEditor keyboard path — 2026-10-30
+
+A GPUI test window focused the public RustUI NodeEditor surface, moved its selected node with the Right key, then deleted it with Backspace. The owner graph reflected the movement and deletion, removed the incident edge, retained the other node, and cleared selection. The focused test passed 1/1 (`target/headstart/evidence/native-node-editor-keyboard-20261030.log`, SHA-256 `af5375125ad09a625de866989a0f1f77ec58bd81b8106c2bde839becb4c48270`). This is test-window evidence; native Playground, pointer/drag, broader graph behavior and release acceptance remain open.
+
 ## R04/R05 root window lifecycle — 2026-10-30
 
 A GPUI test-platform window now checks that opening RustUI's root mounts its owner once and closing it unmounts the owner once. The focused window suite passed 2/2 (`target/headstart/evidence/native-root-window-lifecycle-20261030.log`, SHA-256 `ca25ef1edada0282bf807c8a46ef4caf131446a8cae337217e58fe29f095b879`). This does not establish actual macOS launch/close or broader lifecycle acceptance.
