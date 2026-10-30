@@ -1091,6 +1091,11 @@ pub(super) fn render_graph(
                         },
                         display_port_label
                     ));
+                #[cfg(test)]
+                let port_control = {
+                    let selector = format!("graph-test-port:{}:{}", node.id, port.id);
+                    port_control.debug_selector(move || selector)
+                };
                 card = card.child(port_control);
             }
         }
@@ -2212,7 +2217,7 @@ mod current_selection_regressions {
     use super::*;
 
     #[gpui::test]
-    fn rendered_node_editor_moves_and_deletes_selected_node(cx: &mut gpui::TestAppContext) {
+    fn rendered_node_editor_connects_moves_and_deletes_nodes(cx: &mut gpui::TestAppContext) {
         use crate::{components::advanced::node_editor::NodeEditor, runtime::ComponentHost};
 
         struct EditorOwner {
@@ -2254,14 +2259,15 @@ mod current_selection_regressions {
         let graph = GraphDocument::new(
             [
                 GraphNode::new("a", "A", rect, [output]).unwrap(),
-                GraphNode::new("b", "B", rect, [input]).unwrap(),
+                GraphNode::new(
+                    "b",
+                    "B",
+                    CanvasRect::new(200.0, 0.0, 100.0, 80.0).unwrap(),
+                    [input],
+                )
+                .unwrap(),
             ],
-            [GraphEdge::new(
-                "edge",
-                GraphEndpoint::new("a", "out"),
-                GraphEndpoint::new("b", "in"),
-            )
-            .unwrap()],
+            [],
         )
         .unwrap();
         let viewport =
@@ -2275,6 +2281,23 @@ mod current_selection_regressions {
                 },
                 app,
             )
+        });
+        window.update(|window, app| {
+            let _ = window.draw(app);
+        });
+        let first = window.debug_bounds("graph-test-port:a:out").unwrap();
+        let second = window.debug_bounds("graph-test-port:b:in").unwrap();
+        window.simulate_click(first.center(), gpui::Modifiers::default());
+        window.update(|window, app| {
+            let _ = window.draw(app);
+        });
+        window.simulate_click(second.center(), gpui::Modifiers::default());
+        window.update(|window, app| {
+            let _ = window.draw(app);
+            let edges = owner.read(app).component().graph.edges();
+            assert_eq!(edges.len(), 1);
+            assert_eq!(edges[0].from(), &GraphEndpoint::new("a", "out"));
+            assert_eq!(edges[0].to(), &GraphEndpoint::new("b", "in"));
         });
         window.update(|window, app| {
             let _ = window.draw(app);

@@ -1,3 +1,7 @@
+## R35/R36 NodeEditor rendered port connection — 2026-10-30
+
+The rendered NodeEditor regression now clicks an output and an input port, verifies the owner-bound edge endpoints, moves the selected node by keyboard, and deletes it and the connected edge. The GraphView suite passed 21/21 (`target/headstart/evidence/native-node-editor-connect-20261030.log`, SHA-256 `70ebb6fb60142a826a0c8bcccc1654a1abecefe24c59d8113be9fe9f14e3fb7d`). Port selectors are compiled only for tests. This is GPUI test-window evidence; native Playground, drag and broader graph acceptance remain open.
+
 ## R35/R36 rendered NodeEditor keyboard path — 2026-10-30
 
 A GPUI test window focused the public RustUI NodeEditor surface, moved its selected node with the Right key, then deleted it with Backspace. The owner graph reflected the movement and deletion, removed the incident edge, retained the other node, and cleared selection. The focused test passed 1/1 (`target/headstart/evidence/native-node-editor-keyboard-20261030.log`, SHA-256 `af5375125ad09a625de866989a0f1f77ec58bd81b8106c2bde839becb4c48270`). This is test-window evidence; native Playground, pointer/drag, broader graph behavior and release acceptance remain open.
