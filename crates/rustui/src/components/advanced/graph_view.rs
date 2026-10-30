@@ -999,8 +999,8 @@ pub(super) fn render_graph(
                 let endpoint = GraphEndpoint::new(node.id.clone(), port.id.clone());
                 let port_state = state.clone();
                 let guard = lease.clone();
-                let graph = graph.clone();
                 let binding = editor.as_ref().unwrap().clone();
+                let read_graph = context.binding_reader(binding.clone());
                 let update = context.binding_event_updater(binding, apply_edit);
                 let refresh =
                     context.binding_event_updater(view.selection.clone(), |_, (): ()| true);
@@ -1009,6 +1009,9 @@ pub(super) fn render_graph(
                         if !guard.current() {
                             return;
                         }
+                        let Some(graph) = read_graph(cx) else {
+                            return;
+                        };
                         let mut edit = None;
                         port_state.update(cx, |s, cx| {
                             if let Some(first) = s.pending.take() {
@@ -2261,14 +2264,16 @@ mod current_selection_regressions {
         let rect = CanvasRect::new(0.0, 0.0, 100.0, 80.0).unwrap();
         let output = GraphPort::new("out", "Output", GraphPortDirection::Output).unwrap();
         let input = GraphPort::new("in", "Input", GraphPortDirection::Input).unwrap();
+        let output2 = GraphPort::new("out2", "Output 2", GraphPortDirection::Output).unwrap();
+        let input2 = GraphPort::new("in2", "Input 2", GraphPortDirection::Input).unwrap();
         let graph = GraphDocument::new(
             [
-                GraphNode::new("a", "A", rect, [output]).unwrap(),
+                GraphNode::new("a", "A", rect, [output, output2]).unwrap(),
                 GraphNode::new(
                     "b",
                     "B",
                     CanvasRect::new(200.0, 0.0, 100.0, 80.0).unwrap(),
-                    [input],
+                    [input, input2],
                 )
                 .unwrap(),
             ],
@@ -2292,17 +2297,46 @@ mod current_selection_regressions {
         });
         let first = window.debug_bounds("graph-test-port:a:out").unwrap();
         let second = window.debug_bounds("graph-test-port:b:in").unwrap();
-        window.simulate_click(first.center(), gpui::Modifiers::default());
+        let third = window.debug_bounds("graph-test-port:a:out2").unwrap();
+        let fourth = window.debug_bounds("graph-test-port:b:in2").unwrap();
         window.update(|window, app| {
-            let _ = window.draw(app);
+            for position in [
+                first.center(),
+                second.center(),
+                third.center(),
+                fourth.center(),
+            ] {
+                window.dispatch_event(
+                    gpui::PlatformInput::MouseDown(gpui::MouseDownEvent {
+                        position,
+                        button: MouseButton::Left,
+                        modifiers: gpui::Modifiers::default(),
+                        click_count: 1,
+                        first_mouse: false,
+                    }),
+                    app,
+                );
+                window.dispatch_event(
+                    gpui::PlatformInput::MouseUp(gpui::MouseUpEvent {
+                        position,
+                        button: MouseButton::Left,
+                        modifiers: gpui::Modifiers::default(),
+                        click_count: 1,
+                    }),
+                    app,
+                );
+            }
+            assert_eq!(owner.read(app).component().graph.edges().len(), 2);
         });
-        window.simulate_click(second.center(), gpui::Modifiers::default());
         window.update(|window, app| {
             let _ = window.draw(app);
             let edges = owner.read(app).component().graph.edges();
-            assert_eq!(edges.len(), 1);
+            assert_eq!(edges.len(), 2);
+            assert_ne!(edges[0].id(), edges[1].id());
             assert_eq!(edges[0].from(), &GraphEndpoint::new("a", "out"));
             assert_eq!(edges[0].to(), &GraphEndpoint::new("b", "in"));
+            assert_eq!(edges[1].from(), &GraphEndpoint::new("a", "out2"));
+            assert_eq!(edges[1].to(), &GraphEndpoint::new("b", "in2"));
         });
         let node = window.debug_bounds("graph-test-node:a").unwrap();
         let start = gpui::point(node.origin.x + px(10.0), node.origin.y + px(10.0));
