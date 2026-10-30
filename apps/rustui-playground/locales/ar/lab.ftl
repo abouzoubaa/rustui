@@ -751,3 +751,6 @@ lab-theme-inspector-uncovered = غير مغطى: {component}/{part} ({appearance
 lab-theme-inspector-button-light = زر فاتح: {width} × {height} بكسل · الخط {font} بكسل · الحشو {padding} بكسل · نصف القطر {radius} بكسل
 lab-theme-inspector-button-dark = زر داكن: {width} × {height} بكسل · الخط {font} بكسل · الحشو {padding} بكسل · نصف القطر {radius} بكسل
 lab-theme-inspector-error = فشل فحص السمة: {error}
+
+lab-theme-inspector-uncovered-no-renderer = غير مغطى: {component}/{part} ({appearance}) — لا يدعم محرّك الرسم هذه القاعدة
+lab-theme-inspector-uncovered-properties = غير مغطى: {component}/{part} ({appearance}) — خصائص غير مطبقة: {properties}

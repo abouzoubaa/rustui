@@ -751,3 +751,6 @@ lab-theme-inspector-uncovered = Non couvert : {component}/{part} ({appearance}) 
 lab-theme-inspector-button-light = Bouton clair : {width} × {height} px · police {font} px · marge intérieure {padding} px · rayon {radius} px
 lab-theme-inspector-button-dark = Bouton sombre : {width} × {height} px · police {font} px · marge intérieure {padding} px · rayon {radius} px
 lab-theme-inspector-error = Échec de l’inspection du thème : {error}
+
+lab-theme-inspector-uncovered-no-renderer = Non couvert : {component}/{part} ({appearance}) — aucune capacité de rendu pour cette règle
+lab-theme-inspector-uncovered-properties = Non couvert : {component}/{part} ({appearance}) — propriétés non appliquées : {properties}

@@ -173,14 +173,24 @@ fn inspect_document(document: ThemeDocument) -> Result<(String, Vec<SummaryLine>
             "\nUncovered: {}/{} ({:?}) — {}",
             uncovered.component, uncovered.part, uncovered.appearance, uncovered.reason,
         ));
-        localized_summary.push(SummaryLine {
-            key: "lab-theme-inspector-uncovered",
-            arguments: MessageArguments::new()
-                .with("component", uncovered.component.to_string())
-                .with("part", uncovered.part.to_string())
-                .with("appearance", format!("{:?}", uncovered.appearance))
-                .with("reason", uncovered.reason.to_string()),
-        });
+        let arguments = MessageArguments::new()
+            .with("component", uncovered.component.to_string())
+            .with("part", uncovered.part.to_string())
+            .with("appearance", format!("{:?}", uncovered.appearance));
+        let (key, arguments) = if uncovered.reason == "no renderer capability for this rule" {
+            ("lab-theme-inspector-uncovered-no-renderer", arguments)
+        } else if let Some(properties) = uncovered.reason.strip_prefix("unapplied properties: ") {
+            (
+                "lab-theme-inspector-uncovered-properties",
+                arguments.with("properties", properties.to_owned()),
+            )
+        } else {
+            (
+                "lab-theme-inspector-uncovered",
+                arguments.with("reason", uncovered.reason.to_string()),
+            )
+        };
+        localized_summary.push(SummaryLine { key, arguments });
     }
     for mode in [AppearanceMode::Light, AppearanceMode::Dark] {
         let button = resolve_button(&document, Some(mode)).map_err(|error| error.to_string())?;
@@ -274,6 +284,8 @@ mod tests {
                 "lab-theme-inspector-profile",
                 "lab-theme-inspector-coverage",
                 "lab-theme-inspector-uncovered",
+                "lab-theme-inspector-uncovered-no-renderer",
+                "lab-theme-inspector-uncovered-properties",
                 "lab-theme-inspector-button-light",
                 "lab-theme-inspector-button-dark",
                 "lab-theme-inspector-error",
@@ -311,6 +323,16 @@ mod tests {
         let (summary, localized_summary, preview) =
             inspect_theme().expect("current theme is inspectable");
         assert!(!localized_summary.is_empty());
+        assert!(
+            localized_summary
+                .iter()
+                .any(|line| line.key == "lab-theme-inspector-uncovered-no-renderer")
+        );
+        assert!(
+            localized_summary
+                .iter()
+                .any(|line| line.key == "lab-theme-inspector-uncovered-properties")
+        );
         let catalogs = super::super::locale_selector::catalogs();
         for language in ["en", "fr", "ar"] {
             let locale = rustui::localization::Locale::parse(language).unwrap();

@@ -751,3 +751,6 @@ lab-theme-inspector-uncovered = Uncovered: {component}/{part} ({appearance}) —
 lab-theme-inspector-button-light = Light Button: {width} × {height} px · font {font} px · padding {padding} px · radius {radius} px
 lab-theme-inspector-button-dark = Dark Button: {width} × {height} px · font {font} px · padding {padding} px · radius {radius} px
 lab-theme-inspector-error = Theme inspection failed: {error}
+
+lab-theme-inspector-uncovered-no-renderer = Uncovered: {component}/{part} ({appearance}) — no renderer capability for this rule
+lab-theme-inspector-uncovered-properties = Uncovered: {component}/{part} ({appearance}) — unapplied properties: {properties}
