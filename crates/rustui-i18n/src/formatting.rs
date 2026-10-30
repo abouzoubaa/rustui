@@ -1027,6 +1027,11 @@ pub fn format_integer(value: i64, locale: &Locale) -> String {
         Some("arab") => true,
         _ => default_arabic_digits,
     };
+    let separator = match numbering_system_override(locale) {
+        Some("arab") => '\u{066c}',
+        Some("latn") if language == "ar" => ',',
+        _ => separator,
+    };
 
     let digits = value.unsigned_abs().to_string();
     let mut grouped = String::with_capacity(digits.len() + digits.len() / 3);
@@ -1071,6 +1076,11 @@ pub fn format_decimal(value: &str, locale: &Locale) -> String {
         Some("latn") => false,
         Some("arab") => true,
         _ => default_arabic_digits,
+    };
+    let (group_separator, decimal_separator) = match numbering_system_override(locale) {
+        Some("arab") => ('\u{066c}', '\u{066b}'),
+        Some("latn") if locale.primary_language() == "ar" => (',', '.'),
+        _ => (group_separator, decimal_separator),
     };
 
     let exponent_index = raw.find(|character| matches!(character, 'e' | 'E'));
@@ -1337,11 +1347,11 @@ mod tests {
         assert_eq!(format_integer(1_234, &Locale::parse("ja").unwrap()), "1234");
         assert_eq!(
             format_integer(1_234, &Locale::parse("ar-EG-u-nu-latn").unwrap()),
-            "1\u{066c}234"
+            "1,234"
         );
         assert_eq!(
             format_integer(1_234, &Locale::parse("en-US-u-nu-arab").unwrap()),
-            "١,٢٣٤"
+            "١٬٢٣٤"
         );
         assert_eq!(
             format_integer(
@@ -1350,6 +1360,19 @@ mod tests {
             ),
             "1,234"
         );
+    }
+
+    #[test]
+    fn numbering_override_changes_decimal_and_grouping_symbols() {
+        let arabic_latin = Locale::parse("ar-EG-u-nu-latn").unwrap();
+        let english_arabic = Locale::parse("en-US-u-nu-arab").unwrap();
+        let french_arabic = Locale::parse("fr-FR-u-nu-arab").unwrap();
+        assert_eq!(format_integer(1_234, &arabic_latin), "1,234");
+        assert_eq!(format_decimal("1234.5", &arabic_latin), "1,234.5");
+        for locale in [&english_arabic, &french_arabic] {
+            assert_eq!(format_integer(1_234, locale), "١٬٢٣٤");
+            assert_eq!(format_decimal("1234.5", locale), "١٬٢٣٤٫٥");
+        }
     }
 
     #[test]
@@ -1420,7 +1443,7 @@ mod tests {
         );
         assert_eq!(
             format_decimal("1234.5", &Locale::parse("en-US-u-nu-arab").unwrap()),
-            "١,٢٣٤.٥"
+            "١٬٢٣٤٫٥"
         );
         assert_eq!(
             format_decimal("1e+21", &Locale::parse("ar-EG").unwrap()),
@@ -1468,11 +1491,11 @@ mod tests {
         );
         assert_eq!(
             format_decimal("+1234.5", &Locale::parse("ar-EG-u-nu-latn").unwrap()),
-            "\u{200e}+1\u{066c}234\u{066b}5"
+            "\u{200e}+1,234.5"
         );
         assert_eq!(
             format_integer(-1_234, &Locale::parse("en-US-u-nu-arab").unwrap()),
-            "\u{061c}-١,٢٣٤"
+            "\u{061c}-١٬٢٣٤"
         );
     }
 
@@ -1878,11 +1901,11 @@ mod pound_substitution_tests {
         );
         assert_eq!(
             interpolate_with_locale(message, &arguments, &locale("ar-EG-u-nu-latn")),
-            Ok("1\u{066c}234 files".to_owned())
+            Ok("1,234 files".to_owned())
         );
         assert_eq!(
             interpolate_with_locale(message, &arguments, &locale("en-US-u-nu-arab")),
-            Ok("١,٢٣٤ files".to_owned())
+            Ok("١٬٢٣٤ files".to_owned())
         );
     }
 
