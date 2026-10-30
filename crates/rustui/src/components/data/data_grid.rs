@@ -38,7 +38,7 @@ impl DataGridView {
         }
     }
 
-    /// Sets a stable unique identity when sibling grids can share a label.
+    /// Sets a stable identity for a grid whose position may change.
     pub fn id(mut self, id: impl Into<SharedString>) -> Self {
         let id = id.into();
         self.table = self.table.id(table_identity(&id));
@@ -101,6 +101,80 @@ impl View for DataGridView {
 mod tests {
     use super::{data_grid_element, table_identity};
     use gpui::{Element, Role, SharedString, accesskit::Node};
+
+    #[gpui::test]
+    fn same_label_implicit_grids_keep_selections_independent(cx: &mut gpui::TestAppContext) {
+        use super::{DataGrid, TableView};
+        use crate::runtime::{Binding, ComponentHost};
+        use crate::view::{EmptyView, RenderContext, View};
+        use gpui::{IntoElement, ParentElement, div};
+
+        struct Owner {
+            first: Option<usize>,
+            second: Option<usize>,
+            first_present: bool,
+        }
+        impl View for Owner {
+            fn body(&self) -> impl View {
+                EmptyView
+            }
+
+            fn into_element(&self, context: &mut RenderContext<'_>) -> gpui::AnyElement {
+                let first = Binding::new(
+                    self.first,
+                    |owner: &Owner| owner.first,
+                    |owner, value| owner.first = value,
+                );
+                let second = Binding::new(
+                    self.second,
+                    |owner: &Owner| owner.second,
+                    |owner, value| owner.second = value,
+                );
+                let first_rows = self.first_present.then(|| vec!["first"]);
+                let first = DataGrid(TableView::new(["Value"], first_rows, first), "Same label")
+                    .into_element(context);
+                let second = DataGrid(
+                    TableView::new(["Value"], [vec!["second"]], second),
+                    "Same label",
+                )
+                .into_element(context);
+                div().child(first).child(second).into_any_element()
+            }
+        }
+        let theme = crate::theme::parse_theme(include_str!(concat!(
+            env!("CARGO_MANIFEST_DIR"),
+            "/../../themes/macos27.json"
+        )))
+        .unwrap();
+        cx.update(|app| {
+            gpui_component::init(app);
+            crate::theme::activate_theme(&theme, Some(crate::theme::AppearanceMode::Dark), app)
+                .unwrap();
+        });
+        let (owner, window) = cx.add_window_view(|_, app| {
+            ComponentHost::new(
+                Owner {
+                    first: Some(0),
+                    second: Some(0),
+                    first_present: true,
+                },
+                app,
+            )
+        });
+        window.update(|window, app| {
+            let _ = window.draw(app);
+            owner.update(app, |host, cx| {
+                host.component_mut().first_present = false;
+                cx.notify();
+            });
+            let _ = window.draw(app);
+        });
+        window.cx.run_until_parked();
+        window.update(|_, app| {
+            assert_eq!(owner.read(app).component().first, None);
+            assert_eq!(owner.read(app).component().second, Some(0));
+        });
+    }
 
     #[gpui::test]
     fn label_change_preserves_restored_grid_selection(cx: &mut gpui::TestAppContext) {

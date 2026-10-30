@@ -1,3 +1,7 @@
+## R17 same-label DataGrid siblings — 2026-10-30
+
+A GPUI test window renders two implicit DataGrids with the same label and independent controlled selections. Removing the selected row from the first clears only its selection; the second remains selected. The DataGrid suite passed 5/5 (`target/headstart/evidence/native-grid-siblings-20261030.log`, SHA-256 `0c7f126e5d25251afcbc9a5606c1814f06524ae8fdaf8569c5cbb89579e51d92`). DataGrid's ID documentation now recommends explicit identity when a grid's position may change. This is GPUI test-window evidence, not macOS Playground acceptance.
+
 ## R17 DataGrid identity across label changes — 2026-10-30
 
 DataGrid no longer derives its implicit wrapper and inner Table identities from its accessible label. The wrapper uses a stable positional identity, the Table retains its own identity unless the grid has an explicit ID, and explicit grid IDs remain distinct. A GPUI test window changes the label while a selected row is removed and restored before the deferred update. Before the fix it lost selection (`target/headstart/evidence/native-grid-label-before-20261030.log`, SHA-256 `78194f3a32a2eb3c6276cb07b2f84757a1d747e9c9a56e4b44011adc694d7c10`). The DataGrid suite passed 4/4 (`native-grid-label-final-20261030.log`, SHA-256 `0c064d9e233be9fac5c628c65a80438abc219004f392f56c9a715ef0443fe33c`), and the locked offline native library check passed. This is GPUI test-window and build evidence; actual macOS Playground and broader DataGrid acceptance remain open.
