@@ -963,6 +963,11 @@ pub(super) fn render_graph(
                     .overflow_hidden()
                     .child(display_node_label.clone()),
             );
+        #[cfg(test)]
+        {
+            let selector = format!("graph-test-node:{}", node.id);
+            card = card.debug_selector(move || selector);
+        }
         if !view.disabled {
             card = card
                 .focusable()
@@ -2299,6 +2304,25 @@ mod current_selection_regressions {
             assert_eq!(edges[0].from(), &GraphEndpoint::new("a", "out"));
             assert_eq!(edges[0].to(), &GraphEndpoint::new("b", "in"));
         });
+        let node = window.debug_bounds("graph-test-node:a").unwrap();
+        let start = gpui::point(node.origin.x + px(10.0), node.origin.y + px(10.0));
+        let end = gpui::point(start.x + px(30.0), start.y + px(20.0));
+        window.simulate_mouse_down(start, MouseButton::Left, gpui::Modifiers::default());
+        window.simulate_mouse_move(end, MouseButton::Left, gpui::Modifiers::default());
+        window.update(|window, app| {
+            let _ = window.draw(app);
+        });
+        window.simulate_mouse_up(end, MouseButton::Left, gpui::Modifiers::default());
+        window.simulate_mouse_move(
+            gpui::point(end.x + px(25.0), end.y + px(25.0)),
+            None,
+            gpui::Modifiers::default(),
+        );
+        window.update(|window, app| {
+            let _ = window.draw(app);
+            let rect = owner.read(app).component().graph.node("a").unwrap().rect();
+            assert_eq!((rect.x, rect.y), (30.0, 20.0));
+        });
         window.update(|window, app| {
             let _ = window.draw(app);
             let state = owner
@@ -2324,7 +2348,7 @@ mod current_selection_regressions {
                     .unwrap()
                     .rect()
                     .x,
-                10.0
+                40.0
             );
         });
         window.simulate_keystrokes("backspace");
