@@ -2398,6 +2398,63 @@ mod current_selection_regressions {
             assert!(owner.read(app).component().graph.edges().is_empty());
             assert_eq!(owner.read(app).component().selected, None);
         });
+        window.update(|window, app| {
+            window.dispatch_event(
+                gpui::PlatformInput::KeyDown(gpui::KeyDownEvent {
+                    keystroke: gpui::Keystroke::parse("pageup").unwrap(),
+                    is_held: false,
+                    prefer_character_input: false,
+                }),
+                app,
+            );
+            assert_eq!(owner.read(app).component().viewport.zoom(), 1.25);
+            window.dispatch_event(
+                gpui::PlatformInput::KeyUp(gpui::KeyUpEvent {
+                    keystroke: gpui::Keystroke::parse("pageup").unwrap(),
+                }),
+                app,
+            );
+            window.dispatch_event(
+                gpui::PlatformInput::KeyDown(gpui::KeyDownEvent {
+                    keystroke: gpui::Keystroke::parse("home").unwrap(),
+                    is_held: false,
+                    prefer_character_input: false,
+                }),
+                app,
+            );
+            assert_eq!(owner.read(app).component().viewport.zoom(), 1.0);
+            window.dispatch_event(
+                gpui::PlatformInput::KeyUp(gpui::KeyUpEvent {
+                    keystroke: gpui::Keystroke::parse("home").unwrap(),
+                }),
+                app,
+            );
+            owner.update(app, |host, cx| {
+                let rect = CanvasRect::new(f32::MAX * 0.9, 0.0, f32::MAX * 0.01, 80.0).unwrap();
+                let node = GraphNode::new("b", "B", rect, []).unwrap();
+                let next = GraphDocument::new([node], []).unwrap();
+                host.component_mut().graph = next;
+                cx.notify();
+            });
+            window.dispatch_event(
+                gpui::PlatformInput::KeyDown(gpui::KeyDownEvent {
+                    keystroke: gpui::Keystroke::parse("pageup").unwrap(),
+                    is_held: false,
+                    prefer_character_input: false,
+                }),
+                app,
+            );
+            assert_eq!(owner.read(app).component().viewport.zoom(), 1.0);
+            window.dispatch_event(
+                gpui::PlatformInput::KeyDown(gpui::KeyDownEvent {
+                    keystroke: gpui::Keystroke::parse("pagedown").unwrap(),
+                    is_held: false,
+                    prefer_character_input: false,
+                }),
+                app,
+            );
+            assert_eq!(owner.read(app).component().viewport.zoom(), 0.8);
+        });
     }
     struct Owner {
         document: GraphDocument,
