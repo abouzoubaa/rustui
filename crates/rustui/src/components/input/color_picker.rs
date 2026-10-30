@@ -329,6 +329,8 @@ impl ColorPickerView {
             });
 
         let active_tab_state = state.clone();
+        let direction = context.layout_direction();
+        let palette_label = popup_label(context, "rustui-color-picker-palette", "Palette");
         let mut panel = gpui_component::v_flex()
             .w(px(288.0))
             .gap_3()
@@ -340,7 +342,7 @@ impl ColorPickerView {
                     .on_click(move |index: &usize, _, cx| {
                         active_tab_state.update(cx, |state, cx| state.set_active_tab(*index, cx));
                     })
-                    .child(Tab::new().flex_1().label("Palette"))
+                    .child(Tab::new().flex_1().label(palette_label))
                     .child(Tab::new().flex_1().label("HSLA")),
             );
 
@@ -362,16 +364,26 @@ impl ColorPickerView {
                 &hex_accessibility_fallback,
             );
             panel = panel
-                .child(slider_row("H", GpuiSlider::new(sliders.hue()).flex_1()))
                 .child(slider_row(
-                    "S",
+                    popup_label(context, "rustui-color-picker-hue", "Hue"),
+                    GpuiSlider::new(sliders.hue()).flex_1(),
+                    direction,
+                ))
+                .child(slider_row(
+                    popup_label(context, "rustui-color-picker-saturation", "Saturation"),
                     GpuiSlider::new(sliders.saturation()).flex_1(),
+                    direction,
                 ))
                 .child(slider_row(
-                    "L",
+                    popup_label(context, "rustui-color-picker-lightness", "Lightness"),
                     GpuiSlider::new(sliders.lightness()).flex_1(),
+                    direction,
                 ))
-                .child(slider_row("A", GpuiSlider::new(sliders.alpha()).flex_1()))
+                .child(slider_row(
+                    popup_label(context, "rustui-color-picker-opacity", "Opacity"),
+                    GpuiSlider::new(sliders.alpha()).flex_1(),
+                    direction,
+                ))
                 .child(
                     Input::new(&hex_input)
                         .small()
@@ -394,6 +406,55 @@ mod tests {
             |value: &Option<Hsla>| value.clone(),
             |value, next| *value = next,
         )
+    }
+
+    #[test]
+    fn popup_labels_are_present_for_runtime_locales_and_rows_follow_direction() {
+        use gpui::Styled;
+        use rustui_i18n::{Catalog, LayoutDirection, Locale};
+        for (tag, source, palette) in [
+            (
+                "en",
+                include_str!("../../../../../locales/en/rustui.ftl"),
+                "Palette",
+            ),
+            (
+                "fr",
+                include_str!("../../../../../locales/fr/rustui.ftl"),
+                "Palette",
+            ),
+            (
+                "ar",
+                include_str!("../../../../../locales/ar/rustui.ftl"),
+                "لوحة الألوان",
+            ),
+        ] {
+            let catalog = Catalog::parse(Locale::parse(tag).unwrap(), source).unwrap();
+            assert_eq!(catalog.get("rustui-color-picker-palette"), Some(palette));
+            for key in [
+                "rustui-color-picker-hue",
+                "rustui-color-picker-saturation",
+                "rustui-color-picker-lightness",
+                "rustui-color-picker-opacity",
+            ] {
+                assert!(
+                    catalog
+                        .get(key)
+                        .is_some_and(|value| !value.trim().is_empty()),
+                    "{tag}: {key}"
+                );
+            }
+        }
+        for (direction, expected) in [
+            (LayoutDirection::LeftToRight, gpui::FlexDirection::Row),
+            (
+                LayoutDirection::RightToLeft,
+                gpui::FlexDirection::RowReverse,
+            ),
+        ] {
+            let mut row = super::slider_row("Hue".into(), gpui::div(), direction);
+            assert_eq!(row.style().flex_direction, Some(expected));
+        }
     }
 
     #[test]
@@ -594,11 +655,23 @@ mod tests {
     }
 }
 
-fn slider_row(label: &'static str, slider: impl IntoElement) -> impl IntoElement {
-    gpui_component::h_flex()
+fn popup_label(
+    context: &RenderContext<'_>,
+    id: &'static str,
+    fallback: &'static str,
+) -> SharedString {
+    resolved_message_label(context.localized_message(id), &id.into(), &fallback.into())
+}
+
+fn slider_row(
+    label: SharedString,
+    slider: impl IntoElement,
+    direction: rustui_i18n::LayoutDirection,
+) -> gpui::Div {
+    super::logical_input_row(gpui_component::h_flex(), direction)
         .items_center()
         .gap_2()
-        .child(div().w(px(16.0)).child(label))
+        .child(div().w(px(92.0)).flex_shrink_0().child(label))
         .child(slider)
 }
 
