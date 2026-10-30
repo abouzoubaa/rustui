@@ -73,10 +73,11 @@ fn set_picker_open(
 struct RetainedColorPicker {
     state: gpui::Entity<ColorPickerState>,
     writer: Rc<RefCell<Option<EventWriter<Option<Hsla>, gpui::App>>>>,
+    disabled: bool,
 }
 use gpui_base::{ColorPicker as BaseColorPicker, ColorSwatch};
 use gpui_component::{
-    Selectable as _, Sizable as _, Size,
+    Disableable as _, Selectable as _, Sizable as _, Size,
     button::{Button as GpuiButton, ButtonVariants as _},
     color_picker::{ColorPickerEvent, ColorPickerState},
     input::Input,
@@ -104,6 +105,7 @@ pub struct ColorPickerView {
     value: Binding<Option<Hsla>>,
     id: Option<Identity>,
     compact: bool,
+    disabled: bool,
     featured_colors: Option<Vec<Hsla>>,
     accessibility_label: Option<ColorPickerLabel>,
 }
@@ -169,6 +171,7 @@ impl ColorPickerView {
             value,
             id: None,
             compact: false,
+            disabled: false,
             featured_colors: None,
             accessibility_label: None,
         }
@@ -186,6 +189,12 @@ impl ColorPickerView {
 
     pub fn compact(mut self, compact: bool) -> Self {
         self.compact = compact;
+        self
+    }
+
+    /// Disables interaction and closes any open picker popup.
+    pub fn disabled(mut self, disabled: bool) -> Self {
+        self.disabled = disabled;
         self
     }
 
@@ -872,6 +881,7 @@ impl View for ColorPickerView {
     fn into_element(&self, context: &mut RenderContext<'_>) -> AnyElement {
         let identity = self.identity(context);
         let initial_value = self.value.value();
+        let disabled = self.disabled;
         let (retained, created) = context.retained_entity(identity.clone(), move |window, cx| {
             let state = cx.new(|cx| {
                 let state = ColorPickerState::new(window, cx);
@@ -888,17 +898,31 @@ impl View for ColorPickerView {
             RetainedColorPicker {
                 state,
                 writer: Rc::new(RefCell::new(None)),
+                disabled,
             }
         });
         let (state, writer) = {
             let retained = retained.read(context.app());
             (retained.state.clone(), retained.writer.clone())
         };
-        replace_event_writer(&writer, context.binding_writer(self.value.clone()));
+        if retained.read(context.app()).disabled != self.disabled {
+            let disabled = self.disabled;
+            context.update_entity(&retained, move |retained, _, _| {
+                retained.disabled = disabled
+            });
+        }
+        if self.disabled {
+            *writer.borrow_mut() = None;
+            if state.read(context.app()).is_open() {
+                context.update_entity(&state, |state, _, cx| state.set_open(false, cx));
+            }
+        } else {
+            replace_event_writer(&writer, context.binding_writer(self.value.clone()));
+        }
 
         let current = self.value.value();
-        let retained = state.read(context.app()).value();
-        if retained != current {
+        let retained_color = state.read(context.app()).value();
+        if retained_color != current {
             context.update_entity(&state, move |state, window, cx| match current {
                 Some(value) => state.set_value(value, window, cx),
                 None => clear_picker_value(state, window, cx),
@@ -940,6 +964,7 @@ impl View for ColorPickerView {
             .when_some(selected, |this, color| this.bg(color));
         let trigger = GpuiButton::new(format!("{identity}:trigger"))
             .secondary()
+            .disabled(self.disabled)
             .with_size(if self.compact {
                 Size::Small
             } else {
@@ -966,20 +991,27 @@ impl View for ColorPickerView {
 
         let popup = self.render_popup(&state, context, &selector);
         let popup_change_state = popup_state.clone();
+        let popup_owner = retained.clone();
+        let root_owner = retained.clone();
         let popup_element = GpuiPopover::new(format!("{identity}:popover"))
             .open(open)
             .on_open_change(move |open: &bool, window, cx| {
-                set_picker_open(&popup_change_state, *open, window, cx);
+                if !*open || !popup_owner.read(cx).disabled {
+                    set_picker_open(&popup_change_state, *open, window, cx);
+                }
             })
             .trigger(trigger)
             .child(popup);
 
         BaseColorPicker::new(format!("{identity}:root"))
             .open(open)
+            .disabled(self.disabled)
             .track_focus(&state.focus_handle(context.app()))
             .accessibility_label(label)
             .on_open_change(move |open, window, cx| {
-                set_picker_open(&root_state, open, window, cx);
+                if !open || !root_owner.read(cx).disabled {
+                    set_picker_open(&root_state, open, window, cx);
+                }
             })
             .child(popup_element)
             .into_any_element()
@@ -1027,6 +1059,85 @@ mod rendered_locale_tests {
         theme::{AppearanceMode, activate_theme, parse_theme},
     };
     use gpui_component::Root;
+
+    #[gpui::test]
+    fn disabling_open_picker_closes_it_and_rejects_late_changes(cx: &mut gpui::TestAppContext) {
+        struct DisabledOwner {
+            color: Option<Hsla>,
+            disabled: bool,
+        }
+        impl View for DisabledOwner {
+            fn body(&self) -> impl View {
+                ColorPicker(
+                    "Color",
+                    Binding::new(
+                        self.color,
+                        |owner: &DisabledOwner| owner.color,
+                        |owner, color| owner.color = color,
+                    ),
+                )
+                .id("disabled-color-picker")
+                .disabled(self.disabled)
+            }
+        }
+        let original = hsla(0.1, 0.4, 0.5, 1.0);
+        let external = hsla(0.2, 0.4, 0.5, 1.0);
+        let late = hsla(0.3, 0.4, 0.5, 1.0);
+        let theme = parse_theme(include_str!(concat!(
+            env!("CARGO_MANIFEST_DIR"),
+            "/../../themes/macos27.json"
+        )))
+        .unwrap();
+        cx.update(|app| {
+            gpui_component::init(app);
+            activate_theme(&theme, Some(AppearanceMode::Dark), app).unwrap();
+        });
+        let (owner, window) = cx.add_window_view(|_, cx| {
+            ComponentHost::new(
+                DisabledOwner {
+                    color: Some(original),
+                    disabled: false,
+                },
+                cx,
+            )
+        });
+        let state = window.update(|window, app| {
+            let _ = window.draw(app);
+            let retained = owner
+                .read(app)
+                .retained_entity_for_test::<RetainedColorPicker>(
+                    vec![],
+                    Identity::from("disabled-color-picker"),
+                )
+                .unwrap();
+            let state = retained.read(app).state.clone();
+            state.update(app, |state, cx| state.set_open(true, cx));
+            state
+        });
+        window.update(|window, app| {
+            owner.update(app, |host, cx| {
+                host.component_mut().disabled = true;
+                host.component_mut().color = Some(external);
+                cx.notify();
+            });
+            let _ = window.draw(app);
+            assert!(!state.read(app).is_open());
+            assert_eq!(state.read(app).value(), Some(external));
+            state.update(app, |_, cx| cx.emit(ColorPickerEvent::Change(Some(late))));
+        });
+        window.cx.run_until_parked();
+        window.update(|_, app| assert_eq!(owner.read(app).component().color, Some(external)));
+        window.update(|window, app| {
+            owner.update(app, |host, cx| {
+                host.component_mut().disabled = false;
+                cx.notify();
+            });
+            let _ = window.draw(app);
+            state.update(app, |_, cx| cx.emit(ColorPickerEvent::Change(Some(late))));
+        });
+        window.cx.run_until_parked();
+        window.update(|_, app| assert_eq!(owner.read(app).component().color, Some(late)));
+    }
 
     struct Owner {
         color: Option<Hsla>,
