@@ -703,3 +703,14 @@ lab-drawer-refresh = Update title and size
 lab-drawer-owner-close = Owner close
 lab-drawer-release = Release Drawer
 lab-drawer-activate = Activate
+
+lab-foundation-theme-layout = Theme and layout
+lab-foundation-theme-light = Light
+lab-foundation-theme-dark = Dark
+lab-foundation-theme-stop-auto = Stop auto
+lab-foundation-theme-start-auto = Start auto
+lab-foundation-spacer = Flexible HStack spacer
+lab-foundation-leading = Leading
+lab-foundation-trailing = Trailing
+lab-foundation-first-side = First side
+lab-foundation-second-side = Second side

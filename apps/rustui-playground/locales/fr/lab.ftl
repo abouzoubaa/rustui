@@ -703,3 +703,14 @@ lab-drawer-refresh = Modifier le titre et la taille
 lab-drawer-owner-close = Fermer depuis le propriétaire
 lab-drawer-release = Libérer le panneau
 lab-drawer-activate = Activer
+
+lab-foundation-theme-layout = Thème et disposition
+lab-foundation-theme-light = Clair
+lab-foundation-theme-dark = Sombre
+lab-foundation-theme-stop-auto = Arrêter le suivi
+lab-foundation-theme-start-auto = Démarrer le suivi
+lab-foundation-spacer = Espaceur horizontal flexible
+lab-foundation-leading = Début
+lab-foundation-trailing = Fin
+lab-foundation-first-side = Premier côté
+lab-foundation-second-side = Deuxième côté

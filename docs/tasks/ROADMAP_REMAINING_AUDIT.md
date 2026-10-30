@@ -1,3 +1,7 @@
+## R13 native Playground theme and layout labels — 2026-10-30
+
+The Playground theme/layout story now resolves its heading, Light/Dark, start/stop watcher and static spacer/divider labels from English, French and Arabic catalogs. Locale validation passed for all three runtime groups, and the focused Playground story tests passed 2/2 (`target/headstart/evidence/native-theme-label-locales-20261030.log`, SHA-256 `28fddd748e8f5179004ab4a06423ff8985d1b81315b2f02f1c5020453394742b`) on parent `6508d63f` plus the change. Dynamic reload status, numeric direction readouts and explicit accessibility labels remain English; native visual, RTL and live-switch acceptance remain open.
+
 ## R26 native forced theme reload app context — 2026-10-30
 
 On parent `69ba6f0e` plus this regression, a macOS-hosted GPUI app context loaded a theme file in Light, activated Dark separately, then forced a file reload in Light. The active mode returned to Light and its revision advanced. A subsequent invalid file failed without changing the active mode or revision. The focused test passed 1/1 (`target/headstart/evidence/native-theme-forced-active-20261030.log`, SHA-256 `a35131b054881e03b6a45dce19a47d75820e9b753cbba401b2afb1c7a7a2c358`). This verifies the API called by native manual reload; it does not exercise the Playground button or establish visual acceptance.

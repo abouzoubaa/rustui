@@ -703,3 +703,14 @@ lab-drawer-refresh = تحديث العنوان والحجم
 lab-drawer-owner-close = إغلاق بواسطة المالك
 lab-drawer-release = تحرير اللوحة
 lab-drawer-activate = تنشيط
+
+lab-foundation-theme-layout = المظهر والتخطيط
+lab-foundation-theme-light = فاتح
+lab-foundation-theme-dark = داكن
+lab-foundation-theme-stop-auto = إيقاف المتابعة
+lab-foundation-theme-start-auto = بدء المتابعة
+lab-foundation-spacer = فاصل أفقي مرن
+lab-foundation-leading = البداية
+lab-foundation-trailing = النهاية
+lab-foundation-first-side = الجانب الأول
+lab-foundation-second-side = الجانب الثاني

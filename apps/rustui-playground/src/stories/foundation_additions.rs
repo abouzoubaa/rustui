@@ -480,18 +480,20 @@ impl View for FoundationAdditions {
         Container(
             VStack::new()
                 .spacing(5.0)
-                .child(Text("Theme and layout"))
+                .child(LocalizedText("lab-foundation-theme-layout"))
                 .child(
                     HStack::new()
                         .spacing(4.0)
                         .child(
                             Button("Light", self.reload_action(AppearanceMode::Light))
+                                .localized_label("lab-foundation-theme-light")
                                 .accessibility_label(format!(
                                     "Reload light appearance. Last result: {result}"
                                 )),
                         )
                         .child(
                             Button("Dark", self.reload_action(AppearanceMode::Dark))
+                                .localized_label("lab-foundation-theme-dark")
                                 .accessibility_label(format!(
                                     "Reload dark appearance. Last result: {result}"
                                 )),
@@ -502,6 +504,11 @@ impl View for FoundationAdditions {
                         if enabled { "Stop auto" } else { "Start auto" },
                         self.toggle_auto_action(),
                     )
+                    .localized_label(if enabled {
+                        "lab-foundation-theme-stop-auto"
+                    } else {
+                        "lab-foundation-theme-start-auto"
+                    })
                     .accessibility_label(format!(
                         "{} automatic theme file reload. Last result: {result}",
                         if enabled { "Disable" } else { "Enable" },
@@ -509,21 +516,21 @@ impl View for FoundationAdditions {
                 )
                 .child(Text(result).font_size(12.0))
                 .child(Divider())
-                .child(Text("Flexible HStack spacer"))
+                .child(LocalizedText("lab-foundation-spacer"))
                 .child(
                     HStack::new()
                         .fill()
                         .spacing(4.0)
-                        .child(Text("Leading"))
+                        .child(LocalizedText("lab-foundation-leading"))
                         .child(Spacer().min_length(SpacerAxis::Horizontal, 24.0))
-                        .child(Text("Trailing")),
+                        .child(LocalizedText("lab-foundation-trailing")),
                 )
                 .child(
                     HStack::new()
                         .spacing(6.0)
-                        .child(Text("First side"))
+                        .child(LocalizedText("lab-foundation-first-side"))
                         .child(Divider().vertical())
-                        .child(Text("Second side")),
+                        .child(LocalizedText("lab-foundation-second-side")),
                 )
                 .child(Text(format!("LTR left/right: {}/{}", ltr.left, ltr.right)))
                 .child(Text(format!("RTL left/right: {}/{}", rtl.left, rtl.right))),
@@ -537,6 +544,34 @@ impl View for FoundationAdditions {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn theme_and_layout_labels_exist_in_runtime_locales() {
+        let catalogs = super::super::locale_selector::catalogs();
+        for language in ["en", "fr", "ar"] {
+            let locale = rustui::localization::Locale::parse(language).unwrap();
+            let catalog = catalogs.get(&locale).unwrap();
+            for key in [
+                "lab-foundation-theme-layout",
+                "lab-foundation-theme-light",
+                "lab-foundation-theme-dark",
+                "lab-foundation-theme-start-auto",
+                "lab-foundation-theme-stop-auto",
+                "lab-foundation-spacer",
+                "lab-foundation-leading",
+                "lab-foundation-trailing",
+                "lab-foundation-first-side",
+                "lab-foundation-second-side",
+            ] {
+                assert!(
+                    catalog
+                        .get(key)
+                        .is_some_and(|value| !value.trim().is_empty()),
+                    "{language}: {key}"
+                );
+            }
+        }
+    }
 
     #[test]
     fn reload_actions_do_not_keep_owner_alive_or_survive_unmount() {
