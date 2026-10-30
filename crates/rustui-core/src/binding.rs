@@ -6,6 +6,11 @@ type Read<T> = dyn Fn(&dyn Any) -> Option<T>;
 type Write<T> = dyn Fn(&mut dyn Any, T) -> bool;
 
 /// A typed field lens whose storage remains in the owning component.
+///
+/// [`Binding::value`] is the snapshot captured when the binding was created.
+/// It does not change when the owner is updated; obtain a new binding on a
+/// subsequent render to see the new snapshot. Binding-based update callbacks
+/// read the current owner value rather than this snapshot.
 pub struct Binding<T> {
     current: Rc<T>,
     read: Rc<Read<T>>,
@@ -60,7 +65,7 @@ impl<T: 'static> Binding<T> {
         }
     }
 
-    /// Returns the value captured while the owning component described its body.
+    /// Returns the snapshot captured when this binding was created.
     pub fn value(&self) -> T
     where
         T: Clone,

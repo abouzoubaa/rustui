@@ -1,3 +1,7 @@
+## R06 binding snapshot contract — 2026-10-30
+
+The public `Binding` documentation now distinguishes its captured `value()` snapshot from binding-based update callbacks, which read the current owner value. The focused `rustui-core` binding tests passed 7/7 with `./scripts/cargo-headstart test -p rustui-core --lib --locked --offline binding::`; evidence: `target/headstart/evidence/native-binding-contract-20261030.log`, SHA-256 `86f471e7545645d620b7ce2842ffe3d4d2c1c435c56d52afeae9e23fbe88983a`. These tests include consecutive owner updates and rejection of stale context and wrong owner types. Broader state, invalidation and native acceptance remain open.
+
 ## R03 native public documentation build — 2026-10-30
 
 On source commit `1e15c4c9`, `./scripts/cargo-headstart doc --workspace --no-deps --profile headstart --locked --offline` succeeded and generated seven workspace documentation entry points, including `target/headstart/doc/rustui/index.html`. The log contains upstream deprecation warnings; a search found no unresolved-link warnings. Evidence: `target/headstart/evidence/native-public-docs-20261030.log`, SHA-256 `e0c06957f1343c3340e745fcb5e1a8e99686a5211d3d3454fa4179a33c906efc`. This establishes documentation generation, not completeness or correctness of every public API contract; R03 remains open.
