@@ -725,3 +725,16 @@ lab-foundation-watch-stopped = Automatic theme reload disabled.
 lab-foundation-watching = Watching theme file every 350 ms.
 lab-foundation-ltr-readout = LTR left/right: {left}/{right}
 lab-foundation-rtl-readout = RTL left/right: {left}/{right}
+
+lab-segment-title = Segmented Control · Finder view modes
+lab-segment-selected = Selected view:
+lab-segment-icons = Icons
+lab-segment-list = List
+lab-segment-columns = Columns
+lab-segment-gallery = Gallery
+lab-button-group-title = Button Group
+lab-button-group-last-action = Last action:
+lab-button-group-none = None
+lab-button-group-previous = Previous
+lab-button-group-next = Next
+lab-button-group-more = More

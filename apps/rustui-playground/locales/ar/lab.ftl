@@ -725,3 +725,16 @@ lab-foundation-watch-stopped = تم إيقاف إعادة تحميل المظه�
 lab-foundation-watching = تجري مراقبة ملف المظهر كل 350 مللي ثانية.
 lab-foundation-ltr-readout = اليسار/اليمين باتجاه LTR: {left}/{right}
 lab-foundation-rtl-readout = اليسار/اليمين باتجاه RTL: {left}/{right}
+
+lab-segment-title = عنصر مجزأ · أوضاع عرض Finder
+lab-segment-selected = العرض المحدد:
+lab-segment-icons = أيقونات
+lab-segment-list = قائمة
+lab-segment-columns = أعمدة
+lab-segment-gallery = معرض
+lab-button-group-title = مجموعة أزرار
+lab-button-group-last-action = آخر إجراء:
+lab-button-group-none = لا شيء
+lab-button-group-previous = السابق
+lab-button-group-next = التالي
+lab-button-group-more = المزيد

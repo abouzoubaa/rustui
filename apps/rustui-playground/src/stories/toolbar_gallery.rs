@@ -65,7 +65,12 @@ impl SegmentedControlGallery {
 
 impl View for SegmentedControlGallery {
     fn body(&self) -> impl View {
-        let selected_label = self.selected_label();
+        let selected_key = match self.selected_label() {
+            "List" => "lab-segment-list",
+            "Columns" => "lab-segment-columns",
+            "Gallery" => "lab-segment-gallery",
+            _ => "lab-segment-icons",
+        };
         let selected_style = if self.mode_is_selected("icons") {
             ButtonStyle::BorderedProminent
         } else {
@@ -93,12 +98,14 @@ impl View for SegmentedControlGallery {
                 .child(
                     Button(SEGMENTED_CONTROL_MODES[0].1, self.action(Self::show_icons))
                         .id("segmented-control-icons")
+                        .localized_label("lab-segment-icons")
                         .button_style(selected_style)
                         .toggled(self.mode_is_selected("icons")),
                 )
                 .child(
                     Button(SEGMENTED_CONTROL_MODES[1].1, self.action(Self::show_list))
                         .id("segmented-control-list")
+                        .localized_label("lab-segment-list")
                         .button_style(list_style)
                         .toggled(self.mode_is_selected("list")),
                 )
@@ -108,6 +115,7 @@ impl View for SegmentedControlGallery {
                         self.action(Self::show_columns),
                     )
                     .id("segmented-control-columns")
+                    .localized_label("lab-segment-columns")
                     .button_style(columns_style)
                     .toggled(self.mode_is_selected("columns")),
                 )
@@ -117,6 +125,7 @@ impl View for SegmentedControlGallery {
                         self.action(Self::show_gallery),
                     )
                     .id("segmented-control-gallery")
+                    .localized_label("lab-segment-gallery")
                     .button_style(gallery_style)
                     .toggled(self.mode_is_selected("gallery")),
                 ),
@@ -128,9 +137,14 @@ impl View for SegmentedControlGallery {
 
         VStack::new()
             .spacing(8.0)
-            .child(Text("Segmented Control · Finder view modes"))
+            .child(LocalizedText("lab-segment-title"))
             .child(segments)
-            .child(Text(format!("Selected view: {selected_label}")))
+            .child(
+                HStack::new()
+                    .spacing(4.0)
+                    .child(LocalizedText("lab-segment-selected"))
+                    .child(LocalizedText(selected_key)),
+            )
     }
 }
 
@@ -164,15 +178,18 @@ impl View for ButtonGroupGallery {
                         BUTTON_GROUP_ACTIONS[0].1,
                         self.action(Self::choose_previous),
                     )
-                    .id("button-group-previous"),
+                    .id("button-group-previous")
+                    .localized_label("lab-button-group-previous"),
                 )
                 .child(
                     Button(BUTTON_GROUP_ACTIONS[1].1, self.action(Self::choose_next))
-                        .id("button-group-next"),
+                        .id("button-group-next")
+                        .localized_label("lab-button-group-next"),
                 )
                 .child(
                     Button(BUTTON_GROUP_ACTIONS[2].1, self.action(Self::choose_more))
-                        .id("button-group-more"),
+                        .id("button-group-more")
+                        .localized_label("lab-button-group-more"),
                 ),
         )
         .padding(4.0)
@@ -181,9 +198,19 @@ impl View for ButtonGroupGallery {
         .radius(18.0);
         VStack::new()
             .spacing(8.0)
-            .child(Text("Button Group"))
+            .child(LocalizedText("lab-button-group-title"))
             .child(group)
-            .child(Text(format!("Last action: {}", self.last_action())))
+            .child(
+                HStack::new()
+                    .spacing(4.0)
+                    .child(LocalizedText("lab-button-group-last-action"))
+                    .child(LocalizedText(match self.last_action().as_str() {
+                        "Previous" => "lab-button-group-previous",
+                        "Next" => "lab-button-group-next",
+                        "More" => "lab-button-group-more",
+                        _ => "lab-button-group-none",
+                    })),
+            )
     }
 }
 
@@ -204,6 +231,34 @@ mod button_group_tests {
             .collect::<Vec<_>>();
         assert_eq!(selected_modes, vec![expected_id]);
         assert_eq!(gallery.selected_label(), expected_label);
+    }
+
+    #[test]
+    fn navigation_story_messages_exist_for_all_runtime_locales() {
+        let catalogs = super::super::locale_selector::catalogs();
+        for language in ["en", "fr", "ar"] {
+            let locale = rustui::localization::Locale::parse(language).unwrap();
+            let catalog = catalogs.get(&locale).unwrap();
+            for key in [
+                "lab-segment-title",
+                "lab-segment-selected",
+                "lab-segment-icons",
+                "lab-segment-list",
+                "lab-segment-columns",
+                "lab-segment-gallery",
+                "lab-button-group-title",
+                "lab-button-group-last-action",
+                "lab-button-group-none",
+                "lab-button-group-previous",
+                "lab-button-group-next",
+                "lab-button-group-more",
+            ] {
+                assert!(
+                    catalog.get(key).is_some_and(|text| !text.trim().is_empty()),
+                    "{language}: {key}"
+                );
+            }
+        }
     }
 
     #[test]
