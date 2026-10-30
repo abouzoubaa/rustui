@@ -195,6 +195,10 @@ impl SliderView {
         self
     }
 
+    /// Fills the track from its maximum end instead of its minimum end.
+    ///
+    /// This changes the fill only; values, pointer mapping, and keyboard
+    /// direction are unchanged.
     pub fn reverse(mut self, reverse: bool) -> Self {
         self.reverse = reverse;
         self
