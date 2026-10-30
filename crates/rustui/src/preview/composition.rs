@@ -254,6 +254,42 @@ fn validate_composition<C>(
     Ok(())
 }
 
+fn check_edit_payload(edit: &CompositionEdit) -> Result<(), PreviewError> {
+    match edit {
+        CompositionEdit::SetProperty {
+            value: PropertyValue::String(text),
+            ..
+        } if text.len() > super::model::MAX_STRING_VALUE_BYTES => Err(PreviewError::Invalid(
+            "composition property string exceeds size limit".into(),
+        )),
+        CompositionEdit::Insert { value, .. } => {
+            let mut budget =
+                super::codec::SerializedTextBudget::new("composition node exceeds size limit");
+            budget.add_preview(&value.preview)?;
+            if value.slots.len() > MAX_SLOTS_PER_COMPONENT {
+                return Err(PreviewError::Invalid(
+                    "composition node exceeds slot limit".into(),
+                ));
+            }
+            let mut child_count = 0usize;
+            for (slot_id, children) in &value.slots {
+                budget.add(slot_id.as_str())?;
+                child_count = child_count.saturating_add(children.len());
+                if child_count > MAX_COMPOSITION_NODES {
+                    return Err(PreviewError::Invalid(
+                        "composition node exceeds child limit".into(),
+                    ));
+                }
+                for child in children {
+                    budget.add(child.as_str())?;
+                }
+            }
+            Ok(())
+        }
+        _ => Ok(()),
+    }
+}
+
 // Count the serialized identifiers and preview text before cloning the graph.
 fn check_composition_text_budget(document: &CompositionDocument) -> Result<(), PreviewError> {
     let mut budget =
@@ -498,6 +534,9 @@ impl<C> CompositionHost<C> {
             .ok_or_else(|| {
                 PreviewError::Invalid("stale or unmounted composition revision".into())
             })?;
+        for op in edits {
+            check_edit_payload(op)?;
+        }
         let mut next = doc.clone();
         for op in edits {
             match op {
@@ -506,13 +545,6 @@ impl<C> CompositionHost<C> {
                     property,
                     value,
                 } => {
-                    if let PropertyValue::String(text) = value
-                        && text.len() > super::model::MAX_STRING_VALUE_BYTES
-                    {
-                        return Err(PreviewError::Invalid(
-                            "composition property string exceeds size limit".into(),
-                        ));
-                    }
                     let current = &next
                         .nodes
                         .get(node)
@@ -534,28 +566,6 @@ impl<C> CompositionHost<C> {
                     node,
                     value,
                 } => {
-                    let mut budget = super::codec::SerializedTextBudget::new(
-                        "composition node exceeds size limit",
-                    );
-                    budget.add_preview(&value.preview)?;
-                    if value.slots.len() > MAX_SLOTS_PER_COMPONENT {
-                        return Err(PreviewError::Invalid(
-                            "composition node exceeds slot limit".into(),
-                        ));
-                    }
-                    let mut child_count = 0usize;
-                    for (slot_id, children) in &value.slots {
-                        budget.add(slot_id.as_str())?;
-                        child_count = child_count.saturating_add(children.len());
-                        if child_count > MAX_COMPOSITION_NODES {
-                            return Err(PreviewError::Invalid(
-                                "composition node exceeds child limit".into(),
-                            ));
-                        }
-                        for child in children {
-                            budget.add(child.as_str())?;
-                        }
-                    }
                     if next.nodes.len() >= MAX_COMPOSITION_NODES {
                         return Err(PreviewError::Invalid(
                             "composition node limit exceeded".into(),
@@ -882,8 +892,11 @@ mod tests {
                 "x".repeat(super::super::model::MAX_STRING_VALUE_BYTES + 1),
             ),
         };
+        let remove = CompositionEdit::RemoveSubtree {
+            node: NodeId::new("child").unwrap(),
+        };
         assert!(
-            matches!(host.edit(&stamp, &[set]), Err(PreviewError::Invalid(message)) if message == "composition property string exceeds size limit")
+            matches!(host.edit(&stamp, &[remove, set]), Err(PreviewError::Invalid(message)) if message == "composition property string exceeds size limit")
         );
 
         let mut node = document.nodes[&root].clone();
