@@ -232,6 +232,7 @@ impl TableDelegate for StringTableDelegate {
 /// A virtualized string table with controlled row selection.
 pub struct TableView {
     columns: Vec<String>,
+    column_messages: Option<Vec<String>>,
     rows: Vec<Vec<String>>,
     selection: Binding<Option<usize>>,
     id: Option<Identity>,
@@ -264,6 +265,7 @@ impl TableView {
 
         Self {
             columns,
+            column_messages: None,
             rows,
             selection,
             id: None,
@@ -273,6 +275,47 @@ impl TableView {
             bordered: true,
             vertical_scrollbar: true,
             horizontal_scrollbar: true,
+        }
+    }
+
+    /// Resolves one localization message per column, falling back to its original label.
+    ///
+    /// Panics if the number of message IDs differs from the number of columns or
+    /// any ID is blank. Labels are resolved again when the active locale changes.
+    pub fn localized_columns<I, S>(mut self, messages: I) -> Self
+    where
+        I: IntoIterator<Item = S>,
+        S: Into<String>,
+    {
+        let messages: Vec<String> = messages.into_iter().map(Into::into).collect();
+        assert!(
+            messages.len() == self.columns.len(),
+            "Table needs one message ID per column"
+        );
+        assert!(
+            messages.iter().all(|id| !id.trim().is_empty()),
+            "Table column message IDs must be nonempty"
+        );
+        self.column_messages = Some(messages);
+        self
+    }
+
+    fn resolved_columns(&self, mut resolve: impl FnMut(&str) -> String) -> Vec<String> {
+        match &self.column_messages {
+            None => self.columns.clone(),
+            Some(messages) => self
+                .columns
+                .iter()
+                .zip(messages)
+                .map(|(fallback, id)| {
+                    let label = resolve(id);
+                    if label.trim().is_empty() || label.trim() == id.trim() {
+                        fallback.clone()
+                    } else {
+                        label
+                    }
+                })
+                .collect(),
         }
     }
 
@@ -378,7 +421,8 @@ impl View for TableView {
         let header_style =
             required_style_with_artwork(context, "table", "table_column_headers", &query);
         let identity = self.identity(context);
-        let columns = self.columns.clone();
+        let resolved_columns = self.resolved_columns(|id| context.localized_message(id));
+        let columns = resolved_columns.clone();
         let rows = self.rows.clone();
         let column_width = self.column_width;
         let initial_row_style = row_style.clone();
@@ -409,14 +453,14 @@ impl View for TableView {
         let data_changed = {
             let state = state.read(context.app());
             let delegate = state.delegate();
-            delegate.columns != self.columns
+            delegate.columns != resolved_columns
                 || delegate.rows != self.rows
                 || delegate.column_width != self.column_width
                 || delegate.row_style != row_style
                 || delegate.header_style != header_style
         };
         if data_changed {
-            let columns = self.columns.clone();
+            let columns = resolved_columns;
             let rows = self.rows.clone();
             let column_width = self.column_width;
             let row_style = row_style.clone();
@@ -624,6 +668,47 @@ mod tests {
     }
 
     fn write_selection(_: &mut (), _: Option<usize>) {}
+
+    #[test]
+    fn localized_columns_resolve_and_fall_back_per_label() {
+        let table = TableView::new(
+            ["Index", "Row"],
+            [["0", "Alpha"]],
+            Binding::new(None, read_selection, write_selection),
+        )
+        .localized_columns(["table.index", "table.row"]);
+        assert_eq!(
+            table.resolved_columns(|id| match id {
+                "table.index" => "Indice".into(),
+                _ => id.into(),
+            }),
+            ["Indice", "Row"]
+        );
+        assert_eq!(table.resolved_columns(|_| " ".into()), ["Index", "Row"]);
+        assert_eq!(table.resolved_columns(|_| "صف".into()), ["صف", "صف"]);
+    }
+
+    #[test]
+    #[should_panic(expected = "Table needs one message ID per column")]
+    fn localized_columns_reject_wrong_count() {
+        let _ = TableView::new(
+            ["Index", "Row"],
+            [["0", "Alpha"]],
+            Binding::new(None, read_selection, write_selection),
+        )
+        .localized_columns(["table.index"]);
+    }
+
+    #[test]
+    #[should_panic(expected = "Table column message IDs must be nonempty")]
+    fn localized_columns_reject_blank_ids() {
+        let _ = TableView::new(
+            ["Index"],
+            [["0"]],
+            Binding::new(None, read_selection, write_selection),
+        )
+        .localized_columns([" "]);
+    }
 
     #[test]
     fn accessibility_counts_include_header_row_and_all_columns() {

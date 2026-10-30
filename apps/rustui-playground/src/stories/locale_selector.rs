@@ -133,6 +133,56 @@ mod tests {
     }
 
     #[test]
+    fn table_gallery_messages_resolve_in_each_runtime_locale() {
+        use rustui::localization::MessageArguments;
+        let catalogs = catalogs();
+        for tag in ["en", "fr", "ar"] {
+            let locale = locale(tag);
+            let catalog = catalogs.get(&locale).unwrap();
+            for id in [
+                "lab-table-reconcile-title",
+                "lab-table-select-0",
+                "lab-table-select-2",
+                "lab-table-clear",
+                "lab-table-invalid",
+                "lab-table-reverse",
+                "lab-table-remove",
+                "lab-table-restore",
+                "lab-table-rows",
+                "lab-table-reversed",
+                "lab-table-forward",
+                "lab-table-selected",
+                "lab-table-no-selection",
+                "lab-table-reconcile-help",
+                "lab-table-index-header",
+                "lab-table-row-header",
+            ] {
+                assert!(catalog.get(id).is_some(), "{id} missing in {tag}");
+            }
+            assert!(
+                catalogs
+                    .format(
+                        &locale,
+                        "lab-table-rows",
+                        &MessageArguments::new().with("rows", "Alpha, Beta")
+                    )
+                    .unwrap()
+                    .contains("Alpha, Beta")
+            );
+            assert!(
+                !catalogs
+                    .format(
+                        &locale,
+                        "lab-table-selected",
+                        &MessageArguments::new().with("index", 2_i64)
+                    )
+                    .unwrap()
+                    .is_empty()
+            );
+        }
+    }
+
+    #[test]
     fn runtime_validation_rejects_unsupported_interpolation_syntax() {
         let language = locale("en");
         let mut catalogs = Catalogs::new(language.clone());
