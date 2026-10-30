@@ -3360,3 +3360,7 @@ Commit `0fbfceef` gives the Playground references panel logical-start alignment.
 ### R17 native NavigationStack route cycle — 2026-10-30
 
 On source `ba00bfe6`, the native Playground release binary SHA-256 `e79669cb105f7352b302d1dd8dff452198c2a70210b53c993779f8402aa4b2ab` matched the disposable bundle. In the NavigationStack story, pointer navigation root → details → inspector → details → root → details → inspector returned the expected destination at each step. Text entered separately in root, details, and inspector remained in the corresponding owner-bound fields on return. This is bounded native pointer and owner-state evidence; unknown-route recovery, keyboard/RTL, and broader navigation acceptance remain open. The app was quit, its bundle moved to Trash, and the GUI slot released.
+
+### R17 rendered unknown-route recovery — 2026-10-30
+
+Commit `264a71f1` adds a GPUI test-window regression starting with `[known, missing]`. The rendered Back control is clicked to recover the known route, then focused and activated with Space to return to root; owner path and exactly one write per action are asserted. Locked offline Headstart release test passed 1/1 (`target/headstart/evidence/native-route-recovery-20261030.log`), and RustUI package formatting passed. This is test-window event evidence, not a native Playground or broader keyboard/RTL acceptance pass.
