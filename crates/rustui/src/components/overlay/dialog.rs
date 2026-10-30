@@ -549,6 +549,105 @@ mod tests {
     }
 
     #[gpui::test]
+    fn native_dialog_text_field_updates_original_owner(cx: &mut gpui::TestAppContext) {
+        use crate::{components::input::text_field::TextField, runtime::ComponentHost};
+        use gpui::AppContext as _;
+        use rustui_core::Binding;
+        use std::{cell::RefCell, rc::Rc};
+
+        struct Owner {
+            text: String,
+        }
+        impl View for Owner {
+            fn body(&self) -> impl View {
+                Dialog("native-owner-dialog", "Open").content(
+                    TextField(
+                        "Name",
+                        Binding::new(
+                            self.text.clone(),
+                            |owner: &Owner| owner.text.clone(),
+                            |owner, value| owner.text = value,
+                        ),
+                    )
+                    .id("dialog-owner-field"),
+                )
+            }
+        }
+        let theme = crate::theme::parse_theme(include_str!(concat!(
+            env!("CARGO_MANIFEST_DIR"),
+            "/../../themes/macos27.json"
+        )))
+        .unwrap();
+        cx.update(|app| {
+            gpui_component::init(app);
+            crate::theme::activate_theme(&theme, Some(crate::theme::AppearanceMode::Dark), app)
+                .unwrap();
+        });
+        let slot = Rc::new(RefCell::new(None));
+        let saved = slot.clone();
+        let (_, window) = cx.add_window_view(|window, cx| {
+            let owner = cx.new(|cx| {
+                ComponentHost::new(
+                    Owner {
+                        text: String::new(),
+                    },
+                    cx,
+                )
+            });
+            *saved.borrow_mut() = Some(owner.clone());
+            gpui_component::Root::new(owner, window, cx)
+        });
+        let owner = slot.borrow().clone().unwrap();
+        window.update(|window, app| {
+            let _ = window.draw(app);
+            window.focus_next(app);
+            let _ = window.draw(app);
+        });
+        let key = gpui::Keystroke::parse("enter").unwrap();
+        window.simulate_event(gpui::KeyDownEvent {
+            keystroke: key.clone(),
+            is_held: false,
+            prefer_character_input: false,
+        });
+        window.simulate_event(gpui::KeyUpEvent { keystroke: key });
+        window.update(|window, app| {
+            let _ = window.draw(app);
+            assert!(window.has_active_dialog(app));
+            window.focus_next(app);
+            let _ = window.draw(app);
+        });
+        window.simulate_input("RustUI");
+        window.update(|window, app| {
+            let _ = window.draw(app);
+            assert_eq!(owner.read(app).component().text, "RustUI");
+        });
+        window.simulate_keystrokes("escape");
+        window.update(|window, app| {
+            let _ = window.draw(app);
+            assert!(!window.has_active_dialog(app));
+            assert_eq!(owner.read(app).component().text, "RustUI");
+        });
+        let key = gpui::Keystroke::parse("enter").unwrap();
+        window.simulate_event(gpui::KeyDownEvent {
+            keystroke: key.clone(),
+            is_held: false,
+            prefer_character_input: false,
+        });
+        window.simulate_event(gpui::KeyUpEvent { keystroke: key });
+        window.update(|window, app| {
+            let _ = window.draw(app);
+            assert!(window.has_active_dialog(app));
+            window.focus_next(app);
+            let _ = window.draw(app);
+        });
+        window.simulate_input("!");
+        window.update(|window, app| {
+            let _ = window.draw(app);
+            assert_eq!(owner.read(app).component().text, "RustUI!");
+        });
+    }
+
+    #[gpui::test]
     fn retained_dialog_reconciles_content_and_accessible_name(cx: &mut gpui::TestAppContext) {
         use crate::runtime::component_host::RetainedEntities;
         use std::any::TypeId;

@@ -1,3 +1,7 @@
+## R19 native Dialog owner-bound text — 2026-10-30
+
+On parent `ffbe8e6b` plus this regression, a macOS-hosted GPUI Root/test window opened the public RustUI Dialog with Enter, typed into a TextField bound directly to the original owner, dismissed with Escape, reopened with Enter and appended text. The owner retained `RustUI` through dismissal and received `RustUI!` after reopening. The Dialog suite passed 22/22 (`target/headstart/evidence/native-dialog-owner-suite-20261030.log`, SHA-256 `94aeb2a2387a2a23969670cd469532edb42d24ba95c1c393c23149411bd5212e`). This verifies one synthetic native-hosted event path, not real OS IME, native Playground, focus containment or broader modal acceptance.
+
 ## R13/R17 native TabView RTL keyboard event — 2026-10-30
 
 On parent `f24c2168` plus this regression, the macOS-hosted GPUI TabView test switched from English to Arabic with the first tab selected. Left moved focus past a disabled middle tab without writing the owner, and Enter selected the third tab. The focused test passed 1/1 (`target/headstart/evidence/native-tab-view-rtl-20261030.log`, SHA-256 `45e612c2cdb4871029611447b5e4afe94820e52d84835936f441f6d459eabbaf`). This verifies the bounded direction-aware event path, not rendered RTL layout, native Playground or broader acceptance.
