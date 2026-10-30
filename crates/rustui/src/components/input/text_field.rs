@@ -486,12 +486,15 @@ impl View for TextFieldView {
         };
         // IME preedit updates InputState before InputEvent::Change writes the owner.
         // Keep it only while the owner still has its last synchronized value.
-        if should_sync_owner_value(
-            &current_value,
-            &previous_owner_value,
-            &retained_value,
-            marked_range.clone(),
-        ) {
+        if ((self.disabled || self.readonly)
+            && (retained_value != current_value || marked_range.is_some()))
+            || should_sync_owner_value(
+                &current_value,
+                &previous_owner_value,
+                &retained_value,
+                marked_range.clone(),
+            )
+        {
             let value_to_sync = current_value.clone();
             let selection_to_restore = selection_to_restore.clone();
             context.update_entity(&state, move |state, window, cx| {
@@ -503,12 +506,13 @@ impl View for TextFieldView {
         }
         let selection_after_sync =
             context.update_entity(&state, |state, _, _| state.selected_range());
-        let next_selection_before_preedit = if marked_range.is_some() && owner_unchanged {
-            selection_before_preedit
-                .or_else(|| last_selection.or_else(|| Some(current_selection.clone())))
-        } else {
-            None
-        };
+        let next_selection_before_preedit =
+            if !self.disabled && !self.readonly && marked_range.is_some() && owner_unchanged {
+                selection_before_preedit
+                    .or_else(|| last_selection.or_else(|| Some(current_selection.clone())))
+            } else {
+                None
+            };
         context.update_entity(&retained, move |retained, _, _| {
             retained.selection_before_preedit = next_selection_before_preedit;
             if retained.selection_before_preedit.is_none() {
@@ -1201,6 +1205,113 @@ mod tests {
             let _ = window.draw(app);
             assert_eq!(state.read(app).value().as_ref(), "جديد😀");
             assert_eq!(owner.read(app).component().value, "جديد😀");
+        });
+    }
+
+    #[gpui::test]
+    fn disabling_or_freezing_field_discards_uncommitted_composition(cx: &mut gpui::TestAppContext) {
+        use crate::{runtime::component_host::ComponentHost, view::View};
+        use gpui::EntityInputHandler;
+        struct Owner {
+            value: String,
+            disabled: bool,
+            readonly: bool,
+        }
+        impl View for Owner {
+            fn body(&self) -> impl View {
+                TextField(
+                    "Name",
+                    Binding::new(
+                        self.value.clone(),
+                        |owner: &Owner| owner.value.clone(),
+                        |owner, value| owner.value = value,
+                    ),
+                )
+                .id("composition-guard")
+                .disabled(self.disabled)
+                .readonly(self.readonly)
+            }
+        }
+        let theme = parse_theme(include_str!(concat!(
+            env!("CARGO_MANIFEST_DIR"),
+            "/../../themes/macos27.json"
+        )))
+        .unwrap();
+        cx.update(|app| {
+            gpui_component::init(app);
+            crate::theme::activate_theme(&theme, Some(AppearanceMode::Dark), app).unwrap();
+        });
+        let (owner, window) = cx.add_window_view(|_, cx| {
+            ComponentHost::new(
+                Owner {
+                    value: "base".into(),
+                    disabled: false,
+                    readonly: false,
+                },
+                cx,
+            )
+        });
+        let state = window.update(|window, app| {
+            let _ = window.draw(app);
+            owner
+                .read(app)
+                .retained_entity_for_test::<super::RetainedTextField>(
+                    vec![],
+                    Identity::from("composition-guard"),
+                )
+                .unwrap()
+                .read(app)
+                .state
+                .clone()
+        });
+        for readonly in [false, true] {
+            window.update(|window, app| {
+                state.update(app, |state, cx| {
+                    state.replace_and_mark_text_in_range(Some(4..4), "é", Some(1..1), window, cx)
+                });
+                assert_eq!(state.read(app).value().as_ref(), "baseé");
+                owner.update(app, |host, cx| {
+                    host.component_mut().disabled = !readonly;
+                    host.component_mut().readonly = readonly;
+                    cx.notify();
+                });
+                let _ = window.draw(app);
+                assert_eq!(state.read(app).value().as_ref(), "base");
+                assert!(
+                    state
+                        .update(app, |state, cx| state.marked_text_range(window, cx))
+                        .is_none()
+                );
+                assert_eq!(owner.read(app).component().value, "base");
+                owner.update(app, |host, cx| {
+                    host.component_mut().disabled = false;
+                    host.component_mut().readonly = false;
+                    cx.notify();
+                });
+                let _ = window.draw(app);
+            });
+            window.cx.run_until_parked();
+        }
+        window.update(|window, app| {
+            state.update(app, |state, cx| {
+                state.replace_and_mark_text_in_range(Some(0..1), "b", Some(1..1), window, cx)
+            });
+            assert_eq!(state.read(app).value().as_ref(), "base");
+            assert!(
+                state
+                    .update(app, |state, cx| state.marked_text_range(window, cx))
+                    .is_some()
+            );
+            owner.update(app, |host, cx| {
+                host.component_mut().disabled = true;
+                cx.notify();
+            });
+            let _ = window.draw(app);
+            assert!(
+                state
+                    .update(app, |state, cx| state.marked_text_range(window, cx))
+                    .is_none()
+            );
         });
     }
 

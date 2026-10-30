@@ -296,7 +296,8 @@ impl View for TextEditorView {
             has_marked_text,
         );
         if sync_plan.update_editor_value
-            || ((self.disabled || self.readonly) && retained_value != current_value)
+            || ((self.disabled || self.readonly)
+                && (retained_value != current_value || has_marked_text))
         {
             let value_to_sync = current_value.clone();
             context.update_entity(&state, move |state, window, cx| {
@@ -353,6 +354,7 @@ mod tests {
         cx: &mut gpui::TestAppContext,
     ) {
         use crate::runtime::component_host::ComponentHost;
+        use gpui::EntityInputHandler;
         struct Owner {
             value: String,
             disabled: bool,
@@ -451,6 +453,32 @@ mod tests {
         });
         window.cx.run_until_parked();
         window.update(|_, app| assert_eq!(owner.read(app).component().value, "fresh"));
+        window.update(|window, app| {
+            owner.update(app, |host, cx| {
+                host.component_mut().readonly = false;
+                cx.notify();
+            });
+            let _ = window.draw(app);
+            editor.update(app, |editor, cx| {
+                editor.replace_and_mark_text_in_range(Some(0..1), "f", Some(1..1), window, cx)
+            });
+            assert_eq!(editor.read(app).value().to_string(), "fresh");
+            assert!(
+                editor
+                    .update(app, |editor, cx| editor.marked_text_range(window, cx))
+                    .is_some()
+            );
+            owner.update(app, |host, cx| {
+                host.component_mut().disabled = true;
+                cx.notify();
+            });
+            let _ = window.draw(app);
+            assert!(
+                editor
+                    .update(app, |editor, cx| editor.marked_text_range(window, cx))
+                    .is_none()
+            );
+        });
     }
 
     fn binding() -> Binding<String> {

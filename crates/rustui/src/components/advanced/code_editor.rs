@@ -245,7 +245,8 @@ impl View for CodeEditorView {
         );
         let native = editor.read(context.app());
         let value_changed = sync_plan.update_editor_value
-            || ((self.disabled || self.readonly) && retained_value != current_value);
+            || ((self.disabled || self.readonly)
+                && (retained_value != current_value || has_marked_text));
         let language_changed = native.language_name() != self.language;
         let placeholder_changed = native.presentation().placeholder() != &resolved_placeholder;
         if value_changed || language_changed || placeholder_changed || line_numbers_changed {
@@ -417,6 +418,7 @@ mod tests {
         cx: &mut gpui::TestAppContext,
     ) {
         use crate::runtime::component_host::ComponentHost;
+        use gpui::EntityInputHandler;
         struct Owner {
             value: String,
             disabled: bool,
@@ -514,6 +516,32 @@ mod tests {
         });
         window.cx.run_until_parked();
         window.update(|_, app| assert_eq!(owner.read(app).component().value, "fresh"));
+        window.update(|window, app| {
+            owner.update(app, |host, cx| {
+                host.component_mut().readonly = false;
+                cx.notify();
+            });
+            let _ = window.draw(app);
+            editor.update(app, |editor, cx| {
+                editor.replace_and_mark_text_in_range(Some(0..1), "f", Some(1..1), window, cx)
+            });
+            assert_eq!(editor.read(app).value().to_string(), "fresh");
+            assert!(
+                editor
+                    .update(app, |editor, cx| editor.marked_text_range(window, cx))
+                    .is_some()
+            );
+            owner.update(app, |host, cx| {
+                host.component_mut().disabled = true;
+                cx.notify();
+            });
+            let _ = window.draw(app);
+            assert!(
+                editor
+                    .update(app, |editor, cx| editor.marked_text_range(window, cx))
+                    .is_none()
+            );
+        });
     }
 
     #[cfg(not(target_family = "wasm"))]
