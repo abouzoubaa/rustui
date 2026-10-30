@@ -315,6 +315,24 @@ pub fn resolve_component_style_with(
     let record = document
         .component_theme(component)
         .map_err(ThemeResolveError::Invalid)?;
+    resolve_component_style_from_record(
+        document,
+        component,
+        part,
+        selector,
+        handled_extras,
+        &record,
+    )
+}
+
+fn resolve_component_style_from_record(
+    document: &ThemeDocument,
+    component: &str,
+    part: &str,
+    selector: &ButtonStyleSelector,
+    handled_extras: &[&str],
+    record: &ComponentThemeRecord,
+) -> Result<ResolvedComponentStyle, ThemeResolveError> {
     let part_metadata = record
         .parts
         .get(part)
@@ -425,7 +443,7 @@ pub fn resolve_component_style_with(
         colors,
         typography,
         extra_properties,
-        record_metadata: record.metadata,
+        record_metadata: record.metadata.clone(),
         part_metadata: part_metadata.clone(),
         rule_metadata: best.metadata.clone(),
         style_metadata: best.style.metadata.clone(),
@@ -498,8 +516,15 @@ pub(super) fn validate_component_theme(
             })
             .map(String::as_str)
             .collect::<Vec<_>>();
-        resolve_component_style_with(document, component, &rule.part, &rule.when, &handled_extras)
-            .map_err(|error| ThemeResolveError::Invalid(format!("style rule {index}: {error}")))?;
+        resolve_component_style_from_record(
+            document,
+            component,
+            &rule.part,
+            &rule.when,
+            &handled_extras,
+            record,
+        )
+        .map_err(|error| ThemeResolveError::Invalid(format!("style rule {index}: {error}")))?;
     }
 
     Ok(())
