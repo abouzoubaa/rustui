@@ -11,6 +11,7 @@ use gpui::{
 };
 use gpui_component::table::{Column, DataTable, TableDelegate, TableEvent, TableState};
 use rustui_core::{Binding, Identity};
+use rustui_i18n::LayoutDirection;
 
 use crate::{
     components::theme::{required_style, required_style_with_artwork, selector, styled_element},
@@ -230,6 +231,9 @@ impl TableDelegate for StringTableDelegate {
 }
 
 /// A virtualized string table with controlled row selection.
+///
+/// Right-to-left locales display columns in reverse visual order while retaining
+/// each header's association with its cells and preserving source-row selection.
 pub struct TableView {
     columns: Vec<String>,
     column_messages: Option<Vec<String>>,
@@ -371,6 +375,20 @@ impl TableView {
     }
 }
 
+fn presentation_data(
+    mut columns: Vec<String>,
+    mut rows: Vec<Vec<String>>,
+    direction: LayoutDirection,
+) -> (Vec<String>, Vec<Vec<String>>) {
+    if direction == LayoutDirection::RightToLeft {
+        columns.reverse();
+        for row in &mut rows {
+            row.reverse();
+        }
+    }
+    (columns, rows)
+}
+
 fn selection_for_rows(selection: Option<usize>, row_count: usize) -> Option<usize> {
     selection.filter(|index| *index < row_count)
 }
@@ -421,9 +439,13 @@ impl View for TableView {
         let header_style =
             required_style_with_artwork(context, "table", "table_column_headers", &query);
         let identity = self.identity(context);
-        let resolved_columns = self.resolved_columns(|id| context.localized_message(id));
-        let columns = resolved_columns.clone();
-        let rows = self.rows.clone();
+        let (display_columns, display_rows) = presentation_data(
+            self.resolved_columns(|id| context.localized_message(id)),
+            self.rows.clone(),
+            context.layout_direction(),
+        );
+        let columns = display_columns.clone();
+        let rows = display_rows.clone();
         let column_width = self.column_width;
         let initial_row_style = row_style.clone();
         let initial_header_style = header_style.clone();
@@ -453,15 +475,15 @@ impl View for TableView {
         let data_changed = {
             let state = state.read(context.app());
             let delegate = state.delegate();
-            delegate.columns != resolved_columns
-                || delegate.rows != self.rows
+            delegate.columns != display_columns
+                || delegate.rows != display_rows
                 || delegate.column_width != self.column_width
                 || delegate.row_style != row_style
                 || delegate.header_style != header_style
         };
         if data_changed {
-            let columns = resolved_columns;
-            let rows = self.rows.clone();
+            let columns = display_columns;
+            let rows = display_rows;
             let column_width = self.column_width;
             let row_style = row_style.clone();
             let header_style = header_style.clone();
@@ -686,6 +708,33 @@ mod tests {
         );
         assert_eq!(table.resolved_columns(|_| " ".into()), ["Index", "Row"]);
         assert_eq!(table.resolved_columns(|_| "صف".into()), ["صف", "صف"]);
+    }
+
+    #[test]
+    fn rtl_presentation_reorders_columns_without_reordering_rows() {
+        let columns = vec!["Index".to_owned(), "Name".to_owned()];
+        let rows = vec![
+            vec!["0".to_owned(), "Alpha".to_owned()],
+            vec!["1".to_owned(), "Beta".to_owned()],
+        ];
+        assert_eq!(
+            super::presentation_data(
+                columns.clone(),
+                rows.clone(),
+                rustui_i18n::LayoutDirection::LeftToRight,
+            ),
+            (columns.clone(), rows.clone())
+        );
+        assert_eq!(
+            super::presentation_data(columns, rows, rustui_i18n::LayoutDirection::RightToLeft),
+            (
+                vec!["Name".to_owned(), "Index".to_owned()],
+                vec![
+                    vec!["Alpha".to_owned(), "0".to_owned()],
+                    vec!["Beta".to_owned(), "1".to_owned()],
+                ],
+            )
+        );
     }
 
     #[test]
