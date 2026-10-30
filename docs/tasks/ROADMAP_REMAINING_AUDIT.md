@@ -1,3 +1,7 @@
+## R15 native Stepper keyboard event path — 2026-10-30
+
+A macOS-hosted GPUI test-window regression focuses the rendered Stepper increment button, sends Enter key-down/up events, confirms owner values 0 → 1 → 2 with no further increment beyond the configured maximum, then focuses decrement and confirms 2 → 1. The focused Stepper suite passed 17/17 on parent `73804997` plus the test (`target/headstart/evidence/native-stepper-event-suite-20261030.log`, SHA-256 `ccc916e00f5b961580a03bdeee877c7ea563cd743a6bc23c5fd2423052bfe177`). Earlier harness attempts failed because `simulate_keystrokes` sends key-down without the key-up that GPUI button activation requires; the focused retry log SHA-256 is `1682c6f329c66b70b3b318736c4bacc7c9cfd8c7eac91c70a3ea3d1bc4afd0c5`. This event-path test is not a native Playground interaction, visual, locale-switch or broader input acceptance.
+
 ## R13/R15 native Stepper direction — 2026-10-30
 
 Stepper's horizontal label/value/control row now follows the active layout direction: GPUI Row in LTR and RowReverse in RTL. The vertical increment/decrement order remains unchanged. On parent `c685421b` plus this change, the native-hosted focused Stepper suite passed 16/16, including a GPUI style regression for both directions. Log `target/headstart/evidence/native-stepper-rtl-20261030.log`, SHA-256 `4448d99a3db15ce5fdccd69bfaa3fa1c75af619112582ef40e25443682518eb0`. This verifies source-level layout selection, not actual native rendering, keyboard or broader locale acceptance; the protected-bundle cleanup rejection remains unresolved.

@@ -593,4 +593,90 @@ mod tests {
         assert_eq!(stepped_value(14, 5, 15, 4, true), 15);
         assert_eq!(stepped_value(6, 5, 15, 4, false), 5);
     }
+    #[gpui::test]
+    fn rendered_stepper_keyboard_updates_owner_and_stops_at_limit(cx: &mut gpui::TestAppContext) {
+        use crate::{runtime::ComponentHost, view::View};
+        struct Owner {
+            value: i32,
+        }
+        impl View for Owner {
+            fn body(&self) -> impl View {
+                Stepper(
+                    "Count",
+                    rustui_core::Binding::new(
+                        self.value,
+                        |owner: &Owner| owner.value,
+                        |owner, value| owner.value = value,
+                    ),
+                )
+                .id("keyboard-stepper")
+                .range(0..=2)
+            }
+        }
+        let theme = parse_theme(include_str!(concat!(
+            env!("CARGO_MANIFEST_DIR"),
+            "/../../themes/macos27.json"
+        )))
+        .unwrap();
+        cx.update(|app| {
+            gpui_component::init(app);
+            crate::theme::activate_theme(&theme, Some(AppearanceMode::Dark), app).unwrap();
+        });
+        let (owner, window) =
+            cx.add_window_view(|_, cx| ComponentHost::new(Owner { value: 0 }, cx));
+        window.update(|window, app| {
+            let _ = window.draw(app);
+        });
+        window.update(|window, app| {
+            window.focus_next(app);
+            assert!(window.focused(app).is_some());
+            let _ = window.draw(app);
+        });
+        let key = gpui::Keystroke::parse("enter").unwrap();
+        window.simulate_event(gpui::KeyDownEvent {
+            keystroke: key.clone(),
+            is_held: false,
+            prefer_character_input: false,
+        });
+        window.simulate_event(gpui::KeyUpEvent { keystroke: key });
+        window.update(|window, app| {
+            let _ = window.draw(app);
+            assert_eq!(owner.read(app).component().value, 1);
+        });
+        let key = gpui::Keystroke::parse("enter").unwrap();
+        window.simulate_event(gpui::KeyDownEvent {
+            keystroke: key.clone(),
+            is_held: false,
+            prefer_character_input: false,
+        });
+        window.simulate_event(gpui::KeyUpEvent { keystroke: key });
+        window.update(|window, app| {
+            let _ = window.draw(app);
+            assert_eq!(owner.read(app).component().value, 2);
+        });
+        let key = gpui::Keystroke::parse("enter").unwrap();
+        window.simulate_event(gpui::KeyDownEvent {
+            keystroke: key.clone(),
+            is_held: false,
+            prefer_character_input: false,
+        });
+        window.simulate_event(gpui::KeyUpEvent { keystroke: key });
+        window.update(|window, app| {
+            let _ = window.draw(app);
+            assert_eq!(owner.read(app).component().value, 2);
+            window.focus_next(app);
+            let _ = window.draw(app);
+        });
+        let key = gpui::Keystroke::parse("enter").unwrap();
+        window.simulate_event(gpui::KeyDownEvent {
+            keystroke: key.clone(),
+            is_held: false,
+            prefer_character_input: false,
+        });
+        window.simulate_event(gpui::KeyUpEvent { keystroke: key });
+        window.update(|window, app| {
+            let _ = window.draw(app);
+            assert_eq!(owner.read(app).component().value, 1);
+        });
+    }
 }
