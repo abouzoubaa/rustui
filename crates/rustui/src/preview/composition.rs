@@ -506,6 +506,13 @@ impl<C> CompositionHost<C> {
                     property,
                     value,
                 } => {
+                    if let PropertyValue::String(text) = value
+                        && text.len() > super::model::MAX_STRING_VALUE_BYTES
+                    {
+                        return Err(PreviewError::Invalid(
+                            "composition property string exceeds size limit".into(),
+                        ));
+                    }
                     let current = &next
                         .nodes
                         .get(node)
@@ -527,6 +534,28 @@ impl<C> CompositionHost<C> {
                     node,
                     value,
                 } => {
+                    let mut budget = super::codec::SerializedTextBudget::new(
+                        "composition node exceeds size limit",
+                    );
+                    budget.add_preview(&value.preview)?;
+                    if value.slots.len() > MAX_SLOTS_PER_COMPONENT {
+                        return Err(PreviewError::Invalid(
+                            "composition node exceeds slot limit".into(),
+                        ));
+                    }
+                    let mut child_count = 0usize;
+                    for (slot_id, children) in &value.slots {
+                        budget.add(slot_id.as_str())?;
+                        child_count = child_count.saturating_add(children.len());
+                        if child_count > MAX_COMPOSITION_NODES {
+                            return Err(PreviewError::Invalid(
+                                "composition node exceeds child limit".into(),
+                            ));
+                        }
+                        for child in children {
+                            budget.add(child.as_str())?;
+                        }
+                    }
                     if next.nodes.len() >= MAX_COMPOSITION_NODES {
                         return Err(PreviewError::Invalid(
                             "composition node limit exceeded".into(),
@@ -837,6 +866,56 @@ mod tests {
             .is_err(),
             true
         );
+    }
+
+    #[test]
+    fn oversized_edit_payloads_are_rejected_atomically() {
+        let (registry, document) = fixture();
+        let mut host = CompositionHost::new(registry);
+        let stamp = host.mount(document.clone()).unwrap();
+        let root = document.root.clone();
+        let property = PropertyId::new("oversized").unwrap();
+        let set = CompositionEdit::SetProperty {
+            node: root.clone(),
+            property: property.clone(),
+            value: PropertyValue::String(
+                "x".repeat(super::super::model::MAX_STRING_VALUE_BYTES + 1),
+            ),
+        };
+        assert!(
+            matches!(host.edit(&stamp, &[set]), Err(PreviewError::Invalid(message)) if message == "composition property string exceeds size limit")
+        );
+
+        let mut node = document.nodes[&root].clone();
+        node.preview.properties.insert(
+            property,
+            PropertyValue::String("x".repeat(MAX_DOCUMENT_BYTES + 1)),
+        );
+        let insert = CompositionEdit::Insert {
+            parent: root,
+            slot: SlotId::new("body").unwrap(),
+            node: NodeId::new("new-node").unwrap(),
+            value: node,
+        };
+        assert!(
+            matches!(host.edit(&stamp, &[insert]), Err(PreviewError::Invalid(message)) if message == "composition node exceeds size limit")
+        );
+        let mut node = document.nodes[&document.root].clone();
+        node.slots.insert(
+            SlotId::new("body").unwrap(),
+            vec![NodeId::new("child").unwrap(); MAX_COMPOSITION_NODES + 1],
+        );
+        let insert = CompositionEdit::Insert {
+            parent: document.root.clone(),
+            slot: SlotId::new("body").unwrap(),
+            node: NodeId::new("new-node").unwrap(),
+            value: node,
+        };
+        assert!(
+            matches!(host.edit(&stamp, &[insert]), Err(PreviewError::Invalid(message)) if message == "composition node exceeds child limit")
+        );
+        assert_eq!(host.stamp(), Some(&stamp));
+        assert_eq!(host.document(), Some(&document));
     }
 
     #[test]

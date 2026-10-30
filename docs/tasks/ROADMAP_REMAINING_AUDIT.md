@@ -1,3 +1,7 @@
+## R22/R24 composition edit payload bounds — 2026-10-30
+
+Composition edits now reject oversized property strings and inserted-node payloads before cloning those caller-supplied payloads. Inserted nodes are checked against existing slot, node-count and serialized-text bounds; invalid edits preserve the mounted document and revision. The focused composition suite passed 16/16 (`target/headstart/evidence/native-composition-edit-bounds-20261030.log`, SHA-256 `e0c7b72b5f74b9e1566454ca83d618d1bbac5e23c16a1d4e4f237864ef92c9da`). The current mounted graph is still cloned for an edit before these payload checks. This bounded source/test result does not close the complete preview security or release audit.
+
 ## R16 native owner updates during Unicode preedit — 2026-10-30
 
 Extended the existing GPUI event-path tests for TextField and multiline TextEditor with a supplementary Unicode preedit (UTF-16 surrogate pair), an external Arabic owner update, and a subsequent commit. Both focused tests passed, 1/1 each. Evidence: `target/headstart/evidence/native-text-field-ime-unicode-20261030.log` SHA-256 `98db3e3ee8cc7fc2759ae8b6cb0024a6b54d53084d8bff34ab81855525d62f17`; `target/headstart/evidence/native-text-editor-ime-unicode-20261030.log` SHA-256 `6e0b69e65225d53ddd907bc20003f472ca4acebaa946d1f5767c0f0ad03bf274`. This uses simulated GPUI input events; real macOS IME and wider text-input acceptance remain open.
