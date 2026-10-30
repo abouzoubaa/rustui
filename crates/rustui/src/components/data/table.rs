@@ -194,7 +194,7 @@ impl TableDelegate for StringTableDelegate {
         window: &mut Window,
         cx: &mut Context<TableState<Self>>,
     ) -> Stateful<gpui::Div> {
-        let selected = cx.entity().read(cx).selected_row() == Some(row_ix);
+        let selected = self.last_owner_selection.get() == Some(row_ix);
         let focused = cx.focus_handle().is_focused(window);
         let mut row = styled_element(table_data_row_element(row_ix), &self.row_style);
         if should_report_active_descendant(selected, focused) {
@@ -322,12 +322,7 @@ impl TableView {
 
     fn identity(&self, context: &mut RenderContext<'_>) -> Identity {
         let Some(id) = &self.id else {
-            return context.next_implicit_retained_identity(Identity::from(format!(
-                "table:{}:{}:{}",
-                self.columns.len(),
-                self.rows.len(),
-                self.columns.first().map_or("", String::as_str)
-            )));
+            return context.next_implicit_retained_identity(Identity::from("table"));
         };
         id.clone()
     }
@@ -482,8 +477,13 @@ impl View for TableView {
             let normalize = context.binding_updater(self.selection.clone(), move |current| {
                 clear_invalid_selection(current, invalid)
             });
+            let current_state = state.clone();
             context.update_entity(&state, move |_state, _window, cx| {
-                cx.defer(move |cx| normalize(cx));
+                cx.defer(move |cx| {
+                    if invalid >= current_state.read(cx).delegate().rows.len() {
+                        normalize(cx);
+                    }
+                });
             });
         }
 
@@ -502,7 +502,92 @@ impl View for TableView {
 
 #[cfg(test)]
 mod tests {
+    use super::View;
     use gpui::{Element, Role, accesskit::Node};
+
+    struct RestoredRowOwner {
+        selection: Option<usize>,
+        rows: usize,
+        writes: usize,
+    }
+
+    impl super::View for RestoredRowOwner {
+        fn body(&self) -> impl super::View {
+            super::EmptyView
+        }
+
+        fn into_element(&self, context: &mut super::RenderContext<'_>) -> gpui::AnyElement {
+            let selection = super::Binding::new(
+                self.selection,
+                |owner: &Self| owner.selection,
+                |owner, value| {
+                    owner.selection = value;
+                    owner.writes += 1;
+                },
+            );
+            let rows = (0..self.rows).map(|index| vec![index.to_string()]);
+            super::TableView::new(["Value"], rows, selection).into_element(context)
+        }
+    }
+
+    #[gpui::test]
+    fn restored_row_survives_queued_selection_clear(cx: &mut gpui::TestAppContext) {
+        let theme = crate::theme::parse_theme(include_str!(concat!(
+            env!("CARGO_MANIFEST_DIR"),
+            "/../../themes/macos27.json"
+        )))
+        .unwrap();
+        cx.update(|app| {
+            gpui_component::init(app);
+            crate::theme::activate_theme(&theme, Some(crate::theme::AppearanceMode::Dark), app)
+                .unwrap();
+        });
+        let (owner, window) = cx.add_window_view(|_, app| {
+            crate::runtime::ComponentHost::new(
+                RestoredRowOwner {
+                    selection: Some(1),
+                    rows: 2,
+                    writes: 0,
+                },
+                app,
+            )
+        });
+        window.update(|window, app| {
+            let _ = window.draw(app);
+            owner.update(app, |host, cx| {
+                host.component_mut().rows = 1;
+                cx.notify();
+            });
+            let _ = window.draw(app);
+            owner.update(app, |host, cx| {
+                host.component_mut().rows = 2;
+                cx.notify();
+            });
+            let _ = window.draw(app);
+            assert_eq!(
+                owner.read(app).component().selection,
+                Some(1),
+                "after restoration draw"
+            );
+        });
+        window.cx.run_until_parked();
+        window.update(|_, app| {
+            assert_eq!(owner.read(app).component().selection, Some(1));
+            assert_eq!(owner.read(app).component().writes, 0);
+        });
+        window.update(|window, app| {
+            owner.update(app, |host, cx| {
+                host.component_mut().rows = 1;
+                cx.notify();
+            });
+            let _ = window.draw(app);
+        });
+        window.cx.run_until_parked();
+        window.update(|_, app| {
+            assert_eq!(owner.read(app).component().selection, None);
+            assert_eq!(owner.read(app).component().writes, 1);
+        });
+    }
 
     use super::{
         SelectionUpdater, TableView, apply_owner_selection_request, apply_selection_updater,
