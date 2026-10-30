@@ -865,6 +865,7 @@ impl View for SearchFieldReferenceGallery {
                             .child(
                                 SearchField("Search components...", self.empty_query_binding())
                                     .id("search-field-reference-empty")
+                                    .width(210.0)
                                     .localized_placeholder("lab-search-gallery-placeholder")
                                     .localized_accessibility_label("lab-search-gallery-label"),
                             ),
@@ -878,6 +879,7 @@ impl View for SearchFieldReferenceGallery {
                             .child(
                                 SearchField("Search components...", self.active_query_binding())
                                     .id("search-field-reference-active")
+                                    .width(210.0)
                                     .localized_placeholder("lab-search-gallery-placeholder")
                                     .localized_accessibility_label("lab-search-gallery-label"),
                             ),
@@ -891,6 +893,7 @@ impl View for SearchFieldReferenceGallery {
                             .child(
                                 SearchField("Search components...", self.recent_query_binding())
                                     .id("search-field-reference-recent")
+                                    .width(210.0)
                                     .localized_placeholder("lab-search-gallery-placeholder")
                                     .localized_accessibility_label("lab-search-gallery-label"),
                             )

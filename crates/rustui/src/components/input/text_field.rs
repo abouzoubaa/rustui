@@ -2,7 +2,7 @@
 
 use gpui::{
     AnyElement, AppContext, Entity, EntityInputHandler, IntoElement, ParentElement as _,
-    SharedString, Styled, div,
+    SharedString, Styled, div, px,
 };
 use gpui_component::{
     Disableable as _, Icon, IconName, Sizable,
@@ -100,6 +100,7 @@ pub struct TextFieldView {
     id: Option<Identity>,
     kind: TextFieldKind,
     size: TextFieldSize,
+    width: Option<f32>,
     disabled: bool,
     readonly: bool,
     cleanable: bool,
@@ -118,6 +119,7 @@ impl TextFieldView {
             id: None,
             kind: TextFieldKind::Plain,
             size: TextFieldSize::Small,
+            width: None,
             disabled: false,
             readonly: false,
             cleanable: false,
@@ -150,6 +152,16 @@ impl TextFieldView {
 
     pub fn size(mut self, size: TextFieldSize) -> Self {
         self.size = size;
+        self
+    }
+
+    /// Overrides the theme's field width in logical pixels.
+    pub fn width(mut self, width: f32) -> Self {
+        assert!(
+            width.is_finite() && width > 0.0,
+            "TextField width must be positive and finite"
+        );
+        self.width = Some(width);
         self
     }
 
@@ -637,6 +649,9 @@ impl View for TextFieldView {
             input = input.prefix(icon);
         }
         input = styled_element(input, &style);
+        if let Some(width) = self.width {
+            input = input.w(px(width));
+        }
         // Input draws its one-pixel border before applying the public Styled
         // refinement. The theme's border color can override that border here.
         if let Some(color) = style.colors.get("border") {
@@ -680,6 +695,20 @@ mod tests {
                 *value = next;
             },
         )
+    }
+
+    #[test]
+    fn input_width_override_requires_a_positive_finite_value() {
+        use crate::components::input::search_field::SearchField;
+        assert_eq!(
+            SearchField("Search", binding()).width(210.0).width,
+            Some(210.0)
+        );
+        for width in [0.0, -1.0, f32::NAN, f32::INFINITY] {
+            assert!(
+                std::panic::catch_unwind(|| SearchField("Search", binding()).width(width)).is_err()
+            );
+        }
     }
 
     #[test]
