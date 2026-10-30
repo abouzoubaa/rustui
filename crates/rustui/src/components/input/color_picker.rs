@@ -413,10 +413,15 @@ impl ColorPickerView {
                     direction,
                 ))
                 .child(
-                    Input::new(&hex_input)
-                        .small()
-                        .px_2p5()
-                        .aria_label(hex_accessibility_label),
+                    div()
+                        .id("color-picker-hex-input")
+                        .on_action(|_: &gpui_base::actions::Confirm, _, cx| cx.stop_propagation())
+                        .child(
+                            Input::new(&hex_input)
+                                .small()
+                                .px_2p5()
+                                .aria_label(hex_accessibility_label),
+                        ),
                 );
         }
 
@@ -1107,7 +1112,7 @@ mod rendered_locale_tests {
         });
     }
     #[gpui::test]
-    fn hsla_slider_keyboard_updates_owner_and_clamps(cx: &mut gpui::TestAppContext) {
+    fn hsla_keyboard_controls_and_hex_commit_update_owner(cx: &mut gpui::TestAppContext) {
         let theme = parse_theme(include_str!(concat!(
             env!("CARGO_MANIFEST_DIR"),
             "/../../themes/macos27.json"
@@ -1205,6 +1210,36 @@ mod rendered_locale_tests {
         window.update(|window, app| {
             let _ = window.draw(app);
             assert_eq!(owner.read(app).component().color.unwrap().a, 0.0);
+            window.focus_next(app);
+            let _ = window.draw(app);
+        });
+        window.simulate_keystrokes("cmd-a");
+        window.simulate_input("#FF");
+        window.simulate_keystrokes("enter");
+        window.update(|window, app| {
+            let _ = window.draw(app);
+            assert!(
+                state.read(app).is_open(),
+                "incomplete hex must not close the picker"
+            );
+            assert_eq!(owner.read(app).component().color.unwrap().a, 0.0);
+        });
+        window.simulate_keystrokes("cmd-a");
+        window.simulate_input("#FF0000");
+        window.update(|window, app| {
+            let _ = window.draw(app);
+            assert_eq!(
+                state.read(app).hex_input().read(app).value().as_ref(),
+                "#FF0000"
+            );
+            assert_eq!(owner.read(app).component().color.unwrap().a, 0.0);
+        });
+        window.simulate_keystrokes("enter");
+        window.update(|window, app| {
+            let _ = window.draw(app);
+            let color = owner.read(app).component().color.unwrap();
+            assert_eq!(color.to_rgb(), hsla(0.0, 1.0, 0.5, 1.0).to_rgb());
+            assert!(!state.read(app).is_open());
         });
     }
 }
