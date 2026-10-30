@@ -1471,3 +1471,103 @@ mod rendered_accessibility_tests {
         );
     }
 }
+
+#[cfg(test)]
+mod rendered_keyboard_tests {
+    use super::*;
+    use crate::runtime::{Action, ComponentHost};
+
+    struct Owner {
+        selection: Option<String>,
+        activations: Vec<String>,
+    }
+    impl View for Owner {
+        fn body(&self) -> impl View {
+            TreeView::new(
+                [
+                    TreeNode::new("first", "First"),
+                    TreeNode::new("disabled", "Disabled").disabled(true),
+                    TreeNode::new("last", "Last"),
+                ],
+                Binding::new(
+                    self.selection.clone(),
+                    |owner: &Owner| owner.selection.clone(),
+                    |owner, selection| owner.selection = selection,
+                ),
+            )
+            .id("keyboard-leaf-test")
+            .on_activate(Action::new(|owner: &mut Owner| {
+                if let Some(id) = &owner.selection {
+                    owner.activations.push(id.clone());
+                }
+            }))
+        }
+    }
+
+    #[gpui::test]
+    fn keyboard_confirmation_activates_current_enabled_leaf(cx: &mut gpui::TestAppContext) {
+        let theme = crate::theme::parse_theme(include_str!(concat!(
+            env!("CARGO_MANIFEST_DIR"),
+            "/../../themes/macos27.json"
+        )))
+        .unwrap();
+        cx.update(|app| {
+            gpui_component::init(app);
+            // Mirror the Tree confirmation binding installed by RustUI application bootstrap.
+            app.bind_keys([gpui::KeyBinding::new(
+                "enter",
+                Confirm { secondary: false },
+                Some("Tree"),
+            )]);
+            crate::theme::activate_theme(&theme, Some(crate::theme::AppearanceMode::Dark), app)
+                .unwrap();
+        });
+        let (owner, window) = cx.add_window_view(|_, cx| {
+            ComponentHost::new(
+                Owner {
+                    selection: Some("first".into()),
+                    activations: Vec::new(),
+                },
+                cx,
+            )
+        });
+        window.update(|window, app| {
+            let _ = window.draw(app);
+            let retained = owner
+                .read(app)
+                .retained_entity_for_test::<RetainedTree>(
+                    vec![],
+                    Identity::from("keyboard-leaf-test"),
+                )
+                .unwrap();
+            let tree = retained.read(app).tree.clone();
+            assert_eq!(
+                tree.read(app)
+                    .selected_item()
+                    .map(|item| item.id.to_string())
+                    .as_deref(),
+                Some("first")
+            );
+            tree.update(app, |tree, cx| tree.focus(window, cx));
+            let _ = window.draw(app);
+        });
+        window.simulate_keystrokes("enter");
+        window.update(|window, app| {
+            let _ = window.draw(app);
+            assert_eq!(owner.read(app).component().activations, ["first"]);
+        });
+        window.simulate_keystrokes("down");
+        window.update(|window, app| {
+            let _ = window.draw(app);
+            assert_eq!(
+                owner.read(app).component().selection.as_deref(),
+                Some("last")
+            );
+        });
+        window.simulate_keystrokes("enter");
+        window.update(|window, app| {
+            let _ = window.draw(app);
+            assert_eq!(owner.read(app).component().activations, ["first", "last"]);
+        });
+    }
+}
