@@ -363,7 +363,7 @@ impl Playground {
                 panel = panel.child(Text(missing).font_size(11.0));
             }
         }
-        Container(panel.spacing(12.0))
+        Container(panel.alignment(HorizontalAlignment::Start).spacing(12.0))
             .padding(12.0)
             .border()
             .background(Surface::Background)
