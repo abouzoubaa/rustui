@@ -1,3 +1,7 @@
+## R03 native public documentation build — 2026-10-30
+
+On source commit `1e15c4c9`, `./scripts/cargo-headstart doc --workspace --no-deps --profile headstart --locked --offline` succeeded and generated seven workspace documentation entry points, including `target/headstart/doc/rustui/index.html`. The log contains upstream deprecation warnings; a search found no unresolved-link warnings. Evidence: `target/headstart/evidence/native-public-docs-20261030.log`, SHA-256 `e0c06957f1343c3340e745fcb5e1a8e99686a5211d3d3454fa4179a33c906efc`. This establishes documentation generation, not completeness or correctness of every public API contract; R03 remains open.
+
 ## Native release CI selection — 2026-10-30
 
 The manual release workflow now defaults to macOS checks; `include_web` explicitly opts into Web tool provisioning and Web release checks. A local YAML structure check verified the default and all three conditions. The repository reported zero self-hosted runners, so no remote macOS CI run was performed. The macOS packaging gate also remains subject to the previous automatic cleanup rejection; native packaging and release acceptance are open. Web/Wasm remains deferred as directed.
