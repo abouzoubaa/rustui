@@ -1,3 +1,7 @@
+## R20 stale async error — 2026-10-30
+
+The GPUI test-window replacement race now covers an old background task that has completed with an error before its foreground callback runs. Starting a replacement prevents the old error from being applied; the new task succeeds. The owner-task suite passed 8/8 using `./scripts/cargo-headstart test -p rustui --lib --profile headstart --locked --offline runtime::tasks::tests::`. Evidence: `target/headstart/evidence/native-owner-task-stale-error-20261030.log`, SHA-256 `bdda0677dfb7b978ce88991b1ae0bacb0e04906185fb88aff2a6d8acdb227803`. This is a simulated GPUI test-window result, not complete native application acceptance.
+
 ## R06 binding snapshot contract — 2026-10-30
 
 The public `Binding` documentation now distinguishes its captured `value()` snapshot from binding-based update callbacks, which read the current owner value. The focused `rustui-core` binding tests passed 7/7 with `./scripts/cargo-headstart test -p rustui-core --lib --locked --offline binding::`; evidence: `target/headstart/evidence/native-binding-contract-20261030.log`, SHA-256 `86f471e7545645d620b7ce2842ffe3d4d2c1c435c56d52afeae9e23fbe88983a`. These tests include consecutive owner updates and rejection of stale context and wrong owner types. Broader state, invalidation and native acceptance remain open.

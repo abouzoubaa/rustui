@@ -308,6 +308,18 @@ mod tests {
 
     #[gpui::test]
     fn completed_old_work_cannot_overwrite_a_replacement(cx: &mut gpui::TestAppContext) {
+        check_completed_old_work_cannot_overwrite_a_replacement(cx, false);
+    }
+
+    #[gpui::test]
+    fn completed_old_error_cannot_overwrite_a_replacement(cx: &mut gpui::TestAppContext) {
+        check_completed_old_work_cannot_overwrite_a_replacement(cx, true);
+    }
+
+    fn check_completed_old_work_cannot_overwrite_a_replacement(
+        cx: &mut gpui::TestAppContext,
+        old_fails: bool,
+    ) {
         use std::sync::{
             Arc, Mutex,
             atomic::{AtomicBool, Ordering},
@@ -332,7 +344,11 @@ mod tests {
                         let mut state = gate.lock().unwrap();
                         if state.0 {
                             completed.store(true, Ordering::SeqCst);
-                            Poll::Ready(Ok::<_, String>("old".to_owned()))
+                            Poll::Ready(if old_fails {
+                                Err("old error".to_owned())
+                            } else {
+                                Ok("old".to_owned())
+                            })
                         } else {
                             state.1 = Some(cx.waker().clone());
                             Poll::Pending
