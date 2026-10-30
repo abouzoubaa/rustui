@@ -541,13 +541,9 @@ impl TreeView {
     }
 
     fn identity_with(&self, allocate: impl FnOnce(Identity) -> Identity) -> Identity {
-        self.id.clone().unwrap_or_else(|| {
-            allocate(Identity::from(format!(
-                "tree:{}:{}",
-                self.nodes.len(),
-                self.nodes.first().map_or("", |node| node.id.as_str())
-            )))
-        })
+        self.id
+            .clone()
+            .unwrap_or_else(|| allocate(Identity::from("tree")))
     }
 }
 
@@ -1433,7 +1429,6 @@ mod rendered_accessibility_tests {
                 .present
                 .then(|| TreeNode::new("a", "Alpha").child(TreeNode::new("child", "Child")));
             TreeView::new(nodes, selection)
-                .id("restored-node")
                 .controlled_expansion(expansion)
                 .into_element(context)
         }

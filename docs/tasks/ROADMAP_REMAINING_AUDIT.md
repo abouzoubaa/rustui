@@ -1,3 +1,7 @@
+## R17 implicit Tree identity — 2026-10-30
+
+An implicit Tree now keeps its retained identity when its nodes change. The rendered selected/expanded branch restoration regression previously used an explicit ID; removing that ID reproduced lost selection (`target/headstart/evidence/native-tree-implicit-before-20261030.log`, SHA-256 `5d3bbdcd02abe81809efcdea875d441d106b7ab54ac47a2546b4f711c158808d`). With stable implicit identity, the Tree/Outline suite passed 35/35 (`native-tree-implicit-suite-20261030.log`, SHA-256 `02ba7ab2b0d1f5fecb7d72d262ecd7369d119a55ccbf127cf3911267500deb23`) and the locked offline native library check passed. This is GPUI test-window and build evidence; macOS Playground and broader Tree acceptance remain open.
+
 ## R17 TabView focus across item changes — 2026-10-30
 
 An implicit TabView now keeps a stable retained identity when its tabs change. A GPUI test window moves keyboard focus to the second tab, adds another tab and activates the focused tab. Before the fix the selection remained on the first tab (`target/headstart/evidence/native-tab-identity-before-20261030.log`, SHA-256 `0f9a0851a875032a0d0a555b37bc9fc4ed5b0ed264a85b5ecfc9205bb5bf0bb0`); the fixed TabView suite passed 28/28 (`native-tab-identity-suite-20261030.log`, SHA-256 `9aa45129c49512693e527f05b6eac977989deb9e0af10dbf9f2d7328e515a179`) and the locked offline native library check passed. This is GPUI test-window and build evidence; macOS Playground and broader navigation acceptance remain open.
