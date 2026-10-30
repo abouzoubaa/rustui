@@ -1,3 +1,7 @@
+## Native workspace integration checkpoint — 2026-10-30
+
+On clean source commit `e89dc268`, macOS `./scripts/cargo-headstart test --profile headstart --locked --offline --workspace --tests` passed 1,483 tests across 42 targets, with no failures or ignored tests. Evidence: `target/headstart/evidence/native-workspace-tests-e89dc268-20261030.log`, SHA-256 `7104d097ab42fea025eb97786be9bedeee6b4c34c64878f23e3f2c5b74907c8d`. This includes the recent collection restoration regressions; it does not establish native Playground, OS input, packaging, CI, licensing or release acceptance.
+
 ## R17 Collection selection restoration — 2026-10-30
 
 Collection now checks its current retained item IDs before a deferred clear of a missing selection. A rendered GPUI regression removes and restores the selected item before the deferred update, then permanently removes it; the former preserves the owner selection and the latter clears it. Before the fix restoration failed (`target/headstart/evidence/native-collection-reinsert-before-20261030.log`, SHA-256 `f044b232ae8735f20e1bb0b9c8d37fef8863275ec35821518065ec1806709fea`). The Collection suite passed 11/11 (`native-collection-reinsert-suite-20261030.log`, SHA-256 `019143ad81890164438eb0d589548e0e72ebe4e94d4084936acd061792f63eba`) and the locked offline native library check passed. This is GPUI test-window and build evidence; actual macOS Playground and broader Collection acceptance remain open.
