@@ -2,13 +2,14 @@
 
 use std::ops::RangeInclusive;
 
-use gpui::{AnyElement, Hsla, IntoElement, ParentElement, SharedString, Styled, div};
+use gpui::{AnyElement, Div, Hsla, IntoElement, ParentElement, SharedString, Styled, div};
 use gpui_component::{
     Disableable as _, Sizable as _, Size,
     button::{Button as GpuiButton, ButtonVariant, ButtonVariants as _},
     theme::try_parse_color,
 };
 use rustui_core::{Binding, Identity};
+use rustui_i18n::LayoutDirection;
 
 use crate::{
     components::theme::{required_style, selector, styled_element},
@@ -76,6 +77,14 @@ fn resolved_message_label(
         fallback.clone()
     } else {
         SharedString::from(localized)
+    }
+}
+
+fn native_stepper_row(direction: LayoutDirection) -> Div {
+    let row = div().flex().flex_row().items_center().gap_2();
+    match direction {
+        LayoutDirection::LeftToRight => row,
+        LayoutDirection::RightToLeft => row.flex_row_reverse(),
     }
 }
 
@@ -297,10 +306,7 @@ impl View for StepperView {
             .on_click(move |_, _, cx| decrement(cx))
             .child(styled_element(div().child("−"), &decrement_glyph));
 
-        div()
-            .flex()
-            .items_center()
-            .gap_2()
+        native_stepper_row(context.layout_direction())
             .child(div().text_color(label_color).child(label))
             .child(displayed_value(current, context.locale()))
             .child(
@@ -534,6 +540,18 @@ mod tests {
                 try_parse_color(&colors.primary_text).unwrap()
             );
         }
+    }
+
+    #[test]
+    fn native_stepper_row_follows_layout_direction() {
+        use gpui::Styled;
+        let mut ltr = super::native_stepper_row(rustui_i18n::LayoutDirection::LeftToRight);
+        let mut rtl = super::native_stepper_row(rustui_i18n::LayoutDirection::RightToLeft);
+        assert_eq!(ltr.style().flex_direction, Some(gpui::FlexDirection::Row));
+        assert_eq!(
+            rtl.style().flex_direction,
+            Some(gpui::FlexDirection::RowReverse)
+        );
     }
 
     #[test]

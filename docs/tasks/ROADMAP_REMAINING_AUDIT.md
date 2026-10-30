@@ -1,3 +1,7 @@
+## R13/R15 native Stepper direction — 2026-10-30
+
+Stepper's horizontal label/value/control row now follows the active layout direction: GPUI Row in LTR and RowReverse in RTL. The vertical increment/decrement order remains unchanged. On parent `c685421b` plus this change, the native-hosted focused Stepper suite passed 16/16, including a GPUI style regression for both directions. Log `target/headstart/evidence/native-stepper-rtl-20261030.log`, SHA-256 `4448d99a3db15ce5fdccd69bfaa3fa1c75af619112582ef40e25443682518eb0`. This verifies source-level layout selection, not actual native rendering, keyboard or broader locale acceptance; the protected-bundle cleanup rejection remains unresolved.
+
 ## R13/R15 native Stepper numeric display — 2026-10-30
 
 Stepper now formats its displayed clamped integer with the active RustUI locale using the existing integer formatter, retaining the unlocalized decimal fallback when no locale is active. The controlled integer and increment/decrement behavior do not change. The focused native-hosted Stepper suite passed 15/15, including English, French, Arabic negative numbers and the no-locale fallback, on parent `9d41fb5c` plus this change. Log `target/headstart/evidence/native-stepper-number-locale-20261030.log`, SHA-256 `0ca19f3deda2981faaf0b2bf15cd595d7d16ff1c49d6d718a6f27f6a91747c29`. A current native Playground visual/locale-switch check remains open; the protected-bundle cleanup rejection remains unresolved.
