@@ -28,6 +28,31 @@ fn write_with_current_writer<Value, Context>(
     }
 }
 
+fn clear_picker_value(
+    state: &mut ColorPickerState,
+    window: &mut gpui::Window,
+    cx: &mut gpui::Context<ColorPickerState>,
+) {
+    state.clear_value(window, cx);
+    reset_empty_sliders(state, window, cx);
+}
+
+fn reset_empty_sliders(
+    state: &ColorPickerState,
+    window: &mut gpui::Window,
+    cx: &mut gpui::Context<ColorPickerState>,
+) {
+    let sliders = state.sliders().clone();
+    for (slider, value) in [
+        (sliders.hue(), 0.0),
+        (sliders.saturation(), 0.0),
+        (sliders.lightness(), 0.0),
+        (sliders.alpha(), 1.0),
+    ] {
+        slider.update(cx, |slider, cx| slider.set_value(value, window, cx));
+    }
+}
+
 fn set_picker_open(
     state: &gpui::Entity<ColorPickerState>,
     open: bool,
@@ -38,7 +63,7 @@ fn set_picker_open(
         if state.is_open() && !open {
             match state.value() {
                 Some(value) => state.set_value(value, window, cx),
-                None => state.clear_value(window, cx),
+                None => clear_picker_value(state, window, cx),
             }
         }
         state.set_open(open, cx);
@@ -830,6 +855,9 @@ impl View for ColorPickerView {
                     None => state,
                 };
                 state.sync_pending_value(window, cx);
+                if initial_value.is_none() {
+                    reset_empty_sliders(&state, window, cx);
+                }
                 state
             });
             RetainedColorPicker {
@@ -848,7 +876,7 @@ impl View for ColorPickerView {
         if retained != current {
             context.update_entity(&state, move |state, window, cx| match current {
                 Some(value) => state.set_value(value, window, cx),
-                None => state.clear_value(window, cx),
+                None => clear_picker_value(state, window, cx),
             });
         }
 
@@ -987,6 +1015,41 @@ mod rendered_locale_tests {
             )
             .id("locale-color-picker")
         }
+    }
+
+    #[gpui::test]
+    fn empty_picker_sliders_match_opaque_black_without_writing_owner(
+        cx: &mut gpui::TestAppContext,
+    ) {
+        let theme = parse_theme(include_str!(concat!(
+            env!("CARGO_MANIFEST_DIR"),
+            "/../../themes/macos27.json"
+        )))
+        .unwrap();
+        cx.update(|app| {
+            gpui_component::init(app);
+            activate_theme(&theme, Some(AppearanceMode::Dark), app).unwrap();
+        });
+        let (owner, window) =
+            cx.add_window_view(|_, cx| ComponentHost::new(Owner { color: None }, cx));
+        window.update(|window, app| {
+            let _ = window.draw(app);
+            let retained = owner
+                .read(app)
+                .retained_entity_for_test::<RetainedColorPicker>(
+                    vec![],
+                    Identity::from("locale-color-picker"),
+                )
+                .unwrap();
+            let state = retained.read(app).state.read(app);
+            assert_eq!(state.value(), None);
+            let sliders = state.sliders();
+            assert_eq!(sliders.hue().read(app).value().end(), 0.0);
+            assert_eq!(sliders.saturation().read(app).value().end(), 0.0);
+            assert_eq!(sliders.lightness().read(app).value().end(), 0.0);
+            assert_eq!(sliders.alpha().read(app).value().end(), 1.0);
+            assert_eq!(owner.read(app).component().color, None);
+        });
     }
 
     #[gpui::test]
@@ -1249,6 +1312,11 @@ mod rendered_locale_tests {
             let _ = window.draw(app);
             assert_eq!(state.read(app).value(), None);
             assert!(state.read(app).hex_input().read(app).value().is_empty());
+            let sliders = state.read(app).sliders();
+            assert_eq!(sliders.hue().read(app).value().end(), 0.0);
+            assert_eq!(sliders.saturation().read(app).value().end(), 0.0);
+            assert_eq!(sliders.lightness().read(app).value().end(), 0.0);
+            assert_eq!(sliders.alpha().read(app).value().end(), 1.0);
         });
         let external = hsla(0.5, 1.0, 0.5, 0.0);
         window.update(|window, app| {
