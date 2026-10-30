@@ -1,3 +1,7 @@
+## R30 current GitHub source CI — 2026-10-30
+
+GitHub Actions push [run 41060841118](https://github.com/abouzoubaa/rustui/actions/runs/41060841118) completed successfully on exact commit `9028d57fd87779545b801730c83f6a0345c96712`: its `source` job passed, while `macos-and-web-builds` was skipped. Earlier runs were canceled as newer commits arrived. This confirms that source job only; it is not compiled macOS CI, native GUI acceptance, licensing clearance or release readiness. The local native test checkpoint remains recorded separately.
+
 ## R13/R15 native ColorPicker palette direction — 2026-10-30
 
 ColorPicker's trigger contents, featured-swatches row and individual crayon rows now use the existing logical input-row layout, applying GPUI Row in LTR and RowReverse in RTL. Swatch identities, color values and HSLA slider semantics are unchanged. On parent `abd5a0c1` plus this change, the focused native-hosted ColorPicker suite passed 18/18, including the retained-locale test and logical-row style checks (`target/headstart/evidence/native-color-picker-rtl-rows-20261030.log`, SHA-256 `306429fa3a84b6b09c1b21785d58b66a18a059b751d2e21b334796e206c7ea8f`). Native visual, pointer, narrow-width and broad RTL acceptance remain open.
