@@ -1,3 +1,7 @@
+## Native workspace test integration checkpoint — 2026-10-30
+
+On clean source commit `6d45fb0d`, macOS `./scripts/cargo-headstart test --profile headstart --locked --offline --workspace --tests` passed 1,463 tests across 42 targets: 1,403 library/binary tests in eight targets and 60 integration tests in 34 targets, with no failures or ignored tests. Log `target/headstart/evidence/native-workspace-tests-6d45fb0d-20261030.log`, SHA-256 `3e9e2a60f2554d968b9de674118b4331426c36435f2aaecd962d3e9900dcc4f2`. This is a current native source/test checkpoint, not native Playground, OS input, licensing, packaging or production acceptance.
+
 ## R15 native ColorPicker first hex preview — 2026-10-30
 
 On parent `5e8f5eb3` plus this regression, a macOS-hosted GPUI test window applied an external owner value, canceled an incomplete hex edit, reopened the picker and entered `#00FF00`. The preview became green while the owner retained its external value; a subsequent valid hex commit still updated the owner. The focused test passed 1/1 (`target/headstart/evidence/native-color-picker-first-preview-20261030.log`, SHA-256 `2328862e4389d49e399ca1e4a60d31d9f495339c4b7545221015e54a332ac53f`). This resolves the bounded first-preview investigation noted below; actual native Playground, OS IME and broader preview acceptance remain open.
