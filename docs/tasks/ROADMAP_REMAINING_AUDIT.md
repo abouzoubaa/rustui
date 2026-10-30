@@ -1,3 +1,7 @@
+## R27/R35 NodeEditor connection ID search — 2026-10-30
+
+Generating a connection ID previously rescanned every existing edge for each occupied ordinal, giving quadratic comparisons for densely numbered edges. The search now indexes existing IDs once and preserves the first unused `connection-N` name, including gaps and noncanonical names. The GraphView suite passed 22/22 (`target/headstart/evidence/native-graph-connection-index-20261030.log`, SHA-256 `a24aa8e2578ae7604c357a673aac0bef821fb81447148cffae43d1d74cdcf661`); the locked offline native library check passed (`target/headstart/evidence/native-graph-connection-index-check-20261030.log`, SHA-256 `6713eb766f9aff6837972213a46be91a457fbd2eced45040b3e938dbded2169f`). This is an algorithmic improvement; no new frame-time or end-to-end performance benchmark has run.
+
 ## R35/R36 NodeEditor viewport after owner update — 2026-10-30
 
 A GPUI test-window regression verifies normal keyboard zoom and reset, replaces the owner graph with valid extreme geometry, then checks that zoom-in is rejected when its projection would overflow while zoom-out remains usable. The direct owner update caused a redraw before the tested key event; therefore this test does not establish behavior for a stale pre-redraw viewport callback. The GraphView suite passed 21/21 (`target/headstart/evidence/native-node-editor-viewport-owner-update-20261030.log`, SHA-256 `88562e26478e9fcd124a01afcb5ba9c78a06c4103dd68a0798fe01981abe5946`). Actual macOS Playground and broader graph acceptance remain open.

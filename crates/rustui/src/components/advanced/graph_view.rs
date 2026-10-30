@@ -702,17 +702,23 @@ fn connection(
     } else {
         (second, first)
     };
+    let id = next_connection_id(&graph.edges);
+    let edge = GraphEdge::new(id, from, to)?;
+    graph.edited(GraphEdit::Connect(edge.clone()))?;
+    Ok(edge)
+}
+
+fn next_connection_id(edges: &[GraphEdge]) -> String {
+    let used_ids: HashSet<&str> = edges.iter().map(|edge| edge.id.as_str()).collect();
     let mut ordinal = 0_u64;
     let id = loop {
         let id = format!("connection-{ordinal}");
-        if !graph.edges.iter().any(|edge| edge.id == id) {
+        if !used_ids.contains(id.as_str()) {
             break id;
         }
         ordinal += 1;
     };
-    let edge = GraphEdge::new(id, from, to)?;
-    graph.edited(GraphEdit::Connect(edge.clone()))?;
-    Ok(edge)
+    id
 }
 
 pub(super) fn render_graph(
@@ -1429,6 +1435,28 @@ fn apply_edit(current: &mut GraphDocument, edit: GraphEdit) -> bool {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn generated_connection_ids_fill_gaps_and_keep_exact_names() {
+        let edge = |id: String| {
+            GraphEdge::new(
+                id,
+                GraphEndpoint::new("a", "out"),
+                GraphEndpoint::new("b", "in"),
+            )
+            .unwrap()
+        };
+        let mut edges = vec![
+            edge("connection-0".into()),
+            edge("connection-2".into()),
+            edge("connection-01".into()),
+        ];
+        assert_eq!(next_connection_id(&edges), "connection-1");
+        edges = (0..1_024)
+            .map(|id| edge(format!("connection-{id}")))
+            .collect();
+        assert_eq!(next_connection_id(&edges), "connection-1024");
+    }
     fn node(id: &str, x: f32) -> GraphNode {
         GraphNode::new(
             id,
