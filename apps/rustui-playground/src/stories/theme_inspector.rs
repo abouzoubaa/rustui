@@ -176,16 +176,17 @@ impl View for ThemeInspector {
         drop(state);
         VStack::new()
             .spacing(8.0)
-            .child(Text("Theme document inspector").font_weight(TextWeight::Semibold))
-            .child(Text("Read-only normalized export preview. Reload reads theme data; it does not apply a theme."))
+            .child(LocalizedText("lab-theme-inspector-title").font_weight(TextWeight::Semibold))
+            .child(LocalizedText("lab-theme-inspector-description"))
             .child(
                 Button("Reload theme inspection", self.reload_action())
+                    .localized_label("lab-theme-inspector-reload")
                     .id("theme-inspector-reload")
                     .accessibility_label(format!("Reload theme inspection. {summary}")),
             )
             .child(Text(error).font_size(12.0))
             .child(Text(summary).font_size(12.0))
-            .child(Text("First 18 lines of normalized JSON"))
+            .child(LocalizedText("lab-theme-inspector-preview"))
             .child(Text(preview).font_size(11.0))
     }
 }
@@ -193,6 +194,28 @@ impl View for ThemeInspector {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn inspector_controls_exist_in_all_supported_locales() {
+        let catalogs = super::super::locale_selector::catalogs();
+        for language in ["en", "fr", "ar"] {
+            let locale = rustui::localization::Locale::parse(language).unwrap();
+            let catalog = catalogs.get(&locale).unwrap();
+            for key in [
+                "lab-theme-inspector-title",
+                "lab-theme-inspector-description",
+                "lab-theme-inspector-reload",
+                "lab-theme-inspector-preview",
+            ] {
+                assert!(
+                    catalog
+                        .get(key)
+                        .is_some_and(|value| !value.trim().is_empty()),
+                    "{language}: {key}"
+                );
+            }
+        }
+    }
 
     #[test]
     fn invalid_inspection_preserves_last_valid_preview_and_recovers() {

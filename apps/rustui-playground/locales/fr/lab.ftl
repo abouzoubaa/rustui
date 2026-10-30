@@ -739,3 +739,8 @@ lab-button-group-none = Aucune
 lab-button-group-previous = Précédent
 lab-button-group-next = Suivant
 lab-button-group-more = Plus
+
+lab-theme-inspector-title = Inspecteur du document de thème
+lab-theme-inspector-description = Aperçu en lecture seule de l’export normalisé. Recharger lit les données du thème sans appliquer celui-ci.
+lab-theme-inspector-reload = Recharger l’inspection du thème
+lab-theme-inspector-preview = 18 premières lignes du JSON normalisé

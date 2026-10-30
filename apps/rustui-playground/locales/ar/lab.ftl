@@ -739,3 +739,8 @@ lab-button-group-none = لا شيء
 lab-button-group-previous = السابق
 lab-button-group-next = التالي
 lab-button-group-more = المزيد
+
+lab-theme-inspector-title = فاحص مستند السمة
+lab-theme-inspector-description = معاينة للقراءة فقط للتصدير الموحّد. تعيد إعادة التحميل قراءة بيانات السمة دون تطبيقها.
+lab-theme-inspector-reload = إعادة تحميل فحص السمة
+lab-theme-inspector-preview = أول ١٨ سطرًا من JSON الموحّد

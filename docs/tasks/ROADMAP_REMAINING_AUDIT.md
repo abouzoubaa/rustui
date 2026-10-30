@@ -1,3 +1,7 @@
+## R13 native Playground theme inspector controls — 2026-10-30
+
+The theme inspector title, description, reload button and JSON-preview label now use English, French and Arabic runtime catalog messages. Locale validation and the locked offline Headstart Playground check passed (with existing warnings). A catalog test passed 1/1 across the three supported locales (`target/headstart/evidence/native-theme-inspector-catalog-20261030.log`, SHA-256 `5dfddcba4e508735825134e40817fd1e74061c86832e95c268d08840fd17afe3`). The diagnostic summary, error text and existing accessible name still contain English; native visual and interaction acceptance remain open.
+
 ## R15 TokenField owner-updated draft — 2026-10-30
 
 An accepted token update can itself replace the owner's draft. TokenField now clears the draft only if its current value still equals the text added, preserving newer owner state. Locked offline Headstart RustUI library TokenField tests passed 8/8, including a binding-level newer-draft regression (`target/headstart/evidence/native-token-preserve-new-draft-20261030.log`, SHA-256 `d98765875c1bc7643ad444cb1b0dad0990eb0cfe4c95bdeddcab8d4693ff4741`). Native click-path and broader input acceptance remain open.

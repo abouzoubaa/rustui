@@ -739,3 +739,8 @@ lab-button-group-none = None
 lab-button-group-previous = Previous
 lab-button-group-next = Next
 lab-button-group-more = More
+
+lab-theme-inspector-title = Theme document inspector
+lab-theme-inspector-description = Read-only normalized export preview. Reload reads theme data; it does not apply a theme.
+lab-theme-inspector-reload = Reload theme inspection
+lab-theme-inspector-preview = First 18 lines of normalized JSON
