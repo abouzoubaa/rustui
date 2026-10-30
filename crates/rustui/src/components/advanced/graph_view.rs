@@ -704,7 +704,18 @@ fn connection(
     };
     let id = next_connection_id(&graph.edges);
     let edge = GraphEdge::new(id, from, to)?;
-    graph.edited(GraphEdit::Connect(edge.clone()))?;
+    if graph
+        .edges
+        .iter()
+        .any(|existing| existing.from == edge.from && existing.to == edge.to)
+    {
+        return Err(GraphError::DuplicateConnection);
+    }
+    if graph.endpoint(&edge.from)?.1.direction != GraphPortDirection::Output
+        || graph.endpoint(&edge.to)?.1.direction != GraphPortDirection::Input
+    {
+        return Err(GraphError::PortDirection);
+    }
     Ok(edge)
 }
 
@@ -1456,6 +1467,45 @@ mod tests {
             .map(|id| edge(format!("connection-{id}")))
             .collect();
         assert_eq!(next_connection_id(&edges), "connection-1024");
+    }
+
+    #[test]
+    fn connection_validation_matches_full_graph_validation() {
+        fn reference(
+            graph: &GraphDocument,
+            first: GraphEndpoint,
+            second: GraphEndpoint,
+        ) -> Result<GraphEdge, GraphError> {
+            let (from, to) = if graph.endpoint(&first)?.1.direction == GraphPortDirection::Output {
+                (first, second)
+            } else {
+                (second, first)
+            };
+            let edge = GraphEdge::new(next_connection_id(&graph.edges), from, to)?;
+            graph.edited(GraphEdit::Connect(edge.clone()))?;
+            Ok(edge)
+        }
+        let populated = graph().edited(GraphEdit::Connect(edge())).unwrap();
+        let endpoints = [
+            GraphEndpoint::new("a", "out"),
+            GraphEndpoint::new("a", "in"),
+            GraphEndpoint::new("b", "out"),
+            GraphEndpoint::new("b", "in"),
+            GraphEndpoint::new("missing", "out"),
+            GraphEndpoint::new("a", "missing"),
+            GraphEndpoint::new("", "out"),
+        ];
+        for document in [graph(), populated] {
+            for first in &endpoints {
+                for second in &endpoints {
+                    assert_eq!(
+                        connection(&document, first.clone(), second.clone()),
+                        reference(&document, first.clone(), second.clone()),
+                        "first={first:?}, second={second:?}"
+                    );
+                }
+            }
+        }
     }
     fn node(id: &str, x: f32) -> GraphNode {
         GraphNode::new(
