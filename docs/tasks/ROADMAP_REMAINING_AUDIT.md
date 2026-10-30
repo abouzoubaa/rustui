@@ -1,3 +1,7 @@
+## R13 native Playground theme reload status — 2026-10-30
+
+The native theme/layout story now keeps reload status as a message key and arguments, so ready, open/reload error, applied appearance, recovery and watcher state render in the current English, French or Arabic catalog; error details remain available. Direction readouts now use localized messages and numeric arguments. Existing English fallback strings remain for the deferred accessibility labels, and the Web-specific reload status remains outside this native milestone. Three runtime locale groups validated; focused Playground story tests passed 3/3 (`target/headstart/evidence/native-theme-status-locales-20261030.log`, SHA-256 `a6821853490bd41753fc97fdfb0ae51ef1eed17cb4598e8e3023b5f53204a628`) on parent `097cc013` plus this change. Native Playground visual, RTL, and live locale-switch acceptance remain open.
+
 ## R13 native Playground theme and layout labels — 2026-10-30
 
 The Playground theme/layout story now resolves its heading, Light/Dark, start/stop watcher and static spacer/divider labels from English, French and Arabic catalogs. Locale validation passed for all three runtime groups, and the focused Playground story tests passed 2/2 (`target/headstart/evidence/native-theme-label-locales-20261030.log`, SHA-256 `28fddd748e8f5179004ab4a06423ff8985d1b81315b2f02f1c5020453394742b`) on parent `6508d63f` plus the change. Dynamic reload status, numeric direction readouts and explicit accessibility labels remain English; native visual, RTL and live-switch acceptance remain open.

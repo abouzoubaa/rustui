@@ -12,6 +12,7 @@ use std::{
 };
 
 use rustui::{
+    localization::MessageArguments,
     prelude::*,
     theme::{AppearanceMode, ThemeFile, registry::active_theme},
 };
@@ -97,6 +98,7 @@ struct FoundationAdditions {
 struct ReloadState {
     theme_file: Option<ThemeFile>,
     result: String,
+    localized_result: Option<(&'static str, MessageArguments)>,
     had_error: bool,
     enabled: bool,
     generation: u64,
@@ -130,12 +132,25 @@ impl ReloadLease {
 }
 
 impl ReloadState {
+    #[cfg(target_family = "wasm")]
     fn set_result(&mut self, result: String) -> bool {
-        if self.result == result {
-            return false;
-        }
+        let changed = self.result != result || self.localized_result.is_some();
         self.result = result;
-        true
+        self.localized_result = None;
+        changed
+    }
+
+    fn set_localized_result(
+        &mut self,
+        key: &'static str,
+        arguments: MessageArguments,
+        fallback: String,
+    ) -> bool {
+        let localized = Some((key, arguments));
+        let changed = self.result != fallback || self.localized_result != localized;
+        self.result = fallback;
+        self.localized_result = localized;
+        changed
     }
 
     #[cfg(not(target_family = "wasm"))]
@@ -151,7 +166,11 @@ impl ReloadState {
                 Ok(theme_file) => self.theme_file = Some(theme_file),
                 Err(error) => {
                     self.had_error = true;
-                    return self.set_result(format!("Open error: {error}"));
+                    return self.set_localized_result(
+                        "lab-foundation-open-error",
+                        MessageArguments::new().with("error", error.to_string()),
+                        format!("Open error: {error}"),
+                    );
                 }
             }
         }
@@ -166,16 +185,32 @@ impl ReloadState {
         match result {
             Ok(true) => {
                 self.had_error = false;
-                self.set_result(format!("Applied {mode:?} appearance from file."));
+                self.set_localized_result(
+                    match mode {
+                        AppearanceMode::Light => "lab-foundation-applied-light",
+                        AppearanceMode::Dark => "lab-foundation-applied-dark",
+                    },
+                    MessageArguments::new(),
+                    format!("Applied {mode:?} appearance from file."),
+                );
                 true
             }
-            Ok(false) if std::mem::take(&mut self.had_error) => self.set_result(format!(
-                "Theme file recovered; {mode:?} appearance is unchanged."
-            )),
+            Ok(false) if std::mem::take(&mut self.had_error) => self.set_localized_result(
+                match mode {
+                    AppearanceMode::Light => "lab-foundation-recovered-light",
+                    AppearanceMode::Dark => "lab-foundation-recovered-dark",
+                },
+                MessageArguments::new(),
+                format!("Theme file recovered; {mode:?} appearance is unchanged."),
+            ),
             Ok(false) => false,
             Err(error) => {
                 self.had_error = true;
-                self.set_result(format!("Reload error: {error}"))
+                self.set_localized_result(
+                    "lab-foundation-reload-error",
+                    MessageArguments::new().with("error", error.to_string()),
+                    format!("Reload error: {error}"),
+                )
             }
         }
     }
@@ -271,20 +306,33 @@ impl FoundationAdditions {
             .map(PathBuf::from)
             .unwrap_or_else(|| crate::playground_resource_path("themes/macos27.json"));
         #[cfg(not(target_family = "wasm"))]
-        let (theme_file, result) = match ThemeFile::open(&path) {
+        let (theme_file, result, localized_result) = match ThemeFile::open(&path) {
             Ok(theme_file) => (
                 Some(theme_file),
                 format!("Ready to reload {}.", path.display()),
+                Some((
+                    "lab-foundation-ready",
+                    MessageArguments::new().with("path", path.display().to_string()),
+                )),
             ),
-            Err(error) => (None, format!("Open error: {error}")),
+            Err(error) => (
+                None,
+                format!("Open error: {error}"),
+                Some((
+                    "lab-foundation-open-error",
+                    MessageArguments::new().with("error", error.to_string()),
+                )),
+            ),
         };
         #[cfg(target_family = "wasm")]
-        let (theme_file, result) = (None, "Ready to load browser theme data.".to_owned());
+        let (theme_file, result, localized_result) =
+            (None, "Ready to load browser theme data.".to_owned(), None);
         let had_error = theme_file.is_none();
         Self {
             reload: Rc::new(RefCell::new(ReloadState {
                 theme_file,
                 result,
+                localized_result,
                 had_error,
                 enabled: false,
                 generation: 0,
@@ -371,7 +419,11 @@ impl FoundationAdditions {
                 let mut state = reload.borrow_mut();
                 if state.enabled {
                     state.stop();
-                    state.set_result("Automatic theme reload disabled.".to_owned());
+                    state.set_localized_result(
+                        "lab-foundation-watch-stopped",
+                        MessageArguments::new(),
+                        "Automatic theme reload disabled.".to_owned(),
+                    );
                     cx.refresh_windows();
                     return;
                 }
@@ -380,7 +432,11 @@ impl FoundationAdditions {
                     .generation
                     .checked_add(1)
                     .expect("theme watcher generation exhausted");
-                state.set_result("Watching theme file every 350 ms.".to_owned());
+                state.set_localized_result(
+                    "lab-foundation-watching",
+                    MessageArguments::new(),
+                    "Watching theme file every 350 ms.".to_owned(),
+                );
                 state.generation
             };
             let weak = Rc::downgrade(&reload);
@@ -474,9 +530,16 @@ impl View for FoundationAdditions {
         let rtl = insets.resolve(LayoutDirection::RightToLeft);
         let state = self.reload.borrow();
         let result = state.result.clone();
+        let localized_result = state.localized_result.clone();
         let enabled = state.enabled;
         drop(state);
 
+        let result_view = match localized_result {
+            Some((key, arguments)) => {
+                AnyView::new(LocalizedText(key).with_arguments(arguments).font_size(12.0))
+            }
+            None => AnyView::new(Text(result.clone()).font_size(12.0)),
+        };
         Container(
             VStack::new()
                 .spacing(5.0)
@@ -514,7 +577,7 @@ impl View for FoundationAdditions {
                         if enabled { "Disable" } else { "Enable" },
                     )),
                 )
-                .child(Text(result).font_size(12.0))
+                .child(result_view)
                 .child(Divider())
                 .child(LocalizedText("lab-foundation-spacer"))
                 .child(
@@ -532,8 +595,20 @@ impl View for FoundationAdditions {
                         .child(Divider().vertical())
                         .child(LocalizedText("lab-foundation-second-side")),
                 )
-                .child(Text(format!("LTR left/right: {}/{}", ltr.left, ltr.right)))
-                .child(Text(format!("RTL left/right: {}/{}", rtl.left, rtl.right))),
+                .child(
+                    LocalizedText("lab-foundation-ltr-readout").with_arguments(
+                        MessageArguments::new()
+                            .with("left", ltr.left)
+                            .with("right", ltr.right),
+                    ),
+                )
+                .child(
+                    LocalizedText("lab-foundation-rtl-readout").with_arguments(
+                        MessageArguments::new()
+                            .with("left", rtl.left)
+                            .with("right", rtl.right),
+                    ),
+                ),
         )
         .width(200.0)
         .padding(8.0)
@@ -562,6 +637,17 @@ mod tests {
                 "lab-foundation-trailing",
                 "lab-foundation-first-side",
                 "lab-foundation-second-side",
+                "lab-foundation-ready",
+                "lab-foundation-open-error",
+                "lab-foundation-reload-error",
+                "lab-foundation-applied-light",
+                "lab-foundation-applied-dark",
+                "lab-foundation-recovered-light",
+                "lab-foundation-recovered-dark",
+                "lab-foundation-watch-stopped",
+                "lab-foundation-watching",
+                "lab-foundation-ltr-readout",
+                "lab-foundation-rtl-readout",
             ] {
                 assert!(
                     catalog
@@ -570,6 +656,33 @@ mod tests {
                     "{language}: {key}"
                 );
             }
+        }
+    }
+
+    #[test]
+    fn native_status_messages_retain_arguments_and_retranslate() {
+        let owner = FoundationAdditions::new();
+        let arguments = MessageArguments::new().with("error", "disk failure");
+        {
+            let mut state = owner.reload.borrow_mut();
+            assert!(state.set_localized_result(
+                "lab-foundation-reload-error",
+                arguments.clone(),
+                "Reload error: disk failure".into(),
+            ));
+            assert!(!state.set_localized_result(
+                "lab-foundation-reload-error",
+                arguments.clone(),
+                "Reload error: disk failure".into(),
+            ));
+        }
+        let catalogs = super::super::locale_selector::catalogs();
+        for language in ["en", "fr", "ar"] {
+            let locale = rustui::localization::Locale::parse(language).unwrap();
+            let (key, arguments) = owner.reload.borrow().localized_result.clone().unwrap();
+            let rendered = catalogs.format(&locale, key, &arguments).unwrap();
+            assert!(rendered.contains("disk failure"), "{language}: {rendered}");
+            assert_ne!(rendered, key);
         }
     }
 
