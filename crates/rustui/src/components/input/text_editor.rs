@@ -312,7 +312,11 @@ impl View for TextEditorView {
             });
         }
         let writer = retained.read(context.app()).writer.clone();
-        replace_event_writer(&writer, context.binding_writer(self.value.clone()));
+        if self.disabled || self.readonly {
+            *writer.borrow_mut() = None;
+        } else {
+            replace_event_writer(&writer, context.binding_writer(self.value.clone()));
+        }
 
         if created {
             let current_writer = writer.clone();
@@ -341,6 +345,107 @@ impl View for TextEditorView {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[gpui::test]
+    fn retained_editor_ignores_late_changes_when_disabled_or_readonly(
+        cx: &mut gpui::TestAppContext,
+    ) {
+        use crate::runtime::component_host::ComponentHost;
+        struct Owner {
+            value: String,
+            disabled: bool,
+            readonly: bool,
+        }
+        impl View for Owner {
+            fn body(&self) -> impl View {
+                TextEditor(
+                    "Notes",
+                    Binding::new(
+                        self.value.clone(),
+                        |owner: &Owner| owner.value.clone(),
+                        |owner, value| owner.value = value,
+                    ),
+                )
+                .id("editor-guard")
+                .disabled(self.disabled)
+                .readonly(self.readonly)
+            }
+        }
+        let theme = crate::theme::parse_theme(include_str!(concat!(
+            env!("CARGO_MANIFEST_DIR"),
+            "/../../themes/macos27.json"
+        )))
+        .unwrap();
+        cx.update(|app| {
+            gpui_component::init(app);
+            crate::theme::activate_theme(&theme, Some(crate::theme::AppearanceMode::Dark), app)
+                .unwrap();
+        });
+        let (owner, window) = cx.add_window_view(|_, cx| {
+            ComponentHost::new(
+                Owner {
+                    value: "initial".into(),
+                    disabled: false,
+                    readonly: false,
+                },
+                cx,
+            )
+        });
+        let editor = window.update(|window, app| {
+            let _ = window.draw(app);
+            owner
+                .read(app)
+                .retained_entity_for_test::<RetainedTextEditor>(
+                    vec![],
+                    Identity::from("editor-guard"),
+                )
+                .unwrap()
+                .read(app)
+                .state
+                .clone()
+        });
+        window.update(|window, app| {
+            owner.update(app, |host, cx| {
+                host.component_mut().disabled = true;
+                host.component_mut().value = "external".into();
+                cx.notify();
+            });
+            let _ = window.draw(app);
+            assert_eq!(editor.read(app).value().to_string(), "external");
+            editor.update(app, |editor, cx| {
+                editor.set_value("late", window, cx);
+                cx.emit(InputEvent::Change);
+            });
+        });
+        window.cx.run_until_parked();
+        window.update(|_, app| assert_eq!(owner.read(app).component().value, "external"));
+        window.update(|window, app| {
+            owner.update(app, |host, cx| {
+                host.component_mut().disabled = false;
+                cx.notify();
+            });
+            let _ = window.draw(app);
+            editor.update(app, |editor, cx| {
+                editor.set_value("fresh", window, cx);
+                cx.emit(InputEvent::Change);
+            });
+        });
+        window.cx.run_until_parked();
+        window.update(|_, app| assert_eq!(owner.read(app).component().value, "fresh"));
+        window.update(|window, app| {
+            owner.update(app, |host, cx| {
+                host.component_mut().readonly = true;
+                cx.notify();
+            });
+            let _ = window.draw(app);
+            editor.update(app, |editor, cx| {
+                editor.set_value("late readonly", window, cx);
+                cx.emit(InputEvent::Change);
+            });
+        });
+        window.cx.run_until_parked();
+        window.update(|_, app| assert_eq!(owner.read(app).component().value, "fresh"));
+    }
 
     fn binding() -> Binding<String> {
         Binding::new(
