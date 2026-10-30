@@ -380,11 +380,20 @@ pub fn activate_theme(
     mode: Option<AppearanceMode>,
     cx: &mut App,
 ) -> Result<(), ThemeActivationError> {
+    document.validate().map_err(ThemeResolveError::Invalid)?;
+    activate_validated_theme(document, mode, cx)
+}
+
+// Only call with an unmodified document just validated by parse_theme.
+pub(super) fn activate_validated_theme(
+    document: &ThemeDocument,
+    mode: Option<AppearanceMode>,
+    cx: &mut App,
+) -> Result<(), ThemeActivationError> {
     let revision = active_theme(cx)
         .map_or(0, |theme| theme.revision)
         .checked_add(1)
         .expect("theme activation revision exhausted");
-    document.validate().map_err(ThemeResolveError::Invalid)?;
     let button = resolve_button(document, mode)?;
     let mode = mode.unwrap_or(document.platform_snapshot.appearance.default);
     let (table_head, table_head_foreground) = table_header_colors(document, mode)?;

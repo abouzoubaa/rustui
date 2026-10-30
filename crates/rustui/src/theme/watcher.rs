@@ -5,8 +5,8 @@ use std::{error::Error, fmt, fs, io, path::PathBuf};
 use gpui::App;
 
 use crate::theme::{
-    AppearanceMode, ThemeActivationError, ThemeDocument, ThemeLoadError, activate_theme,
-    parse_theme,
+    AppearanceMode, ThemeActivationError, ThemeDocument, ThemeLoadError, parse_theme,
+    registry::activate_validated_theme,
 };
 
 /// A validated theme file that can be explicitly reloaded into a GPUI app.
@@ -47,7 +47,9 @@ impl ThemeFile {
         mode: Option<AppearanceMode>,
         cx: &mut App,
     ) -> Result<bool, ThemeFileError> {
-        self.reload_file(mode, true, |document| activate_theme(document, mode, cx))
+        self.reload_file(mode, true, |document| {
+            activate_validated_theme(document, mode, cx)
+        })
     }
 
     /// Check the file and activate it only when its content or requested
@@ -60,7 +62,9 @@ impl ThemeFile {
         mode: Option<AppearanceMode>,
         cx: &mut App,
     ) -> Result<bool, ThemeFileError> {
-        self.reload_file(mode, false, |document| activate_theme(document, mode, cx))
+        self.reload_file(mode, false, |document| {
+            activate_validated_theme(document, mode, cx)
+        })
     }
 
     fn reload_file(
@@ -150,7 +154,7 @@ mod tests {
     };
 
     use super::*;
-    use crate::theme::ThemeResolveError;
+    use crate::theme::{ThemeResolveError, activate_theme};
 
     static NEXT_FILE: AtomicUsize = AtomicUsize::new(0);
 
@@ -196,6 +200,25 @@ mod tests {
 
     fn activate_ok(_: &ThemeDocument) -> Result<(), ThemeActivationError> {
         Ok(())
+    }
+
+    #[gpui::test]
+    fn public_activation_rejects_a_mutated_theme_and_preserves_active_state(
+        cx: &mut gpui::TestAppContext,
+    ) {
+        let mut document = parse_theme(&valid_source()).unwrap();
+        cx.update(|app| {
+            gpui_component::init(app);
+            activate_theme(&document, Some(AppearanceMode::Light), app).unwrap();
+            let revision = crate::theme::registry::active_theme(app)
+                .unwrap()
+                .revision();
+            document.theme_roles.clear();
+            assert!(activate_theme(&document, Some(AppearanceMode::Dark), app).is_err());
+            let active = crate::theme::registry::active_theme(app).unwrap();
+            assert_eq!(active.revision(), revision);
+            assert_eq!(active.mode, AppearanceMode::Light);
+        });
     }
 
     #[gpui::test]
