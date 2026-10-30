@@ -232,3 +232,124 @@ mod tests {
 }
 #[cfg(test)]
 mod focus_tests;
+
+#[cfg(test)]
+mod locale_transition_tests {
+    use crate::{
+        localization::{Catalog, Catalogs, Locale, activate_localization, set_locale},
+        prelude::{Checkbox, Radio, Toggle, VStack},
+        runtime::ComponentHost,
+        theme::{AppearanceMode, activate_theme, parse_theme},
+        view::View,
+    };
+    use rustui_core::Binding;
+
+    struct Owner {
+        checked: bool,
+        selected: bool,
+        toggled: bool,
+    }
+    impl View for Owner {
+        fn body(&self) -> impl View {
+            VStack::new()
+                .child(
+                    Checkbox(
+                        "Checkbox",
+                        Binding::new(self.checked, |o: &Owner| o.checked, |o, v| o.checked = v),
+                    )
+                    .id("locale-check"),
+                )
+                .child(
+                    Radio(
+                        "Radio",
+                        Binding::new(self.selected, |o: &Owner| o.selected, |o, v| o.selected = v),
+                    )
+                    .id("locale-radio"),
+                )
+                .child(
+                    Toggle(
+                        "Toggle",
+                        Binding::new(self.toggled, |o: &Owner| o.toggled, |o, v| o.toggled = v),
+                    )
+                    .id("locale-toggle"),
+                )
+        }
+    }
+
+    #[gpui::test]
+    fn rendered_checkable_controls_keep_owner_state_after_arabic_switch(
+        cx: &mut gpui::TestAppContext,
+    ) {
+        let en = Locale::parse("en").unwrap();
+        let ar = Locale::parse("ar").unwrap();
+        let mut catalogs = Catalogs::new(en.clone());
+        catalogs
+            .insert(Catalog::parse(en.clone(), "sample = Sample").unwrap())
+            .unwrap();
+        catalogs
+            .insert(Catalog::parse(ar.clone(), "sample = مثال").unwrap())
+            .unwrap();
+        let theme = parse_theme(include_str!(concat!(
+            env!("CARGO_MANIFEST_DIR"),
+            "/../../themes/macos27.json"
+        )))
+        .unwrap();
+        cx.update(|app| {
+            gpui_component::init(app);
+            activate_theme(&theme, Some(AppearanceMode::Dark), app).unwrap();
+            activate_localization(catalogs, en, app);
+        });
+        let (owner, window) = cx.add_window_view(|_, cx| {
+            ComponentHost::new(
+                Owner {
+                    checked: false,
+                    selected: false,
+                    toggled: false,
+                },
+                cx,
+            )
+        });
+        macro_rules! focus_next {
+            () => {
+                window.update(|window, app| {
+                    let _ = window.draw(app);
+                    window.focus_next(app);
+                    let _ = window.draw(app);
+                });
+            };
+        }
+        macro_rules! press {
+            () => {{
+                let key = gpui::Keystroke::parse("enter").unwrap();
+                window.simulate_event(gpui::KeyDownEvent {
+                    keystroke: key.clone(),
+                    is_held: false,
+                    prefer_character_input: false,
+                });
+                window.simulate_event(gpui::KeyUpEvent { keystroke: key });
+                window.update(|window, app| {
+                    let _ = window.draw(app);
+                });
+            }};
+        }
+        focus_next!();
+        press!();
+        window.update(|_, app| assert!(owner.read(app).component().checked));
+        window.update(|_, app| set_locale(ar, app));
+        window.update(|window, app| {
+            let _ = window.draw(app);
+            assert!(owner.read(app).component().checked);
+        });
+        focus_next!();
+        press!();
+        window.update(|_, app| assert!(owner.read(app).component().selected));
+        focus_next!();
+        press!();
+        window.update(|_, app| set_locale(Locale::parse("en").unwrap(), app));
+        window.update(|window, app| {
+            let _ = window.draw(app);
+            let owner = owner.read(app).component();
+            assert!(owner.checked && owner.selected && owner.toggled);
+        });
+    }
+}

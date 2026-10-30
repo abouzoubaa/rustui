@@ -1,3 +1,7 @@
+## R13/R15 native checkable controls across locale change — 2026-10-30
+
+A macOS-hosted GPUI test window rendered Checkbox, Radio and Toggle with owner bindings. Keyboard activation set Checkbox in English; switching to Arabic preserved it, and keyboard activation then set Radio and Toggle. Switching back to English preserved all three owner values. The focused test passed 1/1 on parent `63c08a11` plus the test. Log `target/headstart/evidence/native-checkable-locale-transition-final-20261030.log`, SHA-256 `987f9a4f23fd1e5d7dbf0d66f776aaa194c6927960443531a25855b15eb6a0ce`. This does not establish visible label translations, real native visual direction, pointer operation or broad locale/input acceptance; the protected-bundle cleanup rejection remains unresolved.
+
 ## R13/R15 native checkable-control direction — 2026-10-30
 
 Checkbox, Radio and Toggle now apply active logical direction to their indicator/label row: LTR uses GPUI Row and RTL uses RowReverse. The control state, event handlers, focus and Toggle thumb behavior are unchanged. On parent `c2b2668f` plus this change, the macOS-hosted `components::input` suite passed 218/218, including a GPUI style regression for each underlying control in both directions. Log `target/headstart/evidence/native-checkable-rtl-20261030.log`, SHA-256 `2b4d1dfff8f228e58eb5114b3a8b505d323cfaedda3ed38fce57ff54492ad05f`. These are source and test-window results, not native Playground visual/RTL, broader keyboard or release acceptance. The protected-bundle cleanup rejection remains unresolved.
