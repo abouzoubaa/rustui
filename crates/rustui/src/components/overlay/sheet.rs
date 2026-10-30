@@ -377,6 +377,153 @@ mod tests {
     }
 
     #[gpui::test]
+    fn native_sheet_text_field_updates_original_owner(cx: &mut gpui::TestAppContext) {
+        use crate::{components::input::text_field::TextField, runtime::ComponentHost};
+        use gpui::AppContext as _;
+        use rustui_core::Binding;
+        use std::{cell::RefCell, rc::Rc};
+
+        struct Owner {
+            text: String,
+            outside: String,
+        }
+        impl View for Owner {
+            fn body(&self) -> impl View {
+                crate::layout::VStack::new()
+                    .child(
+                        Sheet("native-owner-sheet", "Open").content(
+                            TextField(
+                                "Name",
+                                Binding::new(
+                                    self.text.clone(),
+                                    |owner: &Owner| owner.text.clone(),
+                                    |owner, value| owner.text = value,
+                                ),
+                            )
+                            .id("sheet-owner-field"),
+                        ),
+                    )
+                    .child(
+                        TextField(
+                            "Outside",
+                            Binding::new(
+                                self.outside.clone(),
+                                |owner: &Owner| owner.outside.clone(),
+                                |owner, value| owner.outside = value,
+                            ),
+                        )
+                        .id("outside-field"),
+                    )
+            }
+        }
+        let theme = crate::theme::parse_theme(include_str!(concat!(
+            env!("CARGO_MANIFEST_DIR"),
+            "/../../themes/macos27.json"
+        )))
+        .unwrap();
+        cx.update(|app| {
+            gpui_component::init(app);
+            crate::theme::activate_theme(&theme, Some(crate::theme::AppearanceMode::Dark), app)
+                .unwrap();
+        });
+        let slot = Rc::new(RefCell::new(None));
+        let saved = slot.clone();
+        let (_, window) = cx.add_window_view(|window, cx| {
+            let owner = cx.new(|cx| {
+                ComponentHost::new(
+                    Owner {
+                        text: String::new(),
+                        outside: String::new(),
+                    },
+                    cx,
+                )
+            });
+            *saved.borrow_mut() = Some(owner.clone());
+            gpui_component::Root::new(owner, window, cx)
+        });
+        let owner = slot.borrow().clone().unwrap();
+        let (trigger_focus, outside_focus) = window.update(|window, app| {
+            let _ = window.draw(app);
+            window.focus_next(app);
+            let _ = window.draw(app);
+            let trigger = window.focused(app).expect("sheet trigger focus");
+            window.focus_next(app);
+            let _ = window.draw(app);
+            let outside = window.focused(app).expect("outside field focus");
+            assert_ne!(trigger, outside);
+            window.focus(&trigger, app);
+            let _ = window.draw(app);
+            (trigger, outside)
+        });
+        let key = gpui::Keystroke::parse("enter").unwrap();
+        window.simulate_event(gpui::KeyDownEvent {
+            keystroke: key.clone(),
+            is_held: false,
+            prefer_character_input: false,
+        });
+        window.simulate_event(gpui::KeyUpEvent { keystroke: key });
+        window.update(|window, app| {
+            let _ = window.draw(app);
+            assert!(window.has_active_sheet(app));
+            window.focus_next(app);
+            let _ = window.draw(app);
+            window.focus_next(app);
+            let _ = window.draw(app);
+        });
+        window.simulate_input("RustUI");
+        window.update(|window, app| {
+            let _ = window.draw(app);
+            assert_eq!(owner.read(app).component().text, "RustUI");
+        });
+        for key in ["tab", "shift-tab"] {
+            let mut visited = Vec::new();
+            for _ in 0..6 {
+                window.simulate_keystrokes(key);
+                let focus = window.update(|window, app| {
+                    let _ = window.draw(app);
+                    assert!(window.has_active_sheet(app));
+                    let focus = window.focused(app).expect("open sheet has focus");
+                    assert_ne!(focus, trigger_focus, "focus escaped to sheet trigger");
+                    assert_ne!(focus, outside_focus, "focus escaped to outside field");
+                    focus
+                });
+                if !visited.contains(&focus) {
+                    visited.push(focus);
+                }
+            }
+            assert!(visited.len() >= 2, "{key} did not traverse sheet controls");
+        }
+        window.simulate_keystrokes("escape");
+        window.update(|window, app| {
+            let _ = window.draw(app);
+            assert!(!window.has_active_sheet(app));
+            assert_eq!(window.focused(app), Some(trigger_focus.clone()));
+            assert_eq!(owner.read(app).component().text, "RustUI");
+            assert!(owner.read(app).component().outside.is_empty());
+        });
+        let key = gpui::Keystroke::parse("enter").unwrap();
+        window.simulate_event(gpui::KeyDownEvent {
+            keystroke: key.clone(),
+            is_held: false,
+            prefer_character_input: false,
+        });
+        window.simulate_event(gpui::KeyUpEvent { keystroke: key });
+        window.update(|window, app| {
+            let _ = window.draw(app);
+            assert!(window.has_active_sheet(app));
+            window.focus_next(app);
+            let _ = window.draw(app);
+            window.focus_next(app);
+            let _ = window.draw(app);
+        });
+        window.simulate_input("!");
+        window.update(|window, app| {
+            let _ = window.draw(app);
+            assert_eq!(owner.read(app).component().text, "RustUI!");
+        });
+    }
+
+    #[gpui::test]
     fn retained_sheet_reconciles_content_and_accessible_name(cx: &mut gpui::TestAppContext) {
         use crate::runtime::component_host::RetainedEntities;
         use std::any::TypeId;
