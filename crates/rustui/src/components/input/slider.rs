@@ -305,7 +305,7 @@ impl View for SliderView {
             }),
             thumb_width,
             thumb_height,
-            track_color: slider_role_color(
+            track_color: slider_track_color(
                 &style,
                 "track",
                 &active_theme.profile,
@@ -626,6 +626,25 @@ fn set_slider_accessibility_disabled(node: &mut gpui::accesskit::Node) {
     node.set_disabled();
 }
 
+fn slider_track_color(
+    style: &crate::theme::ResolvedComponentStyle,
+    role: &str,
+    profile: &crate::theme::ThemeProfile,
+    mode: AppearanceMode,
+) -> gpui::Hsla {
+    let track = slider_role_color(style, role, profile, mode);
+    let colors = profile.colors(Some(mode));
+    let background =
+        try_parse_color(&colors.window_background).expect("validated RustUI window background");
+    // The bundled secondary surface equals the window background in both
+    // appearances; a translucent rail in that color would be invisible.
+    if track == background {
+        try_parse_color(&colors.secondary_text).expect("validated RustUI secondary text")
+    } else {
+        track
+    }
+}
+
 fn slider_role_color(
     style: &crate::theme::ResolvedComponentStyle,
     role: &str,
@@ -904,6 +923,34 @@ mod tests {
             let style = resolve_component_style(&theme, "slider", "sliders", &selector).unwrap();
             assert_eq!(style.lengths.get("width"), Some(&24.0));
             assert_eq!(style.lengths.get("height"), Some(&24.0));
+        }
+    }
+
+    #[test]
+    fn slider_track_falls_back_only_when_it_matches_window_background() {
+        let theme = parse_theme(include_str!("../../../../../themes/macos27.json")).unwrap();
+        for mode in [AppearanceMode::Light, AppearanceMode::Dark] {
+            let mut selector = selector_for_mode(mode);
+            selector.chrome = "utility".into();
+            let style = resolve_component_style(&theme, "slider", "sliders", &selector).unwrap();
+            let colors = theme.platform_snapshot.colors(Some(mode));
+            assert_eq!(
+                super::slider_track_color(&style, "track", &theme.platform_snapshot, mode),
+                try_parse_color(&colors.secondary_text).unwrap()
+            );
+            let mut custom = theme.platform_snapshot.clone();
+            match mode {
+                AppearanceMode::Light => {
+                    custom.appearance.light.toolbar_background = "#123456".into()
+                }
+                AppearanceMode::Dark => {
+                    custom.appearance.dark.toolbar_background = "#123456".into()
+                }
+            }
+            assert_eq!(
+                super::slider_track_color(&style, "track", &custom, mode),
+                try_parse_color("#123456").unwrap()
+            );
         }
     }
 
