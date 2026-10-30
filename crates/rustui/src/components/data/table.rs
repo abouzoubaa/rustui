@@ -9,6 +9,7 @@ use gpui::{
     AnyElement, App, Context, InteractiveElement as _, IntoElement, ParentElement as _, Role,
     SharedString, Stateful, StatefulInteractiveElement as _, Styled as _, Window, div, px,
 };
+use gpui_component::ElementExt as _;
 use gpui_component::table::{Column, DataTable, TableDelegate, TableEvent, TableState};
 use rustui_core::{Binding, Identity};
 use rustui_i18n::LayoutDirection;
@@ -24,6 +25,8 @@ struct StringTableDelegate {
     rows: Vec<Vec<String>>,
     column_width: f32,
     direction: LayoutDirection,
+    empty_rtl_anchor: Rc<Cell<bool>>,
+    empty_anchor_refresh: Rc<Cell<bool>>,
     row_style: ResolvedComponentStyle,
     header_style: ResolvedComponentStyle,
     last_owner_selection: Rc<Cell<Option<usize>>>,
@@ -124,6 +127,8 @@ impl StringTableDelegate {
             rows,
             column_width,
             direction,
+            empty_rtl_anchor: Rc::new(Cell::new(false)),
+            empty_anchor_refresh: Rc::new(Cell::new(false)),
             row_style,
             header_style,
             last_owner_selection: Rc::new(Cell::new(owner_selection)),
@@ -410,6 +415,30 @@ fn leading_column_to_reveal(
     }
 }
 
+#[derive(Debug, PartialEq, Eq)]
+enum EmptyAnchorStep {
+    Wait,
+    Refresh,
+    Align,
+}
+
+fn empty_anchor_step(
+    pending: &Cell<bool>,
+    refresh_requested: &Cell<bool>,
+    has_bounds: bool,
+) -> EmptyAnchorStep {
+    if !pending.get() {
+        EmptyAnchorStep::Wait
+    } else if has_bounds {
+        pending.set(false);
+        EmptyAnchorStep::Align
+    } else if refresh_requested.replace(true) {
+        EmptyAnchorStep::Wait
+    } else {
+        EmptyAnchorStep::Refresh
+    }
+}
+
 fn selection_for_rows(selection: Option<usize>, row_count: usize) -> Option<usize> {
     selection.filter(|index| *index < row_count)
 }
@@ -534,8 +563,15 @@ impl View for TableView {
         );
         if previous_direction != direction || leading.is_some() {
             context.update_entity(&state, move |state, _window, cx| {
+                let empty_rtl =
+                    direction == LayoutDirection::RightToLeft && state.delegate().rows.is_empty();
                 state.delegate_mut().direction = direction;
-                if let Some(column) = leading {
+                state
+                    .delegate()
+                    .empty_rtl_anchor
+                    .set(empty_rtl && leading.is_some());
+                state.delegate().empty_anchor_refresh.set(false);
+                if let Some(column) = leading.filter(|_| !empty_rtl) {
                     state.scroll_to_col(column, cx);
                 }
             });
@@ -597,9 +633,36 @@ impl View for TableView {
             });
         }
 
+        let handle = state.read(context.app()).horizontal_scroll_handle.clone();
+        let (empty_anchor, refresh_requested) = {
+            let state = state.read(context.app());
+            (
+                state.delegate().empty_rtl_anchor.clone(),
+                state.delegate().empty_anchor_refresh.clone(),
+            )
+        };
         div()
             .w_full()
             .h(px(self.height))
+            .on_prepaint(move |_, window, cx| {
+                match empty_anchor_step(
+                    &empty_anchor,
+                    &refresh_requested,
+                    handle.bounds().size.width > px(0.0),
+                ) {
+                    EmptyAnchorStep::Wait => return,
+                    EmptyAnchorStep::Align => {
+                        let mut offset = handle.offset();
+                        offset.x = -handle.max_offset().x;
+                        handle.set_offset(offset);
+                    }
+                    EmptyAnchorStep::Refresh => {}
+                }
+                let window = window.window_handle();
+                cx.defer(move |cx| {
+                    let _ = window.update(cx, |_, window, _| window.refresh());
+                });
+            })
             .child(
                 DataTable::new(&state)
                     .stripe(self.striped)
@@ -752,6 +815,29 @@ mod tests {
         );
         assert_eq!(table.resolved_columns(|_| " ".into()), ["Index", "Row"]);
         assert_eq!(table.resolved_columns(|_| "صف".into()), ["صف", "صف"]);
+    }
+
+    #[test]
+    fn empty_rtl_anchor_waits_for_layout_without_repeated_refreshes() {
+        use super::{EmptyAnchorStep, empty_anchor_step};
+        let pending = Cell::new(true);
+        let refresh = Cell::new(false);
+        assert_eq!(
+            empty_anchor_step(&pending, &refresh, false),
+            EmptyAnchorStep::Refresh
+        );
+        assert_eq!(
+            empty_anchor_step(&pending, &refresh, false),
+            EmptyAnchorStep::Wait
+        );
+        assert_eq!(
+            empty_anchor_step(&pending, &refresh, true),
+            EmptyAnchorStep::Align
+        );
+        assert_eq!(
+            empty_anchor_step(&pending, &refresh, true),
+            EmptyAnchorStep::Wait
+        );
     }
 
     #[test]
