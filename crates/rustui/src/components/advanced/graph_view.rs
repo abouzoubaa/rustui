@@ -2299,6 +2299,21 @@ mod current_selection_regressions {
         let second = window.debug_bounds("graph-test-port:b:in").unwrap();
         let third = window.debug_bounds("graph-test-port:a:out2").unwrap();
         let fourth = window.debug_bounds("graph-test-port:b:in2").unwrap();
+        window.simulate_click(first.center(), gpui::Modifiers::default());
+        window.simulate_click(third.center(), gpui::Modifiers::default());
+        window.update(|window, app| {
+            let _ = window.draw(app);
+            assert!(owner.read(app).component().graph.edges().is_empty());
+            let state = owner
+                .read(app)
+                .retained_entity_for_test::<Interaction>(
+                    vec![],
+                    Identity::from("graph-interaction:keyboard-editor"),
+                )
+                .unwrap();
+            assert_eq!(state.read(app).error, Some(GraphError::PortDirection));
+            assert!(state.read(app).pending.is_none());
+        });
         window.update(|window, app| {
             for position in [
                 first.center(),
@@ -2337,6 +2352,15 @@ mod current_selection_regressions {
             assert_eq!(edges[0].to(), &GraphEndpoint::new("b", "in"));
             assert_eq!(edges[1].from(), &GraphEndpoint::new("a", "out2"));
             assert_eq!(edges[1].to(), &GraphEndpoint::new("b", "in2"));
+            let state = owner
+                .read(app)
+                .retained_entity_for_test::<Interaction>(
+                    vec![],
+                    Identity::from("graph-interaction:keyboard-editor"),
+                )
+                .unwrap();
+            assert!(state.read(app).error.is_none());
+            assert!(state.read(app).pending.is_none());
         });
         let node = window.debug_bounds("graph-test-node:a").unwrap();
         let start = gpui::point(node.origin.x + px(10.0), node.origin.y + px(10.0));
