@@ -163,7 +163,7 @@ impl View for TokenFieldView {
         let tokens = self.tokens.value();
         let draft = self.draft.value();
         let add_token =
-            context.binding_event_updater(self.tokens.clone(), |tokens, draft: String| {
+            context.binding_event_try_updater(self.tokens.clone(), |tokens, draft: String| {
                 if let Some((next, _)) = token_after_add(tokens, &draft) {
                     *tokens = next;
                     true
@@ -226,8 +226,9 @@ impl View for TokenFieldView {
             .accessibility_label(add_accessible_label(|id| context.localized_message(id)))
             .on_click(move |_, _, cx| {
                 if let Some(draft) = read_draft(cx).filter(|draft| !draft.trim().is_empty()) {
-                    add_token(draft, cx);
-                    write_draft(String::new(), cx);
+                    if add_token(draft, cx) {
+                        write_draft(String::new(), cx);
+                    }
                 }
             });
         field.child(add).into_any_element()

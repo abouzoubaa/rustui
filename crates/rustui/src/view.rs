@@ -780,6 +780,34 @@ impl<'a> RenderContext<'a> {
         })
     }
 
+    /// Returns whether the current owner accepted the event's write.
+    pub(crate) fn binding_event_try_updater<T: 'static, Event: 'static>(
+        &self,
+        binding: Binding<T>,
+        update: impl Fn(&mut T, Event) -> bool + 'static,
+    ) -> Rc<dyn Fn(Event, &mut App) -> bool> {
+        let update_component = self.update_component.clone();
+        let update = Rc::new(update);
+        Rc::new(move |event, cx| {
+            let accepted = Rc::new(std::cell::Cell::new(false));
+            let result = accepted.clone();
+            let binding = binding.clone();
+            let update = update.clone();
+            update_component(
+                Box::new(move |component| {
+                    let changed =
+                        apply_binding_event(&binding, component, event, |value, event| {
+                            update(value, event)
+                        });
+                    result.set(changed);
+                    changed
+                }),
+                cx,
+            );
+            accepted.get()
+        })
+    }
+
     pub(crate) fn binding_updater<T: 'static>(
         &self,
         binding: Binding<T>,

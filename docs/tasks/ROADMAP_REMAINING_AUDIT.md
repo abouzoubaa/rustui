@@ -1,3 +1,7 @@
+## R15 TokenField rejected additions — 2026-10-30
+
+TokenField now clears its draft only when the current owner accepts the token addition. A synchronous binding event updater reports rejected or detached owner writes without changing the existing notification semantics. Locked offline Headstart RustUI library tests passed for TokenField (7/7, `native-token-rejected-add-20261030.log`, SHA-256 `68c50f4a3ef8f1c812007ac20640e12dc7759f4a9cad81325ce4871cb2e84e85`) and existing binding event rejection cases (2/2, `native-binding-rejection-20261030.log`, SHA-256 `27b73dcedb8fb00b520c72a13c692a0047296904332f23c538a63113ca62c7f7`), under `target/headstart/evidence/`. These checks do not directly exercise a rejected TokenField click or establish native GUI acceptance; that event path remains to validate.
+
 ## R30 current native all-targets checkpoint — 2026-10-30
 
 On clean source commit `27330b3b`, `./scripts/cargo-headstart check --profile headstart --locked --offline --workspace --all-targets` passed with warnings (`target/headstart/evidence/native-token-all-targets-27330b3b-20261030.log`, SHA-256 `ba27b971793d43b4c6363ef5b997298a165d13ae1e7272286ed638ebafaab844`). GitHub Actions run 41107805388 passed its source job for that commit; the macOS/Web job was skipped. These checks do not establish native GUI, compiled CI, or release acceptance.
