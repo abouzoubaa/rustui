@@ -353,8 +353,31 @@ impl GraphDocument {
         }
         Ok(())
     }
+    fn validate_new_edge(&self, edge: &GraphEdge) -> Result<(), GraphError> {
+        identity(&edge.id)?;
+        if self.edges.iter().any(|existing| existing.id == edge.id) {
+            return Err(GraphError::DuplicateEdge);
+        }
+        if self
+            .edges
+            .iter()
+            .any(|existing| existing.from == edge.from && existing.to == edge.to)
+        {
+            return Err(GraphError::DuplicateConnection);
+        }
+        if self.endpoint(&edge.from)?.1.direction != GraphPortDirection::Output
+            || self.endpoint(&edge.to)?.1.direction != GraphPortDirection::Input
+        {
+            return Err(GraphError::PortDirection);
+        }
+        Ok(())
+    }
+
     /// Applies one atomic edit to a clone. Failure leaves the original untouched.
     pub fn edited(&self, edit: GraphEdit) -> Result<Self, GraphError> {
+        if let GraphEdit::Connect(edge) = &edit {
+            self.validate_new_edge(edge)?;
+        }
         let mut next = self.clone();
         match edit {
             GraphEdit::AddNode(node) => next.nodes.push(node),
@@ -386,7 +409,10 @@ impl GraphDocument {
                 next.nodes.retain(|n| n.id != id);
                 next.edges.retain(|e| e.from.node != id && e.to.node != id);
             }
-            GraphEdit::Connect(edge) => next.edges.push(edge),
+            GraphEdit::Connect(edge) => {
+                next.edges.push(edge);
+                return Ok(next);
+            }
             GraphEdit::Disconnect(id) => {
                 let count = next.edges.len();
                 next.edges.retain(|e| e.id != id);
@@ -704,18 +730,7 @@ fn connection(
     };
     let id = next_connection_id(&graph.edges);
     let edge = GraphEdge::new(id, from, to)?;
-    if graph
-        .edges
-        .iter()
-        .any(|existing| existing.from == edge.from && existing.to == edge.to)
-    {
-        return Err(GraphError::DuplicateConnection);
-    }
-    if graph.endpoint(&edge.from)?.1.direction != GraphPortDirection::Output
-        || graph.endpoint(&edge.to)?.1.direction != GraphPortDirection::Input
-    {
-        return Err(GraphError::PortDirection);
-    }
+    graph.validate_new_edge(&edge)?;
     Ok(edge)
 }
 
@@ -1482,7 +1497,9 @@ mod tests {
                 (second, first)
             };
             let edge = GraphEdge::new(next_connection_id(&graph.edges), from, to)?;
-            graph.edited(GraphEdit::Connect(edge.clone()))?;
+            let mut edges = graph.edges.clone();
+            edges.push(edge.clone());
+            GraphDocument::new(graph.nodes.clone(), edges)?;
             Ok(edge)
         }
         let populated = graph().edited(GraphEdit::Connect(edge())).unwrap();
@@ -1503,6 +1520,36 @@ mod tests {
                         reference(&document, first.clone(), second.clone()),
                         "first={first:?}, second={second:?}"
                     );
+                }
+            }
+        }
+    }
+
+    #[test]
+    fn connect_edit_matches_full_reconstruction() {
+        let populated = graph().edited(GraphEdit::Connect(edge())).unwrap();
+        let endpoints = [
+            GraphEndpoint::new("a", "out"),
+            GraphEndpoint::new("a", "in"),
+            GraphEndpoint::new("b", "out"),
+            GraphEndpoint::new("b", "in"),
+            GraphEndpoint::new("missing", "out"),
+            GraphEndpoint::new("a", "missing"),
+        ];
+        let existing = edge();
+        for document in [graph(), populated] {
+            for id in ["new-edge", existing.id()] {
+                for from in &endpoints {
+                    for to in &endpoints {
+                        let candidate = GraphEdge::new(id, from.clone(), to.clone()).unwrap();
+                        let mut edges = document.edges.clone();
+                        edges.push(candidate.clone());
+                        assert_eq!(
+                            document.edited(GraphEdit::Connect(candidate)),
+                            GraphDocument::new(document.nodes.clone(), edges),
+                            "id={id}, from={from:?}, to={to:?}"
+                        );
+                    }
                 }
             }
         }
