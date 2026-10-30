@@ -319,8 +319,13 @@ impl View for NavigationSplitComposition {
                             .with_retention_scope(sidebar_scope.clone(), |context| {
                                 sidebar.focus_handle(context)
                             });
-                        let back = Button(
+                        let back_label = resolved_message_label(
                             context.localized_message("rustui-navigation-back"),
+                            "rustui-navigation-back",
+                            &"Back".into(),
+                        );
+                        let back = Button(
+                            back_label,
                             AppAction::with_window_action(move |_, window, cx| {
                                 let restore_focus = state.update(cx, |state, cx| {
                                     let restore_focus = return_to_narrow_list(state);
@@ -833,6 +838,14 @@ mod tests {
 
     #[test]
     fn blank_localized_labels_keep_visible_fallbacks() {
+        assert_eq!(
+            resolved_message_label(
+                "rustui-navigation-back".into(),
+                "rustui-navigation-back",
+                &"Back".into(),
+            ),
+            "Back"
+        );
         let destination =
             NavigationSplitItem::new("home", "Home", EmptyView).localized("navigation.home");
         assert!(matches!(
