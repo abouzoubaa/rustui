@@ -1234,10 +1234,16 @@ mod rendered_locale_tests {
             let _ = window.draw(app);
             assert!(!state.read(app).is_open());
             assert_eq!(state.read(app).value(), Some(external));
-            state.update(app, |_, cx| cx.emit(ColorPickerEvent::Change(Some(late))));
+            state.update(app, |state, cx| {
+                state.set_value(late, window, cx);
+                cx.emit(ColorPickerEvent::Change(Some(late)));
+            });
         });
         window.cx.run_until_parked();
-        window.update(|_, app| assert_eq!(owner.read(app).component().color, Some(external)));
+        window.update(|_, app| {
+            assert_eq!(owner.read(app).component().color, Some(external));
+            assert_eq!(state.read(app).value(), Some(external));
+        });
         window.update(|window, app| {
             owner.update(app, |host, cx| {
                 host.component_mut().disabled = false;
