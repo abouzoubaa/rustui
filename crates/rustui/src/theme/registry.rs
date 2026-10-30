@@ -1,6 +1,6 @@
 //! Active resolved RustUI theme stored in GPUI's application globals.
 
-use std::{error::Error, fmt};
+use std::{cell::RefCell, collections::BTreeMap, error::Error, fmt};
 
 use gpui::{App, Global, Hsla, Rgba};
 use gpui_component::Theme;
@@ -8,13 +8,15 @@ use gpui_component::Theme;
 use crate::{
     adapters::themes::{ThemeApplyError, apply_profile},
     theme::{
-        AppearanceMode, ButtonStyleSelector, ComponentStyleCapability, ResolvedButtonTheme,
-        ResolvedComponentStyle, ThemeCoverageReport, ThemeDocument, ThemeResolveError,
-        resolve_button, resolve_component_style, resolve_component_style_with,
+        AppearanceMode, ButtonStyleSelector, ComponentStyleCapability, ComponentThemeRecord,
+        ResolvedButtonTheme, ResolvedComponentStyle, ThemeCoverageReport, ThemeDocument,
+        ThemeResolveError, resolve_button, resolve_component_style_with,
     },
 };
 
-use super::resolver::assess_theme_coverage_with_capabilities;
+use super::resolver::{
+    assess_theme_coverage_with_capabilities, resolve_component_style_from_record,
+};
 
 /// Assess how much of a theme document the current RustUI renderers apply.
 pub fn assess_theme_coverage(document: &ThemeDocument) -> ThemeCoverageReport {
@@ -336,6 +338,7 @@ pub struct ActiveTheme {
     pub button: ResolvedButtonTheme,
     pub coverage: ThemeCoverageReport,
     document: ThemeDocument,
+    component_records: RefCell<BTreeMap<String, ComponentThemeRecord>>,
 }
 
 impl ActiveTheme {
@@ -351,7 +354,7 @@ impl ActiveTheme {
         part: &str,
         selector: &ButtonStyleSelector,
     ) -> Result<ResolvedComponentStyle, ThemeResolveError> {
-        resolve_component_style(&self.document, component, part, selector)
+        self.component_style_with(component, part, selector, &[])
     }
 
     pub fn component_style_with(
@@ -361,7 +364,26 @@ impl ActiveTheme {
         selector: &ButtonStyleSelector,
         handled_extras: &[&str],
     ) -> Result<ResolvedComponentStyle, ThemeResolveError> {
-        resolve_component_style_with(&self.document, component, part, selector, handled_extras)
+        if !self.component_records.borrow().contains_key(component) {
+            let record = self
+                .document
+                .component_theme(component)
+                .map_err(ThemeResolveError::Invalid)?;
+            self.component_records
+                .borrow_mut()
+                .insert(component.to_owned(), record);
+        }
+        let records = self.component_records.borrow();
+        resolve_component_style_from_record(
+            &self.document,
+            component,
+            part,
+            selector,
+            handled_extras,
+            records
+                .get(component)
+                .expect("component record was inserted"),
+        )
     }
 }
 
@@ -438,6 +460,7 @@ pub(super) fn activate_validated_theme(
         button,
         coverage,
         document: document.clone(),
+        component_records: RefCell::new(BTreeMap::new()),
     });
     Ok(())
 }
@@ -541,6 +564,93 @@ impl From<ThemeApplyError> for ThemeActivationError {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[gpui::test]
+    fn active_theme_record_reuse_matches_public_resolver_and_refreshes(
+        cx: &mut gpui::TestAppContext,
+    ) {
+        let mut document =
+            crate::theme::parse_theme(include_str!("../../../../themes/macos27.json")).unwrap();
+        cx.update(|app| {
+            gpui_component::init(app);
+            activate_theme(&document, Some(AppearanceMode::Light), app).unwrap();
+            let active = active_theme(app).unwrap();
+            assert!(active.component_records.borrow().is_empty());
+            let mut compared = 0;
+            for name in document.components.keys() {
+                let Ok(record) = document.component_theme(name) else {
+                    continue;
+                };
+                for rule in &record.styles {
+                    let extras: Vec<_> = rule
+                        .style
+                        .properties
+                        .keys()
+                        .filter(|name| {
+                            !matches!(
+                                name.as_str(),
+                                "width"
+                                    | "height"
+                                    | "corner_radius"
+                                    | "border_width"
+                                    | "background"
+                                    | "foreground"
+                                    | "border"
+                                    | "typography"
+                            )
+                        })
+                        .map(String::as_str)
+                        .collect();
+                    assert_eq!(
+                        active.component_style_with(name, &rule.part, &rule.when, &extras),
+                        resolve_component_style_with(
+                            &document, name, &rule.part, &rule.when, &extras
+                        ),
+                        "{name}/{}",
+                        rule.part
+                    );
+                    assert_eq!(
+                        active.component_style_with(name, &rule.part, &rule.when, &[]),
+                        resolve_component_style_with(&document, name, &rule.part, &rule.when, &[]),
+                        "{name}/{} without extra properties",
+                        rule.part
+                    );
+                    compared += 1;
+                }
+            }
+            assert!(compared > 100);
+            assert!(active.component_records.borrow().len() <= document.components.len());
+            let selector = crate::components::theme::selector_for_mode(AppearanceMode::Light);
+            assert_eq!(
+                active.component_style("missing-component", "body", &selector),
+                resolve_component_style_with(
+                    &document,
+                    "missing-component",
+                    "body",
+                    &selector,
+                    &[]
+                )
+            );
+            assert_eq!(
+                active.component_style("toggle", "missing-part", &selector),
+                resolve_component_style_with(&document, "toggle", "missing-part", &selector, &[])
+            );
+            let before = active.revision();
+            document.components.get_mut("toggle").unwrap()["custom_metadata"] =
+                serde_json::json!({"tag": "new-theme"});
+            activate_theme(&document, Some(AppearanceMode::Light), app).unwrap();
+            let active = active_theme(app).unwrap();
+            assert_eq!(active.revision(), before + 1);
+            assert!(active.component_records.borrow().is_empty());
+            assert_eq!(
+                active
+                    .component_style("toggle", "body", &selector)
+                    .unwrap()
+                    .record_metadata["custom_metadata"]["tag"],
+                "new-theme"
+            );
+        });
+    }
 
     #[gpui::test]
     fn successful_activations_advance_revision_and_failures_preserve_it(

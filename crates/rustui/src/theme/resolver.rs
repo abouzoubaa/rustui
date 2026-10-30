@@ -325,7 +325,7 @@ pub fn resolve_component_style_with(
     )
 }
 
-fn resolve_component_style_from_record(
+pub(super) fn resolve_component_style_from_record(
     document: &ThemeDocument,
     component: &str,
     part: &str,
