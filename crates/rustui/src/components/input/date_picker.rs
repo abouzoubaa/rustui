@@ -292,7 +292,11 @@ impl View for DatePickerView {
         }
 
         let writer = bridge.read(context.app()).writer.clone();
-        replace_event_writer(&writer, context.binding_writer(self.value.clone()));
+        if self.disabled {
+            *writer.borrow_mut() = None;
+        } else {
+            replace_event_writer(&writer, context.binding_writer(self.value.clone()));
+        }
 
         if created {
             let current_writer = writer.clone();
@@ -335,6 +339,95 @@ impl View for DatePickerView {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[gpui::test]
+    fn disabled_date_picker_ignores_late_selection_and_resumes(cx: &mut gpui::TestAppContext) {
+        use crate::{runtime::component_host::ComponentHost, view::View};
+
+        struct Owner {
+            date: Option<NaiveDate>,
+            disabled: bool,
+        }
+        impl View for Owner {
+            fn body(&self) -> impl View {
+                DatePicker(
+                    "Date",
+                    Binding::new(
+                        self.date,
+                        |owner: &Owner| owner.date,
+                        |owner, date| owner.date = date,
+                    ),
+                )
+                .id("disabled-date")
+                .disabled(self.disabled)
+            }
+        }
+        let date = NaiveDate::from_ymd_opt(2026, 10, 28).unwrap();
+        let external = date.succ_opt().unwrap();
+        let late = external.succ_opt().unwrap();
+        let theme = crate::theme::parse_theme(include_str!(concat!(
+            env!("CARGO_MANIFEST_DIR"),
+            "/../../themes/macos27.json"
+        )))
+        .unwrap();
+        cx.update(|app| {
+            gpui_component::init(app);
+            crate::theme::activate_theme(&theme, Some(crate::theme::AppearanceMode::Dark), app)
+                .unwrap();
+        });
+        let (owner, window) = cx.add_window_view(|_, cx| {
+            ComponentHost::new(
+                Owner {
+                    date: Some(date),
+                    disabled: false,
+                },
+                cx,
+            )
+        });
+        let state = window.update(|window, app| {
+            let _ = window.draw(app);
+            owner
+                .read(app)
+                .retained_entity_for_test::<RetainedDatePicker>(
+                    vec![],
+                    Identity::from("disabled-date"),
+                )
+                .unwrap()
+                .read(app)
+                .state
+                .clone()
+        });
+        window.update(|window, app| {
+            owner.update(app, |host, cx| {
+                host.component_mut().disabled = true;
+                host.component_mut().date = Some(external);
+                cx.notify();
+            });
+            let _ = window.draw(app);
+            assert_eq!(state.read(app).date(), CalendarDate::Single(Some(external)));
+            state.update(app, |_, cx| {
+                cx.emit(DatePickerEvent::Change(DateTime::Single(Some(
+                    late.and_hms_opt(0, 0, 0).unwrap(),
+                ))))
+            });
+        });
+        window.cx.run_until_parked();
+        window.update(|_, app| assert_eq!(owner.read(app).component().date, Some(external)));
+        window.update(|window, app| {
+            owner.update(app, |host, cx| {
+                host.component_mut().disabled = false;
+                cx.notify();
+            });
+            let _ = window.draw(app);
+            state.update(app, |_, cx| {
+                cx.emit(DatePickerEvent::Change(DateTime::Single(Some(
+                    late.and_hms_opt(0, 0, 0).unwrap(),
+                ))))
+            });
+        });
+        window.cx.run_until_parked();
+        window.update(|_, app| assert_eq!(owner.read(app).component().date, Some(late)));
+    }
 
     #[test]
     fn calendar_uses_locale_week_rules_and_date_format() {
