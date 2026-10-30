@@ -1,3 +1,7 @@
+## Native-first priority — 2026-10-30
+
+The user directed this session to finish its current Web/Wasm task and then focus on native RustUI while Web/Wasm work is deferred for later. The embedded Web preview viewport change was integrated in `93432e2a`, with its source-check record in `96126e1e`. Preserve existing Web work and its open requirements; do not treat this priority change as Web acceptance or release completion. Continue native implementation, macOS validation, English/French/Arabic and RTL, keyboard behavior, performance, licensing, packaging and CI. Accessibility and VoiceOver remain deferred as previously directed. The protected disposable-bundle cleanup rejection and held GUI reservation remain unresolved; do not disturb the preserved bundles.
+
 ## Current source release check — 2026-10-30
 
 On clean commit `93432e2a`, `./scripts/verify-release.sh source` exited 0: 628 Python tests and 47 Node tests passed, along with the configured patch and packaging checks. Log `target/headstart/evidence/source-gate-93432e2a-20261030.log`, SHA-256 `cb64e94a73b5fc099aebca27dfd194a0560e5412adf6a2a8d6063ead3fc9840a`. This is source-check evidence; macOS and Web runtime acceptance, compiled CI, licensing and release readiness remain open.
