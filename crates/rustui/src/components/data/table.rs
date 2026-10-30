@@ -766,6 +766,27 @@ mod tests {
                 gpui::px(0.)
             );
         });
+        window.simulate_event(gpui::ScrollWheelEvent {
+            position: gpui::point(gpui::px(100.), gpui::px(45.)),
+            delta: gpui::ScrollDelta::Pixels(gpui::point(gpui::px(-80.), gpui::px(0.))),
+            ..Default::default()
+        });
+        window.update(|window, app| {
+            let _ = window.draw(app);
+            assert!(state.read(app).horizontal_scroll_handle.offset().x < gpui::px(0.));
+        });
+        window.simulate_event(gpui::ScrollWheelEvent {
+            position: gpui::point(gpui::px(100.), gpui::px(45.)),
+            delta: gpui::ScrollDelta::Pixels(gpui::point(gpui::px(80.), gpui::px(0.))),
+            ..Default::default()
+        });
+        window.update(|window, app| {
+            let _ = window.draw(app);
+            assert_eq!(
+                state.read(app).horizontal_scroll_handle.offset().x,
+                gpui::px(0.)
+            );
+        });
     }
 
     #[gpui::test]
