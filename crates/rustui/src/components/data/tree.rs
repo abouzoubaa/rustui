@@ -698,11 +698,18 @@ impl View for TreeView {
         let desired = valid_selection(&self.nodes, requested.as_deref());
         if desired.is_none() {
             if let Some(missing) = requested.clone() {
+                let check_id = missing.clone();
+                let current_tree = retained.clone();
                 let normalize = context.binding_updater(self.selection.clone(), move |current| {
                     clear_missing_selection(current, &missing)
                 });
                 context.update_entity(&tree, move |_state, _window, cx| {
-                    cx.defer(move |cx| normalize(cx));
+                    cx.defer(move |cx| {
+                        if valid_selection(&current_tree.read(cx).nodes, Some(&check_id)).is_none()
+                        {
+                            normalize(cx);
+                        }
+                    });
                 });
             }
         }
@@ -716,13 +723,24 @@ impl View for TreeView {
                     expected_owner: requested.clone(),
                     expanded: desired.clone(),
                 };
+                let check_expected = request.expected_owner.clone();
+                let check_expanded = request.expanded.clone();
+                let current_tree = retained.clone();
                 let owner_expansion = owner_expansion.clone();
                 let normalize = context.binding_updater(binding.clone(), move |current| {
                     let changed = apply_expansion_request(current, &request);
                     *owner_expansion.borrow_mut() = Some(current.clone());
                     changed
                 });
-                context.update_entity(&tree, move |_, _, cx| cx.defer(move |cx| normalize(cx)));
+                context.update_entity(&tree, move |_, _, cx| {
+                    cx.defer(move |cx| {
+                        if valid_expanded_branches(&current_tree.read(cx).nodes, &check_expected)
+                            == check_expanded
+                        {
+                            normalize(cx);
+                        }
+                    });
+                });
             }
         }
         let native_desired = desired_expansion.as_ref().map_or_else(
@@ -1380,6 +1398,97 @@ mod outline_tests;
 mod rendered_accessibility_tests {
     use super::*;
     use crate::runtime::ComponentHost;
+
+    struct RestoredNodeOwner {
+        selection: Option<String>,
+        expanded: HashSet<String>,
+        present: bool,
+        writes: usize,
+        expansion_writes: usize,
+    }
+
+    impl View for RestoredNodeOwner {
+        fn body(&self) -> impl View {
+            EmptyView
+        }
+
+        fn into_element(&self, context: &mut RenderContext<'_>) -> AnyElement {
+            let selection = Binding::new(
+                self.selection.clone(),
+                |owner: &Self| owner.selection.clone(),
+                |owner, value| {
+                    owner.selection = value;
+                    owner.writes += 1;
+                },
+            );
+            let expansion = Binding::new(
+                self.expanded.clone(),
+                |owner: &Self| owner.expanded.clone(),
+                |owner, value| {
+                    owner.expanded = value;
+                    owner.expansion_writes += 1;
+                },
+            );
+            let nodes = self
+                .present
+                .then(|| TreeNode::new("a", "Alpha").child(TreeNode::new("child", "Child")));
+            TreeView::new(nodes, selection)
+                .id("restored-node")
+                .controlled_expansion(expansion)
+                .into_element(context)
+        }
+    }
+
+    #[gpui::test]
+    fn restored_node_survives_queued_selection_clear(cx: &mut gpui::TestAppContext) {
+        init(cx);
+        let (owner, window) = cx.add_window_view(|_, app| {
+            ComponentHost::new(
+                RestoredNodeOwner {
+                    selection: Some("a".into()),
+                    expanded: HashSet::from(["a".to_owned()]),
+                    present: true,
+                    writes: 0,
+                    expansion_writes: 0,
+                },
+                app,
+            )
+        });
+        window.update(|window, app| {
+            let _ = window.draw(app);
+            owner.update(app, |host, cx| {
+                host.component_mut().present = false;
+                cx.notify();
+            });
+            let _ = window.draw(app);
+            owner.update(app, |host, cx| {
+                host.component_mut().present = true;
+                cx.notify();
+            });
+            let _ = window.draw(app);
+        });
+        window.cx.run_until_parked();
+        window.update(|_, app| {
+            assert_eq!(owner.read(app).component().selection.as_deref(), Some("a"));
+            assert_eq!(owner.read(app).component().writes, 0);
+            assert!(owner.read(app).component().expanded.contains("a"));
+            assert_eq!(owner.read(app).component().expansion_writes, 0);
+        });
+        window.update(|window, app| {
+            owner.update(app, |host, cx| {
+                host.component_mut().present = false;
+                cx.notify();
+            });
+            let _ = window.draw(app);
+        });
+        window.cx.run_until_parked();
+        window.update(|_, app| {
+            assert_eq!(owner.read(app).component().selection, None);
+            assert_eq!(owner.read(app).component().writes, 1);
+            assert!(owner.read(app).component().expanded.is_empty());
+            assert_eq!(owner.read(app).component().expansion_writes, 1);
+        });
+    }
 
     struct TreeSelectionOwner;
     struct RenderedTreeProbe;
