@@ -255,6 +255,84 @@ mod tests {
     use rustui_core::Binding;
 
     #[gpui::test]
+    fn rendered_stale_remove_never_deletes_replaced_owner_token(cx: &mut gpui::TestAppContext) {
+        use crate::{runtime::ComponentHost, view::View};
+        use std::{cell::Cell, rc::Rc};
+
+        struct Owner {
+            tokens: Vec<String>,
+            reads: Rc<Cell<usize>>,
+        }
+        impl View for Owner {
+            fn body(&self) -> impl View {
+                TokenField(
+                    "Add recipients",
+                    Binding::new_with(
+                        self.tokens.clone(),
+                        self.reads.clone(),
+                        |owner: &Self, reads| {
+                            reads.set(reads.get() + 1);
+                            owner.tokens.clone()
+                        },
+                        |owner: &mut Self, _, tokens| {
+                            owner.tokens = tokens;
+                            true
+                        },
+                    ),
+                    Binding::new(String::new(), |_: &Self| String::new(), |_, _| {}),
+                )
+                .id("stale-token-removal")
+            }
+        }
+
+        let theme = crate::theme::parse_theme(include_str!(concat!(
+            env!("CARGO_MANIFEST_DIR"),
+            "/../../themes/macos27.json"
+        )))
+        .unwrap();
+        cx.update(|app| {
+            gpui_component::init(app);
+            crate::theme::activate_theme(&theme, Some(crate::theme::AppearanceMode::Dark), app)
+                .unwrap();
+        });
+        let reads = Rc::new(Cell::new(0));
+        let (owner, window) = cx.add_window_view(|_, app| {
+            ComponentHost::new(
+                Owner {
+                    tokens: vec!["Atlas".into(), "Studio".into(), "Notes".into()],
+                    reads: reads.clone(),
+                },
+                app,
+            )
+        });
+        window.update(|window, app| {
+            let _ = window.draw(app);
+            window.focus_next(app);
+            window.focus_next(app);
+        });
+        let key = gpui::Keystroke::parse("space").unwrap();
+        window.simulate_event(gpui::KeyDownEvent {
+            keystroke: key.clone(),
+            is_held: false,
+            prefer_character_input: false,
+        });
+        window.update(|_, app| {
+            // Change the owner after key-down but before the old button receives key-up.
+            owner.update(app, |host, _| {
+                host.component_mut().tokens[1] = "Changed".into()
+            });
+        });
+        window.simulate_event(gpui::KeyUpEvent { keystroke: key });
+        window.update(|_, app| {
+            assert_eq!(reads.get(), 1, "the rendered button delivered its event");
+            assert_eq!(
+                owner.read(app).component().tokens,
+                ["Atlas", "Changed", "Notes"]
+            );
+        });
+    }
+
+    #[gpui::test]
     fn add_button_preserves_draft_on_rejection_and_owner_replacement(
         cx: &mut gpui::TestAppContext,
     ) {
