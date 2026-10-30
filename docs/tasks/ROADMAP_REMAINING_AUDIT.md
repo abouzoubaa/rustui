@@ -1,3 +1,7 @@
+## R17 TabView focus across item changes — 2026-10-30
+
+An implicit TabView now keeps a stable retained identity when its tabs change. A GPUI test window moves keyboard focus to the second tab, adds another tab and activates the focused tab. Before the fix the selection remained on the first tab (`target/headstart/evidence/native-tab-identity-before-20261030.log`, SHA-256 `0f9a0851a875032a0d0a555b37bc9fc4ed5b0ed264a85b5ecfc9205bb5bf0bb0`); the fixed TabView suite passed 28/28 (`native-tab-identity-suite-20261030.log`, SHA-256 `9aa45129c49512693e527f05b6eac977989deb9e0af10dbf9f2d7328e515a179`) and the locked offline native library check passed. This is GPUI test-window and build evidence; macOS Playground and broader navigation acceptance remain open.
+
 ## Native workspace integration checkpoint — 2026-10-30
 
 On clean source commit `e89dc268`, macOS `./scripts/cargo-headstart test --profile headstart --locked --offline --workspace --tests` passed 1,483 tests across 42 targets, with no failures or ignored tests. Evidence: `target/headstart/evidence/native-workspace-tests-e89dc268-20261030.log`, SHA-256 `7104d097ab42fea025eb97786be9bedeee6b4c34c64878f23e3f2c5b74907c8d`. This includes the recent collection restoration regressions; it does not establish native Playground, OS input, packaging, CI, licensing or release acceptance.

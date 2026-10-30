@@ -180,13 +180,9 @@ impl TabViewControl {
     }
 
     fn identity_with(&self, allocate: impl FnOnce(Identity) -> Identity) -> Identity {
-        self.id.clone().unwrap_or_else(|| {
-            allocate(Identity::from(format!(
-                "tab-view:{}:{}",
-                self.tabs.len(),
-                self.tabs.first().map_or("", |tab| tab.id.as_str())
-            )))
-        })
+        self.id
+            .clone()
+            .unwrap_or_else(|| allocate(Identity::from("tab-view")))
     }
 }
 
@@ -640,6 +636,67 @@ fn activation_selection(items: &[(String, bool)], focused_index: usize) -> Optio
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[gpui::test]
+    fn implicit_tabs_preserve_keyboard_focus_when_items_change(cx: &mut gpui::TestAppContext) {
+        struct Owner {
+            selection: String,
+            extra: bool,
+        }
+        impl View for Owner {
+            fn body(&self) -> impl View {
+                let tabs = [
+                    Some(TabItem::new("first", "First", EmptyView)),
+                    Some(TabItem::new("second", "Second", EmptyView)),
+                    self.extra
+                        .then(|| TabItem::new("third", "Third", EmptyView)),
+                ];
+                TabView(
+                    tabs.into_iter().flatten(),
+                    Binding::new(
+                        self.selection.clone(),
+                        |owner: &Owner| owner.selection.clone(),
+                        |owner, value| owner.selection = value,
+                    ),
+                )
+            }
+        }
+        let theme = crate::theme::parse_theme(include_str!(concat!(
+            env!("CARGO_MANIFEST_DIR"),
+            "/../../themes/macos27.json"
+        )))
+        .unwrap();
+        cx.update(|app| {
+            gpui_component::init(app);
+            crate::theme::activate_theme(&theme, Some(crate::theme::AppearanceMode::Dark), app)
+                .unwrap();
+        });
+        let (owner, window) = cx.add_window_view(|_, app| {
+            crate::runtime::ComponentHost::new(
+                Owner {
+                    selection: "first".into(),
+                    extra: false,
+                },
+                app,
+            )
+        });
+        window.update(|window, app| {
+            let _ = window.draw(app);
+            window.focus_next(app);
+            let _ = window.draw(app);
+        });
+        window.simulate_keystrokes("right");
+        window.update(|window, app| {
+            let _ = window.draw(app);
+            owner.update(app, |host, cx| {
+                host.component_mut().extra = true;
+                cx.notify();
+            });
+            let _ = window.draw(app);
+        });
+        window.simulate_keystrokes("space");
+        window.update(|_, app| assert_eq!(owner.read(app).component().selection, "second"));
+    }
 
     #[gpui::test]
     fn native_keyboard_skips_disabled_tabs_and_commits_only_on_activation(
