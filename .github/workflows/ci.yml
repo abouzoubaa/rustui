@@ -4,6 +4,11 @@ on:
   push:
   pull_request:
   workflow_dispatch:
+    inputs:
+      include_web:
+        description: Also run Web/Wasm release checks
+        type: boolean
+        default: false
 
 permissions:
   contents: read
@@ -39,10 +44,13 @@ jobs:
           EXPECTED_SHA: ${{ github.sha }}
         run: ./scripts/verify-ci-checkout.sh "$EXPECTED_SHA"
       - name: Provision Web binding tool on the trusted runner
+        if: inputs.include_web
         run: ./scripts/provision-ci-wasm-bindgen.sh
       - name: Check Web binding tool before builds
+        if: inputs.include_web
         run: ./scripts/build-playground-web.sh --check-bindgen
       - name: macOS checks and optimized package
         run: ./scripts/verify-release.sh macos
       - name: Web optimized bundle
+        if: inputs.include_web
         run: ./scripts/verify-release.sh web
