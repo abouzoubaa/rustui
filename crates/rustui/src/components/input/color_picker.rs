@@ -379,6 +379,17 @@ impl ColorPickerView {
         let active_tab_state = state.clone();
         let keyboard_tab_state = state.clone();
         let palette_label = popup_label(context, "rustui-color-picker-palette", "Palette");
+        let palette = Tab::new().flex_1().label(palette_label);
+        let hsla = Tab::new().flex_1().label("HSLA");
+        #[cfg(test)]
+        let palette = palette.debug_selector(|| "color-mode-palette".to_owned());
+        #[cfg(test)]
+        let hsla = hsla.debug_selector(|| "color-mode-hsla".to_owned());
+        let mut mode_tabs = vec![palette, hsla];
+        if direction == rustui_i18n::LayoutDirection::RightToLeft {
+            mode_tabs.reverse();
+        }
+        let displayed_tab = color_mode_index(active_tab, direction).unwrap_or(active_tab);
         let mut panel = gpui_component::v_flex()
             .w(px(288.0))
             .gap_3()
@@ -396,8 +407,10 @@ impl ColorPickerView {
                             return;
                         }
                         let index = match event.keystroke.key.as_ref() {
-                            "left" | "home" => 0,
-                            "right" | "end" => 1,
+                            "left" => color_mode_index(0, direction).unwrap(),
+                            "right" => color_mode_index(1, direction).unwrap(),
+                            "home" => 0,
+                            "end" => 1,
                             _ => return,
                         };
                         keyboard_tab_state.update(cx, |state, cx| state.set_active_tab(index, cx));
@@ -406,13 +419,14 @@ impl ColorPickerView {
                     .child(
                         TabBar::new("color-picker-mode")
                             .segmented()
-                            .selected_index(active_tab)
+                            .selected_index(displayed_tab)
                             .on_click(move |index: &usize, _, cx| {
-                                active_tab_state
-                                    .update(cx, |state, cx| state.set_active_tab(*index, cx));
+                                if let Some(logical) = color_mode_index(*index, direction) {
+                                    active_tab_state
+                                        .update(cx, |state, cx| state.set_active_tab(logical, cx));
+                                }
                             })
-                            .child(Tab::new().flex_1().label(palette_label))
-                            .child(Tab::new().flex_1().label("HSLA")),
+                            .children(mode_tabs),
                     ),
             );
 
@@ -777,6 +791,17 @@ fn keyboard_color_slider(id: &'static str, state: &gpui::Entity<SliderState>) ->
         .child(GpuiSlider::new(state).w_full())
 }
 
+// The two-mode display mapping is its own inverse.
+fn color_mode_index(index: usize, direction: rustui_i18n::LayoutDirection) -> Option<usize> {
+    if index >= 2 {
+        return None;
+    }
+    Some(match direction {
+        rustui_i18n::LayoutDirection::LeftToRight => index,
+        rustui_i18n::LayoutDirection::RightToLeft => 1 - index,
+    })
+}
+
 fn slider_row(
     label: SharedString,
     slider: impl IntoElement,
@@ -1128,11 +1153,54 @@ mod rendered_locale_tests {
             assert_eq!(state.read(app).active_tab(), 1);
             let snapshot = window.debug_a11y_tree_json().expect("rendered picker tree");
             assert!(snapshot.contains("لوحة الألوان"));
+            let tree: serde_json::Value = serde_json::from_str(&snapshot).unwrap();
+            let nodes = tree["nodes"].as_object().unwrap();
+            let tabs = nodes
+                .values()
+                .find(|node| node["aria"]["role"] == "TabList")
+                .unwrap();
+            let order: Vec<_> = tabs["children"]
+                .as_array()
+                .unwrap()
+                .iter()
+                .map(|id| {
+                    nodes[id.as_str().unwrap()]["aria"]["label"]
+                        .as_str()
+                        .unwrap()
+                })
+                .collect();
+            assert_eq!(order, ["HSLA", "لوحة الألوان"]);
+            let selected = tabs["children"][0].as_str().unwrap();
+            assert_eq!(nodes[selected]["aria"]["selected"], true);
             assert_eq!(state.read(app).value(), Some(color));
             assert_eq!(owner.read(app).component().color, Some(color));
-            state.update(app, |state, cx| state.set_active_tab(0, cx));
+        });
+        let palette = window.debug_bounds("color-mode-palette").unwrap();
+        let hsla = window.debug_bounds("color-mode-hsla").unwrap();
+        assert!(hsla.center().x < palette.center().x);
+        window.simulate_click(palette.center(), gpui::Modifiers::default());
+        window.update(|window, app| {
             let _ = window.draw(app);
+            assert_eq!(state.read(app).active_tab(), 0);
+        });
+        let hsla = window.debug_bounds("color-mode-hsla").unwrap();
+        window.simulate_click(hsla.center(), gpui::Modifiers::default());
+        window.update(|window, app| {
+            let _ = window.draw(app);
+            assert_eq!(state.read(app).active_tab(), 1);
             window.focus_next(app);
+            let _ = window.draw(app);
+        });
+        window.simulate_keystrokes("right");
+        window.update(|window, app| {
+            let _ = window.draw(app);
+            assert_eq!(state.read(app).active_tab(), 0);
+        });
+        window.simulate_keystrokes("left");
+        window.update(|window, app| {
+            let _ = window.draw(app);
+            assert_eq!(state.read(app).active_tab(), 1);
+            state.update(app, |state, cx| state.set_active_tab(0, cx));
             let _ = window.draw(app);
             window.focus_next(app);
             let _ = window.draw(app);
@@ -1237,6 +1305,9 @@ mod rendered_locale_tests {
             window.focus_next(app);
             let _ = window.draw(app);
         });
+        let palette = window.debug_bounds("color-mode-palette").unwrap();
+        let hsla_bounds = window.debug_bounds("color-mode-hsla").unwrap();
+        assert!(palette.center().x < hsla_bounds.center().x);
         window.simulate_keystrokes("right");
         window.update(|window, app| {
             let _ = window.draw(app);
