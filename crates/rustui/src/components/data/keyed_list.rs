@@ -82,8 +82,12 @@ fn valid_selection(items: &[KeyedListItem], requested: Option<&str>) -> Option<S
         .map(str::to_owned)
 }
 
-fn clear_removed_selection(current: &mut Option<String>, removed_id: &str) -> bool {
-    if current.as_deref() != Some(removed_id) {
+fn clear_removed_selection(
+    current: &mut Option<String>,
+    removed_id: &str,
+    resolved_selection: Option<&str>,
+) -> bool {
+    if current.as_deref() != Some(removed_id) || resolved_selection == Some(removed_id) {
         return false;
     }
     *current = None;
@@ -491,8 +495,9 @@ impl View for KeyedListView {
 
         if requested != desired {
             let invalid_id = requested.expect("only a missing selected ID needs normalization");
+            let latest_selection = selection_id.clone();
             let clear = context.binding_updater(self.selection.clone(), move |current| {
-                clear_removed_selection(current, &invalid_id)
+                clear_removed_selection(current, &invalid_id, latest_selection.borrow().as_deref())
             });
             context.update_entity(&state, move |_state, _window, cx| {
                 cx.defer(move |cx| clear(cx));
@@ -708,14 +713,22 @@ mod tests {
         assert_eq!(valid_selection(&items, Some("missing")), None);
         assert_eq!(valid_selection(&items, Some("a")), Some("a".into()));
         let mut selected = Some("missing".to_owned());
-        assert!(clear_removed_selection(&mut selected, "missing"));
+        assert!(clear_removed_selection(&mut selected, "missing", None));
         assert_eq!(selected, None);
         let mut new_owner_selection = Some("a".to_owned());
         assert!(!clear_removed_selection(
             &mut new_owner_selection,
-            "missing"
+            "missing",
+            None
         ));
         assert_eq!(new_owner_selection.as_deref(), Some("a"));
+        let mut restored_selection = Some("missing".to_owned());
+        assert!(!clear_removed_selection(
+            &mut restored_selection,
+            "missing",
+            Some("missing")
+        ));
+        assert_eq!(restored_selection.as_deref(), Some("missing"));
     }
 
     #[test]

@@ -1,3 +1,7 @@
+## R17 keyed-list deferred normalization — 2026-10-30
+
+A queued clear for a removed selected ID now checks the list's latest resolved selection before writing to the owner. If the same ID has become valid again after a later render, the old clear is rejected; an unchanged missing ID still clears, and a newer owner selection remains protected. The keyed-list suite passed 13/13 using `./scripts/cargo-headstart test -p rustui --lib --profile headstart --locked --offline components::data::keyed_list::tests::`. Evidence: `target/headstart/evidence/native-keyed-reinsert-20261030.log`, SHA-256 `af54003dc8cd4e2e336740e71cee67539a32256f14dbe624ff36a506a4647e53`. The restored-ID interleaving is covered at the normalization helper boundary; a rendered deferred-event regression and native Playground acceptance remain open.
+
 ## R20 stale async error — 2026-10-30
 
 The GPUI test-window replacement race now covers an old background task that has completed with an error before its foreground callback runs. Starting a replacement prevents the old error from being applied; the new task succeeds. The owner-task suite passed 8/8 using `./scripts/cargo-headstart test -p rustui --lib --profile headstart --locked --offline runtime::tasks::tests::`. Evidence: `target/headstart/evidence/native-owner-task-stale-error-20261030.log`, SHA-256 `bdda0677dfb7b978ce88991b1ae0bacb0e04906185fb88aff2a6d8acdb227803`. This is a simulated GPUI test-window result, not complete native application acceptance.
