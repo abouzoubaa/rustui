@@ -1,3 +1,7 @@
+## R04/R05 root window lifecycle — 2026-10-30
+
+A GPUI test-platform window now checks that opening RustUI's root mounts its owner once and closing it unmounts the owner once. The focused window suite passed 2/2 (`target/headstart/evidence/native-root-window-lifecycle-20261030.log`, SHA-256 `ca25ef1edada0282bf807c8a46ef4caf131446a8cae337217e58fe29f095b879`). This does not establish actual macOS launch/close or broader lifecycle acceptance.
+
 ## R30 native all-target integration check — 2026-10-30
 
 On source commit `a38a38ad608afa01e8ee04cf35646cf618111f47`, the local macOS `./scripts/cargo-headstart check --workspace --all-targets --profile headstart --locked --offline` exited 0. It emitted warnings, including six for the Playground library test target. Evidence: `target/headstart/evidence/native-all-targets-a38a38ad-20261030.log`, SHA-256 `de1dc7e4111685e5970896328027968ba0853df9fa10b421ecc9058970a0c82a`. This is compilation evidence; native runtime, packaging, CI and release acceptance remain open.
