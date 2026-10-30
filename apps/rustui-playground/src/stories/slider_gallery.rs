@@ -31,9 +31,8 @@ impl View for SliderGallery {
             .child(LocalizedText("lab-slider-gallery-title"))
             .child(LocalizedText("lab-slider-gallery-help"))
             .child(
-                LocalizedText("lab-slider-gallery-value").with_arguments(
-                    MessageArguments::new().with("value", self.value().to_string()),
-                ),
+                LocalizedText("lab-slider-gallery-value")
+                    .with_arguments(MessageArguments::new().with("value", self.value())),
             )
             .child(
                 Slider(self.value_binding(), 0.0..=100.0)

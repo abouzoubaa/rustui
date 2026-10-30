@@ -757,7 +757,7 @@ lab-theme-inspector-uncovered-properties = غير مغطى: {component}/{part} (
 
 lab-slider-gallery-title = شريط التمرير · قيمة متحكم بها
 lab-slider-gallery-help = يشترك الشريطان في قيمة واحدة ويتحركان بخطوات مقدارها خمسة.
-lab-slider-gallery-value = القيمة: { $value }
+lab-slider-gallery-value = القيمة: {value}
 lab-slider-gallery-horizontal = شريط تمرير أفقي
 lab-slider-gallery-reverse = شريط تمرير معكوس
 lab-slider-gallery-reset = إعادة الضبط

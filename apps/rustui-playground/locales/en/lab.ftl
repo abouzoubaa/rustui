@@ -757,7 +757,7 @@ lab-theme-inspector-uncovered-properties = Uncovered: {component}/{part} ({appea
 
 lab-slider-gallery-title = Slider · controlled value
 lab-slider-gallery-help = Both sliders share one value and move in steps of five.
-lab-slider-gallery-value = Value: { $value }
+lab-slider-gallery-value = Value: {value}
 lab-slider-gallery-horizontal = Horizontal slider
 lab-slider-gallery-reverse = Reversed slider
 lab-slider-gallery-reset = Reset

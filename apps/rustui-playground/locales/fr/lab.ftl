@@ -757,7 +757,7 @@ lab-theme-inspector-uncovered-properties = Non couvert : {component}/{part} ({ap
 
 lab-slider-gallery-title = Curseur · valeur contrôlée
 lab-slider-gallery-help = Les deux curseurs partagent une valeur et avancent par pas de cinq.
-lab-slider-gallery-value = Valeur : { $value }
+lab-slider-gallery-value = Valeur : {value}
 lab-slider-gallery-horizontal = Curseur horizontal
 lab-slider-gallery-reverse = Curseur inversé
 lab-slider-gallery-reset = Réinitialiser

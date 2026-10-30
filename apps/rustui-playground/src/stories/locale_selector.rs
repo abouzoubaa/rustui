@@ -128,6 +128,26 @@ mod tests {
     use super::*;
 
     #[test]
+    fn slider_gallery_value_formats_in_every_runtime_locale() {
+        use rustui::localization::{MessageArguments, format_integer};
+        let catalogs = catalogs();
+        for identifier in ["en", "fr", "ar"] {
+            let locale = locale(identifier);
+            let value = catalogs
+                .format(
+                    &locale,
+                    "lab-slider-gallery-value",
+                    &MessageArguments::new().with("value", 35.0_f32),
+                )
+                .expect("slider value should format");
+            assert!(
+                value.contains(&format_integer(35, &locale)),
+                "{identifier}: {value}"
+            );
+        }
+    }
+
+    #[test]
     fn browser_document_direction_matches_playground_locale() {
         for (identifier, expected) in [("en", "ltr"), ("fr", "ltr"), ("ar", "rtl")] {
             assert_eq!(document_direction(&locale(identifier)), expected);
