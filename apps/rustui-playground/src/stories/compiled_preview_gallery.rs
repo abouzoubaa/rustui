@@ -725,6 +725,20 @@ impl Default for CompiledPreviewGallery {
                     },
                 ),
                 (
+                    PropertyId::new("disabled").unwrap(),
+                    PropertySchema {
+                        kind: PropertyKind::Boolean,
+                        default: Some(PropertyValue::Boolean(false)),
+                        required: false,
+                        editable: true,
+                        minimum: None,
+                        maximum: None,
+                        min_length: None,
+                        max_length: None,
+                        allowed_values: vec![],
+                    },
+                ),
+                (
                     PropertyId::new("has_color").unwrap(),
                     PropertySchema {
                         kind: PropertyKind::Boolean,
@@ -761,10 +775,17 @@ impl Default for CompiledPreviewGallery {
             .register(color_picker_schema, |snapshot, context: &FactoryContext| {
                 let label =
                     property_string(snapshot, "label").expect("validated ColorPicker label");
-                AnyView::new(ColorPicker(label, context.color_value.clone()).id(format!(
-                    "compiled-preview-color-picker-{}",
-                    snapshot.stamp.generation
-                )))
+                AnyView::new(
+                    ColorPicker(label, context.color_value.clone())
+                        .id(format!(
+                            "compiled-preview-color-picker-{}",
+                            snapshot.stamp.generation
+                        ))
+                        .disabled(
+                            property_boolean(snapshot, "disabled")
+                                .expect("validated ColorPicker disabled state"),
+                        ),
+                )
             })
             .unwrap();
 
@@ -9934,6 +9955,7 @@ mod tests {
             visible,
             [
                 "alpha",
+                "disabled",
                 "has_color",
                 "hue",
                 "label",
@@ -9954,6 +9976,23 @@ mod tests {
         assert!(gallery.write_color_presence(&context, true));
         assert!(gallery.read_color_presence(&context));
         assert_eq!(gallery.enabled, original_enabled);
+
+        let disabled_context = PropertyBindingContext {
+            property: PropertyId::new("disabled").unwrap(),
+            stamp: gallery.stamp_lease.clone(),
+        };
+        let disabled = gallery.preview_inspector_boolean_binding(disabled_context);
+        assert!(disabled.write_to(&mut gallery, true));
+        assert_eq!(
+            property_boolean(gallery.host.snapshot().unwrap(), "disabled"),
+            Some(true)
+        );
+        gallery.export_descriptor();
+        gallery.import_descriptor();
+        assert_eq!(
+            property_boolean(gallery.host.snapshot().unwrap(), "disabled"),
+            Some(true)
+        );
     }
 
     #[test]
@@ -9968,7 +10007,11 @@ mod tests {
         let lightness_id = PropertyId::new("lightness").unwrap();
         let alpha_id = PropertyId::new("alpha").unwrap();
         let schema = &gallery.host.catalog().components[&component_id];
-        assert_eq!(schema.properties.len(), 6);
+        assert_eq!(schema.properties.len(), 7);
+        let disabled = &schema.properties[&PropertyId::new("disabled").unwrap()];
+        assert_eq!(disabled.kind, PropertyKind::Boolean);
+        assert_eq!(disabled.default, Some(PropertyValue::Boolean(false)));
+        assert!(disabled.editable);
         assert!(schema.events.is_empty());
         for id in [&hue_id, &saturation_id, &lightness_id, &alpha_id] {
             assert_eq!(schema.properties[id].kind, PropertyKind::Number);

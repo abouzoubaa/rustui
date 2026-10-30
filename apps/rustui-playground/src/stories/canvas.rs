@@ -439,6 +439,12 @@ impl View for StoryCanvas {
                             .id("story-input-color")
                             .localized_label("lab-input-choose-color"),
                     )
+                    .child(
+                        ColorPicker("Color (disabled)", self.color_binding.clone())
+                            .id("story-input-color-disabled")
+                            .localized_label("lab-input-color-disabled")
+                            .disabled(true),
+                    )
                     .child(super::code_editor_gallery::demo())
                     .spacing(8.0)
                     .alignment(rustui::prelude::HorizontalAlignment::Start)

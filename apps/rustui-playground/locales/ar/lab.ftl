@@ -63,6 +63,7 @@ lab-input-count-disabled = العدّاد (معطّل)
 lab-input-picker-owner-value = قيمة المحدّد: {value}
 lab-input-picker-set-kotlin = تعيين المحدّد إلى Kotlin
 lab-input-choose-color = اختر لونًا
+lab-input-color-disabled = اللون (معطّل)
 lab-input-choose-date = اختر تاريخًا
 lab-input-choose-date-two-months = اختر تاريخًا (شهران)
 lab-input-owner-update = غيّر النص المرتبط من المالك خلال ٥ ثوانٍ

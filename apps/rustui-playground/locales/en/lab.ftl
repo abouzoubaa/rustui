@@ -63,6 +63,7 @@ lab-input-count-disabled = Count (disabled)
 lab-input-picker-owner-value = Picker owner value: {value}
 lab-input-picker-set-kotlin = Set Picker to Kotlin
 lab-input-choose-color = Choose a color
+lab-input-color-disabled = Color (disabled)
 lab-input-choose-date = Choose a date
 lab-input-choose-date-two-months = Choose a date (two months)
 lab-input-owner-update = Change bound text from owner in 5 seconds
