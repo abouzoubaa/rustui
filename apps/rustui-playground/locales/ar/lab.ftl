@@ -15,6 +15,7 @@ lab-status-ready = جاهز · ساحة تجارب RustUI
 lab-status-no-references = لا تتوفر مراجع SVG محلية
 lab-status-opened = طُلب فتح {count} من المراجع لـ {key}
 lab-status-open-failed = تعذّر فتح {path}: {error}
+lab-status-appearance-failed = تعذّر تغيير المظهر: {error}
 lab-select-reference = اختر مكوّنًا من الدليل لعرض مراجع SVG الخاصة به.
 lab-no-source-gaps = لم تُسجَّل نواقص معروفة في المصدر.
 lab-known-source-gaps = نواقص المصدر المعروفة

@@ -15,6 +15,7 @@ lab-status-ready = Prêt · Terrain de jeu RustUI
 lab-status-no-references = Aucune référence SVG locale disponible
 lab-status-opened = Ouverture demandée pour {count} référence(s) de {key}
 lab-status-open-failed = Impossible d’ouvrir {path} : {error}
+lab-status-appearance-failed = Impossible de changer l’apparence : {error}
 lab-select-reference = Sélectionnez un composant du catalogue pour voir ses références SVG.
 lab-no-source-gaps = Aucune lacune connue du code source.
 lab-known-source-gaps = Lacunes connues du code source

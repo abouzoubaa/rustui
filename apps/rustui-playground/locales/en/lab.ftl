@@ -15,6 +15,7 @@ lab-status-ready = Ready · RustUI Playground
 lab-status-no-references = No local SVG references available
 lab-status-opened = Requested {count} reference(s) for {key}
 lab-status-open-failed = Could not open {path}: {error}
+lab-status-appearance-failed = Could not switch appearance: {error}
 lab-select-reference = Select a component catalog row to inspect its SVG references.
 lab-no-source-gaps = No known source gaps recorded.
 lab-known-source-gaps = Known source gaps

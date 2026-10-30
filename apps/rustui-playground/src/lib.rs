@@ -13,8 +13,10 @@ use rustui::{
     theme::{AppearanceMode, ThemeDocument, activate_theme, parse_theme},
 };
 use std::{
+    cell::RefCell,
     path::{Path, PathBuf},
     process::Command,
+    rc::Rc,
     sync::{Arc, OnceLock},
 };
 use stories::{STORIES, StoryHost, StoryId, filtered_story_indices};
@@ -38,6 +40,17 @@ struct Playground {
     #[state(PlaygroundStatus::Ready)]
     status: PlaygroundStatus,
     theme: Option<Arc<ThemeDocument>>,
+    appearance_error: Rc<RefCell<Option<String>>>,
+}
+
+fn update_appearance_error(slot: &RefCell<Option<String>>, result: Result<(), String>) -> bool {
+    let next = result.err();
+    let mut current = slot.borrow_mut();
+    if *current == next {
+        return false;
+    }
+    *current = next;
+    true
 }
 
 impl Playground {
@@ -101,9 +114,11 @@ impl Playground {
             .as_ref()
             .expect("Playground theme initialized")
             .clone();
+        let error_slot = Rc::clone(&self.appearance_error);
         AppAction::new(move |cx| {
-            if let Err(error) = activate_theme(&theme, Some(mode), cx) {
-                eprintln!("Could not switch Playground appearance: {error}");
+            let result = activate_theme(&theme, Some(mode), cx).map_err(|error| error.to_string());
+            if update_appearance_error(&error_slot, result) {
+                cx.refresh_windows();
             }
         })
     }
@@ -140,6 +155,11 @@ impl Playground {
     }
 
     fn status_view(&self) -> impl View {
+        if let Some(error) = self.appearance_error.borrow().clone() {
+            return LocalizedText("lab-status-appearance-failed")
+                .with_arguments(MessageArguments::new().with("error", error))
+                .font_size(12.0);
+        }
         let (message, arguments) = match self.status() {
             PlaygroundStatus::Ready => ("lab-status-ready", MessageArguments::new()),
             PlaygroundStatus::NoReferences => ("lab-status-no-references", MessageArguments::new()),
@@ -684,6 +704,33 @@ mod tests {
     use super::*;
     use catalog::Coverage;
     use std::sync::atomic::{AtomicUsize, Ordering};
+
+    #[test]
+    fn appearance_error_changes_only_when_needed_and_clears_on_success() {
+        let slot = RefCell::new(None);
+        assert!(!update_appearance_error(&slot, Ok(())));
+        assert!(update_appearance_error(&slot, Err("invalid theme".into())));
+        assert_eq!(slot.borrow().as_deref(), Some("invalid theme"));
+        assert!(!update_appearance_error(&slot, Err("invalid theme".into())));
+        assert!(update_appearance_error(&slot, Ok(())));
+        assert_eq!(*slot.borrow(), None);
+    }
+
+    #[test]
+    fn appearance_error_is_localized_with_its_detail() {
+        let catalogs = stories::catalogs();
+        for tag in ["en", "fr", "ar"] {
+            let locale = rustui::localization::Locale::parse(tag).unwrap();
+            let message = catalogs
+                .format(
+                    &locale,
+                    "lab-status-appearance-failed",
+                    &MessageArguments::new().with("error", "invalid theme"),
+                )
+                .unwrap();
+            assert!(message.contains("invalid theme"), "{tag}: {message}");
+        }
+    }
 
     #[test]
     fn bundled_theme_is_shared_across_appearance_actions() {
