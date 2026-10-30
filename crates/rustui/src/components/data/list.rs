@@ -347,13 +347,9 @@ impl ListView {
     }
 
     fn identity_with(&self, allocate: impl FnOnce(Identity) -> Identity) -> Identity {
-        self.id.clone().unwrap_or_else(|| {
-            allocate(Identity::from(format!(
-                "list:{}:{}",
-                self.items.len(),
-                self.items.first().map_or("", String::as_str)
-            )))
-        })
+        self.id
+            .clone()
+            .unwrap_or_else(|| allocate(Identity::from("list")))
     }
 }
 
@@ -504,8 +500,13 @@ impl View for ListView {
             let normalize = context.binding_updater(self.selection.clone(), move |current| {
                 clear_invalid_selection(current, invalid)
             });
+            let current_state = state.clone();
             context.update_entity(&state, move |_state, _window, cx| {
-                cx.defer(move |cx| normalize(cx));
+                cx.defer(move |cx| {
+                    if invalid >= current_state.read(cx).delegate().items.len() {
+                        normalize(cx);
+                    }
+                });
             });
         }
 
@@ -522,6 +523,84 @@ impl View for ListView {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    struct RestoredListOwner {
+        selection: Option<usize>,
+        count: usize,
+        writes: usize,
+    }
+
+    impl View for RestoredListOwner {
+        fn body(&self) -> impl View {
+            EmptyView
+        }
+
+        fn into_element(&self, context: &mut RenderContext<'_>) -> AnyElement {
+            let binding = Binding::new(
+                self.selection,
+                |owner: &Self| owner.selection,
+                |owner, value| {
+                    owner.selection = value;
+                    owner.writes += 1;
+                },
+            );
+            List(["first", "second"].into_iter().take(self.count), binding).into_element(context)
+        }
+    }
+
+    #[gpui::test]
+    fn restored_item_survives_deferred_list_normalization(cx: &mut gpui::TestAppContext) {
+        let theme = crate::theme::parse_theme(include_str!(concat!(
+            env!("CARGO_MANIFEST_DIR"),
+            "/../../themes/macos27.json"
+        )))
+        .unwrap();
+        cx.update(|app| {
+            gpui_component::init(app);
+            crate::theme::activate_theme(&theme, Some(crate::theme::AppearanceMode::Dark), app)
+                .unwrap();
+        });
+        let (owner, window) = cx.add_window_view(|_, app| {
+            crate::runtime::ComponentHost::new(
+                RestoredListOwner {
+                    selection: Some(1),
+                    count: 2,
+                    writes: 0,
+                },
+                app,
+            )
+        });
+        window.update(|window, app| {
+            let _ = window.draw(app);
+            owner.update(app, |host, cx| {
+                host.component_mut().count = 1;
+                cx.notify();
+            });
+            let _ = window.draw(app);
+            owner.update(app, |host, cx| {
+                host.component_mut().count = 2;
+                cx.notify();
+            });
+            let _ = window.draw(app);
+        });
+        window.cx.run_until_parked();
+        window.update(|_, app| {
+            assert_eq!(owner.read(app).component().selection, Some(1));
+            assert_eq!(owner.read(app).component().writes, 0);
+        });
+        window.update(|window, app| {
+            owner.update(app, |host, cx| {
+                host.component_mut().count = 1;
+                cx.notify();
+            });
+            let _ = window.draw(app);
+        });
+        window.cx.run_until_parked();
+        window.update(|_, app| {
+            assert_eq!(owner.read(app).component().selection, None);
+            assert_eq!(owner.read(app).component().writes, 1);
+        });
+    }
 
     struct KeyboardListOwner {
         selection: Option<usize>,
