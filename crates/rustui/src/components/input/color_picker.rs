@@ -1241,6 +1241,30 @@ mod rendered_locale_tests {
             );
             assert_eq!(owner.read(app).component().color.unwrap().a, 0.0);
         });
+        window.update(|window, app| {
+            owner.update(app, |host, cx| {
+                host.component_mut().color = None;
+                cx.notify();
+            });
+            let _ = window.draw(app);
+            assert_eq!(state.read(app).value(), None);
+            assert!(state.read(app).hex_input().read(app).value().is_empty());
+        });
+        let external = hsla(0.5, 1.0, 0.5, 0.0);
+        window.update(|window, app| {
+            owner.update(app, |host, cx| {
+                host.component_mut().color = Some(external);
+                cx.notify();
+            });
+            let _ = window.draw(app);
+            assert_eq!(state.read(app).value(), Some(external));
+            assert_ne!(
+                state.read(app).hex_input().read(app).value().as_ref(),
+                "#FF"
+            );
+        });
+        window.simulate_keystrokes("cmd-a");
+        window.simulate_input("#FF");
         window.simulate_keystrokes("escape");
         window.update(|window, app| {
             let _ = window.draw(app);
@@ -1249,7 +1273,8 @@ mod rendered_locale_tests {
                 state.read(app).hex_input().read(app).value().as_ref(),
                 "#FF"
             );
-            assert_eq!(owner.read(app).component().color.unwrap().a, 0.0);
+            assert_eq!(owner.read(app).component().color, Some(external));
+            assert_eq!(state.read(app).value(), Some(external));
             state.update(app, |state, cx| state.set_open(true, cx));
             let _ = window.draw(app);
             let focus = state.read(app).hex_input().read(app).focus_handle(app);
