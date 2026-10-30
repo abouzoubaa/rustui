@@ -3390,3 +3390,7 @@ On source `42824b7c`, the locked offline path-remapped Playground release build 
 ### R30 native source and packaging checks — 2026-10-30
 
 On `75c744f2`, local dependency-boundary, runtime locale catalog (three records), theme-plan validation, theme-adapter mapping and Playground packaging fixture checks passed; logs are `target/headstart/evidence/native-{dependency-boundary,locales,themes,theme-coverage,package-fixture}-75c744f2-20261030.log`. Theme mapping and fixture results do not establish runtime visual or license acceptance. GitHub repository runner inventory returned no registered runners; the macOS job is manual and requires a trusted self-hosted ARM64 Headstart runner, so push-triggered source runs skip it. At inspection, run 41120250455 was still executing source checks. Local compiled results do not substitute for remote compiled CI.
+
+### R15 disabled ColorPicker retained value — 2026-10-30
+
+Commit `4e00d65e` strengthens the existing GPUI test-window regression: after disabling and externally updating the owner, it changes the retained picker value and emits a late change, then checks that both owner and retained state reconcile to the external value. The locked offline Headstart release focused test passed 1/1 (`target/headstart/evidence/native-color-disabled-retained-before-20261030.log`, SHA-256 `ea7a79aa2ff751bf8343a56dec7f92826084a740094a634b41ad2bd045a42f41`). No implementation defect was reproduced. This simulated event evidence does not close native GUI or broader input acceptance.
