@@ -155,11 +155,14 @@ impl ReloadState {
                 }
             }
         }
-        let result = self
-            .theme_file
-            .as_mut()
-            .expect("theme file opened")
-            .reload_if_changed(Some(mode), cx);
+        let theme_file = self.theme_file.as_mut().expect("theme file opened");
+        // A manual reload must restore the file even if another action changed
+        // the active theme since this file was last loaded.
+        let result = if manual {
+            theme_file.reload(Some(mode), cx)
+        } else {
+            theme_file.reload_if_changed(Some(mode), cx)
+        };
         match result {
             Ok(true) => {
                 self.had_error = false;
@@ -169,9 +172,6 @@ impl ReloadState {
             Ok(false) if std::mem::take(&mut self.had_error) => self.set_result(format!(
                 "Theme file recovered; {mode:?} appearance is unchanged."
             )),
-            Ok(false) if manual => {
-                self.set_result(format!("No change; {mode:?} appearance is already active."))
-            }
             Ok(false) => false,
             Err(error) => {
                 self.had_error = true;
