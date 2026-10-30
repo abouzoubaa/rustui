@@ -335,20 +335,43 @@ impl ColorPickerView {
             });
 
         let active_tab_state = state.clone();
+        let keyboard_tab_state = state.clone();
         let palette_label = popup_label(context, "rustui-color-picker-palette", "Palette");
         let mut panel = gpui_component::v_flex()
             .w(px(288.0))
             .gap_3()
             .child(wheel)
             .child(
-                TabBar::new("color-picker-mode")
-                    .segmented()
-                    .selected_index(active_tab)
-                    .on_click(move |index: &usize, _, cx| {
-                        active_tab_state.update(cx, |state, cx| state.set_active_tab(*index, cx));
+                div()
+                    .id("color-picker-mode-keyboard")
+                    .focusable()
+                    .tab_stop(true)
+                    .on_key_down(move |event, _, cx| {
+                        if event.prefer_character_input
+                            || event.keystroke.is_ime_in_progress()
+                            || event.keystroke.modifiers.modified()
+                        {
+                            return;
+                        }
+                        let index = match event.keystroke.key.as_ref() {
+                            "left" | "home" => 0,
+                            "right" | "end" => 1,
+                            _ => return,
+                        };
+                        keyboard_tab_state.update(cx, |state, cx| state.set_active_tab(index, cx));
+                        cx.stop_propagation();
                     })
-                    .child(Tab::new().flex_1().label(palette_label))
-                    .child(Tab::new().flex_1().label("HSLA")),
+                    .child(
+                        TabBar::new("color-picker-mode")
+                            .segmented()
+                            .selected_index(active_tab)
+                            .on_click(move |index: &usize, _, cx| {
+                                active_tab_state
+                                    .update(cx, |state, cx| state.set_active_tab(*index, cx));
+                            })
+                            .child(Tab::new().flex_1().label(palette_label))
+                            .child(Tab::new().flex_1().label("HSLA")),
+                    ),
             );
 
         if active_tab == 0 {
@@ -1027,6 +1050,8 @@ mod rendered_locale_tests {
             let _ = window.draw(app);
             window.focus_next(app);
             let _ = window.draw(app);
+            window.focus_next(app);
+            let _ = window.draw(app);
             let tree: serde_json::Value =
                 serde_json::from_str(&window.debug_a11y_tree_json().expect("rendered picker tree"))
                     .unwrap();
@@ -1052,9 +1077,10 @@ mod rendered_locale_tests {
             assert!(!state.read(app).is_open());
             state.update(app, |state, cx| state.set_open(true, cx));
             let _ = window.draw(app);
-            window.focus_next(app);
-            window.focus_next(app);
-            let _ = window.draw(app);
+            for _ in 0..3 {
+                window.focus_next(app);
+                let _ = window.draw(app);
+            }
             let tree: serde_json::Value =
                 serde_json::from_str(&window.debug_a11y_tree_json().expect("rendered picker tree"))
                     .unwrap();
@@ -1124,8 +1150,23 @@ mod rendered_locale_tests {
         window.update(|window, app| {
             let _ = window.draw(app);
             assert!(state.read(app).is_open());
-            state.update(app, |state, cx| state.set_active_tab(1, cx));
+            window.focus_next(app);
             let _ = window.draw(app);
+        });
+        window.simulate_keystrokes("right");
+        window.update(|window, app| {
+            let _ = window.draw(app);
+            assert_eq!(state.read(app).active_tab(), 1);
+        });
+        window.simulate_keystrokes("left");
+        window.update(|window, app| {
+            let _ = window.draw(app);
+            assert_eq!(state.read(app).active_tab(), 0);
+        });
+        window.simulate_keystrokes("right");
+        window.update(|window, app| {
+            let _ = window.draw(app);
+            assert_eq!(state.read(app).active_tab(), 1);
             window.focus_next(app);
             let _ = window.draw(app);
         });
