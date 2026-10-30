@@ -55,13 +55,13 @@ struct RetainedTextEditor {
 }
 
 #[derive(Debug, PartialEq, Eq)]
-struct OwnerSyncPlan {
-    update_editor_value: bool,
-    update_owner_snapshot: bool,
-    update_marked_text_snapshot: bool,
+pub(crate) struct OwnerSyncPlan {
+    pub(crate) update_editor_value: bool,
+    pub(crate) update_owner_snapshot: bool,
+    pub(crate) update_marked_text_snapshot: bool,
 }
 
-fn owner_sync_plan(
+pub(crate) fn owner_sync_plan(
     current_owner_value: &str,
     previous_owner_value: &str,
     retained_value: &str,
@@ -295,7 +295,9 @@ impl View for TextEditorView {
             had_marked_text,
             has_marked_text,
         );
-        if sync_plan.update_editor_value {
+        if sync_plan.update_editor_value
+            || ((self.disabled || self.readonly) && retained_value != current_value)
+        {
             let value_to_sync = current_value.clone();
             context.update_entity(&state, move |state, window, cx| {
                 state.set_value(value_to_sync, window, cx);
@@ -418,7 +420,11 @@ mod tests {
             });
         });
         window.cx.run_until_parked();
-        window.update(|_, app| assert_eq!(owner.read(app).component().value, "external"));
+        window.update(|window, app| {
+            assert_eq!(owner.read(app).component().value, "external");
+            let _ = window.draw(app);
+            assert_eq!(editor.read(app).value().to_string(), "external");
+        });
         window.update(|window, app| {
             owner.update(app, |host, cx| {
                 host.component_mut().disabled = false;

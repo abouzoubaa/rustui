@@ -2,7 +2,9 @@
 
 use std::{cell::RefCell, rc::Rc};
 
-use gpui::{AnyElement, AppContext as _, Entity, IntoElement, SharedString, px};
+use gpui::{
+    AnyElement, AppContext as _, Entity, EntityInputHandler as _, IntoElement, SharedString, px,
+};
 use gpui_component::input::{Editor, EditorState, InputEvent};
 use rustui_core::{Binding, Identity};
 
@@ -39,6 +41,8 @@ fn write_with_current_writer<Value, Context>(
 struct RetainedCodeEditor {
     editor: Entity<EditorState>,
     line_numbers: bool,
+    owner_value: String,
+    had_marked_text: bool,
     writer: Rc<RefCell<Option<EventWriter<String, gpui::App>>>>,
 }
 
@@ -216,19 +220,38 @@ impl View for CodeEditorView {
                         .default_value(current_value.clone())
                 }),
                 line_numbers: self.line_numbers,
+                owner_value: current_value.clone(),
+                had_marked_text: false,
                 writer: Rc::new(RefCell::new(None)),
             });
         let retained_state = retained.read(context.app());
         let editor = retained_state.editor.clone();
         let line_numbers_changed = retained_state.line_numbers != self.line_numbers;
+        let previous_owner_value = retained_state.owner_value.clone();
+        let had_marked_text = retained_state.had_marked_text;
+        let (retained_value, has_marked_text) =
+            context.update_entity(&editor, |native, window, cx| {
+                (
+                    native.value().to_string(),
+                    native.marked_text_range(window, cx).is_some(),
+                )
+            });
+        let sync_plan = crate::components::input::text_editor::owner_sync_plan(
+            &current_value,
+            &previous_owner_value,
+            &retained_value,
+            had_marked_text,
+            has_marked_text,
+        );
         let native = editor.read(context.app());
-        let value_changed = native.value().to_string() != current_value;
+        let value_changed = sync_plan.update_editor_value
+            || ((self.disabled || self.readonly) && retained_value != current_value);
         let language_changed = native.language_name() != self.language;
         let placeholder_changed = native.presentation().placeholder() != &resolved_placeholder;
         if value_changed || language_changed || placeholder_changed || line_numbers_changed {
             context.update_entity(&editor, |native, window, cx| {
                 if value_changed {
-                    native.set_value(current_value, window, cx);
+                    native.set_value(current_value.clone(), window, cx);
                 }
                 if language_changed {
                     native.set_highlighter(self.language.clone(), cx);
@@ -245,6 +268,16 @@ impl View for CodeEditorView {
                     retained.line_numbers = self.line_numbers
                 });
             }
+        }
+        if sync_plan.update_owner_snapshot || sync_plan.update_marked_text_snapshot {
+            context.update_entity(&retained, |retained, _, _| {
+                if sync_plan.update_owner_snapshot {
+                    retained.owner_value = current_value;
+                }
+                if sync_plan.update_marked_text_snapshot {
+                    retained.had_marked_text = has_marked_text;
+                }
+            });
         }
         if created {
             let writer = retained.read(context.app()).writer.clone();
@@ -275,6 +308,109 @@ impl View for CodeEditorView {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[gpui::test]
+    fn code_editor_preserves_composition_on_rerender_and_honors_owner_update(
+        cx: &mut gpui::TestAppContext,
+    ) {
+        use crate::runtime::component_host::ComponentHost;
+        use gpui::EntityInputHandler;
+        struct Owner {
+            value: String,
+        }
+        impl View for Owner {
+            fn body(&self) -> impl View {
+                CodeEditor(
+                    "ime-code-editor",
+                    Binding::new(
+                        self.value.clone(),
+                        |owner: &Owner| owner.value.clone(),
+                        |owner, value| owner.value = value,
+                    ),
+                )
+            }
+        }
+        let theme = crate::theme::parse_theme(include_str!(concat!(
+            env!("CARGO_MANIFEST_DIR"),
+            "/../../themes/macos27.json"
+        )))
+        .unwrap();
+        cx.update(|app| {
+            gpui_component::init(app);
+            crate::theme::activate_theme(&theme, Some(crate::theme::AppearanceMode::Dark), app)
+                .unwrap();
+        });
+        let (owner, window) = cx.add_window_view(|_, cx| {
+            ComponentHost::new(
+                Owner {
+                    value: "base".into(),
+                },
+                cx,
+            )
+        });
+        let editor = window.update(|window, app| {
+            let _ = window.draw(app);
+            owner
+                .read(app)
+                .retained_entity_for_test::<RetainedCodeEditor>(
+                    vec![],
+                    Identity::from("ime-code-editor"),
+                )
+                .unwrap()
+                .read(app)
+                .editor
+                .clone()
+        });
+        window.update(|window, app| {
+            editor.update(app, |editor, cx| {
+                editor.replace_and_mark_text_in_range(Some(4..4), "é", Some(1..1), window, cx)
+            });
+            assert_eq!(editor.read(app).value().to_string(), "baseé");
+            let _ = window.draw(app);
+            assert_eq!(editor.read(app).value().to_string(), "baseé");
+            assert!(
+                editor
+                    .update(app, |editor, cx| editor.marked_text_range(window, cx))
+                    .is_some()
+            );
+            owner.update(app, |host, cx| {
+                host.component_mut().value = "external".into();
+                cx.notify();
+            });
+            let _ = window.draw(app);
+            assert_eq!(editor.read(app).value().to_string(), "external");
+        });
+        window.cx.run_until_parked();
+        window.update(|window, app| {
+            editor.update(app, |editor, cx| {
+                editor.replace_text_in_range(None, "é", window, cx)
+            })
+        });
+        window.cx.run_until_parked();
+        // Multiline InputState::set_value resets the caret to the start.
+        window.update(|_, app| assert_eq!(owner.read(app).component().value, "éexternal"));
+        window.update(|window, app| {
+            editor.update(app, |editor, cx| {
+                editor.replace_and_mark_text_in_range(Some(0..0), "م", Some(1..1), window, cx)
+            });
+            let _ = window.draw(app);
+            assert_eq!(editor.read(app).value().to_string(), "مéexternal");
+            owner.update(app, |host, cx| {
+                host.component_mut().value = "جديد".into();
+                cx.notify();
+            });
+            let _ = window.draw(app);
+            assert_eq!(editor.read(app).value().to_string(), "جديد");
+        });
+        window.cx.run_until_parked();
+        window.update(|window, app| {
+            editor.update(app, |editor, cx| {
+                editor.replace_text_in_range(None, "م", window, cx)
+            });
+        });
+        window.cx.run_until_parked();
+        window.update(|_, app| assert_eq!(owner.read(app).component().value, "مجديد"));
+    }
 
     #[gpui::test]
     fn retained_editor_ignores_late_changes_when_disabled_or_readonly(
@@ -347,7 +483,11 @@ mod tests {
             });
         });
         window.cx.run_until_parked();
-        window.update(|_, app| assert_eq!(owner.read(app).component().value, "external"));
+        window.update(|window, app| {
+            assert_eq!(owner.read(app).component().value, "external");
+            let _ = window.draw(app);
+            assert_eq!(editor.read(app).value().to_string(), "external");
+        });
         window.update(|window, app| {
             owner.update(app, |host, cx| {
                 host.component_mut().disabled = false;
