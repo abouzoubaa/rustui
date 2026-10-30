@@ -254,6 +254,103 @@ mod tests {
     };
     use rustui_core::Binding;
 
+    #[gpui::test]
+    fn add_button_preserves_draft_on_rejection_and_owner_replacement(
+        cx: &mut gpui::TestAppContext,
+    ) {
+        use crate::{runtime::ComponentHost, view::View};
+
+        struct Owner {
+            tokens: Vec<String>,
+            draft: String,
+            reject: bool,
+            attempts: usize,
+        }
+        impl View for Owner {
+            fn body(&self) -> impl View {
+                TokenField(
+                    "Add recipients",
+                    Binding::new_with(
+                        self.tokens.clone(),
+                        (),
+                        |owner: &Self, _| owner.tokens.clone(),
+                        |owner: &mut Self, _, tokens| {
+                            owner.attempts += 1;
+                            if owner.reject {
+                                return false;
+                            }
+                            owner.tokens = tokens;
+                            owner.draft = "new owner draft".into();
+                            true
+                        },
+                    ),
+                    Binding::new(
+                        self.draft.clone(),
+                        |owner: &Self| owner.draft.clone(),
+                        |owner, draft| owner.draft = draft,
+                    ),
+                )
+                .id("token-event-regression")
+            }
+        }
+
+        let theme = crate::theme::parse_theme(include_str!(concat!(
+            env!("CARGO_MANIFEST_DIR"),
+            "/../../themes/macos27.json"
+        )))
+        .unwrap();
+        cx.update(|app| {
+            gpui_component::init(app);
+            crate::theme::activate_theme(&theme, Some(crate::theme::AppearanceMode::Dark), app)
+                .unwrap();
+        });
+        let (owner, window) = cx.add_window_view(|_, app| {
+            ComponentHost::new(
+                Owner {
+                    tokens: Vec::new(),
+                    draft: "original".into(),
+                    reject: true,
+                    attempts: 0,
+                },
+                app,
+            )
+        });
+        window.update(|window, app| {
+            let _ = window.draw(app);
+            window.focus_next(app);
+            window.focus_next(app);
+        });
+        let press_add = |window: &mut gpui::VisualTestContext| {
+            window.update(|window, app| {
+                let _ = window.draw(app);
+            });
+            let key = gpui::Keystroke::parse("space").unwrap();
+            window.simulate_event(gpui::KeyDownEvent {
+                keystroke: key.clone(),
+                is_held: false,
+                prefer_character_input: false,
+            });
+            window.simulate_event(gpui::KeyUpEvent { keystroke: key });
+        };
+        press_add(window);
+        window.update(|window, app| {
+            assert!(owner.read(app).component().tokens.is_empty());
+            assert_eq!(owner.read(app).component().attempts, 1);
+            assert_eq!(owner.read(app).component().draft, "original");
+            owner.update(app, |host, cx| {
+                host.component_mut().reject = false;
+                cx.notify();
+            });
+            let _ = window.draw(app);
+        });
+        press_add(window);
+        window.update(|_, app| {
+            assert_eq!(owner.read(app).component().tokens, ["original"]);
+            assert_eq!(owner.read(app).component().attempts, 2);
+            assert_eq!(owner.read(app).component().draft, "new owner draft");
+        });
+    }
+
     fn binding<T: Clone + 'static>(value: T) -> Binding<T> {
         Binding::new(
             value,
