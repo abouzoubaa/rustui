@@ -205,7 +205,8 @@ impl TableDelegate for StringTableDelegate {
     ) -> Stateful<gpui::Div> {
         let selected = self.last_owner_selection.get() == Some(row_ix);
         let focused = cx.focus_handle().is_focused(window);
-        let mut row = styled_element(table_data_row_element(row_ix), &self.row_style);
+        // The theme's reference-artwork width must not override the table viewport.
+        let mut row = styled_element(table_data_row_element(row_ix), &self.row_style).w_full();
         if should_report_active_descendant(selected, focused) {
             row = row.aria_active_descendant();
         }
@@ -701,6 +702,70 @@ mod tests {
             let rows = (0..self.rows).map(|index| vec![index.to_string()]);
             super::TableView::new(["Value"], rows, selection).into_element(context)
         }
+    }
+
+    struct TableGeometryProbe;
+    impl super::View for TableGeometryProbe {
+        fn body(&self) -> impl super::View {
+            super::EmptyView
+        }
+        fn into_element(&self, context: &mut super::RenderContext<'_>) -> gpui::AnyElement {
+            use gpui::{IntoElement as _, ParentElement as _, Styled as _, div, px};
+            let selection = super::Binding::new(None, |_: &Self| None, |_, _| {});
+            div()
+                .w(px(300.))
+                .h(px(240.))
+                .child(
+                    super::TableView::new(["First", "Second"], vec![["A", "B"]; 4], selection)
+                        .id("geometry-probe")
+                        .column_width(700.)
+                        .height(240.)
+                        .into_element(context),
+                )
+                .into_any_element()
+        }
+    }
+
+    #[gpui::test]
+    fn narrow_table_retains_horizontal_scroll_after_draw(cx: &mut gpui::TestAppContext) {
+        use rustui_core::Identity;
+        let theme = crate::theme::parse_theme(include_str!(concat!(
+            env!("CARGO_MANIFEST_DIR"),
+            "/../../themes/macos27.json"
+        )))
+        .unwrap();
+        cx.update(|app| {
+            gpui_component::init(app);
+            crate::theme::activate_theme(&theme, Some(crate::theme::AppearanceMode::Dark), app)
+                .unwrap();
+        });
+        let (owner, window) = cx
+            .add_window_view(|_, app| crate::runtime::ComponentHost::new(TableGeometryProbe, app));
+        window.run_until_parked();
+        let state = window.update(|window, app| {
+            let _ = window.draw(app);
+            owner
+                .read(app)
+                .retained_entity_for_test::<super::TableState<super::StringTableDelegate>>(
+                    vec![],
+                    Identity::from("geometry-probe"),
+                )
+                .unwrap()
+        });
+        window.run_until_parked();
+        window.update(|window, app| {
+            state.update(app, |table, cx| table.scroll_to_col(1, cx));
+            let before = state.read(app).horizontal_scroll_handle.offset().x;
+            assert!(before < gpui::px(-900.));
+            let _ = window.draw(app);
+            assert_eq!(state.read(app).horizontal_scroll_handle.offset().x, before);
+            state.update(app, |table, cx| table.scroll_to_col(0, cx));
+            let _ = window.draw(app);
+            assert_eq!(
+                state.read(app).horizontal_scroll_handle.offset().x,
+                gpui::px(0.)
+            );
+        });
     }
 
     #[gpui::test]
