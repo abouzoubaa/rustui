@@ -406,6 +406,11 @@ fn disabled_text_color(profile: &ThemeProfile, mode: AppearanceMode) -> gpui::Hs
         .expect("validated RustUI text field disabled text color")
 }
 
+fn search_text_color(profile: &ThemeProfile, mode: AppearanceMode) -> gpui::Hsla {
+    gpui_component::theme::try_parse_color(&profile.colors(Some(mode)).primary_text)
+        .expect("validated RustUI primary text color")
+}
+
 /// Creates a controlled single-line text field.
 #[allow(non_snake_case)]
 pub fn TextField(placeholder: impl Into<SharedString>, value: Binding<String>) -> TextFieldView {
@@ -641,6 +646,12 @@ impl View for TextFieldView {
             let theme = crate::theme::registry::active_theme(context.app())
                 .expect("a RustUI component theme requires an active theme");
             input = input.text_color(disabled_text_color(&theme.profile, theme.mode));
+        } else if self.kind == TextFieldKind::Search {
+            // The reference artwork foreground colors the icon; entered text
+            // uses the theme's primary text color for readability.
+            let theme = crate::theme::registry::active_theme(context.app())
+                .expect("a RustUI component theme requires an active theme");
+            input = input.text_color(search_text_color(&theme.profile, theme.mode));
         }
         input.into_any_element()
     }
@@ -1030,6 +1041,20 @@ mod tests {
     #[should_panic(expected = "TextField accessibility label must not be empty")]
     fn explicit_accessible_name_must_not_be_blank() {
         TextField("Search", binding()).accessibility_label("\t ");
+    }
+
+    #[test]
+    fn search_text_uses_primary_text_in_both_appearances() {
+        let profile = parse_theme(include_str!("../../../../../themes/macos27.json"))
+            .unwrap()
+            .platform_snapshot;
+        for mode in [AppearanceMode::Light, AppearanceMode::Dark] {
+            assert_eq!(
+                super::search_text_color(&profile, mode),
+                gpui_component::theme::try_parse_color(&profile.colors(Some(mode)).primary_text)
+                    .unwrap()
+            );
+        }
     }
 
     #[test]
