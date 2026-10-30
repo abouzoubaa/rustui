@@ -1,3 +1,7 @@
+## R30 current native workspace integration tests — 2026-10-30
+
+On clean commit `414c9d98` (only a validation-ledger change after library-tested source `64005a18`), local macOS `./scripts/cargo-headstart test --workspace --test '*' --profile headstart --locked --offline` exited 0: 60 tests passed across 34 suites, with zero failures or ignored tests. Log `target/headstart/evidence/native-workspace-integration-414c9d98-20261030.log`, SHA-256 `e161b6b7302a6fe52ef2da6f07d5fedd8e2325fb95d45428ca90db94e8572e8a`. Together with the preceding 1,395 library tests this is 1,455 passing native-hosted tests on the same code, not native Playground interaction, real IME, packaging, licensing or release acceptance.
+
 ## R30 current native workspace library tests — 2026-10-30
 
 On clean source commit `64005a18592dcb0e05823d0b465368d72bfeacf2`, local macOS `./scripts/cargo-headstart test --workspace --lib --profile headstart --locked --offline` exited 0: 1,395 tests passed across five nonempty library suites (1,031 + 9 + 83 + 40 + 232); one additional library suite had zero tests. Log `target/headstart/evidence/native-workspace-lib-64005a18-20261030.log`, SHA-256 `5483373bed05a08fcf8474eff038694970e73a52e39423e3a38806d7463110c1`. This is current native-hosted library/test-window evidence, not integration targets, native Playground interaction, real IME, release packaging, licensing or production acceptance.
