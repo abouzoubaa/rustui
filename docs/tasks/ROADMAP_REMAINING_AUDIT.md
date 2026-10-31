@@ -20,6 +20,20 @@ With the GUI slot reserved, the exact disposable bundle was selected by full pat
 
 ## Native release source/build checkpoint — 2026-10-31
 
+On clean commit `dcd8d0d4`, `./scripts/verify-release.sh macos` completed
+patch checks, formatting, dependency-boundary and workspace checks, the external
+consumer check, tests, optimized build, notice collection and a disposable
+package. The 41 test suites reported 1,546 passed, zero failed and two ignored.
+The optimized Playground executable SHA-256 was
+`59a8ecd829f639be6dbd4f03421632173a91902d2266f27589cec135bfc75e78`.
+The run log SHA-256 was
+`9408e15bb136044f40d1a11d576c49b00ba5c00cde3d7c6a4ca8fad6491c350e`
+at `target/headstart/evidence/native-release-picker-dcd8d0d4-20261031.log`.
+The notice collection covered 446 observed packages and retained five unresolved
+gaps. The unlaunched disposable bundle was moved to Trash; prior metadata and
+build evidence were preserved outside the checkout. This is source, build and
+package evidence, not full native GUI, performance, license or release acceptance.
+
 The macOS release script previously invoked the full Web semantic patch-stack verifier and stopped on a Web source-image mismatch before native checks. It now verifies the shared native GPUI input patch layers independently, while the original full Web check remains in the source/Web paths. The Web-only noopener check is also excluded from the macOS path. With the shared-stack correction, the macOS release script completed the workspace and external-consumer checks, test runs, optimized Playground build and disposable package. Its log (`target/headstart/evidence/native-release-shared-stack-20261031.log`, SHA-256 `e6696c7097f863aa8eca0895a78d977a2054f3822b0912c6eb2928e2f1a8bf47`) records 41 successful test-suite results, 1,540 passed and one ignored. It reported five unresolved dependency notice gaps, and is source/build/package evidence only: native pointer acceptance, licensing and other release gates remain open. The old native metadata and build evidence were backed up before the run; the disposable bundle was moved to Trash. The deferred Web stack mismatch remains open.
 
 ## Native release patch verification — 2026-10-31
