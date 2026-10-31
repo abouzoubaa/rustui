@@ -1,3 +1,7 @@
+## R22/R23 descriptor and preview source checkpoint — 2026-10-31
+
+On source commit `d2e4daa7`, the locked offline macOS Headstart preview library suite passed 54/54 (`target/headstart/evidence/native-preview-contract-d2e4daa7-20261031.log`, SHA-256 `2242e07649b4f3ef3e6080289184c8c157dd92dc51ba6d3def7a2dfb46f7de76`). Source review checked JSON size and duplicate-key rejection, catalog/schema validation, atomic property batches, and stale preview stamps; these checks are bounded and do not complete the full contract review, native GUI, or release acceptance.
+
 ## R13 compiled preview operation results — 2026-10-31
 
 The descriptor-export, delayed-parent-refresh, mount and import success summaries now resolve in English, French and Arabic. Mount and import carry their component or preview identifier and generation as structured display arguments; an earlier success cannot mask a later error. Focused regressions passed 1/1 for fixed results and 1/1 for mount/import transitions, and `python3 scripts/validate_locales.py --runtime` passed after each change on macOS using Headstart (compiler warnings remain). Other operation results and detailed errors still need localization; no new native GUI acceptance is claimed. Provisional whole-group counts remain 4/37 coding and 3/37 acceptance.
