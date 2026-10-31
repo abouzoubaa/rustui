@@ -490,6 +490,13 @@ On source commit `1e15c4c9`, `./scripts/cargo-headstart doc --workspace --no-dep
 
 ## Native release CI selection — 2026-10-30
 
+On 2026-10-31 at 11:27 UTC, the GitHub Actions runner inventory for the
+repository reported `total_count: 0`. The manually dispatched compiled macOS
+job requires a trusted self-hosted macOS ARM64 runner with the
+`rustui-headstart` label, so a GitHub-hosted compiled run cannot currently be
+claimed. The local macOS release checkpoint is separate evidence. Restoring a
+trusted runner and running the selected revision remain open.
+
 The manual release workflow now defaults to macOS checks; `include_web` explicitly opts into Web tool provisioning and Web release checks. A local YAML structure check verified the default and all three conditions. The repository reported zero self-hosted runners, so no remote macOS CI run was performed. The macOS packaging gate also remains subject to the previous automatic cleanup rejection; native packaging and release acceptance are open. Web/Wasm remains deferred as directed.
 
 ## R27/R35 graph connection edit validation — 2026-10-30
