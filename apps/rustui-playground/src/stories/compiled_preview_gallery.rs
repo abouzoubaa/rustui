@@ -7652,29 +7652,30 @@ impl View for CompiledPreviewGallery {
             CompiledPreviewGallery::write_color_value,
         );
         let stamp_lease = self.stamp_lease.clone();
-        let owner_summary = if self.host.snapshot().is_some_and(|snapshot| {
+        let secure_preview = self.host.snapshot().is_some_and(|snapshot| {
             snapshot.preview.document.component_id.as_str() == "secure-field-specimen"
-        }) {
-            format!(
-                "Owner: secure value present={} enabled={} amount={} · mounted stamp: {:?}",
-                !self.secure_value.is_empty(),
-                self.enabled,
-                self.amount,
-                self.host.snapshot().map(|snapshot| &snapshot.stamp)
-            )
+        });
+        let owner_message = if secure_preview {
+            "lab-compiled-preview-owner-secure"
         } else {
-            format!(
-                "Owner: text={} enabled={} amount={} · mounted stamp: {:?}",
-                self.text,
-                self.enabled,
-                self.amount,
-                self.host.snapshot().map(|snapshot| &snapshot.stamp)
-            )
+            "lab-compiled-preview-owner-text"
         };
-        let status_text = format!(
-            "{} · activations {} · parent rerenders {}",
-            self.status, self.activations, self.renders
-        );
+        let owner_arguments = MessageArguments::new()
+            .with("text", self.text.clone())
+            .with(
+                "secure_present",
+                (!self.secure_value.is_empty()).to_string(),
+            )
+            .with("enabled", self.enabled.to_string())
+            .with("amount", self.amount.to_string())
+            .with(
+                "stamp",
+                format!("{:?}", self.host.snapshot().map(|snapshot| &snapshot.stamp)),
+            );
+        let status_arguments = MessageArguments::new()
+            .with("status", self.status.clone())
+            .with("activations", self.activations.to_string())
+            .with("renders", self.renders.to_string());
         let rejection_announcement =
             preview_inspector_rejection_live_region_value(&self.status).unwrap_or_default();
         let mounted_preview =
@@ -7706,10 +7707,14 @@ impl View for CompiledPreviewGallery {
             .spacing(8.0)
             .child(self.reference_owner_binding())
             .child(LocalizedText("lab-compiled-preview-title"))
-            .child(Text(owner_summary))
+            .child(LocalizedText(owner_message).with_arguments(owner_arguments))
             .child(
-                Semantics("compiled-preview-status", Text(status_text))
-                    .live_region_value(rejection_announcement, LivePoliteness::Polite),
+                Semantics(
+                    "compiled-preview-status",
+                    LocalizedText("lab-compiled-preview-status-summary")
+                        .with_arguments(status_arguments),
+                )
+                .live_region_value(rejection_announcement, LivePoliteness::Polite),
             )
             .child(
                 VStack::new()
