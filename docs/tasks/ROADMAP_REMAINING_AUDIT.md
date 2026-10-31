@@ -42,6 +42,19 @@ remount showed it again. The competing-modal conflict was not exercised: the
 active modal blocks the background opener. The app was quit and its bundle
 moved to Trash. These are bounded desktop observations, not full acceptance.
 
+## R19/R33 native Drawer modal conflicts — 2026-10-31
+
+Playground commit `4bf0a63b` adds an action inside each competing Sheet and
+Dialog to request the Drawer while the modal is active. The locked offline
+Headstart Playground build passed; the exact-path disposable bundle and built
+executable matched SHA-256
+`beb4d72c568b1fd672a37200d3485211662ec37e76766ebe1127befbbcc0eca5`.
+In the owned native process (PID 38982), each modal remained open and the
+Drawer story reported `another modal is open` after the request. After each
+modal was dismissed, the Drawer opened and its error cleared. The app was quit,
+the bundle moved to Trash, and the GUI slot released. This is bounded native
+conflict and recovery evidence, not full overlay acceptance.
+
 ## Native GUI evidence provenance — 2026-10-31
 
 A generic-name Playground selection was observed to resolve an older checkout while a current disposable bundle existed. For prior GUI entries, an executable hash alone proves the bundle's contents but does not prove which app the automation controlled. Keep historical observations, but treat native acceptance as unverified unless the inspected UI is tied to the exact process and bundle path or independently corroborated. Subsequent native checks must bind by full bundle path and verify the process and executable hash. Source/test-window and build results are unaffected.
