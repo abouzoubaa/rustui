@@ -108,6 +108,21 @@ SHA-256 `3fa6030f52774ead290759ca1777b924ec58ed050c71b0f0b16a518f61b8be53`.
 These are local test-window timings, not native scrolling, cross-machine,
 memory, or release-budget acceptance.
 
+## Native release source/build checkpoint — 2026-10-31, `4bc58caa`
+
+On clean commit `4bc58caa`, `./scripts/verify-release.sh macos` passed patch,
+format, dependency-boundary, workspace, external-consumer, test, optimized
+build, and disposable-package checks. Its 41 test suites reported 1,546 passed,
+zero failed, and three ignored. The log is
+`target/headstart/evidence/native-release-4bc58caa-20261031.log` (SHA-256
+`402c2c252b080fc1d43f1c4c040e78eabe3faf083c29c6b4937b321f9c60cb69`).
+The packaged executable SHA-256 was
+`a2f60f41790b59e481bec8022cf54a03aec8ff99239d6642267f32ad18db87e4`.
+Notice collection still reports five unresolved package gaps. The unlaunched
+bundle was moved to Trash and prior release-check evidence was backed up at
+`/tmp/rustui-release-evidence-CNf22j`. This checkpoint does not establish
+native GUI, licensing, performance, compiled CI, or distribution acceptance.
+
 ## Native GUI evidence provenance — 2026-10-31
 
 A generic-name Playground selection was observed to resolve an older checkout while a current disposable bundle existed. For prior GUI entries, an executable hash alone proves the bundle's contents but does not prove which app the automation controlled. Keep historical observations, but treat native acceptance as unverified unless the inspected UI is tied to the exact process and bundle path or independently corroborated. Subsequent native checks must bind by full bundle path and verify the process and executable hash. Source/test-window and build results are unaffected.
