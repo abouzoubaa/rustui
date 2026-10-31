@@ -1,3 +1,11 @@
+## Current priority — 2026-10-31
+
+The user deferred all localization work, including French and Arabic, to focus
+on completing RustUI's native macOS capabilities. Preserve existing locale and
+RTL implementation and evidence; do not count deferred localization as complete.
+Web/Wasm, accessibility, and VoiceOver remain deferred as previously directed.
+Earlier entries describing locale acceptance as an immediate priority are historical.
+
 ## Native GUI evidence provenance — 2026-10-31
 
 A generic-name Playground selection was observed to resolve an older checkout while a current disposable bundle existed. For prior GUI entries, an executable hash alone proves the bundle's contents but does not prove which app the automation controlled. Keep historical observations, but treat native acceptance as unverified unless the inspected UI is tied to the exact process and bundle path or independently corroborated. Subsequent native checks must bind by full bundle path and verify the process and executable hash. Source/test-window and build results are unaffected.
