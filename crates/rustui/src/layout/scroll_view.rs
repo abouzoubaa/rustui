@@ -482,6 +482,106 @@ mod rendered_overflow_tests {
         });
     }
 
+    struct TallLeaf;
+
+    impl View for TallLeaf {
+        fn body(&self) -> impl View {
+            EmptyView
+        }
+
+        fn into_element(&self, _: &mut RenderContext<'_>) -> AnyElement {
+            div()
+                .w(px(100.0))
+                .h(px(500.0))
+                .flex_none()
+                .into_any_element()
+        }
+    }
+
+    struct ReorderedScrolls {
+        reverse: bool,
+    }
+
+    impl View for ReorderedScrolls {
+        fn body(&self) -> impl View {
+            EmptyView
+        }
+
+        fn into_element(&self, context: &mut RenderContext<'_>) -> AnyElement {
+            let ids = if self.reverse {
+                ["second", "first"]
+            } else {
+                ["first", "second"]
+            };
+            let mut row = div().flex();
+            for id in ids {
+                row = row.child(
+                    ScrollView(TallLeaf)
+                        .id(id)
+                        .width(100.0)
+                        .height(100.0)
+                        .into_element(context),
+                );
+            }
+            row.into_any_element()
+        }
+    }
+
+    #[gpui::test]
+    fn explicitly_keyed_scroll_views_keep_positions_when_reordered(cx: &mut gpui::TestAppContext) {
+        cx.update(gpui_component::init);
+        let (owner, window) = cx
+            .add_window_view(|_, app| ComponentHost::new(ReorderedScrolls { reverse: false }, app));
+        let (first, second) = window.update(|window, app| {
+            let _ = window.draw(app);
+            let state = |id| {
+                owner
+                    .read(app)
+                    .retained_entity_for_test::<ScrollState>(
+                        vec![RetentionScope::ScrollView(Identity::from(id))],
+                        Identity::from("scroll-state"),
+                    )
+                    .expect("keyed scroll state exists")
+            };
+            let first = state("first");
+            let second = state("second");
+            first.read(app).handle.set_offset(Point {
+                x: px(0.0),
+                y: px(-100.0),
+            });
+            second.read(app).handle.set_offset(Point {
+                x: px(0.0),
+                y: px(-200.0),
+            });
+            (first, second)
+        });
+        owner.update(window, |host, cx| {
+            host.component_mut().reverse = true;
+            cx.notify();
+        });
+        window.update(|window, app| {
+            window.refresh();
+            let _ = window.draw(app);
+            let state = |id| {
+                owner
+                    .read(app)
+                    .retained_entity_for_test::<ScrollState>(
+                        vec![RetentionScope::ScrollView(Identity::from(id))],
+                        Identity::from("scroll-state"),
+                    )
+                    .expect("keyed scroll state survives reorder")
+            };
+            assert_eq!(state("first").entity_id(), first.entity_id());
+            assert_eq!(state("second").entity_id(), second.entity_id());
+            assert_eq!(first.read(app).handle.offset().y, px(-100.0));
+            assert_eq!(second.read(app).handle.offset().y, px(-200.0));
+            assert!(
+                second.read(app).handle.bounds().origin.x
+                    < first.read(app).handle.bounds().origin.x
+            );
+        });
+    }
+
     struct WideLeaf(Rc<Cell<Option<gpui::Bounds<Pixels>>>>);
 
     impl View for WideLeaf {
