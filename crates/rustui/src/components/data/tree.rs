@@ -1575,6 +1575,100 @@ mod rendered_accessibility_tests {
 }
 
 #[cfg(test)]
+mod performance_tests {
+    use super::*;
+    use crate::runtime::ComponentHost;
+    use std::sync::{
+        Arc,
+        atomic::{AtomicUsize, Ordering},
+    };
+
+    struct TimedTree {
+        nodes: Vec<TreeNode>,
+        renders: Arc<AtomicUsize>,
+    }
+
+    impl View for TimedTree {
+        fn body(&self) -> impl View {
+            self.renders.fetch_add(1, Ordering::Relaxed);
+            TreeView::new(
+                self.nodes.clone(),
+                Binding::new(None, |_: &Self| None, |_, _| {}),
+            )
+            .id("large-tree-workload")
+            .height(240.)
+        }
+    }
+
+    #[gpui::test]
+    #[ignore = "manual large-tree timing"]
+    fn large_tree_draw_timing(cx: &mut gpui::TestAppContext) {
+        let theme = crate::theme::parse_theme(include_str!(concat!(
+            env!("CARGO_MANIFEST_DIR"),
+            "/../../themes/macos27.json"
+        )))
+        .unwrap();
+        cx.update(|app| {
+            gpui_component::init(app);
+            crate::theme::activate_theme(&theme, Some(crate::theme::AppearanceMode::Dark), app)
+                .unwrap();
+        });
+        for sample in 0..4 {
+            let renders = Arc::new(AtomicUsize::new(0));
+            let nodes = vec![TreeNode::new("root", "Root").expanded(true).children(
+                (0..10_000).map(|i| TreeNode::new(format!("node-{i}"), format!("Node {i}"))),
+            )];
+            let (owner, window) = cx.add_window_view(|_, app| {
+                ComponentHost::new(
+                    TimedTree {
+                        nodes,
+                        renders: renders.clone(),
+                    },
+                    app,
+                )
+            });
+            let start = std::time::Instant::now();
+            window.update(|window, app| {
+                let _ = window.draw(app);
+            });
+            let initial = start.elapsed();
+            window.update(|_, app| {
+                let retained = owner
+                    .read(app)
+                    .retained_entity_for_test::<RetainedTree>(
+                        vec![],
+                        Identity::from("large-tree-workload"),
+                    )
+                    .unwrap();
+                assert_eq!(
+                    retained
+                        .read(app)
+                        .tree
+                        .read(app)
+                        .index_of(&"node-9999".into()),
+                    Some(10_000)
+                );
+            });
+            let before = renders.load(Ordering::Relaxed);
+            let start = std::time::Instant::now();
+            for _ in 0..10 {
+                owner.update(window, |_, cx| cx.notify());
+                window.update(|window, app| {
+                    window.refresh();
+                    let _ = window.draw(app);
+                });
+            }
+            let rendered = renders.load(Ordering::Relaxed) - before;
+            assert!(rendered >= 10, "owner updates must render the tree");
+            eprintln!(
+                "10,000-node Tree sample {sample}: initial={initial:?}, ten owner updates and draws={:?}",
+                start.elapsed()
+            );
+        }
+    }
+}
+
+#[cfg(test)]
 mod rendered_keyboard_tests {
     use super::*;
     use crate::runtime::{Action, ComponentHost};
