@@ -707,11 +707,18 @@ struct Drag {
     last_target: CanvasRect,
 }
 
+fn finite_pointer(pointer: gpui::Point<gpui::Pixels>) -> bool {
+    f32::from(pointer.x).is_finite() && f32::from(pointer.y).is_finite()
+}
+
 fn drag_for_node(
     graph: &GraphDocument,
     id: &str,
     pointer: gpui::Point<gpui::Pixels>,
 ) -> Option<Drag> {
+    if !finite_pointer(pointer) {
+        return None;
+    }
     let rect = graph.node(id)?.rect;
     Some(Drag {
         id: id.to_owned(),
@@ -728,6 +735,9 @@ fn drag_move(
     pointer: gpui::Point<gpui::Pixels>,
     zoom: f32,
 ) -> Option<GraphEdit> {
+    if !finite_pointer(pointer) {
+        return None;
+    }
     let current = graph.node(&drag.id)?.rect;
     if current != drag.last_target {
         drag.anchor_rect = current;
@@ -1726,6 +1736,28 @@ mod tests {
         let accepted = drag_move(&mut drag, &graph, point(12.0), 1.0).unwrap();
         apply_edit(&mut graph, accepted);
         assert_eq!(graph.node("a").unwrap().rect().x, 20_000_006.0);
+    }
+
+    #[test]
+    fn nonfinite_pointer_does_not_poison_a_later_owner_rebase() {
+        let mut graph = graph();
+        let point = |x| gpui::point(gpui::px(x), gpui::px(0.0));
+        assert!(drag_for_node(&graph, "a", point(f32::INFINITY)).is_none());
+        assert!(
+            drag_for_node(&graph, "a", gpui::point(gpui::px(0.0), gpui::px(f32::NAN)),).is_none()
+        );
+        let mut drag = drag_for_node(&graph, "a", point(0.0)).unwrap();
+        assert!(drag_move(&mut drag, &graph, point(f32::NAN), 1.0).is_none());
+        graph = graph
+            .edited(GraphEdit::MoveNode {
+                id: "a".into(),
+                x: 50.0,
+                y: 10.0,
+            })
+            .unwrap();
+        let edit = drag_move(&mut drag, &graph, point(1.0), 1.0).unwrap();
+        apply_edit(&mut graph, edit);
+        assert_eq!(graph.node("a").unwrap().rect().x, 51.0);
     }
 
     #[test]
