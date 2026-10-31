@@ -70,6 +70,14 @@ On commit `169e23fc`, the ignored macOS Headstart test-window workload `owner_up
 
 ## R13/R15 native Picker menu width — 2026-10-31
 
+Follow-up: automatic sizing remains open. The pinned Select maps automatic width
+to its trigger bounds, and its virtualized options cannot supply a reliable
+intrinsic width for all entries. A content-aware implementation needs real menu
+font metrics, trigger and viewport constraints, and the explicit-width override;
+it must compose with the existing Select patches. Their committed-title source
+check passed. An English native Playground smoke opened the Rendering engine
+menu, but its short labels do not validate the clipping case.
+
 The enabled native Arabic Picker revealed that a trigger-width menu truncated `Swift` and `Kotlin`. The public Picker now provides a positive, finite `menu_width` setting, and the Playground example sets it to 160 logical pixels. The locked offline macOS Picker suite passed 15/15 (`target/headstart/evidence/native-picker-menu-width-20261031.log`, SHA-256 `1ab7b2aacc2fdd3dafaff4e80a7d25e1337601820bdb9fc037e8e40690d4ed89`); the release Playground build passed (`native-picker-menu-width-build-20261031.log`, SHA-256 `63d634c5a1a791ab6bb41d450762bc3ca6457ee9ed4c160ff8588c70c100c0c4`). Its exact-path bundle matched executable SHA-256 `af83db11c024e224dfe3f52c847000bf96b5696bc11156900482faf0d1b9b819`. In Arabic, all three options were fully visible, selecting Kotlin updated the owner, and switching to English retained it. Without an explicit width the menu still matches its trigger and can truncate long titles; automatic content-based sizing remains open. The test app exited, its bundle moved to Trash, and the GUI slot was released.
 
 ## R13/R15 native selection-control RTL arrows — 2026-10-31
