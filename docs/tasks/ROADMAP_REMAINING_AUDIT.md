@@ -96,6 +96,18 @@ all three edits; rustfmt and diff checks passed. The log is
 This removes specific unnecessary copies; it does not establish a performance
 budget or complete native collection acceptance.
 
+## R17 rendered large-Table workload — 2026-10-31
+
+Commit `23be3c12` adds an opt-in GPUI test-window workload for a 10,000-row,
+two-column Table. Four optimized Headstart samples measured the first explicit
+draw at 1.77–2.21 ms and ten notified owner updates plus forced draws at
+37.51–41.53 ms total. The workload asserts that at least ten owner renders ran;
+the first-draw timing excludes window creation. The ignored test passed 1/1.
+Evidence: `target/headstart/evidence/native-table-10000-workload-20261031.log`,
+SHA-256 `3fa6030f52774ead290759ca1777b924ec58ed050c71b0f0b16a518f61b8be53`.
+These are local test-window timings, not native scrolling, cross-machine,
+memory, or release-budget acceptance.
+
 ## Native GUI evidence provenance — 2026-10-31
 
 A generic-name Playground selection was observed to resolve an older checkout while a current disposable bundle existed. For prior GUI entries, an executable hash alone proves the bundle's contents but does not prove which app the automation controlled. Keep historical observations, but treat native acceptance as unverified unless the inspected UI is tied to the exact process and bundle path or independently corroborated. Subsequent native checks must bind by full bundle path and verify the process and executable hash. Source/test-window and build results are unaffected.
