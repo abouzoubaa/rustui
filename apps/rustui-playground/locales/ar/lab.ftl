@@ -801,3 +801,9 @@ lab-preview-replay-callback = إعادة تشغيل رد استدعاء القي
 lab-preview-reject-stale = رفض ردود الاستدعاء القديمة للمعاينة
 lab-preview-reject-type = رفض نوع المعاينة غير الصحيح
 lab-preview-delayed-rerender = جدولة تحديث الأصل دون فقد التركيز (٥ ثوانٍ)
+
+lab-composition-add = إضافة عنصر فرعي
+lab-composition-rename = إعادة تسمية العنصر الأول
+lab-composition-remove = إزالة العنصر الأخير
+lab-composition-move = نقل العنصر الأول إلى النهاية
+lab-composition-unmounted = تم إلغاء تركيب المجموعة

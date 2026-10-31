@@ -801,3 +801,9 @@ lab-preview-replay-callback = Replay captured amount callback
 lab-preview-reject-stale = Reject stale preview callbacks
 lab-preview-reject-type = Reject wrong preview type
 lab-preview-delayed-rerender = Schedule no-blur parent rerender (5 seconds)
+
+lab-composition-add = Add child
+lab-composition-rename = Rename first child
+lab-composition-remove = Remove last child
+lab-composition-move = Move first to end
+lab-composition-unmounted = Composition unmounted

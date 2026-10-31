@@ -326,7 +326,7 @@ impl View for CompositionGallery {
             Some(Ok(model)) => (
                 match model.host.render(&()) {
                     Ok(Some(view)) => view,
-                    Ok(None) => AnyView::new(Text("Composition unmounted")),
+                    Ok(None) => AnyView::new(LocalizedText("lab-composition-unmounted")),
                     Err(error) => AnyView::new(Text(error.to_string())),
                 },
                 model.status.clone(),
@@ -334,7 +334,7 @@ impl View for CompositionGallery {
             ),
             Some(Err(error)) => (AnyView::new(Text(error.to_string())), String::new(), 0),
             None => (
-                AnyView::new(Text("Composition unmounted")),
+                AnyView::new(LocalizedText("lab-composition-unmounted")),
                 String::new(),
                 0,
             ),
@@ -355,21 +355,25 @@ impl View for CompositionGallery {
                     .spacing(8.0)
                     .child(
                         Button("Add child", self.action(Self::add))
+                            .localized_label("lab-composition-add")
                             .id("composition-add")
                             .disabled(!can_add || count >= 8),
                     )
                     .child(
                         Button("Rename first child", self.action(Self::rename))
+                            .localized_label("lab-composition-rename")
                             .id("composition-rename")
                             .disabled(count == 0),
                     )
                     .child(
                         Button("Remove last child", self.action(Self::remove))
+                            .localized_label("lab-composition-remove")
                             .id("composition-remove")
                             .disabled(count == 0),
                     )
                     .child(
                         Button("Move first to end", self.action(Self::move_first))
+                            .localized_label("lab-composition-move")
                             .id("composition-move")
                             .disabled(count < 2),
                     ),

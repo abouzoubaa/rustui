@@ -801,3 +801,9 @@ lab-preview-replay-callback = Rejouer le rappel de valeur capturé
 lab-preview-reject-stale = Rejeter les anciens rappels de prévisualisation
 lab-preview-reject-type = Rejeter un type de prévisualisation incorrect
 lab-preview-delayed-rerender = Planifier l’actualisation du parent sans perte de focus (5 secondes)
+
+lab-composition-add = Ajouter un élément enfant
+lab-composition-rename = Renommer le premier élément
+lab-composition-remove = Retirer le dernier élément
+lab-composition-move = Déplacer le premier à la fin
+lab-composition-unmounted = Composition démontée
