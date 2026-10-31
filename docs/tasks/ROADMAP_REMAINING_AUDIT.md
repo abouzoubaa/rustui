@@ -8,6 +8,18 @@ Earlier entries describing locale acceptance as an immediate priority are histor
 
 ## R09/M924 native Utility Window — 2026-10-31
 
+On `45f68af8`, the locked offline native Playground build passed. The built
+and disposable bundle executables matched SHA-256
+`476188f54265668b1db1394b9ee7443361ef83b4de824ee02231079be922c160`.
+After clicking the selected Color Wheel tab, Right followed by Space selected
+Sliders; End/Return selected Crayons, Home/Space selected Color Wheel, and
+Left/Space and Right/Return wrapped between Crayons and Color Wheel. These
+automated macOS keyboard observations verify those selection paths; entry by
+Tab, visible focus indication, disabled-tab navigation and physical keyboard
+input remain unverified. The owned app was quit and its bundle moved to Trash.
+Build log: `target/headstart/evidence/m924-native-tab-keyboard-45f68af8-build.log`
+(SHA-256 `45f62cc4d5ab25c82b51d1179824626240f5c76ee211ae928d1f1ffde83f8623`).
+
 On clean commit `14a12a79`, `./scripts/verify-release.sh macos` completed the
 composed slider-patch verification, workspace and external-consumer checks,
 tests, optimized build, notice collection and disposable packaging. The log
