@@ -704,6 +704,18 @@ struct Drag {
     pointer: gpui::Point<gpui::Pixels>,
     rect: CanvasRect,
 }
+
+fn drag_for_node(
+    graph: &GraphDocument,
+    id: &str,
+    pointer: gpui::Point<gpui::Pixels>,
+) -> Option<Drag> {
+    Some(Drag {
+        id: id.to_owned(),
+        pointer,
+        rect: graph.node(id)?.rect,
+    })
+}
 #[derive(Clone)]
 struct Lease {
     epoch: Weak<Cell<u64>>,
@@ -1008,23 +1020,22 @@ pub(super) fn render_graph(
         if editor.is_some() && !view.disabled {
             let drag_state = state.clone();
             let id = node.id.clone();
-            let world_rect = node.rect;
             let guard = lease.clone();
             let drag_focus = focus.clone();
             let writer = context.binding_writer(view.selection.clone());
+            let read_graph = context.binding_reader(editor.as_ref().unwrap().clone());
             card = card.on_mouse_down(MouseButton::Left, move |event, window, cx| {
                 if !guard.current() {
                     return;
                 }
+                let Some(drag) =
+                    read_graph(cx).and_then(|graph| drag_for_node(&graph, &id, event.position))
+                else {
+                    return;
+                };
                 drag_focus.focus(window, cx);
                 writer(Some(id.clone()), cx);
-                drag_state.update(cx, |s, _| {
-                    s.drag = Some(Drag {
-                        id: id.clone(),
-                        pointer: event.position,
-                        rect: world_rect,
-                    })
-                });
+                drag_state.update(cx, |s, _| s.drag = Some(drag));
                 cx.stop_propagation();
             });
             for port in &node.ports {
@@ -1628,6 +1639,25 @@ mod tests {
     }
     fn graph() -> GraphDocument {
         GraphDocument::new([node("a", 10.0), node("b", 240.0)], []).unwrap()
+    }
+
+    #[test]
+    fn drag_starts_from_current_owner_geometry_and_rejects_removed_nodes() {
+        let rendered = graph();
+        let current = rendered
+            .edited(GraphEdit::MoveNode {
+                id: "a".into(),
+                x: 90.0,
+                y: 35.0,
+            })
+            .unwrap();
+        let pointer = gpui::point(gpui::px(20.0), gpui::px(30.0));
+        let drag = drag_for_node(&current, "a", pointer).unwrap();
+        assert_eq!(drag.rect, current.node("a").unwrap().rect());
+        assert_ne!(drag.rect, rendered.node("a").unwrap().rect());
+        assert_eq!(drag.pointer, pointer);
+        let removed = current.edited(GraphEdit::RemoveNode("a".into())).unwrap();
+        assert!(drag_for_node(&removed, "a", pointer).is_none());
     }
 
     #[test]
@@ -2549,6 +2579,37 @@ mod current_selection_regressions {
         });
         let node = window.debug_bounds("graph-test-node:a").unwrap();
         let start = gpui::point(node.origin.x + px(10.0), node.origin.y + px(10.0));
+        // Change owner geometry after rendering but before the mouse-down reaches
+        // the existing node handler. It must not start from the rendered snapshot.
+        let original = window.update(|_, app| {
+            let original = owner.read(app).component().graph.clone();
+            let moved = original
+                .edited(GraphEdit::MoveNode {
+                    id: "a".into(),
+                    x: 150.0,
+                    y: 60.0,
+                })
+                .unwrap();
+            owner.update(app, |host, _| host.component_mut().graph = moved);
+            original
+        });
+        window.simulate_mouse_down(start, MouseButton::Left, gpui::Modifiers::default());
+        window.update(|_, app| {
+            let state = owner
+                .read(app)
+                .retained_entity_for_test::<Interaction>(
+                    vec![],
+                    Identity::from("graph-interaction:keyboard-editor"),
+                )
+                .unwrap();
+            let drag = state.read(app).drag.as_ref().unwrap();
+            assert_eq!((drag.rect.x, drag.rect.y), (150.0, 60.0));
+        });
+        window.simulate_mouse_up(start, MouseButton::Left, gpui::Modifiers::default());
+        window.update(|window, app| {
+            owner.update(app, |host, _| host.component_mut().graph = original);
+            let _ = window.draw(app);
+        });
         let end = gpui::point(start.x + px(30.0), start.y + px(20.0));
         window.simulate_mouse_down(start, MouseButton::Left, gpui::Modifiers::default());
         window.simulate_mouse_move(end, MouseButton::Left, gpui::Modifiers::default());
