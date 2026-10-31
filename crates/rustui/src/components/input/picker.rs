@@ -132,8 +132,8 @@ impl PickerView {
         self
     }
 
-    /// Sets the dropdown menu width in logical pixels. By default it matches
-    /// the trigger width, which can truncate longer option titles.
+    /// Sets the dropdown menu width in logical pixels. By default it fits the
+    /// option titles and trigger, within the window's available width.
     pub fn menu_width(mut self, width: f32) -> Self {
         assert!(
             width.is_finite() && width > 0.0,
@@ -347,6 +347,7 @@ impl View for PickerView {
 
         let mut picker = GpuiSelect::new(&select)
             .id(identity.to_string())
+            .auto_fit_menu(true)
             .right_to_left(context.layout_direction() == rustui_i18n::LayoutDirection::RightToLeft)
             .placeholder(self.label.clone())
             .accessibility_label(match &self.accessibility_label {

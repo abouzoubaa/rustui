@@ -70,6 +70,18 @@ On commit `169e23fc`, the ignored macOS Headstart test-window workload `owner_up
 
 ## R13/R15 native Picker menu width — 2026-10-31
 
+RustUI Picker now opts into measured automatic menu widths through the
+reproducible Select v4 patch. The width accounts for option text and trigger
+width, capped to the window; an explicit `menu_width` still uses the existing
+explicit branch. Patch replay tests passed 4/4, the Picker suite passed 15/15,
+and the locked offline Playground development build passed. In the owned native
+executable (PID 33181, SHA-256
+`7b8828ef25b07128a6d6a4274c4a9a9d1a79260d8ac21b5c7ada85d3869f33a9`),
+the automatic-width case displayed Rust, Swift, Kotlin and the full long option.
+The app exited and its bundle moved to Trash. Native explicit-width verification,
+automated rendered-width coverage, large-option performance and full Picker
+acceptance remain open; title measurement currently runs when the open menu renders.
+
 The Playground now includes an enabled automatic-width Picker with a long
 English option and the same controlled selection as the existing example. Its
 locked offline Playground library suite passed 250/250 and the development build

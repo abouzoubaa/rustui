@@ -92,6 +92,7 @@ struct SelectOptions {
     appearance: bool,
     focus_ring_enabled: bool,
     right_to_left: bool,
+    auto_fit_menu: bool,
 }
 
 impl Default for SelectOptions {
@@ -110,6 +111,7 @@ impl Default for SelectOptions {
             appearance: true,
             focus_ring_enabled: true,
             right_to_left: false,
+            auto_fit_menu: false,
             search_placeholder: None,
         }
     }
@@ -132,6 +134,7 @@ where
     title_prefix: Option<SharedString>,
     focus_ring_enabled: bool,
     right_to_left: bool,
+    auto_fit_menu: bool,
 }
 
 /// A Select element.
@@ -298,6 +301,7 @@ where
             title_prefix: None,
             focus_ring_enabled: true,
             right_to_left: false,
+            auto_fit_menu: false,
         }
     }
 
@@ -513,6 +517,46 @@ where
         let is_focused = self.state.focus_handle.is_focused(window);
         let show_clean = self.state.cleanable && self.selected_index(cx).is_some();
         let bounds = self.state.bounds;
+        // Measure item titles rather than relying on the intrinsic width of the
+        // virtualized list, which only lays out visible rows.
+        let automatic_menu_width = if self.state.open && self.auto_fit_menu && matches!(self.state.menu_width, Length::Auto) {
+            let style = window.text_style();
+            let font_size = match self.state.size {
+                Size::XSmall => window.rem_size() * 0.75,
+                Size::Small | Size::Medium => window.rem_size() * 0.875,
+                Size::Large => window.rem_size(),
+                Size::Size(size) => size * 0.875,
+            };
+            let max_width = window.viewport_size().width;
+            let chrome = window.rem_size() * 3.0;
+            let mut width = bounds.size.width;
+            let list = self.state.list.read(cx);
+            let delegate = &list.delegate().delegate;
+            'sections: for section in 0..delegate.sections_count(cx) {
+                for row in 0..delegate.items_count(section) {
+                    if let Some(item) = delegate.item(IndexPath::new(row).section(section)) {
+                        let title = item.title();
+                        for line in title.lines() {
+                            let text: SharedString = line.to_owned().into();
+                            let run = gpui::TextRun {
+                                len: text.len(),
+                                font: style.font(),
+                                color: style.color,
+                                background_color: None,
+                                underline: None,
+                                strikethrough: None,
+                            };
+                            let line_width = window.text_system().shape_line(text, font_size, &[run], None).width;
+                            width = width.max(line_width + chrome);
+                        }
+                    }
+                    if width >= max_width { break 'sections; }
+                }
+            }
+            width.min(max_width)
+        } else {
+            bounds.size.width
+        };
         let allow_open = !(self.state.open || self.state.disabled);
         let outline_visible = self.state.open || (is_focused && !self.state.disabled);
 
@@ -616,7 +660,7 @@ where
                             v_flex()
                                 .occlude()
                                 .map(|this| match self.state.menu_width {
-                                    Length::Auto => this.w(bounds.size.width),
+                                    Length::Auto => this.w(automatic_menu_width),
                                     Length::Definite(w) => this.w(w),
                                 })
                                 .popover_style(cx)
@@ -671,6 +715,12 @@ where
     /// Align the popup with the logical start of a right-to-left trigger.
     pub fn right_to_left(mut self, value: bool) -> Self {
         self.options.right_to_left = value;
+        self
+    }
+
+    /// Fit automatic menu width to option titles, within the window.
+    pub fn auto_fit_menu(mut self, value: bool) -> Self {
+        self.options.auto_fit_menu = value;
         self
     }
 
@@ -839,6 +889,7 @@ where
             this.state.appearance = opts.appearance;
             this.focus_ring_enabled = opts.focus_ring_enabled;
             this.right_to_left = opts.right_to_left;
+            this.auto_fit_menu = opts.auto_fit_menu;
             this.icon = opts.icon;
             this.title_prefix = opts.title_prefix;
 

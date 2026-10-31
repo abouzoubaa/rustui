@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Replay the approved gpui-component Select RTL alignment patch with pinned inputs."""
+"""Replay the pinned Select RTL alignment and opt-in automatic width patch."""
 import argparse
 import hashlib
 import os
@@ -9,10 +9,10 @@ import tempfile
 import tomllib
 
 SOURCE = Path("vendor/gpui-component-0.7.3/src/select.rs")
-PATCH = Path("patches/approved/gpui-component-select-rtl-alignment-v3.patch")
+PATCH = Path("patches/approved/gpui-component-select-rtl-auto-width-v4.patch")
 PRE = "1a1559e6b46cfb562b565d85600bef7731c3015ae5354d0dcc10454e3bc51efe"
-POST = "aef4bdbc7dbeab626b1091be47ddfb1b330028b7904daa75173914fbb2a84a8e"
-PATCH_HASH = "ccc86d278b2ee52ed8b371867cf91e6e7e6c25fc222a8194e9a07c2c4c373a1c"
+POST = "31e9a302263144f0669fb6483505c9a02e82b21a9c5beb9bef83fff798386213"
+PATCH_HASH = "57f65a5e64a29afea61e2b5f7acae227fe6a189819f75e9f1891bdabacf53cef"
 PRESERVED = {
     "vendor/gpui-component-0.7.3/Cargo.toml": "192f4156aee8738567c748d6b1c5bc44c80e4ba5369a41e5349e370d83b35026",
     "vendor/gpui-component-0.7.3/.cargo-checksum.json": "d5b533efba197cc15bcb6756b935a786e846463c1ee431f876e8c334a7e638c6",
