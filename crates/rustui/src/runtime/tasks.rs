@@ -598,6 +598,42 @@ mod tests {
         assert_eq!(dropped.load(Ordering::SeqCst), 1);
     }
 
+    #[gpui::test]
+    fn closing_root_window_cancels_pending_owner_work(cx: &mut gpui::TestAppContext) {
+        use std::sync::{
+            Arc,
+            atomic::{AtomicUsize, Ordering},
+        };
+
+        cx.update(gpui_component::init);
+        let (host, window) =
+            cx.add_window_view(|_, cx| ComponentHost::new(TaskProbe::default(), cx));
+        let weak = host.downgrade();
+        let owner = OwnerTask::new(weak.clone());
+        let dropped = Arc::new(AtomicUsize::new(0));
+        let work_dropped = dropped.clone();
+        let pending = owner.start(
+            "window-close",
+            move || {
+                let guard = DropProbe(work_dropped.clone());
+                async move {
+                    let _guard = guard;
+                    std::future::pending::<Result<String, String>>().await
+                }
+            },
+            apply_probe,
+        );
+        window.update(|window, cx| pending.dispatch_keyboard(window, cx));
+        window.cx.run_until_parked();
+        assert_eq!(dropped.load(Ordering::SeqCst), 0);
+
+        drop(host);
+        window.update(|window, _| window.remove_window());
+        window.cx.run_until_parked();
+        assert!(weak.upgrade().is_none());
+        assert_eq!(dropped.load(Ordering::SeqCst), 1);
+    }
+
     #[test]
     fn replacement_and_cancel_invalidate_old_generations() {
         let mut tasks = TaskRegistry::default();
