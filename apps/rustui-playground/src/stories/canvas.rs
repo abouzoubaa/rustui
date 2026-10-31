@@ -405,11 +405,29 @@ impl View for StoryCanvas {
                         Picker(
                             "Framework",
                             self.picker_binding.clone(),
-                            ["Rust", "Swift", "Kotlin"],
+                            [
+                                "Rust",
+                                "Swift",
+                                "Kotlin",
+                                "A significantly longer framework option",
+                            ],
                         )
                         .id("story-input-picker")
                         .menu_width(160.0)
                         .disabled(!self.toggle_binding.value()),
+                    )
+                    .child(
+                        Picker(
+                            "Automatic menu width",
+                            self.picker_binding.clone(),
+                            [
+                                "Rust",
+                                "Swift",
+                                "Kotlin",
+                                "A significantly longer framework option",
+                            ],
+                        )
+                        .id("story-input-picker-automatic-width"),
                     )
                     .child(
                         ComboBox(

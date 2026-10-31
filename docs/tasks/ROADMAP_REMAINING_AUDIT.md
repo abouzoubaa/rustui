@@ -70,6 +70,15 @@ On commit `169e23fc`, the ignored macOS Headstart test-window workload `owner_up
 
 ## R13/R15 native Picker menu width — 2026-10-31
 
+The Playground now includes an enabled automatic-width Picker with a long
+English option and the same controlled selection as the existing example. Its
+locked offline Playground library suite passed 250/250 and the development build
+passed. In the owned native executable (PID 17797, SHA-256
+`0521cf992ff64b7ce600bfee89c0460ce70048a2aa261b9634a5f25f7cbd315c`),
+the popup rendered the options as `Rust`, `S...`, `Ko...` and `A...`, reproducing
+the clipping defect. The app exited and its disposable bundle moved to Trash.
+This is a reproducible failing native case; automatic menu sizing remains open.
+
 Follow-up: automatic sizing remains open. The pinned Select maps automatic width
 to its trigger bounds, and its virtualized options cannot supply a reliable
 intrinsic width for all entries. A content-aware implementation needs real menu
