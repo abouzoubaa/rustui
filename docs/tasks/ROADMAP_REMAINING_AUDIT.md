@@ -169,6 +169,20 @@ do not establish a timing improvement or regression. Logs:
 `target/headstart/evidence/native-tree-retained-after-20261031.log` SHA-256
 `60dcdfca015062fa4d858289c7a543ab6b84cd0c4d5115f1c1bdffdf9ce6675b`.
 
+## R17 native KeyedList and Tree reconciliation — 2026-10-31
+
+On `f7ac2ad2`, the locked offline Headstart Playground build passed (log
+`target/headstart/evidence/native-reconcile-f7ac2ad2-build-20261031.log`,
+SHA-256 `c6d8a024447fa75c69c5eb71d536fe84edf5e101e106a1542621d66aea310af5`).
+The exact-path owned bundle ran as PID 3551, with executable SHA-256
+`ffe7c832c841843c139722d8dd26f8336b9ce3a2645132f5c32e0f878b027f13`
+matching the build. In the 1,000-row KeyedList gallery, selected ID `row-0004`
+survived reverse and prepend, then cleared when removed. In the Tree story,
+selected `grandchild` survived root reversal and relabeling, cleared when its
+branch was removed, and the branch returned on restoration. The app was quit
+and the bundle moved to Trash. These post-change native checks do not close
+full keyboard, virtualization, performance, or collection acceptance.
+
 ## Native GUI evidence provenance — 2026-10-31
 
 A generic-name Playground selection was observed to resolve an older checkout while a current disposable bundle existed. For prior GUI entries, an executable hash alone proves the bundle's contents but does not prove which app the automation controlled. Keep historical observations, but treat native acceptance as unverified unless the inspected UI is tied to the exact process and bundle path or independently corroborated. Subsequent native checks must bind by full bundle path and verify the process and executable hash. Source/test-window and build results are unaffected.
