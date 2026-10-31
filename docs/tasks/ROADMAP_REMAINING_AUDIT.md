@@ -4061,3 +4061,20 @@ latest direction, further localization is deferred along with Web/Wasm and
 accessibility; these remain open rather than being counted as complete.
 
 The `scroll_view` catalog row now opens its existing public-API ScrollView gallery directly instead of the unrelated general layout and preview gallery. On parent `aeff771f` plus this route change, the locked offline native release build passed (`target/headstart/evidence/native-scroll-route-build-20261031.log`, SHA-256 `dcc7f4776a1ed02462679366417619b702105a22c7cd456de58a10bf3a4a0ca5`), as did the Playground library suite 249/249 (`native-scroll-route-tests-20261031.log`, SHA-256 `4522a20a571dbad253f7b95ce98e6f88a0a33c2e025b317f0edb990d36d0a7a3`). In the exact disposable bundle (executable SHA-256 `b70924f7687a0c1ac5d9a62e7d1c682d2073fda2023c8986167da58d426fe69d`, PID 90742), selecting the row displayed the ScrollView gallery and sibling examples, and Update parent advanced its counter. The owned app exited and the bundle moved to Trash. Broader ScrollView and Playground acceptance remains open.
+# Native priority update — 2026-10-31
+
+The user deferred all localization, including French and Arabic, to concentrate
+on native RustUI. Preserve the existing locale implementation and leave its
+implementation and acceptance requirements open. Web/Wasm, accessibility and
+VoiceOver also remain deferred; none of these deferrals constitutes completion.
+
+On source `b2be8d83`, the native Playground build passed with
+`cargo-headstart build -p rustui-playground --locked --offline`. In the
+NodeEditor story, an automated in-surface drag selected the Source node and
+moved it visibly by approximately 150 pixels right and 30 pixels down. This
+checks ordinary automated dragging after the non-finite pointer fix; it does not
+establish physical mouse or outside-surface release behavior. The build log is
+`target/headstart/evidence/node-editor-native-drag-b2be8d83-build.log`
+(SHA-256 `45d9108b5278bc089de8602b8f71b8b1d3c220afe0b5825e8a1237e2a04f7395`).
+The disposable application was quit and removed from `/tmp`; the GUI slot was
+released. Broader native, performance, licensing and release gates remain open.
