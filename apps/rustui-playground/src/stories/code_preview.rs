@@ -8,7 +8,15 @@ pub fn source_for(story: StoryId) -> &'static str {
             r#"Button("Increment", increment)
     .button_style(ButtonStyle::BorderedProminent)"#
         }
-        StoryId::Text => r#"Text(format!("Count: {}", self.count()))"#,
+        StoryId::Text => {
+            r#"use rustui::localization::MessageArguments;
+
+let arguments = MessageArguments::new().with("name", "Ada").with("count", 3);
+LocalizedText("lab-i18n-sample").with_arguments(arguments)"#
+        }
+        StoryId::Card => {
+            r#"Card("sample", TextField("First card", value_binding).localized_placeholder("lab-card-first-placeholder"))"#
+        }
         StoryId::Layout => {
             r#"let alpha = Keyed(
     "alpha",
@@ -51,7 +59,7 @@ Environment(display_mode, child_stack)
         StoryId::Input => {
             r#"VStack!
     TextField("Name", self.input_text_binding()).id("name")
-    SecureField("Password", self.input_text_binding()).id("password")
+    SecureField("Password", self.secure_text_binding()).id("password")
     SearchField("Search", self.input_text_binding()).id("search")
     TextEditor("Notes", self.input_text_binding()).id("notes")
     Toggle("Enabled", self.toggle_value_binding()).id("enabled")
@@ -62,7 +70,9 @@ Environment(display_mode, child_stack)
     Picker("Language", self.picker_value_binding(), ["Rust", "Swift"])
     ComboBox("Rendering", self.combo_box_value_binding(), ["GPUI", "AppKit"])
     DatePicker("Choose a date", self.date_value_binding())
-    ColorPicker("Choose a color", self.color_value_binding())"#
+    DatePicker("Two months", self.date_value_binding()).number_of_months(2)
+ColorPicker("Choose a color", self.color_value_binding())
+ColorPicker("Color (disabled)", self.color_value_binding()).disabled(true)"#
         }
         StoryId::List => {
             r#"List(
@@ -81,6 +91,51 @@ Environment(display_mode, child_stack)
 )
 .id("component-table")
 .height(300.0)"#
+        }
+        StoryId::Outline => {
+            r#"Outline(
+    "document-outline",
+    [TreeNode::new("document", "Document")
+        .child(TreeNode::new("heading", "Heading"))],
+    self.selected_binding(),
+    self.expanded_binding(),
+)
+.accessibility_label("Document outline")
+.height(280.0)"#
+        }
+        StoryId::GraphView => {
+            r#"GraphView(
+    "dependency-graph",
+    self.document().clone(),
+    self.selection_binding(),
+    self.viewport_binding(),
+)
+.accessibility_label("Dependency graph")
+.on_activate(self.action(Self::activate))"#
+        }
+        StoryId::NodeEditor => {
+            r#"NodeEditor(
+    "node-editor",
+    self.document_binding(),
+    self.selection_binding(),
+    self.viewport_binding(),
+)
+.accessibility_label("Node editor")
+.on_activate(self.action(Self::activate))"#
+        }
+        StoryId::SplitView => {
+            r#"SplitView::horizontal("editor")
+    .panel(ResizablePanel::new("sidebar", Text("Files")).initial_size(180.0))
+    .panel(ResizablePanel::new("document", Text("Document")))"#
+        }
+        StoryId::Drawer => {
+            r#"Drawer("details", self.visible_binding())
+    .title("Details")
+    .edge(DrawerEdge::Right)
+    .size(350.0)
+    .accessibility_label("Details drawer")
+    .localized_close_label("rustui-action-close")
+    .content(TextField("Notes", self.notes_binding()))"#
         }
         StoryId::Tree => {
             r#"Tree(
@@ -108,6 +163,7 @@ if self.tab_conditional_visible() {
             .height(80.0),
     );
 }
+
 let mut tabs = vec![TabItem::new("overview", "Overview", overview)];
 if self.details_tab_present() {
     tabs.push(TabItem::new(
@@ -118,6 +174,7 @@ if self.details_tab_present() {
             .height(80.0),
     ));
 }
+
 TabView(tabs, self.tab_selection_binding())
     .id("story-tabs")
     .style(TabViewStyle::Segmented)"#
@@ -151,6 +208,23 @@ NavigationStack(
     path,
 )
 .id("story-navigation-stack")"#
+        }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::super::component_catalog::STORIES;
+    use super::source_for;
+
+    #[test]
+    fn every_rendered_story_has_illustrative_source() {
+        for story in STORIES {
+            assert!(
+                !source_for(story.id).trim().is_empty(),
+                "missing source preview for {}",
+                story.title
+            );
         }
     }
 }

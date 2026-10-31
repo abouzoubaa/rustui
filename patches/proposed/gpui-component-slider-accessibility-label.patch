@@ -1,0 +1,50 @@
+--- a/vendor/gpui-component-0.7.3/src/slider.rs
++++ b/vendor/gpui-component-0.7.3/src/slider.rs
+@@ -7,7 +7,7 @@
+ use gpui::{
+     App, Axis, Background, Corners, DefiniteLength, ElementId, Entity, EntityId, Hsla,
+     InteractiveElement as _, IntoElement, MouseButton, ParentElement as _, Pixels, RenderOnce,
+-    StatefulInteractiveElement as _, StyleRefinement, Styled, Window, div,
++    SharedString, StatefulInteractiveElement as _, StyleRefinement, Styled, Window, div,
+     prelude::FluentBuilder as _, px, relative,
+ };
+ 
+@@ -89,6 +89,7 @@
+     style: StyleRefinement,
+     disabled: bool,
+     reverse: bool,
++    accessibility_label: Option<SharedString>,
+ }
+ 
+ impl Slider {
+@@ -100,6 +101,7 @@
+             style: StyleRefinement::default(),
+             disabled: false,
+             reverse: false,
++            accessibility_label: None,
+         }
+     }
+ 
+@@ -118,6 +120,12 @@
+     /// Set the disabled state of the slider, default: false
+     pub fn disabled(mut self, disabled: bool) -> Self {
+         self.disabled = disabled;
++        self
++    }
++
++    /// Set the accessible name of the slider.
++    pub fn accessibility_label(mut self, label: impl Into<SharedString>) -> Self {
++        self.accessibility_label = Some(label.into());
+         self
+     }
+ 
+@@ -261,6 +269,9 @@
+         BaseSlider::new(&self.state)
+             .axis(axis)
+             .disabled(self.disabled)
++            .when_some(self.accessibility_label, |this, label| {
++                this.aria_label(label)
++            })
+             .flex()
+             .flex_1()
+             .items_center()

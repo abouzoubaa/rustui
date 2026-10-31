@@ -14,6 +14,22 @@ use rustui_core::{Binding, Identity};
 
 use crate::view::{EmptyView, RenderContext, View};
 
+type SelectionUpdater<T> = Rc<dyn Fn(&mut T)>;
+
+fn replace_selection_updater<T>(
+    slot: &RefCell<Option<SelectionUpdater<T>>>,
+    updater: SelectionUpdater<T>,
+) {
+    *slot.borrow_mut() = Some(updater);
+}
+
+fn apply_selection_updater<T>(slot: &RefCell<Option<SelectionUpdater<T>>>, context: &mut T) {
+    let updater = slot.borrow().clone();
+    if let Some(updater) = updater {
+        updater(context);
+    }
+}
+
 /// One string row with identity independent of its position and label.
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub struct KeyedListItem {
@@ -22,14 +38,16 @@ pub struct KeyedListItem {
 }
 
 impl KeyedListItem {
-    /// Creates a row. IDs must be unique and contain a non-whitespace character.
+    /// Creates a row. IDs must be unique, and labels must contain a non-whitespace character.
     pub fn new(id: impl Into<String>, label: impl Into<String>) -> Self {
         let id = id.into();
+        let label = label.into();
         assert!(!id.trim().is_empty(), "KeyedList item IDs must be nonempty");
-        Self {
-            id,
-            label: label.into(),
-        }
+        assert!(
+            !label.trim().is_empty(),
+            "KeyedList item labels must be nonempty"
+        );
+        Self { id, label }
     }
 
     pub fn id(&self) -> &str {
@@ -64,11 +82,53 @@ fn valid_selection(items: &[KeyedListItem], requested: Option<&str>) -> Option<S
         .map(str::to_owned)
 }
 
-fn clear_removed_selection(current: &mut Option<String>, removed_id: &str) -> bool {
-    if current.as_deref() != Some(removed_id) {
+fn clear_removed_selection(
+    current: &mut Option<String>,
+    removed_id: &str,
+    resolved_selection: Option<&str>,
+) -> bool {
+    if current.as_deref() != Some(removed_id) || resolved_selection == Some(removed_id) {
         return false;
     }
     *current = None;
+    true
+}
+
+fn apply_selection_request(
+    current: &mut Option<String>,
+    expected: &RefCell<Option<String>>,
+    request: &Option<SelectionRequest>,
+) -> bool {
+    let Some(request) = request else {
+        return false;
+    };
+    if current.as_ref() != request.expected_owner.as_ref()
+        || expected.borrow().as_ref() != request.expected_owner.as_ref()
+        || current.as_ref() == request.selection.as_ref()
+    {
+        return false;
+    }
+    *expected.borrow_mut() = request.selection.clone();
+    *current = request.selection.clone();
+    true
+}
+
+#[derive(Clone, Debug, PartialEq, Eq)]
+struct SelectionRequest {
+    expected_owner: Option<String>,
+    selection: Option<String>,
+}
+
+fn clear_selection_on_cancel(
+    selectable: bool,
+    selection: &mut Option<String>,
+    requested: &mut Option<String>,
+) -> bool {
+    if !selectable {
+        return false;
+    }
+    *selection = None;
+    *requested = None;
     true
 }
 
@@ -78,6 +138,9 @@ struct KeyedListDelegate {
     query: String,
     row_height: f32,
     selection_id: Rc<RefCell<Option<String>>>,
+    expected_owner_selection: Rc<RefCell<Option<String>>>,
+    requested_selection: Rc<RefCell<Option<SelectionRequest>>>,
+    selection_update: Rc<RefCell<Option<SelectionUpdater<App>>>>,
     searchable: bool,
     selectable: bool,
 }
@@ -96,7 +159,10 @@ impl KeyedListDelegate {
             visible,
             query: String::new(),
             row_height,
-            selection_id: Rc::new(RefCell::new(selection_id)),
+            selection_id: Rc::new(RefCell::new(selection_id.clone())),
+            expected_owner_selection: Rc::new(RefCell::new(selection_id)),
+            requested_selection: Rc::new(RefCell::new(None)),
+            selection_update: Rc::new(RefCell::new(None)),
             searchable,
             selectable,
         }
@@ -224,8 +290,13 @@ impl KeyedListView {
         items: impl IntoIterator<Item = KeyedListItem>,
         selection: Binding<Option<String>>,
     ) -> Self {
+        let id = id.into();
+        assert!(
+            !id.as_str().trim().is_empty(),
+            "KeyedList identity must be nonempty"
+        );
         Self {
-            id: id.into(),
+            id,
             items: collect_items(items),
             selection,
             height: 240.0,
@@ -238,13 +309,16 @@ impl KeyedListView {
     }
 
     pub fn height(mut self, height: f32) -> Self {
+        assert!(height.is_finite(), "KeyedList height must be finite");
         self.height = height.max(1.0);
         self
     }
     pub fn row_height(mut self, height: f32) -> Self {
+        assert!(height.is_finite(), "KeyedList row height must be finite");
         self.row_height = height.max(1.0);
         self
     }
+    /// Shows a search field. Turning search off clears its filter while retaining selection.
     pub fn searchable(mut self, enabled: bool) -> Self {
         self.searchable = enabled;
         self
@@ -300,39 +374,74 @@ impl View for KeyedListView {
             state
         });
         let selection_id = state.read(context.app()).delegate().selection_id.clone();
+        let expected_selection = state
+            .read(context.app())
+            .delegate()
+            .expected_owner_selection
+            .clone();
+        let (requested_selection, selection_update) = {
+            let delegate = state.read(context.app()).delegate();
+            (
+                delegate.requested_selection.clone(),
+                delegate.selection_update.clone(),
+            )
+        };
+
+        let current_request = requested_selection.clone();
+        let expected = expected_selection.clone();
+        replace_selection_updater(
+            &selection_update,
+            context.binding_updater(self.selection.clone(), move |current| {
+                apply_selection_request(current, &expected, &current_request.borrow())
+            }),
+        );
 
         if created {
-            let requested = Rc::new(RefCell::new(None::<String>));
-            let current_request = requested.clone();
-            let update = context.binding_updater(self.selection.clone(), move |current| {
-                let selected = current_request.borrow();
-                if *current == *selected {
-                    return false;
-                }
-                *current = selected.clone();
-                true
-            });
             let event_selection_id = selection_id.clone();
+            let event_expected_selection = expected_selection.clone();
+            let current_update = selection_update.clone();
+            let requested = requested_selection.clone();
             context.subscribe_retained(&identity, &state, move |state, event: &ListEvent, cx| {
+                let selected_index = state.read(cx).selected_index();
                 match event {
                     ListEvent::Select(index) | ListEvent::Confirm(index) => {
+                        if selected_index != Some(*index) {
+                            return;
+                        }
                         let selected = state.read(cx).delegate().id_at(*index).map(str::to_owned);
                         if let Some(id) = selected {
                             *event_selection_id.borrow_mut() = Some(id.clone());
-                            *requested.borrow_mut() = Some(id);
-                            update(cx);
+                            *requested.borrow_mut() = Some(SelectionRequest {
+                                expected_owner: event_expected_selection.borrow().clone(),
+                                selection: Some(id),
+                            });
+                            apply_selection_updater(&current_update, cx);
                         }
                     }
                     ListEvent::Cancel => {
-                        *event_selection_id.borrow_mut() = None;
-                        *requested.borrow_mut() = None;
-                        update(cx);
+                        if selected_index.is_some() {
+                            return;
+                        }
+                        let selectable = state.read(cx).delegate().selectable;
+                        let mut cancelled_selection = event_selection_id.borrow().clone();
+                        if clear_selection_on_cancel(
+                            selectable,
+                            &mut *event_selection_id.borrow_mut(),
+                            &mut cancelled_selection,
+                        ) {
+                            *requested.borrow_mut() = Some(SelectionRequest {
+                                expected_owner: event_expected_selection.borrow().clone(),
+                                selection: cancelled_selection,
+                            });
+                            apply_selection_updater(&current_update, cx);
+                        }
                     }
                 }
             });
         }
 
         let requested = self.selection.value();
+        *expected_selection.borrow_mut() = requested.clone();
         let desired = valid_selection(&self.items, requested.as_deref());
         *selection_id.borrow_mut() = desired.clone();
         let flags_changed = {
@@ -343,10 +452,13 @@ impl View for KeyedListView {
         if flags_changed {
             let searchable = self.searchable;
             let selectable = self.selectable;
-            context.update_entity(&state, move |state, _window, cx| {
+            context.update_entity(&state, move |state, window, cx| {
                 if state.delegate().searchable != searchable {
                     state.set_searchable(searchable, cx);
                     state.delegate_mut().searchable = searchable;
+                    if !searchable {
+                        state.set_query("", window, cx);
+                    }
                 }
                 if state.delegate().selectable != selectable {
                     state.set_selectable(selectable, cx);
@@ -383,8 +495,9 @@ impl View for KeyedListView {
 
         if requested != desired {
             let invalid_id = requested.expect("only a missing selected ID needs normalization");
+            let latest_selection = selection_id.clone();
             let clear = context.binding_updater(self.selection.clone(), move |current| {
-                clear_removed_selection(current, &invalid_id)
+                clear_removed_selection(current, &invalid_id, latest_selection.borrow().as_deref())
             });
             context.update_entity(&state, move |_state, _window, cx| {
                 cx.defer(move |cx| clear(cx));
@@ -403,10 +516,168 @@ impl View for KeyedListView {
 
 #[cfg(test)]
 mod tests {
-    use super::{
-        KeyedListDelegate, KeyedListItem, clear_removed_selection, collect_items, valid_selection,
-    };
+    use super::*;
     use gpui_component::IndexPath;
+
+    struct SearchOwner {
+        selection: Option<String>,
+        searchable: bool,
+        include_a: bool,
+        writes: usize,
+    }
+
+    impl View for SearchOwner {
+        fn body(&self) -> impl View {
+            EmptyView
+        }
+
+        fn into_element(&self, context: &mut RenderContext<'_>) -> AnyElement {
+            let selection = Binding::new(
+                self.selection.clone(),
+                |owner: &Self| owner.selection.clone(),
+                |owner, value| {
+                    owner.selection = value;
+                    owner.writes += 1;
+                },
+            );
+            div()
+                .w(px(320.0))
+                .h(px(280.0))
+                .child(
+                    KeyedList(
+                        "keyed-search",
+                        [
+                            self.include_a.then(|| KeyedListItem::new("a", "Alpha")),
+                            Some(KeyedListItem::new("b", "Beta")),
+                        ]
+                        .into_iter()
+                        .flatten(),
+                        selection,
+                    )
+                    .searchable(self.searchable)
+                    .into_element(context),
+                )
+                .into_any_element()
+        }
+    }
+
+    #[gpui::test]
+    fn restored_item_survives_queued_selection_clear(cx: &mut gpui::TestAppContext) {
+        let theme = crate::theme::parse_theme(include_str!(concat!(
+            env!("CARGO_MANIFEST_DIR"),
+            "/../../themes/macos27.json"
+        )))
+        .unwrap();
+        cx.update(|app| {
+            gpui_component::init(app);
+            crate::theme::activate_theme(&theme, Some(crate::theme::AppearanceMode::Dark), app)
+                .unwrap();
+        });
+        let (owner, window) = cx.add_window_view(|_, app| {
+            crate::runtime::ComponentHost::new(
+                SearchOwner {
+                    selection: Some("a".into()),
+                    searchable: false,
+                    include_a: true,
+                    writes: 0,
+                },
+                app,
+            )
+        });
+        window.update(|window, app| {
+            let _ = window.draw(app);
+            owner.update(app, |host, cx| {
+                host.component_mut().include_a = false;
+                cx.notify();
+            });
+            let _ = window.draw(app);
+            owner.update(app, |host, cx| {
+                host.component_mut().include_a = true;
+                cx.notify();
+            });
+            let _ = window.draw(app);
+        });
+        window.cx.run_until_parked();
+        window.update(|_, app| {
+            assert_eq!(owner.read(app).component().selection.as_deref(), Some("a"));
+            assert_eq!(owner.read(app).component().writes, 0);
+        });
+    }
+
+    #[gpui::test]
+    fn disabling_search_clears_filter_and_preserves_keyed_selection(cx: &mut gpui::TestAppContext) {
+        let theme = crate::theme::parse_theme(include_str!(concat!(
+            env!("CARGO_MANIFEST_DIR"),
+            "/../../themes/macos27.json"
+        )))
+        .unwrap();
+        cx.update(|app| {
+            gpui_component::init(app);
+            crate::theme::activate_theme(&theme, Some(crate::theme::AppearanceMode::Dark), app)
+                .unwrap();
+        });
+        let (owner, window) = cx.add_window_view(|_, app| {
+            crate::runtime::ComponentHost::new(
+                SearchOwner {
+                    selection: Some("a".into()),
+                    searchable: true,
+                    include_a: true,
+                    writes: 0,
+                },
+                app,
+            )
+        });
+        let state = window.update(|window, app| {
+            let _ = window.draw(app);
+            let state = owner
+                .read(app)
+                .retained_entity_for_test::<ListState<KeyedListDelegate>>(
+                    vec![],
+                    Identity::from("keyed-search"),
+                )
+                .unwrap();
+            state.update(app, |state, cx| state.set_query("Beta", window, cx));
+            assert_eq!(state.read(app).delegate().visible, [1]);
+            state
+        });
+        window.update(|window, app| {
+            owner.update(app, |host, cx| {
+                host.component_mut().searchable = false;
+                cx.notify();
+            });
+            let _ = window.draw(app);
+            assert_eq!(state.read(app).delegate().visible, [0, 1]);
+            assert!(state.read(app).delegate().query.is_empty());
+            assert_eq!(owner.read(app).component().selection.as_deref(), Some("a"));
+            assert_eq!(owner.read(app).component().writes, 0);
+            owner.update(app, |host, cx| {
+                host.component_mut().searchable = true;
+                cx.notify();
+            });
+            let _ = window.draw(app);
+            assert_eq!(state.read(app).delegate().visible, [0, 1]);
+            assert!(state.read(app).delegate().query.is_empty());
+            assert_eq!(state.read(app).selected_index(), Some(IndexPath::new(0)));
+        });
+    }
+
+    struct Owner(Option<String>);
+
+    fn read_selection(owner: &Owner) -> Option<String> {
+        owner.0.clone()
+    }
+
+    fn write_selection(owner: &mut Owner, selection: Option<String>) {
+        owner.0 = selection;
+    }
+
+    fn list() -> KeyedListView {
+        KeyedListView::new(
+            "list",
+            [],
+            Binding::new(None, read_selection, write_selection),
+        )
+    }
 
     fn item(id: &str, label: &str) -> KeyedListItem {
         KeyedListItem::new(id, label)
@@ -419,6 +690,42 @@ mod tests {
             std::panic::catch_unwind(|| collect_items([item("a", "A"), item("a", "Other")]))
                 .is_err()
         );
+    }
+
+    #[test]
+    fn rejects_blank_accessible_labels_and_preserves_nonblank_labels() {
+        assert!(std::panic::catch_unwind(|| item("a", "")).is_err());
+        assert!(std::panic::catch_unwind(|| item("b", " \t\n ")).is_err());
+
+        assert_eq!(item("c", "  Cedar  ").label(), "  Cedar  ");
+    }
+
+    #[test]
+    fn rejects_blank_list_identity() {
+        assert!(
+            std::panic::catch_unwind(|| {
+                KeyedListView::new("", [], Binding::new(None, read_selection, write_selection))
+            })
+            .is_err()
+        );
+        assert!(
+            std::panic::catch_unwind(|| {
+                KeyedListView::new(
+                    " \t\n ",
+                    [],
+                    Binding::new(None, read_selection, write_selection),
+                )
+            })
+            .is_err()
+        );
+    }
+
+    #[test]
+    fn rejects_non_finite_viewport_and_row_heights() {
+        for height in [f32::INFINITY, f32::NEG_INFINITY, f32::NAN] {
+            assert!(std::panic::catch_unwind(|| list().height(height)).is_err());
+            assert!(std::panic::catch_unwind(|| list().row_height(height)).is_err());
+        }
     }
 
     #[test]
@@ -453,13 +760,111 @@ mod tests {
         assert_eq!(valid_selection(&items, Some("missing")), None);
         assert_eq!(valid_selection(&items, Some("a")), Some("a".into()));
         let mut selected = Some("missing".to_owned());
-        assert!(clear_removed_selection(&mut selected, "missing"));
+        assert!(clear_removed_selection(&mut selected, "missing", None));
         assert_eq!(selected, None);
         let mut new_owner_selection = Some("a".to_owned());
         assert!(!clear_removed_selection(
             &mut new_owner_selection,
-            "missing"
+            "missing",
+            None
         ));
         assert_eq!(new_owner_selection.as_deref(), Some("a"));
+        let mut restored_selection = Some("missing".to_owned());
+        assert!(!clear_removed_selection(
+            &mut restored_selection,
+            "missing",
+            Some("missing")
+        ));
+        assert_eq!(restored_selection.as_deref(), Some("missing"));
+    }
+
+    #[test]
+    fn queued_selection_preserves_newer_owner_value() {
+        let expected = std::cell::RefCell::new(Some(String::from("first")));
+        let mut owner = Some(String::from("newer"));
+        let request = Some(SelectionRequest {
+            expected_owner: Some(String::from("first")),
+            selection: Some(String::from("stale")),
+        });
+
+        assert!(!apply_selection_request(&mut owner, &expected, &request));
+        assert_eq!(owner.as_deref(), Some("newer"));
+        assert_eq!(expected.borrow().as_deref(), Some("first"));
+    }
+
+    #[test]
+    fn queued_selection_is_rejected_after_owner_rerender() {
+        let expected = std::cell::RefCell::new(Some(String::from("A")));
+        let request = Some(SelectionRequest {
+            expected_owner: Some(String::from("A")),
+            selection: Some(String::from("B")),
+        });
+
+        // The owner rerenders with C after B is queued but before its updater runs.
+        let mut owner = Some(String::from("C"));
+        *expected.borrow_mut() = owner.clone();
+
+        assert!(!apply_selection_request(&mut owner, &expected, &request));
+        assert_eq!(owner.as_deref(), Some("C"));
+        assert_eq!(expected.borrow().as_deref(), Some("C"));
+    }
+
+    #[test]
+    fn accepted_selection_advances_expected_owner_value() {
+        let expected = std::cell::RefCell::new(Some(String::from("first")));
+        let mut owner = Some(String::from("first"));
+        let request = Some(SelectionRequest {
+            expected_owner: Some(String::from("first")),
+            selection: Some(String::from("second")),
+        });
+
+        assert!(apply_selection_request(&mut owner, &expected, &request));
+        assert_eq!(owner.as_deref(), Some("second"));
+        assert_eq!(expected.borrow().as_deref(), Some("second"));
+    }
+
+    #[test]
+    fn cancel_preserves_selection_when_list_is_not_selectable() {
+        let mut selection = Some("a".to_owned());
+        let mut requested = Some("a".to_owned());
+
+        assert!(!clear_selection_on_cancel(
+            false,
+            &mut selection,
+            &mut requested
+        ));
+        assert_eq!(selection.as_deref(), Some("a"));
+        assert_eq!(requested.as_deref(), Some("a"));
+    }
+
+    #[test]
+    fn cancel_clears_selection_when_list_is_selectable() {
+        let mut selection = Some("a".to_owned());
+        let mut requested = Some("a".to_owned());
+
+        assert!(clear_selection_on_cancel(
+            true,
+            &mut selection,
+            &mut requested
+        ));
+        assert_eq!(selection, None);
+        assert_eq!(requested, None);
+    }
+
+    #[test]
+    fn retained_selection_event_uses_latest_owner_binding_writer() {
+        let slot = RefCell::new(None);
+        let old_writer_called = Rc::new(std::cell::Cell::new(false));
+        let new_writer_called = Rc::new(std::cell::Cell::new(false));
+
+        let old = old_writer_called.clone();
+        replace_selection_updater(&slot, Rc::new(move |_: &mut ()| old.set(true)));
+        let new = new_writer_called.clone();
+        replace_selection_updater(&slot, Rc::new(move |_: &mut ()| new.set(true)));
+
+        apply_selection_updater(&slot, &mut ());
+
+        assert!(!old_writer_called.get());
+        assert!(new_writer_called.get());
     }
 }

@@ -18,7 +18,8 @@ import sys
 import time
 
 import collect_runtime_metrics as collector
-from calibrate_cache_workload import compiler_identity
+from calibrate_cache_workload import compiler_identity, json_value_matches
+from record_build_provenance import INPUT_FILES, file_record, git_commit, snapshot_digest, source_records
 from runtime_metrics import OUTPUT_DIR, validate_output_path, write_json_exclusive
 
 ROOT = Path(__file__).resolve().parent.parent
@@ -28,12 +29,7 @@ WORKLOADS = {
     "32-leaf": {"leaves": 32, "lines_per_leaf": 12, "width": 210.0, "height": 220.0,
                 "warmup_updates": 10, "measured_updates": 100},
 }
-INPUTS = ("Cargo.toml", "Cargo.lock", ".cargo/config.toml", "scripts/cargo-headstart",
-          "crates/rustui/examples/cache_comparison.rs", "crates/rustui/src/view.rs",
-          "crates/rustui/src/runtime/component_host.rs", "crates/rustui/src/runtime/render_diagnostics.rs",
-          "scripts/compare_cache_workload.py", "scripts/collect_runtime_metrics.py",
-          "scripts/runtime_metrics.py", "scripts/calibrate_cache_workload.py",
-          "docs/tasks/P3_DIAGNOSTICS_OVERHEAD_CALIBRATION.md")
+INPUTS = INPUT_FILES
 WARMUP_PAIRS = 1
 MEASURED_PAIRS = 5
 INTERVAL_NS = 100_000_000
@@ -80,19 +76,97 @@ def schedule(session, diagnostics_overhead=False):
     return runs
 
 
-def make_plan(session, binary, workload="8-leaf", diagnostics_overhead=False):
+def validate_build_provenance(path, binary, compiler, inputs):
+    provenance_path = Path(path).resolve(strict=True)
+    provenance = read_json(provenance_path)
+    if provenance.get("schema_version") != 1:
+        raise ValueError("unsupported build provenance schema")
+    build_log = provenance.get("build_log")
+    if (
+        not isinstance(build_log, dict)
+        or not isinstance(build_log.get("path"), str)
+        or not build_log["path"]
+        or not isinstance(build_log.get("sha256"), str)
+        or not re.fullmatch(r"[0-9a-f]{64}", build_log["sha256"])
+        or type(build_log.get("size_bytes")) is not int
+        or build_log["size_bytes"] < 0
+        or build_log.get("parsed_for_success") is not False
+    ):
+        raise ValueError("build provenance has an invalid build log record")
+    facts = provenance.get("build_facts_declared_by_caller", {})
+    if facts.get("status") != "observed_success" or facts.get("exit_status") != 0:
+        raise ValueError("build provenance does not report an observed successful build")
+    # Current provenance uses pinned-root-relative paths; older schema-1 records
+    # used absolute paths. Bind either spelling to the same current rooted file.
+    current_binary = file_record(ROOT, binary["path"])
+    selected = provenance.get("selected_binary")
+    if (current_binary.get("status") != "captured"
+            or current_binary.get("sha256") != binary["sha256"]
+            or current_binary.get("size_bytes") != binary["size_bytes"]
+            or not isinstance(selected, dict)
+            or selected.get("path") not in (current_binary["path"], binary["path"])
+            or {key: value for key, value in selected.items() if key != "path"} != {
+                "sha256": binary["sha256"], "size_bytes": binary["size_bytes"],
+                "status": "captured"}):
+        raise ValueError("build provenance binary does not match selected executable")
+    if provenance.get("compiler_identity") != compiler:
+        raise ValueError("build provenance compiler differs from planned compiler")
+    captured = provenance.get("captured_current_workspace", {})
+    revision = captured.get("git_commit")
+    if not isinstance(revision, str) or not re.fullmatch(r"[0-9a-f]{40,64}", revision):
+        raise ValueError("build provenance has no valid source revision")
+    if captured.get("source_snapshot_sha256") != snapshot_digest(captured):
+        raise ValueError("build provenance source snapshot digest is invalid")
+    records = captured.get("input_file_hashes", [])
+    if not isinstance(records, list) or any(not isinstance(entry, dict) for entry in records):
+        raise ValueError("build provenance input file hashes must be a list of objects")
+    paths = [entry.get("path") for entry in records]
+    if any(not isinstance(path, str) or not path for path in paths):
+        raise ValueError("build provenance input paths must be nonempty strings")
+    if len(paths) != len(set(paths)):
+        raise ValueError("build provenance input paths must be unique")
+    if set(paths) != set(inputs):
+        raise ValueError("build provenance input paths do not match expected inputs")
+    by_path = {entry["path"]: entry for entry in records}
+    for name, expected in inputs.items():
+        entry = by_path.get(name)
+        if not entry or entry.get("status") != "captured" or entry.get("sha256") != expected["sha256"]:
+            raise ValueError(f"build provenance input mismatch: {name}")
+    sources = captured.get("workspace_crate_app_file_hashes", [])
+    if not sources or any(entry.get("status") != "captured" for entry in sources):
+        raise ValueError("build provenance has incomplete workspace source hashes")
+    current_sources = source_records(ROOT)
+    if current_sources != sources or git_commit(ROOT) != revision:
+        raise ValueError("workspace source revision changed after build provenance capture")
+    for name in INPUTS:
+        if file_record(ROOT, name) != by_path.get(name):
+            raise ValueError(f"workspace build input changed after provenance capture: {name}")
+    return identity(provenance_path)
+
+
+def make_plan(session, binary, workload="8-leaf", diagnostics_overhead=False, build_provenance=None):
     if workload not in WORKLOADS:
         raise ValueError(f"unknown workload: {workload}")
     protocol = WORKLOADS[workload]
     runs = schedule(session, diagnostics_overhead)
     comparison = "diagnostics_overhead" if diagnostics_overhead else "cache"
+    binary_identity = identity(binary)
+    compiler = compiler_identity()
+    provenance_identity = None
+    if diagnostics_overhead:
+        if build_provenance is None:
+            raise ValueError("diagnostics-overhead plans require --build-provenance")
+        provenance_identity = validate_build_provenance(
+            build_provenance, binary_identity, compiler,
+            {name: identity(ROOT / name) for name in INPUTS})
     plan = {"schema_version": 1, "kind": "rustui_cache_comparison_plan", "session_id": session,
-            "created_at_utc": datetime.now(timezone.utc).isoformat(), "binary": identity(binary),
-            "inputs": {name: identity(ROOT / name) for name in INPUTS}, "compiler_at_plan_time": compiler_identity(),
+            "created_at_utc": datetime.now(timezone.utc).isoformat(), "binary": binary_identity,
+            "inputs": {name: identity(ROOT / name) for name in INPUTS}, "compiler_at_plan_time": compiler,
+            "build_provenance": provenance_identity,
             "machine": {"platform": platform.platform(), "machine": platform.machine()},
             "workload": workload, "protocol": protocol, "comparison": comparison, "runs": runs,
             "collector": {"duration_ns": DURATION_NS, "interval_ns": INTERVAL_NS},
-            "provenance_limit": "Plan-time hashes do not prove that these sources produced this binary.",
+            "provenance_limit": "Build metadata is caller-declared; hashes bind the selected binary, compiler, revision, and inputs but do not independently certify historical compiler execution.",
             "launch_policy": "Each run is a new native process launched only via CUA; this script never launches it."}
     for run in runs:
         runtime_mode = "uncached" if diagnostics_overhead else run["mode"]
@@ -155,10 +229,18 @@ def load_plan(path, verify_inputs=True):
         for name in INPUTS:
             if identity(ROOT / name) != plan["inputs"][name]:
                 raise ValueError(f"input changed after plan: {name}")
+    if comparison == "diagnostics_overhead":
+        provenance_identity = validate_build_provenance(
+            plan.get("build_provenance", {}).get("path", ""), plan["binary"],
+            plan.get("compiler_at_plan_time"), plan.get("inputs", {}))
+        if provenance_identity != plan["build_provenance"]:
+            raise ValueError("build provenance record changed after planning")
     return plan
 
 
 def check_workload(result, run, pid, protocol):
+    if not isinstance(result, dict):
+        raise ValueError("workload must be an object")
     expected = {"schema_version": 1, "kind": "rustui_cache_comparison_workload", "run_id": run["run_id"],
                 "pid": pid, "mode": run.get("runtime_mode", run["mode"]),
                 "diagnostics_enabled": run.get("diagnostics_enabled", True),
@@ -166,7 +248,7 @@ def check_workload(result, run, pid, protocol):
                 "native_drag_seen": False, "environment_scope": "empty", "correctness_passed": True,
                 "protocol": protocol, "values": [1] * protocol["leaves"], "mounts": [1] * protocol["leaves"]}
     for field, value in expected.items():
-        if result.get(field) != value:
+        if not json_value_matches(value, result.get(field)):
             raise ValueError(f"workload {field}: expected {value!r}, got {result.get(field)!r}")
     diagnostic_counts = run.get("diagnostics_enabled", True)
     if not diagnostic_counts:
@@ -176,7 +258,7 @@ def check_workload(result, run, pid, protocol):
         leaf = 0 if runtime_mode == "cached" else protocol["leaves"] * protocol["measured_updates"]
         required = {"parent_root": protocol["measured_updates"], "parent_leaf": leaf,
                     "final_leaf": leaf + protocol["leaves"], "mutation_leaf_delta": protocol["leaves"]}
-    if result.get("counts") != required:
+    if not json_value_matches(required, result.get("counts")):
         raise ValueError("wrong raw lowering counts")
     diagnostic_records = result.get("diagnostics")
     if not isinstance(diagnostic_records, list):
@@ -201,8 +283,12 @@ def check_workload(result, run, pid, protocol):
                    for key in ("count", "total_ns", "max_ns")) or host["max_ns"] > host["total_ns"]:
                 raise ValueError("invalid per-type diagnostic timing")
         counts = result["counts"]
-        expected_counts = {"ComparisonRoot": counts["parent_root"],
-                           "ComparisonLeaf": counts["final_leaf"]}
+        # The final mutation phase produces one root lowering after parent_root
+        # snapshots the measured update loop.
+        expected_counts = {
+            "ComparisonRoot": counts["parent_root"] + 1,
+            "ComparisonLeaf": counts["final_leaf"],
+        }
         if any(hosts[name]["count"] != count for name, count in expected_counts.items()):
             raise ValueError("diagnostic timing counts differ from lowering counts")
 
@@ -446,6 +532,8 @@ def main(argv=None):
     create.add_argument("--workload", choices=WORKLOADS, default="8-leaf")
     create.add_argument("--diagnostics-overhead", action="store_true",
                         help="pair diagnostics off/on with identical uncached workload")
+    create.add_argument("--build-provenance", type=Path,
+                        help="required build record for diagnostics-overhead plans")
     capture = commands.add_parser("collect", help="attach to an already CUA-launched PID")
     capture.add_argument("--plan", type=Path, required=True)
     capture.add_argument("--run-index", type=int, required=True)
@@ -455,7 +543,8 @@ def main(argv=None):
     args = parser.parse_args(argv)
     try:
         if args.command == "plan":
-            print(make_plan(args.session, args.binary, args.workload, args.diagnostics_overhead))
+            print(make_plan(args.session, args.binary, args.workload, args.diagnostics_overhead,
+                            args.build_provenance))
         elif args.command == "collect":
             destination, status = collect_run(args.plan, args.run_index, args.pid)
             print(destination)

@@ -1,13 +1,18 @@
 //! Controlled virtualized string table backed by retained GPUI TableState.
 
-use std::{cell::Cell, rc::Rc};
+use std::{
+    cell::{Cell, RefCell},
+    rc::Rc,
+};
 
 use gpui::{
-    AnyElement, App, Context, InteractiveElement as _, IntoElement, ParentElement as _,
-    SharedString, Stateful, Styled as _, Window, div, px,
+    AnyElement, App, Context, InteractiveElement as _, IntoElement, ParentElement as _, Role,
+    SharedString, Stateful, StatefulInteractiveElement as _, Styled as _, Window, div, px,
 };
+use gpui_component::ElementExt as _;
 use gpui_component::table::{Column, DataTable, TableDelegate, TableEvent, TableState};
 use rustui_core::{Binding, Identity};
+use rustui_i18n::LayoutDirection;
 
 use crate::{
     components::theme::{required_style, required_style_with_artwork, selector, styled_element},
@@ -19,9 +24,92 @@ struct StringTableDelegate {
     columns: Vec<String>,
     rows: Vec<Vec<String>>,
     column_width: f32,
+    direction: LayoutDirection,
+    empty_rtl_anchor: Rc<Cell<bool>>,
+    empty_anchor_refresh: Rc<Cell<bool>>,
     row_style: ResolvedComponentStyle,
     header_style: ResolvedComponentStyle,
     last_owner_selection: Rc<Cell<Option<usize>>>,
+    requested_selection: Rc<Cell<Option<usize>>>,
+    selection_update: Rc<RefCell<Option<SelectionUpdater<App>>>>,
+}
+
+type SelectionUpdater<T> = Rc<dyn Fn(&mut T)>;
+
+fn table_header_element() -> Stateful<gpui::Div> {
+    div()
+        .id("rustui-table-header")
+        .role(Role::Row)
+        .aria_row_index(TABLE_HEADER_ROW_INDEX)
+}
+
+fn table_column_header_element(
+    col_ix: usize,
+    name: String,
+    accessible_name: String,
+) -> Stateful<gpui::Div> {
+    div()
+        .id(("rustui-table-column-header", col_ix))
+        .size_full()
+        .role(Role::ColumnHeader)
+        .aria_label(accessible_name)
+        .aria_column_index(col_ix + 1)
+        .child(SharedString::from(name))
+}
+
+fn table_data_row_element(row_ix: usize) -> Stateful<gpui::Div> {
+    div()
+        .id(("rustui-table-row", row_ix))
+        .aria_row_index(table_data_row_aria_index(row_ix))
+}
+
+fn should_report_active_descendant(selected: bool, table_focused: bool) -> bool {
+    selected && table_focused
+}
+
+fn table_data_cell_element(
+    row_ix: usize,
+    col_ix: usize,
+    value: String,
+    accessible_name: String,
+) -> Stateful<gpui::Div> {
+    div()
+        .id(format!("rustui-table-cell-content:{row_ix}:{col_ix}"))
+        .size_full()
+        .role(Role::Cell)
+        .aria_label(accessible_name)
+        .aria_column_index(col_ix + 1)
+        .flex()
+        .items_center()
+        .px_3()
+        .child(SharedString::from(value))
+}
+
+fn replace_selection_updater<T>(
+    slot: &RefCell<Option<SelectionUpdater<T>>>,
+    updater: SelectionUpdater<T>,
+) {
+    *slot.borrow_mut() = Some(updater);
+}
+
+fn apply_selection_updater<T>(slot: &RefCell<Option<SelectionUpdater<T>>>, context: &mut T) {
+    let updater = slot.borrow().clone();
+    if let Some(updater) = updater {
+        updater(context);
+    }
+}
+
+fn apply_owner_selection_request(
+    current: &mut Option<usize>,
+    last_owner_selection: &Cell<Option<usize>>,
+    requested: Option<usize>,
+) -> bool {
+    if *current != last_owner_selection.get() || *current == requested {
+        return false;
+    }
+    *current = requested;
+    last_owner_selection.set(requested);
+    true
 }
 
 impl StringTableDelegate {
@@ -29,6 +117,7 @@ impl StringTableDelegate {
         columns: Vec<String>,
         rows: Vec<Vec<String>>,
         column_width: f32,
+        direction: LayoutDirection,
         row_style: ResolvedComponentStyle,
         header_style: ResolvedComponentStyle,
         owner_selection: Option<usize>,
@@ -37,9 +126,14 @@ impl StringTableDelegate {
             columns,
             rows,
             column_width,
+            direction,
+            empty_rtl_anchor: Rc::new(Cell::new(false)),
+            empty_anchor_refresh: Rc::new(Cell::new(false)),
             row_style,
             header_style,
             last_owner_selection: Rc::new(Cell::new(owner_selection)),
+            requested_selection: Rc::new(Cell::new(None)),
+            selection_update: Rc::new(RefCell::new(None)),
         }
     }
 
@@ -47,6 +141,14 @@ impl StringTableDelegate {
         self.columns = columns;
         self.rows = rows;
         self.column_width = column_width;
+    }
+
+    fn accessible_column_name(&self, col_ix: usize) -> String {
+        self.columns
+            .get(col_ix)
+            .filter(|name| !name.trim().is_empty())
+            .cloned()
+            .unwrap_or_else(|| format!("Column {}", col_ix + 1))
     }
 }
 
@@ -67,6 +169,14 @@ impl TableDelegate for StringTableDelegate {
             .movable(false)
     }
 
+    fn render_header(
+        &mut self,
+        _window: &mut Window,
+        _cx: &mut Context<TableState<Self>>,
+    ) -> Stateful<gpui::Div> {
+        table_header_element()
+    }
+
     fn render_th(
         &mut self,
         col_ix: usize,
@@ -74,9 +184,10 @@ impl TableDelegate for StringTableDelegate {
         _cx: &mut Context<TableState<Self>>,
     ) -> impl IntoElement {
         let name = self.columns.get(col_ix).cloned().unwrap_or_default();
+        let accessible_name = self.accessible_column_name(col_ix);
         // GPUI Components paints the header surface with mapped theme colors.
         // Style only the label here so its background remains visible.
-        let mut label = div().size_full().child(SharedString::from(name));
+        let mut label = table_column_header_element(col_ix, name, accessible_name);
         if let Some(typography) = &self.header_style.typography {
             label = label
                 .font_family(typography.family.clone())
@@ -89,10 +200,17 @@ impl TableDelegate for StringTableDelegate {
     fn render_tr(
         &mut self,
         row_ix: usize,
-        _window: &mut Window,
-        _cx: &mut Context<TableState<Self>>,
+        window: &mut Window,
+        cx: &mut Context<TableState<Self>>,
     ) -> Stateful<gpui::Div> {
-        styled_element(div().id(("rustui-table-row", row_ix)), &self.row_style)
+        let selected = self.last_owner_selection.get() == Some(row_ix);
+        let focused = cx.focus_handle().is_focused(window);
+        // The theme's reference-artwork width must not override the table viewport.
+        let mut row = styled_element(table_data_row_element(row_ix), &self.row_style).w_full();
+        if should_report_active_descendant(selected, focused) {
+            row = row.aria_active_descendant();
+        }
+        row
     }
 
     fn render_td(
@@ -108,12 +226,8 @@ impl TableDelegate for StringTableDelegate {
             .and_then(|row| row.get(col_ix))
             .cloned()
             .unwrap_or_default();
-        div()
-            .size_full()
-            .flex()
-            .items_center()
-            .px_3()
-            .child(SharedString::from(value))
+        let accessible_name = format!("{}: {value}", self.accessible_column_name(col_ix));
+        table_data_cell_element(row_ix, col_ix, value, accessible_name)
     }
 
     fn cell_text(&self, row_ix: usize, col_ix: usize, _cx: &App) -> String {
@@ -126,8 +240,13 @@ impl TableDelegate for StringTableDelegate {
 }
 
 /// A virtualized string table with controlled row selection.
+///
+/// Right-to-left locales display columns in reverse visual order while retaining
+/// each header's association with its cells and preserving source-row selection.
+/// On a direction change, the first logical column is brought into view.
 pub struct TableView {
     columns: Vec<String>,
+    column_messages: Option<Vec<String>>,
     rows: Vec<Vec<String>>,
     selection: Binding<Option<usize>>,
     id: Option<Identity>,
@@ -160,6 +279,7 @@ impl TableView {
 
         Self {
             columns,
+            column_messages: None,
             rows,
             selection,
             id: None,
@@ -172,18 +292,72 @@ impl TableView {
         }
     }
 
+    /// Resolves one localization message per column, falling back to its original label.
+    ///
+    /// Panics if the number of message IDs differs from the number of columns or
+    /// any ID is blank. Labels are resolved again when the active locale changes.
+    pub fn localized_columns<I, S>(mut self, messages: I) -> Self
+    where
+        I: IntoIterator<Item = S>,
+        S: Into<String>,
+    {
+        let messages: Vec<String> = messages.into_iter().map(Into::into).collect();
+        assert!(
+            messages.len() == self.columns.len(),
+            "Table needs one message ID per column"
+        );
+        assert!(
+            messages.iter().all(|id| !id.trim().is_empty()),
+            "Table column message IDs must be nonempty"
+        );
+        self.column_messages = Some(messages);
+        self
+    }
+
+    fn resolved_columns(&self, mut resolve: impl FnMut(&str) -> String) -> Vec<String> {
+        match &self.column_messages {
+            None => self.columns.clone(),
+            Some(messages) => self
+                .columns
+                .iter()
+                .zip(messages)
+                .map(|(fallback, id)| {
+                    let label = resolve(id);
+                    if label.trim().is_empty() || label.trim() == id.trim() {
+                        fallback.clone()
+                    } else {
+                        label
+                    }
+                })
+                .collect(),
+        }
+    }
+
+    pub(crate) fn aria_row_count(&self) -> usize {
+        self.rows.len() + TABLE_HEADER_ROW_INDEX
+    }
+
+    pub(crate) fn aria_column_count(&self) -> usize {
+        self.columns.len()
+    }
+
     pub fn id(mut self, id: impl Into<Identity>) -> Self {
-        self.id = Some(id.into());
+        let id = id.into();
+        assert!(
+            !id.as_str().trim().is_empty(),
+            "Table identity must be nonempty"
+        );
+        self.id = Some(id);
         self
     }
 
     pub fn height(mut self, height: f32) -> Self {
-        self.height = height.max(1.0);
+        self.height = finite_dimension(height);
         self
     }
 
     pub fn column_width(mut self, width: f32) -> Self {
-        self.column_width = width.max(1.0);
+        self.column_width = finite_dimension(width);
         self
     }
 
@@ -203,20 +377,86 @@ impl TableView {
         self
     }
 
-    fn identity(&self) -> Identity {
-        self.id.clone().unwrap_or_else(|| {
-            Identity::from(format!(
-                "table:{}:{}:{}",
-                self.columns.len(),
-                self.rows.len(),
-                self.columns.first().map_or("", String::as_str)
-            ))
-        })
+    fn identity(&self, context: &mut RenderContext<'_>) -> Identity {
+        let Some(id) = &self.id else {
+            return context.next_implicit_retained_identity(Identity::from("table"));
+        };
+        id.clone()
+    }
+}
+
+fn presentation_data(
+    mut columns: Vec<String>,
+    mut rows: Vec<Vec<String>>,
+    direction: LayoutDirection,
+) -> (Vec<String>, Vec<Vec<String>>) {
+    if direction == LayoutDirection::RightToLeft {
+        columns.reverse();
+        for row in &mut rows {
+            row.reverse();
+        }
+    }
+    (columns, rows)
+}
+
+fn leading_column_to_reveal(
+    created: bool,
+    previous: LayoutDirection,
+    direction: LayoutDirection,
+    previous_count: usize,
+    count: usize,
+) -> Option<usize> {
+    let rtl_initial = direction == LayoutDirection::RightToLeft && (created || previous_count == 0);
+    if previous == direction && !rtl_initial {
+        return None;
+    }
+    match direction {
+        LayoutDirection::LeftToRight => (count > 0).then_some(0),
+        LayoutDirection::RightToLeft => count.checked_sub(1),
+    }
+}
+
+#[derive(Debug, PartialEq, Eq)]
+enum EmptyAnchorStep {
+    Wait,
+    Refresh,
+    Align,
+}
+
+fn empty_anchor_step(
+    pending: &Cell<bool>,
+    refresh_requested: &Cell<bool>,
+    has_bounds: bool,
+) -> EmptyAnchorStep {
+    if !pending.get() {
+        EmptyAnchorStep::Wait
+    } else if has_bounds {
+        pending.set(false);
+        EmptyAnchorStep::Align
+    } else if refresh_requested.replace(true) {
+        EmptyAnchorStep::Wait
+    } else {
+        EmptyAnchorStep::Refresh
     }
 }
 
 fn selection_for_rows(selection: Option<usize>, row_count: usize) -> Option<usize> {
     selection.filter(|index| *index < row_count)
+}
+
+fn finite_dimension(value: f32) -> f32 {
+    if value.is_finite() {
+        value.max(1.0)
+    } else {
+        1.0
+    }
+}
+
+const TABLE_HEADER_ROW_INDEX: usize = 1;
+
+fn table_data_row_aria_index(row_ix: usize) -> usize {
+    // ARIA row indices are one-based, and this table has one header row.
+    row_ix + TABLE_HEADER_ROW_INDEX + 1
 }
 
 fn clear_invalid_selection(current: &mut Option<usize>, invalid: usize) -> bool {
@@ -249,9 +489,15 @@ impl View for TableView {
         let row_style = required_style(context, "table", "table_rows", &query);
         let header_style =
             required_style_with_artwork(context, "table", "table_column_headers", &query);
-        let identity = self.identity();
-        let columns = self.columns.clone();
-        let rows = self.rows.clone();
+        let identity = self.identity(context);
+        let direction = context.layout_direction();
+        let (display_columns, display_rows) = presentation_data(
+            self.resolved_columns(|id| context.localized_message(id)),
+            self.rows.clone(),
+            direction,
+        );
+        let columns = display_columns.clone();
+        let rows = display_rows.clone();
         let column_width = self.column_width;
         let initial_row_style = row_style.clone();
         let initial_header_style = header_style.clone();
@@ -262,6 +508,7 @@ impl View for TableView {
                 columns,
                 rows,
                 column_width,
+                direction,
                 initial_row_style,
                 initial_header_style,
                 owner_selection,
@@ -278,18 +525,22 @@ impl View for TableView {
             state
         });
 
+        let (previous_direction, previous_count) = {
+            let state = state.read(context.app());
+            (state.delegate().direction, state.delegate().columns.len())
+        };
         let data_changed = {
             let state = state.read(context.app());
             let delegate = state.delegate();
-            delegate.columns != self.columns
-                || delegate.rows != self.rows
+            delegate.columns != display_columns
+                || delegate.rows != display_rows
                 || delegate.column_width != self.column_width
                 || delegate.row_style != row_style
                 || delegate.header_style != header_style
         };
         if data_changed {
-            let columns = self.columns.clone();
-            let rows = self.rows.clone();
+            let columns = display_columns;
+            let rows = display_rows;
             let column_width = self.column_width;
             let row_style = row_style.clone();
             let header_style = header_style.clone();
@@ -303,6 +554,30 @@ impl View for TableView {
             });
         }
 
+        // Re-anchor on a direction change, while preserving user scroll on ordinary updates.
+        let leading = leading_column_to_reveal(
+            created,
+            previous_direction,
+            direction,
+            previous_count,
+            self.columns.len(),
+        );
+        if previous_direction != direction || leading.is_some() {
+            context.update_entity(&state, move |state, _window, cx| {
+                let empty_rtl =
+                    direction == LayoutDirection::RightToLeft && state.delegate().rows.is_empty();
+                state.delegate_mut().direction = direction;
+                state
+                    .delegate()
+                    .empty_rtl_anchor
+                    .set(empty_rtl && leading.is_some());
+                state.delegate().empty_anchor_refresh.set(false);
+                if let Some(column) = leading.filter(|_| !empty_rtl) {
+                    state.scroll_to_col(column, cx);
+                }
+            });
+        }
+
         let desired = selection_for_rows(owner_selection, self.rows.len());
         let selected = state.read(context.app()).selected_row();
         if selected != desired {
@@ -312,26 +587,25 @@ impl View for TableView {
             });
         }
 
-        let last_owner_selection = state
-            .read(context.app())
-            .delegate()
-            .last_owner_selection
-            .clone();
+        let (last_owner_selection, requested_selection, selection_update) = {
+            let delegate = state.read(context.app()).delegate();
+            (
+                delegate.last_owner_selection.clone(),
+                delegate.requested_selection.clone(),
+                delegate.selection_update.clone(),
+            )
+        };
         last_owner_selection.set(owner_selection);
+        let marker = last_owner_selection.clone();
+        let current_request = requested_selection.clone();
+        let updater = context.binding_updater(self.selection.clone(), move |current| {
+            apply_owner_selection_request(current, &marker, current_request.get())
+        });
+        replace_selection_updater(&selection_update, updater);
 
         if created {
-            let requested = Rc::new(Cell::new(None));
-            let current_request = requested.clone();
-            let last_owner_selection = last_owner_selection.clone();
-            let update = context.binding_updater(self.selection.clone(), move |current| {
-                let selected = current_request.get();
-                if *current != last_owner_selection.get() || *current == selected {
-                    return false;
-                }
-                *current = selected;
-                last_owner_selection.set(selected);
-                true
-            });
+            let current_update = selection_update.clone();
+            let requested = requested_selection.clone();
             context.subscribe_retained(&identity, &state, move |state, event: &TableEvent, cx| {
                 let selection = match event {
                     TableEvent::SelectRow(row) => Some(*row),
@@ -342,7 +616,7 @@ impl View for TableView {
                     return;
                 }
                 requested.set(selection);
-                update(cx);
+                apply_selection_updater(&current_update, cx);
             });
         }
 
@@ -350,14 +624,46 @@ impl View for TableView {
             let normalize = context.binding_updater(self.selection.clone(), move |current| {
                 clear_invalid_selection(current, invalid)
             });
+            let current_state = state.clone();
             context.update_entity(&state, move |_state, _window, cx| {
-                cx.defer(move |cx| normalize(cx));
+                cx.defer(move |cx| {
+                    if invalid >= current_state.read(cx).delegate().rows.len() {
+                        normalize(cx);
+                    }
+                });
             });
         }
 
+        let handle = state.read(context.app()).horizontal_scroll_handle.clone();
+        let (empty_anchor, refresh_requested) = {
+            let state = state.read(context.app());
+            (
+                state.delegate().empty_rtl_anchor.clone(),
+                state.delegate().empty_anchor_refresh.clone(),
+            )
+        };
         div()
             .w_full()
             .h(px(self.height))
+            .on_prepaint(move |_, window, cx| {
+                match empty_anchor_step(
+                    &empty_anchor,
+                    &refresh_requested,
+                    handle.bounds().size.width > px(0.0),
+                ) {
+                    EmptyAnchorStep::Wait => return,
+                    EmptyAnchorStep::Align => {
+                        let mut offset = handle.offset();
+                        offset.x = -handle.max_offset().x;
+                        handle.set_offset(offset);
+                    }
+                    EmptyAnchorStep::Refresh => {}
+                }
+                let window = window.window_handle();
+                cx.defer(move |cx| {
+                    let _ = window.update(cx, |_, window, _| window.refresh());
+                });
+            })
             .child(
                 DataTable::new(&state)
                     .stripe(self.striped)
@@ -370,7 +676,513 @@ impl View for TableView {
 
 #[cfg(test)]
 mod tests {
-    use super::{clear_invalid_selection, selection_for_rows};
+    use super::View;
+    use gpui::{Element, Role, accesskit::Node};
+
+    struct RestoredRowOwner {
+        selection: Option<usize>,
+        rows: usize,
+        writes: usize,
+    }
+
+    impl super::View for RestoredRowOwner {
+        fn body(&self) -> impl super::View {
+            super::EmptyView
+        }
+
+        fn into_element(&self, context: &mut super::RenderContext<'_>) -> gpui::AnyElement {
+            let selection = super::Binding::new(
+                self.selection,
+                |owner: &Self| owner.selection,
+                |owner, value| {
+                    owner.selection = value;
+                    owner.writes += 1;
+                },
+            );
+            let rows = (0..self.rows).map(|index| vec![index.to_string()]);
+            super::TableView::new(["Value"], rows, selection).into_element(context)
+        }
+    }
+
+    struct TableGeometryProbe;
+
+    struct TableScrollCase {
+        rows: usize,
+        column_width: f32,
+    }
+
+    impl super::View for TableScrollCase {
+        fn body(&self) -> impl super::View {
+            super::EmptyView
+        }
+
+        fn into_element(&self, context: &mut super::RenderContext<'_>) -> gpui::AnyElement {
+            use gpui::{IntoElement as _, ParentElement as _, Styled as _, div, px};
+            let selection = super::Binding::new(None, |_: &Self| None, |_, _| {});
+            div()
+                .w(px(300.))
+                .h(px(240.))
+                .child(
+                    super::TableView::new(
+                        ["First", "Second"],
+                        vec![["A", "B"]; self.rows],
+                        selection,
+                    )
+                    .id("scroll-diagnostic")
+                    .column_width(self.column_width)
+                    .height(240.)
+                    .into_element(context),
+                )
+                .into_any_element()
+        }
+    }
+
+    #[gpui::test]
+    fn narrow_table_scroll_survives_wheel_events_and_draw(cx: &mut gpui::TestAppContext) {
+        use rustui_core::Identity;
+        let theme = crate::theme::parse_theme(include_str!(concat!(
+            env!("CARGO_MANIFEST_DIR"),
+            "/../../themes/macos27.json"
+        )))
+        .unwrap();
+        cx.update(|app| {
+            gpui_component::init(app);
+            crate::theme::activate_theme(&theme, Some(crate::theme::AppearanceMode::Dark), app)
+                .unwrap();
+        });
+        for rows in [1, 4] {
+            for column_width in [300., 700.] {
+                let (owner, window) = cx.add_window_view(|_, app| {
+                    crate::runtime::ComponentHost::new(TableScrollCase { rows, column_width }, app)
+                });
+                window.run_until_parked();
+                let state = window.update(|window, app| {
+                    let _ = window.draw(app);
+                    owner
+                        .read(app)
+                        .retained_entity_for_test::<super::TableState<super::StringTableDelegate>>(
+                            vec![],
+                            Identity::from("scroll-diagnostic"),
+                        )
+                        .unwrap()
+                });
+                window.run_until_parked();
+                window.simulate_event(gpui::ScrollWheelEvent {
+                    position: gpui::point(gpui::px(100.), gpui::px(45.)),
+                    delta: gpui::ScrollDelta::Pixels(gpui::point(gpui::px(-80.), gpui::px(0.))),
+                    ..Default::default()
+                });
+                window.update(|window, app| {
+                    let _ = window.draw(app);
+                    assert!(
+                        state.read(app).horizontal_scroll_handle.offset().x < gpui::px(0.),
+                        "wheel did not scroll: rows={rows} width={column_width}"
+                    );
+                });
+                for y in [10., 30., 50., 100.] {
+                    window.simulate_event(gpui::ScrollWheelEvent {
+                        position: gpui::point(gpui::px(100.), gpui::px(y)),
+                        delta: gpui::ScrollDelta::Pixels(gpui::point(gpui::px(-80.), gpui::px(0.))),
+                        ..Default::default()
+                    });
+                    window.update(|window, app| {
+                        let _ = window.draw(app);
+                    });
+                }
+                window.update(|window, app| {
+                    state.update(app, |table, cx| table.scroll_to_col(1, cx));
+                    let handle = state.read(app).horizontal_scroll_handle.clone();
+                    let before = handle.offset();
+                    let _ = window.draw(app);
+                    assert!(before.x < gpui::px(0.), "rows={rows} width={column_width}");
+                    assert_eq!(handle.offset(), before, "rows={rows} width={column_width}");
+                });
+            }
+        }
+    }
+    impl super::View for TableGeometryProbe {
+        fn body(&self) -> impl super::View {
+            super::EmptyView
+        }
+        fn into_element(&self, context: &mut super::RenderContext<'_>) -> gpui::AnyElement {
+            use gpui::{IntoElement as _, ParentElement as _, Styled as _, div, px};
+            let selection = super::Binding::new(None, |_: &Self| None, |_, _| {});
+            div()
+                .w(px(300.))
+                .h(px(240.))
+                .child(
+                    super::TableView::new(["First", "Second"], vec![["A", "B"]; 4], selection)
+                        .id("geometry-probe")
+                        .column_width(700.)
+                        .height(240.)
+                        .into_element(context),
+                )
+                .into_any_element()
+        }
+    }
+
+    #[gpui::test]
+    fn narrow_table_retains_horizontal_scroll_after_draw(cx: &mut gpui::TestAppContext) {
+        use rustui_core::Identity;
+        let theme = crate::theme::parse_theme(include_str!(concat!(
+            env!("CARGO_MANIFEST_DIR"),
+            "/../../themes/macos27.json"
+        )))
+        .unwrap();
+        cx.update(|app| {
+            gpui_component::init(app);
+            crate::theme::activate_theme(&theme, Some(crate::theme::AppearanceMode::Dark), app)
+                .unwrap();
+        });
+        let (owner, window) = cx
+            .add_window_view(|_, app| crate::runtime::ComponentHost::new(TableGeometryProbe, app));
+        window.run_until_parked();
+        let state = window.update(|window, app| {
+            let _ = window.draw(app);
+            owner
+                .read(app)
+                .retained_entity_for_test::<super::TableState<super::StringTableDelegate>>(
+                    vec![],
+                    Identity::from("geometry-probe"),
+                )
+                .unwrap()
+        });
+        window.run_until_parked();
+        window.update(|window, app| {
+            state.update(app, |table, cx| table.scroll_to_col(1, cx));
+            let before = state.read(app).horizontal_scroll_handle.offset().x;
+            assert!(before < gpui::px(-900.));
+            let _ = window.draw(app);
+            assert_eq!(state.read(app).horizontal_scroll_handle.offset().x, before);
+            state.update(app, |table, cx| table.scroll_to_col(0, cx));
+            let _ = window.draw(app);
+            assert_eq!(
+                state.read(app).horizontal_scroll_handle.offset().x,
+                gpui::px(0.)
+            );
+        });
+        window.simulate_event(gpui::ScrollWheelEvent {
+            position: gpui::point(gpui::px(100.), gpui::px(45.)),
+            delta: gpui::ScrollDelta::Pixels(gpui::point(gpui::px(-80.), gpui::px(0.))),
+            ..Default::default()
+        });
+        window.update(|window, app| {
+            let _ = window.draw(app);
+            assert!(state.read(app).horizontal_scroll_handle.offset().x < gpui::px(0.));
+        });
+        window.simulate_event(gpui::ScrollWheelEvent {
+            position: gpui::point(gpui::px(100.), gpui::px(45.)),
+            delta: gpui::ScrollDelta::Pixels(gpui::point(gpui::px(80.), gpui::px(0.))),
+            ..Default::default()
+        });
+        window.update(|window, app| {
+            let _ = window.draw(app);
+            assert_eq!(
+                state.read(app).horizontal_scroll_handle.offset().x,
+                gpui::px(0.)
+            );
+        });
+    }
+
+    #[gpui::test]
+    fn restored_row_survives_queued_selection_clear(cx: &mut gpui::TestAppContext) {
+        let theme = crate::theme::parse_theme(include_str!(concat!(
+            env!("CARGO_MANIFEST_DIR"),
+            "/../../themes/macos27.json"
+        )))
+        .unwrap();
+        cx.update(|app| {
+            gpui_component::init(app);
+            crate::theme::activate_theme(&theme, Some(crate::theme::AppearanceMode::Dark), app)
+                .unwrap();
+        });
+        let (owner, window) = cx.add_window_view(|_, app| {
+            crate::runtime::ComponentHost::new(
+                RestoredRowOwner {
+                    selection: Some(1),
+                    rows: 2,
+                    writes: 0,
+                },
+                app,
+            )
+        });
+        window.update(|window, app| {
+            let _ = window.draw(app);
+            owner.update(app, |host, cx| {
+                host.component_mut().rows = 1;
+                cx.notify();
+            });
+            let _ = window.draw(app);
+            owner.update(app, |host, cx| {
+                host.component_mut().rows = 2;
+                cx.notify();
+            });
+            let _ = window.draw(app);
+            assert_eq!(
+                owner.read(app).component().selection,
+                Some(1),
+                "after restoration draw"
+            );
+        });
+        window.cx.run_until_parked();
+        window.update(|_, app| {
+            assert_eq!(owner.read(app).component().selection, Some(1));
+            assert_eq!(owner.read(app).component().writes, 0);
+        });
+        window.update(|window, app| {
+            owner.update(app, |host, cx| {
+                host.component_mut().rows = 1;
+                cx.notify();
+            });
+            let _ = window.draw(app);
+        });
+        window.cx.run_until_parked();
+        window.update(|_, app| {
+            assert_eq!(owner.read(app).component().selection, None);
+            assert_eq!(owner.read(app).component().writes, 1);
+        });
+    }
+
+    use super::{
+        SelectionUpdater, TableView, apply_owner_selection_request, apply_selection_updater,
+        clear_invalid_selection, finite_dimension, replace_selection_updater, selection_for_rows,
+        should_report_active_descendant, table_column_header_element, table_data_cell_element,
+        table_data_row_element, table_header_element,
+    };
+    use rustui_core::Binding;
+    use std::{cell::Cell, cell::RefCell, rc::Rc};
+
+    struct Owner {
+        primary: Option<usize>,
+        secondary: Option<usize>,
+    }
+
+    fn read_primary(owner: &Owner) -> Option<usize> {
+        owner.primary
+    }
+
+    fn write_primary(owner: &mut Owner, selection: Option<usize>) {
+        owner.primary = selection;
+    }
+
+    fn read_secondary(owner: &Owner) -> Option<usize> {
+        owner.secondary
+    }
+
+    fn write_secondary(owner: &mut Owner, selection: Option<usize>) {
+        owner.secondary = selection;
+    }
+
+    fn read_selection(_: &()) -> Option<usize> {
+        None
+    }
+
+    fn write_selection(_: &mut (), _: Option<usize>) {}
+
+    #[test]
+    fn localized_columns_resolve_and_fall_back_per_label() {
+        let table = TableView::new(
+            ["Index", "Row"],
+            [["0", "Alpha"]],
+            Binding::new(None, read_selection, write_selection),
+        )
+        .localized_columns(["table.index", "table.row"]);
+        assert_eq!(
+            table.resolved_columns(|id| match id {
+                "table.index" => "Indice".into(),
+                _ => id.into(),
+            }),
+            ["Indice", "Row"]
+        );
+        assert_eq!(table.resolved_columns(|_| " ".into()), ["Index", "Row"]);
+        assert_eq!(table.resolved_columns(|_| "صف".into()), ["صف", "صف"]);
+    }
+
+    #[test]
+    fn empty_rtl_anchor_waits_for_layout_without_repeated_refreshes() {
+        use super::{EmptyAnchorStep, empty_anchor_step};
+        let pending = Cell::new(true);
+        let refresh = Cell::new(false);
+        assert_eq!(
+            empty_anchor_step(&pending, &refresh, false),
+            EmptyAnchorStep::Refresh
+        );
+        assert_eq!(
+            empty_anchor_step(&pending, &refresh, false),
+            EmptyAnchorStep::Wait
+        );
+        assert_eq!(
+            empty_anchor_step(&pending, &refresh, true),
+            EmptyAnchorStep::Align
+        );
+        assert_eq!(
+            empty_anchor_step(&pending, &refresh, true),
+            EmptyAnchorStep::Wait
+        );
+    }
+
+    #[test]
+    fn direction_changes_reveal_leading_column_without_resetting_owner_updates() {
+        use rustui_i18n::LayoutDirection::{LeftToRight as Ltr, RightToLeft as Rtl};
+        let leading = super::leading_column_to_reveal;
+        assert_eq!(leading(true, Ltr, Ltr, 3, 3), None);
+        assert_eq!(leading(true, Rtl, Rtl, 3, 3), Some(2));
+        assert_eq!(leading(false, Ltr, Rtl, 3, 3), Some(2));
+        assert_eq!(leading(false, Rtl, Ltr, 3, 3), Some(0));
+        assert_eq!(leading(false, Rtl, Rtl, 3, 3), None);
+        assert_eq!(leading(false, Rtl, Rtl, 0, 3), Some(2));
+        assert_eq!(leading(false, Ltr, Rtl, 0, 0), None);
+    }
+
+    #[test]
+    fn rtl_presentation_reorders_columns_without_reordering_rows() {
+        let columns = vec!["Index".to_owned(), "Name".to_owned()];
+        let rows = vec![
+            vec!["0".to_owned(), "Alpha".to_owned()],
+            vec!["1".to_owned(), "Beta".to_owned()],
+        ];
+        assert_eq!(
+            super::presentation_data(
+                columns.clone(),
+                rows.clone(),
+                rustui_i18n::LayoutDirection::LeftToRight,
+            ),
+            (columns.clone(), rows.clone())
+        );
+        assert_eq!(
+            super::presentation_data(columns, rows, rustui_i18n::LayoutDirection::RightToLeft),
+            (
+                vec!["Name".to_owned(), "Index".to_owned()],
+                vec![
+                    vec!["Alpha".to_owned(), "0".to_owned()],
+                    vec!["Beta".to_owned(), "1".to_owned()],
+                ],
+            )
+        );
+    }
+
+    #[test]
+    #[should_panic(expected = "Table needs one message ID per column")]
+    fn localized_columns_reject_wrong_count() {
+        let _ = TableView::new(
+            ["Index", "Row"],
+            [["0", "Alpha"]],
+            Binding::new(None, read_selection, write_selection),
+        )
+        .localized_columns(["table.index"]);
+    }
+
+    #[test]
+    #[should_panic(expected = "Table column message IDs must be nonempty")]
+    fn localized_columns_reject_blank_ids() {
+        let _ = TableView::new(
+            ["Index"],
+            [["0"]],
+            Binding::new(None, read_selection, write_selection),
+        )
+        .localized_columns([" "]);
+    }
+
+    #[test]
+    fn accessibility_counts_include_header_row_and_all_columns() {
+        let table = TableView::new(
+            ["Quarter", "Revenue"],
+            [["Q1", "$18.2M"], ["Q2", "$20.4M"]],
+            Binding::new(None, read_selection, write_selection),
+        );
+
+        assert_eq!(table.aria_row_count(), 3);
+        assert_eq!(table.aria_column_count(), 2);
+    }
+
+    #[test]
+    fn non_finite_table_dimensions_fall_back_to_the_minimum_size() {
+        assert_eq!(finite_dimension(f32::INFINITY), 1.0);
+        assert_eq!(finite_dimension(f32::NEG_INFINITY), 1.0);
+        assert_eq!(finite_dimension(f32::NAN), 1.0);
+        assert_eq!(finite_dimension(24.0), 24.0);
+        assert_eq!(finite_dimension(0.0), 1.0);
+    }
+
+    fn accesskit_node(element: &impl Element, fallback_role: Option<Role>) -> Node {
+        let role = element
+            .a11y_role()
+            .or(fallback_role)
+            .expect("table accessibility element has a role");
+        let mut node = Node::new(role);
+        element.write_a11y_info(&mut node);
+        node
+    }
+
+    #[test]
+    fn header_and_cell_elements_emit_accesskit_names_roles_and_indices() {
+        let header_row = accesskit_node(&table_header_element(), None);
+        assert_eq!(header_row.role(), Role::Row);
+        assert_eq!(header_row.row_index(), Some(1));
+
+        let header = table_column_header_element(1, "Revenue".into(), "Revenue".into());
+        let header = accesskit_node(&header, None);
+        assert_eq!(header.role(), Role::ColumnHeader);
+        assert_eq!(header.label(), Some("Revenue"));
+        assert_eq!(header.column_index(), Some(2));
+
+        let cell = table_data_cell_element(1, 0, "$20.4M".into(), "Quarter: $20.4M".into());
+        let cell = accesskit_node(&cell, None);
+        assert_eq!(cell.role(), Role::Cell);
+        assert_eq!(cell.label(), Some("Quarter: $20.4M"));
+        assert_eq!(cell.column_index(), Some(1));
+
+        // The pinned DataTable adds the Row role to this same delegate element.
+        let row = accesskit_node(&table_data_row_element(1), Some(Role::Row));
+        assert_eq!(row.row_index(), Some(3));
+    }
+
+    #[test]
+    fn active_descendant_requires_the_selected_row_and_table_focus() {
+        assert!(!should_report_active_descendant(false, false));
+        assert!(!should_report_active_descendant(false, true));
+        assert!(!should_report_active_descendant(true, false));
+        assert!(should_report_active_descendant(true, true));
+    }
+
+    #[test]
+    #[should_panic(expected = "Table identity must be nonempty")]
+    fn rejects_whitespace_only_retained_identity() {
+        TableView::new(
+            ["Column"],
+            [["value"]],
+            Binding::new(None, read_selection, write_selection),
+        )
+        .id(" \t");
+    }
+
+    #[test]
+    fn retained_table_subscription_uses_the_latest_selection_binding() {
+        let primary = Binding::new(Some(0), read_primary, write_primary);
+        let secondary = Binding::new(Some(1), read_secondary, write_secondary);
+        let last_owner_selection = Rc::new(Cell::new(Some(1)));
+        let make_updater = |binding: Binding<Option<usize>>| {
+            let marker = last_owner_selection.clone();
+            Rc::new(move |owner: &mut Owner| {
+                binding.update_on(owner, |current| {
+                    apply_owner_selection_request(current, &marker, Some(2))
+                });
+            }) as SelectionUpdater<Owner>
+        };
+        let current_update = RefCell::new(None);
+
+        replace_selection_updater(&current_update, make_updater(primary));
+        replace_selection_updater(&current_update, make_updater(secondary));
+
+        let mut owner = Owner {
+            primary: Some(0),
+            secondary: Some(1),
+        };
+        apply_selection_updater(&current_update, &mut owner);
+
+        assert_eq!(owner.primary, Some(0));
+        assert_eq!(owner.secondary, Some(2));
+    }
 
     #[test]
     fn initial_invalid_selection_is_normalized_even_without_native_selection() {

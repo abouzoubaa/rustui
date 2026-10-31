@@ -1,6 +1,6 @@
 //! Active resolved RustUI theme stored in GPUI's application globals.
 
-use std::{error::Error, fmt};
+use std::{cell::RefCell, collections::BTreeMap, error::Error, fmt};
 
 use gpui::{App, Global, Hsla, Rgba};
 use gpui_component::Theme;
@@ -8,13 +8,15 @@ use gpui_component::Theme;
 use crate::{
     adapters::themes::{ThemeApplyError, apply_profile},
     theme::{
-        AppearanceMode, ButtonStyleSelector, ComponentStyleCapability, ResolvedButtonTheme,
-        ResolvedComponentStyle, ThemeCoverageReport, ThemeDocument, ThemeResolveError,
-        resolve_button, resolve_component_style, resolve_component_style_with,
+        AppearanceMode, ButtonStyleSelector, ComponentStyleCapability, ComponentThemeRecord,
+        ResolvedButtonTheme, ResolvedComponentStyle, ThemeCoverageReport, ThemeDocument,
+        ThemeResolveError, resolve_button, resolve_component_style_with,
     },
 };
 
-use super::resolver::assess_theme_coverage_with_capabilities;
+use super::resolver::{
+    assess_theme_coverage_with_capabilities, resolve_component_style_from_record,
+};
 
 /// Assess how much of a theme document the current RustUI renderers apply.
 pub fn assess_theme_coverage(document: &ThemeDocument) -> ThemeCoverageReport {
@@ -199,8 +201,16 @@ const RENDERER_CAPABILITIES: &[ComponentStyleCapability] = &[
     ),
     capability!("color_picker", "swatches", ["width", "height"]),
     capability!("color_picker", "crayons", ["width", "height"]),
-    capability!("scroll_view", "scrollbar_vertical", ["background"]),
-    capability!("scroll_view", "scrollbar_horizontal", ["background"]),
+    capability!(
+        "scroll_view",
+        "scrollbar_vertical",
+        ["background", "border", "corner_radius"]
+    ),
+    capability!(
+        "scroll_view",
+        "scrollbar_horizontal",
+        ["background", "border", "corner_radius"]
+    ),
     capability!(
         "text",
         "text_styles_left_aligned_light_opaque_body",
@@ -320,6 +330,7 @@ const RENDERER_CAPABILITIES: &[ComponentStyleCapability] = &[
 
 #[derive(Clone)]
 pub struct ActiveTheme {
+    revision: u64,
     /// Effective appearance used by the most recent successful activation.
     pub mode: AppearanceMode,
     /// Active platform profile supplying shared component metrics and tokens.
@@ -327,16 +338,23 @@ pub struct ActiveTheme {
     pub button: ResolvedButtonTheme,
     pub coverage: ThemeCoverageReport,
     document: ThemeDocument,
+    component_records: RefCell<BTreeMap<String, ComponentThemeRecord>>,
 }
 
 impl ActiveTheme {
+    /// Identifies the successful theme activation currently owned by this app.
+    /// A new successful activation advances this value, even for the same mode.
+    pub fn revision(&self) -> u64 {
+        self.revision
+    }
+
     pub fn component_style(
         &self,
         component: &str,
         part: &str,
         selector: &ButtonStyleSelector,
     ) -> Result<ResolvedComponentStyle, ThemeResolveError> {
-        resolve_component_style(&self.document, component, part, selector)
+        self.component_style_with(component, part, selector, &[])
     }
 
     pub fn component_style_with(
@@ -346,7 +364,26 @@ impl ActiveTheme {
         selector: &ButtonStyleSelector,
         handled_extras: &[&str],
     ) -> Result<ResolvedComponentStyle, ThemeResolveError> {
-        resolve_component_style_with(&self.document, component, part, selector, handled_extras)
+        if !self.component_records.borrow().contains_key(component) {
+            let record = self
+                .document
+                .component_theme(component)
+                .map_err(ThemeResolveError::Invalid)?;
+            self.component_records
+                .borrow_mut()
+                .insert(component.to_owned(), record);
+        }
+        let records = self.component_records.borrow();
+        resolve_component_style_from_record(
+            &self.document,
+            component,
+            part,
+            selector,
+            handled_extras,
+            records
+                .get(component)
+                .expect("component record was inserted"),
+        )
     }
 }
 
@@ -366,6 +403,19 @@ pub fn activate_theme(
     cx: &mut App,
 ) -> Result<(), ThemeActivationError> {
     document.validate().map_err(ThemeResolveError::Invalid)?;
+    activate_validated_theme(document, mode, cx)
+}
+
+// Only call with an unmodified document just validated by parse_theme.
+pub(super) fn activate_validated_theme(
+    document: &ThemeDocument,
+    mode: Option<AppearanceMode>,
+    cx: &mut App,
+) -> Result<(), ThemeActivationError> {
+    let revision = active_theme(cx)
+        .map_or(0, |theme| theme.revision)
+        .checked_add(1)
+        .expect("theme activation revision exhausted");
     let button = resolve_button(document, mode)?;
     let mode = mode.unwrap_or(document.platform_snapshot.appearance.default);
     let (table_head, table_head_foreground) = table_header_colors(document, mode)?;
@@ -401,14 +451,16 @@ pub fn activate_theme(
         colors.button_secondary_foreground = foreground;
         colors.table_head = table_head;
         colors.table_head_foreground = table_head_foreground;
-        colors.popover = menu_popover;
+        colors.popover = opaque_popover_fallback(colors.popover, menu_popover);
     });
     cx.set_global(ActiveTheme {
+        revision,
         mode,
         profile: document.platform_snapshot.clone(),
         button,
         coverage,
         document: document.clone(),
+        component_records: RefCell::new(BTreeMap::new()),
     });
     Ok(())
 }
@@ -417,28 +469,12 @@ fn table_header_colors(
     document: &ThemeDocument,
     mode: AppearanceMode,
 ) -> Result<(Hsla, Hsla), ThemeResolveError> {
-    let record = document
-        .component_theme("table")
-        .map_err(ThemeResolveError::Invalid)?;
-    let appearance = match mode {
-        AppearanceMode::Light => "light",
-        AppearanceMode::Dark => "dark",
-    };
-    let rule = record
-        .styles
-        .iter()
-        .find(|rule| rule.part == "table_column_headers" && rule.when.appearance == appearance)
-        .ok_or_else(|| {
-            ThemeResolveError::Invalid(format!(
-                "table has no column header style for {appearance} appearance"
-            ))
-        })?;
     // The vector path is source artwork. Coverage still reports it as unresolved.
     let style = resolve_component_style_with(
         document,
         "table",
         "table_column_headers",
-        &rule.when,
+        &crate::components::theme::selector_for_mode(mode),
         &["vector_path"],
     )?;
     let background =
@@ -452,32 +488,24 @@ fn table_header_colors(
     Ok((hsla(background), hsla(foreground)))
 }
 
+fn opaque_popover_fallback(surface: Hsla, tint: Hsla) -> Hsla {
+    // Native backdrop blur is not available here; composite the material tint
+    // over the elevated surface so content behind a popup stays legible.
+    let mut base = Rgba::from(surface);
+    base.a = 1.0;
+    Hsla::from(base.blend(Rgba::from(tint)))
+}
+
 fn menu_background(
     document: &ThemeDocument,
     mode: AppearanceMode,
 ) -> Result<Hsla, ThemeResolveError> {
-    let record = document
-        .component_theme("menu")
-        .map_err(ThemeResolveError::Invalid)?;
-    let appearance = match mode {
-        AppearanceMode::Light => "light",
-        AppearanceMode::Dark => "dark",
-    };
-    let rule = record
-        .styles
-        .iter()
-        .find(|rule| rule.part == "body" && rule.when.appearance == appearance)
-        .ok_or_else(|| {
-            ThemeResolveError::Invalid(format!(
-                "menu has no body style for {appearance} appearance"
-            ))
-        })?;
     // These three source SVG properties are reported as unresolved coverage.
     let style = resolve_component_style_with(
         document,
         "menu",
         "body",
-        &rule.when,
+        &crate::components::theme::selector_for_mode(mode),
         &["filter", "blend_mode", "vector_path"],
     )?;
     let background =
@@ -530,5 +558,241 @@ impl From<ThemeResolveError> for ThemeActivationError {
 impl From<ThemeApplyError> for ThemeActivationError {
     fn from(error: ThemeApplyError) -> Self {
         Self::Apply(error)
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[gpui::test]
+    fn active_theme_record_reuse_matches_public_resolver_and_refreshes(
+        cx: &mut gpui::TestAppContext,
+    ) {
+        let mut document =
+            crate::theme::parse_theme(include_str!("../../../../themes/macos27.json")).unwrap();
+        cx.update(|app| {
+            gpui_component::init(app);
+            activate_theme(&document, Some(AppearanceMode::Light), app).unwrap();
+            let active = active_theme(app).unwrap();
+            assert!(active.component_records.borrow().is_empty());
+            let mut compared = 0;
+            for name in document.components.keys() {
+                let Ok(record) = document.component_theme(name) else {
+                    continue;
+                };
+                for rule in &record.styles {
+                    let extras: Vec<_> = rule
+                        .style
+                        .properties
+                        .keys()
+                        .filter(|name| {
+                            !matches!(
+                                name.as_str(),
+                                "width"
+                                    | "height"
+                                    | "corner_radius"
+                                    | "border_width"
+                                    | "background"
+                                    | "foreground"
+                                    | "border"
+                                    | "typography"
+                            )
+                        })
+                        .map(String::as_str)
+                        .collect();
+                    assert_eq!(
+                        active.component_style_with(name, &rule.part, &rule.when, &extras),
+                        resolve_component_style_with(
+                            &document, name, &rule.part, &rule.when, &extras
+                        ),
+                        "{name}/{}",
+                        rule.part
+                    );
+                    assert_eq!(
+                        active.component_style_with(name, &rule.part, &rule.when, &[]),
+                        resolve_component_style_with(&document, name, &rule.part, &rule.when, &[]),
+                        "{name}/{} without extra properties",
+                        rule.part
+                    );
+                    compared += 1;
+                }
+            }
+            assert!(compared > 100);
+            assert!(active.component_records.borrow().len() <= document.components.len());
+            let selector = crate::components::theme::selector_for_mode(AppearanceMode::Light);
+            assert_eq!(
+                active.component_style("missing-component", "body", &selector),
+                resolve_component_style_with(
+                    &document,
+                    "missing-component",
+                    "body",
+                    &selector,
+                    &[]
+                )
+            );
+            assert_eq!(
+                active.component_style("toggle", "missing-part", &selector),
+                resolve_component_style_with(&document, "toggle", "missing-part", &selector, &[])
+            );
+            let before = active.revision();
+            document.components.get_mut("toggle").unwrap()["custom_metadata"] =
+                serde_json::json!({"tag": "new-theme"});
+            activate_theme(&document, Some(AppearanceMode::Light), app).unwrap();
+            let active = active_theme(app).unwrap();
+            assert_eq!(active.revision(), before + 1);
+            assert!(active.component_records.borrow().is_empty());
+            assert_eq!(
+                active
+                    .component_style("toggle", "body", &selector)
+                    .unwrap()
+                    .record_metadata["custom_metadata"]["tag"],
+                "new-theme"
+            );
+        });
+    }
+
+    #[gpui::test]
+    fn successful_activations_advance_revision_and_failures_preserve_it(
+        cx: &mut gpui::TestAppContext,
+    ) {
+        let mut document =
+            crate::theme::parse_theme(include_str!("../../../../themes/macos27.json")).unwrap();
+        cx.update(|app| {
+            gpui_component::init(app);
+            activate_theme(&document, Some(AppearanceMode::Dark), app).unwrap();
+            let initial = active_theme(app).unwrap().revision();
+            activate_theme(&document, Some(AppearanceMode::Dark), app).unwrap();
+            let next = active_theme(app).unwrap().revision();
+            assert_eq!(next, initial + 1);
+            document.format = "invalid".into();
+            assert!(activate_theme(&document, None, app).is_err());
+            assert_eq!(active_theme(app).unwrap().revision(), next);
+        });
+    }
+
+    #[test]
+    fn popover_fallback_composites_tint_on_an_opaque_surface() {
+        let surface = Hsla::from(Rgba {
+            r: 0.1,
+            g: 0.2,
+            b: 0.3,
+            a: 0.5,
+        });
+        let tint = Hsla::from(Rgba {
+            r: 1.0,
+            g: 1.0,
+            b: 1.0,
+            a: 0.2,
+        });
+        let result = Rgba::from(opaque_popover_fallback(surface, tint));
+
+        assert!((result.r - 0.28).abs() < 0.0001);
+        assert!((result.g - 0.36).abs() < 0.0001);
+        assert!((result.b - 0.44).abs() < 0.0001);
+        assert_eq!(result.a, 1.0);
+    }
+
+    #[test]
+    fn table_header_colors_resolve_any_appearance_rules() {
+        let mut document =
+            crate::theme::parse_theme(include_str!("../../../../themes/macos27.json"))
+                .expect("macOS 27 theme parses");
+        let rules = document.components.get_mut("table").unwrap()["styles"]
+            .as_array_mut()
+            .unwrap();
+        rules.retain(|rule| {
+            rule["part"] != "table_column_headers" || rule["when"]["appearance"] == "light"
+        });
+        let light = rules
+            .iter_mut()
+            .find(|rule| rule["part"] == "table_column_headers")
+            .expect("light table header rule");
+        light["when"]["appearance"] = serde_json::json!("any");
+
+        document.validate().expect("wildcard header theme is valid");
+        let expected = resolve_component_style_with(
+            &document,
+            "table",
+            "table_column_headers",
+            &crate::components::theme::selector_for_mode(AppearanceMode::Light),
+            &["vector_path"],
+        )
+        .expect("wildcard header style resolves");
+        let expected = (
+            hsla(expected.colors["background"]),
+            hsla(expected.colors["foreground"]),
+        );
+
+        assert_eq!(
+            table_header_colors(&document, AppearanceMode::Light).unwrap(),
+            expected
+        );
+        assert_eq!(
+            table_header_colors(&document, AppearanceMode::Dark).unwrap(),
+            expected
+        );
+    }
+
+    #[test]
+    fn menu_background_resolves_any_appearance_rules() {
+        let mut document =
+            crate::theme::parse_theme(include_str!("../../../../themes/macos27.json"))
+                .expect("macOS 27 theme parses");
+        let rules = document.components.get_mut("menu").unwrap()["styles"]
+            .as_array_mut()
+            .unwrap();
+        rules.retain(|rule| rule["part"] != "body" || rule["when"]["appearance"] == "light");
+        let light = rules
+            .iter_mut()
+            .find(|rule| rule["part"] == "body")
+            .expect("light menu body rule");
+        light["when"]["appearance"] = serde_json::json!("any");
+
+        document.validate().expect("wildcard menu theme is valid");
+        let expected = resolve_component_style_with(
+            &document,
+            "menu",
+            "body",
+            &crate::components::theme::selector_for_mode(AppearanceMode::Light),
+            &["filter", "blend_mode", "vector_path"],
+        )
+        .expect("wildcard menu style resolves")
+        .colors["background"];
+
+        assert_eq!(
+            menu_background(&document, AppearanceMode::Light).unwrap(),
+            hsla(expected)
+        );
+        assert_eq!(
+            menu_background(&document, AppearanceMode::Dark).unwrap(),
+            hsla(expected)
+        );
+    }
+
+    #[test]
+    fn scroll_view_track_border_and_radius_are_counted_as_applied() {
+        let document = crate::theme::parse_theme(include_str!("../../../../themes/macos27.json"))
+            .expect("macOS 27 theme parses");
+        let coverage = assess_theme_coverage(&document);
+
+        for part in ["scrollbar_vertical", "scrollbar_horizontal"] {
+            let uncovered = coverage
+                .uncovered_rules
+                .iter()
+                .find(|rule| rule.component == "scroll_view" && rule.part == part);
+            assert!(
+                uncovered.is_none_or(|rule| {
+                    !rule
+                        .reason
+                        .split(": ")
+                        .last()
+                        .unwrap_or_default()
+                        .split(", ")
+                        .any(|name| matches!(name, "border" | "corner_radius"))
+                }),
+                "{part} border and corner radius should be covered by the renderer capability: {uncovered:?}"
+            );
+        }
     }
 }

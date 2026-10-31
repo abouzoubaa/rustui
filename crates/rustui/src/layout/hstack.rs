@@ -35,8 +35,16 @@ impl HStack {
         }
     }
 
+    /// Sets the gap between children in logical pixels.
+    ///
+    /// Panics if `spacing` is negative or nonfinite.
     pub fn spacing(mut self, spacing: f32) -> Self {
-        self.spacing = spacing.max(0.0);
+        assert!(
+            spacing.is_finite() && spacing >= 0.0,
+            "HStack spacing must be finite and nonnegative"
+        );
+        super::validate_gap_span(spacing, self.children.len(), "HStack");
+        self.spacing = spacing;
         self
     }
 
@@ -60,6 +68,7 @@ impl HStack {
     pub fn child<V: View>(mut self, child: V) -> Self {
         self.children
             .push(Box::new(move |context| child.into_element(context)));
+        super::validate_gap_span(self.spacing, self.children.len(), "HStack");
         self
     }
 
@@ -73,7 +82,52 @@ impl HStack {
     /// Inserts a group's children as direct siblings without an extra layout node.
     pub fn group(mut self, group: super::group::Group) -> Self {
         self.children.extend(group.into_renderers());
+        super::validate_gap_span(self.spacing, self.children.len(), "HStack");
         self
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::HStack;
+    use std::panic::{AssertUnwindSafe, catch_unwind};
+
+    #[test]
+    fn spacing_accepts_finite_nonnegative_values() {
+        assert_eq!(HStack::new().spacing(0.0).spacing, 0.0);
+        assert_eq!(HStack::new().spacing(8.0).spacing, 8.0);
+    }
+
+    #[test]
+    fn total_spacing_span_must_remain_finite() {
+        use crate::view::EmptyView;
+
+        assert!(
+            std::panic::catch_unwind(|| {
+                HStack::new()
+                    .spacing(f32::MAX)
+                    .child(EmptyView)
+                    .child(EmptyView)
+                    .child(EmptyView)
+            })
+            .is_err()
+        );
+
+        let stack = HStack::new()
+            .child(EmptyView)
+            .child(EmptyView)
+            .child(EmptyView);
+        assert!(
+            std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| { stack.spacing(f32::MAX) }))
+                .is_err()
+        );
+    }
+
+    #[test]
+    fn spacing_rejects_negative_and_nonfinite_values() {
+        for spacing in [-1.0, f32::NAN, f32::INFINITY, f32::NEG_INFINITY] {
+            assert!(catch_unwind(AssertUnwindSafe(|| HStack::new().spacing(spacing))).is_err());
+        }
     }
 }
 

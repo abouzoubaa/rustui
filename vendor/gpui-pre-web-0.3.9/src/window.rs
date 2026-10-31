@@ -55,6 +55,7 @@ pub(crate) struct WebWindowInner {
     pub(crate) browser_window: web_sys::Window,
     pub(crate) canvas: web_sys::HtmlCanvasElement,
     pub(crate) ime_mirror: ImeMirror,
+    pub(crate) a11y: RefCell<Option<crate::a11y::Adapter>>,
     pub(crate) viewport: RefCell<WebViewport>,
     pub(crate) has_device_pixel_support: bool,
     pub(crate) is_mac: bool,
@@ -115,7 +116,7 @@ impl WebWindow {
             .map_err(|error| anyhow::anyhow!("Failed to create canvas element: {error:?}"))?
             .dyn_into()
             .map_err(|error| anyhow::anyhow!("Created element is not a canvas: {error:?}"))?;
-        canvas.set_tab_index(-1);
+        canvas.set_tab_index(0);
 
         let style = canvas.style();
         for (property, value) in [
@@ -209,6 +210,7 @@ impl WebWindow {
             browser_window,
             canvas,
             ime_mirror,
+            a11y: RefCell::new(None),
             viewport: RefCell::new(viewport),
             has_device_pixel_support,
             is_mac,
@@ -624,6 +626,7 @@ impl Drop for WebWindow {
         // out so the inner can actually be freed.
         self.inner.mql_handle.borrow_mut().take();
 
+        self.inner.a11y.borrow_mut().take();
         let canvas: &web_sys::Element = self.inner.canvas.as_ref();
         canvas.remove();
         self.inner.ime_mirror.remove();
@@ -778,6 +781,32 @@ impl PlatformWindow for WebWindow {
         self.inner.state.borrow_mut().input_handler.take()
     }
 
+    fn text_input_owner_ready(&mut self) {
+        self.inner.suppress_focus_status_events.set(true);
+        let has_owner = self.inner.state.borrow().input_handler.is_some();
+        self.inner.ime_mirror.element.set_owner_active(has_owner);
+        if let Some(adapter) = self.inner.a11y.borrow_mut().as_mut() {
+            adapter.frame_ready(self.inner.is_composing.get());
+        }
+        self.inner.suppress_focus_status_events.set(false);
+        self.inner.schedule_ime_mirror_sync();
+    }
+
+    fn set_secure_input(&mut self, secure: bool) {
+        self.inner.ime_mirror.element.set_secure(secure);
+    }
+
+    fn text_input_owner_changed(&mut self) {
+        self.inner.is_composing.set(false);
+        self.inner.suppress_focus_status_events.set(true);
+        self.inner.ime_mirror.owner_changed();
+        if let Some(adapter) = self.inner.a11y.borrow().as_ref() {
+            adapter.owner_changed();
+        }
+        self.inner.is_composing.set(false);
+        self.inner.suppress_focus_status_events.set(false);
+    }
+
     fn set_text_input_configuration(&mut self, configuration: TextInputConfiguration) {
         self.inner.ime_mirror.apply_configuration(&configuration);
     }
@@ -807,7 +836,11 @@ impl PlatformWindow for WebWindow {
                     && inner.state.borrow().is_active
                 {
                     inner.suppress_focus_status_events.set(true);
-                    inner.ime_mirror.focus();
+                    if let Some(adapter) = inner.a11y.borrow_mut().as_mut() {
+                        adapter.frame_ready(inner.is_composing.get());
+                    } else {
+                        inner.ime_mirror.focus();
+                    }
                     inner.suppress_focus_status_events.set(false);
                 }
             }
@@ -863,6 +896,39 @@ impl PlatformWindow for WebWindow {
             }
             TextInputStateChange::SelectionChanged | TextInputStateChange::ContentChanged => {}
         }
+    }
+
+    fn a11y_init(&self, callbacks: gpui::A11yCallbacks) {
+        self.inner.a11y.borrow_mut().take();
+        let Some(document) = self.inner.browser_window.document() else {
+            (callbacks.deactivation)();
+            return;
+        };
+        let Some(body) = document.body() else {
+            (callbacks.deactivation)();
+            return;
+        };
+        self.inner.suppress_focus_status_events.set(true);
+        let adapter = crate::a11y::Adapter::new(
+            &document,
+            &body,
+            &self.inner.canvas,
+            self.inner.ime_mirror.element.clone(),
+            callbacks,
+        );
+        self.inner.suppress_focus_status_events.set(false);
+        match adapter {
+            Ok(adapter) => *self.inner.a11y.borrow_mut() = Some(adapter),
+            Err(_) => log::warn!("Failed to initialize Web semantic accessibility adapter"),
+        }
+    }
+
+    fn a11y_tree_update(&self, tree_update: gpui::accesskit::TreeUpdate) {
+        self.inner.suppress_focus_status_events.set(true);
+        if let Some(adapter) = self.inner.a11y.borrow_mut().as_mut() {
+            adapter.update(tree_update, self.inner.is_composing.get());
+        }
+        self.inner.suppress_focus_status_events.set(false);
     }
 
     fn prompt(

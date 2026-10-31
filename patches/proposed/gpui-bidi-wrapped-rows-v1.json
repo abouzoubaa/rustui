@@ -1,0 +1,52 @@
+{
+  "schema_version": 1,
+  "status": "proposed; no vendored source selected or modified",
+  "upstream_snapshot_revision": "93d745668805029476e6d7fbb19652116fed51de",
+  "packages": [
+    "gpui-pre 0.3.9",
+    "gpui-pre-web 0.3.9",
+    "gpui-pre-wgpu 0.3.9"
+  ],
+  "patch": "patches/proposed/gpui-bidi-wrapped-rows-v1.patch",
+  "patch_sha256": "5a593507ff8e5db732ca012cf6c4832d69a98054b97df8cc1698548ab488468d",
+  "images": {
+    "vendor/gpui-pre-0.3.9/src/platform.rs": {
+      "pre_sha256": "d6dfff87c74e8aa6b6db65fe0caba9425de1478fe0144f524f37a2cde1d4f47d",
+      "post_sha256": "d68a63e6b51b4785b54fe43d0cee34f1f5a8e536cc0dd7be7b5095e9ac162bb7"
+    },
+    "vendor/gpui-pre-0.3.9/src/text_system/line.rs": {
+      "pre_sha256": "25bbf6a409ce8e70d1265a858f2d2abdbbc2c110d515abd31bb0a379cdce54e3",
+      "post_sha256": "42ef1913f7955d896716d8d98c1f495ccb7d6b0dc59ee5979bd9a97694813644"
+    },
+    "vendor/gpui-pre-0.3.9/src/text_system/line_layout.rs": {
+      "pre_sha256": "a78d230d050bbf17bd968612da1d84f4c8aaefc39f82100e11b2b3a6990d45e4",
+      "post_sha256": "e133b3b78d04daeeee0f4cbb23a69d3b01e1c33bda4a4a6c60efdf803418de9f"
+    },
+    "vendor/gpui-pre-web-0.3.9/src/text_system.rs": {
+      "pre_sha256": "50d2d9da4a628d4363264dee69ae7eb271655007ccd5ef1bfbdb88954315808f",
+      "post_sha256": "48d587bfa9aea1f8d1b57b9d9329b3c8ac5f3aaeac28e3f03c36e142d774af6c"
+    },
+    "vendor/gpui-pre-wgpu-0.3.9/src/cosmic_text_system.rs": {
+      "pre_sha256": "d88929c80c8c4bf00eac0ff5aa8180985e982bf9880b668a962532139b175f63",
+      "post_sha256": "5cd575bc1cba745a7a84fe19938815c245a0229c130496a45d3303a82ea3ffc5"
+    }
+  },
+  "preserved_checksum_files": {
+    "vendor/gpui-pre-0.3.9/.cargo-checksum.json": "7b8e889ae4ac0cbe651b654f5e39d9003969d09ae4a70aff4147f521eda8faa0",
+    "vendor/gpui-pre-web-0.3.9/.cargo-checksum.json": "aad9503f554e462d582461d008ea4bc0dda00021812ccf6b876734b55757579e",
+    "vendor/gpui-pre-wgpu-0.3.9/.cargo-checksum.json": "906bdff7525f72408ab82627719b99646517707ac2a28acec88d763c61d93750"
+  },
+  "purpose": "Use Cosmic row-shaped geometry for multi-row bidirectional text on the Web WGPU path, including paint and byte-position mapping; preserve existing layout for ordinary left-to-right text and max-lines callers.",
+  "compatibility": "The pinned GPUI snapshot and package versions remain unchanged. Mac CoreText uses the default legacy layout method. No new dependency is selected.",
+  "checks": {
+    "patch_apply_reverse": "exact five-file apply and reverse passed in disposable staging; staged postimages equal the candidate source",
+    "format": "Rust 1.97.1 rustfmt --check passed on all five candidate sources after formatting the focused geometry regression.",
+    "web_check": "Headstart wasm32-unknown-unknown rustui-playground check passed after the max-lines guard; Cargo.toml and Cargo.lock restored byte-for-byte",
+    "cosmic_rows": "2/2 focused probe tests passed in a fresh Headstart target; requested widths 96, 180, 350, and 698 px retained visible character bytes",
+    "geometry": "1/1 separate host fixture test passed for RTL/LTR row hit and caret position mapping; gpui-pre own lib-test target is blocked by pre-existing missing test support fonts/util_macros and unrelated aria_disabled tests",
+    "browser": "A preceding candidate build visibly painted the full 302-byte Arabic Button note on two rows in Chromium. The final max-lines guard was added after that build; source-matched browser acceptance remains pending."
+  },
+  "fallback": "Keep the proposed patch unselected; current pinned runtime remains as before.",
+  "removal_condition": "Replace with an upstream GPUI release whose bidirectional wrapping, paint, and hit mapping pass equivalent native and browser checks.",
+  "evidence_dir": "target/headstart/candidates/rtl-seam-source/"
+}

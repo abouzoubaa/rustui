@@ -1,4 +1,7 @@
-pub use crate::accessibility::semantics::{Semantics, SemanticsRole, SemanticsView};
+pub use crate::accessibility::semantics::{
+    LivePoliteness, Semantics, SemanticsRole, SemanticsView,
+};
+pub use crate::animation::offset::{SpringOffset, SpringOffsetError};
 pub use crate::animation::spring::{SpringConfig, SpringOpacity, SpringOpacityError};
 pub use crate::components::advanced::canvas::{
     Canvas, CanvasError, CanvasPoint, CanvasRect, CanvasScene, CanvasSceneBuilder, CanvasSize,
@@ -8,7 +11,7 @@ pub use crate::components::advanced::property_inspector::{
     PropertyEditor, PropertyInspector, PropertyInspectorError, PropertyInspectorRow,
     PropertyInspectorView,
 };
-pub use crate::components::advanced::{CodeEditor, CodeEditorView};
+pub use crate::components::advanced::{CodeEditor, CodeEditorView, ResizablePanel};
 pub use crate::components::basic::avatar::{Avatar, AvatarView};
 pub use crate::components::basic::badge::{Badge, BadgeSize, BadgeView};
 pub use crate::components::basic::divider::{Divider, DividerView};
@@ -22,6 +25,7 @@ pub use crate::components::basic::{
 };
 pub use crate::components::data::keyed_list::{KeyedList, KeyedListItem, KeyedListView};
 pub use crate::components::data::list::{List, ListView};
+pub use crate::components::data::outline::{Outline, OutlineView};
 pub use crate::components::data::table::{Table, TableView};
 pub use crate::components::data::tree::{Tree, TreeNode, TreeView};
 pub use crate::components::feedback::empty_state::{EmptyState, EmptyStateView};
@@ -43,6 +47,7 @@ pub use crate::components::input::{
     text_editor::{TextEditor, TextEditorView},
     text_field::{TextField, TextFieldView},
     toggle::{Toggle, ToggleView},
+    token_field::{TokenField, TokenFieldView},
 };
 pub use crate::components::navigation::disclosure::{Disclosure, DisclosureView};
 pub use crate::components::navigation::sidebar::{Sidebar, SidebarItem, SidebarView};
@@ -58,6 +63,7 @@ pub use crate::components::navigation::{
 pub use crate::components::overlay::alert::{Alert, AlertVariant, AlertView};
 pub use crate::components::overlay::context_menu::{ContextMenu, ContextMenuView};
 pub use crate::components::overlay::dialog::{Dialog, DialogView};
+pub use crate::components::overlay::drawer::{Drawer, DrawerEdge, DrawerError, DrawerView};
 pub use crate::components::overlay::menu::{Menu, MenuItem, MenuView};
 pub use crate::components::overlay::popover::{Popover, PopoverView};
 pub use crate::components::overlay::sheet::{Sheet, SheetView};
@@ -82,6 +88,7 @@ pub use crate::layout::{
 };
 pub use crate::localization::{LayoutDirection, Locale};
 pub use crate::modifiers::frame::{Frame, FrameView};
+pub use crate::modifiers::interaction::{PointerCursor, PointerCursorView};
 pub use crate::modifiers::opacity::{AnimatedOpacity, OpacityAnimationError};
 pub use crate::modifiers::padding::{LogicalInsets, LogicalInsetsError, PhysicalInsets};
 pub use crate::modifiers::transform::{Offset, OffsetView};
@@ -105,3 +112,9 @@ pub use crate::modifiers::shadow::{
 };
 
 pub use crate::components::data::collection::{Collection, CollectionItem};
+
+pub use crate::components::advanced::{
+    GraphDocument, GraphEdge, GraphEdit, GraphEndpoint, GraphError, GraphNode, GraphPort,
+    GraphPortDirection, GraphStyle, GraphView, GraphViewControl, GraphViewport, NodeEditor,
+    NodeEditorView,
+};

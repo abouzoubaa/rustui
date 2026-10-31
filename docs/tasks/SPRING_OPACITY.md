@@ -44,6 +44,30 @@ The public-only Playground sample in `stories/spring_gallery.rs` provides target
 retargeting, explicit app-level reduced-motion controls, and a child button with
 an activity counter. It keeps one stable spring identity.
 
+## Playground initial-value remount sample
+
+The public-only `stories/spring_gallery.rs` includes a second spring created
+with `.from(0.0)`. “Remount from zero” increments a `Keyed` identity, so each
+new native spring starts at zero and moves toward the current target. Toggling
+the target without using that control keeps the key stable; the mounted spring
+retargets and does not replay its initial value. The original sample remains
+mounted with its own stable identity and clickable child.
+
+Native Playground acceptance observed generation 0 → 1 on remount, a visible
+fade when the target changed from 1.00 to 0.15 with generation 1 unchanged, and
+return to the endpoint when the target changed back to 1.00. With reduced motion
+enabled, a new identity displayed its target; with motion allowed, another new
+identity reached the target after the motion interval. This did not measure
+exact alpha, intermediate frames, velocity continuity, presented-frame timing,
+or native entity lifecycle counts. Evidence:
+`target/headstart/evidence/roadmap-m120-m123-native-20261019.json`.
+
+Source checks passed: focused SpringOpacity tests passed 3/3, the Playground
+all-targets check and build exited 0, and formatting and whitespace checks
+passed. Logs are retained in `target/headstart/spring-from-gallery-focused-tests.log`,
+`target/headstart/spring-from-gallery-playground-check.log`, and
+`target/headstart/spring-from-gallery-playground-build.log`.
+
 ## Evidence and remaining limits
 
 Source basis: `vendor/gpui-pre-0.3.9/src/elements/animation.rs` (`with_spring`
@@ -118,3 +142,11 @@ files; the final verifier accepts the emitted f32 values within tolerance.
 The probe counts RustUI root host lowerings only. They do not measure GPUI
 frames, presented alpha, or velocity continuity. See
 `docs/tasks/SPRING_OPACITY_PROBE.md`.
+
+
+## M472 — Nonblank retained identity
+
+`SpringOpacity::new` rejects empty and whitespace-only IDs with the typed
+`SpringOpacityError::EmptyIdentity`; nonblank IDs are preserved verbatim. See
+`docs/tasks/SPRING_OFFSET.md` for the paired SpringOffset contract and M472
+acceptance status.

@@ -19,11 +19,42 @@ updated in N1; see `N1_NAVIGATION_POLICY.md`. Retention lifetime is now implemen
 
 `NavigationLinkView` and `NavigationStackView` → `RenderContext::binding_updater` → `ComponentUpdater` → GPUI `ComponentHost` owner update → `Binding::update_on` → owner field read/write. This adds no reactive runtime, dependency, upstream revision, or vendored edit.
 
-## Queued work outside R1
+## Related work outside R1
 
-- `crates/rustui/src/components/input/stepper.rs` calculates increment and decrement targets from `Binding::value()` during rendering. Rapid callbacks can still overwrite a newer owner value. Apply the same owner-current pattern in its own task, including range behavior when the owner changes between render and click.
-- `crates/rustui/src/runtime/component_host.rs` retains control entities and subscriptions by `Identity` in `RetainedEntities`, but the inspected code has no removal path when a control disappears from a later render. Audit conditional views and reuse of identities separately; this task does not change retention or lifecycle policy.
+- `crates/rustui/src/runtime/component_host.rs` now reconciles retained controls after each root render: entries seen in the frame and declared inactive scopes remain; other entries and their subscriptions are pruned. The scoped-retention implementation and its limits are documented in `R2_RUNTIME_RETENTION.md` and `R2_COMPOSITION_RETENTION.md`; it does not add child-view lifecycle callbacks.
 
 ## Acceptance status and future checks
 
 Implementation is complete for the bounded R1 path. No Cargo build, tests, or GUI run were performed in this task; shared compilation is assigned to the parent task. Future acceptance should exercise two push callbacks before rerender, push then Back before rerender, Back after the owner path has become empty, owner type mismatch, and owner release. A native GPUI window interaction check is still needed to establish end-to-end behavior.
+
+
+## M414 — Wrong-owner update rejection
+
+The R1 contract requires `Binding::update_on` to reject a mismatched component owner by returning `false`, without invoking the mutation or panicking. Added regressions for wrong-owner rejection/no mutation, no-op behavior, and consecutive owner-current updates. Focused tests passed 3/3. Evidence: `target/headstart/evidence/r1-binding-owner-current-tests-20261021.log`. The `rustui-core` suite passed 4/4, RustUI suite passed 522/522, and locked/offline workspace all-targets check exited 0; see the latest Tests row in `docs/IMPLEMENTATION_ROADMAP.md`.
+
+## M445 — Reject wrong-owner binding writes
+
+`Binding::new` and `Binding::new_with` writers now return `false` when the supplied component owner has the wrong concrete type, matching the owner-rejection contract already recorded for `Binding::update_on`. Two focused regression tests passed. Native R1 owner/update checks remain open. Evidence: `target/headstart/evidence/binding-wrong-owner-writes.log`.
+
+## M530 wrong-owner Action dispatch
+
+`Action::new` and `Action::new_if_changed` now return `Invalidation::None`
+when dispatch receives a different owner type. The shared regression checks
+both constructors, verifies no panic, and confirms the rejected owner was not
+mutated. The focused wrong-owner tests passed 4/4 in
+`target/headstart/evidence/m530-action-wrong-owner-dispatch-tests-20261021.log`.
+
+## M553 generated component state setter contract
+
+Counter value starts at 0. `set_value(0)` returns false and preserves 0. `set_value(1)` returns true and updates to 1. The public macro integration test passed 1/1 in `target/headstart/evidence/m553-component-state-setter-contract-20261021.log`.
+
+## M615 — Reject stale update writer contexts
+
+Added a focused regression for `Binding::update_on` when its `new_with` writer rejects a captured stale context after the mutation closure reports a change. The call returns `false`; the owner's revision and value remain unchanged. Focused binding tests passed 4/4; scoped rustfmt and diff checks passed. Evidence: `target/headstart/evidence/m615-stage2-update-on-stale-writer-20261021.log`.
+
+## M620 — Generated updater return and mutation contract
+
+The `#[component]` integration test verifies that a generated `update_value`
+returns the closure's result and writes the changed field. Focused integration
+test passed (2/2); scoped rustfmt passed. It does not assign change-detection
+meaning to arbitrary closure outputs.

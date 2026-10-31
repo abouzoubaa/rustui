@@ -5,7 +5,7 @@ use std::sync::{
     atomic::{AtomicUsize, Ordering},
 };
 
-use rustui::prelude::*;
+use rustui::{localization::MessageArguments, prelude::*};
 
 use super::locale_selector::LocaleSelector;
 
@@ -52,24 +52,32 @@ impl View for PopoverHarness {
     fn body(&self) -> impl View {
         let probe = self.probe.clone();
         let present = self.present();
+        let mounts = self.probe.mounts.load(Ordering::SeqCst);
+        let releases = self.probe.releases.load(Ordering::SeqCst);
+        let args = MessageArguments::new()
+            .with("mounts", mounts as i64)
+            .with("releases", releases as i64);
         VStack::new()
             .spacing(8.0)
-            .child(Text("Popover ownership"))
+            .child(LocalizedText("lab-popover-heading"))
+            .child(LocaleSelector::new())
             .child(
-                Button(
-                    format!(
-                        "Observe: mounts {} / releases {}",
-                        self.probe.mounts.load(Ordering::SeqCst),
-                        self.probe.releases.load(Ordering::SeqCst)
-                    ),
-                    self.action(Self::observe),
-                )
-                .id("popover-observe"),
+                HStack::new().child(
+                    Button(
+                        format!("Observe: mounts {mounts} / releases {releases}"),
+                        self.action(Self::observe),
+                    )
+                    .id("popover-observe")
+                    .localized_label_with_arguments("lab-popover-observe", args),
+                ),
             )
             .child(
-                Button("Restore popover owner", self.action(Self::restore_owner))
-                    .id("popover-restore-owner")
-                    .disabled(present),
+                HStack::new().child(
+                    Button("Restore popover owner", self.action(Self::restore_owner))
+                        .id("popover-restore-owner")
+                        .localized_label("lab-popover-restore")
+                        .disabled(present),
+                ),
             )
             .child(Environment(
                 InheritedVersion(self.inherited_version()),
@@ -118,53 +126,85 @@ impl View for PopoverOwner {
     fn body(&self) -> impl View {
         let probe = self.probe.clone();
         let harness = self.harness.as_ref().expect("harness owner is supplied");
+        let count = self.count();
+        let status_key = if self.open() {
+            "lab-popover-open-status"
+        } else {
+            "lab-popover-closed-status"
+        };
+        let status = MessageArguments::new()
+            .with("count", count as i64)
+            .with("notes", self.notes());
         VStack::new()
             .spacing(8.0)
-            .child(Text(format!(
-                "Open: {} · owner count: {} · notes: {}",
-                self.open(),
-                self.count(),
-                self.notes()
-            )))
-            .child(Popover(
-                "owner-popover",
-                "Open editor popover",
-                self.open_binding(),
-                VStack::new()
-                    .spacing(8.0)
-                    .child(Text(format!("Owner count: {}", self.count())))
-                    .child(TextField("Popover notes", self.notes_binding()).id("popover-notes"))
-                    .child(
-                        Button("Increment owner", self.action(Self::increment))
-                            .id("popover-increment-owner"),
+            .child(LocalizedText(status_key).with_arguments(status))
+            .child(
+                HStack::new().child(
+                    Popover(
+                        "owner-popover",
+                        "Open editor popover",
+                        self.open_binding(),
+                        VStack::new()
+                            .spacing(8.0)
+                            .child(LocalizedText("lab-popover-owner-count").with_arguments(
+                                MessageArguments::new().with("count", count as i64),
+                            ))
+                            .child(
+                                TextField("Popover notes", self.notes_binding())
+                                    .localized_placeholder("lab-popover-notes")
+                                    .id("popover-notes"),
+                            )
+                            .child(
+                                HStack::new().child(
+                                    Button("Increment owner", self.action(Self::increment))
+                                        .localized_label("lab-popover-increment-owner")
+                                        .id("popover-increment-owner"),
+                                ),
+                            )
+                            .child(EnvironmentReader::<InheritedVersion, _, _>(|value| {
+                                LocalizedText("lab-popover-inherited").with_arguments(
+                                    MessageArguments::new().with(
+                                        "version",
+                                        i64::from(value.map_or(0, |value| value.0)),
+                                    ),
+                                )
+                            }))
+                            .child(
+                                HStack::new().child(
+                                    Button(
+                                        "Change inherited value",
+                                        harness.action(PopoverHarness::change_inherited),
+                                    )
+                                    .localized_label("lab-popover-change-inherited")
+                                    .id("popover-change-inherited"),
+                                ),
+                            )
+                            .child(Component("popover-child", move || {
+                                PopoverChild::new(probe.clone())
+                            }))
+                            .child(LocaleSelector::new())
+                            .child(LocalizedText("lab-navigation-locales"))
+                            .child(
+                                HStack::new().child(
+                                    Button("Close popover", self.action(Self::close))
+                                        .localized_label("lab-popover-close")
+                                        .id("popover-close"),
+                                ),
+                            )
+                            .child(
+                                HStack::new().child(
+                                    Button(
+                                        "Remove popover owner",
+                                        harness.action(PopoverHarness::remove_owner),
+                                    )
+                                    .localized_label("lab-popover-remove")
+                                    .id("popover-remove-owner"),
+                                ),
+                            ),
                     )
-                    .child(EnvironmentReader::<InheritedVersion, _, _>(|value| {
-                        Text(format!(
-                            "Inherited version: {}",
-                            value.map_or(0, |value| value.0)
-                        ))
-                    }))
-                    .child(
-                        Button(
-                            "Change inherited value",
-                            harness.action(PopoverHarness::change_inherited),
-                        )
-                        .id("popover-change-inherited"),
-                    )
-                    .child(Component("popover-child", move || {
-                        PopoverChild::new(probe.clone())
-                    }))
-                    .child(LocaleSelector::new())
-                    .child(LocalizedText("lab-navigation-locales"))
-                    .child(Button("Close popover", self.action(Self::close)).id("popover-close"))
-                    .child(
-                        Button(
-                            "Remove popover owner",
-                            harness.action(PopoverHarness::remove_owner),
-                        )
-                        .id("popover-remove-owner"),
-                    ),
-            ))
+                    .localized_label("lab-popover-open"),
+                ),
+            )
     }
 }
 
@@ -195,10 +235,50 @@ impl View for PopoverChild {
         self.probe.releases.fetch_add(1, Ordering::SeqCst);
     }
     fn body(&self) -> impl View {
-        Button(
-            format!("Child count: {}", self.count()),
-            self.action(Self::increment),
+        let count = self.count();
+        HStack::new().child(
+            Button(
+                format!("Child count: {count}"),
+                self.action(Self::increment),
+            )
+            .localized_label_with_arguments(
+                "lab-popover-child-count",
+                MessageArguments::new().with("count", count as i64),
+            )
+            .id("popover-child-increment"),
         )
-        .id("popover-child-increment")
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use rustui::localization::{Locale, MessageArguments, format_integer};
+
+    #[test]
+    fn popover_counts_format_in_supported_locales() {
+        let catalogs = super::super::catalogs();
+        for tag in ["en", "fr", "ar"] {
+            let locale = Locale::parse(tag).unwrap();
+            let args = MessageArguments::new()
+                .with("count", 12_i64)
+                .with("mounts", 12_i64)
+                .with("releases", 34_i64)
+                .with("notes", "example")
+                .with("version", 12_i64);
+            for key in [
+                "lab-popover-observe",
+                "lab-popover-open-status",
+                "lab-popover-closed-status",
+                "lab-popover-owner-count",
+                "lab-popover-inherited",
+                "lab-popover-child-count",
+            ] {
+                let result = catalogs.format(&locale, key, &args).unwrap();
+                assert!(
+                    result.contains(&format_integer(12, &locale)),
+                    "{tag}: {key}: {result}"
+                );
+            }
+        }
     }
 }

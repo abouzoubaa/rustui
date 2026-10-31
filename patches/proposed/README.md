@@ -1,5 +1,15 @@
 # Proposed upstream accessibility patches
 
+## Current Tree accessibility status (supersedes historical proposal notes below)
+
+The corrected full three-source Tree series is retained here as review history;
+identical copies are recorded under `patches/approved/` with ordered metadata in
+`gpui-tree-accessibility-series-v1.json`. The authoritative replay/POST verifier is
+`scripts/apply_gpui_tree_accessibility_series.py`; standalone level-only mutation
+is retired. The original proposal descriptions below document their earlier
+review state and do not override the full-series metadata or source hashes.
+
+
 These patches are review artifacts only. They are not applied to `vendor/`, do not change dependency revisions, and do not change RustUI's roadmap.
 
 ## Pinned sources
@@ -51,8 +61,37 @@ or tested, and it does not authorize a RustUI Dialog implementation.
 
 ### Disabled Tree accessibility state
 
-`gpui-tree-aria-disabled.patch` adds an additive `StatefulInteractiveElement::aria_disabled(bool)` API in pinned `gpui-pre 0.3.9` and uses it for `gpui-base 0.7.3` TreeItem nodes. RustUI's `TreeNode::disabled(true)` already prevents pointer activation through GPUI Tree, but the native accessibility node currently omits disabled state. The paired changes expose that state to AccessKit. This proposal is not applied or validated; exact package/revision context, source hashes, compatibility risks, and focused validation are recorded in `docs/tasks/TREE_ARIA_DISABLED_PROPOSAL.md`.
+`gpui-tree-aria-disabled.patch` now has an approved v1 in `patches/approved/`; see `patches/README.md` and `docs/tasks/TREE_ARIA_DISABLED_PROPOSAL.md` for exact hashes, source scope, and validation limits.
 
 ### PopupMenu disabled confirmation
 
 `gpui-component-popup-menu-disabled-confirm.patch` prevents a disabled selected item from running its handler/action or dismissing the menu. The focused source finding, exact package source hash, trade-offs, and validation plan are in `docs/tasks/POPUP_MENU_DISABLED_CONFIRM_PROPOSAL.md`. The patch is review-only and has not been applied or validated.
+
+### Sheet close-button accessible name, v1 proposal
+
+- Patch: `gpui-component-sheet-close-accessibility-v1.patch` (SHA-256 `cc326693b24507f20b4beeb2f4649404167d5dabdade4bbb07d1ebd5b1500104`).
+- Source: Longbridge `gpui-kit` revision `67265a36e260ffe03c5aaebdcd8d654dbf892eab`, path `crates/component`, package `gpui-component 0.7.3`; registry package checksum `465a363235cd4062ef5f0953fc096fc764ed6f53dfbd9f409f669f93ea3b1ff9`.
+- Source preimage: `vendor/gpui-component-0.7.3/src/sheet.rs`, SHA-256 `0bfd572bda2ba54f9e862401705829073de2d33eb94f03d615452d428fc5d5af`; proposed postimage SHA-256 `bf54674f0df559561004bf7676efb70fe1ce8f0109bf183e109b7dbfe9526f8e`.
+- Adds optional `Sheet::close_accessibility_label`; existing callers and behavior remain unchanged when the setter is unused. RustUI still needs a separate wrapper integration that supplies a nonblank localized name before the native close control is named.
+- Exact-source and isolated-application evidence, integration contract, validation gates, fallback, and removal conditions: `docs/tasks/SHEET_CLOSE_ACCESSIBILITY_NAME_PROPOSAL.md`. Candidate snapshot: `target/headstart/candidates/sheet-close-accessibility-20261021-r1/`. Review-only; not applied to `vendor/`, compiled, or GUI-validated.
+
+## Sheet close-name validation gate
+
+Before promotion, confirm unchanged Sheet call sites compile, add and run a focused test proving the supplied label reaches the rendered internal close Button (and the unset path remains unchanged), and repeat the native macOS accessibility-tree/VoiceOver probe after RustUI integration. No compile, test, or GUI check has run for this proposal.
+
+### Tree root name and aria-level combined review package
+
+- The proposed root-name patch adds optional accessible-name builders to the existing `gpui-base` and `gpui-component` Tree wrappers; the RustUI integration supplies a localized name to the existing root. It does not add another semantic node.
+- The aria-level proposal adds one-based levels to existing outer TreeItem rows. Both patches compose after approved `gpui-tree-aria-disabled-v1.patch` in this order: aria-level and root accessible name. The existing aria-level renderer test is included; a root-name renderer test awaits the pinned TestAppContext prerequisites. The prepared helper supports exact `--check`, `--apply`, and `--reverse`; it is not yet integrated into the checkout.
+- Exact review package, source hashes, alternatives, and validation limits: `docs/tasks/TREE_ROOT_AND_LEVEL_PROMOTION_DECISION.md` and `PACKAGE_MANIFEST.md` in the prepared package.
+- These changes remain proposals. No upstream merge, local promotion, or Cargo selection change is claimed.
+
+### Tree aria-level on the outer TreeItem, v1 proposal
+
+- Patch: `gpui-tree-aria-level-v1.patch` (SHA-256 `7729270cd97bfc74039e05d5142d522b78cc9bd563a825ccaa33caeb2d8f77f7`).
+- Source: Longbridge `gpui-kit` revision `67265a36e260ffe03c5aaebdcd8d654dbf892eab`, package `gpui-base 0.7.3`; registry archive checksum `2e9955b6f4b048fd50ca15fc8e225d80bb00ba9ebc8fecdddde5ad26dbef9270`.
+- The package's pristine `src/tree.rs` SHA-256 is `e74e4fcdef6ccec174e3e6ced50f108433e726f3e3d46f3539b1f41d5944e5df`; pristine `.cargo-checksum.json` SHA-256 is `9e96d55b0071b60576bc6ac18c3e9c48e6d0de5ff848821af7623bd151f7c3ed`. The patch preimage is the current aria-disabled-v1 postimage `9ef2efa0a44af810eef3088343b0838179d5e952c6ca8734e5306d5c74736924`; the one-line proposed postimage is `4dae8754abef34b1173e0b69b4dfb80483ae61545e2dd3614fc259dfd38fe6fb`.
+- Adds `.aria_level(entry.depth() + 1)` to the existing outer TreeItem row. Depth is zero-based; ARIA tree levels are one-based. The pinned `gpui-pre 0.3.9` already supplies the setter. No RustUI API or dependency revision change is proposed.
+- Exact-identity helper: `scripts/apply_gpui_tree_aria_level_patch.py`. Its `--check` verifies the preimage, applies and reverses the patch in temporary copies, and confirms both hashes without changing the checkout. Apply/reverse modes target only the Tree source and require their exact source image.
+- Review-only: not applied to `vendor/`. Applying it requires separate user approval. See `docs/tasks/M1222_STAGE8_TREEITEM_ROW_SEMANTICS_BOUNDARY.md` for the focused test command, runtime oracle, and validation status.
+- Validation: exact helper round-trip check passed in a temporary copy. No unit test or GUI acceptance was run.

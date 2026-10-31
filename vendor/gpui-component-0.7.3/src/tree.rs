@@ -2,7 +2,7 @@ use std::rc::Rc;
 
 use gpui::{
     App, Context, ElementId, Entity, InteractiveElement as _, IntoElement, ParentElement as _,
-    RenderOnce, StyleRefinement, Styled, Window, div,
+    RenderOnce, SharedString, StyleRefinement, Styled, Window, div,
 };
 
 use crate::{
@@ -33,6 +33,7 @@ pub struct Tree {
     id: ElementId,
     state: Entity<TreeState>,
     style: StyleRefinement,
+    accessibility_label: Option<SharedString>,
     render_item: Rc<RenderItem>,
     context_menu_builder: Option<Rc<ContextMenuBuilder>>,
 }
@@ -46,9 +47,16 @@ impl Tree {
             id: ElementId::Name(format!("tree-{}", state.entity_id()).into()),
             state: state.clone(),
             style: StyleRefinement::default(),
+            accessibility_label: None,
             render_item: Rc::new(render_item),
             context_menu_builder: None,
         }
+    }
+
+    /// Sets the accessible name of the tree.
+    pub fn accessibility_label(mut self, label: impl Into<SharedString>) -> Self {
+        self.accessibility_label = Some(label.into());
+        self
     }
 
     /// Add a context menu to the tree.
@@ -74,12 +82,16 @@ impl RenderOnce for Tree {
         let render_item = self.render_item;
         let context_menu_builder = self.context_menu_builder;
         let scroll_handle = self.state.read(cx).scroll_handle().clone();
+        let mut tree = gpui_base::Tree::new(&self.state);
+        if let Some(label) = self.accessibility_label {
+            tree = tree.accessibility_label(label);
+        }
 
         div()
             .id(self.id)
             .size_full()
             .child(
-                gpui_base::Tree::new(&self.state)
+                tree
                     .item(move |ix, entry, entry_state, window, cx| {
                         // Capture only the id: cloning the entry would deep-clone
                         // its whole subtree for every visible row on every frame.

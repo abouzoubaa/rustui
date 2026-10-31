@@ -1,16 +1,43 @@
 //! Single-line text input backed by a retained GPUI Components InputState.
 
-use gpui::{AnyElement, IntoElement, SharedString, Styled};
+use gpui::{
+    AnyElement, AppContext, Entity, EntityInputHandler, IntoElement, ParentElement as _,
+    SharedString, Styled, div, px,
+};
 use gpui_component::{
-    Icon, IconName, Sizable,
+    Disableable as _, Icon, IconName, Sizable,
+    button::{Button as GpuiButton, ButtonVariants as _},
     input::{Input, InputContentType, InputEvent, InputState},
 };
 use rustui_core::{Binding, Identity};
+use std::{cell::RefCell, ops::Range, rc::Rc};
 
 use crate::{
     components::theme::{required_style_with_artwork, selector, styled_element},
+    theme::{AppearanceMode, ThemeProfile},
     view::{EmptyView, RenderContext, View},
 };
+
+const DEFAULT_ACCESSIBILITY_LABEL: &str = "Text field";
+const DEFAULT_PASSWORD_VISIBILITY_ACCESSIBILITY_LABEL: &str = "Toggle password visibility";
+const CLEAR_BUTTON_TAB_STOP: bool = true;
+
+#[derive(Clone, Debug, PartialEq, Eq)]
+enum TextFieldAccessibilityLabel {
+    Literal(SharedString),
+    Message {
+        id: SharedString,
+        fallback: SharedString,
+    },
+}
+
+fn resolved_message_label(id: &str, localized: String, fallback: &SharedString) -> SharedString {
+    if !localized.trim().is_empty() && localized.trim() != id.trim() {
+        SharedString::from(localized)
+    } else {
+        fallback.clone()
+    }
+}
 
 #[derive(Clone, Copy, Debug, Default, PartialEq, Eq)]
 pub(crate) enum TextFieldKind {
@@ -27,6 +54,35 @@ pub enum TextFieldSize {
     Large,
 }
 
+struct RetainedTextField {
+    state: Entity<InputState>,
+    owner_value: String,
+    last_selection: Option<Range<usize>>,
+    selection_before_preedit: Option<Range<usize>>,
+    secure: bool,
+    writer: Rc<RefCell<Option<EventWriter<String, gpui::App>>>>,
+}
+
+type EventWriter<Value, Context> = Rc<dyn Fn(Value, &mut Context)>;
+
+fn replace_event_writer<Value, Context>(
+    slot: &RefCell<Option<EventWriter<Value, Context>>>,
+    writer: EventWriter<Value, Context>,
+) {
+    *slot.borrow_mut() = Some(writer);
+}
+
+fn write_with_current_writer<Value, Context>(
+    slot: &RefCell<Option<EventWriter<Value, Context>>>,
+    value: Value,
+    context: &mut Context,
+) {
+    let writer = slot.borrow().clone();
+    if let Some(writer) = writer {
+        writer(value, context);
+    }
+}
+
 impl TextFieldSize {
     fn selector_value(self) -> &'static str {
         match self {
@@ -39,14 +95,18 @@ impl TextFieldSize {
 /// A controlled single-line text field whose editing state survives body rebuilds.
 pub struct TextFieldView {
     placeholder: SharedString,
+    placeholder_message_id: Option<SharedString>,
     value: Binding<String>,
     id: Option<Identity>,
     kind: TextFieldKind,
     size: TextFieldSize,
+    width: Option<f32>,
     disabled: bool,
     readonly: bool,
     cleanable: bool,
-    accessibility_label: Option<SharedString>,
+    accessibility_label: Option<TextFieldAccessibilityLabel>,
+    clear_button_accessibility_label: Option<TextFieldAccessibilityLabel>,
+    password_visibility_accessibility_label: Option<TextFieldAccessibilityLabel>,
     tab_index: isize,
 }
 
@@ -54,16 +114,32 @@ impl TextFieldView {
     pub fn new(placeholder: impl Into<SharedString>, value: Binding<String>) -> Self {
         Self {
             placeholder: placeholder.into(),
+            placeholder_message_id: None,
             value,
             id: None,
             kind: TextFieldKind::Plain,
             size: TextFieldSize::Small,
+            width: None,
             disabled: false,
             readonly: false,
             cleanable: false,
             accessibility_label: None,
+            clear_button_accessibility_label: None,
+            password_visibility_accessibility_label: None,
             tab_index: 0,
         }
+    }
+
+    /// Resolves the visible placeholder from the active RustUI catalog.
+    /// The constructor's placeholder remains the fallback if the key is missing.
+    pub fn localized_placeholder(mut self, message_id: impl Into<SharedString>) -> Self {
+        let id = message_id.into();
+        assert!(
+            !id.trim().is_empty(),
+            "TextField placeholder localization key must not be blank"
+        );
+        self.placeholder_message_id = Some(id);
+        self
     }
 
     pub(crate) fn with_kind(mut self, kind: TextFieldKind) -> Self {
@@ -79,9 +155,26 @@ impl TextFieldView {
         self
     }
 
+    /// Overrides the theme's field width in logical pixels.
+    pub fn width(mut self, width: f32) -> Self {
+        assert!(
+            width.is_finite() && width > 0.0,
+            "TextField width must be positive and finite"
+        );
+        self.width = Some(width);
+        self
+    }
+
     /// Sets the stable identity used to retain cursor, selection, undo, focus, and IME state.
+    /// Without an explicit identity, fields use their render owner and sibling position;
+    /// supply an ID when fields may be reordered or conditionally replaced.
     pub fn id(mut self, id: impl Into<Identity>) -> Self {
-        self.id = Some(id.into());
+        let id = id.into();
+        assert!(
+            !id.as_str().trim().is_empty(),
+            "TextField IDs must be nonempty"
+        );
+        self.id = Some(id);
         self
     }
 
@@ -101,8 +194,166 @@ impl TextFieldView {
     }
 
     pub fn accessibility_label(mut self, label: impl Into<SharedString>) -> Self {
-        self.accessibility_label = Some(label.into());
+        let label = label.into();
+        assert!(
+            !label.trim().is_empty(),
+            "TextField accessibility label must not be empty"
+        );
+        self.accessibility_label = Some(TextFieldAccessibilityLabel::Literal(label));
         self
+    }
+
+    /// Resolves the field's accessible name from the active RustUI message catalog.
+    pub fn localized_accessibility_label(mut self, message_id: impl Into<SharedString>) -> Self {
+        let id = message_id.into();
+        assert!(
+            !id.trim().is_empty(),
+            "TextField accessibility localization key must not be blank"
+        );
+        let fallback = match &self.accessibility_label {
+            Some(TextFieldAccessibilityLabel::Literal(label))
+            | Some(TextFieldAccessibilityLabel::Message {
+                fallback: label, ..
+            }) => label.clone(),
+            None => self.default_accessibility_label(),
+        };
+        self.accessibility_label = Some(TextFieldAccessibilityLabel::Message { id, fallback });
+        self
+    }
+
+    fn default_accessibility_label(&self) -> SharedString {
+        if self.placeholder.trim().is_empty() {
+            DEFAULT_ACCESSIBILITY_LABEL.into()
+        } else {
+            self.placeholder.clone()
+        }
+    }
+
+    fn resolved_placeholder(&self, localized_message: impl FnOnce(&str) -> String) -> SharedString {
+        match &self.placeholder_message_id {
+            Some(id) => resolved_message_label(
+                id.as_ref(),
+                localized_message(id.as_ref()),
+                &self.placeholder,
+            ),
+            None => self.placeholder.clone(),
+        }
+    }
+
+    fn resolved_accessibility_label(
+        &self,
+        localized_message: impl FnOnce(&str) -> String,
+    ) -> SharedString {
+        match &self.accessibility_label {
+            Some(TextFieldAccessibilityLabel::Literal(label)) => label.clone(),
+            Some(TextFieldAccessibilityLabel::Message { id, fallback }) => {
+                resolved_message_label(id.as_ref(), localized_message(id.as_ref()), fallback)
+            }
+            None => {
+                let placeholder = self.resolved_placeholder(localized_message);
+                if placeholder.trim().is_empty() {
+                    DEFAULT_ACCESSIBILITY_LABEL.into()
+                } else {
+                    placeholder
+                }
+            }
+        }
+    }
+
+    /// Sets a localized accessible name for the optional clear button.
+    pub fn clear_button_accessibility_label(mut self, label: impl Into<SharedString>) -> Self {
+        let label = label.into();
+        assert!(
+            !label.trim().is_empty(),
+            "TextField clear button accessibility label must not be blank"
+        );
+        self.clear_button_accessibility_label = Some(TextFieldAccessibilityLabel::Literal(label));
+        self
+    }
+
+    /// Resolves the clear button's accessible name from the active RustUI catalog.
+    pub fn localized_clear_button_accessibility_label(
+        mut self,
+        message_id: impl Into<SharedString>,
+    ) -> Self {
+        let id = message_id.into();
+        assert!(
+            !id.trim().is_empty(),
+            "TextField clear button accessibility localization key must not be blank"
+        );
+        let fallback = match &self.clear_button_accessibility_label {
+            Some(TextFieldAccessibilityLabel::Literal(label))
+            | Some(TextFieldAccessibilityLabel::Message {
+                fallback: label, ..
+            }) => label.clone(),
+            None => clear_accessibility_label(&self.placeholder).into(),
+        };
+        self.clear_button_accessibility_label =
+            Some(TextFieldAccessibilityLabel::Message { id, fallback });
+        self
+    }
+
+    fn resolved_clear_button_accessibility_label(
+        &self,
+        localized_message: impl FnOnce(&str) -> String,
+    ) -> SharedString {
+        match &self.clear_button_accessibility_label {
+            Some(TextFieldAccessibilityLabel::Literal(label)) => label.clone(),
+            Some(TextFieldAccessibilityLabel::Message { id, fallback }) => {
+                resolved_message_label(id.as_ref(), localized_message(id.as_ref()), fallback)
+            }
+            None => clear_accessibility_label(&self.placeholder).into(),
+        }
+    }
+
+    /// Sets a literal accessible name for a SecureField's visibility control.
+    pub fn password_visibility_accessibility_label(
+        mut self,
+        label: impl Into<SharedString>,
+    ) -> Self {
+        let label = label.into();
+        assert!(
+            !label.trim().is_empty(),
+            "TextField password visibility accessibility label must not be blank"
+        );
+        self.password_visibility_accessibility_label =
+            Some(TextFieldAccessibilityLabel::Literal(label));
+        self
+    }
+
+    /// Resolves the visibility control's accessible name from the active RustUI catalog.
+    pub fn localized_password_visibility_accessibility_label(
+        mut self,
+        message_id: impl Into<SharedString>,
+    ) -> Self {
+        let id = message_id.into();
+        assert!(
+            !id.trim().is_empty(),
+            "TextField password visibility accessibility localization key must not be blank"
+        );
+        let fallback = match &self.password_visibility_accessibility_label {
+            Some(TextFieldAccessibilityLabel::Literal(label))
+            | Some(TextFieldAccessibilityLabel::Message {
+                fallback: label, ..
+            }) => label.clone(),
+            None => DEFAULT_PASSWORD_VISIBILITY_ACCESSIBILITY_LABEL.into(),
+        };
+        self.password_visibility_accessibility_label =
+            Some(TextFieldAccessibilityLabel::Message { id, fallback });
+        self
+    }
+
+    fn resolved_password_visibility_accessibility_label(
+        &self,
+        localized_message: impl FnOnce(&str) -> String,
+    ) -> SharedString {
+        match &self.password_visibility_accessibility_label {
+            Some(TextFieldAccessibilityLabel::Literal(label)) => label.clone(),
+            Some(TextFieldAccessibilityLabel::Message { id, fallback }) => {
+                resolved_message_label(id.as_ref(), localized_message(id.as_ref()), fallback)
+            }
+            None => DEFAULT_PASSWORD_VISIBILITY_ACCESSIBILITY_LABEL.into(),
+        }
     }
 
     pub fn tab_index(mut self, tab_index: isize) -> Self {
@@ -110,16 +361,66 @@ impl TextFieldView {
         self
     }
 
-    fn identity(&self) -> Identity {
-        self.id.clone().unwrap_or_else(|| {
-            let kind = match self.kind {
-                TextFieldKind::Plain => "text-field",
-                TextFieldKind::Secure => "secure-field",
-                TextFieldKind::Search => "search-field",
-            };
-            Identity::from(format!("{kind}:{}", self.placeholder))
-        })
+    fn identity(&self, context: &mut RenderContext<'_>) -> Identity {
+        self.identity_with(|base| context.next_implicit_retained_identity(base))
     }
+
+    fn identity_with(&self, allocate_implicit: impl FnOnce(Identity) -> Identity) -> Identity {
+        if let Some(id) = &self.id {
+            return id.clone();
+        }
+
+        let kind = match self.kind {
+            TextFieldKind::Plain => "text-field",
+            TextFieldKind::Secure => "secure-field",
+            TextFieldKind::Search => "search-field",
+        };
+        allocate_implicit(Identity::from(kind))
+    }
+}
+
+fn should_sync_owner_value(
+    current_owner_value: &str,
+    previous_owner_value: &str,
+    retained_value: &str,
+    marked_range: Option<Range<usize>>,
+) -> bool {
+    retained_value != current_owner_value
+        && !(marked_range.is_some() && current_owner_value == previous_owner_value)
+}
+
+fn placeholder_changed(retained_placeholder: &str, requested_placeholder: &str) -> bool {
+    retained_placeholder != requested_placeholder
+}
+
+fn reconcile_masked_state(current_masked: bool, was_secure: bool, secure: bool) -> bool {
+    if was_secure == secure {
+        current_masked
+    } else {
+        secure
+    }
+}
+
+fn visibility_control_is_toggled(masked: bool) -> bool {
+    !masked
+}
+
+fn clear_accessibility_label(placeholder: &str) -> String {
+    if placeholder.trim().is_empty() {
+        "Clear text field".to_owned()
+    } else {
+        format!("Clear {placeholder}")
+    }
+}
+
+fn disabled_text_color(profile: &ThemeProfile, mode: AppearanceMode) -> gpui::Hsla {
+    gpui_component::theme::try_parse_color(&profile.colors(Some(mode)).disabled_text)
+        .expect("validated RustUI text field disabled text color")
+}
+
+fn search_text_color(profile: &ThemeProfile, mode: AppearanceMode) -> gpui::Hsla {
+    gpui_component::theme::try_parse_color(&profile.colors(Some(mode)).primary_text)
+        .expect("validated RustUI primary text color")
 }
 
 /// Creates a controlled single-line text field.
@@ -134,38 +435,137 @@ impl View for TextFieldView {
     }
 
     fn into_element(&self, context: &mut RenderContext<'_>) -> AnyElement {
-        let identity = self.identity();
+        let identity = self.identity(context);
         let initial_value = self.value.value();
-        let placeholder = self.placeholder.clone();
+        let placeholder = self.resolved_placeholder(|id| context.localized_message(id));
+        let initial_placeholder = placeholder.clone();
         let secure = self.kind == TextFieldKind::Secure;
-        let (state, created) = context.retained_entity(identity.clone(), move |window, cx| {
-            InputState::new(window, cx)
-                .placeholder(placeholder)
-                .default_value(initial_value)
-                .masked(secure)
+        let (retained, created) = context.retained_entity(identity.clone(), move |window, cx| {
+            let state = cx.new(|cx| {
+                InputState::new(window, cx)
+                    .placeholder(initial_placeholder)
+                    .default_value(initial_value.clone())
+                    .masked(secure)
+            });
+            RetainedTextField {
+                state,
+                owner_value: initial_value,
+                last_selection: None,
+                selection_before_preedit: None,
+                secure,
+                writer: Rc::new(RefCell::new(None)),
+            }
         });
-
+        let state = retained.read(context.app()).state.clone();
         let current_value = self.value.value();
-        let (retained_value, retained_masked) = {
-            let state = state.read(context.app());
-            (state.value().to_string(), state.presentation().is_masked())
-        };
-        if retained_value != current_value {
+        let show_clear_button =
+            self.cleanable && !self.disabled && !self.readonly && !current_value.is_empty();
+        let previous_owner_value = retained.read(context.app()).owner_value.clone();
+        let previous_secure = retained.read(context.app()).secure;
+        let retained_placeholder = state
+            .read(context.app())
+            .presentation()
+            .placeholder()
+            .to_string();
+        if placeholder_changed(&retained_placeholder, &placeholder) {
+            let placeholder = placeholder.clone();
             context.update_entity(&state, move |state, window, cx| {
-                state.set_value(current_value, window, cx);
+                state.set_placeholder(placeholder, window, cx);
             });
         }
-        if retained_masked != secure {
+        let (retained_value, retained_masked, marked_range, current_selection) = context
+            .update_entity(&state, |state, window, cx| {
+                (
+                    state.value().to_string(),
+                    state.presentation().is_masked(),
+                    state.marked_text_range(window, cx),
+                    state.selected_range(),
+                )
+            });
+        let last_selection = retained.read(context.app()).last_selection.clone();
+        let selection_before_preedit = retained
+            .read(context.app())
+            .selection_before_preedit
+            .clone();
+        let owner_unchanged = current_value == previous_owner_value;
+        let selection_to_restore = if marked_range.is_none()
+            && owner_unchanged
+            && retained_value != current_value
+            && should_sync_owner_value(
+                &current_value,
+                &previous_owner_value,
+                &retained_value,
+                marked_range.clone(),
+            ) {
+            selection_before_preedit.clone()
+        } else {
+            None
+        };
+        // IME preedit updates InputState before InputEvent::Change writes the owner.
+        // Keep it only while the owner still has its last synchronized value.
+        if ((self.disabled || self.readonly)
+            && (retained_value != current_value || marked_range.is_some()))
+            || should_sync_owner_value(
+                &current_value,
+                &previous_owner_value,
+                &retained_value,
+                marked_range.clone(),
+            )
+        {
+            let value_to_sync = current_value.clone();
+            let selection_to_restore = selection_to_restore.clone();
             context.update_entity(&state, move |state, window, cx| {
-                state.set_masked(secure, window, cx);
+                state.set_value(value_to_sync, window, cx);
+                if let Some(selection) = selection_to_restore {
+                    state.set_selected_range(selection, cx);
+                }
+            });
+        }
+        let selection_after_sync =
+            context.update_entity(&state, |state, _, _| state.selected_range());
+        let next_selection_before_preedit =
+            if !self.disabled && !self.readonly && marked_range.is_some() && owner_unchanged {
+                selection_before_preedit
+                    .or_else(|| last_selection.or_else(|| Some(current_selection.clone())))
+            } else {
+                None
+            };
+        context.update_entity(&retained, move |retained, _, _| {
+            retained.selection_before_preedit = next_selection_before_preedit;
+            if retained.selection_before_preedit.is_none() {
+                retained.last_selection = Some(selection_after_sync);
+            }
+        });
+        if current_value != previous_owner_value || previous_secure != secure {
+            context.update_entity(&retained, move |retained, _, _| {
+                if current_value != retained.owner_value {
+                    retained.owner_value = current_value;
+                }
+                retained.secure = secure;
+            });
+        }
+        let next_masked = reconcile_masked_state(retained_masked, previous_secure, secure);
+        if retained_masked != next_masked {
+            context.update_entity(&state, move |state, window, cx| {
+                state.set_masked(next_masked, window, cx);
             });
         }
 
+        let writer = retained.read(context.app()).writer.clone();
+        if self.disabled || self.readonly {
+            *writer.borrow_mut() = None;
+        } else {
+            replace_event_writer(&writer, context.binding_writer(self.value.clone()));
+        }
         if created {
-            let write = context.binding_writer(self.value.clone());
+            let current_writer = writer.clone();
             context.subscribe_retained(&identity, &state, move |state, event: &InputEvent, cx| {
                 if matches!(event, InputEvent::Change) {
-                    write(state.read(cx).value().to_string(), cx);
+                    write_with_current_writer(
+                        &current_writer,
+                        state.read(cx).value().to_string(),
+                        cx,
+                    );
                 }
             });
         }
@@ -174,17 +574,63 @@ impl View for TextFieldView {
             .id(identity.to_string())
             .disabled(self.disabled)
             .readonly(self.readonly)
-            .cleanable(self.cleanable)
+            // GPUI Components' built-in icon-only clear button has no accessible
+            // label. Render the same affordance below with an explicit name.
+            .cleanable(false)
             .tab_index(self.tab_index);
         input = match self.size {
             TextFieldSize::Small => input.small(),
             TextFieldSize::Large => input.large(),
         };
         if secure {
-            input = input.content_type(InputContentType::Password).mask_toggle();
+            input = input.content_type(InputContentType::Password);
         }
-        if let Some(label) = &self.accessibility_label {
-            input = input.aria_label(label.clone());
+        input =
+            input.aria_label(self.resolved_accessibility_label(|id| context.localized_message(id)));
+        if secure || show_clear_button {
+            let mut suffix = div().flex().items_center();
+            if secure {
+                let toggle_state = state.clone();
+                let focus = state.clone();
+                suffix = suffix.child(
+                    GpuiButton::new(format!("{identity}-password-visibility"))
+                        .icon(Icon::new(IconName::Eye))
+                        .xsmall()
+                        .text()
+                        .tab_stop(true)
+                        .disabled(self.disabled)
+                        .toggled(visibility_control_is_toggled(next_masked))
+                        .accessibility_label(self.resolved_password_visibility_accessibility_label(
+                            |id| context.localized_message(id),
+                        ))
+                        .on_click(move |_, window, cx| {
+                            toggle_state.update(cx, |state, cx| {
+                                let masked = state.presentation().is_masked();
+                                state.set_masked(!masked, window, cx);
+                            });
+                            focus.update(cx, |state, cx| state.focus(window, cx));
+                        }),
+                );
+            }
+            if show_clear_button {
+                let clear = context.binding_writer(self.value.clone());
+                let focus = state.clone();
+                suffix = suffix.child(
+                    GpuiButton::new(format!("{identity}-clear"))
+                        .icon(Icon::new(IconName::Close))
+                        .text()
+                        .xsmall()
+                        .tab_stop(CLEAR_BUTTON_TAB_STOP)
+                        .accessibility_label(self.resolved_clear_button_accessibility_label(|id| {
+                            context.localized_message(id)
+                        }))
+                        .on_click(move |_, window, cx| {
+                            clear(String::new(), cx);
+                            focus.update(cx, |state, cx| state.focus(window, cx));
+                        }),
+                );
+            }
+            input = input.suffix(suffix);
         }
 
         // Keep the native input and macOS rule on the same size selector.
@@ -203,10 +649,25 @@ impl View for TextFieldView {
             input = input.prefix(icon);
         }
         input = styled_element(input, &style);
+        if let Some(width) = self.width {
+            input = input.w(px(width));
+        }
         // Input draws its one-pixel border before applying the public Styled
         // refinement. The theme's border color can override that border here.
         if let Some(color) = style.colors.get("border") {
             input = input.border_color(crate::theme::registry::hsla(*color));
+        }
+        if self.disabled {
+            let theme = crate::theme::registry::active_theme(context.app())
+                .expect("a RustUI component theme requires an active theme");
+            input = input.text_color(disabled_text_color(&theme.profile, theme.mode));
+        } else if self.kind == TextFieldKind::Search {
+            // The reference artwork foreground colors the icon; entered text
+            // uses the theme's primary text color for readability.
+            let theme = crate::theme::registry::active_theme(context.app())
+                .expect("a RustUI component theme requires an active theme");
+            let color = search_text_color(&theme.profile, theme.mode);
+            input = input.text_color(color).placeholder_color(color);
         }
         input.into_any_element()
     }
@@ -214,11 +675,129 @@ impl View for TextFieldView {
 
 #[cfg(test)]
 mod tests {
-    use super::TextFieldSize;
+    #[test]
+    fn input_placeholder_override_survives_theme_resolution() {
+        let ink = gpui::hsla(0.2, 0.3, 0.4, 1.0);
+        let tokens = gpui_base::SemanticThemeTokens::default();
+        let style = gpui_base::input::InputEditorStyle {
+            placeholder_foreground: Some(ink),
+            ..Default::default()
+        };
+        assert_eq!(style.resolved(&tokens).placeholder_foreground, Some(ink));
+        assert_eq!(
+            gpui_base::input::InputEditorStyle::default()
+                .resolved(&tokens)
+                .placeholder_foreground,
+            None
+        );
+    }
+    use super::{
+        Binding, CLEAR_BUTTON_TAB_STOP, TextField, TextFieldKind, TextFieldSize,
+        clear_accessibility_label, disabled_text_color, placeholder_changed,
+        reconcile_masked_state, replace_event_writer, should_sync_owner_value,
+        visibility_control_is_toggled, write_with_current_writer,
+    };
     use crate::{
         components::theme::selector_for_mode,
         theme::{AppearanceMode, parse_theme, resolve_component_style_with},
     };
+    use rustui_core::Identity;
+    use std::{cell::RefCell, rc::Rc};
+
+    fn binding() -> Binding<String> {
+        Binding::new(
+            String::new(),
+            |value: &String| value.clone(),
+            |value, next| {
+                *value = next;
+            },
+        )
+    }
+
+    #[test]
+    fn input_width_override_requires_a_positive_finite_value() {
+        use crate::components::input::search_field::SearchField;
+        assert_eq!(
+            SearchField("Search", binding()).width(210.0).width,
+            Some(210.0)
+        );
+        for width in [0.0, -1.0, f32::NAN, f32::INFINITY] {
+            assert!(
+                std::panic::catch_unwind(|| SearchField("Search", binding()).width(width)).is_err()
+            );
+        }
+    }
+
+    #[test]
+    #[should_panic(expected = "TextField IDs must be nonempty")]
+    fn rejects_empty_explicit_identity() {
+        TextField("Name", binding()).id("");
+    }
+
+    #[test]
+    #[should_panic(expected = "TextField IDs must be nonempty")]
+    fn rejects_whitespace_only_explicit_identity() {
+        TextField("Name", binding()).id(" \t ");
+    }
+
+    #[test]
+    fn preserves_nonblank_explicit_identity_verbatim() {
+        let identity = Identity::from(" field-name ");
+        assert_eq!(
+            TextField("Name", binding()).id(identity.clone()).id,
+            Some(identity)
+        );
+    }
+
+    #[test]
+    fn implicit_identity_survives_placeholder_localization_and_separates_siblings() {
+        let allocate_at_slot = |slot| {
+            move |base: Identity| Identity::from(format!("owner:implicit-retained:{slot}:{base}"))
+        };
+        let original = TextField("Name", binding()).identity_with(allocate_at_slot(0));
+        let translated = TextField("Nom", binding()).identity_with(allocate_at_slot(0));
+        let sibling = TextField("Name", binding()).identity_with(allocate_at_slot(1));
+
+        assert_eq!(original, translated);
+        assert_ne!(original, sibling);
+    }
+
+    #[test]
+    fn search_field_identity_survives_placeholder_localization_and_separates_siblings() {
+        use crate::components::input::search_field::SearchField;
+
+        let allocate_at_slot = |slot| {
+            move |base: Identity| Identity::from(format!("owner:implicit-retained:{slot}:{base}"))
+        };
+        let original = SearchField("Search files", binding()).identity_with(allocate_at_slot(0));
+        let translated = SearchField("Rechercher", binding()).identity_with(allocate_at_slot(0));
+        let sibling = SearchField("Search files", binding()).identity_with(allocate_at_slot(1));
+
+        assert_eq!(original, translated);
+        assert_ne!(original, sibling);
+    }
+
+    #[test]
+    fn retained_input_event_uses_the_latest_owner_binding_writer() {
+        let slot = RefCell::new(None);
+        let old_called = Rc::new(RefCell::new(false));
+        let new_called = Rc::new(RefCell::new(false));
+        let old = old_called.clone();
+        replace_event_writer(
+            &slot,
+            Rc::new(move |_: String, _: &mut ()| *old.borrow_mut() = true),
+        );
+        let new = new_called.clone();
+        replace_event_writer(
+            &slot,
+            Rc::new(move |_: String, _: &mut ()| *new.borrow_mut() = true),
+        );
+
+        write_with_current_writer(&slot, "typed".to_owned(), &mut ());
+
+        assert!(!*old_called.borrow());
+        assert!(*new_called.borrow());
+    }
 
     #[test]
     fn native_input_size_selects_matching_macos_rule() {
@@ -240,5 +819,678 @@ mod tests {
                 assert_eq!(style.lengths["width"], expected_width);
             }
         }
+    }
+
+    #[test]
+    fn clear_button_accessible_name_uses_the_field_placeholder() {
+        assert_eq!(clear_accessibility_label("Search"), "Clear Search");
+    }
+
+    #[test]
+    fn clear_button_accessible_name_stays_meaningful_without_a_placeholder() {
+        assert_eq!(clear_accessibility_label(""), "Clear text field");
+        assert_eq!(clear_accessibility_label(" \t "), "Clear text field");
+    }
+
+    #[test]
+    fn clear_button_participates_in_keyboard_tab_traversal() {
+        assert!(CLEAR_BUTTON_TAB_STOP);
+    }
+
+    #[test]
+    fn localized_clear_button_accessible_name_overrides_english_fallback() {
+        let field =
+            TextField("Search", binding()).clear_button_accessibility_label("Effacer la recherche");
+
+        assert_eq!(
+            field.resolved_clear_button_accessibility_label(|_| unreachable!()),
+            "Effacer la recherche"
+        );
+    }
+
+    #[test]
+    fn localized_clear_button_accessible_name_uses_catalog_and_keeps_fallback() {
+        let field = TextField("Search", binding())
+            .localized_clear_button_accessibility_label("rustui-text-field-clear-button");
+
+        assert_eq!(
+            field.resolved_clear_button_accessibility_label(|id| {
+                assert_eq!(id, "rustui-text-field-clear-button");
+                "Effacer le texte".to_owned()
+            }),
+            "Effacer le texte"
+        );
+        assert_eq!(
+            field.resolved_clear_button_accessibility_label(|id| id.to_owned()),
+            "Clear Search"
+        );
+        assert_eq!(
+            field.resolved_clear_button_accessibility_label(|_| " \t".to_owned()),
+            "Clear Search"
+        );
+    }
+
+    #[test]
+    fn localized_clear_button_accessible_name_preserves_explicit_fallback() {
+        let field = TextField("Search", binding())
+            .clear_button_accessibility_label("Clear query")
+            .localized_clear_button_accessibility_label("rustui-text-field-clear-button");
+
+        assert_eq!(
+            field.resolved_clear_button_accessibility_label(|id| id.to_owned()),
+            "Clear query"
+        );
+    }
+
+    #[test]
+    #[should_panic(
+        expected = "TextField clear button accessibility localization key must not be blank"
+    )]
+    fn localized_clear_button_accessible_name_rejects_blank_message_id() {
+        TextField("Search", binding()).localized_clear_button_accessibility_label(" \t ");
+    }
+
+    #[test]
+    #[should_panic(expected = "TextField clear button accessibility label must not be blank")]
+    fn clear_button_accessible_name_must_not_be_blank() {
+        TextField("Search", binding()).clear_button_accessibility_label(" \t ");
+    }
+
+    #[test]
+    fn secure_field_visibility_control_has_a_stable_accessible_name() {
+        let field = TextField("Password", binding()).with_kind(TextFieldKind::Secure);
+
+        assert_eq!(
+            field.resolved_password_visibility_accessibility_label(|_| unreachable!()),
+            "Toggle password visibility"
+        );
+    }
+
+    #[test]
+    fn secure_field_visibility_control_accepts_a_localized_name() {
+        let field = TextField("Password", binding())
+            .with_kind(TextFieldKind::Secure)
+            .password_visibility_accessibility_label("Afficher ou masquer le mot de passe");
+
+        assert_eq!(
+            field.resolved_password_visibility_accessibility_label(|_| unreachable!()),
+            "Afficher ou masquer le mot de passe"
+        );
+    }
+
+    #[test]
+    fn localized_password_visibility_name_resolves_catalog_and_preserves_fallback() {
+        let default = TextField("Password", binding())
+            .localized_password_visibility_accessibility_label("secure_field.toggle_visibility");
+        assert_eq!(
+            default.resolved_password_visibility_accessibility_label(|id| {
+                assert_eq!(id, "secure_field.toggle_visibility");
+                "Afficher ou masquer le mot de passe".into()
+            }),
+            "Afficher ou masquer le mot de passe"
+        );
+        assert_eq!(
+            default.resolved_password_visibility_accessibility_label(|id| id.to_owned()),
+            "Toggle password visibility"
+        );
+        assert_eq!(
+            default.resolved_password_visibility_accessibility_label(|_| " \t".to_owned()),
+            "Toggle password visibility"
+        );
+
+        let explicit = TextField("Password", binding())
+            .password_visibility_accessibility_label("Show or hide password")
+            .localized_password_visibility_accessibility_label("secure_field.toggle_visibility");
+        assert_eq!(
+            explicit.resolved_password_visibility_accessibility_label(|_| String::new()),
+            "Show or hide password"
+        );
+    }
+
+    #[test]
+    #[should_panic(
+        expected = "TextField password visibility accessibility localization key must not be blank"
+    )]
+    fn localized_password_visibility_accessible_name_key_must_not_be_blank() {
+        TextField("Password", binding()).localized_password_visibility_accessibility_label(" \t ");
+    }
+
+    #[test]
+    #[should_panic(
+        expected = "TextField password visibility accessibility label must not be blank"
+    )]
+    fn secure_field_visibility_accessible_name_must_not_be_blank() {
+        TextField("Password", binding()).password_visibility_accessibility_label(" \t ");
+    }
+
+    #[test]
+    fn secure_field_visibility_toggle_survives_same_mode_rerenders() {
+        assert!(!reconcile_masked_state(false, true, true));
+    }
+
+    #[test]
+    fn secure_field_mode_transitions_reset_masking_to_the_new_mode_default() {
+        assert!(!reconcile_masked_state(true, true, false));
+        assert!(reconcile_masked_state(false, false, true));
+    }
+
+    #[test]
+    fn secure_field_visibility_control_exposes_revealed_state() {
+        assert!(!visibility_control_is_toggled(true));
+        assert!(visibility_control_is_toggled(false));
+    }
+
+    #[test]
+    fn explicit_accessible_name_preserves_nonblank_text() {
+        let field = TextField("Search", binding()).accessibility_label("  Find items  ");
+
+        assert_eq!(
+            field
+                .resolved_accessibility_label(|id| id.to_owned())
+                .as_ref(),
+            "  Find items  "
+        );
+    }
+
+    #[test]
+    fn localized_accessible_name_resolves_and_preserves_literal_fallback() {
+        let field = TextField("Search", binding())
+            .accessibility_label("Find items")
+            .localized_accessibility_label("field.search");
+        assert_eq!(
+            field
+                .resolved_accessibility_label(|_| "Rechercher".into())
+                .as_ref(),
+            "Rechercher"
+        );
+        assert_eq!(
+            field.resolved_accessibility_label(|id| id.into()).as_ref(),
+            "Find items"
+        );
+    }
+
+    #[test]
+    fn localized_accessible_name_falls_back_to_placeholder_then_default() {
+        let field = TextField("Search", binding()).localized_accessibility_label("field.search");
+        assert_eq!(
+            field.resolved_accessibility_label(|id| id.into()).as_ref(),
+            "Search"
+        );
+        let blank = TextField(" \t", binding()).localized_accessibility_label("field.search");
+        assert_eq!(
+            blank.resolved_accessibility_label(|id| id.into()).as_ref(),
+            "Text field"
+        );
+    }
+
+    #[test]
+    fn localized_placeholder_updates_visible_text_and_default_accessible_name() {
+        let field = TextField("Search", binding()).localized_placeholder("field.search");
+        assert_eq!(
+            field.resolved_placeholder(|_| "Rechercher".into()).as_ref(),
+            "Rechercher"
+        );
+        assert_eq!(
+            field
+                .resolved_accessibility_label(|_| "Rechercher".into())
+                .as_ref(),
+            "Rechercher"
+        );
+        assert_eq!(
+            field.resolved_placeholder(|id| id.into()).as_ref(),
+            "Search"
+        );
+
+        let explicitly_named = TextField("Search", binding())
+            .accessibility_label("Find items")
+            .localized_placeholder("field.search");
+        assert_eq!(
+            explicitly_named
+                .resolved_accessibility_label(|_| "Rechercher".into())
+                .as_ref(),
+            "Find items"
+        );
+
+        let replaced = TextField("Search", binding())
+            .localized_placeholder("field.old")
+            .localized_placeholder("field.new");
+        assert_eq!(
+            replaced
+                .resolved_accessibility_label(|id| {
+                    assert_eq!(id, "field.new");
+                    "Chercher".into()
+                })
+                .as_ref(),
+            "Chercher"
+        );
+    }
+
+    #[test]
+    fn padded_localization_key_echo_uses_text_field_fallback() {
+        let field = TextField("Search", binding()).localized_accessibility_label("field.search");
+
+        assert_eq!(
+            field
+                .resolved_accessibility_label(|_| " \tfield.search\n".to_owned())
+                .as_ref(),
+            "Search"
+        );
+    }
+
+    #[test]
+    #[should_panic(expected = "TextField accessibility localization key must not be blank")]
+    fn localized_accessible_name_rejects_blank_message_id() {
+        TextField("Search", binding()).localized_accessibility_label(" \t ");
+    }
+
+    #[test]
+    #[should_panic(expected = "TextField accessibility label must not be empty")]
+    fn explicit_accessible_name_must_not_be_blank() {
+        TextField("Search", binding()).accessibility_label("\t ");
+    }
+
+    #[test]
+    fn search_text_uses_primary_text_in_both_appearances() {
+        let profile = parse_theme(include_str!("../../../../../themes/macos27.json"))
+            .unwrap()
+            .platform_snapshot;
+        for mode in [AppearanceMode::Light, AppearanceMode::Dark] {
+            assert_eq!(
+                super::search_text_color(&profile, mode),
+                gpui_component::theme::try_parse_color(&profile.colors(Some(mode)).primary_text)
+                    .unwrap()
+            );
+        }
+    }
+
+    #[test]
+    fn disabled_text_uses_the_platform_token_in_both_appearances() {
+        let profile = parse_theme(include_str!("../../../../../themes/macos27.json"))
+            .unwrap()
+            .platform_snapshot;
+        for mode in [AppearanceMode::Light, AppearanceMode::Dark] {
+            assert_eq!(
+                disabled_text_color(&profile, mode),
+                gpui_component::theme::try_parse_color(&profile.colors(Some(mode)).disabled_text)
+                    .unwrap()
+            );
+        }
+    }
+
+    #[test]
+    fn marked_preedit_replacing_selection_does_not_sync_unchanged_owner() {
+        // The preedit replaced selected "bc"; the original owner value is "abcd".
+        assert!(!should_sync_owner_value("abcd", "abcd", "aにd", Some(1..2)));
+    }
+
+    #[test]
+    fn repeated_marked_preedit_does_not_sync_unchanged_owner() {
+        assert!(!should_sync_owner_value(
+            "abcd",
+            "abcd",
+            "a日本d",
+            Some(1..3)
+        ));
+    }
+
+    #[test]
+    fn canceled_preedit_without_a_marked_range_restores_unchanged_owner() {
+        // A canceled composition can leave the retained state different from
+        // its owner after GPUI clears the marked range. The owner remains the
+        // committed value, so reconciliation must restore it.
+        assert!(should_sync_owner_value("abcd", "abcd", "aにd", None));
+    }
+
+    #[test]
+    fn unchanged_value_does_not_call_set_value_and_reset_selection() {
+        // A selection is editor state, not part of the string. With no owner
+        // change, reconciliation must leave InputState untouched.
+        assert!(!should_sync_owner_value("abcdef", "abcdef", "abcdef", None));
+    }
+
+    #[test]
+    fn changed_placeholder_is_refreshed_in_retained_input_state() {
+        assert!(placeholder_changed("Search", "Find"));
+        assert!(!placeholder_changed("Search", "Search"));
+    }
+
+    #[test]
+    fn committed_input_matching_owner_does_not_sync_again() {
+        assert!(!should_sync_owner_value("a日本d", "abcd", "a日本d", None));
+    }
+
+    #[test]
+    fn external_owner_update_during_preedit_is_synchronized() {
+        assert!(should_sync_owner_value(
+            "external update",
+            "abcd",
+            "aにd",
+            Some(1..2)
+        ));
+    }
+
+    #[gpui::test]
+    fn retained_input_syncs_external_owner_during_marked_text(cx: &mut gpui::TestAppContext) {
+        use super::RetainedTextField;
+        use crate::{runtime::component_host::ComponentHost, view::View};
+        use gpui::EntityInputHandler;
+
+        struct Owner {
+            value: String,
+        }
+        impl View for Owner {
+            fn body(&self) -> impl View {
+                TextField(
+                    "Name",
+                    Binding::new(
+                        self.value.clone(),
+                        |owner: &Owner| owner.value.clone(),
+                        |owner, next| owner.value = next,
+                    ),
+                )
+                .id("ime-owner-input")
+            }
+        }
+        let theme = parse_theme(include_str!(concat!(
+            env!("CARGO_MANIFEST_DIR"),
+            "/../../themes/macos27.json"
+        )))
+        .unwrap();
+        cx.update(|app| {
+            gpui_component::init(app);
+            crate::theme::activate_theme(&theme, Some(AppearanceMode::Dark), app).unwrap();
+        });
+        let (owner, window) = cx.add_window_view(|_, cx| {
+            ComponentHost::new(
+                Owner {
+                    value: "base".into(),
+                },
+                cx,
+            )
+        });
+        let state = window.update(|window, app| {
+            let _ = window.draw(app);
+            let retained = owner
+                .read(app)
+                .retained_entity_for_test::<RetainedTextField>(
+                    vec![],
+                    Identity::from("ime-owner-input"),
+                )
+                .unwrap();
+            let state = retained.read(app).state.clone();
+            state.update(app, |state, cx| {
+                state.replace_and_mark_text_in_range(Some(4..4), "é", Some(1..1), window, cx)
+            });
+            assert_eq!(state.read(app).value().as_ref(), "baseé");
+            assert!(
+                state
+                    .update(app, |state, cx| state.marked_text_range(window, cx))
+                    .is_some()
+            );
+            owner.update(app, |host, cx| {
+                host.component_mut().value = "external".into();
+                cx.notify();
+            });
+            let _ = window.draw(app);
+            assert_eq!(state.read(app).value().as_ref(), "external");
+            assert_eq!(owner.read(app).component().value, "external");
+            state
+        });
+        window.cx.run_until_parked();
+        window.update(|window, app| {
+            state.update(app, |state, cx| {
+                state.replace_text_in_range(None, "é", window, cx);
+            });
+        });
+        window.cx.run_until_parked();
+        window.update(|window, app| {
+            let _ = window.draw(app);
+            assert_eq!(state.read(app).value().as_ref(), "externalé");
+            assert_eq!(owner.read(app).component().value, "externalé");
+        });
+        window.update(|window, app| {
+            state.update(app, |state, cx| {
+                state.replace_and_mark_text_in_range(Some(9..9), "😀", Some(2..2), window, cx);
+            });
+            assert_eq!(state.read(app).value().as_ref(), "externalé😀");
+            assert!(
+                state
+                    .update(app, |state, cx| state.marked_text_range(window, cx))
+                    .is_some()
+            );
+            owner.update(app, |host, cx| {
+                host.component_mut().value = "جديد".into();
+                cx.notify();
+            });
+            let _ = window.draw(app);
+            assert_eq!(state.read(app).value().as_ref(), "جديد");
+        });
+        window.cx.run_until_parked();
+        window.update(|window, app| {
+            state.update(app, |state, cx| {
+                state.replace_text_in_range(None, "😀", window, cx);
+            });
+        });
+        window.cx.run_until_parked();
+        window.update(|window, app| {
+            let _ = window.draw(app);
+            assert_eq!(state.read(app).value().as_ref(), "جديد😀");
+            assert_eq!(owner.read(app).component().value, "جديد😀");
+        });
+    }
+
+    #[gpui::test]
+    fn disabling_or_freezing_field_discards_uncommitted_composition(cx: &mut gpui::TestAppContext) {
+        use crate::{runtime::component_host::ComponentHost, view::View};
+        use gpui::EntityInputHandler;
+        struct Owner {
+            value: String,
+            disabled: bool,
+            readonly: bool,
+        }
+        impl View for Owner {
+            fn body(&self) -> impl View {
+                TextField(
+                    "Name",
+                    Binding::new(
+                        self.value.clone(),
+                        |owner: &Owner| owner.value.clone(),
+                        |owner, value| owner.value = value,
+                    ),
+                )
+                .id("composition-guard")
+                .disabled(self.disabled)
+                .readonly(self.readonly)
+            }
+        }
+        let theme = parse_theme(include_str!(concat!(
+            env!("CARGO_MANIFEST_DIR"),
+            "/../../themes/macos27.json"
+        )))
+        .unwrap();
+        cx.update(|app| {
+            gpui_component::init(app);
+            crate::theme::activate_theme(&theme, Some(AppearanceMode::Dark), app).unwrap();
+        });
+        let (owner, window) = cx.add_window_view(|_, cx| {
+            ComponentHost::new(
+                Owner {
+                    value: "base".into(),
+                    disabled: false,
+                    readonly: false,
+                },
+                cx,
+            )
+        });
+        let state = window.update(|window, app| {
+            let _ = window.draw(app);
+            owner
+                .read(app)
+                .retained_entity_for_test::<super::RetainedTextField>(
+                    vec![],
+                    Identity::from("composition-guard"),
+                )
+                .unwrap()
+                .read(app)
+                .state
+                .clone()
+        });
+        for readonly in [false, true] {
+            window.update(|window, app| {
+                state.update(app, |state, cx| {
+                    state.replace_and_mark_text_in_range(Some(4..4), "é", Some(1..1), window, cx)
+                });
+                assert_eq!(state.read(app).value().as_ref(), "baseé");
+                owner.update(app, |host, cx| {
+                    host.component_mut().disabled = !readonly;
+                    host.component_mut().readonly = readonly;
+                    cx.notify();
+                });
+                let _ = window.draw(app);
+                assert_eq!(state.read(app).value().as_ref(), "base");
+                assert!(
+                    state
+                        .update(app, |state, cx| state.marked_text_range(window, cx))
+                        .is_none()
+                );
+                assert_eq!(owner.read(app).component().value, "base");
+                owner.update(app, |host, cx| {
+                    host.component_mut().disabled = false;
+                    host.component_mut().readonly = false;
+                    cx.notify();
+                });
+                let _ = window.draw(app);
+            });
+            window.cx.run_until_parked();
+        }
+        window.update(|window, app| {
+            state.update(app, |state, cx| {
+                state.replace_and_mark_text_in_range(Some(0..1), "b", Some(1..1), window, cx)
+            });
+            assert_eq!(state.read(app).value().as_ref(), "base");
+            assert!(
+                state
+                    .update(app, |state, cx| state.marked_text_range(window, cx))
+                    .is_some()
+            );
+            owner.update(app, |host, cx| {
+                host.component_mut().disabled = true;
+                cx.notify();
+            });
+            let _ = window.draw(app);
+            assert!(
+                state
+                    .update(app, |state, cx| state.marked_text_range(window, cx))
+                    .is_none()
+            );
+        });
+    }
+
+    #[gpui::test]
+    fn disabled_retained_input_rejects_late_change_and_resumes(cx: &mut gpui::TestAppContext) {
+        use super::RetainedTextField;
+        use crate::{runtime::component_host::ComponentHost, view::View};
+
+        struct Owner {
+            value: String,
+            disabled: bool,
+            readonly: bool,
+        }
+        impl View for Owner {
+            fn body(&self) -> impl View {
+                TextField(
+                    "Name",
+                    Binding::new(
+                        self.value.clone(),
+                        |owner: &Owner| owner.value.clone(),
+                        |owner, next| owner.value = next,
+                    ),
+                )
+                .id("disabled-input")
+                .disabled(self.disabled)
+                .readonly(self.readonly)
+            }
+        }
+        let theme = parse_theme(include_str!(concat!(
+            env!("CARGO_MANIFEST_DIR"),
+            "/../../themes/macos27.json"
+        )))
+        .unwrap();
+        cx.update(|app| {
+            gpui_component::init(app);
+            crate::theme::activate_theme(&theme, Some(AppearanceMode::Dark), app).unwrap();
+        });
+        let (owner, window) = cx.add_window_view(|_, cx| {
+            ComponentHost::new(
+                Owner {
+                    value: "initial".into(),
+                    disabled: false,
+                    readonly: false,
+                },
+                cx,
+            )
+        });
+        let state = window.update(|window, app| {
+            let _ = window.draw(app);
+            let retained = owner
+                .read(app)
+                .retained_entity_for_test::<RetainedTextField>(
+                    vec![],
+                    Identity::from("disabled-input"),
+                )
+                .unwrap();
+            retained.read(app).state.clone()
+        });
+        window.update(|window, app| {
+            owner.update(app, |host, cx| {
+                host.component_mut().disabled = true;
+                host.component_mut().value = "external".into();
+                cx.notify();
+            });
+            let _ = window.draw(app);
+            assert_eq!(state.read(app).value().as_ref(), "external");
+            state.update(app, |state, cx| {
+                state.set_value("late", window, cx);
+                cx.emit(gpui_component::input::InputEvent::Change);
+            });
+        });
+        window.cx.run_until_parked();
+        window.update(|_, app| assert_eq!(owner.read(app).component().value, "external"));
+        window.update(|window, app| {
+            owner.update(app, |host, cx| {
+                host.component_mut().disabled = false;
+                cx.notify();
+            });
+            let _ = window.draw(app);
+            state.update(app, |state, cx| {
+                state.set_value("fresh", window, cx);
+                cx.emit(gpui_component::input::InputEvent::Change);
+            });
+        });
+        window.cx.run_until_parked();
+        window.update(|_, app| assert_eq!(owner.read(app).component().value, "fresh"));
+        window.update(|window, app| {
+            owner.update(app, |host, cx| {
+                host.component_mut().readonly = true;
+                cx.notify();
+            });
+            let _ = window.draw(app);
+            state.update(app, |state, cx| {
+                state.set_value("late readonly", window, cx);
+                cx.emit(gpui_component::input::InputEvent::Change);
+            });
+        });
+        window.cx.run_until_parked();
+        window.update(|_, app| assert_eq!(owner.read(app).component().value, "fresh"));
+    }
+
+    #[test]
+    fn external_owner_update_without_preedit_is_synchronized() {
+        assert!(should_sync_owner_value(
+            "external update",
+            "abcd",
+            "abcd",
+            None
+        ));
     }
 }

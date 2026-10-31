@@ -9,13 +9,22 @@ use rustui_core::Identity;
 
 use crate::view::{EmptyView, RenderContext, View};
 
+#[derive(Clone, Debug)]
+enum SkeletonAccessibilityLabel {
+    Literal(SharedString),
+    Message {
+        id: SharedString,
+        fallback: SharedString,
+    },
+}
+
 /// An animated placeholder with optional explicit size and corner radius.
 #[derive(Clone, Debug, Default)]
 pub struct SkeletonView {
     size: Option<(f32, f32)>,
     corner_radius: Option<f32>,
     secondary: bool,
-    accessibility_label: Option<SharedString>,
+    accessibility_label: Option<SkeletonAccessibilityLabel>,
     id: Option<Identity>,
 }
 
@@ -56,7 +65,29 @@ impl SkeletonView {
             !label.trim().is_empty(),
             "skeleton accessibility label must not be empty"
         );
-        self.accessibility_label = Some(label);
+        self.accessibility_label = Some(SkeletonAccessibilityLabel::Literal(label));
+        self
+    }
+
+    /// Resolves the placeholder name from the active locale catalog.
+    ///
+    /// The current literal label is retained as a fallback; otherwise the
+    /// fallback is "Loading". A localized label keeps the message key as its
+    /// generated accessibility ID across locale changes.
+    pub fn localized_accessibility_label(mut self, message_id: impl Into<SharedString>) -> Self {
+        let id = message_id.into();
+        assert!(
+            !id.trim().is_empty(),
+            "skeleton accessibility localization key must not be blank"
+        );
+        let fallback = match &self.accessibility_label {
+            Some(SkeletonAccessibilityLabel::Literal(label))
+            | Some(SkeletonAccessibilityLabel::Message {
+                fallback: label, ..
+            }) => label.clone(),
+            None => "Loading".into(),
+        };
+        self.accessibility_label = Some(SkeletonAccessibilityLabel::Message { id, fallback });
         self
     }
 
@@ -64,6 +95,39 @@ impl SkeletonView {
     pub fn id(mut self, id: impl Into<Identity>) -> Self {
         self.id = Some(id.into());
         self
+    }
+
+    fn resolved_accessibility_label(
+        &self,
+        localized_message: impl FnOnce(&str) -> String,
+    ) -> Option<SharedString> {
+        match &self.accessibility_label {
+            None => None,
+            Some(SkeletonAccessibilityLabel::Literal(label)) => Some(label.clone()),
+            Some(SkeletonAccessibilityLabel::Message { id, fallback }) => {
+                let localized = localized_message(id.as_ref());
+                Some(
+                    if localized.trim().is_empty() || localized.trim() == id.trim() {
+                        fallback.clone()
+                    } else {
+                        localized.into()
+                    },
+                )
+            }
+        }
+    }
+
+    fn resolved_accessibility_id(&self) -> Option<Identity> {
+        self.accessibility_label.as_ref().map(|label| {
+            self.id.clone().unwrap_or_else(|| match label {
+                SkeletonAccessibilityLabel::Literal(label) => {
+                    Identity::from(format!("rustui-skeleton:{label}"))
+                }
+                SkeletonAccessibilityLabel::Message { id, .. } => {
+                    Identity::from(format!("rustui-skeleton-message:{id}"))
+                }
+            })
+        })
     }
 }
 
@@ -78,7 +142,7 @@ impl View for SkeletonView {
         EmptyView
     }
 
-    fn into_element(&self, _: &mut RenderContext<'_>) -> AnyElement {
+    fn into_element(&self, context: &mut RenderContext<'_>) -> AnyElement {
         let mut skeleton = NativeSkeleton::new();
         if self.secondary {
             skeleton = skeleton.secondary();
@@ -90,16 +154,15 @@ impl View for SkeletonView {
             skeleton = skeleton.rounded(px(radius));
         }
         let skeleton = skeleton.into_any_element();
-        match &self.accessibility_label {
+        match self.resolved_accessibility_label(|id| context.localized_message(id)) {
             Some(label) => {
                 let id = self
-                    .id
-                    .clone()
-                    .unwrap_or_else(|| Identity::from(format!("rustui-skeleton:{label}")));
+                    .resolved_accessibility_id()
+                    .expect("labeled skeleton has an accessibility ID");
                 div()
                     .id(id.as_str().to_owned())
                     .role(Role::ProgressIndicator)
-                    .aria_label(label.clone())
+                    .aria_label(label)
                     .child(skeleton)
                     .into_any_element()
             }
@@ -147,5 +210,68 @@ mod tests {
     #[should_panic(expected = "skeleton accessibility label must not be empty")]
     fn rejects_empty_accessibility_label() {
         Skeleton().accessibility_label("  ");
+    }
+
+    #[test]
+    fn remains_decorative_without_an_accessibility_label() {
+        assert_eq!(
+            Skeleton().resolved_accessibility_label(|_| unreachable!()),
+            None
+        );
+        assert_eq!(Skeleton().resolved_accessibility_id(), None);
+    }
+
+    #[test]
+    fn localized_accessibility_label_uses_explicit_fallback() {
+        let skeleton = Skeleton()
+            .accessibility_label("Loading profile")
+            .localized_accessibility_label("skeleton.profile");
+        assert_eq!(
+            skeleton.resolved_accessibility_label(|id| format!("{id} traduit")),
+            Some("skeleton.profile traduit".into())
+        );
+        assert_eq!(
+            skeleton.resolved_accessibility_label(|_| "skeleton.profile".to_owned()),
+            Some("Loading profile".into())
+        );
+        assert_eq!(
+            skeleton.resolved_accessibility_label(|_| " skeleton.profile \t".to_owned()),
+            Some("Loading profile".into())
+        );
+        assert_eq!(
+            skeleton.resolved_accessibility_label(|_| " \t ".to_owned()),
+            Some("Loading profile".into())
+        );
+    }
+
+    #[test]
+    fn localized_accessibility_label_defaults_to_loading() {
+        let skeleton = Skeleton().localized_accessibility_label("skeleton.loading");
+        assert_eq!(
+            skeleton.resolved_accessibility_label(|_| String::new()),
+            Some("Loading".into())
+        );
+    }
+
+    #[test]
+    fn localized_accessibility_id_is_stable_across_resolutions() {
+        let skeleton = Skeleton().localized_accessibility_label("skeleton.profile");
+        let before = skeleton.resolved_accessibility_id();
+        let english = skeleton.resolved_accessibility_label(|_| "Loading profile".to_owned());
+        let french = skeleton.resolved_accessibility_label(|_| "Chargement du profil".to_owned());
+
+        assert_eq!(english, Some("Loading profile".into()));
+        assert_eq!(french, Some("Chargement du profil".into()));
+        assert_eq!(before, skeleton.resolved_accessibility_id());
+        assert_eq!(
+            before.unwrap().as_str(),
+            "rustui-skeleton-message:skeleton.profile"
+        );
+    }
+
+    #[test]
+    #[should_panic(expected = "skeleton accessibility localization key must not be blank")]
+    fn rejects_blank_accessibility_message_id() {
+        Skeleton().localized_accessibility_label(" \t ");
     }
 }

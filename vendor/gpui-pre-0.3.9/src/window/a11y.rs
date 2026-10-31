@@ -246,9 +246,21 @@ impl A11y {
             // later focus on a node-less element logs again.
             self.last_focus_without_node = None;
             self.nodes.set_focus(node_id);
+        } else if let Some(ancestor) = self
+            .nodes
+            .ids_stack
+            .last()
+            .copied()
+            .filter(|id| *id != ROOT_NODE_ID)
+        {
+            // A role-less editing/focus implementation can live inside an
+            // exposed semantic control. Report that closest control while
+            // preserving the implementation's actual GPUI focus handle.
+            self.last_focus_without_node = None;
+            self.nodes.set_focus(ancestor);
         } else {
-            // The element registered a focus handle and an id, but never got a
-            // node because it has no role.
+            // The element registered a focus handle and an id, but has no
+            // semantic node or exposed control ancestor.
             if let Some(focus_id) = self.focus_ids.get(&node_id).copied() {
                 self.note_focus_without_node(focus_id, "it has an id but no role");
             }
@@ -901,5 +913,28 @@ mod tests {
 
         let update = a11y.end_frame(Default::default());
         assert_eq!(update.focus, a);
+    }
+    #[test]
+    fn roleless_focus_reports_closest_semantic_ancestor() {
+        let mut a11y = new_a11y();
+        let control = NodeId(1);
+        let implementation = NodeId(2);
+        assert!(a11y.nodes.push(control, test_node()));
+        a11y.set_focusable(implementation, FocusId::default());
+        a11y.set_focus(implementation);
+        assert_eq!(a11y.nodes.focus, Some(control));
+        assert_eq!(
+            a11y.focus_ids.get(&implementation),
+            Some(&FocusId::default())
+        );
+    }
+
+    #[test]
+    fn roleless_focus_without_semantic_control_keeps_root_fallback() {
+        let mut a11y = new_a11y();
+        let implementation = NodeId(2);
+        a11y.set_focusable(implementation, FocusId::default());
+        a11y.set_focus(implementation);
+        assert_eq!(a11y.nodes.focus, None);
     }
 }

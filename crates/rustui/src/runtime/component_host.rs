@@ -16,6 +16,45 @@ use crate::view::{ComponentMutation, ComponentUpdater, RenderContext, RetentionS
 pub(crate) struct RetainedEntry {
     entity: Box<dyn Any>,
     _subscriptions: Vec<Subscription>,
+    _replaceable_subscriptions: HashMap<Identity, Subscription>,
+}
+
+#[cfg(test)]
+mod replacement_subscription_tests {
+    use super::*;
+    use std::cell::Cell;
+
+    #[test]
+    fn replacement_drops_only_its_slot_and_owner_removal_drops_the_rest() {
+        let dropped = Rc::new(Cell::new(0));
+        let subscription = || {
+            let dropped = dropped.clone();
+            Subscription::new(move || dropped.set(dropped.get() + 1))
+        };
+        let id = Identity::from("picker");
+        let slot = Identity::from("selection");
+        let mut retained = RetainedEntities::default();
+        retained.entries.insert(
+            retained.key(&id),
+            RetainedEntry {
+                entity: Box::new(()),
+                _subscriptions: vec![subscription()],
+                _replaceable_subscriptions: std::collections::HashMap::new(),
+            },
+        );
+        retained.replace_subscription(&id, slot.clone(), subscription());
+        retained.replace_subscription(&id, Identity::from("other"), subscription());
+        retained.replace_subscription(&id, slot, subscription());
+        assert_eq!(dropped.get(), 1);
+        let entry = retained.entries.get(&retained.key(&id)).unwrap();
+        assert_eq!(entry._subscriptions.len(), 1);
+        assert_eq!(entry._replaceable_subscriptions.len(), 2);
+
+        retained.begin_frame();
+        retained.finish_frame();
+        assert_eq!(dropped.get(), 4);
+        assert!(retained.entries.is_empty());
+    }
 }
 
 struct RetainedComponent {
@@ -130,8 +169,14 @@ impl RetainedEntities {
                     | RetentionScope::Card(_)
                     | RetentionScope::DragSource(_)
                     | RetentionScope::DropTarget(_)
+                    | RetentionScope::SpringOffset(_)
                     | RetentionScope::SpringOpacity(_)
                     | RetentionScope::AnimatedOpacity(_)
+                    | RetentionScope::Tabs(_)
+                    | RetentionScope::Tab(_)
+                    | RetentionScope::Navigation(_)
+                    | RetentionScope::NavigationSplit(_)
+                    | RetentionScope::Page(_)
             )
         ) {
             assert!(
@@ -182,6 +227,7 @@ impl RetainedEntities {
             RetainedEntry {
                 entity: Box::new(entity),
                 _subscriptions: Vec::new(),
+                _replaceable_subscriptions: std::collections::HashMap::new(),
             },
         );
     }
@@ -254,6 +300,20 @@ impl RetainedEntities {
             ._subscriptions
             .push(subscription);
     }
+
+    pub(crate) fn replace_subscription(
+        &mut self,
+        id: &Identity,
+        slot: Identity,
+        subscription: Subscription,
+    ) {
+        let key = self.key(id);
+        self.entries
+            .get_mut(&key)
+            .expect("retained subscriptions require an existing entity")
+            ._replaceable_subscriptions
+            .insert(slot, subscription);
+    }
 }
 
 /// Owns a RustUI component inside GPUI's entity and rendering lifecycle.
@@ -264,6 +324,7 @@ pub struct ComponentHost<V> {
     pub(crate) tasks: TaskRegistry,
     _release: Subscription,
     _localization: Subscription,
+    _theme: Subscription,
 }
 
 impl<V: View> ComponentHost<V> {
@@ -278,6 +339,7 @@ impl<V: View> ComponentHost<V> {
     ) -> Self {
         let release = cx.on_release(|host, cx| host.component.on_unmount(cx));
         let localization = crate::localization::invalidation::observe(cx);
+        let theme = crate::theme::invalidation::observe(cx);
         component.on_mount(cx);
         Self {
             component,
@@ -286,11 +348,26 @@ impl<V: View> ComponentHost<V> {
             tasks: TaskRegistry::default(),
             _release: release,
             _localization: localization,
+            _theme: theme,
         }
     }
 
     pub fn component(&self) -> &V {
         &self.component
+    }
+
+    /// Reads an exact slot without marking it visited. GPUI's test windows do not project AX trees.
+    #[cfg(test)]
+    pub(crate) fn retained_entity_for_test<T: 'static>(
+        &self,
+        scope: Vec<RetentionScope>,
+        id: Identity,
+    ) -> Option<Entity<T>> {
+        self.retained
+            .entries
+            .get(&RetainedKey { scope, id })
+            .and_then(|entry| entry.entity.downcast_ref::<Entity<T>>())
+            .cloned()
     }
 
     pub fn component_mut(&mut self) -> &mut V {
@@ -516,6 +593,42 @@ mod context_menu_scope_tests {
     }
 
     #[test]
+    fn duplicate_spring_offset_siblings_are_rejected() {
+        let mut retained = RetainedEntities::default();
+        retained.begin_frame();
+        let scope = RetentionScope::SpringOffset(Identity::from("moving"));
+        retained.push_scope(scope.clone());
+        retained.pop_scope();
+        assert!(
+            std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| retained.push_scope(scope)))
+                .is_err()
+        );
+    }
+
+    #[test]
+    fn remaining_keyed_retention_scopes_reject_duplicate_siblings() {
+        let scopes = [
+            RetentionScope::Tabs(Identity::from("tabs")),
+            RetentionScope::Tab("overview".to_owned()),
+            RetentionScope::NavigationSplit(Identity::from("navigation-split")),
+            RetentionScope::Page(vec!["details".to_owned()]),
+        ];
+
+        for scope in scopes {
+            let mut retained = RetainedEntities::default();
+            retained.begin_frame();
+            retained.push_scope(scope.clone());
+            retained.pop_scope();
+            assert!(
+                std::panic::catch_unwind(std::panic::AssertUnwindSafe(
+                    || retained.push_scope(scope)
+                ))
+                .is_err()
+            );
+        }
+    }
+
+    #[test]
     fn dedicated_reader_store_releases_omitted_branch() {
         let mut retained = RetainedEntities::default();
         let key = RetainedKey {
@@ -527,6 +640,7 @@ mod context_menu_scope_tests {
             RetainedEntry {
                 entity: Box::new(()),
                 _subscriptions: Vec::new(),
+                _replaceable_subscriptions: std::collections::HashMap::new(),
             },
         );
         retained.begin_frame();
@@ -559,6 +673,19 @@ mod context_menu_scope_tests {
         retained.push_scope(RetentionScope::Key(id.clone()));
         retained.pop_scope();
         let scope = RetentionScope::SplitView(id);
+        retained.push_scope(scope.clone());
+        retained.pop_scope();
+        assert!(
+            std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| retained.push_scope(scope)))
+                .is_err()
+        );
+    }
+
+    #[test]
+    fn duplicate_navigation_stack_siblings_are_rejected_without_key_collisions() {
+        let mut retained = RetainedEntities::default();
+        retained.begin_frame();
+        let scope = RetentionScope::Navigation(Identity::from("target"));
         retained.push_scope(scope.clone());
         retained.pop_scope();
         assert!(
@@ -620,6 +747,7 @@ mod context_menu_scope_tests {
                 RetainedEntry {
                     entity: Box::new(()),
                     _subscriptions: Vec::new(),
+                    _replaceable_subscriptions: std::collections::HashMap::new(),
                 },
             );
             retained.components.insert(
@@ -649,6 +777,7 @@ mod context_menu_scope_tests {
                 RetainedEntry {
                     entity: Box::new(()),
                     _subscriptions: Vec::new(),
+                    _replaceable_subscriptions: std::collections::HashMap::new(),
                 },
             );
         }
@@ -682,6 +811,7 @@ mod collection_eviction_tests {
                 RetainedEntry {
                     entity: Box::new(ReleaseProbe(released.clone())),
                     _subscriptions: Vec::new(),
+                    _replaceable_subscriptions: std::collections::HashMap::new(),
                 },
             );
             retained.components.insert(
@@ -700,3 +830,7 @@ mod collection_eviction_tests {
         assert_eq!(released.get(), 6);
     }
 }
+
+#[cfg(test)]
+#[path = "component_host_tests.rs"]
+mod component_lifecycle_tests;

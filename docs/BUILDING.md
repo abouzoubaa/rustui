@@ -133,12 +133,15 @@ and feature set for warmup and normal development.
 ```sh
 python3 scripts/validate_themes.py --plans-only
 python3 scripts/validate_locales.py
+python3 scripts/validate_locales.py --runtime
 ```
 
-The theme command validates planning records only. The locale command validates the
-three runtime locale records, the supported catalog syntax, duplicate/empty messages,
-and matching message-ID sets across the framework and Playground catalog groups. It does not
-claim pluralization, interpolation, formatting, bidi, or visual acceptance.
+The theme command validates planning records only. The basic locale command checks
+the three runtime locale records, message lines, duplicate/empty messages, and
+matching message-ID sets. It does not parse message patterns. The `--runtime`
+option also runs RustUI's bundled-catalog validation through Headstart, with the
+intentional malformed-pattern demonstration exempted. Neither command establishes
+native visual, bidi, or accessibility acceptance.
 
 ## Structured dependency reuse evidence (P2b)
 
@@ -416,3 +419,53 @@ See `tasks/P2E_W1_ACCEPTANCE_BASELINE.md` for exact inputs, results and limitati
 ## P3D paired cache comparison compile validation — 2026-10-18
 
 - The final comparison-tool suite passed 21 Python tests (`target/headstart/p3d-final-python-tests.log`); its final guards exclude runs when accessibility or native drag is detected, including late observations. No native comparison or benchmark measurement has run; these checks make no performance claim. See `docs/tasks/P3D_CACHE_COMPARISON.md` for the native protocol and its remaining documentation refresh.
+## GPUI ownership and event-path tests
+
+RustUI's test-only GPUI dependency enables the pinned upstream `test-support`
+feature. Eighteen additional registry packages were restored from the retained
+worktree after verifying official registry checksums, archive contents, source
+checksums and license files. No existing package versions or checksums changed.
+The macOS and Wasm Playground normal/build dependency trees were compared before
+and after this addition and are unchanged; the application does not enable the
+test harness. All sources remain under `vendor/`.
+
+```sh
+./scripts/cargo-headstart test -p rustui --lib component_lifecycle_tests --profile headstart --locked --offline
+./scripts/cargo-headstart test -p rustui --lib focused_divider_routes --profile headstart --locked --offline
+```
+
+These tests use GPUI's fake windows and production render/event/owner paths. They
+do not launch Playground or establish native/browser accessibility, VoiceOver,
+IME or visual acceptance. The fake backend does not project AX trees; the
+SplitView event test observes the retained native `ResizableState` after key
+dispatch. Its read-only retained-slot inspector is compiled only for tests.
+
+## Stable generated-source paths for native release artifacts
+
+`RUSTUI_REMAP_BUILD_PATHS=1` opts the Headstart launcher into stable source/build
+path mappings. It maps the physical repository root to `/rustui/src` and the
+selected target directory to `/rustui/build`, preserving caller flags and the
+approved `-Zmetadata-crate-hash=no` workaround. Encoded caller flags retain
+precedence over unencoded `RUSTFLAGS`; paths containing spaces remain single
+encoded arguments. Python 3 is required for this opt-in mode. Development defaults
+are unchanged. Values other than `0` and `1` are rejected.
+
+The native optimized build in `scripts/verify-release.sh macos` enables the mode.
+Select and record the same installed SDK and toolchain when comparing builds.
+Two initially absent native target directories on the current Mac produced
+byte-identical executables after this mapping. Without it, html5ever embeds its
+absolute generated `OUT_DIR/rules.rs` filename and changes executable bytes.
+This establishes same-host, same-toolchain native target-directory reproduction;
+cross-machine and complete native archive reproduction remain separate. The
+approved installed compiler is identified by its binary hash and configuration;
+binding that binary to an exact source snapshot or reproducing its bootstrap is
+a disclosed provenance follow-up, not an original RustUI release requirement.
+Evidence: `target/headstart/evidence/native-clean-reproduction-20261026/`.
+
+Web reproduction was also checked on source `39da1d7b` using two initially absent
+`RUSTUI_WASM_TARGET_DIR` directories, the same approved Wasm compiler and
+wasm-bindgen, and explicit `RUSTUI_REMAP_BUILD_PATHS=1`. Each build recorded 496
+rebuilt / 0 fresh Cargo artifacts. Raw Wasm, processed Wasm and all 770 package
+files (including the manifest) match byte-for-byte. Keep each copied bundle before
+the next build replaces `target/headstart/playground-web`.
+Evidence: `target/headstart/evidence/web-clean-reproduction-20261026/`.

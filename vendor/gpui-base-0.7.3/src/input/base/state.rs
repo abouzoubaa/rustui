@@ -245,19 +245,19 @@ pub(crate) fn init(cx: &mut App) {
         KeyBinding::new("ctrl-shift-right", SelectToNextWordEnd, Some(CONTEXT)),
         #[cfg(target_os = "macos")]
         KeyBinding::new("ctrl-cmd-space", ShowCharacterPalette, Some(CONTEXT)),
-        #[cfg(target_os = "macos")]
+        #[cfg(any(target_os = "macos", target_family = "wasm"))]
         KeyBinding::new("cmd-a", SelectAll, Some(CONTEXT)),
         #[cfg(not(target_os = "macos"))]
         KeyBinding::new("ctrl-a", SelectAll, Some(CONTEXT)),
-        #[cfg(target_os = "macos")]
+        #[cfg(any(target_os = "macos", target_family = "wasm"))]
         KeyBinding::new("cmd-c", Copy, Some(CONTEXT)),
         #[cfg(not(target_os = "macos"))]
         KeyBinding::new("ctrl-c", Copy, Some(CONTEXT)),
-        #[cfg(target_os = "macos")]
+        #[cfg(any(target_os = "macos", target_family = "wasm"))]
         KeyBinding::new("cmd-x", Cut, Some(CONTEXT)),
         #[cfg(not(target_os = "macos"))]
         KeyBinding::new("ctrl-x", Cut, Some(CONTEXT)),
-        #[cfg(target_os = "macos")]
+        #[cfg(any(target_os = "macos", target_family = "wasm"))]
         KeyBinding::new("cmd-v", Paste, Some(CONTEXT)),
         #[cfg(not(target_os = "macos"))]
         KeyBinding::new("ctrl-v", Paste, Some(CONTEXT)),
@@ -470,6 +470,7 @@ pub struct InputBaseState<M: InputModeKind> {
     pub(crate) readonly: bool,
     pub(crate) text_align: TextAlign,
     pub(super) masked: bool,
+    platform_secure_input: bool,
     pub(super) clean_on_escape: bool,
     pub(super) submit_on_enter: bool,
     pub(super) show_whitespaces: bool,
@@ -622,6 +623,11 @@ impl InputPresentation {
 impl<M: InputModeKind> EventEmitter<InputEvent> for InputBaseState<M> {}
 
 impl<M: InputModeKind> InputBaseState<M> {
+    /// Renderer-owned input security metadata; does not schedule or mutate text.
+    pub fn sync_platform_secure_input(&mut self, secure: bool) {
+        self.platform_secure_input = secure;
+    }
+
     #[doc(hidden)]
     pub fn cursor_layout(&self) -> Option<(Bounds<Pixels>, Pixels)> {
         let layout = self.last_layout.as_ref()?;
@@ -836,6 +842,7 @@ impl<M: InputModeKind> InputBaseState<M> {
             readonly: false,
             text_align: TextAlign::Left,
             masked: false,
+            platform_secure_input: false,
             clean_on_escape: false,
             submit_on_enter: false,
             show_whitespaces: false,
@@ -4092,6 +4099,9 @@ impl<M: InputModeKind> InputBaseState<M> {
 }
 
 impl<M: InputModeKind> EntityInputHandler for InputBaseState<M> {
+    fn is_secure_input(&mut self, _window: &mut Window, _cx: &mut Context<Self>) -> bool {
+        self.masked || self.platform_secure_input
+    }
     fn text_for_range(
         &mut self,
         range_utf16: Range<usize>,
@@ -4114,6 +4124,19 @@ impl<M: InputModeKind> EntityInputHandler for InputBaseState<M> {
             range: self.range_to_utf16(&self.selected_range()),
             reversed: self.active_selection().reversed,
         })
+    }
+
+    fn set_selected_text_range(
+        &mut self,
+        range_utf16: Range<usize>,
+        _window: &mut Window,
+        cx: &mut Context<Self>,
+    ) {
+        if self.disabled {
+            return;
+        }
+        let range = self.range_from_utf16(&range_utf16);
+        self.set_selected_range(range, cx);
     }
 
     fn marked_text_range(
@@ -10911,6 +10934,54 @@ mod tests {
                     previous.origin.x
                 );
                 assert!(range_bounds.size.width >= px(0.0));
+            });
+        });
+    }
+
+    #[gpui::test]
+    fn test_native_utf16_selection_replacement_and_clear(cx: &mut TestAppContext) {
+        let input_view = InputView::build_textarea(cx, |state| state.default_value("tree"));
+        let mut visual = VisualTestContext::from_window(input_view.window_handle.into(), cx);
+        visual.update(|window, cx| {
+            input_view.input.update(cx, |state, cx| {
+                state.set_cursor_to(4);
+                state.set_selected_text_range(0..4, window, cx);
+                assert_eq!(
+                    state.selected_text_range(false, window, cx).unwrap().range,
+                    0..4
+                );
+                state.replace_text_in_range(None, "button", window, cx);
+                assert_eq!(state.text.to_string(), "button");
+                state.set_selected_text_range(0..6, window, cx);
+                state.replace_text_in_range(None, "button", window, cx);
+                assert_eq!(state.text.to_string(), "button");
+                state.set_selected_text_range(0..6, window, cx);
+                state.replace_text_in_range(None, "", window, cx);
+                assert_eq!(state.text.to_string(), "");
+            });
+        });
+    }
+
+    #[gpui::test]
+    fn test_native_selection_uses_utf16_and_respects_disabled(cx: &mut TestAppContext) {
+        let input_view = InputView::build_textarea(cx, |state| state.default_value("a😀b"));
+        let mut visual = VisualTestContext::from_window(input_view.window_handle.into(), cx);
+        visual.update(|window, cx| {
+            input_view.input.update(cx, |state, cx| {
+                state.set_selected_text_range(1..3, window, cx);
+                assert_eq!(
+                    state.selected_text_range(false, window, cx).unwrap().range,
+                    1..3
+                );
+                state.replace_text_in_range(None, "x", window, cx);
+                assert_eq!(state.text.to_string(), "axb");
+                state.set_disabled(true, cx);
+                let before = state.selected_text_range(true, window, cx).unwrap().range;
+                state.set_selected_text_range(0..3, window, cx);
+                assert_eq!(
+                    state.selected_text_range(true, window, cx).unwrap().range,
+                    before
+                );
             });
         });
     }

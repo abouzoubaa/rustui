@@ -103,3 +103,59 @@ changed. The GPUI Fast fork was not adopted.
 
 The canonical app bundle was updated. The separate W1 Acceptance verification
 app remains available for inspection; existing user app processes were preserved.
+
+## Release-build recalibration — 2026-10-26
+
+Three fresh **Playground test-app launches**, all controlled from the single
+production-consolidation implementation chat, completed three warmups and thirty
+measured W1 cycles each. All **90 measured cycles / 630 mounted child-state
+observations passed**; nine warmup cycles were excluded from measurements. The
+window was independently checked at 2640×1640 screenshot pixels / 1320×820 logical
+points, with Dark macOS 27 appearance and English. Existing user applications
+were preserved. These test runs are not additional Codex sessions or writers.
+
+The optimized executable SHA-256 was
+`15c71ff4d3cef06cd9483f2413d00a1c2a5e1e83d052c2befd74ce6b8aa08f78`.
+Source/protocol checkpoint: `4e00ad14`; application sources are unchanged from
+`5a37a8d6`. The reporter now checks manifest cycle denominators and integer native
+observations, reports the actual build profile, and keeps relative statistics
+unavailable for nonpositive denominators. Five focused regressions pass. A rerun
+against the old development calibration preserves its session values and
+repeatability calculations exactly.
+
+| Fresh test run | Measured cycles | Total process CPU | Median RSS | Peak RSS |
+| --- | ---: | ---: | ---: | ---: |
+| 1 | 30 | 23.57 s | 125.156 MiB | 125.438 MiB |
+| 2 | 30 | 24.23 s | 124.953 MiB | 125.281 MiB |
+| 3 | 30 | 24.70 s | 125.875 MiB | 126.203 MiB |
+
+Gross process CPU has a median **0.807667 CPU seconds per cycle**, a **4.664%**
+between-run range relative to the median, and **2.349%** sample coefficient of
+variation. The separately labeled idle-adjusted estimate has a median 0.685880
+CPU seconds per cycle and 2.192% observed range. It assumes stationary idle cost.
+Active capture windows lasted 249.505, 269.754 and 346.500 seconds and include
+inter-batch pauses. Automation cycle durations are not application response time.
+The third run's resident set fell by about 21.5 MiB near the end; its raw samples
+and extrema are preserved. This bounded record does not establish leak freedom.
+
+This is a contemporary release CPU/RSS baseline and descriptive repeatability,
+not a speedup comparison or an approved automatic regression threshold. Frame,
+main-thread, GPU and input-to-display latency, representative collection/editor
+workloads, and wider platform performance acceptance remain open. Accessibility
+and VoiceOver are undone and deferred; AX text was used only to read functional
+child state.
+
+Evidence is under `target/headstart/performance/w1-release-20261026-4e00ad14/`:
+three manifests, complete idle/active raw process captures, compact native trace
+and per-run summaries, build/notice provenance, `report.json`, independent hash
+and RSS verification, and cleanup. The original exclusive report is
+`target/headstart/performance/w1-release-20261026-4e00ad14-report.json`.
+The reporter requires output directly under `target/headstart/performance/`;
+a rejected nested output attempt did not modify measurement records.
+
+All three owned app processes stopped, the disposable bundle and standalone
+executable were removed, Cargo caches and evidence were preserved, and the GUI
+slot was released. Independent fresh-target RustUI artifact reproduction is
+separate from these measurements. It subsequently passed for native executables
+and Web packages; see `docs/RELEASE.md`. Compiler-source binding/bootstrap is a
+disclosed provenance follow-up, not an original RustUI release requirement.

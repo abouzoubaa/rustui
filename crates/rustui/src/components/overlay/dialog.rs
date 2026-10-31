@@ -4,7 +4,7 @@ use std::rc::Rc;
 
 use gpui::{
     AnyElement, InteractiveElement as _, IntoElement as _, ParentElement as _, Role, SharedString,
-    StatefulInteractiveElement as _, Window, div,
+    StatefulInteractiveElement as _, Styled as _, Window, div, px,
 };
 use gpui_component::{
     WindowExt as _,
@@ -16,13 +16,21 @@ use rustui_core::Identity;
 use crate::{
     components::basic::button::Button,
     runtime::AppAction,
-    view::{AnyView, ControlAction, EmptyView, RenderContext, RetentionScope, View},
+    view::{AnyView, ControlAction, EmptyView, RenderContext, RenderSeed, RetentionScope, View},
 };
 
 #[derive(Clone)]
 enum DialogText {
     Literal(SharedString),
     Message(SharedString),
+}
+
+fn default_action_label(localized: String, key: &str, fallback: &str) -> SharedString {
+    if localized.trim().is_empty() || localized.trim() == key {
+        fallback.into()
+    } else {
+        localized.into()
+    }
 }
 
 impl DialogText {
@@ -34,11 +42,72 @@ impl DialogText {
     }
 }
 
+fn first_nonblank_accessibility_label(
+    labels: impl IntoIterator<Item = SharedString>,
+    identity: SharedString,
+) -> SharedString {
+    labels
+        .into_iter()
+        .find(|label| !label.trim().is_empty())
+        .unwrap_or(identity)
+}
+
+fn first_nonblank_trigger_label(
+    key: Option<&SharedString>,
+    localized: Option<SharedString>,
+    fallback: SharedString,
+) -> SharedString {
+    localized
+        .filter(|label| {
+            !label.trim().is_empty() && key.is_none_or(|key| label.trim() != key.trim())
+        })
+        .unwrap_or(fallback)
+}
+
+fn resolved_localized_accessibility_candidate(
+    key: &SharedString,
+    label: SharedString,
+) -> Option<SharedString> {
+    (label.trim() != key.trim() && !label.trim().is_empty()).then_some(label)
+}
+
 /// Keeps arbitrary RustUI dialog content owned across native builder rerenders.
 struct DialogContent {
     content: Rc<AnyView>,
+    seed: RenderSeed,
     accessibility_id: SharedString,
     accessibility_label: SharedString,
+}
+
+#[derive(Clone)]
+struct DialogContentProps {
+    content: Rc<AnyView>,
+    seed: RenderSeed,
+    label: SharedString,
+}
+
+impl PartialEq for DialogContentProps {
+    fn eq(&self, other: &Self) -> bool {
+        Rc::ptr_eq(&self.content, &other.content) && self.label == other.label
+    }
+}
+
+fn update_dialog_content(content: &mut DialogContent, props: &DialogContentProps) {
+    content.content = props.content.clone();
+    content.seed = props.seed.clone();
+    content.accessibility_label = props.label.clone();
+}
+
+fn dialog_semantic_element(
+    accessibility_id: SharedString,
+    accessibility_label: SharedString,
+    content: AnyElement,
+) -> impl gpui::Element + gpui::IntoElement {
+    div()
+        .id(accessibility_id)
+        .role(Role::Dialog)
+        .aria_label(accessibility_label)
+        .child(content)
 }
 
 impl View for DialogContent {
@@ -50,12 +119,14 @@ impl View for DialogContent {
         // GPUI Components does not expose its native Dialog surface element.
         // Keep a semantic dialog node around the RustUI body; this cannot
         // assign a role or contain focus on the upstream Dialog host.
-        div()
-            .id(self.accessibility_id.clone())
-            .role(Role::Dialog)
-            .aria_label(self.accessibility_label.clone())
-            .child(self.content.into_element(context))
-            .into_any_element()
+        let body =
+            context.with_seed_owner(&self.seed, |context| self.content.into_element(context));
+        dialog_semantic_element(
+            self.accessibility_id.clone(),
+            self.accessibility_label.clone(),
+            body,
+        )
+        .into_any_element()
     }
 }
 
@@ -68,7 +139,10 @@ impl View for DialogContent {
 pub struct DialogView {
     id: Identity,
     trigger: DialogText,
+    localized_trigger: Option<SharedString>,
     title: Option<DialogText>,
+    accessibility_label: Option<DialogText>,
+    accessibility_fallback: Option<SharedString>,
     content: Option<Rc<AnyView>>,
     confirm_label: Option<DialogText>,
     cancel_label: Option<DialogText>,
@@ -83,10 +157,18 @@ impl DialogView {
             !id.as_str().trim().is_empty(),
             "Dialog identity must be nonempty"
         );
+        let trigger = trigger.into();
+        assert!(
+            !trigger.trim().is_empty(),
+            "Dialog trigger requires a non-empty visible label"
+        );
         Self {
             id,
-            trigger: DialogText::Literal(trigger.into()),
+            trigger: DialogText::Literal(trigger),
+            localized_trigger: None,
             title: None,
+            accessibility_label: None,
+            accessibility_fallback: None,
             content: None,
             confirm_label: None,
             cancel_label: None,
@@ -97,19 +179,108 @@ impl DialogView {
 
     /// Resolves the trigger label from the active RustUI message catalog.
     pub fn localized_trigger(mut self, message_key: impl Into<SharedString>) -> Self {
-        self.trigger = DialogText::Message(message_key.into());
+        let message_key = message_key.into();
+        assert!(
+            !message_key.trim().is_empty(),
+            "Dialog trigger requires a non-empty localization key"
+        );
+        self.localized_trigger = Some(message_key);
         self
     }
 
     pub fn title(mut self, title: impl Into<SharedString>) -> Self {
-        self.title = Some(DialogText::Literal(title.into()));
+        let title = title.into();
+        assert!(!title.trim().is_empty(), "Dialog title must not be blank");
+        self.title = Some(DialogText::Literal(title));
         self
     }
 
     /// Resolves the title from the active RustUI message catalog when opened.
     pub fn localized_title(mut self, message_key: impl Into<SharedString>) -> Self {
-        self.title = Some(DialogText::Message(message_key.into()));
+        let message_key = message_key.into();
+        assert!(
+            !message_key.trim().is_empty(),
+            "Dialog title requires a non-empty localization key"
+        );
+        self.title = Some(DialogText::Message(message_key));
         self
+    }
+
+    /// Names the dialog content for assistive technology.
+    ///
+    /// By default, the visible title is used when present; otherwise the
+    /// trigger label is used.
+    pub fn accessibility_label(mut self, label: impl Into<SharedString>) -> Self {
+        let label = label.into();
+        assert!(
+            !label.trim().is_empty(),
+            "Dialog accessibility label must not be empty"
+        );
+        self.accessibility_label = Some(DialogText::Literal(label));
+        self.accessibility_fallback = None;
+        self
+    }
+
+    /// Resolves the dialog's accessible name from the active RustUI message catalog.
+    pub fn localized_accessibility_label(mut self, message_key: impl Into<SharedString>) -> Self {
+        let message_key = message_key.into();
+        assert!(
+            !message_key.trim().is_empty(),
+            "Dialog accessibility label localization key must not be empty"
+        );
+        if let Some(DialogText::Literal(label)) = &self.accessibility_label {
+            self.accessibility_fallback = Some(label.clone());
+        }
+        self.accessibility_label = Some(DialogText::Message(message_key));
+        self
+    }
+
+    #[cfg(test)]
+    fn accessibility_label_text(&self) -> &DialogText {
+        self.accessibility_label
+            .as_ref()
+            .or(self.title.as_ref())
+            .unwrap_or(&self.trigger)
+    }
+
+    fn resolve_accessibility_label(&self, context: &RenderContext<'_>) -> SharedString {
+        let trigger = self.resolve_trigger_label(context);
+        let explicit = self
+            .accessibility_label
+            .as_ref()
+            .and_then(|label| match label {
+                DialogText::Literal(label) => Some(label.clone()),
+                DialogText::Message(key) => {
+                    resolved_localized_accessibility_candidate(key, label.resolve(context))
+                        .or_else(|| self.accessibility_fallback.clone())
+                }
+            });
+        let title = self.title.iter().filter_map(|label| {
+            let resolved = label.resolve(context);
+            match label {
+                DialogText::Literal(_) => Some(resolved),
+                DialogText::Message(key) => {
+                    resolved_localized_accessibility_candidate(key, resolved)
+                }
+            }
+        });
+        first_nonblank_accessibility_label(
+            explicit
+                .into_iter()
+                .chain(title)
+                .chain(std::iter::once(trigger)),
+            self.id.as_str().into(),
+        )
+    }
+
+    fn resolve_trigger_label(&self, context: &RenderContext<'_>) -> SharedString {
+        first_nonblank_trigger_label(
+            self.localized_trigger.as_ref(),
+            self.localized_trigger
+                .as_ref()
+                .map(|key| SharedString::from(context.localized_message(key.as_ref()))),
+            self.trigger.resolve(context),
+        )
     }
 
     /// Adds arbitrary RustUI content to the dialog body.
@@ -125,7 +296,12 @@ impl DialogView {
 
     /// Resolves the confirm label from the active RustUI message catalog.
     pub fn localized_confirm_label(mut self, message_key: impl Into<SharedString>) -> Self {
-        self.confirm_label = Some(DialogText::Message(message_key.into()));
+        let message_key = message_key.into();
+        assert!(
+            !message_key.trim().is_empty(),
+            "Dialog confirm label requires a non-empty localization key"
+        );
+        self.confirm_label = Some(DialogText::Message(message_key));
         self
     }
 
@@ -136,7 +312,12 @@ impl DialogView {
 
     /// Resolves the cancel label from the active RustUI message catalog.
     pub fn localized_cancel_label(mut self, message_key: impl Into<SharedString>) -> Self {
-        self.cancel_label = Some(DialogText::Message(message_key.into()));
+        let message_key = message_key.into();
+        assert!(
+            !message_key.trim().is_empty(),
+            "Dialog cancel label requires a non-empty localization key"
+        );
+        self.cancel_label = Some(DialogText::Message(message_key));
         self
     }
 
@@ -166,28 +347,47 @@ impl View for DialogView {
 
     fn into_element(&self, context: &mut RenderContext<'_>) -> AnyElement {
         context.with_element_scope(RetentionScope::Key(self.id.clone()), |context| {
-            let accessibility_label = self
-                .title
-                .as_ref()
-                .map(|title| title.resolve(context))
-                .unwrap_or_else(|| self.trigger.resolve(context));
+            let accessibility_label = self.resolve_accessibility_label(context);
             let content = self.content.as_ref().map(|content| {
-                context.retained_component(Identity::from(format!("{}:content", self.id)), || {
-                    DialogContent {
-                        content: Rc::clone(content),
-                        accessibility_id: format!("{}:dialog", self.id).into(),
-                        accessibility_label: accessibility_label.clone(),
-                    }
-                })
+                let props = DialogContentProps {
+                    content: Rc::clone(content),
+                    seed: context.seed(),
+                    label: accessibility_label.clone(),
+                };
+                context
+                    .retained_component_with_props(
+                        Identity::from(format!("{}:content", self.id)),
+                        || DialogContent {
+                            content: Rc::clone(content),
+                            seed: props.seed.clone(),
+                            accessibility_id: format!("{}:dialog", self.id).into(),
+                            accessibility_label: accessibility_label.clone(),
+                        },
+                        &props,
+                        update_dialog_content,
+                    )
+                    .0
             });
-            let trigger = self.trigger.resolve(context);
+            let trigger = self.resolve_trigger_label(context);
             let title = self.title.as_ref().map(|title| title.resolve(context));
             let confirm_label = self.confirm_label.as_ref().map_or_else(
-                || SharedString::from(context.localized_message("rustui-action-confirm")),
+                || {
+                    default_action_label(
+                        context.localized_message("rustui-action-confirm"),
+                        "rustui-action-confirm",
+                        "Confirm",
+                    )
+                },
                 |label| label.resolve(context),
             );
             let cancel_label = self.cancel_label.as_ref().map_or_else(
-                || SharedString::from(context.localized_message("rustui-action-cancel")),
+                || {
+                    default_action_label(
+                        context.localized_message("rustui-action-cancel"),
+                        "rustui-action-cancel",
+                        "Cancel",
+                    )
+                },
                 |label| label.resolve(context),
             );
             let confirm_handler = self
@@ -201,7 +401,7 @@ impl View for DialogView {
             let id = self.id.clone();
 
             let open = AppAction::with_window_action(move |_, window: &mut Window, cx| {
-                if window.has_active_dialog(cx) {
+                if window.has_active_dialog(cx) || super::drawer::is_active(window, cx) {
                     return;
                 }
 
@@ -215,7 +415,9 @@ impl View for DialogView {
 
                 window.open_dialog(cx, move |mut dialog, _, _| {
                     if let Some(title) = title.clone() {
-                        dialog = dialog.title(title);
+                        // Components places its close button at the physical right edge.
+                        // Reserve room there even when localized text is right-aligned.
+                        dialog = dialog.title(div().pr(px(32.0)).child(title));
                     }
 
                     if let Some(body) = content.clone() {
@@ -265,6 +467,90 @@ mod tests {
     use super::*;
 
     #[test]
+    fn default_actions_keep_readable_labels_when_messages_are_missing() {
+        for (key, fallback) in [
+            ("rustui-action-confirm", "Confirm"),
+            ("rustui-action-cancel", "Cancel"),
+        ] {
+            assert_eq!(default_action_label(key.into(), key, fallback), fallback);
+            assert_eq!(default_action_label("  ".into(), key, fallback), fallback);
+        }
+        assert_eq!(
+            default_action_label("Confirmer".into(), "rustui-action-confirm", "Confirm"),
+            "Confirmer"
+        );
+    }
+
+    #[test]
+    #[should_panic(expected = "Dialog trigger requires a non-empty visible label")]
+    fn blank_visible_trigger_is_rejected() {
+        Dialog("settings", " \t");
+    }
+
+    #[test]
+    #[should_panic(expected = "Dialog trigger requires a non-empty localization key")]
+    fn blank_localized_trigger_key_is_rejected() {
+        Dialog("settings", "Open").localized_trigger(" \t");
+    }
+
+    #[test]
+    #[should_panic(expected = "Dialog title requires a non-empty localization key")]
+    fn blank_localized_title_key_is_rejected() {
+        Dialog("settings", "Open").localized_title(" \t");
+    }
+
+    #[test]
+    #[should_panic(expected = "Dialog title must not be blank")]
+    fn blank_literal_title_is_rejected() {
+        Dialog("settings", "Open").title(" \t");
+    }
+
+    #[test]
+    #[should_panic(expected = "Dialog confirm label requires a non-empty localization key")]
+    fn blank_localized_confirm_label_key_is_rejected() {
+        Dialog("settings", "Open").localized_confirm_label(" \t");
+    }
+
+    #[test]
+    #[should_panic(expected = "Dialog cancel label requires a non-empty localization key")]
+    fn blank_localized_cancel_label_key_is_rejected() {
+        Dialog("settings", "Open").localized_cancel_label(" \t");
+    }
+
+    #[test]
+    fn blank_localized_trigger_falls_back_to_its_visible_label() {
+        assert_eq!(
+            first_nonblank_trigger_label(None, Some(" \t".into()), "Open settings".into()),
+            "Open settings"
+        );
+    }
+
+    #[test]
+    fn nonblank_localized_trigger_takes_precedence() {
+        assert_eq!(
+            first_nonblank_trigger_label(
+                Some(&"dialog.settings".into()),
+                Some("Ouvrir les réglages".into()),
+                "Open settings".into()
+            ),
+            "Ouvrir les réglages"
+        );
+    }
+
+    #[test]
+    fn unresolved_localized_trigger_falls_back_to_its_visible_label() {
+        let key: SharedString = "dialog.settings".into();
+        assert_eq!(
+            first_nonblank_trigger_label(
+                Some(&key),
+                Some(" \tdialog.settings\n".into()),
+                "Open settings".into()
+            ),
+            "Open settings"
+        );
+    }
+
+    #[test]
     fn dialog_requires_a_nonempty_stable_identity() {
         assert_eq!(Dialog("settings", "Open").id.as_str(), "settings");
         assert!(std::panic::catch_unwind(|| Dialog(" ", "Open")).is_err());
@@ -283,13 +569,303 @@ mod tests {
 
     #[test]
     fn semantic_dialog_content_has_a_stable_id_and_accessible_name() {
-        let content = DialogContent {
-            content: Rc::new(AnyView::new(EmptyView)),
-            accessibility_id: "confirm:dialog".into(),
-            accessibility_label: "Confirm changes".into(),
-        };
+        use gpui::Element as _;
+        for label in ["Confirm changes", "Confirmer les changements"] {
+            let element = dialog_semantic_element(
+                "confirm:dialog".into(),
+                label.into(),
+                div().into_any_element(),
+            );
+            assert_eq!(element.a11y_role(), Some(Role::Dialog));
+            let mut node = gpui::accesskit::Node::new(Role::Dialog);
+            element.write_a11y_info(&mut node);
+            assert_eq!(node.label(), Some(label));
+        }
+    }
 
-        assert_eq!(content.accessibility_id.as_ref(), "confirm:dialog");
-        assert_eq!(content.accessibility_label.as_ref(), "Confirm changes");
+    #[gpui::test]
+    fn native_dialog_text_field_updates_original_owner(cx: &mut gpui::TestAppContext) {
+        use crate::{components::input::text_field::TextField, runtime::ComponentHost};
+        use gpui::AppContext as _;
+        use rustui_core::Binding;
+        use std::{cell::RefCell, rc::Rc};
+
+        struct Owner {
+            text: String,
+            outside: String,
+        }
+        impl View for Owner {
+            fn body(&self) -> impl View {
+                crate::layout::VStack::new()
+                    .child(
+                        Dialog("native-owner-dialog", "Open").content(
+                            TextField(
+                                "Name",
+                                Binding::new(
+                                    self.text.clone(),
+                                    |owner: &Owner| owner.text.clone(),
+                                    |owner, value| owner.text = value,
+                                ),
+                            )
+                            .id("dialog-owner-field"),
+                        ),
+                    )
+                    .child(
+                        TextField(
+                            "Outside",
+                            Binding::new(
+                                self.outside.clone(),
+                                |owner: &Owner| owner.outside.clone(),
+                                |owner, value| owner.outside = value,
+                            ),
+                        )
+                        .id("outside-field"),
+                    )
+            }
+        }
+        let theme = crate::theme::parse_theme(include_str!(concat!(
+            env!("CARGO_MANIFEST_DIR"),
+            "/../../themes/macos27.json"
+        )))
+        .unwrap();
+        cx.update(|app| {
+            gpui_component::init(app);
+            crate::theme::activate_theme(&theme, Some(crate::theme::AppearanceMode::Dark), app)
+                .unwrap();
+        });
+        let slot = Rc::new(RefCell::new(None));
+        let saved = slot.clone();
+        let (_, window) = cx.add_window_view(|window, cx| {
+            let owner = cx.new(|cx| {
+                ComponentHost::new(
+                    Owner {
+                        text: String::new(),
+                        outside: String::new(),
+                    },
+                    cx,
+                )
+            });
+            *saved.borrow_mut() = Some(owner.clone());
+            gpui_component::Root::new(owner, window, cx)
+        });
+        let owner = slot.borrow().clone().unwrap();
+        let (trigger_focus, outside_focus) = window.update(|window, app| {
+            let _ = window.draw(app);
+            window.focus_next(app);
+            let _ = window.draw(app);
+            let trigger = window.focused(app).expect("dialog trigger focus");
+            window.focus_next(app);
+            let _ = window.draw(app);
+            let outside = window.focused(app).expect("outside field focus");
+            assert_ne!(trigger, outside);
+            window.focus(&trigger, app);
+            let _ = window.draw(app);
+            (trigger, outside)
+        });
+        let key = gpui::Keystroke::parse("enter").unwrap();
+        window.simulate_event(gpui::KeyDownEvent {
+            keystroke: key.clone(),
+            is_held: false,
+            prefer_character_input: false,
+        });
+        window.simulate_event(gpui::KeyUpEvent { keystroke: key });
+        window.update(|window, app| {
+            let _ = window.draw(app);
+            assert!(window.has_active_dialog(app));
+            window.focus_next(app);
+            let _ = window.draw(app);
+        });
+        window.simulate_input("RustUI");
+        window.update(|window, app| {
+            let _ = window.draw(app);
+            assert_eq!(owner.read(app).component().text, "RustUI");
+        });
+        for key in ["tab", "shift-tab"] {
+            let mut visited = Vec::new();
+            for _ in 0..6 {
+                window.simulate_keystrokes(key);
+                let focus = window.update(|window, app| {
+                    let _ = window.draw(app);
+                    assert!(window.has_active_dialog(app));
+                    let focus = window.focused(app).expect("open dialog has focus");
+                    assert_ne!(focus, trigger_focus, "focus escaped to dialog trigger");
+                    assert_ne!(focus, outside_focus, "focus escaped to outside field");
+                    focus
+                });
+                if !visited.contains(&focus) {
+                    visited.push(focus);
+                }
+            }
+            assert!(visited.len() >= 2, "{key} did not traverse dialog controls");
+        }
+        window.simulate_keystrokes("escape");
+        window.update(|window, app| {
+            let _ = window.draw(app);
+            assert!(!window.has_active_dialog(app));
+            assert_eq!(window.focused(app), Some(trigger_focus.clone()));
+            assert_eq!(owner.read(app).component().text, "RustUI");
+            assert!(owner.read(app).component().outside.is_empty());
+        });
+        let key = gpui::Keystroke::parse("enter").unwrap();
+        window.simulate_event(gpui::KeyDownEvent {
+            keystroke: key.clone(),
+            is_held: false,
+            prefer_character_input: false,
+        });
+        window.simulate_event(gpui::KeyUpEvent { keystroke: key });
+        window.update(|window, app| {
+            let _ = window.draw(app);
+            assert!(window.has_active_dialog(app));
+            window.focus_next(app);
+            let _ = window.draw(app);
+        });
+        window.simulate_input("!");
+        window.update(|window, app| {
+            let _ = window.draw(app);
+            assert_eq!(owner.read(app).component().text, "RustUI!");
+        });
+    }
+
+    #[gpui::test]
+    fn retained_dialog_reconciles_content_and_accessible_name(cx: &mut gpui::TestAppContext) {
+        use crate::runtime::component_host::RetainedEntities;
+        use std::any::TypeId;
+
+        cx.update(gpui_component::init);
+        let (host, window) =
+            cx.add_window_view(|_, cx| crate::runtime::ComponentHost::new(EmptyView, cx));
+        window.update(|window, app| {
+            let environment = rustui_core::EnvironmentValues::default();
+            let mut retained = RetainedEntities::default();
+            let seed = RenderContext::new(
+                Rc::new(|_, _| {}),
+                host.entity_id(),
+                TypeId::of::<()>(),
+                Rc::new(()),
+                px(14.0),
+                &environment,
+                None,
+                None,
+                window,
+                app,
+                &mut retained,
+            )
+            .seed();
+            let old = Rc::new(AnyView::new(EmptyView));
+            let new = Rc::new(AnyView::new(EmptyView));
+            let mut content = DialogContent {
+                content: old.clone(),
+                seed: seed.clone(),
+                accessibility_id: "confirm:dialog".into(),
+                accessibility_label: "Confirm changes".into(),
+            };
+            let props = DialogContentProps {
+                content: new.clone(),
+                seed,
+                label: "Confirmer les changements".into(),
+            };
+            update_dialog_content(&mut content, &props);
+            assert!(Rc::ptr_eq(&content.content, &new));
+            assert_eq!(content.accessibility_label, props.label);
+        });
+    }
+
+    #[test]
+    fn accessible_name_prefers_explicit_label_then_title_then_trigger() {
+        let trigger = Dialog("confirm", "Open").accessibility_label("Explicit name");
+        assert!(matches!(
+        trigger.accessibility_label_text(),
+        DialogText::Literal(label) if label.as_ref() == "Explicit name"
+        ));
+
+        let localized = trigger.localized_accessibility_label("dialog.confirm");
+        assert!(matches!(
+        localized.accessibility_label_text(),
+        DialogText::Message(key) if key.as_ref() == "dialog.confirm"
+        ));
+
+        let titled = Dialog("titled", "Open").title("Visible title");
+        assert!(matches!(
+        titled.accessibility_label_text(),
+        DialogText::Literal(label) if label.as_ref() == "Visible title"
+        ));
+
+        let untitled = Dialog("untitled", "Open");
+        assert!(matches!(
+        untitled.accessibility_label_text(),
+        DialogText::Literal(label) if label.as_ref() == "Open"
+        ));
+    }
+
+    #[test]
+    fn explicit_accessible_name_rejects_whitespace_only_text() {
+        assert!(
+            std::panic::catch_unwind(|| Dialog("confirm", "Open").accessibility_label(" \t\n "))
+                .is_err()
+        );
+    }
+
+    #[test]
+    #[should_panic(expected = "Dialog accessibility label localization key must not be empty")]
+    fn explicit_localized_accessible_name_rejects_blank_key() {
+        Dialog("confirm", "Open").localized_accessibility_label(" \t\n ");
+    }
+
+    #[test]
+    fn explicit_accessible_name_preserves_nonblank_text_verbatim() {
+        let dialog = Dialog("confirm", "Open").accessibility_label(" Confirm changes ");
+
+        assert!(matches!(
+        dialog.accessibility_label_text(),
+        DialogText::Literal(label) if label.as_ref() == " Confirm changes "
+        ));
+    }
+
+    #[test]
+    fn blank_resolved_accessible_name_falls_back_to_the_next_candidate() {
+        assert_eq!(
+            first_nonblank_accessibility_label(
+                [" \t ".into(), "Confirm changes".into()],
+                "confirm".into()
+            ),
+            "Confirm changes"
+        );
+    }
+
+    #[test]
+    fn all_blank_resolved_accessible_name_candidates_fall_back_to_identity() {
+        assert_eq!(
+            first_nonblank_accessibility_label([" ".into(), "\n".into()], "confirm".into()),
+            "confirm"
+        );
+    }
+
+    #[test]
+    fn unresolved_localized_accessible_name_falls_back_to_visible_title() {
+        let key: SharedString = "dialog.confirm".into();
+        let unresolved = resolved_localized_accessibility_candidate(&key, key.clone());
+
+        assert_eq!(
+            first_nonblank_accessibility_label(
+                unresolved.into_iter().chain(["Confirm changes".into()]),
+                "confirm".into()
+            ),
+            "Confirm changes"
+        );
+    }
+
+    #[test]
+    fn padded_unresolved_localized_accessible_name_falls_back_to_visible_title() {
+        let key: SharedString = "dialog.confirm".into();
+        let unresolved =
+            resolved_localized_accessibility_candidate(&key, " dialog.confirm ".into());
+
+        assert_eq!(
+            first_nonblank_accessibility_label(
+                unresolved.into_iter().chain(["Confirm changes".into()]),
+                "confirm".into()
+            ),
+            "Confirm changes"
+        );
     }
 }

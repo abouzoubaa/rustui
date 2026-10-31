@@ -25,3 +25,8 @@ The agent's first rustfmt invocation traversed modules and updated
 `locale_selector.rs`'s timestamp. No before-byte snapshot was available to establish
 a content change; no speculative restoration was performed. Root formatting used
 `--config skip_children=true` thereafter.
+
+
+## M139 native acceptance (2026-10-19)
+
+On macOS 27, Tabs kept separate Overview and Details values. Removing selected Details fell back to Overview; restoring Details preserved its value. The conditional Overview editor retained its value across hide/show. NavigationStack retained separate root, Details, and Inspector values while navigating forward/back, including reopening the popped Inspector route. The conditional root editor retained its value across hide/show. The visible event log recorded these visibility and tab actions. Cursor/undo history, focus restoration, screen-reader, theme/locale, and cross-platform behavior were not measured. Evidence: `target/headstart/evidence/l3b-retention-m139-20261019.json`.

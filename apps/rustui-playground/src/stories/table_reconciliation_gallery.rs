@@ -1,6 +1,6 @@
 //! Controlled Table selection across source-row changes.
 
-use rustui::prelude::*;
+use rustui::{localization::MessageArguments, prelude::*};
 
 pub fn demo() -> impl View {
     Component(
@@ -68,36 +68,87 @@ impl View for TableReconciliationGallery {
             .enumerate()
             .map(|(index, name)| vec![index.to_string(), name.clone()])
             .collect::<Vec<_>>();
-
+        let selection = match self.selection() {
+            Some(index) => LocalizedText("lab-table-selected")
+                .with_arguments(MessageArguments::new().with("index", index as i64)),
+            None => LocalizedText("lab-table-no-selection"),
+        };
         VStack::new()
             .spacing(8.0)
-            .child(Text("Table · controlled source-index selection"))
             .child(
-                HStack::new()
-                    .spacing(6.0)
-                    .child(Button("Select row 0", self.action(Self::select_first)).id("table-reconcile-select-0"))
-                    .child(Button("Select row 2", self.action(Self::select_third)).id("table-reconcile-select-2"))
-                    .child(Button("Clear selection", self.action(Self::clear_selection)).id("table-reconcile-clear"))
-                    .child(Button("Set invalid index", self.action(Self::select_invalid)).id("table-reconcile-invalid")),
+                Frame(LocalizedText("lab-table-reconcile-title"))
+                    .alignment(HorizontalAlignment::Start, VerticalAlignment::Start),
             )
             .child(
                 HStack::new()
                     .spacing(6.0)
-                    .child(Button("Reverse rows", self.action(Self::reverse_rows)).id("table-reconcile-reverse"))
-                    .child(Button("Remove selected row", self.action(Self::remove_selected_row)).id("table-reconcile-remove"))
-                    .child(Button("Restore rows", self.action(Self::restore_rows)).id("table-reconcile-restore")),
+                    .child(
+                        Button("Select row 0", self.action(Self::select_first))
+                            .id("table-reconcile-select-0")
+                            .localized_label("lab-table-select-0"),
+                    )
+                    .child(
+                        Button("Select row 2", self.action(Self::select_third))
+                            .id("table-reconcile-select-2")
+                            .localized_label("lab-table-select-2"),
+                    )
+                    .child(
+                        Button("Clear selection", self.action(Self::clear_selection))
+                            .id("table-reconcile-clear")
+                            .localized_label("lab-table-clear"),
+                    )
+                    .child(
+                        Button("Set invalid index", self.action(Self::select_invalid))
+                            .id("table-reconcile-invalid")
+                            .localized_label("lab-table-invalid"),
+                    ),
             )
-            .child(Text(format!(
-                "Rows: {:?} · order: {} · bound selection: {:?}",
-                self.rows(),
-                if self.reversed() { "reversed" } else { "forward" },
-                self.selection(),
-            )))
-            .child(Text(
-                "Selection stores a source index. Reordering keeps the index, so it may refer to a different row. An out-of-range index is normalized to None, including when no row was selected.",
-            ))
+            .child(
+                HStack::new()
+                    .spacing(6.0)
+                    .child(
+                        Button("Reverse rows", self.action(Self::reverse_rows))
+                            .id("table-reconcile-reverse")
+                            .localized_label("lab-table-reverse"),
+                    )
+                    .child(
+                        Button(
+                            "Remove selected row",
+                            self.action(Self::remove_selected_row),
+                        )
+                        .id("table-reconcile-remove")
+                        .localized_label("lab-table-remove"),
+                    )
+                    .child(
+                        Button("Restore rows", self.action(Self::restore_rows))
+                            .id("table-reconcile-restore")
+                            .localized_label("lab-table-restore"),
+                    ),
+            )
+            .child(
+                Frame(
+                    LocalizedText("lab-table-rows").with_arguments(
+                        MessageArguments::new().with("rows", self.rows().join(", ")),
+                    ),
+                )
+                .alignment(HorizontalAlignment::Start, VerticalAlignment::Start),
+            )
+            .child(
+                Frame(LocalizedText(if self.reversed() {
+                    "lab-table-reversed"
+                } else {
+                    "lab-table-forward"
+                }))
+                .alignment(HorizontalAlignment::Start, VerticalAlignment::Start),
+            )
+            .child(Frame(selection).alignment(HorizontalAlignment::Start, VerticalAlignment::Start))
+            .child(
+                Frame(LocalizedText("lab-table-reconcile-help"))
+                    .alignment(HorizontalAlignment::Start, VerticalAlignment::Start),
+            )
             .child(
                 Table(["Source index", "Row"], rows, self.selection_binding())
+                    .localized_columns(["lab-table-index-header", "lab-table-row-header"])
                     .id("table-reconciliation-rows")
                     .height(240.0)
                     .striped(true),

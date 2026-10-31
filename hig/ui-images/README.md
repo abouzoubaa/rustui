@@ -1,0 +1,3 @@
+# UI and documentation images
+
+This directory contains **40 image files**: 14 remaining paired UI screen candidates, 16 v1.0 specification artworks and 10 distinct v1.1 artworks. `../IMAGE_INVENTORY.json` maps files to source chat/message, Library IDs, versions, SHA-256 values and deduplication targets. Every stored image passed recorded size/hash verification. Manual visual comparison covered both #16 RTL candidates; the rest were not all visually inspected. Nine v1.1 artworks are byte-identical to v1.0 and map to one stored copy; all distinct revised and new v1.1 artworks are retained. These are illustrative concepts, not Apple specifications or proof of implemented behavior.

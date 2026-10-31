@@ -36,10 +36,10 @@ pub(crate) type PlatformScreenCaptureFrame =
     objc2_core_foundation::CFRetained<objc2_core_video::CVImageBuffer>;
 
 use crate::{
-    Action, AnyWindowHandle, App, AsyncWindowContext, BackgroundExecutor, Bounds,
-    DEFAULT_WINDOW_SIZE, DevicePixels, DispatchEventResult, Edges, ExternalDragPayload, Font,
-    FontId, FontMetrics, FontRun, ForegroundExecutor, GlyphId, GpuSpecs, Hsla, ImageSource, Keymap,
-    LineLayout, MissingGlyphSink, Pixels, PlatformGestures, PlatformInput, Point, Priority,
+    Action, AnyWindowHandle, App, AsyncWindowContext, BackendWrappedRow, BackgroundExecutor,
+    Bounds, DEFAULT_WINDOW_SIZE, DevicePixels, DispatchEventResult, Edges, ExternalDragPayload,
+    Font, FontId, FontMetrics, FontRun, ForegroundExecutor, GlyphId, GpuSpecs, Hsla, ImageSource,
+    Keymap, LineLayout, MissingGlyphSink, Pixels, PlatformGestures, PlatformInput, Point, Priority,
     RenderGlyphParams, RenderImage, RenderImageParams, RenderSvgParams, Scene, ShapedGlyph,
     ShapedRun, SharedString, Size, SvgRenderer, SystemWindowTab, Task, Window, WindowControlArea,
     hash, point, px, size,
@@ -1228,6 +1228,12 @@ pub trait PlatformWindow: HasWindowHandle + HasDisplayHandle {
     /// platform's text input session (e.g. attributes of the hidden editable
     /// element on web). Called only when the configuration changes, because
     /// reconfiguring a live input session can restart the IME connection.
+    fn text_input_owner_changed(&mut self) {}
+    /// Commit semantics after the frame tree and native input configuration.
+    fn text_input_owner_ready(&mut self) {}
+
+    fn set_secure_input(&mut self, _secure: bool) {}
+
     fn set_text_input_configuration(&mut self, _configuration: TextInputConfiguration) {}
     fn prompt(
         &self,
@@ -1519,6 +1525,19 @@ pub trait PlatformTextSystem: Send + Sync {
     ) -> Result<(Size<DevicePixels>, Vec<u8>)>;
     /// Layout a line of text with the given font runs.
     fn layout_line(&self, text: &str, font_size: Pixels, runs: &[FontRun]) -> LineLayout;
+
+    /// Returns backend-shaped rows when the backend can wrap bidirectional text
+    /// using its own glyph geometry. Other backends retain GPUI's legacy path.
+    fn layout_line_wrapped(
+        &self,
+        _text: &str,
+        _font_size: Pixels,
+        _runs: &[FontRun],
+        _width: Pixels,
+        _max_lines: Option<usize>,
+    ) -> Option<Vec<BackendWrappedRow>> {
+        None
+    }
     /// Returns the recommended text rendering mode for the given font and size.
     fn recommended_rendering_mode(&self, _font_id: FontId, _font_size: Pixels)
     -> TextRenderingMode;
@@ -1646,6 +1665,8 @@ impl PlatformTextSystem for NoopTextSystem {
             descent: font_size * (metrics.descent / metrics.units_per_em as f32),
             runs,
             len: text.len(),
+
+            bidi_clusters: None,
         }
     }
 
@@ -1994,6 +2015,16 @@ pub struct PlatformInputHandler {
     allow(dead_code)
 )]
 impl PlatformInputHandler {
+    /// Whether native protected-value input is required.
+    pub fn is_secure_input(&mut self, window: &mut crate::Window, cx: &mut crate::App) -> bool {
+        self.handler.is_secure_input(window, cx)
+    }
+
+    /// Existing input-owner lifecycle metadata, when available.
+    pub fn input_lifecycle(&self) -> Option<InputHandlerLifecycle> {
+        self.handler.input_lifecycle()
+    }
+
     pub fn new(cx: AsyncWindowContext, handler: Box<dyn InputHandler>) -> Self {
         Self { cx, handler }
     }
@@ -2237,7 +2268,25 @@ pub struct UTF16Selection {
 /// This is currently a 1:1 exposure of the NSTextInputClient API:
 ///
 /// <https://developer.apple.com/documentation/appkit/nstextinputclient>
+/// Existing input entity identity and a weak composition cleanup callback.
+pub struct InputHandlerLifecycle {
+    /// Identity of the existing input entity.
+    pub owner: crate::EntityId,
+    /// Weak cleanup of its marked range before an owner transition.
+    pub cancel_composition: std::rc::Rc<dyn Fn(&mut crate::Window, &mut crate::App)>,
+}
+
+/// Text and composition operations of the platform input owner.
 pub trait InputHandler: 'static {
+    /// Optional stable identity and weak composition cleanup.
+    fn input_lifecycle(&self) -> Option<InputHandlerLifecycle> {
+        None
+    }
+    /// Protected native input; defaults preserve existing third-party handlers.
+    fn is_secure_input(&mut self, _window: &mut crate::Window, _cx: &mut crate::App) -> bool {
+        false
+    }
+
     /// Get the range of the user's currently selected text, if any
     /// Corresponds to [selectedRange()](https://developer.apple.com/documentation/appkit/nstextinputclient/1438242-selectedrange)
     ///

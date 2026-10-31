@@ -1,5 +1,6 @@
 //! Stable-ID Tree updates and native expansion reconciliation examples.
 
+use rustui::localization::MessageArguments;
 use rustui::prelude::*;
 
 pub fn demo() -> impl View {
@@ -21,6 +22,10 @@ struct TreeReconciliationGallery {
     declared_root_expanded: bool,
     #[state(false)]
     relabeled: bool,
+    #[state(None)]
+    last_activated_leaf: Option<String>,
+    #[state(0)]
+    leaf_activation_count: u32,
 }
 
 impl TreeReconciliationGallery {
@@ -39,6 +44,13 @@ impl TreeReconciliationGallery {
     fn relabel(&mut self) {
         self.relabeled = !self.relabeled;
     }
+
+    fn activate_selected_leaf(&mut self) {
+        if let Some(selection) = self.selection.clone() {
+            self.last_activated_leaf = Some(selection);
+            self.leaf_activation_count = self.leaf_activation_count.saturating_add(1);
+        }
+    }
 }
 
 impl View for TreeReconciliationGallery {
@@ -54,12 +66,24 @@ impl View for TreeReconciliationGallery {
             "Branch"
         };
         let mut workspace_children = Vec::new();
-        let branch = TreeNode::new("branch", branch_label).expanded(true).child(
-            TreeNode::new("child-folder", "Nested child folder")
-                .expanded(true)
-                .child(TreeNode::new("grandchild", "Grandchild leaf")),
-        );
-        let sibling = TreeNode::new("sibling", "Stable sibling");
+        let branch = TreeNode::new("branch", branch_label)
+            .localized_label(if self.relabeled() {
+                "lab-tree-branch-renamed"
+            } else {
+                "lab-tree-branch"
+            })
+            .expanded(true)
+            .child(
+                TreeNode::new("child-folder", "Nested child folder")
+                    .localized_label("lab-tree-nested")
+                    .expanded(true)
+                    .child(
+                        TreeNode::new("grandchild", "Grandchild leaf")
+                            .localized_label("lab-tree-grandchild"),
+                    ),
+            );
+        let sibling =
+            TreeNode::new("sibling", "Stable sibling").localized_label("lab-tree-sibling");
 
         if self.branch_present() {
             workspace_children.push(branch);
@@ -70,11 +94,20 @@ impl View for TreeReconciliationGallery {
         }
 
         let workspace = TreeNode::new("workspace", workspace_label)
+            .localized_label(if self.relabeled() {
+                "lab-tree-workspace-renamed"
+            } else {
+                "lab-tree-workspace"
+            })
             .expanded(self.declared_root_expanded())
             .children(workspace_children);
         let archive = TreeNode::new("archive", "Archive")
+            .localized_label("lab-tree-archive")
             .expanded(true)
-            .child(TreeNode::new("archive-item", "Archived item"));
+            .child(
+                TreeNode::new("archive-item", "Archived item")
+                    .localized_label("lab-tree-archived-item"),
+            );
         let roots = if self.reversed() {
             vec![archive, workspace]
         } else {
@@ -83,7 +116,7 @@ impl View for TreeReconciliationGallery {
 
         VStack::new()
             .spacing(8.0)
-            .child(Text("Tree · stable IDs across owner updates"))
+            .child(LocalizedText("lab-tree-demo-heading"))
             .child(
                 VStack::new()
                     .spacing(6.0)
@@ -92,10 +125,12 @@ impl View for TreeReconciliationGallery {
                             .spacing(6.0)
                             .child(
                                 Button("Reverse order", self.action(Self::reverse))
+                                    .localized_label("lab-tree-reverse")
                                     .id("tree-reconcile-reverse"),
                             )
                             .child(
                                 Button("Relabel", self.action(Self::relabel))
+                                    .localized_label("lab-tree-relabel")
                                     .id("tree-reconcile-relabel"),
                             ),
                     )
@@ -111,6 +146,11 @@ impl View for TreeReconciliationGallery {
                                     },
                                     self.action(Self::toggle_branch),
                                 )
+                                .localized_label(if self.branch_present() {
+                                    "lab-tree-remove-branch"
+                                } else {
+                                    "lab-tree-restore-branch"
+                                })
                                 .id("tree-reconcile-branch"),
                             )
                             .child(
@@ -118,21 +158,38 @@ impl View for TreeReconciliationGallery {
                                     "Toggle declared expansion",
                                     self.action(Self::toggle_declared_expansion),
                                 )
+                                .localized_label("lab-tree-toggle-declared")
                                 .id("tree-reconcile-declared-expansion"),
                             ),
                     ),
             )
-            .child(Text(format!(
-                "Declared Workspace expansion: {} · selected stable ID: {}",
-                self.declared_root_expanded(),
-                self.selection().as_deref().unwrap_or("none"),
-            )))
-            .child(Text(
-                "Expand the nested folders, then collapse Workspace and update labels or order. Removing and restoring Branch starts it at its declared default.",
-            ))
+            .child(
+                LocalizedText(if self.declared_root_expanded() {
+                    "lab-tree-status-expanded"
+                } else {
+                    "lab-tree-status-collapsed"
+                })
+                .with_arguments(
+                    MessageArguments::new()
+                        .with(
+                            "selection",
+                            self.selection().as_deref().unwrap_or("none").to_owned(),
+                        )
+                        .with(
+                            "last",
+                            self.last_activated_leaf()
+                                .as_deref()
+                                .unwrap_or("none")
+                                .to_owned(),
+                        )
+                        .with("count", self.leaf_activation_count().to_string()),
+                ),
+            )
+            .child(LocalizedText("lab-tree-demo-help"))
             .child(
                 Tree(roots, self.selection_binding())
                     .id("tree-reconciliation-tree")
+                    .on_activate(self.action(Self::activate_selected_leaf))
                     .height(280.0),
             )
     }

@@ -76,6 +76,11 @@ impl TextInputState {
             .install_token_hover_presentation(hover_listener)))
     }
 
+    pub(crate) fn sync_platform_secure_input(&self, secure: bool, cx: &mut App) {
+        dispatch!(self, |state| state
+            .update(cx, |state, _| state.sync_platform_secure_input(secure)))
+    }
+
     pub(crate) fn entity_id(&self) -> gpui::EntityId {
         dispatch!(self, |state| state.entity_id())
     }

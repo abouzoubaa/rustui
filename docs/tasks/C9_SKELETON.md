@@ -29,3 +29,9 @@ inspection found two ProgressIndicator nodes named “Loading item title” and
 
 This confirms the observed rendering and accessibility tree in that review;
 it does not establish animation timing or VoiceOver announcement behavior.
+
+## M617 — Localized accessible names
+
+Labeled Skeletons support `.localized_accessibility_label(message_id)`, resolved through the active catalog. Missing, blank, and key-echo results use the prior explicit label or `Loading` fallback. Blank message IDs are rejected. Generated accessibility IDs use the stable message key; explicit `.id` takes precedence. Unlabeled Skeletons remain decorative, and literal `.accessibility_label(text)` behavior is preserved.
+
+Focused tests passed 11/11; scoped rustfmt and diff checks passed. Native AX, locale switching, VoiceOver, RTL, and cross-platform acceptance remain open. Evidence: `target/headstart/evidence/m617-stage7-skeleton-localized-name-tests-20261021.log`.

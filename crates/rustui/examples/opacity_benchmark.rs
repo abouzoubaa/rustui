@@ -203,6 +203,12 @@ fn write_result(result: &Value) -> std::io::Result<()> {
     Ok(())
 }
 
+fn init_probe_theme(cx: &mut App) {
+    let theme = rustui::theme::parse_theme(include_str!("../../../themes/macos27.json"))
+        .expect("bundled probe theme must be valid");
+    rustui::theme::activate_theme(&theme, None, cx).expect("probe theme must activate");
+}
+
 fn main() {
     if std::env::args().any(|argument| argument == "--spring") {
         if std::env::args().any(|argument| argument == "--limit-fps") {
@@ -218,6 +224,7 @@ fn main() {
         .then_some(PROBE_MAX_FPS);
     gpui_platform::application().run(move |cx| {
         gpui_component::init(cx);
+        init_probe_theme(cx);
         cx.set_reduce_motion(reduce_motion);
         enable_render_diagnostics(cx);
 

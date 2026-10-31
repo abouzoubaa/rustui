@@ -457,7 +457,7 @@ impl Platform for WebPlatform {
     }
 
     fn open_url(&self, url: &str) {
-        if let Err(error) = self.browser_window.open_with_url(url) {
+        if let Err(error) = self.browser_window.open_with_url_and_target_and_features(url, "_blank", "noopener") {
             log::warn!("Failed to open URL '{url}': {error:?}");
         }
     }

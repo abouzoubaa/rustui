@@ -1402,6 +1402,12 @@ pub trait StatefulInteractiveElement: InteractiveElement {
         self
     }
 
+    /// Set the disabled state exposed to accessibility clients.
+    fn aria_disabled(mut self, disabled: bool) -> Self {
+        self.interactivity().aria.disabled = Some(disabled);
+        self
+    }
+
     /// Set the toggled state for this element.
     fn aria_toggled(mut self, toggled: accesskit::Toggled) -> Self {
         self.interactivity().aria.toggled = Some(toggled);
@@ -2110,6 +2116,7 @@ pub(crate) struct AriaProperties {
     pub(crate) keyshortcuts: Option<SharedString>,
     pub(crate) selected: Option<bool>,
     pub(crate) expanded: Option<bool>,
+    pub(crate) disabled: Option<bool>,
     pub(crate) toggled: Option<accesskit::Toggled>,
     pub(crate) numeric_value: Option<f64>,
     pub(crate) min_numeric_value: Option<f64>,
@@ -3545,6 +3552,13 @@ impl Interactivity {
         }
         if let Some(expanded) = self.aria.expanded {
             node.set_expanded(expanded);
+        }
+        if let Some(disabled) = self.aria.disabled {
+            if disabled {
+                node.set_disabled();
+            } else {
+                node.clear_disabled();
+            }
         }
         if let Some(toggled) = self.aria.toggled {
             node.set_toggled(toggled);
@@ -5637,4 +5651,17 @@ mod tests {
         assert_eq!(bounds("cell-1").origin.x, px(100.));
         assert_eq!(bounds("cell-2").origin.x, px(300.));
     }
+
+    #[test]
+    fn test_write_a11y_info_disabled_state() {
+        let mut node = accesskit::Node::new(accesskit::Role::TreeItem);
+        let mut disabled = div().aria_disabled(true);
+        disabled.interactivity().write_a11y_info(&mut node);
+        assert!(node.is_disabled());
+
+        let mut enabled = div().aria_disabled(false);
+        enabled.interactivity().write_a11y_info(&mut node);
+        assert!(!node.is_disabled());
+    }
+
 }

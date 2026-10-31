@@ -96,3 +96,8 @@ Some UI automation sessions activate accessibility when connecting to an app.
 Such a session must be recorded as excluded; it cannot establish no-AX cache
 fallback evidence. Use a separate native session with AX inactive for that
 acceptance run.
+
+
+### M141 — no-AX native drag and idle cache acceptance
+
+The probe now activates the bundled macOS 27 theme before opening its window; without it, the first run panicked in the shared RustUI theme lookup. A fresh app-bundled native run used direct Quartz mouse events while GPUI accessibility remained inactive. Dragging A onto B produced order B/A/C, retained A local value 166, kept each mount count at one, captured 441 drag-move samples and 357 active-frame samples, and observed active-drag fallback. The separate idle parent update lowered the root once and children zero times. The raw result reports `complete`, `cache_acceptance_eligible: true`, and `ax_active_seen: false`. Evidence summary: `target/headstart/evidence/p3b-cache-drag-m141-20261019.json`; raw result: `target/headstart/cache-drag-benchmark-16398-1792453262573662000.json`; probe SHA-256 `57f8e240559c54f7d05b5f07f6a8116226a75170246b7587dc62562565bf3f44`. This closes the native drag fallback and idle reuse probe only; broader keyboard/focus/accessibility and performance acceptance remain open.

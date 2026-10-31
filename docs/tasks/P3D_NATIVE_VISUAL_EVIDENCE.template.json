@@ -1,0 +1,52 @@
+{
+  "schema_version": 1,
+  "kind": "rustui_p3d_visual_evidence",
+  "workload": {
+    "name": "32-leaf",
+    "leaves": 32
+  },
+  "provenance": {
+    "build_record": {
+      "path": "target/headstart/evidence/REPLACE-build-provenance.json",
+      "sha256": "REPLACE_WITH_SHA256"
+    },
+    "plan": {
+      "path": "target/headstart/performance/REPLACE-plan.json",
+      "sha256": "REPLACE_WITH_SHA256"
+    },
+    "binary_sha256": "REPLACE_WITH_SHA256",
+    "platform": "RECORD_PLATFORM_AND_OS_VERSION",
+    "appearance": "RECORD_LIGHT_OR_DARK",
+    "display": "RECORD_DISPLAY_AND_RESOLUTION",
+    "scale_factor": "RECORD_SCALE_FACTOR",
+    "capture_layout": {
+      "mode": "native_wide_8x4",
+      "columns": 8,
+      "window_logical_points": [1700, 1000],
+      "leaf_logical_points": [210, 220],
+      "lines_per_leaf": 12
+    }
+  },
+  "states": {
+    "cached_initial": {
+      "status": "not_run",
+      "screenshot": null,
+      "observation": null
+    },
+    "cached_after_mutation": {
+      "status": "not_run",
+      "screenshot": null,
+      "observation": null
+    },
+    "uncached_initial": {
+      "status": "not_run",
+      "screenshot": null,
+      "observation": null
+    },
+    "uncached_after_mutation": {
+      "status": "not_run",
+      "screenshot": null,
+      "observation": null
+    }
+  }
+}

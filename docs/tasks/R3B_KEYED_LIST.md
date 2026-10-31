@@ -2,8 +2,9 @@
 
 `KeyedList(id, items, selection)` is an additive string-list API. `items` are
 `KeyedListItem::new(id, label)` values and `selection` is a
-`Binding<Option<String>>`. The list identity is required and stable across owner
-renders. Row IDs must be nonempty after trimming and unique within the list;
+`Binding<Option<String>>`. The list identity is required, nonempty after trimming,
+and stable across owner renders. Row IDs must be nonempty after trimming and
+unique within the list;
 invalid input panics at construction. The existing `List` source-index API is
 unchanged.
 
@@ -18,6 +19,8 @@ items retains the selected ID. Removing the selected item clears native
 selection and defers an owner binding update to `None`; the deferred update
 checks that the owner still holds the removed ID. Native selection and cancel
 events write the bound ID only when it changes, avoiding notification feedback.
+Escape cancellation clears selection only when the list is selectable; a
+non-selectable list preserves its controlled owner selection.
 The upstream search path temporarily selects its first row; the adapter defers
 reconciliation back to the bound ID after that update.
 
@@ -49,3 +52,29 @@ data replacement.
 
 The explicit text child supplies native row names; full screenreader behavior
 remains unverified.
+
+
+## M126 native Escape check
+
+The canonical Playground `list · Partial` catalog route exercised the non-selectable source-index List and KeyedList controls together. After preselecting row 2 and disabling both selectors, clicking the selected East/EAST rows and pressing Escape left owner values at `Some(1)` and `east`; the native tree retained those selected rows and exposed the expected row names. The same story exposed visible KeyedList AX row names `Item row-0000` through `Item row-0013`. Raw observation: `target/headstart/evidence/r3-list-datagrid-acceptance-20261019.json`. Full screen-reader, RTL, cross-platform and performance acceptance remain open.
+
+## Owner update ordering
+
+The retained adapter tracks the owner selection observed at render or an accepted event. Each event captures that owner value when the adapter receives the event. Writeback applies only if the native selected index still matches the event and both the current binding and current marker still match the captured owner value; accepted writes advance the marker. A focused unit test covers the A→queued B→owner rerender C→updater ordering. This source-level guard does not claim native queued-event race acceptance.
+
+## M474 — Refreshed native KeyedList acceptance
+
+This is a current-source refresh after M408 changed retained selection event
+writers; it does not introduce a new public behavior contract. In the canonical
+macOS 27 Playground `list · Partial` KeyedList gallery, `row-0002` remained
+selected through reverse and prepend, stayed the owner selection while filtered
+out, and normalized to `None` on removal. A second selected row survived
+filter-out/filter-back; Up/Down changed its stable ID and native selected marker;
+virtualized scroll-away/restore brought its accessible row name and selection
+back. Return caused no observable accessibility-tree change. The snapshot
+reported the root window as focused, so child focus ownership and VoiceOver
+speech remain unverified. Focused tests passed 12/12; the locked/offline
+Playground all-targets check and build exited 0. Evidence is in
+`target/headstart/evidence/m474-keyed-list-native-acceptance-20261021.json` and
+the adjacent `m474-keyed-list-tests-20261021.log`,
+`m474-playground-check-20261021.log`, and `m474-playground-build-20261021.log`.

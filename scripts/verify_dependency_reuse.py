@@ -8,6 +8,17 @@ import sys
 from urllib.parse import unquote, urlsplit
 
 
+MAX_LOG_BYTES = 64 * 1024 * 1024
+
+
+def read_log(path):
+    with path.open("rb") as source:
+        log_bytes = source.read(MAX_LOG_BYTES + 1)
+    if len(log_bytes) > MAX_LOG_BYTES:
+        raise ValueError(f"Cargo JSON log exceeds {MAX_LOG_BYTES}-byte limit")
+    return log_bytes
+
+
 def package_name(package_id):
     identifier = urlsplit(package_id)
     if "@" in identifier.fragment:
@@ -68,7 +79,7 @@ def main():
             same_file = args.report.exists() and args.log.exists() and args.report.samefile(args.log)
             if report_path == log_path or same_file:
                 raise ValueError("report path identifies the input log")
-        log_bytes = args.log.read_bytes()
+        log_bytes = read_log(args.log)
         log_text = log_bytes.decode("utf-8")
         artifacts_by_package = {name: [] for name in required}
         finished = []

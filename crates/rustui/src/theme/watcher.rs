@@ -5,8 +5,8 @@ use std::{error::Error, fmt, fs, io, path::PathBuf};
 use gpui::App;
 
 use crate::theme::{
-    AppearanceMode, ThemeActivationError, ThemeDocument, ThemeLoadError, activate_theme,
-    parse_theme,
+    AppearanceMode, ThemeActivationError, ThemeDocument, ThemeLoadError, parse_theme,
+    registry::activate_validated_theme,
 };
 
 /// A validated theme file that can be explicitly reloaded into a GPUI app.
@@ -47,7 +47,9 @@ impl ThemeFile {
         mode: Option<AppearanceMode>,
         cx: &mut App,
     ) -> Result<bool, ThemeFileError> {
-        self.reload_file(mode, true, |document| activate_theme(document, mode, cx))
+        self.reload_file(mode, true, |document| {
+            activate_validated_theme(document, mode, cx)
+        })
     }
 
     /// Check the file and activate it only when its content or requested
@@ -60,7 +62,9 @@ impl ThemeFile {
         mode: Option<AppearanceMode>,
         cx: &mut App,
     ) -> Result<bool, ThemeFileError> {
-        self.reload_file(mode, false, |document| activate_theme(document, mode, cx))
+        self.reload_file(mode, false, |document| {
+            activate_validated_theme(document, mode, cx)
+        })
     }
 
     fn reload_file(
@@ -150,7 +154,7 @@ mod tests {
     };
 
     use super::*;
-    use crate::theme::ThemeResolveError;
+    use crate::theme::{ThemeResolveError, activate_theme};
 
     static NEXT_FILE: AtomicUsize = AtomicUsize::new(0);
 
@@ -196,6 +200,116 @@ mod tests {
 
     fn activate_ok(_: &ThemeDocument) -> Result<(), ThemeActivationError> {
         Ok(())
+    }
+
+    #[gpui::test]
+    fn public_activation_rejects_a_mutated_theme_and_preserves_active_state(
+        cx: &mut gpui::TestAppContext,
+    ) {
+        let mut document = parse_theme(&valid_source()).unwrap();
+        cx.update(|app| {
+            gpui_component::init(app);
+            activate_theme(&document, Some(AppearanceMode::Light), app).unwrap();
+            let revision = crate::theme::registry::active_theme(app)
+                .unwrap()
+                .revision();
+            document.theme_roles.clear();
+            assert!(activate_theme(&document, Some(AppearanceMode::Dark), app).is_err());
+            let active = crate::theme::registry::active_theme(app).unwrap();
+            assert_eq!(active.revision(), revision);
+            assert_eq!(active.mode, AppearanceMode::Light);
+        });
+    }
+
+    #[gpui::test]
+    fn forced_reload_restores_file_after_another_theme_activation(cx: &mut gpui::TestAppContext) {
+        let source = valid_source();
+        let file = TempTheme::new(&source);
+        let mut theme = ThemeFile::open(&file.0).expect("open theme");
+        cx.update(|app| {
+            gpui_component::init(app);
+            assert!(
+                theme
+                    .reload_if_changed(Some(AppearanceMode::Light), app)
+                    .unwrap()
+            );
+            let document = parse_theme(&source).unwrap();
+            activate_theme(&document, Some(AppearanceMode::Dark), app).unwrap();
+            let revision = crate::theme::registry::active_theme(app)
+                .unwrap()
+                .revision();
+            assert_eq!(
+                crate::theme::registry::active_theme(app).unwrap().mode,
+                AppearanceMode::Dark
+            );
+            assert!(theme.reload(Some(AppearanceMode::Light), app).unwrap());
+            let active = crate::theme::registry::active_theme(app).unwrap();
+            assert_eq!(active.mode, AppearanceMode::Light);
+            assert_eq!(active.revision(), revision + 1);
+            file.write("not json");
+            assert!(theme.reload(Some(AppearanceMode::Dark), app).is_err());
+            let active = crate::theme::registry::active_theme(app).unwrap();
+            assert_eq!(active.mode, AppearanceMode::Light);
+            assert_eq!(active.revision(), revision + 1);
+        });
+    }
+
+    #[gpui::test]
+    fn file_reload_recovers_after_invalid_update_in_app(cx: &mut gpui::TestAppContext) {
+        let initial = valid_source();
+        let file = TempTheme::new(&initial);
+        let mut theme = ThemeFile::open(&file.0).expect("open theme");
+        cx.update(|app| {
+            gpui_component::init(app);
+            assert!(
+                theme
+                    .reload_if_changed(Some(AppearanceMode::Light), app)
+                    .unwrap()
+            );
+            let revision = crate::theme::registry::active_theme(app)
+                .unwrap()
+                .revision();
+
+            file.write("not json");
+            assert!(
+                theme
+                    .reload_if_changed(Some(AppearanceMode::Light), app)
+                    .is_err()
+            );
+            assert_eq!(
+                crate::theme::registry::active_theme(app)
+                    .unwrap()
+                    .revision(),
+                revision
+            );
+            assert_eq!(theme.theme(), &parse_theme(&initial).unwrap());
+
+            file.write(&initial);
+            assert!(
+                !theme
+                    .reload_if_changed(Some(AppearanceMode::Light), app)
+                    .unwrap()
+            );
+            assert_eq!(
+                crate::theme::registry::active_theme(app)
+                    .unwrap()
+                    .revision(),
+                revision
+            );
+
+            file.write(&format!("{initial}\n"));
+            assert!(
+                theme
+                    .reload_if_changed(Some(AppearanceMode::Light), app)
+                    .unwrap()
+            );
+            assert_eq!(
+                crate::theme::registry::active_theme(app)
+                    .unwrap()
+                    .revision(),
+                revision + 1
+            );
+        });
     }
 
     #[test]
@@ -320,6 +434,22 @@ mod tests {
             &parse_theme(&initial).expect("original theme")
         );
 
+        let ambiguous = initial.replacen(
+            "\"background\": \"surface\",",
+            "\"background\": \"ignored\",\n    \"background\": \"surface\",",
+            1,
+        );
+        assert_ne!(ambiguous, initial);
+        assert!(
+            theme
+                .reload_source(ambiguous, None, false, activate_ok)
+                .is_err()
+        );
+        assert_eq!(
+            theme.theme(),
+            &parse_theme(&initial).expect("original theme")
+        );
+
         file.write(&initial);
         let repaired = fs::read_to_string(&file.0).expect("read repaired fixture");
         assert!(
@@ -374,7 +504,7 @@ mod tests {
             .expect("initial activation");
 
         let changed = format!("{initial}\n");
-        let result = theme.reload_source(changed, None, false, |_| {
+        let result = theme.reload_source(changed.clone(), None, false, |_| {
             Err(ThemeActivationError::Resolve(ThemeResolveError::Invalid(
                 "simulated activation failure".into(),
             )))
@@ -384,6 +514,31 @@ mod tests {
             theme.theme(),
             &parse_theme(&initial).expect("original theme")
         );
+        assert_eq!(theme.activated_source.as_deref(), Some(initial.as_str()));
+        assert_eq!(theme.activated_mode, None);
+
+        let activations = AtomicUsize::new(0);
+        assert!(
+            theme
+                .reload_source(changed.clone(), None, false, |_| {
+                    activations.fetch_add(1, Ordering::Relaxed);
+                    Ok(())
+                })
+                .expect("retry identical candidate after activation failure")
+        );
+        assert_eq!(theme.activated_source.as_deref(), Some(changed.as_str()));
+        assert_eq!(theme.activated_mode, None);
+        assert_eq!(activations.load(Ordering::Relaxed), 1);
+
+        assert!(
+            !theme
+                .reload_source(changed.clone(), None, false, |_| {
+                    activations.fetch_add(1, Ordering::Relaxed);
+                    Ok(())
+                })
+                .expect("unchanged candidate skips activation")
+        );
+        assert_eq!(activations.load(Ordering::Relaxed), 1);
     }
 
     #[test]

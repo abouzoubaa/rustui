@@ -1,67 +1,26 @@
 # M66 typed same-process drag and drop
 
-`DragSource(id, value, child)` and `DropTarget(id, binding, child)` are RustUI
-wrappers over pinned GPUI's `on_drag` and typed `on_drop`. The source copies a
-`Clone + 'static` value into GPUI's native active drag, which owns the payload
-for the gesture. The target accepts exactly the same Rust type and writes an
-owned `DropEvent<T>` to a component-owned
-`Binding<Option<DropEvent<T>>>`. The event includes the source and target IDs,
-Create that binding from the component currently rendering the target.
-A binding captured from another owner or an earlier owner instance is not
-a supported event channel. `DropEvent<T>` implements `PartialEq` when `T`
-does, so `#[state] Option<DropEvent<T>>` can receive it. The Playground
-shows both a direct state sink and a custom model-applying writer.
-value, and `DragOperation::{Copy, Transfer}` intent. The binding owner applies
-that intent to its model. RustUI does not automatically remove source data,
-promise an atomic cross-owner move, or synthesize a click event.
+`DragSource(id, value, child)` and `DropTarget(id, binding, child)` wrap the pinned GPUI `on_drag` and typed `on_drop` APIs. A source owns a cloned payload for the native drag gesture. A target accepts only the same Rust type and writes a `DropEvent<T>` to its component-owned `Binding<Option<DropEvent<T>>>`.
 
-The wrappers use their own retention scopes and stable GPUI IDs. A dynamic
-collection should also wrap each source or target in `Keyed(stable_id, ...)`.
-The target's binding update goes through the existing weak component owner
-callback; an event targeting an unmounted owner does not mutate it. GPUI owns
-hit testing, threshold, drag preview, payload type matching, drop dispatch,
-and propagation. Disabled wrappers leave their children rendered without
-registering a drag or drop listener.
+`DropEvent<T>` records the source ID, target ID, value, and `DragOperation::{Copy, Transfer}` intent. Create the binding in the component currently rendering the target. A binding captured from another owner or an earlier owner instance is not a supported event channel. The binding owner applies the operation to its model; RustUI does not remove source data or promise an atomic cross-owner move. `DropEvent<T>` implements `PartialEq` when `T` does, so it can be stored in `#[state] Option<DropEvent<T>>`.
 
-`apps/rustui-playground/src/stories/drag_drop_gallery.rs` demonstrates String
-copy and transfer within one component owner, a mismatched `usize` source,
-source reorder, target removal, and keyboard-equivalent copy and transfer
-buttons. The gallery's transfer mutates the source and destination in one
-component binding write. Other applications decide their own model policy.
+The wrappers use stable GPUI IDs and owner-scoped retention. Dynamic collections should wrap each source and target in `Keyed(stable_id, ...)`. Target updates go through the existing weak owner callback, so an event for an unmounted owner does not mutate it. GPUI owns hit testing, drag threshold, preview, payload type matching, drop dispatch, and propagation. Disabled wrappers render their children without registering drag or drop listeners.
 
-This milestone covers basic in-process pointer drag/drop. It does not claim OS
-file dragging, cross-window transport, touch support, external payloads, drag
-GPU optimization, or accessible drag gestures. Applications must provide a
-keyboard path for the same operation; the gallery includes one.
+The canonical Playground story at `apps/rustui-playground/src/stories/drag_drop_gallery.rs` demonstrates String copy and transfer in one component owner, a mismatched `usize` source, source reordering, target removal, and keyboard buttons for equivalent Copy and Transfer model operations. The buttons operate on the first source item.
+
+This milestone covers basic in-process pointer drag and drop. It does not cover OS file dragging, cross-window transport, touch, external payloads, GPU optimization, atomic cross-owner moves, or accessible drag gestures. Applications provide a keyboard path for the same operation.
 
 ## Acceptance
 
-1. Drag A/B/C into the target in Copy mode. Confirm the source remains and
-   the destination gains the value once.
-2. Switch to Transfer, drag an item, and confirm it leaves the source and
-   appears once in the destination. Reverse sources and repeat; identity must
-   follow the item rather than its position.
-3. Drag the `usize` source over the String target and confirm no event.
-4. Remove the target while a drag is active and release. Confirm no stale
-   target event or crash, then restore and retry. This removes a target
-   subtree while the gallery component owner remains mounted; it does not
-   establish owner-release or cross-owner cancellation behavior.
-5. Use the keyboard alternative buttons and confirm equivalent model changes.
+1. Drag A, B, and C into the target in Copy mode. Confirm the source remains unchanged and each value appears once in the destination.
+2. Switch to Transfer, drag an item, and confirm it leaves the source and appears once in the destination. Repeat after reversing the source order; identity follows the item rather than its position.
+3. Drag a `usize` source over the String target and confirm no event is delivered.
+4. Remove the target subtree during an active left-button drag while the gallery owner remains mounted; release, confirm the destination stays unchanged and the app remains responsive, then restore the target and retry.
+5. Remove the whole gallery owner during an active left-button drag; release and confirm the parent remains responsive after the child owner is gone.
+6. Use only the keyboard to activate Copy and Transfer alternatives and confirm equivalent model changes.
 
 ## Bounded native evidence
 
-M66's core typed pointer copy/drop/transfer flow was delivered and announced.
-The native CUA bundle at `target/headstart/milestone66-drag-drop-gui.json`
-records copy into the destination, a component-state drop, transfer removing a
-source item, reordered-source behavior, a second copy and transfer, target
-removal/restoration, and rejected numeric-type or disabled-source/target drops.
-This is bounded pointer evidence for the same-process typed flow; unchanged AX
-on rejected drops is only negative evidence, not a native event trace or broad
-accessibility acceptance.
+The native CUA bundle at `target/headstart/milestone66-drag-drop-gui.json` records pointer copy and transfer, reordered-source behavior, target removal and restoration, and rejected incompatible-type and disabled-source/target drops. This is bounded evidence for the same-process typed pointer flow. Unchanged accessibility output on rejected drops is negative evidence only, not a native event trace or broad accessibility result.
 
-Keyboard-only alternative acceptance remains pending. Actual destruction of
-the component owner while a drag is in flight was not tested; removing the
-target subtree while its gallery owner remained mounted is a different case.
-OS/file drag, cross-window transport, touch, cross-owner binding and
-exact-pixel/performance/full accessibility acceptance also remain outside this
-evidence.
+M142 verified keyboard-only Copy and Transfer alternatives in canonical Playground. See `target/headstart/evidence/m66-keyboard-alternatives-m142-20261019.json`. M146 verified whole-gallery child-owner removal while a native left-button drag was held over the target; the parent showed the owner-released placeholder before mouse-up, and the app remained responsive afterward. See `target/headstart/evidence/m66-owner-destroyed-during-drag-m146-20261020.json`. M148 verifies removal of only the target subtree during a held native drag while the gallery owner and source remain mounted; the destination stayed empty through release, target restoration succeeded, and a retry copied A. The live snapshot confirmed the left button remained down while the target was absent. See `target/headstart/evidence/m66-target-removed-during-held-drag-m148-20261020.json`. This is bounded negative evidence, not an internal GPUI cancellation or event trace. Buttons operate on the first source item. Screen-reader announcements, cross-platform behavior, broader accessibility, exact-pixel, performance, cross-window, touch, and OS file-drag acceptance remain outside evidence.

@@ -2,6 +2,7 @@
 
 use std::{
     any::{Any, TypeId},
+    collections::HashMap,
     marker::PhantomData,
     rc::Rc,
 };
@@ -16,7 +17,7 @@ use rustui_i18n::LayoutDirection;
 
 pub use crate::runtime::ComponentHost as ViewHost;
 use crate::{
-    localization::ActiveLocalization,
+    localization::{ActiveLocalization, InterpolationError, MessageArguments},
     runtime::{
         AppAction, ComponentHost, component_host::RetainedEntities, scoped_element::scoped_element,
         tasks::OwnerTask,
@@ -29,6 +30,65 @@ pub(crate) type ActionHandler = Box<dyn Fn(&ClickEvent, &mut Window, &mut App)>;
 pub(crate) type KeyboardActionHandler = Box<dyn Fn(&mut Window, &mut App)>;
 pub(crate) type ComponentMutation = Box<dyn FnOnce(&mut dyn Any) -> bool>;
 pub(crate) type ComponentUpdater = Rc<dyn Fn(ComponentMutation, &mut App)>;
+
+#[cfg(test)]
+mod overlay_owner_tests {
+    use super::*;
+    use std::cell::RefCell;
+
+    struct Owner(String);
+
+    #[gpui::test]
+    fn overlay_binding_writes_to_original_owner(cx: &mut gpui::TestAppContext) {
+        cx.update(gpui_component::init);
+        let (host, window) = cx.add_window_view(|_, cx| ComponentHost::new(EmptyView, cx));
+        let owner = Rc::new(RefCell::new(Owner("before".into())));
+        let target = owner.clone();
+        let updater: ComponentUpdater = Rc::new(move |mutation, _| {
+            mutation(&mut *target.borrow_mut());
+        });
+        window.update(|window, app| {
+            let environment = EnvironmentValues::default();
+            let mut retained = RetainedEntities::default();
+            let seed = RenderContext::new(
+                updater,
+                host.entity_id(),
+                TypeId::of::<Owner>(),
+                Rc::new(()),
+                px(14.0),
+                &environment,
+                None,
+                None,
+                window,
+                app,
+                &mut retained,
+            )
+            .seed();
+            let mut overlay_retained = RetainedEntities::default();
+            let mut overlay = RenderContext::new(
+                Rc::new(|_, _| {}),
+                host.entity_id(),
+                TypeId::of::<()>(),
+                Rc::new(()),
+                px(14.0),
+                &environment,
+                None,
+                None,
+                window,
+                app,
+                &mut overlay_retained,
+            );
+            let binding = Binding::new(
+                "before".to_string(),
+                |owner: &Owner| owner.0.clone(),
+                |owner, value| owner.0 = value,
+            );
+            let writer = overlay.with_seed_owner(&seed, |context| context.binding_writer(binding));
+            writer("after".into(), overlay.app);
+        });
+        assert_eq!(owner.borrow().0, "after");
+    }
+}
 
 /// An explicit callback target for the component that described a child view.
 ///
@@ -75,6 +135,54 @@ impl<C: 'static> OwnerAction<C> {
                 cx,
             );
         })
+    }
+
+    /// Captures a typed local value for a compiled owner mutation.
+    /// Useful for rejecting callbacks from stale preview revisions.
+    pub fn action_with<T: Clone + 'static>(&self, value: T, handler: fn(&mut C, &T)) -> AppAction {
+        let update_component = self.update_component.clone();
+        AppAction::new(move |cx| {
+            let value = value.clone();
+            update_component(
+                Box::new(move |owner| {
+                    let owner = owner
+                        .downcast_mut::<C>()
+                        .expect("OwnerAction target has the wrong component type");
+                    handler(owner, &value);
+                    true
+                }),
+                cx,
+            );
+        })
+    }
+
+    /// Dispatch a typed mutation from an existing RustUI foreground callback.
+    ///
+    /// Enter GPUI's foreground/application context before calling this method.
+    /// `None` means the weak owner is unavailable. `Some` carries the handler's
+    /// reply even when its notification flag is false (for example an export).
+    /// The existing weak component updater keeps released owners inert.
+    pub fn dispatch_with<T: 'static, R: 'static>(
+        &self,
+        value: T,
+        handler: fn(&mut C, T) -> (R, bool),
+        cx: &mut App,
+    ) -> Option<R> {
+        let result = Rc::new(std::cell::RefCell::new(None));
+        let output = result.clone();
+        (self.update_component)(
+            Box::new(move |owner| {
+                let owner = owner
+                    .downcast_mut::<C>()
+                    .expect("OwnerAction target has the wrong component type");
+                let (reply, changed) = handler(owner, value);
+                *output.borrow_mut() = Some(reply);
+                changed
+            }),
+            cx,
+        );
+        let reply = result.borrow_mut().take();
+        reply
     }
 
     /// Notify the owner only when its mutation reports a change.
@@ -150,6 +258,7 @@ pub(crate) enum RetentionScope {
     DragSource(Identity),
     DropTarget(Identity),
     SpringOpacity(Identity),
+    SpringOffset(Identity),
     AnimatedOpacity(Identity),
     Tabs(Identity),
     Tab(String),
@@ -211,6 +320,7 @@ pub struct RenderContext<'a> {
     owner_id: EntityId,
     text_element_id_prefix: SharedString,
     text_element_slot: usize,
+    implicit_retained_identity_slots: HashMap<String, usize>,
     owner_type: TypeId,
     task_owner: Rc<dyn Any>,
     control_font_size: Pixels,
@@ -220,6 +330,21 @@ pub struct RenderContext<'a> {
     window: &'a mut Window,
     app: &'a mut App,
     retained: &'a mut RetainedEntities,
+}
+
+fn implicit_retained_identity(prefix: &SharedString, slot: usize, base: Identity) -> Identity {
+    Identity::new(format!("{prefix}:implicit-retained:{slot}:{base}"))
+}
+
+fn allocate_implicit_retained_identity(
+    prefix: &SharedString,
+    slots: &mut HashMap<String, usize>,
+    base: Identity,
+) -> Identity {
+    let occurrence = slots.entry(base.as_str().to_owned()).or_default();
+    let slot = *occurrence;
+    *occurrence += 1;
+    implicit_retained_identity(prefix, slot, base)
 }
 
 /// Owned inputs for lowering a deferred cell with the current component owner.
@@ -236,6 +361,20 @@ pub(crate) struct RenderSeed {
 }
 
 impl RenderSeed {
+    /// Lowers window-hosted overlay content with its original RustUI owner.
+    pub(crate) fn overlay_context<'a>(
+        &'a self,
+        overlay_instance: EntityId,
+        window: &'a mut Window,
+        app: &'a mut App,
+        retained: &'a mut RetainedEntities,
+    ) -> RenderContext<'a> {
+        let mut context = self.geometry_context(overlay_instance, window, app, retained);
+        context.text_element_id_prefix =
+            format!("{:?}:overlay:{:?}", self.owner_id, overlay_instance).into();
+        context
+    }
+
     /// Builds deferred geometry content while preserving its actual component owner.
     pub(crate) fn geometry_context<'a>(
         &'a self,
@@ -249,6 +388,7 @@ impl RenderSeed {
             owner_id: self.owner_id,
             text_element_id_prefix: geometry_text_prefix(self.owner_id, reader_instance),
             text_element_slot: 0,
+            implicit_retained_identity_slots: HashMap::new(),
             owner_type: self.owner_type,
             task_owner: self.task_owner.clone(),
             control_font_size: self.control_font_size,
@@ -274,6 +414,7 @@ impl RenderSeed {
             owner_id: self.owner_id,
             text_element_id_prefix: cell_text_prefix(self.owner_id, grid_instance, cell),
             text_element_slot: 0,
+            implicit_retained_identity_slots: HashMap::new(),
             owner_type: self.owner_type,
             task_owner: self.task_owner.clone(),
             control_font_size: self.control_font_size,
@@ -359,6 +500,34 @@ impl<'a> RenderContext<'a> {
             localization: self.localization.clone(),
         }
     }
+
+    /// Render retained overlay content with the component that created it as owner.
+    pub(crate) fn with_seed_owner<R>(
+        &mut self,
+        seed: &RenderSeed,
+        render: impl FnOnce(&mut RenderContext<'_>) -> R,
+    ) -> R {
+        let mut scoped = RenderContext {
+            update_component: seed.update_component.clone(),
+            owner_id: seed.owner_id,
+            owner_type: seed.owner_type,
+            task_owner: seed.task_owner.clone(),
+            text_element_id_prefix: self.text_element_id_prefix.clone(),
+            text_element_slot: self.text_element_slot,
+            implicit_retained_identity_slots: self.implicit_retained_identity_slots.clone(),
+            control_font_size: self.control_font_size,
+            environment: self.environment,
+            button_theme: self.button_theme.clone(),
+            localization: self.localization.clone(),
+            window: &mut *self.window,
+            app: &mut *self.app,
+            retained: &mut *self.retained,
+        };
+        let result = render(&mut scoped);
+        self.text_element_slot = scoped.text_element_slot;
+        self.implicit_retained_identity_slots = scoped.implicit_retained_identity_slots;
+        result
+    }
     pub(crate) fn new(
         update_component: ComponentUpdater,
         owner_id: EntityId,
@@ -377,6 +546,7 @@ impl<'a> RenderContext<'a> {
             owner_id,
             text_element_id_prefix: format!("rustui-text-{}", owner_id.as_u64()).into(),
             text_element_slot: 0,
+            implicit_retained_identity_slots: HashMap::new(),
             owner_type,
             task_owner,
             control_font_size,
@@ -435,10 +605,18 @@ impl<'a> RenderContext<'a> {
         self.control_font_size
     }
 
-    pub(crate) fn next_text_element_id(&mut self) -> ElementId {
+    pub(crate) fn next_text_element_id_with(&mut self, identity: Option<&Identity>) -> ElementId {
         let slot = self.text_element_slot;
         self.text_element_slot += 1;
-        ElementId::named_usize(self.text_element_id_prefix.clone(), slot)
+        text_element_id(&self.text_element_id_prefix, slot, identity)
+    }
+
+    pub(crate) fn next_implicit_retained_identity(&mut self, base: Identity) -> Identity {
+        allocate_implicit_retained_identity(
+            &self.text_element_id_prefix,
+            &mut self.implicit_retained_identity_slots,
+            base,
+        )
     }
 
     pub fn environment<T: 'static>(&self) -> Option<&T> {
@@ -455,6 +633,7 @@ impl<'a> RenderContext<'a> {
             owner_id: self.owner_id,
             text_element_id_prefix: self.text_element_id_prefix.clone(),
             text_element_slot: self.text_element_slot,
+            implicit_retained_identity_slots: self.implicit_retained_identity_slots.clone(),
             owner_type: self.owner_type,
             task_owner: self.task_owner.clone(),
             control_font_size: self.control_font_size,
@@ -467,6 +646,7 @@ impl<'a> RenderContext<'a> {
         };
         let result = render(&mut scoped);
         self.text_element_slot = scoped.text_element_slot;
+        self.implicit_retained_identity_slots = scoped.implicit_retained_identity_slots;
         result
     }
 
@@ -519,7 +699,25 @@ impl<'a> RenderContext<'a> {
     pub fn localized_message(&self, identifier: &str) -> String {
         self.localization.as_ref().map_or_else(
             || identifier.to_owned(),
-            |active| active.message(identifier).to_owned(),
+            |active| {
+                active
+                    .formatted_message(identifier)
+                    .unwrap_or_else(|_| identifier.to_owned())
+            },
+        )
+    }
+
+    /// Resolves and interpolates a message using the active locale, or the
+    /// identifier itself when no localization is active.
+    pub fn localized_message_with_arguments(
+        &self,
+        identifier: &str,
+        arguments: &MessageArguments,
+    ) -> Result<String, InterpolationError> {
+        crate::localization::resolve_message_with_arguments(
+            self.localization.as_ref(),
+            identifier,
+            arguments,
         )
     }
 
@@ -534,6 +732,79 @@ impl<'a> RenderContext<'a> {
                 Box::new(move |component| binding.write_to(component, value)),
                 cx,
             );
+        })
+    }
+
+    /// Reads the current owner through the existing synchronous component dispatcher.
+    /// A detached/wrong owner returns None; this never schedules a second runtime.
+    pub(crate) fn binding_reader<T: 'static>(
+        &self,
+        binding: Binding<T>,
+    ) -> Rc<dyn Fn(&mut App) -> Option<T>> {
+        let update_component = self.update_component.clone();
+        Rc::new(move |cx| {
+            let output = Rc::new(std::cell::RefCell::new(None));
+            let result = output.clone();
+            let binding = binding.clone();
+            update_component(
+                Box::new(move |owner| {
+                    *result.borrow_mut() = binding.read_from(owner);
+                    false
+                }),
+                cx,
+            );
+            let value = output.borrow_mut().take();
+            value
+        })
+    }
+
+    /// Applies an event to the latest owner value, avoiding captured render snapshots.
+    pub(crate) fn binding_event_updater<T: 'static, Event: 'static>(
+        &self,
+        binding: Binding<T>,
+        update: impl Fn(&mut T, Event) -> bool + 'static,
+    ) -> Rc<dyn Fn(Event, &mut App)> {
+        let update_component = self.update_component.clone();
+        let update = Rc::new(update);
+        Rc::new(move |event, cx| {
+            let binding = binding.clone();
+            let update = update.clone();
+            update_component(
+                Box::new(move |component| {
+                    apply_binding_event(&binding, component, event, |value, event| {
+                        update(value, event)
+                    })
+                }),
+                cx,
+            );
+        })
+    }
+
+    /// Returns whether the current owner accepted the event's write.
+    pub(crate) fn binding_event_try_updater<T: 'static, Event: 'static>(
+        &self,
+        binding: Binding<T>,
+        update: impl Fn(&mut T, Event) -> bool + 'static,
+    ) -> Rc<dyn Fn(Event, &mut App) -> bool> {
+        let update_component = self.update_component.clone();
+        let update = Rc::new(update);
+        Rc::new(move |event, cx| {
+            let accepted = Rc::new(std::cell::Cell::new(false));
+            let result = accepted.clone();
+            let binding = binding.clone();
+            let update = update.clone();
+            update_component(
+                Box::new(move |component| {
+                    let changed =
+                        apply_binding_event(&binding, component, event, |value, event| {
+                            update(value, event)
+                        });
+                    result.set(changed);
+                    changed
+                }),
+                cx,
+            );
+            accepted.get()
         })
     }
 
@@ -663,6 +934,20 @@ impl<'a> RenderContext<'a> {
         self.retained.retain_subscription(id, subscription);
     }
 
+    pub(crate) fn replace_retained_subscription<T, Event>(
+        &mut self,
+        id: &Identity,
+        slot: Identity,
+        entity: &Entity<T>,
+        listener: impl FnMut(Entity<T>, &Event, &mut App) + 'static,
+    ) where
+        T: EventEmitter<Event> + 'static,
+        Event: 'static,
+    {
+        let subscription: Subscription = self.app.subscribe(entity, listener);
+        self.retained.replace_subscription(id, slot, subscription);
+    }
+
     pub(crate) fn observe_retained<T: 'static>(
         &mut self,
         id: &Identity,
@@ -675,6 +960,38 @@ impl<'a> RenderContext<'a> {
 
     pub(crate) fn app(&self) -> &App {
         self.app
+    }
+}
+
+fn text_element_id(prefix: &SharedString, slot: usize, identity: Option<&Identity>) -> ElementId {
+    match identity {
+        Some(identity) => ElementId::from((
+            ElementId::from(prefix.clone()),
+            identity.as_str().to_owned(),
+        )),
+        None => ElementId::named_usize(prefix.clone(), slot),
+    }
+}
+
+#[cfg(test)]
+mod text_element_identity_tests {
+    use super::text_element_id;
+    use gpui::SharedString;
+    use rustui_core::Identity;
+
+    #[test]
+    fn explicit_ids_are_scoped_and_implicit_ids_remain_positional() {
+        let owner = SharedString::from("owner-1");
+        let geometry = SharedString::from("owner-1:geometry-instance:2");
+        let explicit = Identity::from("title");
+        let owner_id = text_element_id(&owner, 0, Some(&explicit));
+        assert_eq!(owner_id, text_element_id(&owner, 9, Some(&explicit)));
+        assert_ne!(owner_id, text_element_id(&geometry, 0, Some(&explicit)));
+
+        assert_eq!(
+            text_element_id(&owner, 3, None),
+            gpui::ElementId::named_usize(owner, 3)
+        );
     }
 }
 
@@ -936,6 +1253,21 @@ fn assert_valid_cache_bounds(width: f32, height: f32) {
     );
 }
 
+fn fixed_bounds_child(child: AnyElement, width: f32, height: f32) -> gpui::Div {
+    div()
+        .w(px(width))
+        .h(px(height))
+        .flex_shrink_0()
+        .child(child)
+}
+
+fn fixed_cache_style(width: f32, height: f32) -> StyleRefinement {
+    StyleRefinement::default()
+        .w(px(width))
+        .h(px(height))
+        .flex_shrink_0()
+}
+
 impl<C: View> View for ComponentView<C> {
     fn body(&self) -> impl View {
         EmptyView
@@ -951,8 +1283,10 @@ impl<C: View> View for ComponentView<C> {
             )
         {
             child
-                .cached(StyleRefinement::default().w(px(width)).h(px(height)))
+                .cached(fixed_cache_style(width, height))
                 .into_any_element()
+        } else if let Some((width, height)) = self.cached_fixed {
+            fixed_bounds_child(child.into_any_element(), width, height).into_any_element()
         } else {
             child.into_any_element()
         }
@@ -965,6 +1299,68 @@ fn cached_component_eligible(
     accessibility_active: bool,
 ) -> bool {
     environment.is_empty() && !native_drag_active && !accessibility_active
+}
+
+#[cfg(test)]
+mod implicit_retained_identity_tests {
+    use super::allocate_implicit_retained_identity;
+    use gpui::SharedString;
+    use rustui_core::Identity;
+    use std::collections::HashMap;
+
+    #[test]
+    fn distinct_conditional_siblings_keep_identity_and_same_base_siblings_get_slots() {
+        let prefix = SharedString::from("rustui-text-owner-7");
+        let conditional = Identity::from("text-field:Conditional");
+        let later = Identity::from("text-editor:Notes");
+        let mut visible_slots = HashMap::new();
+        let visible_conditional =
+            allocate_implicit_retained_identity(&prefix, &mut visible_slots, conditional.clone());
+        let visible_later =
+            allocate_implicit_retained_identity(&prefix, &mut visible_slots, later.clone());
+
+        let mut hidden_slots = HashMap::new();
+        let hidden_later =
+            allocate_implicit_retained_identity(&prefix, &mut hidden_slots, later.clone());
+        assert_eq!(visible_later, hidden_later);
+
+        let mut reappeared_slots = HashMap::new();
+        let reappeared_conditional = allocate_implicit_retained_identity(
+            &prefix,
+            &mut reappeared_slots,
+            conditional.clone(),
+        );
+        let reappeared_later =
+            allocate_implicit_retained_identity(&prefix, &mut reappeared_slots, later);
+        assert_eq!(visible_conditional, reappeared_conditional);
+        assert_eq!(visible_later, reappeared_later);
+
+        let mut same_base_slots = HashMap::new();
+        let same_base = Identity::from("text-field:Name");
+        let first_sibling =
+            allocate_implicit_retained_identity(&prefix, &mut same_base_slots, same_base.clone());
+        let second_sibling =
+            allocate_implicit_retained_identity(&prefix, &mut same_base_slots, same_base.clone());
+        assert_ne!(first_sibling, second_sibling);
+
+        let mut next_render_slots = HashMap::new();
+        assert_eq!(
+            first_sibling,
+            allocate_implicit_retained_identity(&prefix, &mut next_render_slots, same_base.clone())
+        );
+        assert_eq!(
+            second_sibling,
+            allocate_implicit_retained_identity(&prefix, &mut next_render_slots, same_base)
+        );
+        assert_ne!(
+            allocate_implicit_retained_identity(
+                &SharedString::from("rustui-text-owner-8"),
+                &mut HashMap::new(),
+                Identity::from("text-editor:Notes"),
+            ),
+            visible_later,
+        );
+    }
 }
 
 #[cfg(test)]
@@ -998,6 +1394,23 @@ mod cached_component_tests {
         assert!(!cached_component_eligible(&environment, false, true));
         environment.set(1_u8);
         assert!(!cached_component_eligible(&environment, false, false));
+    }
+
+    #[test]
+    fn fixed_bounds_are_preserved_when_component_caching_falls_back() {
+        let mut fallback = fixed_bounds_child(div().into_any_element(), 80.0, 32.0);
+        let style = fallback.style();
+        assert_eq!(style.size.width, Some(px(80.0).into()));
+        assert_eq!(style.size.height, Some(px(32.0).into()));
+        assert_eq!(style.flex_shrink, Some(0.0));
+    }
+
+    #[test]
+    fn cached_fixed_bounds_disable_flex_shrink() {
+        let style = fixed_cache_style(80.0, 32.0);
+        assert_eq!(style.size.width, Some(px(80.0).into()));
+        assert_eq!(style.size.height, Some(px(32.0).into()));
+        assert_eq!(style.flex_shrink, Some(0.0));
     }
 
     #[test]
@@ -1049,21 +1462,17 @@ impl<C: View, P: Clone + PartialEq + 'static> View for ComponentPropsView<C, P> 
                 // A props notification raised during parent lowering is too
                 // late to invalidate a cached child in that same frame.
                 // Lower changed props normally so the current frame is fresh.
-                div()
-                    .w(px(width))
-                    .h(px(height))
-                    .child(child)
-                    .into_any_element()
+                fixed_bounds_child(child.into_any_element(), width, height).into_any_element()
             } else if cached_component_eligible(
                 context.environment,
                 context.app().has_active_drag(),
                 context.window.is_a11y_active(),
             ) {
                 child
-                    .cached(StyleRefinement::default().w(px(width)).h(px(height)))
+                    .cached(fixed_cache_style(width, height))
                     .into_any_element()
             } else {
-                child.into_any_element()
+                fixed_bounds_child(child.into_any_element(), width, height).into_any_element()
             }
         } else {
             child.into_any_element()
@@ -1114,5 +1523,77 @@ impl View for EmptyView {
 
     fn into_element(&self, _context: &mut RenderContext<'_>) -> AnyElement {
         div().into_any_element()
+    }
+}
+
+fn apply_binding_event<T: 'static, Event>(
+    binding: &Binding<T>,
+    owner: &mut dyn std::any::Any,
+    event: Event,
+    update: impl FnOnce(&mut T, Event) -> bool,
+) -> bool {
+    binding.update_on(owner, |value| update(value, event))
+}
+
+#[cfg(test)]
+mod binding_event_regressions {
+    use super::*;
+    struct Owner {
+        value: Vec<String>,
+        revision: u64,
+    }
+    #[test]
+    fn event_dispatch_reads_current_owner_value_and_preserves_intervening_changes() {
+        let binding = Binding::new::<Owner>(
+            vec!["snapshot".into()],
+            |owner| owner.value.clone(),
+            |owner, value| owner.value = value,
+        );
+        let mut owner = Owner {
+            value: vec!["current".into(), "intervening".into()],
+            revision: 0,
+        };
+        assert!(apply_binding_event(
+            &binding,
+            &mut owner,
+            "event",
+            |value, event| {
+                value.push(event.into());
+                true
+            }
+        ));
+        assert_eq!(owner.value, ["current", "intervening", "event"]);
+        let before = owner.value.clone();
+        assert!(!apply_binding_event(&binding, &mut owner, (), |_, _| false));
+        assert_eq!(owner.value, before);
+    }
+    #[test]
+    fn event_dispatch_honors_owner_revision_rejection() {
+        let binding = Binding::new_with(
+            vec![String::from("snapshot")],
+            1_u64,
+            |owner: &Owner, _| owner.value.clone(),
+            |owner: &mut Owner, revision, value| {
+                if owner.revision != *revision {
+                    return false;
+                }
+                owner.value = value;
+                true
+            },
+        );
+        let mut owner = Owner {
+            value: vec!["new owner revision".into()],
+            revision: 2,
+        };
+        assert!(!apply_binding_event(
+            &binding,
+            &mut owner,
+            "stale",
+            |value, event| {
+                value.push(event.into());
+                true
+            }
+        ));
+        assert_eq!(owner.value, ["new owner revision"]);
     }
 }

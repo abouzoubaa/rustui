@@ -1,6 +1,6 @@
 //! Public component families.
 //!
-//! Scaffold only. The modules below do not yet implement their planned APIs.
+//! Each family contains implemented adapters and, where marked, planned modules.
 
 pub mod advanced;
 pub mod basic;

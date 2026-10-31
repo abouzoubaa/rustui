@@ -3,15 +3,28 @@
 use std::ops::Range;
 
 use gpui::{
-    AnyElement, AppContext as _, Axis, Entity, IntoElement, ParentElement as _, Pixels,
-    Styled as _, div, px,
+    AnyElement, AppContext as _, Axis, Entity, InteractiveElement as _, IntoElement, Orientation,
+    ParentElement as _, Pixels, Role, StatefulInteractiveElement as _, Styled as _, div,
+    prelude::FluentBuilder as _, px,
 };
 use gpui_component::resizable::{ResizableState, h_resizable, resizable_panel, v_resizable};
 use rustui_core::Identity;
+use rustui_i18n::LayoutDirection;
 
 use crate::view::{EmptyView, RenderContext, RetentionScope, View};
 
 type ChildRenderer = Box<dyn for<'a> Fn(&mut RenderContext<'a>) -> AnyElement>;
+
+const SPLITTER_ACCESSIBLE_NAME_ID: &str = "rustui-splitter-resize-divider";
+const SPLITTER_ACCESSIBLE_NAME_FALLBACK: &str = "Resize divider";
+
+fn splitter_accessible_name(localized: &str) -> String {
+    if localized.trim() == SPLITTER_ACCESSIBLE_NAME_ID {
+        SPLITTER_ACCESSIBLE_NAME_FALLBACK.to_owned()
+    } else {
+        localized.to_owned()
+    }
+}
 
 /// One keyed split panel containing any public RustUI view.
 pub struct SplitPanel {
@@ -119,6 +132,14 @@ fn checked_id(id: Identity) -> Identity {
     id
 }
 
+fn panel_order(axis: Axis, direction: LayoutDirection, count: usize) -> Vec<usize> {
+    let mut order: Vec<_> = (0..count).collect();
+    if axis == Axis::Horizontal && direction == LayoutDirection::RightToLeft {
+        order.reverse();
+    }
+    order
+}
+
 struct RetainedSplit {
     axis: Axis,
     ids: Vec<Identity>,
@@ -148,32 +169,107 @@ fn measured_preferences(container_size: Pixels, sizes: &[Pixels]) -> Vec<f32> {
     }
 }
 
+fn divider_keyboard_size(
+    axis: Axis,
+    key: &str,
+    current: Pixels,
+    range: &Range<Pixels>,
+) -> Option<Pixels> {
+    // Arrow keys move the physical divider; RTL changes panel order, not key direction.
+    let delta = match (axis, key) {
+        (Axis::Horizontal, "left") => px(-10.0),
+        (Axis::Horizontal, "right") => px(10.0),
+        (Axis::Vertical, "up") => px(-10.0),
+        (Axis::Vertical, "down") => px(10.0),
+        _ => return None,
+    };
+    Some((current + delta).max(range.start).min(range.end))
+}
+
+fn divider_effective_range(
+    container_size: Pixels,
+    index: usize,
+    configured_ranges: &[Range<f32>],
+    panel_sizes: &[Pixels],
+    current: Pixels,
+) -> Range<Pixels> {
+    let Some(configured) = configured_ranges.get(index) else {
+        return px(0.0)..Pixels::MAX;
+    };
+    let configured = px(configured.start)..px(configured.end);
+    if container_size <= px(0.0) {
+        return configured;
+    }
+
+    let preceding_size = panel_sizes
+        .iter()
+        .take(index)
+        .map(|size| f64::from(size.as_f32()))
+        .sum::<f64>();
+    let other_min = configured_ranges
+        .iter()
+        .skip(index + 1)
+        .map(|range| f64::from(range.start))
+        .sum::<f64>();
+    let extent = f64::from(container_size.as_f32());
+    // GPUI's resize_panel_at_handle expands this panel by shrinking only
+    // panels to its right, but shrinking it transfers space only to the
+    // immediately adjacent panel. Earlier panels therefore keep their size.
+    let immediate_right_growth = panel_sizes
+        .get(index + 1)
+        .zip(configured_ranges.get(index + 1))
+        .map(|(size, range)| f64::from(size.as_f32()) - f64::from(range.end))
+        .unwrap_or(0.0);
+    let min = f64::from(configured.start.as_f32())
+        .max(f64::from(current.as_f32()) + immediate_right_growth);
+    let max = f64::from(configured.end.as_f32()).min(extent - preceding_size - other_min);
+    if min <= max {
+        px(min as f32)..px(max as f32)
+    } else {
+        current..current
+    }
+}
+
+fn divider_aria_values(
+    current: Option<Pixels>,
+    fallback: Pixels,
+    range: &Range<Pixels>,
+) -> (f64, f64, f64) {
+    let value = current.unwrap_or(fallback).max(range.start).min(range.end);
+    (
+        value.as_f32() as f64,
+        range.start.as_f32() as f64,
+        range.end.as_f32() as f64,
+    )
+}
+
 // Upstream native sizes are positional. Topology and range reconciliation map
 // size preferences by ID; official GPUI still owns drag, fitting, and clamping.
-fn reconcile_sizes(
+fn reconcile_sizes<'a>(
     old_ids: &[Identity],
     measured: &[f32],
     previous: &[Option<f32>],
-    panels: &[SplitPanel],
+    panels: impl IntoIterator<Item = &'a SplitPanel>,
     same_axis: bool,
 ) -> Vec<Option<f32>> {
     panels
-        .iter()
+        .into_iter()
         .map(|panel| {
-            if same_axis {
-                if let Some(index) = old_ids.iter().position(|id| *id == panel.id) {
-                    return measured
-                        .get(index)
-                        .copied()
-                        .filter(|size| size.is_finite() && *size >= 0.0)
-                        .or_else(|| previous.get(index).copied().flatten())
-                        .or(panel.initial_size);
-                }
-            }
-            panel.initial_size
-        })
-        .zip(panels)
-        .map(|(size, panel)| {
+            let size = if same_axis {
+                old_ids
+                    .iter()
+                    .position(|id| *id == panel.id)
+                    .and_then(|index| {
+                        measured
+                            .get(index)
+                            .copied()
+                            .filter(|size| size.is_finite() && *size >= 0.0)
+                            .or_else(|| previous.get(index).copied().flatten())
+                    })
+                    .or(panel.initial_size)
+            } else {
+                panel.initial_size
+            };
             size.map(|size| size.clamp(panel.size_range.start, panel.size_range.end))
         })
         .collect()
@@ -186,9 +282,16 @@ impl View for SplitView {
 
     fn into_element(&self, context: &mut RenderContext<'_>) -> AnyElement {
         context.with_element_scope(RetentionScope::SplitView(self.id.clone()), |context| {
-            let ids: Vec<_> = self.panels.iter().map(|panel| panel.id.clone()).collect();
-            let size_ranges: Vec<_> = self
-                .panels
+            let direction = context.layout_direction();
+            // GPUI's resizable group uses physical row order. Match RustUI's
+            // other horizontal layouts by placing the first logical panel on
+            // the right in RTL; reconciliation below maps native sizes by ID.
+            let panels: Vec<_> = panel_order(self.axis, direction, self.panels.len())
+                .into_iter()
+                .map(|index| &self.panels[index])
+                .collect();
+            let ids: Vec<_> = panels.iter().map(|panel| panel.id.clone()).collect();
+            let size_ranges: Vec<_> = panels
                 .iter()
                 .map(|panel| panel.size_range.clone())
                 .collect();
@@ -197,7 +300,7 @@ impl View for SplitView {
                     axis: self.axis,
                     ids: ids.clone(),
                     size_ranges: size_ranges.clone(),
-                    initial_sizes: self.panels.iter().map(|panel| panel.initial_size).collect(),
+                    initial_sizes: panels.iter().map(|panel| panel.initial_size).collect(),
                     native: cx.new(|_| ResizableState::default()),
                 });
             let state = retained.read(context.app());
@@ -215,7 +318,7 @@ impl View for SplitView {
                     &state.ids,
                     &measured,
                     &state.initial_sizes,
-                    &self.panels,
+                    panels.iter().copied(),
                     state.axis == self.axis,
                 );
                 context.update_entity(&retained, |state, _, cx| {
@@ -232,16 +335,87 @@ impl View for SplitView {
             let state = retained.read(context.app());
             let native = state.native.clone();
             let initial_sizes = state.initial_sizes.clone();
+            let configured_ranges = state.size_ranges.clone();
             let mut group = match self.axis {
                 Axis::Horizontal => h_resizable("rustui-split"),
                 Axis::Vertical => v_resizable("rustui-split"),
             }
             .with_state(&native);
-            for (index, panel) in self.panels.iter().enumerate() {
+            for (index, panel) in panels.iter().enumerate() {
                 let content = context
                     .with_element_scope(RetentionScope::Key(panel.id.clone()), |context| {
                         (panel.content)(context)
                     });
+                let content = if index + 1 < panels.len() {
+                    let axis = self.axis;
+                    let native = native.clone();
+                    let native_state = native.read(context.app());
+                    let fallback = px(initial_sizes[index].unwrap_or(panel.size_range.start));
+                    let current = native_state.sizes().get(index).copied().unwrap_or(fallback);
+                    let range = divider_effective_range(
+                        native_state.container_size(),
+                        index,
+                        &configured_ranges,
+                        native_state.sizes(),
+                        current,
+                    );
+                    let (value, min_value, max_value) =
+                        divider_aria_values(Some(current), fallback, &range);
+                    let divider = div()
+                        .id(format!("rustui-split-divider-{}", panel.id.as_str()))
+                        .absolute()
+                        .when(axis == Axis::Horizontal, |this| {
+                            this.top_0().right_0().bottom_0().w(px(9.0))
+                        })
+                        .when(axis == Axis::Vertical, |this| {
+                            this.left_0().right_0().bottom_0().h(px(9.0))
+                        })
+                        .focusable()
+                        .tab_stop(true)
+                        .role(Role::Splitter)
+                        .aria_label(splitter_accessible_name(
+                            &context.localized_message(SPLITTER_ACCESSIBLE_NAME_ID),
+                        ))
+                        .aria_orientation(match axis {
+                            Axis::Horizontal => Orientation::Vertical,
+                            Axis::Vertical => Orientation::Horizontal,
+                        })
+                        .aria_numeric_value(value)
+                        .aria_min_numeric_value(min_value)
+                        .aria_max_numeric_value(max_value)
+                        .aria_numeric_value_step(10.0)
+                        .on_key_down(move |event, window, cx| {
+                            if event.prefer_character_input
+                                || event.keystroke.is_ime_in_progress()
+                                || event.keystroke.modifiers.modified()
+                            {
+                                return;
+                            }
+                            let Some(current) = native.read(cx).sizes().get(index).copied() else {
+                                return;
+                            };
+                            let Some(size) = divider_keyboard_size(
+                                axis,
+                                event.keystroke.key.as_ref(),
+                                current,
+                                &range,
+                            ) else {
+                                return;
+                            };
+                            native.update(&mut *cx, |state, cx| {
+                                state.resize_panel(index, size, window, cx);
+                            });
+                            cx.stop_propagation();
+                        });
+                    div()
+                        .relative()
+                        .size_full()
+                        .child(content)
+                        .child(divider)
+                        .into_any_element()
+                } else {
+                    content
+                };
                 let mut native_panel = resizable_panel()
                     .size_range(px(panel.size_range.start)..px(panel.size_range.end))
                     .child(content);
@@ -256,11 +430,62 @@ impl View for SplitView {
 }
 
 #[cfg(test)]
+#[path = "split_view_tests.rs"]
+mod event_tests;
+
+#[cfg(test)]
 mod tests {
     use super::*;
 
+    #[test]
+    fn splitter_name_uses_a_human_readable_fallback_without_localization() {
+        assert_eq!(
+            splitter_accessible_name(SPLITTER_ACCESSIBLE_NAME_ID),
+            SPLITTER_ACCESSIBLE_NAME_FALLBACK
+        );
+        assert_eq!(
+            splitter_accessible_name(" \trustui-splitter-resize-divider\n"),
+            SPLITTER_ACCESSIBLE_NAME_FALLBACK
+        );
+        assert_eq!(
+            splitter_accessible_name("Redimensionner le séparateur"),
+            "Redimensionner le séparateur"
+        );
+    }
+
     fn panel(id: &str, size: f32) -> SplitPanel {
         SplitPanel::new(id, EmptyView).initial_size(size)
+    }
+
+    #[test]
+    fn horizontal_panels_follow_layout_direction_while_vertical_panels_do_not() {
+        assert_eq!(
+            panel_order(Axis::Horizontal, LayoutDirection::LeftToRight, 3),
+            [0, 1, 2]
+        );
+        assert_eq!(
+            panel_order(Axis::Horizontal, LayoutDirection::RightToLeft, 3),
+            [2, 1, 0]
+        );
+        assert_eq!(
+            panel_order(Axis::Vertical, LayoutDirection::RightToLeft, 3),
+            [0, 1, 2]
+        );
+
+        let logical_panels = [panel("sidebar", 180.0), panel("content", 320.0)];
+        let ltr_ids = [Identity::from("sidebar"), Identity::from("content")];
+        let rtl_panels: Vec<_> = panel_order(
+            Axis::Horizontal,
+            LayoutDirection::RightToLeft,
+            logical_panels.len(),
+        )
+        .into_iter()
+        .map(|index| &logical_panels[index])
+        .collect();
+        assert_eq!(
+            reconcile_sizes(&ltr_ids, &[180.0, 320.0], &[None, None], rtl_panels, true),
+            [Some(320.0), Some(180.0)]
+        );
     }
 
     #[test]
@@ -298,6 +523,129 @@ mod tests {
                 true
             ),
             vec![Some(180.0)]
+        );
+    }
+
+    #[test]
+    fn divider_keyboard_adjustment_moves_physically_and_clamps() {
+        assert_eq!(
+            panel_order(Axis::Horizontal, LayoutDirection::RightToLeft, 2),
+            [1, 0]
+        );
+        let horizontal = px(100.0)..px(300.0);
+        assert_eq!(
+            divider_keyboard_size(Axis::Horizontal, "left", px(150.0), &horizontal,),
+            Some(px(140.0))
+        );
+        assert_eq!(
+            divider_keyboard_size(Axis::Horizontal, "right", px(150.0), &horizontal,),
+            Some(px(160.0))
+        );
+        assert_eq!(
+            divider_keyboard_size(Axis::Horizontal, "left", px(100.0), &horizontal,),
+            Some(px(100.0))
+        );
+        assert_eq!(
+            divider_keyboard_size(Axis::Horizontal, "up", px(150.0), &horizontal,),
+            None
+        );
+        assert_eq!(
+            divider_keyboard_size(Axis::Horizontal, "left", px(150.0), &horizontal,),
+            Some(px(140.0))
+        );
+        assert_eq!(
+            divider_keyboard_size(Axis::Horizontal, "right", px(150.0), &horizontal,),
+            Some(px(160.0))
+        );
+
+        let vertical = px(80.0)..px(240.0);
+        assert_eq!(
+            divider_keyboard_size(Axis::Vertical, "up", px(120.0), &vertical,),
+            Some(px(110.0))
+        );
+        assert_eq!(
+            divider_keyboard_size(Axis::Vertical, "down", px(120.0), &vertical,),
+            Some(px(130.0))
+        );
+        assert_eq!(
+            divider_keyboard_size(Axis::Vertical, "down", px(240.0), &vertical,),
+            Some(px(240.0))
+        );
+        assert_eq!(
+            divider_keyboard_size(Axis::Vertical, "right", px(120.0), &vertical,),
+            None
+        );
+    }
+
+    #[test]
+    fn divider_accessibility_reports_current_and_configured_size_bounds() {
+        let range = px(80.0)..px(240.0);
+        assert_eq!(
+            divider_aria_values(Some(px(120.0)), px(80.0), &range),
+            (120.0, 80.0, 240.0)
+        );
+        assert_eq!(
+            divider_aria_values(None, px(100.0), &range),
+            (100.0, 80.0, 240.0)
+        );
+    }
+
+    #[test]
+    fn divider_range_respects_container_and_sibling_constraints() {
+        let ranges = [100.0..300.0, 100.0..300.0];
+        assert_eq!(
+            divider_effective_range(px(250.0), 0, &ranges, &[px(140.0), px(110.0)], px(140.0)),
+            px(100.0)..px(150.0)
+        );
+        let three_panel_ranges = [200.0..240.0, 100.0..300.0, 70.0..90.0];
+        assert_eq!(
+            divider_effective_range(
+                px(500.0),
+                1,
+                &three_panel_ranges,
+                &[px(200.0), px(200.0), px(100.0)],
+                px(200.0)
+            ),
+            px(210.0)..px(230.0)
+        );
+        assert_eq!(
+            divider_effective_range(
+                px(700.0),
+                1,
+                &[300.0..500.0, 0.0..400.0, 100.0..300.0],
+                &[px(300.0), px(200.0), px(200.0)],
+                px(200.0)
+            ),
+            px(100.0)..px(300.0)
+        );
+        let equal_ranges = [100.0..300.0, 100.0..300.0, 100.0..300.0];
+        assert_eq!(
+            divider_effective_range(
+                px(500.0),
+                1,
+                &equal_ranges,
+                &[px(200.0), px(150.0), px(150.0)],
+                px(150.0)
+            ),
+            px(100.0)..px(200.0)
+        );
+        assert_eq!(
+            divider_effective_range(
+                px(500.0),
+                0,
+                &[0.0..500.0, 100.0..200.0, 100.0..500.0],
+                &[px(200.0), px(200.0), px(100.0)],
+                px(200.0)
+            ),
+            px(200.0)..px(300.0)
+        );
+        assert_eq!(
+            divider_effective_range(px(0.0), 0, &ranges, &[px(140.0), px(110.0)], px(140.0)),
+            px(100.0)..px(300.0)
+        );
+        assert_eq!(
+            divider_effective_range(px(150.0), 0, &ranges, &[px(140.0), px(110.0)], px(140.0)),
+            px(140.0)..px(140.0)
         );
     }
 

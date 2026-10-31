@@ -1,0 +1,54 @@
+--- a/vendor/gpui-pre-wgpu-0.3.9/src/cosmic_text_system.rs
++++ b/vendor/gpui-pre-wgpu-0.3.9/src/cosmic_text_system.rs
+@@ -690,6 +690,31 @@
+         layout.descent = layout.descent.max(segment.descent);
+     }
+ 
++    // Keep Cosmic's row geometry intact for backend-shaped wrapping. Existing
++    // GPUI callers still request one unwrapped row until the wrapped-row
++    // paint and index paths consume the same geometry.
++    fn shape_rows(
++        &mut self,
++        line: &ShapeLine,
++        font_size: Pixels,
++        width: Option<f32>,
++        wrap: cosmic_text::Wrap,
++    ) -> Vec<cosmic_text::LayoutLine> {
++        let mut rows = Vec::with_capacity(1);
++        line.layout_to_buffer(
++            &mut self.scratch,
++            f32::from(font_size),
++            width,
++            wrap,
++            Ellipsize::None,
++            None,
++            &mut rows,
++            None,
++            cosmic_text::Hinting::Disabled,
++        );
++        rows
++    }
++
+     fn layout_line_no_separators(
+         &mut self,
+         text: &str,
+@@ -752,18 +777,7 @@
+             cosmic_text::Shaping::Advanced,
+             4,
+         );
+-        let mut layout_lines = Vec::with_capacity(1);
+-        line.layout_to_buffer(
+-            &mut self.scratch,
+-            f32::from(font_size),
+-            None, // We do our own wrapping
+-            cosmic_text::Wrap::None,
+-            Ellipsize::None,
+-            None,
+-            &mut layout_lines,
+-            None,
+-            cosmic_text::Hinting::Disabled,
+-        );
++        let layout_lines = self.shape_rows(&line, font_size, None, cosmic_text::Wrap::None);
+ 
+         let Some(layout) = layout_lines.first() else {
+             return LineLayout {

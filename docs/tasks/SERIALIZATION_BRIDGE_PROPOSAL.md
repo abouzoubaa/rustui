@@ -1,33 +1,47 @@
 # Serialization and UI Studio bridge proposal
 
-**Status: D1a implemented; D1b remains proposed and awaits an architecture decision.**
-The versioned descriptor schema and codec already exist under
-`crates/rustui/src/preview/` and are publicly exported as `rustui::preview`.
-The focused test filter passed 10 tests. This document authorizes no preview-host,
-macro, dependency, transport or application changes. It remains a proposal, not an
-accepted ADR. `docs/adr/README.md` requires explicit authorization before creating
-an individual ADR; this proposal stays in the task register.
+**Status: D1a–D1c and descriptor-first composition source implementations are present.**
 
-## Decision requested
+The user approved Strategy A on 2026-10-25. `STAGE9_DESCRIPTOR_COMPOSITION_IMPLEMENTATION.md` records the separate composition format, slot factories, structural/property operations, local node signals and current evidence. Native/browser acceptance and the D1d external consumer/transport remain open. D1c's schema-driven
+Playground inspector passes its targeted locked/offline all-targets check; native
+inspector acceptance remains open. The selected D1b
+contract is signal-only (2026-10-19). The versioned descriptor schema, codec,
+compiled registry and local preview host are publicly exported under
+`rustui::preview`. D1b focused tests were included in the workspace `--lib` run
+of 335 tests across six result groups. M125 native checks covered typed edits and
+binding feedback, action dispatch, lifecycle generations, stale/type rejection
+and NavigationSplit labels; M128 observed caret-position retention across parent
+rerender plus keyboard blur/refocus. Text selection, IME composition, and
+retention without blur remain open. See `D1B_COMPILED_PREVIEW_HOST.md` for the
+implemented boundary and limits.
 
-Decide whether to continue with **D1b: an in-process host for explicitly
-registered, compiled components**, using the existing versioned descriptor,
-declared editable properties and host-bound action references. D1a is already
-implemented. Keep external transport and full visual composition as separately
-reviewable deliverables. Before D1b, decide whether action events are signal-only
-or require payload values; the current document maps event IDs to action IDs and
-does not carry event payloads.
+This task document records the design rationale and current status; it is not an
+ADR. D1a–D1c are implemented as source slices. D1d external host integration
+remains separate roadmap work. Creating an individual ADR still follows
+`docs/adr/README.md`.
 
-This boundary is the recommendation. It supports useful editable native previews
-without attempting to serialize arbitrary Rust views, closures or component
-memory. It is a foundation for the full UI Studio goal, not completion of it.
+## Decision and scope
+
+The selected D1b boundary is an in-process host for explicitly registered,
+compiled components, using the existing versioned descriptor, declared editable
+properties and host-bound action references. D1b events are signal-only: a
+`PreviewSignal` carries an event ID and exact mount/revision stamp. The registry
+rejects event schemas with payload properties; typed values remain in
+owner-controlled RustUI state and flow through validated property feedback.
+`PreviewDocument` binds event IDs to allowlisted action references, which the
+owner resolves and invokes locally. External transport and full visual
+composition remain separate deliverables.
+
+This boundary supports useful editable native previews without attempting to
+serialize arbitrary Rust views, closures or component memory. It is a foundation
+for the full UI Studio goal, not completion of it.
 
 ## Current evidence
 
 | Current source | What it establishes |
 |---|---|
 | `crates/rustui/src/theme/loader.rs`: `parse_theme`, `serialize_theme` | Validated, typed theme-document JSON import/export. Export normalizes JSON; it does not preserve source bytes or describe a view tree. |
-| `crates/rustui/src/preview/{model,schema,codec}.rs`; `crates/rustui/src/preview/mod.rs` | Implemented and publicly exported versioned catalog/preview descriptors, scalar properties, schema validation, action references, atomic property batches and JSON codec. The focused test filter passed 10 tests. No compiled preview host is established. |
+| `crates/rustui/src/preview/{model,schema,codec,registry,host}.rs`; `crates/rustui/src/preview/mod.rs` | Implemented and publicly exported versioned catalog/preview descriptors, scalar properties, validation, allowlisted actions, atomic property batches, JSON codec and signal-only compiled preview host. |
 | `docs/tasks/T1B_THEME_SERIALIZATION.md`; `apps/rustui-playground/src/stories/theme_inspector.rs` | Existing theme export and read-only inspection have a bounded theme-only purpose. |
 | `crates/rustui/src/view.rs`: `View`, `RenderContext`, `AnyView`, `Component`, `ComponentPropsView` | Views are Rust descriptions lowered to native elements. `body` returns `impl View`; the interface is not a serializable object graph. Retained components accept explicit `Clone + PartialEq + 'static` props and a typed reconciler. |
 | `crates/rustui-macros/src/component.rs` | The component macro generates state accessors/bindings, defaults and action constructors. It does not generate a component catalog, property schema or serialization contract. |
@@ -35,17 +49,18 @@ memory. It is a foundation for the full UI Studio goal, not completion of it.
 | `crates/rustui/src/runtime/component_host.rs`; `view.rs`: `OwnerAction`, `OwnerActionReader` | GPUI entities own components, subscriptions and invalidation. Explicit owner targets exist for callbacks; type names alone are not owner identities. |
 | `crates/rustui/src/theme/registry.rs`; `localization/mod.rs` | Active theme/localization use application globals. Independent appearance/locale in simultaneous previews is not established by adding document fields. |
 | `docs/ARCHITECTURE.md`; `AGENTS.md` | RustUI must remain independent of Allui and Chorus. GPUI owns entities, scheduling, layout and rendering; another reactive/rendering runtime is excluded. Playground is the public-API-only canonical development app. |
-| `docs/IMPLEMENTATION_ROADMAP.md`: framework capabilities, D1, pending serialization decision | General serialization and UI Studio integration remain planned; theme export is not general view/state serialization. |
+| `docs/IMPLEMENTATION_ROADMAP.md`: D1 and framework capabilities | D1a/D1b are implemented; general view/state serialization and UI Studio integration remain planned. Theme export is not general view/state serialization. |
 
 The existing theme exporter validates the current theme-document contract; it
 preserves arbitrary metadata/non-Button records as JSON data without establishing
 semantic component-descriptor support for those records. The proposed preview
 catalog must declare its own validation coverage explicitly.
 
-The descriptor schema/codec exists, but no local compiled preview host was found
-under `crates/rustui/src/preview`. The D1a unit tests validate document behavior;
-they do not establish component mounting, property editing in a live preview,
-native accessibility or UI Studio integration.
+The local compiled preview host is implemented under
+`crates/rustui/src/preview/host.rs`. Source and unit tests establish its bounded
+mount, edit, signal dispatch and stale-revision behavior. Native checks cover the
+recorded Playground cases; they do not establish full native accessibility or
+UI Studio integration.
 
 ## Alternatives
 
@@ -131,7 +146,14 @@ the proposed scalar model: `rustui` already uses serde and serde_json.
 
 ## Compiled component registry and native hosting
 
-Proposed API sketch, subject to D1a/D1b review:
+The following API sketch and protocol operations preserve the original design
+proposal for context. They are not the shipped API contract; see
+`D1B_COMPILED_PREVIEW_HOST.md` for actual methods and guarantees. In particular,
+the selected signal-only design rejects payload schemas and has no remote action
+invocation protocol.
+
+Historical API sketch, superseded by the implemented API described in
+`D1B_COMPILED_PREVIEW_HOST.md`:
 
 ```rust,ignore
 let mut registry = PreviewRegistry::new();
@@ -232,7 +254,7 @@ All paths below are proposals, not created placeholders.
 |---|---|---|
 | D1a — schema and codec | Implemented in `crates/rustui/src/preview/{mod.rs,model.rs,schema.rs,codec.rs}` and exported by `rustui::preview` | Focused test filter passed 10 tests. Provides versioned scalar descriptor/catalog data, validation errors, defaults, deterministic export, duplicate-key rejection and whole-batch validation. No host/runtime behavior. |
 | D1b — local compiled preview host | `preview/{registry.rs,host.rs}` plus public exports; small existing owner/props adapters only if proved necessary | Register Text, Button and TextField specimens; keep one native ownership path. Verify typed prop edits, explicit action target, binding feedback, stale mount/revision rejection, native input state on parent rerender, teardown and remount. No transport. |
-| D1c — canonical Playground inspector | Dedicated Playground story/panel using public `rustui::preview` API; task documentation and fixtures | Show schema-derived controls, edit known properties, read action events, import/export normalized descriptors and retain specimen identity. Native theme/locale/lifecycle/keyboard/accessibility checks recorded separately. Theme JSON remains a separate document. |
+| D1c — canonical Playground inspector | Implemented in `apps/rustui-playground/src/stories/compiled_preview_gallery.rs`; see `D1C_PLAYGROUND_PREVIEW_INSPECTOR.md` | Schema-derived string-property editor, stamp-validated writes, signal-only action dispatch, normalized descriptor import/export and preview ID retention are present. Targeted locked/offline all-targets check passed. Native theme/locale/lifecycle/keyboard/accessibility acceptance remains open. Theme JSON remains separate. |
 | D1d — external host adapter | Consumer-owned adapter/module chosen after an actual host and transport are specified | Capability/version negotiation, request/reply/error behavior, stale revisions, host disconnect/close, explicit action policy and owner-safe dispatch. No framework dependency on UI Studio or Chorus. |
 
 Keep the first model in `rustui::preview`, using its existing serde dependencies;
@@ -260,17 +282,14 @@ still needs explicit work for:
 - Accessibility inspection and reproducible native acceptance, including state
   retention while inspecting/editing and observable failure recovery.
 
-Those goals remain on the roadmap. D1a establishes a reusable data contract; it
-does not declare the compiled preview host, general view/state serialization or
-UI Studio integration complete.
+Those broader goals remain on the roadmap. D1a–D1c provide a reusable descriptor
+contract, compiled preview host and bounded canonical Playground inspector; they
+do not complete general view/state serialization or D1d UI Studio/external host
+integration.
 
-## User approval wording
+## Selected D1b boundary (2026-10-19)
 
-> Decide whether to continue with D1b, an in-process host for explicitly
-> registered compiled components using the existing `rustui::preview` schema.
-> Before implementation, choose whether preview actions are signal-only or need
-> serializable event payloads. Keep transport and full composition separate.
-
-If the user instead requires arbitrary authored Rust source editing or a full
-composition document as the first deliverable, choose that alternative explicitly
-before implementing a misleading partial serialization API.
+The selected boundary is implemented: preview events remain signal-only; typed
+values stay in owner-controlled RustUI state and are validated through D1a.
+Arbitrary Rust source editing, general view or state serialization, external
+transport, and full visual composition remain separate work.

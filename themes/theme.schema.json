@@ -24,6 +24,7 @@
     },
     "theme": {
       "type": "object",
+      "additionalProperties": false,
       "required": [
         "format",
         "format_version",
@@ -75,6 +76,126 @@
           "properties": {
             "button": {
               "$ref": "#/$defs/buttonTheme"
+            },
+            "alert_dialog": {
+              "$ref": "#/$defs/componentTheme"
+            },
+            "button_group": {
+              "$ref": "#/$defs/componentTheme"
+            },
+            "checkbox": {
+              "$ref": "#/$defs/componentTheme"
+            },
+            "color_picker": {
+              "$ref": "#/$defs/componentTheme"
+            },
+            "combo_box": {
+              "$ref": "#/$defs/componentTheme"
+            },
+            "disclosure_control": {
+              "$ref": "#/$defs/componentTheme"
+            },
+            "divider": {
+              "$ref": "#/$defs/componentTheme"
+            },
+            "form": {
+              "$ref": "#/$defs/componentTheme"
+            },
+            "form_accessories": {
+              "$ref": "#/$defs/componentTheme"
+            },
+            "icon": {
+              "$ref": "#/$defs/componentTheme"
+            },
+            "image": {
+              "$ref": "#/$defs/componentTheme"
+            },
+            "label": {
+              "$ref": "#/$defs/componentTheme"
+            },
+            "link": {
+              "$ref": "#/$defs/componentTheme"
+            },
+            "list": {
+              "$ref": "#/$defs/componentTheme"
+            },
+            "menu": {
+              "$ref": "#/$defs/componentTheme"
+            },
+            "menu_bar": {
+              "$ref": "#/$defs/componentTheme"
+            },
+            "menu_item": {
+              "$ref": "#/$defs/componentTheme"
+            },
+            "menu_separator": {
+              "$ref": "#/$defs/componentTheme"
+            },
+            "notification": {
+              "$ref": "#/$defs/componentTheme"
+            },
+            "outline_view": {
+              "$ref": "#/$defs/componentTheme"
+            },
+            "picker": {
+              "$ref": "#/$defs/componentTheme"
+            },
+            "radio_button": {
+              "$ref": "#/$defs/componentTheme"
+            },
+            "save_dialog": {
+              "$ref": "#/$defs/componentTheme"
+            },
+            "scroll_view": {
+              "$ref": "#/$defs/componentTheme"
+            },
+            "search_field": {
+              "$ref": "#/$defs/componentTheme"
+            },
+            "search_field_examples": {
+              "$ref": "#/$defs/componentTheme"
+            },
+            "segmented_control": {
+              "$ref": "#/$defs/componentTheme"
+            },
+            "sidebar": {
+              "$ref": "#/$defs/componentTheme"
+            },
+            "slider": {
+              "$ref": "#/$defs/componentTheme"
+            },
+            "stepper": {
+              "$ref": "#/$defs/componentTheme"
+            },
+            "tab_bar": {
+              "$ref": "#/$defs/componentTheme"
+            },
+            "table": {
+              "$ref": "#/$defs/componentTheme"
+            },
+            "text": {
+              "$ref": "#/$defs/componentTheme"
+            },
+            "text_field": {
+              "$ref": "#/$defs/componentTheme"
+            },
+            "text_style_guide": {
+              "$ref": "#/$defs/componentTheme"
+            },
+            "toggle": {
+              "$ref": "#/$defs/componentTheme"
+            },
+            "toolbar": {
+              "$ref": "#/$defs/componentTheme"
+            },
+            "utility_window": {
+              "$ref": "#/$defs/componentTheme"
+            },
+            "window_chrome": {
+              "$ref": "#/$defs/componentTheme"
+            },
+            "window_controls": {
+              "$ref": "#/$defs/componentTheme"
             }
           }
         },
@@ -108,7 +229,8 @@
       "properties": {
         "id": {
           "type": "string",
-          "minLength": 1
+          "minLength": 1,
+          "pattern": "\\S"
         },
         "platform": {
           "enum": [
@@ -358,19 +480,19 @@
       ],
       "properties": {
         "sm": {
-          "$ref": "#/$defs/measure"
+          "$ref": "#/$defs/positiveMeasure"
         },
         "md": {
-          "$ref": "#/$defs/measure"
+          "$ref": "#/$defs/positiveMeasure"
         },
         "lg": {
-          "$ref": "#/$defs/measure"
+          "$ref": "#/$defs/positiveMeasure"
         },
         "segment": {
-          "$ref": "#/$defs/measure"
+          "$ref": "#/$defs/positiveMeasure"
         },
         "window": {
-          "$ref": "#/$defs/measure"
+          "$ref": "#/$defs/positiveMeasure"
         }
       },
       "additionalProperties": false
@@ -680,7 +802,7 @@
         },
         "version": {
           "type": "string",
-          "pattern": "^[0-9]+\\.[0-9]+\\.[0-9]+$"
+          "pattern": "^(0|[1-9][0-9]*)\\.(0|[1-9][0-9]*)\\.(0|[1-9][0-9]*)$"
         }
       },
       "additionalProperties": false
@@ -804,8 +926,11 @@
                 ],
                 "properties": {
                   "appearance": {
-                    "type": "string",
-                    "minLength": 1
+                    "enum": [
+                      "any",
+                      "light",
+                      "dark"
+                    ]
                   },
                   "material": {
                     "type": "string",
@@ -1063,6 +1188,100 @@
         }
       },
       "additionalProperties": false
+    },
+    "componentTheme": {
+      "type": "object",
+      "required": [
+        "rustui_type",
+        "parts"
+      ],
+      "properties": {
+        "rustui_type": {
+          "type": "string"
+        },
+        "parts": {
+          "type": "object"
+        },
+        "styles": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "required": [
+              "part",
+              "when",
+              "style"
+            ],
+            "properties": {
+              "part": {
+                "type": "string",
+                "minLength": 1
+              },
+              "when": {
+                "type": "object",
+                "required": [
+                  "appearance",
+                  "material",
+                  "interaction",
+                  "text_presence",
+                  "size",
+                  "orientation",
+                  "chrome",
+                  "modality"
+                ],
+                "properties": {
+                  "appearance": {
+                    "enum": [
+                      "any",
+                      "light",
+                      "dark"
+                    ]
+                  },
+                  "material": {
+                    "type": "string",
+                    "minLength": 1
+                  },
+                  "interaction": {
+                    "type": "string",
+                    "minLength": 1
+                  },
+                  "text_presence": {
+                    "type": "string",
+                    "minLength": 1
+                  },
+                  "size": {
+                    "type": "string",
+                    "minLength": 1
+                  },
+                  "orientation": {
+                    "type": "string",
+                    "minLength": 1
+                  },
+                  "chrome": {
+                    "type": "string",
+                    "minLength": 1
+                  },
+                  "modality": {
+                    "type": "string",
+                    "minLength": 1
+                  }
+                },
+                "additionalProperties": false
+              },
+              "style": {
+                "type": "object",
+                "required": [
+                  "properties"
+                ],
+                "properties": {
+                  "properties": {
+                    "type": "object"
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
     }
   }
 }

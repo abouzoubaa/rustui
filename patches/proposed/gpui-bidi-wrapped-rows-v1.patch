@@ -1,0 +1,576 @@
+--- a/vendor/gpui-pre-0.3.9/src/platform.rs
++++ b/vendor/gpui-pre-0.3.9/src/platform.rs
+@@ -36,10 +36,10 @@
+     objc2_core_foundation::CFRetained<objc2_core_video::CVImageBuffer>;
+ 
+ use crate::{
+-    Action, AnyWindowHandle, App, AsyncWindowContext, BackgroundExecutor, Bounds,
+-    DEFAULT_WINDOW_SIZE, DevicePixels, DispatchEventResult, Edges, ExternalDragPayload, Font,
+-    FontId, FontMetrics, FontRun, ForegroundExecutor, GlyphId, GpuSpecs, Hsla, ImageSource, Keymap,
+-    LineLayout, MissingGlyphSink, Pixels, PlatformGestures, PlatformInput, Point, Priority,
++    Action, AnyWindowHandle, App, AsyncWindowContext, BackendWrappedRow, BackgroundExecutor,
++    Bounds, DEFAULT_WINDOW_SIZE, DevicePixels, DispatchEventResult, Edges, ExternalDragPayload,
++    Font, FontId, FontMetrics, FontRun, ForegroundExecutor, GlyphId, GpuSpecs, Hsla, ImageSource,
++    Keymap, LineLayout, MissingGlyphSink, Pixels, PlatformGestures, PlatformInput, Point, Priority,
+     RenderGlyphParams, RenderImage, RenderImageParams, RenderSvgParams, Scene, ShapedGlyph,
+     ShapedRun, SharedString, Size, SvgRenderer, SystemWindowTab, Task, Window, WindowControlArea,
+     hash, point, px, size,
+@@ -1525,6 +1525,19 @@
+     ) -> Result<(Size<DevicePixels>, Vec<u8>)>;
+     /// Layout a line of text with the given font runs.
+     fn layout_line(&self, text: &str, font_size: Pixels, runs: &[FontRun]) -> LineLayout;
++
++    /// Returns backend-shaped rows when the backend can wrap bidirectional text
++    /// using its own glyph geometry. Other backends retain GPUI's legacy path.
++    fn layout_line_wrapped(
++        &self,
++        _text: &str,
++        _font_size: Pixels,
++        _runs: &[FontRun],
++        _width: Pixels,
++        _max_lines: Option<usize>,
++    ) -> Option<Vec<BackendWrappedRow>> {
++        None
++    }
+     /// Returns the recommended text rendering mode for the given font and size.
+     fn recommended_rendering_mode(&self, _font_id: FontId, _font_size: Pixels)
+     -> TextRenderingMode;
+--- a/vendor/gpui-pre-0.3.9/src/text_system/line.rs
++++ b/vendor/gpui-pre-0.3.9/src/text_system/line.rs
+@@ -471,6 +471,26 @@
+             None => self.layout.wrap_width,
+         };
+ 
++        if let Some(rows) = &self.layout.backend_rows {
++            for (index, row) in rows.iter().enumerate() {
++                paint_line(
++                    point(origin.x, origin.y + line_height * index),
++                    &row.layout,
++                    line_height,
++                    TextAlign::Left,
++                    align_width,
++                    &self.decoration_runs,
++                    &[],
++                    window,
++                    cx,
++                    &mut |_, origin, width, style, window| {
++                        window.paint_underline(origin, width, style)
++                    },
++                )?;
++            }
++            return Ok(());
++        }
++
+         paint_line(
+             origin,
+             &self.layout.unwrapped_layout,
+@@ -501,6 +521,23 @@
+             Some(bounds) => Some(bounds.size.width),
+             None => self.layout.wrap_width,
+         };
++
++        if let Some(rows) = &self.layout.backend_rows {
++            for (index, row) in rows.iter().enumerate() {
++                paint_line_background(
++                    point(origin.x, origin.y + line_height * index),
++                    &row.layout,
++                    line_height,
++                    TextAlign::Left,
++                    align_width,
++                    &self.decoration_runs,
++                    &[],
++                    window,
++                    cx,
++                )?;
++            }
++            return Ok(());
++        }
+ 
+         paint_line_background(
+             origin,
+@@ -1377,6 +1414,7 @@
+                             glyph_ix: 2,
+                         }]),
+                         wrap_width: Some(px(16.)),
++                        backend_rows: None,
+                     }),
+                     text: line.text,
+                     decoration_runs: line.decoration_runs.into_vec(),
+--- a/vendor/gpui-pre-0.3.9/src/text_system/line_layout.rs
++++ b/vendor/gpui-pre-0.3.9/src/text_system/line_layout.rs
+@@ -54,6 +54,79 @@
+ 
+     /// Whether this glyph is an emoji
+     pub is_emoji: bool,
++}
++
++/// A glyph cluster in a backend-shaped visual row. The byte range remains in
++/// the original logical line; `x` is measured within the requested row width.
++#[derive(Clone, Debug)]
++pub struct WrappedGlyphCluster {
++    pub bytes: Range<usize>,
++    pub x: Pixels,
++    pub width: Pixels,
++    pub rtl: bool,
++}
++
++/// One visual row from a text backend that shapes with the final wrap width.
++#[derive(Debug)]
++pub struct BackendWrappedRow {
++    pub layout: LineLayout,
++    pub bytes: Range<usize>,
++    pub clusters: Vec<WrappedGlyphCluster>,
++}
++
++impl BackendWrappedRow {
++    fn index_for_x(&self, x: Pixels, closest: bool) -> Result<usize, usize> {
++        let x = f32::from(x);
++        let mut nearest = (f32::INFINITY, self.bytes.start);
++        for cluster in &self.clusters {
++            let left = f32::from(cluster.x);
++            let right = left + f32::from(cluster.width);
++            let (left_index, right_index) = if cluster.rtl {
++                (cluster.bytes.end, cluster.bytes.start)
++            } else {
++                (cluster.bytes.start, cluster.bytes.end)
++            };
++            if x >= left && x < right {
++                return Ok(if closest {
++                    if x < (left + right) / 2.0 {
++                        left_index
++                    } else {
++                        right_index
++                    }
++                } else {
++                    cluster.bytes.start
++                });
++            }
++            for (edge, index) in [(left, left_index), (right, right_index)] {
++                let distance = (x - edge).abs();
++                if distance < nearest.0 {
++                    nearest = (distance, index);
++                }
++            }
++        }
++        Err(nearest.1)
++    }
++
++    fn x_for_index(&self, index: usize) -> Pixels {
++        let mut nearest = (usize::MAX, Pixels::ZERO);
++        for cluster in &self.clusters {
++            let (start_x, end_x) = if cluster.rtl {
++                (cluster.x + cluster.width, cluster.x)
++            } else {
++                (cluster.x, cluster.x + cluster.width)
++            };
++            if cluster.bytes.start <= index && index < cluster.bytes.end {
++                return start_x;
++            }
++            for (byte, x) in [(cluster.bytes.start, start_x), (cluster.bytes.end, end_x)] {
++                let distance = byte.abs_diff(index);
++                if distance < nearest.0 {
++                    nearest = (distance, x);
++                }
++            }
++        }
++        nearest.1
++    }
+ }
+ 
+ impl LineLayout {
+@@ -283,6 +356,8 @@
+ 
+     /// The width of the line, if it was wrapped
+     pub wrap_width: Option<Pixels>,
++    /// Backend-shaped rows whose glyph positions already include wrapping.
++    pub backend_rows: Option<Vec<BackendWrappedRow>>,
+ }
+ 
+ /// A boundary at which a line was wrapped
+@@ -313,7 +388,11 @@
+     pub fn size(&self, line_height: Pixels) -> Size<Pixels> {
+         Size {
+             width: self.width(),
+-            height: line_height * (self.wrap_boundaries.len() + 1),
++            height: line_height
++                * self
++                    .backend_rows
++                    .as_ref()
++                    .map_or(self.wrap_boundaries.len() + 1, Vec::len),
+         }
+     }
+ 
+@@ -372,6 +451,15 @@
+         line_height: Pixels,
+         closest: bool,
+     ) -> Result<usize, usize> {
++        if let Some(rows) = &self.backend_rows {
++            if position.y < Pixels::ZERO {
++                return Err(0);
++            }
++            let row_index = (position.y / line_height) as usize;
++            return rows
++                .get(row_index)
++                .map_or(Err(self.len()), |row| row.index_for_x(position.x, closest));
++        }
+         let wrapped_line_ix = (position.y / line_height) as usize;
+ 
+         let wrapped_line_start_index;
+@@ -426,6 +514,17 @@
+ 
+     /// Returns the pixel position for the given byte index.
+     pub fn position_for_index(&self, index: usize, line_height: Pixels) -> Option<Point<Pixels>> {
++        if let Some(rows) = &self.backend_rows {
++            if index > self.len() {
++                return None;
++            }
++            let row_index = rows
++                .iter()
++                .position(|row| index < row.bytes.end)
++                .unwrap_or(rows.len().checked_sub(1)?);
++            let row = &rows[row_index];
++            return Some(point(row.x_for_index(index), line_height * row_index));
++        }
+         let mut line_start_ix = 0;
+         let mut line_end_indices = self
+             .wrap_boundaries
+@@ -637,7 +736,18 @@
+             drop(current_frame);
+             let text = SharedString::from(text);
+             let unwrapped_layout = self.layout_line::<&SharedString>(&text, font_size, runs, None);
+-            let wrap_boundaries = if let Some(wrap_width) = wrap_width {
++            let backend_rows = wrap_width.and_then(|width| {
++                self.platform_text_system.layout_line_wrapped(
++                    text.as_ref(),
++                    font_size,
++                    runs,
++                    width,
++                    max_lines,
++                )
++            });
++            let wrap_boundaries = if backend_rows.is_none()
++                && let Some(wrap_width) = wrap_width
++            {
+                 unwrapped_layout.compute_wrap_boundaries(text.as_ref(), wrap_width, max_lines)
+             } else {
+                 SmallVec::new()
+@@ -646,6 +756,7 @@
+                 unwrapped_layout,
+                 wrap_boundaries,
+                 wrap_width,
++                backend_rows,
+             });
+             let key = Arc::new(CacheKey {
+                 text,
+@@ -1106,6 +1217,60 @@
+     }
+ 
+     #[test]
++    fn backend_wrapped_rows_use_row_local_bidi_geometry_for_caret_and_hits() {
++        let mut unwrapped = make_layout(vec![]);
++        unwrapped.len = 12;
++        let layout = WrappedLineLayout {
++            unwrapped_layout: Arc::new(unwrapped),
++            wrap_boundaries: SmallVec::new(),
++            wrap_width: Some(px(100.)),
++            backend_rows: Some(vec![
++                BackendWrappedRow {
++                    layout: make_layout(vec![]),
++                    bytes: 0..6,
++                    clusters: vec![WrappedGlyphCluster {
++                        bytes: 0..6,
++                        x: px(80.),
++                        width: px(20.),
++                        rtl: true,
++                    }],
++                },
++                BackendWrappedRow {
++                    layout: make_layout(vec![]),
++                    bytes: 6..12,
++                    clusters: vec![WrappedGlyphCluster {
++                        bytes: 6..12,
++                        x: px(0.),
++                        width: px(20.),
++                        rtl: false,
++                    }],
++                },
++            ]),
++        };
++        assert_eq!(layout.size(px(20.)).height, px(40.));
++        assert_eq!(
++            layout.position_for_index(0, px(20.)),
++            Some(point(px(100.), px(0.)))
++        );
++        assert_eq!(
++            layout.position_for_index(6, px(20.)),
++            Some(point(px(0.), px(20.)))
++        );
++        assert_eq!(
++            layout.closest_index_for_position(point(px(82.), px(0.)), px(20.)),
++            Ok(6)
++        );
++        assert_eq!(
++            layout.closest_index_for_position(point(px(98.), px(0.)), px(20.)),
++            Ok(0)
++        );
++        assert_eq!(
++            layout.closest_index_for_position(point(px(18.), px(20.)), px(20.)),
++            Ok(12)
++        );
++    }
++
++    #[test]
+     fn test_force_width_latin_unchanged() {
+         let cell_width = px(8.);
+         let mut layout = make_layout(vec![glyph_at(0., 0), glyph_at(8., 1), glyph_at(16., 2)]);
+--- a/vendor/gpui-pre-web-0.3.9/src/text_system.rs
++++ b/vendor/gpui-pre-web-0.3.9/src/text_system.rs
+@@ -4,9 +4,10 @@
+ use crate::run_replacements::{Replacement, apply_replacements, collect_candidates};
+ use anyhow::{Context as _, Result, ensure};
+ use gpui::{
+-    Bounds, DevicePixels, Font, FontId, FontMetrics, FontRun, FontStyle, GlyphId, Hsla, LineLayout,
+-    MissingGlyphSink, Pixels, PlatformTextSystem, RenderGlyphParams, SUBPIXEL_VARIANTS_X,
+-    SUBPIXEL_VARIANTS_Y, ShapedGlyph, Size, TextRenderingMode, point, px, size,
++    BackendWrappedRow, Bounds, DevicePixels, Font, FontId, FontMetrics, FontRun, FontStyle,
++    GlyphId, Hsla, LineLayout, MissingGlyphSink, Pixels, PlatformTextSystem, RenderGlyphParams,
++    SUBPIXEL_VARIANTS_X, SUBPIXEL_VARIANTS_Y, ShapedGlyph, Size, TextRenderingMode, point, px,
++    size,
+ };
+ use gpui_wgpu::CosmicTextSystem;
+ use parking_lot::RwLock;
+@@ -430,6 +431,33 @@
+         layout
+     }
+ 
++    fn layout_line_wrapped(
++        &self,
++        text: &str,
++        font_size: Pixels,
++        runs: &[FontRun],
++        width: Pixels,
++        max_lines: Option<usize>,
++    ) -> Option<Vec<BackendWrappedRow>> {
++        let native_runs: Cow<'_, [FontRun]> =
++            if runs.iter().any(|run| run.font_id.0 & CANVAS_FONT_BIT != 0) {
++                Cow::Owned(
++                    runs.iter()
++                        .map(|run| FontRun {
++                            len: run.len,
++                            font_id: self.native_font_id(run.font_id),
++                        })
++                        .collect(),
++                )
++            } else {
++                Cow::Borrowed(runs)
++            };
++        let rows = self
++            .native
++            .layout_line_wrapped(text, font_size, &native_runs, width, max_lines);
++        rows
++    }
++
+     fn recommended_rendering_mode(&self, font_id: FontId, font_size: Pixels) -> TextRenderingMode {
+         if self.canvas_font(font_id).is_some() {
+             TextRenderingMode::Grayscale
+--- a/vendor/gpui-pre-wgpu-0.3.9/src/cosmic_text_system.rs
++++ b/vendor/gpui-pre-wgpu-0.3.9/src/cosmic_text_system.rs
+@@ -5,10 +5,11 @@
+     FontFeatures as CosmicFontFeatures, FontSystem, ShapeBuffer, ShapeLine, Stretch, Style, Weight,
+ };
+ use gpui::{
+-    Bounds, DevicePixels, FallbackFontClass, Font, FontFallbacks, FontFeatures, FontId,
+-    FontMetrics, FontRun, GlyphId, IsZero as _, LineLayout, MissingGlyph, MissingGlyphSink, Pixels,
+-    PlatformTextSystem, RenderGlyphParams, SUBPIXEL_VARIANTS_X, SUBPIXEL_VARIANTS_Y, ShapedGlyph,
+-    ShapedRun, SharedString, Size, TextRenderingMode, point, size,
++    BackendWrappedRow, Bounds, DevicePixels, FallbackFontClass, Font, FontFallbacks, FontFeatures,
++    FontId, FontMetrics, FontRun, GlyphId, IsZero as _, LineLayout, MissingGlyph, MissingGlyphSink,
++    Pixels, PlatformTextSystem, RenderGlyphParams, SUBPIXEL_VARIANTS_X, SUBPIXEL_VARIANTS_Y,
++    ShapedGlyph, ShapedRun, SharedString, Size, TextRenderingMode, WrappedGlyphCluster, point,
++    size,
+ };
+ 
+ use itertools::Itertools;
+@@ -272,6 +273,21 @@
+ 
+     fn layout_line(&self, text: &str, font_size: Pixels, runs: &[FontRun]) -> LineLayout {
+         self.0.write().layout_line(text, font_size, runs)
++    }
++
++    fn layout_line_wrapped(
++        &self,
++        text: &str,
++        font_size: Pixels,
++        runs: &[FontRun],
++        width: Pixels,
++        max_lines: Option<usize>,
++    ) -> Option<Vec<BackendWrappedRow>> {
++        let rows = self
++            .0
++            .write()
++            .layout_line_wrapped(text, font_size, runs, width, max_lines);
++        rows
+     }
+ 
+     fn recommended_rendering_mode(
+@@ -690,12 +706,32 @@
+         layout.descent = layout.descent.max(segment.descent);
+     }
+ 
+-    fn layout_line_no_separators(
++    // Keep Cosmic's row geometry intact for backend-shaped wrapping. Existing
++    // GPUI callers still request one unwrapped row until the wrapped-row
++    // paint and index paths consume the same geometry.
++    fn shape_rows(
+         &mut self,
+-        text: &str,
++        line: &ShapeLine,
+         font_size: Pixels,
+-        font_runs: &[FontRun],
+-    ) -> LineLayout {
++        width: Option<f32>,
++        wrap: cosmic_text::Wrap,
++    ) -> Vec<cosmic_text::LayoutLine> {
++        let mut rows = Vec::with_capacity(1);
++        line.layout_to_buffer(
++            &mut self.scratch,
++            f32::from(font_size),
++            width,
++            wrap,
++            Ellipsize::None,
++            None,
++            &mut rows,
++            None,
++            cosmic_text::Hinting::Disabled,
++        );
++        rows
++    }
++
++    fn shape_line_no_separators(&mut self, text: &str, font_runs: &[FontRun]) -> ShapeLine {
+         let mut attrs_list = AttrsList::new(&Attrs::new());
+         let mut offs = 0;
+         for run in font_runs {
+@@ -752,18 +788,17 @@
+             cosmic_text::Shaping::Advanced,
+             4,
+         );
+-        let mut layout_lines = Vec::with_capacity(1);
+-        line.layout_to_buffer(
+-            &mut self.scratch,
+-            f32::from(font_size),
+-            None, // We do our own wrapping
+-            cosmic_text::Wrap::None,
+-            Ellipsize::None,
+-            None,
+-            &mut layout_lines,
+-            None,
+-            cosmic_text::Hinting::Disabled,
+-        );
++        line
++    }
++
++    fn layout_line_no_separators(
++        &mut self,
++        text: &str,
++        font_size: Pixels,
++        font_runs: &[FontRun],
++    ) -> LineLayout {
++        let line = self.shape_line_no_separators(text, font_runs);
++        let layout_lines = self.shape_rows(&line, font_size, None, cosmic_text::Wrap::None);
+ 
+         let Some(layout) = layout_lines.first() else {
+             return LineLayout {
+@@ -776,6 +811,93 @@
+             };
+         };
+ 
++        self.convert_layout_line(text, font_size, font_runs, layout)
++    }
++
++    fn layout_line_wrapped(
++        &mut self,
++        text: &str,
++        font_size: Pixels,
++        font_runs: &[FontRun],
++        width: Pixels,
++        max_lines: Option<usize>,
++    ) -> Option<Vec<BackendWrappedRow>> {
++        let width_f32 = f32::from(width);
++        if !width_f32.is_finite()
++            || width_f32 <= 0.0
++            || text.chars().any(is_paragraph_separator)
++            || max_lines.is_some()
++        {
++            return None;
++        }
++        let line = self.shape_line_no_separators(text, font_runs);
++        let rows = self.shape_rows(
++            &line,
++            font_size,
++            Some(f32::from(width)),
++            cosmic_text::Wrap::WordOrGlyph,
++        );
++        if rows.is_empty() || rows.iter().any(|row| row.glyphs.is_empty()) {
++            return None;
++        }
++        if !rows
++            .iter()
++            .flat_map(|row| &row.glyphs)
++            .any(|glyph| glyph.level.is_rtl())
++        {
++            return None;
++        }
++        let starts: Vec<_> = rows
++            .iter()
++            .map(|row| row.glyphs.iter().map(|glyph| glyph.start).min().unwrap())
++            .collect();
++        if starts.windows(2).any(|pair| pair[0] >= pair[1]) {
++            return None;
++        }
++        let mut result = Vec::with_capacity(rows.len());
++        for (index, row) in rows.iter().enumerate() {
++            let start = if index == 0 { 0 } else { starts[index] };
++            let end = starts.get(index + 1).copied().unwrap_or(text.len());
++            if row.glyphs.iter().any(|glyph| {
++                glyph.start < start
++                    || glyph.end > end
++                    || glyph.start >= glyph.end
++                    || !text.is_char_boundary(glyph.start)
++                    || !text.is_char_boundary(glyph.end)
++            }) {
++                return None;
++            }
++            let clusters = row
++                .glyphs
++                .iter()
++                .map(|glyph| WrappedGlyphCluster {
++                    bytes: glyph.start..glyph.end,
++                    x: glyph.x.into(),
++                    width: glyph.w.into(),
++                    rtl: glyph.level.is_rtl(),
++                })
++                .collect();
++            let mut layout = self.convert_layout_line(text, font_size, font_runs, row);
++            // Cosmic positions RTL glyphs against the requested width, even
++            // when the row's occupied width is shorter. GPUI's paint bounds
++            // must include those right-aligned positions.
++            layout.width = width;
++            result.push(BackendWrappedRow {
++                layout,
++                bytes: start..end,
++                clusters,
++            });
++        }
++        Some(result)
++    }
++
++    fn convert_layout_line(
++        &mut self,
++        text: &str,
++        font_size: Pixels,
++        font_runs: &[FontRun],
++        layout: &cosmic_text::LayoutLine,
++    ) -> LineLayout {
+         let missing_glyphs = self.missing_glyph_sink.as_ref().map(|_| {
+             self.missing_glyphs(
+                 text,

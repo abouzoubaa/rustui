@@ -55,3 +55,35 @@ results. Evidence: `target/headstart/milestone28-combobox-gui.json`; build log:
 and external options replacement remained separate native cases; the bounded
 M78 follow-up above now covers those cases. No upstream patch or dependency
 change was used.
+
+## M121 Picker native acceptance (2026-10-19)
+
+The canonical Playground Inputs story now includes an independent Enabled
+toggle, a Kotlin owner-value setter, and a visible owner-value readout for
+Picker. Using `dev.rustui.playground`, selecting Swift changed the readout and
+trigger to Swift. Disabling Picker prevented its popup from opening or changing
+the value. Setting Kotlin externally updated the readout and disabled trigger;
+re-enabling opened the popup with Kotlin selected. Evidence:
+`target/headstart/evidence/picker-acceptance-20261019.json`.
+
+DatePicker's focused ComboBox trigger still has no accessible name. The pinned
+GPUI Components public builder does not expose a label option; see
+`DATE_PICKER_ACCESSIBILITY.md` for the API audit and required upstream
+capability. Existing AX SetValue evidence does not establish trigger naming or
+VoiceOver announcement behavior.
+
+
+## M130 bounded Picker and ComboBox keyboard observations
+
+In the canonical macOS Playground Inputs story, enabling the Picker allowed
+its options to open. Down followed by Return changed its owner value from
+`Rust` to `Swift`; reopening, pressing Down, then Escape left `Swift`
+selected. In the searchable ComboBox, typing `Skia` reduced the popup to the
+matching option and Return committed `Skia`. Typing `no-match` returned no
+selectable result; Escape closed the popup and the rendered trigger remained
+`Skia`. This is bounded keyboard selection/filter/cancel evidence, not complete
+focus traversal, VoiceOver, or pixel acceptance. The accessibility API did not
+identify the focused popup child. Evidence:
+`target/headstart/evidence/picker-combobox-keyboard-m130-20261019.json`.
+# M403 — retain search through owner rerenders
+`ComboBox` no longer reapplies an unchanged unmatched controlled value on every owner rerender. The pinned `SelectState::set_selected_value` clears the active search query, so reconciliation now runs only when the owner value or options change. Focused ComboBox tests passed 4/4; native rerender-during-search behavior and broader keyboard, focus, accessibility, visual, and cross-platform acceptance remain open. Evidence: `target/headstart/evidence/combo-box-owner-rerender-m403-20261021.log`.

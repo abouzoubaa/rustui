@@ -13,14 +13,23 @@ use crate::view::{EmptyView, RenderContext, View};
 #[derive(Clone)]
 pub struct SpinnerView {
     id: Option<Identity>,
-    accessibility_label: SharedString,
+    accessibility_label: SpinnerAccessibilityLabel,
+}
+
+#[derive(Clone)]
+enum SpinnerAccessibilityLabel {
+    Literal(SharedString),
+    Message {
+        id: SharedString,
+        fallback: SharedString,
+    },
 }
 
 impl Default for SpinnerView {
     fn default() -> Self {
         Self {
             id: None,
-            accessibility_label: "Loading".into(),
+            accessibility_label: SpinnerAccessibilityLabel::Literal("Loading".into()),
         }
     }
 }
@@ -28,14 +37,59 @@ impl Default for SpinnerView {
 impl SpinnerView {
     /// Sets a stable ID when multiple spinners share one view tree.
     pub fn id(mut self, id: impl Into<Identity>) -> Self {
-        self.id = Some(id.into());
+        let id = id.into();
+        assert!(
+            !id.as_str().trim().is_empty(),
+            "Spinner identity must not be blank"
+        );
+        self.id = Some(id);
         self
     }
 
     /// Names the operation for assistive technology.
     pub fn accessibility_label(mut self, label: impl Into<SharedString>) -> Self {
-        self.accessibility_label = label.into();
+        let label = label.into();
+        assert!(
+            !label.trim().is_empty(),
+            "Spinner accessibility label must not be blank"
+        );
+        self.accessibility_label = SpinnerAccessibilityLabel::Literal(label);
         self
+    }
+
+    /// Resolves an accessible name from the active locale, falling back to
+    /// the explicit name or the default `Loading` label.
+    pub fn localized_accessibility_label(mut self, message_id: impl Into<SharedString>) -> Self {
+        let id = message_id.into();
+        assert!(
+            !id.trim().is_empty(),
+            "Spinner accessibility localization key must not be blank"
+        );
+        let fallback = match &self.accessibility_label {
+            SpinnerAccessibilityLabel::Literal(label)
+            | SpinnerAccessibilityLabel::Message {
+                fallback: label, ..
+            } => label.clone(),
+        };
+        self.accessibility_label = SpinnerAccessibilityLabel::Message { id, fallback };
+        self
+    }
+
+    fn resolved_accessibility_label(
+        &self,
+        localized_message: impl FnOnce(&str) -> String,
+    ) -> SharedString {
+        match &self.accessibility_label {
+            SpinnerAccessibilityLabel::Literal(label) => label.clone(),
+            SpinnerAccessibilityLabel::Message { id, fallback } => {
+                let localized = localized_message(id.as_ref());
+                if localized.trim().is_empty() || localized.trim() == id.trim() {
+                    fallback.clone()
+                } else {
+                    localized.into()
+                }
+            }
+        }
     }
 }
 
@@ -50,7 +104,7 @@ impl View for SpinnerView {
         EmptyView
     }
 
-    fn into_element(&self, _: &mut RenderContext<'_>) -> AnyElement {
+    fn into_element(&self, context: &mut RenderContext<'_>) -> AnyElement {
         div()
             .id(SharedString::from(
                 self.id
@@ -59,7 +113,7 @@ impl View for SpinnerView {
                     .unwrap_or_else(|| "rustui-spinner".to_owned()),
             ))
             .role(Role::ProgressIndicator)
-            .aria_label(self.accessibility_label.clone())
+            .aria_label(self.resolved_accessibility_label(|id| context.localized_message(id)))
             .child(GpuiSpinner::new())
             .into_any_element()
     }
@@ -71,21 +125,84 @@ mod tests {
 
     #[test]
     fn spinner_has_an_accessible_name() {
-        assert_eq!(Spinner().accessibility_label.as_ref(), "Loading");
         assert_eq!(
             Spinner()
-                .accessibility_label("Downloading")
-                .accessibility_label
+                .resolved_accessibility_label(|_| unreachable!())
                 .as_ref(),
-            "Downloading"
+            "Loading"
+        );
+        assert_eq!(
+            Spinner()
+                .accessibility_label(" Download progress ")
+                .resolved_accessibility_label(|_| unreachable!())
+                .as_ref(),
+            " Download progress "
         );
     }
 
     #[test]
+    fn localized_accessibility_label_uses_catalog_and_fallback() {
+        let explicit = Spinner()
+            .accessibility_label("Downloading files")
+            .localized_accessibility_label("spinner.download");
+        assert_eq!(
+            explicit
+                .resolved_accessibility_label(|id| format!("{id} traduit"))
+                .as_ref(),
+            "spinner.download traduit"
+        );
+        assert_eq!(
+            explicit
+                .resolved_accessibility_label(|id| id.to_owned())
+                .as_ref(),
+            "Downloading files"
+        );
+        assert_eq!(
+            explicit
+                .resolved_accessibility_label(|id| format!(" \t{id}\n"))
+                .as_ref(),
+            "Downloading files"
+        );
+        assert_eq!(
+            explicit
+                .resolved_accessibility_label(|_| " \t ".to_owned())
+                .as_ref(),
+            "Downloading files"
+        );
+
+        let default = Spinner().localized_accessibility_label("spinner.loading");
+        assert_eq!(
+            default
+                .resolved_accessibility_label(|_| String::new())
+                .as_ref(),
+            "Loading"
+        );
+    }
+
+    #[test]
+    #[should_panic(expected = "Spinner accessibility localization key must not be blank")]
+    fn localized_accessibility_label_rejects_blank_message_id() {
+        Spinner().localized_accessibility_label(" \t ");
+    }
+
+    #[test]
+    #[should_panic(expected = "Spinner accessibility label must not be blank")]
+    fn spinner_rejects_a_blank_accessibility_name() {
+        Spinner().accessibility_label(" \t ");
+    }
+
+    #[test]
     fn spinner_accepts_an_explicit_id() {
+        assert_eq!(Spinner().id, None);
         assert_eq!(
             Spinner().id("upload-spinner").id,
             Some(Identity::from("upload-spinner"))
         );
+    }
+
+    #[test]
+    #[should_panic(expected = "Spinner identity must not be blank")]
+    fn spinner_rejects_a_blank_identity() {
+        Spinner().id(" \t ");
     }
 }

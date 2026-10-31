@@ -12,14 +12,78 @@ use rustui_core::Identity;
 use crate::{
     components::basic::button::Button,
     runtime::AppAction,
-    view::{AnyView, EmptyView, RenderContext, RetentionScope, View},
+    view::{AnyView, EmptyView, RenderContext, RenderSeed, RetentionScope, View},
 };
+
+#[derive(Clone)]
+enum SheetText {
+    Literal(SharedString),
+    Message(SharedString),
+}
+
+impl SheetText {
+    fn resolve(&self, context: &RenderContext<'_>) -> SharedString {
+        match self {
+            Self::Literal(text) => text.clone(),
+            Self::Message(key) => SharedString::from(context.localized_message(key.as_ref())),
+        }
+    }
+}
+
+fn first_nonblank_accessibility_label(
+    labels: impl IntoIterator<Item = SharedString>,
+    identity: SharedString,
+) -> SharedString {
+    labels
+        .into_iter()
+        .find(|label| !label.trim().is_empty())
+        .unwrap_or(identity)
+}
+
+fn first_nonblank_trigger_label(
+    key: Option<&SharedString>,
+    localized: Option<SharedString>,
+    fallback: SharedString,
+) -> SharedString {
+    localized
+        .filter(|label| {
+            !label.trim().is_empty() && key.is_none_or(|key| label.trim() != key.trim())
+        })
+        .unwrap_or(fallback)
+}
+
+fn resolved_localized_accessibility_candidate(
+    key: &SharedString,
+    label: SharedString,
+) -> Option<SharedString> {
+    (label.trim() != key.trim() && !label.trim().is_empty()).then_some(label)
+}
 
 /// Keeps arbitrary RustUI sheet content owned across native builder rerenders.
 struct SheetContent {
     content: Rc<AnyView>,
+    seed: RenderSeed,
     accessibility_id: SharedString,
     accessibility_label: SharedString,
+}
+
+#[derive(Clone)]
+struct SheetContentProps {
+    content: Rc<AnyView>,
+    seed: RenderSeed,
+    label: SharedString,
+}
+
+impl PartialEq for SheetContentProps {
+    fn eq(&self, other: &Self) -> bool {
+        Rc::ptr_eq(&self.content, &other.content) && self.label == other.label
+    }
+}
+
+fn update_sheet_content(content: &mut SheetContent, props: &SheetContentProps) {
+    content.content = props.content.clone();
+    content.seed = props.seed.clone();
+    content.accessibility_label = props.label.clone();
 }
 
 impl View for SheetContent {
@@ -31,11 +95,13 @@ impl View for SheetContent {
         // GPUI Components does not expose its Sheet surface element. Keep the
         // semantic dialog node around the RustUI body; this cannot assign a
         // role to the upstream Sheet host itself.
+        let body =
+            context.with_seed_owner(&self.seed, |context| self.content.into_element(context));
         div()
             .id(self.accessibility_id.clone())
             .role(Role::Dialog)
             .aria_label(self.accessibility_label.clone())
-            .child(self.content.into_element(context))
+            .child(body)
             .into_any_element()
     }
 }
@@ -46,8 +112,10 @@ impl View for SheetContent {
 /// slice has no controlled visibility or owner-driven close operation.
 pub struct SheetView {
     id: Identity,
-    trigger: SharedString,
-    title: Option<SharedString>,
+    trigger: SheetText,
+    localized_trigger: Option<SharedString>,
+    title: Option<SheetText>,
+    accessibility_label: Option<SheetText>,
     content: Option<Rc<AnyView>>,
 }
 
@@ -58,21 +126,108 @@ impl SheetView {
             !id.as_str().trim().is_empty(),
             "Sheet identity must be nonempty"
         );
+        let trigger = trigger.into();
+        assert!(
+            !trigger.trim().is_empty(),
+            "Sheet trigger requires a non-empty visible label"
+        );
         Self {
             id,
-            trigger: trigger.into(),
+            trigger: SheetText::Literal(trigger),
+            localized_trigger: None,
             title: None,
+            accessibility_label: None,
             content: None,
         }
     }
 
-    pub fn title(mut self, title: impl Into<SharedString>) -> Self {
-        self.title = Some(title.into());
+    /// Resolves the trigger label from the active RustUI message catalog.
+    pub fn localized_trigger(mut self, message_key: impl Into<SharedString>) -> Self {
+        let message_key = message_key.into();
+        assert!(
+            !message_key.trim().is_empty(),
+            "Sheet trigger requires a non-empty localization key"
+        );
+        self.localized_trigger = Some(message_key);
         self
     }
 
-    fn resolved_accessibility_label(&self) -> SharedString {
-        self.title.clone().unwrap_or_else(|| self.trigger.clone())
+    pub fn title(mut self, title: impl Into<SharedString>) -> Self {
+        let title = title.into();
+        assert!(!title.trim().is_empty(), "Sheet title must not be blank");
+        self.title = Some(SheetText::Literal(title));
+        self
+    }
+
+    /// Resolves the visible title from the active RustUI message catalog when opened.
+    pub fn localized_title(mut self, message_key: impl Into<SharedString>) -> Self {
+        let message_key = message_key.into();
+        assert!(
+            !message_key.trim().is_empty(),
+            "Sheet title requires a non-empty localization key"
+        );
+        self.title = Some(SheetText::Message(message_key));
+        self
+    }
+
+    /// Names the sheet content for assistive technology.
+    ///
+    /// By default, the visible title is used when present; otherwise the
+    /// trigger label is used.
+    pub fn accessibility_label(mut self, label: impl Into<SharedString>) -> Self {
+        let label = label.into();
+        assert!(
+            !label.trim().is_empty(),
+            "Sheet accessibility label must not be blank"
+        );
+        self.accessibility_label = Some(SheetText::Literal(label));
+        self
+    }
+
+    /// Resolves the sheet's accessible name from the active RustUI message catalog.
+    pub fn localized_accessibility_label(mut self, message_key: impl Into<SharedString>) -> Self {
+        let message_key = message_key.into();
+        assert!(
+            !message_key.trim().is_empty(),
+            "Sheet accessibility label localization key must not be blank"
+        );
+        self.accessibility_label = Some(SheetText::Message(message_key));
+        self
+    }
+
+    #[cfg(test)]
+    fn accessibility_label_text(&self) -> SheetText {
+        self.accessibility_label
+            .clone()
+            .or_else(|| self.title.clone())
+            .or_else(|| self.localized_trigger.clone().map(SheetText::Message))
+            .unwrap_or_else(|| self.trigger.clone())
+    }
+
+    fn resolve_accessibility_label(&self, context: &RenderContext<'_>) -> SharedString {
+        first_nonblank_accessibility_label(
+            self.accessibility_label
+                .iter()
+                .chain(self.title.iter())
+                .filter_map(|label| match label {
+                    SheetText::Literal(_) => Some(label.resolve(context)),
+                    SheetText::Message(key) => {
+                        resolved_localized_accessibility_candidate(key, label.resolve(context))
+                    }
+                })
+                .chain(std::iter::once(self.resolve_trigger_label(context))),
+            self.id.as_str().into(),
+        )
+    }
+
+    fn resolve_trigger_label(&self, context: &RenderContext<'_>) -> SharedString {
+        first_nonblank_trigger_label(
+            self.localized_trigger.as_ref(),
+            self.localized_trigger
+                .as_ref()
+                .map(|key| SharedString::from(context.localized_message(key.as_ref()))),
+            self.trigger.resolve(context),
+        )
     }
 
     /// Adds arbitrary RustUI content to the sheet body.
@@ -95,20 +250,35 @@ impl View for SheetView {
 
     fn into_element(&self, context: &mut RenderContext<'_>) -> AnyElement {
         context.with_element_scope(RetentionScope::Key(self.id.clone()), |context| {
-            let accessibility_label = self.resolved_accessibility_label();
+            let accessibility_label = self.resolve_accessibility_label(context);
+            let trigger = self.resolve_trigger_label(context);
             let content = self.content.as_ref().map(|content| {
-                context.retained_component(Identity::from(format!("{}:content", self.id)), || {
-                    SheetContent {
-                        content: Rc::clone(content),
-                        accessibility_id: format!("{}:dialog", self.id).into(),
-                        accessibility_label: accessibility_label.clone(),
-                    }
-                })
+                let props = SheetContentProps {
+                    content: Rc::clone(content),
+                    seed: context.seed(),
+                    label: accessibility_label.clone(),
+                };
+                context
+                    .retained_component_with_props(
+                        Identity::from(format!("{}:content", self.id)),
+                        || SheetContent {
+                            content: Rc::clone(content),
+                            seed: props.seed.clone(),
+                            accessibility_id: format!("{}:dialog", self.id).into(),
+                            accessibility_label: accessibility_label.clone(),
+                        },
+                        &props,
+                        update_sheet_content,
+                    )
+                    .0
             });
-            let title = self.title.clone();
+            let title = self.title.as_ref().map(|title| title.resolve(context));
             let title_id = format!("{}:title", self.id);
             let id = self.id.clone();
             let open = AppAction::with_window_action(move |_, window: &mut Window, cx| {
+                if super::drawer::is_active(window, cx) {
+                    return;
+                }
                 let content = content.clone();
                 let title = title.clone();
                 let title_id = title_id.clone();
@@ -129,7 +299,7 @@ impl View for SheetView {
                 });
             });
 
-            Button(self.trigger.clone(), open)
+            Button(trigger, open)
                 .id(format!("{}:trigger", id))
                 .into_element(context)
         })
@@ -147,21 +317,387 @@ mod tests {
     }
 
     #[test]
+    #[should_panic(expected = "Sheet trigger requires a non-empty visible label")]
+    fn blank_visible_trigger_is_rejected() {
+        Sheet("details", " \t");
+    }
+
+    #[test]
+    #[should_panic(expected = "Sheet trigger requires a non-empty localization key")]
+    fn blank_localized_trigger_key_is_rejected() {
+        Sheet("details", "Open").localized_trigger(" \t");
+    }
+
+    #[test]
+    #[should_panic(expected = "Sheet title requires a non-empty localization key")]
+    fn blank_localized_title_key_is_rejected() {
+        Sheet("details", "Open").localized_title(" \t");
+    }
+
+    #[test]
+    #[should_panic(expected = "Sheet title must not be blank")]
+    fn blank_literal_title_is_rejected() {
+        Sheet("details", "Open").title(" \t");
+    }
+
+    #[test]
+    fn blank_localized_trigger_falls_back_to_its_visible_label() {
+        assert_eq!(
+            first_nonblank_trigger_label(None, Some(" \t".into()), "Open details".into()),
+            "Open details"
+        );
+    }
+
+    #[test]
     fn title_and_content_are_optional() {
         let sheet = Sheet("details", "Open").title("Details").content(EmptyView);
 
         assert!(sheet.title.is_some());
         assert!(sheet.content.is_some());
-        assert_eq!(sheet.resolved_accessibility_label().as_ref(), "Details");
+        assert!(matches!(
+            sheet.accessibility_label_text(),
+            SheetText::Literal(label) if label.as_ref() == "Details"
+        ));
+    }
+
+    #[test]
+    fn trigger_and_title_can_be_localized() {
+        let sheet = Sheet("details", "Open")
+            .localized_trigger("sheet.open")
+            .localized_title("sheet.title");
+
+        assert!(matches!(
+            sheet.localized_trigger,
+            Some(key) if key.as_ref() == "sheet.open"
+        ));
+        assert!(matches!(
+            sheet.title,
+            Some(SheetText::Message(key)) if key.as_ref() == "sheet.title"
+        ));
+    }
+
+    #[gpui::test]
+    fn native_sheet_text_field_updates_original_owner(cx: &mut gpui::TestAppContext) {
+        use crate::{components::input::text_field::TextField, runtime::ComponentHost};
+        use gpui::AppContext as _;
+        use rustui_core::Binding;
+        use std::{cell::RefCell, rc::Rc};
+
+        struct Owner {
+            text: String,
+            outside: String,
+        }
+        impl View for Owner {
+            fn body(&self) -> impl View {
+                crate::layout::VStack::new()
+                    .child(
+                        Sheet("native-owner-sheet", "Open").content(
+                            TextField(
+                                "Name",
+                                Binding::new(
+                                    self.text.clone(),
+                                    |owner: &Owner| owner.text.clone(),
+                                    |owner, value| owner.text = value,
+                                ),
+                            )
+                            .id("sheet-owner-field"),
+                        ),
+                    )
+                    .child(
+                        TextField(
+                            "Outside",
+                            Binding::new(
+                                self.outside.clone(),
+                                |owner: &Owner| owner.outside.clone(),
+                                |owner, value| owner.outside = value,
+                            ),
+                        )
+                        .id("outside-field"),
+                    )
+            }
+        }
+        let theme = crate::theme::parse_theme(include_str!(concat!(
+            env!("CARGO_MANIFEST_DIR"),
+            "/../../themes/macos27.json"
+        )))
+        .unwrap();
+        cx.update(|app| {
+            gpui_component::init(app);
+            crate::theme::activate_theme(&theme, Some(crate::theme::AppearanceMode::Dark), app)
+                .unwrap();
+        });
+        let slot = Rc::new(RefCell::new(None));
+        let saved = slot.clone();
+        let (_, window) = cx.add_window_view(|window, cx| {
+            let owner = cx.new(|cx| {
+                ComponentHost::new(
+                    Owner {
+                        text: String::new(),
+                        outside: String::new(),
+                    },
+                    cx,
+                )
+            });
+            *saved.borrow_mut() = Some(owner.clone());
+            gpui_component::Root::new(owner, window, cx)
+        });
+        let owner = slot.borrow().clone().unwrap();
+        let (trigger_focus, outside_focus) = window.update(|window, app| {
+            let _ = window.draw(app);
+            window.focus_next(app);
+            let _ = window.draw(app);
+            let trigger = window.focused(app).expect("sheet trigger focus");
+            window.focus_next(app);
+            let _ = window.draw(app);
+            let outside = window.focused(app).expect("outside field focus");
+            assert_ne!(trigger, outside);
+            window.focus(&trigger, app);
+            let _ = window.draw(app);
+            (trigger, outside)
+        });
+        let key = gpui::Keystroke::parse("enter").unwrap();
+        window.simulate_event(gpui::KeyDownEvent {
+            keystroke: key.clone(),
+            is_held: false,
+            prefer_character_input: false,
+        });
+        window.simulate_event(gpui::KeyUpEvent { keystroke: key });
+        window.update(|window, app| {
+            let _ = window.draw(app);
+            assert!(window.has_active_sheet(app));
+            window.focus_next(app);
+            let _ = window.draw(app);
+            window.focus_next(app);
+            let _ = window.draw(app);
+        });
+        window.simulate_input("RustUI");
+        window.update(|window, app| {
+            let _ = window.draw(app);
+            assert_eq!(owner.read(app).component().text, "RustUI");
+        });
+        for key in ["tab", "shift-tab"] {
+            let mut visited = Vec::new();
+            for _ in 0..6 {
+                window.simulate_keystrokes(key);
+                let focus = window.update(|window, app| {
+                    let _ = window.draw(app);
+                    assert!(window.has_active_sheet(app));
+                    let focus = window.focused(app).expect("open sheet has focus");
+                    assert_ne!(focus, trigger_focus, "focus escaped to sheet trigger");
+                    assert_ne!(focus, outside_focus, "focus escaped to outside field");
+                    focus
+                });
+                if !visited.contains(&focus) {
+                    visited.push(focus);
+                }
+            }
+            assert!(visited.len() >= 2, "{key} did not traverse sheet controls");
+        }
+        window.simulate_keystrokes("escape");
+        window.update(|window, app| {
+            let _ = window.draw(app);
+            assert!(!window.has_active_sheet(app));
+            assert_eq!(window.focused(app), Some(trigger_focus.clone()));
+            assert_eq!(owner.read(app).component().text, "RustUI");
+            assert!(owner.read(app).component().outside.is_empty());
+        });
+        let key = gpui::Keystroke::parse("enter").unwrap();
+        window.simulate_event(gpui::KeyDownEvent {
+            keystroke: key.clone(),
+            is_held: false,
+            prefer_character_input: false,
+        });
+        window.simulate_event(gpui::KeyUpEvent { keystroke: key });
+        window.update(|window, app| {
+            let _ = window.draw(app);
+            assert!(window.has_active_sheet(app));
+            window.focus_next(app);
+            let _ = window.draw(app);
+            window.focus_next(app);
+            let _ = window.draw(app);
+        });
+        window.simulate_input("!");
+        window.update(|window, app| {
+            let _ = window.draw(app);
+            assert_eq!(owner.read(app).component().text, "RustUI!");
+        });
+    }
+
+    #[gpui::test]
+    fn retained_sheet_reconciles_content_and_accessible_name(cx: &mut gpui::TestAppContext) {
+        use crate::runtime::component_host::RetainedEntities;
+        use std::any::TypeId;
+
+        cx.update(gpui_component::init);
+        let (host, window) =
+            cx.add_window_view(|_, cx| crate::runtime::ComponentHost::new(EmptyView, cx));
+        window.update(|window, app| {
+            let environment = rustui_core::EnvironmentValues::default();
+            let mut retained = RetainedEntities::default();
+            let seed = RenderContext::new(
+                Rc::new(|_, _| {}),
+                host.entity_id(),
+                TypeId::of::<()>(),
+                Rc::new(()),
+                gpui::px(14.0),
+                &environment,
+                None,
+                None,
+                window,
+                app,
+                &mut retained,
+            )
+            .seed();
+            let old = Rc::new(AnyView::new(EmptyView));
+            let new = Rc::new(AnyView::new(EmptyView));
+            let mut content = SheetContent {
+                content: old.clone(),
+                seed: seed.clone(),
+                accessibility_id: "confirm:dialog".into(),
+                accessibility_label: "Confirm changes".into(),
+            };
+            let props = SheetContentProps {
+                content: new.clone(),
+                seed,
+                label: "Confirmer les changements".into(),
+            };
+            update_sheet_content(&mut content, &props);
+            assert!(Rc::ptr_eq(&content.content, &new));
+            assert_eq!(content.accessibility_label, props.label);
+        });
     }
 
     #[test]
     fn trigger_names_sheet_when_title_is_omitted() {
         let sheet = Sheet("details", "Open details");
 
+        assert!(matches!(
+            sheet.accessibility_label_text(),
+            SheetText::Literal(label) if label.as_ref() == "Open details"
+        ));
+    }
+
+    #[test]
+    fn localized_title_or_trigger_is_the_accessible_name_fallback() {
+        let titled = Sheet("details", "Open")
+            .localized_trigger("sheet.open")
+            .localized_title("sheet.title");
+        assert!(matches!(
+            titled.accessibility_label_text(),
+            SheetText::Message(key) if key.as_ref() == "sheet.title"
+        ));
+
+        let untitled = Sheet("details", "Open").localized_trigger("sheet.open");
+        assert!(matches!(
+            untitled.accessibility_label_text(),
+            SheetText::Message(key) if key.as_ref() == "sheet.open"
+        ));
+        assert_eq!(untitled.localized_trigger.as_deref(), Some("sheet.open"));
+    }
+
+    #[test]
+    #[should_panic(expected = "Sheet accessibility label must not be blank")]
+    fn rejects_blank_explicit_accessible_name() {
+        Sheet("details", "Open").accessibility_label(" \t ");
+    }
+
+    #[test]
+    #[should_panic(expected = "Sheet accessibility label localization key must not be blank")]
+    fn rejects_blank_localized_accessible_name_key() {
+        Sheet("details", "Open").localized_accessibility_label(" \t ");
+    }
+
+    #[test]
+    fn preserves_nonblank_explicit_accessible_name_verbatim() {
+        let sheet = Sheet("details", "Open").accessibility_label("  Details panel  ");
+
+        assert!(matches!(
+            sheet.accessibility_label_text(),
+            SheetText::Literal(label) if label.as_ref() == "  Details panel  "
+        ));
+    }
+
+    #[test]
+    fn blank_resolved_accessible_name_falls_back_to_the_next_candidate() {
         assert_eq!(
-            sheet.resolved_accessibility_label().as_ref(),
-            "Open details"
+            first_nonblank_accessibility_label([" \t ".into(), "Details".into()], "details".into()),
+            "Details"
         );
+    }
+
+    #[test]
+    fn unresolved_localized_accessible_name_falls_back_to_visible_title() {
+        let key: SharedString = "sheet.accessibility.details".into();
+        let unresolved = resolved_localized_accessibility_candidate(&key, key.clone());
+
+        assert_eq!(
+            first_nonblank_accessibility_label(
+                [unresolved.unwrap_or_default(), "Visible title".into()],
+                "details".into(),
+            ),
+            "Visible title"
+        );
+    }
+
+    #[test]
+    fn padded_untranslated_accessibility_key_falls_back_to_visible_title() {
+        let key: SharedString = "sheet.accessibility.details".into();
+        let padded_echo: SharedString = format!(" \t{key}\n").into();
+        let unresolved = resolved_localized_accessibility_candidate(&key, padded_echo);
+
+        assert_eq!(
+            first_nonblank_accessibility_label(
+                [unresolved.unwrap_or_default(), "Visible title".into()],
+                "details".into(),
+            ),
+            "Visible title"
+        );
+    }
+
+    #[test]
+    fn all_blank_resolved_accessible_name_candidates_fall_back_to_identity() {
+        assert_eq!(
+            first_nonblank_accessibility_label([" ".into(), "\n".into()], "details".into()),
+            "details"
+        );
+    }
+
+    #[test]
+    fn unresolved_localized_trigger_key_falls_back_to_visible_trigger() {
+        let key: SharedString = "sheet.open_details".into();
+
+        assert_eq!(
+            first_nonblank_trigger_label(Some(&key), Some(key.clone()), "Open".into()),
+            "Open"
+        );
+        assert_eq!(
+            first_nonblank_trigger_label(
+                Some(&key),
+                Some(format!(" \t{key}\n").into()),
+                "Open".into(),
+            ),
+            "Open"
+        );
+        assert_eq!(
+            first_nonblank_trigger_label(Some(&key), Some("Ouvrir".into()), "Open".into()),
+            "Ouvrir"
+        );
+    }
+
+    #[test]
+    fn accessible_name_prefers_explicit_label_then_title_then_trigger() {
+        let explicit = Sheet("details", "Open")
+            .title("Visible title")
+            .accessibility_label("Explicit name");
+        assert!(matches!(
+            explicit.accessibility_label_text(),
+            SheetText::Literal(label) if label.as_ref() == "Explicit name"
+        ));
+
+        let localized = explicit.localized_accessibility_label("sheet.details.name");
+        assert!(matches!(
+            localized.accessibility_label_text(),
+            SheetText::Message(key) if key.as_ref() == "sheet.details.name"
+        ));
     }
 }

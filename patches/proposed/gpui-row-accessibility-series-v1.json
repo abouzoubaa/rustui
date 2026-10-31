@@ -1,0 +1,54 @@
+{
+  "schema_version": 1,
+  "status": "proposed; selected vendor sources unchanged",
+  "prepared_at": "2026-10-26T07:09:55.765859+00:00",
+  "baseline_source_head": "a47cec88b9b45afb8615b7e15452af6b48d3b4b1",
+  "purpose": [
+    "Advertise existing GPUI primary-mousedown Click fallback for rows",
+    "Use listbox/option and selected state only for selectable Components Lists"
+  ],
+  "pins": {
+    "gpui-pre": "0.3.9",
+    "gpui-component": "0.7.3",
+    "gpui_snapshot_revision": "93d745668805029476e6d7fbb19652116fed51de",
+    "components_revision": "67265a36e260ffe03c5aaebdcd8d654dbf892eab"
+  },
+  "sources": [
+    {
+      "package_directory": "gpui-pre-0.3.9",
+      "source": "vendor/gpui-pre-0.3.9/src/elements/div.rs",
+      "pre_sha256": "de8298ce4e48f055984742a18f18206e385786f64ff495f2d5b176481033b84e",
+      "post_sha256": "5e608a0496d551366e2c7db0636760e69455a1d62bfc8575410cbd59856b5b67",
+      "patch": "patches/proposed/gpui-primary-mousedown-click-v1.patch",
+      "patch_sha256": "a48af06fb08a5c707c644a7a19e0bf33238d0f81b625c272897b75bccb6413f3",
+      "cargo_manifest_sha256": "43ac0a636d1283313dbb48810ff32c0f6b55737824a886bd9fad37735ec0c56c",
+      "checksum_metadata_sha256": "7b8e889ae4ac0cbe651b654f5e39d9003969d09ae4a70aff4147f521eda8faa0",
+      "registry_checksum": "34f61c1cfd36fc9c436af09308c963822ae27a45a84feb21a77ba5c9e051f1c0",
+      "vcs_metadata_sha256": null
+    },
+    {
+      "package_directory": "gpui-component-0.7.3",
+      "source": "vendor/gpui-component-0.7.3/src/list/list.rs",
+      "pre_sha256": "5010322282b37829c974b105050ec8a8505df442e621724ea7c4fa3fa544a453",
+      "post_sha256": "b4c314c73c889d5ac10e63745b5095c4798f6fb6869b23d62b86eb285d884ad4",
+      "patch": "patches/proposed/gpui-selectable-list-semantics-v1.patch",
+      "patch_sha256": "9497a0a315039fd6e5758918bcaa3eb55ed47d32d554587cff3e6667a289b745",
+      "cargo_manifest_sha256": "bc3d39631970412dd2abbe1d5e34b0a0dbc65e6e995f13f3809895cda0ecc3c8",
+      "checksum_metadata_sha256": "d5b533efba197cc15bcb6756b935a786e846463c1ee431f876e8c334a7e638c6",
+      "registry_checksum": "465a363235cd4062ef5f0953fc096fc764ed6f53dfbd9f409f669f93ea3b1ff9",
+      "vcs_metadata_sha256": "a1386afd75147d04bfa36dee2a4d8625ce59f5494f811fa2c4f8c94d3b741738"
+    }
+  ],
+  "dependencies": "Compose after current approved patch selection; no dependency or package revision changes",
+  "fallback": "Keep current approved source selection; do not claim semantic row activation acceptance",
+  "removal_condition": "Verified matching official upstream behavior replaces these exact changes",
+  "validation": {
+    "required": [
+      "exact disposable apply/reverse with unchanged selected sources",
+      "isolated metadata and rendered-list probe using approved locked package versions",
+      "real native/browser acceptance after approved promotion"
+    ],
+    "evidence_record": "target/headstart/evidence/row-accessibility-proposal-20261026/validation.json",
+    "runtime_acceptance": "not performed; not promoted"
+  }
+}

@@ -132,6 +132,7 @@ pub struct Input {
     role: RoleOverride,
     accessibility_id: Option<SharedString>,
     aria_label: Option<SharedString>,
+    placeholder_color: Option<Hsla>,
 
     /// An optional context menu builder to allow a custom context menu on the input.
     ///
@@ -209,6 +210,12 @@ impl Input {
         self
     }
 
+    /// Override the color used for placeholder text.
+    pub fn placeholder_color(mut self, color: Hsla) -> Self {
+        self.placeholder_color = Some(color);
+        self
+    }
+
     /// Create a new [`Input`] element bind to the [`InputState`].
     pub fn new(state: &Entity<InputState>) -> Self {
         Self::with_state(state.clone().into())
@@ -244,6 +251,7 @@ impl Input {
             role: RoleOverride::default(),
             accessibility_id: None,
             aria_label: None,
+            placeholder_color: None,
             context_menu_builder: None,
             paste_handler: None,
             token_renderer: None,
@@ -557,6 +565,7 @@ impl RenderOnce for Input {
             gpui_base::input::InputEditorStyle {
                 foreground: cx.theme().foreground,
                 muted_foreground: cx.theme().muted_foreground,
+                placeholder_foreground: self.placeholder_color,
                 background: cx.theme().editor_background(),
                 border: cx.theme().border,
                 selection: cx.theme().selection,
@@ -686,6 +695,13 @@ impl RenderOnce for Input {
         let input_focused =
             presentation.focus_handle().is_focused(window) && !presentation.is_disabled();
         if input_focused {
+            state.sync_platform_secure_input(
+                matches!(
+                    content_type,
+                    Some(InputContentType::Password | InputContentType::NewPassword)
+                ),
+                cx,
+            );
             sync_native_content_type(window, content_type, presentation.is_editable());
         }
         let frame_focus_handle = window

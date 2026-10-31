@@ -6,3 +6,17 @@ rust-version.workspace = true
 license.workspace = true
 publish.workspace = true
 description = "Locale, catalog, fallback, and validation support for RustUI"
+
+[dependencies]
+fluent-bundle = { version = "=0.16.0", default-features = false }
+# Already inspected fluent-bundle transitive source; direct for FTL AST policy/validation.
+fluent-syntax = "=0.12.0"
+intl-memoizer = "=0.5.3"
+unic-langid = "=0.9.6"
+icu_locale_core = { version = "=2.4.0", default-features = false }
+icu_calendar = { version = "=2.4.0", default-features = false, features = ["compiled_data"] }
+icu_decimal = { version = "=2.4.0", default-features = false, features = ["compiled_data", "ryu"] }
+icu_datetime = { version = "=2.4.0", default-features = false, features = ["compiled_data"] }
+# Fluent's concurrent memoizer requires ICU data payloads to use Arc.
+icu_provider = { version = "=2.4.0", default-features = false, features = ["sync"] }
+writeable = { version = "=0.6.4", default-features = false, features = ["alloc"] }

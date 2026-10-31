@@ -86,13 +86,29 @@ Playground build. Native review verified C3/B2/A1 after reversal, B release and
 fresh B0 reinsertion, preserved surviving counters on axis change, and narrowing
 and restoring A's range without remounts or losing A1. Evidence and executable
 hashes: `target/headstart/milestone46-split-view-gui.json`.
-The later measured-readiness guard adds one focused model check covering a
-prepaint placeholder 100 retaining initial 180, a measured 100 remaining valid,
-and fallback 180 clamping to an updated maximum 150. Formatting ran; compilation
-and execution of this new check remain pending. The earlier 135-test result
-does not validate this later guard.
-Horizontal drag and post-range-change drag continuity remain unverified, as do
-keyboard/accessibility behavior and full GUI acceptance.
+The later measured-readiness guard covers a prepaint placeholder of 100
+retaining initial 180, a measured 100 remaining valid, and fallback 180
+clamping to updated maximum 150; the focused SplitView suite now passes 13/13.
+Horizontal drag and post-range-change drag continuity remain unverified. Each
+boundary now includes a focusable `splitter` node: Left/Right adjusts a
+horizontal split, Up/Down adjusts a vertical split, and the change goes through
+the pinned public `ResizableState::resize_panel` API. Its keyboard clamp and AX
+minimum/maximum use the same measured feasible interval derived from the
+container extent and all sibling ranges. Before measurement, the configured
+range remains the fallback; incompatible constraints pin the interval at the
+current size. Focused SplitView tests passed 13/13
+(`target/headstart/evidence/m525-split-view-tests-20261021.log`).
+Native focus traversal, keyboard resizing, screen-reader announcements, and
+full GUI acceptance remain unverified; this source change does not close those
+native acceptance gates.
+
+The separator uses the `Splitter` accessibility role; its focusable 9-point
+interaction area is the resize handle. Its accessible name resolves the
+`rustui-splitter-resize-divider` catalog message for English, French, or Arabic.
+The visual divider/gutter and pointer-drag behavior remain owned by GPUI
+Components. M580's catalog contract and RustUI compile check passed; native AX
+tree exposure, VoiceOver announcement, and locale-switching behavior remain
+unverified.
 
 In Playground, increment each panel, resize native dividers in both axes, and
 force a parent render with **Observe lifecycle**. The unchanged arrangement
@@ -105,3 +121,50 @@ per-panel mounts/releases after **Observe lifecycle** refreshes the owner.
 
 Unit model checks alone do not establish native resizing, focus preservation,
 accessibility acceptance, or exact size behavior after membership changes.
+
+## M586 — bounded native interaction and lifecycle acceptance
+
+The canonical Playground exposed two adjustable `Splitter` nodes named
+“Resize divider.” Horizontal and vertical pointer drags and keyboard arrows
+changed the native values. A parent observation retained pane sizes; reversing
+the keyed panels retained distinct counters without extra mounts. Switching
+axis reset size preferences while keeping counters. Removing B released it;
+reinserting it mounted a fresh zero-count B while A and C retained their counts.
+Narrowing and restoring A’s range did not change panel mounts. Exact AX frame
+bounds, VoiceOver announcements, locale switching, complete focus traversal,
+and broader visual/platform acceptance remain open. Evidence:
+`target/headstart/evidence/m586-splitter-native-interaction-20261021.json`.
+
+## Direct Playground route — 2026-10-26
+
+The existing public-API gallery is now directly reachable as **SplitView +
+ResizablePanel** in Framework Demos. Search matches either API name; the Stacks
+foundation tab continues to reuse the same gallery. No panel implementation or
+state owner is duplicated. The source example shows both APIs. Six focused
+registry/search regressions and the optimized Web build passed; browser/native
+functional acceptance of this direct route is recorded separately.
+
+## Current direct-route functional acceptance — 2026-10-26
+
+Source `5a37a8d6` passes **11/11 native macOS** and **11/11 Web** bounded functional
+checks: direct API-name search, independent A1/B2/C3 counters, horizontal drag,
+resize retention through parent notification, keyed reorder, B owner release,
+reinsertion at zero, range narrowing/restoration, axis change retaining child
+state, and vertical drag. Reordered counts were C3/B2/A1; reinsertion produced
+C3/B0/A1, with B mounts 2 / releases 1. Native first-pane size changed from
+159.43 to 199 and survived parent observation. In the vertical group, B changed
+from 99.33 to 118 while C remained 119.2. Web CSS divider positions independently
+confirmed horizontal and vertical movement. Initial pointer gestures that missed
+the visible divider edge were excluded before acceptance.
+
+The Web package predates the commit label but all 2,932 packaged build-input
+hashes were independently matched to the committed source. Its 769 packaged file
+hashes match. Native build, package executable hash, focused search tests,
+platform-specific results and cleanup are recorded under
+`target/headstart/evidence/split-direct-route-20261026/`. The native application,
+disposable bundle, standalone executable, browser tabs and owned server were
+cleaned up; shared dependency caches were preserved and the GUI slot released.
+
+Accessibility/VoiceOver are undone and deferred by user direction. Wider native
+and browser visual, theme/RTL, keyboard, IME and representative workload checks
+remain separate; this does not establish production readiness.

@@ -3,6 +3,7 @@ use std::rc::Rc;
 
 use crate::{h_flex, styled::StyledExt as _, v_flex};
 use chrono::{Datelike, Local, NaiveDate, Weekday};
+use gpui::prelude::FluentBuilder as _;
 use gpui::{
     AnyElement, App, Context, ElementId, Empty, Entity, EventEmitter, FocusHandle,
     InteractiveElement, IntoElement, ParentElement, Render, RenderOnce, SharedString,
@@ -154,6 +155,17 @@ impl CalendarView {
     }
 }
 
+// RTL grids retain row order but place each row's first value on the right.
+fn calendar_grid_order(values: Vec<i32>, columns: usize, rtl: bool) -> Vec<Option<i32>> {
+    if !rtl { return values.into_iter().map(Some).collect(); }
+    let mut ordered = Vec::new();
+    for row in values.chunks(columns) {
+        ordered.extend(std::iter::repeat_n(None, columns - row.len()));
+        ordered.extend(row.iter().rev().copied().map(Some));
+    }
+    ordered
+}
+
 fn picker_grid_layout(view: CalendarView) -> Option<(u16, f32)> {
     match view {
         CalendarView::Day => None,
@@ -170,6 +182,8 @@ pub struct CalendarState {
     pub focus_handle: FocusHandle,
     view: CalendarView,
     date: Date,
+    keyboard_cursor: Option<NaiveDate>,
+    right_to_left: bool,
     current_year: i32,
     current_month: u8,
     years: Vec<Vec<i32>>,
@@ -186,6 +200,8 @@ impl CalendarState {
             focus_handle: cx.focus_handle(),
             view: CalendarView::Day,
             date: Date::Single(None),
+            keyboard_cursor: None,
+            right_to_left: false,
             current_year: today.year(),
             current_month: today.month() as u8,
             years: vec![],
@@ -214,6 +230,27 @@ impl CalendarState {
     pub fn disabled_matcher_ref(&self) -> Option<&Matcher> {
         self.disabled_matcher.as_deref()
     }
+    /// Whether calendar columns run right to left.
+    pub fn right_to_left(&self) -> bool { self.right_to_left }
+
+    /// Set the direction used by all calendar views.
+    pub fn set_right_to_left(&mut self, value: bool) { self.right_to_left = value; }
+
+    /// Current uncommitted keyboard navigation target, if any.
+    pub fn keyboard_cursor(&self) -> Option<NaiveDate> {
+        self.keyboard_cursor
+    }
+
+    /// Move the visible calendar without changing its committed selection.
+    pub fn set_keyboard_cursor(&mut self, date: Option<NaiveDate>, cx: &mut Context<Self>) {
+        self.keyboard_cursor = date;
+        if let Some(date) = date {
+            self.current_year = date.year();
+            self.current_month = date.month() as u8;
+        }
+        cx.notify();
+    }
+
     pub fn set_date(&mut self, date: impl Into<Date>, _: &mut Window, cx: &mut Context<Self>) {
         if self.apply_date(date.into()) {
             cx.notify();
@@ -270,7 +307,7 @@ impl CalendarState {
         self.date
     }
     pub fn set_number_of_months(&mut self, n: usize, _: &mut Window, cx: &mut Context<Self>) {
-        self.number_of_months = n;
+        self.number_of_months = n.max(1).min(self.months_available());
         cx.notify();
     }
     pub fn number_of_months(&self) -> usize {
@@ -285,7 +322,9 @@ impl CalendarState {
         cx.notify();
     }
     fn apply_year_range(&mut self, range: (i32, i32)) {
-        self.years = (range.0..range.1)
+        let start = range.0.max(NaiveDate::MIN.year());
+        let end = range.1.min(NaiveDate::MAX.year() + 1);
+        self.years = (start..end)
             .collect::<Vec<_>>()
             .chunks(20)
             .map(<[_]>::to_vec)
@@ -296,26 +335,27 @@ impl CalendarState {
             .position(|v| v.contains(&self.current_year))
             .unwrap_or(0) as i32;
     }
+    fn months_available(&self) -> usize {
+        ((NaiveDate::MAX.year() - self.current_year) as usize * 12)
+            + (13 - self.current_month as usize)
+    }
     pub fn offset_year_month(&self, offset: usize) -> (i32, u32) {
-        let n = self.current_month as i64 - 1 + offset as i64;
-        (
-            self.current_year + n.div_euclid(12) as i32,
-            n.rem_euclid(12) as u32 + 1,
-        )
+        let total =
+            self.current_year as i128 * 12 + self.current_month as i128 - 1 + offset as i128;
+        let maximum = NaiveDate::MAX.year() as i128 * 12 + 11;
+        let total = total.min(maximum);
+        (total.div_euclid(12) as i32, total.rem_euclid(12) as u32 + 1)
     }
     pub fn days(&self) -> Vec<Vec<NaiveDate>> {
         self.month_days().into_iter().flatten().collect()
     }
-    /// Calendar weeks grouped by visible month. This preserves six-week
-    /// months and is the preferred rendering API.
+    /// Calendar weeks grouped by visible month. Weeks at Chrono's limits
+    /// contain fewer than seven dates where padding is not representable.
     pub fn month_days(&self) -> Vec<Vec<Vec<NaiveDate>>> {
-        (0..self.number_of_months)
+        (0..self.number_of_months.min(self.months_available()))
             .map(|n| {
-                days_in_month(
-                    self.current_year,
-                    self.current_month as u32 + n as u32,
-                    Weekday::Sun,
-                )
+                let (year, month) = self.offset_year_month(n);
+                days_in_month(year, month, Weekday::Sun)
             })
             .collect()
     }
@@ -342,6 +382,9 @@ impl CalendarState {
         }
     }
     pub fn prev_month(&mut self) {
+        if self.current_year == NaiveDate::MIN.year() && self.current_month == 1 {
+            return;
+        }
         if self.current_month == 1 {
             self.current_year -= 1;
             self.current_month = 12;
@@ -350,6 +393,9 @@ impl CalendarState {
         }
     }
     pub fn next_month(&mut self) {
+        if self.current_year == NaiveDate::MAX.year() && self.current_month == 12 {
+            return;
+        }
         if self.current_month == 12 {
             self.current_year += 1;
             self.current_month = 1;
@@ -379,10 +425,16 @@ impl CalendarState {
             .unwrap_or_default()
     }
     pub fn select_month(&mut self, month: u8) {
+        if !(1..=12).contains(&month) {
+            return;
+        }
         self.current_month = month;
         self.view = CalendarView::Day;
     }
     pub fn select_year(&mut self, year: i32) {
+        if !(NaiveDate::MIN.year()..=NaiveDate::MAX.year()).contains(&year) {
+            return;
+        }
         self.current_year = year;
         self.view = CalendarView::Day;
     }
@@ -633,13 +685,20 @@ impl Styled for Calendar {
 
 impl RenderOnce for Calendar {
     fn render(self, window: &mut Window, cx: &mut App) -> impl IntoElement {
-        let count = self.number_of_months;
+        let count = self
+            .number_of_months
+            .min(self.state.read(cx).months_available());
         self.state
             .update(cx, |s, cx| s.set_number_of_months(count, window, cx));
         let view = self.state.read(cx).view();
-        let mut header = h_flex().items_center().justify_between().child({
+        let rtl = self.state.read(cx).right_to_left();
+        let mut header = h_flex().when(rtl, |row| row.flex_row_reverse()).when(count > 1, |row| row.relative()).items_center().justify_between().child({
             let st = CalendarItemState::new(CalendarItemKind::Previous).disabled(
-                view.is_month() || (view.is_year() && !self.state.read(cx).has_prev_year_page()),
+                view.is_month()
+                    || (view.is_year() && !self.state.read(cx).has_prev_year_page())
+                    || (view.is_day()
+                        && self.state.read(cx).current_year == NaiveDate::MIN.year()
+                        && self.state.read(cx).current_month == 1),
             );
             let mut item =
                 CalendarItem::new("calendar-prev", st).with_label((self.label)(st.kind(), 0));
@@ -656,7 +715,10 @@ impl RenderOnce for Calendar {
                     })
                 });
             }
-            (self.item)(item, st, window, cx)
+            let item = (self.item)(item, st, window, cx);
+            if count > 1 {
+                div().absolute().top_0().when(rtl, |el| el.right_0()).when(!rtl, |el| el.left_0()).child(item).into_any_element()
+            } else { item }
         });
         if count == 1 {
             let (month, year) = {
@@ -697,7 +759,7 @@ impl RenderOnce for Calendar {
             for offset in 0..count {
                 let (y, m) = self.state.read(cx).offset_year_month(offset);
                 header = header.child(
-                    div().text_sm().font_medium().child(
+                    div().flex_1().text_sm().font_medium().child(
                         v_flex()
                             .items_center()
                             .child((self.label)(CalendarItemKind::MonthToggle, m as i32))
@@ -708,7 +770,11 @@ impl RenderOnce for Calendar {
         }
         header = header.child({
             let st = CalendarItemState::new(CalendarItemKind::Next).disabled(
-                view.is_month() || (view.is_year() && !self.state.read(cx).has_next_year_page()),
+                view.is_month()
+                    || (view.is_year() && !self.state.read(cx).has_next_year_page())
+                    || (view.is_day()
+                        && self.state.read(cx).current_year == NaiveDate::MAX.year()
+                        && self.state.read(cx).current_month == 12),
             );
             let mut item =
                 CalendarItem::new("calendar-next", st).with_label((self.label)(st.kind(), 0));
@@ -725,11 +791,14 @@ impl RenderOnce for Calendar {
                     })
                 });
             }
-            (self.item)(item, st, window, cx)
+            let item = (self.item)(item, st, window, cx);
+            if count > 1 {
+                div().absolute().top_0().when(rtl, |el| el.left_0()).when(!rtl, |el| el.right_0()).child(item).into_any_element()
+            } else { item }
         });
 
         let mut body = match picker_grid_layout(view) {
-            None => h_flex().justify_around(),
+            None => h_flex().when(rtl, |row| row.flex_row_reverse()).justify_around(),
             Some((columns, horizontal_gap)) => {
                 div().grid().grid_cols(columns).gap_x(px(horizontal_gap))
             }
@@ -737,9 +806,9 @@ impl RenderOnce for Calendar {
         if view.is_day() {
             for offset in 0..count {
                 let (year, month_number) = self.state.read(cx).offset_year_month(offset);
-                let weeks = days_in_month(year, month_number, self.first_day_of_week);
+                let weeks = calendar_slots(year, month_number, self.first_day_of_week);
                 let mut month = v_flex();
-                let mut header_row = h_flex();
+                let mut header_row = h_flex().when(rtl, |row| row.flex_row_reverse());
                 for weekday in 0..7 {
                     let st = CalendarItemState::new(CalendarItemKind::Weekday)
                         .muted(true)
@@ -754,16 +823,26 @@ impl RenderOnce for Calendar {
                 }
                 month = month.child(header_row);
                 for (week_index, week) in weeks.iter().enumerate() {
-                    let mut week_row = h_flex();
-                    for date in week {
-                        let date = *date;
+                    let mut week_row = h_flex().when(rtl, |row| row.flex_row_reverse());
+                    for (column, date) in week.iter().enumerate() {
+                        let Some(date) = *date else {
+                            let st = CalendarItemState::new(CalendarItemKind::Weekday)
+                                .disabled(true)
+                                .muted(true);
+                            let item = CalendarItem::new(
+                                format!("calendar-padding-{offset}-{week_index}-{column}"),
+                                st,
+                            );
+                            week_row = week_row.child((self.item)(item, st, window, cx));
+                            continue;
+                        };
                         let st = {
                             let s = self.state.read(cx);
                             let (_, m) = s.offset_year_month(offset);
                             let disabled =
                                 s.disabled_matcher_ref().is_some_and(|x| x.matched(&date));
                             CalendarItemState::new(CalendarItemKind::Day)
-                                .active(s.date().is_active(&date))
+                                .active(s.keyboard_cursor().map_or_else(|| s.date().is_active(&date), |cursor| cursor == date))
                                 .in_range(s.date().is_in_range(&date))
                                 .muted(date.month() != m || disabled)
                                 .disabled(disabled)
@@ -789,7 +868,9 @@ impl RenderOnce for Calendar {
             }
         } else if view.is_month() {
             let current = self.state.read(cx).current_month();
-            for month in 1..=12u8 {
+            for month in calendar_grid_order((1..=12).collect(), 3, rtl) {
+                let Some(month) = month else { body = body.child(div()); continue; };
+                let month = month as u8;
                 let st = CalendarItemState::new(CalendarItemKind::Month).active(month == current);
                 let entity = self.state.clone();
                 let item = CalendarItem::new(format!("calendar-month-{month}"), st)
@@ -805,7 +886,8 @@ impl RenderOnce for Calendar {
         } else {
             let current = self.state.read(cx).current_year();
             let years = self.state.read(cx).years_on_page().to_vec();
-            for year in years {
+            for year in calendar_grid_order(years, 5, rtl) {
+                let Some(year) = year else { body = body.child(div()); continue; };
                 let st = CalendarItemState::new(CalendarItemKind::Year).active(year == current);
                 let entity = self.state.clone();
                 let item = CalendarItem::new(format!("calendar-year-{year}"), st)
@@ -829,21 +911,28 @@ impl RenderOnce for Calendar {
 }
 
 fn days_in_month(year: i32, month: u32, first_day: Weekday) -> Vec<Vec<NaiveDate>> {
-    let total = year as i64 * 12 + month as i64 - 1;
-    let year = total.div_euclid(12) as i32;
-    let month = total.rem_euclid(12) as u32 + 1;
-    let first = NaiveDate::from_ymd_opt(year, month, 1).unwrap();
-    let next = if month == 12 {
-        NaiveDate::from_ymd_opt(year + 1, 1, 1).unwrap()
-    } else {
-        NaiveDate::from_ymd_opt(year, month + 1, 1).unwrap()
+    calendar_slots(year, month, first_day)
+        .into_iter()
+        .map(|week| week.into_iter().flatten().collect())
+        .collect()
+}
+
+fn calendar_slots(year: i32, month: u32, first_day: Weekday) -> Vec<Vec<Option<NaiveDate>>> {
+    let Some(first) = NaiveDate::from_ymd_opt(year, month, 1) else {
+        return Vec::new();
+    };
+    let days = match month {
+        1 | 3 | 5 | 7 | 8 | 10 | 12 => 31,
+        4 | 6 | 9 | 11 => 30,
+        2 if year % 4 == 0 && (year % 100 != 0 || year % 400 == 0) => 29,
+        2 => 28,
+        _ => return Vec::new(),
     };
     let offset =
         (first.weekday().num_days_from_sunday() + 7 - first_day.num_days_from_sunday()) % 7;
-    let start = first - chrono::Duration::days(offset as i64);
-    let count = ((next - start).num_days() as usize).div_ceil(7) * 7;
+    let count = (offset as usize + days).div_ceil(7) * 7;
     (0..count)
-        .map(|n| start + chrono::Duration::days(n as i64))
+        .map(|n| first.checked_add_signed(chrono::Duration::days(n as i64 - offset as i64)))
         .collect::<Vec<_>>()
         .chunks(7)
         .map(<[_]>::to_vec)
@@ -857,6 +946,59 @@ mod tests {
     use gpui::{AppContext as _, Context, Entity, IntoElement, Render, Subscription, Window};
 
     use super::*;
+
+    #[test]
+    fn calendar_slots_keep_weekday_alignment_at_date_limits() {
+        for boundary in [NaiveDate::MIN, NaiveDate::MAX] {
+            for start in [Weekday::Sun, Weekday::Mon, Weekday::Sat] {
+                let weeks = calendar_slots(boundary.year(), boundary.month(), start);
+                assert!(weeks.iter().all(|week| week.len() == 7));
+                assert!(weeks.iter().flatten().any(|date| *date == Some(boundary)));
+                for (column, date) in weeks.iter().flat_map(|week| week.iter().enumerate()) {
+                    if let Some(date) = date {
+                        assert_eq!(
+                            (date.weekday().num_days_from_sunday() + 7
+                                - start.num_days_from_sunday())
+                                % 7,
+                            column as u32
+                        );
+                    }
+                }
+            }
+        }
+    }
+
+    #[gpui::test]
+    fn calendar_navigation_and_multi_months_stop_at_date_limits(cx: &mut gpui::TestAppContext) {
+        let calendar = state(cx, Date::Single(None));
+        calendar.update(cx, |calendar, _| {
+            calendar.apply_date(Date::Single(Some(NaiveDate::MIN)));
+            calendar.prev_month();
+            assert_eq!(
+                (calendar.current_year(), calendar.current_month()),
+                (NaiveDate::MIN.year(), NaiveDate::MIN.month() as u8)
+            );
+            calendar.apply_date(Date::Single(Some(NaiveDate::MAX)));
+            calendar.number_of_months = 2;
+            assert_eq!(calendar.month_days().len(), 1);
+            assert!(
+                calendar
+                    .days()
+                    .iter()
+                    .flatten()
+                    .any(|date| *date == NaiveDate::MAX)
+            );
+            assert_eq!(
+                calendar.offset_year_month(usize::MAX),
+                (NaiveDate::MAX.year(), 12)
+            );
+            calendar.next_month();
+            assert_eq!(
+                (calendar.current_year(), calendar.current_month()),
+                (NaiveDate::MAX.year(), NaiveDate::MAX.month() as u8)
+            );
+        });
+    }
 
     #[gpui::test]
     fn calendar_items_expose_names_in_every_view(cx: &mut gpui::TestAppContext) {

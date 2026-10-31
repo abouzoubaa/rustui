@@ -100,6 +100,8 @@ impl ShapedLine {
             descent: layout.descent,
             runs: layout.runs.clone(),
             len,
+
+            bidi_clusters: self.layout.bidi_clusters.clone(),
         });
         self
     }
@@ -367,6 +369,8 @@ impl<'a> ShapedLineCursor<'a> {
                 descent: self.line.layout.descent,
                 runs,
                 len: byte_index - previous_index,
+
+                bidi_clusters: None,
             }),
             text: SharedString::new(&self.line.text[previous_index..byte_index]),
             decoration_runs: decorations,
@@ -471,6 +475,26 @@ impl WrappedLine {
             None => self.layout.wrap_width,
         };
 
+        if let Some(rows) = &self.layout.backend_rows {
+            for (index, row) in rows.iter().enumerate() {
+                paint_line(
+                    point(origin.x, origin.y + line_height * index),
+                    &row.layout,
+                    line_height,
+                    TextAlign::Left,
+                    align_width,
+                    &self.decoration_runs,
+                    &[],
+                    window,
+                    cx,
+                    &mut |_, origin, width, style, window| {
+                        window.paint_underline(origin, width, style)
+                    },
+                )?;
+            }
+            return Ok(());
+        }
+
         paint_line(
             origin,
             &self.layout.unwrapped_layout,
@@ -501,6 +525,23 @@ impl WrappedLine {
             Some(bounds) => Some(bounds.size.width),
             None => self.layout.wrap_width,
         };
+
+        if let Some(rows) = &self.layout.backend_rows {
+            for (index, row) in rows.iter().enumerate() {
+                paint_line_background(
+                    point(origin.x, origin.y + line_height * index),
+                    &row.layout,
+                    line_height,
+                    TextAlign::Left,
+                    align_width,
+                    &self.decoration_runs,
+                    &[],
+                    window,
+                    cx,
+                )?;
+            }
+            return Ok(());
+        }
 
         paint_line_background(
             origin,
@@ -1044,6 +1085,8 @@ mod tests {
                     glyphs: shaped_glyphs,
                 }],
                 len: text.len(),
+
+                bidi_clusters: None,
             }),
             text: SharedString::new(text),
             decoration_runs: SmallVec::from(decorations.to_vec()),
@@ -1377,6 +1420,7 @@ mod tests {
                             glyph_ix: 2,
                         }]),
                         wrap_width: Some(px(16.)),
+                        backend_rows: None,
                     }),
                     text: line.text,
                     decoration_runs: line.decoration_runs.into_vec(),
@@ -1534,6 +1578,8 @@ mod tests {
                     },
                 ],
                 len: 6,
+
+                bidi_clusters: None,
             }),
             text: "abcdef".into(),
             decoration_runs: SmallVec::new(),
@@ -1706,6 +1752,8 @@ mod tests {
             descent: layout.descent,
             runs,
             len: layout.len,
+
+            bidi_clusters: None,
         });
         line
     }
@@ -1774,6 +1822,8 @@ mod tests {
                     },
                 ],
                 len: 10,
+
+                bidi_clusters: None,
             }),
             text: "a😀bcdef".into(),
             decoration_runs: SmallVec::new(),

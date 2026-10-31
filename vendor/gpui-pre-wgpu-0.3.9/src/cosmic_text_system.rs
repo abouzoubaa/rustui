@@ -5,10 +5,11 @@ use cosmic_text::{
     FontFeatures as CosmicFontFeatures, FontSystem, ShapeBuffer, ShapeLine, Stretch, Style, Weight,
 };
 use gpui::{
-    Bounds, DevicePixels, FallbackFontClass, Font, FontFallbacks, FontFeatures, FontId,
-    FontMetrics, FontRun, GlyphId, IsZero as _, LineLayout, MissingGlyph, MissingGlyphSink, Pixels,
-    PlatformTextSystem, RenderGlyphParams, SUBPIXEL_VARIANTS_X, SUBPIXEL_VARIANTS_Y, ShapedGlyph,
-    ShapedRun, SharedString, Size, TextRenderingMode, point, size,
+    BackendWrappedRow, Bounds, DevicePixels, FallbackFontClass, Font, FontFallbacks, FontFeatures,
+    FontId, FontMetrics, FontRun, GlyphId, IsZero as _, LineLayout, MissingGlyph, MissingGlyphSink,
+    Pixels, PlatformTextSystem, RenderGlyphParams, SUBPIXEL_VARIANTS_X, SUBPIXEL_VARIANTS_Y,
+    ShapedGlyph, ShapedRun, SharedString, Size, TextRenderingMode, WrappedGlyphCluster, point,
+    size,
 };
 
 use itertools::Itertools;
@@ -272,6 +273,21 @@ impl PlatformTextSystem for CosmicTextSystem {
 
     fn layout_line(&self, text: &str, font_size: Pixels, runs: &[FontRun]) -> LineLayout {
         self.0.write().layout_line(text, font_size, runs)
+    }
+
+    fn layout_line_wrapped(
+        &self,
+        text: &str,
+        font_size: Pixels,
+        runs: &[FontRun],
+        width: Pixels,
+        max_lines: Option<usize>,
+    ) -> Option<Vec<BackendWrappedRow>> {
+        let rows = self
+            .0
+            .write()
+            .layout_line_wrapped(text, font_size, runs, width, max_lines);
+        rows
     }
 
     fn recommended_rendering_mode(
@@ -690,12 +706,32 @@ impl CosmicTextSystemState {
         layout.descent = layout.descent.max(segment.descent);
     }
 
-    fn layout_line_no_separators(
+    // Keep Cosmic's row geometry intact for backend-shaped wrapping. Existing
+    // GPUI callers still request one unwrapped row until the wrapped-row
+    // paint and index paths consume the same geometry.
+    fn shape_rows(
         &mut self,
-        text: &str,
+        line: &ShapeLine,
         font_size: Pixels,
-        font_runs: &[FontRun],
-    ) -> LineLayout {
+        width: Option<f32>,
+        wrap: cosmic_text::Wrap,
+    ) -> Vec<cosmic_text::LayoutLine> {
+        let mut rows = Vec::with_capacity(1);
+        line.layout_to_buffer(
+            &mut self.scratch,
+            f32::from(font_size),
+            width,
+            wrap,
+            Ellipsize::None,
+            None,
+            &mut rows,
+            None,
+            cosmic_text::Hinting::Disabled,
+        );
+        rows
+    }
+
+    fn shape_line_no_separators(&mut self, text: &str, font_runs: &[FontRun]) -> ShapeLine {
         let mut attrs_list = AttrsList::new(&Attrs::new());
         let mut offs = 0;
         for run in font_runs {
@@ -752,18 +788,17 @@ impl CosmicTextSystemState {
             cosmic_text::Shaping::Advanced,
             4,
         );
-        let mut layout_lines = Vec::with_capacity(1);
-        line.layout_to_buffer(
-            &mut self.scratch,
-            f32::from(font_size),
-            None, // We do our own wrapping
-            cosmic_text::Wrap::None,
-            Ellipsize::None,
-            None,
-            &mut layout_lines,
-            None,
-            cosmic_text::Hinting::Disabled,
-        );
+        line
+    }
+
+    fn layout_line_no_separators(
+        &mut self,
+        text: &str,
+        font_size: Pixels,
+        font_runs: &[FontRun],
+    ) -> LineLayout {
+        let line = self.shape_line_no_separators(text, font_runs);
+        let layout_lines = self.shape_rows(&line, font_size, None, cosmic_text::Wrap::None);
 
         let Some(layout) = layout_lines.first() else {
             return LineLayout {
@@ -773,9 +808,98 @@ impl CosmicTextSystemState {
                 descent: Pixels::ZERO,
                 runs: Vec::new(),
                 len: text.len(),
+
+                bidi_clusters: None,
             };
         };
 
+        self.convert_layout_line(text, font_size, font_runs, layout)
+    }
+
+    fn layout_line_wrapped(
+        &mut self,
+        text: &str,
+        font_size: Pixels,
+        font_runs: &[FontRun],
+        width: Pixels,
+        max_lines: Option<usize>,
+    ) -> Option<Vec<BackendWrappedRow>> {
+        let width_f32 = f32::from(width);
+        if !width_f32.is_finite()
+            || width_f32 <= 0.0
+            || text.chars().any(is_paragraph_separator)
+            || max_lines.is_some()
+        {
+            return None;
+        }
+        let line = self.shape_line_no_separators(text, font_runs);
+        let rows = self.shape_rows(
+            &line,
+            font_size,
+            Some(f32::from(width)),
+            cosmic_text::Wrap::WordOrGlyph,
+        );
+        if rows.is_empty() || rows.iter().any(|row| row.glyphs.is_empty()) {
+            return None;
+        }
+        if !rows
+            .iter()
+            .flat_map(|row| &row.glyphs)
+            .any(|glyph| glyph.level.is_rtl())
+        {
+            return None;
+        }
+        let starts: Vec<_> = rows
+            .iter()
+            .map(|row| row.glyphs.iter().map(|glyph| glyph.start).min().unwrap())
+            .collect();
+        if starts.windows(2).any(|pair| pair[0] >= pair[1]) {
+            return None;
+        }
+        let mut result = Vec::with_capacity(rows.len());
+        for (index, row) in rows.iter().enumerate() {
+            let start = if index == 0 { 0 } else { starts[index] };
+            let end = starts.get(index + 1).copied().unwrap_or(text.len());
+            if row.glyphs.iter().any(|glyph| {
+                glyph.start < start
+                    || glyph.end > end
+                    || glyph.start >= glyph.end
+                    || !text.is_char_boundary(glyph.start)
+                    || !text.is_char_boundary(glyph.end)
+            }) {
+                return None;
+            }
+            let clusters = row
+                .glyphs
+                .iter()
+                .map(|glyph| WrappedGlyphCluster {
+                    bytes: glyph.start..glyph.end,
+                    x: glyph.x.into(),
+                    width: glyph.w.into(),
+                    rtl: glyph.level.is_rtl(),
+                })
+                .collect();
+            let mut layout = self.convert_layout_line(text, font_size, font_runs, row);
+            // Cosmic positions RTL glyphs against the requested width, even
+            // when the row's occupied width is shorter. GPUI's paint bounds
+            // must include those right-aligned positions.
+            layout.width = width;
+            result.push(BackendWrappedRow {
+                layout,
+                bytes: start..end,
+                clusters,
+            });
+        }
+        Some(result)
+    }
+
+    fn convert_layout_line(
+        &mut self,
+        text: &str,
+        font_size: Pixels,
+        font_runs: &[FontRun],
+        layout: &cosmic_text::LayoutLine,
+    ) -> LineLayout {
         let missing_glyphs = self.missing_glyph_sink.as_ref().map(|_| {
             self.missing_glyphs(
                 text,
@@ -845,6 +969,22 @@ impl CosmicTextSystemState {
             descent: layout.max_descent.into(),
             runs,
             len: text.len(),
+
+            bidi_clusters: Some(
+                layout
+                    .glyphs
+                    .iter()
+                    .map(|glyph| WrappedGlyphCluster {
+                        bytes: glyph.start..glyph.end,
+                        x: glyph.x.into(),
+                        width: glyph.w.into(),
+                        rtl: glyph.level.is_rtl(),
+                    })
+                    .collect(),
+            )
+            .filter(|_: &Vec<WrappedGlyphCluster>| {
+                layout.glyphs.iter().any(|glyph| glyph.level.is_rtl())
+            }),
         }
     }
 

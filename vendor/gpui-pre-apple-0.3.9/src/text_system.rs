@@ -632,6 +632,8 @@ impl AppleTextSystemState {
             ascent: max_ascent.into(),
             descent: max_descent.into(),
             len: text.len(),
+
+            bidi_clusters: None,
         }
     }
 }

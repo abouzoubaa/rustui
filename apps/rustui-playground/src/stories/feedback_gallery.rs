@@ -1,6 +1,6 @@
 //! Compact gallery for empty, error, and loading feedback.
 
-use rustui::prelude::*;
+use rustui::{localization::MessageArguments, prelude::*};
 
 pub fn demo() -> impl View {
     Container(Component("feedback-gallery", FeedbackGallery::default))
@@ -41,44 +41,46 @@ impl View for FeedbackGallery {
         let toast_action_activations = self.toast_action_activations();
         OwnerActionReader(move |target: OwnerAction<FeedbackGallery>| {
             let persistent_action_toast = Toast("Saved changes")
+                .localized_message("lab-feedback-toast-saved-body")
                 .title("Saved")
+                .localized_title("lab-feedback-toast-saved-title")
                 .kind(ToastKind::Success)
                 .id("feedback-action-toast")
+                .logical_placement()
                 .autohide(false)
                 .on_click(target.action(Self::record_toast_body_activation))
                 .action("Undo", target.action(Self::record_toast_action_activation))
+                .localized_action_label("lab-feedback-toast-undo")
                 .show();
 
             VStack::new()
                 .spacing(10.0)
-                .child(Text("Feedback states").font_weight(TextWeight::Semibold))
+                .child(LocalizedText("lab-feedback-heading").font_weight(TextWeight::Semibold))
                 .child(
-                    Button("Show persistent action toast", persistent_action_toast)
-                        .id("feedback-show-toast"),
-                )
-                .child(Text(format!(
-                    "Toast body activations: {toast_body_activations}; action activations: {toast_action_activations}"
-                )))
+HStack::new().child(Button("Show persistent action toast", persistent_action_toast)
+                        .id("feedback-show-toast")
+                    .localized_label("lab-feedback-show-toast")),
+)
+                .child(LocalizedText("lab-feedback-toast-counts").with_arguments(MessageArguments::new().with("body", toast_body_activations as i64).with("action", toast_action_activations as i64)))
                 .child(
                     HStack::new()
                         .spacing(6.0)
-                        .child(Button("Info", Toast("Info notice").id("feedback-kind-toast").kind(ToastKind::Info).show()).id("feedback-kind-info"))
-                        .child(Button("Success", Toast("Success notice").id("feedback-kind-toast").kind(ToastKind::Success).show()).id("feedback-kind-success"))
-                        .child(Button("Warning", Toast("Warning notice").id("feedback-kind-toast").kind(ToastKind::Warning).show()).id("feedback-kind-warning"))
-                        .child(Button("Error", Toast("Error notice").id("feedback-kind-toast").kind(ToastKind::Error).show()).id("feedback-kind-error")),
+                        .child(Button("Info", Toast("Info notice").localized_message("lab-feedback-toast-info").id("feedback-kind-toast").logical_placement().kind(ToastKind::Info).show()).id("feedback-kind-info").localized_label("lab-feedback-kind-info"))
+                        .child(Button("Success", Toast("Success notice").localized_message("lab-feedback-toast-success").id("feedback-kind-toast").logical_placement().kind(ToastKind::Success).show()).id("feedback-kind-success").localized_label("lab-feedback-kind-success"))
+                        .child(Button("Warning", Toast("Warning notice").localized_message("lab-feedback-toast-warning").id("feedback-kind-toast").logical_placement().kind(ToastKind::Warning).show()).id("feedback-kind-warning").localized_label("lab-feedback-kind-warning"))
+                        .child(Button("Error", Toast("Error notice").localized_message("lab-feedback-toast-error").id("feedback-kind-toast").logical_placement().kind(ToastKind::Error).show()).id("feedback-kind-error").localized_label("lab-feedback-kind-error")),
                 )
                 .child(
                     HStack::new()
                         .spacing(10.0)
                         .child(
                             Container(
-                                EmptyState("No saved items")
-                                    .detail("Saved items will appear here.")
+                                EmptyState("No saved items").localized_title("lab-feedback-empty-title")
+                                    .detail("Saved items will appear here.").localized_detail("lab-feedback-empty-detail")
                                     .id("feedback-empty-state")
-                                    .accessibility_label("Saved items are empty"),
+                                    .localized_accessibility_label("lab-feedback-empty-a11y"),
                             )
                             .width(196.0)
-                            .height(150.0)
                             .padding(10.0)
                             .border(),
                         )
@@ -87,24 +89,21 @@ impl View for FeedbackGallery {
                                 VStack::new()
                                     .spacing(8.0)
                                     .child(
-                                        ErrorState("Could not load items")
-                                            .detail("Check your connection and retry.")
+                                        ErrorState("Could not load items").localized_title("lab-feedback-error-title")
+                                            .detail("Check your connection and retry.").localized_detail("lab-feedback-error-detail")
                                             .id("feedback-error-state")
-                                            .accessibility_label("Item loading failed"),
+                                            .localized_accessibility_label("lab-feedback-error-a11y"),
                                     )
                                     .child(
-                                        Button("Retry", target.action(Self::retry))
-                                            .id("feedback-retry-button")
+HStack::new().child(Button("Retry", target.action(Self::retry))
+                                            .id("feedback-retry-button").localized_label("lab-feedback-retry")
                                             .accessibility_label(format!(
                                                 "Retry loading items; activated {retry_activations} times"
-                                            )),
-                                    )
-                                    .child(Text(format!(
-                                        "Retry activations: {retry_activations}"
-                                    ))),
+                                            ))),
+)
+                                    .child(LocalizedText("lab-feedback-retry-count").with_arguments(MessageArguments::new().with("count", retry_activations as i64))),
                             )
                             .width(196.0)
-                            .height(150.0)
                             .padding(10.0)
                             .border(),
                         )
@@ -128,11 +127,45 @@ impl View for FeedbackGallery {
                                     ),
                             )
                             .width(196.0)
-                            .height(150.0)
                             .padding(10.0)
                             .border(),
                         ),
                 )
         })
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use rustui::localization::{Locale, MessageArguments, format_integer};
+
+    #[test]
+    fn feedback_counts_format_in_all_supported_locales() {
+        let catalogs = super::super::catalogs();
+        for tag in ["en", "fr", "ar"] {
+            let locale = Locale::parse(tag).unwrap();
+            let text = catalogs
+                .format(
+                    &locale,
+                    "lab-feedback-toast-counts",
+                    &MessageArguments::new()
+                        .with("body", 12_i64)
+                        .with("action", 34_i64),
+                )
+                .unwrap();
+            assert!(text.contains(&format_integer(12, &locale)), "{tag}: {text}");
+            assert!(text.contains(&format_integer(34, &locale)), "{tag}: {text}");
+            let retry = catalogs
+                .format(
+                    &locale,
+                    "lab-feedback-retry-count",
+                    &MessageArguments::new().with("count", 56_i64),
+                )
+                .unwrap();
+            assert!(
+                retry.contains(&format_integer(56, &locale)),
+                "{tag}: {retry}"
+            );
+        }
     }
 }

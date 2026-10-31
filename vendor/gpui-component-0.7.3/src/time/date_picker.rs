@@ -304,6 +304,19 @@ impl DatePickerState {
         self
     }
 
+    /// Read the first day of the calendar week.
+    pub fn week_start(&self) -> Weekday {
+        self.first_day_of_week
+    }
+
+    /// Update the first day without replacing the retained picker state.
+    pub fn set_week_start(&mut self, day: Weekday, cx: &mut Context<Self>) {
+        if self.first_day_of_week != day {
+            self.first_day_of_week = day;
+            cx.notify();
+        }
+    }
+
     /// Get the date part of the value.
     pub fn date(&self) -> Date {
         self.date
@@ -421,6 +434,7 @@ impl DatePickerState {
         self.date = date;
         self.calendar.update(cx, |view, cx| {
             view.set_date(date, window, cx);
+            view.set_keyboard_cursor(None, cx);
         });
         self.open = false;
         if emit {
@@ -444,9 +458,51 @@ impl DatePickerState {
     fn set_open(&mut self, open: bool, window: &mut Window, cx: &mut Context<Self>) {
         if !open {
             self.focus_back_if_need(window, cx);
+            self.calendar.update(cx, |calendar, cx| {
+                calendar.set_date(self.date, window, cx);
+                calendar.set_keyboard_cursor(None, cx);
+            });
         }
         self.open = open;
         cx.notify();
+    }
+
+    fn on_calendar_key_down(
+        &mut self,
+        event: &gpui::KeyDownEvent,
+        window: &mut Window,
+        cx: &mut Context<Self>,
+    ) {
+        if !self.open || !self.focus_handle.is_focused(window)
+            || event.prefer_character_input || event.keystroke.is_ime_in_progress()
+            || event.keystroke.modifiers.modified()
+            || !self.calendar.read(cx).view().is_day()
+        {
+            return;
+        }
+        let current = self.calendar.read(cx).keyboard_cursor()
+            .or_else(|| self.date.start())
+            .unwrap_or_else(|| self.calendar.read(cx).today());
+        let delta = match event.keystroke.key.as_str() {
+            "left" => if self.calendar.read(cx).right_to_left() { 1 } else { -1 },
+            "right" => if self.calendar.read(cx).right_to_left() { -1 } else { 1 },
+            "up" => -7,
+            "down" => 7,
+            _ => return,
+        };
+        if let Some(next) = current.checked_add_signed(chrono::Duration::days(delta)) {
+            self.calendar.update(cx, |calendar, cx| calendar.set_keyboard_cursor(Some(next), cx));
+        }
+        cx.stop_propagation();
+    }
+
+    fn on_calendar_confirm(&mut self, _: &Confirm, window: &mut Window, cx: &mut Context<Self>) {
+        if self.open && self.focus_handle.is_focused(window) && self.calendar.read(cx).view().is_day() {
+            if let Some(date) = self.calendar.read(cx).keyboard_cursor() {
+                self.calendar.update(cx, |calendar, cx| { calendar.activate_date(date, cx); });
+                cx.stop_propagation();
+            }
+        }
     }
 
     fn on_escape(&mut self, _: &Cancel, window: &mut Window, cx: &mut Context<Self>) {
@@ -551,6 +607,9 @@ pub struct DatePicker {
     appearance: bool,
     focus_ring_enabled: bool,
     disabled: bool,
+    accessibility_label: Option<SharedString>,
+    display_value: Option<SharedString>,
+    right_to_left: bool,
 }
 
 impl Sizable for DatePicker {
@@ -610,7 +669,28 @@ impl DatePicker {
             appearance: true,
             focus_ring_enabled: true,
             disabled: false,
+            accessibility_label: None,
+            display_value: None,
+            right_to_left: false,
         }
+    }
+
+    /// Set an accessible name for the date picker.
+    pub fn accessibility_label(mut self, label: impl Into<SharedString>) -> Self {
+        self.accessibility_label = Some(label.into());
+        self
+    }
+
+    /// Align the calendar with the logical start of a right-to-left trigger.
+    pub fn right_to_left(mut self, value: bool) -> Self {
+        self.right_to_left = value;
+        self
+    }
+
+    /// Override the displayed value when a date is selected.
+    pub fn display_value(mut self, value: impl Into<SharedString>) -> Self {
+        self.display_value = Some(value.into());
+        self
     }
 
     /// Set the placeholder of the date picker, default: "".
@@ -673,6 +753,7 @@ impl DatePicker {
 impl RenderOnce for DatePicker {
     fn render(self, window: &mut Window, cx: &mut App) -> impl IntoElement {
         self.state.update(cx, |state, cx| {
+            state.calendar.update(cx, |calendar, _| calendar.set_right_to_left(self.right_to_left));
             state.sync_children(window, cx);
         });
         let month_count = self.number_of_months.max(1) as f32;
@@ -685,16 +766,18 @@ impl RenderOnce for DatePicker {
             .placeholder
             .clone()
             .unwrap_or_else(|| t!("DatePicker.placeholder").into());
-        let display_title = state
-            .date_time()
-            .format(&state.display_format())
-            .unwrap_or(placeholder.clone());
+        let display_title = if state.date.is_some() {
+            self.display_value.clone().or_else(|| state.date_time().format(&state.display_format()))
+        } else {
+            None
+        }.unwrap_or(placeholder.clone());
 
         let (bg, fg) = input_style(self.disabled, cx);
 
         let picker_state = self.state.clone();
 
         BaseDatePicker::new(self.id, &state.focus_handle)
+            .when_some(self.accessibility_label, |this, label| this.aria_label(label))
             .open(state.open)
             .when(state.date.is_some(), |this| {
                 this.aria_value(display_title.clone())
@@ -704,6 +787,8 @@ impl RenderOnce for DatePicker {
                 picker_state.update(cx, |state, cx| state.set_open(open, window, cx));
             })
             .key_context(CONTEXT)
+            .on_key_down(window.listener_for(&self.state, DatePickerState::on_calendar_key_down))
+            .capture_action(window.listener_for(&self.state, DatePickerState::on_calendar_confirm))
             .on_action(window.listener_for(&self.state, DatePickerState::on_delete))
             .flex_none()
             .w_full()
@@ -849,7 +934,11 @@ impl RenderOnce for DatePicker {
                                     ),
                             ),
                         cx,
-                    ))
+                    ).align(if self.right_to_left {
+                        gpui_base::Align::End
+                    } else {
+                        gpui_base::Align::Start
+                    }))
                     .with_priority(gpui_base::POPUP_PRIORITY),
                 )
             })
