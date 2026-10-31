@@ -1,3 +1,7 @@
+## R30 shared source gate and native checks — 2026-10-31
+
+On clean source commit `ec077414`, `./scripts/verify-release.sh source` failed at `verify_gpui_web_patch_stack.py`: `unknown or partial Web source image; no source writes performed`. Its remaining checks did not run; log `target/headstart/evidence/native-release-source-ec077414-20261031.log` SHA-256 `2a1812843c569c89cca715122278746c33847a11f59b907d2ba9cff893b2af5e`. Web diagnosis remains deferred by the user's instruction, and the shared source/CI gate is not passing. Separately, the dependency boundary, planning-only theme records, locale metadata and theme adapter coverage checks passed; the latter reported the existing unapplied `radio_button.blend_mode` and ScrollView artwork-size limitations. These partial checks do not establish full source or visual acceptance.
+
 ## R15 native disabled ColorPicker — 2026-10-31
 
 In the exact-path native Playground bundle, executable SHA-256 `6adaadd941ff809430f698dfca6a69c18bf430879bcdf24bfe52cc40d89be04e` (built at `185d39ea`; intervening changes through `00f48a75` are ledger-only), clicking the disabled ColorPicker did not open a popup. The enabled control opened; selecting `#EE4444` updated both controls sharing its binding, and another click on the disabled control did not open a popup. This is a bounded computer-controlled pointer check, not keyboard, accessibility, physical-input or full ColorPicker acceptance. The app exited, its disposable bundle moved to Trash, and the GUI slot was released.
