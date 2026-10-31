@@ -790,3 +790,14 @@ lab-compiled-preview-specimen = Preview {component} specimen
 lab-compiled-preview-owner-text = Owner: text={text} enabled={enabled} amount={amount} · mounted stamp: {stamp}
 lab-compiled-preview-owner-secure = Owner: secure value present={secure_present} enabled={enabled} amount={amount} · mounted stamp: {stamp}
 lab-compiled-preview-status-summary = {status} · activations {activations} · parent rerenders {renders}
+
+lab-preview-teardown = Teardown preview
+lab-preview-descriptor-heading = Preview descriptor JSON
+lab-preview-import = Import descriptor
+lab-preview-export = Export normalized descriptor
+lab-preview-descriptor-editor = Import or export normalized preview JSON
+lab-preview-capture-callback = Capture amount callback
+lab-preview-replay-callback = Replay captured amount callback
+lab-preview-reject-stale = Reject stale preview callbacks
+lab-preview-reject-type = Reject wrong preview type
+lab-preview-delayed-rerender = Schedule no-blur parent rerender (5 seconds)

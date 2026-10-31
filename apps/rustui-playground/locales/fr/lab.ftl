@@ -790,3 +790,14 @@ lab-compiled-preview-specimen = Exemple : {component}
 lab-compiled-preview-owner-text = Propriétaire : texte={text} activé={enabled} valeur={amount} · identifiant monté : {stamp}
 lab-compiled-preview-owner-secure = Propriétaire : valeur secrète présente={secure_present} activé={enabled} valeur={amount} · identifiant monté : {stamp}
 lab-compiled-preview-status-summary = {status} · activations {activations} · actualisations du parent {renders}
+
+lab-preview-teardown = Fermer la prévisualisation
+lab-preview-descriptor-heading = Descripteur JSON de la prévisualisation
+lab-preview-import = Importer le descripteur
+lab-preview-export = Exporter le descripteur normalisé
+lab-preview-descriptor-editor = Importer ou exporter le JSON normalisé de la prévisualisation
+lab-preview-capture-callback = Capturer le rappel de valeur
+lab-preview-replay-callback = Rejouer le rappel de valeur capturé
+lab-preview-reject-stale = Rejeter les anciens rappels de prévisualisation
+lab-preview-reject-type = Rejeter un type de prévisualisation incorrect
+lab-preview-delayed-rerender = Planifier l’actualisation du parent sans perte de focus (5 secondes)

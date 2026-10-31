@@ -8035,23 +8035,32 @@ impl View for CompiledPreviewGallery {
                         "Preview ColorPicker specimen",
                         rustui::runtime::Action::new(Self::mount_color_picker_specimen),
                     ))
-                    .child(Button(
-                        "Teardown preview",
-                        rustui::runtime::Action::new(Self::teardown),
-                    )),
+                    .child(
+                        Button(
+                            "Teardown preview",
+                            rustui::runtime::Action::new(Self::teardown),
+                        )
+                        .localized_label("lab-preview-teardown"),
+                    ),
             )
-            .child(Text("Preview descriptor JSON"))
+            .child(LocalizedText("lab-preview-descriptor-heading"))
             .child(
                 HStack::new()
                     .spacing(6.0)
-                    .child(Button(
-                        "Import descriptor",
-                        rustui::runtime::Action::new(Self::import_descriptor),
-                    ))
-                    .child(Button(
-                        "Export normalized descriptor",
-                        rustui::runtime::Action::new(Self::export_descriptor),
-                    )),
+                    .child(
+                        Button(
+                            "Import descriptor",
+                            rustui::runtime::Action::new(Self::import_descriptor),
+                        )
+                        .localized_label("lab-preview-import"),
+                    )
+                    .child(
+                        Button(
+                            "Export normalized descriptor",
+                            rustui::runtime::Action::new(Self::export_descriptor),
+                        )
+                        .localized_label("lab-preview-export"),
+                    ),
             )
             .child(OwnerActionReader(
                 move |owner: OwnerAction<CompiledPreviewGallery>| {
@@ -8061,6 +8070,7 @@ impl View for CompiledPreviewGallery {
                             "Import or export normalized preview JSON",
                             descriptor_binding.clone(),
                         )
+                        .localized_placeholder("lab-preview-descriptor-editor")
                         .id("compiled-preview-descriptor-json")
                         .height(150.0),
                     )
@@ -8073,22 +8083,34 @@ impl View for CompiledPreviewGallery {
             .child(
                 VStack::new()
                     .spacing(6.0)
-                    .child(Button(
-                        "Capture amount callback",
-                        rustui::runtime::Action::new(Self::capture_stale_amount_callback),
-                    ))
-                    .child(Button(
-                        "Replay captured amount callback",
-                        rustui::runtime::Action::new(Self::replay_stale_amount_callback),
-                    ))
-                    .child(Button(
-                        "Reject stale preview callbacks",
-                        rustui::runtime::Action::new(Self::reject_stale),
-                    ))
-                    .child(Button(
-                        "Reject wrong preview type",
-                        rustui::runtime::Action::new(Self::reject_wrong_type),
-                    )),
+                    .child(
+                        Button(
+                            "Capture amount callback",
+                            rustui::runtime::Action::new(Self::capture_stale_amount_callback),
+                        )
+                        .localized_label("lab-preview-capture-callback"),
+                    )
+                    .child(
+                        Button(
+                            "Replay captured amount callback",
+                            rustui::runtime::Action::new(Self::replay_stale_amount_callback),
+                        )
+                        .localized_label("lab-preview-replay-callback"),
+                    )
+                    .child(
+                        Button(
+                            "Reject stale preview callbacks",
+                            rustui::runtime::Action::new(Self::reject_stale),
+                        )
+                        .localized_label("lab-preview-reject-stale"),
+                    )
+                    .child(
+                        Button(
+                            "Reject wrong preview type",
+                            rustui::runtime::Action::new(Self::reject_wrong_type),
+                        )
+                        .localized_label("lab-preview-reject-type"),
+                    ),
             )
             .child(OwnerTaskReader(
                 |tasks: OwnerTask<CompiledPreviewGallery>| {
@@ -8106,6 +8128,7 @@ impl View for CompiledPreviewGallery {
                             CompiledPreviewGallery::finish_delayed_rerender,
                         ),
                     )
+                    .localized_label("lab-preview-delayed-rerender")
                     .id("compiled-preview-no-blur-rerender")
                 },
             ))

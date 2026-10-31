@@ -790,3 +790,14 @@ lab-compiled-preview-specimen = مثال: {component}
 lab-compiled-preview-owner-text = المالك: النص={text} مفعّل={enabled} القيمة={amount} · معرّف المعاينة المثبّتة: {stamp}
 lab-compiled-preview-owner-secure = المالك: توجد قيمة سرية={secure_present} مفعّل={enabled} القيمة={amount} · معرّف المعاينة المثبّتة: {stamp}
 lab-compiled-preview-status-summary = {status} · مرات التفعيل {activations} · تحديثات الأصل {renders}
+
+lab-preview-teardown = إغلاق المعاينة
+lab-preview-descriptor-heading = واصف المعاينة بصيغة JSON
+lab-preview-import = استيراد الواصف
+lab-preview-export = تصدير الواصف الموحّد
+lab-preview-descriptor-editor = استيراد أو تصدير JSON الموحّد للمعاينة
+lab-preview-capture-callback = التقاط رد استدعاء القيمة
+lab-preview-replay-callback = إعادة تشغيل رد استدعاء القيمة الملتقط
+lab-preview-reject-stale = رفض ردود الاستدعاء القديمة للمعاينة
+lab-preview-reject-type = رفض نوع المعاينة غير الصحيح
+lab-preview-delayed-rerender = جدولة تحديث الأصل دون فقد التركيز (٥ ثوانٍ)
