@@ -360,7 +360,6 @@ impl SliderState {
         _: &mut Window,
         cx: &mut Context<Self>,
     ) {
-        self.dragging = true;
         let bounds = self.bounds;
         let step = self.step;
 
@@ -370,6 +369,13 @@ impl SliderState {
             bounds.bottom() - position.y
         };
         let total_size = bounds.size.along(axis);
+        if !f32::from(total_size).is_finite()
+            || total_size <= px(0.)
+            || !f32::from(inner_pos).is_finite()
+        {
+            return;
+        }
+        self.dragging = true;
         let percentage = inner_pos.clamp(px(0.), total_size) / total_size;
 
         let percentage = if is_start {

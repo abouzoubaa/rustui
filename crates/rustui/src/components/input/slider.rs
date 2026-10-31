@@ -686,6 +686,35 @@ mod tests {
     use rustui_core::Binding;
     use std::{cell::RefCell, rc::Rc};
 
+    #[gpui::test]
+    fn zero_sized_track_ignores_pointer_updates(cx: &mut gpui::TestAppContext) {
+        use gpui::AppContext as _;
+
+        cx.update(gpui_component::init);
+        let (_root, window) = cx.add_window_view(|_, cx| {
+            crate::runtime::ComponentHost::new(crate::view::EmptyView, cx)
+        });
+        let slider = window
+            .update(|_, cx| cx.new(|_| super::configured_slider_state(0.0, 100.0, 1.0, 50.0)));
+        window.update(|window, cx| {
+            for axis in [Axis::Horizontal, Axis::Vertical] {
+                slider.update(cx, |slider, cx| {
+                    slider.update_value_by_position(
+                        axis,
+                        gpui::point(gpui::px(0.0), gpui::px(0.0)),
+                        false,
+                        window,
+                        cx,
+                    );
+                });
+            }
+            assert_eq!(
+                slider.read(cx).value(),
+                gpui_component::slider::SliderValue::Single(50.0)
+            );
+        });
+    }
+
     #[test]
     #[should_panic(
         expected = "Slider range must contain finite ascending values with a finite span"
