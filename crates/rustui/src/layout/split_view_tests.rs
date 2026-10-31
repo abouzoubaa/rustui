@@ -106,6 +106,47 @@ fn rendered_split_divider_drag_resizes_the_first_panel(cx: &mut gpui::TestAppCon
             after_second > after_first + 10.0,
             "{axis:?} divider did not continue moving: {after_first} -> {after_second}"
         );
+        // Deliver a complete drag before a draw can refresh the listeners.
+        window.update(|window, app| {
+            window.dispatch_event(
+                gpui::PlatformInput::MouseDown(gpui::MouseDownEvent {
+                    position: point(after_second - 2.0),
+                    button: gpui::MouseButton::Left,
+                    modifiers,
+                    click_count: 1,
+                    first_mouse: false,
+                }),
+                app,
+            );
+            window.dispatch_event(
+                gpui::PlatformInput::MouseMove(gpui::MouseMoveEvent {
+                    position: point(after_second - 40.0),
+                    pressed_button: Some(gpui::MouseButton::Left),
+                    modifiers,
+                }),
+                app,
+            );
+            window.dispatch_event(
+                gpui::PlatformInput::MouseUp(gpui::MouseUpEvent {
+                    position: point(after_second - 40.0),
+                    button: gpui::MouseButton::Left,
+                    modifiers,
+                    click_count: 1,
+                }),
+                app,
+            );
+        });
+        let after_release = divider_size(&native, window);
+        assert!(
+            after_release < after_second - 10.0,
+            "{axis:?} second drag did not move before release: {after_second} -> {after_release}"
+        );
+        window.simulate_mouse_move(point(after_release + 60.0), None, modifiers);
+        let after_idle_move = divider_size(&native, window);
+        assert_eq!(
+            after_release, after_idle_move,
+            "{axis:?} divider moved after mouse release"
+        );
     }
 }
 

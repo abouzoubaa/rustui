@@ -10,10 +10,10 @@ import tomllib
 from pathlib import Path
 
 SOURCE = Path("vendor/gpui-base-0.7.3/src/resizable/panel.rs")
-PATCH = Path("patches/approved/gpui-base-resize-first-move-v1.patch")
+PATCH = Path("patches/approved/gpui-base-resize-first-move-v2.patch")
 PRE = "c54be541d3d77e76b286227f6d4cc01856f75a9a549e799a63887f736ef9f0c4"
-POST = "bef1cffd606419ff90954192bb0970a6366842739aa79f55fd6cfa6b18063055"
-PATCH_HASH = "a42497ca9eca1e8eff677b94d423a25e747dea0d77237dd8f311d2363430bf5f"
+POST = "d1f93a39193186f8b114c61893b5354a796275c4f793cfc44fe0ee82b42ea19b"
+PATCH_HASH = "4c2e27107ad2c606535a261fd3f34b0fca34b5642ab1ebb25d63eeb2587dc3bf"
 PRESERVED = {
     "vendor/gpui-base-0.7.3/Cargo.toml": "b6fa9bb529c7e049df902890f12f5e15b298aebea6a46bb8e5101d6cade298cb",
     "vendor/gpui-base-0.7.3/.cargo-checksum.json": "9e96d55b0071b60576bc6ac18c3e9c48e6d0de5ff848821af7623bd151f7c3ed",
@@ -53,13 +53,13 @@ def run(root, artifacts, mode):
         staged = stage / SOURCE
         staged.parent.mkdir(parents=True)
         staged.write_bytes(old)
-        command = ["git", "apply", "--whitespace=nowarn"] + (["--reverse"] if reverse else [])
+        command = ["git", "apply", "--unidiff-zero", "--whitespace=nowarn"] + (["--reverse"] if reverse else [])
         subprocess.run(command + ["--check", str(patch)], cwd=stage, check=True, capture_output=True)
         subprocess.run(command + [str(patch)], cwd=stage, check=True, capture_output=True)
         new = staged.read_bytes()
         if digest(new) != (PRE if reverse else POST):
             raise ValueError("resize patch replay hash mismatch")
-        undo = ["git", "apply", "--whitespace=nowarn"] + ([] if reverse else ["--reverse"])
+        undo = ["git", "apply", "--unidiff-zero", "--whitespace=nowarn"] + ([] if reverse else ["--reverse"])
         subprocess.run(undo + [str(patch)], cwd=stage, check=True, capture_output=True)
         if staged.read_bytes() != old:
             raise ValueError("resize patch reversal mismatch")
