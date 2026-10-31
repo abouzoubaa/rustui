@@ -687,6 +687,78 @@ mod tests {
     use std::{cell::RefCell, rc::Rc};
 
     #[gpui::test]
+    fn rendered_slider_thumb_drag_updates_owner(cx: &mut gpui::TestAppContext) {
+        use crate::{prelude::*, runtime::ComponentHost};
+        use gpui::{Modifiers, MouseButton, px};
+        use rustui_core::Identity;
+
+        struct Owner(f32);
+        impl View for Owner {
+            fn body(&self) -> impl View {
+                Slider(
+                    Binding::new(
+                        self.0,
+                        |owner: &Owner| owner.0,
+                        |owner, value| {
+                            owner.0 = value;
+                        },
+                    ),
+                    0.0..=100.0,
+                )
+                .id("drag-test")
+            }
+        }
+
+        let theme = parse_theme(include_str!("../../../../../themes/macos27.json")).unwrap();
+        cx.update(|app| {
+            gpui_component::init(app);
+            crate::theme::activate_theme(&theme, Some(AppearanceMode::Dark), app).unwrap();
+        });
+        let (owner, window) = cx.add_window_view(|_, cx| ComponentHost::new(Owner(50.0), cx));
+        let bounds = window.update(|window, app| {
+            let _ = window.draw(app);
+            let retained = owner
+                .read(app)
+                .retained_entity_for_test::<super::RetainedSlider>(
+                    vec![],
+                    Identity::from("drag-test"),
+                )
+                .unwrap();
+            let state = retained.read(app).state.clone();
+            state.read(app).bounds()
+        });
+        let x = f32::from(bounds.origin.x);
+        let y = f32::from(bounds.origin.y) + f32::from(bounds.size.height) / 2.0;
+        let width = f32::from(bounds.size.width);
+        assert!(width > 10.0);
+        let point = |fraction| gpui::point(px(x + width * fraction), px(y));
+        let modifiers = Modifiers::default();
+        window.simulate_mouse_down(point(0.5), MouseButton::Left, modifiers);
+        window.simulate_mouse_move(point(0.65), Some(MouseButton::Left), modifiers);
+        let first_value = window.update(|_, app| owner.read(app).component().0);
+        assert!(
+            first_value > 55.0,
+            "first thumb movement was lost: {first_value}"
+        );
+        window.simulate_mouse_move(point(0.8), Some(MouseButton::Left), modifiers);
+        window.simulate_mouse_up(point(0.8), MouseButton::Left, modifiers);
+        let value = window.update(|_, app| owner.read(app).component().0);
+        assert!(value > 60.0, "thumb drag did not update owner: {value}");
+
+        window.update(|window, app| {
+            let _ = window.draw(app);
+        });
+        window.simulate_mouse_down(point(0.2), MouseButton::Left, modifiers);
+        window.simulate_mouse_move(point(0.4), Some(MouseButton::Left), modifiers);
+        window.simulate_mouse_up(point(0.4), MouseButton::Left, modifiers);
+        let track_value = window.update(|_, app| owner.read(app).component().0);
+        assert!(
+            track_value > 30.0 && track_value < 50.0,
+            "first track movement was lost: {track_value}"
+        );
+    }
+
+    #[gpui::test]
     fn zero_sized_track_ignores_pointer_updates(cx: &mut gpui::TestAppContext) {
         use gpui::AppContext as _;
 

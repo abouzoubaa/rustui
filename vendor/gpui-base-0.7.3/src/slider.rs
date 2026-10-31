@@ -705,8 +705,13 @@ impl RenderOnce for SliderTrack {
                     ),
                 )
                 .when(!is_range, |this| {
-                    this.on_drag(DragSlider(entity_id), |drag, _, _, cx| {
+                    let state = self.state.clone();
+                    this.on_drag(DragSlider(entity_id), move |drag, _, window, cx| {
                         cx.stop_propagation();
+                        let position = window.mouse_position();
+                        state.update(cx, |state, cx| {
+                            state.update_value_by_position(axis, position, false, window, cx);
+                        });
                         cx.new(|_| drag.clone())
                     })
                     .on_drag_move(window.listener_for(
@@ -847,9 +852,16 @@ impl RenderOnce for SliderThumb {
             .children(self.children)
             .when(!self.disabled, |this| {
                 this.on_mouse_down(MouseButton::Left, |_, _, cx| cx.stop_propagation())
-                    .on_drag(DragThumb((entity_id, start)), |drag, _, _, cx| {
-                        cx.stop_propagation();
-                        cx.new(|_| drag.clone())
+                    .on_drag(DragThumb((entity_id, start)), {
+                        let state = self.state.clone();
+                        move |drag, _, window, cx| {
+                            cx.stop_propagation();
+                            let position = window.mouse_position();
+                            state.update(cx, |state, cx| {
+                                state.update_value_by_position(axis, position, start, window, cx);
+                            });
+                            cx.new(|_| drag.clone())
+                        }
                     })
                     .on_drag_move(window.listener_for(
                         &self.state,

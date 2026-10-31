@@ -8,6 +8,28 @@ Earlier entries describing locale acceptance as an immediate priority are histor
 
 ## R09/M924 native Utility Window — 2026-10-31
 
+Follow-up: a GPUI test-window regression found that a single initial thumb
+movement left the controlled value at 50; a second movement updated it to 80.
+The approved reproducible `gpui-base-slider-first-move-v1` patch handles the
+initial drag movement for thumb and track on the pinned GPUI Base snapshot.
+The rendered test now checks both first-movement paths, and the Slider suite
+passes 28/28. Patch-stack replay/reversal and tamper tests pass 5/5. Native
+Playground executable SHA-256
+`577cbec714cf30c855b98442c08d0f0a9e7599cf133038d15e7e983d4e830dc7`
+visibly moved the Utility Red thumb from its midpoint to the requested location
+using the same automated drag that previously produced no movement. The owned
+app was quit, its bundle moved to Trash and the GUI slot released. This checks
+bounded automated interaction, not physical-mouse or complete input acceptance.
+On a snapshot with the earlier zero-track patch applied, replay the new patch
+with `python3 scripts/apply_gpui_base_slider_first_move.py --apply`; verify the
+composed images with `python3 scripts/verify_gpui_base_slider_patch_stack.py`.
+Logs under `target/headstart/evidence/`: `slider-first-drag-before-20261031.log`
+(SHA-256 `b4455df478eb43f7dc136649202906eacf6c2c87d71055bad66e37317c05d626`),
+`slider-first-drag-suite-20261031.log` (SHA-256
+`c3fee23a7cce773bf75fa183dff0fbf0e395f505783ad8b89f3172c29f974520`), and
+`slider-first-drag-native-build-20261031.log` (SHA-256
+`7f147d98957627eb004e6efdbdd7f7f645b73a5fe624eec3335a7c21801048f9`).
+
 On `18618e34`, a locked offline Headstart Playground build passed. The owned
 disposable macOS bundle and build executable had SHA-256
 `45df76d46704ede8a6a4fb81c33ad5f2c4ecd89ee913979ea08d53e484a4e824`.
