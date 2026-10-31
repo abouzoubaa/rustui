@@ -159,6 +159,16 @@ ignored test passed 1/1. Evidence:
 These local test-window measurements do not establish native scrolling,
 memory, cross-machine, or release-budget acceptance.
 
+An exploratory same-host comparison temporarily reversed `ac46f2ec` in the
+workload source, ran the optimized test, restored the exact tracked file, then
+ran the current version. Four ten-update samples were 46.93–48.42 ms before
+and 46.82–85.45 ms after; both tests passed. The spread and sequential ordering
+do not establish a timing improvement or regression. Logs:
+`target/headstart/evidence/native-tree-retained-before-20261031.log` SHA-256
+`9e2b32774211e0202aec680163314f4b3984acac732a9d657e9f3c8d493d57dc`;
+`target/headstart/evidence/native-tree-retained-after-20261031.log` SHA-256
+`60dcdfca015062fa4d858289c7a543ab6b84cd0c4d5115f1c1bdffdf9ce6675b`.
+
 ## Native GUI evidence provenance — 2026-10-31
 
 A generic-name Playground selection was observed to resolve an older checkout while a current disposable bundle existed. For prior GUI entries, an executable hash alone proves the bundle's contents but does not prove which app the automation controlled. Keep historical observations, but treat native acceptance as unverified unless the inspected UI is tied to the exact process and bundle path or independently corroborated. Subsequent native checks must bind by full bundle path and verify the process and executable hash. Source/test-window and build results are unaffected.
