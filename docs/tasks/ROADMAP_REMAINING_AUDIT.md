@@ -174,6 +174,19 @@ The locked offline macOS Headstart release Playground build at `185d39ea` passed
 
 ## R35/R36 graph drag precision — 2026-10-31
 
+The rendered NodeEditor regression now presses a node, moves it inside the
+surface, releases outside, and checks that the active drag is cleared before a
+later held-pointer move. It passed 1/1 with Headstart; log SHA-256
+`8c180f89919f791ec9a097f81597f06c5b6c41b096ff34401f6c338e09daecd3`
+at `target/headstart/evidence/node-editor-outside-release-gpui-20261031.log`.
+In the owned native Playground executable (PID 75803, SHA-256
+`59a8ecd829f639be6dbd4f03421632173a91902d2266f27589cec135bfc75e78`),
+an in-surface computer-controlled drag moved a node, while an attempted drag
+ending outside the surface showed no movement. That attempt did not establish
+the required inside-move/outside-release sequence; native physical-input
+acceptance remains open. The app exited, its disposable bundle moved to Trash,
+and the shared GUI slot was released.
+
 Graph dragging retains accumulated pointer displacement when individual movements round away at large coordinates, while rebasing when the owner changes or rejects a position. The macOS Headstart GraphView suite passed 27/27 (`target/headstart/evidence/native-graph-drag-precision-final-20261031.log`, SHA-256 `cb0643a53a5547ed0dec461ebcf00954fe96e02a4b7545eaee35485409c7fc3c`), including a precision/rebase regression and the rendered owner-update event path. Rejection is simulated in the logic test; physical pointer and broader native GraphView/NodeEditor acceptance of this change remain open. The GUI slot was released.
 
 ## R35/R36 native NodeEditor pointer check — 2026-10-31

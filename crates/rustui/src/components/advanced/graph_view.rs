@@ -2713,6 +2713,65 @@ mod current_selection_regressions {
             let rect = owner.read(app).component().graph.node("a").unwrap().rect();
             assert_eq!((rect.x, rect.y), (40.0, 25.0));
         });
+        // Release beyond the graph after a real in-surface move. A later held
+        // pointer move must not resume the old drag.
+        let node = window.debug_bounds("graph-test-node:a").unwrap();
+        let drag_start = gpui::point(node.origin.x + px(10.0), node.origin.y + px(10.0));
+        let drag_inside = gpui::point(drag_start.x + px(10.0), drag_start.y + px(5.0));
+        let drag_outside = gpui::point(drag_start.x + px(1_000.0), drag_start.y);
+        window.simulate_mouse_down(drag_start, MouseButton::Left, gpui::Modifiers::default());
+        window.simulate_mouse_move(drag_inside, MouseButton::Left, gpui::Modifiers::default());
+        window.update(|window, app| {
+            let _ = window.draw(app);
+            let rect = owner.read(app).component().graph.node("a").unwrap().rect();
+            assert_eq!((rect.x, rect.y), (50.0, 30.0));
+            let state = owner
+                .read(app)
+                .retained_entity_for_test::<Interaction>(
+                    vec![],
+                    Identity::from("graph-interaction:keyboard-editor"),
+                )
+                .unwrap();
+            assert!(state.read(app).drag.is_some());
+        });
+        window.simulate_mouse_up(drag_outside, MouseButton::Left, gpui::Modifiers::default());
+        window.update(|_, app| {
+            let state = owner
+                .read(app)
+                .retained_entity_for_test::<Interaction>(
+                    vec![],
+                    Identity::from("graph-interaction:keyboard-editor"),
+                )
+                .unwrap();
+            assert!(state.read(app).drag.is_none());
+        });
+        window.simulate_mouse_move(drag_inside, MouseButton::Left, gpui::Modifiers::default());
+        window.update(|window, app| {
+            let _ = window.draw(app);
+            let state = owner
+                .read(app)
+                .retained_entity_for_test::<Interaction>(
+                    vec![],
+                    Identity::from("graph-interaction:keyboard-editor"),
+                )
+                .unwrap();
+            assert!(state.read(app).drag.is_none());
+            let graph = &owner.read(app).component().graph;
+            let rect = graph.node("a").unwrap().rect();
+            assert_eq!((rect.x, rect.y), (50.0, 30.0));
+            let restored = graph
+                .edited(GraphEdit::MoveNode {
+                    id: "a".into(),
+                    x: 40.0,
+                    y: 25.0,
+                })
+                .unwrap();
+            owner.update(app, |host, cx| {
+                host.component_mut().graph = restored;
+                cx.notify();
+            });
+            let _ = window.draw(app);
+        });
         window.update(|window, app| {
             let _ = window.draw(app);
             let state = owner
