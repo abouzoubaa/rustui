@@ -12,6 +12,7 @@ references_bundle="$resources/references"
 references_staging=""
 references_previous="$resources/references.previous.$$"
 release_notices_source="${RUSTUI_RELEASE_NOTICES_DIR:-}"
+fresh_bundle_marker=""
 
 cleanup() {
     status=$?
@@ -24,6 +25,14 @@ cleanup() {
             mv "$references_previous" "$references_bundle"
         else
             rm -rf "$references_previous"
+        fi
+    fi
+    if [ -n "$fresh_bundle_marker" ] && [ ! -L "$bundle" ] && \
+        [ -f "$fresh_bundle_marker" ] && [ ! -L "$fresh_bundle_marker" ]; then
+        if [ "$status" -ne 0 ]; then
+            rm -rf "$bundle"
+        else
+            rm -f "$fresh_bundle_marker"
         fi
     fi
     exit "$status"
@@ -52,6 +61,10 @@ if [ -n "${RUSTUI_PLAYGROUND_BUNDLE_PATH:-}" ]; then
     mkdir -p "$(dirname -- "$bundle")"
     if ! mkdir "$bundle"; then
         printf '%s\n' "cannot create fresh Playground bundle: $bundle" >&2
+        exit 1
+    fi
+    if ! fresh_bundle_marker=$(mktemp "$bundle/.rustui-package-owner.XXXXXX"); then
+        rmdir "$bundle" 2>/dev/null || :
         exit 1
     fi
 fi

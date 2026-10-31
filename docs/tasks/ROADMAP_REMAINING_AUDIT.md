@@ -1,3 +1,7 @@
+## R31 native fresh bundle failure cleanup — 2026-10-31
+
+An explicitly requested fresh Playground bundle is now removed after a packaging failure only when its per-invocation ownership marker remains present; an existing bundle is not treated as owned. The regression reproduced the old leftover bundle with missing release notices, then passed after the fix, verified a successful retry at the same path, marker removal on success, and preservation of an existing bundle. `sh scripts/tests/test_package_playground_app.sh` passed (`target/headstart/evidence/native-fresh-bundle-cleanup-20261031.log`, SHA-256 `6cad587b8a9f3958c5dad5fb321cfaa4ae3b878df28f5b7aadd6df7fe73c35aa`); shell syntax and `git diff --check` also passed. This fixture check does not clear dependency notices, signing, reproducibility or full release acceptance.
+
 ## Current scope — 2026-10-31
 
 The user directed this session to put localization aside and focus on finishing RustUI. Defer localization implementation and acceptance, alongside previously deferred Web/Wasm, accessibility and VoiceOver work. Prioritize native framework implementation, tests and release blockers. Preserve the existing localization work and leave its remaining requirements open.

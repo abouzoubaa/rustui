@@ -127,6 +127,7 @@ RUSTUI_PLAYGROUND_BUNDLE_PATH="$fresh_bundle" \
 RUSTUI_PLAYGROUND_REFERENCES_DIR="$references_source" \
     "$repository_root/apps/rustui-playground/package-app.sh" >/dev/null
 cmp "$headstart_binary" "$fresh_bundle/Contents/MacOS/rustui-playground"
+test -z "$(find "$fresh_bundle" -name '.rustui-package-owner.*' -print -quit)"
 test "$(cat "$bundle/sentinel")" = 'existing bundle sentinel'
 if CARGO_TARGET_DIR="$target_root" \
     RUSTUI_PLAYGROUND_BINARY="$headstart_binary" \
@@ -137,5 +138,26 @@ if CARGO_TARGET_DIR="$target_root" \
     exit 1
 fi
 cmp "$headstart_binary" "$fresh_bundle/Contents/MacOS/rustui-playground"
+test "$(cat "$bundle/sentinel")" = 'existing bundle sentinel'
+failed_bundle="$temporary_root/failed output/RustUI Playground.app"
+if CARGO_TARGET_DIR="$target_root" \
+    RUSTUI_PLAYGROUND_BINARY="$headstart_binary" \
+    RUSTUI_PLAYGROUND_BUNDLE_PATH="$failed_bundle" \
+    RUSTUI_PLAYGROUND_REFERENCES_DIR="$references_source" \
+    RUSTUI_RELEASE_NOTICES_DIR="$temporary_root/missing-notices" \
+        "$repository_root/apps/rustui-playground/package-app.sh" >/dev/null 2>&1; then
+    printf '%s\n' 'package unexpectedly succeeded with missing release notices.' >&2
+    exit 1
+fi
+if [ -e "$failed_bundle" ]; then
+    printf '%s\n' 'failed fresh bundle was left behind.' >&2
+    exit 1
+fi
+CARGO_TARGET_DIR="$target_root" \
+RUSTUI_PLAYGROUND_BINARY="$headstart_binary" \
+RUSTUI_PLAYGROUND_BUNDLE_PATH="$failed_bundle" \
+RUSTUI_PLAYGROUND_REFERENCES_DIR="$references_source" \
+    "$repository_root/apps/rustui-playground/package-app.sh" >/dev/null
+cmp "$headstart_binary" "$failed_bundle/Contents/MacOS/rustui-playground"
 test "$(cat "$bundle/sentinel")" = 'existing bundle sentinel'
 printf '%s\n' "Playground package replaces stale SVG references and preserves them if promotion fails."
