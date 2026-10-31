@@ -136,6 +136,16 @@ leaf and collapsed and expanded its branch. The offscreen KeyedList specimen
 was not exercised. The app was quit and its bundle moved to Trash. These are
 bounded post-change smoke checks, not full collection or performance acceptance.
 
+## R17 retained Tree comparison — 2026-10-31
+
+Commit `ac46f2ec` compares and reconciles against the retained Tree nodes by
+reference, avoiding a full copy of the old tree on every render. The locked
+offline Headstart collection suite passed 104 tests with one manual workload
+ignored; rustfmt and diff checks passed. Evidence:
+`target/headstart/evidence/native-tree-retained-borrow-20261031.log`, SHA-256
+`017b475fcce038198a81d7425e1f1f4e5c94bb1be96511b9352df4a2ed62a00f`.
+No timing or post-change native GUI acceptance is claimed.
+
 ## Native GUI evidence provenance — 2026-10-31
 
 A generic-name Playground selection was observed to resolve an older checkout while a current disposable bundle existed. For prior GUI entries, an executable hash alone proves the bundle's contents but does not prove which app the automation controlled. Keep historical observations, but treat native acceptance as unverified unless the inspected UI is tied to the exact process and bundle path or independently corroborated. Subsequent native checks must bind by full bundle path and verify the process and executable hash. Source/test-window and build results are unaffected.
