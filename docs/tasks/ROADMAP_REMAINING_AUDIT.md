@@ -146,6 +146,19 @@ ignored; rustfmt and diff checks passed. Evidence:
 `017b475fcce038198a81d7425e1f1f4e5c94bb1be96511b9352df4a2ed62a00f`.
 No timing or post-change native GUI acceptance is claimed.
 
+## R17 rendered large-Tree workload — 2026-10-31
+
+Commit `08f5a4bc` adds an opt-in GPUI test-window workload with one expanded
+root and 10,000 children. It verifies the last child is present and that at
+least ten owner renders run. Four optimized Headstart samples measured the
+first explicit draw at 1.77–2.05 ms and ten notified updates plus forced draws
+at 37.29–39.63 ms total. The first-draw timing excludes window creation; the
+ignored test passed 1/1. Evidence:
+`target/headstart/evidence/native-tree-10000-workload-20261031.log`, SHA-256
+`1519b37c1a7438bc43564612566c0c3e933b857d3601820c0ea9d5d2af2fbaaa`.
+These local test-window measurements do not establish native scrolling,
+memory, cross-machine, or release-budget acceptance.
+
 ## Native GUI evidence provenance — 2026-10-31
 
 A generic-name Playground selection was observed to resolve an older checkout while a current disposable bundle existed. For prior GUI entries, an executable hash alone proves the bundle's contents but does not prove which app the automation controlled. Keep historical observations, but treat native acceptance as unverified unless the inspected UI is tied to the exact process and bundle path or independently corroborated. Subsequent native checks must bind by full bundle path and verify the process and executable hash. Source/test-window and build results are unaffected.
