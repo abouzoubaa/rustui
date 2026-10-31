@@ -114,5 +114,7 @@ change all related files needed to complete and validate it; unrelated work and
 dependency revisions remain outside that scope.
 
 Accessibility and VoiceOver acceptance are explicitly undone and deferred by
-user direction. Functional and release work continues; see the
+user direction. Further localization and Web/Wasm work are also deferred while
+native macOS work continues; existing implementations and evidence are retained.
+Functional and release work continues; see the
 [canonical remaining-work record](docs/tasks/ROADMAP_REMAINING_AUDIT.md).

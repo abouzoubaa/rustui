@@ -9,23 +9,22 @@ exercise does not close unrelated requirements.
 
 | Target | Current evidence | Outstanding release scope |
 | --- | --- | --- |
-| macOS native | Optimized arm64 builds, same-host executable reproduction and disposable Playground packages; bounded functional and 8/8 English/French/Arabic input checks on macOS 27 | Supported OS/version policy, wider functional/visual/theme/RTL/workload checks, cross-machine/archive reproduction, compiled CI, signing and notarization |
-| Web/Wasm browser | Optimized Playground bundle, hashed build inputs/assets, bounded functional and 6/6 English/French/Arabic input checks in one Chromium profile | Supported browser/version policy, wider browser/real OS IME/clipboard/font/theme/RTL/workload checks and compiled CI |
+| macOS native | Optimized arm64 builds, same-host executable reproduction and disposable Playground packages; bounded functional and 8/8 English/French/Arabic input checks on macOS 27 | Supported OS/version policy, wider functional/visual/theme/workload checks, cross-machine/archive reproduction, compiled CI, signing and notarization |
+| Web/Wasm browser | Optimized Playground bundle, hashed build inputs/assets, bounded functional and 6/6 English/French/Arabic input checks in one Chromium profile | Further Web/Wasm implementation and acceptance are deferred until the user resumes them. |
 
 Linux CI checks the source tooling. It does not establish a Linux product target.
 Do not infer Windows, Linux, mobile, or other platform support from GPUI's APIs.
 Accessibility acceptance and VoiceOver are **undone and deferred** by the user.
 Keep existing behavior and evidence; the deferral is not a passed check.
 
-## Current language scope
+## Localization scope
 
-The user selected **English, French and Arabic** for the current release scope
-on 2026-10-26. Validate their input, text rendering, translations and locale
-behavior on the declared macOS and Web targets, including French accents and
-Arabic RTL/mixed-direction text. Japanese and all other languages/scripts are
-**undone and deferred** for a later release. Native Japanese IME acceptance is
-unrun/deferred; it is not counted as a passed check. Preserve existing code,
-fonts and evidence without claiming broader acceptance.
+The user has deferred all further localization work, including French and Arabic,
+to prioritize native macOS completion. Japanese and other languages and scripts
+also remain deferred. Preserve existing translations, fonts and evidence; the
+deferral does not mark localization, RTL or language-specific acceptance as passed.
+The earlier English/French/Arabic observations in this guide are historical
+bounded evidence and do not change the current priority.
 
 ## Build the reviewed source
 
@@ -35,8 +34,15 @@ compiler identities, host/SDK, command output and artifact hashes. Preserve
 unrelated work and persistent dependency caches.
 
 ```sh
-./scripts/verify-release.sh source
 ./scripts/verify-release.sh macos
+```
+
+The full source gate includes Web patch-stack checks. Run applicable native
+source checks independently now; run the complete source gate and Web release
+command when Web/Wasm work resumes:
+
+```sh
+./scripts/verify-release.sh source
 ./scripts/verify-release.sh web
 ```
 
