@@ -10,6 +10,7 @@ ROOT = Path(__file__).resolve().parents[2]
 SCRIPT = ROOT / "scripts/apply_gpui_base_slider_first_move.py"
 SOURCE = Path("vendor/gpui-base-0.7.3/src/slider.rs")
 PATCH = ROOT / "patches/approved/gpui-base-slider-first-move-v1.patch"
+SNAP_PATCH = ROOT / "patches/approved/gpui-base-slider-snap-position-v1.patch"
 
 
 class SliderFirstMovePatchTests(unittest.TestCase):
@@ -23,6 +24,7 @@ class SliderFirstMovePatchTests(unittest.TestCase):
         (self.root / "Cargo.toml").write_text(
             '[patch.crates-io]\ngpui-base = { path = "vendor/gpui-base-0.7.3" }\n'
         )
+        subprocess.run(["git", "apply", "--reverse", str(SNAP_PATCH)], cwd=self.root, check=True)
         subprocess.run(["git", "apply", "--reverse", str(PATCH)], cwd=self.root, check=True)
 
     def tearDown(self):
@@ -52,12 +54,15 @@ class SliderFirstMovePatchTests(unittest.TestCase):
 
     def test_composed_stack_detects_tampered_earlier_patch_without_mutation(self):
         self.assertEqual(self.run_patch("--apply").returncode, 0)
+        snap = ROOT / "scripts/apply_gpui_base_slider_snap_position.py"
+        subprocess.run([sys.executable, str(snap), "--root", str(self.root),
+                        "--artifacts", str(ROOT), "--apply"], check=True, capture_output=True)
         source = self.root / SOURCE
         before = source.read_bytes()
         artifacts = self.root / "artifacts"
         patches = artifacts / "patches/approved"
         patches.mkdir(parents=True)
-        for name in ("gpui-base-slider-first-move-v1.patch", "gpui-base-slider-zero-track-v1.patch"):
+        for name in ("gpui-base-slider-snap-position-v1.patch", "gpui-base-slider-first-move-v1.patch", "gpui-base-slider-zero-track-v1.patch"):
             shutil.copyfile(ROOT / "patches/approved" / name, patches / name)
         command = [sys.executable, str(ROOT / "scripts/verify_gpui_base_slider_patch_stack.py"),
                    "--root", str(self.root), "--artifacts", str(artifacts)]

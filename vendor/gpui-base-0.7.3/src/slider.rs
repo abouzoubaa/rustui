@@ -394,6 +394,7 @@ impl SliderState {
             self.percentage.end = percentage;
             self.value.set_end(value);
         }
+        self.update_thumb_pos();
         cx.emit(SliderEvent::Change(self.value));
         cx.notify();
     }

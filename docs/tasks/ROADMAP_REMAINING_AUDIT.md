@@ -8,6 +8,30 @@ Earlier entries describing locale acceptance as an immediate priority are histor
 
 ## R09/M924 native Utility Window — 2026-10-31
 
+Follow-up: the GPUI Base pointer path snapped a Slider's value to its step but
+left its thumb at the unsnapped pointer position. A rendered test reproduced
+value 60 with position 65%; the reproducible `gpui-base-slider-snap-position-v1`
+patch now synchronizes the thumb with the resulting value. The regression passes
+on horizontal and vertical tracks; the Slider suite passed 28/28 and the
+three-layer patch replay, reversal and tamper suite passed 7/7. Utility Window
+RGB sliders now use a 0.01 step instead of the default 1 over their 0–1 range;
+their Playground suite passed 4/4. In the exact native disposable executable
+SHA-256 `1a5eacffb18b2caac475e32bd76f1d3748e76c7b020a27cc7329c23289c5ec2c`,
+an automated drag displayed an intermediate Red value of approximately 0.74
+and retained it across a tab change. The owned app was quit and the bundle
+moved to Trash. Physical input and broader Slider acceptance remain open.
+Replay the new patch after the first-move patch using
+`python3 scripts/apply_gpui_base_slider_snap_position.py --apply`; verify all
+three layers with `python3 scripts/verify_gpui_base_slider_patch_stack.py`.
+Logs under `target/headstart/evidence/`: `slider-snap-before-20261031.log`
+(SHA-256 `0c45fb3bada7c7f1c3457e365ac12df53a70b7ed024176f0e4b7efe941224dc7`),
+`slider-snap-suite-20261031.log` (SHA-256
+`abb6583a60a48132e39397fd813eb9f3ed763015d345de991ad598739ce50925`),
+`utility-step-tests-20261031.log` (SHA-256
+`eb9b3b4459a6342187f225a3d7e7b19766e66799499052d2ff9aabced5cd2d9b`), and
+`slider-snap-native-build-20261031.log` (SHA-256
+`9ac3e7d91fb0a9d2f79adb23f2f80d1561d77252b1d254c77149f0c07f148fd9`).
+
 On `45f68af8`, the locked offline native Playground build passed. The built
 and disposable bundle executables matched SHA-256
 `476188f54265668b1db1394b9ee7443361ef83b4de824ee02231079be922c160`.

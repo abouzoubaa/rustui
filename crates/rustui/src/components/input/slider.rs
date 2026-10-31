@@ -709,6 +709,7 @@ mod tests {
                     0.0..=100.0,
                 )
                 .id("drag-test")
+                .step(20.0)
                 .vertical(self.vertical)
             }
         }
@@ -728,7 +729,7 @@ mod tests {
                     cx,
                 )
             });
-            let bounds = window.update(|window, app| {
+            let (bounds, state) = window.update(|window, app| {
                 let _ = window.draw(app);
                 let retained = owner
                     .read(app)
@@ -738,7 +739,7 @@ mod tests {
                     )
                     .unwrap();
                 let state = retained.read(app).state.clone();
-                state.read(app).bounds()
+                (state.read(app).bounds(), state)
             });
             let x = f32::from(bounds.origin.x);
             let y = f32::from(bounds.origin.y);
@@ -759,6 +760,11 @@ mod tests {
             assert!(
                 first_value > 55.0,
                 "first thumb movement was lost: {first_value}"
+            );
+            let first_position = window.update(|_, app| state.read(app).percentage().end);
+            assert!(
+                (first_position - first_value / 100.0).abs() < 0.001,
+                "thumb position {first_position} disagrees with value {first_value}"
             );
             window.simulate_mouse_move(point(0.8), Some(MouseButton::Left), modifiers);
             window.simulate_mouse_up(point(0.8), MouseButton::Left, modifiers);

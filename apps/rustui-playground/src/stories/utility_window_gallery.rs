@@ -86,14 +86,17 @@ impl View for UtilityWindowGallery {
                                     .child(LocalizedText("lab-utility-color-channels"))
                                     .child(
                                         Slider(self.red_binding(), 0.0..=1.0)
+                                            .step(0.01)
                                             .accessibility_label(UTILITY_WINDOW_CHANNEL_LABELS[0]),
                                     )
                                     .child(
                                         Slider(self.green_binding(), 0.0..=1.0)
+                                            .step(0.01)
                                             .accessibility_label(UTILITY_WINDOW_CHANNEL_LABELS[1]),
                                     )
                                     .child(
                                         Slider(self.blue_binding(), 0.0..=1.0)
+                                            .step(0.01)
                                             .accessibility_label(UTILITY_WINDOW_CHANNEL_LABELS[2]),
                                     ),
                             ),
