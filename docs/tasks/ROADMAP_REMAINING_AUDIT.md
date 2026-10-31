@@ -84,6 +84,13 @@ On commit `169e23fc`, the ignored macOS Headstart test-window workload `owner_up
 
 ## R13/R15 native Picker menu width — 2026-10-31
 
+The rendered Picker regression now also changes the window's rem size while the
+menu is open, confirms its measured width grows, and restores the original size.
+The focused Headstart test passed 1/1; log SHA-256
+`06910279c17d99ffeb630a28a7c917505463ce2c9e68cd9a281659b42a1630cd`
+at `target/headstart/evidence/picker-font-size-cache-20261031.log`. This verifies
+font-size cache invalidation in a GPUI test window, not native theme acceptance.
+
 The large-option timing workload now checks that the menu opened using its focus
 handles, so it can run in optimized builds without debug-only selectors. On an
 Apple M1 Max with 64 GiB RAM, four optimized GPUI test-window samples with

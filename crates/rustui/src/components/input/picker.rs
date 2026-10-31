@@ -503,6 +503,27 @@ mod tests {
                     .width,
             );
             if !explicit {
+                let original_rem = window.update(|window, app| {
+                    let original = window.rem_size();
+                    window.set_rem_size(original * 1.5);
+                    window.refresh();
+                    let _ = window.draw(app);
+                    original
+                });
+                let larger_font = window
+                    .debug_bounds("rustui-select-popup-test")
+                    .expect("picker popup should survive a font-size change")
+                    .size
+                    .width;
+                assert!(
+                    larger_font > widths[0],
+                    "font-size changes must invalidate cached width"
+                );
+                window.update(|window, app| {
+                    window.set_rem_size(original_rem);
+                    window.refresh();
+                    let _ = window.draw(app);
+                });
                 window.update(|window, app| {
                     owner.update(app, |host, cx| {
                         host.component_mut().long_option =
