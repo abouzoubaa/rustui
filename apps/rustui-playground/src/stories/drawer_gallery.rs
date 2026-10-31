@@ -142,14 +142,28 @@ impl View for DrawerGallery {
                     .localized_trigger("lab-drawer-competing-sheet")
                     .title("Competing modal")
                     .localized_title("lab-drawer-competing-title")
-                    .content(LocalizedText("lab-drawer-exclusive-help")),
+                    .content(
+                        VStack::new()
+                            .child(LocalizedText("lab-drawer-exclusive-help"))
+                            .child(Button(
+                                "Try to open Drawer",
+                                Action::new(|owner: &mut Self| owner.visible = true),
+                            )),
+                    ),
             )
             .child(
                 Dialog("drawer-competing-dialog", "Open competing Dialog")
                     .localized_trigger("lab-drawer-competing-dialog")
                     .title("Competing modal")
                     .localized_title("lab-drawer-competing-title")
-                    .content(LocalizedText("lab-drawer-exclusive-help")),
+                    .content(
+                        VStack::new()
+                            .child(LocalizedText("lab-drawer-exclusive-help"))
+                            .child(Button(
+                                "Try to open Drawer",
+                                Action::new(|owner: &mut Self| owner.visible = true),
+                            )),
+                    ),
             );
         if self.mounted {
             let mut drawer = Drawer("details-drawer", self.visible())
