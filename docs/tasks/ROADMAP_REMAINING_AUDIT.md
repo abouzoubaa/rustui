@@ -34,6 +34,14 @@ native focus-restoration path; it does not establish all dismissal paths or
 the entire focus-containment contract. The app was quit and its bundle moved
 to Trash.
 
+At `495fb4cd` (documentation-only changes since the same hash-matched build),
+the owned bundle ran as PID 29347. The native story showed the bottom, left,
+and top edge positions; a backdrop click dismissed the bottom drawer. Release
+removed the top drawer while the owner retained its requested-open value, and
+remount showed it again. The competing-modal conflict was not exercised: the
+active modal blocks the background opener. The app was quit and its bundle
+moved to Trash. These are bounded desktop observations, not full acceptance.
+
 ## Native GUI evidence provenance — 2026-10-31
 
 A generic-name Playground selection was observed to resolve an older checkout while a current disposable bundle existed. For prior GUI entries, an executable hash alone proves the bundle's contents but does not prove which app the automation controlled. Keep historical observations, but treat native acceptance as unverified unless the inspected UI is tied to the exact process and bundle path or independently corroborated. Subsequent native checks must bind by full bundle path and verify the process and executable hash. Source/test-window and build results are unaffected.
