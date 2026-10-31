@@ -70,6 +70,28 @@ On commit `169e23fc`, the ignored macOS Headstart test-window workload `owner_up
 
 ## R13/R15 native Picker menu width — 2026-10-31
 
+The large-option timing workload now checks that the menu opened using its focus
+handles, so it can run in optimized builds without debug-only selectors. On an
+Apple M1 Max with 64 GiB RAM, four optimized GPUI test-window samples with
+10,000 short options took 12.9–15.9 ms to open and draw and 23.7–24.9 ms for
+ten forced redraws. The final test executable SHA-256 was
+`a9a7a307fbf34b7267bb61908223df6378995599138c9745dbbad91a59b954cf`;
+the final log SHA-256 was
+`804bb33bd159d1e71be2676708410aaab48fc209b58505eb4d3d494bb772bc52` at
+`target/headstart/evidence/picker-width-release-20261031/final.log`. This local
+workload does not establish a release performance budget or physical-input result.
+The rendered-width test is restricted to debug builds because its selector is
+debug-only; the focused debug test passed 1/1.
+
+In the owned native Playground executable (PID 55081, SHA-256
+`530ccb72b1eebe7054c57595d39a2429fce2cf563202bba016a5e504042fe29b`),
+scrolling inside the input canvas reached the controls. Enabling the first Picker
+opened its explicitly sized, narrower menu; the long option was truncated as
+expected at that fixed width. Two Down keys and Return selected Kotlin, and both
+Pickers and the owner value showed Kotlin. The app exited, its bundle moved to
+Trash and the GUI slot was released. This is bounded explicit-width and keyboard
+evidence, not full Picker acceptance.
+
 The v6 Select patch caches measured title widths while titles and font are
 unchanged. A rendered GPUI regression with a 90-pixel trigger passed for a long
 option, an explicit 120-pixel menu, changed and shortened options, and window

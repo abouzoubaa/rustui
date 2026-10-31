@@ -430,6 +430,7 @@ fn record_confirmed_selection(owner_value: &mut String, confirmed_value: &str) {
 mod tests {
     use super::*;
 
+    #[cfg(debug_assertions)]
     #[gpui::test]
     fn automatic_menu_width_fits_long_options_and_respects_explicit_width(
         cx: &mut gpui::TestAppContext,
@@ -562,6 +563,7 @@ mod tests {
     #[ignore = "manual large-option Picker timing"]
     fn automatic_menu_width_large_option_timing(cx: &mut gpui::TestAppContext) {
         use crate::{runtime::component_host::ComponentHost, view::View};
+        use gpui::Focusable as _;
 
         struct Owner {
             value: String,
@@ -592,7 +594,7 @@ mod tests {
             crate::theme::activate_theme(&theme, Some(crate::theme::AppearanceMode::Dark), app)
                 .unwrap();
         });
-        let (_, window) = cx.add_window_view(|_, cx| {
+        let (owner, window) = cx.add_window_view(|_, cx| {
             ComponentHost::new(
                 Owner {
                     value: "Option 00000".into(),
@@ -606,12 +608,26 @@ mod tests {
             window.focus_next(app);
             let _ = window.draw(app);
         });
+        let select = window.update(|_, app| {
+            owner
+                .read(app)
+                .retained_entity_for_test::<RetainedPicker>(
+                    vec![],
+                    Identity::from("large-width-test"),
+                )
+                .unwrap()
+                .read(app)
+                .select
+                .clone()
+        });
+        let closed_focus = window.update(|_, app| select.read(app).focus_handle(app));
         let started = std::time::Instant::now();
         window.simulate_keystrokes("enter");
         window.update(|window, app| {
             let _ = window.draw(app);
         });
-        assert!(window.debug_bounds("rustui-select-popup-test").is_some());
+        let open_focus = window.update(|_, app| select.read(app).focus_handle(app));
+        assert!(closed_focus != open_focus, "Picker menu must be open");
         eprintln!(
             "10,000-option Picker open and draw: {:?}",
             started.elapsed()
