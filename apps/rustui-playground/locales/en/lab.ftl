@@ -807,3 +807,6 @@ lab-composition-rename = Rename first child
 lab-composition-remove = Remove last child
 lab-composition-move = Move first to end
 lab-composition-unmounted = Composition unmounted
+
+lab-composition-error = Composition error: {detail}
+lab-composition-reference-accepted = Browser reference request accepted

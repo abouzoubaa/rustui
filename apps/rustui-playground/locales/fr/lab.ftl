@@ -807,3 +807,6 @@ lab-composition-rename = Renommer le premier élément
 lab-composition-remove = Retirer le dernier élément
 lab-composition-move = Déplacer le premier à la fin
 lab-composition-unmounted = Composition démontée
+
+lab-composition-error = Erreur de composition : {detail}
+lab-composition-reference-accepted = Requête de référence du navigateur acceptée

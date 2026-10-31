@@ -807,3 +807,6 @@ lab-composition-rename = إعادة تسمية العنصر الأول
 lab-composition-remove = إزالة العنصر الأخير
 lab-composition-move = نقل العنصر الأول إلى النهاية
 lab-composition-unmounted = تم إلغاء تركيب المجموعة
+
+lab-composition-error = خطأ في التركيب: {detail}
+lab-composition-reference-accepted = تم قبول طلب مرجع المتصفح

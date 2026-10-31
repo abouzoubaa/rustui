@@ -1,5 +1,5 @@
 //! Structural composition editing through RustUI's public compiled-factory API.
-use rustui::{component, prelude::*, preview::*, view::EmptyView};
+use rustui::{component, localization::MessageArguments, prelude::*, preview::*, view::EmptyView};
 use std::collections::{BTreeMap, BTreeSet};
 
 pub fn demo() -> impl View {
@@ -22,11 +22,35 @@ pub(crate) fn reference_demo() -> impl View {
     })
 }
 
+#[derive(Clone, Default)]
+enum CompositionStatus {
+    #[default]
+    Idle,
+    Error(String),
+    #[allow(dead_code)] // Constructed by the browser reference handler.
+    ReferenceAccepted,
+}
+
+impl CompositionStatus {
+    fn view(&self) -> AnyView {
+        match self {
+            Self::Idle => AnyView::new(EmptyView),
+            Self::Error(detail) => AnyView::new(
+                LocalizedText("lab-composition-error")
+                    .with_arguments(MessageArguments::new().with("detail", detail.clone())),
+            ),
+            Self::ReferenceAccepted => {
+                AnyView::new(LocalizedText("lab-composition-reference-accepted"))
+            }
+        }
+    }
+}
+
 struct Model {
     host: CompositionHost<()>,
     stamp: CompositionStamp,
     next_id: u64,
-    status: String,
+    status: CompositionStatus,
 }
 
 impl Model {
@@ -113,7 +137,7 @@ impl Model {
             host,
             stamp,
             next_id: 1,
-            status: String::new(),
+            status: CompositionStatus::Idle,
         };
         model.add()?;
         Ok(model)
@@ -264,7 +288,7 @@ impl CompositionGallery {
             model.stamp = stamp;
         }
         if outcome.changed {
-            model.status = "Browser reference request accepted".into();
+            model.status = CompositionStatus::ReferenceAccepted;
             self.revision = self.revision.saturating_add(1);
         }
         (outcome.reply, outcome.changed)
@@ -280,10 +304,10 @@ impl CompositionGallery {
     }
     fn change(&mut self, operation: fn(&mut Model) -> Result<(), PreviewError>) {
         if let Some(Ok(model)) = &mut self.model {
-            model.status = operation(model)
-                .err()
-                .map(|error| error.to_string())
-                .unwrap_or_default();
+            model.status = match operation(model) {
+                Ok(()) => CompositionStatus::Idle,
+                Err(error) => CompositionStatus::Error(error.to_string()),
+            };
         }
         self.revision = self.revision.saturating_add(1);
     }
@@ -327,15 +351,19 @@ impl View for CompositionGallery {
                 match model.host.render(&()) {
                     Ok(Some(view)) => view,
                     Ok(None) => AnyView::new(LocalizedText("lab-composition-unmounted")),
-                    Err(error) => AnyView::new(Text(error.to_string())),
+                    Err(error) => CompositionStatus::Error(error.to_string()).view(),
                 },
-                model.status.clone(),
+                model.status.view(),
                 model.children().len(),
             ),
-            Some(Err(error)) => (AnyView::new(Text(error.to_string())), String::new(), 0),
+            Some(Err(error)) => (
+                CompositionStatus::Error(error.to_string()).view(),
+                AnyView::new(EmptyView),
+                0,
+            ),
             None => (
                 AnyView::new(LocalizedText("lab-composition-unmounted")),
-                String::new(),
+                AnyView::new(EmptyView),
                 0,
             ),
         };
@@ -379,13 +407,53 @@ impl View for CompositionGallery {
                     ),
             )
             .child(view)
-            .child(Text(status))
+            .child(status)
     }
 }
 
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn composition_status_tracks_failure_and_clears_after_success() {
+        fn fail(_: &mut Model) -> Result<(), PreviewError> {
+            Err(PreviewError::Invalid("sample detail".into()))
+        }
+        fn succeed(_: &mut Model) -> Result<(), PreviewError> {
+            Ok(())
+        }
+        let mut gallery = CompositionGallery::new();
+        gallery.change(fail);
+        let status = &gallery.model.as_ref().unwrap().as_ref().unwrap().status;
+        assert!(
+            matches!(status, CompositionStatus::Error(detail) if detail.contains("sample detail"))
+        );
+        gallery.change(succeed);
+        let status = &gallery.model.as_ref().unwrap().as_ref().unwrap().status;
+        assert!(matches!(status, CompositionStatus::Idle));
+    }
+
+    #[test]
+    fn localized_composition_errors_preserve_the_detail() {
+        let catalogs = super::super::locale_selector::catalogs();
+        for (language, prefix) in [
+            ("en", "Composition error"),
+            ("fr", "Erreur de composition"),
+            ("ar", "خطأ في التركيب"),
+        ] {
+            let locale = rustui::localization::Locale::parse(language).unwrap();
+            let message = catalogs
+                .format(
+                    &locale,
+                    "lab-composition-error",
+                    &MessageArguments::new().with("detail", "sample detail"),
+                )
+                .unwrap();
+            assert!(message.contains(prefix), "{language}: {message}");
+            assert!(message.contains("sample detail"), "{language}: {message}");
+        }
+    }
 
     #[test]
     fn composition_actions_follow_document_root_identity() {
