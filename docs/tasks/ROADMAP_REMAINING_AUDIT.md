@@ -84,6 +84,18 @@ comparison remain. The focused locked offline Headstart Table suite passed
 `1b1314bdffe778a9dbf42aa18f423033a3cd77b4e275a4311838cf82e8fc0342`).
 No timing or large-table performance acceptance is claimed by this change.
 
+## R17 retained List and Tree data copies — 2026-10-31
+
+Commit `c2048f82` moves creation-only item and node copies into the retained
+entity initializers for List, KeyedList, and Tree. KeyedList also defers its
+initial selection lookup until creation. Normal data reconciliation remains
+unchanged. The locked offline Headstart collection suite passed 104/104 after
+all three edits; rustfmt and diff checks passed. The log is
+`target/headstart/evidence/native-collection-lazy-clone-20261031.log` (SHA-256
+`1dda908bc9420e35c929c6eb49b85fdd2c6cc4f40ec4160b19511f28e333c454`).
+This removes specific unnecessary copies; it does not establish a performance
+budget or complete native collection acceptance.
+
 ## Native GUI evidence provenance — 2026-10-31
 
 A generic-name Playground selection was observed to resolve an older checkout while a current disposable bundle existed. For prior GUI entries, an executable hash alone proves the bundle's contents but does not prove which app the automation controlled. Keep historical observations, but treat native acceptance as unverified unless the inspected UI is tied to the exact process and bundle path or independently corroborated. Subsequent native checks must bind by full bundle path and verify the process and executable hash. Source/test-window and build results are unaffected.
