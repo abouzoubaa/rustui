@@ -183,6 +183,19 @@ branch was removed, and the branch returned on restoration. The app was quit
 and the bundle moved to Trash. These post-change native checks do not close
 full keyboard, virtualization, performance, or collection acceptance.
 
+## R35/R36 non-finite graph drag input — 2026-10-31
+
+Commit `82f93f06` rejects non-finite pointer coordinates before starting or
+updating a graph drag. Previously a NaN move could poison the previous pointer;
+after an owner-side node move, a subsequent valid move was rejected. The new
+regression reproduced that failure before the fix. The focused locked offline
+Headstart GraphView suite passed 28/28 after the fix; rustfmt and diff checks
+passed. Evidence: `target/headstart/evidence/native-graph-invalid-pointer-before-20261031.log`
+(SHA-256 `44aac9ef68dfc58d9ee9d2660810ea2aa1d70e3c0a3e42762cd7ace05c2b227a`)
+and `target/headstart/evidence/native-graph-invalid-pointer-after-20261031.log`
+(SHA-256 `a233558e8bc78ff6158503a510a9516637d5eda4b0a6c6e697a30969af16d097`).
+This is focused source-test evidence, not native pointer acceptance.
+
 ## Native GUI evidence provenance — 2026-10-31
 
 A generic-name Playground selection was observed to resolve an older checkout while a current disposable bundle existed. For prior GUI entries, an executable hash alone proves the bundle's contents but does not prove which app the automation controlled. Keep historical observations, but treat native acceptance as unverified unless the inspected UI is tied to the exact process and bundle path or independently corroborated. Subsequent native checks must bind by full bundle path and verify the process and executable hash. Source/test-window and build results are unaffected.
