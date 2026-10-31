@@ -6,6 +6,18 @@ RTL implementation and evidence; do not count deferred localization as complete.
 Web/Wasm, accessibility, and VoiceOver remain deferred as previously directed.
 Earlier entries describing locale acceptance as an immediate priority are historical.
 
+## R19/R33 native Drawer interaction — 2026-10-31
+
+On source commit `3747dce0`, the locked offline Headstart Playground build
+completed. A disposable bundle bound by its full path ran as PID 6651; its
+executable and the built binary both had SHA-256
+`09e926db0f76ac09a24ba292da86082bf55ffecd454a43b6c07a5113fa064c63`.
+In the native Drawer story, entering text updated the owner display, Escape
+closed the drawer, reopening retained the text, the owner update changed the
+title, and owner close dismissed it. The owned app was quit and the disposable
+bundle moved to Trash. This bounded check does not establish full keyboard,
+focus-restoration, lifecycle, or release acceptance.
+
 ## Native GUI evidence provenance — 2026-10-31
 
 A generic-name Playground selection was observed to resolve an older checkout while a current disposable bundle existed. For prior GUI entries, an executable hash alone proves the bundle's contents but does not prove which app the automation controlled. Keep historical observations, but treat native acceptance as unverified unless the inspected UI is tied to the exact process and bundle path or independently corroborated. Subsequent native checks must bind by full bundle path and verify the process and executable hash. Source/test-window and build results are unaffected.
