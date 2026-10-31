@@ -373,16 +373,24 @@ impl RenderOnce for ResizablePanel {
             .children(self.children)
             .when(self.panel_ix > 0, |this| {
                 let ix = self.panel_ix - 1;
+                let axis = self.axis;
                 this.child(
                     resize_handle(("resizable-handle", ix), self.axis)
                         .when_some(self.handle_appearance.clone(), |handle, appearance| {
                             handle.with_appearance(appearance)
                         })
-                        .on_drag(DragPanel, move |drag_panel, _, _, cx| {
+                        .on_drag(DragPanel, move |drag_panel, _, window, cx| {
                             cx.stop_propagation();
-                            // Set current resizing panel ix
-                            state.update(cx, |state, _| {
+                            let position = window.mouse_position();
+                            state.update(cx, |state, cx| {
                                 state.resizing_panel_ix = Some(ix);
+                                let bounds = state.panels[ix].bounds;
+                                let size = match axis {
+                                    Axis::Horizontal => position.x - bounds.left(),
+                                    Axis::Vertical => position.y - bounds.top(),
+                                };
+                                state.resize_panel_at_handle(ix, size, window, cx);
+                                cx.notify();
                             });
                             cx.new(|_| drag_panel.deref().clone())
                         }),
