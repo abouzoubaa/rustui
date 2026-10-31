@@ -26,6 +26,14 @@ Space closed the drawer. Intermediate focus stops and focus restoration were
 not observed, so full keyboard containment and restoration remain open. The
 owned app was quit and its disposable bundle moved to Trash.
 
+At `623c2c00` (documentation-only changes since the same hash-matched build),
+the owned bundle ran as PID 22208. Keyboard Tab focused Open Drawer; Space
+opened it, Escape closed it, and the visible focus ring returned to Open Drawer.
+Space then reopened it without a mouse action. This verifies that particular
+native focus-restoration path; it does not establish all dismissal paths or
+the entire focus-containment contract. The app was quit and its bundle moved
+to Trash.
+
 ## Native GUI evidence provenance — 2026-10-31
 
 A generic-name Playground selection was observed to resolve an older checkout while a current disposable bundle existed. For prior GUI entries, an executable hash alone proves the bundle's contents but does not prove which app the automation controlled. Keep historical observations, but treat native acceptance as unverified unless the inspected UI is tied to the exact process and bundle path or independently corroborated. Subsequent native checks must bind by full bundle path and verify the process and executable hash. Source/test-window and build results are unaffected.
