@@ -18,16 +18,17 @@
 
 ## GPUI Components 0.7.3 Select RTL alignment
 
-`approved/gpui-component-select-rtl-auto-width-v4.patch` layers on the
+`approved/gpui-component-select-rtl-auto-width-v6.patch` layers on the
 committed-title patch and includes the previous v3 RTL changes. It allows RustUI Picker and ComboBox to align their
 popups to the trigger's logical start and reverse and right-align the trigger
 content in RTL, while keeping LTR as the default. Opted-in automatic Select menus measure
 option titles and retain at least the trigger width, capped by the window width;
-explicit menu widths remain unchanged. This replaces v3.
+explicit menu widths remain unchanged. The v6 layer caches measured titles and
+adds a debug-only popup selector for rendered regression tests; it replaces v4.
 Run `python3 scripts/apply_gpui_select_rtl_patch.py --verify` to verify
 the composed image; `--apply` and `--reverse` replay the layer.
 
-`approved/gpui-component-select-popup-rtl-v1.patch` complements v4 by
+`approved/gpui-component-select-popup-rtl-v1.patch` complements v6 by
 propagating direction to the existing search input and option rows. Verify
 its three-file image with `python3 scripts/apply_gpui_select_popup_rtl_patch.py
 --verify`. Apply or reverse the two select layers together; an interrupted

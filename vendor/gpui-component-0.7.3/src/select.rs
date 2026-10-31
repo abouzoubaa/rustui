@@ -119,6 +119,13 @@ impl Default for SelectOptions {
 
 // MARK: SelectState
 
+struct AutoWidthCache {
+    titles: Vec<SharedString>,
+    font: gpui::Font,
+    font_size: gpui::Pixels,
+    text_width: gpui::Pixels,
+}
+
 /// State of the [`Select`] component.
 ///
 /// Emits [`DismissEvent`] when an open menu closes, including after a selection is confirmed.
@@ -135,6 +142,7 @@ where
     focus_ring_enabled: bool,
     right_to_left: bool,
     auto_fit_menu: bool,
+    auto_width_cache: Option<AutoWidthCache>,
 }
 
 /// A Select element.
@@ -302,6 +310,7 @@ where
             focus_ring_enabled: true,
             right_to_left: false,
             auto_fit_menu: false,
+            auto_width_cache: None,
         }
     }
 
@@ -517,43 +526,52 @@ where
         let is_focused = self.state.focus_handle.is_focused(window);
         let show_clean = self.state.cleanable && self.selected_index(cx).is_some();
         let bounds = self.state.bounds;
-        // Measure item titles rather than relying on the intrinsic width of the
-        // virtualized list, which only lays out visible rows.
+        // The list virtualizes rows, so its intrinsic width cannot represent every
+        // title. Cache measurements while the visible titles and font are unchanged.
         let automatic_menu_width = if self.state.open && self.auto_fit_menu && matches!(self.state.menu_width, Length::Auto) {
             let style = window.text_style();
+            let font = style.font();
             let font_size = match self.state.size {
                 Size::XSmall => window.rem_size() * 0.75,
                 Size::Small | Size::Medium => window.rem_size() * 0.875,
                 Size::Large => window.rem_size(),
                 Size::Size(size) => size * 0.875,
             };
-            let max_width = window.viewport_size().width;
-            let chrome = window.rem_size() * 3.0;
-            let mut width = bounds.size.width;
             let list = self.state.list.read(cx);
             let delegate = &list.delegate().delegate;
-            'sections: for section in 0..delegate.sections_count(cx) {
+            let mut titles = Vec::new();
+            for section in 0..delegate.sections_count(cx) {
                 for row in 0..delegate.items_count(section) {
                     if let Some(item) = delegate.item(IndexPath::new(row).section(section)) {
-                        let title = item.title();
+                        titles.push(item.title());
+                    }
+                }
+            }
+            let text_width = match &self.auto_width_cache {
+                Some(cache) if cache.titles == titles && cache.font == font && cache.font_size == font_size => cache.text_width,
+                _ => {
+                    let mut width = px(0.);
+                    for title in &titles {
                         for line in title.lines() {
                             let text: SharedString = line.to_owned().into();
                             let run = gpui::TextRun {
                                 len: text.len(),
-                                font: style.font(),
+                                font: font.clone(),
                                 color: style.color,
                                 background_color: None,
                                 underline: None,
                                 strikethrough: None,
                             };
-                            let line_width = window.text_system().shape_line(text, font_size, &[run], None).width;
-                            width = width.max(line_width + chrome);
+                            width = width.max(window.text_system().shape_line(text, font_size, &[run], None).width);
                         }
                     }
-                    if width >= max_width { break 'sections; }
+                    self.auto_width_cache = Some(AutoWidthCache { titles, font, font_size, text_width: width });
+                    width
                 }
-            }
-            width.min(max_width)
+            };
+            (text_width + window.rem_size() * 3.0)
+                .max(bounds.size.width)
+                .min(window.viewport_size().width)
         } else {
             bounds.size.width
         };
@@ -659,6 +677,7 @@ where
                             bounds,
                             v_flex()
                                 .occlude()
+                                .debug_selector(|| "rustui-select-popup-test".to_owned())
                                 .map(|this| match self.state.menu_width {
                                     Length::Auto => this.w(automatic_menu_width),
                                     Length::Definite(w) => this.w(w),

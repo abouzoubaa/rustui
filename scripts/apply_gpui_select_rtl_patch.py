@@ -9,10 +9,10 @@ import tempfile
 import tomllib
 
 SOURCE = Path("vendor/gpui-component-0.7.3/src/select.rs")
-PATCH = Path("patches/approved/gpui-component-select-rtl-auto-width-v4.patch")
+PATCH = Path("patches/approved/gpui-component-select-rtl-auto-width-v6.patch")
 PRE = "1a1559e6b46cfb562b565d85600bef7731c3015ae5354d0dcc10454e3bc51efe"
-POST = "31e9a302263144f0669fb6483505c9a02e82b21a9c5beb9bef83fff798386213"
-PATCH_HASH = "57f65a5e64a29afea61e2b5f7acae227fe6a189819f75e9f1891bdabacf53cef"
+POST = "371e211d5f253c376764af4b7d5a7571ba379182ae6b9eda6157099233832bcc"
+PATCH_HASH = "9d6d57f11f03ccd7a4d88e7fa55a3c1297dd953e220b19d1d418e2dcc8638895"
 PRESERVED = {
     "vendor/gpui-component-0.7.3/Cargo.toml": "192f4156aee8738567c748d6b1c5bc44c80e4ba5369a41e5349e370d83b35026",
     "vendor/gpui-component-0.7.3/.cargo-checksum.json": "d5b533efba197cc15bcb6756b935a786e846463c1ee431f876e8c334a7e638c6",

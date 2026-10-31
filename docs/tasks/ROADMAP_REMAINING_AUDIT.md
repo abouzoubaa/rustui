@@ -70,6 +70,21 @@ On commit `169e23fc`, the ignored macOS Headstart test-window workload `owner_up
 
 ## R13/R15 native Picker menu width — 2026-10-31
 
+The v6 Select patch caches measured title widths while titles and font are
+unchanged. A rendered GPUI regression with a 90-pixel trigger passed for a long
+option, an explicit 120-pixel menu, changed and shortened options, and window
+width capping. The Picker suite passed 16/16 with one manual timing test ignored;
+the patch replay suite passed 4/4. A separate debug test-window run with 10,000
+options measured 89.1 ms for opening and drawing and 148.5 ms for ten forced
+redraws (one sample; no release-performance claim). Log SHA-256
+`bb6779580519a95267512ec2685ef147a4d9fc923278ffa7b215ccead3e40713` at
+`target/headstart/evidence/picker-auto-width-10000-debug-20261031.log`.
+In the owned native executable (PID 45450, SHA-256
+`530ccb72b1eebe7054c57595d39a2429fce2cf563202bba016a5e504042fe29b`),
+the automatic menu showed all four options in full. The app exited and its
+bundle moved to Trash. Native explicit-width behavior and optimized performance
+remain unverified; the cache still collects and compares titles on open redraws.
+
 RustUI Picker now opts into measured automatic menu widths through the
 reproducible Select v4 patch. The width accounts for option text and trigger
 width, capped to the window; an explicit `menu_width` still uses the existing

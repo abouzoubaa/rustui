@@ -431,6 +431,205 @@ mod tests {
     use super::*;
 
     #[gpui::test]
+    fn automatic_menu_width_fits_long_options_and_respects_explicit_width(
+        cx: &mut gpui::TestAppContext,
+    ) {
+        use crate::{runtime::component_host::ComponentHost, view::View};
+
+        struct Owner {
+            value: String,
+            explicit: bool,
+            long_option: String,
+        }
+        impl View for Owner {
+            fn body(&self) -> impl View {
+                let picker = Picker(
+                    "Choice",
+                    Binding::new(
+                        self.value.clone(),
+                        |owner: &Owner| owner.value.clone(),
+                        |owner, value| owner.value = value,
+                    ),
+                    ["Rust", self.long_option.as_str()],
+                )
+                .id("width-test");
+                let picker = if self.explicit {
+                    picker.menu_width(120.0)
+                } else {
+                    picker
+                };
+                crate::modifiers::frame::Frame(picker).width(90.0)
+            }
+        }
+
+        let theme = crate::theme::parse_theme(include_str!(concat!(
+            env!("CARGO_MANIFEST_DIR"),
+            "/../../themes/macos27.json"
+        )))
+        .unwrap();
+        cx.update(|app| {
+            gpui_component::init(app);
+            crate::theme::activate_theme(&theme, Some(crate::theme::AppearanceMode::Dark), app)
+                .unwrap();
+        });
+
+        let mut widths = Vec::new();
+        for explicit in [false, true] {
+            let (owner, window) = cx.add_window_view(|_, cx| {
+                ComponentHost::new(
+                    Owner {
+                        value: "Rust".into(),
+                        explicit,
+                        long_option: "A significantly longer framework option".into(),
+                    },
+                    cx,
+                )
+            });
+            window.update(|window, app| {
+                let _ = window.draw(app);
+                window.focus_next(app);
+                let _ = window.draw(app);
+            });
+            window.simulate_keystrokes("enter");
+            window.update(|window, app| {
+                let _ = window.draw(app);
+            });
+            widths.push(
+                window
+                    .debug_bounds("rustui-select-popup-test")
+                    .expect("picker popup should be rendered")
+                    .size
+                    .width,
+            );
+            if !explicit {
+                window.update(|window, app| {
+                    owner.update(app, |host, cx| {
+                        host.component_mut().long_option =
+                            "An even longer framework option that changes after the menu opens"
+                                .into();
+                        cx.notify();
+                    });
+                    let _ = window.draw(app);
+                });
+                let updated = window
+                    .debug_bounds("rustui-select-popup-test")
+                    .expect("updated picker popup should be rendered")
+                    .size
+                    .width;
+                assert!(
+                    updated > widths[0],
+                    "changed options must invalidate cached width: before {:?}, after {:?}",
+                    widths[0],
+                    updated
+                );
+                let viewport_width = window.update(|window, app| {
+                    owner.update(app, |host, cx| {
+                        host.component_mut().long_option = "Wide option ".repeat(1_000);
+                        cx.notify();
+                    });
+                    let _ = window.draw(app);
+                    window.viewport_size().width
+                });
+                let capped = window
+                    .debug_bounds("rustui-select-popup-test")
+                    .expect("wide picker popup should be rendered")
+                    .size
+                    .width;
+                assert!(capped <= viewport_width, "menu must fit the window");
+                window.update(|window, app| {
+                    owner.update(app, |host, cx| {
+                        host.component_mut().long_option = "Go".into();
+                        cx.notify();
+                    });
+                    let _ = window.draw(app);
+                });
+                let reduced = window
+                    .debug_bounds("rustui-select-popup-test")
+                    .expect("short picker popup should be rendered")
+                    .size
+                    .width;
+                assert!(reduced < updated, "shorter options should shrink the menu");
+            }
+        }
+        assert_eq!(widths[1], gpui::px(120.0));
+        assert!(
+            widths[0] > widths[1],
+            "long option must widen automatic menu"
+        );
+    }
+
+    #[gpui::test]
+    #[ignore = "manual large-option Picker timing"]
+    fn automatic_menu_width_large_option_timing(cx: &mut gpui::TestAppContext) {
+        use crate::{runtime::component_host::ComponentHost, view::View};
+
+        struct Owner {
+            value: String,
+            options: Vec<String>,
+        }
+        impl View for Owner {
+            fn body(&self) -> impl View {
+                let picker = Picker(
+                    "Choice",
+                    Binding::new(
+                        self.value.clone(),
+                        |owner: &Owner| owner.value.clone(),
+                        |owner, value| owner.value = value,
+                    ),
+                    self.options.clone(),
+                )
+                .id("large-width-test");
+                crate::modifiers::frame::Frame(picker).width(90.0)
+            }
+        }
+        let theme = crate::theme::parse_theme(include_str!(concat!(
+            env!("CARGO_MANIFEST_DIR"),
+            "/../../themes/macos27.json"
+        )))
+        .unwrap();
+        cx.update(|app| {
+            gpui_component::init(app);
+            crate::theme::activate_theme(&theme, Some(crate::theme::AppearanceMode::Dark), app)
+                .unwrap();
+        });
+        let (_, window) = cx.add_window_view(|_, cx| {
+            ComponentHost::new(
+                Owner {
+                    value: "Option 00000".into(),
+                    options: (0..10_000).map(|i| format!("Option {i:05}")).collect(),
+                },
+                cx,
+            )
+        });
+        window.update(|window, app| {
+            let _ = window.draw(app);
+            window.focus_next(app);
+            let _ = window.draw(app);
+        });
+        let started = std::time::Instant::now();
+        window.simulate_keystrokes("enter");
+        window.update(|window, app| {
+            let _ = window.draw(app);
+        });
+        assert!(window.debug_bounds("rustui-select-popup-test").is_some());
+        eprintln!(
+            "10,000-option Picker open and draw: {:?}",
+            started.elapsed()
+        );
+        let redraw_started = std::time::Instant::now();
+        for _ in 0..10 {
+            window.update(|window, app| {
+                window.refresh();
+                let _ = window.draw(app);
+            });
+        }
+        eprintln!(
+            "10,000-option Picker ten refreshed draws: {:?}",
+            redraw_started.elapsed()
+        );
+    }
+
+    #[gpui::test]
     fn disabled_confirmation_restores_owner_selection(cx: &mut gpui::TestAppContext) {
         use crate::{runtime::component_host::ComponentHost, view::View};
         struct Owner {
