@@ -701,7 +701,10 @@ struct Interaction {
 #[derive(Clone)]
 struct Drag {
     id: String,
-    pointer: gpui::Point<gpui::Pixels>,
+    anchor_pointer: gpui::Point<gpui::Pixels>,
+    previous_pointer: gpui::Point<gpui::Pixels>,
+    anchor_rect: CanvasRect,
+    last_target: CanvasRect,
 }
 
 fn drag_for_node(
@@ -709,10 +712,42 @@ fn drag_for_node(
     id: &str,
     pointer: gpui::Point<gpui::Pixels>,
 ) -> Option<Drag> {
-    graph.node(id)?;
+    let rect = graph.node(id)?.rect;
     Some(Drag {
         id: id.to_owned(),
-        pointer,
+        anchor_pointer: pointer,
+        previous_pointer: pointer,
+        anchor_rect: rect,
+        last_target: rect,
+    })
+}
+
+fn drag_move(
+    drag: &mut Drag,
+    graph: &GraphDocument,
+    pointer: gpui::Point<gpui::Pixels>,
+    zoom: f32,
+) -> Option<GraphEdit> {
+    let current = graph.node(&drag.id)?.rect;
+    if current != drag.last_target {
+        drag.anchor_rect = current;
+        drag.anchor_pointer = drag.previous_pointer;
+    }
+    let dx = f32::from(pointer.x - drag.anchor_pointer.x) / zoom;
+    let dy = f32::from(pointer.y - drag.anchor_pointer.y) / zoom;
+    drag.previous_pointer = pointer;
+    let next = CanvasRect::new(
+        drag.anchor_rect.x + dx,
+        drag.anchor_rect.y + dy,
+        current.width,
+        current.height,
+    )
+    .ok()?;
+    drag.last_target = next;
+    Some(GraphEdit::MoveNode {
+        id: drag.id.clone(),
+        x: next.x,
+        y: next.y,
     })
 }
 #[derive(Clone)]
@@ -1381,7 +1416,8 @@ pub(super) fn render_graph(
         }
     });
     if let Some(binding) = editor.filter(|_| !view.disabled) {
-        let update = context.binding_event_updater(binding, translate_node);
+        let read_graph = context.binding_reader(binding.clone());
+        let update = context.binding_event_updater(binding, apply_edit);
         let drag_state = state.clone();
         let guard = lease.clone();
         root = root.on_mouse_move(move |event, window, cx| {
@@ -1394,16 +1430,17 @@ pub(super) fn render_graph(
                 drag_state.update(cx, |state, _| state.drag = None);
                 return;
             }
-            let drag = drag_state.update(cx, |state, _| {
-                let drag = state.drag.as_mut()?;
-                let previous = drag.clone();
-                drag.pointer = event.position;
-                Some(previous)
+            if drag_state.read(cx).drag.is_none() {
+                return;
+            }
+            let Some(graph) = read_graph(cx) else {
+                return;
+            };
+            let edit = drag_state.update(cx, |state, _| {
+                drag_move(state.drag.as_mut()?, &graph, event.position, viewport.zoom)
             });
-            if let Some(drag) = drag {
-                let dx = f32::from(event.position.x - drag.pointer.x) / viewport.zoom;
-                let dy = f32::from(event.position.y - drag.pointer.y) / viewport.zoom;
-                update((drag.id, dx, dy), cx);
+            if let Some(edit) = edit {
+                update(edit, cx);
             }
         });
         let end = state.clone();
@@ -1651,9 +1688,44 @@ mod tests {
         let pointer = gpui::point(gpui::px(20.0), gpui::px(30.0));
         let drag = drag_for_node(&current, "a", pointer).unwrap();
         assert_eq!(drag.id, "a");
-        assert_eq!(drag.pointer, pointer);
+        assert_eq!(drag.anchor_pointer, pointer);
         let removed = current.edited(GraphEdit::RemoveNode("a".into())).unwrap();
         assert!(drag_for_node(&removed, "a", pointer).is_none());
+    }
+
+    #[test]
+    fn drag_accumulates_subpixel_world_moves_and_rebases_on_owner_change() {
+        let mut graph = graph()
+            .edited(GraphEdit::MoveNode {
+                id: "a".into(),
+                x: 16_777_216.0,
+                y: 10.0,
+            })
+            .unwrap();
+        let point = |x| gpui::point(gpui::px(x), gpui::px(0.0));
+        let mut drag = drag_for_node(&graph, "a", point(0.0)).unwrap();
+        for x in 1..=4 {
+            let edit = drag_move(&mut drag, &graph, point(x as f32), 1.0).unwrap();
+            apply_edit(&mut graph, edit);
+        }
+        assert_eq!(graph.node("a").unwrap().rect().x, 16_777_220.0);
+        graph = graph
+            .edited(GraphEdit::MoveNode {
+                id: "a".into(),
+                x: 20_000_000.0,
+                y: 10.0,
+            })
+            .unwrap();
+        for x in 5..=8 {
+            let edit = drag_move(&mut drag, &graph, point(x as f32), 1.0).unwrap();
+            apply_edit(&mut graph, edit);
+        }
+        assert_eq!(graph.node("a").unwrap().rect().x, 20_000_004.0);
+        // An owner that rejects an attempted move must not receive it again.
+        let _rejected = drag_move(&mut drag, &graph, point(10.0), 1.0).unwrap();
+        let accepted = drag_move(&mut drag, &graph, point(12.0), 1.0).unwrap();
+        apply_edit(&mut graph, accepted);
+        assert_eq!(graph.node("a").unwrap().rect().x, 20_000_006.0);
     }
 
     #[test]

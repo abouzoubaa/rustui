@@ -1,3 +1,7 @@
+## R35/R36 graph drag precision — 2026-10-31
+
+Graph dragging retains accumulated pointer displacement when individual movements round away at large coordinates, while rebasing when the owner changes or rejects a position. The macOS Headstart GraphView suite passed 27/27 (`target/headstart/evidence/native-graph-drag-precision-final-20261031.log`, SHA-256 `cb0643a53a5547ed0dec461ebcf00954fe96e02a4b7545eaee35485409c7fc3c`), including a precision/rebase regression and the rendered owner-update event path. Rejection is simulated in the logic test; physical pointer and broader native GraphView/NodeEditor acceptance of this change remain open. The GUI slot was released.
+
 ## R35/R36 native NodeEditor pointer check — 2026-10-31
 
 The locked offline macOS Headstart release Playground build at `30b93962` passed (`target/headstart/evidence/native-graph-drag-build-30b93962-20261031.log`, SHA-256 `09035291283247cad4c3ad4fbd1c5ce36896f4c24c224fff852bed822c6a4bd7`). The exact-path disposable bundle matched executable SHA-256 `731e7f7a92943f89be470b4668315440b95caddcc703ecdacddedac6b3c35653`. In the Stacks Graphs example, a computer-controlled pointer drag moved the Transform node visibly, selected it, and left its connection visible. This checks an ordinary native app drag, not physical input or an owner update during a drag; the latter has separate test-window coverage. The app exited, the disposable bundle moved to Trash, and the GUI slot was released.
