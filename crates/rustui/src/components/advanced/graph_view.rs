@@ -739,20 +739,23 @@ fn drag_move(
         return None;
     }
     let current = graph.node(&drag.id)?.rect;
-    if current != drag.last_target {
-        drag.anchor_rect = current;
-        drag.anchor_pointer = drag.previous_pointer;
-    }
-    let dx = f32::from(pointer.x - drag.anchor_pointer.x) / zoom;
-    let dy = f32::from(pointer.y - drag.anchor_pointer.y) / zoom;
-    drag.previous_pointer = pointer;
+    let (anchor_rect, anchor_pointer) = if current != drag.last_target {
+        (current, drag.previous_pointer)
+    } else {
+        (drag.anchor_rect, drag.anchor_pointer)
+    };
+    let dx = f32::from(pointer.x - anchor_pointer.x) / zoom;
+    let dy = f32::from(pointer.y - anchor_pointer.y) / zoom;
     let next = CanvasRect::new(
-        drag.anchor_rect.x + dx,
-        drag.anchor_rect.y + dy,
+        anchor_rect.x + dx,
+        anchor_rect.y + dy,
         current.width,
         current.height,
     )
     .ok()?;
+    drag.anchor_rect = anchor_rect;
+    drag.anchor_pointer = anchor_pointer;
+    drag.previous_pointer = pointer;
     drag.last_target = next;
     Some(GraphEdit::MoveNode {
         id: drag.id.clone(),
@@ -1748,6 +1751,24 @@ mod tests {
         );
         let mut drag = drag_for_node(&graph, "a", point(0.0)).unwrap();
         assert!(drag_move(&mut drag, &graph, point(f32::NAN), 1.0).is_none());
+        graph = graph
+            .edited(GraphEdit::MoveNode {
+                id: "a".into(),
+                x: 50.0,
+                y: 10.0,
+            })
+            .unwrap();
+        let edit = drag_move(&mut drag, &graph, point(1.0), 1.0).unwrap();
+        apply_edit(&mut graph, edit);
+        assert_eq!(graph.node("a").unwrap().rect().x, 51.0);
+    }
+
+    #[test]
+    fn overflowed_drag_does_not_poison_a_later_owner_rebase() {
+        let mut graph = graph();
+        let point = |x| gpui::point(gpui::px(x), gpui::px(0.0));
+        let mut drag = drag_for_node(&graph, "a", point(0.0)).unwrap();
+        assert!(drag_move(&mut drag, &graph, point(10.0), f32::MIN_POSITIVE).is_none());
         graph = graph
             .edited(GraphEdit::MoveNode {
                 id: "a".into(),

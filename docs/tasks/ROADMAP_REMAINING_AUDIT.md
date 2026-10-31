@@ -185,6 +185,19 @@ full keyboard, virtualization, performance, or collection acceptance.
 
 ## R35/R36 non-finite graph drag input — 2026-10-31
 
+Follow-up: finite pointer movement at a very small valid zoom can overflow the
+world-coordinate calculation. The failed edit previously advanced drag state,
+causing a later owner rebase to move the node to 41 rather than 51. The new
+regression reproduced that failure; drag state now changes only after the
+computed rectangle is valid. The focused GraphView unit suite passed 24/24 and
+the file passed rustfmt checking. Evidence under `target/headstart/evidence/`:
+`native-graph-overflow-drag-before-20261031.log` (SHA-256
+`574703a75822216caa55376d66d743d7d02ab198e3349124a011ce7180cf38bb`)
+and `native-graph-overflow-drag-after-20261031.log` (SHA-256
+`305ec73fb86f00473f845a15331679eb441d07ad7bcbe2611f8d3add6fd3141e`).
+This is unit-test evidence; native interaction and broader graph acceptance
+remain separate.
+
 Commit `82f93f06` rejects non-finite pointer coordinates before starting or
 updating a graph drag. Previously a NaN move could poison the previous pointer;
 after an owner-side node move, a subsequent valid move was rejected. The new
