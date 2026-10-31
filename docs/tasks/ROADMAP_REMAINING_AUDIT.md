@@ -1,3 +1,7 @@
+## R15 native disabled ColorPicker — 2026-10-31
+
+In the exact-path native Playground bundle, executable SHA-256 `6adaadd941ff809430f698dfca6a69c18bf430879bcdf24bfe52cc40d89be04e` (built at `185d39ea`; intervening changes through `00f48a75` are ledger-only), clicking the disabled ColorPicker did not open a popup. The enabled control opened; selecting `#EE4444` updated both controls sharing its binding, and another click on the disabled control did not open a popup. This is a bounded computer-controlled pointer check, not keyboard, accessibility, physical-input or full ColorPicker acceptance. The app exited, its disposable bundle moved to Trash, and the GUI slot was released.
+
 ## R10/R30 native workspace checkpoint — 2026-10-31
 
 On clean source commit `c21c3636`, macOS `./scripts/cargo-headstart test --profile headstart --locked --offline --workspace --tests` passed 1,536 tests across 42 suites, with zero failures and one ignored manual performance workload (`target/headstart/evidence/native-workspace-tests-c21c3636-20261031.log`, SHA-256 `ea777394a127d3b7b4ede4ed973606a709c7a2ee572618c8d152d7a34e799de3`). This includes the recent GraphView and preview changes. It is native-hosted test evidence, not physical GUI, performance, compiled CI, licensing, packaging or release acceptance. The GUI slot was released.
