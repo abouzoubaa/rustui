@@ -787,8 +787,8 @@ lab-compiled-preview-rerender = Rafraîchir le parent de la prévisualisation
 lab-compiled-preview-show = Aperçu : {component}
 lab-compiled-preview-specimen = Exemple : {component}
 
-lab-compiled-preview-owner-text = Propriétaire : texte={text} activé={enabled} valeur={amount} · identifiant monté : {stamp}
-lab-compiled-preview-owner-secure = Propriétaire : valeur secrète présente={secure_present} activé={enabled} valeur={amount} · identifiant monté : {stamp}
+lab-compiled-preview-owner-text = Propriétaire : texte={text} activé={enabled, select, true {oui} false {non} other {inconnu}} valeur={amount} · identifiant monté : {stamp}
+lab-compiled-preview-owner-secure = Propriétaire : valeur secrète présente={secure_present, select, true {oui} false {non} other {inconnu}} activé={enabled, select, true {oui} false {non} other {inconnu}} valeur={amount} · identifiant monté : {stamp}
 lab-compiled-preview-status-summary = {status} · activations {activations} · actualisations du parent {renders}
 
 lab-preview-teardown = Fermer la prévisualisation

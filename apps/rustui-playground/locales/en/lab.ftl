@@ -787,8 +787,8 @@ lab-compiled-preview-rerender = Rerender preview parent
 lab-compiled-preview-show = Preview {component}
 lab-compiled-preview-specimen = Preview {component} specimen
 
-lab-compiled-preview-owner-text = Owner: text={text} enabled={enabled} amount={amount} · mounted stamp: {stamp}
-lab-compiled-preview-owner-secure = Owner: secure value present={secure_present} enabled={enabled} amount={amount} · mounted stamp: {stamp}
+lab-compiled-preview-owner-text = Owner: text={text} enabled={enabled, select, true {true} false {false} other {unknown}} amount={amount} · mounted stamp: {stamp}
+lab-compiled-preview-owner-secure = Owner: secure value present={secure_present, select, true {true} false {false} other {unknown}} enabled={enabled, select, true {true} false {false} other {unknown}} amount={amount} · mounted stamp: {stamp}
 lab-compiled-preview-status-summary = {status} · activations {activations} · parent rerenders {renders}
 
 lab-preview-teardown = Teardown preview

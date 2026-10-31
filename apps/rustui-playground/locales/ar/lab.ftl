@@ -787,8 +787,8 @@ lab-compiled-preview-rerender = إعادة عرض أصل المعاينة
 lab-compiled-preview-show = معاينة: {component}
 lab-compiled-preview-specimen = مثال: {component}
 
-lab-compiled-preview-owner-text = المالك: النص={text} مفعّل={enabled} القيمة={amount} · معرّف المعاينة المثبّتة: {stamp}
-lab-compiled-preview-owner-secure = المالك: توجد قيمة سرية={secure_present} مفعّل={enabled} القيمة={amount} · معرّف المعاينة المثبّتة: {stamp}
+lab-compiled-preview-owner-text = المالك: النص={text} مفعّل={enabled, select, true {نعم} false {لا} other {غير معروف}} القيمة={amount} · معرّف المعاينة المثبّتة: {stamp}
+lab-compiled-preview-owner-secure = المالك: توجد قيمة سرية={secure_present, select, true {نعم} false {لا} other {غير معروف}} مفعّل={enabled, select, true {نعم} false {لا} other {غير معروف}} القيمة={amount} · معرّف المعاينة المثبّتة: {stamp}
 lab-compiled-preview-status-summary = {status} · مرات التفعيل {activations} · تحديثات الأصل {renders}
 
 lab-preview-teardown = إغلاق المعاينة

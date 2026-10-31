@@ -7667,7 +7667,7 @@ impl View for CompiledPreviewGallery {
                 (!self.secure_value.is_empty()).to_string(),
             )
             .with("enabled", self.enabled.to_string())
-            .with("amount", self.amount.to_string())
+            .with("amount", self.amount)
             .with(
                 "stamp",
                 format!("{:?}", self.host.snapshot().map(|snapshot| &snapshot.stamp)),
@@ -8141,6 +8141,29 @@ impl View for CompiledPreviewGallery {
 mod tests {
     use super::*;
     use rustui::localization::{Catalog, Catalogs, Locale};
+
+    #[test]
+    fn preview_owner_summary_formats_flags_and_amount_for_each_locale() {
+        let catalogs = super::super::locale_selector::catalogs();
+        for (language, yes, no, amount) in [
+            ("en", "true", "false", "0.375"),
+            ("fr", "oui", "non", "0,375"),
+            ("ar", "نعم", "لا", "٠٫٣٧٥"),
+        ] {
+            let locale = Locale::parse(language).unwrap();
+            let arguments = MessageArguments::new()
+                .with("secure_present", "true")
+                .with("enabled", "false")
+                .with("amount", 0.375_f64)
+                .with("stamp", "stamp");
+            let message = catalogs
+                .format(&locale, "lab-compiled-preview-owner-secure", &arguments)
+                .unwrap();
+            for expected in [yes, no, amount, "stamp"] {
+                assert!(message.contains(expected), "{language}: {message}");
+            }
+        }
+    }
 
     #[test]
     fn every_implemented_public_component_has_a_preview_specimen() {
