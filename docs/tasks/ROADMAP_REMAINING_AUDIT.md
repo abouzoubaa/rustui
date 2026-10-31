@@ -1,3 +1,7 @@
+## Project branch integration — 2026-10-31
+
+The verified project branch `work/m118-diagnostics-provenance` was fast-forwarded from `123f4e60` to `a29dcb6e`, integrating 449 accumulated commits. Before integration the primary checkout had no tracked changes; 24 untracked files and all newly tracked target paths were checked for collisions, with none found. After integration all 24 untracked files remained and the tracked checkout was clean. The accumulated diff whitespace diagnostics were confined to patch artifacts and vendored upstream content. This integration is not release acceptance; native SplitView drag and other recorded gates remain open.
+
 ## R17 native divider drag control comparison — 2026-10-31
 
 Using the same disposable Playground executable SHA-256 `4f7e69617415bcc203b7feaa6d814673d144b1c7c52090b5aead853c488b30b1` (runtime source `17f7f26b`; subsequent changes through `b8f24d5c` were a test and ledger entries), a computer-controlled drag visibly moved and selected the NodeEditor Transform node. In the same app session, a drag started near the first SplitView divider did not visibly move that divider. The separate GPUI test-window sequence below passes with two move events. The desktop result does not establish whether the cause is the native hit target, event sequencing, or automation; native SplitView drag remains an open issue for diagnosis. The owned app exited and its disposable bundle moved to Trash.
@@ -968,13 +972,7 @@ Reverify live HEAD and dirty state before subsequent integration; preserve unrel
 
 ## User-selected current scope
 
-English, French, and Arabic remain in scope. The user explicitly set aside
-VoiceOver and broader accessibility work, plus Japanese and other languages
-and scripts, for later. Keep these items marked undone; do not count them as
-passed or imply accessibility or language support beyond the evidence. The
-37-group counts are provisional lower bounds and do not measure the amount of
-code completed or an adjusted-scope release percentage. Older checkpoint counts
-are retained as historical records.
+Prioritize native macOS RustUI. Localization, including French and Arabic, is deferred; preserve existing work. Web/Wasm, VoiceOver, and broader accessibility are also deferred until the user resumes them. Deferred work remains undone and must not be counted as passed. The 37-group counts are provisional and do not measure an adjusted native release percentage.
 
 ## Current release evidence — 2026-10-27
 
