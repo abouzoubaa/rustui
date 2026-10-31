@@ -6,6 +6,7 @@ use std::{cell::Cell, rc::Rc};
 struct SplitProbe {
     axis: Axis,
     unhandled: Rc<Cell<usize>>,
+    three_panels: bool,
 }
 
 impl View for SplitProbe {
@@ -18,11 +19,16 @@ impl View for SplitProbe {
             Axis::Horizontal => SplitView::horizontal("event-path"),
             Axis::Vertical => SplitView::vertical("event-path"),
         }
-        .panels(["first", "second"].map(|id| {
-            crate::prelude::ResizablePanel::new(id, EmptyView)
-                .initial_size(200.0)
-                .size_range(100.0..300.0)
-        }));
+        .panels(
+            ["first", "second", "third"]
+                .into_iter()
+                .take(if self.three_panels { 3 } else { 2 })
+                .map(|id| {
+                    crate::prelude::ResizablePanel::new(id, EmptyView)
+                        .initial_size(200.0)
+                        .size_range(100.0..300.0)
+                }),
+        );
         let unhandled = self.unhandled.clone();
         div()
             .w(px(400.0))
@@ -43,12 +49,18 @@ fn divider_size(native: &Entity<ResizableState>, cx: &mut gpui::VisualTestContex
 #[gpui::test]
 fn rendered_split_divider_drag_resizes_the_first_panel(cx: &mut gpui::TestAppContext) {
     cx.update(gpui_component::init);
-    for axis in [Axis::Horizontal, Axis::Vertical] {
+    for (axis, three_panels) in [
+        (Axis::Horizontal, false),
+        (Axis::Vertical, false),
+        (Axis::Horizontal, true),
+        (Axis::Vertical, true),
+    ] {
         let (owner, window) = cx.add_window_view(|_, app| {
             ComponentHost::new(
                 SplitProbe {
                     axis,
                     unhandled: Rc::new(Cell::new(0)),
+                    three_panels,
                 },
                 app,
             )
@@ -120,6 +132,7 @@ fn focused_divider_routes_physical_arrows_and_clamps_through_the_rendered_contro
                 SplitProbe {
                     axis,
                     unhandled: unhandled.clone(),
+                    three_panels: false,
                 },
                 app,
             )
