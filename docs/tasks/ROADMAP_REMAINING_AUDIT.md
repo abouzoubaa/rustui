@@ -1,3 +1,7 @@
+## R17 native divider drag control comparison — 2026-10-31
+
+Using the same disposable Playground executable SHA-256 `4f7e69617415bcc203b7feaa6d814673d144b1c7c52090b5aead853c488b30b1` (runtime source `17f7f26b`; subsequent changes through `b8f24d5c` were a test and ledger entries), a computer-controlled drag visibly moved and selected the NodeEditor Transform node. In the same app session, a drag started near the first SplitView divider did not visibly move that divider. The separate GPUI test-window sequence below passes with two move events. The desktop result does not establish whether the cause is the native hit target, event sequencing, or automation; native SplitView drag remains an open issue for diagnosis. The owned app exited and its disposable bundle moved to Trash.
+
 ## R17 SplitView pointer event-path regression — 2026-10-31
 
 The public RustUI SplitView now has a GPUI test-window regression that presses its rendered horizontal divider, sends two left-button pointer moves and releases, then verifies that the first panel grew. The focused macOS Headstart test passed 1/1 (`target/headstart/evidence/native-split-pointer-event-20261031.log`, SHA-256 `4ba7b40bca1b87fcf7db35944207a7b8a38a25d6aa17765e71fc35f19e6c84d3`). This narrows the earlier inconclusive desktop drag but does not establish physical pointer behavior or explain the automation result; native divider-drag acceptance remains open.
