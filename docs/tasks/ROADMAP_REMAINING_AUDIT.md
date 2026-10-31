@@ -32,6 +32,10 @@ visibly moved the Utility Red thumb from its midpoint to the requested location
 using the same automated drag that previously produced no movement. The owned
 app was quit, its bundle moved to Trash and the GUI slot released. This checks
 bounded automated interaction, not physical-mouse or complete input acceptance.
+The rendered first-move test was then expanded to horizontal and vertical
+sliders; thumb and track cases passed on both axes (1 test, 4 paths). Log:
+`target/headstart/evidence/slider-first-drag-axes-20261031.log` (SHA-256
+`d01c9d49f568bfe2cab9b63c8b1ea695ba2248ace4e6d28ec91115511e3cc351`).
 On a snapshot with the earlier zero-track patch applied, replay the new patch
 with `python3 scripts/apply_gpui_base_slider_first_move.py --apply`; verify the
 composed images with `python3 scripts/verify_gpui_base_slider_patch_stack.py`.
