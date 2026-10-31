@@ -67,6 +67,12 @@ selection, and restoring rows kept selection empty. The app was quit and the
 bundle moved to Trash. This is bounded owner synchronization evidence, not full
 virtualization, keyboard, visual, or collection acceptance.
 
+At `affe17d7` (documentation-only changes since the same hash-matched build),
+the owned native bundle ran as PID 57989. Clicking Table source row 1 then
+pressing Down selected index 2; Up returned to index 1; Escape cleared the
+owner selection. The app was quit and the bundle moved to Trash. This checks
+those keyboard paths only, not full Table keyboard or collection acceptance.
+
 ## Native GUI evidence provenance — 2026-10-31
 
 A generic-name Playground selection was observed to resolve an older checkout while a current disposable bundle existed. For prior GUI entries, an executable hash alone proves the bundle's contents but does not prove which app the automation controlled. Keep historical observations, but treat native acceptance as unverified unless the inspected UI is tied to the exact process and bundle path or independently corroborated. Subsequent native checks must bind by full bundle path and verify the process and executable hash. Source/test-window and build results are unaffected.
