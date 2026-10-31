@@ -460,11 +460,17 @@ impl Element for ResizePanelGroupElement {
         window.on_mouse_event({
             let state = self.state.clone();
             let axis = self.axis;
+            let on_resize = self.on_resize.clone();
             move |e: &MouseMoveEvent, phase, window, cx| {
                 if !phase.bubble() {
                     return;
                 }
                 let Some(ix) = state.read(cx).resizing_panel_ix else { return };
+                if e.pressed_button != Some(gpui::MouseButton::Left) {
+                    state.update(cx, |state, cx| state.done_resizing(cx));
+                    on_resize(&state, window, cx);
+                    return;
+                }
 
                 state.update(cx, |state, cx| {
                     let panel = state.panels.get(ix).expect("BUG: invalid panel index");

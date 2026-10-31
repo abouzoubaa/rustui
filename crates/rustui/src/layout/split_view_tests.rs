@@ -147,6 +147,41 @@ fn rendered_split_divider_drag_resizes_the_first_panel(cx: &mut gpui::TestAppCon
             after_release, after_idle_move,
             "{axis:?} divider moved after mouse release"
         );
+        // If the OS misses mouse-up (for example after a focus change),
+        // a move without the left button must end the resize.
+        window.simulate_mouse_down(
+            point(after_idle_move - 2.0),
+            gpui::MouseButton::Left,
+            modifiers,
+        );
+        window.simulate_mouse_move(
+            point(after_idle_move - 30.0),
+            Some(gpui::MouseButton::Left),
+            modifiers,
+        );
+        let during_drag = divider_size(&native, window);
+        assert!(during_drag < after_idle_move - 10.0);
+        window.simulate_mouse_move(point(during_drag + 60.0), None, modifiers);
+        let after_lost_release = divider_size(&native, window);
+        assert_eq!(
+            during_drag, after_lost_release,
+            "{axis:?} divider moved without the mouse button"
+        );
+        window.simulate_mouse_move(
+            point(during_drag + 80.0),
+            Some(gpui::MouseButton::Left),
+            modifiers,
+        );
+        assert_eq!(
+            after_lost_release,
+            divider_size(&native, window),
+            "{axis:?} lost release did not end the drag"
+        );
+        window.simulate_mouse_up(
+            point(during_drag + 80.0),
+            gpui::MouseButton::Left,
+            modifiers,
+        );
     }
 }
 

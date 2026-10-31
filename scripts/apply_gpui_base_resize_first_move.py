@@ -10,10 +10,10 @@ import tomllib
 from pathlib import Path
 
 SOURCE = Path("vendor/gpui-base-0.7.3/src/resizable/panel.rs")
-PATCH = Path("patches/approved/gpui-base-resize-first-move-v2.patch")
+PATCH = Path("patches/approved/gpui-base-resize-first-move-v3.patch")
 PRE = "c54be541d3d77e76b286227f6d4cc01856f75a9a549e799a63887f736ef9f0c4"
-POST = "d1f93a39193186f8b114c61893b5354a796275c4f793cfc44fe0ee82b42ea19b"
-PATCH_HASH = "4c2e27107ad2c606535a261fd3f34b0fca34b5642ab1ebb25d63eeb2587dc3bf"
+POST = "0e02f15458b15194300f4ae1ed6c14960aa0e24164e73b624b6a06b4a7c97274"
+PATCH_HASH = "acfcfc996105d8d27b0bcfbf6bb9a7b78f83a3e9e56be0d1ea5d316a7fea0dc6"
 PRESERVED = {
     "vendor/gpui-base-0.7.3/Cargo.toml": "b6fa9bb529c7e049df902890f12f5e15b298aebea6a46bb8e5101d6cade298cb",
     "vendor/gpui-base-0.7.3/.cargo-checksum.json": "9e96d55b0071b60576bc6ac18c3e9c48e6d0de5ff848821af7623bd151f7c3ed",
