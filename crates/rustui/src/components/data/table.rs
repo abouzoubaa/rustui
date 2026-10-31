@@ -496,17 +496,16 @@ impl View for TableView {
             self.rows.clone(),
             direction,
         );
-        let columns = display_columns.clone();
-        let rows = display_rows.clone();
         let column_width = self.column_width;
         let initial_row_style = row_style.clone();
         let initial_header_style = header_style.clone();
         let owner_selection = self.selection.value();
-        let initial_selection = selection_for_rows(owner_selection, rows.len());
-        let (state, created) = context.retained_entity(identity.clone(), move |window, cx| {
+        let initial_selection = selection_for_rows(owner_selection, display_rows.len());
+        // Clone the data only when creating the retained table, not on every render.
+        let (state, created) = context.retained_entity(identity.clone(), |window, cx| {
             let delegate = StringTableDelegate::new(
-                columns,
-                rows,
+                display_columns.clone(),
+                display_rows.clone(),
                 column_width,
                 direction,
                 initial_row_style,
