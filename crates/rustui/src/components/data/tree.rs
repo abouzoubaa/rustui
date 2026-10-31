@@ -606,7 +606,6 @@ impl View for TreeView {
 
         let (
             tree,
-            retained_nodes,
             observed_selection,
             owner_selection,
             pending_selection,
@@ -619,7 +618,6 @@ impl View for TreeView {
             let retained = retained.read(context.app());
             (
                 retained.tree.clone(),
-                retained.nodes.clone(),
                 retained.observed_selection.clone(),
                 retained.owner_selection.clone(),
                 retained.pending_selection.clone(),
@@ -758,7 +756,7 @@ impl View for TreeView {
             .read(context.app())
             .selected_item()
             .map(|item| item.id.to_string());
-        let data_changed = retained_nodes != resolved_nodes;
+        let data_changed = retained.read(context.app()).nodes != resolved_nodes;
         let click_activation = self
             .on_activate
             .clone()
@@ -779,7 +777,7 @@ impl View for TreeView {
                 let expansion = desired_expansion.as_ref().map_or_else(
                     || {
                         reconcile_expansion(
-                            &retained_nodes,
+                            &retained.read(context.app()).nodes,
                             &resolved_nodes,
                             &current_expansion(&tree.read(context.app())),
                         )
