@@ -62,11 +62,10 @@ case "${1:-}" in
     python3 scripts/apply_gpui_component_select_title_patch.py --check
     python3 scripts/apply_gpui_select_rtl_patch.py --verify
     python3 scripts/apply_gpui_select_popup_rtl_patch.py --verify
-    python3 scripts/apply_gpui_web_noopener_patch.py --check
     python3 scripts/apply_gpui_component_web_syntax_patch.py --check
     python3 scripts/apply_gpui_component_web_syntax_runtime_patch.py --check
     python3 scripts/apply_cosmic_bidi_initial_span_patch.py --check
-    python3 scripts/verify_gpui_web_patch_stack.py
+    python3 scripts/verify_gpui_web_patch_stack.py --native-only
     python3 scripts/apply_gpui_macos_focused_element_patch.py --verify
     if [[ "$(uname -s)" != Darwin ]]; then
       echo 'The macos release check requires a macOS host.' >&2

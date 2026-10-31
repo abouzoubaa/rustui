@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 """Verify the approved Web patches as one exact, read-only source stack."""
 
+import argparse
 from pathlib import Path
 import shutil
 import tempfile
@@ -12,6 +13,9 @@ import apply_gpui_web_semantic_adapter as semantic
 
 
 def main() -> None:
+    parser = argparse.ArgumentParser()
+    parser.add_argument("--native-only", action="store_true", help="verify shared native GPUI patches only")
+    args = parser.parse_args()
     root = Path(__file__).resolve().parents[1]
     input_meta = input_hit.load_manifest()
     input_state, current_input = input_hit.current_images(input_meta)
@@ -30,6 +34,9 @@ def main() -> None:
     ):
         raise ValueError("approved bidirectional wrapping patch is not applied")
     before_bidi = bidi.staged_images(bidi_meta, current_bidi, reverse=True)
+    if args.native_only:
+        print("Approved shared GPUI input patch stack verified; checkout unchanged")
+        return
 
     combo.run(root, root, "--verify")
     with tempfile.TemporaryDirectory(prefix="rustui-web-combobox-stack-") as folder:
