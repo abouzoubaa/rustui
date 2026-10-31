@@ -8,6 +8,18 @@ Earlier entries describing locale acceptance as an immediate priority are histor
 
 ## R09/M924 native Utility Window — 2026-10-31
 
+On clean commit `14a12a79`, `./scripts/verify-release.sh macos` completed the
+composed slider-patch verification, workspace and external-consumer checks,
+tests, optimized build, notice collection and disposable packaging. The log
+contains 41 successful test suites: 1,549 passed, zero failed and four ignored.
+It collected 446 observed packages and reported five unresolved notice gaps.
+The unlaunched disposable bundle was moved to Trash. Earlier native metadata
+and build evidence were preserved in `release-checks-before-slider-14a12a79`.
+Log: `target/headstart/evidence/native-release-slider-14a12a79-20261031.log`
+(SHA-256 `24f8ebfd66aba29d0419db00fc99720369560e5b8202399f934eecc7a0b748d1`).
+This is source, test, build and package evidence, not native GUI, licensing or
+complete release acceptance.
+
 Follow-up: a GPUI test-window regression found that a single initial thumb
 movement left the controlled value at 50; a second movement updated it to 80.
 The approved reproducible `gpui-base-slider-first-move-v1` patch handles the
