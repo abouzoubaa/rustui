@@ -268,6 +268,13 @@ registry cannot adopt a process started before this lock was introduced; if a
 test app exists, identify its owning session before launching or cleaning it
 up. Never terminate a user-owned or unknown app to free the slot.
 
+Bind computer-use interactions to the disposable bundle's full path, not its
+shared display name. Confirm the running process executable path and compare
+its hash with the intended build before recording GUI evidence. A generic name
+can launch or select a different checkout even when the intended process exists.
+If the observed app cannot be tied to the intended executable, mark that GUI
+observation unverified and preserve its original record for investigation.
+
 After the test, the owner must quit its app, remove its disposable app bundle
 and standalone executable, and confirm no test app remains running. Then use
 `rescope` to remove the shared slot while retaining every other path in that

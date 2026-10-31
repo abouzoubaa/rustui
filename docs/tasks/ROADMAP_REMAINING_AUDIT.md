@@ -1,3 +1,7 @@
+## Native GUI evidence provenance — 2026-10-31
+
+A generic-name Playground selection was observed to resolve an older checkout while a current disposable bundle existed. For prior GUI entries, an executable hash alone proves the bundle's contents but does not prove which app the automation controlled. Keep historical observations, but treat native acceptance as unverified unless the inspected UI is tied to the exact process and bundle path or independently corroborated. Subsequent native checks must bind by full bundle path and verify the process and executable hash. Source/test-window and build results are unaffected.
+
 ## R17 native SplitView v3 smoke — 2026-10-31
 
 On commit `541875e3`, the locked offline Headstart Playground build passed (`target/headstart/evidence/native-split-v3-build-20261031.log`). The exact-path disposable bundle and build executable matched SHA-256 `82d1e3a18372bf25d6c536d6be5aaaf084153627bd4babd32d269d6edb0d2300`; the process path was verified (PID 67011). In the current 16-demo app, a computer-controlled horizontal divider drag moved it from 159.43 to 235 pt; a subsequent unrelated drag left it at 235. The owned app exited and the disposable bundle moved to Trash. This confirms ordinary native dragging and release after v3, not missing mouse-up, physical input, focus loss, vertical dragging, or broader native acceptance.
