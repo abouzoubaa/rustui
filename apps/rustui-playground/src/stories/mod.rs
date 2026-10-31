@@ -112,6 +112,7 @@ pub(crate) fn catalog_demo(key: &str) -> Option<AnyView> {
         "divider" => Some(AnyView::new(foundation_additions::foundation_additions())),
         "notification" => Some(AnyView::new(feedback_gallery::demo())),
         "button_group" => Some(AnyView::new(toolbar_gallery::button_group_demo())),
+        "scroll_view" => Some(AnyView::new(scroll_gallery::demo())),
         "segmented_control" => Some(AnyView::new(toolbar_gallery::segmented_control_demo())),
         "window_chrome" => Some(AnyView::new(window_chrome_gallery::demo())),
         "utility_window" => Some(AnyView::new(utility_window_gallery::demo())),
@@ -175,6 +176,11 @@ mod catalog_demo_tests {
     #[test]
     fn button_group_catalog_reaches_public_button_composition() {
         assert!(catalog_demo("button_group").is_some());
+    }
+
+    #[test]
+    fn scroll_view_catalog_reaches_scroll_gallery() {
+        assert!(catalog_demo("scroll_view").is_some());
     }
 
     #[test]
@@ -918,7 +924,7 @@ impl View for StoryHost {
             .id("lab-clear-events")
             .localized_label("lab-clear-events-visible")
             (selected == StoryId::Button).then(|| LocalizedText("lab-button-layout-summary"))
-            (selected != StoryId::Button && selected != StoryId::ScrollView).then(|| LocalizedText(layout_inspector::summary_key_for(selected)))
+            (selected != StoryId::Button).then(|| LocalizedText(layout_inspector::summary_key_for(selected)))
             (selected == StoryId::Button).then(|| LocalizedText("lab-button-test-status"))
             (selected != StoryId::Button).then(|| LocalizedText(test_runner::status_for(selected).localization_key()))
             (selected == StoryId::Button).then(|| LocalizedText("lab-button-source-disclaimer"))

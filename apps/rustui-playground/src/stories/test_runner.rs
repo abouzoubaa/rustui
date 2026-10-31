@@ -36,12 +36,9 @@ impl VerificationStatus {
 pub const fn status_for(story: StoryId) -> VerificationStatus {
     match story {
         StoryId::Button | StoryId::Input => VerificationStatus::SomeNativeChecksRecorded,
-        StoryId::Layout
-        | StoryId::ScrollView
-        | StoryId::List
-        | StoryId::Table
-        | StoryId::Tree
-        | StoryId::Navigation => VerificationStatus::BoundedNativeChecksRecorded,
+        StoryId::Layout | StoryId::List | StoryId::Table | StoryId::Tree | StoryId::Navigation => {
+            VerificationStatus::BoundedNativeChecksRecorded
+        }
         StoryId::Text
         | StoryId::Card
         | StoryId::Tabs

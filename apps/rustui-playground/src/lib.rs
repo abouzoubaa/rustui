@@ -512,8 +512,7 @@ fn story_for(key: &str) -> Option<StoryId> {
         "button" => Some(StoryId::Button),
         "text" | "text_style_guide" => Some(StoryId::Text),
         "card" => Some(StoryId::Card),
-        "button_group" => Some(StoryId::Layout),
-        "scroll_view" => Some(StoryId::ScrollView),
+        "button_group" | "scroll_view" => Some(StoryId::Layout),
         "checkbox"
         | "slider"
         | "toggle"

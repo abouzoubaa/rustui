@@ -17,12 +17,6 @@ LocalizedText("lab-i18n-sample").with_arguments(arguments)"#
         StoryId::Card => {
             r#"Card("sample", TextField("First card", value_binding).localized_placeholder("lab-card-first-placeholder"))"#
         }
-        StoryId::ScrollView => {
-            r#"ScrollView(content)
-    .width(220.0)
-    .height(100.0)
-    .scrollbars(true)"#
-        }
         StoryId::Layout => {
             r#"let alpha = Keyed(
     "alpha",
