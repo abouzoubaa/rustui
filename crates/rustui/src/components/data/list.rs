@@ -379,10 +379,9 @@ impl View for ListView {
         let row_height = self.row_height;
         let searchable = self.searchable;
         let selectable = self.selectable;
-        let initial_items = items.clone();
-        let (state, created) = context.retained_entity(identity.clone(), move |window, cx| {
+        let (state, created) = context.retained_entity(identity.clone(), |window, cx| {
             let delegate = StringListDelegate::new(
-                initial_items,
+                items.clone(),
                 row_height,
                 initial_selection,
                 searchable,

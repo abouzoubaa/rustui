@@ -568,14 +568,14 @@ impl View for TreeView {
         for node in &mut resolved_nodes {
             node.resolve_labels(context);
         }
-        let nodes = resolved_nodes.clone();
         let initial_selection = self.selection.value();
         let requested_expansion = self.expansion.as_ref().map(Binding::value);
         let desired_expansion = requested_expansion
             .as_ref()
             .map(|requested| valid_expanded_branches(&self.nodes, requested));
-        let initial_expansion = desired_expansion.clone();
-        let (retained, created) = context.retained_entity(identity.clone(), move |_window, cx| {
+        let (retained, created) = context.retained_entity(identity.clone(), |_window, cx| {
+            let nodes = resolved_nodes.clone();
+            let initial_expansion = desired_expansion.clone();
             let tree = cx.new(|cx| {
                 let items = if let Some(expanded) = initial_expansion.as_ref() {
                     let expansion = controlled_expansion(&nodes, expanded);

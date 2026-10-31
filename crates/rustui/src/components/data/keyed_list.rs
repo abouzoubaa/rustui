@@ -353,14 +353,13 @@ impl View for KeyedListView {
 
     fn into_element(&self, context: &mut RenderContext<'_>) -> AnyElement {
         let identity = self.id.clone();
-        let items = self.items.clone();
-        let initial_selection = valid_selection(&items, self.selection.value().as_deref());
         let row_height = self.row_height;
         let searchable = self.searchable;
         let selectable = self.selectable;
-        let (state, created) = context.retained_entity(identity.clone(), move |window, cx| {
+        let (state, created) = context.retained_entity(identity.clone(), |window, cx| {
+            let initial_selection = valid_selection(&self.items, self.selection.value().as_deref());
             let delegate = KeyedListDelegate::new(
-                items,
+                self.items.clone(),
                 row_height,
                 initial_selection.clone(),
                 searchable,
