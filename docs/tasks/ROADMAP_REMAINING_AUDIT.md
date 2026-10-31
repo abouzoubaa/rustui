@@ -1,3 +1,7 @@
+## Current scope — 2026-10-31
+
+The user directed this session to put localization aside and focus on finishing RustUI. Defer localization implementation and acceptance, alongside previously deferred Web/Wasm, accessibility and VoiceOver work. Prioritize native framework implementation, tests and release blockers. Preserve the existing localization work and leave its remaining requirements open.
+
 ## R13/R17 SplitView story localization — 2026-10-31
 
 The native Playground SplitView story now localizes its heading, instructions, five action labels, pane names and counter labels in English, French and Arabic. `python3 scripts/validate_locales.py --runtime` passed, as did the locked offline Headstart Playground check and focused three-locale message/argument test (1/1; `target/headstart/evidence/native-split-locale-test-20261031.log`, SHA-256 `874e1a909eb57060e34873b345c4fe5f78603b87bba6e7808d243953aa43ccf8`). The diagnostic state, ranges and lifecycle summaries remain English. No native GUI or RTL layout observation was performed for this change; broader SplitView and localization acceptance remain open.
