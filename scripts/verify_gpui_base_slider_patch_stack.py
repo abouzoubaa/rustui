@@ -12,6 +12,7 @@ SOURCE = Path("vendor/gpui-base-0.7.3/src/slider.rs")
 FIRST = ROOT / "scripts/apply_gpui_base_slider_first_move.py"
 ZERO = ROOT / "scripts/apply_gpui_base_slider_zero_track.py"
 SNAP = ROOT / "scripts/apply_gpui_base_slider_snap_position.py"
+ENDPOINT = ROOT / "scripts/apply_gpui_base_slider_endpoint.py"
 
 
 def run(script, root, artifacts, mode):
@@ -28,7 +29,7 @@ def main():
     args = parser.parse_args()
     source_root = args.root.resolve()
     artifacts = args.artifacts.resolve()
-    run(SNAP, source_root, artifacts, "--verify")
+    run(ENDPOINT, source_root, artifacts, "--verify")
     with tempfile.TemporaryDirectory(prefix="rustui-slider-stack-") as directory:
         root = Path(directory)
         source = root / SOURCE
@@ -36,6 +37,8 @@ def main():
         shutil.copyfile(source_root / SOURCE, source)
         shutil.copyfile(source_root / "vendor/gpui-base-0.7.3/Cargo.toml", source.parent.parent / "Cargo.toml")
         shutil.copyfile(source_root / "Cargo.toml", root / "Cargo.toml")
+        run(ENDPOINT, root, artifacts, "--reverse")
+        run(SNAP, root, artifacts, "--verify")
         run(SNAP, root, artifacts, "--reverse")
         run(FIRST, root, artifacts, "--verify")
         run(FIRST, root, artifacts, "--reverse")

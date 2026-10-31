@@ -10,6 +10,7 @@ ROOT = Path(__file__).resolve().parents[2]
 SCRIPT = ROOT / "scripts/apply_gpui_base_slider_snap_position.py"
 SOURCE = Path("vendor/gpui-base-0.7.3/src/slider.rs")
 PATCH = ROOT / "patches/approved/gpui-base-slider-snap-position-v1.patch"
+ENDPOINT_PATCH = ROOT / "patches/approved/gpui-base-slider-endpoint-v1.patch"
 
 
 class SliderSnapPositionPatchTests(unittest.TestCase):
@@ -23,6 +24,7 @@ class SliderSnapPositionPatchTests(unittest.TestCase):
         (self.root / "Cargo.toml").write_text(
             '[patch.crates-io]\ngpui-base = { path = "vendor/gpui-base-0.7.3" }\n'
         )
+        subprocess.run(["git", "apply", "--unidiff-zero", "--reverse", str(ENDPOINT_PATCH)], cwd=self.root, check=True)
         subprocess.run(["git", "apply", "--reverse", str(PATCH)], cwd=self.root, check=True)
 
     def tearDown(self):

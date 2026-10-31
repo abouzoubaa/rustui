@@ -385,7 +385,7 @@ impl SliderState {
         };
 
         let value = self.percentage_to_value(percentage);
-        let value = (value / step).round() * step;
+        let value = ((value / step).round() * step).clamp(self.min, self.max);
 
         if is_start {
             self.percentage.start = percentage;

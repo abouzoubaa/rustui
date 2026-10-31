@@ -12,6 +12,7 @@ SOURCE = Path("vendor/gpui-base-0.7.3/src/slider.rs")
 PATCH = ROOT / "patches/approved/gpui-base-slider-zero-track-v1.patch"
 FIRST_PATCH = ROOT / "patches/approved/gpui-base-slider-first-move-v1.patch"
 SNAP_PATCH = ROOT / "patches/approved/gpui-base-slider-snap-position-v1.patch"
+ENDPOINT_PATCH = ROOT / "patches/approved/gpui-base-slider-endpoint-v1.patch"
 
 
 class SliderPatchTests(unittest.TestCase):
@@ -25,6 +26,7 @@ class SliderPatchTests(unittest.TestCase):
         (self.root / "Cargo.toml").write_text(
             '[patch.crates-io]\ngpui-base = { path = "vendor/gpui-base-0.7.3" }\n'
         )
+        subprocess.run(["git", "apply", "--unidiff-zero", "--reverse", str(ENDPOINT_PATCH)], cwd=self.root, check=True)
         subprocess.run(["git", "apply", "--reverse", str(SNAP_PATCH)], cwd=self.root, check=True)
         subprocess.run(["git", "apply", "--reverse", str(FIRST_PATCH)], cwd=self.root, check=True)
         subprocess.run(["git", "apply", "--reverse", str(PATCH)], cwd=self.root, check=True)

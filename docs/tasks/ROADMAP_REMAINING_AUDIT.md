@@ -8,6 +8,22 @@ Earlier entries describing locale acceptance as an immediate priority are histor
 
 ## R09/M924 native Utility Window — 2026-10-31
 
+Follow-up: when a Slider's step did not divide its range, GPUI Base could
+retain and emit a rounded value outside that range. A focused test reproduced
+100 for a maximum of 95. The reproducible `gpui-base-slider-endpoint-v1`
+patch clamps the snapped value before updating the state and emitting its
+event; the test now checks both a minimum of 5 and a maximum of 95 with step
+20. The Slider suite passed 29/29 and the four-layer replay/reversal/tamper
+suite passed 9/9. Replay this patch after the snap-position layer with
+`python3 scripts/apply_gpui_base_slider_endpoint.py --apply`; verify all four
+layers with `python3 scripts/verify_gpui_base_slider_patch_stack.py`.
+The focused pre-fix and suite logs are `target/headstart/evidence/slider-endpoint-before-20261031.log`
+(SHA-256 `2967c3e38429bd126fb0b14cbcd7e5d27deabee2a2b46b49842f1094090d009e`)
+and `target/headstart/evidence/slider-endpoint-suite-20261031.log` (SHA-256
+`fa3f6bbb9d29d05c4b0b0a6773e0cac52388da0da4e9dabaee5b81750bce271b`).
+This directly exercises the pointer-position update using a rendered test
+window's bounds; native event delivery and broader input acceptance remain open.
+
 Follow-up: the GPUI Base pointer path snapped a Slider's value to its step but
 left its thumb at the unsnapped pointer position. A rendered test reproduced
 value 60 with position 65%; the reproducible `gpui-base-slider-snap-position-v1`

@@ -786,6 +786,64 @@ mod tests {
     }
 
     #[gpui::test]
+    fn stepped_pointer_endpoint_stays_within_range(cx: &mut gpui::TestAppContext) {
+        use crate::{prelude::*, runtime::ComponentHost};
+        use gpui::{Axis, px};
+        use rustui_core::Identity;
+
+        struct Owner(f32);
+        impl View for Owner {
+            fn body(&self) -> impl View {
+                Slider(
+                    Binding::new(
+                        self.0,
+                        |owner: &Owner| owner.0,
+                        |owner, value| owner.0 = value,
+                    ),
+                    5.0..=95.0,
+                )
+                .step(20.0)
+                .id("endpoint")
+            }
+        }
+        let theme = parse_theme(include_str!("../../../../../themes/macos27.json")).unwrap();
+        cx.update(|app| {
+            gpui_component::init(app);
+            crate::theme::activate_theme(&theme, Some(AppearanceMode::Dark), app).unwrap();
+        });
+        let (owner, window) = cx.add_window_view(|_, cx| ComponentHost::new(Owner(50.0), cx));
+        let (bounds, state) = window.update(|window, app| {
+            let _ = window.draw(app);
+            let retained = owner
+                .read(app)
+                .retained_entity_for_test::<super::RetainedSlider>(
+                    vec![],
+                    Identity::from("endpoint"),
+                )
+                .unwrap();
+            let state = retained.read(app).state.clone();
+            (state.read(app).bounds(), state)
+        });
+        let y = f32::from(bounds.origin.y + bounds.size.height / 2.0);
+        for (x, expected) in [
+            (f32::from(bounds.origin.x) + 1.0, 5.0),
+            (f32::from(bounds.origin.x + bounds.size.width) - 1.0, 95.0),
+        ] {
+            let point = gpui::point(px(x), px(y));
+            let retained_value = window.update(|window, app| {
+                state.update(app, |state, cx| {
+                    state.update_value_by_position(Axis::Horizontal, point, false, window, cx);
+                    state.value().end()
+                })
+            });
+            assert_eq!(
+                retained_value, expected,
+                "retained slider value exceeded its range"
+            );
+        }
+    }
+
+    #[gpui::test]
     fn zero_sized_track_ignores_pointer_updates(cx: &mut gpui::TestAppContext) {
         use gpui::AppContext as _;
 
