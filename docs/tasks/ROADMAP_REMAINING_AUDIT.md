@@ -1,3 +1,7 @@
+## Native release patch verification — 2026-10-31
+
+The macOS release script now verifies both the GPUI Base disabled-button and SplitView first-move patch images; previously these checks ran only in its source-only mode. `bash -n` and both patch replay verifiers passed. This is a release-check correction, not a complete macOS release run or native SplitView acceptance. Five previously reported native dependency notice gaps remain unresolved.
+
 ## Project branch integration — 2026-10-31
 
 The verified project branch `work/m118-diagnostics-provenance` was fast-forwarded from `123f4e60` to `a29dcb6e`, integrating 449 accumulated commits. Before integration the primary checkout had no tracked changes; 24 untracked files and all newly tracked target paths were checked for collisions, with none found. After integration all 24 untracked files remained and the tracked checkout was clean. The accumulated diff whitespace diagnostics were confined to patch artifacts and vendored upstream content. This integration is not release acceptance; native SplitView drag and other recorded gates remain open.
