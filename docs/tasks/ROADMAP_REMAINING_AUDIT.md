@@ -123,6 +123,19 @@ bundle was moved to Trash and prior release-check evidence was backed up at
 `/tmp/rustui-release-evidence-CNf22j`. This checkpoint does not establish
 native GUI, licensing, performance, compiled CI, or distribution acceptance.
 
+## R17 native collection smoke after retained-copy changes — 2026-10-31
+
+On `8a5666d4`, the locked offline Headstart Playground build passed (log
+`target/headstart/evidence/native-collections-8a5666d4-build-20261031.log`,
+SHA-256 `9dc839454759275fea0069ae4eddebb8c326283e09031697e9336848ad83abe7`).
+The owned exact-path bundle ran as PID 85854; its executable matched the build
+at SHA-256 `8d68e460da67f940c33e4f017cce61845a91064ac0f9ac7ba2ee5fa6a2bd5783`.
+Native List pointer/Down selection and hidden selection through filtering and
+clear worked; Table retained source index 2 through reversal; Tree selected a
+leaf and collapsed and expanded its branch. The offscreen KeyedList specimen
+was not exercised. The app was quit and its bundle moved to Trash. These are
+bounded post-change smoke checks, not full collection or performance acceptance.
+
 ## Native GUI evidence provenance — 2026-10-31
 
 A generic-name Playground selection was observed to resolve an older checkout while a current disposable bundle existed. For prior GUI entries, an executable hash alone proves the bundle's contents but does not prove which app the automation controlled. Keep historical observations, but treat native acceptance as unverified unless the inspected UI is tied to the exact process and bundle path or independently corroborated. Subsequent native checks must bind by full bundle path and verify the process and executable hash. Source/test-window and build results are unaffected.
