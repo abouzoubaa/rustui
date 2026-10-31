@@ -55,6 +55,18 @@ modal was dismissed, the Drawer opened and its error cleared. The app was quit,
 the bundle moved to Trash, and the GUI slot released. This is bounded native
 conflict and recovery evidence, not full overlay acceptance.
 
+## R17 native Table owner synchronization — 2026-10-31
+
+At `647d2da8` (documentation-only changes after the hash-matched Playground
+build at `4bf0a63b`), the owned exact-path bundle ran as PID 49627 with
+executable SHA-256 `beb4d72c568b1fd672a37200d3485211662ec37e76766ebe1127befbbcc0eca5`.
+In the native Table story, source index 2 remained selected after reversing rows;
+removing that row retained the still-valid index, and setting an invalid index
+cleared it. A pointer click selected final index 3; removing that row cleared
+selection, and restoring rows kept selection empty. The app was quit and the
+bundle moved to Trash. This is bounded owner synchronization evidence, not full
+virtualization, keyboard, visual, or collection acceptance.
+
 ## Native GUI evidence provenance — 2026-10-31
 
 A generic-name Playground selection was observed to resolve an older checkout while a current disposable bundle existed. For prior GUI entries, an executable hash alone proves the bundle's contents but does not prove which app the automation controlled. Keep historical observations, but treat native acceptance as unverified unless the inspected UI is tied to the exact process and bundle path or independently corroborated. Subsequent native checks must bind by full bundle path and verify the process and executable hash. Source/test-window and build results are unaffected.
