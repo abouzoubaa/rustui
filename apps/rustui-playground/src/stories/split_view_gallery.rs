@@ -5,6 +5,7 @@ use std::sync::{
     atomic::{AtomicUsize, Ordering},
 };
 
+use rustui::localization::MessageArguments;
 use rustui::prelude::*;
 
 pub fn demo() -> impl View {
@@ -103,19 +104,19 @@ impl View for SplitGallery {
             .collect::<Vec<_>>()
             .join(" · ");
         VStack::new().spacing(8.0)
-            .child(Text("SplitView: drag native dividers, increment panes, then reorder"))
+            .child(LocalizedText("lab-split-heading"))
             .child(Text(format!("Vertical: {} · reversed: {} · B present: {} · narrow limits: {} · observations: {}", vertical, self.reverse(), self.middle(), narrow_limits, self.observations())))
             .child(Text(format!("Ranges (pt): A 60..{a_max}, B 60..800, C 60..800")))
             .child(Text(lifecycle))
             .child(Container(split).width(560.0).height(300.0).border())
             .child(HStack::new().spacing(6.0)
-                .child(Button("Switch axis", self.action(Self::toggle_axis)).id("split-axis"))
-                .child(Button("Reverse panes", self.action(Self::toggle_order)).id("split-reverse"))
-                .child(Button("Remove / insert B", self.action(Self::toggle_middle)).id("split-middle")))
+                .child(Button("Switch axis", self.action(Self::toggle_axis)).localized_label("lab-split-axis").id("split-axis"))
+                .child(Button("Reverse panes", self.action(Self::toggle_order)).localized_label("lab-split-reverse").id("split-reverse"))
+                .child(Button("Remove / insert B", self.action(Self::toggle_middle)).localized_label("lab-split-middle").id("split-middle")))
             .child(HStack::new().spacing(6.0)
-                .child(Button("Narrow / restore limits", self.action(Self::toggle_limits)).id("split-limits"))
-                .child(Button("Observe lifecycle", self.action(Self::observe)).id("split-observe")))
-            .child(Text("Reorder preserves each counter. Narrow A without changing panel IDs, then restore its range. Removing B releases it; reinserting B starts at zero. Axis changes reset size preferences."))
+                .child(Button("Narrow / restore limits", self.action(Self::toggle_limits)).localized_label("lab-split-limits").id("split-limits"))
+                .child(Button("Observe lifecycle", self.action(Self::observe)).localized_label("lab-split-observe").id("split-observe")))
+            .child(LocalizedText("lab-split-help"))
     }
 }
 
@@ -144,11 +145,17 @@ impl View for PaneCounter {
         Container(
             VStack::new()
                 .spacing(6.0)
-                .child(Text(format!("Pane {}", ["A", "B", "C"][self.index])))
+                .child(LocalizedText("lab-split-pane").with_arguments(
+                    MessageArguments::new().with("name", ["A", "B", "C"][self.index]),
+                ))
                 .child(
                     Button(
                         format!("Count: {}", self.count()),
                         self.action(Self::increment),
+                    )
+                    .localized_label_with_arguments(
+                        "lab-split-count",
+                        MessageArguments::new().with("count", i64::from(self.count())),
                     )
                     .id("increment"),
                 ),
@@ -156,5 +163,51 @@ impl View for PaneCounter {
         .fill()
         .padding(8.0)
         .background(Surface::Panel)
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use rustui::localization::{Locale, MessageArguments, format_integer};
+
+    #[test]
+    fn split_story_messages_resolve_with_arguments_in_runtime_locales() {
+        let catalogs = super::super::locale_selector::catalogs();
+        for language in ["en", "fr", "ar"] {
+            let locale = Locale::parse(language).unwrap();
+            for key in [
+                "lab-split-heading",
+                "lab-split-axis",
+                "lab-split-reverse",
+                "lab-split-middle",
+                "lab-split-limits",
+                "lab-split-observe",
+                "lab-split-help",
+            ] {
+                let text = catalogs
+                    .format(&locale, key, &MessageArguments::new())
+                    .unwrap();
+                assert!(!text.trim().is_empty() && text != key, "{language}: {key}");
+            }
+            let pane = catalogs
+                .format(
+                    &locale,
+                    "lab-split-pane",
+                    &MessageArguments::new().with("name", "B"),
+                )
+                .unwrap();
+            assert!(pane.contains('B'), "{language}: {pane}");
+            let count = catalogs
+                .format(
+                    &locale,
+                    "lab-split-count",
+                    &MessageArguments::new().with("count", 42_i64),
+                )
+                .unwrap();
+            assert!(
+                count.contains(&format_integer(42, &locale)),
+                "{language}: {count}"
+            );
+        }
     }
 }

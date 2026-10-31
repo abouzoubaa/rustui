@@ -814,3 +814,12 @@ lab-composition-unmounted = Composition unmounted
 
 lab-composition-error = Composition error: {detail}
 lab-composition-reference-accepted = Browser reference request accepted
+lab-split-heading = SplitView: drag the dividers, increment panes, then reorder
+lab-split-axis = Switch axis
+lab-split-reverse = Reverse panes
+lab-split-middle = Remove / insert B
+lab-split-limits = Narrow / restore limits
+lab-split-observe = Observe lifecycle
+lab-split-help = Reordering preserves each counter. Narrow A without changing panel IDs, then restore its range. Removing B releases it; reinserting B starts at zero. Changing the axis resets size preferences.
+lab-split-pane = Pane {name}
+lab-split-count = Count: {count}

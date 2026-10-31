@@ -814,3 +814,12 @@ lab-composition-unmounted = Composition démontée
 
 lab-composition-error = Erreur de composition : {detail}
 lab-composition-reference-accepted = Requête de référence du navigateur acceptée
+lab-split-heading = SplitView : déplacez les séparateurs, incrémentez les panneaux, puis réorganisez-les
+lab-split-axis = Changer d’axe
+lab-split-reverse = Inverser les panneaux
+lab-split-middle = Retirer / insérer B
+lab-split-limits = Réduire / rétablir les limites
+lab-split-observe = Observer le cycle de vie
+lab-split-help = La réorganisation conserve chaque compteur. Réduisez la plage de A sans changer les identifiants des panneaux, puis rétablissez-la. Retirer B le libère ; le réinsérer repart de zéro. Changer d’axe réinitialise les tailles préférées.
+lab-split-pane = Panneau {name}
+lab-split-count = Compteur : {count}

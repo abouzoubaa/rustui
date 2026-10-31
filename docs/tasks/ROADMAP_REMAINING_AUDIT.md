@@ -1,3 +1,7 @@
+## R13/R17 SplitView story localization — 2026-10-31
+
+The native Playground SplitView story now localizes its heading, instructions, five action labels, pane names and counter labels in English, French and Arabic. `python3 scripts/validate_locales.py --runtime` passed, as did the locked offline Headstart Playground check and focused three-locale message/argument test (1/1; `target/headstart/evidence/native-split-locale-test-20261031.log`, SHA-256 `874e1a909eb57060e34873b345c4fe5f78603b87bba6e7808d243953aa43ccf8`). The diagnostic state, ranges and lifecycle summaries remain English. No native GUI or RTL layout observation was performed for this change; broader SplitView and localization acceptance remain open.
+
 ## R30 optimized native owner update workload — 2026-10-31
 
 On commit `5d38591c`, `./scripts/cargo-headstart test --release -p rustui --lib owner_update_and_draw_workload --locked --offline -- --ignored --nocapture` passed 1/1. For 10, 100 and 1,000 rows, the median per update over ten samples was 0.061, 0.598 and 6.181 ms; with a forced draw after each update it was 0.125, 1.159 and 12.189 ms. Every update changes all displayed row strings; the forced-draw figure includes the update. Log `target/headstart/evidence/native-owner-draw-release-5d38591c-20261031.log`, SHA-256 `7b5ebb161e611b7d29f2c3d1a0cccdcaef5ec9d89ba26b6010f816cb25372a36`. This optimized test-window workload clarifies the earlier debug measurement but is not an app frame-rate, GPU or performance acceptance test; no performance threshold is established.

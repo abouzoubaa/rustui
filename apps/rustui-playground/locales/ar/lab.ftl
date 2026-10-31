@@ -814,3 +814,12 @@ lab-composition-unmounted = تم إلغاء تركيب المجموعة
 
 lab-composition-error = خطأ في التركيب: {detail}
 lab-composition-reference-accepted = تم قبول طلب مرجع المتصفح
+lab-split-heading = SplitView: اسحب الفواصل، وزد عدادات الأجزاء، ثم أعد ترتيبها
+lab-split-axis = تغيير المحور
+lab-split-reverse = عكس ترتيب الأجزاء
+lab-split-middle = إزالة / إدراج B
+lab-split-limits = تضييق / استعادة الحدود
+lab-split-observe = مراقبة دورة الحياة
+lab-split-help = تحتفظ إعادة الترتيب بكل عداد. ضيّق نطاق A دون تغيير معرّفات الأجزاء، ثم استعده. تؤدي إزالة B إلى تحريره؛ وتبدأ إعادة إدراجه من الصفر. يؤدي تغيير المحور إلى إعادة ضبط الأحجام المفضلة.
+lab-split-pane = الجزء {name}
+lab-split-count = العداد: {count}
