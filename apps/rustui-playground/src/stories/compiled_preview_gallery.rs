@@ -107,6 +107,14 @@ fn preview_nonblank_detail(detail: &str) -> Option<&str> {
     (!detail.trim().is_empty()).then_some(detail)
 }
 
+fn preview_status_summary_key(status: &str) -> &'static str {
+    match status {
+        "Exported normalized preview descriptor" => "lab-preview-status-exported",
+        "Completed delayed parent rerender" => "lab-preview-status-rerendered",
+        _ => "lab-compiled-preview-status-summary",
+    }
+}
+
 fn preview_inspector_rejection_live_region_value(status: &str) -> Option<&str> {
     (status == DATE_PICKER_DATE_REJECTION
         || status.to_ascii_lowercase().contains("reject")
@@ -7711,7 +7719,7 @@ impl View for CompiledPreviewGallery {
             .child(
                 Semantics(
                     "compiled-preview-status",
-                    LocalizedText("lab-compiled-preview-status-summary")
+                    LocalizedText(preview_status_summary_key(&self.status))
                         .with_arguments(status_arguments),
                 )
                 .live_region_value(rejection_announcement, LivePoliteness::Polite),
@@ -8141,6 +8149,38 @@ impl View for CompiledPreviewGallery {
 mod tests {
     use super::*;
     use rustui::localization::{Catalog, Catalogs, Locale};
+
+    #[test]
+    fn preview_status_summary_localizes_known_results_and_preserves_errors() {
+        let catalogs = super::super::locale_selector::catalogs();
+        for (status, translations) in [
+            (
+                "Exported normalized preview descriptor",
+                ["Exported", "Descripteur", "تصدير"],
+            ),
+            (
+                "Completed delayed parent rerender",
+                ["Completed", "Actualisation", "تحديث"],
+            ),
+        ] {
+            let key = preview_status_summary_key(status);
+            for (language, expected) in ["en", "fr", "ar"].into_iter().zip(translations) {
+                let locale = Locale::parse(language).unwrap();
+                let args = MessageArguments::new()
+                    .with("activations", "2")
+                    .with("renders", "3");
+                let text = catalogs.format(&locale, key, &args).unwrap();
+                assert!(
+                    text.contains(expected) && text.contains('2') && text.contains('3'),
+                    "{language}: {text}"
+                );
+            }
+        }
+        assert_eq!(
+            preview_status_summary_key("Export rejected: disk error"),
+            "lab-compiled-preview-status-summary"
+        );
+    }
 
     #[test]
     fn preview_owner_summary_formats_flags_and_amount_for_each_locale() {

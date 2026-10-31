@@ -790,6 +790,8 @@ lab-compiled-preview-specimen = Exemple : {component}
 lab-compiled-preview-owner-text = Propriétaire : texte={text} activé={enabled, select, true {oui} false {non} other {inconnu}} valeur={amount} · identifiant monté : {stamp}
 lab-compiled-preview-owner-secure = Propriétaire : valeur secrète présente={secure_present, select, true {oui} false {non} other {inconnu}} activé={enabled, select, true {oui} false {non} other {inconnu}} valeur={amount} · identifiant monté : {stamp}
 lab-compiled-preview-status-summary = {status} · activations {activations} · actualisations du parent {renders}
+lab-preview-status-exported = Descripteur de prévisualisation normalisé exporté · activations {activations} · actualisations du parent {renders}
+lab-preview-status-rerendered = Actualisation différée du parent terminée · activations {activations} · actualisations du parent {renders}
 
 lab-preview-teardown = Fermer la prévisualisation
 lab-preview-descriptor-heading = Descripteur JSON de la prévisualisation
