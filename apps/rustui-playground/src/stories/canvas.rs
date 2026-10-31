@@ -408,6 +408,7 @@ impl View for StoryCanvas {
                             ["Rust", "Swift", "Kotlin"],
                         )
                         .id("story-input-picker")
+                        .menu_width(160.0)
                         .disabled(!self.toggle_binding.value()),
                     )
                     .child(

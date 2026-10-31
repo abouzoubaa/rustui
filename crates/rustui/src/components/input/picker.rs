@@ -69,6 +69,7 @@ pub struct PickerView {
     disabled: bool,
     searchable: bool,
     search_placeholder: Option<SharedString>,
+    menu_width: Option<f32>,
     accessibility_label: Option<PickerLabel>,
     appearance: bool,
 }
@@ -90,6 +91,7 @@ impl PickerView {
             disabled: false,
             searchable: false,
             search_placeholder: None,
+            menu_width: None,
             accessibility_label: None,
             appearance: true,
         }
@@ -127,6 +129,17 @@ impl PickerView {
 
     pub fn disabled(mut self, disabled: bool) -> Self {
         self.disabled = disabled;
+        self
+    }
+
+    /// Sets the dropdown menu width in logical pixels. By default it matches
+    /// the trigger width, which can truncate longer option titles.
+    pub fn menu_width(mut self, width: f32) -> Self {
+        assert!(
+            width.is_finite() && width > 0.0,
+            "Picker menu width must be positive and finite"
+        );
+        self.menu_width = Some(width);
         self
     }
 
@@ -345,6 +358,9 @@ impl View for PickerView {
             })
             .disabled(self.disabled)
             .appearance(self.appearance);
+        if let Some(width) = self.menu_width {
+            picker = picker.menu_width(px(width));
+        }
         if let Some(placeholder) = &self.search_placeholder {
             picker = picker.search_placeholder(placeholder.clone());
         }
@@ -508,6 +524,22 @@ mod tests {
             |value: &String| value.clone(),
             |value, next| *value = next,
         )
+    }
+
+    #[test]
+    fn picker_menu_width_accepts_only_positive_finite_values() {
+        assert_eq!(
+            Picker("Choice", binding(), ["One"])
+                .menu_width(160.0)
+                .menu_width,
+            Some(160.0)
+        );
+        for width in [0.0, -1.0, f32::NAN, f32::INFINITY] {
+            assert!(
+                std::panic::catch_unwind(|| Picker("Choice", binding(), ["One"]).menu_width(width))
+                    .is_err()
+            );
+        }
     }
 
     #[test]
