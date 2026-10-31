@@ -18,6 +18,14 @@ title, and owner close dismissed it. The owned app was quit and the disposable
 bundle moved to Trash. This bounded check does not establish full keyboard,
 focus-restoration, lifecycle, or release acceptance.
 
+At `115dba68` (documentation-only changes since that build), the same
+hash-matched disposable executable ran as PID 14517. In the native story,
+Tab focused Close and then Notes; keyboard typing updated Notes. Five further
+Tab presses ended at Close, Shift+Tab focused Activate, and Tab followed by
+Space closed the drawer. Intermediate focus stops and focus restoration were
+not observed, so full keyboard containment and restoration remain open. The
+owned app was quit and its disposable bundle moved to Trash.
+
 ## Native GUI evidence provenance — 2026-10-31
 
 A generic-name Playground selection was observed to resolve an older checkout while a current disposable bundle existed. For prior GUI entries, an executable hash alone proves the bundle's contents but does not prove which app the automation controlled. Keep historical observations, but treat native acceptance as unverified unless the inspected UI is tied to the exact process and bundle path or independently corroborated. Subsequent native checks must bind by full bundle path and verify the process and executable hash. Source/test-window and build results are unaffected.
