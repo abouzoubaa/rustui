@@ -780,3 +780,9 @@ lab-table-no-selection = No row selected
 lab-table-reconcile-help = Selection stores a source index. Reordering keeps the index, which may refer to a different row. An out-of-range index becomes no selection.
 lab-table-index-header = Source index
 lab-table-row-header = Row
+
+lab-compiled-preview-title = Compiled preview host
+lab-compiled-preview-inspector = Schema inspector
+lab-compiled-preview-rerender = Rerender preview parent
+lab-compiled-preview-show = Preview {component}
+lab-compiled-preview-specimen = Preview {component} specimen

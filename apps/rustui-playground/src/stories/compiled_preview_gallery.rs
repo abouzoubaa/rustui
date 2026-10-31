@@ -1,6 +1,18 @@
 //! D1c schema-driven local preview inspector; all controls use public RustUI APIs.
-use rustui::{prelude::*, preview::*, view::EmptyView};
+use rustui::{localization::MessageArguments, prelude::*, preview::*, view::EmptyView};
 use std::{cell::RefCell, collections::BTreeMap, rc::Rc, time::Duration};
+
+fn preview_action(label: &'static str, action: rustui::runtime::Action) -> impl View {
+    let component = label.strip_prefix("Preview ").unwrap_or(label);
+    let (component, message) = match component.strip_suffix(" specimen") {
+        Some(component) => (component, "lab-compiled-preview-specimen"),
+        None => (component, "lab-compiled-preview-show"),
+    };
+    Button(label, action).localized_label_with_arguments(
+        message,
+        MessageArguments::new().with("component", component),
+    )
+}
 
 pub fn demo() -> impl View {
     Component("compiled-preview-gallery", CompiledPreviewGallery::default)
@@ -7693,7 +7705,7 @@ impl View for CompiledPreviewGallery {
         let view = VStack::new()
             .spacing(8.0)
             .child(self.reference_owner_binding())
-            .child(Text("Compiled preview host"))
+            .child(LocalizedText("lab-compiled-preview-title"))
             .child(Text(owner_summary))
             .child(
                 Semantics("compiled-preview-status", Text(status_text))
@@ -7702,56 +7714,56 @@ impl View for CompiledPreviewGallery {
             .child(
                 VStack::new()
                     .spacing(6.0)
-                    .child(Button(
+                    .child(preview_action(
                         "Preview Text specimen",
                         rustui::runtime::Action::new(Self::mount_text_specimen),
                     ))
-                    .child(Button(
+                    .child(preview_action(
                         "Preview LocalizedText specimen",
                         rustui::runtime::Action::new(Self::mount_localized_text_specimen),
                     ))
-                    .child(Button(
+                    .child(preview_action(
                         "Preview Text",
                         rustui::runtime::Action::new(Self::mount_text),
                     ))
-                    .child(Button(
+                    .child(preview_action(
                         "Preview Button",
                         rustui::runtime::Action::new(Self::mount_button),
                     ))
-                    .child(Button(
+                    .child(preview_action(
                         "Preview TextField",
                         rustui::runtime::Action::new(Self::mount_field),
                     ))
-                    .child(Button(
+                    .child(preview_action(
                         "Preview Toggle",
                         rustui::runtime::Action::new(Self::mount_toggle),
                     ))
-                    .child(Button(
+                    .child(preview_action(
                         "Preview Checkbox",
                         rustui::runtime::Action::new(Self::mount_checkbox),
                     ))
-                    .child(Button(
+                    .child(preview_action(
                         "Preview Radio",
                         rustui::runtime::Action::new(Self::mount_radio),
                     ))
-                    .child(Button(
+                    .child(preview_action(
                         "Preview Picker",
                         rustui::runtime::Action::new(Self::mount_picker),
                     ))
-                    .child(Button(
+                    .child(preview_action(
                         "Preview Slider",
                         rustui::runtime::Action::new(Self::mount_slider),
                     ))
-                    .child(Button(
+                    .child(preview_action(
                         "Preview Progress",
                         rustui::runtime::Action::new(Self::mount_progress),
                     ))
-                    .child(Button(
+                    .child(preview_action(
                         "Preview Stepper",
                         rustui::runtime::Action::new(Self::mount_stepper),
                     )),
             )
-            .child(Text("Schema inspector"))
+            .child(LocalizedText("lab-compiled-preview-inspector"))
             .child(
                 PropertyInspector("compiled-preview-inspector", inspector_rows)
                     .expect("schema property IDs are unique and valid"),
@@ -7759,259 +7771,262 @@ impl View for CompiledPreviewGallery {
             .child(
                 VStack::new()
                     .spacing(4.0)
-                    .child(Button(
-                        "Rerender preview parent",
-                        rustui::runtime::Action::new(Self::rerender),
-                    ))
-                    .child(Button(
+                    .child(
+                        Button(
+                            "Rerender preview parent",
+                            rustui::runtime::Action::new(Self::rerender),
+                        )
+                        .localized_label("lab-compiled-preview-rerender"),
+                    )
+                    .child(preview_action(
                         "Preview TextField specimen",
                         rustui::runtime::Action::new(Self::mount_text_field_specimen),
                     ))
-                    .child(Button(
+                    .child(preview_action(
                         "Preview TokenField specimen",
                         rustui::runtime::Action::new(Self::mount_token_field_specimen),
                     ))
-                    .child(Button(
+                    .child(preview_action(
                         "Preview SearchField specimen",
                         rustui::runtime::Action::new(Self::mount_search_field_specimen),
                     ))
-                    .child(Button(
+                    .child(preview_action(
                         "Preview TextEditor specimen",
                         rustui::runtime::Action::new(Self::mount_text_editor_specimen),
                     ))
-                    .child(Button(
+                    .child(preview_action(
                         "Preview CodeEditor specimen",
                         rustui::runtime::Action::new(Self::mount_code_editor_specimen),
                     ))
-                    .child(Button(
+                    .child(preview_action(
                         "Preview SecureField specimen",
                         rustui::runtime::Action::new(Self::mount_secure_field_specimen),
                     ))
-                    .child(Button(
+                    .child(preview_action(
                         "Preview ComboBox specimen",
                         rustui::runtime::Action::new(Self::mount_combo_box_specimen),
                     ))
-                    .child(Button(
+                    .child(preview_action(
                         "Preview TabView specimen",
                         rustui::runtime::Action::new(Self::mount_tab_view_specimen),
                     ))
-                    .child(Button(
+                    .child(preview_action(
                         "Preview Button specimen",
                         rustui::runtime::Action::new(Self::mount_button_specimen),
                     ))
-                    .child(Button(
+                    .child(preview_action(
                         "Preview Toolbar specimen",
                         rustui::runtime::Action::new(Self::mount_toolbar_specimen),
                     ))
-                    .child(Button(
+                    .child(preview_action(
                         "Preview Image specimen",
                         rustui::runtime::Action::new(Self::mount_image_specimen),
                     ))
-                    .child(Button(
+                    .child(preview_action(
                         "Preview Breadcrumb specimen",
                         rustui::runtime::Action::new(Self::mount_breadcrumb_specimen),
                     ))
-                    .child(Button(
+                    .child(preview_action(
                         "Preview ContextMenu specimen",
                         rustui::runtime::Action::new(Self::mount_context_menu_specimen),
                     ))
-                    .child(Button(
+                    .child(preview_action(
                         "Preview Menu specimen",
                         rustui::runtime::Action::new(Self::mount_menu_specimen),
                     ))
-                    .child(Button(
+                    .child(preview_action(
                         "Preview Link specimen",
                         rustui::runtime::Action::new(Self::mount_link_specimen),
                     ))
-                    .child(Button(
+                    .child(preview_action(
                         "Preview Dialog specimen",
                         rustui::runtime::Action::new(Self::mount_dialog_specimen),
                     ))
-                    .child(Button(
+                    .child(preview_action(
                         "Preview Popover specimen",
                         rustui::runtime::Action::new(Self::mount_popover_specimen),
                     ))
-                    .child(Button(
+                    .child(preview_action(
                         "Preview EmptyState specimen",
                         rustui::runtime::Action::new(Self::mount_empty_state_specimen),
                     ))
-                    .child(Button(
+                    .child(preview_action(
                         "Preview Alert specimen",
                         rustui::runtime::Action::new(Self::mount_alert_specimen),
                     ))
-                    .child(Button(
+                    .child(preview_action(
                         "Preview Toast specimen",
                         rustui::runtime::Action::new(Self::mount_toast_specimen),
                     ))
-                    .child(Button(
+                    .child(preview_action(
                         "Preview Sheet specimen",
                         rustui::runtime::Action::new(Self::mount_sheet_specimen),
                     ))
-                    .child(Button(
+                    .child(preview_action(
                         "Preview Drawer specimen",
                         rustui::runtime::Action::new(Self::mount_drawer_specimen),
                     ))
-                    .child(Button(
+                    .child(preview_action(
                         "Preview Sidebar specimen",
                         rustui::runtime::Action::new(Self::mount_sidebar_specimen),
                     ))
-                    .child(Button(
+                    .child(preview_action(
                         "Preview KeyedList specimen",
                         rustui::runtime::Action::new(Self::mount_keyed_list_specimen),
                     ))
-                    .child(Button(
+                    .child(preview_action(
                         "Preview DataGrid specimen",
                         rustui::runtime::Action::new(Self::mount_data_grid_specimen),
                     ))
-                    .child(Button(
+                    .child(preview_action(
                         "Preview List specimen",
                         rustui::runtime::Action::new(Self::mount_list_specimen),
                     ))
-                    .child(Button(
+                    .child(preview_action(
                         "Preview Table specimen",
                         rustui::runtime::Action::new(Self::mount_table_specimen),
                     ))
-                    .child(Button(
+                    .child(preview_action(
                         "Preview Tree specimen",
                         rustui::runtime::Action::new(Self::mount_tree_specimen),
                     ))
-                    .child(Button(
+                    .child(preview_action(
                         "Preview Outline specimen",
                         rustui::runtime::Action::new(Self::mount_outline_specimen),
                     ))
-                    .child(Button(
+                    .child(preview_action(
                         "Preview NavigationSplitView specimen",
                         rustui::runtime::Action::new(Self::mount_navigation_split_specimen),
                     ))
-                    .child(Button(
+                    .child(preview_action(
                         "Preview NavigationStack specimen",
                         rustui::runtime::Action::new(Self::mount_navigation_stack_specimen),
                     ))
-                    .child(Button(
+                    .child(preview_action(
                         "Preview Collection specimen",
                         rustui::runtime::Action::new(Self::mount_collection_specimen),
                     ))
-                    .child(Button(
+                    .child(preview_action(
                         "Preview Canvas specimen",
                         rustui::runtime::Action::new(Self::mount_canvas_specimen),
                     ))
-                    .child(Button(
+                    .child(preview_action(
                         "Preview Group specimen",
                         rustui::runtime::Action::new(Self::mount_group_specimen),
                     ))
-                    .child(Button(
+                    .child(preview_action(
                         "Preview AnimatedOpacity specimen",
                         rustui::runtime::Action::new(Self::mount_animated_opacity_specimen),
                     ))
-                    .child(Button(
+                    .child(preview_action(
                         "Preview SpringOpacity specimen",
                         rustui::runtime::Action::new(Self::mount_spring_opacity_specimen),
                     ))
-                    .child(Button(
+                    .child(preview_action(
                         "Preview Shadow specimen",
                         rustui::runtime::Action::new(Self::mount_shadow_specimen),
                     ))
-                    .child(Button(
+                    .child(preview_action(
                         "Preview Background specimen",
                         rustui::runtime::Action::new(Self::mount_background_specimen),
                     ))
-                    .child(Button(
+                    .child(preview_action(
                         "Preview Border specimen",
                         rustui::runtime::Action::new(Self::mount_border_specimen),
                     ))
-                    .child(Button(
+                    .child(preview_action(
                         "Preview Semantics specimen",
                         rustui::runtime::Action::new(Self::mount_semantics_specimen),
                     ))
-                    .child(Button(
+                    .child(preview_action(
                         "Preview Card specimen",
                         rustui::runtime::Action::new(Self::mount_card_specimen),
                     ))
-                    .child(Button(
+                    .child(preview_action(
                         "Preview Container specimen",
                         rustui::runtime::Action::new(Self::mount_container_specimen),
                     ))
-                    .child(Button(
+                    .child(preview_action(
                         "Preview SplitView specimen",
                         rustui::runtime::Action::new(Self::mount_split_view_specimen),
                     ))
-                    .child(Button(
+                    .child(preview_action(
                         "Preview Frame specimen",
                         rustui::runtime::Action::new(Self::mount_frame_specimen),
                     ))
-                    .child(Button(
+                    .child(preview_action(
                         "Preview Spacer specimen",
                         rustui::runtime::Action::new(Self::mount_spacer_specimen),
                     ))
-                    .child(Button(
+                    .child(preview_action(
                         "Preview HStack specimen",
                         rustui::runtime::Action::new(Self::mount_hstack_specimen),
                     ))
-                    .child(Button(
+                    .child(preview_action(
                         "Preview VStack specimen",
                         rustui::runtime::Action::new(Self::mount_vstack_specimen),
                     ))
-                    .child(Button(
+                    .child(preview_action(
                         "Preview Grid specimen",
                         rustui::runtime::Action::new(Self::mount_grid_specimen),
                     ))
-                    .child(Button(
+                    .child(preview_action(
                         "Preview LazyGrid specimen",
                         rustui::runtime::Action::new(Self::mount_lazy_grid_specimen),
                     ))
-                    .child(Button(
+                    .child(preview_action(
                         "Preview GeometryReader specimen",
                         rustui::runtime::Action::new(Self::mount_geometry_reader_specimen),
                     ))
-                    .child(Button(
+                    .child(preview_action(
                         "Preview PropertyInspector specimen",
                         rustui::runtime::Action::new(Self::mount_property_inspector_specimen),
                     ))
-                    .child(Button(
+                    .child(preview_action(
                         "Preview Disclosure specimen",
                         rustui::runtime::Action::new(Self::mount_disclosure_specimen),
                     ))
-                    .child(Button(
+                    .child(preview_action(
                         "Preview ErrorState specimen",
                         rustui::runtime::Action::new(Self::mount_error_state_specimen),
                     ))
-                    .child(Button(
+                    .child(preview_action(
                         "Preview DatePicker specimen",
                         rustui::runtime::Action::new(Self::mount_date_picker_specimen),
                     ))
-                    .child(Button(
+                    .child(preview_action(
                         "Preview Badge specimen",
                         rustui::runtime::Action::new(Self::mount_badge_specimen),
                     ))
-                    .child(Button(
+                    .child(preview_action(
                         "Preview Label specimen",
                         rustui::runtime::Action::new(Self::mount_label_specimen),
                     ))
-                    .child(Button(
+                    .child(preview_action(
                         "Preview Tooltip specimen",
                         rustui::runtime::Action::new(Self::mount_tooltip_specimen),
                     ))
-                    .child(Button(
+                    .child(preview_action(
                         "Preview Spinner specimen",
                         rustui::runtime::Action::new(Self::mount_spinner_specimen),
                     ))
-                    .child(Button(
+                    .child(preview_action(
                         "Preview Divider specimen",
                         rustui::runtime::Action::new(Self::mount_divider_specimen),
                     ))
-                    .child(Button(
+                    .child(preview_action(
                         "Preview Skeleton specimen",
                         rustui::runtime::Action::new(Self::mount_skeleton_specimen),
                     ))
-                    .child(Button(
+                    .child(preview_action(
                         "Preview Icon specimen",
                         rustui::runtime::Action::new(Self::mount_icon_specimen),
                     ))
-                    .child(Button(
+                    .child(preview_action(
                         "Preview Avatar specimen",
                         rustui::runtime::Action::new(Self::mount_avatar_specimen),
                     ))
-                    .child(Button(
+                    .child(preview_action(
                         "Preview ColorPicker specimen",
                         rustui::runtime::Action::new(Self::mount_color_picker_specimen),
                     ))

@@ -780,3 +780,9 @@ lab-table-no-selection = Aucune ligne sélectionnée
 lab-table-reconcile-help = La sélection conserve un indice source. Après réorganisation, cet indice peut désigner une autre ligne. Un indice hors limites supprime la sélection.
 lab-table-index-header = Indice source
 lab-table-row-header = Ligne
+
+lab-compiled-preview-title = Hôte de prévisualisation compilée
+lab-compiled-preview-inspector = Inspecteur de schéma
+lab-compiled-preview-rerender = Rafraîchir le parent de la prévisualisation
+lab-compiled-preview-show = Aperçu : {component}
+lab-compiled-preview-specimen = Exemple : {component}

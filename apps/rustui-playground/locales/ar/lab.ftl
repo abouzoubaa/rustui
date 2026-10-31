@@ -780,3 +780,9 @@ lab-table-no-selection = لم يُحدد أي صف
 lab-table-reconcile-help = يحفظ الاختيار فهرس المصدر. بعد إعادة الترتيب قد يشير الفهرس إلى صف آخر. الفهرس خارج النطاق يلغي الاختيار.
 lab-table-index-header = فهرس المصدر
 lab-table-row-header = الصف
+
+lab-compiled-preview-title = مضيف المعاينة المترجمة
+lab-compiled-preview-inspector = فاحص المخطط
+lab-compiled-preview-rerender = إعادة عرض أصل المعاينة
+lab-compiled-preview-show = معاينة: {component}
+lab-compiled-preview-specimen = مثال: {component}
