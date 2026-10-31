@@ -23,6 +23,16 @@ fn logical_input_row<T: gpui::Styled>(control: T, direction: rustui_i18n::Layout
     }
 }
 
+fn select_trailing_affordance<T: gpui::Styled>(
+    control: T,
+    direction: rustui_i18n::LayoutDirection,
+) -> T {
+    match direction {
+        rustui_i18n::LayoutDirection::LeftToRight => control.right(gpui::px(9.0)),
+        rustui_i18n::LayoutDirection::RightToLeft => control.left(gpui::px(9.0)),
+    }
+}
+
 /// A select option keeps its stable binding value separate from its display title.
 #[derive(Clone, Debug, PartialEq, Eq)]
 struct SelectOption {
@@ -85,6 +95,18 @@ fn select_needs_reconciliation(
 
 #[cfg(test)]
 mod tests {
+    #[test]
+    fn select_affordance_uses_the_logical_trailing_edge() {
+        use gpui::{Styled, div, px};
+        use rustui_i18n::LayoutDirection;
+        let mut ltr = super::select_trailing_affordance(div(), LayoutDirection::LeftToRight);
+        let mut rtl = super::select_trailing_affordance(div(), LayoutDirection::RightToLeft);
+        assert_eq!(ltr.style().inset.right, Some(px(9.0).into()));
+        assert_eq!(ltr.style().inset.left, None);
+        assert_eq!(rtl.style().inset.left, Some(px(9.0).into()));
+        assert_eq!(rtl.style().inset.right, None);
+    }
+
     #[test]
     fn checkable_rows_follow_active_layout_direction() {
         use gpui::{FlexDirection, Styled};

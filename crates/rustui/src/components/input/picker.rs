@@ -356,12 +356,14 @@ impl View for PickerView {
         // has no background styling hook, so draw the themed affordance over an
         // empty icon while leaving the native trigger fully interactive.
         let style = required_style(context, "picker", "body", &selector(context));
-        let mut affordance = styled_element(div().flex().items_center().justify_center(), &style)
-            .absolute()
-            .right(px(9.))
-            .top_0()
-            .bottom_0()
-            .my_auto();
+        let mut affordance = super::select_trailing_affordance(
+            styled_element(div().flex().items_center().justify_center(), &style)
+                .absolute()
+                .top_0()
+                .bottom_0()
+                .my_auto(),
+            context.layout_direction(),
+        );
         if self.disabled {
             affordance = affordance.opacity(0.5);
         }

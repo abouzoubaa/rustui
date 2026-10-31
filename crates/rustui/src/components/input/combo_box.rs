@@ -411,12 +411,14 @@ impl View for ComboBoxView {
         // Keep GPUI Select's searchable menu and focus behavior. Theme only
         // the 16 px arrow affordance described by the component record.
         let style = required_style(context, "combo_box", "body", &selector(context));
-        let mut affordance = styled_element(div().flex().items_center().justify_center(), &style)
-            .absolute()
-            .right(px(9.))
-            .top_0()
-            .bottom_0()
-            .my_auto();
+        let mut affordance = super::select_trailing_affordance(
+            styled_element(div().flex().items_center().justify_center(), &style)
+                .absolute()
+                .top_0()
+                .bottom_0()
+                .my_auto(),
+            context.layout_direction(),
+        );
         if self.disabled {
             affordance = affordance.opacity(0.5);
         }
