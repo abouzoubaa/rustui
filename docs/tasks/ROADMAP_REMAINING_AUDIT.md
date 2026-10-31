@@ -73,6 +73,17 @@ pressing Down selected index 2; Up returned to index 1; Escape cleared the
 owner selection. The app was quit and the bundle moved to Trash. This checks
 those keyboard paths only, not full Table keyboard or collection acceptance.
 
+## R17 Table retained-render data copy — 2026-10-31
+
+Commit `826bfef8` moves the initial delegate's column and row clones into the
+retained-entity initializer. Existing Table renders no longer make that extra
+deep copy when the initializer is skipped; the ordinary presentation copy and
+comparison remain. The focused locked offline Headstart Table suite passed
+19/19, and rustfmt and diff checks passed. The test log is
+`target/headstart/evidence/native-table-lazy-clone-20261031.log` (SHA-256
+`1b1314bdffe778a9dbf42aa18f423033a3cd77b4e275a4311838cf82e8fc0342`).
+No timing or large-table performance acceptance is claimed by this change.
+
 ## Native GUI evidence provenance — 2026-10-31
 
 A generic-name Playground selection was observed to resolve an older checkout while a current disposable bundle existed. For prior GUI entries, an executable hash alone proves the bundle's contents but does not prove which app the automation controlled. Keep historical observations, but treat native acceptance as unverified unless the inspected UI is tied to the exact process and bundle path or independently corroborated. Subsequent native checks must bind by full bundle path and verify the process and executable hash. Source/test-window and build results are unaffected.
