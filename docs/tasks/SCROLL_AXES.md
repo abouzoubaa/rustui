@@ -57,8 +57,9 @@ adapter handle entry, so even a child named `scroll-state` cannot collide with
 internal state.
 Sibling scroll views can reuse child control IDs while keeping independent
 native editing state. Duplicate sibling viewport IDs in the same retained scope
-are rejected. Existing Keyboard, GeometryReader and animation scopes remain
-separate and unchanged.
+are rejected. Siblings without an explicit ID receive distinct identities in
+render order; use explicit IDs when dynamically reordering them. Existing
+Keyboard, GeometryReader and animation scopes remain separate and unchanged.
 
 ## Wheel, nested scrolling and locale
 

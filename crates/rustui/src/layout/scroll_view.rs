@@ -32,7 +32,7 @@ pub enum ScrollAxis {
 /// This adapter does not virtualize content or expose a second scrolling runtime.
 pub struct ScrollViewView<V> {
     content: V,
-    id: Identity,
+    id: Option<Identity>,
     width: Option<f32>,
     height: Option<f32>,
     axis: ScrollAxis,
@@ -44,7 +44,7 @@ pub struct ScrollViewView<V> {
 pub fn ScrollView<V: View>(content: V) -> ScrollViewView<V> {
     ScrollViewView {
         content,
-        id: Identity::from("scroll-view"),
+        id: None,
         width: None,
         height: None,
         axis: ScrollAxis::Vertical,
@@ -53,9 +53,10 @@ pub fn ScrollView<V: View>(content: V) -> ScrollViewView<V> {
 }
 
 impl<V: View> ScrollViewView<V> {
-    /// Give sibling or dynamic scroll views unique, stable identities.
+    /// Give a dynamically reordered scroll view a stable identity.
+    /// Fixed siblings receive distinct implicit identities in render order.
     pub fn id(mut self, id: impl Into<Identity>) -> Self {
-        self.id = id.into();
+        self.id = Some(id.into());
         self
     }
 
@@ -292,7 +293,10 @@ impl<V: View> View for ScrollViewView<V> {
     }
 
     fn into_element(&self, context: &mut RenderContext<'_>) -> AnyElement {
-        context.with_element_scope(RetentionScope::ScrollView(self.id.clone()), |context| {
+        let id = self.id.clone().unwrap_or_else(|| {
+            context.next_implicit_retained_identity(Identity::from("scroll-view"))
+        });
+        context.with_element_scope(RetentionScope::ScrollView(id.clone()), |context| {
             let direction = context.layout_direction();
             let (state, _) =
                 context.retained_entity(Identity::from("scroll-state"), |_, _| ScrollState {
@@ -314,7 +318,7 @@ impl<V: View> View for ScrollViewView<V> {
             let mut viewport =
                 native_viewport(self.axis, &handle).child(native_content(self.axis).child(content));
             if diagnostics {
-                let id = self.id.clone();
+                let id = id.clone();
                 let axis = self.axis;
                 let observed = handle.clone();
                 viewport = viewport.on_scroll_wheel(move |event, _, _| {
@@ -330,7 +334,7 @@ impl<V: View> View for ScrollViewView<V> {
                 overlay = overlay.child(themed_scrollbar(&handle, context, self.axis).id("scrollbar"));
             }
             if diagnostics {
-                let id = self.id.clone();
+                let id = id.clone();
                 let axis = self.axis;
                 let bars = self.scrollbars;
                 overlay = overlay.on_prepaint(move |bounds, _, _| {
@@ -380,7 +384,7 @@ impl<V: View> View for ScrollViewView<V> {
                 root
             };
             if diagnostics {
-                let id = self.id.clone();
+                let id = id.clone();
                 let axis = self.axis;
                 root.on_prepaint(move |bounds, _, _| {
                     eprintln!("RUSTUI_SCROLL_DIAGNOSTICS phase=root-prepaint id={} root_bounds={bounds:?}", id.as_str());
@@ -423,6 +427,60 @@ mod rendered_overflow_tests {
     };
     use rustui_i18n::{Catalogs, Locale};
     use std::{cell::Cell, rc::Rc};
+
+    struct SiblingScrolls;
+
+    impl View for SiblingScrolls {
+        fn body(&self) -> impl View {
+            EmptyView
+        }
+
+        fn into_element(&self, context: &mut RenderContext<'_>) -> AnyElement {
+            let first = ScrollView(EmptyView)
+                .width(100.0)
+                .height(100.0)
+                .into_element(context);
+            let second = ScrollView(EmptyView)
+                .width(100.0)
+                .height(100.0)
+                .into_element(context);
+            div().flex().child(first).child(second).into_any_element()
+        }
+    }
+
+    #[gpui::test]
+    fn implicit_sibling_scroll_views_keep_independent_handles(cx: &mut gpui::TestAppContext) {
+        cx.update(gpui_component::init);
+        let (owner, window) = cx.add_window_view(|_, app| ComponentHost::new(SiblingScrolls, app));
+        window.update(|window, app| {
+            let _ = window.draw(app);
+            let state = |app: &gpui::App, slot| {
+                let id = Identity::new(format!(
+                    "rustui-text-{}:implicit-retained:{slot}:scroll-view",
+                    owner.entity_id().as_u64()
+                ));
+                owner
+                    .read(app)
+                    .retained_entity_for_test::<ScrollState>(
+                        vec![RetentionScope::ScrollView(id)],
+                        Identity::from("scroll-state"),
+                    )
+                    .expect("each sibling has retained scroll state")
+            };
+            let first = state(app, 0);
+            let second = state(app, 1);
+            assert_ne!(first.entity_id(), second.entity_id());
+            first.read(app).handle.set_offset(Point {
+                x: px(0.0),
+                y: px(-10.0),
+            });
+            assert_eq!(second.read(app).handle.offset(), Point::default());
+            window.refresh();
+            let _ = window.draw(app);
+            assert_eq!(state(app, 0).entity_id(), first.entity_id());
+            assert_eq!(state(app, 1).entity_id(), second.entity_id());
+        });
+    }
 
     struct WideLeaf(Rc<Cell<Option<gpui::Bounds<Pixels>>>>);
 
