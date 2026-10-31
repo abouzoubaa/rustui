@@ -6,6 +6,27 @@ RTL implementation and evidence; do not count deferred localization as complete.
 Web/Wasm, accessibility, and VoiceOver remain deferred as previously directed.
 Earlier entries describing locale acceptance as an immediate priority are historical.
 
+## R09/M924 native Utility Window — 2026-10-31
+
+On `18618e34`, a locked offline Headstart Playground build passed. The owned
+disposable macOS bundle and build executable had SHA-256
+`45df76d46704ede8a6a4fb81c33ad5f2c4ecd89ee913979ea08d53e484a4e824`.
+The native story displayed all five category panels; the sample image rendered,
+a color selection updated the picker, and a Red slider track click changed its
+position, which survived switching tabs. A slider drag did not visibly change
+the value, and a Right-arrow attempt after clicking the selected tab did not
+change the selection. TabView uses independent roving focus, so a selection
+change was not expected from an arrow alone; focus movement was not observed.
+Neither attempt closes the corresponding interaction check.
+Focused `utility_window_gallery` Playground tests passed 4/4, including the
+previously unexecuted source check. Build and test logs are respectively
+`target/headstart/evidence/m924-native-build-18618e34.log` (SHA-256
+`733e814ba2b506e970cda322bb58a245f6d99d790a6ff60b7c42ecb7f2f40e25`) and
+`target/headstart/evidence/m924-native-tests-18618e34.log` (SHA-256
+`7c49c192f185bb61c053ba082396169e5c44535454ce8f63878b6eb5060989e2`).
+The owned app was quit and its bundle moved to Trash. Full visual, pointer and
+keyboard acceptance remains open; accessibility is deferred.
+
 ## R19/R33 native Drawer interaction — 2026-10-31
 
 On source commit `3747dce0`, the locked offline Headstart Playground build
