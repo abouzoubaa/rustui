@@ -1,3 +1,7 @@
+## R13/R23 native preview status check — 2026-10-31
+
+The locked offline macOS Headstart release Playground build at `0df7d9b1` passed (log SHA-256 `3a21197bec0536c74454c1a5972bdc310272458853c337d8824d16c1b6eb9f0c`); the disposable bundle's executable matched source binary SHA-256 `f356ace400f56be113f1b101c507207e6a45aa3da3c6f0f241ba449f03363d7a`. In that exact-path native app, mounting Text showed generation 2 in English, then French and Arabic on locale changes. Importing the retained TextField descriptor showed preview ID `compiled-gallery` and generation 3 in Arabic and French. This is a bounded operation/locale observation, not full native preview acceptance. The app exited, the disposable bundle moved to Trash, and the GUI slot was released.
+
 ## R22/R23 descriptor and preview source checkpoint — 2026-10-31
 
 On source commit `d2e4daa7`, the locked offline macOS Headstart preview library suite passed 54/54 (`target/headstart/evidence/native-preview-contract-d2e4daa7-20261031.log`, SHA-256 `2242e07649b4f3ef3e6080289184c8c157dd92dc51ba6d3def7a2dfb46f7de76`). Source review checked JSON size and duplicate-key rejection, catalog/schema validation, atomic property batches, and stale preview stamps; these checks are bounded and do not complete the full contract review, native GUI, or release acceptance.
