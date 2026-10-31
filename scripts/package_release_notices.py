@@ -177,12 +177,15 @@ def package(source, font_source, destination, repo_root):
             raise ValueError(f"missing embedded font license: {name}")
     source_resolved = source.resolve()
     font_resolved = font_source.resolve()
-    dest_resolved = destination.absolute()
+    validate_destination_path(destination.absolute())
+    # Resolve every existing ancestor before testing overlap. On macOS even
+    # ordinary temporary paths can contain symlinks (for example /tmp), so
+    # rejecting every symlink would also reject valid destinations.
+    dest_resolved = destination.resolve()
     if dest_resolved == source_resolved or source_resolved in dest_resolved.parents or dest_resolved in source_resolved.parents:
         raise ValueError("destination overlaps collection")
     if dest_resolved == font_resolved or font_resolved in dest_resolved.parents or dest_resolved in font_resolved.parents:
         raise ValueError("destination overlaps font source")
-    validate_destination_path(destination.absolute())
     validate_existing(destination, font_source)
     destination.parent.mkdir(parents=True, exist_ok=True)
     stage = Path(tempfile.mkdtemp(prefix=f".{destination.name}.next-", dir=destination.parent))

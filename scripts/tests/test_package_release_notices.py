@@ -150,6 +150,18 @@ class PackageReleaseNoticesTests(unittest.TestCase):
         (self.collection / "notices" / "LICENSE").symlink_to(target)
         self.assertNotEqual(self.run_package().returncode, 0)
 
+    def test_rejects_destination_overlap_through_symlinked_ancestor(self):
+        alias = self.root / "alias"
+        alias.symlink_to(self.root, target_is_directory=True)
+        for source in (self.collection, self.fonts):
+            with self.subTest(source=source.name):
+                destination = alias / source.name / "nested" / "release"
+                result = self.run_package(destination=destination)
+                self.assertNotEqual(result.returncode, 0, result.stdout)
+                self.assertFalse((source / "nested").exists())
+        safe = self.run_package(destination=alias / "safe" / "release")
+        self.assertEqual(safe.returncode, 0, safe.stderr)
+
     def test_rejects_traversal_and_unknown_destination_content(self):
         report_path = self.collection / "report.json"
         report = json.loads(report_path.read_text())
