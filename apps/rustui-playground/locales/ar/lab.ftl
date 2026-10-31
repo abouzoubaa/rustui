@@ -792,6 +792,8 @@ lab-compiled-preview-owner-secure = المالك: توجد قيمة سرية={se
 lab-compiled-preview-status-summary = {status} · مرات التفعيل {activations} · تحديثات الأصل {renders}
 lab-preview-status-exported = تم تصدير واصف المعاينة الموحّد · مرات التفعيل {activations} · تحديثات الأصل {renders}
 lab-preview-status-rerendered = اكتمل تحديث الأصل المؤجّل · مرات التفعيل {activations} · تحديثات الأصل {renders}
+lab-preview-status-mounted = تم تثبيت {subject}، الجيل {generation} · مرات التفعيل {activations} · تحديثات الأصل {renders}
+lab-preview-status-imported = تم استيراد واصف {subject} · الجيل {generation} · مرات التفعيل {activations} · تحديثات الأصل {renders}
 
 lab-preview-teardown = إغلاق المعاينة
 lab-preview-descriptor-heading = واصف المعاينة بصيغة JSON

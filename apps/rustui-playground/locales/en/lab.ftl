@@ -792,6 +792,8 @@ lab-compiled-preview-owner-secure = Owner: secure value present={secure_present,
 lab-compiled-preview-status-summary = {status} · activations {activations} · parent rerenders {renders}
 lab-preview-status-exported = Exported normalized preview descriptor · activations {activations} · parent rerenders {renders}
 lab-preview-status-rerendered = Completed delayed parent rerender · activations {activations} · parent rerenders {renders}
+lab-preview-status-mounted = Mounted {subject}, generation {generation} · activations {activations} · parent rerenders {renders}
+lab-preview-status-imported = Imported descriptor for {subject} · generation {generation} · activations {activations} · parent rerenders {renders}
 
 lab-preview-teardown = Teardown preview
 lab-preview-descriptor-heading = Preview descriptor JSON

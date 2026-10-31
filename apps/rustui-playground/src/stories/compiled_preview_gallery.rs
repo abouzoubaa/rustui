@@ -115,6 +115,13 @@ fn preview_status_summary_key(status: &str) -> &'static str {
     }
 }
 
+struct PreviewStatusPresentation {
+    status: String,
+    key: &'static str,
+    subject: String,
+    generation: String,
+}
+
 fn preview_inspector_rejection_live_region_value(status: &str) -> Option<&str> {
     (status == DATE_PICKER_DATE_REJECTION
         || status.to_ascii_lowercase().contains("reject")
@@ -323,6 +330,7 @@ struct CompiledPreviewGallery {
     activations: usize,
     renders: usize,
     status: String,
+    status_presentation: Option<PreviewStatusPresentation>,
     descriptor_json: String,
 }
 
@@ -4967,6 +4975,7 @@ impl Default for CompiledPreviewGallery {
             activations: 0,
             renders: 0,
             status: "Mounted TextField".into(),
+            status_presentation: None,
             descriptor_json: String::new(),
         };
         result.mount("text-field");
@@ -4976,6 +4985,12 @@ impl Default for CompiledPreviewGallery {
 }
 
 impl CompiledPreviewGallery {
+    fn current_status_presentation(&self) -> Option<&PreviewStatusPresentation> {
+        self.status_presentation
+            .as_ref()
+            .filter(|p| p.status == self.status)
+    }
+
     fn reference_owner_binding(&self) -> AnyView {
         #[cfg(target_family = "wasm")]
         if let Some(bridge) = self.reference_bridge.clone() {
@@ -5664,7 +5679,14 @@ impl CompiledPreviewGallery {
                 // A new lease per generation keeps callbacks from an older mount stale.
                 self.stamp_lease = Rc::new(RefCell::new(Some(stamp.clone())));
                 self.refresh_number_drafts();
-                format!("Mounted {component}, generation {}", stamp.generation)
+                let status = format!("Mounted {component}, generation {}", stamp.generation);
+                self.status_presentation = Some(PreviewStatusPresentation {
+                    status: status.clone(),
+                    key: "lab-preview-status-mounted",
+                    subject: component.into(),
+                    generation: stamp.generation.to_string(),
+                });
+                status
             }
             Err(error) => error.to_string(),
         };
@@ -6331,6 +6353,12 @@ impl CompiledPreviewGallery {
                 );
                 let status = self.status.clone();
                 self.export_descriptor();
+                self.status_presentation = Some(PreviewStatusPresentation {
+                    status: status.clone(),
+                    key: "lab-preview-status-imported",
+                    subject: stamp.preview_id.to_string(),
+                    generation: stamp.generation.to_string(),
+                });
                 self.status = status;
             }
             Err(error) => self.status = format!("Import rejected: {error}"),
@@ -7680,8 +7708,13 @@ impl View for CompiledPreviewGallery {
                 "stamp",
                 format!("{:?}", self.host.snapshot().map(|snapshot| &snapshot.stamp)),
             );
+        let presentation = self.current_status_presentation();
+        let status_key =
+            presentation.map_or_else(|| preview_status_summary_key(&self.status), |p| p.key);
         let status_arguments = MessageArguments::new()
             .with("status", self.status.clone())
+            .with("subject", presentation.map_or("", |p| &p.subject))
+            .with("generation", presentation.map_or("", |p| &p.generation))
             .with("activations", self.activations.to_string())
             .with("renders", self.renders.to_string());
         let rejection_announcement =
@@ -7719,8 +7752,7 @@ impl View for CompiledPreviewGallery {
             .child(
                 Semantics(
                     "compiled-preview-status",
-                    LocalizedText(preview_status_summary_key(&self.status))
-                        .with_arguments(status_arguments),
+                    LocalizedText(status_key).with_arguments(status_arguments),
                 )
                 .live_region_value(rejection_announcement, LivePoliteness::Polite),
             )
@@ -8149,6 +8181,39 @@ impl View for CompiledPreviewGallery {
 mod tests {
     use super::*;
     use rustui::localization::{Catalog, Catalogs, Locale};
+
+    #[test]
+    fn preview_mount_and_import_status_presentation_never_masks_later_errors() {
+        let mut gallery = CompiledPreviewGallery::default();
+        gallery.mount_text();
+        let mounted = gallery.current_status_presentation().unwrap();
+        assert_eq!(mounted.key, "lab-preview-status-mounted");
+        assert_eq!(mounted.subject, "text");
+        gallery.export_descriptor();
+        assert!(gallery.current_status_presentation().is_none());
+        gallery.import_descriptor();
+        let imported = gallery.current_status_presentation().unwrap();
+        assert_eq!(imported.key, "lab-preview-status-imported");
+        assert!(!imported.subject.is_empty());
+        gallery.status = "Import rejected: invalid descriptor".into();
+        assert!(gallery.current_status_presentation().is_none());
+        let catalogs = super::super::locale_selector::catalogs();
+        for language in ["en", "fr", "ar"] {
+            let locale = Locale::parse(language).unwrap();
+            let args = MessageArguments::new()
+                .with("subject", "text")
+                .with("generation", "7")
+                .with("activations", "2")
+                .with("renders", "3");
+            for key in ["lab-preview-status-mounted", "lab-preview-status-imported"] {
+                let text = catalogs.format(&locale, key, &args).unwrap();
+                assert!(
+                    text.contains("text") && text.contains('7'),
+                    "{language}: {text}"
+                );
+            }
+        }
+    }
 
     #[test]
     fn preview_status_summary_localizes_known_results_and_preserves_errors() {

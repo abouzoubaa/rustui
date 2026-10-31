@@ -792,6 +792,8 @@ lab-compiled-preview-owner-secure = Propriétaire : valeur secrète présente={s
 lab-compiled-preview-status-summary = {status} · activations {activations} · actualisations du parent {renders}
 lab-preview-status-exported = Descripteur de prévisualisation normalisé exporté · activations {activations} · actualisations du parent {renders}
 lab-preview-status-rerendered = Actualisation différée du parent terminée · activations {activations} · actualisations du parent {renders}
+lab-preview-status-mounted = {subject} monté, génération {generation} · activations {activations} · actualisations du parent {renders}
+lab-preview-status-imported = Descripteur importé pour {subject} · génération {generation} · activations {activations} · actualisations du parent {renders}
 
 lab-preview-teardown = Fermer la prévisualisation
 lab-preview-descriptor-heading = Descripteur JSON de la prévisualisation

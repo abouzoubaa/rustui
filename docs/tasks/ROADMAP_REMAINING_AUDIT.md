@@ -1,6 +1,6 @@
 ## R13 compiled preview operation results — 2026-10-31
 
-The descriptor-export and delayed-parent-refresh success summaries now resolve in English, French and Arabic. Unknown results and errors retain their original text, preventing an earlier success from masking later details. The focused localization regression passed 1/1 and `python3 scripts/validate_locales.py --runtime` passed on macOS using Headstart (compiler warnings remain). Other operation results and detailed errors still need localization; no new native GUI acceptance is claimed. Provisional whole-group counts remain 4/37 coding and 3/37 acceptance.
+The descriptor-export, delayed-parent-refresh, mount and import success summaries now resolve in English, French and Arabic. Mount and import carry their component or preview identifier and generation as structured display arguments; an earlier success cannot mask a later error. Focused regressions passed 1/1 for fixed results and 1/1 for mount/import transitions, and `python3 scripts/validate_locales.py --runtime` passed after each change on macOS using Headstart (compiler warnings remain). Other operation results and detailed errors still need localization; no new native GUI acceptance is claimed. Provisional whole-group counts remain 4/37 coding and 3/37 acceptance.
 
 ## R17 controlled Table wheel investigation — 2026-10-30
 
