@@ -207,6 +207,7 @@ impl View for StoryCanvas {
                     .spacing(8.0)
                     .alignment(rustui::prelude::HorizontalAlignment::Start)
             }
+            StoryId::ScrollView => VStack::new().child(super::scroll_gallery::demo()),
             StoryId::Layout => {
                 let alpha = Keyed(
                     "alpha",

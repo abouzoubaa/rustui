@@ -918,7 +918,7 @@ impl View for StoryHost {
             .id("lab-clear-events")
             .localized_label("lab-clear-events-visible")
             (selected == StoryId::Button).then(|| LocalizedText("lab-button-layout-summary"))
-            (selected != StoryId::Button).then(|| LocalizedText(layout_inspector::summary_key_for(selected)))
+            (selected != StoryId::Button && selected != StoryId::ScrollView).then(|| LocalizedText(layout_inspector::summary_key_for(selected)))
             (selected == StoryId::Button).then(|| LocalizedText("lab-button-test-status"))
             (selected != StoryId::Button).then(|| LocalizedText(test_runner::status_for(selected).localization_key()))
             (selected == StoryId::Button).then(|| LocalizedText("lab-button-source-disclaimer"))
