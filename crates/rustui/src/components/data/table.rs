@@ -737,6 +737,66 @@ mod tests {
     }
 
     #[gpui::test]
+    #[ignore = "manual large-table timing"]
+    fn large_table_draw_timing(cx: &mut gpui::TestAppContext) {
+        struct TimedTable(std::sync::Arc<std::sync::atomic::AtomicUsize>);
+        impl super::View for TimedTable {
+            fn body(&self) -> impl super::View {
+                super::EmptyView
+            }
+
+            fn into_element(&self, context: &mut super::RenderContext<'_>) -> gpui::AnyElement {
+                self.0.fetch_add(1, std::sync::atomic::Ordering::Relaxed);
+                TableScrollCase {
+                    rows: 10_000,
+                    column_width: 300.,
+                }
+                .into_element(context)
+            }
+        }
+        let theme = crate::theme::parse_theme(include_str!(concat!(
+            env!("CARGO_MANIFEST_DIR"),
+            "/../../themes/macos27.json"
+        )))
+        .unwrap();
+        cx.update(|app| {
+            gpui_component::init(app);
+            crate::theme::activate_theme(&theme, Some(crate::theme::AppearanceMode::Dark), app)
+                .unwrap();
+        });
+        for sample in 0..4 {
+            let renders = std::sync::Arc::new(std::sync::atomic::AtomicUsize::new(0));
+            let (owner, window) = cx.add_window_view(|_, app| {
+                crate::runtime::ComponentHost::new(TimedTable(renders.clone()), app)
+            });
+            let started = std::time::Instant::now();
+            window.update(|window, app| {
+                let _ = window.draw(app);
+            });
+            let initial = started.elapsed();
+            let before_updates = renders.load(std::sync::atomic::Ordering::Relaxed);
+            let started = std::time::Instant::now();
+            for _ in 0..10 {
+                owner.update(window, |_, cx| cx.notify());
+                window.update(|window, app| {
+                    window.refresh();
+                    let _ = window.draw(app);
+                });
+            }
+            let rendered_updates =
+                renders.load(std::sync::atomic::Ordering::Relaxed) - before_updates;
+            assert!(
+                rendered_updates >= 10,
+                "owner updates must render the table"
+            );
+            eprintln!(
+                "10,000-row Table sample {sample}: initial={initial:?}, ten owner updates and draws={:?}",
+                started.elapsed()
+            );
+        }
+    }
+
+    #[gpui::test]
     fn narrow_table_scroll_survives_wheel_events_and_draw(cx: &mut gpui::TestAppContext) {
         use rustui_core::Identity;
         let theme = crate::theme::parse_theme(include_str!(concat!(
