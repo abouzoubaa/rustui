@@ -1,3 +1,7 @@
+## R17 SplitView pointer event-path regression — 2026-10-31
+
+The public RustUI SplitView now has a GPUI test-window regression that presses its rendered horizontal divider, sends two left-button pointer moves and releases, then verifies that the first panel grew. The focused macOS Headstart test passed 1/1 (`target/headstart/evidence/native-split-pointer-event-20261031.log`, SHA-256 `4ba7b40bca1b87fcf7db35944207a7b8a38a25d6aa17765e71fc35f19e6c84d3`). This narrows the earlier inconclusive desktop drag but does not establish physical pointer behavior or explain the automation result; native divider-drag acceptance remains open.
+
 ## R17 native SplitView retained pane state — 2026-10-31
 
 The disposable native Playground executable SHA-256 `4f7e69617415bcc203b7feaa6d814673d144b1c7c52090b5aead853c488b30b1` was built from `17f7f26b`; the only subsequent source change through `f49761c5` was this ledger. In the Stacks Split story, computer-controlled clicks incremented A and B to one. Reversing panes retained A and B at one; removing B showed one release, and reinserting it showed a second mount and a fresh zero count while A stayed at one. An automated divider drag produced no visible movement; this attempt does not distinguish an input-automation issue from control behavior, so drag acceptance remains open. This is bounded native interaction evidence, not full SplitView, physical-input or accessibility acceptance. The owned app exited and its disposable bundle moved to Trash.

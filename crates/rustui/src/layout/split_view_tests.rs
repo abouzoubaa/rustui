@@ -41,6 +41,53 @@ fn divider_size(native: &Entity<ResizableState>, cx: &mut gpui::VisualTestContex
 }
 
 #[gpui::test]
+fn rendered_split_divider_drag_resizes_the_first_panel(cx: &mut gpui::TestAppContext) {
+    cx.update(gpui_component::init);
+    let (owner, window) = cx.add_window_view(|_, app| {
+        ComponentHost::new(
+            SplitProbe {
+                axis: Axis::Horizontal,
+                unhandled: Rc::new(Cell::new(0)),
+            },
+            app,
+        )
+    });
+    let native = window.update(|window, app| {
+        let _ = window.draw(app);
+        owner
+            .read(app)
+            .retained_entity_for_test::<RetainedSplit>(
+                vec![RetentionScope::SplitView(Identity::from("event-path"))],
+                Identity::from("split-state"),
+            )
+            .expect("the production render retained split state")
+            .read(app)
+            .native
+            .clone()
+    });
+    let before = divider_size(&native, window);
+    let point = |x| gpui::point(px(x), px(50.0));
+    let modifiers = gpui::Modifiers::default();
+    window.simulate_mouse_down(point(before - 2.0), gpui::MouseButton::Left, modifiers);
+    window.simulate_mouse_move(
+        point(before + 10.0),
+        Some(gpui::MouseButton::Left),
+        modifiers,
+    );
+    window.simulate_mouse_move(
+        point(before + 40.0),
+        Some(gpui::MouseButton::Left),
+        modifiers,
+    );
+    window.simulate_mouse_up(point(before + 40.0), gpui::MouseButton::Left, modifiers);
+    let after = divider_size(&native, window);
+    assert!(
+        after > before + 10.0,
+        "divider did not move: {before} -> {after}"
+    );
+}
+
+#[gpui::test]
 fn focused_divider_routes_physical_arrows_and_clamps_through_the_rendered_control(
     cx: &mut gpui::TestAppContext,
 ) {
