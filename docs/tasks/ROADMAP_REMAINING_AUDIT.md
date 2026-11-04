@@ -37,7 +37,8 @@ the workspace all-targets check and all 9 core library tests. Their logs are
 `137129e4bd7e3cdf691e3ba4244aea5664b99e0eb6bb5e95d972547f23ce818a`)
 and `target/headstart/evidence/native-ci-smoke-core-633c0eab.log` (SHA-256
 `39edd3fa8e6ad48be239a363ef5801804a2d6c50537a1139b59148bcac2545f9`).
-The workflow has not yet completed a trusted CI run.
+At that local checkpoint the workflow had not yet run in trusted CI; the
+subsequent CI result is recorded above.
 
 ## R15 native disabled-control traversal — 2026-11-04
 
