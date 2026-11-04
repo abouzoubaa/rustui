@@ -6,6 +6,21 @@ RTL implementation and evidence; do not count deferred localization as complete.
 Web/Wasm, accessibility, and VoiceOver remain deferred as previously directed.
 Earlier entries describing locale acceptance as an immediate priority are historical.
 
+## R31 Pathfinder exact-revision search — 2026-11-04
+
+The recorded `pathfinder_geometry 0.5.1` revision
+`a5e98fac00f433fe2ff4b2135383d82491b8bfc5` still returned HTTP 422 from
+`servo/pathfinder`; GitHub commit search returned zero matches. The first two
+pages of newest public forks (200 repositories created from 2018-02-08 through
+2026-11-04) were also queried by exact SHA: 195 returned HTTP 422 and five
+returned HTTP 404. No match was found in this bounded search; the five 404s do
+not establish absence in those repositories. Results are retained in
+`target/headstart/evidence/pathfinder-forks-20261104.json` (SHA-256
+`551be52e17ca7d940acb3b31aefceaba1bfaeada51e8e026bbbb369152d7d949`)
+and `target/headstart/evidence/pathfinder-forks-page2-20261104.json` (SHA-256
+`3d964af217a91e620505f7ab637603ac64bc0aec4eabd7893edc8ed2bedb1e9f`).
+No notice was added: the five native notice gaps and license review remain open.
+
 ## R20 current owner-task lifecycle suite — 2026-11-04
 
 On source `5c817f63`, the locked offline Headstart owner-task test module passed
