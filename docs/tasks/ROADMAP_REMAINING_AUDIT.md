@@ -6,6 +6,23 @@ RTL implementation and evidence; do not count deferred localization as complete.
 Web/Wasm, accessibility, and VoiceOver remain deferred as previously directed.
 Earlier entries describing locale acceptance as an immediate priority are historical.
 
+## R26 native theme reload visual recovery — 2026-11-04
+
+On `3d9d3803`, a temporary path-only Playground patch pointed the existing
+watcher at a disposable copy of the theme. The locked offline Headstart build
+passed (`target/headstart/evidence/r26-native-theme-visual-3d9d3803-build.log`,
+SHA-256 `64c531f4d57bf8bc0e3455f9962d947dc2eb88119f06377297c299685690fe42`;
+patch SHA-256 `da0f65f237252e2b0e974299afab8ea219f2f4a02bfcf25e581935835f5574ca`).
+The exact native executable (SHA-256
+`bcf781048a77190ed3c798225743e684008b875b07caa34ce58b05ee79a57efd`, PID
+73994) visibly changed the dark window, sidebar and content backgrounds from
+charcoal to green after the watched file was edited. Invalid JSON produced a
+reload error while the green appearance remained; restoring the original file
+cleared the error and visibly restored the charcoal appearance. The watcher was
+stopped, the owned app exited, the bundle and theme copy were removed, and the
+source patch was reversed. This bounded native visual recovery check does not
+complete theme coverage, other platforms, or release acceptance.
+
 ## R17 native empty Table scrollbar probe — 2026-11-04
 
 A temporary zero-row, 700-point-column, 100-point-high Playground specimen on
