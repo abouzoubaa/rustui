@@ -6,6 +6,30 @@ RTL implementation and evidence; do not count deferred localization as complete.
 Web/Wasm, accessibility, and VoiceOver remain deferred as previously directed.
 Earlier entries describing locale acceptance as an immediate priority are historical.
 
+## R04 native platform window error propagation — 2026-11-04
+
+On clean candidate `38486c2e`, a temporary framework-crate example requested
+an anchored native popup as the root. The pinned macOS backend rejects that
+window kind with `popups are not supported on this platform` before inspecting
+the deliberately nonexistent parent handle. No existing framework runtime or
+vendor source was modified. The normal locked offline Headstart build passed; retained source
+`target/headstart/evidence/mvp-platform-error-38486c2e.rs` has SHA-256
+`88859b37e2a273d62305e92873b4b6e485ca2e2bfa714e678c788688c0e8cb4a` and
+build log SHA-256 is
+`87908e2d6547e71c9ec37b72bb8eca8331b9f5db94fd492a20f41ed20ba3951f`.
+
+The exact executable (SHA-256
+`144402fd5df4c420a46c03c99461d22d7d49f85f16d2d1058afb54c49b3e7ec7`)
+ran from the owned validation bundle. The custom handler received the actual
+platform error and quit (PID 5404; log SHA-256
+`b2690067486ad878ab527647c92326e6601d6a3da041055ce556f88db5f640a6`).
+The default handler logged the same platform error and quit (PID 5419; log
+SHA-256 `988a76c8c72d0dc761c13cb6c5264278ba2d6a9a03d21b719a4e297c2ea542dd`).
+Both exited 0. The owned bundle, temporary example and standalone executable
+were removed; source and logs remain under `target/headstart/evidence/`.
+This exercises a real unsupported-popup backend return through RustUI error
+handling, not ordinary-window creation failures or the full lifecycle contract.
+
 ## R30/R31 native CI notice regression result — 2026-11-04
 
 GitHub Actions [run 41885998486](https://github.com/abouzoubaa/rustui/actions/runs/41885998486)

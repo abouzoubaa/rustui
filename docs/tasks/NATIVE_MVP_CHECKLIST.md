@@ -34,6 +34,9 @@ below identify sections in `ROADMAP_REMAINING_AUDIT.md`.
    - [x] Observe native root launch, close and owner unmount (R04/R05 native root close unmount).
    - [x] Observe cancellation of pending owner work on close (R04/R05 native pending task root close).
    - [ ] Verify actual platform window-open failure handling and broader lifecycle cases end to end. The existing error injection is partial evidence.
+     Partial progress: R04 native platform window error propagation verifies
+     both handlers with a real unsupported-popup backend error; other window
+     failure and lifecycle cases remain open.
 4. **Basic controls and input: 2/3**
    - [x] Demonstrate native text binding with owner state (R03/R06 external consumer bound input).
    - [x] Demonstrate Stepper bounds and enabled/disabled owner updates (R06/R15 native combined form coordination).
