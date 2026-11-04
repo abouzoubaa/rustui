@@ -6,6 +6,20 @@ RTL implementation and evidence; do not count deferred localization as complete.
 Web/Wasm, accessibility, and VoiceOver remain deferred as previously directed.
 Earlier entries describing locale acceptance as an immediate priority are historical.
 
+## R03/R04 native source-consumer probe — 2026-11-04
+
+On `5ffcb466`, the independent Cargo workspace under `examples/external-consumer`
+built with locked offline Headstart (log
+`target/headstart/evidence/native-consumer-5ffcb466-build.log`, SHA-256
+`d704daf844a1f4a18799b499e436b14f18d8f7899812689b2bc3d803d11f1b03`).
+The source-consumer executable SHA-256
+`a78475b780109ce1d9cff502a6f46c7f938e0c2d8627e8c58d921f4a83958086`
+ran as PID 92602 from an owned disposable probe bundle, opened its native
+window, and two Button clicks changed the displayed count from 0 to 1 to 2.
+The process exited and the probe bundle was removed. This is a bounded native
+public-API interaction using a path dependency and local patches, not an
+installed-package, keyboard, signing, licensing or release acceptance check.
+
 ## R31 real Playground package reuse — 2026-11-04
 
 At `1d19f9f1`, the revised packaging script packaged the retained optimized
