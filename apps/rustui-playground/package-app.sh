@@ -118,6 +118,11 @@ for destination in \
         exit 1
     fi
 done
+if [ -z "$release_notices_source" ] && [ -e "$resources/licenses/release" ]; then
+  printf '%s\n' 'refusing to reuse release notices without RUSTUI_RELEASE_NOTICES_DIR' >&2
+  exit 1
+fi
+
 mkdir -p "$bundle/Contents/MacOS" "$resources"
 mkdir -p "$resources/assets" "$resources/themes"
 copy_output "$repository_root/assets/link-fixture.html" "$resources/assets/link-fixture.html"

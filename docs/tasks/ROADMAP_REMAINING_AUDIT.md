@@ -6,6 +6,23 @@ RTL implementation and evidence; do not count deferred localization as complete.
 Web/Wasm, accessibility, and VoiceOver remain deferred as previously directed.
 Earlier entries describing locale acceptance as an immediate priority are historical.
 
+## R31 stale release notices on bundle reuse — 2026-11-04
+
+The default Playground packager could replace an executable while retaining a
+previous release notice collection if none was supplied for the new build.
+It now refuses that reuse before writing bundle outputs and asks for
+`RUSTUI_RELEASE_NOTICES_DIR`. A fixture reproduced the prior behavior and then
+passed with the guard, preserving the previous executable and notices; normal
+reuse with a supplied collection and existing packaging fixtures also passed.
+The packaging README documents the requirement. Logs:
+`target/headstart/evidence/native-package-stale-before.log` SHA-256
+`4633941685f854d0722e25f946890d83aaf0bd97e8f09ae3b97b05f11f908574` and
+`target/headstart/evidence/native-package-stale-after.log` SHA-256
+`0bcc8c4f92b38506b47a7b049b38b0385b303f88b1c57c49ec0c5ac3b0a3345c`.
+Shell syntax and `git diff --check` passed. The caller must still supply a
+collection matching the build; notice sufficiency and release acceptance remain
+open.
+
 ## R20 current component lifecycle suite — 2026-11-04
 
 At `25af62f9`, the locked offline Headstart component lifecycle module passed

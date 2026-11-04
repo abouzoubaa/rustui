@@ -22,7 +22,9 @@ package is a thin launcher for this same implementation.
 
 To package into a separate, fresh location without changing the default bundle,
 set `RUSTUI_PLAYGROUND_BUNDLE_PATH` to the desired `.app` path. The script
-refuses to reuse an existing explicit destination. For a nondefault Cargo
+refuses to reuse an existing explicit destination. A default bundle containing
+release notices can only be repackaged when `RUSTUI_RELEASE_NOTICES_DIR` points
+to the notice collection for the new build. For a nondefault Cargo
 artifact layout, also set `RUSTUI_PLAYGROUND_BINARY` to the built executable.
 
 See [the Playground guide](../../docs/RUSTUI_PLAYGROUND.md) and the consolidation

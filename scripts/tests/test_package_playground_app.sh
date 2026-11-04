@@ -64,6 +64,23 @@ RUSTUI_RELEASE_NOTICES_DIR="$notice_source" \
 RUSTUI_PLAYGROUND_REFERENCES_DIR="$references_source" \
     "$repository_root/apps/rustui-playground/package-app.sh" >/dev/null
 cmp "$headstart_binary" "$bundle/Contents/MacOS/rustui-playground"
+
+# A new executable must not inherit release notices from a prior package.
+if CARGO_TARGET_DIR="$target_root" \
+    RUSTUI_RELEASE_NOTICES_DIR="" \
+    RUSTUI_PLAYGROUND_REFERENCES_DIR="$references_source" \
+    "$repository_root/apps/rustui-playground/package-app.sh" >/dev/null 2>&1; then
+    printf '%s\n' 'package unexpectedly reused stale release notices.' >&2
+    exit 1
+fi
+cmp "$headstart_binary" "$bundle/Contents/MacOS/rustui-playground"
+cmp "$notice_source/notices/LICENSE" \
+    "$bundle/Contents/Resources/licenses/release/dependency-notices/notices/LICENSE"
+# Remaining reuse fixtures exercise a bundle with no release notice collection.
+python3 - "$bundle/Contents/Resources/licenses/release" <<'PY'
+import shutil, sys
+shutil.rmtree(sys.argv[1])
+PY
 if CARGO_TARGET_DIR="$target_root" \
     RUSTUI_PLAYGROUND_BINARY="$(dirname -- "$headstart_binary")" \
     RUSTUI_PLAYGROUND_REFERENCES_DIR="$references_source" \
