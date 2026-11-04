@@ -67,6 +67,38 @@ def check_renderer_calls(source_overrides: dict[str, str] | None = None) -> list
         if source is None:
             source = (ROOT / "crates/rustui/src" / relative_path).read_text(encoding="utf-8")
         source = _without_test_modules(source)
+        if name == "menu":
+            # Menu colors are resolved once at theme activation and consumed by
+            # Components' PopupMenu through the shared popover theme role.
+            menu_registry = _without_test_modules(
+                source_overrides.get("theme/registry.rs", registry)
+            )
+            popup_path = "@gpui/menu/popup_menu.rs"
+            styled_path = "@gpui/styled.rs"
+            popup = source_overrides.get(popup_path)
+            if popup is None:
+                popup = (ROOT / "vendor/gpui-component-0.7.3/src/menu/popup_menu.rs").read_text(encoding="utf-8")
+            styled_source = source_overrides.get(styled_path)
+            if styled_source is None:
+                styled_source = (ROOT / "vendor/gpui-component-0.7.3/src/styled.rs").read_text(encoding="utf-8")
+            menu_function = menu_registry.partition("fn menu_background(")[2].partition("\n}")[0]
+            menu_markers = (
+                r'resolve_component_style_with\s*\(\s*document\s*,\s*"menu"\s*,\s*"body"',
+                r'style\s*\.\s*colors\s*\.\s*get\s*\(\s*"background"\s*\)',
+            )
+            activation_markers = (
+                r'let\s+menu_popover\s*=\s*menu_background\s*\(\s*document\s*,\s*mode\s*\)\s*\?',
+                r'colors\.popover\s*=\s*opaque_popover_fallback\s*\(\s*colors\.popover\s*,\s*menu_popover',
+            )
+            if not (
+                ".dropdown_menu(" in source
+                and all(re.search(marker, menu_function) for marker in menu_markers)
+                and all(re.search(marker, menu_registry) for marker in activation_markers)
+                and ".popover_style(cx)" in _without_test_modules(popup)
+                and ".bg(theme.popover)" in _without_test_modules(styled_source)
+            ):
+                errors.append("menu activation-to-popover theme path is incomplete")
+            continue
         if name == "button":
             queried = "context.button_theme()" in source
         elif name in {"text_field", "search_field"}:

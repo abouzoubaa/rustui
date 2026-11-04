@@ -6,6 +6,22 @@ RTL implementation and evidence; do not count deferred localization as complete.
 Web/Wasm, accessibility, and VoiceOver remain deferred as previously directed.
 Earlier entries describing locale acceptance as an immediate priority are historical.
 
+## R26/R30 menu theme source verifier — 2026-11-04
+
+The native source check exposed a stale Menu theme verifier: it required the
+Menu renderer to resolve the `menu` style directly, although theme activation
+now resolves that record and composites it into the Components popover role.
+The checker now verifies the activation-to-PopupMenu path, including the
+upstream popover consumer, while retaining the other renderer checks. The
+regression failed before the fix (`menu-theme-verifier-before-a160db10.log`,
+SHA-256 `b5b4f00d9243e8c47bd52756fc1a75c7ab7470c93e7c12a50510f253c3a29ed5`)
+and passes with mutations to each checked link rejected. The new native-only CI
+source step and its local checks passed (log
+`native-ci-source-check-final-a160db10.log`, SHA-256
+`558547dc53c964c4dde47e296dc757979b35e0d604e43dbe3d9e077135d827ed`).
+These are static checks, not visual theme acceptance. Trusted CI for this
+candidate is still pending.
+
 ## R30 native CI smoke result — 2026-11-04
 
 GitHub Actions [run 41882107560](https://github.com/abouzoubaa/rustui/actions/runs/41882107560)

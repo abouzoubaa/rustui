@@ -73,6 +73,15 @@ jobs:
         env:
           EXPECTED_SHA: ${{ github.sha }}
         run: ./scripts/verify-ci-checkout.sh "$EXPECTED_SHA"
+      - name: Verify native source boundaries and theme wiring
+        run: |
+          rustup run 1.97.1 cargo fmt --all --check
+          python3 scripts/verify_dependency_boundary.py
+          python3 scripts/validate_themes.py --plans-only
+          python3 scripts/verify_theme_adapter_coverage.py
+          python3 -m unittest discover -s scripts/tests -p 'test_verify_theme_adapter_coverage.py'
+          python3 -m unittest discover -s scripts/tests -p 'test_cargo_headstart.py'
+          sh scripts/tests/test_verify_ci_checkout.sh
       - name: Check native workspace targets
         run: ./scripts/cargo-headstart check --workspace --all-targets --profile headstart --locked --offline
       - name: Test core state and lifecycle
