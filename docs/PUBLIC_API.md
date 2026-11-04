@@ -300,11 +300,13 @@ returns `bool`, allowing no-op updates to skip `Context::notify()`.
 
 - State access and bindings are field-backed, but derived state and field-level
   dependency tracking are not implemented; invalidation is currently whole-host.
-- Environment values reach primitive lowering through `RenderContext`; ergonomic
-  component property access, async state, and typed events are not implemented.
-- The stack DSL accepts constructor-call expressions and chained methods. General
-  `if`/`for`, tuple, and block syntax is not supported in the macros. Conditional
-  and repeated content use `Option<V>`, `Keyed`, and stack `.children(...)` builders.
+- Environment values can be read during lowering with `EnvironmentReader`;
+  fine-grained environment observation and automatic invalidation for interior
+  mutations are not provided. `OwnerTaskReader` provides owner-scoped async
+  work and `AsyncState`; it does not guarantee interruption of blocking work.
+- The stack DSL supports `if`/`else` child branches as well as supported view
+  expressions. It does not accept `for`, `match`, `while`, or `loop` directly;
+  use builders such as `.children(...)` for repeated content.
 - VStack start/end alignment and HStack flow follow the active locale direction.
   Unicode bidi isolation and logical padding are not implemented.
 - Button accepts component methods through `Action` and application-global changes
@@ -314,7 +316,8 @@ returns `bool`, allowing no-op updates to skip `Context::notify()`.
   date/number formatting are not implemented.
 - Repeated Button labels require explicit stable IDs to avoid GPUI element ID
   collisions.
-- Most public module paths contain scaffolds rather than supported contracts.
+- Some module paths are scaffolds; a module's presence alone does not establish
+  that its planned capabilities are implemented.
 
 ### Composing application actions
 
@@ -1023,10 +1026,12 @@ instrumentation remain pending. Evidence:
 
 ## Stack macro grammar
 
-`VStack!` and `HStack!` accept adjacent constructor or nested-stack calls, optional
-commas or semicolons, and chained builder calls. A bare second argument in
-`Button(label, handler)` is rewritten to the owning component action. Conditional,
-repeated, keyed, tuple, and arbitrary block content are not implemented yet.
+`VStack!` and `HStack!` accept supported adjacent view expressions, nested-stack
+calls, `if`/`else` branches, optional commas or semicolons, and chained builder
+calls. A bare second argument in `Button(label, handler)` is rewritten to the
+owning component action. Direct `for`, `match`, `while`, and `loop` children are
+not supported; use `.children(...)` for repeated content. See the conditional
+stack section below for the branch behavior and its acceptance limits.
 
 ## Application entry point
 

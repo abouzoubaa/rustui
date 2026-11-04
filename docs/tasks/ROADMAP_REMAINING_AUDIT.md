@@ -6,6 +6,27 @@ RTL implementation and evidence; do not count deferred localization as complete.
 Web/Wasm, accessibility, and VoiceOver remain deferred as previously directed.
 Earlier entries describing locale acceptance as an immediate priority are historical.
 
+## Native release and public API checkpoint — 2026-11-04
+
+On source commit `8ce6886d` with the public guide correction, the macOS release
+script passed the current four-layer Slider patch verification, workspace and
+external-consumer checks, tests, optimized build and disposable packaging. Its
+41 test-suite results report 1,550 passed, zero failed and four ignored. It
+collected 446 observed packages and still reported five missing notice files.
+The unlaunched bundle was moved to Trash and prior native metadata and build
+evidence preserved in `release-checks-before-8ce6886d`. Log:
+`target/headstart/evidence/native-release-8ce6886d-20261104.log` (SHA-256
+`b9d3a984ff42049609f24d6ee50e9b716a8f4224dabf04bc1e7f11662cdb7161`).
+This is source, build, test and package evidence, not license clearance or
+complete native acceptance.
+
+The public guide's stale limitations incorrectly said conditional stack
+children and owner-scoped async state were unavailable. Its descriptions now
+match the existing contracts. Two conditional-macro integration tests and the
+owner-task replacement/cancellation test passed (3/3), recorded in
+`target/headstart/evidence/public-contracts-20261104.log` (SHA-256
+`3482dfa8d28302a7e8643e8ccedeffc0b3d4f1155cc1004559a02af490a84b1c`).
+
 ## R09/M924 native Utility Window — 2026-10-31
 
 Follow-up: when a Slider's step did not divide its range, GPUI Base could
