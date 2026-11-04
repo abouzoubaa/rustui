@@ -6,6 +6,20 @@ RTL implementation and evidence; do not count deferred localization as complete.
 Web/Wasm, accessibility, and VoiceOver remain deferred as previously directed.
 Earlier entries describing locale acceptance as an immediate priority are historical.
 
+## R20 current component lifecycle suite — 2026-11-04
+
+At `25af62f9`, the locked offline Headstart component lifecycle module passed
+11 tests; its manual performance workload was ignored. The tests cover keyed
+retention, owner-specific actions and bindings, retained subscriptions, and
+unmounting. Log `target/headstart/evidence/native-lifecycle-25af62f9.log` has
+SHA-256 `e3172a54416396836bf726cc992491a980df9d94556f4fb193bae0da5cfbadaa`.
+This is test-platform evidence, not native interaction or performance acceptance.
+
+A mistakenly started full RustUI library suite was interrupted after execution
+began because it included deferred areas. Its log has no final result and some
+localization and accessibility-named tests did run; it is not counted as a
+passed suite or as acceptance evidence for those deferred areas.
+
 ## R19 native unfocused modal probe — 2026-11-04
 
 On `11eb913f`, a temporary framework-only F8 handler called `window.blur` in
