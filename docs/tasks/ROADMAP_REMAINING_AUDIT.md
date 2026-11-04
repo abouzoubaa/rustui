@@ -6,6 +6,20 @@ RTL implementation and evidence; do not count deferred localization as complete.
 Web/Wasm, accessibility, and VoiceOver remain deferred as previously directed.
 Earlier entries describing locale acceptance as an immediate priority are historical.
 
+## R31 native missing-notice dependency paths — 2026-11-04
+
+At `f56cc711`, locked offline Cargo reverse trees for `rustui-playground` on
+`aarch64-apple-darwin`, restricted to normal dependency edges, each reached
+the Playground for `block 0.1.6`, `mac 0.1.1`, `malloc_buf 0.0.6`,
+`pathfinder_geometry 0.5.1`, and `seahash 4.1.0`. Thus the five unresolved
+notice packages cannot all be dismissed as build-only from the dependency
+graph. The five logs and their hashes are indexed in
+`target/headstart/evidence/native-notice-normal-graph.json` (SHA-256
+`fd934cef8996b0c0a2ddca330c9b7262b48fea43724aaa7fd7ac4d24c8eec677`).
+Cargo normal edges do not prove which code remains in the linked executable or
+determine license obligations. No notice was added; all five gaps and legal
+review remain open.
+
 ## R06/R15 native combined form coordination — 2026-11-04
 
 On `373f62ad`, a temporary outside-checkout public-API consumer combined a

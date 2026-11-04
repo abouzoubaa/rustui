@@ -38,7 +38,9 @@ unweighted count is not a measure of code written or time remaining.
    documented and verified independently of the development checkout. The
    local source workflow above does not satisfy an installed SDK requirement.
 9. **Open — dependency notices and review:** the five native missing notice
-   files and license sufficiency are resolved for the candidate.
+   files and license sufficiency are resolved for the candidate. All five
+   appear on normal macOS Playground dependency paths; linked-binary contents
+   and the legal obligations remain to be determined.
 10. **Open — supported macOS release:** the supported OS/version scope and
     package workflow are decided and verified; signing and notarization are
     verified if required for the chosen distribution route.
