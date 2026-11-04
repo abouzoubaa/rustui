@@ -6,6 +6,23 @@ RTL implementation and evidence; do not count deferred localization as complete.
 Web/Wasm, accessibility, and VoiceOver remain deferred as previously directed.
 Earlier entries describing locale acceptance as an immediate priority are historical.
 
+## R17 native empty wide Table probe — 2026-11-04
+
+On `6834cc2f`, a temporary Playground story patch supplied zero Table rows and
+700-point columns; the patch was then reversed. The locked offline Headstart
+build passed (log `target/headstart/evidence/r17-empty-wide-native-6834cc2f-build.log`,
+SHA-256 `b671b168a377464e047399aaeb0efb09828da805b1470c12fb34044f76f46d30`;
+patch `target/headstart/evidence/r17-empty-wide-native-6834cc2f.patch`, SHA-256
+`6da70ce4a34c479889c18a577a960301fab19d84ba313c44e59fc19e5efdbed0`).
+The exact native bundle executable (SHA-256
+`39e1d21322f2425da0e59053b19949650353e271849a1e98e32f050ebbba317b`, PID
+66886) displayed the empty Table with both headers. Computer-controlled left
+and right horizontal scroll attempts over header and body showed no visible
+header movement. Input delivery and scroll offset were not independently
+observed, so this does not establish a scrolling defect or acceptance. The
+owned app exited and bundle was removed; physical native scrolling and broader
+Table acceptance remain open.
+
 ## R17 empty Table horizontal scrolling — 2026-11-04
 
 The rendered GPUI test-window regression now also exercises a zero-row Table
