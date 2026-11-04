@@ -6,6 +6,25 @@ RTL implementation and evidence; do not count deferred localization as complete.
 Web/Wasm, accessibility, and VoiceOver remain deferred as previously directed.
 Earlier entries describing locale acceptance as an immediate priority are historical.
 
+## R06/R15 native combined form keyboard flow — 2026-11-04
+
+On clean candidate `04de711b`, a generated outside-checkout consumer using
+the public API built with the normal locked offline Headstart profile (log
+`target/headstart/evidence/mvp-keyboard-form-04de711b-build.log`, SHA-256
+`ac88e730e1968fc90dbf8685846cf37d99710b80109d3b16e0d4bc1e52f95982`).
+The retained probe source `target/headstart/evidence/native-form-coordination-probe.rs`
+has SHA-256 `08723b2355243e6bf2e8c9012044d38d693d1ea43a7fce81cabce3a47658f155`.
+The exact executable (SHA-256
+`c4ba7e405f60ddeb0368d551ff53f5326d5a822b27332191467963a58fd256c5`)
+ran as PID 75538 in the owned validation bundle. After entering `Ari`, Tab
+traversal skipped the disabled Stepper buttons and Space activated Set maximum
+(quantity 0 to 2). Shift-Tab and Space enabled the Toggle; Tab and Space
+activated Decrease (2 to 1); Shift-Tab and Space activated Increase (1 to 2),
+which became disabled at the upper bound. The owner retained `Ari` throughout.
+The process exited and disposable bundle and generated workspace were removed.
+This computer-input observation does not establish physical keyboard, IME,
+other controls or complete native acceptance.
+
 ## R06 native consumer keyboard editing — 2026-11-04
 
 On clean candidate `05c9e0ab`, the separate public-API consumer built with the

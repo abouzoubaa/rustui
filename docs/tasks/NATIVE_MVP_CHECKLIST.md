@@ -40,7 +40,9 @@ below identify sections in `ROADMAP_REMAINING_AUDIT.md`.
    - [ ] Complete the documented MVP control set, disabled states, keyboard navigation and ordinary text-editing workflow on a current candidate.
      Partial progress: R06 native consumer keyboard editing verifies selection,
      replacement, cursor editing and Tab navigation between the sample's field
-     and button; other controls and disabled states remain open.
+     and button. R06/R15 native combined form keyboard flow additionally verifies
+     disabled Stepper traversal and keyboard operation of Toggle and Stepper;
+     other controls and disabled states remain open.
 5. **Navigation and overlays: 2/3**
    - [x] Demonstrate native unknown-route recovery (R17 native unknown-route keyboard recovery).
    - [x] Demonstrate a native Drawer interaction (R19/R33 native Drawer interaction).
