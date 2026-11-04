@@ -6,6 +6,22 @@ RTL implementation and evidence; do not count deferred localization as complete.
 Web/Wasm, accessibility, and VoiceOver remain deferred as previously directed.
 Earlier entries describing locale acceptance as an immediate priority are historical.
 
+## R30 native-only CI smoke path — 2026-11-04
+
+The existing CI workflow now offers an explicit `native_smoke_only` manual
+dispatch. It checks the trusted checkout, compiles workspace targets on macOS,
+and runs `rustui-core` library tests; it skips the full source and release jobs
+for that dispatch. Normal push, pull-request and ordinary manual workflow paths
+retain their existing checks. This smoke path does not establish the full
+source, native release, Web, accessibility, licensing or distribution gates.
+On `633c0eab` plus this workflow change, both smoke commands passed locally:
+the workspace all-targets check and all 9 core library tests. Their logs are
+`target/headstart/evidence/native-ci-smoke-all-targets-633c0eab.log` (SHA-256
+`137129e4bd7e3cdf691e3ba4244aea5664b99e0eb6bb5e95d972547f23ce818a`)
+and `target/headstart/evidence/native-ci-smoke-core-633c0eab.log` (SHA-256
+`39edd3fa8e6ad48be239a363ef5801804a2d6c50537a1139b59148bcac2545f9`).
+The workflow has not yet completed a trusted CI run.
+
 ## R15 native disabled-control traversal — 2026-11-04
 
 On clean candidate `c7a9e90e`, a generated outside-checkout public-API

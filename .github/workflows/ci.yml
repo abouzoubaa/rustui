@@ -9,6 +9,10 @@ on:
         description: Also run Web/Wasm release checks
         type: boolean
         default: false
+      native_smoke_only:
+        description: Run only native build and core tests (not release acceptance)
+        type: boolean
+        default: false
 
 permissions:
   contents: read
@@ -19,6 +23,7 @@ concurrency:
 
 jobs:
   source:
+    if: github.event_name != 'workflow_dispatch' || !inputs.native_smoke_only
     runs-on: ubuntu-24.04
     timeout-minutes: 15
     steps:
@@ -31,7 +36,7 @@ jobs:
   # Run only after a maintainer selects a trusted revision. Never execute PR
   # code automatically on the persistent runner/toolchain cache.
   macos-and-web-builds:
-    if: github.event_name == 'workflow_dispatch'
+    if: github.event_name == 'workflow_dispatch' && !inputs.native_smoke_only
     runs-on: [self-hosted, macOS, ARM64, rustui-headstart]
     timeout-minutes: 120
     steps:
@@ -54,3 +59,21 @@ jobs:
       - name: Web optimized bundle
         if: inputs.include_web
         run: ./scripts/verify-release.sh web
+
+  native-mvp-smoke:
+    if: github.event_name == 'workflow_dispatch' && inputs.native_smoke_only
+    runs-on: [self-hosted, macOS, ARM64, rustui-headstart]
+    timeout-minutes: 120
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
+        with:
+          persist-credentials: false
+          clean: false
+      - name: Verify trusted checkout
+        env:
+          EXPECTED_SHA: ${{ github.sha }}
+        run: ./scripts/verify-ci-checkout.sh "$EXPECTED_SHA"
+      - name: Check native workspace targets
+        run: ./scripts/cargo-headstart check --workspace --all-targets --profile headstart --locked --offline
+      - name: Test core state and lifecycle
+        run: ./scripts/cargo-headstart test -p rustui-core --lib --profile headstart --locked --offline
