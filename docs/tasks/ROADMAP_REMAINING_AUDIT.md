@@ -5338,3 +5338,18 @@ caches and consumer workspace were preserved. This closes only the bounded
 Picker/Slider recovery defect. The complete basic-controls workflow and all
 other open MVP checks remain open, so the totals stay 21/31 evidence milestones
 (67.74%) and 2/10 acceptance checks (20%).
+
+### R06/R15 current-candidate native TextField editing — 2026-11-04
+
+The rebuilt combined-controls consumer (executable SHA-256
+`48fc6748728c3aa3180c6d021dce46e080427fd6010b0c199b0d4c669f45592c`) was
+retested for ordinary text editing. Tab focused Name; selecting all and
+replacing it with `Native edit` changed both the field and the bound owner
+summary. Moving to the start and inserting `Start ` changed both to `Start Native
+edit`. Tab moved to Accept and Shift-Tab returned to Name. This passes the
+bounded current-candidate replacement, cursor-insertion, owner-readback, and
+focus-traversal step. Evidence: `native-current-text-edit-20261104.log` (SHA-256
+`e606e9fdbf126591f28e8521c7f9a9543c660ef10d93d2e79c16e0fd67e95054`). IME,
+VoiceOver, browser behavior, the complete control matrix, and the full
+basic-controls acceptance check remain open. No evidence milestone or acceptance
+check is newly closed, so totals remain 21/31 (67.74%) and 2/10 (20%).

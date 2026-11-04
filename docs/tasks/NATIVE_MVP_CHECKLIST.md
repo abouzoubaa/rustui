@@ -1,5 +1,15 @@
 # Proposed macOS developer-preview MVP checks
 
+## Current-candidate native text editing — 2026-11-04
+
+On the rebuilt combined-controls consumer, Tab focused TextField; selecting all
+and replacing the text updated both the field and owner summary. Inserting at
+the beginning updated both again. Tab moved to Checkbox and Shift-Tab returned
+to TextField. Evidence: `ROADMAP_REMAINING_AUDIT.md`. This closes only the
+bounded current-candidate editing check. MVP totals remain 21/31 evidence
+milestones (67.74%) and 2/10 acceptance checks (20%); the complete basic-controls
+workflow remains open.
+
 ## Latest native retest — 2026-11-04
 
 R11/R15 Checkbox, Toggle, TextField, and Radio dynamic-disable recovery passed
