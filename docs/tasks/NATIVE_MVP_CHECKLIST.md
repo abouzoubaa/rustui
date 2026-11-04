@@ -51,7 +51,8 @@ below identify sections in `ROADMAP_REMAINING_AUDIT.md`.
      R15 native Slider and Picker keyboard flow covers disabled traversal,
      keyboard adjustment and selection, and re-disabling. R11/R15 native Radio
      and Button disabled flow covers disabled clicks, traversal and re-enabling.
-     Other controls and disabled states remain open.
+     R15 native owner-controlled Radio selection covers one exclusive-binding
+     pattern; other control and group policies remain open.
 5. **Navigation and overlays: 2/3**
    - [x] Demonstrate native unknown-route recovery (R17 native unknown-route keyboard recovery).
    - [x] Demonstrate a native Drawer interaction (R19/R33 native Drawer interaction).

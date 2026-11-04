@@ -6,6 +6,25 @@ RTL implementation and evidence; do not count deferred localization as complete.
 Web/Wasm, accessibility, and VoiceOver remain deferred as previously directed.
 Earlier entries describing locale acceptance as an immediate priority are historical.
 
+## R15 native owner-controlled Radio selection — 2026-11-04
+
+On clean candidate `ddcbe1a3`, a generated outside-checkout public-API
+consumer built with normal locked offline Headstart. Its retained source
+`target/headstart/evidence/mvp-radio-group-ddcbe1a3.rs` has SHA-256
+`a14922f6dba6f3155a0c886c10a804b7ed4139df70f1ec5827d7978b3b2b068b`;
+build log SHA-256 is
+`9b2655c53c5ed444e2fc9aa87013db137d58ada74edf2c8fa1c3c04422a2f6ad`.
+The exact executable (SHA-256
+`4104e7fef03ca698c9c2c023ef133d24c1fc892e91950ea3b22b02f27c751dfe`)
+ran as PID 14989 in the owned validation bundle. Two Radio controls used
+bindings into one owner selection; clicking Second changed First to Second,
+repeating that click and clicking a disabled third choice kept Second selected.
+Tab and Space selected First, then Second, and Tab skipped the disabled choice
+to return to First. The process exited; the disposable bundle and generated
+workspace were removed. This verifies the tested owner-controlled binding
+pattern, not a dedicated RadioGroup API, arrow-key policy, physical keyboard or
+complete native acceptance.
+
 ## R11/R15 native Radio and Button disabled flow — 2026-11-04
 
 On clean candidate `a6c21244`, a generated outside-checkout public-API
