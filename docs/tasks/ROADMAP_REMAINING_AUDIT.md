@@ -6,6 +6,18 @@ RTL implementation and evidence; do not count deferred localization as complete.
 Web/Wasm, accessibility, and VoiceOver remain deferred as previously directed.
 Earlier entries describing locale acceptance as an immediate priority are historical.
 
+## R17 native unknown-route keyboard recovery — 2026-11-04
+
+The retained `83407ea8` temporary initial-path specimen was repackaged after
+confirming its executable SHA-256
+`f9b1f9ca5b45e967e1653115408cebc741c7dfc52936d720c5791afce59cea03` and
+that subsequent changes affected only the package script, its fixture and the
+ledger. In exact native process PID 88933, Tab reached the Back button from the
+story list; Space returned the `details → missing` path to Details, and a
+second Space returned to the root. The owned process exited and its bundle was
+removed. This bounded computer-keyboard check does not establish physical input,
+VoiceOver, or broader navigation acceptance.
+
 ## Native Playground output type safety — 2026-11-04
 
 A reused bundle with a directory at `Contents/Info.plist` previously let the
