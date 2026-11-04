@@ -6,6 +6,28 @@ RTL implementation and evidence; do not count deferred localization as complete.
 Web/Wasm, accessibility, and VoiceOver remain deferred as previously directed.
 Earlier entries describing locale acceptance as an immediate priority are historical.
 
+## R26 current native appearance and build diagnostic — 2026-11-04
+
+On clean candidate `6b04eb82`, a locked offline Headstart Playground build
+failed with `internal compiler error: encountered incremental compilation error
+with module_children(rustui_playground[2dce])`. The log is
+`target/headstart/evidence/mvp-appearance-6b04eb82-build.log` (SHA-256
+`e6262f6506548d64311aa1de1f8ecb266dd92d6062986c7149b12ae572a87c8e`).
+A one-off retry with `CARGO_INCREMENTAL=0` succeeded without changing the
+project's profiles or removing caches; its log SHA-256 is
+`3f35c3b502ee3589f1de6522ce367723b26b7cd472ce0ff210a7b3d39313f699`.
+This retry does not resolve the incremental compiler failure.
+
+The resulting executable (SHA-256
+`d83b0434d4cdb7cb1c8fd7f38559f8d262f98397c6d4d0c487ce5b34b1b5bbfd`)
+ran as PID 68523 from an owned disposable bundle. In its Button story, a click
+raised the count to 1; switching dark to light visibly changed the window,
+sidebar, text and controls while retaining that count. Switching back to dark
+visibly restored the dark appearance, and another click raised the count to 2.
+The owned process exited and bundle was removed. This is one story's native
+appearance and state observation; broader theme, motion and release acceptance
+remain open.
+
 ## R08 native opacity scheduling — 2026-11-04
 
 On clean candidate `8d0c5065`, the locked offline Headstart build of the

@@ -8,6 +8,62 @@ unweighted count is not a measure of code written or time remaining.
 
 **Current count: 2/10 checks complete (20%).**
 
+## Granular progress baseline — 2026-11-04
+
+**MVP 61%: 19 of 31 evidence milestones below have been demonstrated.** This
+unweighted count exposes progress inside the larger checks. It is not an
+estimate of effort, calendar time, coding completion, or production readiness.
+The milestones differ in size; some record evidence on an earlier revision
+and need repetition on a release candidate. The 2/10 acceptance count above
+remains separate and closes only when each complete requirement is satisfied.
+Future updates should report both counts and the milestone that changed.
+
+The scope is a proposed macOS developer preview. This does not remove the
+broader production roadmap or decide the release strategy. Evidence references
+below identify sections in `ROADMAP_REMAINING_AUDIT.md`.
+
+1. **Separate local consumer: 3/3**
+   - [x] Build an outside-checkout consumer using the public API (R03/R04 native source-consumer probe).
+   - [x] Run its native button action (R03/R04 native source-consumer probe).
+   - [x] Run a bound text input and observe the owner update (R03/R06 external consumer bound input).
+2. **Repeatable local setup: 3/3**
+   - [x] Provide a generator for a separate consumer workspace (R03/R04 repeatable local consumer setup).
+   - [x] Refuse to overwrite an existing destination (same section).
+   - [x] Build a generated fixture offline from a path containing spaces (same section).
+3. **Window lifecycle: 2/3**
+   - [x] Observe native root launch, close and owner unmount (R04/R05 native root close unmount).
+   - [x] Observe cancellation of pending owner work on close (R04/R05 native pending task root close).
+   - [ ] Verify actual platform window-open failure handling and broader lifecycle cases end to end. The existing error injection is partial evidence.
+4. **Basic controls and input: 2/3**
+   - [x] Demonstrate native text binding with owner state (R03/R06 external consumer bound input).
+   - [x] Demonstrate Stepper bounds and enabled/disabled owner updates (R06/R15 native combined form coordination).
+   - [ ] Complete the documented MVP control set, disabled states, keyboard navigation and ordinary text-editing workflow on a current candidate.
+5. **Navigation and overlays: 2/3**
+   - [x] Demonstrate native unknown-route recovery (R17 native unknown-route keyboard recovery).
+   - [x] Demonstrate a native Drawer interaction (R19/R33 native Drawer interaction).
+   - [ ] Integrate and verify lost-focus recovery for Sheet and Dialog and complete the chosen navigation/overlay workflow.
+6. **Theme and motion: 3/4**
+   - [x] Observe native light and dark switching with preserved state in one story (R26 current native appearance and build diagnostic).
+   - [x] Verify normal opacity scheduling and quiescence in the native probe (R08 native opacity scheduling).
+   - [x] Verify the probe's reduced-motion scheduling (same section).
+   - [ ] Verify the supported theme and ordinary-motion paths across the selected MVP workflow, including visual behavior.
+7. **Trusted native CI: 0/3**
+   - [ ] Make a trusted runner with the required macOS labels available.
+   - [ ] Run source checks for the selected candidate in trusted CI.
+   - [ ] Run compiled macOS checks for that exact candidate in trusted CI.
+8. **Distribution: 2/3**
+   - [x] Package a real native Playground with collected notices (R31 real Playground package reuse).
+   - [x] Compare two bundles made from the same binary and notice collection on one host (R30/R31 native package comparison).
+   - [ ] Select, document and independently verify the distribution workflow outside the development checkout.
+9. **Dependency notices: 2/3**
+   - [x] Collect an inventory for the native build (R31 real Playground package reuse).
+   - [x] Determine whether the five missing-notice packages occur on normal macOS dependency paths (R31 native missing-notice dependency paths).
+   - [ ] Resolve the five notice gaps and complete license sufficiency review.
+10. **Supported macOS release: 0/3**
+    - [ ] Decide and verify the supported macOS versions.
+    - [ ] Decide and verify the release packaging route.
+    - [ ] Verify signing and notarization if required by the selected route, or document why they do not apply.
+
 1. **Complete — separate local consumer:** an app outside the checkout builds
    using the public API and responds to native button and bound text input.
    Evidence: R03/R04 and R03/R06 entries in the remaining-work ledger.
