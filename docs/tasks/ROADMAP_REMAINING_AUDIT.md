@@ -6,6 +6,16 @@ RTL implementation and evidence; do not count deferred localization as complete.
 Web/Wasm, accessibility, and VoiceOver remain deferred as previously directed.
 Earlier entries describing locale acceptance as an immediate priority are historical.
 
+## R03/R04 root traversal isolation — 2026-11-04
+
+The test-platform root-window suite passed 4/4 with a two-window regression:
+Tab established focus in the RustUI root, while an independently created
+Components root remained unfocused on Tab both before and after the RustUI
+root closed. This exercises the real root-window registration and its window
+filter; it does not by itself measure subscription disposal or replace native
+multi-window acceptance. Log `target/headstart/evidence/native-root-focus-isolation.log`
+SHA-256 `06972f5725553eae9b2bbed3bb1529776d5732d280c7fdb790bb5c2cfe209e07`.
+
 ## R03/R04 native initial keyboard traversal — 2026-11-04
 
 At `d307f8a8`, native root windows install a window-scoped keystroke

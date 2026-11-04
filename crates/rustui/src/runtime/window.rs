@@ -117,6 +117,71 @@ mod tests {
         window.update(|window, app| assert!(window.focused(app).is_some()));
     }
 
+    #[cfg(not(target_family = "wasm"))]
+    #[gpui::test]
+    fn initial_traversal_is_scoped_to_its_root_window(cx: &mut gpui::TestAppContext) {
+        use gpui::AppContext as _;
+
+        struct Owner;
+        impl crate::view::View for Owner {
+            fn body(&self) -> impl crate::view::View {
+                crate::prelude::Button("Test", crate::runtime::Action::new(|_: &mut Owner| {}))
+            }
+        }
+
+        let theme = crate::theme::parse_theme(include_str!(concat!(
+            env!("CARGO_MANIFEST_DIR"),
+            "/../../themes/macos27.json"
+        )))
+        .unwrap();
+        let (owned, other) = cx.update(|app| {
+            gpui_component::init(app);
+            crate::theme::activate_theme(&theme, Some(crate::theme::AppearanceMode::Dark), app)
+                .unwrap();
+            super::open_root_window(
+                Owner,
+                rustui_core::EnvironmentValues::default(),
+                gpui::WindowOptions::default(),
+                app,
+            )
+            .unwrap();
+            let owned = *app.windows().last().unwrap();
+            let other = app
+                .open_window(gpui::WindowOptions::default(), |window, app| {
+                    let content = app.new(|app| super::ComponentHost::new(Owner, app));
+                    app.new(|app| gpui_component::Root::new(content, window, app))
+                })
+                .unwrap();
+            (owned, other.into())
+        });
+        for handle in [owned, other] {
+            handle
+                .update(cx, |_, window, app| {
+                    let _ = window.draw(app);
+                })
+                .unwrap();
+        }
+        cx.simulate_keystrokes(other, "tab");
+        other
+            .update(cx, |_, window, app| assert!(window.focused(app).is_none()))
+            .unwrap();
+        cx.simulate_keystrokes(owned, "tab");
+        owned
+            .update(cx, |_, window, app| assert!(window.focused(app).is_some()))
+            .unwrap();
+        owned
+            .update(cx, |_, window, _| window.remove_window())
+            .unwrap();
+        cx.run_until_parked();
+        cx.simulate_keystrokes(other, "tab");
+        other
+            .update(cx, |_, window, app| assert!(window.focused(app).is_none()))
+            .unwrap();
+        other
+            .update(cx, |_, window, _| window.remove_window())
+            .unwrap();
+    }
+
     struct LifecycleProbe {
         mounts: std::rc::Rc<std::cell::Cell<usize>>,
         unmounts: std::rc::Rc<std::cell::Cell<usize>>,
