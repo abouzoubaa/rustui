@@ -37,6 +37,12 @@ application dependencies on GPUI or GPUI Components.
 
 ## Copying this example outside the checkout
 
+For a repeatable local setup, follow the
+[external consumer setup guide](../examples/external-consumer/README.md).
+Its generator creates a new standalone workspace, adjusts its local paths,
+and copies the theme and lockfile. It still requires this checkout and the
+approved Headstart toolchain; it is not an installed SDK.
+
 The checked-in-relative paths deliberately target this SDK checkout. If copying
 the app elsewhere, change the `rustui` path and each patch path to the
 corresponding paths in the complete SDK checkout, or place the app as a member

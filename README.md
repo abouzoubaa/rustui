@@ -55,7 +55,7 @@ are the upstream implementation sources.
 ```
 
 RustUI Playground is the canonical component development and manual acceptance
-application. It currently exposes 15 live framework demos and 46 catalog rows, including
+application. It currently exposes 16 live framework demos and 46 catalog rows, including
 Outline, Drawer, GraphView, NodeEditor, and a directly searchable
 SplitView/ResizablePanel gallery. The original theme-reference catalog remains
 available alongside the additional public-API entries. Story source, events, English/French/Arabic locales, and Light/Dark
