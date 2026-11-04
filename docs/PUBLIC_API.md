@@ -1024,6 +1024,27 @@ instrumentation remain pending. Evidence:
 `target/headstart/milestone78-navigation-gui.json` and
 `target/headstart/milestone78-navigation-final.png`.
 
+## GraphView and NodeEditor
+
+`GraphView(id, document, selection, viewport)` renders a validated, positioned
+`GraphDocument`. The caller supplies node geometry and owns the selection and
+viewport bindings. `NodeEditor(id, document_binding, selection, viewport)` uses
+the same graph model and adds controlled node movement, removal and connections.
+Both controls are available through the public RustUI API and have live stories
+in Playground.
+
+Build documents from `GraphNode`, `GraphPort`, `GraphEdge` and `GraphEndpoint`.
+Construction validates identities, geometry, endpoint references and port
+directions. `GraphDocument::edited` returns a validated replacement or a
+`GraphError`; a rejected edit leaves the original document unchanged. Removing a
+node also removes its incident edges. Cycles and fan-out are allowed; graph layout
+and application-specific connection policies remain the caller's responsibility.
+
+Unknown or removed selection IDs render as unselected without silently changing
+the owner's binding. See [the graph component contract](tasks/GRAPH_COMPONENTS_IMPLEMENTATION.md)
+for viewport and keyboard behavior, lifecycle details and the limits of the
+recorded native evidence.
+
 ## Stack macro grammar
 
 `VStack!` and `HStack!` accept supported adjacent view expressions, nested-stack

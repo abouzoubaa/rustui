@@ -8,6 +8,14 @@ Earlier entries describing locale acceptance as an immediate priority are histor
 
 ## Native release and public API checkpoint — 2026-11-04
 
+The public API guide now describes the existing GraphView and NodeEditor owner
+bindings, validated graph edits and selection policy, and links to the detailed
+component contract. The exported names and documentation link were checked;
+this documentation change does not add or revalidate component behavior.
+On this host `security find-identity -p codesigning -v` reported zero valid
+identities. Signing and notarization therefore remain unverified and require an
+appropriate identity before distribution; no signing operation was attempted.
+
 On source commit `8ce6886d` with the public guide correction, the macOS release
 script passed the current four-layer Slider patch verification, workspace and
 external-consumer checks, tests, optimized build and disposable packaging. Its
