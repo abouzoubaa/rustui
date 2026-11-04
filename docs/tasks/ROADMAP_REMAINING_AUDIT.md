@@ -5374,3 +5374,43 @@ candidate text cursor insertion and forward/reverse TextField traversal are in
 coverage but does not close other control/group policies, physical-keyboard,
 VoiceOver, or the full basic-controls acceptance requirement. Totals remain
 21/31 evidence milestones (67.74%) and 2/10 acceptance checks (20%).
+
+### R04 current-candidate native platform window failure — 2026-11-04
+
+On current candidate `71c8a4c7`, the retained unsupported-popup probe was
+rebuilt as a temporary internal `rustui` example with locked, offline Headstart
+(`./scripts/cargo-headstart build -p rustui --example
+mvp_platform_error_current --profile headstart --locked --offline`). The build
+passed. The initial outside-checkout consumer attempt failed with unresolved
+`gpui` imports, as expected for that public API boundary; the internal framework
+example was the correct harness. The packaged executable SHA-256 was
+`431784c68a8cbee46d56976623b5c22e670369427082622067d76fc8d2041189` in a
+disposable `dev.rustui.playground` bundle. The custom handler received
+`popups are not supported on this platform` and exited 0; the default handler
+logged the same backend error and exited 0. Logs: build
+`r04-platform-error-current-build.log` (SHA-256
+`0ce8ef28df4d52c52fbbeaf476226fc076b94a76cf7283de34b4a028faa2cbad`), custom
+`r04-platform-error-current-custom.log` (SHA-256
+`ec37548f297d475bf5428719c270db19f34e94f8ea833b178201f636d207507c`), and
+default `r04-platform-error-current-default.log` (SHA-256
+`1577d5e670f077420bb2d8a94bd6f1a6ac15c4b38fa78a81e09328fd5c898a66`). The
+probe app exited; its disposable bundle, temporary example, executable, and
+failed external harness were moved to Trash. Cargo caches and the pre-existing
+protected validation bundle were preserved. This verifies error propagation
+for one backend failure only; broader window-lifecycle acceptance remains open.
+
+### User-added MVP requirement — native anchored popup windows — 2026-11-04
+
+The user clarified that separate native anchored popup windows are required for
+the RustUI MVP. RustUI's `Popover` wraps GPUI Components' in-window popover in
+`crates/rustui/src/components/overlay/popover.rs`; it is not an OS popup
+window. The pinned GPUI common API defines `WindowKind::AnchoredPopup` with
+parent, anchor, gravity, and constraint options, but the pinned macOS backend
+returns `PopupNotSupportedError` from `vendor/gpui-pre-macos-0.3.9/src/platform.rs`
+before opening it. Its macOS window code has panel-style branches but does not
+consume the anchor or parent options. No vendored source or pinned revision was
+changed. The MVP now tracks three open evidence milestones: a reproducible
+macOS backend patch against the approved pin; a RustUI public API with parent
+lifecycle and non-native fallback; and current-candidate native placement,
+dismissal, teardown, and owner-state evidence. Totals after this scope update:
+21/34 evidence milestones (61.76%) and 2/11 acceptance checks (18.18%).

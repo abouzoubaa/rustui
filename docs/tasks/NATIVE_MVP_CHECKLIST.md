@@ -1,5 +1,14 @@
 # Proposed macOS developer-preview MVP checks
 
+## Current scope — 2026-11-04
+
+The user clarified that true native anchored popup windows are required for the
+RustUI MVP. RustUI's existing `Popover` is an in-window overlay; pinned GPUI
+0.3.9 rejects `WindowKind::AnchoredPopup` on macOS. This adds one acceptance
+check and three evidence milestones. Historical entries below retain their
+original totals; current totals are 21/34 milestones (61.76%) and 2/11 checks
+(18.18%).
+
 ## Current-candidate combined controls — 2026-11-04
 
 The rebuilt public-API consumer passed a keyboard flow across TextField,
@@ -42,8 +51,8 @@ Tab/Shift-Tab regression and a rebuilt native consumer check: after a focused
 Checkbox is disabled, Tab reaches the enabled Toggle lock button and Space
 unlocks the controls. See `ROADMAP_REMAINING_AUDIT.md`. This closes that
 bounded defect only; the complete basic-controls workflow remains unchecked.
-Overall totals remain 21/31 evidence milestones (67.74%) and 2/10 acceptance
-checks (20%).
+Overall totals after the popup-window scope update are 21/34 evidence
+milestones (61.76%) and 2/11 acceptance checks (18.18%).
 
 This is a provisional acceptance checklist for the macOS developer preview
 discussed with the user. It does not replace the full production roadmap or
@@ -51,15 +60,15 @@ assert that the user has approved a publication strategy. Count a check only
 when all of its stated evidence exists. The checks differ in size, so their
 unweighted count is not a measure of code written or time remaining.
 
-**Current count: 2/10 checks complete (20%).**
+**Current count: 2/11 checks complete (18.18%).**
 
-## Granular progress baseline — 2026-11-04
+## Granular progress baseline after popup-window scope update — 2026-11-04
 
-**MVP 67.74%: 21 of 31 evidence milestones below have been demonstrated.** This
+**MVP 61.76%: 21 of 34 evidence milestones below have been demonstrated.** This
 unweighted count exposes progress inside the larger checks. It is not an
 estimate of effort, calendar time, coding completion, or production readiness.
 The milestones differ in size; some record evidence on an earlier revision
-and need repetition on a release candidate. The 2/10 acceptance count above
+and need repetition on a release candidate. The 2/11 acceptance count above
 remains separate and closes only when each complete requirement is satisfied.
 Future updates should report both counts, the percentage rounded to two decimal
 places, and the milestone that changed.
@@ -80,9 +89,12 @@ below identify sections in `ROADMAP_REMAINING_AUDIT.md`.
    - [x] Observe native root launch, close and owner unmount (R04/R05 native root close unmount).
    - [x] Observe cancellation of pending owner work on close (R04/R05 native pending task root close).
    - [ ] Verify actual platform window-open failure handling and broader lifecycle cases end to end. The existing error injection is partial evidence.
-     Partial progress: R04 native platform window error propagation verifies
-     both handlers with a real unsupported-popup backend error; other window
-     failure and lifecycle cases remain open.
+     Partial progress: on current candidate `71c8a4c7`, a fresh internal
+     framework probe reached the real unsupported-popup backend error. The
+     custom handler received it and the default handler logged it and quit;
+     both runs exited successfully. This confirms that failure mode only.
+     Other platform failure and combined lifecycle cases remain open. Logs
+     and executable identity are in `ROADMAP_REMAINING_AUDIT.md`.
 4. **Basic controls and input: 2/3**
    - [x] Demonstrate native text binding with owner state (R03/R06 external consumer bound input).
    - [x] Demonstrate Stepper bounds and enabled/disabled owner updates (R06/R15 native combined form coordination).
@@ -130,6 +142,11 @@ below identify sections in `ROADMAP_REMAINING_AUDIT.md`.
     - [ ] Decide and verify the release packaging route.
     - [ ] Verify signing and notarization if required by the selected route, or document why they do not apply.
 
+11. **Native anchored popup windows: 0/3**
+    - [ ] Implement macOS `WindowKind::AnchoredPopup` against the approved pinned GPUI source through a reproducible, versioned patch; preserve the pinned revision.
+    - [ ] Expose parent-owned popup-window open/close behavior through the RustUI public API, with an in-window fallback where native popup windows are unavailable.
+    - [ ] Verify current-candidate placement, dismissal, parent teardown, and owner-state updates in a native macOS app.
+
 1. **Complete — separate local consumer:** an app outside the checkout builds
    using the public API and responds to native button and bound text input.
    Evidence: R03/R04 and R03/R06 entries in the remaining-work ledger.
@@ -166,6 +183,10 @@ below identify sections in `ROADMAP_REMAINING_AUDIT.md`.
 10. **Open — supported macOS release:** the supported OS/version scope and
     package workflow are decided and verified; signing and notarization are
     verified if required for the chosen distribution route.
+11. **Open — native anchored popup windows:** the pinned macOS backend rejects
+    anchored popup windows; RustUI's current `Popover` stays within the parent
+    window. Backend implementation, RustUI public API, and current-candidate
+    native acceptance remain open.
 
 Localization, Web/Wasm, accessibility and VoiceOver remain deferred by the
 user. They are not counted as passed and remain required wherever the final
