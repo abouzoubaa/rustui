@@ -6,6 +6,23 @@ RTL implementation and evidence; do not count deferred localization as complete.
 Web/Wasm, accessibility, and VoiceOver remain deferred as previously directed.
 Earlier entries describing locale acceptance as an immediate priority are historical.
 
+## Native Playground release package verification — 2026-11-04
+
+At `f1e05802`, the changed packaging script successfully packaged the existing
+optimized Playground executable (SHA-256
+`dae3ecf0155f2ac0463b95ed7a9648016ae255cba0e7cfd9be01d522aee1115a`)
+and the retained collection of 446 observed dependency notices. The packaged
+executable matched, remained executable, the plist passed `plutil -lint`, the
+notice report was present, and no output staging files remained. The disposable
+bundle was removed without launching. The first validation used an incorrect
+notice-report path and failed; the corrected run passed. Evidence logs:
+`target/headstart/evidence/native-package-real-f1e05802-20261104.log` and
+`target/headstart/evidence/native-package-real-f1e05802-corrected-20261104.log`
+(corrected log SHA-256 `2053921edf251b35954cde6663762cf41a1b6d3575638144b7210b0e88d9f4f5`).
+This reuses an existing binary and does not establish current-source rebuild,
+native runtime, signing, licensing, CI, or release acceptance. Five notice gaps
+remain unresolved.
+
 ## Native Playground packaging hard-link safety — 2026-11-04
 
 A reproduced fixture showed that copying into a reused bundle could modify an
