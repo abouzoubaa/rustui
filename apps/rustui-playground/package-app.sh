@@ -11,6 +11,7 @@ resources="$bundle/Contents/Resources"
 references_bundle="$resources/references"
 references_staging=""
 references_previous="$resources/references.previous.$$"
+references_moved=""
 release_notices_source="${RUSTUI_RELEASE_NOTICES_DIR:-}"
 fresh_bundle_marker=""
 
@@ -20,7 +21,7 @@ cleanup() {
     if [ -n "$references_staging" ]; then
         rm -rf "$references_staging"
     fi
-    if [ -e "$references_previous" ]; then
+    if [ -n "$references_moved" ]; then
         if [ ! -e "$references_bundle" ]; then
             mv "$references_previous" "$references_bundle"
         else
@@ -56,6 +57,10 @@ for resource in assets/link-fixture.html assets/link-disabled-fixture.html \
         exit 1
     fi
 done
+if [ -e "$references_previous" ]; then
+    printf '%s\n' "refusing existing Playground backup path: $references_previous" >&2
+    exit 1
+fi
 
 if [ -n "${RUSTUI_PLAYGROUND_BUNDLE_PATH:-}" ]; then
     mkdir -p "$(dirname -- "$bundle")"
@@ -68,6 +73,26 @@ if [ -n "${RUSTUI_PLAYGROUND_BUNDLE_PATH:-}" ]; then
         exit 1
     fi
 fi
+
+# The default bundle may be reused, but none of its output paths may redirect
+# writes into another application or file.
+for destination in \
+    "$bundle" "$bundle/Contents" "$bundle/Contents/MacOS" \
+    "$bundle/Contents/MacOS/rustui-playground" \
+    "$bundle/Contents/MacOS/rustui-playground.next" \
+    "$bundle/Contents/Info.plist" "$resources" \
+    "$resources/assets" "$resources/assets/link-fixture.html" \
+    "$resources/assets/link-disabled-fixture.html" \
+    "$resources/assets/playground-sample.png" \
+    "$resources/themes" "$resources/themes/macos27.json" \
+    "$resources/licenses" "$resources/licenses/icons" \
+    "$resources/licenses/icons/LICENSE-LUCIDE" "$resources/licenses/release" \
+    "$references_bundle" "$references_previous"; do
+    if [ -L "$destination" ]; then
+        printf '%s\n' "refusing symlinked Playground bundle path: $destination" >&2
+        exit 1
+    fi
+done
 mkdir -p "$bundle/Contents/MacOS" "$resources"
 mkdir -p "$resources/assets" "$resources/themes"
 cp "$repository_root/assets/link-fixture.html" "$resources/assets/link-fixture.html"
@@ -88,10 +113,12 @@ references_staging=$(mktemp -d "$resources/.references.next.XXXXXX")
 cp -R "$references_dir/." "$references_staging/"
 if [ -e "$references_bundle" ] || [ -L "$references_bundle" ]; then
     mv "$references_bundle" "$references_previous"
+    references_moved=1
 fi
 mv "$references_staging" "$references_bundle"
 references_staging=""
 rm -rf "$references_previous"
+references_moved=""
 cp "$app_root/macos/Info.plist" "$bundle/Contents/Info.plist"
 cp "$binary" "$bundle/Contents/MacOS/rustui-playground.next"
 chmod 755 "$bundle/Contents/MacOS/rustui-playground.next"

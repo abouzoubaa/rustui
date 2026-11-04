@@ -160,4 +160,45 @@ RUSTUI_PLAYGROUND_REFERENCES_DIR="$references_source" \
     "$repository_root/apps/rustui-playground/package-app.sh" >/dev/null
 cmp "$headstart_binary" "$failed_bundle/Contents/MacOS/rustui-playground"
 test "$(cat "$bundle/sentinel")" = 'existing bundle sentinel'
+unsafe_root="$temporary_root/unsafe-target"
+protected="$temporary_root/protected-app"
+mkdir -p "$unsafe_root/debug" "$protected/Contents/MacOS" "$protected/Contents/Resources"
+printf '%s\n' 'protected executable' > "$protected/Contents/MacOS/rustui-playground"
+ln -s "$protected" "$unsafe_root/debug/RustUI Playground.app"
+if CARGO_TARGET_DIR="$unsafe_root" \
+    RUSTUI_PLAYGROUND_BINARY="$headstart_binary" \
+    RUSTUI_PLAYGROUND_REFERENCES_DIR="$references_source" \
+    "$repository_root/apps/rustui-playground/package-app.sh" >/dev/null 2>&1; then
+    printf '%s\n' 'package accepted a symlinked default bundle.' >&2
+    exit 1
+fi
+test "$(cat "$protected/Contents/MacOS/rustui-playground")" = 'protected executable'
+
+unsafe_contents="$temporary_root/unsafe-contents"
+unsafe_bundle="$unsafe_contents/debug/RustUI Playground.app"
+mkdir -p "$unsafe_bundle/Contents/MacOS"
+ln -s "$protected/Contents/Resources" "$unsafe_bundle/Contents/Resources"
+if CARGO_TARGET_DIR="$unsafe_contents" \
+    RUSTUI_PLAYGROUND_BINARY="$headstart_binary" \
+    RUSTUI_PLAYGROUND_REFERENCES_DIR="$references_source" \
+    "$repository_root/apps/rustui-playground/package-app.sh" >/dev/null 2>&1; then
+    printf '%s\n' 'package accepted a symlinked Resources directory.' >&2
+    exit 1
+fi
+test ! -e "$protected/Contents/Resources/assets"
+
+unsafe_file="$temporary_root/unsafe-file"
+unsafe_bundle="$unsafe_file/debug/RustUI Playground.app"
+mkdir -p "$unsafe_bundle/Contents/Resources/assets"
+printf '%s\n' 'protected resource' > "$protected/resource"
+ln -s "$protected/resource" "$unsafe_bundle/Contents/Resources/assets/link-fixture.html"
+if CARGO_TARGET_DIR="$unsafe_file" \
+    RUSTUI_PLAYGROUND_BINARY="$headstart_binary" \
+    RUSTUI_PLAYGROUND_REFERENCES_DIR="$references_source" \
+    "$repository_root/apps/rustui-playground/package-app.sh" >/dev/null 2>&1; then
+    printf '%s\n' 'package accepted a symlinked resource file.' >&2
+    exit 1
+fi
+test "$(cat "$protected/resource")" = 'protected resource'
+
 printf '%s\n' "Playground package replaces stale SVG references and preserves them if promotion fails."

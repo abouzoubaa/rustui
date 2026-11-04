@@ -6,6 +6,17 @@ RTL implementation and evidence; do not count deferred localization as complete.
 Web/Wasm, accessibility, and VoiceOver remain deferred as previously directed.
 Earlier entries describing locale acceptance as an immediate priority are historical.
 
+## Native Playground packaging path safety — 2026-11-04
+
+The reused default bundle now rejects symlinks at its bundle and fixed output
+paths before packaging. Cleanup only restores a references backup created by
+the current invocation. The packaging fixture passed normal reuse, fresh-bundle
+and failed-promotion cases, plus rejection of symlinked bundle, Resources and
+resource-file paths. Log: `target/headstart/evidence/native-package-path-safety-20261104.log`
+(SHA-256 `6cad587b8a9f3958c5dad5fb321cfaa4ae3b878df28f5b7aadd6df7fe73c35aa`).
+These checks do not protect against concurrent path substitution or establish
+native runtime, signing, licensing, CI, or release acceptance.
+
 ## Native release and public API checkpoint — 2026-11-04
 
 The public API guide now describes the existing GraphView and NodeEditor owner
