@@ -6,6 +6,18 @@ RTL implementation and evidence; do not count deferred localization as complete.
 Web/Wasm, accessibility, and VoiceOver remain deferred as previously directed.
 Earlier entries describing locale acceptance as an immediate priority are historical.
 
+## R04 root-window close follow-up — 2026-11-04
+
+At `8a9e696e` (only the ledger changed since the prior source-bound build),
+the owned Playground opened again as PID 63279. The close-button click returned,
+but the computer-use service timed out while reading the resulting state, so
+native window closure remains unverified. Quit exited the process and the
+owned bundle was removed. The current-source test-platform root-close tests
+passed 2/2: owner unmount and pending owner-work cancellation. Log:
+`target/headstart/evidence/r04-root-close-test-8a9e696e.log` (SHA-256
+`788f3d68bdeccafd6d926ad2dcf1ae1661d0eced57217a5e7e5ce942cd3a8ab3`).
+These tests do not replace the native close observation.
+
 ## R04 native root-window launch — 2026-11-04
 
 On source `a378afea`, the locked offline Headstart Playground build passed
