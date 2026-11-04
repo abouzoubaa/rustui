@@ -10,13 +10,14 @@ unweighted count is not a measure of code written or time remaining.
 
 ## Granular progress baseline — 2026-11-04
 
-**MVP 67%: 21 of 31 evidence milestones below have been demonstrated.** This
+**MVP 67.74%: 21 of 31 evidence milestones below have been demonstrated.** This
 unweighted count exposes progress inside the larger checks. It is not an
 estimate of effort, calendar time, coding completion, or production readiness.
 The milestones differ in size; some record evidence on an earlier revision
 and need repetition on a release candidate. The 2/10 acceptance count above
 remains separate and closes only when each complete requirement is satisfied.
-Future updates should report both counts and the milestone that changed.
+Future updates should report both counts, the percentage rounded to two decimal
+places, and the milestone that changed.
 
 The scope is a proposed macOS developer preview. This does not remove the
 broader production roadmap or decide the release strategy. Evidence references

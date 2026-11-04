@@ -6,6 +6,16 @@ RTL implementation and evidence; do not count deferred localization as complete.
 Web/Wasm, accessibility, and VoiceOver remain deferred as previously directed.
 Earlier entries describing locale acceptance as an immediate priority are historical.
 
+## R30 current native library test suite — 2026-11-04
+
+On clean candidate `7db6dda4`, `./scripts/cargo-headstart test --workspace
+--lib --profile headstart --locked --offline --quiet` passed: 1,495 tests
+passed and four were ignored across six test binaries. The retained log is
+`target/headstart/evidence/native-lib-tests-7db6dda4-20261104.log` (SHA-256
+`e69b7a3f9d2605445c3459d8860d05c40f57f5a3f1fb69dbd23e6b1faa6c5102`). This
+is local library-test evidence, not native GUI, trusted CI, or release
+acceptance; the MVP milestone counts are unchanged.
+
 ## R15 native owner-controlled Radio selection — 2026-11-04
 
 On clean candidate `ddcbe1a3`, a generated outside-checkout public-API
