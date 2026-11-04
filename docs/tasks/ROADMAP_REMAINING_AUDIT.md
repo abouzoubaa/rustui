@@ -6,6 +6,18 @@ RTL implementation and evidence; do not count deferred localization as complete.
 Web/Wasm, accessibility, and VoiceOver remain deferred as previously directed.
 Earlier entries describing locale acceptance as an immediate priority are historical.
 
+## R30/R31 native CI notice regression result — 2026-11-04
+
+GitHub Actions [run 41885998486](https://github.com/abouzoubaa/rustui/actions/runs/41885998486)
+passed the native-only smoke job on exact candidate
+`063b483f12a4f5dd98d43daba3a26d0c3f9b83e0`. Its source checks included all 20
+notice collector tests, 9 notice packager tests and the Playground packaging
+fixture; workspace all-targets check and 9 core tests also passed. The captured
+job log `target/headstart/evidence/native-ci-notice-063b483f-gh.log` has SHA-256
+`c6545fadd68f2e43bcf07029d4f2aeb35fd4c204c34a48864bc85cf6b6c1f9e3`.
+The one-job runner deregistered; the full source and native release jobs were
+skipped. Five missing notices and legal review remain open.
+
 ## R30/R31 native CI notice regressions — 2026-11-04
 
 The native-only CI source step now runs the notice collector tests, packaged
@@ -16,7 +28,7 @@ locally on `e89fba01` plus this workflow change; its log is
 `357a534f526541966a17466eb9fd0aeabbf46954c43e56703c998e19b6537117`).
 This adds regression coverage for the report-integrity fix; the missing notices, legal
 review, full source job and release CI remain open. Trusted CI for this
-candidate was pending at this local checkpoint.
+candidate was pending at this local checkpoint; the subsequent result is above.
 
 ## R31 packaged notice-report integrity — 2026-11-04
 
