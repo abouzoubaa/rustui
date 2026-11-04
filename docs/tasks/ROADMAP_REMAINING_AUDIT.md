@@ -6,6 +6,26 @@ RTL implementation and evidence; do not count deferred localization as complete.
 Web/Wasm, accessibility, and VoiceOver remain deferred as previously directed.
 Earlier entries describing locale acceptance as an immediate priority are historical.
 
+## R04/R05 native root close and unmount — 2026-11-04
+
+On `4510afe7`, a generated outside-checkout source consumer was instrumented
+only in its temporary source to write a marker from its root `on_unmount`.
+The retained probe source `target/headstart/evidence/native-root-close-probe.rs`
+has SHA-256 `4bbad50507073c65c19c928a075380b78cd9df5b925326e2d7d8acb63f1f00a6`.
+Locked offline Headstart built it; build log
+`target/headstart/evidence/native-root-close-probe-build.log` has SHA-256
+`ec756e91136224c721283054ecfa5201edfe68103caca03883e0efdca00dc7d5`.
+
+The exact native executable SHA-256
+`dd13fee1d0dffdddf666a5a02c5867eb08c7f9f568bdac9bd9fafe1e088b1ee2`
+ran as PID 38848. Clicking the root window's close button produced the
+`unmounted` marker (retained as `target/headstart/evidence/native-root-close-unmounted.txt`,
+SHA-256 `9606ca9212b641a709eeaec2aa591ac370e065f4fbfeb2fb7af30feaf91cb7a3`).
+The process remained alive after the close and exited on Command-Q; the owned
+bundle and temporary workspace were removed. This verifies one native root
+close/unmount path, not app-quit policy, native cancellation/error handling,
+other lifecycle cases or release acceptance.
+
 ## R19 native Menu render crash — 2026-11-04
 
 On `9defc3c0`, selecting the Menu catalog row in the owned Playground process

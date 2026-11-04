@@ -17,6 +17,8 @@ unweighted count is not a measure of code written or time remaining.
    consumer setup in the ledger and `examples/external-consumer/README.md`.
 3. **Open — window and lifecycle:** current-candidate native launch, close,
    error handling, owner teardown and cancellation are verified end to end.
+   A bounded native close-button probe now confirms the root owner's unmount;
+   native error handling and cancellation still need evidence.
 4. **Open — basic controls and input:** the supported MVP controls, bindings,
    disabled states and ordinary keyboard/text editing pass a documented
    current-candidate native workflow.
