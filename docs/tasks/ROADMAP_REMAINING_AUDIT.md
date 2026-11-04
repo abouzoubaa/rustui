@@ -5409,8 +5409,35 @@ parent, anchor, gravity, and constraint options, but the pinned macOS backend
 returns `PopupNotSupportedError` from `vendor/gpui-pre-macos-0.3.9/src/platform.rs`
 before opening it. Its macOS window code has panel-style branches but does not
 consume the anchor or parent options. No vendored source or pinned revision was
-changed. The MVP now tracks three open evidence milestones: a reproducible
-macOS backend patch against the approved pin; a RustUI public API with parent
-lifecycle and non-native fallback; and current-candidate native placement,
-dismissal, teardown, and owner-state evidence. Totals after this scope update:
-21/34 evidence milestones (61.76%) and 2/11 acceptance checks (18.18%).
+changed. The backend patch and RustUI API milestones are complete; native
+placement, dismissal, teardown, and owner-state evidence remain open. Totals:
+23/34 evidence milestones (67.65%) and 2/11 acceptance checks (18.18%).
+
+### R15 implementation progress — 2026-11-04
+
+Two of the three R15 evidence milestones are complete: the versioned macOS
+backend patch and the RustUI API/demo. Patch replay verification and all five
+Python patch-safety tests passed from the clean pinned preimages. The patched
+backend and RustUI API compiled through the Playground Headstart check. RustUI
+now exposes `AnchoredPopupOptions`, `open_anchored_popup`, and a public
+window-aware `AppAction`; the existing Popover Gallery opens a native popup at
+the click position. Non-native callers can choose the existing in-window
+`Popover` component. Patch SHA-256:
+`8e3d10c4f5075717dba9dfd147fa5475ca41c0abc3c88f0784a628f8015c45f6`.
+Replay log SHA-256:
+`672eb8316fec83f94119a4193f9fc552513d56a147502f8be4830e017d817831`;
+patch-safety log SHA-256:
+`2560bc10101d252466d7d96c08fc2de04427a7118626a81ce9c1249a85ce259a`;
+Playground compile log SHA-256:
+`f88e713ddaa75b0835dfc661e95514250b44ce037e11a9f646a84d97eebf5776`.
+Both vendored macOS source files were restored to their exact pinned
+preimages after compilation.
+
+Native placement, outside-click dismissal, parent teardown, and popup owner
+state remain unverified. The existing Playground bundles are protected after
+prior cleanup approval failures; the ledger prohibits overwriting or removing
+them until that incident is resolved. The Rust unit-test command also did not
+execute the patch's placement tests: the vendored package is outside the
+workspace and its test build failed before running tests with missing Apple
+headless-renderer APIs. The five Python tests cover patch replay and reversal,
+not native placement.
