@@ -6,6 +6,28 @@ RTL implementation and evidence; do not count deferred localization as complete.
 Web/Wasm, accessibility, and VoiceOver remain deferred as previously directed.
 Earlier entries describing locale acceptance as an immediate priority are historical.
 
+## R04/R05 native pending task at root close — 2026-11-04
+
+On `287ceb96`, a temporary outside-checkout public-API consumer started a
+five-second timer-backed OwnerTask. Probe source
+`target/headstart/evidence/native-window-task-probe.rs` SHA-256
+`a7fcebd6a2d6ac2cc5ebb1cdf026ebf23ad4c7e6689a8349ac0b159e19b41bb8`
+built with locked offline Headstart (log
+`target/headstart/evidence/native-window-task-probe-build.log`, SHA-256
+`0b37c4fe133a0b26bdf9cd12112f3582b27667f43efa91fe56c5c6f15abf9f6d`).
+
+The exact native executable SHA-256
+`fc112eb40a41b5cafc1d9c4834a04ffc643779eeaf60e2535159acf33a54d134`
+ran as PID 40869 in the owned bundle. After Start showed Loading, closing the
+window produced started, unmounted and task-drop markers. More than five
+seconds after start, the app process was still alive and no task-finished or
+result-delivered marker existed. Observation JSON with marker timestamps:
+`target/headstart/evidence/native-window-task-observation.json`, SHA-256
+`23301632cf8ad1a68c072ef8898d131f2b66463fb8e923816fbcc9476d8d83f8`.
+The process exited on Quit and the bundle and temporary workspace were removed.
+This is one cancellable timer-backed task, not proof that already-running native
+work can be interrupted, nor full lifecycle or release acceptance.
+
 ## R04/R05 native root close and unmount — 2026-11-04
 
 On `4510afe7`, a generated outside-checkout source consumer was instrumented
