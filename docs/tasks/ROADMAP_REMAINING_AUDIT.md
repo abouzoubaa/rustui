@@ -6,6 +6,24 @@ RTL implementation and evidence; do not count deferred localization as complete.
 Web/Wasm, accessibility, and VoiceOver remain deferred as previously directed.
 Earlier entries describing locale acceptance as an immediate priority are historical.
 
+## R11/R15 native Radio and Button disabled flow — 2026-11-04
+
+On clean candidate `a6c21244`, a generated outside-checkout public-API
+consumer built with normal locked offline Headstart. Retained probe source
+`target/headstart/evidence/mvp-radio-button-a6c21244.rs` has SHA-256
+`7affed13c16933d841c778b364f8f05d66055180b0b51f28f20edb0a80cbc6fc`;
+build log SHA-256 is
+`66a5ddaab350307f72916e5b29b95817659ee0fa7355a1f55e80bf9b006f4a24`.
+The exact executable (SHA-256
+`8d3b863c88f09a3ffd77a42a1593803251fae15ec2556c6fb56d8c88e5762e9f`)
+ran as PID 12539 in the owned validation bundle. Clicking the disabled Radio
+and Button left their owner state unchanged; Tab skipped both. After enabling,
+reverse traversal and Space activated the Button and selected the Radio.
+Disabling again and clicking both left those values unchanged. The process
+exited; the disposable bundle and generated workspace were removed. This
+computer-input observation does not establish physical keyboard, grouped Radio
+behavior, other controls or complete native acceptance.
+
 ## R15 native Slider and Picker keyboard flow — 2026-11-04
 
 On clean candidate `1b8f73d9`, a generated outside-checkout public-API
