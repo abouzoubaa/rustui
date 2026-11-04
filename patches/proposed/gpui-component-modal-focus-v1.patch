@@ -1,0 +1,47 @@
+--- a/src/root.rs
++++ b/src/root.rs
+@@ -89,6 +89,17 @@
+         window.root::<gpui_base::Root>()??.read(cx).plugin::<Self>()
+     }
+ 
++    pub(crate) fn active_modal_focus(&self) -> Option<FocusHandle> {
++        self.active_dialogs
++            .last()
++            .map(|dialog| dialog.focus_handle.clone())
++            .or_else(|| {
++                self.active_sheet
++                    .as_ref()
++                    .map(|sheet| sheet.focus_handle.clone())
++            })
++    }
++
+     fn allocate_text_selection_scope(&mut self) -> TextSelectionScopeId {
+         TextSelectionScopeId::new()
+     }
+--- a/src/window_ext.rs
++++ b/src/window_ext.rs
+@@ -34,6 +34,9 @@
+     /// Return true, if there is an active Sheet.
+     fn has_active_sheet(&mut self, cx: &mut App) -> bool;
+ 
++    /// Focuses the topmost active dialog or sheet, returning whether one exists.
++    fn focus_active_modal(&mut self, cx: &mut App) -> bool;
++
+     /// Closes the active Sheet.
+     fn close_sheet(&mut self, cx: &mut App);
+ 
+@@ -162,6 +165,14 @@
+         WindowState::read(self, cx).active_sheet.is_some()
+     }
+ 
++    fn focus_active_modal(&mut self, cx: &mut App) -> bool {
++        let Some(focus) = WindowState::read(self, cx).active_modal_focus() else {
++            return false;
++        };
++        focus.focus(self, cx);
++        true
++    }
++
+     #[inline]
+     fn close_sheet(&mut self, cx: &mut App) {
+         WindowState::update(self, cx, |root, window, cx| {

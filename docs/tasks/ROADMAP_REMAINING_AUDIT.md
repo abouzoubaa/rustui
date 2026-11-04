@@ -6,6 +6,20 @@ RTL implementation and evidence; do not count deferred localization as complete.
 Web/Wasm, accessibility, and VoiceOver remain deferred as previously directed.
 Earlier entries describing locale acceptance as an immediate priority are historical.
 
+## R19 modal focus recovery proposal — 2026-11-04
+
+An isolated Components 0.7.3 proposal exposes focus restoration for its
+current topmost Dialog or Sheet. The candidate test passed for nested Dialogs
+over a Sheet, and a temporary native integration probe recovered and closed an
+unfocused Sheet and Dialog with keyboard input. The pinned vendor source and
+approved patch stack remain unchanged. The reviewable patch, preimage hashes,
+probe limitations and promotion prerequisites are in
+`docs/tasks/R19_MODAL_FOCUS_PROPOSAL.md`. User approval and the reproducible
+patch process are required before promotion; full modal acceptance remains open.
+The proposed Components and RustUI integration patches now have a disposable
+exact-image apply/reverse checker, including a source-tampering rejection check.
+The final RustUI integration variant has not yet been compiled or run natively.
+
 ## R31 native missing-notice dependency paths — 2026-11-04
 
 At `f56cc711`, locked offline Cargo reverse trees for `rustui-playground` on
