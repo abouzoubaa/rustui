@@ -6,6 +6,16 @@ RTL implementation and evidence; do not count deferred localization as complete.
 Web/Wasm, accessibility, and VoiceOver remain deferred as previously directed.
 Earlier entries describing locale acceptance as an immediate priority are historical.
 
+## R30 current native integration tests — 2026-11-04
+
+On clean candidate `5b678989`, `./scripts/cargo-headstart test --workspace
+--test '*' --profile headstart --locked --offline` passed 60 tests across 34
+integration-test binaries, with no failures or ignored tests. The retained log
+is `target/headstart/evidence/native-integration-tests-5b678989-20261104.log`
+(SHA-256 `6b77a9f75722bbe43bac7848bdc36d02c7591cc46cd9064b0428d6614e0209b7`).
+This is local test evidence, not native GUI, trusted CI, or release acceptance;
+the MVP milestone counts are unchanged.
+
 ## R30 current native library test suite — 2026-11-04
 
 On clean candidate `7db6dda4`, `./scripts/cargo-headstart test --workspace
