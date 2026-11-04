@@ -53,7 +53,10 @@ below identify sections in `ROADMAP_REMAINING_AUDIT.md`.
      keyboard adjustment and selection, and re-disabling. R11/R15 native Radio
      and Button disabled flow covers disabled clicks, traversal and re-enabling.
      R15 native owner-controlled Radio selection covers one exclusive-binding
-     pattern; other control and group policies remain open.
+     pattern; other control and group policies remain open. R11/R15 combined
+     native controls exercises eight control types together with shared state,
+     disabled pointer input and one re-enabled keyboard transition. The complete
+     control set and keyboard workflow remain open.
 5. **Navigation and overlays: 2/3**
    - [x] Demonstrate native unknown-route recovery (R17 native unknown-route keyboard recovery).
    - [x] Demonstrate a native Drawer interaction (R19/R33 native Drawer interaction).

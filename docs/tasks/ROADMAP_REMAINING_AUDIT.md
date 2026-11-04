@@ -6,6 +6,25 @@ RTL implementation and evidence; do not count deferred localization as complete.
 Web/Wasm, accessibility, and VoiceOver remain deferred as previously directed.
 Earlier entries describing locale acceptance as an immediate priority are historical.
 
+## R11/R15 combined native controls — 2026-11-04
+
+On clean candidate `3f829664`, an outside-checkout public-API consumer built
+with locked offline Headstart and ran as PID 27365 in the owned validation
+bundle. Its source is `target/headstart/evidence/mvp-combined-controls-3f829664.rs`
+(SHA-256 `a0ce4743c7ae769b4dc509b852b64cefcbc69ed291765217b8a8a3828afe0fbe`);
+the build log SHA-256 is
+`53dd6aec391e0847e4ac85782a7b87a5731a3d06f18701411968240d43adeccb` and
+the executable SHA-256 was
+`9de29a49061a73b857f2bbeb7769a6c8f60d085bc39e9c86f62f068fe7658e0b`.
+Computer input edited TextField to `Chorus`, selected Checkbox and Toggle,
+incremented Stepper, adjusted Slider, chose Picker `Two`, selected Radio
+`Second` and activated Button. Their shared owner display reflected all values.
+Locking the controls and attempting clicks and text input left those values
+unchanged; after unlocking, Tab from TextField and Space toggled Checkbox.
+The owned process exited and the disposable bundle, workspace and standalone
+executable were removed. This is a bounded combined workflow, not a complete
+control-set, keyboard, physical-device or native release acceptance.
+
 ## R30 current native integration tests — 2026-11-04
 
 On clean candidate `5b678989`, `./scripts/cargo-headstart test --workspace
