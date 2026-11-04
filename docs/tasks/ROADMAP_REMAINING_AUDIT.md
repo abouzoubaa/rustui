@@ -6,6 +6,18 @@ RTL implementation and evidence; do not count deferred localization as complete.
 Web/Wasm, accessibility, and VoiceOver remain deferred as previously directed.
 Earlier entries describing locale acceptance as an immediate priority are historical.
 
+## Native Playground output type safety — 2026-11-04
+
+A reused bundle with a directory at `Contents/Info.plist` previously let the
+staged rename succeed inside that directory, producing an invalid package.
+Packaging now rejects existing non-regular fixed output files before writing.
+The fixture reproduced the directory case before the fix and passed afterward,
+including a FIFO resource destination, normal reuse, fresh bundles and earlier
+rollback/link checks. Log: `target/headstart/evidence/native-package-output-type-57532a8f.log`
+(SHA-256 `0bcc8c4f92b38506b47a7b049b38b0385b303f88b1c57c49ec0c5ac3b0a3345c`).
+Shell syntax and whitespace checks passed. Concurrent path substitution and
+native runtime, licensing, signing, CI and release acceptance remain separate.
+
 ## R17 native unknown NavigationStack route — 2026-11-04
 
 A temporary Playground-only initial path `details → missing` was built on

@@ -241,4 +241,30 @@ fi
 test "$(cat "$copy_failure_bundle/Contents/Resources/assets/link-fixture.html")" = 'existing resource'
 test -z "$(find "$copy_failure_bundle" -name '*.tmp.*' -print -quit)"
 
-printf '%s\n' 'Playground packaging reuse, rollback, symlink and hard-link safety passed.'
+directory_root="$temporary_root/directory-output"
+directory_bundle="$directory_root/debug/RustUI Playground.app"
+mkdir -p "$directory_bundle/Contents/Info.plist"
+if CARGO_TARGET_DIR="$directory_root" \
+    RUSTUI_PLAYGROUND_BINARY="$headstart_binary" \
+    RUSTUI_PLAYGROUND_REFERENCES_DIR="$references_source" \
+    "$repository_root/apps/rustui-playground/package-app.sh" >/dev/null 2>&1; then
+    printf '%s\n' 'package accepted a directory at the Info.plist output.' >&2
+    exit 1
+fi
+test -z "$(find "$directory_bundle/Contents/Info.plist" -mindepth 1 -print -quit)"
+test ! -e "$directory_bundle/Contents/Resources"
+
+fifo_root="$temporary_root/fifo-output"
+fifo_bundle="$fifo_root/debug/RustUI Playground.app"
+mkdir -p "$fifo_bundle/Contents/Resources/assets"
+mkfifo "$fifo_bundle/Contents/Resources/assets/link-fixture.html"
+if CARGO_TARGET_DIR="$fifo_root" \
+    RUSTUI_PLAYGROUND_BINARY="$headstart_binary" \
+    RUSTUI_PLAYGROUND_REFERENCES_DIR="$references_source" \
+    "$repository_root/apps/rustui-playground/package-app.sh" >/dev/null 2>&1; then
+    printf '%s\n' 'package accepted a FIFO at a resource output.' >&2
+    exit 1
+fi
+test -p "$fifo_bundle/Contents/Resources/assets/link-fixture.html"
+
+printf '%s\n' 'Playground packaging reuse, rollback and output path safety passed.'

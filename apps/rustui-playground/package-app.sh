@@ -106,6 +106,18 @@ for destination in \
         exit 1
     fi
 done
+for destination in \
+    "$bundle/Contents/MacOS/rustui-playground" "$bundle/Contents/Info.plist" \
+    "$resources/assets/link-fixture.html" \
+    "$resources/assets/link-disabled-fixture.html" \
+    "$resources/assets/playground-sample.png" \
+    "$resources/themes/macos27.json" \
+    "$resources/licenses/icons/LICENSE-LUCIDE"; do
+    if [ -e "$destination" ] && [ ! -f "$destination" ]; then
+        printf '%s\n' "refusing non-file Playground output: $destination" >&2
+        exit 1
+    fi
+done
 mkdir -p "$bundle/Contents/MacOS" "$resources"
 mkdir -p "$resources/assets" "$resources/themes"
 copy_output "$repository_root/assets/link-fixture.html" "$resources/assets/link-fixture.html"
