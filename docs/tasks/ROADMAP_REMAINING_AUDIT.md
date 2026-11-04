@@ -6,6 +6,24 @@ RTL implementation and evidence; do not count deferred localization as complete.
 Web/Wasm, accessibility, and VoiceOver remain deferred as previously directed.
 Earlier entries describing locale acceptance as an immediate priority are historical.
 
+## R17 native Table input diagnostic — 2026-11-04
+
+A temporary instrumented zero-row, 700-point-column Playground specimen on
+`27121a6b` recorded the Table wrapper's wheel events and scroll handle. The
+exact native process (PID 69404; executable SHA-256
+`e92595b0fc9601df2293cfa70d6fdfd7fc5bd243a4d83738f70829ffbfec4b88`)
+reported a 399.5-point horizontal range and zero offset. Computer-use horizontal
+right and left attempts each delivered `Pixels(0, 0)` to the wrapper; a vertical
+control delivered `Pixels(0, -820)`. Thus the previous lack of visible horizontal
+movement cannot establish Table behavior under a nonzero horizontal native event.
+Observation log: `target/headstart/evidence/r17-native-wheel-observation-27121a6b.log`
+(SHA-256 `d7cdbc59c0eb9a1b150c32f6c2b59a3146e33272f3cfa5f4adf2ce7179571f04`).
+The temporary patch and successful build logs are retained as
+`r17-native-wheel-diagnostic-27121a6b.patch` and `r17-native-wheel-diagnostic-27121a6b-build.log`
+under `target/headstart/evidence/`. Source was restored, the owned app exited,
+and its bundle was removed. Nonzero native horizontal input, physical input,
+and broader Table acceptance remain open.
+
 ## R17 native empty wide Table probe — 2026-11-04
 
 On `6834cc2f`, a temporary Playground story patch supplied zero Table rows and
