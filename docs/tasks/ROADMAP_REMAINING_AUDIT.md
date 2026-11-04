@@ -6,6 +6,32 @@ RTL implementation and evidence; do not count deferred localization as complete.
 Web/Wasm, accessibility, and VoiceOver remain deferred as previously directed.
 Earlier entries describing locale acceptance as an immediate priority are historical.
 
+## R04 injected native window-open error — 2026-11-04
+
+On `f35ea1b9`, a temporary framework patch made `open_root_window` return the
+injected error before calling GPUI when a probe-only environment flag was set.
+A generated outside-checkout consumer recorded launch and, in one run,
+registered an error handler that recorded the message and quit. The exact
+probe source `target/headstart/evidence/native-window-error-probe.rs` SHA-256
+`0af31e5b9cde3bd9c4f929adfd6bd4aeef1fa48a1fcd2c47baa50406bffd6fed` and
+framework patch `target/headstart/evidence/native-window-error-probe.patch`
+SHA-256 `0b042c4f9bdedaa5e87970ed4181961768c99ded9a8daee42b12086cd52e8e74`
+were retained. Locked offline Headstart build log SHA-256
+`e7a45daba49b3f53fedb2e9f3cec758ed7ae2ddb4aa0abca9767cbaf2ce1c094`.
+The framework patch was reversed before running the probe.
+
+The exact bundle executable SHA-256
+`284bf3041369b037279bb89eadf48f09556ade61c576e3570e8d30727f91eaa7`
+ran as PID 43481 with the custom handler: launch was recorded, the handler
+received `injected native window failure`, and the process exited 0. A second
+run, PID 43639, omitted the handler: launch was recorded, the default path
+logged `RustUI could not open its root window: injected native window failure`
+and exited 0. The custom marker and default log are retained under the
+`native-window-error-` evidence prefix. The bundle and temporary workspace
+were removed; no probe process remained. This tests native application dispatch
+of a deliberately injected error, not a real GPUI/macOS window-creation failure
+or full lifecycle/release acceptance.
+
 ## R04/R05 native pending task at root close — 2026-11-04
 
 On `287ceb96`, a temporary outside-checkout public-API consumer started a
