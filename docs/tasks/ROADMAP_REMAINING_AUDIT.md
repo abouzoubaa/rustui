@@ -6,6 +6,22 @@ RTL implementation and evidence; do not count deferred localization as complete.
 Web/Wasm, accessibility, and VoiceOver remain deferred as previously directed.
 Earlier entries describing locale acceptance as an immediate priority are historical.
 
+## R08 native opacity scheduling — 2026-11-04
+
+On clean candidate `8d0c5065`, the locked offline Headstart build of the
+`opacity_benchmark` example completed. An owned disposable copy of the
+executable (SHA-256 `d2c1221f348eb132225b95756c6b1c489d6b8b89f175f14d1cf882619c6b9e27`)
+passed the native verifier in normal, reduced-motion, 10-FPS-limited and
+limited reduced-motion modes. The four processes were 65621, 65667, 65702
+and 65732 respectively. Build log SHA-256 is
+`5f9023c5eeb07e0f46ec3882c9022c8f80a6ac9c14c398a4b9034806a81f3c35`;
+the verifier report `target/headstart/opacity-probe-verification-65620-1793813675973017000.json`
+has SHA-256 `344f1b43e81c1e909dba080cb48aec69bf403e4965e3274be87892ef429817f9`.
+The verifier checks RustUI host-lowering progress, reduced-motion scheduling,
+and quiescence; it does not measure pixels, GPU frame timing, or performance
+budgets. All probe processes exited and the disposable executable was removed.
+Theme, broader motion and performance acceptance remain open.
+
 ## R30 native CI availability — 2026-11-04
 
 At project candidate `4ec0b945`, the project branch was 110 commits ahead of
