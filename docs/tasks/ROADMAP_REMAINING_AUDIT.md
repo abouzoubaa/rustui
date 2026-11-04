@@ -6,6 +6,27 @@ RTL implementation and evidence; do not count deferred localization as complete.
 Web/Wasm, accessibility, and VoiceOver remain deferred as previously directed.
 Earlier entries describing locale acceptance as an immediate priority are historical.
 
+## R15 Stepper boundary focus recovery — 2026-11-04
+
+On parent `aab63469`, RustUI now retains a non-tab-stop focus parent around
+each Stepper button. If a focused button becomes disabled, focus moves to its
+own parent, retaining the surrounding focus scope and allowing Tab traversal.
+The new rendered-window test sends actual Tab and Space events; disabling the
+recovery made it fail at the newly disabled decrement button. The focused
+Stepper suite passed 18/18 with recovery enabled (log
+`target/headstart/evidence/mvp-stepper-focus-fix-aab63469-tests.log`, SHA-256
+`dd36f61dec53a7e3ab3b7b1040a647a69457771d5befe5e640ac5bf68bfc4696`).
+
+The combined outside-checkout consumer built against this source (log SHA-256
+`760c17b4dc1c8218355f67d1ac9710916053b1825e42692830ad7e547fe885ee`)
+and ran as PID 37788, executable SHA-256
+`10933a6c0e038328de96ae65b042055a13f1eadde2dfb2f0ad19f90a81b8bdc0`.
+Computer input reached the minimum and Tab/Right changed the following Slider;
+at the maximum, Tab/Space operated decrement; at the minimum, Shift-Tab/Space
+operated increment. The owned process exited and its disposable bundle,
+workspace and standalone executable were removed. This resolves the bounded
+reproduction below; modal behavior and broader controls acceptance remain open.
+
 ## R15 Stepper boundary keyboard focus defect — 2026-11-04
 
 On clean candidate `1199c365`, the public-API combined consumer from the

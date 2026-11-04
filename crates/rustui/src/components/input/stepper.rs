@@ -2,7 +2,10 @@
 
 use std::ops::RangeInclusive;
 
-use gpui::{AnyElement, Div, Hsla, IntoElement, ParentElement, SharedString, Styled, div};
+use gpui::{
+    AnyElement, Div, Hsla, InteractiveElement, IntoElement, ParentElement, SharedString, Styled,
+    div,
+};
 use gpui_component::{
     Disableable as _, Sizable as _, Size,
     button::{Button as GpuiButton, ButtonVariant, ButtonVariants as _},
@@ -240,6 +243,23 @@ impl View for StepperView {
             .value
             .value()
             .clamp(*self.range.start(), *self.range.end());
+        let (focus, _) = context.retained_entity(
+            Identity::from(format!("stepper-focus:{identity}")),
+            |_, cx| (cx.focus_handle(), cx.focus_handle()),
+        );
+        let increment_disabled = self.disabled || current >= *self.range.end();
+        let decrement_disabled = self.disabled || current <= *self.range.start();
+        let (increment_focus, decrement_focus) =
+            context.update_entity(&focus, |focus, window, cx| {
+                // Keep focus in the same scope when a focused button disappears
+                // from the focus tree; Tab can then traverse from its parent.
+                if increment_disabled && focus.0.contains_focused(window, cx) {
+                    window.focus(&focus.0, cx);
+                } else if decrement_disabled && focus.1.contains_focused(window, cx) {
+                    window.focus(&focus.1, cx);
+                }
+                (focus.0.clone(), focus.1.clone())
+            });
         let decrement = context.binding_updater(self.value.clone(), {
             let minimum = *self.range.start();
             let maximum = *self.range.end();
@@ -294,7 +314,7 @@ impl View for StepperView {
             .compact()
             .with_size(Size::XSmall)
             .with_variant(ButtonVariant::Secondary)
-            .disabled(self.disabled || current >= *self.range.end())
+            .disabled(increment_disabled)
             .on_click(move |_, _, cx| increment(cx))
             .child(styled_element(div().child("+"), &increment_glyph));
         let decrement_button = GpuiButton::new(format!("{identity}-decrement"))
@@ -302,7 +322,7 @@ impl View for StepperView {
             .compact()
             .with_size(Size::XSmall)
             .with_variant(ButtonVariant::Secondary)
-            .disabled(self.disabled || current <= *self.range.start())
+            .disabled(decrement_disabled)
             .on_click(move |_, _, cx| decrement(cx))
             .child(styled_element(div().child("−"), &decrement_glyph));
 
@@ -314,9 +334,17 @@ impl View for StepperView {
                     .flex()
                     .flex_col()
                     .items_center()
-                    .child(styled_element(increment_button, &increment_style))
+                    .child(
+                        div()
+                            .track_focus(&increment_focus)
+                            .child(styled_element(increment_button, &increment_style)),
+                    )
                     .child(styled_element(div(), &separator_style))
-                    .child(styled_element(decrement_button, &decrement_style)),
+                    .child(
+                        div()
+                            .track_focus(&decrement_focus)
+                            .child(styled_element(decrement_button, &decrement_style)),
+                    ),
             )
             .into_any_element()
     }
@@ -570,6 +598,110 @@ mod tests {
             super::displayed_value(-1234, Some(&Locale::parse("ar").unwrap())),
             "\u{061c}-١\u{066c}٢٣٤"
         );
+    }
+
+    #[gpui::test]
+    fn tab_traverses_after_stepper_button_becomes_disabled(cx: &mut gpui::TestAppContext) {
+        use crate::{prelude::*, runtime::ComponentHost};
+        use gpui::AppContext as _;
+        use rustui_core::Action;
+        use std::{cell::RefCell, rc::Rc};
+
+        struct Owner {
+            value: i32,
+            after: usize,
+        }
+        impl View for Owner {
+            fn body(&self) -> impl View {
+                VStack::new()
+                    .child(
+                        Stepper(
+                            "Count",
+                            Binding::new(self.value, |o: &Owner| o.value, |o, v| o.value = v),
+                        )
+                        .id("stepper-boundary")
+                        .range(0..=2),
+                    )
+                    .child(Button("After", Action::new(|o: &mut Owner| o.after += 1)).id("after"))
+            }
+        }
+        let theme = parse_theme(include_str!(concat!(
+            env!("CARGO_MANIFEST_DIR"),
+            "/../../themes/macos27.json"
+        )))
+        .unwrap();
+        cx.update(|app| {
+            gpui_component::init(app);
+            crate::theme::activate_theme(&theme, Some(AppearanceMode::Dark), app).unwrap();
+        });
+        let slot = Rc::new(RefCell::new(None));
+        let saved = slot.clone();
+        let (_, window) = cx.add_window_view(|window, app| {
+            let owner = app.new(|app| ComponentHost::new(Owner { value: 0, after: 0 }, app));
+            *saved.borrow_mut() = Some(owner.clone());
+            gpui_component::Root::new(owner, window, app)
+        });
+        let owner = slot.borrow().clone().unwrap();
+        window.update(|window, app| {
+            let _ = window.draw(app);
+            window.focus_next(app);
+        });
+        for key in ["space", "tab", "space", "tab", "space"] {
+            if key == "space" {
+                let keystroke = gpui::Keystroke::parse(key).unwrap();
+                window.simulate_event(gpui::KeyDownEvent {
+                    keystroke: keystroke.clone(),
+                    is_held: false,
+                    prefer_character_input: false,
+                });
+                window.simulate_event(gpui::KeyUpEvent { keystroke });
+            } else {
+                window.simulate_keystrokes(key);
+            }
+            window.update(|window, app| {
+                let _ = window.draw(app);
+            });
+        }
+        window.update(|_, app| {
+            assert_eq!(owner.read(app).component().value, 0);
+            assert_eq!(
+                owner.read(app).component().after,
+                1,
+                "Tab must leave the newly disabled decrement button"
+            );
+        });
+        for key in [
+            "shift-tab",
+            "space",
+            "space",
+            "tab",
+            "space",
+            "space",
+            "shift-tab",
+            "space",
+        ] {
+            if key == "space" {
+                let keystroke = gpui::Keystroke::parse(key).unwrap();
+                window.simulate_event(gpui::KeyDownEvent {
+                    keystroke: keystroke.clone(),
+                    is_held: false,
+                    prefer_character_input: false,
+                });
+                window.simulate_event(gpui::KeyUpEvent { keystroke });
+            } else {
+                window.simulate_keystrokes(key);
+            }
+            window.update(|window, app| {
+                let _ = window.draw(app);
+            });
+        }
+        window.update(|_, app| {
+            assert_eq!(
+                owner.read(app).component().value,
+                1,
+                "both boundaries must preserve forward and reverse traversal"
+            );
+        });
     }
 
     #[test]

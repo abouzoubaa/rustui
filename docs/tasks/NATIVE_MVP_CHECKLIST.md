@@ -56,9 +56,9 @@ below identify sections in `ROADMAP_REMAINING_AUDIT.md`.
      pattern; other control and group policies remain open. R11/R15 combined
      native controls exercises eight control types together with shared state,
      disabled pointer input and one re-enabled keyboard transition. The complete
-     control set and keyboard workflow remain open. R15 Stepper boundary
-     focus defect: reaching the minimum via keyboard leaves focus on a disabled
-     decrement button and Tab/Shift-Tab did not restore traversal in the probe.
+     control set and keyboard workflow remain open. R15 Stepper boundary focus
+     recovery now passes rendered keyboard regression and bounded native checks
+     at both limits; broader controls and modal acceptance remain open.
 5. **Navigation and overlays: 2/3**
    - [x] Demonstrate native unknown-route recovery (R17 native unknown-route keyboard recovery).
    - [x] Demonstrate a native Drawer interaction (R19/R33 native Drawer interaction).
