@@ -10,7 +10,7 @@ unweighted count is not a measure of code written or time remaining.
 
 ## Granular progress baseline — 2026-11-04
 
-**MVP 61%: 19 of 31 evidence milestones below have been demonstrated.** This
+**MVP 64%: 20 of 31 evidence milestones below have been demonstrated.** This
 unweighted count exposes progress inside the larger checks. It is not an
 estimate of effort, calendar time, coding completion, or production readiness.
 The milestones differ in size; some record evidence on an earlier revision
@@ -54,10 +54,10 @@ below identify sections in `ROADMAP_REMAINING_AUDIT.md`.
    - [x] Verify normal opacity scheduling and quiescence in the native probe (R08 native opacity scheduling).
    - [x] Verify the probe's reduced-motion scheduling (same section).
    - [ ] Verify the supported theme and ordinary-motion paths across the selected MVP workflow, including visual behavior.
-7. **Trusted native CI: 0/3**
+7. **Trusted native CI: 1/3**
    - [ ] Make a trusted runner with the required macOS labels available.
    - [ ] Run source checks for the selected candidate in trusted CI.
-   - [ ] Run compiled macOS checks for that exact candidate in trusted CI.
+   - [x] Run compiled macOS checks for that exact candidate in trusted CI (native-only smoke: workspace all-targets check and core tests, R30 native CI smoke result). The full release job remains open.
 8. **Distribution: 2/3**
    - [x] Package a real native Playground with collected notices (R31 real Playground package reuse).
    - [x] Compare two bundles made from the same binary and notice collection on one host (R30/R31 native package comparison).

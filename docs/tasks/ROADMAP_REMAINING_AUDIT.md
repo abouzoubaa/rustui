@@ -6,6 +6,23 @@ RTL implementation and evidence; do not count deferred localization as complete.
 Web/Wasm, accessibility, and VoiceOver remain deferred as previously directed.
 Earlier entries describing locale acceptance as an immediate priority are historical.
 
+## R30 native CI smoke result — 2026-11-04
+
+GitHub Actions [run 41882107560](https://github.com/abouzoubaa/rustui/actions/runs/41882107560)
+passed the manually dispatched `native-mvp-smoke` job on exact source candidate
+`f99b6b04363c0f74c65c01eaa521c75dd048ea88`, using the one-job macOS ARM64
+runner `rustui-mvp-native-633c0eab`. The trusted checkout verification and
+locked offline workspace all-targets check succeeded; all 9 `rustui-core`
+library tests passed. The source and full release jobs were skipped for this
+explicit native-only dispatch, so their gates remain open. The push used
+`[skip ci]` to avoid running deferred Web checks automatically; this smoke job
+was then dispatched explicitly. The captured GitHub job log is
+`target/headstart/evidence/native-ci-smoke-f99b6b04-gh.log` (SHA-256
+`0901ea8c9cd05bae07e8b3feccfa7b110215781a697251171f4fdc90cca52b81`).
+The runner automatically deregistered after its one job; the repository API
+subsequently reported zero repository-level runners. A maintained trusted
+runner and the full current-candidate CI and release checks remain open.
+
 ## R30 native-only CI smoke path — 2026-11-04
 
 The existing CI workflow now offers an explicit `native_smoke_only` manual
