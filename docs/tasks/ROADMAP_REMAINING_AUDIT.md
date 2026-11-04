@@ -6,6 +6,25 @@ RTL implementation and evidence; do not count deferred localization as complete.
 Web/Wasm, accessibility, and VoiceOver remain deferred as previously directed.
 Earlier entries describing locale acceptance as an immediate priority are historical.
 
+## R15 native Slider and Picker keyboard flow — 2026-11-04
+
+On clean candidate `1b8f73d9`, a generated outside-checkout public-API
+consumer built with normal locked offline Headstart. Retained probe source
+`target/headstart/evidence/mvp-slider-picker-1b8f73d9.rs` has SHA-256
+`00ac3ca2cb0183ed417c194e99f515d20debaca9ffd6e214a24a84790ee86e76`;
+build log SHA-256 is
+`33d9900d2aa3b5b68471d6a86002a7dcfb127ed9a608c891dd4ee449a7348ba6`.
+The exact executable (SHA-256
+`533b708082f260f58f472f74b70c8eeed0e36f012e617188652f3e4359cdf53c`)
+ran as PID 9295 in the owned validation bundle. Tab skipped the disabled Slider
+and Picker between two enabled buttons. After enabling them, keyboard Right
+changed Slider 0 to 1, and Tab, Return, Down, Return selected Picker option Two.
+After disabling them again, clicking each and sending its keyboard action left
+the owner values at 1 and Two and did not reopen the Picker. The process exited;
+the disposable bundle and generated workspace were removed. This computer-input
+observation does not establish physical keyboard, all controls or complete
+native acceptance.
+
 ## R15 native disabled TextField owner update — 2026-11-04
 
 On clean candidate `db2ce824`, a generated outside-checkout public-API
