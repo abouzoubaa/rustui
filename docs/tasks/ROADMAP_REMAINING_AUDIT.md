@@ -6,6 +6,28 @@ RTL implementation and evidence; do not count deferred localization as complete.
 Web/Wasm, accessibility, and VoiceOver remain deferred as previously directed.
 Earlier entries describing locale acceptance as an immediate priority are historical.
 
+## R04/R05 native in-flight work after root close — 2026-11-04
+
+On `5a0b91b8`, a temporary outside-checkout public-API consumer started an
+OwnerTask whose background poll blocks for eight seconds. Probe source
+`target/headstart/evidence/native-window-inflight-probe.rs` SHA-256
+`bdf9d72f6edd6c006e14e21d59f9cca55d31f51a864c149b077b98c345140496`
+built with locked offline Headstart (log
+`target/headstart/evidence/native-window-inflight-probe-build.log`, SHA-256
+`8bbd1bffc874a867941ed47cb49bc1c52d534ed1e9b88b951f230f90d5b1b7fa`).
+
+The exact native executable SHA-256
+`9e990fbf453e51ce999d8fa86d8a6ee07c9f636df6e5f8e077a96c457a94a118`
+ran as PID 45729. Start showed Loading; the window was closed after the work
+started. The owner unmounted before the blocking work finished; the work then
+finished and dropped its guard, while the result-delivered marker remained
+absent with the app still running. Marker timestamps and observation are in
+`target/headstart/evidence/native-window-inflight-observation.json`, SHA-256
+`77731c668ce5d34a735c320ee941dd1cabfe42d9d050145bcbc8b2ac9c11afe5`.
+The process exited on Quit, and the owned bundle and temporary workspace were
+removed. This bounded case confirms stale result suppression, not interruption
+of blocking work or full lifecycle/release acceptance.
+
 ## R04 injected native window-open error — 2026-11-04
 
 On `f35ea1b9`, a temporary framework patch made `open_root_window` return the

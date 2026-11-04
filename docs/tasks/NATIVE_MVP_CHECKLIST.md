@@ -18,8 +18,9 @@ unweighted count is not a measure of code written or time remaining.
 3. **Open — window and lifecycle:** current-candidate native launch, close,
    error handling, owner teardown and cancellation are verified end to end.
    Bounded native probes confirm root unmount, cancellation of one pending
-   timer-backed owner task, and dispatch of an injected window-open error.
-   Actual platform failure and broader cancellation cases still need evidence.
+   timer-backed task, suppression of one in-flight native result, and dispatch
+   of an injected window-open error. Actual platform failure and broader
+   lifecycle cases still need evidence.
 4. **Open — basic controls and input:** the supported MVP controls, bindings,
    disabled states and ordinary keyboard/text editing pass a documented
    current-candidate native workflow.
