@@ -32,6 +32,8 @@ fn install_initial_focus_traversal(
     handle: gpui::AnyWindowHandle,
     cx: &mut App,
 ) -> gpui::Subscription {
+    use gpui_component::WindowExt as _;
+
     // With no focused element GPUI dispatches keys at its root node, outside
     // the Components Root key context. Seed traversal only for this window.
     cx.intercept_keystrokes(move |event, window, cx| {
@@ -45,6 +47,15 @@ fn install_initial_focus_traversal(
             || modifiers.platform
             || modifiers.function
         {
+            return;
+        }
+        // Components does not expose the active sheet/dialog focus handle.
+        // Do not move focus behind either modal when its focus was lost.
+        if window.has_active_sheet(cx) || window.has_active_dialog(cx) {
+            return;
+        }
+        if crate::components::overlay::drawer::restore_active_focus(window, cx) {
+            cx.stop_propagation();
             return;
         }
         if modifiers.shift {

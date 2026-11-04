@@ -153,6 +153,104 @@ fn drawer_keeps_keyboard_focus_inside_modal(cx: &mut gpui::TestAppContext) {
     }
 }
 
+#[cfg(not(target_family = "wasm"))]
+#[gpui::test]
+fn unfocused_drawer_keeps_initial_tab_inside_modal(cx: &mut gpui::TestAppContext) {
+    setup(cx);
+    let handle = cx.update(|app| {
+        crate::runtime::window::open_root_window(
+            Probe {
+                visible: true,
+                ..Default::default()
+            },
+            rustui_core::EnvironmentValues::default(),
+            gpui::WindowOptions::default(),
+            app,
+        )
+        .unwrap();
+        *app.windows().last().unwrap()
+    });
+    for key in ["tab", "shift-tab"] {
+        handle
+            .update(cx, |_, window, app| {
+                let _ = window.draw(app);
+                assert!(host(window, app).unwrap().read(app).active.is_some());
+                window.blur(app);
+            })
+            .unwrap();
+        for _ in 0..2 {
+            cx.simulate_keystrokes(handle, key);
+            handle
+                .update(cx, |_, window, app| {
+                    let overlay = host(window, app).unwrap();
+                    let overlay = overlay.read(app);
+                    assert!(
+                        overlay
+                            .active
+                            .as_ref()
+                            .unwrap()
+                            .focus
+                            .contains_focused(window, app)
+                    );
+                })
+                .unwrap();
+        }
+    }
+    handle
+        .update(cx, |_, window, _| window.remove_window())
+        .unwrap();
+}
+
+#[cfg(not(target_family = "wasm"))]
+#[gpui::test]
+fn unfocused_components_modal_does_not_tab_to_background(cx: &mut gpui::TestAppContext) {
+    setup(cx);
+    let handle = cx.update(|app| {
+        crate::runtime::window::open_root_window(
+            Probe::default(),
+            rustui_core::EnvironmentValues::default(),
+            gpui::WindowOptions::default(),
+            app,
+        )
+        .unwrap();
+        *app.windows().last().unwrap()
+    });
+    for sheet in [true, false] {
+        handle
+            .update(cx, |_, window, app| {
+                if sheet {
+                    window.open_sheet(app, |sheet, _, _| sheet.title("Sheet"));
+                } else {
+                    window.open_dialog(app, |dialog, _, _| dialog.title("Dialog"));
+                }
+                let _ = window.draw(app);
+                window.blur(app);
+            })
+            .unwrap();
+        for key in ["tab", "shift-tab"] {
+            cx.simulate_keystrokes(handle, key);
+            handle
+                .update(cx, |_, window, app| {
+                    assert!(window.focused(app).is_none(), "focus escaped the modal");
+                })
+                .unwrap();
+        }
+        handle
+            .update(cx, |_, window, app| {
+                if sheet {
+                    window.close_sheet(app);
+                } else {
+                    window.close_dialog(app);
+                }
+            })
+            .unwrap();
+        cx.run_until_parked();
+    }
+    handle
+        .update(cx, |_, window, _| window.remove_window())
+        .unwrap();
+}
+
 #[gpui::test]
 fn real_root_escape_restores_focus_and_does_not_repeat_visibility_updates(
     cx: &mut gpui::TestAppContext,

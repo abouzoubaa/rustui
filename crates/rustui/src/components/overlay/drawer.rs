@@ -85,6 +85,19 @@ pub(crate) fn is_active(window: &Window, app: &App) -> bool {
     host(window, app).is_some_and(|host| host.read(app).active.is_some())
 }
 
+pub(crate) fn restore_active_focus(window: &mut Window, app: &mut App) -> bool {
+    let Some(focus) = host(window, app).and_then(|host| {
+        host.read(app)
+            .active
+            .as_ref()
+            .map(|active| active.focus.clone())
+    }) else {
+        return false;
+    };
+    window.focus(&focus, app);
+    true
+}
+
 /// A new Drawer never joins or replaces an existing native modal or Drawer.
 fn can_open_drawer(window: &mut Window, app: &mut App) -> bool {
     !window.has_active_sheet(app) && !window.has_active_dialog(app) && !is_active(window, app)

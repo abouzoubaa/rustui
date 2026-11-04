@@ -6,6 +6,25 @@ RTL implementation and evidence; do not count deferred localization as complete.
 Web/Wasm, accessibility, and VoiceOver remain deferred as previously directed.
 Earlier entries describing locale acceptance as an immediate priority are historical.
 
+## R19 unfocused modal traversal — 2026-11-04
+
+A test-platform regression showed that the initial Tab fallback could focus a
+background control after an open Drawer lost focus. The native root fallback
+now restores the active Drawer's focus before further traversal. For an
+unfocused Components Sheet or Dialog it refrains from moving focus behind the
+modal; the pinned Components API does not expose the active modal focus handle,
+so keyboard recovery in that state remains open. This guard does not claim a
+fix for the upstream modal focus API.
+
+The Drawer suite passed 10/10, including forward and reverse recovery and the
+Sheet/Dialog background guard. The root-window suite passed 4/4. Logs:
+`target/headstart/evidence/native-modal-focus-suite.log` SHA-256
+`f2c854f762f9d5eb09e6f9c50f3b1cc4736a5716f890b9c323c77a295ebaf7d9`;
+`target/headstart/evidence/native-modal-root-suite.log` SHA-256
+`d13fd2c65d82da175806dd75877d4114688f7d9c9611df90fb34ff1248b5be63`.
+These are test-platform results; native modal recovery and the broader release
+gates remain open.
+
 ## R03/R04 root traversal isolation — 2026-11-04
 
 The test-platform root-window suite passed 4/4 with a two-window regression:
