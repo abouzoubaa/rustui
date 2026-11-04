@@ -6,6 +6,22 @@ RTL implementation and evidence; do not count deferred localization as complete.
 Web/Wasm, accessibility, and VoiceOver remain deferred as previously directed.
 Earlier entries describing locale acceptance as an immediate priority are historical.
 
+## R06 native consumer keyboard editing — 2026-11-04
+
+On clean candidate `05c9e0ab`, the separate public-API consumer built with the
+normal locked offline Headstart profile (log SHA-256
+`50e3da1b5df81e6eda8721f17d0763acd500310f08a94c7e1ea278698dada1a6`).
+Its exact executable (SHA-256
+`9ec9cb345556830c292676f4262d1e26f95ae1daf955aab2734a1d7c22d77fbe`)
+ran as PID 74321 in the owned validation bundle. In the name field, entering
+`Mira Lee`, selecting all and replacing it with `Ada`, then moving left,
+backspacing and typing `l` produced `Ala` in both the field and owner display.
+Shift-Tab followed by Space activated Increment (count 0 to 1); Tab returned
+to the field, and End followed by `n` produced `Alan` in both displays.
+The process exited and the disposable bundle was removed. This focused
+computer-input workflow does not establish physical keyboard, IME, all controls,
+disabled-state coverage or complete native acceptance.
+
 ## R30 native incremental build recovery — 2026-11-04
 
 On clean candidate `0ca09c0b`, the normal locked offline Headstart Playground
