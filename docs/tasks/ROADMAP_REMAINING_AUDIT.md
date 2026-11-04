@@ -6,6 +6,23 @@ RTL implementation and evidence; do not count deferred localization as complete.
 Web/Wasm, accessibility, and VoiceOver remain deferred as previously directed.
 Earlier entries describing locale acceptance as an immediate priority are historical.
 
+## R17 native unknown NavigationStack route — 2026-11-04
+
+A temporary Playground-only initial path `details → missing` was built on
+`83407ea8` with locked offline Headstart. Build log:
+`target/headstart/evidence/r17-native-navigation-unknown-83407ea8-build.log`
+(SHA-256 `17b3a7473b97277959e0352b235cf329a8ec953331acf4c7b5d38015e96e04c4`);
+the retained temporary patch has SHA-256
+`56eb17a121a14de31a7f74a11dc8100817f07752144e8b4f0de56469e487289d`.
+The exact native executable (SHA-256
+`f9b1f9ca5b45e967e1653115408cebc741c7dfc52936d720c5791afce59cea03`, PID
+83734) visibly showed “Destination unavailable” and `missing`. Back returned
+to Details, a second Back returned to the root, and Open details navigated
+forward again. The temporary patch was reversed, the owned app exited, and its
+bundle was removed. This bounded pointer-driven recovery check does not close
+keyboard, physical-input, accessibility, other-platform, or full navigation
+acceptance.
+
 ## M54 current native LazyGrid interaction — 2026-11-04
 
 The locked offline Headstart Playground build at `77348eb9` passed (log
