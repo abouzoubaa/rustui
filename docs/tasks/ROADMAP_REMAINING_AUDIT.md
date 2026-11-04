@@ -6,6 +6,18 @@ RTL implementation and evidence; do not count deferred localization as complete.
 Web/Wasm, accessibility, and VoiceOver remain deferred as previously directed.
 Earlier entries describing locale acceptance as an immediate priority are historical.
 
+## R20 current owner-task lifecycle suite — 2026-11-04
+
+On source `5c817f63`, the locked offline Headstart owner-task test module passed
+9/9. Coverage includes replacement and cancellation generations, stale success
+and error completions, cancellation isolation, owner release, root-window
+teardown and terminal cleanup. Log:
+`target/headstart/evidence/r20-owner-task-suite-5c817f63.log` (SHA-256
+`8727ea114bf0fb725ebaa8a608f512e5cdde744b990d7f6a5bcedd30ea3d16ad`).
+The build emitted existing upstream warnings and two RustUI test-build warnings.
+This is test-platform evidence; broader native lifecycle and release acceptance
+remain open.
+
 ## R26 native theme reload visual recovery — 2026-11-04
 
 On `3d9d3803`, a temporary path-only Playground patch pointed the existing
