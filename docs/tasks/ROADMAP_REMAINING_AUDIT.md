@@ -6,6 +6,27 @@ RTL implementation and evidence; do not count deferred localization as complete.
 Web/Wasm, accessibility, and VoiceOver remain deferred as previously directed.
 Earlier entries describing locale acceptance as an immediate priority are historical.
 
+## R03/R04 native initial keyboard traversal — 2026-11-04
+
+At `d307f8a8`, native root windows install a window-scoped keystroke
+interceptor for Tab and Shift-Tab only while no element has focus. GPUI's
+unfocused dispatch starts outside the Components Root context; the interceptor
+starts traversal and is released with that root. A regression reproduced the
+initial Tab failure before the fix. The focused test-platform window suite
+passed 3/3 afterward, including initial Tab and Space activation, reverse Tab,
+and an unhandled Control-Tab. Log `target/headstart/evidence/native-root-tab-fix.log`
+SHA-256 `da27c80835f6b55d66cdc2c4792a0f305158978f1e266c4363416d1cf6284e48`.
+
+The independent source consumer built at `d307f8a8` with locked offline
+Headstart (build log `target/headstart/evidence/native-consumer-d307f8a8-build.log`,
+SHA-256 `959916b7de2fc45c0b25242ca82b923f204eca62180c519e8ba644bb22fdc38c`).
+Its executable SHA-256 `b565ea996ccf07720723261e7d16257967a973a09e8db293876a528c9e2d7dc0`
+ran as PID 3066 in the owned disposable bundle. Computer-use Tab focused
+Increment and two Space presses changed Count 0 → 1 → 2. The process exited
+and the bundle was removed. This bounded native check does not establish other
+keyboard paths, physical-input, cross-platform, accessibility, distribution,
+licensing, CI, signing, or release acceptance.
+
 ## R03/R04 native source-consumer keyboard follow-up — 2026-11-04
 
 The retained source-consumer executable from `5ffcb466` (SHA-256

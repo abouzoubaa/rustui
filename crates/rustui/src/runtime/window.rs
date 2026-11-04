@@ -60,6 +60,7 @@ fn install_initial_focus_traversal(
 
 #[cfg(test)]
 mod tests {
+    #[cfg(not(target_family = "wasm"))]
     #[gpui::test]
     fn root_tab_focuses_and_activates_button(cx: &mut gpui::TestAppContext) {
         use gpui::AppContext as _;
