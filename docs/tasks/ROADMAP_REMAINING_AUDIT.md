@@ -6,6 +6,27 @@ RTL implementation and evidence; do not count deferred localization as complete.
 Web/Wasm, accessibility, and VoiceOver remain deferred as previously directed.
 Earlier entries describing locale acceptance as an immediate priority are historical.
 
+## R30 native incremental build recovery — 2026-11-04
+
+On clean candidate `0ca09c0b`, the normal locked offline Headstart Playground
+build reproduced the `module_children(rustui_playground[2dce])` incremental
+compiler ICE (log SHA-256
+`d4f2b5412f84667223b61dd342ae2c1fbed77c53b5f62a8c53dc6f2add16fd3c`).
+Open-file observation during a repeat associated the failing binary compiler
+process with `target/headstart/headstart/incremental/rustui_playground-1yvczjm1vvbio`.
+With no RustUI build running, that one directory was moved intact into
+`target/headstart/evidence/incremental-preserved-playground-1yvczjm1vvbio-0ca09c0b`;
+all 11 file hashes matched before and after the move. The retained inventory is
+`target/headstart/evidence/incremental-preserved-playground-0ca09c0b.json`
+(SHA-256 `de974f770bc84b62d9816be25d3aca9241115464c3673b4fb7c7e463a167eec6`).
+No other cache was moved or cleared, and no compiler setting was changed. The same normal incremental
+build then succeeded with a regenerated cache (log SHA-256
+`2cef63630b1e5d30153599373635422bebd2f843da5ac865335257d9eb3d7b82`),
+and a subsequent warm build also succeeded (log SHA-256
+`e06b1c80ddb0936ca4f4f4037de7c718819e967a44949c8f4229ad1a96c6f702`).
+This restores this local build path; it does not identify the compiler defect,
+prove it cannot recur, or establish trusted CI or release acceptance.
+
 ## R26 current native appearance and build diagnostic — 2026-11-04
 
 On clean candidate `6b04eb82`, a locked offline Headstart Playground build
