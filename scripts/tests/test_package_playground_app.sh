@@ -28,11 +28,20 @@ report = {"schema_version": 1, "status": "gaps",
                         "package_id": "fixture-id", "manifest_path": "fixture/Cargo.toml",
                         "manifest_sha256": "3" * 64,
                         "notices": [{"path": "notices/LICENSE",
-                                     "sha256": hashlib.sha256(notice.read_bytes()).hexdigest()}]}],
+                 "sha256": hashlib.sha256(notice.read_bytes()).hexdigest()}]},
+             {"name": "gap", "version": "1", "source": None,
+              "package_id": "gap-id", "manifest_path": "gap/Cargo.toml",
+              "notices": []}],
           "unresolved_gaps": [{"name": "gap", "version": "1", "package_id": "gap-id",
                                "reason": "no captured notice files"}]}
 (root / "report.json").write_text(json.dumps(report), encoding="utf-8")
-(root / "REPORT.txt").write_text("fixture report\n", encoding="utf-8")
+(root / "REPORT.txt").write_text(
+    "Dependency notice collection\n"
+    "This report is not a complete license or compatibility determination.\n"
+    "Observed packages: 2; unresolved notice gaps: 1.\n"
+    "See report.json for package IDs, sources, hashes and gaps.\n",
+    encoding="utf-8",
+)
 PY
 
 CARGO_TARGET_DIR="$target_root" \

@@ -6,6 +6,29 @@ RTL implementation and evidence; do not count deferred localization as complete.
 Web/Wasm, accessibility, and VoiceOver remain deferred as previously directed.
 Earlier entries describing locale acceptance as an immediate priority are historical.
 
+## R31 packaged notice-report integrity — 2026-11-04
+
+The notice packager previously accepted reports that omitted a gap, assigned it
+to the wrong package, duplicated it, supplied a false status, or displayed a
+contradictory `REPORT.txt`; this could understate unresolved notices in a
+bundle. It now requires unique package identities, a one-to-one match between
+packages without captured notices and gap entries, matching names and versions,
+a reason, consistent status, and the collector's matching human-readable
+summary. Invalid input is rejected before replacing an existing package.
+
+The new regression reproduced six inconsistent JSON cases before the fix
+(`native-notice-integrity-before-7b43eb28.log`, SHA-256
+`a450803847599b8e3fd79428b8b7ec3daad645157a18a6530849ae059d7b5e23`), and a
+separate summary mismatch also failed before the fix. The final packager suite
+passed 9/9 (`native-notice-integrity-final-7b43eb28.log`, SHA-256
+`ae11f0fbcadd463f01dbc63e5964d0d6d4becad64d7dc0f601a2fb250d5238b8`);
+the 20 collector tests and native package fixture passed. Packaging an existing
+real 446-package collection still succeeded and preserved all five reported
+gaps (`native-notice-real-report-7b43eb28.log`, SHA-256
+`23e3a509fe303b9924aa8fafd502901445094a70ac52508adf16151e08317a64`).
+Logs are under `target/headstart/evidence/`. This integrity fix does not supply
+the five missing notices or establish license sufficiency.
+
 ## R30 native source CI result — 2026-11-04
 
 GitHub Actions [run 41883930769](https://github.com/abouzoubaa/rustui/actions/runs/41883930769)

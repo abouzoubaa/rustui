@@ -58,10 +58,20 @@ def validate_collection(source):
         raise ValueError("notice collection report has an invalid package list")
     if report.get("schema_version") != 1 or report.get("complete_license_or_compatibility_claim") is not False:
         raise ValueError("unsupported collection report or completeness claim")
+    gaps = report.get("unresolved_gaps")
+    if not isinstance(gaps, list):
+        raise ValueError("notice collection report has invalid unresolved gaps")
     expected = {"report.json", "REPORT.txt"}
+    packages = {}
     for package in report["packages"]:
         if not isinstance(package, dict) or not isinstance(package.get("notices"), list):
             raise ValueError("notice collection report has an invalid package entry")
+        package_id = package.get("package_id")
+        if not isinstance(package_id, str) or not package_id or package_id in packages:
+            raise ValueError("notice collection report has invalid or duplicate package ID")
+        if any(not isinstance(package.get(key), str) or not package[key] for key in ("name", "version")):
+            raise ValueError("notice collection report has invalid package identity")
+        packages[package_id] = package
         for notice in package["notices"]:
             if not isinstance(notice, dict):
                 raise ValueError("notice collection report has an invalid notice entry")
@@ -75,6 +85,31 @@ def validate_collection(source):
             if path.is_symlink() or not path.is_file() or digest(path) != checksum:
                 raise ValueError(f"notice hash mismatch: {raw}")
             expected.add(raw)
+    gap_ids = set()
+    for gap in gaps:
+        if not isinstance(gap, dict):
+            raise ValueError("notice collection report has invalid gap entry")
+        package_id = gap.get("package_id")
+        if not isinstance(package_id, str) or package_id in gap_ids or package_id not in packages:
+            raise ValueError("notice collection report has invalid or duplicate gap ID")
+        package = packages[package_id]
+        if any(gap.get(key) != package[key] for key in ("name", "version")):
+            raise ValueError("notice collection report gap identity mismatch")
+        if not isinstance(gap.get("reason"), str) or not gap["reason"].strip():
+            raise ValueError("notice collection report gap has no reason")
+        gap_ids.add(package_id)
+    if gap_ids != {package_id for package_id, package in packages.items() if not package["notices"]}:
+        raise ValueError("notice collection report gaps do not match packages without notices")
+    if report.get("status") != ("gaps" if gap_ids else "notice_files_captured"):
+        raise ValueError("notice collection report status does not match gaps")
+    expected_text = (
+        "Dependency notice collection\n"
+        "This report is not a complete license or compatibility determination.\n"
+        f"Observed packages: {len(packages)}; unresolved notice gaps: {len(gap_ids)}.\n"
+        "See report.json for package IDs, sources, hashes and gaps.\n"
+    )
+    if readme_path.read_text(encoding="utf-8") != expected_text:
+        raise ValueError("notice collection summary does not match report")
     actual, directories = regular_tree(source)
     if actual != expected or directories != (parent_directories(expected) | {"notices"}):
         raise ValueError("notice collection contains missing or unrelated files")

@@ -11,7 +11,7 @@ FONT_NAMES = ("FiraMono-LICENSE", "Inter-LICENSE", "NotoSans-LICENSE")
 REPORT_TEXT = (
     "Dependency notice collection\n"
     "This report is not a complete license or compatibility determination.\n"
-    "Observed packages: 1; unresolved notice gaps: 1.\n"
+    "Observed packages: 2; unresolved notice gaps: 1.\n"
     "See report.json for package IDs, sources, hashes and gaps.\n"
 )
 
@@ -38,6 +38,11 @@ class PackageReleaseNoticesTests(unittest.TestCase):
                 "manifest_sha256": "4" * 64, "source_root": str(self.root / "repo"),
                 "notices": [{**entry, "source": str(self.root / "repo/LICENSE")}],
                 "notice_review_notes": ["fixture review note"],
+            }, {
+                "name": "gap", "version": "1", "source": None,
+                "package_id": f"path+file://{self.root}/unknown/Cargo.toml#gap@1",
+                "manifest_path": str(self.root / "unknown/Cargo.toml"),
+                "notices": [],
             }],
             "unresolved_gaps": [{"package_id": f"path+file://{self.root}/unknown/Cargo.toml#gap@1", "name": "gap",
                                  "version": "1", "reason": "no captured notice files"}],
@@ -60,6 +65,83 @@ class PackageReleaseNoticesTests(unittest.TestCase):
                                "--repo-root", str(repo_root if repo_root is not None else self.root),
                                "--destination", str(destination if destination is not None else self.destination)],
                               text=True, capture_output=True)
+
+    def test_rejects_inconsistent_gap_reports_without_replacing_bundle(self):
+        initial = self.run_package()
+        self.assertEqual(initial.returncode, 0, initial.stderr)
+        packaged = self.destination / "dependency-notices/report.json"
+        before = packaged.read_bytes()
+        report_path = self.collection / "report.json"
+        original = json.loads(report_path.read_text())
+
+        def missing_field(report):
+            del report["unresolved_gaps"]
+
+        def hidden_gap(report):
+            report["unresolved_gaps"] = []
+
+        def duplicate_gap(report):
+            report["unresolved_gaps"].append(dict(report["unresolved_gaps"][0]))
+
+        def wrong_package(report):
+            report["unresolved_gaps"][0]["package_id"] = report["packages"][0]["package_id"]
+
+        def wrong_name(report):
+            report["unresolved_gaps"][0]["name"] = "other"
+
+        def false_status(report):
+            report["status"] = "notice_files_captured"
+
+        def duplicate_package(report):
+            report["packages"].append(dict(report["packages"][0]))
+
+        def missing_reason(report):
+            report["unresolved_gaps"][0]["reason"] = " "
+
+        for mutate in (missing_field, hidden_gap, duplicate_gap, wrong_package, wrong_name,
+                       false_status, duplicate_package, missing_reason):
+            with self.subTest(case=mutate.__name__):
+                report = json.loads(json.dumps(original))
+                mutate(report)
+                report_path.write_text(json.dumps(report), encoding="utf-8")
+                result = self.run_package()
+                self.assertNotEqual(result.returncode, 0, result.stdout)
+                self.assertEqual(packaged.read_bytes(), before)
+
+    def test_rejects_misleading_report_text_without_replacing_bundle(self):
+        initial = self.run_package()
+        self.assertEqual(initial.returncode, 0, initial.stderr)
+        packaged = self.destination / "dependency-notices/REPORT.txt"
+        before = packaged.read_bytes()
+        (self.collection / "REPORT.txt").write_text(
+            REPORT_TEXT.replace("unresolved notice gaps: 1", "unresolved notice gaps: 0"),
+            encoding="utf-8",
+        )
+        result = self.run_package()
+        self.assertNotEqual(result.returncode, 0, result.stdout)
+        self.assertEqual(packaged.read_bytes(), before)
+
+    def test_accepts_complete_notice_inventory_without_gaps(self):
+        second_notice = self.collection / "notices/SECOND-LICENSE"
+        second_notice.write_bytes(b"second notice\n")
+        report_path = self.collection / "report.json"
+        report = json.loads(report_path.read_text())
+        report["packages"][1]["notices"] = [{
+            "path": "notices/SECOND-LICENSE",
+            "source": str(second_notice),
+            "sha256": hashlib.sha256(second_notice.read_bytes()).hexdigest(),
+        }]
+        report["unresolved_gaps"] = []
+        report["status"] = "notice_files_captured"
+        report_path.write_text(json.dumps(report), encoding="utf-8")
+        (self.collection / "REPORT.txt").write_text(
+            REPORT_TEXT.replace("unresolved notice gaps: 1", "unresolved notice gaps: 0"),
+            encoding="utf-8",
+        )
+        result = self.run_package()
+        self.assertEqual(result.returncode, 0, result.stderr)
+        packaged = json.loads((self.destination / "dependency-notices/report.json").read_text())
+        self.assertEqual(packaged["unresolved_gaps"], [])
 
     def test_packages_and_repackages_verified_data(self):
         for _ in range(2):
@@ -104,6 +186,8 @@ class PackageReleaseNoticesTests(unittest.TestCase):
         other_report["unresolved_gaps"][0]["package_id"] = (
             f"path+file://{other_root}/unknown/Cargo.toml#gap@1"
         )
+        other_report["packages"][1]["package_id"] = other_report["unresolved_gaps"][0]["package_id"]
+        other_report["packages"][1]["manifest_path"] = str(other_root / "unknown/Cargo.toml")
         (other_collection / "report.json").write_text(json.dumps(other_report), encoding="utf-8")
         (other_collection / "REPORT.txt").write_bytes((self.collection / "REPORT.txt").read_bytes())
 
