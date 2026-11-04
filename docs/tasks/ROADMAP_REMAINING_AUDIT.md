@@ -6,6 +6,28 @@ RTL implementation and evidence; do not count deferred localization as complete.
 Web/Wasm, accessibility, and VoiceOver remain deferred as previously directed.
 Earlier entries describing locale acceptance as an immediate priority are historical.
 
+## R15 Stepper boundary keyboard focus defect — 2026-11-04
+
+On clean candidate `1199c365`, the public-API combined consumer from the
+following entry was rebuilt with locked offline Headstart (build log
+`target/headstart/evidence/mvp-stepper-focus-1199c365-build.log`, SHA-256
+`9fb84e223e680b2fe23100c49ab687ea84ed56b16f23670bf4d425d6baef23da`).
+The owned validation executable SHA-256 was
+`d84d997ffb13197a3c7dfc35cfd1aa6c7041358ad33fd71335d2ccbd2a2385eb`,
+PID 30442. Computer input edited TextField, then Tab/Space activated Checkbox,
+Toggle, Stepper increment and Stepper decrement. When decrement reached zero,
+the decrement button became disabled while retaining its visible focus ring.
+Repeated Tab and Shift-Tab/Space did not reach another control; clicking the
+text field recovered typing. Clicking Count still worked. The owned app exited
+and its disposable bundle, workspace and standalone executable were removed.
+
+This is an open native keyboard defect. The prior rendered Stepper test invokes
+`window.focus_next` directly and does not establish actual Tab event dispatch
+after a focused button becomes disabled. Components' button delegates to the
+pinned Base button, which omits focus tracking while disabled; investigate a
+RustUI-side recovery that preserves modal and ordinary focus behavior before
+changing it. No upstream change has been promoted.
+
 ## R11/R15 combined native controls — 2026-11-04
 
 On clean candidate `3f829664`, an outside-checkout public-API consumer built
