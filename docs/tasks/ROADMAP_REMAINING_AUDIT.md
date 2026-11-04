@@ -6,6 +6,24 @@ RTL implementation and evidence; do not count deferred localization as complete.
 Web/Wasm, accessibility, and VoiceOver remain deferred as previously directed.
 Earlier entries describing locale acceptance as an immediate priority are historical.
 
+## R30 native CI availability — 2026-11-04
+
+At project candidate `4ec0b945`, the project branch was 110 commits ahead of
+its last fetched remote-tracking branch, so that remote revision was not the
+candidate. The latest GitHub run returned by the Actions API was
+`41156148476` for `9f55a4a51d242a13045d65660840d8918ed18bfb` on 2026-10-31.
+Its source job failed in the Web patch-stack verifier with `unknown or partial
+Web source image; no source writes performed`. Its macOS job was skipped: the
+workflow dispatches that job only for manual runs, not push events. This old
+failure does not establish the current candidate's source result.
+
+The GitHub repository runners API returned `total_count: 0` for repository-level
+self-hosted runners. The workflow requires labels `self-hosted`, `macOS`,
+`ARM64`, and `rustui-headstart`; this API result does not prove whether any
+other runner scope is available. No workflow was dispatched, no runner was
+modified, and no current-candidate CI acceptance is claimed. Web investigation
+remains deferred.
+
 ## R19 modal focus recovery proposal — 2026-11-04
 
 An isolated Components 0.7.3 proposal exposes focus restoration for its
