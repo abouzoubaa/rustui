@@ -5353,3 +5353,24 @@ focus-traversal step. Evidence: `native-current-text-edit-20261104.log` (SHA-256
 VoiceOver, browser behavior, the complete control matrix, and the full
 basic-controls acceptance check remain open. No evidence milestone or acceptance
 check is newly closed, so totals remain 21/31 (67.74%) and 2/10 (20%).
+
+### R11/R15 current-candidate combined native controls — 2026-11-04
+
+The rebuilt outside-checkout public-API consumer (executable SHA-256
+`48fc6748728c3aa3180c6d021dce46e080427fd6010b0c199b0d4c669f45592c`) passed a
+keyboard workflow across TextField, Checkbox, Toggle, Stepper, Slider, Picker,
+Radio, and Button. Observed owner updates: TextField `Combined`; Checkbox on;
+Toggle on; Stepper 0→1→0 with Decrease disabled at its lower bound; Slider 0→1;
+Picker One→Two; Radio First→Second; Count clicks 0→1. From Toggle lock, Tab
+reached the enabled lock button, Space disabled the other controls, Tab remained
+on the lock button, a pointer click on disabled Checkbox left its value on, and
+Space re-enabled controls. All steps passed when each focus change was observed
+before its activation key. The initial batched Checkbox attempt left it off; the
+repro sequence with a focus observation passed, so no Checkbox defect was
+found. Evidence: `native-combined-controls-keyboard-20261104.log` (SHA-256
+`a15fa9b902873c2462e9c53ddc2f0479c29a8249887c7348291ba782615c357e`). Current
+candidate text cursor insertion and forward/reverse TextField traversal are in
+`native-current-text-edit-20261104.log`. This advances current-candidate native
+coverage but does not close other control/group policies, physical-keyboard,
+VoiceOver, or the full basic-controls acceptance requirement. Totals remain
+21/31 evidence milestones (67.74%) and 2/10 acceptance checks (20%).

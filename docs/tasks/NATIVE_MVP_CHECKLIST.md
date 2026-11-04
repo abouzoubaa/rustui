@@ -1,5 +1,18 @@
 # Proposed macOS developer-preview MVP checks
 
+## Current-candidate combined controls — 2026-11-04
+
+The rebuilt public-API consumer passed a keyboard flow across TextField,
+Checkbox, Toggle, Stepper, Slider, Picker, Radio, and Button. It verified bound
+owner updates, Stepper lower-bound traversal, Slider adjustment, Picker and
+Radio selection, action dispatch, and lock/disabled skip/re-enable behavior.
+The disabled Checkbox ignored pointer activation. A first batched Checkbox key
+attempt was inconclusive until focus was observed; the properly sequenced
+keyboard retry passed. Exact observations and executable hash are in
+`ROADMAP_REMAINING_AUDIT.md`. This remains partial evidence: other control/group
+policies and the complete basic-controls check remain open. MVP stays 67.74%
+(21/31 evidence milestones) and 2/10 acceptance checks (20%).
+
 ## Current-candidate native text editing — 2026-11-04
 
 On the rebuilt combined-controls consumer, Tab focused TextField; selecting all
