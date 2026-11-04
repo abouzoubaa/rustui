@@ -6,6 +6,27 @@ RTL implementation and evidence; do not count deferred localization as complete.
 Web/Wasm, accessibility, and VoiceOver remain deferred as previously directed.
 Earlier entries describing locale acceptance as an immediate priority are historical.
 
+## R03/R06 external consumer bound input — 2026-11-04
+
+The public-API source consumer now demonstrates a TextField bound to component
+state alongside its counter action. From a generated external workspace on
+`3d3e9f54` plus the retained sample patch
+`target/headstart/evidence/native-consumer-binding.patch` (SHA-256
+`e2df1bfa894840c91fddca99514b778f8abbd0cd4c84162ab3e49811a23382b7`),
+locked offline Headstart built successfully. Build log SHA-256
+`99ff785e4fa8dec3af11c6d890d731092305756c6584fd269edb4576002c56ad` is at
+`target/headstart/evidence/native-consumer-binding-build.log`. The setup fixture
+also passed.
+
+The exact executable SHA-256
+`8a8de919d97d3ae1839622c50e9c10f630e20a41468d23e318d5970641e97bc3`
+ran as PID 25031 in the owned native probe. Typing `Mira` updated the field
+and displayed Name; clicking Increment changed Count 0 to 1 while the text
+remained, and typing ` Lee` updated both to `Mira Lee`. The process exited and
+the temporary workspace and bundle were removed. This bounded native test
+still uses the local checkout and does not establish installed-package,
+cross-machine, IME, accessibility or release acceptance.
+
 ## R03/R04 repeatable local consumer setup — 2026-11-04
 
 The external-consumer example now includes a documented generator for a new

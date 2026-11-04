@@ -1,6 +1,7 @@
 # Local source consumer
 
-This example builds a small app using RustUI's public API. The setup below
+This example builds a small app using RustUI's public API: a counter action
+and an editable text field bound to component state. The setup below
 creates a separate Cargo workspace outside the checkout, but it still uses the
 checkout's RustUI crates, pinned vendor sources, patches, theme and Headstart
 toolchain. It is a local development workflow, not an installed package.

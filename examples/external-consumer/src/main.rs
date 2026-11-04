@@ -5,6 +5,8 @@ use rustui::theme::{AppearanceMode, activate_theme, parse_theme};
 struct Counter {
     #[state(0)]
     count: i32,
+    #[state(String::new())]
+    name: String,
 }
 
 impl Counter {
@@ -19,6 +21,8 @@ impl View for Counter {
             .spacing(12.0)
             .child(Text(format!("Count: {}", self.count())))
             .child(Button("Increment", self.action(Self::increment)))
+            .child(TextField("Your name", self.name_binding()).id("name"))
+            .child(Text(format!("Name: {}", self.name())))
     }
 }
 
