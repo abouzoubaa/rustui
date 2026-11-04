@@ -6,6 +6,25 @@ RTL implementation and evidence; do not count deferred localization as complete.
 Web/Wasm, accessibility, and VoiceOver remain deferred as previously directed.
 Earlier entries describing locale acceptance as an immediate priority are historical.
 
+## R15 native disabled-control traversal — 2026-11-04
+
+On clean candidate `c7a9e90e`, a generated outside-checkout public-API
+consumer built with normal locked offline Headstart. Probe source
+`target/headstart/evidence/mvp-disabled-controls-c7a9e90e.rs` has SHA-256
+`ee918ff4d3766ab9bf7ad05b40c95e54da4b0b3042874ff9b48c63f57df2a290`;
+build log SHA-256 is
+`f2f1be6105e8944d8cb456bd42d27cbfc4b81bf8b448e07b2113e57ef0f1253f`.
+The exact executable (SHA-256
+`7f730367b6ebd2aca3aaabbe21dbf212c9db8aaee4c3c932a1752872c617bd39`)
+ran as PID 77761 in the owned validation bundle. With Checkbox, Toggle and
+Stepper disabled, forward and reverse keyboard traversal between the Before
+and After buttons skipped those controls; Space updated only the focused
+button. After keyboard activation of Unlock, reverse traversal and Space
+changed Stepper 0 to 1, Toggle false to true, and Checkbox false to true.
+The process exited and disposable bundle and generated workspace were removed.
+This computer-input observation is not physical keyboard, accessibility,
+other-control or full native acceptance evidence.
+
 ## R06/R15 native combined form keyboard flow — 2026-11-04
 
 On clean candidate `04de711b`, a generated outside-checkout consumer using
