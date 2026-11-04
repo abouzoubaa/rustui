@@ -5,6 +5,8 @@ use std::sync::{
     atomic::{AtomicUsize, Ordering},
 };
 
+#[cfg(not(target_family = "wasm"))]
+use rustui::runtime::{AnchoredPopupOptions, EnvironmentValues, open_anchored_popup};
 use rustui::{localization::MessageArguments, prelude::*};
 
 use super::locale_selector::LocaleSelector;
@@ -57,9 +59,38 @@ impl View for PopoverHarness {
         let args = MessageArguments::new()
             .with("mounts", mounts as i64)
             .with("releases", releases as i64);
-        VStack::new()
+        let content = VStack::new()
             .spacing(8.0)
-            .child(LocalizedText("lab-popover-heading"))
+            .child(LocalizedText("lab-popover-heading"));
+
+        #[cfg(not(target_family = "wasm"))]
+        let content = content.child(HStack::new().child(Button(
+            "Open native popup",
+            AppAction::with_window_action({
+                let probe = probe.clone();
+                move |event, window, cx| {
+                    let position = event.position();
+                    let options = AnchoredPopupOptions {
+                        anchor_rect: (position.x.as_f32(), position.y.as_f32(), 1.0, 1.0),
+                        size: (280.0, 180.0),
+                    };
+                    if let Err(error) = open_anchored_popup(
+                        PopoverChild::new(probe.clone()),
+                        EnvironmentValues::default(),
+                        options,
+                        window,
+                        cx,
+                    ) {
+                        eprintln!("RustUI could not open native popup: {error}");
+                    }
+                }
+            }),
+        )));
+
+        #[cfg(target_family = "wasm")]
+        let content = content;
+
+        content
             .child(LocaleSelector::new())
             .child(
                 HStack::new().child(

@@ -20,3 +20,6 @@ pub use rustui_core::{
     Action, AsyncState, Binding, EnvironmentValues, Identity, Invalidation, State,
 };
 pub use tasks::OwnerTask;
+pub use window::AnchoredPopupOptions;
+#[cfg(not(target_family = "wasm"))]
+pub use window::open_anchored_popup;

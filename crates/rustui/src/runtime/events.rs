@@ -73,7 +73,8 @@ impl AppAction {
         }
     }
 
-    pub(crate) fn with_window_action(
+    /// Creates a click action with access to the current window and app.
+    pub fn with_window_action(
         action: impl Fn(&ClickEvent, &mut Window, &mut App) + 'static,
     ) -> Self {
         Self {

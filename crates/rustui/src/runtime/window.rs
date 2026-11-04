@@ -1,6 +1,9 @@
 //! Root-window creation using GPUI and GPUI Components ownership.
 
-use gpui::{App, AppContext as _, WindowOptions};
+use gpui::{
+    AnyWindowHandle, App, AppContext as _, Bounds, Window, WindowBounds, WindowKind, WindowOptions,
+    point, px, size,
+};
 use rustui_core::EnvironmentValues;
 
 use super::ComponentHost;
@@ -12,6 +15,88 @@ pub(crate) fn open_root_window<V: View>(
     options: WindowOptions,
     cx: &mut App,
 ) -> Result<(), String> {
+    open_root_window_handle(root, environment, options, cx).map(|_| ())
+}
+
+/// Geometry for a native anchored popup window.
+#[derive(Clone, Copy, Debug, PartialEq)]
+pub struct AnchoredPopupOptions {
+    /// Anchor rectangle in logical pixels relative to the parent window.
+    pub anchor_rect: (f32, f32, f32, f32),
+    /// Popup width and height in logical pixels.
+    pub size: (f32, f32),
+}
+
+/// Opens a parent-anchored native popup.
+///
+/// The popup opens below the anchor and adjusts to remain on screen. Its parent
+/// is the supplied window, so it follows that window and closes with it. On
+/// platforms without native anchored-window support, this returns the platform
+/// error; use RustUI's in-window `Popover` component for portable content.
+#[cfg(not(target_family = "wasm"))]
+pub fn open_anchored_popup<V: View>(
+    root: V,
+    environment: EnvironmentValues,
+    options: AnchoredPopupOptions,
+    parent: &mut Window,
+    cx: &mut App,
+) -> Result<(), String> {
+    let (anchor_x, anchor_y, anchor_width, anchor_height) = options.anchor_rect;
+    let (width, height) = options.size;
+    if ![
+        anchor_x,
+        anchor_y,
+        anchor_width,
+        anchor_height,
+        width,
+        height,
+    ]
+    .into_iter()
+    .all(f32::is_finite)
+        || anchor_width < 0.0
+        || anchor_height < 0.0
+        || width <= 0.0
+        || height <= 0.0
+    {
+        return Err(String::from(
+            "popup values must be finite; anchor size must be non-negative and popup size positive",
+        ));
+    }
+
+    let popup = gpui::popup::PopupOptions {
+        parent: parent.window_handle().into(),
+        anchor_rect: Bounds::new(
+            point(px(anchor_x), px(anchor_y)),
+            size(px(anchor_width), px(anchor_height)),
+        ),
+        anchor: gpui::popup::PopupAnchor::BottomLeft,
+        gravity: gpui::popup::PopupGravity::BottomRight,
+        constraint_adjustment: gpui::popup::PopupConstraintAdjustment::FLIP_X
+            | gpui::popup::PopupConstraintAdjustment::FLIP_Y
+            | gpui::popup::PopupConstraintAdjustment::SLIDE_X
+            | gpui::popup::PopupConstraintAdjustment::SLIDE_Y
+            | gpui::popup::PopupConstraintAdjustment::RESIZE_X
+            | gpui::popup::PopupConstraintAdjustment::RESIZE_Y,
+        offset: point(px(0.0), px(0.0)),
+        grab: true,
+    };
+    let window_options = WindowOptions {
+        kind: WindowKind::AnchoredPopup(popup),
+        window_bounds: Some(WindowBounds::Windowed(Bounds::new(
+            point(px(0.0), px(0.0)),
+            size(px(width), px(height)),
+        ))),
+        ..WindowOptions::default()
+    };
+    open_root_window_handle(root, environment, window_options, cx).map(|_| ())
+}
+
+fn open_root_window_handle<V: View>(
+    root: V,
+    environment: EnvironmentValues,
+    options: WindowOptions,
+    cx: &mut App,
+) -> Result<AnyWindowHandle, String> {
     cx.open_window(options, |window, cx| {
         let content = cx.new(|cx| ComponentHost::with_environment(root, environment, cx));
         let root = cx.new(|cx| gpui_component::Root::new(content, window, cx));
@@ -23,7 +108,7 @@ pub(crate) fn open_root_window<V: View>(
         }
         root
     })
-    .map(|_| ())
+    .map(Into::into)
     .map_err(|error| format!("{error:#}"))
 }
 
