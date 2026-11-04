@@ -6,6 +6,22 @@ RTL implementation and evidence; do not count deferred localization as complete.
 Web/Wasm, accessibility, and VoiceOver remain deferred as previously directed.
 Earlier entries describing locale acceptance as an immediate priority are historical.
 
+## R17 native empty Table scrollbar probe — 2026-11-04
+
+A temporary zero-row, 700-point-column, 100-point-high Playground specimen on
+`e8857198` exposed the full Table vertically. Its native executable SHA-256 was
+`37e0929fa81b7b7e8c1aba83d34ccdace8a3d310b9a77a417db83569a06bd8e3`
+(PID 70846); the locked offline Headstart build passed. The instrumented handle
+reported a 399.5-point horizontal range and offset zero. No scrollbar thumb was
+visibly identifiable; two drags near the Table's lower edge left the logged
+offset at zero. The drag target was not verified, so scrollbar behavior remains
+inconclusive. The observation log is
+`target/headstart/evidence/r17-native-scrollbar-observation-e8857198.log`
+(SHA-256 `a148645d73f8cb0c39e6261109dd8f49ebe020830a1ccdc44d68e0f8411667cd`);
+the temporary patch and build log are retained under the same evidence prefix.
+The source was restored, the owned process exited, and its bundle was removed.
+Nonzero native horizontal input and broader Table acceptance remain open.
+
 ## R17 native Table input diagnostic — 2026-11-04
 
 A temporary instrumented zero-row, 700-point-column Playground specimen on
