@@ -6,6 +6,24 @@ RTL implementation and evidence; do not count deferred localization as complete.
 Web/Wasm, accessibility, and VoiceOver remain deferred as previously directed.
 Earlier entries describing locale acceptance as an immediate priority are historical.
 
+## R15 native disabled TextField owner update — 2026-11-04
+
+On clean candidate `db2ce824`, a generated outside-checkout public-API
+consumer built with normal locked offline Headstart. Its retained probe source
+`target/headstart/evidence/mvp-disabled-text-db2ce824.rs` has SHA-256
+`8a0167303a188711d7503328c3cab698dce2b5b6ca59d186025a26059874be4d`;
+build log SHA-256 is
+`8a44545c1cab94122fef5277b3427253a6bde2422e26fd4ff4692149437e7cab`.
+The exact executable (SHA-256
+`c410938a525f7bf1a9af401760b69fd3baae63471dbf912a28468953b32d4c5e`)
+ran as PID 7709 in the owned validation bundle. Editing `Initial` to `Local`
+updated the owner. After disabling the field, an owner action changed both the
+field and owner display to `External`; clicking the disabled field and typing
+left them unchanged. Re-enabling and editing changed both to `Restored`. The
+process exited and disposable bundle and generated workspace were removed.
+This computer-input observation does not establish physical keyboard, IME,
+other controls or complete native acceptance.
+
 ## R04 native platform window error propagation — 2026-11-04
 
 On clean candidate `38486c2e`, a temporary framework-crate example requested

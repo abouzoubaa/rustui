@@ -46,8 +46,9 @@ below identify sections in `ROADMAP_REMAINING_AUDIT.md`.
      and button. R06/R15 native combined form keyboard flow additionally verifies
      disabled Stepper traversal and keyboard operation of Toggle and Stepper;
      R15 native disabled-control traversal checks disabled Checkbox, Toggle and
-     Stepper in both Tab directions and re-enabled operation. Other controls and
-     disabled states remain open.
+     Stepper in both Tab directions and re-enabled operation. R15 native disabled
+     TextField owner update covers disable, external owner update and re-enable.
+     Other controls and disabled states remain open.
 5. **Navigation and overlays: 2/3**
    - [x] Demonstrate native unknown-route recovery (R17 native unknown-route keyboard recovery).
    - [x] Demonstrate a native Drawer interaction (R19/R33 native Drawer interaction).
