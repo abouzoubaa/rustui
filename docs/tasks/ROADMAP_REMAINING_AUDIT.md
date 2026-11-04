@@ -6,6 +6,20 @@ RTL implementation and evidence; do not count deferred localization as complete.
 Web/Wasm, accessibility, and VoiceOver remain deferred as previously directed.
 Earlier entries describing locale acceptance as an immediate priority are historical.
 
+## R03/R04 repeatable local consumer setup — 2026-11-04
+
+The external-consumer example now includes a documented generator for a new
+workspace outside the checkout. It copies the lockfile and theme, points the
+manifest and Cargo vendor configuration at the current checkout, and refuses
+to overwrite an existing destination. Its focused fixture passed, including a
+path with spaces and an existing-destination sentinel. A generated workspace
+in a temporary directory with spaces built with locked offline Headstart; log
+`target/headstart/evidence/native-local-consumer-generator.log` SHA-256
+`501a6dc923c97f5dcadd75f949cc6acac4ff16df4b2ba19c69e81903817025ea`.
+The temporary workspace was removed. This is a local source workflow; a
+standalone package, independent-machine build, licensing and release acceptance
+remain open.
+
 ## R03/R04 consumer workspace outside checkout — 2026-11-04
 
 At `e3b65e79`, a disposable workspace outside the RustUI checkout copied the
