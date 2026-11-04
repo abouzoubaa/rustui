@@ -6,6 +6,56 @@ RTL implementation and evidence; do not count deferred localization as complete.
 Web/Wasm, accessibility, and VoiceOver remain deferred as previously directed.
 Earlier entries describing locale acceptance as an immediate priority are historical.
 
+## R11/R15 dynamic-disabled Checkbox focus recovery — 2026-11-04
+
+The current-source focused Button suite passed 15/15 (log SHA-256
+`a209c6e8af26b759b25b63a8d04bf0866a6e1ca3c08c1402116d465b50369907`), and
+the control-focus suite passed 2/2 (log SHA-256
+`49257895d7372f2c456ed6681e3d06432c01a6848427dfe1a213b19637463dfb`). A
+new Root-backed Checkbox regression sends actual Tab and Shift-Tab events and
+passed 1/1 (log SHA-256
+`0274d964dde8509fbb48189107a4eba3a1206363742de363e25bdb0819df8a75`).
+
+The retained outside-checkout consumer rebuilt successfully against this
+source with locked offline Headstart (build log SHA-256
+`2c3ebbc2353971a27d598f02bc282cdb0b74ee581b7b6c484a2a2e16b0514767`). The
+disposable app executable SHA-256 was
+`a117fc367fc8e9c93a5a948e305ad5a1cc9047b3ff49b5d96ada35f332334d05`. In the
+native app, Tab focused the Checkbox, clicking Toggle lock dynamically
+disabled it, the next Tab focused Toggle lock, and Space unlocked the
+controls. This resolves the bounded dynamic-disabled Checkbox focus defect.
+The app process exited; its disposable bundle and standalone executable were
+moved to Trash, and build caches and evidence were preserved. The complete
+R11/R15 controls workflow remains open; MVP totals remain 21/31 evidence
+milestones and 2/10 acceptance checks.
+
+## R11/R15 dynamic Checkbox, Toggle, Radio, and TextField retest — 2026-11-04
+
+The native combined-consumer run initially reproduced focus loss after
+Checkbox, Toggle, and Radio became disabled; the TextField path passed. RustUI
+now retains non-tab-stop focus parents for Checkbox, Toggle, and Radio and
+moves focus to the parent when a descendant control becomes disabled.
+
+Current-source Headstart tests passed: Button suite 15/15 (including the
+implicit-label focus case; log SHA-256
+`a209c6e8af26b759b25b63a8d04bf0866a6e1ca3c08c1402116d465b50369907`) and
+Root-backed actual-Tab focus suite 4/4 (log SHA-256
+`ed6887f762c39819739d26052d42f341ec2dcd25f32c8edd446212172f83c696`). The
+retained outside-checkout public-API consumer built locked/offline with
+Headstart (build log SHA-256
+`50a284fa9df0163ada1d3690dfaf298cf1eb19ddc78e332b2b6a323e00b6aeaa`). Its
+executable SHA-256 was
+`67b92db7b2fc8e56396019075365bae9db57a8bf60983cfcf84803f0de38a6ed`.
+
+In that exact native app (PID 91170), each focused Checkbox, Toggle, TextField,
+and Radio was disabled by clicking Toggle lock. Tab focused the still-enabled
+Toggle lock button, and Space unlocked the controls in all four cases. The
+app exited; its disposable bundle and standalone executable were moved to
+Trash, no test process remains, and consumer source, validation logs, and
+shared build caches remain. These four bounded focus paths do not close the
+complete R11/R15 controls workflow. MVP totals remain 21/31 evidence
+milestones and 2/10 acceptance checks.
+
 ## R15 Stepper boundary focus recovery — 2026-11-04
 
 On parent `aab63469`, RustUI now retains a non-tab-stop focus parent around
@@ -5263,3 +5313,28 @@ establish physical mouse or outside-surface release behavior. The build log is
 (SHA-256 `45d9108b5278bc089de8602b8f71b8b1d3c220afe0b5825e8a1237e2a04f7395`).
 The disposable application was quit and removed from `/tmp`; the GUI slot was
 released. Broader native, performance, licensing and release gates remain open.
+
+### R11/R15 dynamic-disabled Picker and Slider focus recovery — 2026-11-04
+
+The first native Picker attempt failed: after Tab focused Picker and Toggle
+lock disabled it, the next Tab produced no focused destination and Space did not
+unlock the controls. Source inspection showed that Picker and Slider lacked the
+retained focus-parent transfer already used by Checkbox and Radio. Both controls
+now transfer focus to a retained parent when disabled while focused. The
+focused Root-backed regression set passed 5/5, including new Picker and Slider
+cases (`native-picker-slider-source-tests-20261104.log`; SHA-256
+`d455f3323fe6fd7bb5d7d6b3e09d162fa8d00d5585856de65e9bae72a3ec0d58`), and
+`cargo fmt --all -- --check` passed. The rebuilt native consumer succeeded
+(build exit 0; `native-picker-slider-build-20261104.log`; SHA-256
+`5b7b08b1ec6f1f0ab6d652b41d7cab13dbc42e09011c00dbd25cc6fc3567127c`). Its
+executable SHA-256 was
+`48fc6748728c3aa3180c6d021dce46e080427fd6010b0c199b0d4c669f45592c`.
+Native retest: Picker and Slider each received keyboard focus; disabling either
+transferred Tab to the enabled Toggle lock button, and Space unlocked the
+controls. Full observations are in `native-picker-slider-focus-20261104.log`
+(SHA-256 `d5706c4ae24b29972d18d09417c61f1a39c9ad6617be2873d90764c005837acd`).
+The disposable app and executable are no longer in `/tmp`; the shared build
+caches and consumer workspace were preserved. This closes only the bounded
+Picker/Slider recovery defect. The complete basic-controls workflow and all
+other open MVP checks remain open, so the totals stay 21/31 evidence milestones
+(67.74%) and 2/10 acceptance checks (20%).

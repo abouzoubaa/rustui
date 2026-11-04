@@ -1,9 +1,9 @@
 //! Controlled switch input with a RustUI-themed track and GPUI Base behavior.
 
 use gpui::{
-    AbsoluteLength, AnyElement, App, EdgesRefinement, Hsla, IntoElement, ParentElement as _,
-    RenderOnce, SharedString, StatefulInteractiveElement as _, Styled as _, Window, div,
-    prelude::FluentBuilder as _, px,
+    AbsoluteLength, AnyElement, App, EdgesRefinement, Hsla, InteractiveElement as _, IntoElement,
+    ParentElement as _, RenderOnce, SharedString, StatefulInteractiveElement as _, Styled as _,
+    Window, div, prelude::FluentBuilder as _, px,
 };
 use gpui_base::Switch as BaseSwitch;
 use gpui_component::theme::try_parse_color;
@@ -323,6 +323,17 @@ impl View for ToggleView {
 
     fn into_element(&self, context: &mut RenderContext<'_>) -> AnyElement {
         let identity = self.identity(context);
+        let disabled = self.disabled;
+        let (focus_parent, _) = context.retained_entity(
+            Identity::from(format!("toggle-focus:{identity}")),
+            |_, cx| cx.focus_handle(),
+        );
+        let focus_parent = context.update_entity(&focus_parent, move |focus, window, cx| {
+            if disabled && focus.contains_focused(window, cx) {
+                window.focus(focus, cx);
+            }
+            focus.clone()
+        });
         let write = context.binding_writer(self.checked.clone());
         let style = required_style(context, "toggle", "body", &selector(context));
         let width = *style.lengths.get("width").expect("toggle track width");
@@ -364,7 +375,7 @@ impl View for ToggleView {
             .checked(checked)
             .disabled(self.disabled)
             .tab_index(self.tab_index)
-            .tab_stop(self.focusable)
+            .tab_stop(self.focusable && !self.disabled)
             .accessibility_label(self.resolved_accessibility_label(context))
             .when(self.disabled, |control| {
                 control.a11y_synthetic_children(|builder| {
@@ -373,7 +384,7 @@ impl View for ToggleView {
             })
             .on_change(move |checked, _, _, cx| write(checked, cx));
 
-        ThemedSwitch {
+        let control = ThemedSwitch {
             id: identity.to_string(),
             base,
             label: self.resolved_label(|id| context.localized_message(id)),
@@ -392,8 +403,11 @@ impl View for ToggleView {
             thumb_inset,
             label_gap: active_theme.profile.spacing.space_2 as f32,
             direction: context.layout_direction(),
-        }
-        .into_any_element()
+        };
+        div()
+            .track_focus(&focus_parent)
+            .child(control)
+            .into_any_element()
     }
 }
 

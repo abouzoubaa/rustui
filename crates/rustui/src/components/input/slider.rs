@@ -231,6 +231,17 @@ impl View for SliderView {
 
     fn into_element(&self, context: &mut RenderContext<'_>) -> AnyElement {
         let identity = self.identity(context);
+        let disabled = self.disabled;
+        let (focus_parent, _) = context.retained_entity(
+            Identity::from(format!("slider-focus:{identity}")),
+            |_, cx| cx.focus_handle(),
+        );
+        let focus_parent = context.update_entity(&focus_parent, move |focus, window, cx| {
+            if disabled && focus.contains_focused(window, cx) {
+                window.focus(focus, cx);
+            }
+            focus.clone()
+        });
         let min = *self.range.start();
         let max = *self.range.end();
         let step = self.step;
@@ -292,7 +303,7 @@ impl View for SliderView {
         let thumb_height = *style.lengths.get("height").expect("slider thumb height");
         let active_theme =
             active_theme(context.app()).expect("a RustUI component theme requires an active theme");
-        ThemedSlider {
+        div().track_focus(&focus_parent).child(ThemedSlider {
             state,
             axis: if self.vertical {
                 Axis::Vertical
@@ -327,7 +338,7 @@ impl View for SliderView {
                 &active_theme.profile,
                 active_theme.mode,
             ),
-        }
+        })
         .into_any_element()
     }
 }

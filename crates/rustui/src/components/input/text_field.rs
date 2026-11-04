@@ -1,5 +1,6 @@
 //! Single-line text input backed by a retained GPUI Components InputState.
 
+use gpui::Focusable as _;
 use gpui::{
     AnyElement, AppContext, Entity, EntityInputHandler, IntoElement, ParentElement as _,
     SharedString, Styled, div, px,
@@ -578,6 +579,10 @@ impl View for TextFieldView {
             // label. Render the same affordance below with an explicit name.
             .cleanable(false)
             .tab_index(self.tab_index);
+        state
+            .read(context.app())
+            .focus_handle(context.app())
+            .tab_stop(!self.disabled);
         input = match self.size {
             TextFieldSize::Small => input.small(),
             TextFieldSize::Large => input.large(),
@@ -597,7 +602,7 @@ impl View for TextFieldView {
                         .icon(Icon::new(IconName::Eye))
                         .xsmall()
                         .text()
-                        .tab_stop(true)
+                        .tab_stop(!self.disabled)
                         .disabled(self.disabled)
                         .toggled(visibility_control_is_toggled(next_masked))
                         .accessibility_label(self.resolved_password_visibility_accessibility_label(
@@ -620,7 +625,7 @@ impl View for TextFieldView {
                         .icon(Icon::new(IconName::Close))
                         .text()
                         .xsmall()
-                        .tab_stop(CLEAR_BUTTON_TAB_STOP)
+                        .tab_stop(CLEAR_BUTTON_TAB_STOP && !self.disabled)
                         .accessibility_label(self.resolved_clear_button_accessibility_label(|id| {
                             context.localized_message(id)
                         }))

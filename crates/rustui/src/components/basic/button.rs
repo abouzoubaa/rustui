@@ -62,7 +62,7 @@ pub(crate) fn themed_button(
         .px(control_font_size)
         .disabled(disabled)
         .tab_index(tab_index)
-        .tab_stop(focusable);
+        .tab_stop(focusable && !disabled);
     if let Some(theme) = &resolved_theme {
         button = button
             .min_w(px(theme.width))
@@ -552,7 +552,8 @@ impl View for ButtonView {
     }
 
     fn into_element(&self, context: &mut RenderContext<'_>) -> AnyElement {
-        let id = SharedString::from(self.identity(context).to_string());
+        let identity = self.identity(context);
+        let id = SharedString::from(identity.to_string());
         let label = self.resolved_label(context);
         let accessibility_label = self.resolved_accessibility_label(context);
         let mut button = themed_button(

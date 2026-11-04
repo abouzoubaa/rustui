@@ -1,5 +1,27 @@
 # Proposed macOS developer-preview MVP checks
 
+## Latest native retest — 2026-11-04
+
+R11/R15 Checkbox, Toggle, TextField, and Radio dynamic-disable recovery passed
+in the earlier rebuilt native consumer run. A follow-up found and repaired
+focus loss for dynamically disabled Picker and Slider. In a fresh consumer
+build, each control received keyboard focus, Toggle lock disabled it, Tab
+focused Toggle lock, and Space unlocked the controls. The five focused
+GPUI Root regressions passed, including both new cases. See
+`ROADMAP_REMAINING_AUDIT.md` for the failure, repair, test log, and executable
+hash. These bounded paths do not complete the basic-controls workflow. Totals
+remain 21/31 evidence milestones (67.74%) and 2/10 acceptance checks (20%).
+
+## Earlier Checkbox-only result — 2026-11-04
+
+R11/R15 dynamic-disabled Checkbox recovery now passes a Root-backed actual
+Tab/Shift-Tab regression and a rebuilt native consumer check: after a focused
+Checkbox is disabled, Tab reaches the enabled Toggle lock button and Space
+unlocks the controls. See `ROADMAP_REMAINING_AUDIT.md`. This closes that
+bounded defect only; the complete basic-controls workflow remains unchecked.
+Overall totals remain 21/31 evidence milestones (67.74%) and 2/10 acceptance
+checks (20%).
+
 This is a provisional acceptance checklist for the macOS developer preview
 discussed with the user. It does not replace the full production roadmap or
 assert that the user has approved a publication strategy. Count a check only

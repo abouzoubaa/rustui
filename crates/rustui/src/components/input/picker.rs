@@ -2,9 +2,10 @@
 
 use std::{cell::RefCell, collections::HashSet, rc::Rc};
 
+use gpui::Focusable as _;
 use gpui::{
-    AnyElement, App, AppContext as _, Entity, IntoElement, ParentElement as _, SharedString,
-    Styled, div, px,
+    AnyElement, App, AppContext as _, Entity, InteractiveElement as _, IntoElement,
+    ParentElement as _, SharedString, Styled, div, px,
 };
 use gpui_component::{
     Icon, IconName, IndexPath, Sizable, Size,
@@ -223,6 +224,17 @@ impl View for PickerView {
         let options = super::select_options(&self.options, &self.option_keys, |key| {
             context.localized_message(key)
         });
+        let disabled = self.disabled;
+        let (focus_parent, _) = context.retained_entity(
+            Identity::from(format!("picker-focus:{}", identity)),
+            |_, cx| cx.focus_handle(),
+        );
+        let focus_parent = context.update_entity(&focus_parent, move |focus, window, cx| {
+            if disabled && focus.contains_focused(window, cx) {
+                window.focus(focus, cx);
+            }
+            focus.clone()
+        });
         let initial_value = self.selection.value();
         let initial_index = option_index(&self.options, &initial_value);
         let initial_options = options.clone();
@@ -345,6 +357,10 @@ impl View for PickerView {
             );
         }
 
+        select
+            .read(context.app())
+            .focus_handle(context.app())
+            .tab_stop(!self.disabled);
         let mut picker = GpuiSelect::new(&select)
             .id(identity.to_string())
             .auto_fit_menu(true)
@@ -366,7 +382,10 @@ impl View for PickerView {
             picker = picker.search_placeholder(placeholder.clone());
         }
         if !self.appearance {
-            return picker.into_any_element();
+            return div()
+                .track_focus(&focus_parent)
+                .child(picker)
+                .into_any_element();
         }
 
         // GPUI Select owns focus, keyboard handling, and the menu. Its icon slot
@@ -387,6 +406,7 @@ impl View for PickerView {
         let affordance = affordance.child(Icon::new(IconName::ChevronDown).with_size(Size::XSmall));
         div()
             .relative()
+            .track_focus(&focus_parent)
             .child(picker.icon(Icon::empty()))
             .child(affordance)
             .into_any_element()

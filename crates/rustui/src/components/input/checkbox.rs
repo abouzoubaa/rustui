@@ -411,6 +411,17 @@ impl View for CheckboxView {
             .then(|| disabled_label_color(&active.profile, active.mode));
         let checked = self.checked.value();
         let identity = self.identity(context);
+        let disabled = self.disabled;
+        let (focus_parent, _) = context.retained_entity(
+            Identity::from(format!("checkbox-focus:{identity}")),
+            |_, cx| cx.focus_handle(),
+        );
+        let focus_parent = context.update_entity(&focus_parent, move |focus, window, cx| {
+            if disabled && focus.contains_focused(window, cx) {
+                window.focus(focus, cx);
+            }
+            focus.clone()
+        });
         let write = context.binding_writer(self.checked.clone());
         let indicator = div()
             .w(px(width))
@@ -443,7 +454,7 @@ impl View for CheckboxView {
                 .text_size(px(typography.size))
                 .font_weight(FontWeight(typography.weight));
         }
-        super::logical_input_row(
+        let control = super::logical_input_row(
             BaseCheckbox::new(identity.to_string()),
             context.layout_direction(),
         )
@@ -455,15 +466,18 @@ impl View for CheckboxView {
         .checked(checked)
         .disabled(self.disabled)
         .tab_index(self.tab_index)
-        .tab_stop(self.focusable)
+        .tab_stop(self.focusable && !self.disabled)
         .accessibility_label(self.resolved_accessibility_label(context))
         .when(self.disabled, |control| {
             control.a11y_synthetic_children(|builder| {
                 super::mark_accessibility_node_disabled(builder.parent_node());
             })
         })
-        .on_change(move |state, _event, _window, cx| write(state == CheckboxState::Checked, cx))
-        .into_any_element()
+        .on_change(move |state, _event, _window, cx| write(state == CheckboxState::Checked, cx));
+        div()
+            .track_focus(&focus_parent)
+            .child(control)
+            .into_any_element()
     }
 }
 
