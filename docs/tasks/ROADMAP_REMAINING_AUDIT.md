@@ -6,6 +6,18 @@ RTL implementation and evidence; do not count deferred localization as complete.
 Web/Wasm, accessibility, and VoiceOver remain deferred as previously directed.
 Earlier entries describing locale acceptance as an immediate priority are historical.
 
+## Native Playground packaging hard-link safety — 2026-11-04
+
+A reproduced fixture showed that copying into a reused bundle could modify an
+outside file hard-linked to a resource or executable staging path. Fixed output
+files now use a fresh temporary file and replacement, with failed-copy cleanup.
+The packaging fixture passed reused and fresh bundles, promotion rollback,
+symlink rejection, hard-linked resource, executable and plist preservation,
+and interrupted-copy cleanup. Log: `target/headstart/evidence/native-package-hardlink-safety-20261104.log`
+(SHA-256 `41426a4f572428231b5d33ab7a56783c92d564f4195ef92fa185e0899b4edff4`).
+Concurrent path substitution and native, licensing, signing, CI and release
+acceptance remain separate and unverified by this fixture.
+
 ## Native Playground packaging path safety — 2026-11-04
 
 The reused default bundle now rejects symlinks at its bundle and fixed output

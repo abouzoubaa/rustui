@@ -12,12 +12,16 @@ references_bundle="$resources/references"
 references_staging=""
 references_previous="$resources/references.previous.$$"
 references_moved=""
+output_staging=""
 release_notices_source="${RUSTUI_RELEASE_NOTICES_DIR:-}"
 fresh_bundle_marker=""
 
 cleanup() {
     status=$?
     trap - EXIT HUP INT TERM
+    if [ -n "$output_staging" ]; then
+        rm -f "$output_staging"
+    fi
     if [ -n "$references_staging" ]; then
         rm -rf "$references_staging"
     fi
@@ -40,6 +44,16 @@ cleanup() {
 }
 trap cleanup EXIT
 trap 'exit 1' HUP INT TERM
+
+copy_output() {
+    output_staging=$(mktemp "$2.tmp.XXXXXX")
+    cp -p "$1" "$output_staging"
+    if [ "${3:-}" = executable ]; then
+        chmod 755 "$output_staging"
+    fi
+    mv -f "$output_staging" "$2"
+    output_staging=""
+}
 
 if [ ! -f "$binary" ] || [ ! -x "$binary" ]; then
     printf '%s\n' "missing executable: $binary" >&2
@@ -79,7 +93,6 @@ fi
 for destination in \
     "$bundle" "$bundle/Contents" "$bundle/Contents/MacOS" \
     "$bundle/Contents/MacOS/rustui-playground" \
-    "$bundle/Contents/MacOS/rustui-playground.next" \
     "$bundle/Contents/Info.plist" "$resources" \
     "$resources/assets" "$resources/assets/link-fixture.html" \
     "$resources/assets/link-disabled-fixture.html" \
@@ -95,12 +108,12 @@ for destination in \
 done
 mkdir -p "$bundle/Contents/MacOS" "$resources"
 mkdir -p "$resources/assets" "$resources/themes"
-cp "$repository_root/assets/link-fixture.html" "$resources/assets/link-fixture.html"
-cp "$repository_root/assets/link-disabled-fixture.html" "$resources/assets/link-disabled-fixture.html"
-cp "$repository_root/assets/playground-sample.png" "$resources/assets/playground-sample.png"
-cp "$repository_root/themes/macos27.json" "$resources/themes/macos27.json"
+copy_output "$repository_root/assets/link-fixture.html" "$resources/assets/link-fixture.html"
+copy_output "$repository_root/assets/link-disabled-fixture.html" "$resources/assets/link-disabled-fixture.html"
+copy_output "$repository_root/assets/playground-sample.png" "$resources/assets/playground-sample.png"
+copy_output "$repository_root/themes/macos27.json" "$resources/themes/macos27.json"
 mkdir -p "$resources/licenses/icons"
-cp "$repository_root/vendor/gpui-kit-assets-0.7.3/LICENSE-LUCIDE" \
+copy_output "$repository_root/vendor/gpui-kit-assets-0.7.3/LICENSE-LUCIDE" \
     "$resources/licenses/icons/LICENSE-LUCIDE"
 if [ -n "$release_notices_source" ]; then
     python3 "$repository_root/scripts/package_release_notices.py" \
@@ -119,8 +132,6 @@ mv "$references_staging" "$references_bundle"
 references_staging=""
 rm -rf "$references_previous"
 references_moved=""
-cp "$app_root/macos/Info.plist" "$bundle/Contents/Info.plist"
-cp "$binary" "$bundle/Contents/MacOS/rustui-playground.next"
-chmod 755 "$bundle/Contents/MacOS/rustui-playground.next"
-mv -f "$bundle/Contents/MacOS/rustui-playground.next" "$bundle/Contents/MacOS/rustui-playground"
+copy_output "$app_root/macos/Info.plist" "$bundle/Contents/Info.plist"
+copy_output "$binary" "$bundle/Contents/MacOS/rustui-playground" executable
 printf '%s\n' "$bundle"

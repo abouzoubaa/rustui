@@ -201,4 +201,44 @@ if CARGO_TARGET_DIR="$unsafe_file" \
 fi
 test "$(cat "$protected/resource")" = 'protected resource'
 
-printf '%s\n' "Playground package replaces stale SVG references and preserves them if promotion fails."
+hardlink_root="$temporary_root/hardlink-target"
+hardlink_bundle="$hardlink_root/debug/RustUI Playground.app"
+mkdir -p "$hardlink_bundle/Contents/Resources/assets" "$hardlink_bundle/Contents/MacOS"
+printf '%s\n' 'protected hardlinked resource' > "$protected/hardlink-resource"
+printf '%s\n' 'protected hardlinked executable' > "$protected/hardlink-executable"
+printf '%s\n' 'protected hardlinked plist' > "$protected/hardlink-plist"
+ln "$protected/hardlink-resource" "$hardlink_bundle/Contents/Resources/assets/link-fixture.html"
+ln "$protected/hardlink-executable" "$hardlink_bundle/Contents/MacOS/rustui-playground.next"
+ln "$protected/hardlink-executable" "$hardlink_bundle/Contents/MacOS/rustui-playground"
+ln "$protected/hardlink-plist" "$hardlink_bundle/Contents/Info.plist"
+CARGO_TARGET_DIR="$hardlink_root" \
+    RUSTUI_PLAYGROUND_BINARY="$headstart_binary" \
+    RUSTUI_PLAYGROUND_REFERENCES_DIR="$references_source" \
+    "$repository_root/apps/rustui-playground/package-app.sh" >/dev/null
+test "$(cat "$protected/hardlink-resource")" = 'protected hardlinked resource'
+test "$(cat "$protected/hardlink-executable")" = 'protected hardlinked executable'
+test "$(cat "$protected/hardlink-plist")" = 'protected hardlinked plist'
+cmp "$headstart_binary" "$hardlink_bundle/Contents/MacOS/rustui-playground"
+cmp "$repository_root/assets/link-fixture.html" "$hardlink_bundle/Contents/Resources/assets/link-fixture.html"
+
+copy_failure_root="$temporary_root/copy-failure"
+copy_failure_bundle="$copy_failure_root/debug/RustUI Playground.app"
+copy_shim="$temporary_root/copy-shim"
+mkdir -p "$copy_failure_bundle/Contents/Resources/assets" "$copy_shim"
+printf '%s\n' 'existing resource' > "$copy_failure_bundle/Contents/Resources/assets/link-fixture.html"
+cat > "$copy_shim/cp" <<'EOF'
+#!/bin/sh
+exit 73
+EOF
+chmod 755 "$copy_shim/cp"
+if PATH="$copy_shim:$PATH" CARGO_TARGET_DIR="$copy_failure_root" \
+    RUSTUI_PLAYGROUND_BINARY="$headstart_binary" \
+    RUSTUI_PLAYGROUND_REFERENCES_DIR="$references_source" \
+    "$repository_root/apps/rustui-playground/package-app.sh" >/dev/null 2>&1; then
+    printf '%s\n' 'package accepted a failed resource copy.' >&2
+    exit 1
+fi
+test "$(cat "$copy_failure_bundle/Contents/Resources/assets/link-fixture.html")" = 'existing resource'
+test -z "$(find "$copy_failure_bundle" -name '*.tmp.*' -print -quit)"
+
+printf '%s\n' 'Playground packaging reuse, rollback, symlink and hard-link safety passed.'
