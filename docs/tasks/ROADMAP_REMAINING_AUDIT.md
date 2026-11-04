@@ -6,6 +6,19 @@ RTL implementation and evidence; do not count deferred localization as complete.
 Web/Wasm, accessibility, and VoiceOver remain deferred as previously directed.
 Earlier entries describing locale acceptance as an immediate priority are historical.
 
+## R04 native root-window launch — 2026-11-04
+
+On source `a378afea`, the locked offline Headstart Playground build passed
+(log `target/headstart/evidence/r04-native-a378afea-build.log`, SHA-256
+`4e5b58e5f126c8db7a80ebac620ffbdb355d50c7684be06ccbc1c6ad8220f34f`).
+The executable and disposable bundle matched SHA-256
+`bd821148d770ddc3c8257d17bd8b54cd9fa567176f1cd25f425024cc52bc7275`.
+The exact bundle process (PID 61226) opened and visibly rendered the Playground
+root window. A close-button attempt timed out in the computer-use tool while
+the application process remained; window-close behavior is therefore unverified.
+Quit succeeded, the process exited and the owned bundle was removed. Native
+error and close acceptance and broader R04 release acceptance remain open.
+
 ## Native Playground release package verification — 2026-11-04
 
 At `f1e05802`, the changed packaging script successfully packaged the existing
