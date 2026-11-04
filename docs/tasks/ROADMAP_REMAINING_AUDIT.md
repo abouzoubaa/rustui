@@ -6,6 +6,19 @@ RTL implementation and evidence; do not count deferred localization as complete.
 Web/Wasm, accessibility, and VoiceOver remain deferred as previously directed.
 Earlier entries describing locale acceptance as an immediate priority are historical.
 
+## R31 real Playground package reuse — 2026-11-04
+
+At `1d19f9f1`, the revised packaging script packaged the retained optimized
+Playground executable and notice collection into a new disposable default
+bundle, then successfully repackaged into the same bundle. Both passes matched
+the executable SHA-256 `dae3ecf0155f2ac0463b95ed7a9648016ae255cba0e7cfd9be01d522aee1115a`,
+passed plist validation, and reported 446 observed packages and five unresolved
+notice gaps with no staging files left. The bundle was not launched and was
+removed. Log: `target/headstart/evidence/r31-real-package-reuse-1d19f9f1.log`
+(SHA-256 `f3f521277a5ddcca2619e60589372f303b8a5d3fa71e31338befe9070ed4233c`).
+This reused a prior executable; it does not establish a current-source release
+build, native runtime, license clearance, signing, CI, or release acceptance.
+
 ## R17 native unknown-route keyboard recovery — 2026-11-04
 
 The retained `83407ea8` temporary initial-path specimen was repackaged after
