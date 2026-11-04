@@ -6,6 +6,27 @@ RTL implementation and evidence; do not count deferred localization as complete.
 Web/Wasm, accessibility, and VoiceOver remain deferred as previously directed.
 Earlier entries describing locale acceptance as an immediate priority are historical.
 
+## R06/R15 native combined form coordination — 2026-11-04
+
+On `373f62ad`, a temporary outside-checkout public-API consumer combined a
+bound TextField, Toggle, Stepper and owner action. Probe source
+`target/headstart/evidence/native-form-coordination-probe.rs` SHA-256
+`08723b2355243e6bf2e8c9012044d38d693d1ea43a7fce81cabce3a47658f155`
+built with locked offline Headstart (log
+`target/headstart/evidence/native-form-coordination-build.log`, SHA-256
+`3f92f20a113eaf0e44219b28546ba4fab8ca1124fcd67af7b484903b547f2956`).
+
+The exact native executable SHA-256
+`6b48d790e110ca3c4e84a8f581ba086252206270e810951330a8e6a46bac48e5`
+ran as PID 50623. With the Stepper initially disabled, typing `Ari` updated
+owner state. Enabling it allowed quantity 0 → 1; disabling it disabled both
+controls. An owner action changed the disabled value to 2; re-enabling kept the
+increment disabled at the maximum and enabled decrement, which returned it to
+1. The name field and owner text still showed `Ari`. The owned app exited and
+its bundle and temporary workspace were removed. This bounded computer-input
+flow does not establish physical-input, all control states, accessibility or
+release acceptance.
+
 ## R15 native Stepper bounds and owner updates — 2026-11-04
 
 On `37a7a6a9`, a temporary outside-checkout public-API consumer rendered a

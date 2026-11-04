@@ -23,8 +23,9 @@ unweighted count is not a measure of code written or time remaining.
    lifecycle cases still need evidence.
 4. **Open — basic controls and input:** the supported MVP controls, bindings,
    disabled states and ordinary keyboard/text editing pass a documented
-   current-candidate native workflow. A bounded native Stepper check covers
-   its endpoints and owner-set values; the other controls remain to be checked.
+   current-candidate native workflow. Bounded native checks cover Stepper
+   endpoints and a combined TextField, Toggle and Stepper owner-update flow;
+   the remaining control paths still need evidence.
 5. **Open — navigation and overlays:** the chosen navigation and modal paths
    pass the native workflow, including recovery after focus loss. In
    particular, an unfocused Components Sheet or Dialog cannot yet regain
