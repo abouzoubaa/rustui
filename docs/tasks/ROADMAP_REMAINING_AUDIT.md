@@ -6,6 +6,22 @@ RTL implementation and evidence; do not count deferred localization as complete.
 Web/Wasm, accessibility, and VoiceOver remain deferred as previously directed.
 Earlier entries describing locale acceptance as an immediate priority are historical.
 
+## R30 native source CI result — 2026-11-04
+
+GitHub Actions [run 41883930769](https://github.com/abouzoubaa/rustui/actions/runs/41883930769)
+passed the manually dispatched native-only smoke job on exact candidate
+`91df6d6994e00c1fe13fd99b35ba2a64b67a8f94`. Its trusted checkout, formatting,
+dependency boundary, theme-plan and theme-wiring checks passed; the theme
+verifier's 3 tests, Headstart launcher's 2 tests and checkout guard passed.
+The locked offline workspace all-targets check and 9 core library tests also
+passed. GitHub job log:
+`target/headstart/evidence/native-ci-source-smoke-91df6d69-gh.log` (SHA-256
+`03d0d5ebd79163e4f16957716c177bbdf2c257d3d797a3d60a2d1cae613b4f02`).
+The source and full release jobs were skipped for the explicit native-only
+dispatch. The one-job macOS runner deregistered, leaving zero repository-level
+runners. A maintained runner, full source job, native release CI and deferred
+areas remain open; this smoke result is not release acceptance.
+
 ## R26/R30 menu theme source verifier — 2026-11-04
 
 The native source check exposed a stale Menu theme verifier: it required the
@@ -19,8 +35,8 @@ and passes with mutations to each checked link rejected. The new native-only CI
 source step and its local checks passed (log
 `native-ci-source-check-final-a160db10.log`, SHA-256
 `558547dc53c964c4dde47e296dc757979b35e0d604e43dbe3d9e077135d827ed`).
-These are static checks, not visual theme acceptance. Trusted CI for this
-candidate is still pending.
+These are static checks, not visual theme acceptance. At that checkpoint,
+trusted CI was pending; its subsequent result is recorded above.
 
 ## R30 native CI smoke result — 2026-11-04
 
