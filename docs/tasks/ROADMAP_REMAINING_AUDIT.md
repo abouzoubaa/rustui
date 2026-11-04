@@ -6,6 +6,26 @@ RTL implementation and evidence; do not count deferred localization as complete.
 Web/Wasm, accessibility, and VoiceOver remain deferred as previously directed.
 Earlier entries describing locale acceptance as an immediate priority are historical.
 
+## R19 native unfocused modal probe — 2026-11-04
+
+On `11eb913f`, a temporary framework-only F8 handler called `window.blur` in
+an otherwise current Playground build; its patch was reversed before launch.
+The retained probe patch SHA-256 is
+`a601d4acea3d607543dd5c2ea0c20f01cc33bf54fc54cc81c9740e63d7218180` and
+locked offline Headstart build log `target/headstart/evidence/native-modal-blur-11eb913f-build.log`
+has SHA-256 `1a9ad06eeac2876b7c3ab8356ba8fddc618873ada2a358454085bfad37aeff0a`.
+The owned `/private/tmp/rustui-validation.app` process PID 10498 had executable
+SHA-256 `935aa6047184bbf679512629a60288996d6b03182c7f275d0e181d732adacdf7`.
+
+In the native Drawer story, F8 cleared focus; two Tabs then focused Close.
+After another F8 cleared that observed focus, two Shift-Tabs focused Activate.
+For the competing Sheet and Dialog, F8 followed by Tab left no focused UI
+element reported and the modal remained open; focus did not visibly move to
+the background. These bounded computer-use observations confirm the current
+Drawer recovery and the Sheet/Dialog limitation, not complete modal, physical
+input, accessibility, or release acceptance. The process exited, the disposable
+bundle was removed, and the temporary source patch was reversed.
+
 ## R19 unfocused modal traversal — 2026-11-04
 
 A test-platform regression showed that the initial Tab fallback could focus a
