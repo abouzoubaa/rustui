@@ -6,6 +6,20 @@ RTL implementation and evidence; do not count deferred localization as complete.
 Web/Wasm, accessibility, and VoiceOver remain deferred as previously directed.
 Earlier entries describing locale acceptance as an immediate priority are historical.
 
+## R03/R04 native source-consumer keyboard follow-up — 2026-11-04
+
+The retained source-consumer executable from `5ffcb466` (SHA-256
+`a78475b780109ce1d9cff502a6f46c7f938e0c2d8627e8c58d921f4a83958086`)
+ran as PID 96841 in the owned disposable validation bundle. Computer-use Tab
+followed by Space did not change Count 0; clicking Increment changed it to 1,
+while subsequent Space and repeated Tab/Space or Return left it at 1. The
+uppercase `Space` spelling was rejected by the input tool; lowercase `space`
+was accepted. Focus was not independently established, so this is an
+unresolved native keyboard observation, not proof of a framework defect or
+keyboard acceptance. The process exited and the owned bundle was removed.
+The source consumer still uses local paths and patches; distribution, native
+acceptance, and other release gates remain open.
+
 ## R03/R04 native source-consumer probe — 2026-11-04
 
 On `5ffcb466`, the independent Cargo workspace under `examples/external-consumer`
