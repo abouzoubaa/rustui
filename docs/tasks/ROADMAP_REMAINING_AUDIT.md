@@ -6,6 +6,26 @@ RTL implementation and evidence; do not count deferred localization as complete.
 Web/Wasm, accessibility, and VoiceOver remain deferred as previously directed.
 Earlier entries describing locale acceptance as an immediate priority are historical.
 
+## R15 native Stepper bounds and owner updates — 2026-11-04
+
+On `37a7a6a9`, a temporary outside-checkout public-API consumer rendered a
+Stepper with range 0..=2 and separate owner buttons that set either bound.
+Probe source `target/headstart/evidence/native-stepper-bounds-probe.rs` SHA-256
+`ed8f7f847deedcb4e5734cdd3e9db8f6dd966938b4d591e8a4c4a650282ec122`
+built with locked offline Headstart (log
+`target/headstart/evidence/native-stepper-bounds-build.log`, SHA-256
+`5b5e75e0c943e72a69d72ea4784bad01b25462136fff7ec07fc564514e7f6e0e`).
+
+The exact native executable SHA-256
+`803413610622afbbd1347ec5e9d21c497b912923b9ec5b3dfca5fb1c96e0519e`
+ran as PID 48443. At owner value 0 the decrement control was disabled;
+incrementing twice gave 1 then 2 and disabled increment. Decrement returned
+to 1. Owner Set maximum gave 2 and disabled increment; Set minimum gave 0 and
+disabled decrement; increment then returned to 1. The owned app exited and
+its bundle and temporary workspace were removed. This bounded pointer-driven
+check does not establish physical-input, keyboard, accessibility, all Stepper
+states or release acceptance.
+
 ## R04/R05 native in-flight work after root close — 2026-11-04
 
 On `5a0b91b8`, a temporary outside-checkout public-API consumer started an
