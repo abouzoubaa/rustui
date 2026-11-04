@@ -6,6 +6,18 @@ RTL implementation and evidence; do not count deferred localization as complete.
 Web/Wasm, accessibility, and VoiceOver remain deferred as previously directed.
 Earlier entries describing locale acceptance as an immediate priority are historical.
 
+## R30/R31 native CI notice regressions — 2026-11-04
+
+The native-only CI source step now runs the notice collector tests, packaged
+notice integrity tests, and native Playground packaging fixture, in addition
+to its existing source checks. The complete updated source sequence passed
+locally on `e89fba01` plus this workflow change; its log is
+`target/headstart/evidence/native-ci-notice-source-e89fba01.log` (SHA-256
+`357a534f526541966a17466eb9fd0aeabbf46954c43e56703c998e19b6537117`).
+This adds regression coverage for the report-integrity fix; the missing notices, legal
+review, full source job and release CI remain open. Trusted CI for this
+candidate was pending at this local checkpoint.
+
 ## R31 packaged notice-report integrity — 2026-11-04
 
 The notice packager previously accepted reports that omitted a gap, assigned it

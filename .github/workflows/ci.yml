@@ -81,6 +81,9 @@ jobs:
           python3 scripts/verify_theme_adapter_coverage.py
           python3 -m unittest discover -s scripts/tests -p 'test_verify_theme_adapter_coverage.py'
           python3 -m unittest discover -s scripts/tests -p 'test_cargo_headstart.py'
+          python3 -m unittest discover -s scripts/tests -p 'test_collect_dependency_notices.py'
+          python3 -m unittest discover -s scripts/tests -p 'test_package_release_notices.py'
+          sh scripts/tests/test_package_playground_app.sh
           sh scripts/tests/test_verify_ci_checkout.sh
       - name: Check native workspace targets
         run: ./scripts/cargo-headstart check --workspace --all-targets --profile headstart --locked --offline
