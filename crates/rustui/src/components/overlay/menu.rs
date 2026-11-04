@@ -12,7 +12,7 @@ use rustui_core::Identity;
 use crate::{
     components::{
         basic::button::{ButtonStyle, themed_button},
-        theme::{required_style, required_style_with_artwork, selector, styled_container},
+        theme::{required_style, selector, styled_container},
     },
     view::{ActionHandler, ControlAction, EmptyView, RenderContext, View},
 };
@@ -340,18 +340,7 @@ impl View for MenuView {
     }
 
     fn into_element(&self, context: &mut RenderContext<'_>) -> AnyElement {
-        // PopupMenu paints from the GPUI popover role, set from this record at activation.
-        let style = required_style_with_artwork(context, "menu", "body", &selector(context));
-        let expected = crate::theme::registry::hsla(
-            *style
-                .colors
-                .get("background")
-                .expect("menu theme needs background"),
-        );
-        debug_assert_eq!(
-            gpui_component::Theme::global(context.app()).colors.popover,
-            expected
-        );
+        // Theme activation composites the menu tint into the opaque popover role.
         let id = self.id.as_ref().unwrap_or_else(|| {
             panic!("Menu requires an explicit stable identity; add `.id(\"menu-name\")`")
         });
@@ -386,6 +375,38 @@ impl View for MenuView {
 mod tests {
     use super::*;
     use crate::runtime::AppAction;
+
+    #[gpui::test]
+    fn menu_renders_with_composited_theme_in_both_appearances(cx: &mut gpui::TestAppContext) {
+        struct Owner;
+        impl View for Owner {
+            fn body(&self) -> impl View {
+                Menu("Actions", std::iter::empty::<MenuItem>()).id("menu")
+            }
+        }
+        let theme = crate::theme::parse_theme(include_str!(concat!(
+            env!("CARGO_MANIFEST_DIR"),
+            "/../../themes/macos27.json"
+        )))
+        .unwrap();
+        cx.update(|app| {
+            gpui_component::init(app);
+            crate::theme::activate_theme(&theme, Some(crate::theme::AppearanceMode::Light), app)
+                .unwrap();
+        });
+        let (_, window) =
+            cx.add_window_view(|_, app| crate::runtime::ComponentHost::new(Owner, app));
+        for mode in [
+            crate::theme::AppearanceMode::Light,
+            crate::theme::AppearanceMode::Dark,
+        ] {
+            window.update(|window, app| {
+                crate::theme::activate_theme(&theme, Some(mode), app).unwrap();
+                window.refresh();
+                let _ = window.draw(app);
+            });
+        }
+    }
 
     #[test]
     fn localized_trigger_uses_literal_for_missing_or_blank_messages() {

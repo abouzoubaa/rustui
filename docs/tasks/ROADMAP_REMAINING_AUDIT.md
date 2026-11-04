@@ -6,6 +6,29 @@ RTL implementation and evidence; do not count deferred localization as complete.
 Web/Wasm, accessibility, and VoiceOver remain deferred as previously directed.
 Earlier entries describing locale acceptance as an immediate priority are historical.
 
+## R19 native Menu render crash — 2026-11-04
+
+On `9defc3c0`, selecting the Menu catalog row in the owned Playground process
+PID 32490 aborted. Crash report `target/headstart/evidence/native-menu-crash-9defc3c0.ips`
+SHA-256 `35be6b1db81fdaf1af5924d4e944144f5534fee5c3a5f68a55c0fa692118b876`
+identified a Menu render assertion. Theme activation composites the translucent
+menu tint into an opaque popover fallback, so comparing those colors for exact
+equality was invalid. The obsolete debug assertion was removed; a rendered
+light/dark regression failed before the change and passed afterward.
+
+With the retained source patch `target/headstart/evidence/native-menu-crash-fix.patch`
+SHA-256 `2f5089ea57a39f72e24cb73e0d2c45883ea399fdd13b4f536528315551302f01`,
+locked offline Headstart built the Playground. The exact executable SHA-256
+`3325224767444f65733de3413bce2e60e6745012b25ba14186bea71d093f7499` ran as
+PID 35688 in the owned disposable bundle. The Menu gallery opened, and the
+Menu action incremented Count 0 → 1 in dark appearance and 1 → 2 in light
+appearance. The owned process exited and the bundle was removed. Focused test
+logs: `target/headstart/evidence/native-menu-crash-before.log` SHA-256
+`7e66e2cb783b971c93fa73dff5cee304320429893a3d6760dbe379673e060eaa`;
+`target/headstart/evidence/native-menu-crash-after.log` SHA-256
+`8c3305bbce4c196c059f8f7222e0d85e51a631131e81e2d1edd9fa83f0fe12e2`.
+This bounded native check does not establish complete Menu or release acceptance.
+
 ## R03/R06 external consumer bound input — 2026-11-04
 
 The public-API source consumer now demonstrates a TextField bound to component
