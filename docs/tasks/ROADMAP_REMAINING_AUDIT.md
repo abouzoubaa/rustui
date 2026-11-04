@@ -6,6 +6,22 @@ RTL implementation and evidence; do not count deferred localization as complete.
 Web/Wasm, accessibility, and VoiceOver remain deferred as previously directed.
 Earlier entries describing locale acceptance as an immediate priority are historical.
 
+## M54 current native LazyGrid interaction — 2026-11-04
+
+The locked offline Headstart Playground build at `77348eb9` passed (log
+`target/headstart/evidence/m54-native-77348eb9-build.log`, SHA-256
+`d477f275f65544f2ee94dc793bcb54c9ec2c095e3d096d3118451a166013ad1a`).
+The exact native bundle executable (SHA-256
+`b2afa635a68aa11fb96e866f6c74780adfe601d4a4a79c44e10267c57214e374`, PID
+80681) displayed the 2,400-item, three-column LazyGrid. Computer-controlled
+vertical scrolling moved from item 0000 to items 0024–0035 and back; item 0000
+retained its incremented count of 1. Reversing twice retained that count; its
+root action increased root hits to 1. Removing item 0000 reduced the list to
+2,399, and restoring it returned the count to 2,400 with its local count reset
+to 0. The owned app exited and the disposable bundle was removed. These bounded
+native interactions do not establish physical-input, full virtualization,
+performance, accessibility or release acceptance.
+
 ## R31 Pathfinder exact-revision search — 2026-11-04
 
 The recorded `pathfinder_geometry 0.5.1` revision
