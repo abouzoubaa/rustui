@@ -809,7 +809,7 @@ mod tests {
             crate::theme::activate_theme(&theme, Some(crate::theme::AppearanceMode::Dark), app)
                 .unwrap();
         });
-        for rows in [1, 4] {
+        for rows in [0, 1, 4] {
             for column_width in [300., 700.] {
                 let (owner, window) = cx.add_window_view(|_, app| {
                     crate::runtime::ComponentHost::new(TableScrollCase { rows, column_width }, app)

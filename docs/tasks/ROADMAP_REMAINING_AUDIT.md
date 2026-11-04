@@ -6,6 +6,17 @@ RTL implementation and evidence; do not count deferred localization as complete.
 Web/Wasm, accessibility, and VoiceOver remain deferred as previously directed.
 Earlier entries describing locale acceptance as an immediate priority are historical.
 
+## R17 empty Table horizontal scrolling — 2026-11-04
+
+The rendered GPUI test-window regression now also exercises a zero-row Table
+with two 300-point and two 700-point columns, alongside the existing one- and
+four-row cases. Its synthetic horizontal wheel and scroll-position assertions
+passed for all six combinations on the `9edc9a5b` source plus this test change.
+Log: `target/headstart/evidence/r17-empty-table-wheel-9edc9a5b.log` (SHA-256
+`36e491ac401290f84642692f94a390409acd1d9f34c7f33a83f2065f7457b5e8`).
+This is test-window evidence; physical native scrolling and broader Table
+acceptance remain open.
+
 ## R04 root-window close follow-up — 2026-11-04
 
 At `8a9e696e` (only the ledger changed since the prior source-bound build),
