@@ -6,6 +6,27 @@ RTL implementation and evidence; do not count deferred localization as complete.
 Web/Wasm, accessibility, and VoiceOver remain deferred as previously directed.
 Earlier entries describing locale acceptance as an immediate priority are historical.
 
+## R03/R04 consumer workspace outside checkout — 2026-11-04
+
+At `e3b65e79`, a disposable workspace outside the RustUI checkout copied the
+external consumer source and lockfile, copied the theme beside its source, and
+changed the manifest's RustUI and patched dependency paths plus Cargo vendor
+configuration to absolute paths into the same checkout. From that external
+working directory, the repository's Headstart launcher built it locked and
+offline. Build log `target/headstart/evidence/external-consumer-outside-e3b65e79.log`
+has SHA-256 `b63645e1b7cb0b99c9466bf3386fb357f718af9593e6a47575f0a60ac418ada1`;
+the adapted manifest is retained beside it as `.toml` (SHA-256
+`965a2c148a0f1c0c71b8e9fc21861d1f4f24d763373e7ce37109a9457d95376b`).
+
+The exact executable SHA-256
+`6922c25f1a82fd7361e0ae716cffcf2865933d0faa5c03b52392b815c7cf8a7e`
+ran as PID 18959 in the owned disposable native bundle. Tab and Space changed
+Count 0 to 1; a pointer click changed it to 2. The process exited and both the
+bundle and temporary workspace were removed. This confirms a separate source
+workspace on the same machine, still dependent on the checkout, vendored
+sources, local patches and Headstart; it is not installed-package,
+cross-machine, licensing or release acceptance.
+
 ## R31 stale release notices on bundle reuse — 2026-11-04
 
 The default Playground packager could replace an executable while retaining a
