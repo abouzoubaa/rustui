@@ -14,14 +14,108 @@ pub(crate) fn open_root_window<V: View>(
 ) -> Result<(), String> {
     cx.open_window(options, |window, cx| {
         let content = cx.new(|cx| ComponentHost::with_environment(root, environment, cx));
-        cx.new(|cx| gpui_component::Root::new(content, window, cx))
+        let root = cx.new(|cx| gpui_component::Root::new(content, window, cx));
+        #[cfg(not(target_family = "wasm"))]
+        {
+            let subscription = install_initial_focus_traversal(window.window_handle(), cx);
+            cx.observe_release(&root, move |_, _| drop(subscription))
+                .detach();
+        }
+        root
     })
     .map(|_| ())
     .map_err(|error| format!("{error:#}"))
 }
 
+#[cfg(not(target_family = "wasm"))]
+fn install_initial_focus_traversal(
+    handle: gpui::AnyWindowHandle,
+    cx: &mut App,
+) -> gpui::Subscription {
+    // With no focused element GPUI dispatches keys at its root node, outside
+    // the Components Root key context. Seed traversal only for this window.
+    cx.intercept_keystrokes(move |event, window, cx| {
+        let key = &event.keystroke;
+        let modifiers = key.modifiers;
+        if window.window_handle() != handle
+            || window.focused(cx).is_some()
+            || key.key != "tab"
+            || modifiers.control
+            || modifiers.alt
+            || modifiers.platform
+            || modifiers.function
+        {
+            return;
+        }
+        if modifiers.shift {
+            window.focus_prev(cx);
+        } else {
+            window.focus_next(cx);
+        }
+        if window.focused(cx).is_some() {
+            cx.stop_propagation();
+        }
+    })
+}
+
 #[cfg(test)]
 mod tests {
+    #[gpui::test]
+    fn root_tab_focuses_and_activates_button(cx: &mut gpui::TestAppContext) {
+        use gpui::AppContext as _;
+
+        struct Owner(std::rc::Rc<std::cell::Cell<usize>>);
+        impl crate::view::View for Owner {
+            fn body(&self) -> impl crate::view::View {
+                crate::prelude::Button(
+                    "Increment",
+                    crate::runtime::Action::new(|owner: &mut Owner| {
+                        owner.0.set(owner.0.get() + 1);
+                    }),
+                )
+            }
+        }
+
+        let theme = crate::theme::parse_theme(include_str!(concat!(
+            env!("CARGO_MANIFEST_DIR"),
+            "/../../themes/macos27.json"
+        )))
+        .unwrap();
+        cx.update(|app| {
+            gpui_component::init(app);
+            crate::theme::activate_theme(&theme, Some(crate::theme::AppearanceMode::Dark), app)
+                .unwrap();
+        });
+        let count = std::rc::Rc::new(std::cell::Cell::new(0));
+        let (_, window) = cx.add_window_view(|window, app| {
+            let content =
+                app.new(|app| crate::runtime::ComponentHost::new(Owner(count.clone()), app));
+            gpui_component::Root::new(content, window, app)
+        });
+        let _subscription = window.update(|window, app| {
+            let _ = window.draw(app);
+            super::install_initial_focus_traversal(window.window_handle(), app)
+        });
+        window.simulate_keystrokes("ctrl-tab");
+        window.update(|window, app| assert!(window.focused(app).is_none()));
+        window.simulate_keystrokes("tab");
+        window.update(|window, app| {
+            let _ = window.draw(app);
+            assert!(window.focused(app).is_some(), "Tab should establish focus");
+        });
+        let keystroke = gpui::Keystroke::parse("space").unwrap();
+        window.simulate_event(gpui::KeyDownEvent {
+            keystroke: keystroke.clone(),
+            is_held: false,
+            prefer_character_input: false,
+        });
+        window.simulate_event(gpui::KeyUpEvent { keystroke });
+        assert_eq!(count.get(), 1);
+        window.update(|window, app| window.blur(app));
+        window.simulate_keystrokes("shift-tab");
+        window.update(|window, app| assert!(window.focused(app).is_some()));
+    }
+
     struct LifecycleProbe {
         mounts: std::rc::Rc<std::cell::Cell<usize>>,
         unmounts: std::rc::Rc<std::cell::Cell<usize>>,
