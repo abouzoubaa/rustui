@@ -5441,3 +5441,29 @@ execute the patch's placement tests: the vendored package is outside the
 workspace and its test build failed before running tests with missing Apple
 headless-renderer APIs. The five Python tests cover patch replay and reversal,
 not native placement.
+
+### R15 macOS release-build patch integration — 2026-11-04
+
+The `macos` branch of `scripts/verify-release.sh` now completes existing
+source-image checks first, verifies that the pinned macOS backend is at its
+exact preimage, applies the approved anchored-popup patch for the build, and
+restores the pinned source on exit, including failed builds. A locked/offline
+Headstart release-profile check of the Playground passed (exit 0) with the
+patch active; the exit trap restored the preimages.
+Evidence: `target/headstart/evidence/r15-popup-release-build-20261104.log`
+(SHA-256
+`a19edcb76d5420fcf8ed019cd55a96589f8ab53046e3acf4d47266a271166dbd`). Shell
+syntax, the five patch replay/safety tests, and `git diff --check` passed.
+The actual macOS release script was also exercised with a controlled Linux
+host result: after preflight and patch application it exited at the host guard
+with the expected status 2, then its `EXIT` trap restored the pinned source;
+the post-exit preimage check returned 0. Evidence:
+`target/headstart/evidence/r15-popup-release-trap-20261104.log` (SHA-256
+`3e460b5e28c8afa7316d4f2a97c43ad598b328457e4622f8e7615d673edcb400`).
+
+The full macOS packaging gate was not run: it still targets the protected
+`target/headstart/debug/RustUI Playground.app` bundle. Native popup placement,
+outside-click dismissal, parent teardown, and owner-state behavior remain
+unverified. This build-path integration does not close the R15 native
+acceptance milestone; MVP remains 23/34 evidence milestones (67.65%) and 2/11
+acceptance checks (18.18%).

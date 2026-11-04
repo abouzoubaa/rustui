@@ -69,6 +69,23 @@ case "${1:-}" in
     python3 scripts/apply_cosmic_bidi_initial_span_patch.py --check
     python3 scripts/verify_gpui_web_patch_stack.py --native-only
     python3 scripts/apply_gpui_macos_focused_element_patch.py --verify
+    # GPUI's pinned macOS backend rejects AnchoredPopup unless this approved
+    # patch is active. Apply it after exact-source checks, and restore the
+    # pinned source on exit, including failed builds and interrupts.
+    python3 scripts/apply_gpui_macos_anchored_popup_patch.py --reverse --check
+    popup_patch_armed=1
+    restore_popup_patch() {
+      result=$?
+      trap - EXIT
+      if [ "$popup_patch_armed" -eq 1 ]; then
+        if ! python3 scripts/apply_gpui_macos_anchored_popup_patch.py --reverse; then
+          result=1
+        fi
+      fi
+      exit "$result"
+    }
+    trap restore_popup_patch EXIT
+    python3 scripts/apply_gpui_macos_anchored_popup_patch.py
     if [[ "$(uname -s)" != Darwin ]]; then
       echo 'The macos release check requires a macOS host.' >&2
       exit 2
