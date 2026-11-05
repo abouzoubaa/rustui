@@ -394,4 +394,108 @@ mod tests {
         cx.run_until_parked();
         assert_eq!(unmounts.get(), 1);
     }
+
+    #[cfg(not(target_family = "wasm"))]
+    #[gpui::test]
+    fn popup_parent_can_open_another_popup_after_explicit_close(cx: &mut gpui::TestAppContext) {
+        use std::{cell::Cell, rc::Rc};
+
+        let parent = cx.update(|app| {
+            gpui_component::init(app);
+            super::open_root_window(
+                crate::view::EmptyView,
+                rustui_core::EnvironmentValues::default(),
+                gpui::WindowOptions::default(),
+                app,
+            )
+            .unwrap();
+            *app.windows()
+                .first()
+                .expect("parent root window should exist")
+        });
+
+        let first_mounts = Rc::new(Cell::new(0));
+        let first_unmounts = Rc::new(Cell::new(0));
+        let first_popup = cx.update(|app| {
+            let previous_count = app.windows().len();
+            let popup = parent
+                .update(app, |_, window, app| {
+                    super::open_anchored_popup(
+                        LifecycleProbe {
+                            mounts: first_mounts.clone(),
+                            unmounts: first_unmounts.clone(),
+                        },
+                        rustui_core::EnvironmentValues::default(),
+                        super::AnchoredPopupOptions {
+                            anchor_rect: (10.0, 20.0, 1.0, 1.0),
+                            size: (200.0, 120.0),
+                        },
+                        window,
+                        app,
+                    )
+                    .unwrap()
+                })
+                .unwrap();
+            assert_eq!(app.windows().len(), previous_count + 1);
+            popup
+        });
+        cx.run_until_parked();
+        assert_eq!(first_mounts.get(), 1);
+        cx.update(|app| {
+            first_popup
+                .update(app, |_, window, _| window.remove_window())
+                .unwrap();
+        });
+        cx.run_until_parked();
+        assert_eq!(first_unmounts.get(), 1);
+        cx.update(|app| {
+            assert_eq!(
+                app.windows().len(),
+                1,
+                "first popup should leave only its parent window"
+            );
+        });
+
+        let second_mounts = Rc::new(Cell::new(0));
+        let second_unmounts = Rc::new(Cell::new(0));
+        let second_popup = cx.update(|app| {
+            let previous_count = app.windows().len();
+            let popup = parent
+                .update(app, |_, window, app| {
+                    super::open_anchored_popup(
+                        LifecycleProbe {
+                            mounts: second_mounts.clone(),
+                            unmounts: second_unmounts.clone(),
+                        },
+                        rustui_core::EnvironmentValues::default(),
+                        super::AnchoredPopupOptions {
+                            anchor_rect: (30.0, 40.0, 1.0, 1.0),
+                            size: (180.0, 100.0),
+                        },
+                        window,
+                        app,
+                    )
+                    .unwrap()
+                })
+                .unwrap();
+            assert_eq!(app.windows().len(), previous_count + 1);
+            popup
+        });
+        cx.run_until_parked();
+        assert_eq!(second_mounts.get(), 1);
+        cx.update(|app| {
+            second_popup
+                .update(app, |_, window, _| window.remove_window())
+                .unwrap();
+        });
+        cx.run_until_parked();
+        assert_eq!(second_unmounts.get(), 1);
+        cx.update(|app| {
+            assert_eq!(
+                app.windows().len(),
+                1,
+                "second popup should leave only its parent window"
+            );
+        });
+    }
 }
