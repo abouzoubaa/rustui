@@ -202,8 +202,10 @@ def distributable_report(report, repo_root):
     return projected
 
 
-def package(source, font_source, destination, repo_root):
+def package(source, font_source, destination, repo_root, require_no_gaps=False):
     report = validate_collection(source)
+    if require_no_gaps and report["unresolved_gaps"]:
+        raise ValueError("release notice collection contains unresolved package gaps")
     if font_source.is_symlink() or not font_source.is_dir():
         raise ValueError("font license source must be a real directory")
     for name in FONT_LICENSES:
@@ -270,9 +272,26 @@ def main():
     parser.add_argument("--font-source", type=Path, required=True)
     parser.add_argument("--repo-root", type=Path, required=True)
     parser.add_argument("--destination", type=Path, required=True)
+    parser.add_argument(
+        "--require-no-gaps",
+        action="store_true",
+        help="reject collections with unresolved package notices; does not establish legal completeness",
+    )
+    parser.add_argument("--validate-only", action="store_true")
     args = parser.parse_args()
     try:
-        package(args.collection, args.font_source, args.destination, args.repo_root.resolve())
+        if args.validate_only:
+            report = validate_collection(args.collection)
+            if args.require_no_gaps and report["unresolved_gaps"]:
+                raise ValueError("release notice collection contains unresolved package gaps")
+        else:
+            package(
+                args.collection,
+                args.font_source,
+                args.destination,
+                args.repo_root.resolve(),
+                require_no_gaps=args.require_no_gaps,
+            )
     except (OSError, ValueError, KeyError, TypeError, AttributeError, json.JSONDecodeError) as error:
         parser.error(str(error))
 

@@ -14,6 +14,27 @@ references_previous="$resources/references.previous.$$"
 references_moved=""
 output_staging=""
 release_notices_source="${RUSTUI_RELEASE_NOTICES_DIR:-}"
+release_notices_required="${RUSTUI_RELEASE_NOTICES_REQUIRED:-0}"
+case "$release_notices_required" in
+    0|1) ;;
+    *)
+        printf '%s\n' 'RUSTUI_RELEASE_NOTICES_REQUIRED must be 0 or 1' >&2
+        exit 1
+        ;;
+esac
+if [ "$release_notices_required" = 1 ]; then
+    if [ -z "$release_notices_source" ]; then
+        printf '%s\n' 'release packaging requires RUSTUI_RELEASE_NOTICES_DIR' >&2
+        exit 1
+    fi
+    python3 "$repository_root/scripts/package_release_notices.py" \
+        --validate-only \
+        --require-no-gaps \
+        --collection "$release_notices_source" \
+        --font-source "$repository_root/crates/rustui/assets/fonts" \
+        --repo-root "$repository_root" \
+        --destination "$resources/licenses/release"
+fi
 fresh_bundle_marker=""
 
 cleanup() {
@@ -133,11 +154,20 @@ mkdir -p "$resources/licenses/icons"
 copy_output "$repository_root/vendor/gpui-kit-assets-0.7.3/LICENSE-LUCIDE" \
     "$resources/licenses/icons/LICENSE-LUCIDE"
 if [ -n "$release_notices_source" ]; then
-    python3 "$repository_root/scripts/package_release_notices.py" \
-        --collection "$release_notices_source" \
-        --font-source "$repository_root/crates/rustui/assets/fonts" \
-        --repo-root "$repository_root" \
-        --destination "$resources/licenses/release"
+    if [ "$release_notices_required" = 1 ]; then
+        python3 "$repository_root/scripts/package_release_notices.py" \
+            --require-no-gaps \
+            --collection "$release_notices_source" \
+            --font-source "$repository_root/crates/rustui/assets/fonts" \
+            --repo-root "$repository_root" \
+            --destination "$resources/licenses/release"
+    else
+        python3 "$repository_root/scripts/package_release_notices.py" \
+            --collection "$release_notices_source" \
+            --font-source "$repository_root/crates/rustui/assets/fonts" \
+            --repo-root "$repository_root" \
+            --destination "$resources/licenses/release"
+    fi
 fi
 references_staging=$(mktemp -d "$resources/.references.next.XXXXXX")
 cp -R "$references_dir/." "$references_staging/"

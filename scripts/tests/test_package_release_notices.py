@@ -58,13 +58,18 @@ class PackageReleaseNoticesTests(unittest.TestCase):
     def tearDown(self):
         self.temp.cleanup()
 
-    def run_package(self, collection=None, destination=None, repo_root=None, font_source=None):
-        return subprocess.run([sys.executable, str(SCRIPT), "--collection",
-                               str(collection if collection is not None else self.collection),
-                               "--font-source", str(font_source if font_source is not None else self.fonts),
-                               "--repo-root", str(repo_root if repo_root is not None else self.root),
-                               "--destination", str(destination if destination is not None else self.destination)],
-                              text=True, capture_output=True)
+    def run_package(self, collection=None, destination=None, repo_root=None, font_source=None,
+                    require_no_gaps=False, validate_only=False):
+        command = [sys.executable, str(SCRIPT), "--collection",
+                   str(collection if collection is not None else self.collection),
+                   "--font-source", str(font_source if font_source is not None else self.fonts),
+                   "--repo-root", str(repo_root if repo_root is not None else self.root),
+                   "--destination", str(destination if destination is not None else self.destination)]
+        if require_no_gaps:
+            command.append("--require-no-gaps")
+        if validate_only:
+            command.append("--validate-only")
+        return subprocess.run(command, text=True, capture_output=True)
 
     def test_rejects_inconsistent_gap_reports_without_replacing_bundle(self):
         initial = self.run_package()
@@ -138,10 +143,38 @@ class PackageReleaseNoticesTests(unittest.TestCase):
             REPORT_TEXT.replace("unresolved notice gaps: 1", "unresolved notice gaps: 0"),
             encoding="utf-8",
         )
-        result = self.run_package()
+        preflight = self.run_package(require_no_gaps=True, validate_only=True)
+        self.assertEqual(preflight.returncode, 0, preflight.stderr)
+        self.assertFalse(self.destination.exists())
+
+        result = self.run_package(require_no_gaps=True)
         self.assertEqual(result.returncode, 0, result.stderr)
         packaged = json.loads((self.destination / "dependency-notices/report.json").read_text())
         self.assertEqual(packaged["unresolved_gaps"], [])
+
+    def test_require_no_gaps_rejects_report_without_replacing_bundle(self):
+        initial = self.run_package()
+        self.assertEqual(initial.returncode, 0, initial.stderr)
+        report_path = self.destination / "dependency-notices/report.json"
+        original_report = report_path.read_bytes()
+
+        result = self.run_package(require_no_gaps=True)
+
+        self.assertNotEqual(result.returncode, 0)
+        self.assertIn("unresolved package gaps", result.stderr)
+        self.assertEqual(report_path.read_bytes(), original_report)
+
+    def test_validate_only_rejects_gaps_without_creating_destination(self):
+        destination = self.root / "not-created"
+        result = self.run_package(
+            destination=destination,
+            require_no_gaps=True,
+            validate_only=True,
+        )
+
+        self.assertNotEqual(result.returncode, 0)
+        self.assertIn("unresolved package gaps", result.stderr)
+        self.assertFalse(destination.exists())
 
     def test_packages_and_repackages_verified_data(self):
         for _ in range(2):

@@ -14,6 +14,21 @@ bundle="$target_root/debug/RustUI Playground.app"
 mkdir -p "$target_root/debug" "$references_source/Nested Folder" "$notice_source/notices"
 printf '%s\n' '#!/bin/sh' 'exit 0' > "$binary"
 chmod 755 "$binary"
+
+strict_missing_bundle="$target_root/debug/Strict Missing Notices.app"
+if RUSTUI_RELEASE_NOTICES_REQUIRED=1 \
+    RUSTUI_PLAYGROUND_BINARY="$binary" \
+    RUSTUI_PLAYGROUND_BUNDLE_PATH="$strict_missing_bundle" \
+    RUSTUI_RELEASE_NOTICES_DIR="" \
+    "$repository_root/apps/rustui-playground/package-app.sh" >/dev/null 2>&1; then
+    printf '%s\n' 'strict release packaging accepted a missing notice collection' >&2
+    exit 1
+fi
+if [ -e "$strict_missing_bundle" ]; then
+    printf '%s\n' 'strict release packaging created a bundle without notices' >&2
+    exit 1
+fi
+
 printf '%s\n' '<svg />' > "$references_source/Nested Folder/Example.svg"
 printf '%s\n' 'verbatim dependency notice' > "$notice_source/notices/LICENSE"
 python3 - "$notice_source" <<'PY'
@@ -48,6 +63,21 @@ CARGO_TARGET_DIR="$target_root" \
 RUSTUI_RELEASE_NOTICES_DIR="$notice_source" \
 RUSTUI_PLAYGROUND_REFERENCES_DIR="$references_source" \
     "$repository_root/apps/rustui-playground/package-app.sh" >/dev/null
+
+bundle_before_strict_gap_check="$temporary_root/bundle before strict gap check"
+cp -R "$bundle" "$bundle_before_strict_gap_check"
+if CARGO_TARGET_DIR="$target_root" \
+    RUSTUI_RELEASE_NOTICES_REQUIRED=1 \
+    RUSTUI_RELEASE_NOTICES_DIR="$notice_source" \
+    RUSTUI_PLAYGROUND_REFERENCES_DIR="$references_source" \
+    "$repository_root/apps/rustui-playground/package-app.sh" >/dev/null 2>&1; then
+    printf '%s\n' 'strict release packaging accepted unresolved notice gaps' >&2
+    exit 1
+fi
+if ! diff -r "$bundle_before_strict_gap_check" "$bundle" >/dev/null; then
+    printf '%s\n' 'strict release packaging modified an existing bundle on notice gaps' >&2
+    exit 1
+fi
 
 test -x "$bundle/Contents/MacOS/rustui-playground"
 test -f "$bundle/Contents/Info.plist"

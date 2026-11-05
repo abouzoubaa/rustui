@@ -5688,3 +5688,64 @@ running and untouched. This confirms the release gate now blocks on notice
 gaps; it does not resolve notice provenance, exact linked-runtime closure, or
 legal review. No evidence milestone or acceptance check closed; MVP remains
 23/34 (67.65%) and acceptance remains 2/11 (18.18%).
+
+### R31 exact-source notice audit — 2026-11-05
+
+The five gaps in the macOS notice report were checked against cached official
+crate archives; exact upstream release tags and trees were checked where
+available. The archive SHA-256 values below match the Cargo.lock checksum where Cargo.lock has a
+registry checksum; `block` is patched to a local vendor path, so its official
+archive hash was instead matched to the vendor checksum and cached archive.
+None of the five exact crate archives contains a file named LICENSE, LICENCE,
+COPYING, or NOTICE. Cargo manifest license identifiers remain metadata only.
+
+| Package | Archive SHA-256 | Upstream source identity | Notice result |
+| --- | --- | --- | --- |
+| `block 0.1.6` | `0d8c1fef690941d3e7788d328517591fecc684c084084702d6ff1641e993699a` | [`SSheldon/rust-block` tag `0.1.6`](https://github.com/SSheldon/rust-block/tree/47178790cfc9d4a8b092051d8b413b78bd31254a), commit `47178790cfc9d4a8b092051d8b413b78bd31254a` | Archive and tagged tree have no notice/license file. |
+| `mac 0.1.1` | `c41e0c4fef86961ac6d6f8a82609f55f31b05e4fce149ac5710e439df7619ba4` | [`reem/rust-mac` tag `0.1.1`](https://github.com/reem/rust-mac/tree/66afc663b68a65633ea165c742b5a9c6734581c2), commit `66afc663b68a65633ea165c742b5a9c6734581c2` | Archive and tagged tree have no notice/license file. |
+| `malloc_buf 0.0.6` | `62bb907fe88d54d8d9ce32a3cceab4218ed2f6b7d35617cafe9adf84e43919cb` | [`SSheldon/malloc_buf` tag `0.0.6`](https://github.com/SSheldon/malloc_buf/tree/a7811e5f4c6f9685dd57ad9bfe34e9bf6b0ba4f9), commit `a7811e5f4c6f9685dd57ad9bfe34e9bf6b0ba4f9` | Archive and tagged tree have no notice/license file. |
+| `pathfinder_geometry 0.5.1` | `0b7b7e7b4ea703700ce73ebf128e1450eb69c3a8329199ffbfb9b2a0418e5ad3` | `.cargo_vcs_info.json` records `servo/pathfinder` revision `a5e98fac00f433fe2ff4b2135383d82491b8bfc5`; that revision could not be retrieved from the upstream repository during this audit. [Issue #443](https://github.com/servo/pathfinder/issues/443) reports that published crates omit the repository's root `LICENSE-MIT` and `LICENSE-APACHE` files, but does not bind their contents to this crate revision. | Archive has no notice/license file; exact revision's license text and hashes remain unverified. |
+| `seahash 4.1.0` | `1c107b6f4780854c8b126e228ea8869f4d7b71260f962fefb57b996b8959ba6b` | [`redox-os/seahash` release commit](https://gitlab.redox-os.org/redox-os/seahash/-/commit/94b632aeac099031c373599313d5b5f0acbbaec0), matching the crate's recorded VCS revision `94b632aeac099031c373599313d5b5f0acbbaec0` | Archive and tagged source tree have no notice/license file. |
+
+**Decision:** this completes the five-package source audit with a negative
+result. Keep the macOS packaging gate blocked for all five packages. Do not
+copy text from unrelated revisions or synthesize notices from manifest
+metadata. Resolution requires version-bound notice/license provenance from an
+authoritative source and the project's licensing review. The source audit
+does not close R31 release acceptance; the earlier full release run stopped
+before packaging on these same five gaps. No evidence milestone or acceptance
+check is closed by this audit; MVP remains 23/34 (67.65%) and acceptance
+remains 2/11 (18.18%).
+
+### R31 release-only packaging boundary — 2026-11-05
+
+Review found that the generic Playground app packager intentionally permits
+developer bundles without dependency notices, but a direct invocation could
+therefore omit notices even when intended for release. Preserve that default
+developer workflow. `verify-release.sh macos` now opts into strict packaging;
+strict mode requires a notice collection and validates it before bundle writes,
+then rejects any unresolved package gaps again while adding the notice files.
+The strict option is named for its actual guarantee and does not claim legal or
+license completeness.
+
+Focused results after this change:
+
+- `python3 scripts/tests/test_package_release_notices.py`: 11/11 passed,
+  including strict gap rejection, preflight without destination creation, and
+  successful strict packaging when the report has no gaps.
+- `python3 scripts/tests/test_collect_dependency_notices.py`: 22/22 passed.
+- `sh scripts/tests/test_package_playground_app.sh`: passed, including strict
+  missing-source rejection, strict rejection of an incomplete report without
+  changing an existing bundle, and retained default developer packaging.
+- `sh -n apps/rustui-playground/package-app.sh`,
+  `bash -n scripts/verify-release.sh`, and `git diff --check`: passed.
+- Retained command output:
+  `target/headstart/evidence/native-release-notice-boundary-tests-20261105.log`
+  (SHA-256 `50444589fb7ceaac614bf4f8474394a188673a9644ad94be2f74aca3e4eb37de`).
+
+The full macOS release run has not been repeated after this boundary change.
+Its last recorded run stopped before packaging because the same five source
+notice gaps remain; this code change does not resolve their provenance or
+license-sufficiency review. R31 remains 2/3, with no evidence milestone or
+acceptance check closed; MVP remains 23/34 (67.65%) and acceptance remains
+2/11 (18.18%).

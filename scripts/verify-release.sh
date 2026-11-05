@@ -134,6 +134,7 @@ print(executables.pop())
 PY
 )"
     RUSTUI_PLAYGROUND_BINARY="$binary" \
+    RUSTUI_RELEASE_NOTICES_REQUIRED=1 \
     RUSTUI_RELEASE_NOTICES_DIR="$notices" \
       apps/rustui-playground/package-app.sh
     ;;
