@@ -5467,3 +5467,11 @@ outside-click dismissal, parent teardown, and owner-state behavior remain
 unverified. This build-path integration does not close the R15 native
 acceptance milestone; MVP remains 23/34 evidence milestones (67.65%) and 2/11
 acceptance checks (18.18%).
+
+### R15 popup v4 and current-source checks — 2026-11-05
+
+Commit `586e3bc2` versions approved macOS popup patch v4. Parent teardown snapshots the child count, traverses in reverse, removes each child relationship, and closes that child. Focused patch safety tests passed 7/7 (`target/headstart/evidence/macos-popup-patch-v4-tests-20261105.log`, SHA-256 `57767a5a1c93c741e5aacb3134b5ddc291753a0b64e10c16b5e38bd61dbd465f`); exact-source patch replay verified. Patch SHA-256 `d83e5fdfa57c0eeaa104b00d65ea717b3f5ca7d6e117cd2ac79f427ebd11febc`. The patched Playground Headstart check passed (exit 0; `target/headstart/evidence/r15-popup-v4-headstart-check-20261105.log`, SHA-256 `78afda92f7010eec7154c765318b084e3c3de5441a8d12d24416f30d4c64e353`); pinned backend preimages were restored exactly.
+
+On current HEAD `586e3bc2`, the workspace library suite passed 1,501 tests with zero failures and four ignored across six binaries (`native-library-tests-586e3bc2-20261105.log`, SHA-256 `94bb8e5c92f51a23c00ea9a32b9c4576484b9f680207124f5e94b72c5c4a85b1`). Workspace integration tests passed 60/60 across 34 binaries (`native-integration-tests-586e3bc2-20261105.log`, SHA-256 `e4781b282af4e556573346fced873f45339221a139a3f89f7aacbfda8672a508`). The focused root-window error-handler test passed 1/1 (`mvp-root-window-error-586e3bc2.log`, SHA-256 `53d0d49513935019cdb891c1372ffbabd8c1853cf1cec87b7e65f887e6ae4f84`). These source checks do not establish platform window-failure cleanup or popup runtime behavior.
+
+The live shared GUI slot remains occupied by the existing `c611` Playground process; no process or protected validation bundle was changed. Popup placement, physical outside-click dismissal, parent teardown, and owner-state behavior remain unverified. MVP remains 23/34 evidence milestones (67.65%) and 2/11 acceptance checks (18.18%).
