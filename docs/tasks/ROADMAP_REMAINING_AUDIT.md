@@ -5779,3 +5779,37 @@ MVP 67.65% (23/34 evidence milestones); acceptance 18.18% (2/11 checks).
 - `LogicalInsets` now rejects overflowing opposite-edge sums. `Container::padding` and `Card::padding` validate uniform padding through the same constructor. Boundary coverage accepts the exact finite half-range and rejects overflowing spans.
 - Focused results: `LogicalInsets` 3/3, `Container` 4/4, `Card` 8/8. `cargo fmt --all -- --check` and `git diff --check` passed. Logs: `target/headstart/evidence/native-logical-inset-span-tests-20261105.log`, `target/headstart/evidence/native-container-padding-span-tests-20261105.log`, and `target/headstart/evidence/native-card-padding-span-tests-20261105.log`.
 - The changed validation is source/test evidence only; native rendered layout acceptance remains open. MVP remains 23/34 evidence milestones (67.65%); acceptance remains 2/11 checks (18.18%). Commit `48e26a75` still awaits safe integration into `work/m118-diagnostics-provenance`.
+
+### Current-candidate native SplitView and Button GUI observations — 2026-11-05
+
+A current-source Playground build passed and was packaged once into the
+reusable disposable bundle `target/headstart/validation/RustUI Playground.app`
+(bundle ID `dev.rustui.playground`). The app executable SHA-256 was
+`0aa58c36d9697906392012a894e8b587563d6c104f2996e690a2a61403f4ef5c`, matching
+the just-built binary. The run used macOS 27.0 build `26A5425a` on the built-in
+XDR display (`3456 × 2234`). The previously protected `debug` and
+`verification/debug` bundles were left untouched.
+
+- **SplitView bounded native check:** a real pointer drag changed the first
+  divider from `159.4286` to `209.5` points. After removing and reinserting B,
+  the left/right pane counters remained `1`, B's new counter was `0`, and its
+  lifecycle counters ended at three mounts and two releases. The first divider
+  returned to `206.4146` points after reinsertion. This closes the bounded
+  native drag/topology observation. The explicit zero-width container scenario
+  from the source regression was not reproduced live, so it remains source-test
+  evidence only; broader SplitView and production acceptance remain open.
+- **Button partial MVP evidence:** Tab/Space reached and activated Increment and
+  Reset (`0 → 1 → 2 → 0`). Tab skipped the disabled `Unavailable` button. With
+  the story's disabled toggle on, Tab and Shift-Tab skipped disabled Increment
+  and Reset, and clicks left the count unchanged. Re-enabling restored keyboard
+  activation. The full Basic controls checklist remains open.
+
+The validation process exited, `pgrep -fl '^rustui-playground$'` returned no
+process, and the disposable bundle and standalone executable created for this
+run were removed. Cargo dependency and incremental caches were preserved. Exact
+source/binary identity and observations are recorded in
+`target/headstart/evidence/native-mvp-bounded-gui-20261105.md`.
+
+MVP remains 23/34 evidence milestones (67.65%); acceptance remains 2/11 checks
+(18.18%). These partial Button observations do not close the full Basic controls
+checkbox, and SplitView is outside the 34-item MVP checklist.

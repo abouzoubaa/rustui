@@ -24,6 +24,15 @@ keyboard retry passed. Exact observations and executable hash are in
 policies and the complete basic-controls check remain open. MVP stays 67.74%
 (21/31 evidence milestones) and 2/10 acceptance checks (20%).
 
+## Current-candidate native Button keyboard follow-up — 2026-11-05
+
+On the current-source Playground, Space activated Increment and Reset.
+Tab skipped the disabled `Unavailable` button; after the story disabled
+Increment and Reset, Tab and Shift-Tab skipped both, and clicking either left
+the counter unchanged. Re-enabling restored keyboard activation. The full Basic
+controls checklist remains open; this partial evidence does not change MVP
+totals. Evidence: `target/headstart/evidence/native-mvp-bounded-gui-20261105.md`.
+
 ## Current-candidate native text editing — 2026-11-04
 
 On the rebuilt combined-controls consumer, Tab focused TextField; selecting all
