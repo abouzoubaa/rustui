@@ -5594,3 +5594,29 @@ This is source-level test evidence, including GPUI's simulated test context; it
 does not verify live macOS IME behavior or close the native text-editing
 acceptance check. No evidence milestone closed; MVP remains 23/34 (67.65%) and
 acceptance remains 2/11 (18.18%).
+
+### R04 macOS window-open failure source audit — 2026-11-05
+
+Review of the pinned macOS platform path found one explicit recoverable error
+branch in `MacPlatform::open_window`: `PopupNotSupportedError` at
+`vendor/gpui-pre-macos-0.3.9/src/platform.rs:768-797`. Otherwise it constructs
+`MacWindow::open` and returns `Ok`; `MacWindow::open` returns `Self`, not `Result`
+(`vendor/gpui-pre-macos-0.3.9/src/window.rs:963-985`). The approved v4 popup
+patch removes that unsupported-popup branch for the macOS build path.
+
+RustUI's root-window wrapper formats a GPUI open error, and the application
+calls the configured error hook or logs and quits
+(`crates/rustui/src/runtime/window.rs:94-113`;
+`crates/rustui/src/runtime/application.rs:17-24, 445-448`). Its current unit
+test invokes the handler with a synthetic error string; it does not create a
+platform failure. The available GPUI test injection route is not public to
+RustUI tests: `TestPlatform` is `pub(crate)` and `TestAppContext::build_with_platform`
+is private (`vendor/gpui-pre-0.3.9/src/platform/test/platform.rs:30, 195`;
+`vendor/gpui-pre-0.3.9/src/app/test_context.rs:164`).
+
+No separate RustUI cleanup defect or supported failure-injection seam was
+found. The broader R04 platform-failure lifecycle check remains open pending
+an observed native failure or an approved GPUI test seam; the earlier
+unsupported-popup probe does not prove other native failure paths. No evidence
+milestone closed; MVP remains 23/34 (67.65%) and acceptance remains 2/11
+(18.18%).
