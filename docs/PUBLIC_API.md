@@ -1094,6 +1094,23 @@ to handle the failure instead, for example by showing a recovery window or
 calling `cx.quit()`. The handler runs on the application thread and owns the
 decision to quit or recover.
 
+## Native anchored popups
+
+On native targets, `rustui::runtime::open_anchored_popup` returns the GPUI
+window handle after successfully opening the popup. Keep that handle when the
+caller needs to dismiss the popup explicitly, then close it from the app context:
+
+```rust
+popup
+    .update(cx, |_, window, _| window.remove_window())
+    .expect("popup window is still open");
+```
+
+The handle is only returned on success. A platform that does not support native
+anchored windows returns its platform error; use the in-window `Popover` for
+portable content. Native placement, outside-click dismissal, and parent-window
+teardown still require platform validation.
+
 ## Localization activation
 
 Parse catalogs with `Catalog::parse`, register them in `Catalogs`, then activate

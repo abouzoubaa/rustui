@@ -32,7 +32,8 @@ pub struct AnchoredPopupOptions {
 /// The popup opens below the anchor and adjusts to remain on screen. Its parent
 /// is the supplied window, so it follows that window and closes with it. On
 /// platforms without native anchored-window support, this returns the platform
-/// error; use RustUI's in-window `Popover` component for portable content.
+/// error; use RustUI's in-window `Popover` component for portable content. The
+/// returned handle can be used to close the popup explicitly.
 #[cfg(not(target_family = "wasm"))]
 pub fn open_anchored_popup<V: View>(
     root: V,
@@ -40,7 +41,7 @@ pub fn open_anchored_popup<V: View>(
     options: AnchoredPopupOptions,
     parent: &mut Window,
     cx: &mut App,
-) -> Result<(), String> {
+) -> Result<AnyWindowHandle, String> {
     let (anchor_x, anchor_y, anchor_width, anchor_height) = options.anchor_rect;
     let (width, height) = options.size;
     if ![
@@ -88,7 +89,7 @@ pub fn open_anchored_popup<V: View>(
         ))),
         ..WindowOptions::default()
     };
-    open_root_window_handle(root, environment, window_options, cx).map(|_| ())
+    open_root_window_handle(root, environment, window_options, cx)
 }
 
 fn open_root_window_handle<V: View>(
@@ -361,7 +362,7 @@ mod tests {
         });
         let popup = cx.update(|app| {
             let previous_count = app.windows().len();
-            parent
+            let popup = parent
                 .update(app, |_, window, app| {
                     super::open_anchored_popup(
                         LifecycleProbe {
@@ -376,13 +377,11 @@ mod tests {
                         window,
                         app,
                     )
-                    .unwrap();
+                    .unwrap()
                 })
                 .unwrap();
             assert_eq!(app.windows().len(), previous_count + 1);
-            *app.windows()
-                .last()
-                .expect("popup root window should exist")
+            popup
         });
 
         cx.run_until_parked();

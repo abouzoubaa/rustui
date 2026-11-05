@@ -5634,3 +5634,25 @@ AppKit placement, outside-click dismissal, parent-window teardown, or native
 owner-state behavior. Those popup acceptance items remain open. No evidence
 milestone closed; MVP remains 23/34 (67.65%) and acceptance remains 2/11
 (18.18%).
+
+### R15 explicit popup handle API — 2026-11-05
+
+`open_anchored_popup` now returns the opened `AnyWindowHandle` on success. The
+existing TestAppContext close regression uses that returned handle to call
+`Window::remove_window`, then verifies the popup root unmounts once. Public API
+documentation shows the explicit close path and states that native placement,
+outside-click dismissal, and parent-window teardown still need platform
+validation. Workspace formatting passed with
+`rustup run 1.97.1 cargo fmt --all -- --check`; focused locked offline test
+passed 1/1 with
+`./scripts/cargo-headstart test -p rustui --lib --locked --offline closing_anchored_popup_unmounts_its_root -- --nocapture`. The Playground consumer check also passed with
+`./scripts/cargo-headstart check -p rustui-playground --locked --offline`.
+Evidence: `target/headstart/evidence/r15-popup-handle-api-test-20261105.log`
+(SHA-256 `f3ad31026a386cf01b3d4855de6fbf1b308726bcfd2b8fa35ce3769923492a8f`) and
+`target/headstart/evidence/r15-popup-handle-playground-check-20261105.log`
+(SHA-256 `fd8a07a12d1709b85630e902acc51718e8ff8ef28002b9a899d108a30565ef9d`).
+This is simulated TestAppContext evidence for explicit popup close and root
+unmount only. It does not test AppKit placement, physical outside-click
+behavior, or parent-close cascade; the current TestPlatform drops the parent
+relationship. No evidence milestone closed; MVP remains 23/34 (67.65%) and
+acceptance remains 2/11 (18.18%).
