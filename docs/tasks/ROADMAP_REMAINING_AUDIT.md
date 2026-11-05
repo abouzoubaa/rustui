@@ -5580,3 +5580,17 @@ The approved v4 macOS popup patch passed GPUI's top-left anchor rectangle direct
 Proposal: `patches/proposed/gpui-macos-anchored-popup-v5-coordinate-fix.patch` (SHA-256 `5626c7c499b464fec8dc5b88cb55fc091a00ca1084b7150354dc9ea9bb8e442e`). It is a small delta on top of approved v4, validated as a v4+v5 stack from the exact pinned preimages. `patch -p1 --dry-run` and replay passed in temporary copies; resulting v4 backend file hash stayed `6f7b88ef87d757c022a505f5b33104e727bd4e8e4ebdc6b7f3c9a5e0823c8aa6`, and the proposed window postimage hash is `33a9b7bc0467c07cc9eda1b9c231e32bf0aca144afccd5b2cb1dc8fc867491ac`. The v5 file parses under Rustfmt. Comparing v4 and v5 formatting output shows the same two pre-existing formatting differences in the v4 placement tests; no new v5 lines were flagged. A temporary Rust unit harness for the same conversion arithmetic passed 1/1 (flipped Y=50, unflipped Y=182); it used lightweight rectangle types and did not compile or exercise AppKit/GPUI. The added vendored Rust unit test is present but was not executed. A v4+v5 test-binary compile in an isolated package copy did not reach Rust compilation: the first attempt failed locked offline resolution (`cocoa 0.26.0` is absent from the vendor source; log `target/headstart/evidence/r15-popup-v5-isolated-test-compile-20261105.log`, SHA-256 `3b95f4bcd3d98534cdabe29ab4f88b37e393253dada9b8cd0f6b5608f08cf063`); a retry matching the root patch table and omitting unrelated screen-capture optionals failed resolution on missing `gpui-pre-bench-metrics` (log `target/headstart/evidence/r15-popup-v5-isolated-test-compile-retry-20261105.log`, SHA-256 `8a26f8a415cf521fa613fb79e246bbaf2ef219b5f6950f8c484b276b04242bcf`). Running the vendored package directly is also rejected because it is excluded from the root workspace. These are harness/dependency-cache blockers, not v5 compile results. The approved v4 replay checker still returns `verified`, and both vendored macOS files remain at their exact pinned preimage hashes.
 
 This is source-level proposal evidence only: the proposed patch was not promoted or activated in the build path, the vendored Rust tests were not run, and native placement/outside-click/parent-teardown/owner-state acceptance remains open because the shared Playground GUI slot is occupied by the protected existing process. No MVP milestone closed; totals remain 23/34 evidence milestones (67.65%) and 2/11 acceptance checks (18.18%). User approval is required before promoting v5.
+
+### R06/R15 current-source marked-text regression suite — 2026-11-05
+
+On current source HEAD 5e4666c7, the locked offline Headstart library run
+`./scripts/cargo-headstart test -p rustui --lib --locked --offline preedit -- --nocapture`
+passed 7/7 tests (zero failures). It covers TextField owner synchronization
+during marked preedit, repeated preedit, cancellation, selection replacement,
+and external owner updates, plus two TextEditor preedit/owner-sync regressions.
+Evidence: `target/headstart/evidence/native-textfield-marked-preedit-tests-5e4666c7-20261105.log`
+(SHA-256 `38621735f6d56c9664d22aa6266eb86e90703608a0b6483c53bdf0005a40d3cf`).
+This is source-level test evidence, including GPUI's simulated test context; it
+does not verify live macOS IME behavior or close the native text-editing
+acceptance check. No evidence milestone closed; MVP remains 23/34 (67.65%) and
+acceptance remains 2/11 (18.18%).
