@@ -5561,3 +5561,14 @@ legal sufficiency. All five gaps therefore remain release blockers pending
 verified notice provenance and legal review; no license text was synthesized
 or added. No evidence milestone closed; MVP remains 23/34 (67.65%) and
 acceptance 2/11 (18.18%).
+
+### Native popup click-coordinate contract — 2026-11-05
+
+Source review confirms the Playground passes `MouseDownEvent.position` directly
+as a 1-by-1 anchor rectangle. Pinned GPUI documents that position as relative to
+the window (`vendor/gpui-pre-0.3.9/src/interactive.rs:148-153`), matching
+RustUI's parent-relative anchor contract (`crates/rustui/src/runtime/window.rs:21-25`).
+No source-level coordinate-space mismatch was found. This does not prove the
+macOS panel's rendered screen placement; live placement, outside-click
+dismissal, parent teardown, and owner-state checks remain pending. MVP remains
+23/34 evidence milestones (67.65%) and 2/11 acceptance checks (18.18%).
