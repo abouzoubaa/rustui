@@ -5532,3 +5532,32 @@ This is source/build and notice-collection evidence only: it does not verify
 live popup placement, outside-click dismissal, parent teardown, or popup owner
 state, and it does not close the separate licensing review. MVP remains 23/34
 evidence milestones (67.65%) and 2/11 acceptance checks (18.18%).
+
+### Native dependency-notice runtime-scope audit — 2026-11-05
+
+The latest release notice report observed 446 build packages and five gaps.
+A target-specific normal dependency tree for `rustui-playground`
+(`aarch64-apple-darwin`) contains every gap, and the current optimized release
+build emitted a library compiler-artifact message for each:
+
+- `block 0.1.6`: `gpui-pre-macos` → `cocoa` → `block`.
+- `mac 0.1.1`: `gpui-base` → `html5ever` → `mac`.
+- `malloc_buf 0.0.6`: `gpui-pre-macos` → `cocoa` → `cocoa-foundation` → `objc` → `malloc_buf`.
+- `pathfinder_geometry 0.5.1`: `gpui-pre-macos` → `gpui-pre-apple` → `pathfinder_geometry`.
+- `seahash 4.1.0`: `gpui-pre` → `seahash`.
+
+Reproducible scope summary:
+`target/headstart/evidence/native-runtime-notice-closure-20261105.json`
+(SHA-256
+`6d72939f81ef0eefff38fc96997b521bba1c5c248c8425e8504814093cce76dd`). Its
+inputs are the macOS normal dependency tree (SHA-256
+`54523580ece58dec84084ab540ff47e65291c8bd64075dc412915585f11e62f0`), release
+compiler-artifact JSONL (SHA-256
+`b2cdbbc9a87ac20372e0af82ba62b6ddb5358b513954c2a3c46fc0bcf47a66af`), and the
+latest notice report (SHA-256
+`a0a91266ab22a832671e692f26c37daf85ebd1f19c41dd0838f398566a90d233`). This
+proves normal-graph reachability and compilation, not exact linker retention or
+legal sufficiency. All five gaps therefore remain release blockers pending
+verified notice provenance and legal review; no license text was synthesized
+or added. No evidence milestone closed; MVP remains 23/34 (67.65%) and
+acceptance 2/11 (18.18%).
