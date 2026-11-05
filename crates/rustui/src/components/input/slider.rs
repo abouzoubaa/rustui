@@ -303,43 +303,45 @@ impl View for SliderView {
         let thumb_height = *style.lengths.get("height").expect("slider thumb height");
         let active_theme =
             active_theme(context.app()).expect("a RustUI component theme requires an active theme");
-        div().track_focus(&focus_parent).child(ThemedSlider {
-            state,
-            axis: if self.vertical {
-                Axis::Vertical
-            } else {
-                Axis::Horizontal
-            },
-            disabled: self.disabled,
-            reverse: self.reverse,
-            accessibility_label: self.accessibility_label.as_ref().map(|label| match label {
-                SliderLabel::Literal(label) => label.clone(),
-                SliderLabel::Message { id, fallback } => {
-                    resolved_message_label(id, context.localized_message(id.as_ref()), fallback)
-                }
-            }),
-            thumb_width,
-            thumb_height,
-            track_color: slider_track_color(
-                &style,
-                "track",
-                &active_theme.profile,
-                active_theme.mode,
-            ),
-            thumb_color: slider_role_color(
-                &style,
-                "thumb",
-                &active_theme.profile,
-                active_theme.mode,
-            ),
-            disabled_color: slider_role_color(
-                &style,
-                "disabled",
-                &active_theme.profile,
-                active_theme.mode,
-            ),
-        })
-        .into_any_element()
+        div()
+            .track_focus(&focus_parent)
+            .child(ThemedSlider {
+                state,
+                axis: if self.vertical {
+                    Axis::Vertical
+                } else {
+                    Axis::Horizontal
+                },
+                disabled: self.disabled,
+                reverse: self.reverse,
+                accessibility_label: self.accessibility_label.as_ref().map(|label| match label {
+                    SliderLabel::Literal(label) => label.clone(),
+                    SliderLabel::Message { id, fallback } => {
+                        resolved_message_label(id, context.localized_message(id.as_ref()), fallback)
+                    }
+                }),
+                thumb_width,
+                thumb_height,
+                track_color: slider_track_color(
+                    &style,
+                    "track",
+                    &active_theme.profile,
+                    active_theme.mode,
+                ),
+                thumb_color: slider_role_color(
+                    &style,
+                    "thumb",
+                    &active_theme.profile,
+                    active_theme.mode,
+                ),
+                disabled_color: slider_role_color(
+                    &style,
+                    "disabled",
+                    &active_theme.profile,
+                    active_theme.mode,
+                ),
+            })
+            .into_any_element()
     }
 }
 

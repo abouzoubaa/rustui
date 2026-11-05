@@ -5510,3 +5510,25 @@ integration evidence, not live popup acceptance: native placement, physical
 outside-click dismissal, parent teardown, and popup owner-state behavior remain
 open. The shared Playground GUI slot is still occupied, so MVP remains 23/34
 evidence milestones (67.65%) and 2/11 acceptance checks (18.18%).
+
+### Native macOS release gate after popup development launcher — 2026-11-05
+
+The first `./scripts/verify-release.sh macos` attempt stopped at the workspace
+format check. Rustfmt reported one existing formatting mismatch in
+`crates/rustui/src/components/input/slider.rs`; the targeted file was formatted,
+and `rustup run 1.97.1 cargo fmt --all -- --check` then passed. No other source
+file required formatting.
+
+The full macOS release gate subsequently passed (exit 0) on the updated popup
+launcher and formatted slider source. It verified the patch stack, workspace and
+external-consumer builds/tests, optimized Playground build, and dependency
+notice collection. Evidence:
+`target/headstart/evidence/rustui-macos-release-check-popup-wrapper-retry-20261105.log`
+(SHA-256
+`22107c7220b0d2f277c1f1964f7a0c2a8f43788cd8f19cf32a3c5ea062f1699d`). The
+report observed 446 build packages and still has five native notice gaps. The
+macOS popup patch restoration check returned `already-reversed` after the gate.
+This is source/build and notice-collection evidence only: it does not verify
+live popup placement, outside-click dismissal, parent teardown, or popup owner
+state, and it does not close the separate licensing review. MVP remains 23/34
+evidence milestones (67.65%) and 2/11 acceptance checks (18.18%).
