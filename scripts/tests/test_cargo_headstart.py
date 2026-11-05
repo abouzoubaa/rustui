@@ -147,5 +147,71 @@ class CargoHeadstartTests(unittest.TestCase):
             self.assertIn("must be 0 or 1", result.stderr)
 
 
+    def test_macos_popup_patch_wraps_development_cargo_and_preserves_outer_owner(self) -> None:
+        with tempfile.TemporaryDirectory(prefix="headstart popup ") as temporary:
+            root = Path(temporary)
+            scripts = root / "scripts"
+            scripts.mkdir()
+            launcher = scripts / "cargo-headstart"
+            launcher.write_bytes(LAUNCHER.read_bytes())
+            launcher.chmod(0o755)
+            helper = scripts / "apply_gpui_macos_anchored_popup_patch.py"
+            helper.write_text(
+                "import os, sys\n"
+                "with open(os.environ['PATCH_LOG'], 'a') as log:\n"
+                "    log.write('reverse\\n' if '--reverse' in sys.argv else 'apply\\n')\n"
+                "print('reversed' if '--reverse' in sys.argv else "
+                "os.environ.get('PATCH_APPLY_STATE', 'applied'))\n",
+                encoding="utf-8",
+            )
+            (root / "vendor/gpui-pre-macos-0.3.9/src").mkdir(parents=True)
+            fake_bin = root / "fake-bin"
+            fake_bin.mkdir()
+            uname = fake_bin / "uname"
+            uname.write_text("#!/bin/sh\nprintf '%s\\n' Darwin\n", encoding="utf-8")
+            uname.chmod(0o755)
+
+            host = re.search(
+                r"^host: (.+)$", subprocess.check_output(["rustc", "-vV"], text=True), re.MULTILINE
+            )[1]
+            headstart = root / "headstart"
+            rustc = headstart / "rustc/build" / host / "stage1/bin/rustc"
+            rustc.parent.mkdir(parents=True)
+            rustc.write_text("#!/bin/sh\nexit 0\n", encoding="utf-8")
+            rustc.chmod(0o755)
+            cargo = headstart / "cargo/target/release/cargo"
+            cargo.parent.mkdir(parents=True)
+            cargo.write_text("#!/bin/sh\nexit \"${CARGO_FAKE_EXIT:-0}\"\n", encoding="utf-8")
+            cargo.chmod(0o755)
+
+            log = root / "patch.log"
+            env = os.environ.copy()
+            for name in ("RUSTC", "RUSTDOC", "DYLD_LIBRARY_PATH"):
+                env.pop(name, None)
+            env.update(
+                RUSTUI_HEADSTART_ROOT=str(headstart),
+                CARGO_TARGET_DIR=str(root / "target"),
+                PATH=str(fake_bin) + os.pathsep + env["PATH"],
+                PATCH_LOG=str(log),
+            )
+
+            result = subprocess.run([str(launcher), "check"], env=env, capture_output=True, text=True)
+            self.assertEqual(result.returncode, 0, result.stderr)
+            self.assertEqual(log.read_text(encoding="utf-8").splitlines(), ["apply", "reverse"])
+
+            log.write_text("", encoding="utf-8")
+            env["PATCH_APPLY_STATE"] = "already-applied"
+            result = subprocess.run([str(launcher), "check"], env=env, capture_output=True, text=True)
+            self.assertEqual(result.returncode, 0, result.stderr)
+            self.assertEqual(log.read_text(encoding="utf-8").splitlines(), ["apply"])
+
+            log.write_text("", encoding="utf-8")
+            env.pop("PATCH_APPLY_STATE")
+            env["CARGO_FAKE_EXIT"] = "23"
+            result = subprocess.run([str(launcher), "check"], env=env, capture_output=True, text=True)
+            self.assertEqual(result.returncode, 23)
+            self.assertEqual(log.read_text(encoding="utf-8").splitlines(), ["apply", "reverse"])
+
+
 if __name__ == "__main__":
     unittest.main()

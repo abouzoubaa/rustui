@@ -5485,3 +5485,28 @@ On source HEAD `f549eddf`, `python3 scripts/verify_dependency_boundary.py --all 
 The latest native notice report in the evidence tree is `native-dependency-notices-checked-20261031T062004Z-35562`: 446 observed build packages and five unresolved notice gaps. It explicitly covers packages observed in Cargo build JSON, including build dependencies, not the exact linked runtime closure. The gaps are `block 0.1.6` (MIT), `mac 0.1.1` (MIT/Apache-2.0), `malloc_buf 0.0.6` (MIT), `pathfinder_geometry 0.5.1` (MIT/Apache-2.0), and `seahash 4.1.0` (MIT). The current supplement manifest hash still matches that report (`e3c7dc0b9fa5a72c773bf99d45785d86c324a0cd488945922f22efc3c0a72695`).
 
 The cached package roots contain no license notice files for those five packages. Exact upstream release-tag trees were inspected for `block` (`SSheldon/rust-block` tag `0.1.6`, commit `47178790cfc9d4a8b092051d8b413b78bd31254a`), `mac` (`reem/rust-mac` tag `0.1.1`, commit `66afc663b68a65633ea165c742b5a9c6734581c2`), and `malloc_buf` (`SSheldon/malloc_buf` tag `0.0.6`, commit `a7811e5f4c6f9685dd57ad9bfe34e9bf6b0ba4f9`); none contains a LICENSE/COPYING/NOTICE path. Pathfinder's upstream [issue 443](https://github.com/servo/pathfinder/issues/443) documents that its published crates omit the repository's MIT/Apache license texts; the cached `pathfinder_geometry` source records VCS commit `a5e98fac00f433fe2ff4b2135383d82491b8bfc5`. The cached `seahash` source records VCS commit `94b632aeac099031c373599313d5b5f0acbbaec0` but has no notice file. No notice text was synthesized or added because exact copyright/license text and legal sufficiency are not established by the manifest's license expression alone. The five native gaps, exact linked-binary scope, and legal review remain open; the three Web gaps remain deferred.
+
+### R15 standard macOS development builds apply the popup patch — 2026-11-05
+
+The standard `scripts/cargo-headstart` launcher now applies approved macOS
+AnchoredPopup patch v4 for native Cargo commands and restores the exact pinned
+vendor preimages when the command exits, including a failed command. When the
+release verifier already owns an applied patch, the launcher detects that state
+and leaves restoration to the verifier. This closes the development-build gap
+that could make an ordinary macOS Playground run report that popups are not
+supported.
+
+The launcher suite passed 3/3, including simulated macOS patch application,
+restoration after Cargo failure, and preservation of an outer patch owner
+(`target/headstart/evidence/r15-popup-development-launcher-tests-20261105.log`,
+SHA-256
+`5ce77a0c3c4e091cb6372425282c52304c8c7def8c9c329be91196d148c0ef30`). The
+standard macOS Playground Headstart check passed (exit 0;
+`target/headstart/evidence/r15-popup-development-launcher-check-20261105.log`,
+SHA-256
+`d1f8568a43ab9ff7e4eb0f65608058c6f2f606ebe93a9a0810dbd7eedd6209c0`). The
+patch helper verified the pinned source restoration afterward. This is build
+integration evidence, not live popup acceptance: native placement, physical
+outside-click dismissal, parent teardown, and popup owner-state behavior remain
+open. The shared Playground GUI slot is still occupied, so MVP remains 23/34
+evidence milestones (67.65%) and 2/11 acceptance checks (18.18%).
