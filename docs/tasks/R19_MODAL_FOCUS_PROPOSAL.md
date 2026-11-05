@@ -1,7 +1,10 @@
 # R19: proposed Components modal focus recovery
 
 The separate [RustUI integration proposal](../../patches/proposed/rustui-modal-focus-integration-v1.patch)
-has SHA-256 `08da41626246846db1c1a9eb6d1a77ee490a2802c7977b526ee1a794f40ef0f8`.
+has SHA-256 `5fcfed26ceef92525e6b650385c685facd1615cfd39ff1f39cb62564700f8c8c`.
+It is rebased on the current `crates/rustui/src/runtime/window.rs` preimage
+`9899b606b34fae666b9a016773ef4d3584ca5c2d4d4a6decfccbdacd510efd85`; the
+proposed postimage is `8d1e02253aaf0cf2497a15d73a417eead5729a678163e99af94689b186ed0274`.
 It calls the proposed method directly when no element is focused. The method
 returns false when no modal exists; the isolated Components test covers that
 case. RustUI initializes Components before creating its Components root, and

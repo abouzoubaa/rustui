@@ -1,6 +1,6 @@
 --- a/crates/rustui/src/runtime/window.rs
 +++ b/crates/rustui/src/runtime/window.rs
-@@ -49,9 +49,9 @@
+@@ -135,9 +135,9 @@
          {
              return;
          }

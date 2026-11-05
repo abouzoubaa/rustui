@@ -5749,3 +5749,19 @@ notice gaps remain; this code change does not resolve their provenance or
 license-sufficiency review. R31 remains 2/3, with no evidence milestone or
 acceptance check closed; MVP remains 23/34 (67.65%) and acceptance remains
 2/11 (18.18%).
+
+### R19 modal focus proposal rebase — 2026-11-05
+
+The proposed RustUI integration patch was stale against the current
+`runtime/window.rs` after later popup-runtime edits. It has been rebased without
+changing RustUI or the pinned GPUI Components source. The exact-image checker
+now applies and reverses both the proposed Components patch and RustUI
+integration patch on disposable copies. The current RustUI patch preimage is
+`9899b606b34fae666b9a016773ef4d3584ca5c2d4d4a6decfccbdacd510efd85`, and its
+postimage is `8d1e02253aaf0cf2497a15d73a417eead5729a678163e99af94689b186ed0274`.
+
+This remains a proposal: the GPUI Components patch is not approved or enabled
+in the pinned build, and the RustUI integration has not been compiled against
+it. Promotion still requires explicit user approval, the versioned patch-stack
+apply/reverse workflow, integration regressions, and native/release validation.
+MVP 67.65% (23/34 evidence milestones); acceptance 18.18% (2/11 checks).

@@ -12,8 +12,8 @@ GROUPS = (
         ("vendor/gpui-component-0.7.3/src/root.rs", "root.rs", "c438aabc60f18252420a40e773e0aa4447fe89b00e27033c0ad7e5980b9c2749", "70eb3b61caf79896a09124271b23a8c67661d0c150d1899608710014d2e9a3b9"),
         ("vendor/gpui-component-0.7.3/src/window_ext.rs", "window_ext.rs", "697b8a6867d1f12085ac6c976568745f6ba4ca21f5a9727c7a74e30523ed77eb", "42f7d726334daf6dec12e46e1ef7cecab0cdccced6ba336c644edb0039d793df"),
     )),
-    ("rustui-modal-focus-integration-v1.patch", "08da41626246846db1c1a9eb6d1a77ee490a2802c7977b526ee1a794f40ef0f8", 1, (
-        ("crates/rustui/src/runtime/window.rs", "crates/rustui/src/runtime/window.rs", "2b83a34120232d8297c900d7c576bcaa6205d316245046f19b45362ebcdad9f1", "26bc28e6977dc5611000471d259d040f66a69afba5d0a3a4c9d1cf309416371d"),
+    ("rustui-modal-focus-integration-v1.patch", "5fcfed26ceef92525e6b650385c685facd1615cfd39ff1f39cb62564700f8c8c", 1, (
+        ("crates/rustui/src/runtime/window.rs", "crates/rustui/src/runtime/window.rs", "9899b606b34fae666b9a016773ef4d3584ca5c2d4d4a6decfccbdacd510efd85", "8d1e02253aaf0cf2497a15d73a417eead5729a678163e99af94689b186ed0274"),
     )),
 )
 
