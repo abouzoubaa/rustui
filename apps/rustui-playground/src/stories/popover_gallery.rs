@@ -1,12 +1,14 @@
 //! Popover ownership, inherited values, editing and release acceptance.
 
 use std::sync::{
-    Arc,
+    Arc, Mutex,
     atomic::{AtomicUsize, Ordering},
 };
 
 #[cfg(not(target_family = "wasm"))]
-use rustui::runtime::{AnchoredPopupOptions, EnvironmentValues, open_anchored_popup};
+use rustui::runtime::{
+    AnchoredPopupHandle, AnchoredPopupOptions, EnvironmentValues, open_anchored_popup,
+};
 use rustui::{localization::MessageArguments, prelude::*};
 
 use super::locale_selector::LocaleSelector;
@@ -19,6 +21,8 @@ pub fn demo() -> impl View {
 struct Probe {
     mounts: AtomicUsize,
     releases: AtomicUsize,
+    #[cfg(not(target_family = "wasm"))]
+    native_popup: Mutex<Option<AnchoredPopupHandle>>,
 }
 
 #[derive(Clone)]
@@ -33,6 +37,7 @@ struct PopoverHarness {
     #[state(0)]
     observations: u32,
     probe: Arc<Probe>,
+    native_probe: Arc<Probe>,
 }
 
 impl PopoverHarness {
@@ -53,9 +58,17 @@ impl PopoverHarness {
 impl View for PopoverHarness {
     fn body(&self) -> impl View {
         let probe = self.probe.clone();
+        #[cfg(not(target_family = "wasm"))]
+        let native_probe = self.native_probe.clone();
         let present = self.present();
         let mounts = self.probe.mounts.load(Ordering::SeqCst);
         let releases = self.probe.releases.load(Ordering::SeqCst);
+        #[cfg(not(target_family = "wasm"))]
+        let native_mounts = native_probe.mounts.load(Ordering::SeqCst);
+        #[cfg(not(target_family = "wasm"))]
+        let native_releases = native_probe.releases.load(Ordering::SeqCst);
+        #[cfg(not(target_family = "wasm"))]
+        let native_popup_open = native_probe.native_popup.lock().unwrap().is_some();
         let args = MessageArguments::new()
             .with("mounts", mounts as i64)
             .with("releases", releases as i64);
@@ -67,26 +80,57 @@ impl View for PopoverHarness {
         let content = content.child(HStack::new().child(Button(
             "Open native popup",
             AppAction::with_window_action({
-                let probe = probe.clone();
+                let probe = native_probe.clone();
                 move |event, window, cx| {
+                    if probe.native_popup.lock().unwrap().is_some() {
+                        return;
+                    }
                     let position = event.position();
                     let options = AnchoredPopupOptions {
                         anchor_rect: (position.x.as_f32(), position.y.as_f32(), 1.0, 1.0),
                         size: (280.0, 180.0),
                     };
-                    if let Err(error) = open_anchored_popup(
+                    match open_anchored_popup(
                         PopoverChild::new(probe.clone()),
                         EnvironmentValues::default(),
                         options,
                         window,
                         cx,
                     ) {
-                        eprintln!("RustUI could not open native popup: {error}");
+                        Ok(handle) => *probe.native_popup.lock().unwrap() = Some(handle),
+                        Err(error) => eprintln!("RustUI could not open native popup: {error}"),
                     }
                 }
             }),
         )));
 
+        #[cfg(not(target_family = "wasm"))]
+        let content = content
+            .child(Button(
+                "Close native popup",
+                AppAction::with_window_action({
+                    let probe = native_probe.clone();
+                    move |_, _, cx| {
+                        let handle = probe.native_popup.lock().unwrap().take();
+                        if let Some(handle) = handle {
+                            if let Err(error) = handle.update(cx, |_, window, _| {
+                                window.remove_window();
+                            }) {
+                                eprintln!("RustUI could not close native popup: {error}");
+                            }
+                        }
+                    }
+                }),
+            ))
+            .child(
+                Button(
+                    format!(
+                        "Observe native popup: open {native_popup_open}, mounts {native_mounts} / releases {native_releases}"
+                    ),
+                    self.action(Self::observe),
+                )
+                .id("popover-native-observe"),
+            );
         #[cfg(target_family = "wasm")]
         let content = content;
 
@@ -264,6 +308,8 @@ impl View for PopoverChild {
     }
     fn on_unmount(&mut self, _cx: &mut rustui::App) {
         self.probe.releases.fetch_add(1, Ordering::SeqCst);
+        #[cfg(not(target_family = "wasm"))]
+        self.probe.native_popup.lock().unwrap().take();
     }
     fn body(&self) -> impl View {
         let count = self.count();

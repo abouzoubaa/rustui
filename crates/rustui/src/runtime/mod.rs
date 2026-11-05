@@ -22,4 +22,4 @@ pub use rustui_core::{
 pub use tasks::OwnerTask;
 pub use window::AnchoredPopupOptions;
 #[cfg(not(target_family = "wasm"))]
-pub use window::open_anchored_popup;
+pub use window::{AnchoredPopupHandle, open_anchored_popup};

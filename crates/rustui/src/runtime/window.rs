@@ -27,6 +27,10 @@ pub struct AnchoredPopupOptions {
     pub size: (f32, f32),
 }
 
+/// Handle used by RustUI applications to inspect or close an anchored popup.
+#[cfg(not(target_family = "wasm"))]
+pub type AnchoredPopupHandle = AnyWindowHandle;
+
 /// Opens a parent-anchored native popup.
 ///
 /// The popup opens below the anchor and adjusts to remain on screen. Its parent
@@ -41,7 +45,7 @@ pub fn open_anchored_popup<V: View>(
     options: AnchoredPopupOptions,
     parent: &mut Window,
     cx: &mut App,
-) -> Result<AnyWindowHandle, String> {
+) -> Result<AnchoredPopupHandle, String> {
     let (anchor_x, anchor_y, anchor_width, anchor_height) = options.anchor_rect;
     let (width, height) = options.size;
     if ![
