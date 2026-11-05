@@ -5476,6 +5476,10 @@ On current HEAD `586e3bc2`, the workspace library suite passed 1,501 tests with 
 
 The live shared GUI slot remains occupied by the existing `c611` Playground process; no process or protected validation bundle was changed. Popup placement, physical outside-click dismissal, parent teardown, and owner-state behavior remain unverified. MVP remains 23/34 evidence milestones (67.65%) and 2/11 acceptance checks (18.18%).
 
+### Current source architecture guard — 2026-11-05
+
+On source HEAD `f549eddf`, `python3 scripts/verify_dependency_boundary.py --all --check` passed: `RustUI dependency boundary check passed.` Evidence: `target/headstart/evidence/dependency-boundary-f549eddf-20261105.log` (SHA-256 `6c7c5fbde3bd173454a5e19441c2e58c201500610cfd251366223e8db45e80d3`). This verifies the dependency boundary only; it does not close a native runtime or release acceptance gate.
+
 ### Native dependency notice provenance audit — 2026-11-05
 
 The latest native notice report in the evidence tree is `native-dependency-notices-checked-20261031T062004Z-35562`: 446 observed build packages and five unresolved notice gaps. It explicitly covers packages observed in Cargo build JSON, including build dependencies, not the exact linked runtime closure. The gaps are `block 0.1.6` (MIT), `mac 0.1.1` (MIT/Apache-2.0), `malloc_buf 0.0.6` (MIT), `pathfinder_geometry 0.5.1` (MIT/Apache-2.0), and `seahash 4.1.0` (MIT). The current supplement manifest hash still matches that report (`e3c7dc0b9fa5a72c773bf99d45785d86c324a0cd488945922f22efc3c0a72695`).
