@@ -340,4 +340,59 @@ mod tests {
         cx.run_until_parked();
         assert_eq!(unmounts.get(), 1);
     }
+
+    #[cfg(not(target_family = "wasm"))]
+    #[gpui::test]
+    fn closing_anchored_popup_unmounts_its_root(cx: &mut gpui::TestAppContext) {
+        let mounts = std::rc::Rc::new(std::cell::Cell::new(0));
+        let unmounts = std::rc::Rc::new(std::cell::Cell::new(0));
+        let parent = cx.update(|app| {
+            gpui_component::init(app);
+            super::open_root_window(
+                crate::view::EmptyView,
+                rustui_core::EnvironmentValues::default(),
+                gpui::WindowOptions::default(),
+                app,
+            )
+            .unwrap();
+            *app.windows()
+                .first()
+                .expect("parent root window should exist")
+        });
+        let popup = cx.update(|app| {
+            let previous_count = app.windows().len();
+            parent
+                .update(app, |_, window, app| {
+                    super::open_anchored_popup(
+                        LifecycleProbe {
+                            mounts: mounts.clone(),
+                            unmounts: unmounts.clone(),
+                        },
+                        rustui_core::EnvironmentValues::default(),
+                        super::AnchoredPopupOptions {
+                            anchor_rect: (10.0, 20.0, 1.0, 1.0),
+                            size: (200.0, 120.0),
+                        },
+                        window,
+                        app,
+                    )
+                    .unwrap();
+                })
+                .unwrap();
+            assert_eq!(app.windows().len(), previous_count + 1);
+            *app.windows()
+                .last()
+                .expect("popup root window should exist")
+        });
+
+        cx.run_until_parked();
+        assert_eq!(mounts.get(), 1);
+        cx.update(|app| {
+            popup
+                .update(app, |_, window, _| window.remove_window())
+                .unwrap();
+        });
+        cx.run_until_parked();
+        assert_eq!(unmounts.get(), 1);
+    }
 }

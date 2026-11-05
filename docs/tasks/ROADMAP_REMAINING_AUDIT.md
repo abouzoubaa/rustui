@@ -5620,3 +5620,17 @@ an observed native failure or an approved GPUI test seam; the earlier
 unsupported-popup probe does not prove other native failure paths. No evidence
 milestone closed; MVP remains 23/34 (67.65%) and acceptance remains 2/11
 (18.18%).
+
+### R15 test-platform anchored-popup close lifecycle regression — 2026-11-05
+
+A new RustUI regression, closing_anchored_popup_unmounts_its_root, passed
+1/1 with the locked offline Headstart library test command `./scripts/cargo-headstart test -p rustui --lib --locked --offline closing_anchored_popup_unmounts_its_root -- --nocapture`.
+It verifies that open_anchored_popup adds a separate test window and that
+explicitly removing that popup window unmounts its root view.
+Evidence: `target/headstart/evidence/r15-popup-test-platform-close-f1303030-20261105.log`
+(SHA-256 `63a0b83e24a67a94de15d9be7524f89ea2fe08c1fc3f85362dd55c8125c94607`).
+This runs through GPUI's simulated TestAppContext platform; it does not test
+AppKit placement, outside-click dismissal, parent-window teardown, or native
+owner-state behavior. Those popup acceptance items remain open. No evidence
+milestone closed; MVP remains 23/34 (67.65%) and acceptance remains 2/11
+(18.18%).
