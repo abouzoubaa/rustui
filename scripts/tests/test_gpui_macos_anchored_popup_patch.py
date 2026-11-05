@@ -48,6 +48,13 @@ class AnchoredPopupPatchTests(unittest.TestCase):
         self.assertIn("let anchor_window: id = msg_send![parent_view, window];", patch)
         self.assertIn("msg_send![anchor_window, convertRectToScreen: anchor_in_window]", patch)
 
+    def test_parent_teardown_closes_popup_children_without_unbounded_loop(self) -> None:
+        patch = PATCH.read_text(encoding="utf-8")
+        shutdown = patch.split("@@ -3260,0 +3591,11 @@", 1)[1]
+        self.assertIn("for index in (0..child_count).rev()", shutdown)
+        self.assertIn("removeChildWindow: child", shutdown)
+        self.assertNotIn("+        loop {", shutdown)
+
     def test_reverse_restores_exact_preimages(self) -> None:
         apply_patch(self.root)
         self.assertEqual(apply_patch(self.root, reverse=True), "reversed")
