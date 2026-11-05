@@ -1,13 +1,14 @@
 # Proposed macOS developer-preview MVP checks
 
-## Current scope — 2026-11-04
+## Current scope — 2026-11-05
 
 The user clarified that true native anchored popup windows are required for the
 RustUI MVP. RustUI's existing `Popover` is an in-window overlay; pinned GPUI
 0.3.9 rejects `WindowKind::AnchoredPopup` on macOS. This adds one acceptance
 check and three evidence milestones. Historical entries below retain their
-original totals; current totals are 21/34 milestones (61.76%) and 2/11 checks
-(18.18%).
+dated totals; the latest detailed audit records 23/34 evidence
+milestones (67.65%) and 2/11 acceptance checks (18.18%). See the current R15
+evidence in `ROADMAP_REMAINING_AUDIT.md`.
 
 ## Current-candidate combined controls — 2026-11-04
 
