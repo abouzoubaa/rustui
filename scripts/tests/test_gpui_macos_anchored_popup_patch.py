@@ -43,6 +43,11 @@ class AnchoredPopupPatchTests(unittest.TestCase):
         self.assertEqual(apply_patch(self.root, check_only=True), "verified")
         self.assertEqual(before, {relative: sha256(self.root / relative) for relative in PREIMAGES})
 
+    def test_screen_conversion_uses_anchor_views_native_window(self) -> None:
+        patch = PATCH.read_text(encoding="utf-8")
+        self.assertIn("let anchor_window: id = msg_send![parent_view, window];", patch)
+        self.assertIn("msg_send![anchor_window, convertRectToScreen: anchor_in_window]", patch)
+
     def test_reverse_restores_exact_preimages(self) -> None:
         apply_patch(self.root)
         self.assertEqual(apply_patch(self.root, reverse=True), "reversed")

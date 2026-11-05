@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Apply the approved native anchored-popup patch to the pinned macOS backend."""
+"""Apply approved v3 native anchored-popup patch to the pinned macOS backend."""
 
 from __future__ import annotations
 
@@ -13,15 +13,15 @@ from pathlib import Path
 
 
 ROOT = Path(__file__).resolve().parents[1]
-PATCH = ROOT / "patches/approved/gpui-macos-anchored-popup-v1.patch"
-PATCH_SHA256 = "8e3d10c4f5075717dba9dfd147fa5475ca41c0abc3c88f0784a628f8015c45f6"
+PATCH = ROOT / "patches/approved/gpui-macos-anchored-popup-v3.patch"
+PATCH_SHA256 = "2449cbc95bf69c41ab1ce396dd62e99bb2ea70ce986a09f72a74e645be8642fe"
 PREIMAGES = {
     "vendor/gpui-pre-macos-0.3.9/src/platform.rs": "1bf0adb67969e7389063de4d54efa70e9bb0a7ac7331a74ba74245d3bb87d801",
     "vendor/gpui-pre-macos-0.3.9/src/window.rs": "12d18266972087f25e876a97751af1903401ad2f9b8d9c84eab7fad9495fbd00",
 }
 POSTIMAGES = {
     "vendor/gpui-pre-macos-0.3.9/src/platform.rs": "6f7b88ef87d757c022a505f5b33104e727bd4e8e4ebdc6b7f3c9a5e0823c8aa6",
-    "vendor/gpui-pre-macos-0.3.9/src/window.rs": "bd2f9a7205b93bb0ac26fe1ad46bbd4e570290e2b706a09384b6bb5e2f264e0f",
+    "vendor/gpui-pre-macos-0.3.9/src/window.rs": "91e0ae5a17182d6cad8703ed3af2ff85084fcf5b68ecb5c2ee204382dfd17479",
 }
 
 
