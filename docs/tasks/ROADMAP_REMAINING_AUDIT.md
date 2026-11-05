@@ -5656,3 +5656,35 @@ unmount only. It does not test AppKit placement, physical outside-click
 behavior, or parent-close cascade; the current TestPlatform drops the parent
 relationship. No evidence milestone closed; MVP remains 23/34 (67.65%) and
 acceptance remains 2/11 (18.18%).
+
+### R31 macOS release gate fails closed on unresolved notice gaps — 2026-11-05
+
+Commit `012aeea0` adds opt-in `--fail-on-unresolved-gaps` behavior to the
+notice collector and enables it in the macOS release path before app packaging.
+The collector still writes its diagnostic report first; this flag then exits
+unsuccessfully when observed packages lack captured notice files. The report
+continues to disclaim license/compatibility completeness. Focused collector
+checks passed 22/22; `bash -n scripts/verify-release.sh` and `git diff --check`
+passed. Test evidence:
+`target/headstart/evidence/native-notice-gate-tests-final2-20261105.log`
+(SHA-256 `8074ccb52192bc65cf3116d184523603fc3861cf734f264b0e757b4d2c3d88d2`).
+
+A full `./scripts/verify-release.sh macos` run completed the patch checks,
+format/dependency-boundary checks, workspace checks, external-consumer check,
+workspace library and integration tests, macro doctests, and optimized
+Playground build. Across 41 test summaries, 1,562 passed, zero failed, and four
+were ignored. The release stopped before `package-app.sh` because the fresh
+notice report covered 446 observed packages and found five without captured
+notice files: `block 0.1.6`, `mac 0.1.1`, `malloc_buf 0.0.6`,
+`pathfinder_geometry 0.5.1`, and `seahash 4.1.0`. The report is
+`target/headstart/evidence/native-dependency-notices-checked-20261105T180449Z-64686/report.json`
+(SHA-256 `119b3d5e65124679b68dadca5871a49616b8d7d08a777df4089c7d98ddd84321`);
+the release log is
+`target/headstart/evidence/native-release-notice-gate-20261105.log`
+(SHA-256 `3d04c0ab0f6f321f6a046c7bfefbdd58cf74d35cc66cb7429ee4ecf399965298`).
+The approved popup patch was restored (`apply_gpui_macos_anchored_popup_patch.py
+--check` returned `verified`), and the protected Playground PID 4835 remained
+running and untouched. This confirms the release gate now blocks on notice
+gaps; it does not resolve notice provenance, exact linked-runtime closure, or
+legal review. No evidence milestone or acceptance check closed; MVP remains
+23/34 (67.65%) and acceptance remains 2/11 (18.18%).
