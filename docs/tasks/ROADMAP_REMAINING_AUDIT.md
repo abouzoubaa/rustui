@@ -5772,3 +5772,10 @@ MVP 67.65% (23/34 evidence milestones); acceptance 18.18% (2/11 checks).
 - Fixed by refreshing the retained preference snapshot from measured GPUI sizes on positive-extent renders; zero-extent placeholders remain ignored. After the fix, the regression passed and the full SplitView group passed 18/18 serially. `cargo fmt --all -- --check` and `git diff --check` passed.
 - Evidence: `target/headstart/evidence/splitview-collapse-topology-before-fix-20261105.log`, `target/headstart/evidence/splitview-collapse-topology-after-fix-20261105.log`, and `target/headstart/evidence/splitview-suite-serial-20261105.log`.
 - This source/test result does not close native macOS GUI drag or broader production acceptance. MVP remains 23/34 evidence milestones (67.65%); acceptance remains 2/11 checks (18.18%).
+
+### Native padding span bounds — 2026-11-05
+
+- Confirmed source-level overflow input: `LogicalInsets::new` accepted individually finite edges even when top+bottom or start+end overflowed. Uniform padding in `Container` and `Card` used the same unbounded span.
+- `LogicalInsets` now rejects overflowing opposite-edge sums. `Container::padding` and `Card::padding` validate uniform padding through the same constructor. Boundary coverage accepts the exact finite half-range and rejects overflowing spans.
+- Focused results: `LogicalInsets` 3/3, `Container` 4/4, `Card` 8/8. `cargo fmt --all -- --check` and `git diff --check` passed. Logs: `target/headstart/evidence/native-logical-inset-span-tests-20261105.log`, `target/headstart/evidence/native-container-padding-span-tests-20261105.log`, and `target/headstart/evidence/native-card-padding-span-tests-20261105.log`.
+- The changed validation is source/test evidence only; native rendered layout acceptance remains open. MVP remains 23/34 evidence milestones (67.65%); acceptance remains 2/11 checks (18.18%). Commit `48e26a75` still awaits safe integration into `work/m118-diagnostics-provenance`.

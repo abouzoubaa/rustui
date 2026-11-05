@@ -14,7 +14,7 @@ pub struct LogicalInsets {
 }
 
 impl LogicalInsets {
-    /// Creates insets, rejecting negative and non-finite values.
+    /// Creates insets, rejecting negative or non-finite edges and overflowing spans.
     pub fn new(top: f32, bottom: f32, start: f32, end: f32) -> Result<Self, LogicalInsetsError> {
         for (name, value) in [
             ("top", top),
@@ -25,6 +25,16 @@ impl LogicalInsets {
             if !value.is_finite() || value < 0.0 {
                 return Err(LogicalInsetsError { edge: name });
             }
+        }
+        if !(top + bottom).is_finite() {
+            return Err(LogicalInsetsError {
+                edge: "top/bottom span",
+            });
+        }
+        if !(start + end).is_finite() {
+            return Err(LogicalInsetsError {
+                edge: "start/end span",
+            });
         }
         Ok(Self {
             top,
@@ -109,5 +119,20 @@ mod tests {
         assert!(LogicalInsets::new(-1.0, 0.0, 0.0, 0.0).is_err());
         assert!(LogicalInsets::new(0.0, f32::NAN, 0.0, 0.0).is_err());
         assert!(LogicalInsets::new(0.0, 0.0, 0.0, f32::INFINITY).is_err());
+    }
+
+    #[test]
+    fn rejects_inset_pairs_with_overflowing_spans() {
+        assert!(LogicalInsets::new(f32::MAX, f32::MAX, 0.0, 0.0).is_err());
+        assert!(LogicalInsets::new(0.0, 0.0, f32::MAX, f32::MAX).is_err());
+        assert!(
+            LogicalInsets::new(
+                f32::MAX / 2.0,
+                f32::MAX / 2.0,
+                f32::MAX / 2.0,
+                f32::MAX / 2.0,
+            )
+            .is_ok()
+        );
     }
 }
