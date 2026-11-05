@@ -256,10 +256,33 @@ class CollectorTests(unittest.TestCase):
         result = subprocess.run([
             sys.executable, str(SCRIPT), "--repo-root", str(self.repo),
             "--metadata", str(self.metadata), "--build-json", str(self.build),
-            "--output", str(self.out),
+            "--fail-on-unresolved-gaps", "--output", str(self.out),
         ], capture_output=True, text=True)
         self.assertEqual(result.returncode, 0, result.stderr)
         self.assertEqual(len(json.loads((self.out / "report.json").read_text())["packages"]), 2)
+
+    def test_cli_fails_on_notice_gaps_after_preserving_diagnostic_report(self):
+        self.remove_notices()
+        result = subprocess.run([
+            sys.executable, str(SCRIPT), "--repo-root", str(self.repo),
+            "--metadata", str(self.metadata), "--build-json", str(self.build),
+            "--fail-on-unresolved-gaps", "--output", str(self.out),
+        ], capture_output=True, text=True)
+        self.assertEqual(result.returncode, 1)
+        self.assertIn("Release blocked", result.stderr)
+        report = json.loads((self.out / "report.json").read_text())
+        self.assertEqual(report["status"], "gaps")
+        self.assertEqual(len(report["unresolved_gaps"]), 1)
+
+    def test_macos_release_gate_fails_closed_before_packaging(self):
+        release_script = SCRIPT.parent / "verify-release.sh"
+        source = release_script.read_text(encoding="utf-8")
+        macos_branch = source.split("  macos)\n", 1)[1].split("  web)\n", 1)[0]
+        collector = macos_branch.index("scripts/collect_dependency_notices.py")
+        fail_closed = macos_branch.index("--fail-on-unresolved-gaps", collector)
+        package = macos_branch.index("apps/rustui-playground/package-app.sh")
+        self.assertLess(collector, fail_closed)
+        self.assertLess(fail_closed, package)
 
 
 if __name__ == "__main__":

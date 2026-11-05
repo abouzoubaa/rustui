@@ -116,6 +116,7 @@ case "${1:-}" in
       --source-root "$cargo_home/git/checkouts" \
       --supplement-manifest docs/release/dependency-notices/manifest.json \
       --supplement-root docs/release/dependency-notices \
+      --fail-on-unresolved-gaps \
       --output "$notices"
     binary="$(python3 - "$evidence/native-build.jsonl" <<'PY'
 import json, sys

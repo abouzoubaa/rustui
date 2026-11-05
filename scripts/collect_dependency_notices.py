@@ -12,6 +12,7 @@ import os
 from pathlib import Path, PurePosixPath
 import re
 import shutil
+import sys
 import tempfile
 
 NOTICE_NAME = re.compile(r"^(?:licen[cs]e|copying|notice|copyright|unlicense)(?:[-.][a-z0-9][a-z0-9._-]*)?$", re.I)
@@ -358,6 +359,8 @@ def main() -> int:
     parser.add_argument("--supplement-manifest", type=Path)
     parser.add_argument("--supplement-root", type=Path)
     parser.add_argument("--output", type=Path, required=True)
+    parser.add_argument("--fail-on-unresolved-gaps", action="store_true",
+                        help="exit unsuccessfully after writing the report if observed packages lack notice files")
     args = parser.parse_args()
     try:
         report = collect(args)
@@ -365,6 +368,10 @@ def main() -> int:
         parser.error(str(error))
     print(f"Collected notices for {len(report['packages'])} observed packages; "
           f"unresolved gaps: {len(report['unresolved_gaps'])}. No completeness or compatibility claim.")
+    if args.fail_on_unresolved_gaps and report["unresolved_gaps"]:
+        print(f"Release blocked: {len(report['unresolved_gaps'])} observed packages lack captured notice files; "
+              f"diagnostic report: {args.output / 'report.json'}", file=sys.stderr)
+        return 1
     return 0
 
 
