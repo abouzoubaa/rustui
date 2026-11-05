@@ -3,9 +3,10 @@
 ## Current scope — 2026-11-05
 
 The user clarified that true native anchored popup windows are required for the
-RustUI MVP. RustUI's existing `Popover` is an in-window overlay; pinned GPUI
-0.3.9 rejects `WindowKind::AnchoredPopup` on macOS. This adds one acceptance
-check and three evidence milestones. Historical entries below retain their
+RustUI MVP. RustUI's existing `Popover` is an in-window overlay; unpatched pinned
+GPUI 0.3.9 rejects `WindowKind::AnchoredPopup` on macOS. The approved v4 patch
+adds native backend support in build paths that apply it. This adds one
+acceptance check and three evidence milestones. Historical entries below retain their
 dated totals; the latest detailed audit records 23/34 evidence
 milestones (67.65%) and 2/11 acceptance checks (18.18%). See the current R15
 evidence in `ROADMAP_REMAINING_AUDIT.md`.
@@ -143,9 +144,11 @@ below identify sections in `ROADMAP_REMAINING_AUDIT.md`.
     - [ ] Decide and verify the release packaging route.
     - [ ] Verify signing and notarization if required by the selected route, or document why they do not apply.
 
-11. **Native anchored popup windows: 0/3**
-    - [ ] Implement macOS `WindowKind::AnchoredPopup` against the approved pinned GPUI source through a reproducible, versioned patch; preserve the pinned revision.
-    - [ ] Expose parent-owned popup-window open/close behavior through the RustUI public API, with an in-window fallback where native popup windows are unavailable.
+11. **Native anchored popup windows: 2/3 evidence milestones complete**
+    - [x] Implement macOS `WindowKind::AnchoredPopup` against the approved pinned GPUI source through a reproducible, versioned patch; preserve the pinned revision.
+    - [x] Expose `open_anchored_popup` through RustUI and return GPUI's
+      `AnyWindowHandle` for explicit close; retain the in-window `Popover`
+      path for non-native use.
     - [ ] Verify current-candidate placement, dismissal, parent teardown, and owner-state updates in a native macOS app.
 
 1. **Complete — separate local consumer:** an app outside the checkout builds
@@ -184,10 +187,10 @@ below identify sections in `ROADMAP_REMAINING_AUDIT.md`.
 10. **Open — supported macOS release:** the supported OS/version scope and
     package workflow are decided and verified; signing and notarization are
     verified if required for the chosen distribution route.
-11. **Open — native anchored popup windows:** the pinned macOS backend rejects
-    anchored popup windows; RustUI's current `Popover` stays within the parent
-    window. Backend implementation, RustUI public API, and current-candidate
-    native acceptance remain open.
+11. **Open — native anchored popup windows (2/3 evidence milestones):** RustUI's
+    versioned macOS patch and public API/demo are implemented, but current-candidate
+    native placement, dismissal, parent teardown, and owner-state updates remain
+    unverified. See the R15 entries in `ROADMAP_REMAINING_AUDIT.md`.
 
 Localization, Web/Wasm, accessibility and VoiceOver remain deferred by the
 user. They are not counted as passed and remain required wherever the final
