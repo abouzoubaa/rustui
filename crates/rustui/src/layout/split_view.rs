@@ -328,6 +328,23 @@ impl View for SplitView {
                     state.initial_sizes = initial_sizes;
                     state.native = cx.new(|_| ResizableState::default());
                 });
+            } else {
+                let native = state.native.read(context.app());
+                let measured = measured_preferences(native.container_size(), native.sizes());
+                if !measured.is_empty() {
+                    let initial_sizes = reconcile_sizes(
+                        &state.ids,
+                        &measured,
+                        &state.initial_sizes,
+                        panels.iter().copied(),
+                        true,
+                    );
+                    if initial_sizes != state.initial_sizes {
+                        context.update_entity(&retained, |state, _, _| {
+                            state.initial_sizes = initial_sizes;
+                        });
+                    }
+                }
             }
             if self.panels.is_empty() {
                 return div().size_full().into_any_element();

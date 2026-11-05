@@ -7,6 +7,8 @@ struct SplitProbe {
     axis: Axis,
     unhandled: Rc<Cell<usize>>,
     three_panels: bool,
+    width: f32,
+    third_size: f32,
 }
 
 impl View for SplitProbe {
@@ -25,13 +27,17 @@ impl View for SplitProbe {
                 .take(if self.three_panels { 3 } else { 2 })
                 .map(|id| {
                     crate::prelude::ResizablePanel::new(id, EmptyView)
-                        .initial_size(200.0)
+                        .initial_size(if id == "third" {
+                            self.third_size
+                        } else {
+                            200.0
+                        })
                         .size_range(100.0..300.0)
                 }),
         );
         let unhandled = self.unhandled.clone();
         div()
-            .w(px(400.0))
+            .w(px(self.width))
             .h(px(400.0))
             .on_key_down(move |_, _, _| unhandled.set(unhandled.get() + 1))
             .child(split.into_element(context))
@@ -61,6 +67,8 @@ fn rendered_split_divider_drag_resizes_the_first_panel(cx: &mut gpui::TestAppCon
                     axis,
                     unhandled: Rc::new(Cell::new(0)),
                     three_panels,
+                    width: 400.0,
+                    third_size: 200.0,
                 },
                 app,
             )
@@ -186,6 +194,82 @@ fn rendered_split_divider_drag_resizes_the_first_panel(cx: &mut gpui::TestAppCon
 }
 
 #[gpui::test]
+fn resized_panel_preferences_survive_collapse_during_topology_change(
+    cx: &mut gpui::TestAppContext,
+) {
+    cx.update(gpui_component::init);
+    let (owner, window) = cx.add_window_view(|_, app| {
+        ComponentHost::new(
+            SplitProbe {
+                axis: Axis::Horizontal,
+                unhandled: Rc::new(Cell::new(0)),
+                three_panels: false,
+                width: 400.0,
+                third_size: 100.0,
+            },
+            app,
+        )
+    });
+
+    let native = window.update(|window, app| {
+        let _ = window.draw(app);
+        owner
+            .read(app)
+            .retained_entity_for_test::<RetainedSplit>(
+                vec![RetentionScope::SplitView(Identity::from("event-path"))],
+                Identity::from("split-state"),
+            )
+            .expect("the production render retained split state")
+            .read(app)
+            .native
+            .clone()
+    });
+
+    window.update(|window, app| {
+        native.update(app, |state, cx| {
+            state.resize_panel(0, px(260.0), window, cx);
+        });
+        let _ = window.draw(app);
+        assert_eq!(native.read(app).sizes(), &[px(260.0), px(140.0)]);
+
+        owner.update(app, |host, cx| {
+            host.component_mut().width = 0.0;
+            cx.notify();
+        });
+        let _ = window.draw(app);
+        assert_eq!(native.read(app).container_size(), px(0.0));
+        assert_eq!(native.read(app).sizes(), &[px(260.0), px(140.0)]);
+
+        owner.update(app, |host, cx| {
+            host.component_mut().three_panels = true;
+            cx.notify();
+        });
+        let _ = window.draw(app);
+
+        let retained = owner
+            .read(app)
+            .retained_entity_for_test::<RetainedSplit>(
+                vec![RetentionScope::SplitView(Identity::from("event-path"))],
+                Identity::from("split-state"),
+            )
+            .expect("the production render retained reconciled split state");
+        assert_eq!(
+            retained.read(app).native.read(app).container_size(),
+            px(0.0)
+        );
+
+        owner.update(app, |host, cx| {
+            host.component_mut().width = 500.0;
+            cx.notify();
+        });
+        let _ = window.draw(app);
+        let expanded = retained.read(app).native.read(app);
+        assert_eq!(expanded.container_size(), px(500.0));
+        assert_eq!(expanded.sizes(), &[px(260.0), px(140.0), px(100.0)]);
+    });
+}
+
+#[gpui::test]
 fn focused_divider_routes_physical_arrows_and_clamps_through_the_rendered_control(
     cx: &mut gpui::TestAppContext,
 ) {
@@ -209,6 +293,8 @@ fn focused_divider_routes_physical_arrows_and_clamps_through_the_rendered_contro
                     axis,
                     unhandled: unhandled.clone(),
                     three_panels: false,
+                    width: 400.0,
+                    third_size: 200.0,
                 },
                 app,
             )

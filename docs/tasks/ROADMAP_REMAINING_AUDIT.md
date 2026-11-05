@@ -5765,3 +5765,10 @@ in the pinned build, and the RustUI integration has not been compiled against
 it. Promotion still requires explicit user approval, the versioned patch-stack
 apply/reverse workflow, integration regressions, and native/release validation.
 MVP 67.65% (23/34 evidence milestones); acceptance 18.18% (2/11 checks).
+
+### SplitView collapse/topology preference retention — 2026-11-05
+
+- Confirmed RustUI defect: after a resized two-panel SplitView was rendered at zero extent, a topology change discarded the latest GPUI panel sizes and restored older initial preferences. The focused rendered regression failed before the fix with actual `[200, 200, 100]` versus expected `[260, 140, 100]`.
+- Fixed by refreshing the retained preference snapshot from measured GPUI sizes on positive-extent renders; zero-extent placeholders remain ignored. After the fix, the regression passed and the full SplitView group passed 18/18 serially. `cargo fmt --all -- --check` and `git diff --check` passed.
+- Evidence: `target/headstart/evidence/splitview-collapse-topology-before-fix-20261105.log`, `target/headstart/evidence/splitview-collapse-topology-after-fix-20261105.log`, and `target/headstart/evidence/splitview-suite-serial-20261105.log`.
+- This source/test result does not close native macOS GUI drag or broader production acceptance. MVP remains 23/34 evidence milestones (67.65%); acceptance remains 2/11 checks (18.18%).
