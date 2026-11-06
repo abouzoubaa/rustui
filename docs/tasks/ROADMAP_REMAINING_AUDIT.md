@@ -5813,3 +5813,8 @@ source/binary identity and observations are recorded in
 MVP remains 23/34 evidence milestones (67.65%); acceptance remains 2/11 checks
 (18.18%). These partial Button observations do not close the full Basic controls
 checkbox, and SplitView is outside the 34-item MVP checklist.
+### Current-candidate combined controls and theme check — 2026-11-05
+
+One current-source Playground session reused the existing Headstart artifact (build completed successfully in 1.13 seconds without recompiling code). Its executable and packaged validation bundle matched SHA-256 `0aa58c36d9697906392012a894e8b587563d6c104f2996e690a2a61403f4ef5c` on macOS 27 arm64. The current HEAD `d8d3314e` is a documentation-only descendant of the code revision; the pre-existing popup source changes match approved v4 post-images. Full identity and observations are in `target/headstart/evidence/native-mvp-current-candidate-controls-20261105.md`.
+
+The session verified bound text updates, Tab skipping the disabled checkbox, Radio selection, Slider keyboard adjustment, Stepper increase/decrease, Picker owner updates, Button pointer/keyboard actions and disabled action suppression, and visible Light/Dark switching with story state retained. It also left an unresolved focus-ring observation on a disabled Button after an automation-triggered disable; determine whether ordinary input reproduces it before treating it as a source defect. Full ordinary text editing, remaining control/group policies, and the visual motion path remain unverified. No acceptance group closed; totals remain **23/34 evidence milestones (67.65%)** and **2/11 acceptance checks (18.18%)**. The app process exited, the disposable bundle was moved to Trash, and build caches were preserved.

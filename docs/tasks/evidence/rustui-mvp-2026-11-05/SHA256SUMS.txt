@@ -1,0 +1,8 @@
+8dd47974416f3385967b20e34f1b7a3204e6bc9425202ab8f70d45f5d7f040a0  docs/tasks/evidence/rustui-mvp-2026-11-05/focused-popup-patch-test-2026-11-06.log
+65d93331307510eb605d9043613e63e78ba058da279af785c92cf89b73369281  docs/tasks/evidence/rustui-mvp-2026-11-05/native-mvp-current-candidate-build-20261105.log
+df804a682af997a2162d74707270bbb8cda9581d2ab64ee285bd2b2dc39a42a7  docs/tasks/evidence/rustui-mvp-2026-11-05/native-mvp-current-candidate-controls-20261105.md
+3d560b8911e868e277192d8d2945ab084aa69b36121123d2ef05072bde0d2fc5  docs/tasks/evidence/rustui-mvp-2026-11-05/r15-popup-test-platform-close-f1303030-20261105.log
+a5b0efdfab01553b2b86b61aff2a20811c3cffc0d1cdf4b5e6c77cf983b45c1d  docs/tasks/evidence/rustui-mvp-2026-11-05/rustc-ice-2026-11-05T22_13_50-37738.txt
+22002560672a771773ca4b37632f2f31a92c0856bfbf20d147fa09f195476764  docs/tasks/evidence/rustui-mvp-2026-11-05/rustc-ice-2026-11-05T22_13_51-37753.txt
+e8b214573c4f2987fbb83cc286fb20408b126b78ac26f228fbfc4e36fc311e6a  docs/tasks/evidence/rustui-mvp-2026-11-05/rustc-ice-2026-11-05T22_15_03-39399.txt
+5f4eabf8aa88c4c2b8a65d5c27d47ac16031c0f9a9aa8d5c027bf26bd4356b6f  docs/tasks/evidence/rustui-mvp-2026-11-05/rustc-ice-2026-11-05T22_15_05-39414.txt

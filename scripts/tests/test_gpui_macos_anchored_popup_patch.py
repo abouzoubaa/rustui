@@ -26,6 +26,11 @@ class AnchoredPopupPatchTests(unittest.TestCase):
             destination = self.root / relative
             destination.parent.mkdir(parents=True, exist_ok=True)
             shutil.copy2(ROOT / relative, destination)
+        state = apply_patch(self.root, check_only=True)
+        if state == "already-applied":
+            self.assertEqual(apply_patch(self.root, reverse=True), "reversed")
+        else:
+            self.assertEqual(state, "verified")
 
     def tearDown(self) -> None:
         self.temp.cleanup()
