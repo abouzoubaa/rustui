@@ -1,5 +1,7 @@
 # RustUI — rules for coding agents
 Focus: native macOS. Web, localization, accessibility acceptance are deferred. Windows/Linux last.
+Web/Wasm is deferred until after the MVP. Do not run, fix, report, or mention Web/Wasm checks or results. The native checks named web_syntax/cosmic_bidi stay; treat them as native.
+Process rules come only from this file and docs/TICKETS.md. Do not apply external skills or workflows (such as Ponytail) unless the owner asks.
 
 ## Archive rule
 - Before modifying, moving, renaming or deleting a file that existed at tag pre-reset-2026-11, copy its current version to archive/pre-reset-2026-11/<same path> (once only, never overwrite). Do not archive files created after that tag. Never archive vendor/ or target/. Never edit or build archived files.
