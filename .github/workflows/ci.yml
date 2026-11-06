@@ -24,14 +24,18 @@ concurrency:
 jobs:
   source:
     if: github.event_name != 'workflow_dispatch' || !inputs.native_smoke_only
-    runs-on: ubuntu-24.04
+    runs-on: macos-15
     timeout-minutes: 15
     steps:
       - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
         with:
           persist-credentials: false
+      - name: Install Rust 1.97.1
+        run: rustup toolchain install 1.97.1 --profile minimal --component rustfmt
       - name: Verify approved Tree sources, replay lifecycle, and source release gates
         run: ./scripts/verify-release.sh source
+      - name: Stable Rust formatting, workspace check, and library tests
+        run: ./scripts/check.sh
 
   # Run only after a maintainer selects a trusted revision. Never execute PR
   # code automatically on the persistent runner/toolchain cache.
