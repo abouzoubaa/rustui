@@ -57,6 +57,11 @@ Phase A — process (in order)
 **Done when:** An external-consumer example builds without any `[patch]` section using only `rustui::gpui`.
 **Stop if:** The work requires unapproved upstream version changes or loses upstream license attribution.
 
+- T11a — Owned GPUI core: copy `vendor/gpui-pre-0.3.9` → `crates/rustui-gpui` (package `rustui-gpui`), plus a verifier that every owned copy is byte-identical to its vendor folder except `Cargo.toml`; run it from `verify-release.sh source`.
+- T11b — Owned macOS platform chain: `rustui-gpui-platform`, `rustui-gpui-macos`, `rustui-gpui-apple`. Other platforms stay later.
+- T11c — Owned Base and Component: `rustui-gpui-base`, `rustui-gpui-component`; plus owned copies of `cosmic-text` and `block` (or a stated reason they are not needed).
+- T11d — Integration: rustui re-exports gpui/gpui_component, root `[patch]` entries removed where replaced, external consumer builds with no `[patch]` using only `rustui::gpui`, locked consumer check in source mode.
+
 Phase B — features (after Phase A)
 
 ## T12 — Anchored popup lifecycle

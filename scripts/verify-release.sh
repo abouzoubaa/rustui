@@ -23,6 +23,7 @@ verify_web_ime_edit_plan() (
 
 case "${1:-}" in
   source)
+    python3 scripts/verify_owned_gpui_sources.py
     verify_tree_accessibility_series
     python3 scripts/apply_block_stack_symbol_patch.py --verify
     python3 scripts/apply_gpui_component_calendar_locale_patch.py --check
