@@ -37,7 +37,32 @@ case "${1:-}" in
     python3 scripts/verify_gpui_base_slider_patch_stack.py
     python3 scripts/apply_gpui_base_disabled_semantic_roots.py --verify
     python3 scripts/apply_gpui_toolbar_rtl.py --verify
-    python3 -m unittest discover -s scripts/tests -p 'test_*.py'
+    python3 - <<'PY'
+import unittest
+
+web_test_prefixes = (
+    "test_apply_gpui_web_",
+    "test_cosmic_bidi_patch.",
+    "test_gpui_web_",
+    "test_manifest_playground_web.",
+    "test_provision_ci_wasm_bindgen.",
+)
+
+def without_web_tests(suite):
+    filtered = unittest.TestSuite()
+    for test in suite:
+        if isinstance(test, unittest.TestSuite):
+            filtered.addTests(without_web_tests(test))
+        elif not test.id().startswith(web_test_prefixes):
+            filtered.addTest(test)
+    return filtered
+
+tests = without_web_tests(
+    unittest.defaultTestLoader.discover("scripts/tests", pattern="test_*.py")
+)
+result = unittest.TextTestRunner(verbosity=2).run(tests)
+raise SystemExit(not result.wasSuccessful())
+PY
     sh scripts/tests/test_package_playground_app.sh
     sh scripts/tests/test_verify_ci_checkout.sh
     python3 scripts/validate_locales.py
@@ -143,6 +168,11 @@ PY
     python3 scripts/apply_gpui_component_web_syntax_patch.py --check
     python3 scripts/apply_gpui_component_web_syntax_runtime_patch.py --check
     python3 scripts/apply_cosmic_bidi_initial_span_patch.py --check
+    python3 -m unittest discover -s scripts/tests -p 'test_apply_gpui_web_*.py'
+    python3 -m unittest discover -s scripts/tests -p 'test_cosmic_bidi_patch.py'
+    python3 -m unittest discover -s scripts/tests -p 'test_gpui_web_*.py'
+    python3 -m unittest discover -s scripts/tests -p 'test_manifest_playground_web.py'
+    python3 -m unittest discover -s scripts/tests -p 'test_provision_ci_wasm_bindgen.py'
     node --test scripts/tests/test_gpui_web_semantic_dom.mjs
     node --test apps/rustui-playground/web/tests/preview-transport.test.mjs
     node --test apps/rustui-playground/web/tests/theme-reload.test.mjs
