@@ -1,3 +1,4 @@
+use gpui::prelude::FluentBuilder;
 use gpui::{AnyElement, App, Context, IntoElement, ParentElement as _, Styled as _, Window, div};
 
 use crate::{
@@ -33,6 +34,7 @@ pub(crate) struct SearchableListAdapter<D: SearchableListDelegate + 'static> {
     pub(crate) size: Size,
     /// Override the trailing check icon; defaults to `IconName::Check`.
     pub(crate) check_icon: Option<Icon>,
+    pub(crate) right_to_left: bool,
 }
 
 impl<D: SearchableListDelegate + 'static> SearchableListAdapter<D> {
@@ -52,6 +54,7 @@ impl<D: SearchableListDelegate + 'static> SearchableListAdapter<D> {
             on_render_empty: Box::new(on_render_empty),
             size: Size::default(),
             check_icon: None,
+            right_to_left: false,
         }
     }
 
@@ -118,6 +121,7 @@ impl<D: SearchableListDelegate + 'static> ListDelegate for SearchableListAdapter
         if let Some(el) = self.delegate.render_item(ix, item, is_checked, window, cx) {
             return Some(
                 SearchableListItemElement::new(ix.row)
+                    .right_to_left(self.right_to_left)
                     .disabled(disabled)
                     .with_size(size)
                     .child(el),
@@ -132,12 +136,14 @@ impl<D: SearchableListDelegate + 'static> ListDelegate for SearchableListAdapter
         let content = div()
             .min_w_0()
             .truncate()
+            .when(self.right_to_left, |this| this.w_full().text_right())
             .child(item.render(window, cx).into_any_element());
 
         Some(
             SearchableListItemElement::new(ix.row)
                 .checked(is_checked)
                 .check_icon(check_icon)
+                .right_to_left(self.right_to_left)
                 .disabled(disabled)
                 .with_size(size)
                 .child(content.into_any_element()),

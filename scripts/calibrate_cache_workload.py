@@ -29,6 +29,21 @@ REAP_SECONDS = 5
 SCENARIOS = {"small": 1, "medium": 8, "large": 32}
 
 
+def json_value_matches(expected, actual):
+    """Compare decoded JSON without Python's bool/int equivalence."""
+    if type(expected) is not type(actual):
+        return False
+    if isinstance(expected, dict):
+        return expected.keys() == actual.keys() and all(
+            json_value_matches(value, actual[key]) for key, value in expected.items()
+        )
+    if isinstance(expected, list):
+        return len(expected) == len(actual) and all(
+            json_value_matches(left, right) for left, right in zip(expected, actual)
+        )
+    return expected == actual
+
+
 def sha256(path):
     digest = hashlib.sha256()
     with path.open("rb") as stream:
@@ -56,6 +71,8 @@ def compiler_identity():
 
 
 def check_workload(result, scenario):
+    if not isinstance(result, dict):
+        raise ValueError("workload must be an object")
     expected_children = SCENARIOS[scenario]
     expected = {
         "schema_version": 1,
@@ -70,16 +87,19 @@ def check_workload(result, scenario):
         "child_invalidation_observed": True,
     }
     for field, value in expected.items():
-        if result.get(field) != value:
+        if not json_value_matches(value, result.get(field)):
             raise ValueError(f"workload {field}: expected {value!r}, got {result.get(field)!r}")
     expected_counts = {
         "cached_after_parent_updates": 0,
         "uncached_after_parent_updates": expected_children * 100,
     }
+    counts = result.get("counts")
+    if not isinstance(counts, dict):
+        raise ValueError("workload counts must be an object")
     for field, value in expected_counts.items():
-        if result.get("counts", {}).get(field) != value:
-            raise ValueError(f"workload counts.{field}: expected {value}, got {result.get('counts', {}).get(field)!r}")
-    if result.get("rendered_values") != {"cached": 1, "uncached": 1}:
+        if not json_value_matches(value, counts.get(field)):
+            raise ValueError(f"workload counts.{field}: expected {value}, got {counts.get(field)!r}")
+    if not json_value_matches({"cached": 1, "uncached": 1}, result.get("rendered_values")):
         raise ValueError(f"unexpected rendered values: {result.get('rendered_values')!r}")
 
 

@@ -1363,6 +1363,7 @@ impl DiffState {
             let mut highlighters = Some(SyntaxHighlighters::default());
             for (ix, file) in pending {
                 let mut moved = highlighters.take();
+                #[cfg(not(target_family = "wasm"))]
                 let (presentation, returned) = cx
                     .background_spawn(async move {
                         let presentation = FilePresentation::prepare(
@@ -1373,6 +1374,13 @@ impl DiffState {
                         (presentation, moved)
                     })
                     .await;
+                #[cfg(target_family = "wasm")]
+                let (presentation, returned) = {
+                    let presentation = FilePresentation::prepare(
+                        &file, options, moved.get_or_insert_default(),
+                    );
+                    (presentation, moved)
+                };
                 highlighters = returned;
                 let current = this.update(cx, |state, cx| {
                     if state.presentation_generation != generation {

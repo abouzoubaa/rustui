@@ -24,6 +24,7 @@ pub struct SearchableListItemElement {
     /// Whether the trailing check icon is shown.
     checked: bool,
     disabled: bool,
+    right_to_left: bool,
     children: Vec<AnyElement>,
     /// The icon drawn at the trailing edge when `checked` is `true`.
     check_icon: Option<Icon>,
@@ -38,9 +39,15 @@ impl SearchableListItemElement {
             selected: false,
             checked: false,
             disabled: false,
+            right_to_left: false,
             children: Vec::new(),
             check_icon: Some(Icon::new(IconName::Check)),
         }
+    }
+
+    pub(crate) fn right_to_left(mut self, right_to_left: bool) -> Self {
+        self.right_to_left = right_to_left;
+        self
     }
 
     /// Set whether the trailing check icon is visible.
@@ -126,12 +133,14 @@ impl RenderOnce for SearchableListItemElement {
                     .items_center()
                     .justify_between()
                     .gap_x_1()
+                    .when(self.right_to_left, |this| this.flex_row_reverse())
                     .child(
                         h_flex()
                             .flex_1()
                             .min_w_0()
                             .overflow_hidden()
                             .items_center()
+                            .when(self.right_to_left, |this| this.justify_end())
                             .children(self.children),
                     )
                     .when_some(self.check_icon, |this, icon| {

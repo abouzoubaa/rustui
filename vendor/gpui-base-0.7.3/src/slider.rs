@@ -360,7 +360,6 @@ impl SliderState {
         _: &mut Window,
         cx: &mut Context<Self>,
     ) {
-        self.dragging = true;
         let bounds = self.bounds;
         let step = self.step;
 
@@ -370,6 +369,13 @@ impl SliderState {
             bounds.bottom() - position.y
         };
         let total_size = bounds.size.along(axis);
+        if !f32::from(total_size).is_finite()
+            || total_size <= px(0.)
+            || !f32::from(inner_pos).is_finite()
+        {
+            return;
+        }
+        self.dragging = true;
         let percentage = inner_pos.clamp(px(0.), total_size) / total_size;
 
         let percentage = if is_start {
@@ -379,7 +385,7 @@ impl SliderState {
         };
 
         let value = self.percentage_to_value(percentage);
-        let value = (value / step).round() * step;
+        let value = ((value / step).round() * step).clamp(self.min, self.max);
 
         if is_start {
             self.percentage.start = percentage;
@@ -388,6 +394,7 @@ impl SliderState {
             self.percentage.end = percentage;
             self.value.set_end(value);
         }
+        self.update_thumb_pos();
         cx.emit(SliderEvent::Change(self.value));
         cx.notify();
     }
@@ -699,8 +706,13 @@ impl RenderOnce for SliderTrack {
                     ),
                 )
                 .when(!is_range, |this| {
-                    this.on_drag(DragSlider(entity_id), |drag, _, _, cx| {
+                    let state = self.state.clone();
+                    this.on_drag(DragSlider(entity_id), move |drag, _, window, cx| {
                         cx.stop_propagation();
+                        let position = window.mouse_position();
+                        state.update(cx, |state, cx| {
+                            state.update_value_by_position(axis, position, false, window, cx);
+                        });
                         cx.new(|_| drag.clone())
                     })
                     .on_drag_move(window.listener_for(
@@ -841,9 +853,16 @@ impl RenderOnce for SliderThumb {
             .children(self.children)
             .when(!self.disabled, |this| {
                 this.on_mouse_down(MouseButton::Left, |_, _, cx| cx.stop_propagation())
-                    .on_drag(DragThumb((entity_id, start)), |drag, _, _, cx| {
-                        cx.stop_propagation();
-                        cx.new(|_| drag.clone())
+                    .on_drag(DragThumb((entity_id, start)), {
+                        let state = self.state.clone();
+                        move |drag, _, window, cx| {
+                            cx.stop_propagation();
+                            let position = window.mouse_position();
+                            state.update(cx, |state, cx| {
+                                state.update_value_by_position(axis, position, start, window, cx);
+                            });
+                            cx.new(|_| drag.clone())
+                        }
                     })
                     .on_drag_move(window.listener_for(
                         &self.state,

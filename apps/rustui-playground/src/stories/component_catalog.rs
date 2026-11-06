@@ -5,26 +5,67 @@ pub enum StoryId {
     #[default]
     Button,
     Text,
+    Card,
     Layout,
     Input,
     List,
     Table,
     Tree,
+    Drawer,
+    GraphView,
+    NodeEditor,
+    SplitView,
+    Outline,
     Tabs,
     Breadcrumb,
     Navigation,
 }
 
 impl StoryId {
+    pub const fn message_slug(self) -> &'static str {
+        match self {
+            Self::Button => "button",
+            Self::Text => "text",
+            Self::Card => "card",
+            Self::Layout => "layout",
+            Self::Input => "input",
+            Self::List => "list",
+            Self::Table => "table",
+            Self::Tree => "tree",
+            Self::Drawer => "drawer",
+            Self::GraphView => "graph-view",
+            Self::NodeEditor => "node-editor",
+            Self::SplitView => "split-view",
+            Self::Outline => "outline",
+            Self::Tabs => "tabs",
+            Self::Breadcrumb => "breadcrumb",
+            Self::Navigation => "navigation",
+        }
+    }
+
+    pub fn title_message_id(self) -> String {
+        format!("lab-story-{}-title", self.message_slug())
+    }
+
+    pub fn summary_message_id(self) -> String {
+        format!("lab-story-{}-summary", self.message_slug())
+    }
+
     pub const fn label(self) -> &'static str {
         match self {
             Self::Button => "Button",
             Self::Text => "Text",
+            Self::Card => "Card",
             Self::Layout => "VStack + HStack",
             Self::Input => "Text inputs",
             Self::List => "List",
             Self::Table => "Table",
             Self::Tree => "Tree",
+            Self::Drawer => "Drawer",
+            Self::GraphView => "GraphView",
+            Self::NodeEditor => "NodeEditor",
+            Self::SplitView => "SplitView + ResizablePanel",
+            Self::Outline => "Outline",
             Self::Tabs => "Tabs",
             Self::Breadcrumb => "Breadcrumb",
             Self::Navigation => "NavigationStack",
@@ -39,7 +80,7 @@ pub struct StoryDefinition {
     pub summary: &'static str,
 }
 
-pub const STORIES: [StoryDefinition; 10] = [
+pub const STORIES: [StoryDefinition; 16] = [
     StoryDefinition {
         id: StoryId::Button,
         title: "Button",
@@ -49,6 +90,11 @@ pub const STORIES: [StoryDefinition; 10] = [
         id: StoryId::Text,
         title: "Text",
         summary: "String content lowered through RustUI into GPUI text.",
+    },
+    StoryDefinition {
+        id: StoryId::Card,
+        title: "Card",
+        summary: "Themed card surfaces with retained child input and appearance controls.",
     },
     StoryDefinition {
         id: StoryId::Layout,
@@ -68,7 +114,7 @@ pub const STORIES: [StoryDefinition; 10] = [
     StoryDefinition {
         id: StoryId::Table,
         title: "Table",
-        summary: "Virtualized string cells with controlled row selection.",
+        summary: "Virtualized rows, controlled selection, and named table accessibility semantics.",
     },
     StoryDefinition {
         id: StoryId::Tree,
@@ -90,4 +136,114 @@ pub const STORIES: [StoryDefinition; 10] = [
         title: "NavigationStack",
         summary: "Edit root and destinations, navigate back, and toggle a root editor.",
     },
+    StoryDefinition {
+        id: StoryId::Outline,
+        title: "Outline",
+        summary: "Document hierarchy with owner-controlled selected and expanded stable IDs.",
+    },
+    StoryDefinition {
+        id: StoryId::Drawer,
+        title: "Drawer",
+        summary: "Controlled modal drawer with physical edges, owner refresh, and focus restoration.",
+    },
+    StoryDefinition {
+        id: StoryId::GraphView,
+        title: "GraphView",
+        summary: "Positioned graph with stable nodes, named ports and connections, controlled viewport and keyboard activation.",
+    },
+    StoryDefinition {
+        id: StoryId::NodeEditor,
+        title: "NodeEditor",
+        summary: "Controlled graph editing with typed ports, node dragging, keyboard movement and connection controls.",
+    },
+    StoryDefinition {
+        id: StoryId::SplitView,
+        title: "SplitView + ResizablePanel",
+        summary: "ResizablePanel panes with stable child identity, divider dragging, axis changes, reorder, insertion, removal and size limits.",
+    },
 ];
+
+pub fn filtered_story_indices(query: &str) -> Vec<usize> {
+    let query = query.trim().to_ascii_lowercase();
+    STORIES
+        .iter()
+        .enumerate()
+        .filter(|(_, story)| {
+            query.is_empty()
+                || story.id.label().to_ascii_lowercase().contains(&query)
+                || story.title.to_ascii_lowercase().contains(&query)
+                || story.summary.to_ascii_lowercase().contains(&query)
+        })
+        .map(|(index, _)| index)
+        .collect()
+}
+
+#[cfg(test)]
+mod tests {
+    use super::filtered_story_indices;
+
+    #[test]
+    fn story_search_trims_query_and_ignores_ascii_case() {
+        assert_eq!(filtered_story_indices("  nAvIgAtIoNsTaCk  "), vec![10]);
+        assert_eq!(filtered_story_indices("  CONDITIONAL EDITOR "), vec![8]);
+    }
+
+    #[test]
+    fn story_search_returns_no_indices_for_no_match() {
+        assert!(filtered_story_indices("no such framework demo").is_empty());
+    }
+
+    #[test]
+    fn story_search_preserves_original_registry_indices() {
+        assert_eq!(filtered_story_indices("selection"), vec![5, 6, 7]);
+    }
+
+    #[test]
+    fn story_search_matches_the_visible_story_label() {
+        assert_eq!(filtered_story_indices("HStack"), vec![3]);
+    }
+    #[test]
+    fn graph_stories_are_individually_searchable_and_reachable() {
+        for (query, id) in [
+            (" GraphView ", super::StoryId::GraphView),
+            (" nOdEeDiToR ", super::StoryId::NodeEditor),
+        ] {
+            let index = super::STORIES
+                .iter()
+                .position(|story| story.id == id)
+                .expect("standalone graph story");
+            assert_eq!(filtered_story_indices(query), vec![index]);
+            assert_eq!(
+                crate::story_for(if id == super::StoryId::GraphView {
+                    "graph_view"
+                } else {
+                    "node_editor"
+                }),
+                Some(id)
+            );
+            assert!(
+                !crate::stories::code_preview::source_for(id)
+                    .trim()
+                    .is_empty()
+            );
+            assert_eq!(
+                crate::stories::test_runner::status_for(id),
+                crate::stories::test_runner::VerificationStatus::InteractionAndVisualPending
+            );
+        }
+    }
+
+    #[test]
+    fn resizable_panels_are_directly_searchable_with_the_existing_split_gallery() {
+        let index = super::STORIES
+            .iter()
+            .position(|story| story.id == super::StoryId::SplitView)
+            .expect("standalone split story");
+        for query in [" SplitView ", " rEsIzAbLePaNeL "] {
+            assert_eq!(filtered_story_indices(query), vec![index]);
+        }
+        let source = crate::stories::code_preview::source_for(super::StoryId::SplitView);
+        assert!(source.contains("SplitView::horizontal"));
+        assert!(source.contains("ResizablePanel::new"));
+    }
+}

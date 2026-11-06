@@ -1,0 +1,181 @@
+--- a/vendor/gpui-base-0.7.3/src/calendar.rs
++++ b/vendor/gpui-base-0.7.3/src/calendar.rs
+@@ -273 +273 @@
+-        self.number_of_months = n;
++        self.number_of_months = n.max(1).min(self.months_available());
+@@ -288 +288,3 @@
+-        self.years = (range.0..range.1)
++        let start = range.0.max(NaiveDate::MIN.year());
++        let end = range.1.min(NaiveDate::MAX.year() + 1);
++        self.years = (start..end)
+@@ -298,0 +301,4 @@
++    fn months_available(&self) -> usize {
++        ((NaiveDate::MAX.year() - self.current_year) as usize * 12)
++            + (13 - self.current_month as usize)
++    }
+@@ -300,5 +306,5 @@
+-        let n = self.current_month as i64 - 1 + offset as i64;
+-        (
+-            self.current_year + n.div_euclid(12) as i32,
+-            n.rem_euclid(12) as u32 + 1,
+-        )
++        let total =
++            self.current_year as i128 * 12 + self.current_month as i128 - 1 + offset as i128;
++        let maximum = NaiveDate::MAX.year() as i128 * 12 + 11;
++        let total = total.min(maximum);
++        (total.div_euclid(12) as i32, total.rem_euclid(12) as u32 + 1)
+@@ -309,2 +315,2 @@
+-    /// Calendar weeks grouped by visible month. This preserves six-week
+-    /// months and is the preferred rendering API.
++    /// Calendar weeks grouped by visible month. Weeks at Chrono's limits
++    /// contain fewer than seven dates where padding is not representable.
+@@ -312 +318 @@
+-        (0..self.number_of_months)
++        (0..self.number_of_months.min(self.months_available()))
+@@ -314,5 +320,2 @@
+-                days_in_month(
+-                    self.current_year,
+-                    self.current_month as u32 + n as u32,
+-                    Weekday::Sun,
+-                )
++                let (year, month) = self.offset_year_month(n);
++                days_in_month(year, month, Weekday::Sun)
+@@ -344,0 +348,3 @@
++        if self.current_year == NaiveDate::MIN.year() && self.current_month == 1 {
++            return;
++        }
+@@ -352,0 +359,3 @@
++        if self.current_year == NaiveDate::MAX.year() && self.current_month == 12 {
++            return;
++        }
+@@ -381,0 +391,3 @@
++        if !(1..=12).contains(&month) {
++            return;
++        }
+@@ -385,0 +398,3 @@
++        if !(NaiveDate::MIN.year()..=NaiveDate::MAX.year()).contains(&year) {
++            return;
++        }
+@@ -636 +651,3 @@
+-        let count = self.number_of_months;
++        let count = self
++            .number_of_months
++            .min(self.state.read(cx).months_available());
+@@ -642 +659,5 @@
+-                view.is_month() || (view.is_year() && !self.state.read(cx).has_prev_year_page()),
++                view.is_month()
++                    || (view.is_year() && !self.state.read(cx).has_prev_year_page())
++                    || (view.is_day()
++                        && self.state.read(cx).current_year == NaiveDate::MIN.year()
++                        && self.state.read(cx).current_month == 1),
+@@ -711 +732,5 @@
+-                view.is_month() || (view.is_year() && !self.state.read(cx).has_next_year_page()),
++                view.is_month()
++                    || (view.is_year() && !self.state.read(cx).has_next_year_page())
++                    || (view.is_day()
++                        && self.state.read(cx).current_year == NaiveDate::MAX.year()
++                        && self.state.read(cx).current_month == 12),
+@@ -740 +765 @@
+-                let weeks = days_in_month(year, month_number, self.first_day_of_week);
++                let weeks = calendar_slots(year, month_number, self.first_day_of_week);
+@@ -758,2 +783,12 @@
+-                    for date in week {
+-                        let date = *date;
++                    for (column, date) in week.iter().enumerate() {
++                        let Some(date) = *date else {
++                            let st = CalendarItemState::new(CalendarItemKind::Weekday)
++                                .disabled(true)
++                                .muted(true);
++                            let item = CalendarItem::new(
++                                format!("calendar-padding-{offset}-{week_index}-{column}"),
++                                st,
++                            );
++                            week_row = week_row.child((self.item)(item, st, window, cx));
++                            continue;
++                        };
+@@ -832,8 +867,16 @@
+-    let total = year as i64 * 12 + month as i64 - 1;
+-    let year = total.div_euclid(12) as i32;
+-    let month = total.rem_euclid(12) as u32 + 1;
+-    let first = NaiveDate::from_ymd_opt(year, month, 1).unwrap();
+-    let next = if month == 12 {
+-        NaiveDate::from_ymd_opt(year + 1, 1, 1).unwrap()
+-    } else {
+-        NaiveDate::from_ymd_opt(year, month + 1, 1).unwrap()
++    calendar_slots(year, month, first_day)
++        .into_iter()
++        .map(|week| week.into_iter().flatten().collect())
++        .collect()
++}
++
++fn calendar_slots(year: i32, month: u32, first_day: Weekday) -> Vec<Vec<Option<NaiveDate>>> {
++    let Some(first) = NaiveDate::from_ymd_opt(year, month, 1) else {
++        return Vec::new();
++    };
++    let days = match month {
++        1 | 3 | 5 | 7 | 8 | 10 | 12 => 31,
++        4 | 6 | 9 | 11 => 30,
++        2 if year % 4 == 0 && (year % 100 != 0 || year % 400 == 0) => 29,
++        2 => 28,
++        _ => return Vec::new(),
+@@ -843,2 +886 @@
+-    let start = first - chrono::Duration::days(offset as i64);
+-    let count = ((next - start).num_days() as usize).div_ceil(7) * 7;
++    let count = (offset as usize + days).div_ceil(7) * 7;
+@@ -846 +888 @@
+-        .map(|n| start + chrono::Duration::days(n as i64))
++        .map(|n| first.checked_add_signed(chrono::Duration::days(n as i64 - offset as i64)))
+@@ -859,0 +902,53 @@
++
++    #[test]
++    fn calendar_slots_keep_weekday_alignment_at_date_limits() {
++        for boundary in [NaiveDate::MIN, NaiveDate::MAX] {
++            for start in [Weekday::Sun, Weekday::Mon, Weekday::Sat] {
++                let weeks = calendar_slots(boundary.year(), boundary.month(), start);
++                assert!(weeks.iter().all(|week| week.len() == 7));
++                assert!(weeks.iter().flatten().any(|date| *date == Some(boundary)));
++                for (column, date) in weeks.iter().flat_map(|week| week.iter().enumerate()) {
++                    if let Some(date) = date {
++                        assert_eq!(
++                            (date.weekday().num_days_from_sunday() + 7
++                                - start.num_days_from_sunday())
++                                % 7,
++                            column as u32
++                        );
++                    }
++                }
++            }
++        }
++    }
++
++    #[gpui::test]
++    fn calendar_navigation_and_multi_months_stop_at_date_limits(cx: &mut gpui::TestAppContext) {
++        let calendar = state(cx, Date::Single(None));
++        calendar.update(cx, |calendar, _| {
++            calendar.apply_date(Date::Single(Some(NaiveDate::MIN)));
++            calendar.prev_month();
++            assert_eq!(
++                (calendar.current_year(), calendar.current_month()),
++                (NaiveDate::MIN.year(), NaiveDate::MIN.month() as u8)
++            );
++            calendar.apply_date(Date::Single(Some(NaiveDate::MAX)));
++            calendar.number_of_months = 2;
++            assert_eq!(calendar.month_days().len(), 1);
++            assert!(
++                calendar
++                    .days()
++                    .iter()
++                    .flatten()
++                    .any(|date| *date == NaiveDate::MAX)
++            );
++            assert_eq!(
++                calendar.offset_year_month(usize::MAX),
++                (NaiveDate::MAX.year(), 12)
++            );
++            calendar.next_month();
++            assert_eq!(
++                (calendar.current_year(), calendar.current_month()),
++                (NaiveDate::MAX.year(), NaiveDate::MAX.month() as u8)
++            );
++        });
++    }

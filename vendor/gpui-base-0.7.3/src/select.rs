@@ -194,6 +194,7 @@ impl RenderOnce for Select {
 
         self.base
             .role(Role::ComboBox)
+            .aria_disabled(disabled)
             .aria_expanded(open)
             .when_some(self.accessibility_label, |this, label| {
                 this.aria_label(label)
@@ -495,6 +496,8 @@ mod tests {
             assert_eq!(enabled.label(), Some("Programming language"));
             assert_eq!(enabled.value(), Some("Rust"));
             assert_eq!(enabled.is_expanded(), Some(true));
+            assert!(!enabled.is_disabled());
+            assert!(disabled.is_disabled());
             assert_eq!(
                 disabled.is_expanded(),
                 Some(true),

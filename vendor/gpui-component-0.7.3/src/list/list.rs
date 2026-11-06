@@ -70,6 +70,7 @@ impl Default for ListOptions {
 pub struct ListState<D: ListDelegate> {
     pub(crate) focus_handle: FocusHandle,
     pub(crate) query_input: Entity<InputState>,
+    right_to_left: bool,
     options: ListOptions,
     delegate: D,
     last_query: Option<String>,
@@ -108,6 +109,7 @@ where
             selected_index: None,
             selectable: true,
             searchable: false,
+            right_to_left: false,
             item_to_measure_index: IndexPath::default(),
             deferred_scroll_to_index: None,
             mouse_right_clicked_index: None,
@@ -129,6 +131,14 @@ where
 
     pub fn set_searchable(&mut self, searchable: bool, cx: &mut Context<Self>) {
         self.searchable = searchable;
+        cx.notify();
+    }
+
+    pub(crate) fn set_right_to_left(&mut self, right_to_left: bool, cx: &mut Context<Self>) {
+        if self.right_to_left == right_to_left {
+            return;
+        }
+        self.right_to_left = right_to_left;
         cx.notify();
     }
 
@@ -682,6 +692,7 @@ where
                         .border_color(cx.theme().border)
                         .child(
                             Input::new(&input)
+                                .when(self.right_to_left, |this| this.flex_row_reverse().text_right())
                                 .with_size(self.options.size)
                                 .prefix(
                                     Icon::new(IconName::Search)

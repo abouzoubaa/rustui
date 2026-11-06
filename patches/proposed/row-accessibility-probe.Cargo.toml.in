@@ -1,0 +1,36 @@
+[package]
+name = "rustui-row-a11y-proposal-probe"
+version = "0.0.0"
+edition = "2024"
+publish = false
+
+[workspace]
+
+[dev-dependencies]
+gpui = { package = "gpui-pre", version = "=0.3.9", features = ["test-support"] }
+gpui-component = "=0.7.3"
+serde_json = "=1.0.154"
+
+[patch.crates-io]
+"gpui-pre" = { path = "@CANDIDATE_ROOT@/vendor/gpui-pre-0.3.9" }
+"gpui-base" = { path = "@RUSTUI_ROOT@/vendor/gpui-base-0.7.3" }
+"gpui-component" = { path = "@CANDIDATE_ROOT@/vendor/gpui-component-0.7.3" }
+"gpui-pre-web" = { path = "@RUSTUI_ROOT@/vendor/gpui-pre-web-0.3.9" }
+"gpui-pre-macos" = { path = "@RUSTUI_ROOT@/vendor/gpui-pre-macos-0.3.9" }
+
+[profile.headstart]
+"inherits" = "dev"
+"debug" = 1
+"incremental" = true
+
+[profile.headstart."package"]
+
+[profile.headstart."package"."rustui-macros"]
+"incremental" = false
+
+[profile.dev]
+
+[profile.dev."package"]
+
+[profile.dev."package"."rustui-macros"]
+"incremental" = false

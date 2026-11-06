@@ -11,17 +11,28 @@ pub struct ProgressView {
     id: SharedString,
     value: f32,
     indeterminate: bool,
-    accessibility_label: SharedString,
+    accessibility_label: ProgressAccessibilityLabel,
+}
+
+#[derive(Clone)]
+enum ProgressAccessibilityLabel {
+    Literal(SharedString),
+    Message {
+        id: SharedString,
+        fallback: SharedString,
+    },
 }
 
 impl ProgressView {
     pub fn new(id: impl Into<SharedString>, value: f32) -> Self {
         assert!(value.is_finite(), "progress value must be finite");
+        let id = id.into();
+        assert!(!id.trim().is_empty(), "Progress identity must not be blank");
         Self {
-            id: id.into(),
+            id,
             value: value.clamp(0.0, 100.0),
             indeterminate: false,
-            accessibility_label: "Progress".into(),
+            accessibility_label: ProgressAccessibilityLabel::Literal("Progress".into()),
         }
     }
 
@@ -35,8 +46,55 @@ impl ProgressView {
 
     /// Names the operation for assistive technology.
     pub fn accessibility_label(mut self, label: impl Into<SharedString>) -> Self {
-        self.accessibility_label = label.into();
+        let label = label.into();
+        assert!(
+            !label.trim().is_empty(),
+            "Progress accessibility label must not be empty"
+        );
+        self.accessibility_label = ProgressAccessibilityLabel::Literal(label);
         self
+    }
+
+    /// Resolves an accessible name from the active locale, falling back to
+    /// the explicit name or the default `Progress` label.
+    pub fn localized_accessibility_label(mut self, message_id: impl Into<SharedString>) -> Self {
+        let id = message_id.into();
+        assert!(
+            !id.trim().is_empty(),
+            "Progress accessibility localization key must not be empty"
+        );
+        let fallback = match &self.accessibility_label {
+            ProgressAccessibilityLabel::Literal(label)
+            | ProgressAccessibilityLabel::Message {
+                fallback: label, ..
+            } => label.clone(),
+        };
+        self.accessibility_label = ProgressAccessibilityLabel::Message { id, fallback };
+        self
+    }
+
+    fn resolved_accessibility_label(
+        &self,
+        localized_message: impl FnOnce(&str) -> String,
+    ) -> SharedString {
+        match &self.accessibility_label {
+            ProgressAccessibilityLabel::Literal(label) => label.clone(),
+            ProgressAccessibilityLabel::Message { id, fallback } => {
+                resolve_message_label(id, localized_message(id.as_ref()), fallback)
+            }
+        }
+    }
+}
+
+fn resolve_message_label(
+    id: &SharedString,
+    localized: String,
+    fallback: &SharedString,
+) -> SharedString {
+    if localized.trim().is_empty() || localized.trim() == id.trim() {
+        fallback.clone()
+    } else {
+        localized.into()
     }
 }
 
@@ -51,11 +109,13 @@ impl View for ProgressView {
         EmptyView
     }
 
-    fn into_element(&self, _: &mut RenderContext<'_>) -> AnyElement {
+    fn into_element(&self, context: &mut RenderContext<'_>) -> AnyElement {
         GpuiProgress::new(self.id.clone())
             .value(self.value)
             .loading(self.indeterminate)
-            .accessibility_label(self.accessibility_label.clone())
+            .accessibility_label(
+                self.resolved_accessibility_label(|id| context.localized_message(id)),
+            )
             .into_any_element()
     }
 }
@@ -72,6 +132,19 @@ mod tests {
     }
 
     #[test]
+    #[should_panic(expected = "Progress identity must not be blank")]
+    fn rejects_whitespace_only_identity() {
+        Progress(" \t ", 30.0);
+    }
+
+    #[test]
+    fn preserves_nonblank_identity_verbatim() {
+        let progress = Progress(" progress ", 30.0);
+
+        assert_eq!(progress.id.as_ref(), " progress ");
+    }
+
+    #[test]
     fn indeterminate_mode_is_opt_in_and_does_not_change_the_value() {
         let determinate = Progress("upload", 30.0);
         assert!(!determinate.indeterminate);
@@ -80,7 +153,74 @@ mod tests {
         let loading = determinate.indeterminate(true);
         assert!(loading.indeterminate);
         assert_eq!(loading.value, 30.0);
-        assert_eq!(loading.accessibility_label.as_ref(), "Progress");
+        assert_eq!(
+            loading
+                .resolved_accessibility_label(|_| unreachable!())
+                .as_ref(),
+            "Progress"
+        );
+    }
+
+    #[test]
+    fn accessibility_label_preserves_nonblank_input() {
+        let progress = Progress("upload", 30.0).accessibility_label(" Uploading files ");
+        assert_eq!(
+            progress
+                .resolved_accessibility_label(|_| unreachable!())
+                .as_ref(),
+            " Uploading files "
+        );
+    }
+
+    #[test]
+    #[should_panic(expected = "Progress accessibility label must not be empty")]
+    fn accessibility_label_rejects_blank_input() {
+        Progress("upload", 30.0).accessibility_label("\t ");
+    }
+
+    #[test]
+    fn localized_accessibility_label_uses_catalog_and_fallback() {
+        let explicit = Progress("upload", 30.0)
+            .accessibility_label("Uploading files")
+            .localized_accessibility_label("progress.upload");
+        assert_eq!(
+            explicit
+                .resolved_accessibility_label(|id| format!("{id} traduit"))
+                .as_ref(),
+            "progress.upload traduit"
+        );
+        assert_eq!(
+            explicit
+                .resolved_accessibility_label(|id| id.to_owned())
+                .as_ref(),
+            "Uploading files"
+        );
+        assert_eq!(
+            explicit
+                .resolved_accessibility_label(|id| format!(" \t{id}\n"))
+                .as_ref(),
+            "Uploading files"
+        );
+        assert_eq!(
+            explicit
+                .resolved_accessibility_label(|_| " \t ".to_owned())
+                .as_ref(),
+            "Uploading files"
+        );
+
+        let default = Progress("upload", 30.0).localized_accessibility_label("progress.label");
+        assert_eq!(
+            default
+                .resolved_accessibility_label(|_| String::new())
+                .as_ref(),
+            "Progress"
+        );
+    }
+
+    #[test]
+    #[should_panic(expected = "Progress accessibility localization key must not be empty")]
+    fn localized_accessibility_label_rejects_blank_message_id() {
+        Progress("upload", 30.0).localized_accessibility_label(" \t ");
     }
 
     #[test]

@@ -80,6 +80,7 @@ impl Styled for Calendar {
 impl RenderOnce for Calendar {
     fn render(self, _: &mut Window, cx: &mut App) -> impl IntoElement {
         let size = self.size;
+        let rtl = self.state.read(cx).right_to_left();
         let month_count = self.number_of_months.max(1) as f32;
         BaseCalendar::new(self.id, &self.state)
             .number_of_months(self.number_of_months)
@@ -104,10 +105,10 @@ impl RenderOnce for Calendar {
                 let item = match state.kind() {
                     CalendarItemKind::Previous => item
                         .clear_children()
-                        .child(Icon::new(IconName::ChevronLeft).size_4()),
+                        .child(Icon::new(if rtl { IconName::ChevronRight } else { IconName::ChevronLeft }).size_4()),
                     CalendarItemKind::Next => item
                         .clear_children()
-                        .child(Icon::new(IconName::ChevronRight).size_4()),
+                        .child(Icon::new(if rtl { IconName::ChevronLeft } else { IconName::ChevronRight }).size_4()),
                     _ => item,
                 };
                 item.map(|this| match size {

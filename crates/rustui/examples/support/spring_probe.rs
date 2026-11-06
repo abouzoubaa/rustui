@@ -114,9 +114,14 @@ fn finish(cx: &mut App, requested_reduce_motion: bool, samples: Samples, error: 
     let complete = error.is_none()
         && requested_reduce_motion == effective_reduce_motion
         && ordered
-        && samples.startup_stable_lowerings.is_some_and(|count| count > 0)
+        && samples
+            .startup_stable_lowerings
+            .is_some_and(|count| count > 0)
         && samples.first_render_count.is_some_and(|count| count > 0)
-        && samples.second_render_count.zip(samples.before_retarget_count).is_some_and(|(second, before)| second > before)
+        && samples
+            .second_render_count
+            .zip(samples.before_retarget_count)
+            .is_some_and(|(second, before)| second > before)
         && if requested_reduce_motion {
             first_flat && second_flat && quiescent
         } else {
@@ -205,11 +210,19 @@ fn write_result(result: &Value) -> std::io::Result<()> {
 pub(super) fn run(reduce_motion: bool) {
     gpui_platform::application().run(move |cx| {
         gpui_component::init(cx);
+        super::init_probe_theme(cx);
         cx.set_reduce_motion(reduce_motion);
         enable_render_diagnostics(cx);
 
         let started = Instant::now();
-        let root = cx.new(|cx| ViewHost::new(SpringProbe { target: INITIAL_TARGET }, cx));
+        let root = cx.new(|cx| {
+            ViewHost::new(
+                SpringProbe {
+                    target: INITIAL_TARGET,
+                },
+                cx,
+            )
+        });
         let bounds = Bounds::centered(None, size(px(460.0), px(180.0)), cx);
         let window_root = root.clone();
         cx.open_window(
@@ -230,7 +243,9 @@ pub(super) fn run(reduce_motion: bool) {
                 cx.background_executor().timer(POLL).await;
                 let count = cx.update(|cx| lowering_count(&render_diagnostics_snapshot(cx)));
                 if count > 0 && stable_count == Some(count) {
-                    if stable_since.is_some_and(|since: Instant| since.elapsed() >= STARTUP_STABILITY) {
+                    if stable_since
+                        .is_some_and(|since: Instant| since.elapsed() >= STARTUP_STABILITY)
+                    {
                         samples.startup_stable_lowerings = Some(count);
                         samples.startup_wait_ms = Some(startup_started.elapsed().as_millis());
                         break;
@@ -240,7 +255,14 @@ pub(super) fn run(reduce_motion: bool) {
                     stable_since = (count > 0).then(Instant::now);
                 }
                 if startup_started.elapsed() >= STARTUP_TIMEOUT {
-                    cx.update(|cx| finish(cx, reduce_motion, samples, Some("static startup baseline did not stabilize")));
+                    cx.update(|cx| {
+                        finish(
+                            cx,
+                            reduce_motion,
+                            samples,
+                            Some("static startup baseline did not stabilize"),
+                        )
+                    });
                     return;
                 }
             }
@@ -263,13 +285,23 @@ pub(super) fn run(reduce_motion: bool) {
                     break;
                 }
                 if first_started.elapsed() >= STARTUP_TIMEOUT {
-                    cx.update(|cx| finish(cx, reduce_motion, samples, Some("first target render did not appear")));
+                    cx.update(|cx| {
+                        finish(
+                            cx,
+                            reduce_motion,
+                            samples,
+                            Some("first target render did not appear"),
+                        )
+                    });
                     return;
                 }
             }
 
-            cx.background_executor().timer(RETARGET_AFTER_FIRST_RENDER).await;
-            samples.before_retarget_count = Some(cx.update(|cx| lowering_count(&render_diagnostics_snapshot(cx))));
+            cx.background_executor()
+                .timer(RETARGET_AFTER_FIRST_RENDER)
+                .await;
+            samples.before_retarget_count =
+                Some(cx.update(|cx| lowering_count(&render_diagnostics_snapshot(cx))));
             samples.before_retarget_ms = Some(started.elapsed().as_millis());
 
             cx.update(|cx| {
@@ -289,21 +321,33 @@ pub(super) fn run(reduce_motion: bool) {
                     break;
                 }
                 if retarget_started.elapsed() >= STARTUP_TIMEOUT {
-                    cx.update(|cx| finish(cx, reduce_motion, samples, Some("retarget render did not appear")));
+                    cx.update(|cx| {
+                        finish(
+                            cx,
+                            reduce_motion,
+                            samples,
+                            Some("retarget render did not appear"),
+                        )
+                    });
                     return;
                 }
             }
 
-            cx.background_executor().timer(PASSIVE_AFTER_SECOND_RENDER).await;
-            samples.after_retarget_count = Some(cx.update(|cx| lowering_count(&render_diagnostics_snapshot(cx))));
+            cx.background_executor()
+                .timer(PASSIVE_AFTER_SECOND_RENDER)
+                .await;
+            samples.after_retarget_count =
+                Some(cx.update(|cx| lowering_count(&render_diagnostics_snapshot(cx))));
             samples.after_retarget_ms = Some(started.elapsed().as_millis());
             cx.background_executor()
                 .timer(SETTLE_AFTER_RETARGET.saturating_sub(retarget_started.elapsed()))
                 .await;
-            samples.settled_count = Some(cx.update(|cx| lowering_count(&render_diagnostics_snapshot(cx))));
+            samples.settled_count =
+                Some(cx.update(|cx| lowering_count(&render_diagnostics_snapshot(cx))));
             samples.settled_ms = Some(started.elapsed().as_millis());
             cx.background_executor().timer(QUIESCENCE_WINDOW).await;
-            samples.quiescence_count = Some(cx.update(|cx| lowering_count(&render_diagnostics_snapshot(cx))));
+            samples.quiescence_count =
+                Some(cx.update(|cx| lowering_count(&render_diagnostics_snapshot(cx))));
             samples.quiescence_ms = Some(started.elapsed().as_millis());
             cx.update(|cx| finish(cx, reduce_motion, samples, None));
         })
@@ -311,7 +355,14 @@ pub(super) fn run(reduce_motion: bool) {
 
         cx.spawn(async move |cx| {
             cx.background_executor().timer(PROCESS_TIMEOUT).await;
-            cx.update(|cx| finish(cx, reduce_motion, Samples::default(), Some("10-second runtime timeout")));
+            cx.update(|cx| {
+                finish(
+                    cx,
+                    reduce_motion,
+                    Samples::default(),
+                    Some("10-second runtime timeout"),
+                )
+            });
         })
         .detach();
         cx.activate(true);

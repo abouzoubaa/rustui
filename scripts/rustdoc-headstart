@@ -1,0 +1,14 @@
+#!/bin/sh
+set -eu
+
+headstart_root="${RUSTUI_HEADSTART_ROOT:-${HOME}/.local/opt/headstart}"
+rustc_host="$(rustc -vV | sed -n 's/^host: //p')"
+stage_root="${headstart_root}/rustc/build/${rustc_host}"
+rustdoc_bin="${stage_root}/stage1-tools-bin/rustdoc-tool-binary"
+if [ ! -x "$rustdoc_bin" ]; then
+    printf '%s\n' "Headstart rustdoc is missing: ${rustdoc_bin}" >&2
+    exit 127
+fi
+DYLD_LIBRARY_PATH="${stage_root}/stage1/lib${DYLD_LIBRARY_PATH:+:${DYLD_LIBRARY_PATH}}"
+export DYLD_LIBRARY_PATH
+exec "$rustdoc_bin" "$@"

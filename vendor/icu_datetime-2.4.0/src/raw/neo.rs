@@ -1,0 +1,1004 @@
+// This file is part of ICU4X. For terms of use, please see the file
+// called LICENSE at the top level of the ICU4X source tree
+// (online at: https://github.com/unicode-org/icu4x/blob/main/LICENSE ).
+
+use crate::DateTimeFormatterPreferences;
+use crate::fieldsets::builder;
+use crate::fieldsets::enums::{CompositeFieldSet, TimeFieldSet, ZoneFieldSet};
+use crate::format::DateTimeInputUnchecked;
+use crate::options::*;
+use crate::pattern::DateTimePattern;
+use crate::provider::fields::{self, Field, FieldLength, FieldSymbol};
+use crate::provider::pattern::CoarseHourCycle;
+use crate::provider::pattern::{
+    GenericPatternItem, PatternItem,
+    runtime::{self, PatternMetadata},
+};
+#[cfg(feature = "unstable")]
+#[allow(unused_imports)]
+use crate::provider::range_patterns::{
+    DateGreatestDifferenceField, DatetimePatternsRangeGlueV1, ErasedPackedRangePatterns,
+    RangePatternInfoBorrowed, TimeGreatestDifferenceField,
+};
+use crate::provider::{
+    packed_pattern::{ErasedPackedPatterns, PackedSkeletonVariant},
+    semantic_skeletons::{DatetimePatternsGlueV1, GluePattern, marker_attrs},
+};
+#[cfg(feature = "unstable")]
+use crate::range::difference::Difference;
+use icu_calendar::types::YearAmbiguity;
+use icu_provider::DataPayloadOr;
+use icu_provider::prelude::*;
+use marker_attrs::GlueType;
+use zerovec::ZeroSlice;
+use zerovec::ule::AsULE;
+
+#[derive(Debug, Copy, Clone)]
+pub(crate) struct RawOptions {
+    pub(crate) length: Option<Length>,
+    pub(crate) date_fields: Option<builder::DateFields>,
+    pub(crate) alignment: Option<Alignment>,
+    pub(crate) year_style: Option<YearStyle>,
+    pub(crate) time_precision: Option<TimePrecision>,
+}
+
+impl RawOptions {
+    #[inline]
+    pub(crate) fn length(self) -> Length {
+        self.length.unwrap_or_else(|| {
+            debug_assert!(false, "length not set in a formatter that needs it");
+            Default::default()
+        })
+    }
+}
+
+#[derive(Debug, Copy, Clone, Default)]
+pub(crate) struct RawPreferences {
+    pub(crate) hour_cycle: Option<fields::Hour>,
+}
+
+impl RawPreferences {
+    #[inline]
+    pub(crate) fn from_prefs(prefs: DateTimeFormatterPreferences) -> Self {
+        Self {
+            hour_cycle: fields::Hour::from_prefs(prefs),
+        }
+    }
+}
+
+#[derive(Debug, Clone)]
+pub(crate) struct DatePatternSelectionData {
+    payload: DataPayloadOr<ErasedPackedPatterns, ()>,
+}
+
+#[derive(Debug, Copy, Clone)]
+pub(crate) enum DatePatternDataBorrowed<'a> {
+    Resolved(runtime::PatternBorrowed<'a>, Option<Alignment>),
+}
+
+/// This enum represents both time patterns and overlap patterns between non-year dates and times.
+//
+// TODO(#5387): Consider reducing data size by filtering out explicit overlap patterns when they are
+// the same as their individual patterns with glue.
+#[derive(Debug, Clone)]
+pub(crate) struct TimePatternSelectionData {
+    payload: DataPayloadOr<ErasedPackedPatterns, ()>,
+}
+
+#[derive(Debug, Copy, Clone)]
+pub(crate) enum TimePatternDataBorrowed<'a> {
+    Resolved(
+        runtime::PatternBorrowed<'a>,
+        Option<Alignment>,
+        Option<fields::Hour>,
+        Option<SubsecondDigits>,
+    ),
+}
+
+#[derive(Debug, Clone)]
+pub(crate) enum ZonePatternSelectionData {
+    SinglePatternItem(ZoneFieldSet, <PatternItem as AsULE>::ULE),
+}
+
+#[derive(Debug, Copy, Clone)]
+pub(crate) enum ZonePatternDataBorrowed<'a> {
+    SinglePatternItem(&'a <PatternItem as AsULE>::ULE),
+}
+
+#[derive(Debug, Copy, Clone, Default)]
+pub(crate) struct ItemsAndOptions<'a> {
+    pub(crate) items: &'a ZeroSlice<PatternItem>,
+    pub(crate) alignment: Option<Alignment>,
+    pub(crate) hour_cycle: Option<fields::Hour>,
+    pub(crate) subsecond_digits: Option<SubsecondDigits>,
+}
+
+impl ItemsAndOptions<'_> {
+    const fn new_empty() -> Self {
+        Self {
+            items: ZeroSlice::new_empty(),
+            alignment: None,
+            hour_cycle: None,
+            subsecond_digits: None,
+        }
+    }
+}
+
+#[derive(Debug, Clone)]
+pub(crate) struct DateTimeZonePatternSelectionData {
+    pub(crate) options: RawOptions,
+    pub(crate) prefs: RawPreferences,
+    pub(crate) date: DatePatternSelectionData,
+    // The data for the overlap case is the same as for time, so we use the same intermediate
+    // type. This means that we can't have overlap patterns with both a year and a time. This
+    // assumption might need to be revisited.
+    pub(crate) time: TimePatternSelectionData,
+    pub(crate) zone: Option<ZonePatternSelectionData>,
+    pub(crate) glue: Option<DataPayload<DatetimePatternsGlueV1>>,
+}
+
+#[derive(Debug, Copy, Clone)]
+pub(crate) struct DateTimeZonePatternDataBorrowed<'a> {
+    pub(crate) date: Option<DatePatternDataBorrowed<'a>>,
+    pub(crate) time: Option<TimePatternDataBorrowed<'a>>,
+    pub(crate) zone: Option<ZonePatternDataBorrowed<'a>>,
+    pub(crate) glue: Option<&'a GluePattern<'a>>,
+}
+
+impl DatePatternSelectionData {
+    pub(crate) fn none() -> Self {
+        Self {
+            payload: DataPayloadOr::none(),
+        }
+    }
+
+    pub(crate) fn try_new_with_skeleton(
+        provider: &(impl BoundDataProvider<ErasedPackedPatterns> + ?Sized),
+        prefs: DateTimeFormatterPreferences,
+        attributes: &DataMarkerAttributes,
+    ) -> Result<Self, DataError> {
+        let locale = provider
+            .bound_marker()
+            .make_locale(prefs.locale_preferences);
+        let payload = provider
+            .load_bound(DataRequest {
+                id: DataIdentifierBorrowed::for_marker_attributes_and_locale(attributes, &locale),
+                ..Default::default()
+            })?
+            .payload;
+        Ok(Self {
+            payload: DataPayloadOr::from_payload(payload),
+        })
+    }
+
+    /// Borrows a pattern containing all of the fields that need to be loaded.
+    #[inline]
+    pub(crate) fn pattern_items_for_data_loading(
+        &self,
+        options: RawOptions,
+    ) -> Option<impl Iterator<Item = PatternItem> + '_> {
+        let payload = self.payload.get_option()?;
+        Some(
+            payload
+                .get(options.length(), PackedSkeletonVariant::Variant1)
+                .items
+                .iter(),
+        )
+    }
+
+    /// Borrows a resolved pattern based on the given datetime
+    pub(crate) fn select(
+        &self,
+        input: &DateTimeInputUnchecked,
+        options: RawOptions,
+    ) -> Option<DatePatternDataBorrowed<'_>> {
+        let payload = self.payload.get_option()?;
+        let variant = input.resolve_date_variant(options);
+        Some(DatePatternDataBorrowed::Resolved(
+            payload.get(options.length(), variant),
+            options.alignment,
+        ))
+    }
+}
+
+/// Data required for selecting date range patterns.
+///
+/// This struct holds the patterns used to format the date portion of a range.
+#[derive(Debug, Clone)]
+#[cfg(feature = "unstable")]
+#[allow(dead_code)]
+pub(crate) struct DateRangePatternSelectionData {
+    /// The loaded date range patterns, or `None` if date range formatting is not supported.
+    pub(crate) payload: DataPayloadOr<ErasedPackedRangePatterns, ()>,
+}
+
+#[cfg(feature = "unstable")]
+#[allow(dead_code)]
+impl DateRangePatternSelectionData {
+    pub(crate) fn none() -> Self {
+        Self {
+            payload: DataPayloadOr::none(),
+        }
+    }
+
+    pub(crate) fn try_new_with_skeleton(
+        provider: &(impl BoundDataProvider<ErasedPackedRangePatterns> + ?Sized),
+        prefs: DateTimeFormatterPreferences,
+        attributes: &DataMarkerAttributes,
+    ) -> Result<Self, DataError> {
+        let locale = provider
+            .bound_marker()
+            .make_locale(prefs.locale_preferences);
+        let payload = provider
+            .load_bound(DataRequest {
+                id: DataIdentifierBorrowed::for_marker_attributes_and_locale(attributes, &locale),
+                ..Default::default()
+            })?
+            .payload;
+        Ok(Self {
+            payload: DataPayloadOr::from_payload(payload),
+        })
+    }
+
+    pub(crate) fn select<'a>(
+        &'a self,
+        input: &DateTimeInputUnchecked,
+        options: RawOptions,
+        diff: Difference,
+    ) -> Option<RangePatternInfoBorrowed<'a>> {
+        let payload = self.payload.get_option()?;
+        let variant = input.resolve_date_variant(options);
+        let ule = payload.get_element(options.length(), variant)?;
+
+        let field = match diff {
+            Difference::Era => DateGreatestDifferenceField::Era,
+            Difference::Year => DateGreatestDifferenceField::Year,
+            Difference::Month => DateGreatestDifferenceField::Month,
+            Difference::Day => DateGreatestDifferenceField::Day,
+            _ => return None,
+        };
+
+        ule.get_date_pattern(field)
+    }
+}
+
+impl DateTimeInputUnchecked {
+    fn resolve_date_variant(&self, options: RawOptions) -> PackedSkeletonVariant {
+        let year_style = options.year_style.unwrap_or_default();
+        let ambiguity = self
+            .year
+            .as_ref()
+            .map(|y| {
+                y.era()
+                    .map(|e| e.ambiguity)
+                    .unwrap_or(YearAmbiguity::EraRequired)
+            })
+            .unwrap_or(YearAmbiguity::EraAndCenturyRequired);
+
+        match (year_style, ambiguity) {
+            (YearStyle::WithEra, _) => PackedSkeletonVariant::Variant1,
+
+            (
+                YearStyle::Full,
+                YearAmbiguity::EraAndCenturyRequired | YearAmbiguity::EraRequired,
+            ) => PackedSkeletonVariant::Variant1,
+            (YearStyle::Full, YearAmbiguity::CenturyRequired | YearAmbiguity::Unambiguous) => {
+                PackedSkeletonVariant::Variant0
+            }
+
+            (
+                YearStyle::Auto | YearStyle::NoEra,
+                YearAmbiguity::Unambiguous | YearAmbiguity::EraRequired,
+            ) => PackedSkeletonVariant::Standard,
+
+            (YearStyle::Auto, YearAmbiguity::CenturyRequired) => PackedSkeletonVariant::Variant0,
+            (YearStyle::Auto, YearAmbiguity::EraAndCenturyRequired) => {
+                PackedSkeletonVariant::Variant1
+            }
+
+            (
+                YearStyle::NoEra,
+                YearAmbiguity::CenturyRequired | YearAmbiguity::EraAndCenturyRequired,
+            ) => PackedSkeletonVariant::Variant0,
+        }
+    }
+
+    /// Resolve the variant to select based on time precision
+    ///
+    /// In case of range patterns, `range_second_input` should be set to the end input
+    /// of the range. Set to None for non range patterns.
+    fn resolve_time_precision(
+        &self,
+        time_precision: TimePrecision,
+        coarse_hour_cycle: Option<CoarseHourCycle>,
+        range_second_input: Option<&Self>,
+    ) -> (PackedSkeletonVariant, Option<SubsecondDigits>) {
+        match time_precision {
+            TimePrecision::Hour => (PackedSkeletonVariant::Standard, None),
+            TimePrecision::Minute => (PackedSkeletonVariant::Variant0, None),
+            TimePrecision::Second => (PackedSkeletonVariant::Variant1, None),
+            TimePrecision::Subsecond(f) => (PackedSkeletonVariant::Variant1, Some(f)),
+            TimePrecision::MinuteOptional => {
+                let minute = self.minute.unwrap_or_default();
+                let second_range_minute_is_zero = range_second_input
+                    .map(|input2| input2.minute.unwrap_or_default().is_zero())
+                    .unwrap_or(true);
+                if minute.is_zero()
+                    && second_range_minute_is_zero
+                    && matches!(coarse_hour_cycle, Some(CoarseHourCycle::H11H12))
+                {
+                    (PackedSkeletonVariant::Standard, None)
+                } else {
+                    (PackedSkeletonVariant::Variant0, None)
+                }
+            }
+        }
+    }
+}
+
+impl<'a> DatePatternDataBorrowed<'a> {
+    pub(crate) fn items_and_options(self) -> ItemsAndOptions<'a> {
+        let Self::Resolved(pattern, alignment) = self;
+        ItemsAndOptions {
+            items: pattern.items,
+            alignment,
+            ..Default::default()
+        }
+    }
+}
+
+impl TimePatternSelectionData {
+    pub(crate) fn none() -> Self {
+        Self {
+            payload: DataPayloadOr::none(),
+        }
+    }
+
+    pub(crate) fn try_new_with_skeleton(
+        provider: &(impl BoundDataProvider<ErasedPackedPatterns> + ?Sized),
+        prefs: DateTimeFormatterPreferences,
+        components: TimeFieldSet,
+    ) -> Result<Self, DataError> {
+        let locale = provider
+            .bound_marker()
+            .make_locale(prefs.locale_preferences);
+        let prefs = RawPreferences::from_prefs(prefs);
+        // First try to load with the explicit hour cycle. If there is no explicit hour cycle,
+        // or if loading the explicit hour cycle fails, then load with the default hour cycle.
+        let mut maybe_payload = None;
+        if let Some(hour_cycle) = prefs.hour_cycle {
+            maybe_payload = provider
+                .load_bound(DataRequest {
+                    id: DataIdentifierBorrowed::for_marker_attributes_and_locale(
+                        components.id_str_for_hour_cycle(Some(hour_cycle)),
+                        &locale,
+                    ),
+                    ..Default::default()
+                })
+                .allow_identifier_not_found()?
+                .map(|r| r.payload);
+        }
+        let payload = match maybe_payload {
+            Some(payload) => payload,
+            None => {
+                provider
+                    .load_bound(DataRequest {
+                        id: DataIdentifierBorrowed::for_marker_attributes_and_locale(
+                            components.id_str_for_hour_cycle(None),
+                            &locale,
+                        ),
+                        ..Default::default()
+                    })?
+                    .payload
+            }
+        };
+        Ok(Self {
+            payload: DataPayloadOr::from_payload(payload),
+        })
+    }
+
+    pub(crate) fn try_new_overlap_with_skeleton(
+        provider: &(impl BoundDataProvider<ErasedPackedPatterns> + ?Sized),
+        prefs: DateTimeFormatterPreferences,
+        attributes: &DataMarkerAttributes,
+        options: RawOptions,
+    ) -> Result<Self, DataError> {
+        // Currently, none of the overlap patterns have a year field,
+        // so we can use the variant to select the time precision.
+        //
+        // We do not currently support overlap patterns with both a
+        // year and a time because that would involve 3*3 = 9 variants
+        // instead of 3 variants.
+        debug_assert!(options.year_style.is_none());
+        let locale = provider
+            .bound_marker()
+            .make_locale(prefs.locale_preferences);
+        let payload = provider
+            .load_bound(DataRequest {
+                id: DataIdentifierBorrowed::for_marker_attributes_and_locale(attributes, &locale),
+                ..Default::default()
+            })?
+            .payload;
+        Ok(Self {
+            payload: DataPayloadOr::from_payload(payload),
+        })
+    }
+
+    /// Borrows a pattern containing all of the fields that need to be loaded.
+    #[inline]
+    pub(crate) fn pattern_items_for_data_loading(
+        &self,
+        options: RawOptions,
+    ) -> Option<impl Iterator<Item = PatternItem> + '_> {
+        let payload = self.payload.get_option()?;
+        Some(
+            payload
+                .get(options.length(), PackedSkeletonVariant::Variant1)
+                .items
+                .iter(),
+        )
+    }
+
+    /// Borrows a resolved pattern based on the given datetime
+    pub(crate) fn select(
+        &self,
+        input: &DateTimeInputUnchecked,
+        options: RawOptions,
+        prefs: RawPreferences,
+    ) -> Option<TimePatternDataBorrowed<'_>> {
+        let payload = self.payload.get_option()?;
+        let time_precision = options.time_precision.unwrap_or_default();
+        // To get the hour cycle without reading the whole pattern, we can check the time
+        // granularity of the hour pattern (packed variant `Standard`).
+        let coarse_hour_cycle = payload
+            .get(options.length(), PackedSkeletonVariant::Standard)
+            .metadata
+            .time_granularity()
+            .coarse_hour_cycle();
+        let (variant, subsecond_digits) =
+            input.resolve_time_precision(time_precision, coarse_hour_cycle, None);
+        Some(TimePatternDataBorrowed::Resolved(
+            payload.get(options.length(), variant),
+            options.alignment,
+            prefs.hour_cycle,
+            subsecond_digits,
+        ))
+    }
+}
+
+impl<'a> TimePatternDataBorrowed<'a> {
+    pub(crate) fn items_and_options(self) -> ItemsAndOptions<'a> {
+        let Self::Resolved(pattern, alignment, hour_cycle, subsecond_digits) = self;
+        ItemsAndOptions {
+            items: pattern.items,
+            alignment,
+            hour_cycle,
+            subsecond_digits,
+        }
+    }
+}
+
+/// Data required for selecting time range patterns.
+///
+/// This struct holds the patterns used to format the time portion of a range.
+#[derive(Debug, Clone)]
+#[cfg(feature = "unstable")]
+#[allow(dead_code)]
+pub(crate) struct TimeRangePatternSelectionData {
+    /// The loaded time range patterns, or `None` if time range formatting is not supported.
+    pub(crate) payload: DataPayloadOr<ErasedPackedRangePatterns, ()>,
+}
+
+#[cfg(feature = "unstable")]
+#[allow(dead_code)]
+impl TimeRangePatternSelectionData {
+    pub(crate) fn none() -> Self {
+        Self {
+            payload: DataPayloadOr::none(),
+        }
+    }
+
+    pub(crate) fn try_new_with_skeleton(
+        provider: &(impl BoundDataProvider<ErasedPackedRangePatterns> + ?Sized),
+        prefs: DateTimeFormatterPreferences,
+        components: TimeFieldSet,
+    ) -> Result<Self, DataError> {
+        let locale = provider
+            .bound_marker()
+            .make_locale(prefs.locale_preferences);
+        let prefs = RawPreferences::from_prefs(prefs);
+        // First try to load with the explicit hour cycle. If there is no explicit hour cycle,
+        // or if loading the explicit hour cycle fails, then load with the default hour cycle.
+        let mut maybe_payload = None;
+        if let Some(hour_cycle) = prefs.hour_cycle {
+            maybe_payload = provider
+                .load_bound(DataRequest {
+                    id: DataIdentifierBorrowed::for_marker_attributes_and_locale(
+                        components.id_str_for_hour_cycle(Some(hour_cycle)),
+                        &locale,
+                    ),
+                    ..Default::default()
+                })
+                .allow_identifier_not_found()?
+                .map(|r| r.payload);
+        }
+        let payload = match maybe_payload {
+            Some(payload) => payload,
+            None => {
+                provider
+                    .load_bound(DataRequest {
+                        id: DataIdentifierBorrowed::for_marker_attributes_and_locale(
+                            components.id_str_for_hour_cycle(None),
+                            &locale,
+                        ),
+                        ..Default::default()
+                    })?
+                    .payload
+            }
+        };
+        Ok(Self {
+            payload: DataPayloadOr::from_payload(payload),
+        })
+    }
+
+    pub(crate) fn select<'a>(
+        &'a self,
+        input: &DateTimeInputUnchecked,
+        input2: &DateTimeInputUnchecked,
+        options: RawOptions,
+        diff: Difference,
+    ) -> Option<RangePatternInfoBorrowed<'a>> {
+        let payload = self.payload.get_option()?;
+        let field = match diff {
+            Difference::DayPeriodB => TimeGreatestDifferenceField::DayPeriodB,
+            Difference::DayPeriodA => TimeGreatestDifferenceField::DayPeriodA,
+            Difference::Hour => TimeGreatestDifferenceField::Hour,
+            Difference::Minute => TimeGreatestDifferenceField::Minute,
+            _ => return None,
+        };
+
+        let coarse_hour_cycle = payload.get_coarse_hour_cycle(options.length());
+        let time_precision = options.time_precision.unwrap_or_default();
+        let (variant, _) =
+            input.resolve_time_precision(time_precision, coarse_hour_cycle, Some(input2));
+        let ule = payload.get_element(options.length(), variant)?;
+
+        ule.get_time_pattern(field)
+    }
+}
+
+impl ZonePatternSelectionData {
+    pub(crate) fn new_with_skeleton(field_set: ZoneFieldSet) -> Self {
+        let (symbol, length) = field_set.to_field();
+        let pattern_item = PatternItem::Field(Field {
+            symbol: FieldSymbol::TimeZone(symbol),
+            length,
+        });
+        Self::SinglePatternItem(field_set, pattern_item.to_unaligned())
+    }
+
+    /// Borrows a pattern containing all of the fields that need to be loaded.
+    #[inline]
+    pub(crate) fn pattern_items_for_data_loading(&self) -> impl Iterator<Item = PatternItem> + '_ {
+        let Self::SinglePatternItem(_, pattern_item) = self;
+        let pattern_item = PatternItem::from_unaligned(*pattern_item);
+        [pattern_item].into_iter()
+    }
+
+    /// Borrows a resolved pattern based on the given datetime
+    pub(crate) fn select(&self, _input: &DateTimeInputUnchecked) -> ZonePatternDataBorrowed<'_> {
+        let Self::SinglePatternItem(_, pattern_item) = self;
+        ZonePatternDataBorrowed::SinglePatternItem(pattern_item)
+    }
+}
+
+impl<'a> ZonePatternDataBorrowed<'a> {
+    pub(crate) fn items_and_options(self) -> ItemsAndOptions<'a> {
+        let Self::SinglePatternItem(item) = self;
+        ItemsAndOptions {
+            items: ZeroSlice::from_ule_slice(core::slice::from_ref(item)),
+            ..Default::default()
+        }
+    }
+}
+
+/// Helper function to map a [`CompositeFieldSet`] to loaded date and time pattern selection data.
+///
+/// This function decomposes a composite field set into its date and time components,
+/// applying the provided loader closures `load_date` and `load_time` respectively to load
+/// the specific pattern selection data payloads.
+///
+/// If a component (date or time) is not present in the composite field set, `None` is returned
+/// for that component.
+#[inline]
+fn map_composite_skeleton<DateRes, TimeRes, E>(
+    skeleton: CompositeFieldSet,
+    mut load_date: impl FnMut(&DataMarkerAttributes) -> Result<DateRes, E>,
+    mut load_time: impl FnMut(TimeFieldSet) -> Result<TimeRes, E>,
+) -> Result<(Option<DateRes>, Option<TimeRes>), E> {
+    let mut date = None;
+    let mut time = None;
+    match skeleton {
+        CompositeFieldSet::Date(field_set) => {
+            date = Some(load_date(field_set.id_str())?);
+        }
+        CompositeFieldSet::CalendarPeriod(field_set) => {
+            date = Some(load_date(field_set.id_str())?);
+        }
+        CompositeFieldSet::Time(field_set) => {
+            time = Some(load_time(field_set)?);
+        }
+        CompositeFieldSet::DateTime(field_set) => {
+            date = Some(load_date(field_set.to_date_field_set().id_str())?);
+            time = Some(load_time(field_set.to_time_field_set())?);
+        }
+        CompositeFieldSet::DateZone(combo) => {
+            date = Some(load_date(combo.dt().id_str())?);
+        }
+        CompositeFieldSet::DateTimeZone(combo) => {
+            date = Some(load_date(combo.dt().to_date_field_set().id_str())?);
+            time = Some(load_time(combo.dt().to_time_field_set())?);
+        }
+        CompositeFieldSet::TimeZone(combo) => {
+            time = Some(load_time(combo.dt())?);
+        }
+        CompositeFieldSet::Zone(_) => {}
+    }
+    Ok((date, time))
+}
+
+impl DateTimeZonePatternSelectionData {
+    pub(crate) fn try_new_with_skeleton(
+        date_provider: &(impl BoundDataProvider<ErasedPackedPatterns> + ?Sized),
+        time_provider: &(impl BoundDataProvider<ErasedPackedPatterns> + ?Sized),
+        glue_provider: &(impl BoundDataProvider<DatetimePatternsGlueV1> + ?Sized),
+        prefs: DateTimeFormatterPreferences,
+        skeleton: CompositeFieldSet,
+    ) -> Result<Self, DataError> {
+        // Handle overlap early return.
+        //
+        // Note: For range formatting on overlap skeletons (such as `ej` for short weekday + time),
+        // returning early with `date: DatePatternSelectionData::none()` and `glue: None` causes
+        // time interval differences to drop to fallback range formatting (`format_fallback`).
+        // This relies on the assumption that any locale in CLDR supporting overlap patterns in
+        // standard date/time formatting also defines corresponding interval range pattern data.
+        // This coverage assumption is verified across all locales and calendars in datagen tests:
+        // `icu_provider_source::datetime::range_patterns::tests`.
+        if let CompositeFieldSet::DateTime(field_set) = skeleton {
+            let options = field_set.to_raw_options();
+            // TODO(#5387): load the patterns for custom hour cycles here
+            if let (Some(attributes), None) = (field_set.id_str(), prefs.hour_cycle)
+                // Try loading an overlap pattern.
+                // Note: Overlap patterns are loaded from the date skeleton pattern provider
+                // and then stored as a TimePatternSelectionData.
+                && let Some(overlap) = TimePatternSelectionData::try_new_overlap_with_skeleton(
+                    date_provider,
+                    prefs,
+                    attributes,
+                    options,
+                )
+                .allow_identifier_not_found()?
+            {
+                let prefs = RawPreferences::from_prefs(prefs);
+                return Ok(Self {
+                    options,
+                    prefs,
+                    date: DatePatternSelectionData::none(),
+                    time: overlap,
+                    zone: None,
+                    glue: None,
+                });
+            }
+        }
+
+        let options = skeleton.to_raw_options();
+        let zone = skeleton
+            .to_zone()
+            .map(ZonePatternSelectionData::new_with_skeleton);
+
+        let glue_type = match skeleton {
+            CompositeFieldSet::DateTime(_) => Some(GlueType::DateTime),
+            CompositeFieldSet::DateZone(_) => Some(GlueType::DateZone),
+            CompositeFieldSet::TimeZone(_) => Some(GlueType::TimeZone),
+            CompositeFieldSet::DateTimeZone(_) => Some(GlueType::DateTimeZone),
+            _ => None,
+        };
+
+        let glue = if let Some(gt) = glue_type {
+            Some(Self::load_glue(glue_provider, prefs, options, gt)?)
+        } else {
+            None
+        };
+
+        let (date_opt, time_opt) = map_composite_skeleton(
+            skeleton,
+            |d_attrs| {
+                DatePatternSelectionData::try_new_with_skeleton(date_provider, prefs, d_attrs)
+            },
+            |t_field_set| {
+                TimePatternSelectionData::try_new_with_skeleton(time_provider, prefs, t_field_set)
+            },
+        )?;
+
+        let has_time = time_opt.is_some();
+        let date = date_opt.unwrap_or_else(DatePatternSelectionData::none);
+        let time = time_opt.unwrap_or_else(TimePatternSelectionData::none);
+
+        let prefs = if has_time {
+            RawPreferences::from_prefs(prefs)
+        } else {
+            Default::default()
+        };
+
+        Ok(Self {
+            options,
+            prefs,
+            date,
+            time,
+            zone,
+            glue,
+        })
+    }
+
+    fn load_glue(
+        provider: &(impl BoundDataProvider<DatetimePatternsGlueV1> + ?Sized),
+        prefs: DateTimeFormatterPreferences,
+        options: RawOptions,
+        glue_type: GlueType,
+    ) -> Result<DataPayload<DatetimePatternsGlueV1>, DataError> {
+        let locale = provider
+            .bound_marker()
+            .make_locale(prefs.locale_preferences);
+        provider
+            .load_bound(DataRequest {
+                id: DataIdentifierBorrowed::for_marker_attributes_and_locale(
+                    marker_attrs::pattern_marker_attr_for_glue(
+                        // According to UTS 35, use the date length here: use the glue
+                        // pattern "whose type matches the type of the date pattern"
+                        match options.length() {
+                            Length::Long => marker_attrs::PatternLength::Long,
+                            Length::Medium => marker_attrs::PatternLength::Medium,
+                            Length::Short => marker_attrs::PatternLength::Short,
+                        },
+                        glue_type,
+                    ),
+                    &locale,
+                ),
+                ..Default::default()
+            })
+            .map(|r| r.payload)
+    }
+
+    /// Returns an iterator over the pattern items that may need to be loaded.
+    #[inline]
+    pub(crate) fn pattern_items_for_data_loading(&self) -> impl Iterator<Item = PatternItem> + '_ {
+        let Self {
+            date, time, zone, ..
+        } = self;
+        let date_items = date
+            .pattern_items_for_data_loading(self.options)
+            .into_iter()
+            .flatten();
+        let time_items = time
+            .pattern_items_for_data_loading(self.options)
+            .into_iter()
+            .flatten();
+        let zone_items = zone.iter().flat_map(|x| x.pattern_items_for_data_loading());
+        date_items.chain(time_items).chain(zone_items)
+    }
+
+    /// Borrows a resolved pattern based on the given datetime
+    pub(crate) fn select(
+        &self,
+        input: &DateTimeInputUnchecked,
+    ) -> DateTimeZonePatternDataBorrowed<'_> {
+        DateTimeZonePatternDataBorrowed {
+            date: self.date.select(input, self.options),
+            time: self.time.select(input, self.options, self.prefs),
+            zone: self.zone.as_ref().map(|zone| zone.select(input)),
+            glue: self.glue.as_ref().map(|glue| glue.get()),
+        }
+    }
+
+    /// Converts one of these into a corresponding [`builder::FieldSetBuilder`]
+    pub(crate) fn to_builder(&self) -> builder::FieldSetBuilder {
+        let time_precision = if self.time.payload.is_payload() {
+            Some(self.options.time_precision.unwrap_or_default())
+        } else {
+            None
+        };
+        let zone_style = self.zone.as_ref().map(|zone| {
+            let ZonePatternSelectionData::SinglePatternItem(field_set, _) = zone;
+            field_set.to_zone_style()
+        });
+        builder::FieldSetBuilder {
+            length: self.options.length,
+            date_fields: self.options.date_fields,
+            time_precision,
+            zone_style,
+            alignment: self.options.alignment,
+            year_style: self.options.year_style,
+        }
+    }
+}
+
+/// Data required for selecting date, time, and zone range patterns.
+///
+/// This struct consolidates the date and time range patterns, as well as the
+/// fallback range glue used when no specific greatest-difference pattern is available.
+#[derive(Debug, Clone)]
+#[cfg(feature = "unstable")]
+#[allow(dead_code)]
+pub(crate) struct DateTimeZoneRangePatternSelectionData {
+    /// Data for selecting date range patterns.
+    pub(crate) date_range: DateRangePatternSelectionData,
+    /// Data for selecting time range patterns.
+    pub(crate) time_range: TimeRangePatternSelectionData,
+    /// Fallback range glue patterns.
+    pub(crate) range_glue: DataPayload<DatetimePatternsRangeGlueV1>,
+}
+
+#[cfg(feature = "unstable")]
+#[allow(dead_code)]
+impl DateTimeZoneRangePatternSelectionData {
+    pub(crate) fn try_new_with_skeleton(
+        date_range_provider: &(impl BoundDataProvider<ErasedPackedRangePatterns> + ?Sized),
+        time_range_provider: &(impl BoundDataProvider<ErasedPackedRangePatterns> + ?Sized),
+        range_glue_provider: &(impl BoundDataProvider<DatetimePatternsRangeGlueV1> + ?Sized),
+        prefs: DateTimeFormatterPreferences,
+        skeleton: CompositeFieldSet,
+    ) -> Result<Self, DataError> {
+        let locale = range_glue_provider
+            .bound_marker()
+            .make_locale(prefs.locale_preferences);
+
+        let range_glue = range_glue_provider
+            .load_bound(DataRequest {
+                id: DataIdentifierBorrowed::for_marker_attributes_and_locale(
+                    DataMarkerAttributes::empty(),
+                    &locale,
+                ),
+                ..Default::default()
+            })?
+            .payload;
+
+        let (date_opt, time_opt) = map_composite_skeleton(
+            skeleton,
+            |d_attrs| {
+                DateRangePatternSelectionData::try_new_with_skeleton(
+                    date_range_provider,
+                    prefs,
+                    d_attrs,
+                )
+            },
+            |t_field_set| {
+                TimeRangePatternSelectionData::try_new_with_skeleton(
+                    time_range_provider,
+                    prefs,
+                    t_field_set,
+                )
+            },
+        )?;
+
+        let date_range = date_opt.unwrap_or_else(DateRangePatternSelectionData::none);
+        let time_range = time_opt.unwrap_or_else(TimeRangePatternSelectionData::none);
+
+        Ok(Self {
+            date_range,
+            time_range,
+            range_glue,
+        })
+    }
+}
+
+impl<'a> DateTimeZonePatternDataBorrowed<'a> {
+    #[inline]
+    fn date_pattern(self) -> Option<DatePatternDataBorrowed<'a>> {
+        self.date
+    }
+
+    #[inline]
+    fn time_pattern(self) -> Option<TimePatternDataBorrowed<'a>> {
+        self.time
+    }
+
+    #[inline]
+    fn zone_pattern(self) -> Option<ZonePatternDataBorrowed<'a>> {
+        self.zone
+    }
+
+    #[inline]
+    fn glue_pattern(self) -> Option<&'a ZeroSlice<GenericPatternItem>> {
+        self.glue.map(|glue| glue.pattern.items.as_slice())
+    }
+
+    #[inline]
+    pub(crate) fn metadata(self) -> PatternMetadata {
+        match (self.date, self.time) {
+            (Some(DatePatternDataBorrowed::Resolved(pb, _)), None) => pb.metadata,
+            (None, Some(TimePatternDataBorrowed::Resolved(pb, _, _, _))) => pb.metadata,
+            (
+                Some(DatePatternDataBorrowed::Resolved(date, _)),
+                Some(TimePatternDataBorrowed::Resolved(time, _, _, _)),
+            ) => PatternMetadata::merge_date_and_time_metadata(date.metadata, time.metadata),
+            (None, None) => Default::default(),
+        }
+    }
+
+    pub(crate) fn iter_items(self) -> impl Iterator<Item = PatternItem> + 'a {
+        let glue_pattern_slice = match self.glue_pattern() {
+            Some(glue) => glue.as_ule_slice(),
+            None => runtime::ZERO_ONE_TWO_SLICE.as_ule_slice(),
+        };
+        glue_pattern_slice
+            .iter()
+            .map(
+                move |generic_item_ule| match generic_item_ule.as_pattern_item_ule() {
+                    Ok(pattern_item_ule) => ItemsAndOptions {
+                        items: ZeroSlice::from_ule_slice(core::slice::from_ref(pattern_item_ule)),
+                        ..Default::default()
+                    },
+                    Err(1) => self
+                        .date_pattern()
+                        .map(|p| p.items_and_options())
+                        .unwrap_or(const { ItemsAndOptions::new_empty() }),
+                    Err(0) => self
+                        .time_pattern()
+                        .map(|p| p.items_and_options())
+                        .unwrap_or(const { ItemsAndOptions::new_empty() }),
+                    Err(2) => self
+                        .zone_pattern()
+                        .map(|p| p.items_and_options())
+                        .unwrap_or(const { ItemsAndOptions::new_empty() }),
+                    _ => ItemsAndOptions::new_empty(),
+                },
+            )
+            .flat_map(|items_and_options| items_and_options.iter_items())
+    }
+
+    pub(crate) fn to_pattern(self) -> DateTimePattern {
+        let pattern = self.iter_items().collect::<runtime::Pattern>();
+        DateTimePattern::from(pattern)
+    }
+}
+
+impl<'a> ItemsAndOptions<'a> {
+    pub(crate) fn iter_items(self) -> impl Iterator<Item = PatternItem> + 'a {
+        self.items.iter().map(move |mut pattern_item| {
+            #[expect(clippy::single_match)] // need `ref mut`, which doesn't work in `if let`?
+            match &mut pattern_item {
+                PatternItem::Field(field) => {
+                    let alignment = self.alignment.unwrap_or_default();
+                    if matches!(alignment, Alignment::Column)
+                        && field.length == FieldLength::One
+                        && matches!(
+                            field.symbol,
+                            FieldSymbol::Month(_)
+                                | FieldSymbol::Day(_)
+                                | FieldSymbol::Week(_)
+                                | FieldSymbol::Hour(_)
+                        )
+                    {
+                        field.length = FieldLength::Two;
+                    }
+                    if let Some(hour_cycle) = self.hour_cycle
+                        && let FieldSymbol::Hour(_) = field.symbol
+                    {
+                        field.symbol = FieldSymbol::Hour(hour_cycle);
+                    }
+                    if let Some(subsecond_digits) = self.subsecond_digits
+                        && matches!(
+                            field.symbol,
+                            FieldSymbol::Second(fields::Second::Second)
+                                | FieldSymbol::DecimalSecond(_)
+                        )
+                    {
+                        field.symbol = FieldSymbol::from_subsecond_digits(subsecond_digits);
+                    }
+                }
+                _ => (),
+            }
+            pattern_item
+        })
+    }
+}

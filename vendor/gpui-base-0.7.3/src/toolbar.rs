@@ -47,6 +47,7 @@ pub struct Toolbar {
     base: Stateful<Div>,
     style: StyleRefinement,
     disabled: bool,
+    right_to_left: bool,
     children: SmallVec<[AnyElement; 4]>,
 }
 
@@ -57,9 +58,16 @@ impl Toolbar {
             base: div().id(id.clone()),
             style: StyleRefinement::default(),
             disabled: false,
+            right_to_left: false,
             children: SmallVec::new(),
             id,
         }
+    }
+
+    /// Reverse horizontal arrow navigation for right-to-left visual order.
+    pub fn right_to_left(mut self, right_to_left: bool) -> Self {
+        self.right_to_left = right_to_left;
+        self
     }
 
     /// Disables the toolbar's own keyboard navigation. Hosted controls are
@@ -113,6 +121,7 @@ fn move_focus(container: &FocusHandle, forward: bool, window: &mut Window, cx: &
 
 fn handle_key_down(
     disabled: bool,
+    right_to_left: bool,
     container: &FocusHandle,
     event: &KeyDownEvent,
     window: &mut Window,
@@ -123,8 +132,8 @@ fn handle_key_down(
     }
 
     let forward = match event.keystroke.key.as_str() {
-        "left" => Some(false),
-        "right" => Some(true),
+        "left" => Some(right_to_left),
+        "right" => Some(!right_to_left),
         _ => None,
     };
 
@@ -160,6 +169,7 @@ impl RenderOnce for Toolbar {
             base,
             style,
             disabled,
+            right_to_left,
             children,
             ..
         } = self;
@@ -176,7 +186,7 @@ impl RenderOnce for Toolbar {
         let key_handler = {
             let focus_handle = focus_handle.clone();
             move |event: &KeyDownEvent, window: &mut Window, cx: &mut App| {
-                handle_key_down(disabled, &focus_handle, event, window, cx);
+                handle_key_down(disabled, right_to_left, &focus_handle, event, window, cx);
             }
         };
 

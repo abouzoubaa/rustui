@@ -1,0 +1,38 @@
+--- a/vendor/gpui-pre-macos-0.3.9/src/window.rs
++++ b/vendor/gpui-pre-macos-0.3.9/src/window.rs
+@@ -960,0 +961,12 @@
++fn popup_anchor_rect_in_view(anchor: NSRect, bounds: NSRect, is_flipped: bool) -> NSRect {
++    let y = if is_flipped {
++        bounds.origin.y + anchor.origin.y
++    } else {
++        bounds.origin.y + bounds.size.height - anchor.origin.y - anchor.size.height
++    };
++    NSRect::new(
++        NSPoint::new(bounds.origin.x + anchor.origin.x, y),
++        anchor.size,
++    )
++}
++
+@@ -978,0 +991,3 @@
++        let parent_bounds: NSRect = msg_send![parent_view, bounds];
++        let parent_is_flipped: BOOL = msg_send![parent_view, isFlipped];
++        let anchor = popup_anchor_rect_in_view(anchor, parent_bounds, parent_is_flipped == YES);
+@@ -1165,0 +1181,18 @@
++
++    #[test]
++    fn anchor_rect_conversion_respects_parent_bounds_and_flip_state() {
++        let bounds = NSRect::new(NSPoint::new(10.0, 20.0), NSSize::new(300.0, 200.0));
++        let anchor = NSRect::new(NSPoint::new(5.0, 30.0), NSSize::new(10.0, 8.0));
++
++        let flipped = popup_anchor_rect_in_view(anchor, bounds, true);
++        assert_eq!(flipped.origin.x, 15.0);
++        assert_eq!(flipped.origin.y, 50.0);
++        assert_eq!(flipped.size.width, 10.0);
++        assert_eq!(flipped.size.height, 8.0);
++
++        let unflipped = popup_anchor_rect_in_view(anchor, bounds, false);
++        assert_eq!(unflipped.origin.x, 15.0);
++        assert_eq!(unflipped.origin.y, 182.0);
++        assert_eq!(unflipped.size.width, 10.0);
++        assert_eq!(unflipped.size.height, 8.0);
++    }

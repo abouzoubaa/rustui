@@ -1,0 +1,319 @@
+--- a/vendor/gpui-pre-0.3.9/src/text_system/line_layout.rs
++++ b/vendor/gpui-pre-0.3.9/src/text_system/line_layout.rs
+@@ -29,6 +29,8 @@
+     pub runs: Vec<ShapedRun>,
+     /// The length of the line in utf-8 bytes
+     pub len: usize,
++    /// Cosmic glyph clusters for bidirectional single-line hit testing.
++    pub bidi_clusters: Option<Vec<WrappedGlyphCluster>>,
+ }
+ 
+ /// A run of text that has been shaped .
+@@ -129,9 +131,65 @@
+     }
+ }
+ 
++fn cluster_index_for_x(clusters: &[WrappedGlyphCluster], x: Pixels, closest: bool) -> usize {
++    let x = f32::from(x);
++    let mut nearest = (f32::INFINITY, 0);
++    for cluster in clusters {
++        let left = f32::from(cluster.x);
++        let right = left + f32::from(cluster.width);
++        let (left_index, right_index) = if cluster.rtl {
++            (cluster.bytes.end, cluster.bytes.start)
++        } else {
++            (cluster.bytes.start, cluster.bytes.end)
++        };
++        if x >= left && x < right {
++            return if closest {
++                if x < (left + right) / 2.0 {
++                    left_index
++                } else {
++                    right_index
++                }
++            } else {
++                cluster.bytes.start
++            };
++        }
++        for (edge, index) in [(left, left_index), (right, right_index)] {
++            let distance = (x - edge).abs();
++            if distance < nearest.0 {
++                nearest = (distance, index);
++            }
++        }
++    }
++    nearest.1
++}
++
++fn cluster_x_for_index(clusters: &[WrappedGlyphCluster], index: usize) -> Pixels {
++    let mut nearest = (usize::MAX, Pixels::ZERO);
++    for cluster in clusters {
++        let (start_x, end_x) = if cluster.rtl {
++            (cluster.x + cluster.width, cluster.x)
++        } else {
++            (cluster.x, cluster.x + cluster.width)
++        };
++        if cluster.bytes.start <= index && index < cluster.bytes.end {
++            return start_x;
++        }
++        for (byte, x) in [(cluster.bytes.start, start_x), (cluster.bytes.end, end_x)] {
++            let distance = byte.abs_diff(index);
++            if distance < nearest.0 {
++                nearest = (distance, x);
++            }
++        }
++    }
++    nearest.1
++}
++
+ impl LineLayout {
+     /// The index for the character at the given x coordinate
+     pub fn index_for_x(&self, x: Pixels) -> Option<usize> {
++        if let Some(clusters) = &self.bidi_clusters {
++            return (x < self.width).then(|| cluster_index_for_x(clusters, x, false));
++        }
+         if x >= self.width {
+             None
+         } else {
+@@ -149,6 +207,9 @@
+     /// closest_index_for_x returns the character boundary closest to the given x coordinate
+     /// (e.g. to handle aligning up/down arrow keys)
+     pub fn closest_index_for_x(&self, x: Pixels) -> usize {
++        if let Some(clusters) = &self.bidi_clusters {
++            return cluster_index_for_x(clusters, x, true);
++        }
+         let mut prev_index = 0;
+         let mut prev_x = px(0.);
+ 
+@@ -179,6 +240,9 @@
+ 
+     /// The x position of the character at the given index
+     pub fn x_for_index(&self, index: usize) -> Pixels {
++        if let Some(clusters) = &self.bidi_clusters {
++            return cluster_x_for_index(clusters, index);
++        }
+         for run in &self.runs {
+             for glyph in &run.glyphs {
+                 if glyph.index >= index {
+@@ -249,6 +313,8 @@
+             descent: self.descent,
+             runs: left_runs,
+             len: byte_index,
++
++            bidi_clusters: None,
+         };
+ 
+         let right = LineLayout {
+@@ -258,6 +324,8 @@
+             descent: self.descent,
+             runs: right_runs,
+             len: self.len - byte_index,
++
++            bidi_clusters: None,
+         };
+ 
+         (left, right)
+@@ -1205,6 +1273,8 @@
+                 glyphs,
+             }],
+             len: 0,
++
++            bidi_clusters: None,
+         }
+     }
+ 
+@@ -1352,4 +1422,49 @@
+         let positions = glyph_x_positions(&layout);
+         assert_eq!(positions, vec![0.5, 0.5]);
+     }
++
++    #[test]
++    fn bidi_single_line_pointer_hits_follow_visual_clusters() {
++        let mut layout = make_layout(Vec::new());
++        layout.len = 7;
++        layout.width = px(40.);
++        layout.bidi_clusters = Some(vec![
++            WrappedGlyphCluster {
++                bytes: 4..6,
++                x: px(0.),
++                width: px(10.),
++                rtl: true,
++            },
++            WrappedGlyphCluster {
++                bytes: 2..4,
++                x: px(10.),
++                width: px(10.),
++                rtl: true,
++            },
++            WrappedGlyphCluster {
++                bytes: 0..2,
++                x: px(20.),
++                width: px(10.),
++                rtl: true,
++            },
++            WrappedGlyphCluster {
++                bytes: 6..7,
++                x: px(30.),
++                width: px(10.),
++                rtl: false,
++            },
++        ]);
++        assert_eq!(layout.closest_index_for_x(px(1.)), 6);
++        assert_eq!(layout.closest_index_for_x(px(9.)), 4);
++        assert_eq!(layout.closest_index_for_x(px(11.)), 4);
++        assert_eq!(layout.closest_index_for_x(px(19.)), 2);
++        assert_eq!(layout.closest_index_for_x(px(21.)), 2);
++        assert_eq!(layout.closest_index_for_x(px(29.)), 0);
++        assert_eq!(layout.closest_index_for_x(px(31.)), 6);
++        assert_eq!(layout.closest_index_for_x(px(39.)), 7);
++        assert_eq!(layout.x_for_index(0), px(30.));
++        assert_eq!(layout.x_for_index(2), px(20.));
++        assert_eq!(layout.x_for_index(4), px(10.));
++        assert_eq!(layout.index_for_x(px(25.)), Some(0));
++    }
+ }
+--- a/vendor/gpui-pre-0.3.9/src/text_system/line.rs
++++ b/vendor/gpui-pre-0.3.9/src/text_system/line.rs
+@@ -100,6 +100,8 @@
+             descent: layout.descent,
+             runs: layout.runs.clone(),
+             len,
++
++            bidi_clusters: self.layout.bidi_clusters.clone(),
+         });
+         self
+     }
+@@ -367,6 +369,8 @@
+                 descent: self.line.layout.descent,
+                 runs,
+                 len: byte_index - previous_index,
++
++                bidi_clusters: None,
+             }),
+             text: SharedString::new(&self.line.text[previous_index..byte_index]),
+             decoration_runs: decorations,
+@@ -1081,6 +1085,8 @@
+                     glyphs: shaped_glyphs,
+                 }],
+                 len: text.len(),
++
++                bidi_clusters: None,
+             }),
+             text: SharedString::new(text),
+             decoration_runs: SmallVec::from(decorations.to_vec()),
+@@ -1572,6 +1578,8 @@
+                     },
+                 ],
+                 len: 6,
++
++                bidi_clusters: None,
+             }),
+             text: "abcdef".into(),
+             decoration_runs: SmallVec::new(),
+@@ -1744,6 +1752,8 @@
+             descent: layout.descent,
+             runs,
+             len: layout.len,
++
++            bidi_clusters: None,
+         });
+         line
+     }
+@@ -1812,6 +1822,8 @@
+                     },
+                 ],
+                 len: 10,
++
++                bidi_clusters: None,
+             }),
+             text: "a😀bcdef".into(),
+             decoration_runs: SmallVec::new(),
+--- a/vendor/gpui-pre-0.3.9/src/platform.rs
++++ b/vendor/gpui-pre-0.3.9/src/platform.rs
+@@ -1665,6 +1665,8 @@
+             descent: font_size * (metrics.descent / metrics.units_per_em as f32),
+             runs,
+             len: text.len(),
++
++            bidi_clusters: None,
+         }
+     }
+ 
+--- a/vendor/gpui-pre-web-0.3.9/src/run_replacements.rs
++++ b/vendor/gpui-pre-web-0.3.9/src/run_replacements.rs
+@@ -386,6 +386,8 @@
+             ascent: px(11.0),
+             descent: px(3.0),
+             len: index * 2,
++
++            bidi_clusters: None,
+         }
+     }
+ 
+--- a/vendor/gpui-pre-wgpu-0.3.9/src/cosmic_text_system.rs
++++ b/vendor/gpui-pre-wgpu-0.3.9/src/cosmic_text_system.rs
+@@ -808,6 +808,8 @@
+                 descent: Pixels::ZERO,
+                 runs: Vec::new(),
+                 len: text.len(),
++
++                bidi_clusters: None,
+             };
+         };
+ 
+@@ -967,6 +969,22 @@
+             descent: layout.max_descent.into(),
+             runs,
+             len: text.len(),
++
++            bidi_clusters: Some(
++                layout
++                    .glyphs
++                    .iter()
++                    .map(|glyph| WrappedGlyphCluster {
++                        bytes: glyph.start..glyph.end,
++                        x: glyph.x.into(),
++                        width: glyph.w.into(),
++                        rtl: glyph.level.is_rtl(),
++                    })
++                    .collect(),
++            )
++            .filter(|_: &Vec<WrappedGlyphCluster>| {
++                layout.glyphs.iter().any(|glyph| glyph.level.is_rtl())
++            }),
+         }
+     }
+ 
+--- a/vendor/gpui-pre-apple-0.3.9/src/text_system.rs
++++ b/vendor/gpui-pre-apple-0.3.9/src/text_system.rs
+@@ -632,6 +632,8 @@
+             ascent: max_ascent.into(),
+             descent: max_descent.into(),
+             len: text.len(),
++
++            bidi_clusters: None,
+         }
+     }
+ }
+--- a/vendor/gpui-pre-windows-0.3.9/src/direct_write.rs
++++ b/vendor/gpui-pre-windows-0.3.9/src/direct_write.rs
+@@ -640,6 +640,8 @@
+                 descent,
+                 runs,
+                 len: text.len(),
++
++                bidi_clusters: None,
+             })
+         }
+     }
+--- a/vendor/gpui-base-0.7.3/src/text/inline.rs
++++ b/vendor/gpui-base-0.7.3/src/text/inline.rs
+@@ -1963,6 +1963,8 @@
+                 descent: font_size * (-metrics.descent / UNITS_PER_EM),
+                 runs: shaped_runs,
+                 len: text.len(),
++
++                bidi_clusters: None,
+             }
+         }
+ 

@@ -2,6 +2,24 @@
 
 use rustui::prelude::*;
 
+const FOUNDATION_TAB_MESSAGES: [&str; 15] = [
+    "lab-foundation-tab-parents",
+    "lab-foundation-tab-feedback",
+    "lab-foundation-tab-cache",
+    "lab-foundation-tab-timings",
+    "lab-foundation-tab-links",
+    "lab-foundation-tab-basics",
+    "lab-foundation-tab-canvas",
+    "lab-foundation-tab-graphs",
+    "lab-foundation-tab-grid",
+    "lab-foundation-tab-lazy-grid",
+    "lab-foundation-tab-focus",
+    "lab-foundation-tab-tasks",
+    "lab-foundation-tab-release",
+    "lab-foundation-tab-theme",
+    "lab-foundation-tab-split",
+];
+
 #[component]
 pub struct FoundationDemos {
     #[state(String::from("owners"))]
@@ -27,11 +45,12 @@ impl View for FoundationDemos {
                     VStack::new()
                         .spacing(12.0)
                         .child(super::primitive_gallery::demo())
-                        .child(super::canvas_gallery::demo())
                         .child(super::group_gallery::demo())
                         .child(super::conditional_gallery::demo())
                         .child(super::property_inspector_gallery::demo()),
                 ),
+                TabItem::new("canvas", "Canvas", super::canvas_gallery::demo()),
+                TabItem::new("graph", "Graphs", super::graph_gallery::demo()),
                 TabItem::new(
                     "grid",
                     "Grid",
@@ -67,10 +86,30 @@ impl View for FoundationDemos {
                         .child(super::foundation_additions::foundation_additions()),
                 ),
                 TabItem::new("split", "Split", super::split_view_demo()),
-            ],
+            ]
+            .into_iter()
+            .zip(FOUNDATION_TAB_MESSAGES)
+            .map(|(tab, message)| tab.localized_label(message)),
             self.selection_binding(),
         )
         .id("foundation-demos")
         .style(TabViewStyle::Segmented)
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::FOUNDATION_TAB_MESSAGES;
+    use rustui::localization::Locale;
+
+    #[test]
+    fn foundation_tab_messages_resolve_in_supported_locales() {
+        let catalogs = crate::stories::locale_selector::catalogs();
+        for tag in ["en", "fr", "ar"] {
+            let locale = Locale::parse(tag).unwrap();
+            for key in FOUNDATION_TAB_MESSAGES {
+                assert_ne!(catalogs.resolve(&locale, key), key, "{tag}: {key}");
+            }
+        }
     }
 }

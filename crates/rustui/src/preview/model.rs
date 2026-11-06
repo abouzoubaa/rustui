@@ -70,6 +70,7 @@ pub(crate) fn is_valid_stable_id(value: &str) -> bool {
 pub enum PropertyValue {
     String(String),
     Boolean(bool),
+    Integer(i64),
     Number(f64),
 }
 
@@ -78,6 +79,7 @@ pub enum PropertyValue {
 pub enum PropertyKind {
     String,
     Boolean,
+    Integer,
     Number,
 }
 
@@ -168,6 +170,8 @@ pub enum PreviewError {
     UnsupportedCatalogVersion(u32),
     UnsupportedPreviewFormat(String),
     UnsupportedPreviewVersion(u32),
+    UnsupportedCompositionFormat(String),
+    UnsupportedCompositionVersion(u32),
     UnknownComponent(ComponentId),
     ComponentVersionMismatch {
         component: ComponentId,
@@ -207,6 +211,15 @@ impl fmt::Display for PreviewError {
             }
             Self::UnsupportedPreviewVersion(version) => {
                 write!(formatter, "unsupported preview format version {version}")
+            }
+            Self::UnsupportedCompositionFormat(format) => {
+                write!(formatter, "unsupported composition format `{format}`")
+            }
+            Self::UnsupportedCompositionVersion(version) => {
+                write!(
+                    formatter,
+                    "unsupported composition format version {version}"
+                )
             }
             Self::UnknownComponent(component) => {
                 write!(formatter, "component `{component}` is not in the catalog")

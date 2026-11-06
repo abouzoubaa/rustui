@@ -1,0 +1,106 @@
+name: RustUI checks
+
+on:
+  push:
+  pull_request:
+  workflow_dispatch:
+    inputs:
+      include_web:
+        description: Also run Web/Wasm release checks
+        type: boolean
+        default: false
+      native_smoke_only:
+        description: Run only native build and core tests (not release acceptance)
+        type: boolean
+        default: false
+
+permissions:
+  contents: read
+
+concurrency:
+  group: rustui-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  source:
+    if: github.event_name != 'workflow_dispatch' || !inputs.native_smoke_only
+    runs-on: macos-15
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
+        with:
+          persist-credentials: false
+      - name: Install Rust 1.97.1
+        run: rustup toolchain install 1.97.1 --profile minimal --component rustfmt
+      - name: Verify approved Tree sources, replay lifecycle, and source release gates
+        run: ./scripts/verify-release.sh source
+      - name: Stable Rust formatting, workspace check, and library tests
+        run: ./scripts/check.sh
+
+  # Run only after a maintainer selects a trusted revision. Never execute PR
+  # code automatically on the persistent runner/toolchain cache.
+  macos-and-web-builds:
+    if: github.event_name == 'workflow_dispatch' && !inputs.native_smoke_only
+    runs-on: [self-hosted, macOS, ARM64, rustui-headstart]
+    timeout-minutes: 120
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
+        with:
+          persist-credentials: false
+          clean: false
+      - name: Verify trusted checkout
+        env:
+          EXPECTED_SHA: ${{ github.sha }}
+        run: ./scripts/verify-ci-checkout.sh "$EXPECTED_SHA"
+      - name: Provision Web binding tool on the trusted runner
+        if: inputs.include_web
+        run: ./scripts/provision-ci-wasm-bindgen.sh
+      - name: Check Web binding tool before builds
+        if: inputs.include_web
+        run: ./scripts/build-playground-web.sh --check-bindgen
+      - name: macOS checks and optimized package
+        run: ./scripts/verify-release.sh macos
+      - name: Web optimized bundle
+        if: inputs.include_web
+        run: ./scripts/verify-release.sh web
+
+  native-mvp-smoke:
+    if: github.event_name == 'workflow_dispatch' && inputs.native_smoke_only
+    runs-on: [self-hosted, macOS, ARM64, rustui-headstart]
+    timeout-minutes: 120
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
+        with:
+          persist-credentials: false
+          clean: false
+      - name: Verify trusted checkout
+        env:
+          EXPECTED_SHA: ${{ github.sha }}
+        run: ./scripts/verify-ci-checkout.sh "$EXPECTED_SHA"
+      - name: Verify native source boundaries and theme wiring
+        run: |
+          rustup run 1.97.1 cargo fmt --all --check
+          python3 scripts/verify_dependency_boundary.py
+          python3 scripts/validate_themes.py --plans-only
+          python3 scripts/verify_theme_adapter_coverage.py
+          python3 -m unittest discover -s scripts/tests -p 'test_verify_theme_adapter_coverage.py'
+          python3 -m unittest discover -s scripts/tests -p 'test_cargo_headstart.py'
+          python3 -m unittest discover -s scripts/tests -p 'test_collect_dependency_notices.py'
+          python3 -m unittest discover -s scripts/tests -p 'test_package_release_notices.py'
+          sh scripts/tests/test_package_playground_app.sh
+          sh scripts/tests/test_verify_ci_checkout.sh
+      - name: Check native workspace targets
+        run: ./scripts/cargo-headstart check --workspace --all-targets --profile headstart --locked --offline
+      - name: Test core state and lifecycle
+        run: ./scripts/cargo-headstart test -p rustui-core --lib --profile headstart --locked --offline
+
+  web-integrity:
+    if: github.event_name == 'push'
+    runs-on: ubuntu-24.04
+    continue-on-error: true
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
+        with:
+          persist-credentials: false
+      - name: Verify full Web patch stack
+        run: python3 scripts/verify_gpui_web_patch_stack.py

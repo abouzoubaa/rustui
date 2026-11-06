@@ -4,6 +4,7 @@
 import argparse
 import json
 import re
+import subprocess
 import sys
 from pathlib import Path
 
@@ -31,10 +32,17 @@ def catalog_ids(path: Path) -> set[str]:
     return identifiers
 
 
-def validate_catalog_group(root: Path, name: str) -> None:
+def validate_catalog_group(root: Path, name: str, expected_locales: set[str]) -> None:
     paths = sorted(root.glob("*/" + name))
     if not paths:
         raise ValueError(f"No {name} catalogs found in {root}")
+    locales = {path.parent.name for path in paths}
+    if locales != expected_locales:
+        missing = sorted(expected_locales - locales)
+        extra = sorted(locales - expected_locales)
+        raise ValueError(
+            f"{root}: {name} locale mismatch; missing={missing}, extra={extra}"
+        )
     expected = catalog_ids(paths[0])
     for path in paths[1:]:
         actual = catalog_ids(path)
@@ -53,12 +61,17 @@ def main() -> int:
         type=Path,
         default=repository / "apps/rustui-playground/locales",
     )
+    parser.add_argument(
+        "--runtime", action="store_true",
+        help="also compile and run the bundled RustUI runtime catalog validation",
+    )
     args = parser.parse_args()
 
     try:
         paths = sorted(args.root.glob("*/locale.json"))
         if not paths:
             raise ValueError(f"No locale records found in {args.root}")
+        runtime_locales = {path.parent.name for path in paths}
         for path in paths:
             data = json.loads(path.read_text(encoding="utf-8"))
             expected_fields = {
@@ -73,6 +86,7 @@ def main() -> int:
                 raise ValueError(f"{path}: unexpected or missing locale fields")
             if (
                 data["record_type"] != "rustui.locale"
+                or type(data["schema_version"]) is not int
                 or data["schema_version"] != 1
                 or data["status"] != "runtime"
                 or data["catalog_format"] != "rustui-ftl-subset-v1"
@@ -81,9 +95,32 @@ def main() -> int:
             ):
                 raise ValueError(f"{path}: invalid runtime locale record")
 
-        validate_catalog_group(args.root, "rustui.ftl")
-        validate_catalog_group(args.lab_root, "lab.ftl")
-        print(f"Validated {len(paths)} runtime locale records and catalog groups.")
+        validate_catalog_group(args.root, "rustui.ftl", runtime_locales)
+        validate_catalog_group(args.lab_root, "lab.ftl", runtime_locales)
+        print(
+            f"Validated {len(paths)} locale records and catalog ID groups; "
+            "message patterns require runtime validation."
+        )
+        if args.runtime:
+            if (args.root.resolve() != (repository / "locales").resolve()
+                    or args.lab_root.resolve() != (repository / "apps/rustui-playground/locales").resolve()):
+                raise ValueError("--runtime only validates the bundled repository catalogs")
+            command = [
+                str(repository / "scripts/cargo-headstart"), "test", "-p", "rustui-playground",
+                "--lib", "stories::locale_selector::tests::all_bundled_catalogs_pass_runtime_validation",
+                "--locked", "--offline", "--", "--exact",
+            ]
+            result = subprocess.run(command, cwd=repository, check=False, capture_output=True, text=True)
+            print(result.stdout, end="")
+            print(result.stderr, end="", file=sys.stderr)
+            if result.returncode:
+                raise ValueError(f"Runtime catalog validation failed (exit {result.returncode})")
+            if "test result: ok. 1 passed; 0 failed;" not in result.stdout:
+                raise ValueError("Runtime catalog validation did not execute its required test")
+            print(
+                "Validated bundled catalog contracts with RustUI runtime; "
+                "the intentional malformed demo is exempt."
+            )
         return 0
     except (OSError, ValueError, json.JSONDecodeError) as error:
         print(error, file=sys.stderr)

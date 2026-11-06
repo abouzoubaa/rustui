@@ -640,6 +640,8 @@ impl DirectWriteState {
                 descent,
                 runs,
                 len: text.len(),
+
+                bidi_clusters: None,
             })
         }
     }

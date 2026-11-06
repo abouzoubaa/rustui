@@ -1963,6 +1963,8 @@ pub(super) mod test_fonts {
                 descent: font_size * (-metrics.descent / UNITS_PER_EM),
                 runs: shaped_runs,
                 len: text.len(),
+
+                bidi_clusters: None,
             }
         }
 

@@ -1,6 +1,6 @@
 use crate::{
-    AnyWindowHandle, Bounds, DevicePixels, DispatchEventResult, DisplayId, GpuSpecs, HeadlessAtlas,
-    Pixels, PlatformAtlas, PlatformDisplay, PlatformHeadlessRenderer, PlatformInput,
+    A11yCallbacks, AnyWindowHandle, Bounds, DevicePixels, DispatchEventResult, DisplayId, GpuSpecs,
+    HeadlessAtlas, Pixels, PlatformAtlas, PlatformDisplay, PlatformHeadlessRenderer, PlatformInput,
     PlatformInputHandler, PlatformWindow, Point, PromptButton, RequestFrameOptions, Scene, Size,
     TestDisplay, TestPlatform, TextInputConfiguration, TextInputStateChange, WindowAppearance,
     WindowBackgroundAppearance, WindowBounds, WindowControlArea, WindowInsets, WindowParams,
@@ -306,6 +306,12 @@ impl TestWindow {
 }
 
 impl PlatformWindow for TestWindow {
+    fn a11y_init(&self, callbacks: A11yCallbacks) {
+        // Test windows have no native accessibility adapter. Activate GPUI's
+        // existing callback so tests can inspect the rendered AX tree.
+        (callbacks.activation)();
+    }
+
     fn visual_viewport_bounds(&self) -> Bounds<Pixels> {
         let state = self.0.lock();
         state

@@ -91,6 +91,8 @@ struct SelectOptions {
     disabled: bool,
     appearance: bool,
     focus_ring_enabled: bool,
+    right_to_left: bool,
+    auto_fit_menu: bool,
 }
 
 impl Default for SelectOptions {
@@ -108,12 +110,21 @@ impl Default for SelectOptions {
             disabled: false,
             appearance: true,
             focus_ring_enabled: true,
+            right_to_left: false,
+            auto_fit_menu: false,
             search_placeholder: None,
         }
     }
 }
 
 // MARK: SelectState
+
+struct AutoWidthCache {
+    titles: Vec<SharedString>,
+    font: gpui::Font,
+    font_size: gpui::Pixels,
+    text_width: gpui::Pixels,
+}
 
 /// State of the [`Select`] component.
 ///
@@ -129,6 +140,9 @@ where
     icon: Option<Icon>,
     title_prefix: Option<SharedString>,
     focus_ring_enabled: bool,
+    right_to_left: bool,
+    auto_fit_menu: bool,
+    auto_width_cache: Option<AutoWidthCache>,
 }
 
 /// A Select element.
@@ -294,6 +308,9 @@ where
             icon: None,
             title_prefix: None,
             focus_ring_enabled: true,
+            right_to_left: false,
+            auto_fit_menu: false,
+            auto_width_cache: None,
         }
     }
 
@@ -456,18 +473,13 @@ where
                 .unwrap_or_else(|| t!("Select.placeholder").into()),
         );
 
-        let Some(selected_index) = self.selected_index(cx) else {
-            return default_title;
-        };
-
+        // The list cursor may move while filtering. Only confirmation changes
+        // the value shown by the trigger.
         let Some(title) = self
             .state
-            .list
-            .read(cx)
-            .delegate()
-            .delegate
-            .item(selected_index)
-            .map(|item| {
+            .selection
+            .first()
+            .map(|(_, item)| {
                 if let Some(el) = item.display_title() {
                     el
                 } else if let Some(prefix) = self.title_prefix.as_ref() {
@@ -514,6 +526,55 @@ where
         let is_focused = self.state.focus_handle.is_focused(window);
         let show_clean = self.state.cleanable && self.selected_index(cx).is_some();
         let bounds = self.state.bounds;
+        // The list virtualizes rows, so its intrinsic width cannot represent every
+        // title. Cache measurements while the visible titles and font are unchanged.
+        let automatic_menu_width = if self.state.open && self.auto_fit_menu && matches!(self.state.menu_width, Length::Auto) {
+            let style = window.text_style();
+            let font = style.font();
+            let font_size = match self.state.size {
+                Size::XSmall => window.rem_size() * 0.75,
+                Size::Small | Size::Medium => window.rem_size() * 0.875,
+                Size::Large => window.rem_size(),
+                Size::Size(size) => size * 0.875,
+            };
+            let list = self.state.list.read(cx);
+            let delegate = &list.delegate().delegate;
+            let mut titles = Vec::new();
+            for section in 0..delegate.sections_count(cx) {
+                for row in 0..delegate.items_count(section) {
+                    if let Some(item) = delegate.item(IndexPath::new(row).section(section)) {
+                        titles.push(item.title());
+                    }
+                }
+            }
+            let text_width = match &self.auto_width_cache {
+                Some(cache) if cache.titles == titles && cache.font == font && cache.font_size == font_size => cache.text_width,
+                _ => {
+                    let mut width = px(0.);
+                    for title in &titles {
+                        for line in title.lines() {
+                            let text: SharedString = line.to_owned().into();
+                            let run = gpui::TextRun {
+                                len: text.len(),
+                                font: font.clone(),
+                                color: style.color,
+                                background_color: None,
+                                underline: None,
+                                strikethrough: None,
+                            };
+                            width = width.max(window.text_system().shape_line(text, font_size, &[run], None).width);
+                        }
+                    }
+                    self.auto_width_cache = Some(AutoWidthCache { titles, font, font_size, text_width: width });
+                    width
+                }
+            };
+            (text_width + window.rem_size() * 3.0)
+                .max(bounds.size.width)
+                .min(window.viewport_size().width)
+        } else {
+            bounds.size.width
+        };
         let allow_open = !(self.state.open || self.state.disabled);
         let outline_visible = self.state.open || (is_focused && !self.state.disabled);
 
@@ -521,6 +582,8 @@ where
 
         self.state.list.update(cx, |list, cx| {
             list.set_searchable(searchable, cx);
+            list.set_right_to_left(self.right_to_left, cx);
+            list.delegate_mut().right_to_left = self.right_to_left;
             list.delegate_mut().size = self.state.size;
         });
 
@@ -571,6 +634,7 @@ where
                                 .items_center()
                                 .justify_between()
                                 .gap_1()
+                                .when(self.right_to_left, |this| this.flex_row_reverse())
                                 .child(
                                     div()
                                         .id("title")
@@ -579,6 +643,7 @@ where
                                         .overflow_hidden()
                                         .whitespace_nowrap()
                                         .truncate()
+                                        .when(self.right_to_left, |this| this.text_right())
                                         .child(self.display_title(window, cx)),
                                 )
                                 .when(show_clean, |this| {
@@ -612,8 +677,9 @@ where
                             bounds,
                             v_flex()
                                 .occlude()
+                                .debug_selector(|| "rustui-select-popup-test".to_owned())
                                 .map(|this| match self.state.menu_width {
-                                    Length::Auto => this.w(bounds.size.width),
+                                    Length::Auto => this.w(automatic_menu_width),
                                     Length::Definite(w) => this.w(w),
                                 })
                                 .popover_style(cx)
@@ -633,7 +699,11 @@ where
                                     this.escape(&Cancel, window, cx);
                                 })),
                             cx,
-                        ))
+                        ).align(if self.right_to_left {
+                            gpui_base::Align::End
+                        } else {
+                            gpui_base::Align::Start
+                        }))
                         .with_priority(gpui_base::POPUP_PRIORITY),
                     )
                 }),
@@ -658,6 +728,18 @@ where
     /// Sets an explicit identity for the select root.
     pub fn id(mut self, id: impl Into<ElementId>) -> Self {
         self.id = id.into();
+        self
+    }
+
+    /// Align the popup with the logical start of a right-to-left trigger.
+    pub fn right_to_left(mut self, value: bool) -> Self {
+        self.options.right_to_left = value;
+        self
+    }
+
+    /// Fit automatic menu width to option titles, within the window.
+    pub fn auto_fit_menu(mut self, value: bool) -> Self {
+        self.options.auto_fit_menu = value;
         self
     }
 
@@ -825,6 +907,8 @@ where
             this.state.disabled = opts.disabled;
             this.state.appearance = opts.appearance;
             this.focus_ring_enabled = opts.focus_ring_enabled;
+            this.right_to_left = opts.right_to_left;
+            this.auto_fit_menu = opts.auto_fit_menu;
             this.icon = opts.icon;
             this.title_prefix = opts.title_prefix;
 

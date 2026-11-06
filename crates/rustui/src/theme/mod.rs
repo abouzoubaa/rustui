@@ -1,5 +1,6 @@
 //! Versioned platform themes and adapters.
 
+pub(crate) mod invalidation;
 pub mod loader;
 pub mod registry;
 pub mod resolver;
@@ -15,7 +16,7 @@ pub use registry::{
 pub use resolver::{
     ComponentStyleCapability, ResolvedButtonTheme, ResolvedComponentStyle, ThemeCoverageReport,
     ThemeRecordDisposition, ThemeResolveError, UncoveredComponentRule, resolve_button,
-    resolve_component_style, resolve_component_style_with,
+    resolve_button_with_selector, resolve_component_style, resolve_component_style_with,
 };
 pub use schema::*;
 pub use watcher::{ThemeFile, ThemeFileError};

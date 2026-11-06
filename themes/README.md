@@ -9,14 +9,18 @@ planning records and do not imply runtime support.
 
 RustUI validates the platform snapshot, selects its light or dark palette, and
 maps every color role exposed by the pinned GPUI Components theme. It also sets
-the shared system font, body size, and general radii. RustUI `Text` reads that
-active theme; `Card` reads profile spacing and radius; collection/table/list
+the shared system font, body size, and general radii. It applies
+`sidebar_opacity` to the sidebar background and `toolbar_opacity` to mapped
+toolbar, tab, table, title, status, and secondary backgrounds. RustUI `Text`
+reads that active theme; `Card` reads profile spacing and radius; collection/table/list
 selection uses the mapped selection color.
 
 The `components` object also preserves imported design records. At present,
-`button` is the only record with a typed RustUI resolver. Other records are not
-automatically applied just because they are present in JSON; they may include
-reference artwork details that have no GPUI runtime equivalent. Do not report a
+`button` is the only record with a dedicated typed RustUI resolver. The menu
+action renderer also resolves `menu_item.body` and applies its foreground and
+typography to the visible label. Other records are not automatically applied
+just because they are present in JSON; they may include reference artwork
+details that have no GPUI runtime equivalent. Do not report a
 component-specific metric as active unless its RustUI rendering path consumes
 it.
 

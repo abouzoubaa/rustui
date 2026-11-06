@@ -1,0 +1,69 @@
+{
+  "schema_version": 1,
+  "status": "approved",
+  "upstream_snapshot_revision": "93d745668805029476e6d7fbb19652116fed51de",
+  "packages": [
+    "gpui-base 0.7.3",
+    "gpui-pre 0.3.9",
+    "gpui-pre-apple 0.3.9",
+    "gpui-pre-web 0.3.9",
+    "gpui-pre-wgpu 0.3.9",
+    "gpui-pre-windows 0.3.9"
+  ],
+  "patch": "patches/approved/gpui-bidi-input-hit-v1.patch",
+  "patch_sha256": "5522774ff20fe9ce7b7c7c23621628e631d52a979aae78b9263f5c64e1f83d19",
+  "images": {
+    "vendor/gpui-pre-0.3.9/src/text_system/line_layout.rs": {
+      "pre_sha256": "e133b3b78d04daeeee0f4cbb23a69d3b01e1c33bda4a4a6c60efdf803418de9f",
+      "post_sha256": "7c09c4b826d3d8cf13e3012062d11b036e3f384654da4bdd50aa90c17a1cb643"
+    },
+    "vendor/gpui-pre-0.3.9/src/text_system/line.rs": {
+      "pre_sha256": "42ef1913f7955d896716d8d98c1f495ccb7d6b0dc59ee5979bd9a97694813644",
+      "post_sha256": "10b268f7e7c1353ca4ec8e8514bb35551c3e8ea01c277bf1a061b6ee6f71cc8e"
+    },
+    "vendor/gpui-pre-0.3.9/src/platform.rs": {
+      "pre_sha256": "d68a63e6b51b4785b54fe43d0cee34f1f5a8e536cc0dd7be7b5095e9ac162bb7",
+      "post_sha256": "7a85d7817d0ff2445a2c125bca09e1df6f7f51fe65d2f313063ccc6468ffa121"
+    },
+    "vendor/gpui-pre-web-0.3.9/src/run_replacements.rs": {
+      "pre_sha256": "c00a0f957f156b3744a90d3687f773de0a0e259c6c8beb1c86bd3f17614c3f43",
+      "post_sha256": "4c23e3d8569aeb1134e3b8fd2d0fe260d30721d9bbd822b51649ff5c608f2cf3"
+    },
+    "vendor/gpui-pre-wgpu-0.3.9/src/cosmic_text_system.rs": {
+      "pre_sha256": "5cd575bc1cba745a7a84fe19938815c245a0229c130496a45d3303a82ea3ffc5",
+      "post_sha256": "8588a1e27eba8710910c8395e075f653966f1bc8be9eef28e1696b755d71b1ef"
+    },
+    "vendor/gpui-pre-apple-0.3.9/src/text_system.rs": {
+      "pre_sha256": "932774c521b1bfd99a2552572cf09769e0dd39b2b2e306a3f6df80f57522b375",
+      "post_sha256": "c1863dbc4eadf105ca5d82da2f657e71a0b3b6d67ef3cb25dba90a49abaa2425"
+    },
+    "vendor/gpui-pre-windows-0.3.9/src/direct_write.rs": {
+      "pre_sha256": "27ff8aa902705794c5b9c0405bb7c3063e4b63e0d3ac44d92148d9ed18ee866c",
+      "post_sha256": "5a1ddc871ebc4eed8131fe1259391b800e1a2ccc650954417c8f0f23b3077296"
+    },
+    "vendor/gpui-base-0.7.3/src/text/inline.rs": {
+      "pre_sha256": "f92e81a1f5a1281d93a45120001cf997d881b8930e2e858e9ba12d64e6b17d62",
+      "post_sha256": "f41625c13614d2a67117590be68ed2b31f41047773ce44179b5f9276c53201d0"
+    }
+  },
+  "preserved_checksum_files": {
+    "vendor/gpui-pre-0.3.9/.cargo-checksum.json": "7b8e889ae4ac0cbe651b654f5e39d9003969d09ae4a70aff4147f521eda8faa0",
+    "vendor/gpui-pre-web-0.3.9/.cargo-checksum.json": "aad9503f554e462d582461d008ea4bc0dda00021812ccf6b876734b55757579e",
+    "vendor/gpui-pre-wgpu-0.3.9/.cargo-checksum.json": "906bdff7525f72408ab82627719b99646517707ac2a28acec88d763c61d93750",
+    "vendor/gpui-pre-apple-0.3.9/.cargo-checksum.json": "367a1f68d0499ccbf1cb57debf28dae85376c833c8179394f806078bd0d02dbc",
+    "vendor/gpui-pre-windows-0.3.9/.cargo-checksum.json": "95247a19a428bab672de5ac187f01cbe249b8d48c0b0debdcf5514c742ef73f9",
+    "vendor/gpui-base-0.7.3/.cargo-checksum.json": "9e96d55b0071b60576bc6ac18c3e9c48e6d0de5ff848821af7623bd151f7c3ed"
+  },
+  "purpose": "Use Cosmic bidirectional glyph clusters for single-line caret and pointer hit testing.",
+  "compatibility": "Pinned gpui-pre 0.3.9 and gpui-base 0.7.3 package set only.",
+  "checks": [
+    "Exact source postimage and rollback",
+    "Focused GPUI cluster hit regression",
+    "RustUI macOS and Web build",
+    "Arabic and Latin browser pointer caret checks"
+  ],
+  "fallback": "Reverse this patch using the exact-image helper.",
+  "removal_condition": "Pinned upstream publishes equivalent bidi single-line hit testing.",
+  "evidence_dir": "target/headstart/evidence/bidi-input-hit-20261026",
+  "approval": "User granted standing approval to proceed with the prepared same-version upstream patches in this RustUI production consolidation conversation."
+}

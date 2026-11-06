@@ -3,7 +3,7 @@
 use rustui::{
     component,
     prelude::*,
-    theme::{AppearanceMode, activate_theme, parse_theme},
+    theme::{AppearanceMode, activate_theme},
 };
 
 const SHARED_CHILD_ID: &str = "decoration-shared-input";
@@ -49,8 +49,8 @@ impl DecorationGallery {
 
 fn appearance(mode: AppearanceMode) -> AppAction {
     AppAction::new(move |cx| {
-        let result = parse_theme(include_str!("../../../../themes/macos27.json"))
-            .map_err(|error| error.to_string())
+        let result = crate::bundled_theme()
+            .map_err(str::to_owned)
             .and_then(|theme| {
                 activate_theme(&theme, Some(mode), cx).map_err(|error| error.to_string())
             });

@@ -1,0 +1,42 @@
+--- a/vendor/gpui-base-0.7.3/src/toolbar.rs
++++ b/vendor/gpui-base-0.7.3/src/toolbar.rs
+@@ -49,0 +50 @@
++    right_to_left: bool,
+@@ -59,0 +61 @@
++            right_to_left: false,
+@@ -62,0 +65,6 @@
++    }
++
++    /// Reverse horizontal arrow navigation for right-to-left visual order.
++    pub fn right_to_left(mut self, right_to_left: bool) -> Self {
++        self.right_to_left = right_to_left;
++        self
+@@ -115,0 +124 @@
++    right_to_left: bool,
+@@ -126,2 +135,2 @@
+-        "left" => Some(false),
+-        "right" => Some(true),
++        "left" => Some(right_to_left),
++        "right" => Some(!right_to_left),
+@@ -162,0 +172 @@
++            right_to_left,
+@@ -179 +189 @@
+-                handle_key_down(disabled, &focus_handle, event, window, cx);
++                handle_key_down(disabled, right_to_left, &focus_handle, event, window, cx);
+--- a/vendor/gpui-component-0.7.3/src/toolbar.rs
++++ b/vendor/gpui-component-0.7.3/src/toolbar.rs
+@@ -162,0 +163 @@
++    right_to_left: bool,
+@@ -173,0 +175 @@
++            right_to_left: false,
+@@ -175,0 +178,6 @@
++    }
++
++    /// Lay out and navigate toolbar items in right-to-left order.
++    pub fn right_to_left(mut self, right_to_left: bool) -> Self {
++        self.right_to_left = right_to_left;
++        self
+@@ -248,0 +257 @@
++            .right_to_left(self.right_to_left)
+@@ -251,0 +261 @@
++            .when(self.right_to_left, |this| this.w_full().flex_row_reverse())

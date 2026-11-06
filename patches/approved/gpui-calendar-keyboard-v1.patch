@@ -1,0 +1,93 @@
+--- a/vendor/gpui-base-0.7.3/src/calendar.rs
++++ b/vendor/gpui-base-0.7.3/src/calendar.rs
+@@ -172,2 +172,3 @@
+     date: Date,
++    keyboard_cursor: Option<NaiveDate>,
+     current_year: i32,
+@@ -188,2 +189,3 @@
+             date: Date::Single(None),
++            keyboard_cursor: None,
+             current_year: today.year(),
+@@ -216,2 +218,17 @@
+     }
++    /// Current uncommitted keyboard navigation target, if any.
++    pub fn keyboard_cursor(&self) -> Option<NaiveDate> {
++        self.keyboard_cursor
++    }
++
++    /// Move the visible calendar without changing its committed selection.
++    pub fn set_keyboard_cursor(&mut self, date: Option<NaiveDate>, cx: &mut Context<Self>) {
++        self.keyboard_cursor = date;
++        if let Some(date) = date {
++            self.current_year = date.year();
++            self.current_month = date.month() as u8;
++        }
++        cx.notify();
++    }
++
+     pub fn set_date(&mut self, date: impl Into<Date>, _: &mut Window, cx: &mut Context<Self>) {
+@@ -800,3 +817,3 @@
+                             CalendarItemState::new(CalendarItemKind::Day)
+-                                .active(s.date().is_active(&date))
++                                .active(s.keyboard_cursor().map_or_else(|| s.date().is_active(&date), |cursor| cursor == date))
+                                 .in_range(s.date().is_in_range(&date))
+--- a/vendor/gpui-component-0.7.3/src/time/date_picker.rs
++++ b/vendor/gpui-component-0.7.3/src/time/date_picker.rs
+@@ -436,2 +436,3 @@
+             view.set_date(date, window, cx);
++            view.set_keyboard_cursor(None, cx);
+         });
+@@ -459,2 +460,6 @@
+             self.focus_back_if_need(window, cx);
++            self.calendar.update(cx, |calendar, cx| {
++                calendar.set_date(self.date, window, cx);
++                calendar.set_keyboard_cursor(None, cx);
++            });
+         }
+@@ -462,2 +467,41 @@
+         cx.notify();
++    }
++
++    fn on_calendar_key_down(
++        &mut self,
++        event: &gpui::KeyDownEvent,
++        window: &mut Window,
++        cx: &mut Context<Self>,
++    ) {
++        if !self.open || !self.focus_handle.is_focused(window)
++            || event.prefer_character_input || event.keystroke.is_ime_in_progress()
++            || event.keystroke.modifiers.modified()
++            || !self.calendar.read(cx).view().is_day()
++        {
++            return;
++        }
++        let current = self.calendar.read(cx).keyboard_cursor()
++            .or_else(|| self.date.start())
++            .unwrap_or_else(|| self.calendar.read(cx).today());
++        let delta = match event.keystroke.key.as_str() {
++            // The current calendar rows are physically left-to-right in all locales.
++            "left" => -1,
++            "right" => 1,
++            "up" => -7,
++            "down" => 7,
++            _ => return,
++        };
++        if let Some(next) = current.checked_add_signed(chrono::Duration::days(delta)) {
++            self.calendar.update(cx, |calendar, cx| calendar.set_keyboard_cursor(Some(next), cx));
++        }
++        cx.stop_propagation();
++    }
++
++    fn on_calendar_confirm(&mut self, _: &Confirm, window: &mut Window, cx: &mut Context<Self>) {
++        if self.open && self.focus_handle.is_focused(window) && self.calendar.read(cx).view().is_day() {
++            if let Some(date) = self.calendar.read(cx).keyboard_cursor() {
++                self.calendar.update(cx, |calendar, cx| { calendar.activate_date(date, cx); });
++                cx.stop_propagation();
++            }
++        }
+     }
+@@ -745,2 +789,4 @@
+             .key_context(CONTEXT)
++            .on_key_down(window.listener_for(&self.state, DatePickerState::on_calendar_key_down))
++            .capture_action(window.listener_for(&self.state, DatePickerState::on_calendar_confirm))
+             .on_action(window.listener_for(&self.state, DatePickerState::on_delete))

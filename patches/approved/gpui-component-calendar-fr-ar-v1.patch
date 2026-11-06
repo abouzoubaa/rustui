@@ -1,0 +1,155 @@
+--- a/vendor/gpui-component-0.7.3/locales/ui.yml
++++ b/vendor/gpui-component-0.7.3/locales/ui.yml
+@@ -13,114 +13,152 @@
+ Calendar:
+   week.0:
+     en: Su
++    fr: di
++    ar: ح
+     zh-CN: 日
+     zh-HK: 日
+     zh-TW: 日
+     it: Do
+   week.1:
+     en: Mo
++    fr: lu
++    ar: ن
+     zh-CN: 一
+     zh-HK: 一
+     zh-TW: 一
+     it: Lu
+   week.2:
+     en: Tu
++    fr: ma
++    ar: ث
+     zh-CN: 二
+     zh-HK: 二
+     zh-TW: 二
+     it: Ma
+   week.3:
+     en: We
++    fr: me
++    ar: ر
+     zh-CN: 三
+     zh-HK: 三
+     zh-TW: 三
+     it: Me
+   week.4:
+     en: Th
++    fr: je
++    ar: خ
+     zh-CN: 四
+     zh-HK: 四
+     zh-TW: 四
+     it: Gi
+   week.5:
+     en: Fr
++    fr: ve
++    ar: ج
+     zh-CN: 五
+     zh-HK: 五
+     zh-TW: 五
+     it: Ve
+   week.6:
+     en: Sa
++    fr: sa
++    ar: س
+     zh-CN: 六
+     zh-HK: 六
+     zh-TW: 六
+     it: Sa
+   month.January:
+     en: January
++    fr: janvier
++    ar: يناير
+     zh-CN: 一月
+     zh-HK: 一月
+     zh-TW: 一月
+     it: Gennaio
+   month.February:
+     en: February
++    fr: février
++    ar: فبراير
+     zh-CN: 二月
+     zh-HK: 二月
+     zh-TW: 二月
+     it: Febbraio
+   month.March:
+     en: March
++    fr: mars
++    ar: مارس
+     zh-CN: 三月
+     zh-HK: 三月
+     zh-TW: 三月
+     it: Marzo
+   month.April:
+     en: April
++    fr: avril
++    ar: أبريل
+     zh-CN: 四月
+     zh-HK: 四月
+     zh-TW: 四月
+     it: Aprile
+   month.May:
+     en: May
++    fr: mai
++    ar: مايو
+     zh-CN: 五月
+     zh-HK: 五月
+     zh-TW: 五月
+     it: Maggio
+   month.June:
+     en: June
++    fr: juin
++    ar: يونيو
+     zh-CN: 六月
+     zh-HK: 六月
+     zh-TW: 六月
+     it: Giugno
+   month.July:
+     en: July
++    fr: juillet
++    ar: يوليو
+     zh-CN: 七月
+     zh-HK: 七月
+     zh-TW: 七月
+     it: Luglio
+   month.August:
+     en: August
++    fr: août
++    ar: أغسطس
+     zh-CN: 八月
+     zh-HK: 八月
+     zh-TW: 八月
+     it: Agosto
+   month.September:
+     en: September
++    fr: septembre
++    ar: سبتمبر
+     zh-CN: 九月
+     zh-HK: 九月
+     zh-TW: 九月
+     it: Settembre
+   month.October:
+     en: October
++    fr: octobre
++    ar: أكتوبر
+     zh-CN: 十月
+     zh-HK: 十月
+     zh-TW: 十月
+     it: Ottobre
+   month.November:
+     en: November
++    fr: novembre
++    ar: نوفمبر
+     zh-CN: 十一月
+     zh-HK: 十一月
+     zh-TW: 十一月
+     it: Novembre
+   month.December:
+     en: December
++    fr: décembre
++    ar: ديسمبر
+     zh-CN: 十二月
+     zh-HK: 十二月
+     zh-TW: 十二月

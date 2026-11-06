@@ -1,4 +1,7 @@
-use rustui::prelude::*;
+use rustui::{
+    prelude::*,
+    theme::{activate_theme, parse_theme},
+};
 
 #[component]
 struct Counter {
@@ -24,5 +27,12 @@ impl View for Counter {
 }
 
 fn main() {
-    let _counter = Counter::default();
+    let theme =
+        parse_theme(include_str!("../../../themes/macos27.json")).expect("valid RustUI theme");
+
+    RustUI::new()
+        .on_launch(move |cx| {
+            activate_theme(&theme, None, cx).expect("RustUI theme activation succeeds");
+        })
+        .run(Counter::default());
 }

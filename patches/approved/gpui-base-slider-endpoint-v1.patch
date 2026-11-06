@@ -1,0 +1,5 @@
+--- a/vendor/gpui-base-0.7.3/src/slider.rs
++++ b/vendor/gpui-base-0.7.3/src/slider.rs
+@@ -388 +388 @@
+-        let value = (value / step).round() * step;
++        let value = ((value / step).round() * step).clamp(self.min, self.max);

@@ -4,9 +4,10 @@ use crate::glyph_cache::{CanvasGlyph, GlyphCache};
 use crate::run_replacements::{Replacement, apply_replacements, collect_candidates};
 use anyhow::{Context as _, Result, ensure};
 use gpui::{
-    Bounds, DevicePixels, Font, FontId, FontMetrics, FontRun, FontStyle, GlyphId, Hsla, LineLayout,
-    MissingGlyphSink, Pixels, PlatformTextSystem, RenderGlyphParams, SUBPIXEL_VARIANTS_X,
-    SUBPIXEL_VARIANTS_Y, ShapedGlyph, Size, TextRenderingMode, point, px, size,
+    BackendWrappedRow, Bounds, DevicePixels, Font, FontId, FontMetrics, FontRun, FontStyle,
+    GlyphId, Hsla, LineLayout, MissingGlyphSink, Pixels, PlatformTextSystem, RenderGlyphParams,
+    SUBPIXEL_VARIANTS_X, SUBPIXEL_VARIANTS_Y, ShapedGlyph, Size, TextRenderingMode, point, px,
+    size,
 };
 use gpui_wgpu::CosmicTextSystem;
 use parking_lot::RwLock;
@@ -428,6 +429,33 @@ impl PlatformTextSystem for WebTextSystem {
             );
         }
         layout
+    }
+
+    fn layout_line_wrapped(
+        &self,
+        text: &str,
+        font_size: Pixels,
+        runs: &[FontRun],
+        width: Pixels,
+        max_lines: Option<usize>,
+    ) -> Option<Vec<BackendWrappedRow>> {
+        let native_runs: Cow<'_, [FontRun]> =
+            if runs.iter().any(|run| run.font_id.0 & CANVAS_FONT_BIT != 0) {
+                Cow::Owned(
+                    runs.iter()
+                        .map(|run| FontRun {
+                            len: run.len,
+                            font_id: self.native_font_id(run.font_id),
+                        })
+                        .collect(),
+                )
+            } else {
+                Cow::Borrowed(runs)
+            };
+        let rows = self
+            .native
+            .layout_line_wrapped(text, font_size, &native_runs, width, max_lines);
+        rows
     }
 
     fn recommended_rendering_mode(&self, font_id: FontId, font_size: Pixels) -> TextRenderingMode {

@@ -15,13 +15,16 @@ use gpui::{
 use rustui::{
     prelude::{Component, Container, HStack, Text, VStack, View, ViewHost},
     runtime::render_diagnostics::{enable_render_diagnostics, render_diagnostics_snapshot},
+    theme::{AppearanceMode, activate_theme, parse_theme},
 };
 use serde_json::{Value, json};
 
-const LEAVES: usize = 8;
 const LINES: usize = 12;
 const WIDTH: f32 = 210.0;
 const HEIGHT: f32 = 220.0;
+const VISUAL_COLUMNS: usize = 8;
+const VISUAL_WINDOW_WIDTH: f32 = 1700.0;
+const VISUAL_WINDOW_HEIGHT: f32 = 1000.0;
 const WARMUP: u32 = 10;
 const UPDATES: u32 = 100;
 
@@ -29,6 +32,9 @@ const UPDATES: u32 = 100;
 struct Config {
     run_id: String,
     cached: bool,
+    diagnostics_enabled: bool,
+    leaves: usize,
+    visual_capture: bool,
 }
 
 impl Config {
@@ -67,9 +73,33 @@ impl Config {
             Some("uncached") => false,
             _ => return Err("mode must be cached or uncached".into()),
         };
+        let leaves = usize::try_from(value["leaves"].as_u64().ok_or("missing leaves")?)
+            .map_err(|_| "leaves does not fit this platform")?;
+        if !matches!(leaves, 8 | 32) {
+            return Err("leaves must be 8 or 32".into());
+        }
+        let diagnostics_enabled = match value.get("diagnostics_enabled") {
+            Some(enabled) => enabled
+                .as_bool()
+                .ok_or("diagnostics_enabled must be a boolean")?,
+            None => true,
+        };
+        let visual_capture = match value.get("visual_capture") {
+            Some(value) => value.as_bool().ok_or("visual_capture must be a boolean")?,
+            None => false,
+        };
+        if visual_capture && leaves != 32 {
+            return Err("visual_capture requires the 32-leaf workload".into());
+        }
+        if visual_capture && diagnostics_enabled {
+            return Err("visual_capture requires diagnostics_enabled: false".into());
+        }
         Ok(Self {
             run_id: run_id.into(),
             cached,
+            diagnostics_enabled,
+            leaves,
+            visual_capture,
         })
     }
 
@@ -118,6 +148,8 @@ fn write(config: &Config, kind: &str, document: &Value) -> std::io::Result<()> {
 struct ComparisonRoot {
     tick: u32,
     cached: bool,
+    leaves: usize,
+    columns: usize,
     values: Rc<RefCell<Vec<u32>>>,
     mounts: Rc<RefCell<Vec<u32>>>,
 }
@@ -125,10 +157,13 @@ struct ComparisonRoot {
 impl View for ComparisonRoot {
     fn body(&self) -> impl View {
         let mut content = VStack::new().child(Text(format!("Parent update {:06}", self.tick)));
-        for row in 0..2 {
+        for row in 0..self.leaves.div_ceil(self.columns) {
             let mut children = HStack::new();
-            for column in 0..4 {
-                let index = row * 4 + column;
+            for column in 0..self.columns {
+                let index = row * self.columns + column;
+                if index >= self.leaves {
+                    break;
+                }
                 let values = self.values.clone();
                 let mounts = self.mounts.clone();
                 let child = Component(format!("comparison-leaf-{index}"), move || ComparisonLeaf {
@@ -190,6 +225,7 @@ enum Phase {
 
 struct State {
     config: Config,
+    leaves: usize,
     phase: Phase,
     root: Entity<ViewHost<ComparisonRoot>>,
     children: Vec<WeakEntity<ViewHost<ComparisonLeaf>>>,
@@ -228,15 +264,29 @@ fn finish(cx: &mut App, state: &Rc<RefCell<State>>, requested: &str) {
         return;
     }
     let (_, leaf) = counts(cx);
-    let expected = if state.config.cached {
-        0
+    let expected_parent_root = if state.config.diagnostics_enabled {
+        u64::from(UPDATES)
     } else {
-        LEAVES as u64 * u64::from(UPDATES)
+        0
     };
-    let valid = state.parent_root == Some(u64::from(UPDATES))
-        && state.parent_leaf == Some(expected)
-        && leaf.checked_sub(expected) == Some(LEAVES as u64)
-        && state.children.len() == LEAVES
+    let expected_parent_leaf = if state.config.diagnostics_enabled && !state.config.cached {
+        state.leaves as u64 * u64::from(UPDATES)
+    } else {
+        0
+    };
+    let expected_mutation_leaf_delta = if state.config.diagnostics_enabled {
+        state.leaves as u64
+    } else {
+        0
+    };
+    let mutation_leaf_delta = state
+        .parent_leaf
+        .and_then(|parent_leaf| leaf.checked_sub(parent_leaf));
+    let valid = state.parent_root == Some(expected_parent_root)
+        && state.parent_leaf == Some(expected_parent_leaf)
+        && leaf == expected_parent_leaf + expected_mutation_leaf_delta
+        && mutation_leaf_delta == Some(expected_mutation_leaf_delta)
+        && state.children.len() == state.leaves
         && state.values.borrow().iter().all(|value| *value == 1)
         && state.mounts.borrow().iter().all(|mounts| *mounts == 1);
     let status = if requested != "complete" {
@@ -249,11 +299,18 @@ fn finish(cx: &mut App, state: &Rc<RefCell<State>>, requested: &str) {
     let document = json!({
         "schema_version": 1, "kind": "rustui_cache_comparison_workload",
         "run_id": state.config.run_id, "pid": std::process::id(), "mode": state.config.mode(),
+        "diagnostics_enabled": state.config.diagnostics_enabled,
         "status": status, "ax_active_seen": state.ax_seen, "native_drag_seen": state.drag_seen,
-        "protocol": {"leaves": LEAVES, "lines_per_leaf": LINES, "width": WIDTH, "height": HEIGHT,
+        "protocol": {"leaves": state.leaves, "lines_per_leaf": LINES, "width": WIDTH, "height": HEIGHT,
             "warmup_updates": WARMUP, "measured_updates": UPDATES},
         "counts": {"parent_root": state.parent_root, "parent_leaf": state.parent_leaf,
-            "final_leaf": leaf, "mutation_leaf_delta": state.parent_leaf.and_then(|n| leaf.checked_sub(n))},
+            "final_leaf": leaf, "mutation_leaf_delta": mutation_leaf_delta},
+        "diagnostics": render_diagnostics_snapshot(cx).hosts.into_iter().map(|host| json!({
+            "component_type": host.component_type,
+            "count": host.count,
+            "total_ns": host.total.as_nanos().min(u64::MAX as u128) as u64,
+            "max_ns": host.max.as_nanos().min(u64::MAX as u128) as u64,
+        })).collect::<Vec<_>>(),
         "values": *state.values.borrow(), "mounts": *state.mounts.borrow(),
         "environment_scope": "empty", "correctness_passed": valid,
     });
@@ -275,17 +332,22 @@ fn advance(window: &mut Window, cx: &mut App, state: Rc<RefCell<State>>) {
     }
     if matches!(phase, Phase::Finished) {
         if state.borrow().config.gate("ack") {
-            let mut state = state.borrow_mut();
-            let status = if state.ax_seen || state.drag_seen {
+            let state = state.borrow();
+            // Screenshot tooling may activate AX; visual-only runs record it without stopping mutation.
+            let status = if !state.config.visual_capture && (state.ax_seen || state.drag_seen) {
                 "excluded_interaction"
             } else {
-                state.terminal_status.as_deref().unwrap_or("failed_missing_result")
+                state
+                    .terminal_status
+                    .as_deref()
+                    .unwrap_or("failed_missing_result")
             };
             let final_document = json!({
                 "schema_version": 1,
                 "kind": "rustui_cache_comparison_final",
                 "run_id": state.config.run_id,
                 "mode": state.config.mode(),
+                "diagnostics_enabled": state.config.diagnostics_enabled,
                 "pid": std::process::id(),
                 "status": status,
                 "ax_active_seen": state.ax_seen,
@@ -301,7 +363,9 @@ fn advance(window: &mut Window, cx: &mut App, state: Rc<RefCell<State>>) {
         }
         return;
     }
-    if state.borrow().ax_seen || state.borrow().drag_seen {
+    // Screenshot tooling may activate AX; visual-only runs record it without stopping mutation.
+    if !state.borrow().config.visual_capture && (state.borrow().ax_seen || state.borrow().drag_seen)
+    {
         finish(cx, &state, "excluded_interaction");
         schedule(window, state);
         return;
@@ -313,7 +377,9 @@ fn advance(window: &mut Window, cx: &mut App, state: Rc<RefCell<State>>) {
             }
         }
         Phase::Warmup(n) if n == WARMUP => {
-            enable_render_diagnostics(cx);
+            if state.borrow().config.diagnostics_enabled {
+                enable_render_diagnostics(cx);
+            }
             state.borrow_mut().phase = Phase::Measure(0);
             advance(window, cx, state);
             return;
@@ -348,7 +414,7 @@ fn advance(window: &mut Window, cx: &mut App, state: Rc<RefCell<State>>) {
                     })
                     .is_ok()
             });
-            if !success || children.len() != LEAVES {
+            if !success || children.len() != state.borrow().leaves {
                 finish(cx, &state, "failed_children");
             } else {
                 state.borrow_mut().phase = Phase::Mutation;
@@ -361,22 +427,45 @@ fn advance(window: &mut Window, cx: &mut App, state: Rc<RefCell<State>>) {
 }
 
 fn main() {
+    let theme = parse_theme(include_str!("../../../themes/macos27.json"))
+        .expect("bundled macOS 27 theme must parse");
     let config = Config::load().unwrap_or_else(|error| {
         eprintln!("cache comparison: {error}");
         std::process::exit(2)
     });
     let ready = json!({"schema_version": 1, "kind": "rustui_cache_comparison_ready", "run_id": config.run_id,
-        "mode": config.mode(), "pid": std::process::id(), "executable": std::env::current_exe().expect("executable path")});
+        "mode": config.mode(), "diagnostics_enabled": config.diagnostics_enabled,
+        "pid": std::process::id(), "executable": std::env::current_exe().expect("executable path")});
     write(&config, "ready", &ready).expect("new comparison ready record");
+    // Finder-launched runs have no attached stderr; preserve any startup panic with the run evidence.
+    let panic_path = config.path("panic");
+    std::panic::set_hook(Box::new(move |info| {
+        if let Ok(mut stream) = OpenOptions::new()
+            .write(true)
+            .create_new(true)
+            .open(&panic_path)
+        {
+            let _ = writeln!(stream, "{info}");
+        }
+    }));
     gpui_platform::application().run(move |cx| {
         gpui_component::init(cx);
-        let values = Rc::new(RefCell::new(vec![0; LEAVES]));
-        let mounts = Rc::new(RefCell::new(vec![0; LEAVES]));
+        activate_theme(&theme, Some(AppearanceMode::Light), cx)
+            .expect("bundled macOS 27 theme must activate");
+        let leaves = config.leaves;
+        let values = Rc::new(RefCell::new(vec![0; leaves]));
+        let mounts = Rc::new(RefCell::new(vec![0; leaves]));
         let root = cx.new(|cx| {
             ViewHost::new(
                 ComparisonRoot {
                     tick: 0,
                     cached: config.cached,
+                    leaves,
+                    columns: if config.visual_capture {
+                        VISUAL_COLUMNS
+                    } else {
+                        4
+                    },
                     values: values.clone(),
                     mounts: mounts.clone(),
                 },
@@ -385,6 +474,7 @@ fn main() {
         });
         let state = Rc::new(RefCell::new(State {
             config,
+            leaves,
             phase: Phase::Waiting,
             root: root.clone(),
             children: Vec::new(),
@@ -403,15 +493,20 @@ fn main() {
         })
         .detach();
         let window_state = state.clone();
-        let bounds = Bounds::centered(None, size(px(900.0), px(520.0)), cx);
+        let window_size = if state.borrow().config.visual_capture {
+            size(px(VISUAL_WINDOW_WIDTH), px(VISUAL_WINDOW_HEIGHT))
+        } else {
+            size(px(900.0), px(520.0))
+        };
+        let bounds = Bounds::centered(None, window_size, cx);
         cx.open_window(
             WindowOptions {
                 window_bounds: Some(WindowBounds::Windowed(bounds)),
                 ..Default::default()
             },
-            move |window, _| {
+            move |window, cx| {
                 schedule(window, window_state);
-                root.clone()
+                cx.new(|cx| gpui_component::Root::new(root.clone(), window, cx))
             },
         )
         .expect("comparison window");

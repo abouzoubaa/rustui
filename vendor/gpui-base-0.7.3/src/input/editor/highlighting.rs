@@ -109,6 +109,8 @@ pub struct DiagnosticColors {
 pub struct InputEditorStyle {
     pub foreground: Hsla,
     pub muted_foreground: Hsla,
+    /// Optional placeholder ink; falls back to muted foreground.
+    pub placeholder_foreground: Option<Hsla>,
     pub background: Hsla,
     pub border: Hsla,
     pub selection: Hsla,
@@ -150,6 +152,7 @@ impl InputEditorStyle {
         Self {
             foreground,
             muted_foreground: or(self.muted_foreground, colors.muted_foreground),
+            placeholder_foreground: self.placeholder_foreground,
             background: or(self.background, colors.surface),
             border: or(self.border, colors.border),
             selection,
@@ -164,6 +167,7 @@ impl Default for InputEditorStyle {
         Self {
             foreground: Hsla::default(),
             muted_foreground: Hsla::default(),
+            placeholder_foreground: None,
             background: Hsla::default(),
             border: Hsla::default(),
             selection: Hsla::default(),
@@ -193,6 +197,17 @@ mod tests {
         tokens.colors.border = hsla(0., 0., 0.15, 1.0);
         tokens.colors.accent = hsla(0.6, 0.5, 0.5, 1.0);
         tokens
+    }
+
+    #[test]
+    fn placeholder_override_survives_palette_resolution() {
+        let color = hsla(0.2, 0.3, 0.4, 1.0);
+        let style = InputEditorStyle {
+            placeholder_foreground: Some(color),
+            ..Default::default()
+        };
+        assert_eq!(style.resolved(&dark()).placeholder_foreground, Some(color));
+        assert_eq!(InputEditorStyle::default().resolved(&dark()).placeholder_foreground, None);
     }
 
     #[test]

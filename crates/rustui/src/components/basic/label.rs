@@ -24,8 +24,13 @@ pub struct LabelView {
 
 impl LabelView {
     pub fn new(text: impl Into<SharedString>) -> Self {
+        let text = text.into();
+        assert!(
+            !text.trim().is_empty(),
+            "Label accessible text must be nonempty"
+        );
         Self {
-            text: text.into(),
+            text,
             secondary: None,
             icon: None,
             vibrant: false,
@@ -127,6 +132,11 @@ mod tests {
 
         assert!(!opaque.vibrant);
         assert!(vibrant.vibrant);
+    }
+
+    #[test]
+    fn rejects_blank_visible_labels() {
+        assert!(std::panic::catch_unwind(|| Label(" \t\n ")).is_err());
     }
 
     #[test]

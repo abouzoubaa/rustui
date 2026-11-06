@@ -3,15 +3,26 @@
 from __future__ import annotations
 
 import hashlib
+import importlib.util
 import json
+import os
 from pathlib import Path
+import shutil
 import subprocess
 import sys
 import tempfile
 import unittest
+from contextlib import redirect_stdout
+from io import StringIO
+from unittest.mock import patch
 
 
 SCRIPT = Path(__file__).resolve().parents[1] / "validate_patch_plan.py"
+sys.path.insert(0, str(SCRIPT.parent))
+SPEC = importlib.util.spec_from_file_location("validate_patch_plan", SCRIPT)
+assert SPEC is not None and SPEC.loader is not None
+VALIDATOR = importlib.util.module_from_spec(SPEC)
+SPEC.loader.exec_module(VALIDATOR)
 
 
 class ValidatePatchPlanTests(unittest.TestCase):
@@ -93,6 +104,56 @@ class ValidatePatchPlanTests(unittest.TestCase):
         self.assertEqual(report["status"], "valid")
         self.assertTrue(all(state == "not_run" for state in report["gates"].values()))
 
+    def test_candidate_id_matches_cache_workspace_identifier_rules(self) -> None:
+        accepted = dict(self.manifest)
+        accepted["candidate"] = dict(self.manifest["candidate"], id="Release_2026.10")
+        self.assertEqual(self.report(accepted)["status"], "valid")
+
+        for candidate_id in ("a..b", "a" * 65, "_invalid"):
+            with self.subTest(candidate_id=candidate_id):
+                changed = json.loads(json.dumps(self.manifest))
+                changed["candidate"]["id"] = candidate_id
+                self.assertEqual(self.report(changed)["status"], "invalid")
+
+    def test_hashing_reads_files_in_bounded_chunks(self) -> None:
+        payload = b"x" * (VALIDATOR._HASH_READ_CHUNK_SIZE * 2 + 3)
+        target = self.root / "large.patch"
+        target.write_bytes(payload)
+
+        class ReadSpy:
+            def __init__(self, stream) -> None:
+                self.stream = stream
+                self.read_sizes: list[int] = []
+
+            def read(self, size: int = -1) -> bytes:
+                self.read_sizes.append(size)
+                return self.stream.read(size)
+
+            def fileno(self) -> int:
+                return self.stream.fileno()
+
+            def __enter__(self):
+                return self
+
+            def __exit__(self, *args):
+                return self.stream.__exit__(*args)
+
+        streams = []
+
+        def open_file(root, relative):
+            stream = ReadSpy((Path(root) / relative).open("rb"))
+            streams.append(stream)
+            return stream
+
+        with patch.object(VALIDATOR, "_open_contained_file", side_effect=open_file):
+            actual = VALIDATOR._hash_contained_file(self.root, Path("large.patch"))
+
+        self.assertEqual(actual, hashlib.sha256(payload).hexdigest())
+        self.assertEqual(
+            streams[0].read_sizes,
+            [VALIDATOR._HASH_READ_CHUNK_SIZE] * 4,
+        )
+
     def test_patch_and_checksum_hashes_use_exact_file_bytes(self) -> None:
         changed = dict(self.manifest)
         changed["patches"] = [dict(self.manifest["patches"][0], sha256="0" * 64)]
@@ -104,6 +165,45 @@ class ValidatePatchPlanTests(unittest.TestCase):
         changed["source"]["packages"][0]["checksum_sha256"] = "0" * 64
         report = self.report(changed)
         self.assertTrue(any("checksum_sha256" in error for error in report["errors"]))
+
+    def test_rejects_patch_replaced_while_its_digest_is_read(self) -> None:
+        patch_path = self.root / self.manifest["patches"][0]["path"]
+        original_open = VALIDATOR._open_contained_file
+        replaced = False
+
+        class ReplacingStream:
+            def __init__(self, stream):
+                self.stream = stream
+
+            def __enter__(self):
+                return self
+
+            def __exit__(self, *args):
+                return self.stream.__exit__(*args)
+
+            def fileno(self):
+                return self.stream.fileno()
+
+            def read(self, size=-1):
+                nonlocal replaced
+                data = self.stream.read(size)
+                if not data and not replaced:
+                    patch_path.write_bytes(b"replaced during digest read\n")
+                    replaced = True
+                return data
+
+        def open_file(root, relative):
+            stream = original_open(root, relative)
+            if relative.as_posix() == self.manifest["patches"][0]["path"]:
+                return ReplacingStream(stream)
+            return stream
+
+        with patch.object(VALIDATOR, "_open_contained_file", side_effect=open_file):
+            report = VALIDATOR.validate(self.manifest, self.root)
+
+        self.assertTrue(replaced)
+        self.assertEqual(report["status"], "invalid")
+        self.assertTrue(any("changed while hashing" in error for error in report["errors"]))
 
     def test_rejects_traversal_absolute_and_nul_paths(self) -> None:
         for path in ("../outside.patch", "/tmp/outside.patch", "C:/outside.patch", "bad\x00path"):
@@ -124,6 +224,99 @@ class ValidatePatchPlanTests(unittest.TestCase):
         report = self.report(changed)
         self.assertEqual(report["status"], "invalid")
         self.assertTrue(any("escapes root" in error for error in report["errors"]))
+
+    def test_source_root_path_swap_does_not_redirect_reads(self) -> None:
+        original_root = self.root.with_name(f"{self.root.name}-pinned")
+        original_contained_file = VALIDATOR._contained_file
+        swapped = False
+
+        def swap_after_check(
+            root: object, relative: Path, field: str, errors: list[str]
+        ) -> Path | None:
+            nonlocal swapped
+            resolved = original_contained_file(root, relative, field, errors)
+            if field == "source.packages[0].checksum_file" and resolved is not None:
+                self.root.rename(original_root)
+                (self.root / "patches").mkdir(parents=True)
+                (self.root / "patches" / "0001-example.patch").write_bytes(b"decoy patch\n")
+                decoy_package = self.root / "vendor" / "example"
+                decoy_package.mkdir(parents=True)
+                (decoy_package / ".cargo-checksum.json").write_bytes(b"decoy checksum\n")
+                (decoy_package / "LICENSE-MIT").write_text("decoy license\n", encoding="utf-8")
+                swapped = True
+            return resolved
+
+        try:
+            with patch.object(VALIDATOR, "_contained_file", side_effect=swap_after_check):
+                report = VALIDATOR.validate(self.manifest, self.root)
+            self.assertTrue(swapped)
+            self.assertEqual(report["status"], "valid", report["errors"])
+            self.assertEqual(
+                (self.root / "patches" / "0001-example.patch").read_bytes(), b"decoy patch\n"
+            )
+        finally:
+            if self.root.exists():
+                shutil.rmtree(self.root)
+            if original_root.exists():
+                original_root.rename(self.root)
+
+    def test_inherited_source_root_fd_survives_repo_path_swap_before_manifest_read(self) -> None:
+        repo_temp = tempfile.TemporaryDirectory()
+        self.addCleanup(repo_temp.cleanup)
+        repo = Path(repo_temp.name)
+        candidate_relative = Path("target/headstart/candidates/candidate-1")
+        candidate_root = repo / candidate_relative
+        candidate_root.mkdir(parents=True)
+        shutil.copytree(self.root / "patches", candidate_root / "patches")
+        shutil.copytree(self.root / "vendor", candidate_root / "vendor")
+        plan_path = candidate_root / "plan.json"
+        plan_path.write_text(json.dumps(self.manifest), encoding="utf-8")
+
+        repo_fd = os.open(repo, os.O_RDONLY | getattr(os, "O_DIRECTORY", 0))
+        source_fd = os.open(candidate_root, os.O_RDONLY | getattr(os, "O_DIRECTORY", 0))
+        parked_root = candidate_root.with_name("candidate-1-pinned")
+        original_load_json = VALIDATOR._load_json
+        swapped = False
+
+        def swap_after_identity_check(root: object, relative: Path) -> dict:
+            nonlocal swapped
+            candidate_root.rename(parked_root)
+            candidate_root.mkdir()
+            (candidate_root / "plan.json").write_text("{}", encoding="utf-8")
+            swapped = True
+            return original_load_json(root, relative)
+
+        argv = [
+            str(SCRIPT),
+            (candidate_relative / "plan.json").as_posix(),
+            "--root",
+            candidate_relative.as_posix(),
+        ]
+        try:
+            with (
+                patch.object(VALIDATOR.sys, "argv", argv),
+                patch.dict(
+                    VALIDATOR.os.environ,
+                    {
+                        "RUSTUI_P3_SOURCE_ROOT_FD": str(source_fd),
+                        "RUSTUI_P3_REPO_ROOT_FD": str(repo_fd),
+                    },
+                ),
+                patch.object(VALIDATOR, "_load_json", side_effect=swap_after_identity_check),
+                redirect_stdout(StringIO()) as output,
+            ):
+                result = VALIDATOR.main()
+
+            self.assertTrue(swapped)
+            self.assertEqual(result, 0, output.getvalue())
+            self.assertEqual(json.loads(output.getvalue())["status"], "valid")
+        finally:
+            os.close(source_fd)
+            os.close(repo_fd)
+            if candidate_root.exists():
+                shutil.rmtree(candidate_root)
+            if parked_root.exists():
+                parked_root.rename(candidate_root)
 
     def test_rejects_duplicate_patch_paths_and_missing_license_metadata(self) -> None:
         changed = json.loads(json.dumps(self.manifest))
@@ -154,7 +347,27 @@ class ValidatePatchPlanTests(unittest.TestCase):
 
         self.assertEqual(report["status"], "invalid")
         self.assertTrue(
-            any("duplicate patch path: patches/alias.patch" in error for error in report["errors"])
+            any("patches[1].path escapes root" in error for error in report["errors"])
+        )
+
+    def test_rejects_patch_hardlink_alias_to_same_file(self) -> None:
+        original = self.root / "patches" / "0001-example.patch"
+        alias = self.root / "patches" / "hardlink.patch"
+        alias.hardlink_to(original)
+        changed = json.loads(json.dumps(self.manifest))
+        changed["patches"].append(
+            {
+                "path": "patches/hardlink.patch",
+                "sha256": hashlib.sha256(self.patch_bytes).hexdigest(),
+            }
+        )
+
+        report = self.report(changed)
+
+        self.assertEqual(report["status"], "invalid")
+        self.assertTrue(
+            any("duplicate patch file identity: patches/hardlink.patch" in error
+                for error in report["errors"])
         )
 
     def test_rejects_gate_promotion_and_duplicate_json_keys(self) -> None:

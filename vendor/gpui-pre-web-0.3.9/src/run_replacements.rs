@@ -386,6 +386,8 @@ mod tests {
             ascent: px(11.0),
             descent: px(3.0),
             len: index * 2,
+
+            bidi_clusters: None,
         }
     }
 

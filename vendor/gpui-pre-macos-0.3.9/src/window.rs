@@ -128,6 +128,8 @@ unsafe fn build_classes() {
     unsafe {
         WINDOW_CLASS = build_window_class("GPUIWindow", class!(NSWindow));
         PANEL_CLASS = build_window_class("GPUIPanel", class!(NSPanel));
+        accesskit_macos::add_focus_forwarder_to_window_class("GPUIWindow");
+        accesskit_macos::add_focus_forwarder_to_window_class("GPUIPanel");
         VIEW_CLASS = {
             let mut decl = ClassDecl::new("GPUIView", class!(NSView)).unwrap();
             decl.add_ivar::<*mut c_void>(WINDOW_STATE_IVAR);

@@ -1,0 +1,99 @@
+--- a/vendor/gpui-base-0.7.3/src/calendar.rs
++++ b/vendor/gpui-base-0.7.3/src/calendar.rs
+@@ -5,2 +5,3 @@
+ use chrono::{Datelike, Local, NaiveDate, Weekday};
++use gpui::prelude::FluentBuilder as _;
+ use gpui::{
+@@ -157,1 +158,12 @@
++// RTL grids retain row order but place each row's first value on the right.
++fn calendar_grid_order(values: Vec<i32>, columns: usize, rtl: bool) -> Vec<Option<i32>> {
++    if !rtl { return values.into_iter().map(Some).collect(); }
++    let mut ordered = Vec::new();
++    for row in values.chunks(columns) {
++        ordered.extend(std::iter::repeat_n(None, columns - row.len()));
++        ordered.extend(row.iter().rev().copied().map(Some));
++    }
++    ordered
++}
++
+ fn picker_grid_layout(view: CalendarView) -> Option<(u16, f32)> {
+@@ -173,2 +185,3 @@
+     keyboard_cursor: Option<NaiveDate>,
++    right_to_left: bool,
+     current_year: i32,
+@@ -190,2 +203,3 @@
+             keyboard_cursor: None,
++            right_to_left: false,
+             current_year: today.year(),
+@@ -218,2 +232,8 @@
+     }
++    /// Whether calendar columns run right to left.
++    pub fn right_to_left(&self) -> bool { self.right_to_left }
++
++    /// Set the direction used by all calendar views.
++    pub fn set_right_to_left(&mut self, value: bool) { self.right_to_left = value; }
++
+     /// Current uncommitted keyboard navigation target, if any.
+@@ -673,3 +693,4 @@
+         let view = self.state.read(cx).view();
+-        let mut header = h_flex().items_center().justify_between().child({
++        let rtl = self.state.read(cx).right_to_left();
++        let mut header = h_flex().when(rtl, |row| row.flex_row_reverse()).items_center().justify_between().child({
+             let st = CalendarItemState::new(CalendarItemKind::Previous).disabled(
+@@ -773,3 +794,3 @@
+         let mut body = match picker_grid_layout(view) {
+-            None => h_flex().justify_around(),
++            None => h_flex().when(rtl, |row| row.flex_row_reverse()).justify_around(),
+             Some((columns, horizontal_gap)) => {
+@@ -783,3 +804,3 @@
+                 let mut month = v_flex();
+-                let mut header_row = h_flex();
++                let mut header_row = h_flex().when(rtl, |row| row.flex_row_reverse());
+                 for weekday in 0..7 {
+@@ -798,3 +819,3 @@
+                 for (week_index, week) in weeks.iter().enumerate() {
+-                    let mut week_row = h_flex();
++                    let mut week_row = h_flex().when(rtl, |row| row.flex_row_reverse());
+                     for (column, date) in week.iter().enumerate() {
+@@ -843,3 +864,5 @@
+             let current = self.state.read(cx).current_month();
+-            for month in 1..=12u8 {
++            for month in calendar_grid_order((1..=12).collect(), 3, rtl) {
++                let Some(month) = month else { body = body.child(div()); continue; };
++                let month = month as u8;
+                 let st = CalendarItemState::new(CalendarItemKind::Month).active(month == current);
+@@ -859,3 +882,4 @@
+             let years = self.state.read(cx).years_on_page().to_vec();
+-            for year in years {
++            for year in calendar_grid_order(years, 5, rtl) {
++                let Some(year) = year else { body = body.child(div()); continue; };
+                 let st = CalendarItemState::new(CalendarItemKind::Year).active(year == current);
+--- a/vendor/gpui-component-0.7.3/src/time/calendar.rs
++++ b/vendor/gpui-component-0.7.3/src/time/calendar.rs
+@@ -82,2 +82,3 @@
+         let size = self.size;
++        let rtl = self.state.read(cx).right_to_left();
+         let month_count = self.number_of_months.max(1) as f32;
+@@ -106,6 +107,6 @@
+                         .clear_children()
+-                        .child(Icon::new(IconName::ChevronLeft).size_4()),
++                        .child(Icon::new(if rtl { IconName::ChevronRight } else { IconName::ChevronLeft }).size_4()),
+                     CalendarItemKind::Next => item
+                         .clear_children()
+-                        .child(Icon::new(IconName::ChevronRight).size_4()),
++                        .child(Icon::new(if rtl { IconName::ChevronLeft } else { IconName::ChevronRight }).size_4()),
+                     _ => item,
+--- a/vendor/gpui-component-0.7.3/src/time/date_picker.rs
++++ b/vendor/gpui-component-0.7.3/src/time/date_picker.rs
+@@ -486,5 +486,4 @@
+         let delta = match event.keystroke.key.as_str() {
+-            // The current calendar rows are physically left-to-right in all locales.
+-            "left" => -1,
+-            "right" => 1,
++            "left" => if self.calendar.read(cx).right_to_left() { 1 } else { -1 },
++            "right" => if self.calendar.read(cx).right_to_left() { -1 } else { 1 },
+             "up" => -7,
+@@ -756,2 +755,3 @@
+         self.state.update(cx, |state, cx| {
++            state.calendar.update(cx, |calendar, _| calendar.set_right_to_left(self.right_to_left));
+             state.sync_children(window, cx);

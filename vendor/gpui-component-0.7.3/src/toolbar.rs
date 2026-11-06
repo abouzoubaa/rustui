@@ -160,6 +160,7 @@ pub struct Toolbar {
     style: StyleRefinement,
     size: Size,
     disabled: bool,
+    right_to_left: bool,
     items: SmallVec<[ToolbarItem; 4]>,
 }
 
@@ -171,8 +172,15 @@ impl Toolbar {
             style: StyleRefinement::default(),
             size: Size::Small,
             disabled: false,
+            right_to_left: false,
             items: SmallVec::new(),
         }
+    }
+
+    /// Lay out and navigate toolbar items in right-to-left order.
+    pub fn right_to_left(mut self, right_to_left: bool) -> Self {
+        self.right_to_left = right_to_left;
+        self
     }
 
     /// Disable the toolbar's roving keyboard navigation.
@@ -246,9 +254,11 @@ impl RenderOnce for Toolbar {
 
         BaseToolbar::new(self.id)
             .disabled(self.disabled)
+            .right_to_left(self.right_to_left)
             .flex()
             .items_center()
             .flex_shrink_0()
+            .when(self.right_to_left, |this| this.w_full().flex_row_reverse())
             .map(|this| match size {
                 Size::XSmall => this.h_7().p_1().gap_1().text_xs(),
                 Size::Small => this.h_8().p_1().gap_1().text_sm(),

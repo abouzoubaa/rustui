@@ -732,8 +732,8 @@ mod tests {
         assert_eq!(disabled.role(), Role::Switch);
         assert_eq!(disabled.toggled(), Some(Toggled::False));
         assert!(!disabled.supports_action(accesskit::Action::Click));
-        // GPUI currently has no aria-disabled setter. Keep the limitation
-        // explicit instead of claiming an AccessKit disabled state.
+        // Switch does not yet forward the aria-disabled setter. Keep this
+        // limitation explicit until its renderer exposes disabled state.
         assert!(!disabled.is_disabled());
     }
 }

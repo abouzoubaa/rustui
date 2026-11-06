@@ -70,10 +70,12 @@ impl<V: View> ContainerView<V> {
     }
 
     /// Adds equal padding on all sides in logical pixels.
+    ///
+    /// Panics if the edges are invalid or their combined span overflows.
     pub fn padding(mut self, padding: f32) -> Self {
         assert!(
-            padding.is_finite() && padding >= 0.0,
-            "padding must be finite and nonnegative"
+            LogicalInsets::new(padding, padding, padding, padding).is_ok(),
+            "padding must have finite nonnegative edges and a finite span"
         );
         self.padding = Some(padding);
         self.padding_edges = None;
@@ -234,6 +236,11 @@ mod tests {
     use super::Container;
     use crate::view::EmptyView;
     use gpui::Hsla;
+
+    #[test]
+    fn rejects_uniform_padding_with_overflowing_span() {
+        assert!(std::panic::catch_unwind(|| Container(EmptyView).padding(f32::MAX)).is_err());
+    }
 
     #[test]
     fn validates_static_opacity_and_keeps_opaque_default() {

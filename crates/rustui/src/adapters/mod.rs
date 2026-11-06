@@ -1,6 +1,7 @@
-//! adapters integration.
+//! Integration boundaries for GPUI and RustUI services.
 //!
-//! Scaffold only. The modules below do not yet implement their planned APIs.
+//! Theme and localization adapters have runtime implementations. The `gpui`
+//! and `gpui_components` modules reserve paths for future adapter APIs.
 
 pub mod gpui;
 pub mod gpui_components;

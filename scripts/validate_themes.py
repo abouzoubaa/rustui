@@ -38,7 +38,8 @@ def main() -> int:
                 raise ValueError(f"{path}: expected an object")
             if (
                 data.get("format") == "rustui-appearance"
-                and data.get("format_version") == 1
+                and type(data.get("format_version")) is int
+                and data["format_version"] == 1
             ):
                 runtime_count += 1
                 continue

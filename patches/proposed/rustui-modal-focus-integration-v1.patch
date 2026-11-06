@@ -1,0 +1,15 @@
+--- a/crates/rustui/src/runtime/window.rs
++++ b/crates/rustui/src/runtime/window.rs
+@@ -135,9 +135,9 @@
+         {
+             return;
+         }
+-        // Components does not expose the active sheet/dialog focus handle.
+-        // Do not move focus behind either modal when its focus was lost.
+-        if window.has_active_sheet(cx) || window.has_active_dialog(cx) {
++        // Restore the topmost modal before continuing normal Tab traversal.
++        if window.focus_active_modal(cx) {
++            cx.stop_propagation();
+             return;
+         }
+         if crate::components::overlay::drawer::restore_active_focus(window, cx) {

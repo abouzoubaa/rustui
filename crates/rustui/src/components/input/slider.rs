@@ -1,12 +1,12 @@
 //! Controlled single-value slider backed by a retained GPUI SliderState.
 
-use std::ops::RangeInclusive;
+use std::{cell::RefCell, ops::RangeInclusive, rc::Rc};
 
 use gpui::prelude::FluentBuilder as _;
 use gpui::{
-    AccessibleAction, AnyElement, App, Axis, InteractiveElement, IntoElement, MouseButton,
-    Orientation, ParentElement, RenderOnce, Role, StatefulInteractiveElement, Styled, Window, div,
-    px, relative,
+    AccessibleAction, AnyElement, App, AppContext as _, Axis, InteractiveElement, IntoElement,
+    MouseButton, Orientation, ParentElement, RenderOnce, Role, SharedString,
+    StatefulInteractiveElement, Styled, Window, div, px, relative,
 };
 use gpui_base::{SliderIndicator, SliderThumb, SliderTrack};
 use gpui_component::{
@@ -22,11 +22,85 @@ use crate::{
     view::{EmptyView, RenderContext, View},
 };
 
+type SliderEventWriter<Context> = Rc<dyn Fn(f32, &mut Context)>;
+
+fn replace_event_writer<Context>(
+    slot: &RefCell<Option<SliderEventWriter<Context>>>,
+    writer: SliderEventWriter<Context>,
+) {
+    *slot.borrow_mut() = Some(writer);
+}
+
+fn write_with_current_writer<Context>(
+    slot: &RefCell<Option<SliderEventWriter<Context>>>,
+    value: f32,
+    cx: &mut Context,
+) {
+    let writer = slot.borrow().clone();
+    if let Some(writer) = writer {
+        writer(value, cx);
+    }
+}
+
+fn bounded_value(value: f32, min: f32, max: f32) -> f32 {
+    if value.is_nan() {
+        min
+    } else {
+        value.clamp(min, max)
+    }
+}
+
+fn bounded_event_writer<Context: 'static>(
+    writer: SliderEventWriter<Context>,
+    min: f32,
+    max: f32,
+    disabled: bool,
+) -> SliderEventWriter<Context> {
+    Rc::new(move |value, cx| {
+        if !disabled {
+            writer(bounded_value(value, min, max), cx);
+        }
+    })
+}
+
+struct RetainedSlider {
+    state: gpui::Entity<SliderState>,
+    writer: Rc<RefCell<Option<SliderEventWriter<App>>>>,
+}
+
+#[derive(Clone, Debug, PartialEq, Eq)]
+enum SliderLabel {
+    Literal(SharedString),
+    Message {
+        id: SharedString,
+        fallback: SharedString,
+    },
+}
+
+fn resolved_message_label(
+    id: &SharedString,
+    localized: String,
+    fallback: &SharedString,
+) -> SharedString {
+    if localized.trim().is_empty() || localized.trim() == id.trim() {
+        fallback.clone()
+    } else {
+        SharedString::from(localized)
+    }
+}
+
+fn slider_accessibility_label(label: Option<SharedString>) -> SharedString {
+    label
+        .filter(|label| !label.trim().is_empty())
+        .unwrap_or_else(|| "Slider".into())
+}
+
 pub struct SliderView {
     value: Binding<f32>,
     range: RangeInclusive<f32>,
     step: f32,
     id: Option<Identity>,
+    accessibility_label: Option<SliderLabel>,
     disabled: bool,
     vertical: bool,
     reverse: bool,
@@ -35,14 +109,18 @@ pub struct SliderView {
 impl SliderView {
     pub fn new(value: Binding<f32>, range: RangeInclusive<f32>) -> Self {
         assert!(
-            range.start().is_finite() && range.end().is_finite() && range.start() < range.end(),
-            "Slider range must contain two finite ascending values"
+            range.start().is_finite()
+                && range.end().is_finite()
+                && range.start() < range.end()
+                && (range.end() - range.start()).is_finite(),
+            "Slider range must contain finite ascending values with a finite span"
         );
         Self {
             value,
             range,
             step: 1.0,
             id: None,
+            accessibility_label: None,
             disabled: false,
             vertical: false,
             reverse: false,
@@ -50,14 +128,58 @@ impl SliderView {
     }
 
     pub fn id(mut self, id: impl Into<Identity>) -> Self {
-        self.id = Some(id.into());
+        let id = id.into();
+        assert!(
+            !id.as_str().trim().is_empty(),
+            "Slider IDs must be nonempty"
+        );
+        self.id = Some(id);
+        self
+    }
+
+    /// Names the slider for assistive technology.
+    pub fn accessibility_label(mut self, label: impl Into<SharedString>) -> Self {
+        let label = label.into();
+        assert!(
+            !label.trim().is_empty(),
+            "slider accessibility label must not be empty"
+        );
+        self.accessibility_label = Some(SliderLabel::Literal(label));
+        self
+    }
+
+    /// Resolves the slider's accessible name from the active RustUI message catalog.
+    pub fn localized_accessibility_label(mut self, message_id: impl Into<SharedString>) -> Self {
+        let message_id = message_id.into();
+        assert!(
+            !message_id.trim().is_empty(),
+            "slider accessibility localization keys must be nonempty"
+        );
+        let fallback = match &self.accessibility_label {
+            Some(SliderLabel::Literal(label))
+            | Some(SliderLabel::Message {
+                fallback: label, ..
+            }) => label.clone(),
+            None => SharedString::from("Slider"),
+        };
+        self.accessibility_label = Some(SliderLabel::Message {
+            id: message_id,
+            fallback,
+        });
         self
     }
 
     pub fn step(mut self, step: f32) -> Self {
+        let snapping_stays_finite = |value: f32| {
+            let quotient = value / step;
+            quotient.is_finite() && (quotient.round() * step).is_finite()
+        };
         assert!(
-            step.is_finite() && step > 0.0,
-            "Slider step must be positive"
+            step.is_finite()
+                && step > 0.0
+                && snapping_stays_finite(*self.range.start())
+                && snapping_stays_finite(*self.range.end()),
+            "Slider step must be positive, finite, and safe for its range"
         );
         self.step = step;
         self
@@ -73,26 +195,27 @@ impl SliderView {
         self
     }
 
+    /// Fills the track from its maximum end instead of its minimum end.
+    ///
+    /// This changes the fill only; values, pointer mapping, and keyboard
+    /// direction are unchanged.
     pub fn reverse(mut self, reverse: bool) -> Self {
         self.reverse = reverse;
         self
     }
 
-    fn identity(&self) -> Identity {
-        self.id.clone().unwrap_or_else(|| {
-            Identity::from(format!(
-                "slider:{}:{}:{}",
-                self.range.start(),
-                self.range.end(),
-                self.step
-            ))
-        })
+    fn identity(&self, context: &mut RenderContext<'_>) -> Identity {
+        self.identity_with(|base| context.next_implicit_retained_identity(base))
+    }
+
+    fn identity_with(&self, allocate_implicit: impl FnOnce(Identity) -> Identity) -> Identity {
+        self.id
+            .clone()
+            .unwrap_or_else(|| allocate_implicit(Identity::from("slider")))
     }
 
     fn clamped_value(&self) -> f32 {
-        self.value
-            .value()
-            .clamp(*self.range.start(), *self.range.end())
+        bounded_value(self.value.value(), *self.range.start(), *self.range.end())
     }
 }
 
@@ -107,18 +230,43 @@ impl View for SliderView {
     }
 
     fn into_element(&self, context: &mut RenderContext<'_>) -> AnyElement {
-        let identity = self.identity();
+        let identity = self.identity(context);
+        let disabled = self.disabled;
+        let (focus_parent, _) = context.retained_entity(
+            Identity::from(format!("slider-focus:{identity}")),
+            |_, cx| cx.focus_handle(),
+        );
+        let focus_parent = context.update_entity(&focus_parent, move |focus, window, cx| {
+            if disabled && focus.contains_focused(window, cx) {
+                window.focus(focus, cx);
+            }
+            focus.clone()
+        });
         let min = *self.range.start();
         let max = *self.range.end();
         let step = self.step;
         let initial_value = self.clamped_value();
-        let (state, created) = context.retained_entity(identity.clone(), move |_window, _cx| {
-            SliderState::new()
-                .min(min)
-                .max(max)
-                .step(step)
-                .default_value(initial_value)
-        });
+        let (retained, created) =
+            context.retained_entity(identity.clone(), move |_window, cx| RetainedSlider {
+                state: cx.new(|_cx| configured_slider_state(min, max, step, initial_value)),
+                writer: Rc::new(RefCell::new(None)),
+            });
+        let (state, writer) = {
+            let retained = retained.read(context.app());
+            (retained.state.clone(), retained.writer.clone())
+        };
+
+        let configuration_changed = {
+            let retained = state.read(context.app());
+            retained.min_value() != min
+                || retained.max_value() != max
+                || retained.step_value() != step
+        };
+        if configuration_changed {
+            context.update_entity(&state, move |state, _window, _cx| {
+                refresh_slider_configuration(state, min, max, step, initial_value);
+            });
+        }
 
         let current = self.clamped_value();
         let retained = match state.read(context.app()).value() {
@@ -131,14 +279,18 @@ impl View for SliderView {
             });
         }
 
+        let binding_writer = context.binding_writer(self.value.clone());
+        // Retained subscriptions can receive an event after the control is disabled.
+        let bounded_writer = bounded_event_writer(binding_writer, min, max, self.disabled);
+        replace_event_writer(&writer, bounded_writer);
         if created {
-            let write = context.binding_writer(self.value.clone());
+            let current_writer = writer.clone();
             context.subscribe_retained(
                 &identity,
                 &state,
                 move |_state, event: &SliderEvent, cx| {
                     if let SliderEvent::Change(SliderValue::Single(value)) = event {
-                        write(*value, cx);
+                        write_with_current_writer(&current_writer, *value, cx);
                     }
                 },
             );
@@ -151,38 +303,68 @@ impl View for SliderView {
         let thumb_height = *style.lengths.get("height").expect("slider thumb height");
         let active_theme =
             active_theme(context.app()).expect("a RustUI component theme requires an active theme");
-        ThemedSlider {
-            state,
-            axis: if self.vertical {
-                Axis::Vertical
-            } else {
-                Axis::Horizontal
-            },
-            disabled: self.disabled,
-            reverse: self.reverse,
-            thumb_width,
-            thumb_height,
-            track_color: slider_role_color(
-                &style,
-                "track",
-                &active_theme.profile,
-                active_theme.mode,
-            ),
-            thumb_color: slider_role_color(
-                &style,
-                "thumb",
-                &active_theme.profile,
-                active_theme.mode,
-            ),
-            disabled_color: slider_role_color(
-                &style,
-                "disabled",
-                &active_theme.profile,
-                active_theme.mode,
-            ),
-        }
-        .into_any_element()
+        div()
+            .track_focus(&focus_parent)
+            .child(ThemedSlider {
+                state,
+                axis: if self.vertical {
+                    Axis::Vertical
+                } else {
+                    Axis::Horizontal
+                },
+                disabled: self.disabled,
+                reverse: self.reverse,
+                accessibility_label: self.accessibility_label.as_ref().map(|label| match label {
+                    SliderLabel::Literal(label) => label.clone(),
+                    SliderLabel::Message { id, fallback } => {
+                        resolved_message_label(id, context.localized_message(id.as_ref()), fallback)
+                    }
+                }),
+                thumb_width,
+                thumb_height,
+                track_color: slider_track_color(
+                    &style,
+                    "track",
+                    &active_theme.profile,
+                    active_theme.mode,
+                ),
+                thumb_color: slider_role_color(
+                    &style,
+                    "thumb",
+                    &active_theme.profile,
+                    active_theme.mode,
+                ),
+                disabled_color: slider_role_color(
+                    &style,
+                    "disabled",
+                    &active_theme.profile,
+                    active_theme.mode,
+                ),
+            })
+            .into_any_element()
     }
+}
+
+fn configured_slider_state(min: f32, max: f32, step: f32, value: f32) -> SliderState {
+    SliderState::new()
+        .min(min)
+        .max(max)
+        .step(step)
+        .default_value(value)
+}
+
+fn refresh_slider_configuration(
+    state: &mut SliderState,
+    min: f32,
+    max: f32,
+    step: f32,
+    value: f32,
+) -> bool {
+    if state.min_value() == min && state.max_value() == max && state.step_value() == step {
+        return false;
+    }
+    *state = configured_slider_state(min, max, step, value);
+    true
 }
 
 /// Uses GPUI Base slider primitives for pointer and touch behavior. RustUI owns
@@ -193,6 +375,7 @@ struct ThemedSlider {
     axis: Axis,
     disabled: bool,
     reverse: bool,
+    accessibility_label: Option<SharedString>,
     thumb_width: f32,
     thumb_height: f32,
     track_color: gpui::Hsla,
@@ -239,6 +422,7 @@ impl RenderOnce for ThemedSlider {
             .when(!horizontal, |slider| {
                 slider.w(px(self.thumb_width)).h(px(120.0))
             })
+            .aria_label(slider_accessibility_label(self.accessibility_label))
             .when(self.disabled, |slider| {
                 slider.a11y_synthetic_children(|builder| {
                     set_slider_accessibility_disabled(builder.parent_node());
@@ -247,7 +431,50 @@ impl RenderOnce for ThemedSlider {
 
         if !self.disabled {
             let slider_state = self.state.clone();
+            let keyboard_state = slider_state.clone();
             slider = slider
+                .focusable()
+                .tab_stop(true)
+                .on_key_down(move |event, window, cx| {
+                    if event.prefer_character_input
+                        || event.keystroke.is_ime_in_progress()
+                        || event.keystroke.modifiers.modified()
+                    {
+                        return;
+                    }
+                    let (current, min, max, step) = {
+                        let state = keyboard_state.read(cx);
+                        let current = match state.value() {
+                            SliderValue::Single(value) => value,
+                            SliderValue::Range(_, _) => {
+                                unreachable!("RustUI Slider retains single-value state")
+                            }
+                        };
+                        (
+                            current,
+                            state.min_value(),
+                            state.max_value(),
+                            state.step_value(),
+                        )
+                    };
+                    let Some(value) = slider_keyboard_value(
+                        axis,
+                        event.keystroke.key.as_ref(),
+                        current,
+                        min,
+                        max,
+                        step,
+                    ) else {
+                        return;
+                    };
+                    if value != current {
+                        keyboard_state.update(cx, |state, cx| {
+                            state.set_value(value, window, cx);
+                            cx.emit(SliderEvent::Change(SliderValue::Single(value)));
+                        });
+                    }
+                    cx.stop_propagation();
+                })
                 .on_a11y_action(AccessibleAction::SetValue, {
                     let state = slider_state.clone();
                     move |data, window, cx| {
@@ -378,12 +605,61 @@ fn accessibility_set_value(
         .then(|| normalize_accessibility_value(*value as f32, min, max, step))
 }
 
+pub(super) fn slider_keyboard_value(
+    axis: Axis,
+    key: &str,
+    current: f32,
+    min: f32,
+    max: f32,
+    step: f32,
+) -> Option<f32> {
+    let value = match (axis, key) {
+        (_, "home") => return Some(min),
+        (_, "end") => return Some(max),
+        (Axis::Horizontal, "left") | (Axis::Vertical, "down") => current - step,
+        (Axis::Horizontal, "right") | (Axis::Vertical, "up") => current + step,
+        _ => return None,
+    };
+    Some(value.clamp(min, max))
+}
+
 fn normalize_accessibility_value(value: f32, min: f32, max: f32, step: f32) -> f32 {
-    ((value.clamp(min, max) / step).round() * step).clamp(min, max)
+    let clamped = value.clamp(min, max);
+    let quotient = clamped / step;
+    if quotient.is_finite() {
+        // Match GPUI's pointer path, which divides, rounds, and multiplies in f32.
+        return (quotient.round() * step).clamp(min, max);
+    }
+
+    // Preserve useful normalization for direct calls with subnormal steps even
+    // though SliderView rejects steps whose configured range overflows in f32.
+    let min = f64::from(min);
+    let max = f64::from(max);
+    let step = f64::from(step);
+    ((f64::from(clamped).clamp(min, max) / step).round() * step).clamp(min, max) as f32
 }
 
 fn set_slider_accessibility_disabled(node: &mut gpui::accesskit::Node) {
     node.set_disabled();
+}
+
+fn slider_track_color(
+    style: &crate::theme::ResolvedComponentStyle,
+    role: &str,
+    profile: &crate::theme::ThemeProfile,
+    mode: AppearanceMode,
+) -> gpui::Hsla {
+    let track = slider_role_color(style, role, profile, mode);
+    let colors = profile.colors(Some(mode));
+    let background =
+        try_parse_color(&colors.window_background).expect("validated RustUI window background");
+    // The bundled secondary surface equals the window background in both
+    // appearances; a translucent rail in that color would be invisible.
+    if track == background {
+        try_parse_color(&colors.secondary_text).expect("validated RustUI secondary text")
+    } else {
+        track
+    }
 }
 
 fn slider_role_color(
@@ -412,12 +688,434 @@ fn slider_role_color(
 #[cfg(test)]
 mod tests {
     use super::{
-        accessibility_set_value, normalize_accessibility_value, set_slider_accessibility_disabled,
-        slider_role_color,
+        accessibility_set_value, bounded_event_writer, bounded_value,
+        normalize_accessibility_value, replace_event_writer, set_slider_accessibility_disabled,
+        slider_keyboard_value, slider_role_color, write_with_current_writer,
     };
     use crate::components::theme::selector_for_mode;
     use crate::theme::{AppearanceMode, loader::parse_theme, resolver::resolve_component_style};
+    use gpui::Axis;
     use gpui_component::theme::try_parse_color;
+    use rustui_core::Binding;
+    use std::{cell::RefCell, rc::Rc};
+
+    #[gpui::test]
+    fn rendered_slider_thumb_drag_updates_owner(cx: &mut gpui::TestAppContext) {
+        use crate::{prelude::*, runtime::ComponentHost};
+        use gpui::{Modifiers, MouseButton, px};
+        use rustui_core::Identity;
+
+        struct Owner {
+            value: f32,
+            vertical: bool,
+        }
+        impl View for Owner {
+            fn body(&self) -> impl View {
+                Slider(
+                    Binding::new(
+                        self.value,
+                        |owner: &Owner| owner.value,
+                        |owner, value| {
+                            owner.value = value;
+                        },
+                    ),
+                    0.0..=100.0,
+                )
+                .id("drag-test")
+                .step(20.0)
+                .vertical(self.vertical)
+            }
+        }
+
+        let theme = parse_theme(include_str!("../../../../../themes/macos27.json")).unwrap();
+        cx.update(|app| {
+            gpui_component::init(app);
+            crate::theme::activate_theme(&theme, Some(AppearanceMode::Dark), app).unwrap();
+        });
+        for vertical in [false, true] {
+            let (owner, window) = cx.add_window_view(|_, cx| {
+                ComponentHost::new(
+                    Owner {
+                        value: 50.0,
+                        vertical,
+                    },
+                    cx,
+                )
+            });
+            let (bounds, state) = window.update(|window, app| {
+                let _ = window.draw(app);
+                let retained = owner
+                    .read(app)
+                    .retained_entity_for_test::<super::RetainedSlider>(
+                        vec![],
+                        Identity::from("drag-test"),
+                    )
+                    .unwrap();
+                let state = retained.read(app).state.clone();
+                (state.read(app).bounds(), state)
+            });
+            let x = f32::from(bounds.origin.x);
+            let y = f32::from(bounds.origin.y);
+            let width = f32::from(bounds.size.width);
+            let height = f32::from(bounds.size.height);
+            assert!(if vertical { height } else { width } > 10.0);
+            let point = |fraction| {
+                if vertical {
+                    gpui::point(px(x + width / 2.0), px(y + height * (1.0 - fraction)))
+                } else {
+                    gpui::point(px(x + width * fraction), px(y + height / 2.0))
+                }
+            };
+            let modifiers = Modifiers::default();
+            window.simulate_mouse_down(point(0.5), MouseButton::Left, modifiers);
+            window.simulate_mouse_move(point(0.65), Some(MouseButton::Left), modifiers);
+            let first_value = window.update(|_, app| owner.read(app).component().value);
+            assert!(
+                first_value > 55.0,
+                "first thumb movement was lost: {first_value}"
+            );
+            let first_position = window.update(|_, app| state.read(app).percentage().end);
+            assert!(
+                (first_position - first_value / 100.0).abs() < 0.001,
+                "thumb position {first_position} disagrees with value {first_value}"
+            );
+            window.simulate_mouse_move(point(0.8), Some(MouseButton::Left), modifiers);
+            window.simulate_mouse_up(point(0.8), MouseButton::Left, modifiers);
+            let value = window.update(|_, app| owner.read(app).component().value);
+            assert!(value > 60.0, "thumb drag did not update owner: {value}");
+
+            window.update(|window, app| {
+                let _ = window.draw(app);
+            });
+            window.simulate_mouse_down(point(0.2), MouseButton::Left, modifiers);
+            window.simulate_mouse_move(point(0.4), Some(MouseButton::Left), modifiers);
+            window.simulate_mouse_up(point(0.4), MouseButton::Left, modifiers);
+            let track_value = window.update(|_, app| owner.read(app).component().value);
+            assert!(
+                track_value > 30.0 && track_value < 50.0,
+                "first track movement was lost: {track_value}"
+            );
+        }
+    }
+
+    #[gpui::test]
+    fn stepped_pointer_endpoint_stays_within_range(cx: &mut gpui::TestAppContext) {
+        use crate::{prelude::*, runtime::ComponentHost};
+        use gpui::{Axis, px};
+        use rustui_core::Identity;
+
+        struct Owner(f32);
+        impl View for Owner {
+            fn body(&self) -> impl View {
+                Slider(
+                    Binding::new(
+                        self.0,
+                        |owner: &Owner| owner.0,
+                        |owner, value| owner.0 = value,
+                    ),
+                    5.0..=95.0,
+                )
+                .step(20.0)
+                .id("endpoint")
+            }
+        }
+        let theme = parse_theme(include_str!("../../../../../themes/macos27.json")).unwrap();
+        cx.update(|app| {
+            gpui_component::init(app);
+            crate::theme::activate_theme(&theme, Some(AppearanceMode::Dark), app).unwrap();
+        });
+        let (owner, window) = cx.add_window_view(|_, cx| ComponentHost::new(Owner(50.0), cx));
+        let (bounds, state) = window.update(|window, app| {
+            let _ = window.draw(app);
+            let retained = owner
+                .read(app)
+                .retained_entity_for_test::<super::RetainedSlider>(
+                    vec![],
+                    Identity::from("endpoint"),
+                )
+                .unwrap();
+            let state = retained.read(app).state.clone();
+            (state.read(app).bounds(), state)
+        });
+        let y = f32::from(bounds.origin.y + bounds.size.height / 2.0);
+        for (x, expected) in [
+            (f32::from(bounds.origin.x) + 1.0, 5.0),
+            (f32::from(bounds.origin.x + bounds.size.width) - 1.0, 95.0),
+        ] {
+            let point = gpui::point(px(x), px(y));
+            let retained_value = window.update(|window, app| {
+                state.update(app, |state, cx| {
+                    state.update_value_by_position(Axis::Horizontal, point, false, window, cx);
+                    state.value().end()
+                })
+            });
+            assert_eq!(
+                retained_value, expected,
+                "retained slider value exceeded its range"
+            );
+        }
+    }
+
+    #[gpui::test]
+    fn zero_sized_track_ignores_pointer_updates(cx: &mut gpui::TestAppContext) {
+        use gpui::AppContext as _;
+
+        cx.update(gpui_component::init);
+        let (_root, window) = cx.add_window_view(|_, cx| {
+            crate::runtime::ComponentHost::new(crate::view::EmptyView, cx)
+        });
+        let slider = window
+            .update(|_, cx| cx.new(|_| super::configured_slider_state(0.0, 100.0, 1.0, 50.0)));
+        window.update(|window, cx| {
+            for axis in [Axis::Horizontal, Axis::Vertical] {
+                slider.update(cx, |slider, cx| {
+                    slider.update_value_by_position(
+                        axis,
+                        gpui::point(gpui::px(0.0), gpui::px(0.0)),
+                        false,
+                        window,
+                        cx,
+                    );
+                });
+            }
+            assert_eq!(
+                slider.read(cx).value(),
+                gpui_component::slider::SliderValue::Single(50.0)
+            );
+        });
+    }
+
+    #[test]
+    #[should_panic(
+        expected = "Slider range must contain finite ascending values with a finite span"
+    )]
+    fn rejects_ranges_with_an_overflowing_span() {
+        let binding = Binding::new(0.0, |value: &f32| *value, |value, next| *value = next);
+        super::Slider(binding, -f32::MAX..=f32::MAX);
+    }
+
+    #[test]
+    fn accepts_large_ranges_with_a_finite_span() {
+        let binding = Binding::new(0.0, |value: &f32| *value, |value, next| *value = next);
+        let slider = super::Slider(binding, -f32::MAX..=0.0);
+
+        assert_eq!(*slider.range.start(), -f32::MAX);
+        assert_eq!(*slider.range.end(), 0.0);
+    }
+
+    #[test]
+    fn retained_slider_events_use_the_latest_owner_binding() {
+        struct Owner {
+            old_value: f32,
+            current_value: f32,
+        }
+        let old_binding = Binding::new_with::<Owner, &'static str>(
+            0.0,
+            "old",
+            |owner, field| match *field {
+                "old" => owner.old_value,
+                _ => owner.current_value,
+            },
+            |owner, field, next| {
+                match *field {
+                    "old" => owner.old_value = next,
+                    _ => owner.current_value = next,
+                }
+                true
+            },
+        );
+        let current_binding = Binding::new_with::<Owner, &'static str>(
+            0.0,
+            "current",
+            |owner, field| match *field {
+                "old" => owner.old_value,
+                _ => owner.current_value,
+            },
+            |owner, field, next| {
+                match *field {
+                    "old" => owner.old_value = next,
+                    _ => owner.current_value = next,
+                }
+                true
+            },
+        );
+        let writer = RefCell::new(None);
+        let mut owner = Owner {
+            old_value: 0.0,
+            current_value: 0.0,
+        };
+        replace_event_writer(
+            &writer,
+            Rc::new(move |value, owner: &mut Owner| {
+                old_binding.write_to(owner, value);
+            }),
+        );
+        replace_event_writer(
+            &writer,
+            bounded_event_writer(
+                Rc::new(move |value, owner: &mut Owner| {
+                    current_binding.write_to(owner, value);
+                }),
+                0.0,
+                10.0,
+                false,
+            ),
+        );
+        write_with_current_writer(&writer, f32::INFINITY, &mut owner);
+        assert_eq!(owner.old_value, 0.0);
+        assert_eq!(owner.current_value, 10.0);
+        write_with_current_writer(&writer, f32::NAN, &mut owner);
+        assert_eq!(owner.current_value, 0.0);
+    }
+
+    #[test]
+    fn retained_slider_events_do_not_write_while_disabled() {
+        let slot = RefCell::new(None);
+        let writer: super::SliderEventWriter<f32> = Rc::new(|value, owner| *owner = value);
+        let mut owner = 2.0;
+        replace_event_writer(
+            &slot,
+            bounded_event_writer(writer.clone(), 0.0, 10.0, false),
+        );
+        write_with_current_writer(&slot, 4.0, &mut owner);
+        assert_eq!(owner, 4.0);
+        replace_event_writer(&slot, bounded_event_writer(writer.clone(), 0.0, 10.0, true));
+        write_with_current_writer(&slot, 8.0, &mut owner);
+        assert_eq!(owner, 4.0);
+        replace_event_writer(&slot, bounded_event_writer(writer, 0.0, 5.0, false));
+        write_with_current_writer(&slot, 8.0, &mut owner);
+        assert_eq!(owner, 5.0);
+    }
+
+    #[test]
+    fn slider_accessibility_label_is_optional_and_owner_settable() {
+        let binding = rustui_core::Binding::new(
+            50.0_f32,
+            |value: &f32| *value,
+            |value, next| {
+                *value = next;
+            },
+        );
+        let unnamed = super::Slider(binding.clone(), 0.0..=100.0);
+        assert_eq!(unnamed.accessibility_label, None);
+        assert_eq!(
+            super::Slider(binding, 0.0..=100.0)
+                .accessibility_label(" Volume ")
+                .accessibility_label,
+            Some(super::SliderLabel::Literal(" Volume ".into()))
+        );
+    }
+
+    #[test]
+    fn slider_without_an_override_uses_a_nonblank_accessible_name() {
+        assert_eq!(super::slider_accessibility_label(None), "Slider");
+        assert_eq!(
+            super::slider_accessibility_label(Some("Volume".into())),
+            "Volume"
+        );
+    }
+
+    #[test]
+    fn keyboard_adjustment_tracks_orientation_and_clamps_to_range() {
+        assert_eq!(
+            slider_keyboard_value(Axis::Horizontal, "right", 5.0, 0.0, 10.0, 2.0),
+            Some(7.0)
+        );
+        assert_eq!(
+            slider_keyboard_value(Axis::Horizontal, "left", 1.0, 0.0, 10.0, 2.0),
+            Some(0.0)
+        );
+        assert_eq!(
+            slider_keyboard_value(Axis::Vertical, "up", 5.0, 0.0, 10.0, 2.0),
+            Some(7.0)
+        );
+        assert_eq!(
+            slider_keyboard_value(Axis::Vertical, "down", 5.0, 0.0, 10.0, 2.0),
+            Some(3.0)
+        );
+        assert_eq!(
+            slider_keyboard_value(Axis::Horizontal, "home", 5.0, 0.0, 10.0, 2.0),
+            Some(0.0)
+        );
+        assert_eq!(
+            slider_keyboard_value(Axis::Vertical, "end", 5.0, 0.0, 10.0, 2.0),
+            Some(10.0)
+        );
+        assert_eq!(
+            slider_keyboard_value(Axis::Horizontal, "up", 5.0, 0.0, 10.0, 2.0),
+            None
+        );
+    }
+
+    #[test]
+    fn localized_accessibility_label_resolves_message_and_preserves_fallback() {
+        let binding =
+            rustui_core::Binding::new(50.0_f32, |value: &f32| *value, |value, next| *value = next);
+        let view = super::Slider(binding, 0.0..=100.0)
+            .accessibility_label("Volume")
+            .localized_accessibility_label("slider.volume");
+        let Some(super::SliderLabel::Message { id, fallback }) = view.accessibility_label else {
+            panic!("expected localized slider accessibility label");
+        };
+
+        assert_eq!(id.as_ref(), "slider.volume");
+        assert_eq!(fallback.as_ref(), "Volume");
+        assert_eq!(
+            super::resolved_message_label(&id, "Volume sonore".into(), &fallback).as_ref(),
+            "Volume sonore"
+        );
+    }
+
+    #[test]
+    fn localized_accessibility_label_uses_slider_fallback_for_blank_messages() {
+        let binding =
+            rustui_core::Binding::new(50.0_f32, |value: &f32| *value, |value, next| *value = next);
+        let view =
+            super::Slider(binding, 0.0..=100.0).localized_accessibility_label("slider.volume");
+        let Some(super::SliderLabel::Message { id, fallback }) = view.accessibility_label else {
+            panic!("expected localized slider accessibility label");
+        };
+
+        assert_eq!(fallback.as_ref(), "Slider");
+        assert_eq!(
+            super::resolved_message_label(&id, " \t\n".into(), &fallback),
+            fallback
+        );
+    }
+
+    #[test]
+    fn explicit_accessibility_label_must_not_be_blank() {
+        for label in ["", " ", "\t\n"] {
+            assert!(
+                std::panic::catch_unwind(|| {
+                    let binding = rustui_core::Binding::new(
+                        50.0_f32,
+                        |value: &f32| *value,
+                        |value, next| *value = next,
+                    );
+                    super::Slider(binding, 0.0..=100.0).accessibility_label(label);
+                })
+                .is_err()
+            );
+        }
+    }
+
+    #[test]
+    fn localized_accessibility_label_requires_nonblank_message_id() {
+        for message_id in ["", " ", "\t\n"] {
+            assert!(
+                std::panic::catch_unwind(|| {
+                    let binding = rustui_core::Binding::new(
+                        50.0_f32,
+                        |value: &f32| *value,
+                        |value, next| *value = next,
+                    );
+                    super::Slider(binding, 0.0..=100.0).localized_accessibility_label(message_id);
+                })
+                .is_err()
+            );
+        }
+    }
 
     #[test]
     fn macos27_slider_thumb_dimensions_are_available_in_both_modes() {
@@ -428,6 +1126,34 @@ mod tests {
             let style = resolve_component_style(&theme, "slider", "sliders", &selector).unwrap();
             assert_eq!(style.lengths.get("width"), Some(&24.0));
             assert_eq!(style.lengths.get("height"), Some(&24.0));
+        }
+    }
+
+    #[test]
+    fn slider_track_falls_back_only_when_it_matches_window_background() {
+        let theme = parse_theme(include_str!("../../../../../themes/macos27.json")).unwrap();
+        for mode in [AppearanceMode::Light, AppearanceMode::Dark] {
+            let mut selector = selector_for_mode(mode);
+            selector.chrome = "utility".into();
+            let style = resolve_component_style(&theme, "slider", "sliders", &selector).unwrap();
+            let colors = theme.platform_snapshot.colors(Some(mode));
+            assert_eq!(
+                super::slider_track_color(&style, "track", &theme.platform_snapshot, mode),
+                try_parse_color(&colors.secondary_text).unwrap()
+            );
+            let mut custom = theme.platform_snapshot.clone();
+            match mode {
+                AppearanceMode::Light => {
+                    custom.appearance.light.toolbar_background = "#123456".into()
+                }
+                AppearanceMode::Dark => {
+                    custom.appearance.dark.toolbar_background = "#123456".into()
+                }
+            }
+            assert_eq!(
+                super::slider_track_color(&style, "track", &custom, mode),
+                try_parse_color("#123456").unwrap()
+            );
         }
     }
 
@@ -466,6 +1192,131 @@ mod tests {
         assert_eq!(normalize_accessibility_value(37.0, 0.0, 100.0, 5.0), 35.0);
         assert_eq!(normalize_accessibility_value(-4.0, 0.0, 100.0, 5.0), 0.0);
         assert_eq!(normalize_accessibility_value(108.0, 0.0, 100.0, 5.0), 100.0);
+    }
+
+    #[test]
+    fn slider_accessibility_set_value_matches_pointer_rounding_in_range() {
+        let value = -15_199.308_593_75_f32;
+        let step = 188.811_294_555_664_06_f32;
+        let pointer_value = (value / step).round() * step;
+
+        assert_eq!(
+            normalize_accessibility_value(value, -20_000.0, 0.0, step),
+            pointer_value
+        );
+    }
+
+    #[test]
+    fn slider_accessibility_set_value_handles_subnormal_steps() {
+        assert_eq!(
+            normalize_accessibility_value(0.5, 0.0, 1.0, f32::from_bits(1)),
+            0.5
+        );
+    }
+
+    #[test]
+    #[should_panic(expected = "Slider step must be positive, finite, and safe for its range")]
+    fn rejects_steps_that_overflow_gpui_step_rounding() {
+        let binding = Binding::new(0.5, |value: &f32| *value, |value, next| *value = next);
+        let _ = super::Slider(binding, 0.0..=1.0).step(f32::from_bits(1));
+    }
+
+    #[test]
+    #[should_panic(expected = "Slider step must be positive, finite, and safe for its range")]
+    fn rejects_steps_whose_snapped_endpoint_overflows() {
+        let binding = Binding::new(
+            3.0e38_f32,
+            |value: &f32| *value,
+            |value, next| *value = next,
+        );
+        let _ = super::Slider(binding, 3.0e38_f32..=f32::MAX).step(1.2e38_f32);
+    }
+
+    #[test]
+    fn controlled_slider_value_is_finite_and_within_bounds() {
+        let binding = |value| {
+            rustui_core::Binding::new(value, |value: &f32| *value, |value, next| *value = next)
+        };
+
+        for (input, expected) in [
+            (f32::NAN, -10.0),
+            (f32::NEG_INFINITY, -10.0),
+            (f32::INFINITY, 10.0),
+            (-11.0, -10.0),
+            (11.0, 10.0),
+            (3.5, 3.5),
+        ] {
+            assert_eq!(
+                super::Slider(binding(input), -10.0..=10.0).clamped_value(),
+                expected
+            );
+        }
+    }
+
+    #[test]
+    fn slider_event_values_are_finite_and_within_current_bounds() {
+        assert_eq!(bounded_value(f32::NAN, -10.0, 10.0), -10.0);
+        assert_eq!(bounded_value(f32::NEG_INFINITY, -10.0, 10.0), -10.0);
+        assert_eq!(bounded_value(f32::INFINITY, -10.0, 10.0), 10.0);
+        assert_eq!(bounded_value(11.0, -10.0, 10.0), 10.0);
+        assert_eq!(bounded_value(3.5, -10.0, 10.0), 3.5);
+    }
+
+    #[test]
+    fn retained_slider_state_refreshes_changed_range_and_step() {
+        let mut state = super::configured_slider_state(0.0, 100.0, 1.0, 50.0);
+        assert_eq!(state.min_value(), 0.0);
+        assert_eq!(state.max_value(), 100.0);
+        assert_eq!(state.step_value(), 1.0);
+
+        assert!(super::refresh_slider_configuration(
+            &mut state, 20.0, 80.0, 5.0, 50.0
+        ));
+        assert_eq!(state.min_value(), 20.0);
+        assert_eq!(state.max_value(), 80.0);
+        assert_eq!(state.step_value(), 5.0);
+        assert_eq!(state.value().end(), 50.0);
+        assert!(!super::refresh_slider_configuration(
+            &mut state, 20.0, 80.0, 5.0, 50.0
+        ));
+    }
+
+    #[test]
+    fn implicit_slider_identity_distinguishes_siblings_and_is_stable_by_slot() {
+        let binding = Binding::new(50.0_f32, |value: &f32| *value, |value, next| *value = next);
+        let slider = super::Slider(binding, 0.0..=100.0);
+        let allocate_at_slot = |slot: usize| {
+            move |base: rustui_core::Identity| {
+                rustui_core::Identity::new(format!(
+                    "rustui-text-owner-7:implicit-retained:{slot}:{base}"
+                ))
+            }
+        };
+
+        let first_sibling = slider.identity_with(allocate_at_slot(0));
+        let second_sibling = slider.identity_with(allocate_at_slot(1));
+        let first_sibling_after_rerender = slider.identity_with(allocate_at_slot(0));
+        let reconfigured = super::Slider(
+            Binding::new(50.0_f32, |value: &f32| *value, |value, next| *value = next),
+            20.0..=80.0,
+        )
+        .step(5.0);
+        let first_sibling_after_reconfiguration = reconfigured.identity_with(allocate_at_slot(0));
+
+        assert_ne!(first_sibling, second_sibling);
+        assert_eq!(first_sibling, first_sibling_after_rerender);
+        assert_eq!(first_sibling, first_sibling_after_reconfiguration);
+    }
+
+    #[test]
+    fn explicit_slider_identity_bypasses_implicit_allocator() {
+        let binding = Binding::new(50.0_f32, |value: &f32| *value, |value, next| *value = next);
+        let slider = super::Slider(binding, 0.0..=100.0).id(" volume ");
+
+        assert_eq!(
+            slider.identity_with(|_| panic!("explicit identity must not allocate a fallback")),
+            rustui_core::Identity::from(" volume ")
+        );
     }
 
     #[test]

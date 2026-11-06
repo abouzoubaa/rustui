@@ -12,7 +12,7 @@ pub(crate) mod scoped_element;
 pub mod tasks;
 pub mod window;
 
-pub use application::RustUI;
+pub use application::{RustUI, component_assets, with_embedded_asset};
 pub use component_host::ComponentHost;
 pub use component_host::ComponentHost as ViewHost;
 pub use events::AppAction;
@@ -20,3 +20,6 @@ pub use rustui_core::{
     Action, AsyncState, Binding, EnvironmentValues, Identity, Invalidation, State,
 };
 pub use tasks::OwnerTask;
+pub use window::AnchoredPopupOptions;
+#[cfg(not(target_family = "wasm"))]
+pub use window::{AnchoredPopupHandle, open_anchored_popup};

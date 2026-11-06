@@ -24,6 +24,8 @@ struct NavigationSplitGallery {
     archive_count: u32,
     #[state(false)]
     reversed: bool,
+    #[state(560.0)]
+    viewport_width: f32,
     #[state(false)]
     archive_disabled: bool,
     #[state(None)]
@@ -49,6 +51,18 @@ impl NavigationSplitGallery {
 
     fn select_unknown(&mut self) {
         self.selection = Some(String::from("missing-page"));
+    }
+
+    fn set_viewport_width_480(&mut self) {
+        self.viewport_width = 480.0;
+    }
+
+    fn set_viewport_width_560(&mut self) {
+        self.viewport_width = 560.0;
+    }
+
+    fn set_viewport_width_640(&mut self) {
+        self.viewport_width = 640.0;
     }
 
     fn toggle_order(&mut self) {
@@ -168,6 +182,32 @@ impl View for NavigationSplitGallery {
         };
         let can_remove_selected = self.removed_item().is_some()
             || matches!(selected.as_deref(), Some("files" | "settings" | "archive"));
+        let requested_width = self.viewport_width();
+        let split_selection = self.selection_binding();
+        let measured_split = Container(
+            GeometryReader::new("split-rendered-width", move |size| {
+                VStack::new()
+                    .child(Text(format!(
+                        "Rendered NavigationSplit width: {:.1} logical px",
+                        size.width
+                    )))
+                    .child(
+                        Container(
+                            NavigationSplit(
+                                "navigation-split-gallery-view",
+                                items.clone(),
+                                split_selection.clone(),
+                            )
+                            .accessibility_label("Workspace navigation"),
+                        )
+                        .width(size.width)
+                        .height(300.0),
+                    )
+            })
+            .width(requested_width)
+            .height(322.0),
+        )
+        .border();
 
         VStack::new()
             .spacing(10.0)
@@ -217,25 +257,33 @@ impl View for NavigationSplitGallery {
                             .disabled(!can_remove_selected),
                     ),
             )
-            .child(Text(format!(
-                "{} · order: {} · Archive disabled: {} · removed ID: {}",
+        .child(
+            HStack::new()
+                .spacing(6.0)
+                .child(
+                    Button("480 px", self.action(Self::set_viewport_width_480))
+                        .id("split-viewport-480"),
+                )
+                .child(
+                    Button("560 px", self.action(Self::set_viewport_width_560))
+                        .id("split-viewport-560"),
+                )
+                .child(
+                    Button("640 px", self.action(Self::set_viewport_width_640))
+                        .id("split-viewport-640"),
+                ),
+        )
+        .child(Text(format!(
+            "{} · requested width: {} logical px · order: {} · Archive disabled: {} · removed ID: {}",
                 selection_status,
+            self.viewport_width(),
                 if self.reversed() { "reversed" } else { "normal" },
                 self.archive_disabled(),
                 self.removed_item().unwrap_or_else(|| String::from("None")),
             )))
-            .child(
-                Container(NavigationSplit(
-                    "navigation-split-gallery-view",
-                    items,
-                    self.selection_binding(),
-                ))
-                .width(560.0)
-                .height(300.0)
-                .border(),
-            )
+        .child(measured_split)
             .child(Text(
-                "Only the selected detail is lowered; switching destinations releases its native controls. Owner-bound values stay in this gallery.",
+                "The navigation tree is named Workspace navigation. The selected detail is a named region; the pinned resizable API does not expose divider accessibility metadata. Switching destinations releases detail controls.",
             ))
             .child(Text(format!(
                 "Owner values · Files: {:?} / count {} · Settings: {:?} / count {} · Archive: {:?} / count {}",

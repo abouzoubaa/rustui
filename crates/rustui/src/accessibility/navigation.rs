@@ -1,5 +1,4 @@
-//! Accessible focus and navigation behavior.
+//! Accessibility landmarks are exposed through [`super::semantics::SemanticsRole`].
+//! Native focus ownership and traversal use the existing `FocusScope` API.
 //!
-//! Status: planned; this file reserves the approved scaffold location.
-//! No runtime behavior or public type contract is implemented here.
-//! Implementation requires a separate file proposal and explicit approval.
+//! This module has no separate navigation runtime or wrapper API.

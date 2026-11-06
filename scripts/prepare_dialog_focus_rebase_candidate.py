@@ -58,6 +58,14 @@ def write_json(path, data):
         stream.write("\n")
 
 
+def copy_approved_patch(source, destination, expected_hash):
+    if digest(source) != expected_hash:
+        raise ValueError("approved patch changed before copy")
+    shutil.copy2(source, destination)
+    if digest(destination) != expected_hash:
+        raise ValueError("approved patch changed during copy")
+
+
 def main():
     root = Path(__file__).resolve().parents[1]
     parent = root / "target/headstart/candidates"
@@ -103,7 +111,7 @@ def main():
     dest.mkdir()  # Never overwrite or reuse an experiment.
     evidence = dest / "evidence"
     evidence.mkdir()
-    shutil.copy2(patch, dest / "approved.patch")
+    copy_approved_patch(patch, dest / "approved.patch", PATCH)
     snapshots = {}
     for variant in ("baseline", "candidate"):
         print(f"Copying and verifying {variant}", flush=True)

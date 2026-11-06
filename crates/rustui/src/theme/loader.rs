@@ -1,14 +1,67 @@
 //! Loading and validating RustUI theme documents.
 
-use std::{error::Error, fmt, fs, io, path::Path};
+use std::{collections::BTreeSet, error::Error, fmt, fs, io, path::Path};
+
+use serde::de::{self, Deserialize, Deserializer, MapAccess, SeqAccess, Visitor};
 
 use crate::theme::schema::ThemeDocument;
 
 /// Load and validate a RustUI theme document from JSON text.
 pub fn parse_theme(source: &str) -> Result<ThemeDocument, ThemeLoadError> {
+    serde_json::from_str::<UniqueJson>(source)?;
     let document: ThemeDocument = serde_json::from_str(source)?;
     document.validate().map_err(ThemeLoadError::Invalid)?;
     Ok(document)
+}
+
+// Preserve the original JSON for the typed parser, which validates raw numeric
+// tokens, while rejecting ambiguous object keys at every depth.
+struct UniqueJson;
+
+impl<'de> Deserialize<'de> for UniqueJson {
+    fn deserialize<D: Deserializer<'de>>(deserializer: D) -> Result<Self, D::Error> {
+        struct UniqueVisitor;
+        impl<'de> Visitor<'de> for UniqueVisitor {
+            type Value = UniqueJson;
+
+            fn expecting(&self, formatter: &mut fmt::Formatter<'_>) -> fmt::Result {
+                formatter.write_str("JSON with unique object keys")
+            }
+            fn visit_bool<E: de::Error>(self, _: bool) -> Result<Self::Value, E> {
+                Ok(UniqueJson)
+            }
+            fn visit_i64<E: de::Error>(self, _: i64) -> Result<Self::Value, E> {
+                Ok(UniqueJson)
+            }
+            fn visit_u64<E: de::Error>(self, _: u64) -> Result<Self::Value, E> {
+                Ok(UniqueJson)
+            }
+            fn visit_f64<E: de::Error>(self, _: f64) -> Result<Self::Value, E> {
+                Ok(UniqueJson)
+            }
+            fn visit_str<E: de::Error>(self, _: &str) -> Result<Self::Value, E> {
+                Ok(UniqueJson)
+            }
+            fn visit_unit<E: de::Error>(self) -> Result<Self::Value, E> {
+                Ok(UniqueJson)
+            }
+            fn visit_seq<A: SeqAccess<'de>>(self, mut seq: A) -> Result<Self::Value, A::Error> {
+                while seq.next_element::<UniqueJson>()?.is_some() {}
+                Ok(UniqueJson)
+            }
+            fn visit_map<A: MapAccess<'de>>(self, mut map: A) -> Result<Self::Value, A::Error> {
+                let mut keys = BTreeSet::new();
+                while let Some(key) = map.next_key::<String>()? {
+                    if !keys.insert(key.clone()) {
+                        return Err(de::Error::custom(format!("duplicate object key `{key}`")));
+                    }
+                    map.next_value::<UniqueJson>()?;
+                }
+                Ok(UniqueJson)
+            }
+        }
+        deserializer.deserialize_any(UniqueVisitor)
+    }
 }
 
 /// Serialize a validated theme document as normalized, pretty-printed JSON.
@@ -17,8 +70,9 @@ pub fn parse_theme(source: &str) -> Result<ThemeDocument, ThemeLoadError> {
 /// Whitespace, object ordering, and numeric spelling may change; absent optional
 /// fields may be emitted explicitly. Arbitrary JSON values stored in the
 /// document are preserved as JSON values. Fields rejected by the parser as
-/// unknown cannot be recovered, and non-Button component values are not
-/// semantically validated by the current theme contract.
+/// unknown cannot be recovered. Non-Button records with the typed `parts` or
+/// `styles` envelope are validated against the shared component resolver;
+/// opaque extension records and unsupported style properties remain intact.
 pub fn serialize_theme(document: &ThemeDocument) -> Result<String, ThemeSerializeError> {
     document.validate().map_err(ThemeSerializeError::Invalid)?;
     serde_json::to_string_pretty(document).map_err(ThemeSerializeError::Json)
@@ -123,6 +177,12 @@ mod tests {
             "custom_widget".into(),
             serde_json::json!({"rustui_type": "CustomWidget", "config": [1, true]}),
         );
+        let future_artwork = serde_json::json!({
+            "kind": "future_artwork",
+            "value": {"path": "custom://toggle-thumb"}
+        });
+        theme.components.get_mut("toggle").unwrap()["styles"][0]["style"]["properties"]["future_artwork"] =
+            future_artwork.clone();
 
         let serialized = serialize_theme(&theme).expect("valid theme serializes");
         let round_tripped = parse_theme(&serialized).expect("serialized theme parses");
@@ -138,6 +198,82 @@ mod tests {
             round_tripped.components["button"]["parts"]["custom_metadata"],
             theme.components["button"]["parts"]["custom_metadata"]
         );
+        assert_eq!(
+            round_tripped.components["toggle"]["styles"][0]["style"]["properties"]["future_artwork"],
+            future_artwork
+        );
+    }
+
+    #[test]
+    fn parser_rejects_non_object_custom_component_records() {
+        let mut theme: ThemeDocument = serde_json::from_str(THEME_SOURCE).unwrap();
+        theme
+            .components
+            .insert("custom_widget".into(), serde_json::json!("opaque"));
+        let source = serde_json::to_string(&theme).unwrap();
+
+        assert!(matches!(
+            parse_theme(&source),
+            Err(ThemeLoadError::Invalid(message))
+                if message.contains("custom_widget") && message.contains("must be an object")
+        ));
+    }
+
+    #[test]
+    fn parser_accepts_typed_component_records_with_intentionally_empty_styles() {
+        let theme = parse_theme(THEME_SOURCE).expect("source theme is valid");
+
+        for component in ["toolbar", "sidebar", "menu_bar", "tab_bar"] {
+            assert!(theme.component_theme(component).unwrap().styles.is_empty());
+        }
+    }
+
+    #[test]
+    fn parser_rejects_non_button_style_rules_that_reference_undeclared_parts() {
+        let mut theme: ThemeDocument = serde_json::from_str(THEME_SOURCE).unwrap();
+        theme.components.get_mut("toggle").unwrap()["styles"][0]["part"] =
+            serde_json::json!("missing_part");
+        let source = serde_json::to_string(&theme).unwrap();
+
+        assert!(matches!(
+            parse_theme(&source),
+            Err(ThemeLoadError::Invalid(message))
+                if message.contains("toggle") && message.contains("missing_part")
+        ));
+    }
+
+    #[test]
+    fn parser_rejects_ambiguous_equal_specificity_component_selectors() {
+        let mut theme: ThemeDocument = serde_json::from_str(THEME_SOURCE).unwrap();
+        let styles = theme.components.get_mut("toggle").unwrap()["styles"]
+            .as_array_mut()
+            .unwrap();
+        styles[0]["when"]["appearance"] = serde_json::json!("dark");
+        styles[0]["when"]["interaction"] = serde_json::json!("rest");
+        styles[1]["when"]["appearance"] = serde_json::json!("any");
+        styles[1]["when"]["material"] = serde_json::json!("opaque");
+        styles[1]["when"]["interaction"] = serde_json::json!("rest");
+        let source = serde_json::to_string(&theme).unwrap();
+
+        assert!(matches!(
+            parse_theme(&source),
+            Err(ThemeLoadError::Invalid(message))
+                if message.contains("toggle") && message.contains("ambiguous")
+        ));
+    }
+
+    #[test]
+    fn parser_rejects_invalid_recognized_property_on_non_default_rule() {
+        let mut theme: ThemeDocument = serde_json::from_str(THEME_SOURCE).unwrap();
+        theme.components.get_mut("toggle").unwrap()["styles"][0]["style"]["properties"]["width"]
+            ["value"]["px"] = serde_json::json!(0.0);
+        let source = serde_json::to_string(&theme).unwrap();
+
+        assert!(matches!(
+            parse_theme(&source),
+            Err(ThemeLoadError::Invalid(message))
+                if message.contains("toggle") && message.contains("width")
+        ));
     }
 
     #[test]
@@ -210,5 +346,22 @@ mod tests {
         );
 
         assert!(matches!(parse_theme(&source), Err(ThemeLoadError::Json(_))));
+    }
+
+    #[test]
+    fn parser_rejects_duplicate_nested_object_keys() {
+        let source = THEME_SOURCE.replacen(
+            "\"background\": \"surface\",",
+            "\"background\": \"ignored\",\n    \"background\": \"surface\",",
+            1,
+        );
+        assert_ne!(source, THEME_SOURCE);
+        assert!(matches!(parse_theme(&source), Err(ThemeLoadError::Json(_))));
+        assert!(
+            serde_json::from_str::<super::UniqueJson>(r#"[{"name":1,"\u006eame":2}]"#).is_err()
+        );
+        assert!(
+            serde_json::from_str::<super::UniqueJson>(r#"[{"name":null},{"name":true}]"#).is_ok()
+        );
     }
 }

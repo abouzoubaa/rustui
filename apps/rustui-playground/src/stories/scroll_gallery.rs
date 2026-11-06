@@ -52,6 +52,29 @@ impl ScrollGallery {
         };
     }
 
+    fn sibling_panes(&self) -> impl View {
+        let mut first = VStack::new().spacing(4.0);
+        let mut second = VStack::new().spacing(4.0);
+        for index in 0..12 {
+            first = first.child(Text(format!("First list row {index:02}")));
+            second = second.child(Text(format!("Second list row {index:02}")));
+        }
+        HStack::new()
+            .spacing(8.0)
+            .child(
+                ScrollView(first)
+                    .width(220.0)
+                    .height(100.0)
+                    .scrollbars(self.bars()),
+            )
+            .child(
+                ScrollView(second)
+                    .width(220.0)
+                    .height(100.0)
+                    .scrollbars(self.bars()),
+            )
+    }
+
     fn vertical_pane(&self) -> impl View {
         let mut rows = VStack::new()
             .spacing(4.0)
@@ -185,6 +208,8 @@ impl View for ScrollGallery {
             AnyView::new(
                 VStack::new()
                     .spacing(8.0)
+                    .child(Text("Independent sibling scroll views"))
+                    .child(self.sibling_panes())
                     .child(Text("Vertical, with a nested horizontal viewport"))
                     .child(self.vertical_pane())
                     .child(Text("Horizontal"))

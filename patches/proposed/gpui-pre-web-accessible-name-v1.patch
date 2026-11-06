@@ -1,0 +1,55 @@
+--- a/vendor/gpui-pre-0.3.9/src/window.rs
++++ b/vendor/gpui-pre-0.3.9/src/window.rs
+@@ -1664,7 +1664,9 @@
+         }
+ 
+         let accessibility_force_disabled = cx.accessibility_force_disabled;
+-        let a11y_active_flag = Arc::new(AtomicBool::new(false));
++        let a11y_active_flag = Arc::new(AtomicBool::new(
++            cfg!(target_family = "wasm") && !accessibility_force_disabled,
++        ));
+ 
+         #[cfg(not(target_family = "wasm"))]
+         if !accessibility_force_disabled {
+--- a/vendor/gpui-pre-web-0.3.9/src/window.rs
++++ b/vendor/gpui-pre-web-0.3.9/src/window.rs
+@@ -865,6 +865,20 @@
+         }
+     }
+ 
++    fn a11y_tree_update(&self, tree_update: gpui::accesskit::TreeUpdate) {
++        let label = tree_update
++            .nodes
++            .iter()
++            .find(|(id, _)| *id == tree_update.focus)
++            .and_then(|(_, node)| {
++                (node.role() == gpui::accesskit::Role::TextInput)
++                    .then(|| node.label())
++                    .flatten()
++            })
++            .filter(|label| !label.is_empty());
++        self.inner.ime_mirror.set_accessible_label(label);
++    }
++
+     fn prompt(
+         &self,
+         _level: PromptLevel,
+--- a/vendor/gpui-pre-web-0.3.9/src/ime_mirror.rs
++++ b/vendor/gpui-pre-web-0.3.9/src/ime_mirror.rs
+@@ -225,6 +225,16 @@
+         }
+     }
+ 
++    pub(crate) fn set_accessible_label(&self, label: Option<&str>) {
++        let result = match label {
++            Some(label) => self.element.set_attribute("aria-label", label),
++            None => self.element.remove_attribute("aria-label"),
++        };
++        if let Err(error) = result {
++            log::warn!("Failed to update accessible input label: {error:?}");
++        }
++    }
++
+     pub(crate) fn remove(&self) {
+         let element: &web_sys::Element = self.element.as_ref();
+         element.remove();

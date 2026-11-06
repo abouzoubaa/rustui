@@ -122,6 +122,39 @@ mod tests {
     use crate::theme::{parse_theme, resolve_component_style, resolve_component_style_with};
 
     #[test]
+    fn resolved_typography_reaches_gpui_style_refinement() {
+        let document = parse_theme(include_str!("../../../../themes/macos27.json")).unwrap();
+        let selector = selector_for_mode(AppearanceMode::Light);
+        let resolved = resolve_component_style(
+            &document,
+            "text",
+            "text_styles_left_aligned_light_opaque_body",
+            &selector,
+        )
+        .unwrap();
+        let typography = resolved.typography.as_ref().unwrap();
+        let mut element = styled_element(gpui::div(), &resolved);
+        let refinement = element.style();
+
+        assert_eq!(
+            refinement
+                .text
+                .font_family
+                .as_ref()
+                .map(|family| family.as_ref()),
+            Some(typography.family.as_str())
+        );
+        assert_eq!(
+            refinement.text.font_size,
+            Some(gpui::AbsoluteLength::Pixels(px(typography.size)))
+        );
+        assert_eq!(
+            refinement.text.font_weight,
+            Some(gpui::FontWeight(typography.weight))
+        );
+    }
+
+    #[test]
     fn paired_border_properties_reach_gpui_style_refinement() {
         let document = parse_theme(include_str!("../../../../themes/macos27.json")).unwrap();
         let selector = selector_for_mode(AppearanceMode::Dark);

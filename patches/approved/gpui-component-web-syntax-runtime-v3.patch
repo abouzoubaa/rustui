@@ -1,0 +1,114 @@
+--- a/vendor/gpui-component-0.7.3/src/highlighter/registry.rs
++++ b/vendor/gpui-component-0.7.3/src/highlighter/registry.rs
+@@ -514,6 +514,7 @@
+ 
+ impl LanguageRegistry {
+     /// Returns the singleton instance of the `LanguageRegistry` with default languages and themes.
++    #[cfg(not(target_family = "wasm"))]
+     pub fn singleton() -> &'static LazyLock<LanguageRegistry> {
+         static INSTANCE: LazyLock<LanguageRegistry> = LazyLock::new(|| LanguageRegistry {
+             languages: Mutex::new(
+@@ -525,6 +526,20 @@
+             generation: AtomicU64::new(0),
+         });
+         &INSTANCE
++    }
++
++    /// The browser executor uses one thread; each WebAssembly thread owns its registry.
++    #[cfg(target_family = "wasm")]
++    pub fn singleton() -> std::rc::Rc<LanguageRegistry> {
++        thread_local! {
++            static INSTANCE: std::rc::Rc<LanguageRegistry> = std::rc::Rc::new(LanguageRegistry {
++                languages: Mutex::new(languages::Language::all()
++                    .map(|language| (language.name().into(), language.config())).collect()),
++                parser_factories: Mutex::new(HashMap::new()),
++                generation: AtomicU64::new(0),
++            });
++        }
++        INSTANCE.with(std::rc::Rc::clone)
+     }
+ 
+     /// Registers a new language configuration to the registry.
+--- a/vendor/gpui-component-0.7.3/src/highlighter/highlighter.rs
++++ b/vendor/gpui-component-0.7.3/src/highlighter/highlighter.rs
+@@ -7,7 +7,8 @@
+ use gpui_base::input::RopeExt as _;
+ use ropey::{ChunkCursor, Rope};
+ use std::sync::Arc;
+-use std::time::{Duration, Instant};
++use std::time::Duration;
++use web_time::Instant;
+ use std::{
+     collections::{BTreeSet, HashMap},
+     ops::{ControlFlow, Range},
+@@ -841,7 +842,7 @@
+ 
+             if language_name.is_none() {
+                 language_name = query_match
+-                    .captures
++                    .captures()
+                     .iter()
+                     .find(|cap| Some(cap.index) == data.language_capture_index)
+                     .and_then(|capture| {
+@@ -865,7 +866,7 @@
+             };
+ 
+             let mut ranges = query_match
+-                .captures
++                .captures()
+                 .iter()
+                 .filter(|cap| Some(cap.index) == data.content_capture_index)
+                 .map(|capture| capture.node.range())
+@@ -1068,7 +1069,7 @@
+                     .iter()
+                     .any(|prop| prop.key.as_ref() == "highlight.allow-overlap");
+ 
+-                for cap in m.captures {
++                for cap in m.captures() {
+                     let node_range = cap.node.start_byte()..cap.node.end_byte();
+ 
+                     if !allow_overlapping_captures && node_range.start < last_end {
+@@ -1094,7 +1095,7 @@
+         let mut matches = query_cursor.matches(query, root_node, TextProvider(source));
+ 
+         while let Some(query_match) = matches.next() {
+-            for cap in query_match.captures {
++            for cap in query_match.captures() {
+                 let node = cap.node;
+ 
+                 let Some(highlight_name) = query.capture_names().get(cap.index as usize) else {
+--- a/vendor/gpui-component-0.7.3/src/diff/state.rs
++++ b/vendor/gpui-component-0.7.3/src/diff/state.rs
+@@ -1363,6 +1363,7 @@
+             let mut highlighters = Some(SyntaxHighlighters::default());
+             for (ix, file) in pending {
+                 let mut moved = highlighters.take();
++                #[cfg(not(target_family = "wasm"))]
+                 let (presentation, returned) = cx
+                     .background_spawn(async move {
+                         let presentation = FilePresentation::prepare(
+@@ -1373,6 +1374,13 @@
+                         (presentation, moved)
+                     })
+                     .await;
++                #[cfg(target_family = "wasm")]
++                let (presentation, returned) = {
++                    let presentation = FilePresentation::prepare(
++                        &file, options, moved.get_or_insert_default(),
++                    );
++                    (presentation, moved)
++                };
+                 highlighters = returned;
+                 let current = this.update(cx, |state, cx| {
+                     if state.presentation_generation != generation {
+--- a/vendor/gpui-component-0.7.3/src/input/syntax_context.rs
++++ b/vendor/gpui-component-0.7.3/src/input/syntax_context.rs
+@@ -84,7 +84,7 @@
+             .as_ref()
+             .is_none_or(|(cached_text, _)| cached_text != text)
+         {
+-            let start = std::time::Instant::now();
++            let start = web_time::Instant::now();
+             let mut progress = |_: &tree_sitter::ParseState| -> ControlFlow<()> {
+                 if start.elapsed() > Self::PARSE_BUDGET {
+                     ControlFlow::Break(())

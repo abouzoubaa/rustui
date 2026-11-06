@@ -1,0 +1,123 @@
+# Controlled Drawer contract
+
+`Drawer(id, visible: Binding<bool>)` presents a modal physical-edge panel in the
+existing GPUI Root. It uses pinned `gpui_base::Sheet` for focus trapping, Escape
+and backdrop dismissal. A RustUI RootPlugin owns the presentation per window;
+there is no additional renderer, scheduler, reactive runtime or dependency.
+
+## Public contract
+
+- Identity must be nonblank and unique within the caller's retention scope.
+- `.edge(DrawerEdge::{Left,Right,Top,Bottom})` uses physical edges, including RTL.
+  Right and 350 logical pixels are defaults. `.size` requires finite positive
+  values and clips the relevant dimension to the available viewport.
+- `visible` is controlled: true opens, false closes. True-to-true owner updates
+  refresh title, name, content, bindings, edge and size without replacing the
+  presentation, focus handle or retained children.
+- `.title`, `.accessibility_label`, `.close_label` and their localized builders
+  reject blank literal values/keys. Missing/blank/untranslated localized values
+  fall back to nonblank literals. The default Close localization key is
+  `rustui-action-close` with a literal `Close` fallback. The actual panel has a
+  named Dialog role and a named visible Close button.
+- Escape, backdrop and Close set owner visibility false exactly once through a
+  shared identity/generation-guarded close path. Owner-driven close uses the same
+  teardown without writing the already-false binding.
+- Prior focus is captured only when opening and restored on close if focus still
+  belongs to that presentation and its target remains alive. Unmount removes only
+  the owned presentation, preserving the owner's requested state; remount uses
+  current owner state. Window close safely releases the host and content.
+
+## Drawer mutual exclusion and compatibility
+
+A new Drawer is rejected while any native Sheet, native Dialog or another Drawer
+is active. Its still-current visibility request is reset to false, and the optional
+`.presentation_error(Binding<Option<DrawerError>>)` records `ModalConflict` or
+`MissingRootHost`. A successful new open clears an old error. Rejection never
+closes or replaces another presentation.
+
+Existing Sheet/Dialog trigger paths add only a Drawer-active guard. Dialog keeps
+its original active-Dialog guard and can still open above a native Sheet. Sheet
+retains its original native replacement/coexistence behavior, including replacing
+a Sheet while a native Dialog is active. No new first-active policy is imposed
+between already implemented native components.
+
+Drawer tokens include the owner lease entity, public identity and a monotonic
+generation. Delayed rejected-open updates also check the caller render revision.
+Stale Drawer-owned release and close callbacks cannot close a successor. The host
+holds only a weak caller lease. Existing native Sheet/Dialog presentations retain
+their pinned upstream event ownership; RustUI never uses an unconditional
+`close_sheet` or `close_dialog` as identity evidence.
+
+Direct upstream modal calls bypassing RustUI's Drawer-active guard remain outside
+its coordinated open API. If one appears while Drawer is active, Drawer removes
+its own layer without closing the foreign modal or restoring focus over it.
+
+## Text-selection scope limitation
+
+The pinned Components WindowState prepares its native/default active text-selection
+scope on every Root render. A later Drawer plugin activating an independent scope
+would switch scopes twice per frame and clear selection. This candidate therefore
+uses the existing Root scope and clears selection once on open and close; it does
+not claim a separately isolated Drawer text-selection scope. Focus trapping and
+pointer occlusion still come from the existing modal Sheet host. Independent
+scope ownership would need an upstream coordination hook rather than a competing
+Root-plugin override. Copy/selection and popup stacking remain acceptance gates.
+
+## Caller ownership and lifecycle
+
+Content is lowered with a current `RenderSeed` from its real caller, plus its own
+retained-entity store. It is not lowered under an artificial SheetContent owner.
+Parent bindings/actions, environment and locale are refreshed on every owner
+render. Removing the lease schedules guarded cleanup through its window handle;
+expired windows/hosts are harmless. All retained child components and resources
+are released with that presentation's store.
+
+## Playground and current checks
+
+The standalone Drawer story and the existing Sheet catalog gallery expose the
+public API, editable caller-bound input, live title/size updates, physical edges,
+owner close, unmount/remount and competing Sheet/Dialog triggers. The compiled
+preview registry adds `drawer-specimen` with the same bounded trigger/title/body
+string limits as Sheet, no serialized actions/events and a real local controlled
+owner. Imports reject blank labels before factory construction.
+
+The real-Root test harness exercises Escape/focus restoration, original-owner input
+binding refresh, stable presentation identity, native modal rejection, preserved Sheet/Dialog combination and replacement, unmount,
+stale generations, backdrop/Close and finite-size checks. The preview regression
+checks descriptor round trips and blank-import rejection.
+
+The integrating writer ran all seven Drawer tests successfully with the approved
+Headstart launcher and persistent production-consolidation target. Playground
+library tests and all-target checking also passed. This is source and test-runtime
+evidence. Native and browser visual/input/AX, VoiceOver, exact focus behavior,
+locale/RTL, window inset handling, popup stacking and cross-platform acceptance
+remain pending, as does the separate text-selection scope limitation above.
+Focused verification commands:
+
+```sh
+./scripts/cargo-headstart test --profile headstart --locked --offline -p rustui --lib drawer
+./scripts/cargo-headstart test --profile headstart --locked --offline -p rustui-playground --lib drawer
+./scripts/cargo-headstart check --profile headstart --locked --offline -p rustui-playground --all-targets
+```
+
+## Bounded Web functional acceptance — 2026-10-26
+
+Current optimized Web source `e50b6ff0` passes **13/13 functional checks** in one
+Chromium profile at 1280×720: open, edit caller-owned notes, live title/size refresh,
+caller action, Escape, reopen retaining notes, owner close, all four physical
+edges, release/remount from owner state, and backdrop dismissal. The visible
+Close control also dismissed each edge case. Updated 420-point sizing produced
+Right (860,0,420,720), Bottom (0,300,1280,420), Left (0,0,420,720), and Top
+(0,0,1280,420) CSS bounds.
+Evidence: `target/headstart/evidence/web-outline-drawer-20261026/acceptance.json`.
+Native, broader browser, independent text-selection scope, popup stacking,
+visual/locale/RTL and workload checks remain open. Accessibility and VoiceOver
+are undone and deferred by user direction.
+
+## Bounded native functional acceptance — 2026-10-26
+
+The verified reproducible `d857e6b5…` native candidate passes **18/18 bounded functional checks** on macOS 27 arm64 at 1320×820 logical pixels: opening, caller-bound notes, caller action, live title refresh, owner close, retained notes/title after reopening, Escape, all four physical edges and Close, owner-retaining release/remount, and actual backdrop dismissal. Settled screenshots show each physical edge; these do not establish the wider visual/locale contract.
+
+The original contract preserves requested visibility on unmount. An initial test incorrectly expected it to clear; that sequence is excluded and the release/remount/backdrop sequence was rerun against the documented contract. An unsettled Top-edge image is superseded by `drawer-top-settled.jpg`. These are test-harness exclusions, not repaired implementation defects.
+
+Evidence: `target/headstart/evidence/native-outline-drawer-20261026/`, with full states, exclusions, screenshots, binary/archive hashes and cleanup. No owned test process or disposable bundle remains. Focus restoration, popup stacking, independent text-selection scope, locale/RTL, window insets and wider workloads remain open. Accessibility and VoiceOver are undone/deferred.

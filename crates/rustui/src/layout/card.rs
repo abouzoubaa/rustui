@@ -45,11 +45,12 @@ pub struct CardView<V: View> {
 impl<V: View> CardView<V> {
     /// Sets equal logical-pixel padding on all sides.
     ///
-    /// Panics if `padding` is negative or nonfinite.
+    /// Panics if the edges are invalid or their combined span overflows.
     pub fn padding(mut self, padding: f32) -> Self {
         assert!(
-            padding.is_finite() && padding >= 0.0,
-            "Card padding must be finite and nonnegative"
+            crate::modifiers::padding::LogicalInsets::new(padding, padding, padding, padding,)
+                .is_ok(),
+            "Card padding must have finite nonnegative edges and a finite span"
         );
         self.padding = Some(padding);
         self
@@ -153,15 +154,20 @@ mod tests {
     }
 
     #[test]
-    #[should_panic(expected = "Card padding must be finite and nonnegative")]
+    #[should_panic(expected = "Card padding must have finite nonnegative edges and a finite span")]
     fn rejects_negative_padding() {
         let _: CardView<_> = Card("card", EmptyView).padding(-1.0);
     }
 
     #[test]
-    #[should_panic(expected = "Card padding must be finite and nonnegative")]
+    #[should_panic(expected = "Card padding must have finite nonnegative edges and a finite span")]
     fn rejects_nonfinite_padding() {
         let _: CardView<_> = Card("card", EmptyView).padding(f32::NAN);
+    }
+
+    #[test]
+    fn rejects_uniform_padding_with_overflowing_span() {
+        assert!(std::panic::catch_unwind(|| Card("padding", EmptyView).padding(f32::MAX)).is_err());
     }
 
     #[test]

@@ -1,5 +1,6 @@
 //! A child-host demo whose state belongs to the retained child component.
 
+use rustui::localization::MessageArguments;
 use rustui::prelude::*;
 
 #[derive(Clone, Copy, PartialEq, Eq)]
@@ -16,10 +17,10 @@ impl DemoDisplayMode {
         };
     }
 
-    pub fn label(self) -> &'static str {
+    pub fn message_id(self) -> &'static str {
         match self {
-            Self::Compact => "compact",
-            Self::Detailed => "detailed",
+            Self::Compact => "lab-child-environment-compact",
+            Self::Detailed => "lab-child-environment-detailed",
         }
     }
 }
@@ -46,15 +47,20 @@ impl View for ChildComponent {
         VStack::new()
             .child(Text(self.label.clone()))
             .child(EnvironmentReader(|mode: Option<&DemoDisplayMode>| {
-                Text(format!(
-                    "RustUI environment display mode: {}",
-                    mode.map_or("default (no scoped value)", |mode| mode.label())
+                HStack::new().child(LocalizedText(
+                    mode.map_or("lab-child-environment-default", |mode| mode.message_id()),
                 ))
             }))
-            .child(Text(format!("Child count: {}", self.count())))
+            .child(
+                HStack::new()
+                    .child(LocalizedText("lab-child-count").with_arguments(
+                        MessageArguments::new().with("count", self.count() as i64),
+                    )),
+            )
             .child(
                 Button("Increment child", self.action(Self::increment))
                     .id("child-increment")
+                    .localized_label("lab-child-increment")
                     .accessibility_label(format!(
                         "Increment {}: count {}",
                         self.label,
@@ -64,6 +70,7 @@ impl View for ChildComponent {
             .child(
                 TextEditor("Child-owned notes", self.text_binding())
                     .id("child-notes")
+                    .localized_placeholder("lab-child-notes")
                     .height(80.0),
             )
             .spacing(8.0)
