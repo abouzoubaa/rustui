@@ -10,6 +10,9 @@ from pathlib import Path
 
 OWNED_VENDOR_COPIES = {
     "crates/rustui-gpui": "vendor/gpui-pre-0.3.9",
+    "crates/rustui-gpui-platform": "vendor/gpui-pre-platform-0.3.9",
+    "crates/rustui-gpui-macos": "vendor/gpui-pre-macos-0.3.9",
+    "crates/rustui-gpui-apple": "vendor/gpui-pre-apple-0.3.9",
 }
 IGNORED_RELATIVE_PATHS = {"Cargo.toml"}
 
