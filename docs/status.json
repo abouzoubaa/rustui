@@ -20,7 +20,6 @@
     { "name": "preview_serialization", "source": "crates/rustui/src/preview/codec.rs, schema.rs, model.rs", "tests": "preview module tests where present", "native": "source present; acceptance pending", "notes": "typed preview protocol and serialization" },
     { "name": "platform_adapters", "source": "crates/rustui/src/adapters/", "tests": "adapter tests where present", "native": "GPUI adapters present", "notes": "GPUI and GPUI Components integration" },
     { "name": "accessibility", "source": "crates/rustui/src/accessibility/", "tests": "source tests where present", "native": "acceptance deferred", "notes": "implementation presence is not acceptance" },
-    { "name": "localization", "source": "crates/rustui/src/localization/", "tests": "source tests where present", "native": "deferred", "notes": "do not treat locale records as translations" },
- { "name": "playground_packaging", "source": "apps/rustui-playground/package-app.sh", "tests": "scripts/tests/test_package_playground_app.sh", "native": "macOS app bundle packaging", "notes": "existing bundle replacement requires --replace; release acceptance remains separate" }
+    { "name": "localization", "source": "crates/rustui/src/localization/", "tests": "source tests where present", "native": "deferred", "notes": "do not treat locale records as translations" }
   ]
 }
