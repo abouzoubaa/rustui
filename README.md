@@ -40,7 +40,7 @@ Components buttons for forward and back navigation.
 
 Localization preserves legacy interpolation and adds explicit Project Fluent resources,
 ICU4X decimal and civil date/time formatting, and Unicode locale preferences.
-See [the locale runtime contract](docs/tasks/STAGE6_LOCALE_RUNTIME_IMPLEMENTATION.md)
+See the [archived locale runtime contract](docs/archive/tasks/STAGE6_LOCALE_RUNTIME_IMPLEMENTATION.md)
 for supported functions, data versions and current acceptance limits. Native and
 browser accessibility, broader platform acceptance and release gates remain open. RustUI has no direct,
 transitive, optional, or public API dependency on Allui. GPUI and GPUI Components
@@ -55,7 +55,7 @@ are the upstream implementation sources.
 ```
 
 RustUI Playground is the canonical component development and manual acceptance
-application. It currently exposes 16 live framework demos and 46 catalog rows, including
+application. It currently exposes 16 live framework stories and 46 catalog rows, including
 Outline, Drawer, GraphView, NodeEditor, and a directly searchable
 SplitView/ResizablePanel gallery. The original theme-reference catalog remains
 available alongside the additional public-API entries. Story source, events, English/French/Arabic locales, and Light/Dark
@@ -117,4 +117,5 @@ Accessibility and VoiceOver acceptance are explicitly undone and deferred by
 user direction. Further localization and Web/Wasm work are also deferred while
 native macOS work continues; existing implementations and evidence are retained.
 Functional and release work continues; see the
-[canonical remaining-work record](docs/tasks/ROADMAP_REMAINING_AUDIT.md).
+[archived roadmap remaining-work audit](docs/archive/tasks/ROADMAP_REMAINING_AUDIT.md)
+for historical planning context.

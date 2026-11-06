@@ -23,7 +23,7 @@ These patches are review artifacts only. They are not applied to `vendor/`, do n
 
 ### Focus trap accessibility forwarding
 
-`gpui-base-focus-trap-accessibility-v1.patch` proposes forwarding role, node-property, and synthetic-child accessibility hooks through GPUI Components' generic `FocusTrapContainer`. Its source trace and validation gates are recorded in `docs/tasks/FOCUS_TRAP_ACCESSIBILITY_PROPOSAL.md`. The patch SHA-256 is `cf5def8ebfb6284f2e63938dda4bd358b344327e3a6951b55eebc0ceffc9040c`. Zero-fuzz application, isolated checks, and bounded native Dialog exposure checks passed; see the proposal for remaining validation gates. The candidate is not applied to `vendor/`.
+`gpui-base-focus-trap-accessibility-v1.patch` proposes forwarding role, node-property, and synthetic-child accessibility hooks through GPUI Components' generic `FocusTrapContainer`. Its source trace and validation gates are recorded in `docs/archive/tasks/FOCUS_TRAP_ACCESSIBILITY_PROPOSAL.md`. The patch SHA-256 is `cf5def8ebfb6284f2e63938dda4bd358b344327e3a6951b55eebc0ceffc9040c`. Zero-fuzz application, isolated checks, and bounded native Dialog exposure checks passed; see the proposal for remaining validation gates. The candidate is not applied to `vendor/`.
 
 ### DatePicker accessible name
 
@@ -45,7 +45,7 @@ when another dialog is above it. Existing `WindowExt` signatures remain
 unchanged. Non-top removal repairs the successor's focus chain; delayed focus
 restore uses a stack generation. The exact API, preimage hashes, patch hash,
 stack/focus contract, fallback, and unrun validation plan are in
-`docs/tasks/O7_DIALOG_KEYED_UPSTREAM_PROPOSAL.md`. This proposal is not applied
+`docs/archive/tasks/O7_DIALOG_KEYED_UPSTREAM_PROPOSAL.md`. This proposal is not applied
 or tested, and it does not authorize a RustUI Dialog implementation.
 
 ## Required upstream validation
@@ -61,11 +61,11 @@ or tested, and it does not authorize a RustUI Dialog implementation.
 
 ### Disabled Tree accessibility state
 
-`gpui-tree-aria-disabled.patch` now has an approved v1 in `patches/approved/`; see `patches/README.md` and `docs/tasks/TREE_ARIA_DISABLED_PROPOSAL.md` for exact hashes, source scope, and validation limits.
+`gpui-tree-aria-disabled.patch` now has an approved v1 in `patches/approved/`; see `patches/README.md` and `docs/archive/tasks/TREE_ARIA_DISABLED_PROPOSAL.md` for exact hashes, source scope, and validation limits.
 
 ### PopupMenu disabled confirmation
 
-`gpui-component-popup-menu-disabled-confirm.patch` prevents a disabled selected item from running its handler/action or dismissing the menu. The focused source finding, exact package source hash, trade-offs, and validation plan are in `docs/tasks/POPUP_MENU_DISABLED_CONFIRM_PROPOSAL.md`. The patch is review-only and has not been applied or validated.
+`gpui-component-popup-menu-disabled-confirm.patch` prevents a disabled selected item from running its handler/action or dismissing the menu. The focused source finding, exact package source hash, trade-offs, and validation plan are in `docs/archive/tasks/POPUP_MENU_DISABLED_CONFIRM_PROPOSAL.md`. The patch is review-only and has not been applied or validated.
 
 ### Sheet close-button accessible name, v1 proposal
 
@@ -73,7 +73,7 @@ or tested, and it does not authorize a RustUI Dialog implementation.
 - Source: Longbridge `gpui-kit` revision `67265a36e260ffe03c5aaebdcd8d654dbf892eab`, path `crates/component`, package `gpui-component 0.7.3`; registry package checksum `465a363235cd4062ef5f0953fc096fc764ed6f53dfbd9f409f669f93ea3b1ff9`.
 - Source preimage: `vendor/gpui-component-0.7.3/src/sheet.rs`, SHA-256 `0bfd572bda2ba54f9e862401705829073de2d33eb94f03d615452d428fc5d5af`; proposed postimage SHA-256 `bf54674f0df559561004bf7676efb70fe1ce8f0109bf183e109b7dbfe9526f8e`.
 - Adds optional `Sheet::close_accessibility_label`; existing callers and behavior remain unchanged when the setter is unused. RustUI still needs a separate wrapper integration that supplies a nonblank localized name before the native close control is named.
-- Exact-source and isolated-application evidence, integration contract, validation gates, fallback, and removal conditions: `docs/tasks/SHEET_CLOSE_ACCESSIBILITY_NAME_PROPOSAL.md`. Candidate snapshot: `target/headstart/candidates/sheet-close-accessibility-20261021-r1/`. Review-only; not applied to `vendor/`, compiled, or GUI-validated.
+- Exact-source and isolated-application evidence, integration contract, validation gates, fallback, and removal conditions: `docs/archive/tasks/SHEET_CLOSE_ACCESSIBILITY_NAME_PROPOSAL.md`. Candidate snapshot: `target/headstart/candidates/sheet-close-accessibility-20261021-r1/`. Review-only; not applied to `vendor/`, compiled, or GUI-validated.
 
 ## Sheet close-name validation gate
 
@@ -83,7 +83,7 @@ Before promotion, confirm unchanged Sheet call sites compile, add and run a focu
 
 - The proposed root-name patch adds optional accessible-name builders to the existing `gpui-base` and `gpui-component` Tree wrappers; the RustUI integration supplies a localized name to the existing root. It does not add another semantic node.
 - The aria-level proposal adds one-based levels to existing outer TreeItem rows. Both patches compose after approved `gpui-tree-aria-disabled-v1.patch` in this order: aria-level and root accessible name. The existing aria-level renderer test is included; a root-name renderer test awaits the pinned TestAppContext prerequisites. The prepared helper supports exact `--check`, `--apply`, and `--reverse`; it is not yet integrated into the checkout.
-- Exact review package, source hashes, alternatives, and validation limits: `docs/tasks/TREE_ROOT_AND_LEVEL_PROMOTION_DECISION.md` and `PACKAGE_MANIFEST.md` in the prepared package.
+- Exact review package, source hashes, alternatives, and validation limits: `docs/archive/tasks/TREE_ROOT_AND_LEVEL_PROMOTION_DECISION.md` and `PACKAGE_MANIFEST.md` in the prepared package.
 - These changes remain proposals. No upstream merge, local promotion, or Cargo selection change is claimed.
 
 ### Tree aria-level on the outer TreeItem, v1 proposal
@@ -93,5 +93,5 @@ Before promotion, confirm unchanged Sheet call sites compile, add and run a focu
 - The package's pristine `src/tree.rs` SHA-256 is `e74e4fcdef6ccec174e3e6ced50f108433e726f3e3d46f3539b1f41d5944e5df`; pristine `.cargo-checksum.json` SHA-256 is `9e96d55b0071b60576bc6ac18c3e9c48e6d0de5ff848821af7623bd151f7c3ed`. The patch preimage is the current aria-disabled-v1 postimage `9ef2efa0a44af810eef3088343b0838179d5e952c6ca8734e5306d5c74736924`; the one-line proposed postimage is `4dae8754abef34b1173e0b69b4dfb80483ae61545e2dd3614fc259dfd38fe6fb`.
 - Adds `.aria_level(entry.depth() + 1)` to the existing outer TreeItem row. Depth is zero-based; ARIA tree levels are one-based. The pinned `gpui-pre 0.3.9` already supplies the setter. No RustUI API or dependency revision change is proposed.
 - Exact-identity helper: `scripts/apply_gpui_tree_aria_level_patch.py`. Its `--check` verifies the preimage, applies and reverses the patch in temporary copies, and confirms both hashes without changing the checkout. Apply/reverse modes target only the Tree source and require their exact source image.
-- Review-only: not applied to `vendor/`. Applying it requires separate user approval. See `docs/tasks/M1222_STAGE8_TREEITEM_ROW_SEMANTICS_BOUNDARY.md` for the focused test command, runtime oracle, and validation status.
+- Review-only: not applied to `vendor/`. Applying it requires separate user approval. See `docs/archive/tasks/M1222_STAGE8_TREEITEM_ROW_SEMANTICS_BOUNDARY.md` for the focused test command, runtime oracle, and validation status.
 - Validation: exact helper round-trip check passed in a temporary copy. No unit test or GUI acceptance was run.

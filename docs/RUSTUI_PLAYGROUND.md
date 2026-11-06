@@ -134,7 +134,7 @@ The production-consolidation run records 55 bounded Web functional checks across
 Outline, Drawer, GraphView, NodeEditor and SplitView/ResizablePanel, plus 11 native
 SplitView/ResizablePanel checks. These are named state/lifecycle/interaction cases,
 not full component or application acceptance. The canonical
-[remaining-work record](tasks/ROADMAP_REMAINING_AUDIT.md) links per-component
+[remaining-work record](archive/tasks/ROADMAP_REMAINING_AUDIT.md) links per-component
 contracts, exact build-input and executable provenance, excluded attempts, and
 cleanup records. Accessibility and VoiceOver are explicitly undone and deferred
 by user direction; existing behavior and previously gathered evidence remain.

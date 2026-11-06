@@ -1,7 +1,11 @@
 # RustUI release verification and packaging
 
+## Release priority
+
+Native macOS is the first release target. Web/Wasm, further localization, and accessibility/VoiceOver acceptance are deferred and incomplete. Windows and Linux come last; neither is a current release target.
+
 RustUI is not yet cleared for production distribution. Use the current
-[remaining-work inventory](tasks/ROADMAP_REMAINING_AUDIT.md) and component
+[archived remaining-work inventory](archive/tasks/ROADMAP_REMAINING_AUDIT.md) and component
 contracts as the acceptance checklist. A successful build or a bounded GUI
 exercise does not close unrelated requirements.
 
@@ -10,7 +14,7 @@ exercise does not close unrelated requirements.
 | Target | Current evidence | Outstanding release scope |
 | --- | --- | --- |
 | macOS native | Optimized arm64 builds, same-host executable reproduction and disposable Playground packages; bounded functional and 8/8 English/French/Arabic input checks on macOS 27 | Supported OS/version policy, wider functional/visual/theme/workload checks, cross-machine/archive reproduction, compiled CI, signing and notarization |
-| Web/Wasm browser | Optimized Playground bundle, hashed build inputs/assets, bounded functional and 6/6 English/French/Arabic input checks in one Chromium profile | Further Web/Wasm implementation and acceptance are deferred until the user resumes them. |
+| Web/Wasm (deferred) | Historical bounded browser bundle and input observations only | Web/Wasm implementation and acceptance are deferred and incomplete. |
 
 Linux CI checks the source tooling. It does not establish a Linux product target.
 Do not infer Windows, Linux, mobile, or other platform support from GPUI's APIs.

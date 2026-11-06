@@ -17,7 +17,7 @@ text. Hashes describe files at capture time, so record evidence promptly and ret
 the log. Compiler version strings are optional caller-supplied metadata; unknown
 provenance remains unknown. Dependency reuse still requires the separate reuse
 checker and Cargo JSON artifact evidence. See
-`docs/tasks/P2A_BUILD_PROVENANCE.md` for the complete contract.
+`docs/archive/tasks/P2A_BUILD_PROVENANCE.md` for the complete contract.
 
 ## Headstart
 
@@ -418,7 +418,7 @@ See `tasks/P2E_W1_ACCEPTANCE_BASELINE.md` for exact inputs, results and limitati
 
 ## P3D paired cache comparison compile validation — 2026-10-18
 
-- The final comparison-tool suite passed 21 Python tests (`target/headstart/p3d-final-python-tests.log`); its final guards exclude runs when accessibility or native drag is detected, including late observations. No native comparison or benchmark measurement has run; these checks make no performance claim. See `docs/tasks/P3D_CACHE_COMPARISON.md` for the native protocol and its remaining documentation refresh.
+- The final comparison-tool suite passed 21 Python tests (`target/headstart/p3d-final-python-tests.log`); its final guards exclude runs when accessibility or native drag is detected, including late observations. No native comparison or benchmark measurement has run; these checks make no performance claim. See `docs/archive/tasks/P3D_CACHE_COMPARISON.md` for the native protocol and its remaining documentation refresh.
 ## GPUI ownership and event-path tests
 
 RustUI's test-only GPUI dependency enables the pinned upstream `test-support`

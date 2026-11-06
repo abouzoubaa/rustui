@@ -626,7 +626,7 @@ probe passed; it measures host lowerings only. Neither result establishes an
 animation trajectory or CPU/GPU performance guarantee. See
 `target/headstart/milestone57-spring-gui.json`,
 `target/headstart/spring-opacity-verification-63179-1792336863069682000.json`,
-`docs/tasks/SPRING_OPACITY.md`, and
+`docs/archive/tasks/SPRING_OPACITY.md`, and
 `apps/rustui-playground/src/stories/spring_gallery.rs`.
 
 ### GeometryReader (M58)
@@ -648,7 +648,7 @@ reader removal/reinsertion. Only explicit widths 280 and 540 and height 240 were
 GUI-tested. Intrinsic, unbounded, and zero-size behavior, exact pixels, stale
 callback rejection, sibling isolation, theme/environment/task propagation,
 keyboard/screen-reader behavior, and performance remain unverified. See
-`docs/tasks/GEOMETRY_READER.md` and
+`docs/archive/tasks/GEOMETRY_READER.md` and
 `target/headstart/milestone58-geometry-gui.json`.
 
 ### One-shot opacity animation (M35)
@@ -690,7 +690,7 @@ was defined. AppAction execution, nested scopes, repeat suppression, real IME,
 sibling retained-state isolation, and full platform keyboard and screen-reader
 behavior remain unverified. This is a scoped single-chord API, not an application
 menu keymap. See `target/headstart/milestone56-keyboard-gui.json`,
-`target/headstart/milestone56-57-tests.log`, `docs/tasks/KEYBOARD_SHORTCUTS.md`, and
+`target/headstart/milestone56-57-tests.log`, `docs/archive/tasks/KEYBOARD_SHORTCUTS.md`, and
 `apps/rustui-playground/src/stories/keyboard_gallery.rs`.
 
 ## HoverRegion (M59)
@@ -707,7 +707,7 @@ retention through removal/restoration, and explicit owner-state clearing when
 removing while hovered. Pointer-only hover dwell, AppAction callbacks, nested
 regions, stale-owner callbacks, and full platform keyboard/screen-reader coverage
 remain unverified. See `target/headstart/milestone59-hover-gui.json`,
-`docs/tasks/HOVER_REGION.md`, and
+`docs/archive/tasks/HOVER_REGION.md`, and
 `apps/rustui-playground/src/stories/hover_gallery.rs`.
 
 ## SplitView (M46)
@@ -731,7 +731,7 @@ removal releases them, and reinsertion creates fresh owners. Axis changes reset
 dimensional preferences. Topology and range changes remap measured preferences,
 clamped to current ranges; exact pixel proportions are not guaranteed. Native
 panel descendant element paths remain positional. See
-`docs/tasks/SPLIT_VIEW_IMPLEMENTATION.md` for sizing and acceptance limits.
+`docs/archive/tasks/SPLIT_VIEW_IMPLEMENTATION.md` for sizing and acceptance limits.
 
 ## Application action factories (M49)
 
@@ -776,7 +776,7 @@ Accessibility-only hiding, focus policy, interactive roles and actions are not
 part of this wrapper. Screenreader announcements (including live-region
 speech), keyboard traversal, description localization, reordered native node
 identity, and wider platform support remain unverified; see
-`docs/tasks/SEMANTICS_GROUPS.md`.
+`docs/archive/tasks/SEMANTICS_GROUPS.md`.
 
 ## Virtualized string table API
 
@@ -1000,7 +1000,7 @@ Only the selected detail is lowered. Switching destinations releases the
 inactive detail's retained native controls; values held in caller-owned bindings
 remain with their owner. The composition uses GPUI Components' sidebar and
 resizable split layout, with a 240-point initial sidebar width and a 140–480
-point width range. Below 560 logical pixels it presents a single-column destination list/detail flow; see `docs/tasks/NAVIGATION_SPLIT_ADAPTIVE_COLLAPSE_DECISIONS.md`. Place
+point width range. Below 560 logical pixels it presents a single-column destination list/detail flow; see `docs/archive/tasks/NAVIGATION_SPLIT_ADAPTIVE_COLLAPSE_DECISIONS.md`. Place
 the split in a parent with bounded width and height so both columns receive a
 finite layout extent. The M78 native checks used a 560×300 parent.
 
@@ -1041,7 +1041,7 @@ node also removes its incident edges. Cycles and fan-out are allowed; graph layo
 and application-specific connection policies remain the caller's responsibility.
 
 Unknown or removed selection IDs render as unselected without silently changing
-the owner's binding. See [the graph component contract](tasks/GRAPH_COMPONENTS_IMPLEMENTATION.md)
+the owner's binding. See [the graph component contract](archive/tasks/GRAPH_COMPONENTS_IMPLEMENTATION.md)
 for viewport and keyboard behavior, lifecycle details and the limits of the
 recorded native evidence.
 
@@ -1199,7 +1199,7 @@ control, disabled polling, and no later activation after leaving the story. This
 reloads theme data only; it does not hot-reload Rust source or serialize
 view/state. It is not a filesystem watcher. Exact activation counts, unchanged
 poll quiescence, large-file latency/CPU, missing-file/permission cases, and
-multi-root isolation remain unverified. See `docs/tasks/AUTO_THEME_RELOAD.md`.
+multi-root isolation remain unverified. See `docs/archive/tasks/AUTO_THEME_RELOAD.md`.
 
 `theme::serialize_theme(&ThemeDocument)` validates a typed theme document and
 returns normalized, pretty-printed JSON or `ThemeSerializeError`. `theme::resolve_button_with_selector(&ThemeDocument, &ButtonStyleSelector)` resolves Button rules for an explicit typed variant selector; `theme::resolve_button` keeps the appearance-only default behavior. This is a
@@ -1284,7 +1284,7 @@ motion, and descriptive accessibility group labels. Evidence:
 `ba2979d96f69ed94c6dc1edd1fba285c65e529d452f6154c5016acaf79f5ebce`. Exact
 pixels, scale-factor variation, screen-reader speech, per-shape accessibility,
 and performance remain unverified. The repaired suite passed 190 tests across
-12 binaries. See `docs/tasks/CANVAS.md`.
+12 binaries. See `docs/archive/tasks/CANVAS.md`.
 
 ## ScrollView axes (M62)
 
@@ -1333,7 +1333,7 @@ input produced delta zero, so real horizontal trackpad input, standalone and
 nested horizontal gestures, shell sidebar/reference-pane wheel regressions,
 diagonal scrolling, and full keyboard/screen-reader accessibility remain
 unverified. Do not infer platform-wide acceptance from this review. See
-`docs/tasks/SCROLL_AXES.md` and `apps/rustui-playground/src/stories/scroll_gallery.rs`.
+`docs/archive/tasks/SCROLL_AXES.md` and `apps/rustui-playground/src/stories/scroll_gallery.rs`.
 
 
 ## Keyed and optional composition (Milestone 7)
@@ -1528,7 +1528,7 @@ body or passed to a single-child wrapper such as `Container` or `Frame`. Use
 must survive reordering. M63 observed matching qualitative placement against
 direct siblings and retained keyed state across reorder, removal, and
 restoration. Exact pixels, macro grammar extension, RTL matrix, native undo,
-and full accessibility remain unverified. See `docs/tasks/GROUP.md`.
+and full accessibility remain unverified. See `docs/archive/tasks/GROUP.md`.
 
 `ZStack::new()` overlays children in insertion order (last above first), centered by default. `.alignment(ZStackAlignment::new(horizontal, vertical))` selects logical alignment. Native screenshot acceptance currently covers the centered case. Both layouts reuse GPUI rather than introducing a second layout engine.
 
@@ -1552,7 +1552,7 @@ of drawing an overlay. M64 observed independent same-ID editors across sibling
 wrappers, retained values through styling/theme/RTL updates, root-bound values
 through removal/restoration, and a bordered-button action. Exact pixels, layout
 impact, native undo, full keyboard behavior, and screen-reader speech remain
-unverified. See `docs/tasks/VIEW_DECORATION.md`.
+unverified. See `docs/archive/tasks/VIEW_DECORATION.md`.
 
 ## Native focus scope
 
@@ -1581,7 +1581,7 @@ focused scope does not clear the caller's binding; callers should clear it if
 the scope is removed. Programmatic focus targets the scope container, not a
 private handle inside an opaque child control. Optional scope tab-stop and full
 keyboard/screen-reader acceptance remain open. See
-`docs/tasks/FOCUS_SCOPE.md` and
+`docs/archive/tasks/FOCUS_SCOPE.md` and
 `target/headstart/milestone52-focus-scope-gui.json`.
 
 ## Controlled CodeEditor
@@ -1609,7 +1609,7 @@ features, so language settings do not establish syntax highlighting; adding
 the parser feature still requires approval. There is no LSP integration.
 Undo coalescing and history across removal/remount are not guaranteed, and full
 editor accessibility/screen-reader acceptance remains pending. See
-`docs/tasks/CODE_EDITOR.md` and
+`docs/archive/tasks/CODE_EDITOR.md` and
 `target/headstart/milestone53-code-editor-gui.json`.
 
 ## Virtualized LazyGrid
@@ -1638,7 +1638,7 @@ they do not establish exact overscan or speed. Retained cell state grows with
 visited IDs still in the current dataset. Native row IDs are positional;
 keyboard/screen-reader coverage, background-task/environment propagation, and
 stale detached-callback behavior remain unverified. See
-`docs/tasks/LAZY_GRID_IMPLEMENTATION.md` and
+`docs/archive/tasks/LAZY_GRID_IMPLEMENTATION.md` and
 `target/headstart/milestone54-lazy-grid-gui.json`.
 
 ## Frame modifier
@@ -1675,7 +1675,7 @@ baseline-placement claim applies to the single-child sample. Exact pixels,
 caret/selection, full keyboard/AX/screen-reader, RTL, and cross-platform
 acceptance remain unverified. The M74 workspace suite passed 238 tests, 0 failed
 across 12 binaries (Cargo exit 0); its locked/offline all-targets check exited 0.
-Evidence: `docs/tasks/FRAME_MODIFIER.md`,
+Evidence: `docs/archive/tasks/FRAME_MODIFIER.md`,
 `target/headstart/milestone74-frame-gui.json`,
 `target/headstart/milestone74-workspace-tests.log`, and
 `target/headstart/milestone74-all-targets-check.log`.
@@ -1703,7 +1703,7 @@ incompatible numeric payload, and target removal/restoration. Keyboard-only
 acceptance and actual component-owner destruction during an in-flight drag
 remain pending. OS file dragging, cross-window transport, touch input, external
 payloads, and GPU optimization are outside scope. See
-`docs/tasks/DRAG_AND_DROP.md` and
+`docs/archive/tasks/DRAG_AND_DROP.md` and
 `target/headstart/milestone66-drag-drop-gui.json`.
 
 ## Native Shadow modifier (M67)
@@ -1722,7 +1722,7 @@ theme elevations, explicit style changes, independent retained fields,
 omission/restoration, owner action, and Arabic RTL with values retained. Exact
 pixels, a native shadow-disable toggle, full keyboard/AX speech, and performance
 remain unverified; no full acceptance claim is made. See
-`docs/tasks/SHADOW_MODIFIER.md` and
+`docs/archive/tasks/SHADOW_MODIFIER.md` and
 `target/headstart/milestone67-shadow-gui.json`.
 
 ## Themed Card (M68)
@@ -1739,7 +1739,7 @@ gallery's equal 260-point card width, independent same-ID child values, custom
 styles, omission/restoration, Light appearance, Arabic RTL, and English LTR
 restoration. The measured width is gallery layout, not an intrinsic Card sizing
 rule. Exact pixels/padding, cursor/undo, full AX speech/keyboard, and performance
-remain unverified. See `docs/tasks/CARD.md` and
+remain unverified. See `docs/archive/tasks/CARD.md` and
 `target/headstart/milestone68-card-gui.json`.
 
 ## Conditional stack children (M69)
@@ -1751,7 +1751,7 @@ retention scope. Conditions follow ordinary Rust short-circuit selection, and
 unselected child constructors are not evaluated. Use explicit `Keyed` IDs for
 stateful dynamic children.
 
-The macro does not add `for`, `match`, arbitrary statement/block, tuple, or bare value child syntax. Existing `.children(...)`, `Option<V>`, `AnyView`, and builder APIs remain available for those cases. Bounded native acceptance is complete: branch changes, explicit keyed editor reorder, actions, parent updates, and optional-child removal/restoration were observed. Explicit `Keyed` identity is required for stateful children. RTL, full keyboard/accessibility speech, performance, cursor/undo, and release callbacks remain unverified. See `docs/tasks/CONDITIONAL_STACKS.md` and `target/headstart/milestone69-conditional-stacks-gui.json`.
+The macro does not add `for`, `match`, arbitrary statement/block, tuple, or bare value child syntax. Existing `.children(...)`, `Option<V>`, `AnyView`, and builder APIs remain available for those cases. Bounded native acceptance is complete: branch changes, explicit keyed editor reorder, actions, parent updates, and optional-child removal/restoration were observed. Explicit `Keyed` identity is required for stateful children. RTL, full keyboard/accessibility speech, performance, cursor/undo, and release callbacks remain unverified. See `docs/archive/tasks/CONDITIONAL_STACKS.md` and `target/headstart/milestone69-conditional-stacks-gui.json`.
 
 ## TapRegion pointer wrapper (M70)
 
@@ -1761,7 +1761,7 @@ Each region has a typed retention scope and distinct native ID namespace.
 GPUI owns hit testing and bubble-phase click dispatch; TapRegion does not stop
 propagation or prevent default behavior.
 
-TapRegion does not create a focus target, keyboard activation contract, or button accessibility role. Provide a separate keyboard-accessible control for essential actions. Bounded native pointer acceptance is complete: bubbling, independent child inputs, disabled wrappers, alternative button actions, and removal/restoration were observed. Keyboard-only alternative-button activation, exact pixels, RTL, full accessibility speech, and performance remain unverified. See `docs/tasks/TAP_REGION.md` and `target/headstart/milestone70-tap-region-gui.json`.
+TapRegion does not create a focus target, keyboard activation contract, or button accessibility role. Provide a separate keyboard-accessible control for essential actions. Bounded native pointer acceptance is complete: bubbling, independent child inputs, disabled wrappers, alternative button actions, and removal/restoration were observed. Keyboard-only alternative-button activation, exact pixels, RTL, full accessibility speech, and performance remain unverified. See `docs/archive/tasks/TAP_REGION.md` and `target/headstart/milestone70-tap-region-gui.json`.
 
 ## Typed PropertyInspector (M71)
 
@@ -1779,7 +1779,7 @@ the Name input exposed an accessible name; primary and sibling `name` rows kept
 independent edited values; toggle/integer bindings, reorder, disabled-row and
 disabled-inspector guards, and restored editing were observed. Native cursor/undo,
 inspector removal, full keyboard/accessibility speech, locale/theme coverage, and
-performance remain unverified. See `docs/tasks/PROPERTY_INSPECTOR.md` and
+performance remain unverified. See `docs/archive/tasks/PROPERTY_INSPECTOR.md` and
 `target/headstart/milestone71-property-inspector-gui.json`.
 
 ## M69–M71 verification status

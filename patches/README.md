@@ -193,7 +193,7 @@ fail on incompatible patches and preserve the last accepted source lock.
   move the pinned GPUI or Components revision. Remove the manifest override and
   reverse the helper to return to the accepted pristine package.
 - Validation evidence and unrun native acceptance are recorded in
-  `docs/tasks/DATE_PICKER_ACCESSIBILITY.md` and the isolated candidate under
+  `docs/archive/tasks/DATE_PICKER_ACCESSIBILITY.md` and the isolated candidate under
   `target/headstart/candidates/date-picker-accessible-name-20261020-r2/`.
 
 Advanced rendering and native composition require explicit approval. GPUI Fast is
@@ -209,7 +209,7 @@ research input, not a dependency or the upstream source of truth.
   Longbridge `gpui-kit` revision `67265a36e260ffe03c5aaebdcd8d654dbf892eab`.
   Their registry checksums remain recorded in their unchanged
   `.cargo-checksum.json` files; source-file pre/postimage hashes are in
-  `docs/tasks/TREE_ARIA_DISABLED_PROPOSAL.md`.
+  `docs/archive/tasks/TREE_ARIA_DISABLED_PROPOSAL.md`.
 - The patch adds `StatefulInteractiveElement::aria_disabled`, maps true with
   AccessKit `set_disabled()` and false with `clear_disabled()`, and forwards
   `TreeItem::is_disabled()` from the pinned Tree renderer. A focused AccessKit
@@ -253,4 +253,4 @@ CI and all release modes verify POST and the composed baseline before further
 checks; the source fixture suite replays PRE/check/apply/POST/verify/reverse for
 all three sources and rejects unknown/partial images and altered patches.
 Fixture evidence is not native/browser/AX/VoiceOver acceptance. See
-`docs/tasks/TREE_ROOT_AND_LEVEL_PROMOTION_DECISION.md`.
+`docs/archive/tasks/TREE_ROOT_AND_LEVEL_PROMOTION_DECISION.md`.

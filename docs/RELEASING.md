@@ -1,9 +1,10 @@
 # RustUI release preparation
 
-RustUI is not currently release-ready. The canonical blockers and acceptance
-counts are in [the remaining-work audit](tasks/ROADMAP_REMAINING_AUDIT.md).
-The declared targets are macOS on Apple Silicon and Web/Wasm in a browser;
-no additional platform support is certified. Package manifests currently set
+## Release priority
+
+Native macOS is the first release target. Web/Wasm, further localization, and accessibility/VoiceOver acceptance are deferred and incomplete. Windows and Linux come last; neither is a current release target.
+
+RustUI is not currently release-ready. The declared native target is macOS on Apple Silicon. Web/Wasm remains deferred and incomplete. No additional platform support is certified; Windows and Linux are future priorities after the native target. Package manifests currently set
 `publish = false`. Do not publish, sign for distribution, upload artifacts or
 create a public release without the user's approval.
 
@@ -67,7 +68,7 @@ For native builds, `RUSTUI_HEADSTART_ROOT` defaults to
 `$HOME/.local/opt/headstart`. For Web, `RUSTUI_WASM_HEADSTART_ROOT` defaults to
 `target/headstart/wasm-root`; it must contain matching host and Wasm standard
 libraries. The established bootstrap command and evidence are recorded in
-[X1A_WASM_COMPILE.md](tasks/X1A_WASM_COMPILE.md). The Web script requires
+[X1A_WASM_COMPILE.md](archive/tasks/X1A_WASM_COMPILE.md). The Web script requires
 `wasm-bindgen 0.2.129` and `rust-lld`; it does not install tools. Use
 `RUSTUI_WASM_TARGET_DIR` for a persistent Web cache override. Keep all build
 artifacts under `target/headstart`.
