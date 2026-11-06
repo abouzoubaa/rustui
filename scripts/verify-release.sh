@@ -31,22 +31,14 @@ case "${1:-}" in
     python3 scripts/apply_gpui_component_select_title_patch.py --check
     python3 scripts/apply_gpui_select_rtl_patch.py --verify
     python3 scripts/apply_gpui_select_popup_rtl_patch.py --verify
-    python3 scripts/apply_gpui_web_noopener_patch.py --check
-    python3 scripts/apply_gpui_component_web_syntax_patch.py --check
-    python3 scripts/apply_gpui_component_web_syntax_runtime_patch.py --check
-    python3 scripts/apply_cosmic_bidi_initial_span_patch.py --check
-    python3 scripts/verify_gpui_web_patch_stack.py
+    python3 scripts/verify_gpui_web_patch_stack.py --native-only
     python3 scripts/apply_gpui_base_button_disabled_patch.py --verify
     python3 scripts/apply_gpui_base_resize_first_move.py --verify
     python3 scripts/verify_gpui_base_slider_patch_stack.py
     python3 scripts/apply_gpui_base_disabled_semantic_roots.py --verify
     python3 scripts/apply_gpui_toolbar_rtl.py --verify
     python3 -m unittest discover -s scripts/tests -p 'test_*.py'
-    node --test scripts/tests/test_gpui_web_semantic_dom.mjs
-    node --test apps/rustui-playground/web/tests/preview-transport.test.mjs
-    node --test apps/rustui-playground/web/tests/theme-reload.test.mjs
     sh scripts/tests/test_package_playground_app.sh
-    sh scripts/tests/test_build_playground_web.sh
     sh scripts/tests/test_verify_ci_checkout.sh
     python3 scripts/validate_locales.py
     python3 scripts/validate_themes.py --plans-only
@@ -151,6 +143,10 @@ PY
     python3 scripts/apply_gpui_component_web_syntax_patch.py --check
     python3 scripts/apply_gpui_component_web_syntax_runtime_patch.py --check
     python3 scripts/apply_cosmic_bidi_initial_span_patch.py --check
+    node --test scripts/tests/test_gpui_web_semantic_dom.mjs
+    node --test apps/rustui-playground/web/tests/preview-transport.test.mjs
+    node --test apps/rustui-playground/web/tests/theme-reload.test.mjs
+    sh scripts/tests/test_build_playground_web.sh
     verify_web_ime_edit_plan
     python3 scripts/verify_gpui_web_patch_stack.py
     RUSTUI_HEADSTART_ROOT="${RUSTUI_WASM_HEADSTART_ROOT:-$repository_root/target/headstart/wasm-root}" \
