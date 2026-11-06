@@ -1,0 +1,24 @@
+{
+  "capabilities": [
+    { "name": "declarative_views", "source": "crates/rustui/src/view.rs, prelude.rs, constructors.rs", "tests": "runtime/view tests where present", "native": "macOS source present; not freshly verified", "notes": "View trait, constructors, and public prelude" },
+    { "name": "application_runtime", "source": "crates/rustui/src/runtime/", "tests": "inline/runtime tests", "native": "macOS source present; not freshly verified", "notes": "GPUI owns scheduling and windows" },
+    { "name": "state_actions_lifecycle", "source": "crates/rustui/src/runtime/component_host.rs, events.rs, tasks.rs", "tests": "component_host_tests.rs", "native": "source present; acceptance pending", "notes": "component state, events, host, and tasks" },
+    { "name": "components_basic", "source": "crates/rustui/src/components/basic/", "tests": "component tests where present", "native": "source present; acceptance pending", "notes": "buttons, text, labels, images" },
+    { "name": "components_input", "source": "crates/rustui/src/components/input/", "tests": "focus_tests.rs and component tests", "native": "source present; acceptance pending", "notes": "text, selection, picker, radio, slider, stepper" },
+    { "name": "components_data", "source": "crates/rustui/src/components/data/", "tests": "module tests where present", "native": "source present; acceptance pending", "notes": "lists, tables, tree, data grid" },
+    { "name": "components_feedback", "source": "crates/rustui/src/components/feedback/", "tests": "module tests where present", "native": "source present; acceptance pending", "notes": "progress, spinner, skeleton, empty and error states" },
+    { "name": "components_navigation", "source": "crates/rustui/src/components/navigation/", "tests": "module tests where present", "native": "source present; acceptance pending", "notes": "tabs, sidebar, toolbar, navigation stack" },
+    { "name": "navigation_stack", "source": "crates/rustui/src/components/navigation/navigation_stack.rs, navigation_split.rs", "tests": "module tests where present", "native": "source present; acceptance pending", "notes": "environment and routing acceptance not established" },
+    { "name": "overlays", "source": "crates/rustui/src/components/overlay/", "tests": "drawer_tests.rs and module tests", "native": "popup patch present; acceptance pending", "notes": "dialogs, sheets, menus, popovers, tooltips" },
+    { "name": "advanced_components", "source": "crates/rustui/src/components/advanced/", "tests": "module tests where present", "native": "source present; acceptance pending", "notes": "canvas, editor, graph, node editor" },
+    { "name": "layout", "source": "crates/rustui/src/layout/", "tests": "inline layout tests", "native": "source present; acceptance pending", "notes": "containers, stacks, grids, scrolling, split view" },
+    { "name": "animation", "source": "crates/rustui/src/animation/", "tests": "module tests where present", "native": "source present; motion acceptance pending", "notes": "springs, timing, transitions, offsets" },
+    { "name": "interaction", "source": "crates/rustui/src/interaction/", "tests": "module tests where present", "native": "source present; acceptance pending", "notes": "focus, keyboard, gestures, drag and drop" },
+    { "name": "theme", "source": "crates/rustui/src/theme/", "tests": "schema and loader tests where present", "native": "macOS theme source present; acceptance pending", "notes": "loading, tokens, registry, watcher" },
+    { "name": "preview", "source": "crates/rustui/src/preview/ and apps/rustui-playground/", "tests": "module and app tests where present", "native": "Playground source present; acceptance pending", "notes": "preview registry and transport" },
+    { "name": "preview_serialization", "source": "crates/rustui/src/preview/codec.rs, schema.rs, model.rs", "tests": "preview module tests where present", "native": "source present; acceptance pending", "notes": "typed preview protocol and serialization" },
+    { "name": "platform_adapters", "source": "crates/rustui/src/adapters/", "tests": "adapter tests where present", "native": "GPUI adapters present", "notes": "GPUI and GPUI Components integration" },
+    { "name": "accessibility", "source": "crates/rustui/src/accessibility/", "tests": "source tests where present", "native": "acceptance deferred", "notes": "implementation presence is not acceptance" },
+    { "name": "localization", "source": "crates/rustui/src/localization/", "tests": "source tests where present", "native": "deferred", "notes": "do not treat locale records as translations" }
+  ]
+}
