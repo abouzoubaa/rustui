@@ -59,8 +59,7 @@ new schema-3 two-file case that invokes the real P3K applicator, verifies both
 postimages in the disposable copy, and confirms prepared baseline/candidate
 snapshots are unchanged. The schema-3 intake suite passed 22/22. Logs:
 `target/headstart/evidence/p3k-schema3-multifile-pipeline-tests-20261020.log`,
-`target/headstart/evidence/p3k-schema3-multifile-pipeline-case-20261020.log`, and
-`target/headroom/evidence/p3k-multi-file-patch-tests-20261020.log`. This remains
+`target/headstart/evidence/p3k-schema3-multifile-pipeline-case-20261020.log`. This remains
 synthetic fixture evidence; no real upstream candidate or downstream acceptance
 gate was run.
 

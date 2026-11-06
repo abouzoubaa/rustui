@@ -10,7 +10,7 @@ assertions.
 Focused regression:
 
 ```text
-rtk proxy ./scripts/cargo-headstart test -p rustui theme::schema::tests::checkbox_and_radio_themes --lib --locked --offline
+./scripts/cargo-headstart test -p rustui theme::schema::tests::checkbox_and_radio_themes --lib --locked --offline
 2 passed; 0 failed
 ```
 

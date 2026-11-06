@@ -2,7 +2,7 @@
 Focus: native macOS. Web, localization, accessibility acceptance are deferred. Windows/Linux last.
 
 ## Archive rule
-- Before modifying, moving, renaming or deleting any existing file, copy its current version to archive/pre-reset-2026-11/<same path> (once only, never overwrite). Not for vendor/ or target/. Never edit or build archived files.
+- Before modifying, moving, renaming or deleting a file that existed at tag pre-reset-2026-11, copy its current version to archive/pre-reset-2026-11/<same path> (once only, never overwrite). Do not archive files created after that tag. Never archive vendor/ or target/. Never edit or build archived files.
 
 ## Work
 - One ticket at a time from docs/TICKETS.md. Do only that ticket. Other ideas go under "Follow-ups" in the report, not in code.

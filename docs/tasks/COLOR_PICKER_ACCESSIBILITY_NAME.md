@@ -9,8 +9,8 @@ The setter guard and focused tests live in
 
 ## Validation
 
-- `CARGO_TARGET_DIR=target/headroom-progress-validation ./scripts/cargo-headstart test --quiet -p rustui --lib color_picker --locked --offline` — passed, 3 tests, 0 failed.
-- `CARGO_TARGET_DIR=target/headroom-progress-validation ./scripts/cargo-headstart check --quiet -p rustui --all-targets --locked --offline` — passed (exit code 0).
+- `./scripts/cargo-headstart test --quiet -p rustui --lib color_picker --locked --offline` — passed, 3 tests, 0 failed.
+- `./scripts/cargo-headstart check --quiet -p rustui --all-targets --locked --offline` — passed (exit code 0).
 - `rustfmt --check --edition 2024 crates/rustui/src/components/input/color_picker.rs` — passed.
 - `git diff --check -- crates/rustui/src/components/input/color_picker.rs docs/tasks/COLOR_PICKER_ACCESSIBILITY_NAME.md` — passed.
 
