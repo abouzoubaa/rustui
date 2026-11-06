@@ -31,6 +31,9 @@ case "${1:-}" in
     python3 scripts/apply_gpui_component_select_title_patch.py --check
     python3 scripts/apply_gpui_select_rtl_patch.py --verify
     python3 scripts/apply_gpui_select_popup_rtl_patch.py --verify
+    python3 scripts/apply_gpui_component_web_syntax_patch.py --check
+    python3 scripts/apply_gpui_component_web_syntax_runtime_patch.py --check
+    python3 scripts/apply_cosmic_bidi_initial_span_patch.py --check
     python3 scripts/verify_gpui_web_patch_stack.py --native-only
     python3 scripts/apply_gpui_base_button_disabled_patch.py --verify
     python3 scripts/apply_gpui_base_resize_first_move.py --verify
@@ -42,7 +45,6 @@ import unittest
 
 web_test_prefixes = (
     "test_apply_gpui_web_",
-    "test_cosmic_bidi_patch.",
     "test_gpui_web_",
     "test_manifest_playground_web.",
     "test_provision_ci_wasm_bindgen.",
