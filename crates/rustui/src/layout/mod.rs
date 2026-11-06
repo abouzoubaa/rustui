@@ -1,6 +1,5 @@
 //! RustUI layout primitives.
 
-pub mod alignment;
 pub mod card;
 pub mod container;
 pub mod geometry;

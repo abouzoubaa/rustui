@@ -5,7 +5,6 @@ pub mod loader;
 pub mod registry;
 pub mod resolver;
 pub mod schema;
-pub mod tokens;
 pub mod watcher;
 
 pub use crate::adapters::themes::{ThemeApplyError, apply_profile};
