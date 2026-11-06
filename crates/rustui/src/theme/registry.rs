@@ -199,8 +199,16 @@ const RENDERER_CAPABILITIES: &[ComponentStyleCapability] = &[
     ),
     capability!("color_picker", "swatches", ["width", "height"]),
     capability!("color_picker", "crayons", ["width", "height"]),
-    capability!("scroll_view", "scrollbar_vertical", ["background"]),
-    capability!("scroll_view", "scrollbar_horizontal", ["background"]),
+    capability!(
+        "scroll_view",
+        "scrollbar_vertical",
+        ["background", "border", "corner_radius"]
+    ),
+    capability!(
+        "scroll_view",
+        "scrollbar_horizontal",
+        ["background", "border", "corner_radius"]
+    ),
     capability!(
         "text",
         "text_styles_left_aligned_light_opaque_body",
@@ -417,28 +425,12 @@ fn table_header_colors(
     document: &ThemeDocument,
     mode: AppearanceMode,
 ) -> Result<(Hsla, Hsla), ThemeResolveError> {
-    let record = document
-        .component_theme("table")
-        .map_err(ThemeResolveError::Invalid)?;
-    let appearance = match mode {
-        AppearanceMode::Light => "light",
-        AppearanceMode::Dark => "dark",
-    };
-    let rule = record
-        .styles
-        .iter()
-        .find(|rule| rule.part == "table_column_headers" && rule.when.appearance == appearance)
-        .ok_or_else(|| {
-            ThemeResolveError::Invalid(format!(
-                "table has no column header style for {appearance} appearance"
-            ))
-        })?;
     // The vector path is source artwork. Coverage still reports it as unresolved.
     let style = resolve_component_style_with(
         document,
         "table",
         "table_column_headers",
-        &rule.when,
+        &crate::components::theme::selector_for_mode(mode),
         &["vector_path"],
     )?;
     let background =
@@ -456,28 +448,12 @@ fn menu_background(
     document: &ThemeDocument,
     mode: AppearanceMode,
 ) -> Result<Hsla, ThemeResolveError> {
-    let record = document
-        .component_theme("menu")
-        .map_err(ThemeResolveError::Invalid)?;
-    let appearance = match mode {
-        AppearanceMode::Light => "light",
-        AppearanceMode::Dark => "dark",
-    };
-    let rule = record
-        .styles
-        .iter()
-        .find(|rule| rule.part == "body" && rule.when.appearance == appearance)
-        .ok_or_else(|| {
-            ThemeResolveError::Invalid(format!(
-                "menu has no body style for {appearance} appearance"
-            ))
-        })?;
     // These three source SVG properties are reported as unresolved coverage.
     let style = resolve_component_style_with(
         document,
         "menu",
         "body",
-        &rule.when,
+        &crate::components::theme::selector_for_mode(mode),
         &["filter", "blend_mode", "vector_path"],
     )?;
     let background =
@@ -530,5 +506,113 @@ impl From<ThemeResolveError> for ThemeActivationError {
 impl From<ThemeApplyError> for ThemeActivationError {
     fn from(error: ThemeApplyError) -> Self {
         Self::Apply(error)
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn table_header_colors_resolve_any_appearance_rules() {
+        let mut document =
+            crate::theme::parse_theme(include_str!("../../../../themes/macos27.json"))
+                .expect("macOS 27 theme parses");
+        let rules = document.components.get_mut("table").unwrap()["styles"]
+            .as_array_mut()
+            .unwrap();
+        rules.retain(|rule| {
+            rule["part"] != "table_column_headers" || rule["when"]["appearance"] == "light"
+        });
+        let light = rules
+            .iter_mut()
+            .find(|rule| rule["part"] == "table_column_headers")
+            .expect("light table header rule");
+        light["when"]["appearance"] = serde_json::json!("any");
+
+        document.validate().expect("wildcard header theme is valid");
+        let expected = resolve_component_style_with(
+            &document,
+            "table",
+            "table_column_headers",
+            &crate::components::theme::selector_for_mode(AppearanceMode::Light),
+            &["vector_path"],
+        )
+        .expect("wildcard header style resolves");
+        let expected = (
+            hsla(expected.colors["background"]),
+            hsla(expected.colors["foreground"]),
+        );
+
+        assert_eq!(
+            table_header_colors(&document, AppearanceMode::Light).unwrap(),
+            expected
+        );
+        assert_eq!(
+            table_header_colors(&document, AppearanceMode::Dark).unwrap(),
+            expected
+        );
+    }
+
+    #[test]
+    fn menu_background_resolves_any_appearance_rules() {
+        let mut document =
+            crate::theme::parse_theme(include_str!("../../../../themes/macos27.json"))
+                .expect("macOS 27 theme parses");
+        let rules = document.components.get_mut("menu").unwrap()["styles"]
+            .as_array_mut()
+            .unwrap();
+        rules.retain(|rule| rule["part"] != "body" || rule["when"]["appearance"] == "light");
+        let light = rules
+            .iter_mut()
+            .find(|rule| rule["part"] == "body")
+            .expect("light menu body rule");
+        light["when"]["appearance"] = serde_json::json!("any");
+
+        document.validate().expect("wildcard menu theme is valid");
+        let expected = resolve_component_style_with(
+            &document,
+            "menu",
+            "body",
+            &crate::components::theme::selector_for_mode(AppearanceMode::Light),
+            &["filter", "blend_mode", "vector_path"],
+        )
+        .expect("wildcard menu style resolves")
+        .colors["background"];
+
+        assert_eq!(
+            menu_background(&document, AppearanceMode::Light).unwrap(),
+            hsla(expected)
+        );
+        assert_eq!(
+            menu_background(&document, AppearanceMode::Dark).unwrap(),
+            hsla(expected)
+        );
+    }
+
+    #[test]
+    fn scroll_view_track_border_and_radius_are_counted_as_applied() {
+        let document = crate::theme::parse_theme(include_str!("../../../../themes/macos27.json"))
+            .expect("macOS 27 theme parses");
+        let coverage = assess_theme_coverage(&document);
+
+        for part in ["scrollbar_vertical", "scrollbar_horizontal"] {
+            let uncovered = coverage
+                .uncovered_rules
+                .iter()
+                .find(|rule| rule.component == "scroll_view" && rule.part == part);
+            assert!(
+                uncovered.is_none_or(|rule| {
+                    !rule
+                        .reason
+                        .split(": ")
+                        .last()
+                        .unwrap_or_default()
+                        .split(", ")
+                        .any(|name| matches!(name, "border" | "corner_radius"))
+                }),
+                "{part} border and corner radius should be covered by the renderer capability: {uncovered:?}"
+            );
+        }
     }
 }

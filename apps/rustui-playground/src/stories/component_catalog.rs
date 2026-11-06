@@ -91,3 +91,44 @@ pub const STORIES: [StoryDefinition; 10] = [
         summary: "Edit root and destinations, navigate back, and toggle a root editor.",
     },
 ];
+
+pub fn filtered_story_indices(query: &str) -> Vec<usize> {
+    let query = query.trim().to_ascii_lowercase();
+    STORIES
+        .iter()
+        .enumerate()
+        .filter(|(_, story)| {
+            query.is_empty()
+                || story.id.label().to_ascii_lowercase().contains(&query)
+                || story.title.to_ascii_lowercase().contains(&query)
+                || story.summary.to_ascii_lowercase().contains(&query)
+        })
+        .map(|(index, _)| index)
+        .collect()
+}
+
+#[cfg(test)]
+mod tests {
+    use super::filtered_story_indices;
+
+    #[test]
+    fn story_search_trims_query_and_ignores_ascii_case() {
+        assert_eq!(filtered_story_indices("  nAvIgAtIoNsTaCk  "), vec![9]);
+        assert_eq!(filtered_story_indices("  CONDITIONAL EDITOR "), vec![7]);
+    }
+
+    #[test]
+    fn story_search_returns_no_indices_for_no_match() {
+        assert!(filtered_story_indices("no such framework demo").is_empty());
+    }
+
+    #[test]
+    fn story_search_preserves_original_registry_indices() {
+        assert_eq!(filtered_story_indices("selection"), vec![4, 5, 6]);
+    }
+
+    #[test]
+    fn story_search_matches_the_visible_story_label() {
+        assert_eq!(filtered_story_indices("HStack"), vec![2]);
+    }
+}

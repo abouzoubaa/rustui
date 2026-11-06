@@ -2,7 +2,7 @@
 
 use crate::view::{EmptyView, RenderContext, RetentionScope, View};
 use gpui::{
-    div, px, AnimationExt as _, AnyElement, IntoElement as _, ParentElement as _, Styled as _,
+    AnimationExt as _, AnyElement, IntoElement as _, ParentElement as _, Styled as _, div, px,
 };
 use rustui_core::Identity;
 use std::{error::Error, fmt};
@@ -21,21 +21,21 @@ pub struct SpringOffset<V: View> {
 }
 
 impl<V: View> SpringOffset<V> {
-    /// Creates a spring translation target. Coordinates must be finite.
+    /// Creates a spring translation target. The ID must be nonblank and
+    /// coordinates must be finite.
     pub fn new(
         id: impl Into<Identity>,
         child: V,
         x: f32,
         y: f32,
     ) -> Result<Self, SpringOffsetError> {
+        let id = id.into();
+        if id.as_str().trim().is_empty() {
+            return Err(SpringOffsetError::EmptyIdentity);
+        }
         validate_offset("x", x)?;
         validate_offset("y", y)?;
-        Ok(Self {
-            id: id.into(),
-            child,
-            x,
-            y,
-        })
+        Ok(Self { id, child, x, y })
     }
 
     /// Changes the horizontal target while preserving the spring identity.
@@ -100,12 +100,14 @@ impl<V: View> View for SpringOffset<V> {
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub enum SpringOffsetError {
+    EmptyIdentity,
     NonFinite { axis: &'static str },
 }
 
 impl fmt::Display for SpringOffsetError {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
+            Self::EmptyIdentity => f.write_str("spring offset identity must be nonempty"),
             Self::NonFinite { axis } => write!(f, "spring offset `{axis}` must be finite"),
         }
     }
@@ -138,5 +140,18 @@ mod tests {
             assert!(SpringOffset::new("bad", EmptyView, value, 0.0).is_err());
             assert!(SpringOffset::new("bad", EmptyView, 0.0, value).is_err());
         }
+    }
+
+    #[test]
+    fn rejects_blank_ids_and_preserves_nonblank_identity() {
+        for id in ["", " \t\n"] {
+            assert_eq!(
+                SpringOffset::new(id, EmptyView, 0.0, 0.0).err(),
+                Some(SpringOffsetError::EmptyIdentity)
+            );
+        }
+
+        let offset = SpringOffset::new(" moving ", EmptyView, 0.0, 0.0).unwrap();
+        assert_eq!(offset.id.as_str(), " moving ");
     }
 }

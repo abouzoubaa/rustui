@@ -65,6 +65,42 @@ impl View for CanvasGallery {
             .unwrap();
         let scene = builder.build();
 
+        let mut overlap_builder = CanvasScene::builder();
+        overlap_builder
+            .fill_rect(
+                CanvasRect::new(0.0, 0.0, 160.0, 90.0).unwrap(),
+                Hsla {
+                    h: 0.62,
+                    s: 0.2,
+                    l: 0.15,
+                    a: 1.0,
+                },
+            )
+            .unwrap();
+        overlap_builder
+            .fill_rect(
+                CanvasRect::new(-8.0, 10.0, 100.0, 60.0).unwrap(),
+                Hsla {
+                    h: 0.11,
+                    s: 0.9,
+                    l: 0.58,
+                    a: 0.55,
+                },
+            )
+            .unwrap();
+        overlap_builder
+            .fill_rect(
+                CanvasRect::new(68.0, 20.0, 100.0, 60.0).unwrap(),
+                Hsla {
+                    h: 0.58,
+                    s: 0.82,
+                    l: 0.58,
+                    a: 0.55,
+                },
+            )
+            .unwrap();
+        let overlap_scene = overlap_builder.build();
+
         VStack::new()
             .spacing(10.0)
             .child(Text("Canvas: rectangles and lines"))
@@ -84,5 +120,11 @@ impl View for CanvasGallery {
                 CanvasSize::new(160.0, 90.0).unwrap(), scene,
             )).role(SemanticsRole::Group)
                 .label("Clipped small copy of the canvas illustration"))
+            .child(Text("Quad ordering and clipping: warm is drawn first; cool overlaps it and crosses the opposite edge."))
+            .child(Semantics(
+                "canvas-quad-order-overlap",
+                Canvas(CanvasSize::new(160.0, 90.0).unwrap(), overlap_scene),
+            ).role(SemanticsRole::Group)
+            .label("Two translucent rectangles overlap on a dark canvas and are clipped at opposite edges"))
     }
 }

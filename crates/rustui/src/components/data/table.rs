@@ -1,10 +1,13 @@
 //! Controlled virtualized string table backed by retained GPUI TableState.
 
-use std::{cell::Cell, rc::Rc};
+use std::{
+    cell::{Cell, RefCell},
+    rc::Rc,
+};
 
 use gpui::{
-    AnyElement, App, Context, InteractiveElement as _, IntoElement, ParentElement as _,
-    SharedString, Stateful, Styled as _, Window, div, px,
+    AnyElement, App, Context, InteractiveElement as _, IntoElement, ParentElement as _, Role,
+    SharedString, Stateful, StatefulInteractiveElement as _, Styled as _, Window, div, px,
 };
 use gpui_component::table::{Column, DataTable, TableDelegate, TableEvent, TableState};
 use rustui_core::{Binding, Identity};
@@ -22,6 +25,86 @@ struct StringTableDelegate {
     row_style: ResolvedComponentStyle,
     header_style: ResolvedComponentStyle,
     last_owner_selection: Rc<Cell<Option<usize>>>,
+    requested_selection: Rc<Cell<Option<usize>>>,
+    selection_update: Rc<RefCell<Option<SelectionUpdater<App>>>>,
+}
+
+type SelectionUpdater<T> = Rc<dyn Fn(&mut T)>;
+
+fn table_header_element() -> Stateful<gpui::Div> {
+    div()
+        .id("rustui-table-header")
+        .role(Role::Row)
+        .aria_row_index(TABLE_HEADER_ROW_INDEX)
+}
+
+fn table_column_header_element(
+    col_ix: usize,
+    name: String,
+    accessible_name: String,
+) -> Stateful<gpui::Div> {
+    div()
+        .id(("rustui-table-column-header", col_ix))
+        .size_full()
+        .role(Role::ColumnHeader)
+        .aria_label(accessible_name)
+        .aria_column_index(col_ix + 1)
+        .child(SharedString::from(name))
+}
+
+fn table_data_row_element(row_ix: usize) -> Stateful<gpui::Div> {
+    div()
+        .id(("rustui-table-row", row_ix))
+        .aria_row_index(table_data_row_aria_index(row_ix))
+}
+
+fn should_report_active_descendant(selected: bool, table_focused: bool) -> bool {
+    selected && table_focused
+}
+
+fn table_data_cell_element(
+    row_ix: usize,
+    col_ix: usize,
+    value: String,
+    accessible_name: String,
+) -> Stateful<gpui::Div> {
+    div()
+        .id(format!("rustui-table-cell-content:{row_ix}:{col_ix}"))
+        .size_full()
+        .role(Role::Cell)
+        .aria_label(accessible_name)
+        .aria_column_index(col_ix + 1)
+        .flex()
+        .items_center()
+        .px_3()
+        .child(SharedString::from(value))
+}
+
+fn replace_selection_updater<T>(
+    slot: &RefCell<Option<SelectionUpdater<T>>>,
+    updater: SelectionUpdater<T>,
+) {
+    *slot.borrow_mut() = Some(updater);
+}
+
+fn apply_selection_updater<T>(slot: &RefCell<Option<SelectionUpdater<T>>>, context: &mut T) {
+    let updater = slot.borrow().clone();
+    if let Some(updater) = updater {
+        updater(context);
+    }
+}
+
+fn apply_owner_selection_request(
+    current: &mut Option<usize>,
+    last_owner_selection: &Cell<Option<usize>>,
+    requested: Option<usize>,
+) -> bool {
+    if *current != last_owner_selection.get() || *current == requested {
+        return false;
+    }
+    *current = requested;
+    last_owner_selection.set(requested);
+    true
 }
 
 impl StringTableDelegate {
@@ -40,6 +123,8 @@ impl StringTableDelegate {
             row_style,
             header_style,
             last_owner_selection: Rc::new(Cell::new(owner_selection)),
+            requested_selection: Rc::new(Cell::new(None)),
+            selection_update: Rc::new(RefCell::new(None)),
         }
     }
 
@@ -47,6 +132,14 @@ impl StringTableDelegate {
         self.columns = columns;
         self.rows = rows;
         self.column_width = column_width;
+    }
+
+    fn accessible_column_name(&self, col_ix: usize) -> String {
+        self.columns
+            .get(col_ix)
+            .filter(|name| !name.trim().is_empty())
+            .cloned()
+            .unwrap_or_else(|| format!("Column {}", col_ix + 1))
     }
 }
 
@@ -67,6 +160,14 @@ impl TableDelegate for StringTableDelegate {
             .movable(false)
     }
 
+    fn render_header(
+        &mut self,
+        _window: &mut Window,
+        _cx: &mut Context<TableState<Self>>,
+    ) -> Stateful<gpui::Div> {
+        table_header_element()
+    }
+
     fn render_th(
         &mut self,
         col_ix: usize,
@@ -74,9 +175,10 @@ impl TableDelegate for StringTableDelegate {
         _cx: &mut Context<TableState<Self>>,
     ) -> impl IntoElement {
         let name = self.columns.get(col_ix).cloned().unwrap_or_default();
+        let accessible_name = self.accessible_column_name(col_ix);
         // GPUI Components paints the header surface with mapped theme colors.
         // Style only the label here so its background remains visible.
-        let mut label = div().size_full().child(SharedString::from(name));
+        let mut label = table_column_header_element(col_ix, name, accessible_name);
         if let Some(typography) = &self.header_style.typography {
             label = label
                 .font_family(typography.family.clone())
@@ -89,10 +191,16 @@ impl TableDelegate for StringTableDelegate {
     fn render_tr(
         &mut self,
         row_ix: usize,
-        _window: &mut Window,
-        _cx: &mut Context<TableState<Self>>,
+        window: &mut Window,
+        cx: &mut Context<TableState<Self>>,
     ) -> Stateful<gpui::Div> {
-        styled_element(div().id(("rustui-table-row", row_ix)), &self.row_style)
+        let selected = cx.entity().read(cx).selected_row() == Some(row_ix);
+        let focused = cx.focus_handle().is_focused(window);
+        let mut row = styled_element(table_data_row_element(row_ix), &self.row_style);
+        if should_report_active_descendant(selected, focused) {
+            row = row.aria_active_descendant();
+        }
+        row
     }
 
     fn render_td(
@@ -108,12 +216,8 @@ impl TableDelegate for StringTableDelegate {
             .and_then(|row| row.get(col_ix))
             .cloned()
             .unwrap_or_default();
-        div()
-            .size_full()
-            .flex()
-            .items_center()
-            .px_3()
-            .child(SharedString::from(value))
+        let accessible_name = format!("{}: {value}", self.accessible_column_name(col_ix));
+        table_data_cell_element(row_ix, col_ix, value, accessible_name)
     }
 
     fn cell_text(&self, row_ix: usize, col_ix: usize, _cx: &App) -> String {
@@ -172,18 +276,31 @@ impl TableView {
         }
     }
 
+    pub(crate) fn aria_row_count(&self) -> usize {
+        self.rows.len() + TABLE_HEADER_ROW_INDEX
+    }
+
+    pub(crate) fn aria_column_count(&self) -> usize {
+        self.columns.len()
+    }
+
     pub fn id(mut self, id: impl Into<Identity>) -> Self {
-        self.id = Some(id.into());
+        let id = id.into();
+        assert!(
+            !id.as_str().trim().is_empty(),
+            "Table identity must be nonempty"
+        );
+        self.id = Some(id);
         self
     }
 
     pub fn height(mut self, height: f32) -> Self {
-        self.height = height.max(1.0);
+        self.height = finite_dimension(height);
         self
     }
 
     pub fn column_width(mut self, width: f32) -> Self {
-        self.column_width = width.max(1.0);
+        self.column_width = finite_dimension(width);
         self
     }
 
@@ -203,20 +320,36 @@ impl TableView {
         self
     }
 
-    fn identity(&self) -> Identity {
-        self.id.clone().unwrap_or_else(|| {
-            Identity::from(format!(
+    fn identity(&self, context: &mut RenderContext<'_>) -> Identity {
+        let Some(id) = &self.id else {
+            return context.next_implicit_retained_identity(Identity::from(format!(
                 "table:{}:{}:{}",
                 self.columns.len(),
                 self.rows.len(),
                 self.columns.first().map_or("", String::as_str)
-            ))
-        })
+            )));
+        };
+        id.clone()
     }
 }
 
 fn selection_for_rows(selection: Option<usize>, row_count: usize) -> Option<usize> {
     selection.filter(|index| *index < row_count)
+}
+
+fn finite_dimension(value: f32) -> f32 {
+    if value.is_finite() {
+        value.max(1.0)
+    } else {
+        1.0
+    }
+}
+
+const TABLE_HEADER_ROW_INDEX: usize = 1;
+
+fn table_data_row_aria_index(row_ix: usize) -> usize {
+    // ARIA row indices are one-based, and this table has one header row.
+    row_ix + TABLE_HEADER_ROW_INDEX + 1
 }
 
 fn clear_invalid_selection(current: &mut Option<usize>, invalid: usize) -> bool {
@@ -249,7 +382,7 @@ impl View for TableView {
         let row_style = required_style(context, "table", "table_rows", &query);
         let header_style =
             required_style_with_artwork(context, "table", "table_column_headers", &query);
-        let identity = self.identity();
+        let identity = self.identity(context);
         let columns = self.columns.clone();
         let rows = self.rows.clone();
         let column_width = self.column_width;
@@ -312,26 +445,25 @@ impl View for TableView {
             });
         }
 
-        let last_owner_selection = state
-            .read(context.app())
-            .delegate()
-            .last_owner_selection
-            .clone();
+        let (last_owner_selection, requested_selection, selection_update) = {
+            let delegate = state.read(context.app()).delegate();
+            (
+                delegate.last_owner_selection.clone(),
+                delegate.requested_selection.clone(),
+                delegate.selection_update.clone(),
+            )
+        };
         last_owner_selection.set(owner_selection);
+        let marker = last_owner_selection.clone();
+        let current_request = requested_selection.clone();
+        let updater = context.binding_updater(self.selection.clone(), move |current| {
+            apply_owner_selection_request(current, &marker, current_request.get())
+        });
+        replace_selection_updater(&selection_update, updater);
 
         if created {
-            let requested = Rc::new(Cell::new(None));
-            let current_request = requested.clone();
-            let last_owner_selection = last_owner_selection.clone();
-            let update = context.binding_updater(self.selection.clone(), move |current| {
-                let selected = current_request.get();
-                if *current != last_owner_selection.get() || *current == selected {
-                    return false;
-                }
-                *current = selected;
-                last_owner_selection.set(selected);
-                true
-            });
+            let current_update = selection_update.clone();
+            let requested = requested_selection.clone();
             context.subscribe_retained(&identity, &state, move |state, event: &TableEvent, cx| {
                 let selection = match event {
                     TableEvent::SelectRow(row) => Some(*row),
@@ -342,7 +474,7 @@ impl View for TableView {
                     return;
                 }
                 requested.set(selection);
-                update(cx);
+                apply_selection_updater(&current_update, cx);
             });
         }
 
@@ -370,7 +502,144 @@ impl View for TableView {
 
 #[cfg(test)]
 mod tests {
-    use super::{clear_invalid_selection, selection_for_rows};
+    use gpui::{Element, Role, accesskit::Node};
+
+    use super::{
+        SelectionUpdater, TableView, apply_owner_selection_request, apply_selection_updater,
+        clear_invalid_selection, finite_dimension, replace_selection_updater, selection_for_rows,
+        should_report_active_descendant, table_column_header_element, table_data_cell_element,
+        table_data_row_element, table_header_element,
+    };
+    use rustui_core::Binding;
+    use std::{cell::Cell, cell::RefCell, rc::Rc};
+
+    struct Owner {
+        primary: Option<usize>,
+        secondary: Option<usize>,
+    }
+
+    fn read_primary(owner: &Owner) -> Option<usize> {
+        owner.primary
+    }
+
+    fn write_primary(owner: &mut Owner, selection: Option<usize>) {
+        owner.primary = selection;
+    }
+
+    fn read_secondary(owner: &Owner) -> Option<usize> {
+        owner.secondary
+    }
+
+    fn write_secondary(owner: &mut Owner, selection: Option<usize>) {
+        owner.secondary = selection;
+    }
+
+    fn read_selection(_: &()) -> Option<usize> {
+        None
+    }
+
+    fn write_selection(_: &mut (), _: Option<usize>) {}
+
+    #[test]
+    fn accessibility_counts_include_header_row_and_all_columns() {
+        let table = TableView::new(
+            ["Quarter", "Revenue"],
+            [["Q1", "$18.2M"], ["Q2", "$20.4M"]],
+            Binding::new(None, read_selection, write_selection),
+        );
+
+        assert_eq!(table.aria_row_count(), 3);
+        assert_eq!(table.aria_column_count(), 2);
+    }
+
+    #[test]
+    fn non_finite_table_dimensions_fall_back_to_the_minimum_size() {
+        assert_eq!(finite_dimension(f32::INFINITY), 1.0);
+        assert_eq!(finite_dimension(f32::NEG_INFINITY), 1.0);
+        assert_eq!(finite_dimension(f32::NAN), 1.0);
+        assert_eq!(finite_dimension(24.0), 24.0);
+        assert_eq!(finite_dimension(0.0), 1.0);
+    }
+
+    fn accesskit_node(element: &impl Element, fallback_role: Option<Role>) -> Node {
+        let role = element
+            .a11y_role()
+            .or(fallback_role)
+            .expect("table accessibility element has a role");
+        let mut node = Node::new(role);
+        element.write_a11y_info(&mut node);
+        node
+    }
+
+    #[test]
+    fn header_and_cell_elements_emit_accesskit_names_roles_and_indices() {
+        let header_row = accesskit_node(&table_header_element(), None);
+        assert_eq!(header_row.role(), Role::Row);
+        assert_eq!(header_row.row_index(), Some(1));
+
+        let header = table_column_header_element(1, "Revenue".into(), "Revenue".into());
+        let header = accesskit_node(&header, None);
+        assert_eq!(header.role(), Role::ColumnHeader);
+        assert_eq!(header.label(), Some("Revenue"));
+        assert_eq!(header.column_index(), Some(2));
+
+        let cell = table_data_cell_element(1, 0, "$20.4M".into(), "Quarter: $20.4M".into());
+        let cell = accesskit_node(&cell, None);
+        assert_eq!(cell.role(), Role::Cell);
+        assert_eq!(cell.label(), Some("Quarter: $20.4M"));
+        assert_eq!(cell.column_index(), Some(1));
+
+        // The pinned DataTable adds the Row role to this same delegate element.
+        let row = accesskit_node(&table_data_row_element(1), Some(Role::Row));
+        assert_eq!(row.row_index(), Some(3));
+    }
+
+    #[test]
+    fn active_descendant_requires_the_selected_row_and_table_focus() {
+        assert!(!should_report_active_descendant(false, false));
+        assert!(!should_report_active_descendant(false, true));
+        assert!(!should_report_active_descendant(true, false));
+        assert!(should_report_active_descendant(true, true));
+    }
+
+    #[test]
+    #[should_panic(expected = "Table identity must be nonempty")]
+    fn rejects_whitespace_only_retained_identity() {
+        TableView::new(
+            ["Column"],
+            [["value"]],
+            Binding::new(None, read_selection, write_selection),
+        )
+        .id(" \t");
+    }
+
+    #[test]
+    fn retained_table_subscription_uses_the_latest_selection_binding() {
+        let primary = Binding::new(Some(0), read_primary, write_primary);
+        let secondary = Binding::new(Some(1), read_secondary, write_secondary);
+        let last_owner_selection = Rc::new(Cell::new(Some(1)));
+        let make_updater = |binding: Binding<Option<usize>>| {
+            let marker = last_owner_selection.clone();
+            Rc::new(move |owner: &mut Owner| {
+                binding.update_on(owner, |current| {
+                    apply_owner_selection_request(current, &marker, Some(2))
+                });
+            }) as SelectionUpdater<Owner>
+        };
+        let current_update = RefCell::new(None);
+
+        replace_selection_updater(&current_update, make_updater(primary));
+        replace_selection_updater(&current_update, make_updater(secondary));
+
+        let mut owner = Owner {
+            primary: Some(0),
+            secondary: Some(1),
+        };
+        apply_selection_updater(&current_update, &mut owner);
+
+        assert_eq!(owner.primary, Some(0));
+        assert_eq!(owner.secondary, Some(2));
+    }
 
     #[test]
     fn initial_invalid_selection_is_normalized_even_without_native_selection() {

@@ -69,3 +69,22 @@ after cancellation or owner release, not that arbitrary blocking work was
 interrupted. Terminal request restart was visible, but private registry
 allocation cleanup was not directly counted. This is bounded native acceptance;
 cross-platform, keyboard-only, and full screen-reader acceptance remain open.
+
+
+## Owner-task lifecycle source audit (2026-10-21)
+
+A narrow review of `runtime/tasks.rs` found no additional decision-free defect.
+Starting the same task identity replaces its retained GPUI task handle and assigns
+a new generation; cancellation removes the handle and reports `Idle`. Completion
+uses a weak component host and verifies the generation before applying success or
+error. The deferred terminal cleanup also verifies that generation, preserving a
+replacement started before cleanup. The executor-aware entry point keeps the same
+registry and completion path as `start`. No runtime or dependency was added.
+
+Focused existing registry tests passed: **2/2** using
+`./scripts/cargo-headstart test -p rustui --lib runtime::tasks::tests -- --nocapture`.
+Evidence: `target/headstart/evidence/owner-task-lifecycle-audit-20261021.log`.
+`rustfmt --edition 2024 --check crates/rustui/src/runtime/tasks.rs` and scoped
+`git diff --check` exited 0. These checks cover replacement/cancellation generation
+invalidation and terminal cleanup; they do not add native owner-release,
+background-poll cancellation, stale-child delivery, or cross-platform acceptance.

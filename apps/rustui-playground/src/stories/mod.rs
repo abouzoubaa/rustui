@@ -1,6 +1,19 @@
 //! Stateful RustUI stories embedded in the canonical Playground.
 
 use rustui::prelude::*;
+
+const MENU_BAR_REFERENCE_LABELS: [&str; 9] = [
+    "Finder",
+    "File",
+    "Edit",
+    "View",
+    "Item",
+    "Window",
+    "Help",
+    "Wed Apr 1",
+    "9:41 AM",
+];
+
 mod compiled_preview_gallery;
 
 mod alert_gallery;
@@ -20,6 +33,7 @@ mod dialog_gallery;
 mod disclosure_gallery;
 mod event_inspector;
 mod feedback_gallery;
+mod form_accessories_gallery;
 mod focus_gallery;
 mod foundation_additions;
 mod foundation_demos;
@@ -31,6 +45,7 @@ mod lazy_grid_gallery;
 mod locale_selector;
 mod localization_gallery;
 mod menu_gallery;
+mod menu_bar_reference_gallery;
 mod navigation_split_gallery;
 mod offset_gallery;
 mod owner_callbacks;
@@ -50,26 +65,47 @@ mod task_release;
 mod test_runner;
 mod theme_inspector;
 mod toolbar_gallery;
+mod tab_bar_reference_gallery;
+mod text_specimen_gallery;
+mod text_style_gallery;
 mod tooltip_gallery;
 mod tree_reconciliation_gallery;
+mod utility_window_gallery;
+mod window_chrome_gallery;
+mod window_controls_gallery;
 
 use canvas::{RetentionStoryFields, StoryCanvas};
 use child_component::DemoDisplayMode;
-pub(crate) use component_catalog::{STORIES, StoryId};
+pub(crate) use component_catalog::{STORIES, StoryId, filtered_story_indices};
 use event_inspector::EventLog;
 use locale_selector::LocaleSelector;
 pub(crate) use locale_selector::{catalogs, initial_locale};
 use properties_panel::ButtonProperties;
 
-/// Returns existing display-control demos for their catalog entries.
+/// Returns existing runtime demos for their catalog entries.
 pub(crate) fn catalog_demo(key: &str) -> Option<AnyView> {
     match key {
+        "text" => Some(AnyView::new(text_specimen_gallery::demo())),
+        "text_style_guide" => Some(AnyView::new(text_style_gallery::demo())),
         "combo_box" => Some(AnyView::new(combo_box_reconciliation_gallery::demo())),
         "link" => Some(AnyView::new(supplementary_gallery::demo())),
+        "divider" => Some(AnyView::new(foundation_additions::foundation_additions())),
+        "notification" => Some(AnyView::new(feedback_gallery::demo())),
+        "button_group" => Some(AnyView::new(toolbar_gallery::button_group_demo())),
+        "segmented_control" => Some(AnyView::new(toolbar_gallery::segmented_control_demo())),
+        "window_chrome" => Some(AnyView::new(window_chrome_gallery::demo())),
+        "utility_window" => Some(AnyView::new(utility_window_gallery::demo())),
+        "form" => Some(AnyView::new(form_accessories_gallery::demo())),
+        "form_accessories" => Some(AnyView::new(form_accessories_gallery::demo())),
+        "menu_bar" => Some(AnyView::new(menu_bar_reference_gallery::demo())),
+        "window_controls" => Some(AnyView::new(window_controls_gallery::demo())),
         "alert_dialog" => Some(AnyView::new(alert_gallery::demo())),
         "save_dialog" => Some(AnyView::new(dialog_gallery::demo())),
         "sheet" => Some(AnyView::new(sheet_gallery::demo())),
         "toolbar" => Some(AnyView::new(toolbar_gallery::demo())),
+        "tab_bar" => Some(AnyView::new(tab_bar_reference_gallery::demo())),
+        "menu_item" => Some(AnyView::new(menu_gallery::demo())),
+        "menu_separator" => Some(AnyView::new(menu_gallery::demo())),
         "menu" => Some(AnyView::new(
             VStack::new()
                 .spacing(20.0)
@@ -99,11 +135,41 @@ pub(crate) fn split_view_demo() -> impl View {
 
 #[cfg(test)]
 mod catalog_demo_tests {
-    use super::catalog_demo;
+    use super::{MENU_BAR_REFERENCE_LABELS, catalog_demo};
+
+    #[test]
+    fn divider_catalog_reaches_horizontal_and_vertical_demo() {
+        assert!(catalog_demo("divider").is_some());
+    }
+
+    #[test]
+    fn button_group_catalog_reaches_public_button_composition() {
+        assert!(catalog_demo("button_group").is_some());
+    }
+
+    #[test]
+    fn tab_bar_catalog_reaches_public_tab_view_composition() {
+        assert!(catalog_demo("tab_bar").is_some());
+    }
+
+    #[test]
+    fn segmented_control_catalog_reaches_public_button_composition() {
+        assert!(catalog_demo("segmented_control").is_some());
+    }
 
     #[test]
     fn menu_catalog_routes_menu_and_context_menu_demos() {
         assert!(catalog_demo("menu").is_some());
+    }
+
+    #[test]
+    fn menu_item_catalog_entry_reaches_menu_demo() {
+        assert!(catalog_demo("menu_item").is_some());
+    }
+
+    #[test]
+    fn menu_separator_catalog_entry_reaches_menu_demo() {
+        assert!(catalog_demo("menu_separator").is_some());
     }
 
     #[test]
@@ -119,6 +185,52 @@ mod catalog_demo_tests {
     #[test]
     fn disclosure_catalog_reaches_controlled_disclosure_gallery() {
         assert!(catalog_demo("disclosure_control").is_some());
+    }
+
+    #[test]
+    fn window_chrome_catalog_routes_to_composed_preview() {
+        assert!(catalog_demo("window_chrome").is_some());
+    }
+
+    #[test]
+    fn primitive_composition_catalog_entries_reach_previews() {
+        for key in ["utility_window", "form", "menu_bar", "window_controls"] {
+            assert!(catalog_demo(key).is_some(), "missing composition preview: {key}");
+        }
+    }
+
+    #[test]
+    fn menu_bar_composition_matches_the_reference_labels_and_order() {
+        assert_eq!(
+            MENU_BAR_REFERENCE_LABELS,
+            [
+                "Finder",
+                "File",
+                "Edit",
+                "View",
+                "Item",
+                "Window",
+                "Help",
+                "Wed Apr 1",
+                "9:41 AM",
+            ]
+        );
+        assert!(catalog_demo("menu_bar").is_some());
+    }
+
+    #[test]
+    fn form_accessories_catalog_routes_to_its_public_api_composition() {
+        assert!(catalog_demo("form_accessories").is_some());
+    }
+
+    #[test]
+    fn text_style_guide_catalog_routes_to_its_public_typography_gallery() {
+        assert!(catalog_demo("text_style_guide").is_some());
+    }
+
+    #[test]
+    fn text_catalog_routes_to_its_public_text_specimen() {
+        assert!(catalog_demo("text").is_some());
     }
 }
 
@@ -653,7 +765,7 @@ impl View for StoryHost {
             .id("lab-clear-events")
         Text(layout_inspector::summary_for(selected))
         Text(test_runner::status_for(selected).label())
-        Text("Public API source")
+        Text("Illustrative source · not compiled")
         Text(code_preview::source_for(selected))
         Text(self.events.summary())
         }

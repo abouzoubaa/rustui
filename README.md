@@ -6,8 +6,11 @@ GPUI Components. It is MIT licensed and under active development.
 ## Current status
 
 
-Stages 0–7 of the baseline roadmap are implemented. Stage 8 now includes retained,
-virtualized `List`, `Table`, and `Tree` controls with controlled selection.
+Stages 0–8 have baseline implementations through Stage 8G. Stage 9 has partial
+compiled-preview support through D1a–D1c; catalog breadth and runtime acceptance
+remain incomplete. Behavioral, visual, accessibility, performance, and platform
+acceptance also remain open. Stage 8 includes retained, virtualized `List`,
+`Table`, and `Tree` controls with controlled selection.
 
 `ComponentHost` retains keyed GPUI entities and subscriptions. `TextField`,
 `SecureField`, `SearchField`, and `TextEditor` preserve editor state across
@@ -29,8 +32,10 @@ breadcrumb presentation.
 `NavigationStack` uses a bound route path, heterogeneous destinations, and GPUI
 Components buttons for forward and back navigation.
 
-Interpolation, plurals, locale-sensitive formatting, most component families, and
-advanced Playground inspectors remain incomplete. RustUI has no direct,
+Named interpolation, bounded cardinal/ordinal plural and select expressions, and
+locale-aware integer/decimal formatting are implemented. Full CLDR coverage,
+date formatting, broader locale support, most component families, and advanced
+Playground inspectors remain incomplete. RustUI has no direct,
 transitive, optional, or public API dependency on Allui. GPUI and GPUI Components
 are the upstream implementation sources.
 
@@ -78,7 +83,7 @@ Approved upstream stack:
 | `rustui` | Public declarative API, component adapters, layout, theme and GPUI integration | Partial |
 | `rustui-core` | Action, identity, state, binding, invalidation and environment contracts | Initial implementation |
 | `rustui-macros` | `#[component]`, `VStack!`, and `HStack!` | Initial implementation |
-| `rustui-i18n` | Locale, catalog, fallback, direction and validation | Initial implementation |
+| `rustui-i18n` | Locale, catalog, fallback, direction, bounded formatting and validation | Bounded implementation; full CLDR and date formatting remain open |
 | `rustui-rgpe` | Performance diagnostics and approved optimization integration | Scaffold |
 | `rustui-playground` | Canonical component development app and macOS 27 reference catalog | GUI acceptance pending |
 | `rustui-lab` | Compatibility launcher delegating to RustUI Playground | Compatibility |

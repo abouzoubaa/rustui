@@ -51,18 +51,22 @@ PROFILE_RENDERERS = {
 }
 
 
-def check_renderer_calls() -> list[str]:
+def check_renderer_calls(source_overrides: dict[str, str] | None = None) -> list[str]:
     theme = json.loads(MACOS.read_text(encoding="utf-8"))
     registry = REGISTRY.read_text(encoding="utf-8")
     mapped_block = registry.split("const MAPPED_COMPONENTS:", 1)[1].split("];", 1)[0]
     mapped = set(re.findall(r'"([a-z_]+)"', mapped_block))
     styled = {name for name in mapped if theme["components"][name].get("styles")}
+    source_overrides = source_overrides or {}
     errors = [f"No renderer registered for {name}" for name in sorted(styled - STYLE_RENDERERS.keys())]
     for name, relative_path in STYLE_RENDERERS.items():
         if name not in styled:
             errors.append(f"Stale renderer mapping for {name}")
             continue
-        source = (ROOT / "crates/rustui/src" / relative_path).read_text(encoding="utf-8")
+        source = source_overrides.get(relative_path)
+        if source is None:
+            source = (ROOT / "crates/rustui/src" / relative_path).read_text(encoding="utf-8")
+        source = _without_test_modules(source)
         if name == "button":
             queried = "context.button_theme()" in source
         elif name in {"text_field", "search_field"}:
@@ -115,7 +119,7 @@ CONTROL_CONTRACTS = {
             "height": (r'style\s*\.\s*lengths\s*\[\s*"height"\s*\]', r'\.h\s*\(\s*px\(height\)\s*\)'),
             "corner_radius": (r'style\s*\.\s*lengths\s*\[\s*"corner_radius"\s*\]', r'\.rounded\s*\(\s*px\(radius\)\s*\)'),
             "background": (r'style\s*\.\s*colors\s*\[\s*"background"\s*\]', r'\.bg\s*\(\s*if\s+selected\s*\{\s*accent\s*\}', r'\.border_color\s*\(\s*if\s+selected\s*\{\s*accent\s*\}'),
-            "foreground": (r'style\s*\.\s*colors\s*\[\s*"foreground"\s*\]', r'\.bg\s*\(\s*foreground\s*\)', r'\.text_color\s*\(\s*crate::theme::registry::hsla\s*\(\s*\*color\s*\)\s*\)'),
+            "foreground": (r'style\s*\.\s*colors\s*\[\s*"foreground"\s*\]', r'\.bg\s*\(\s*foreground\s*\)', r'\.text_color\s*\(\s*color\s*\)'),
             "typography": (r'&\s*style\s*\.\s*typography', r'\.font_family\s*\(', r'\.text_size\s*\(', r'\.font_weight\s*\('),
             "vector_path": (r'rectangular_artwork_size\s*\(\s*&style\s*\)', r'\.w\s*\(\s*px\(width\)\s*\)', r'\.h\s*\(\s*px\(height\)\s*\)'),
         },
@@ -149,8 +153,21 @@ CONTROL_CONTRACTS = {
         "roles_evidence": {
             "on": (r'\.colors\s*\.\s*get\s*\(\s*"background"', r'let\s+track_color\s*=\s*if\s+self\.checked\s*\{\s*self\.checked_color\s*\}', r'\.bg\s*\(\s*if\s+self\.disabled'),
             "off": (r'colors\.toolbar_background', r'unchecked_color\s*,', r'let\s+track_color\s*=\s*if\s+self\.checked\s*\{\s*self\.checked_color\s*\}\s*else\s*\{\s*self\.unchecked_color', r'\.bg\s*\(\s*if\s+self\.disabled'),
-            "thumb": (r'colors\.primary_text', r'foreground_color\s*,', r'let\s+thumb_color\s*=\s*if\s+self\.disabled\s*\{\s*self\.label_color\s*\}\s*else\s*\{\s*self\.foreground_color', r'\.bg\s*\(\s*thumb_color\s*\)'),
-            "disabled": (r'colors\.secondary_text', r'disabled_color', r'label_color\s*=\s*if\s+self\.disabled', r'\.text_color\s*\(\s*self\.label_color\s*\)'),
+            "thumb": (r'colors\.primary_text', r'foreground_color\s*,', r'let\s+thumb_color\s*=\s*if\s+self\.disabled\s*\{\s*self\.disabled_thumb_color\s*\}\s*else\s*\{\s*self\.foreground_color', r'\.bg\s*\(\s*thumb_color\s*\)'),
+            "disabled": (r'colors\.secondary_text', r'disabled_thumb_color', r'label_color\s*=\s*if\s+self\.disabled', r'\.text_color\s*\(\s*self\.label_color\s*\)'),
+        },
+    },
+    "scroll_view": {
+        "path": "layout/scroll_view.rs", "part": "scrollbar_vertical",
+        "roles": {"thumb": "muted_foreground"},
+        "properties": {
+            "background": (r'style\s*\.\s*colors\s*\.\s*get\s*\(\s*"background"', r'track\s*\.\s*bg\s*\(\s*background\s*\)'),
+            "border": (r'style\s*\.\s*colors\s*\.\s*get\s*\(\s*"border"', r'track\s*\.\s*border_color\s*\(\s*border\s*\)'),
+            "corner_radius": (r'style\s*\.\s*lengths\s*\.\s*get\s*\(\s*"corner_radius"', r'\.radius\s*\(\s*px\(radius\)\s*\)'),
+        },
+        "known_unapplied": {
+            "width": "macos27 source-artwork extent is not the scrollbar thumb thickness",
+            "height": "macos27 source-artwork extent is not the viewport-sized scrollbar length",
         },
     },
 }
@@ -249,9 +266,16 @@ def check_control_style_consumption(
             errors.append(f"{name} renderer is missing: {rel}")
             continue
         source = _without_test_modules(raw)
-        call = r'(?:required_style|required_style_with_artwork)\s*\(\s*context\s*,\s*"' + re.escape(name) + r'"\s*,\s*"' + re.escape(contract["part"]) + r'"'
-        if not re.search(call, source, re.S):
-            errors.append(f"{name} renderer does not request its macos27 component/part style")
+        if name == "scroll_view":
+            call = r'required_style\s*\(\s*context\s*,\s*"scroll_view"\s*,\s*part\s*,'
+            if not re.search(call, source, re.S) or not all(
+                f'"{part}"' in source for part in ("scrollbar_vertical", "scrollbar_horizontal")
+            ):
+                errors.append("scroll_view renderer does not request both macos27 scrollbar track styles")
+        else:
+            call = r'(?:required_style|required_style_with_artwork)\s*\(\s*context\s*,\s*"' + re.escape(name) + r'"\s*,\s*"' + re.escape(contract["part"]) + r'"'
+            if not re.search(call, source, re.S):
+                errors.append(f"{name} renderer does not request its macos27 component/part style")
         for prop, markers in contract["properties"].items():
             if any(not re.search(marker, source, re.S) for marker in markers):
                 errors.append(f"{name}.{prop} is not proven read and applied by source markers")
@@ -289,6 +313,8 @@ def main() -> int:
     print(f"Found {len(STYLE_RENDERERS)} styled and {len(PROFILE_RENDERERS)} profile renderer paths.")
     print("Static macos27 source checks cover checkbox, radio_button, slider, and toggle; this is not visual acceptance.")
     print("Artwork checks verify checkbox/radio path bounds are read for sizing; they do not verify rendered path pixels.")
+    print("ScrollView track border colors are checked against the pinned ScrollbarTrackStyle API; native visual acceptance remains separate.")
+    print("Known unapplied macos27 properties: scroll_view.width/height are source-artwork extents; the pinned API derives thumb length from viewport geometry.")
     print("Known unapplied macos27 property: radio_button.blend_mode (GPUI renderer has no blend-mode application).")
     return 0
 

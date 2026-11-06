@@ -32,6 +32,14 @@ theme without changing this file.
 
 Focused unit tests cover content changes, unchanged content, mode changes,
 forced activation, read and parse failures, repair, and activation failure using
-an injected activation seam. These tests do not claim native GPUI theme
-activation or visual acceptance. Workspace compilation and full test
-orchestration remain with the root task.
+an injected activation seam. The activation-failure regression also verifies
+that the last-good document and activation fingerprint remain unchanged, the
+same candidate can then activate successfully, and a subsequent unchanged
+reload skips activation. These tests do not claim native GPUI theme activation
+or visual acceptance. Workspace compilation and full test orchestration remain
+with the root task.
+
+Focused verification passed: `CARGO_TARGET_DIR=target/headstart/stage5
+./scripts/cargo-headstart test -p rustui
+theme::watcher::tests::activation_failure_does_not_commit_candidate --lib`
+(1 passed, 0 failed).

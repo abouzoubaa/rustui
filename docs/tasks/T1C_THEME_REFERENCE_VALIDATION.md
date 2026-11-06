@@ -13,10 +13,12 @@ document's structural and platform checks. The resolver reads `ThemeDocument`
 and does not call `validate`, so this introduces no validation cycle. It does
 not change format version 1, add dependencies, or change vendor sources.
 
-Other component records, `source`, `derivation`, Button `parts`, and additional
-metadata remain arbitrary JSON and are preserved. This task does not add general
-semantic token types, validate every component record, serialize view/state
-trees, or add UI Studio integration.
+Subsequent Stage 5 contracts added object-shape validation for `source`,
+`token_sources`, `derivation`, and component entries. Typed non-Button component
+records are now validated through the shared resolver; opaque object-valued
+custom components, Button `parts`, and additional metadata remain preserved.
+This does not add general semantic token types, serialize view/state trees, or
+add UI Studio integration.
 
 ## Acceptance
 
@@ -27,9 +29,11 @@ trees, or add UI Studio integration.
 - Existing format-v1 `macos27.json`, normalized round-trip, and arbitrary
   custom-component metadata remain accepted.
 
-Validation is covered by focused unit tests in `theme/loader.rs`. Build and test
-execution are recorded by the integrating task; this task itself does not claim
-those checks ran.
+Validation is covered by focused unit tests in `theme/loader.rs`. The root task
+ran 12 focused loader tests and six focused resolver tests under the persistent
+Headstart profile. One default test-profile attempt hit the known Headstart
+incremental compiler ICE before tests ran; the dedicated profile completed both
+suites successfully.
 
 ## Executed validation
 

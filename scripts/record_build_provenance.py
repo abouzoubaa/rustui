@@ -7,6 +7,7 @@ configured Headstart rustc identity for comparison with the selected binary.
 """
 
 import argparse
+import errno
 from datetime import datetime, timezone
 import hashlib
 import json
@@ -17,6 +18,11 @@ import subprocess
 import sys
 
 from calibrate_cache_workload import compiler_identity
+try:
+    from p3_candidate_fs import CandidateFSError, PinnedDir, relative_parts
+except ModuleNotFoundError:
+    sys.path.insert(0, str(Path(__file__).resolve().parent))
+    from p3_candidate_fs import CandidateFSError, PinnedDir, relative_parts
 
 
 WORKSPACE_ROOT = Path(__file__).resolve().parent.parent
@@ -52,70 +58,156 @@ SAFE_BUILD_ENV = (
 )
 
 
-def sha256_file(path):
-    digest = hashlib.sha256()
-    with path.open("rb") as stream:
-        for chunk in iter(lambda: stream.read(1024 * 1024), b""):
-            digest.update(chunk)
-    return digest.hexdigest()
+def _open_absolute_root(path):
+    absolute = Path(os.path.abspath(path))
+    current = PinnedDir.open_root(absolute.anchor)
+    try:
+        for part in absolute.parts[1:]:
+            child = PinnedDir.open_child(current, part)
+            current.close()
+            current = child
+        result = current
+        current = None
+        return result
+    finally:
+        if current is not None:
+            current.close()
+
+def _relative_path(root_path, requested):
+    requested = Path(requested)
+    lexical_root = Path(os.path.abspath(root_path))
+    absolute = Path(os.path.abspath(requested if requested.is_absolute() else lexical_root / requested))
+    try:
+        relative = absolute.relative_to(lexical_root)
+    except ValueError:
+        canonical_root = lexical_root.resolve(strict=True)
+        boundary = absolute.parent
+        while True:
+            try:
+                if os.path.samefile(boundary, canonical_root):
+                    relative = absolute.relative_to(boundary)
+                    break
+            except OSError:
+                pass
+            if boundary == boundary.parent:
+                raise ValueError(f"path is outside root: {requested}")
+            boundary = boundary.parent
+    relative_parts(relative.as_posix())
+    return relative.as_posix()
+
+def sha256_file(path, root=None):
+    owned = not isinstance(root, PinnedDir)
+    path = Path(path)
+    if owned:
+        root = _open_absolute_root(path.parent.resolve(strict=True))
+        relative = path.name
+    else:
+        relative = Path(path).as_posix()
+    try:
+        fd = root.open_file(relative, os.O_RDONLY | getattr(os, "O_NONBLOCK", 0))
+        digest = hashlib.sha256()
+        with os.fdopen(fd, "rb") as stream:
+            for chunk in iter(lambda: stream.read(1024 * 1024), b""):
+                digest.update(chunk)
+        return digest.hexdigest()
+    finally:
+        if owned:
+            root.close()
+
 
 
 def file_record(root, relative_path):
-    path = root / relative_path
-    record = {"path": str(relative_path)}
+    owned = not isinstance(root, PinnedDir)
+    root_path = Path(root) if owned else None
+    pinned = _open_absolute_root(root_path.resolve(strict=True)) if owned else root
     try:
-        if not path.is_file():
+        relative = _relative_path(root_path, relative_path) if owned else Path(relative_path).as_posix()
+        relative_parts(relative)
+    except (OSError, ValueError, CandidateFSError) as error:
+        if owned:
+            pinned.close()
+        return {"path": str(relative_path), "status": "unreadable", "error": str(error)}
+    record = {"path": relative}
+    try:
+        fd = pinned.open_file(relative, os.O_RDONLY | getattr(os, "O_NONBLOCK", 0))
+        with os.fdopen(fd, "rb") as stream:
+            before = os.fstat(stream.fileno())
+            digest = hashlib.sha256()
+            for chunk in iter(lambda: stream.read(1024 * 1024), b""):
+                digest.update(chunk)
+            after = os.fstat(stream.fileno())
+            identity_before = (before.st_dev, before.st_ino, before.st_size, before.st_mtime_ns, before.st_ctime_ns)
+            identity_after = (after.st_dev, after.st_ino, after.st_size, after.st_mtime_ns, after.st_ctime_ns)
+            if identity_before != identity_after:
+                raise OSError("file changed while hashing")
+            record.update({"sha256": digest.hexdigest(), "size_bytes": after.st_size, "status": "captured"})
+    except (OSError, CandidateFSError) as error:
+        cause = error
+        while getattr(cause, "__cause__", None) is not None:
+            cause = cause.__cause__
+        if isinstance(cause, OSError) and cause.errno == errno.ENOENT:
             record["status"] = "missing"
-        else:
-            record["sha256"] = sha256_file(path)
-            record["size_bytes"] = path.stat().st_size
-            record["status"] = "captured"
-    except OSError as error:
-        record["status"] = "unreadable"
-        record["error"] = str(error)
+            return record
+        record.update({"status": "unreadable", "error": str(error)})
+    finally:
+        if owned:
+            pinned.close()
     return record
 
 
+
 def source_records(root):
+    owned = not isinstance(root, PinnedDir)
+    pinned = _open_absolute_root(Path(root).resolve(strict=True)) if owned else root
     records = []
-    for source_root in SOURCE_ROOTS:
-        base = root / source_root
-        if not base.is_dir():
-            records.append({"path": source_root, "status": "missing_directory"})
-            continue
 
-        def record_walk_error(error):
-            try:
-                relative = Path(error.filename).relative_to(root).as_posix()
-            except (TypeError, ValueError):
-                relative = source_root
-            records.append({"path": relative, "status": "unreadable", "error": str(error)})
-
-        for current, dirs, files in os.walk(base, followlinks=False, onerror=record_walk_error):
-            dirs[:] = sorted(name for name in dirs if name not in IGNORED_DIRS)
-            for name in sorted(files):
-                path = Path(current) / name
-                relative = path.relative_to(root).as_posix()
-                record = {"path": relative}
+    def visit(relative_dir):
+        try:
+            directory = PinnedDir.open_child(pinned, relative_dir) if relative_dir else PinnedDir.from_fd(pinned.fd)
+        except (OSError, CandidateFSError) as error:
+            records.append({"path": relative_dir, "status": "unreadable", "error": str(error)})
+            return
+        try:
+            with os.scandir(directory.fd) as entries:
+                names = sorted(entry.name for entry in entries)
+            for name in names:
+                if name in IGNORED_DIRS:
+                    continue
+                relative = f"{relative_dir}/{name}" if relative_dir else name
                 try:
-                    if path.is_symlink():
-                        record["status"] = "symlink_skipped"
-                    else:
-                        record["sha256"] = sha256_file(path)
-                        record["size_bytes"] = path.stat().st_size
-                        record["status"] = "captured"
-                except OSError as error:
-                    record["status"] = "unreadable"
-                    record["error"] = str(error)
-                records.append(record)
-    return records
+                    child = PinnedDir.open_child(pinned, relative)
+                except (OSError, CandidateFSError):
+                    records.append(file_record(pinned, relative))
+                else:
+                    child.close()
+                    visit(relative)
+        except OSError as error:
+            records.append({"path": relative_dir, "status": "unreadable", "error": str(error)})
+        finally:
+            directory.close()
+
+    try:
+        for source_root in SOURCE_ROOTS:
+            try:
+                child = PinnedDir.open_child(pinned, source_root)
+            except (OSError, CandidateFSError):
+                continue
+            child.close()
+            visit(source_root)
+        return records
+    finally:
+        if owned:
+            pinned.close()
+
 
 
 def git_commit(root):
+    owned = not isinstance(root, PinnedDir)
+    pinned = _open_absolute_root(Path(root).resolve(strict=True)) if owned else root
     try:
         result = subprocess.run(
             ["git", "rev-parse", "HEAD"],
-            cwd=root,
+            preexec_fn=lambda: os.fchdir(pinned.fd),
             check=False,
             capture_output=True,
             text=True,
@@ -123,10 +215,14 @@ def git_commit(root):
         )
     except (OSError, subprocess.TimeoutExpired):
         return None
+    finally:
+        if owned:
+            pinned.close()
     if result.returncode != 0:
         return None
     commit = result.stdout.strip()
     return commit or None
+
 
 
 def snapshot_digest(captured):
@@ -187,90 +283,200 @@ def output_path(root, requested):
 def main():
     parser = build_parser()
     args = parser.parse_args()
-    root = args.workspace.expanduser().resolve()
-    log = args.log.expanduser().resolve()
-    if not root.is_dir():
-        parser.error(f"workspace is not a readable directory: {root}")
+    inherited_repo_fd = os.environ.get("RUSTUI_P3_REPO_ROOT_FD")
+    inherited_parent_fd = os.environ.get("RUSTUI_P3_CANDIDATE_PARENT_FD")
+    inherited_candidate_fd = os.environ.get("RUSTUI_P3_CANDIDATE_ROOT_FD")
+    candidate_id = os.environ.get("RUSTUI_P3_CANDIDATE_ID")
+    inherited = any(value is not None for value in
+                     (inherited_repo_fd, inherited_parent_fd, inherited_candidate_fd, candidate_id))
+    if inherited and not all((inherited_repo_fd, inherited_parent_fd, inherited_candidate_fd, candidate_id)):
+        parser.error("incomplete inherited P3 root identity")
+
+    if inherited:
+        repo_root = PinnedDir.from_fd(int(inherited_repo_fd))
+        candidate_parent = PinnedDir.from_fd(int(inherited_parent_fd))
+        try:
+            identity_root = PinnedDir.open_child(candidate_parent, candidate_id)
+        finally:
+            candidate_parent.close()
+        candidate_root = PinnedDir.from_fd(int(inherited_candidate_fd))
+        if candidate_root.identity() != identity_root.identity():
+            identity_root.close()
+            candidate_root.close()
+            repo_root.close()
+            parser.error("inherited candidate directory does not match candidate parent and ID")
+        identity_root.close()
+        workspace_arg = args.workspace.expanduser()
+        if workspace_arg == WORKSPACE_ROOT:
+            workspace_relative = "candidate/source"
+        elif workspace_arg.is_absolute():
+            parser.error("inherited workspace must be relative to the candidate root")
+        else:
+            workspace_relative = workspace_arg.as_posix()
+            try:
+                relative_parts(workspace_relative)
+            except CandidateFSError as error:
+                parser.error(str(error))
+        try:
+            workspace_root = PinnedDir.open_child(candidate_root, workspace_relative)
+        except CandidateFSError as error:
+            parser.error(f"cannot open workspace beneath candidate root: {error}")
+        workspace_label = f"target/headstart/candidates/{candidate_id}/{workspace_relative}"
+        log_relative = args.log.expanduser().as_posix()
+        binary_relative = args.binary.as_posix() if args.binary is not None else None
+        requested_output = args.output.expanduser() if args.output is not None else None
+        if requested_output is not None and requested_output.is_absolute():
+            parser.error("inherited output path must be relative to the candidate root")
+        output_relative = requested_output.as_posix() if requested_output is not None else None
+        log_fs = candidate_root
+    else:
+        workspace_path = args.workspace.expanduser().resolve(strict=True)
+        repo_root = _open_absolute_root(workspace_path)
+        candidate_root = PinnedDir.from_fd(repo_root.fd)
+        workspace_root = repo_root
+        workspace_label = str(workspace_path)
+        log_path = args.log.expanduser()
+        try:
+            log_relative = _relative_path(workspace_path, log_path)
+        except (OSError, ValueError) as error:
+            parser.error(f"build log must be beneath workspace root: {error}")
+        binary_relative = None
+        if args.binary is not None:
+            try:
+                binary_relative = _relative_path(workspace_path, args.binary.expanduser())
+            except (OSError, ValueError) as error:
+                parser.error(f"binary must be beneath workspace root: {error}")
+        requested_output = args.output.expanduser() if args.output is not None else None
+        output_relative = None
+        if requested_output is not None:
+            try:
+                output_relative = _relative_path(workspace_path, requested_output)
+            except (OSError, ValueError) as error:
+                parser.error(f"output must be beneath workspace root: {error}")
+        log_fs = workspace_root
+
     try:
-        if not log.is_file():
-            parser.error(f"build log does not exist or is not a regular file: {log}")
-        log_hash = sha256_file(log)
-        log_size = log.stat().st_size
-    except OSError as error:
-        parser.error(f"cannot read build log {log}: {error}")
+        log_info = None
+        log_fd = log_fs.open_file(log_relative, os.O_RDONLY | getattr(os, "O_NONBLOCK", 0))
+        with os.fdopen(log_fd, "rb") as stream:
+            before = os.fstat(stream.fileno())
+            log_info = before
+            digest = hashlib.sha256()
+            for chunk in iter(lambda: stream.read(1024 * 1024), b""):
+                digest.update(chunk)
+            after = os.fstat(stream.fileno())
+            if (before.st_dev, before.st_ino, before.st_size, before.st_mtime_ns, before.st_ctime_ns) != (
+                after.st_dev, after.st_ino, after.st_size, after.st_mtime_ns, after.st_ctime_ns
+            ):
+                parser.error("build log changed while hashing")
+            log_hash, log_size = digest.hexdigest(), after.st_size
+    except (OSError, CandidateFSError) as error:
+        parser.error(f"cannot read build log beneath pinned root: {error}")
 
     captured_at = datetime.now(timezone.utc).isoformat()
     exit_status = args.exit_status
-    if exit_status is None:
-        build_status = "unverified"
-    else:
-        build_status = "observed_success" if exit_status == 0 else "observed_failure"
-
-    binary_path = args.binary if args.binary is None or args.binary.is_absolute() else root / args.binary
+    build_status = "unverified" if exit_status is None else ("observed_success" if exit_status == 0 else "observed_failure")
+    binary_record = file_record(candidate_root if inherited else workspace_root, binary_relative) if binary_relative else None
     document = {
         "schema_version": 1,
         "recorded_at_utc": captured_at,
-        "purpose": "build provenance capture; not a build, correctness, reuse, or performance verdict",
-        "build_log": {
-            "path": str(log),
-            "sha256": log_hash,
-            "size_bytes": log_size,
-            "parsed_for_success": False,
-        },
-        "selected_binary": file_record(root, binary_path) if binary_path else None,
-        "compiler_identity": compiler_identity() if binary_path else None,
+        "purpose": "build provenance capture; not build, correctness, reuse, or performance verdict",
+        "build_log": {"path": str(args.log), "sha256": log_hash, "size_bytes": log_size, "parsed_for_success": False},
+        "selected_binary": binary_record,
+        "compiler_identity": compiler_identity() if binary_relative else None,
         "build_facts_declared_by_caller": {
             "command": args.command,
             "profile": args.profile,
             "features": args.features,
             "exit_status": exit_status,
             "status": build_status,
-            "toolchain_strings": {
-                "cargo": args.cargo_version,
-                "rustc": args.rustc_version,
-            },
-            "note": "Caller supplied metadata only; no historical toolchain or command flags are inferred.",
+            "toolchain_strings": {"cargo": args.cargo_version, "rustc": args.rustc_version},
+            "note": "Caller supplied metadata only; no historical toolchain command flags are inferred.",
         },
         "dependency_reuse_status": "not_evaluated",
         "captured_current_workspace": {
-            "workspace_root": str(root),
-            "git_commit": git_commit(root),
-            "platform": {
-                "sys_platform": sys.platform,
-                "system": platform.system(),
-                "release": platform.release(),
-                "machine": platform.machine(),
-            },
-            "selected_environment": {
-                key: os.environ[key] for key in SAFE_BUILD_ENV if key in os.environ
-            },
-            "input_file_hashes": [file_record(root, path) for path in INPUT_FILES],
-            "workspace_crate_app_file_hashes": source_records(root),
+            "workspace_root": workspace_label,
+            "git_commit": git_commit(workspace_root),
+            "platform": {"sys_platform": sys.platform, "system": platform.system(), "release": platform.release(), "machine": platform.machine()},
+            "selected_environment": {key: os.environ[key] for key in SAFE_BUILD_ENV if key in os.environ},
+            "input_file_hashes": [file_record(workspace_root, name) for name in INPUT_FILES],
+            "workspace_crate_app_file_hashes": source_records(workspace_root),
         },
-        "time_scope_note": (
-            "File hashes, platform, Git commit, and selected environment are captured now. "
-            "They are not asserted to match the conditions when the supplied log was produced."
-        ),
     }
-    document["captured_current_workspace"]["source_snapshot_sha256"] = snapshot_digest(
-        document["captured_current_workspace"]
-    )
+    captured = document["captured_current_workspace"]
+    captured["source_snapshot_sha256"] = snapshot_digest(captured)
 
-    destination = output_path(root, args.output)
-    if destination.resolve() == log:
-        parser.error("output path must not replace the supplied build log")
+    # The output must not replace a file whose bytes this record claims to
+    # capture. This also covers currently missing declared inputs, which would
+    # otherwise be created after their "missing" status was recorded.
+    workspace_prefix = f"{workspace_relative}/" if inherited else ""
+    captured_paths = {
+        workspace_prefix + entry["path"]
+        for entry in (*captured["input_file_hashes"],
+                      *captured["workspace_crate_app_file_hashes"])
+        if isinstance(entry, dict) and isinstance(entry.get("path"), str)
+    }
+    if binary_relative is not None:
+        captured_paths.add(binary_relative)
+    captured_paths.add(log_relative)
+
+    if output_relative is not None and output_relative in captured_paths:
+        parser.error("output path must not replace a file captured by build provenance")
+    if output_relative is None:
+        output_dir = "target/headstart/evidence"
+        try:
+            evidence_dir = PinnedDir.create_child(candidate_root, output_dir)
+            evidence_dir.close()
+        except CandidateFSError as error:
+            parser.error(f"cannot create evidence output directory: {error}")
+        stamp = datetime.now(timezone.utc).strftime("%Y%m%dT%H%M%S.%fZ")
+        output_relative = f"{output_dir}/build-provenance-{stamp}-{os.getpid()}.json"
+        output_display = str(Path(workspace_label) / output_relative)
+    else:
+        parent = Path(output_relative).parent.as_posix()
+        if parent != ".":
+            try:
+                created = PinnedDir.create_child(candidate_root, parent)
+                created.close()
+            except CandidateFSError as error:
+                parser.error(f"cannot create output parent: {error}")
+        output_display = str(args.output)
+    if output_relative in captured_paths:
+        parser.error("output path must not replace a file captured by build provenance")
     try:
-        destination.parent.mkdir(parents=True, exist_ok=True)
-        mode = "w" if args.force and args.output is not None else "x"
-        with destination.open(mode, encoding="utf-8") as stream:
-            json.dump(document, stream, indent=2, sort_keys=True)
-            stream.write("\n")
+        if args.force:
+            try:
+                existing_fd = candidate_root.open_file(
+                    output_relative, os.O_RDONLY | getattr(os, "O_NONBLOCK", 0)
+                )
+            except (FileNotFoundError, CandidateFSError) as error:
+                cause = error
+                while getattr(cause, "__cause__", None) is not None:
+                    cause = cause.__cause__
+                if not isinstance(cause, FileNotFoundError):
+                    raise
+            else:
+                try:
+                    existing_info = os.fstat(existing_fd)
+                finally:
+                    os.close(existing_fd)
+                if log_info is not None and (existing_info.st_dev, existing_info.st_ino) == (
+                    log_info.st_dev, log_info.st_ino
+                ):
+                    parser.error("output path must not replace the supplied build log (hard-link alias)")
+        candidate_root.atomic_write(
+            output_relative, (json.dumps(document, indent=2) + "\n").encode("utf-8"),
+            replace=args.force,
+        )
     except FileExistsError:
-        parser.error(f"output already exists; choose another --output path: {destination}")
-    except OSError as error:
-        parser.error(f"cannot write output {destination}: {error}")
-
-    print(destination)
+        parser.error(f"output already exists: {output_display} (pass --force to replace)")
+    except (OSError, CandidateFSError) as error:
+        parser.error(f"cannot write provenance output beneath pinned candidate root: {error}")
+    print(output_display)
+    if workspace_root is not repo_root:
+        workspace_root.close()
+    candidate_root.close()
+    repo_root.close()
     return 0
 
 

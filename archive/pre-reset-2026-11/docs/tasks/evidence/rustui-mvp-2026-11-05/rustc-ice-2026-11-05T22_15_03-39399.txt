@@ -1,0 +1,656 @@
+thread 'rustc' panicked at compiler/rustc_middle/src/verify_ich.rs:82:9:
+Found unstable fingerprints for def_span(objc2_foundation[612e]::generated::__NSString::NSString): /Users/Abium/.codex/worktrees/rustui-production-consolidation/rustui/vendor/objc2-0.5.3/src/runtime/method_implementation.rs:30:23: 35:77 (#6583)
+stack backtrace:
+   0:        0x1115f2464 - std[c3366c75e850e32e]::backtrace_rs::backtrace::libunwind::trace
+                               at /rustc/cbae9b4cae2b108f6a3d18cfe6075714bb739463/library/std/src/../../backtrace/src/backtrace/libunwind.rs:117:9
+   1:        0x1115f2464 - std[c3366c75e850e32e]::backtrace_rs::backtrace::trace_unsynchronized::<<std[c3366c75e850e32e]::backtrace::Backtrace>::create::{closure#0}>
+                               at /rustc/cbae9b4cae2b108f6a3d18cfe6075714bb739463/library/std/src/../../backtrace/src/backtrace/mod.rs:66:14
+   2:        0x1115f2464 - <std[c3366c75e850e32e]::backtrace::Backtrace>::create
+                               at /rustc/cbae9b4cae2b108f6a3d18cfe6075714bb739463/library/std/src/backtrace.rs:331:13
+   3:        0x10e638024 - {closure#1}
+                               at /Users/Abium/.local/opt/headstart/rustc/compiler/rustc_driver_impl/src/lib.rs:1515:25
+   4:        0x10e638024 - call<(&(dyn core::ops::function::Fn<(&std::panic::PanicHookInfo), Output=()> + core::marker::Send + core::marker::Sync), &std::panic::PanicHookInfo), rustc_driver_impl::install_ice_hook::{closure_env#1}, alloc::alloc::Global>
+                               at /rustc/cbae9b4cae2b108f6a3d18cfe6075714bb739463/library/alloc/src/boxed.rs:2334:9
+   5:        0x111606ce4 - <alloc[94c0ccea778458a6]::boxed::Box<dyn for<'a, 'b> core[4b17869599bacaad]::ops::function::Fn<(&'a std[c3366c75e850e32e]::panic::PanicHookInfo<'b>,), Output = ()> + core[4b17869599bacaad]::marker::Sync + core[4b17869599bacaad]::marker::Send> as core[4b17869599bacaad]::ops::function::Fn<(&std[c3366c75e850e32e]::panic::PanicHookInfo,)>>::call
+                               at /rustc/cbae9b4cae2b108f6a3d18cfe6075714bb739463/library/alloc/src/boxed.rs:2334:9
+   6:        0x111606ce4 - std[c3366c75e850e32e]::panicking::panic_with_hook
+                               at /rustc/cbae9b4cae2b108f6a3d18cfe6075714bb739463/library/std/src/panicking.rs:823:13
+   7:        0x1115e7944 - std[c3366c75e850e32e]::panicking::panic_handler::{closure#0}
+                               at /rustc/cbae9b4cae2b108f6a3d18cfe6075714bb739463/library/std/src/panicking.rs:688:13
+   8:        0x1115dfe30 - std[c3366c75e850e32e]::sys::backtrace::__rust_end_short_backtrace::<std[c3366c75e850e32e]::panicking::panic_handler::{closure#0}, !>
+                               at /rustc/cbae9b4cae2b108f6a3d18cfe6075714bb739463/library/std/src/sys/backtrace.rs:182:18
+   9:        0x1115e8c90 - __rustc[84be79524b836da9]::rust_begin_unwind
+                               at /rustc/cbae9b4cae2b108f6a3d18cfe6075714bb739463/library/std/src/panicking.rs:679:5
+  10:        0x1117f89b8 - core[4b17869599bacaad]::panicking::panic_fmt
+                               at /rustc/cbae9b4cae2b108f6a3d18cfe6075714bb739463/library/core/src/panicking.rs:80:14
+  11:        0x1117bd800 - incremental_verify_ich_failed
+                               at /Users/Abium/.local/opt/headstart/rustc/compiler/rustc_middle/src/verify_ich.rs:82:9
+  12:        0x11007cc10 - incremental_verify_ich<rustc_middle::query::erase::ErasedData<[u8; 8]>>
+                               at /Users/Abium/.local/opt/headstart/rustc/compiler/rustc_middle/src/verify_ich.rs:33:9
+  13:        0x110056b34 - load_from_disk_or_invoke_provider_green<rustc_middle::query::caches::DefIdCache<rustc_middle::query::erase::ErasedData<[u8; 8]>>>
+                               at /Users/Abium/.local/opt/headstart/rustc/compiler/rustc_query_impl/src/execution.rs:575:9
+  14:        0x110056b34 - {closure#0}<rustc_middle::query::caches::DefIdCache<rustc_middle::query::erase::ErasedData<[u8; 8]>>>
+                               at /Users/Abium/.local/opt/headstart/rustc/compiler/rustc_query_impl/src/execution.rs:485:25
+  15:        0x110056b34 - {closure#0}<rustc_query_impl::execution::execute_job_incr::{closure_env#0}<rustc_middle::query::caches::DefIdCache<rustc_middle::query::erase::ErasedData<[u8; 8]>>>, core::option::Option<(rustc_middle::query::erase::ErasedData<[u8; 8]>, rustc_middle::dep_graph::graph::DepNodeIndex)>>
+                               at /Users/Abium/.local/opt/headstart/rustc/compiler/rustc_middle/src/ty/context/tls.rs:56:9
+  16:        0x110056b34 - try_with<core::cell::Cell<*const ()>, rustc_middle::ty::context::tls::enter_context::{closure_env#0}<rustc_query_impl::execution::execute_job_incr::{closure_env#0}<rustc_middle::query::caches::DefIdCache<rustc_middle::query::erase::ErasedData<[u8; 8]>>>, core::option::Option<(rustc_middle::query::erase::ErasedData<[u8; 8]>, rustc_middle::dep_graph::graph::DepNodeIndex)>>, core::option::Option<(rustc_middle::query::erase::ErasedData<[u8; 8]>, rustc_middle::dep_graph::graph::DepNodeIndex)>>
+                               at /rustc/cbae9b4cae2b108f6a3d18cfe6075714bb739463/library/std/src/thread/local.rs:464:12
+  17:        0x110056b34 - with<core::cell::Cell<*const ()>, rustc_middle::ty::context::tls::enter_context::{closure_env#0}<rustc_query_impl::execution::execute_job_incr::{closure_env#0}<rustc_middle::query::caches::DefIdCache<rustc_middle::query::erase::ErasedData<[u8; 8]>>>, core::option::Option<(rustc_middle::query::erase::ErasedData<[u8; 8]>, rustc_middle::dep_graph::graph::DepNodeIndex)>>, core::option::Option<(rustc_middle::query::erase::ErasedData<[u8; 8]>, rustc_middle::dep_graph::graph::DepNodeIndex)>>
+                               at /rustc/cbae9b4cae2b108f6a3d18cfe6075714bb739463/library/std/src/thread/local.rs:428:20
+  18:        0x10ffa55a8 - enter_context<rustc_query_impl::execution::execute_job_incr::{closure_env#0}<rustc_middle::query::caches::DefIdCache<rustc_middle::query::erase::ErasedData<[u8; 8]>>>, core::option::Option<(rustc_middle::query::erase::ErasedData<[u8; 8]>, rustc_middle::dep_graph::graph::DepNodeIndex)>>
+                               at /Users/Abium/.local/opt/headstart/rustc/compiler/rustc_middle/src/ty/context/tls.rs:53:9
+  19:        0x10ffa55a8 - {closure#0}<core::option::Option<(rustc_middle::query::erase::ErasedData<[u8; 8]>, rustc_middle::dep_graph::graph::DepNodeIndex)>, rustc_query_impl::execution::execute_job_incr::{closure_env#0}<rustc_middle::query::caches::DefIdCache<rustc_middle::query::erase::ErasedData<[u8; 8]>>>>
+                               at /Users/Abium/.local/opt/headstart/rustc/compiler/rustc_query_impl/src/execution.rs:436:9
+  20:        0x10ffa55a8 - {closure#0}<rustc_query_impl::execution::start_query::{closure_env#0}<core::option::Option<(rustc_middle::query::erase::ErasedData<[u8; 8]>, rustc_middle::dep_graph::graph::DepNodeIndex)>, rustc_query_impl::execution::execute_job_incr::{closure_env#0}<rustc_middle::query::caches::DefIdCache<rustc_middle::query::erase::ErasedData<[u8; 8]>>>>, core::option::Option<(rustc_middle::query::erase::ErasedData<[u8; 8]>, rustc_middle::dep_graph::graph::DepNodeIndex)>>
+                               at /Users/Abium/.local/opt/headstart/rustc/compiler/rustc_middle/src/ty/context/tls.rs:86:36
+  21:        0x10ffa55a8 - with_context_opt<rustc_middle::ty::context::tls::with_context::{closure_env#0}<rustc_query_impl::execution::start_query::{closure_env#0}<core::option::Option<(rustc_middle::query::erase::ErasedData<[u8; 8]>, rustc_middle::dep_graph::graph::DepNodeIndex)>, rustc_query_impl::execution::execute_job_incr::{closure_env#0}<rustc_middle::query::caches::DefIdCache<rustc_middle::query::erase::ErasedData<[u8; 8]>>>>, core::option::Option<(rustc_middle::query::erase::ErasedData<[u8; 8]>, rustc_middle::dep_graph::graph::DepNodeIndex)>>, core::option::Option<(rustc_middle::query::erase::ErasedData<[u8; 8]>, rustc_middle::dep_graph::graph::DepNodeIndex)>>
+                               at /Users/Abium/.local/opt/headstart/rustc/compiler/rustc_middle/src/ty/context/tls.rs:75:18
+  22:        0x10ffa55a8 - with_context<rustc_query_impl::execution::start_query::{closure_env#0}<core::option::Option<(rustc_middle::query::erase::ErasedData<[u8; 8]>, rustc_middle::dep_graph::graph::DepNodeIndex)>, rustc_query_impl::execution::execute_job_incr::{closure_env#0}<rustc_middle::query::caches::DefIdCache<rustc_middle::query::erase::ErasedData<[u8; 8]>>>>, core::option::Option<(rustc_middle::query::erase::ErasedData<[u8; 8]>, rustc_middle::dep_graph::graph::DepNodeIndex)>>
+                               at /Users/Abium/.local/opt/headstart/rustc/compiler/rustc_middle/src/ty/context/tls.rs:86:5
+  23:        0x10ffa55a8 - start_query<core::option::Option<(rustc_middle::query::erase::ErasedData<[u8; 8]>, rustc_middle::dep_graph::graph::DepNodeIndex)>, rustc_query_impl::execution::execute_job_incr::{closure_env#0}<rustc_middle::query::caches::DefIdCache<rustc_middle::query::erase::ErasedData<[u8; 8]>>>>
+                               at /Users/Abium/.local/opt/headstart/rustc/compiler/rustc_query_impl/src/execution.rs:423:5
+  24:        0x10ffa55a8 - execute_job_incr<rustc_middle::query::caches::DefIdCache<rustc_middle::query::erase::ErasedData<[u8; 8]>>>
+                               at /Users/Abium/.local/opt/headstart/rustc/compiler/rustc_query_impl/src/execution.rs:483:28
+  25:        0x10ffa55a8 - try_execute_query<rustc_middle::query::caches::DefIdCache<rustc_middle::query::erase::ErasedData<[u8; 8]>>, true>
+                               at /Users/Abium/.local/opt/headstart/rustc/compiler/rustc_query_impl/src/execution.rs:321:17
+  26:        0x1102088fc - execute_query_incr_inner<rustc_middle::query::caches::DefIdCache<rustc_middle::query::erase::ErasedData<[u8; 8]>>>
+                               at /Users/Abium/.local/opt/headstart/rustc/compiler/rustc_query_impl/src/execution.rs:660:9
+  27:        0x1102088fc - __rust_end_short_backtrace
+                               at /Users/Abium/.local/opt/headstart/rustc/compiler/rustc_query_impl/src/query_vtables.rs:73:25
+  28:        0x10eac8da0 - query_get_at<rustc_middle::query::caches::DefIdCache<rustc_middle::query::erase::ErasedData<[u8; 8]>>>
+                               at /Users/Abium/.local/opt/headstart/rustc/compiler/rustc_middle/src/query/calls.rs:154:17
+  29:        0x10eac8da0 - def_span<rustc_span::def_id::DefId>
+                               at /Users/Abium/.local/opt/headstart/rustc/compiler/rustc_middle/src/query/query_api.rs:289:61
+  30:        0x10eac8da0 - def_span<rustc_span::def_id::DefId>
+                               at /Users/Abium/.local/opt/headstart/rustc/compiler/rustc_middle/src/query/query_api.rs:279:39
+  31:        0x10eac8da0 - param_env
+                               at /Users/Abium/.local/opt/headstart/rustc/compiler/rustc_ty_utils/src/ty.rs:201:51
+  32:        0x11025bab0 - __rust_begin_short_backtrace
+                               at /Users/Abium/.local/opt/headstart/rustc/compiler/rustc_query_impl/src/query_vtables.rs:130:46
+  33:        0x110072c68 - {closure#0}<rustc_middle::query::caches::DefIdCache<rustc_middle::query::erase::ErasedData<[u8; 8]>>>
+                               at /Users/Abium/.local/opt/headstart/rustc/compiler/rustc_query_impl/src/execution.rs:558:54
+  34:        0x110072c68 - {closure#0}<rustc_query_impl::execution::load_from_disk_or_invoke_provider_green::{closure_env#0}<rustc_middle::query::caches::DefIdCache<rustc_middle::query::erase::ErasedData<[u8; 8]>>>, rustc_middle::query::erase::ErasedData<[u8; 8]>>
+                               at /Users/Abium/.local/opt/headstart/rustc/compiler/rustc_middle/src/ty/context/tls.rs:56:9
+  35:        0x110072c68 - try_with<core::cell::Cell<*const ()>, rustc_middle::ty::context::tls::enter_context::{closure_env#0}<rustc_query_impl::execution::load_from_disk_or_invoke_provider_green::{closure_env#0}<rustc_middle::query::caches::DefIdCache<rustc_middle::query::erase::ErasedData<[u8; 8]>>>, rustc_middle::query::erase::ErasedData<[u8; 8]>>, rustc_middle::query::erase::ErasedData<[u8; 8]>>
+                               at /rustc/cbae9b4cae2b108f6a3d18cfe6075714bb739463/library/std/src/thread/local.rs:464:12
+  36:        0x110072c68 - with<core::cell::Cell<*const ()>, rustc_middle::ty::context::tls::enter_context::{closure_env#0}<rustc_query_impl::execution::load_from_disk_or_invoke_provider_green::{closure_env#0}<rustc_middle::query::caches::DefIdCache<rustc_middle::query::erase::ErasedData<[u8; 8]>>>, rustc_middle::query::erase::ErasedData<[u8; 8]>>, rustc_middle::query::erase::ErasedData<[u8; 8]>>
+                               at /rustc/cbae9b4cae2b108f6a3d18cfe6075714bb739463/library/std/src/thread/local.rs:428:20
+  37:        0x1101aaec0 - enter_context<rustc_query_impl::execution::load_from_disk_or_invoke_provider_green::{closure_env#0}<rustc_middle::query::caches::DefIdCache<rustc_middle::query::erase::ErasedData<[u8; 8]>>>, rustc_middle::query::erase::ErasedData<[u8; 8]>>
+                               at /Users/Abium/.local/opt/headstart/rustc/compiler/rustc_middle/src/ty/context/tls.rs:53:9
+  38:        0x1101aaec0 - {closure#0}<rustc_query_impl::execution::load_from_disk_or_invoke_provider_green::{closure_env#0}<rustc_middle::query::caches::DefIdCache<rustc_middle::query::erase::ErasedData<[u8; 8]>>>, rustc_middle::query::erase::ErasedData<[u8; 8]>>
+                               at /Users/Abium/.local/opt/headstart/rustc/compiler/rustc_middle/src/dep_graph/mod.rs:65:9
+  39:        0x1101aaec0 - {closure#0}<rustc_middle::dep_graph::with_deps::{closure_env#0}<rustc_query_impl::execution::load_from_disk_or_invoke_provider_green::{closure_env#0}<rustc_middle::query::caches::DefIdCache<rustc_middle::query::erase::ErasedData<[u8; 8]>>>, rustc_middle::query::erase::ErasedData<[u8; 8]>>, rustc_middle::query::erase::ErasedData<[u8; 8]>>
+                               at /Users/Abium/.local/opt/headstart/rustc/compiler/rustc_middle/src/ty/context/tls.rs:86:36
+  40:        0x1101aaec0 - with_context_opt<rustc_middle::ty::context::tls::with_context::{closure_env#0}<rustc_middle::dep_graph::with_deps::{closure_env#0}<rustc_query_impl::execution::load_from_disk_or_invoke_provider_green::{closure_env#0}<rustc_middle::query::caches::DefIdCache<rustc_middle::query::erase::ErasedData<[u8; 8]>>>, rustc_middle::query::erase::ErasedData<[u8; 8]>>, rustc_middle::query::erase::ErasedData<[u8; 8]>>, rustc_middle::query::erase::ErasedData<[u8; 8]>>
+                               at /Users/Abium/.local/opt/headstart/rustc/compiler/rustc_middle/src/ty/context/tls.rs:75:18
+  41:        0x1101aaec0 - with_context<rustc_middle::dep_graph::with_deps::{closure_env#0}<rustc_query_impl::execution::load_from_disk_or_invoke_provider_green::{closure_env#0}<rustc_middle::query::caches::DefIdCache<rustc_middle::query::erase::ErasedData<[u8; 8]>>>, rustc_middle::query::erase::ErasedData<[u8; 8]>>, rustc_middle::query::erase::ErasedData<[u8; 8]>>
+                               at /Users/Abium/.local/opt/headstart/rustc/compiler/rustc_middle/src/ty/context/tls.rs:86:5
+  42:        0x1101aaec0 - with_deps<rustc_query_impl::execution::load_from_disk_or_invoke_provider_green::{closure_env#0}<rustc_middle::query::caches::DefIdCache<rustc_middle::query::erase::ErasedData<[u8; 8]>>>, rustc_middle::query::erase::ErasedData<[u8; 8]>>
+                               at /Users/Abium/.local/opt/headstart/rustc/compiler/rustc_middle/src/dep_graph/mod.rs:63:5
+  43:        0x110056b00 - load_from_disk_or_invoke_provider_green<rustc_middle::query::caches::DefIdCache<rustc_middle::query::erase::ErasedData<[u8; 8]>>>
+                               at /Users/Abium/.local/opt/headstart/rustc/compiler/rustc_query_impl/src/execution.rs:558:39
+  44:        0x110056b00 - {closure#0}<rustc_middle::query::caches::DefIdCache<rustc_middle::query::erase::ErasedData<[u8; 8]>>>
+                               at /Users/Abium/.local/opt/headstart/rustc/compiler/rustc_query_impl/src/execution.rs:485:25
+  45:        0x110056b00 - {closure#0}<rustc_query_impl::execution::execute_job_incr::{closure_env#0}<rustc_middle::query::caches::DefIdCache<rustc_middle::query::erase::ErasedData<[u8; 8]>>>, core::option::Option<(rustc_middle::query::erase::ErasedData<[u8; 8]>, rustc_middle::dep_graph::graph::DepNodeIndex)>>
+                               at /Users/Abium/.local/opt/headstart/rustc/compiler/rustc_middle/src/ty/context/tls.rs:56:9
+  46:        0x110056b00 - try_with<core::cell::Cell<*const ()>, rustc_middle::ty::context::tls::enter_context::{closure_env#0}<rustc_query_impl::execution::execute_job_incr::{closure_env#0}<rustc_middle::query::caches::DefIdCache<rustc_middle::query::erase::ErasedData<[u8; 8]>>>, core::option::Option<(rustc_middle::query::erase::ErasedData<[u8; 8]>, rustc_middle::dep_graph::graph::DepNodeIndex)>>, core::option::Option<(rustc_middle::query::erase::ErasedData<[u8; 8]>, rustc_middle::dep_graph::graph::DepNodeIndex)>>
+                               at /rustc/cbae9b4cae2b108f6a3d18cfe6075714bb739463/library/std/src/thread/local.rs:464:12
+  47:        0x110056b00 - with<core::cell::Cell<*const ()>, rustc_middle::ty::context::tls::enter_context::{closure_env#0}<rustc_query_impl::execution::execute_job_incr::{closure_env#0}<rustc_middle::query::caches::DefIdCache<rustc_middle::query::erase::ErasedData<[u8; 8]>>>, core::option::Option<(rustc_middle::query::erase::ErasedData<[u8; 8]>, rustc_middle::dep_graph::graph::DepNodeIndex)>>, core::option::Option<(rustc_middle::query::erase::ErasedData<[u8; 8]>, rustc_middle::dep_graph::graph::DepNodeIndex)>>
+                               at /rustc/cbae9b4cae2b108f6a3d18cfe6075714bb739463/library/std/src/thread/local.rs:428:20
+  48:        0x10ffa55a8 - enter_context<rustc_query_impl::execution::execute_job_incr::{closure_env#0}<rustc_middle::query::caches::DefIdCache<rustc_middle::query::erase::ErasedData<[u8; 8]>>>, core::option::Option<(rustc_middle::query::erase::ErasedData<[u8; 8]>, rustc_middle::dep_graph::graph::DepNodeIndex)>>
+                               at /Users/Abium/.local/opt/headstart/rustc/compiler/rustc_middle/src/ty/context/tls.rs:53:9
+  49:        0x10ffa55a8 - {closure#0}<core::option::Option<(rustc_middle::query::erase::ErasedData<[u8; 8]>, rustc_middle::dep_graph::graph::DepNodeIndex)>, rustc_query_impl::execution::execute_job_incr::{closure_env#0}<rustc_middle::query::caches::DefIdCache<rustc_middle::query::erase::ErasedData<[u8; 8]>>>>
+                               at /Users/Abium/.local/opt/headstart/rustc/compiler/rustc_query_impl/src/execution.rs:436:9
+  50:        0x10ffa55a8 - {closure#0}<rustc_query_impl::execution::start_query::{closure_env#0}<core::option::Option<(rustc_middle::query::erase::ErasedData<[u8; 8]>, rustc_middle::dep_graph::graph::DepNodeIndex)>, rustc_query_impl::execution::execute_job_incr::{closure_env#0}<rustc_middle::query::caches::DefIdCache<rustc_middle::query::erase::ErasedData<[u8; 8]>>>>, core::option::Option<(rustc_middle::query::erase::ErasedData<[u8; 8]>, rustc_middle::dep_graph::graph::DepNodeIndex)>>
+                               at /Users/Abium/.local/opt/headstart/rustc/compiler/rustc_middle/src/ty/context/tls.rs:86:36
+  51:        0x10ffa55a8 - with_context_opt<rustc_middle::ty::context::tls::with_context::{closure_env#0}<rustc_query_impl::execution::start_query::{closure_env#0}<core::option::Option<(rustc_middle::query::erase::ErasedData<[u8; 8]>, rustc_middle::dep_graph::graph::DepNodeIndex)>, rustc_query_impl::execution::execute_job_incr::{closure_env#0}<rustc_middle::query::caches::DefIdCache<rustc_middle::query::erase::ErasedData<[u8; 8]>>>>, core::option::Option<(rustc_middle::query::erase::ErasedData<[u8; 8]>, rustc_middle::dep_graph::graph::DepNodeIndex)>>, core::option::Option<(rustc_middle::query::erase::ErasedData<[u8; 8]>, rustc_middle::dep_graph::graph::DepNodeIndex)>>
+                               at /Users/Abium/.local/opt/headstart/rustc/compiler/rustc_middle/src/ty/context/tls.rs:75:18
+  52:        0x10ffa55a8 - with_context<rustc_query_impl::execution::start_query::{closure_env#0}<core::option::Option<(rustc_middle::query::erase::ErasedData<[u8; 8]>, rustc_middle::dep_graph::graph::DepNodeIndex)>, rustc_query_impl::execution::execute_job_incr::{closure_env#0}<rustc_middle::query::caches::DefIdCache<rustc_middle::query::erase::ErasedData<[u8; 8]>>>>, core::option::Option<(rustc_middle::query::erase::ErasedData<[u8; 8]>, rustc_middle::dep_graph::graph::DepNodeIndex)>>
+                               at /Users/Abium/.local/opt/headstart/rustc/compiler/rustc_middle/src/ty/context/tls.rs:86:5
+  53:        0x10ffa55a8 - start_query<core::option::Option<(rustc_middle::query::erase::ErasedData<[u8; 8]>, rustc_middle::dep_graph::graph::DepNodeIndex)>, rustc_query_impl::execution::execute_job_incr::{closure_env#0}<rustc_middle::query::caches::DefIdCache<rustc_middle::query::erase::ErasedData<[u8; 8]>>>>
+                               at /Users/Abium/.local/opt/headstart/rustc/compiler/rustc_query_impl/src/execution.rs:423:5
+  54:        0x10ffa55a8 - execute_job_incr<rustc_middle::query::caches::DefIdCache<rustc_middle::query::erase::ErasedData<[u8; 8]>>>
+                               at /Users/Abium/.local/opt/headstart/rustc/compiler/rustc_query_impl/src/execution.rs:483:28
+  55:        0x10ffa55a8 - try_execute_query<rustc_middle::query::caches::DefIdCache<rustc_middle::query::erase::ErasedData<[u8; 8]>>, true>
+                               at /Users/Abium/.local/opt/headstart/rustc/compiler/rustc_query_impl/src/execution.rs:321:17
+  56:        0x1101e0450 - execute_query_incr_inner<rustc_middle::query::caches::DefIdCache<rustc_middle::query::erase::ErasedData<[u8; 8]>>>
+                               at /Users/Abium/.local/opt/headstart/rustc/compiler/rustc_query_impl/src/execution.rs:660:9
+  57:        0x1101e0450 - __rust_end_short_backtrace
+                               at /Users/Abium/.local/opt/headstart/rustc/compiler/rustc_query_impl/src/query_vtables.rs:73:25
+  58:        0x10eac80b4 - query_get_at<rustc_middle::query::caches::DefIdCache<rustc_middle::query::erase::ErasedData<[u8; 8]>>>
+                               at /Users/Abium/.local/opt/headstart/rustc/compiler/rustc_middle/src/query/calls.rs:154:17
+  59:        0x10eac80b4 - param_env<rustc_span::def_id::DefId>
+                               at /Users/Abium/.local/opt/headstart/rustc/compiler/rustc_middle/src/query/query_api.rs:289:61
+  60:        0x10eac80b4 - param_env<rustc_span::def_id::DefId>
+                               at /Users/Abium/.local/opt/headstart/rustc/compiler/rustc_middle/src/query/query_api.rs:279:39
+  61:        0x10eac80b4 - param_env_normalized_for_post_analysis
+                               at /Users/Abium/.local/opt/headstart/rustc/compiler/rustc_ty_utils/src/ty.rs:292:9
+  62:        0x110290a40 - __rust_begin_short_backtrace
+                               at /Users/Abium/.local/opt/headstart/rustc/compiler/rustc_query_impl/src/query_vtables.rs:130:46
+  63:        0x110072c68 - {closure#0}<rustc_middle::query::caches::DefIdCache<rustc_middle::query::erase::ErasedData<[u8; 8]>>>
+                               at /Users/Abium/.local/opt/headstart/rustc/compiler/rustc_query_impl/src/execution.rs:558:54
+  64:        0x110072c68 - {closure#0}<rustc_query_impl::execution::load_from_disk_or_invoke_provider_green::{closure_env#0}<rustc_middle::query::caches::DefIdCache<rustc_middle::query::erase::ErasedData<[u8; 8]>>>, rustc_middle::query::erase::ErasedData<[u8; 8]>>
+                               at /Users/Abium/.local/opt/headstart/rustc/compiler/rustc_middle/src/ty/context/tls.rs:56:9
+  65:        0x110072c68 - try_with<core::cell::Cell<*const ()>, rustc_middle::ty::context::tls::enter_context::{closure_env#0}<rustc_query_impl::execution::load_from_disk_or_invoke_provider_green::{closure_env#0}<rustc_middle::query::caches::DefIdCache<rustc_middle::query::erase::ErasedData<[u8; 8]>>>, rustc_middle::query::erase::ErasedData<[u8; 8]>>, rustc_middle::query::erase::ErasedData<[u8; 8]>>
+                               at /rustc/cbae9b4cae2b108f6a3d18cfe6075714bb739463/library/std/src/thread/local.rs:464:12
+  66:        0x110072c68 - with<core::cell::Cell<*const ()>, rustc_middle::ty::context::tls::enter_context::{closure_env#0}<rustc_query_impl::execution::load_from_disk_or_invoke_provider_green::{closure_env#0}<rustc_middle::query::caches::DefIdCache<rustc_middle::query::erase::ErasedData<[u8; 8]>>>, rustc_middle::query::erase::ErasedData<[u8; 8]>>, rustc_middle::query::erase::ErasedData<[u8; 8]>>
+                               at /rustc/cbae9b4cae2b108f6a3d18cfe6075714bb739463/library/std/src/thread/local.rs:428:20
+  67:        0x1101aaec0 - enter_context<rustc_query_impl::execution::load_from_disk_or_invoke_provider_green::{closure_env#0}<rustc_middle::query::caches::DefIdCache<rustc_middle::query::erase::ErasedData<[u8; 8]>>>, rustc_middle::query::erase::ErasedData<[u8; 8]>>
+                               at /Users/Abium/.local/opt/headstart/rustc/compiler/rustc_middle/src/ty/context/tls.rs:53:9
+  68:        0x1101aaec0 - {closure#0}<rustc_query_impl::execution::load_from_disk_or_invoke_provider_green::{closure_env#0}<rustc_middle::query::caches::DefIdCache<rustc_middle::query::erase::ErasedData<[u8; 8]>>>, rustc_middle::query::erase::ErasedData<[u8; 8]>>
+                               at /Users/Abium/.local/opt/headstart/rustc/compiler/rustc_middle/src/dep_graph/mod.rs:65:9
+  69:        0x1101aaec0 - {closure#0}<rustc_middle::dep_graph::with_deps::{closure_env#0}<rustc_query_impl::execution::load_from_disk_or_invoke_provider_green::{closure_env#0}<rustc_middle::query::caches::DefIdCache<rustc_middle::query::erase::ErasedData<[u8; 8]>>>, rustc_middle::query::erase::ErasedData<[u8; 8]>>, rustc_middle::query::erase::ErasedData<[u8; 8]>>
+                               at /Users/Abium/.local/opt/headstart/rustc/compiler/rustc_middle/src/ty/context/tls.rs:86:36
+  70:        0x1101aaec0 - with_context_opt<rustc_middle::ty::context::tls::with_context::{closure_env#0}<rustc_middle::dep_graph::with_deps::{closure_env#0}<rustc_query_impl::execution::load_from_disk_or_invoke_provider_green::{closure_env#0}<rustc_middle::query::caches::DefIdCache<rustc_middle::query::erase::ErasedData<[u8; 8]>>>, rustc_middle::query::erase::ErasedData<[u8; 8]>>, rustc_middle::query::erase::ErasedData<[u8; 8]>>, rustc_middle::query::erase::ErasedData<[u8; 8]>>
+                               at /Users/Abium/.local/opt/headstart/rustc/compiler/rustc_middle/src/ty/context/tls.rs:75:18
+  71:        0x1101aaec0 - with_context<rustc_middle::dep_graph::with_deps::{closure_env#0}<rustc_query_impl::execution::load_from_disk_or_invoke_provider_green::{closure_env#0}<rustc_middle::query::caches::DefIdCache<rustc_middle::query::erase::ErasedData<[u8; 8]>>>, rustc_middle::query::erase::ErasedData<[u8; 8]>>, rustc_middle::query::erase::ErasedData<[u8; 8]>>
+                               at /Users/Abium/.local/opt/headstart/rustc/compiler/rustc_middle/src/ty/context/tls.rs:86:5
+  72:        0x1101aaec0 - with_deps<rustc_query_impl::execution::load_from_disk_or_invoke_provider_green::{closure_env#0}<rustc_middle::query::caches::DefIdCache<rustc_middle::query::erase::ErasedData<[u8; 8]>>>, rustc_middle::query::erase::ErasedData<[u8; 8]>>
+                               at /Users/Abium/.local/opt/headstart/rustc/compiler/rustc_middle/src/dep_graph/mod.rs:63:5
+  73:        0x110056b00 - load_from_disk_or_invoke_provider_green<rustc_middle::query::caches::DefIdCache<rustc_middle::query::erase::ErasedData<[u8; 8]>>>
+                               at /Users/Abium/.local/opt/headstart/rustc/compiler/rustc_query_impl/src/execution.rs:558:39
+  74:        0x110056b00 - {closure#0}<rustc_middle::query::caches::DefIdCache<rustc_middle::query::erase::ErasedData<[u8; 8]>>>
+                               at /Users/Abium/.local/opt/headstart/rustc/compiler/rustc_query_impl/src/execution.rs:485:25
+  75:        0x110056b00 - {closure#0}<rustc_query_impl::execution::execute_job_incr::{closure_env#0}<rustc_middle::query::caches::DefIdCache<rustc_middle::query::erase::ErasedData<[u8; 8]>>>, core::option::Option<(rustc_middle::query::erase::ErasedData<[u8; 8]>, rustc_middle::dep_graph::graph::DepNodeIndex)>>
+                               at /Users/Abium/.local/opt/headstart/rustc/compiler/rustc_middle/src/ty/context/tls.rs:56:9
+  76:        0x110056b00 - try_with<core::cell::Cell<*const ()>, rustc_middle::ty::context::tls::enter_context::{closure_env#0}<rustc_query_impl::execution::execute_job_incr::{closure_env#0}<rustc_middle::query::caches::DefIdCache<rustc_middle::query::erase::ErasedData<[u8; 8]>>>, core::option::Option<(rustc_middle::query::erase::ErasedData<[u8; 8]>, rustc_middle::dep_graph::graph::DepNodeIndex)>>, core::option::Option<(rustc_middle::query::erase::ErasedData<[u8; 8]>, rustc_middle::dep_graph::graph::DepNodeIndex)>>
+                               at /rustc/cbae9b4cae2b108f6a3d18cfe6075714bb739463/library/std/src/thread/local.rs:464:12
+  77:        0x110056b00 - with<core::cell::Cell<*const ()>, rustc_middle::ty::context::tls::enter_context::{closure_env#0}<rustc_query_impl::execution::execute_job_incr::{closure_env#0}<rustc_middle::query::caches::DefIdCache<rustc_middle::query::erase::ErasedData<[u8; 8]>>>, core::option::Option<(rustc_middle::query::erase::ErasedData<[u8; 8]>, rustc_middle::dep_graph::graph::DepNodeIndex)>>, core::option::Option<(rustc_middle::query::erase::ErasedData<[u8; 8]>, rustc_middle::dep_graph::graph::DepNodeIndex)>>
+                               at /rustc/cbae9b4cae2b108f6a3d18cfe6075714bb739463/library/std/src/thread/local.rs:428:20
+  78:        0x10ffa55a8 - enter_context<rustc_query_impl::execution::execute_job_incr::{closure_env#0}<rustc_middle::query::caches::DefIdCache<rustc_middle::query::erase::ErasedData<[u8; 8]>>>, core::option::Option<(rustc_middle::query::erase::ErasedData<[u8; 8]>, rustc_middle::dep_graph::graph::DepNodeIndex)>>
+                               at /Users/Abium/.local/opt/headstart/rustc/compiler/rustc_middle/src/ty/context/tls.rs:53:9
+  79:        0x10ffa55a8 - {closure#0}<core::option::Option<(rustc_middle::query::erase::ErasedData<[u8; 8]>, rustc_middle::dep_graph::graph::DepNodeIndex)>, rustc_query_impl::execution::execute_job_incr::{closure_env#0}<rustc_middle::query::caches::DefIdCache<rustc_middle::query::erase::ErasedData<[u8; 8]>>>>
+                               at /Users/Abium/.local/opt/headstart/rustc/compiler/rustc_query_impl/src/execution.rs:436:9
+  80:        0x10ffa55a8 - {closure#0}<rustc_query_impl::execution::start_query::{closure_env#0}<core::option::Option<(rustc_middle::query::erase::ErasedData<[u8; 8]>, rustc_middle::dep_graph::graph::DepNodeIndex)>, rustc_query_impl::execution::execute_job_incr::{closure_env#0}<rustc_middle::query::caches::DefIdCache<rustc_middle::query::erase::ErasedData<[u8; 8]>>>>, core::option::Option<(rustc_middle::query::erase::ErasedData<[u8; 8]>, rustc_middle::dep_graph::graph::DepNodeIndex)>>
+                               at /Users/Abium/.local/opt/headstart/rustc/compiler/rustc_middle/src/ty/context/tls.rs:86:36
+  81:        0x10ffa55a8 - with_context_opt<rustc_middle::ty::context::tls::with_context::{closure_env#0}<rustc_query_impl::execution::start_query::{closure_env#0}<core::option::Option<(rustc_middle::query::erase::ErasedData<[u8; 8]>, rustc_middle::dep_graph::graph::DepNodeIndex)>, rustc_query_impl::execution::execute_job_incr::{closure_env#0}<rustc_middle::query::caches::DefIdCache<rustc_middle::query::erase::ErasedData<[u8; 8]>>>>, core::option::Option<(rustc_middle::query::erase::ErasedData<[u8; 8]>, rustc_middle::dep_graph::graph::DepNodeIndex)>>, core::option::Option<(rustc_middle::query::erase::ErasedData<[u8; 8]>, rustc_middle::dep_graph::graph::DepNodeIndex)>>
+                               at /Users/Abium/.local/opt/headstart/rustc/compiler/rustc_middle/src/ty/context/tls.rs:75:18
+  82:        0x10ffa55a8 - with_context<rustc_query_impl::execution::start_query::{closure_env#0}<core::option::Option<(rustc_middle::query::erase::ErasedData<[u8; 8]>, rustc_middle::dep_graph::graph::DepNodeIndex)>, rustc_query_impl::execution::execute_job_incr::{closure_env#0}<rustc_middle::query::caches::DefIdCache<rustc_middle::query::erase::ErasedData<[u8; 8]>>>>, core::option::Option<(rustc_middle::query::erase::ErasedData<[u8; 8]>, rustc_middle::dep_graph::graph::DepNodeIndex)>>
+                               at /Users/Abium/.local/opt/headstart/rustc/compiler/rustc_middle/src/ty/context/tls.rs:86:5
+  83:        0x10ffa55a8 - start_query<core::option::Option<(rustc_middle::query::erase::ErasedData<[u8; 8]>, rustc_middle::dep_graph::graph::DepNodeIndex)>, rustc_query_impl::execution::execute_job_incr::{closure_env#0}<rustc_middle::query::caches::DefIdCache<rustc_middle::query::erase::ErasedData<[u8; 8]>>>>
+                               at /Users/Abium/.local/opt/headstart/rustc/compiler/rustc_query_impl/src/execution.rs:423:5
+  84:        0x10ffa55a8 - execute_job_incr<rustc_middle::query::caches::DefIdCache<rustc_middle::query::erase::ErasedData<[u8; 8]>>>
+                               at /Users/Abium/.local/opt/headstart/rustc/compiler/rustc_query_impl/src/execution.rs:483:28
+  85:        0x10ffa55a8 - try_execute_query<rustc_middle::query::caches::DefIdCache<rustc_middle::query::erase::ErasedData<[u8; 8]>>, true>
+                               at /Users/Abium/.local/opt/headstart/rustc/compiler/rustc_query_impl/src/execution.rs:321:17
+  86:        0x110100810 - execute_query_incr_inner<rustc_middle::query::caches::DefIdCache<rustc_middle::query::erase::ErasedData<[u8; 8]>>>
+                               at /Users/Abium/.local/opt/headstart/rustc/compiler/rustc_query_impl/src/execution.rs:660:9
+  87:        0x110100810 - __rust_end_short_backtrace
+                               at /Users/Abium/.local/opt/headstart/rustc/compiler/rustc_query_impl/src/query_vtables.rs:73:25
+  88:        0x10eae774c - query_get_at<rustc_middle::query::caches::DefIdCache<rustc_middle::query::erase::ErasedData<[u8; 8]>>>
+                               at /Users/Abium/.local/opt/headstart/rustc/compiler/rustc_middle/src/query/calls.rs:154:17
+  89:        0x10eae774c - param_env_normalized_for_post_analysis<rustc_span::def_id::DefId>
+                               at /Users/Abium/.local/opt/headstart/rustc/compiler/rustc_middle/src/query/query_api.rs:289:61
+  90:        0x10eae774c - param_env_normalized_for_post_analysis<rustc_span::def_id::DefId>
+                               at /Users/Abium/.local/opt/headstart/rustc/compiler/rustc_middle/src/query/query_api.rs:279:39
+  91:        0x10eae774c - {closure#23}
+                               at /Users/Abium/.local/opt/headstart/rustc/compiler/rustc_ty_utils/src/layout.rs:746:29
+  92:        0x10eae774c - is_some_and<&rustc_middle::ty::FieldDef, rustc_ty_utils::layout::layout_of_uncached::{closure_env#23}>
+                               at /rustc/cbae9b4cae2b108f6a3d18cfe6075714bb739463/library/core/src/option.rs:662:24
+  93:        0x10eaeace8 - layout_of_uncached
+                               at /Users/Abium/.local/opt/headstart/rustc/compiler/rustc_ty_utils/src/layout.rs:744:54
+  94:        0x10eaeace8 - layout_of
+                               at /Users/Abium/.local/opt/headstart/rustc/compiler/rustc_ty_utils/src/layout.rs:99:18
+  95:        0x110023310 - __rust_begin_short_backtrace
+                               at /Users/Abium/.local/opt/headstart/rustc/compiler/rustc_query_impl/src/query_vtables.rs:130:46
+  96:        0x1100732cc - {closure#0}<rustc_middle::query::caches::DefaultCache<rustc_middle::ty::PseudoCanonicalInput<rustc_middle::ty::Ty>, rustc_middle::query::erase::ErasedData<[u8; 16]>>>
+                               at /Users/Abium/.local/opt/headstart/rustc/compiler/rustc_query_impl/src/execution.rs:558:54
+  97:        0x1100732cc - {closure#0}<rustc_query_impl::execution::load_from_disk_or_invoke_provider_green::{closure_env#0}<rustc_middle::query::caches::DefaultCache<rustc_middle::ty::PseudoCanonicalInput<rustc_middle::ty::Ty>, rustc_middle::query::erase::ErasedData<[u8; 16]>>>, rustc_middle::query::erase::ErasedData<[u8; 16]>>
+                               at /Users/Abium/.local/opt/headstart/rustc/compiler/rustc_middle/src/ty/context/tls.rs:56:9
+  98:        0x1100732cc - try_with<core::cell::Cell<*const ()>, rustc_middle::ty::context::tls::enter_context::{closure_env#0}<rustc_query_impl::execution::load_from_disk_or_invoke_provider_green::{closure_env#0}<rustc_middle::query::caches::DefaultCache<rustc_middle::ty::PseudoCanonicalInput<rustc_middle::ty::Ty>, rustc_middle::query::erase::ErasedData<[u8; 16]>>>, rustc_middle::query::erase::ErasedData<[u8; 16]>>, rustc_middle::query::erase::ErasedData<[u8; 16]>>
+                               at /rustc/cbae9b4cae2b108f6a3d18cfe6075714bb739463/library/std/src/thread/local.rs:464:12
+  99:        0x1100732cc - with<core::cell::Cell<*const ()>, rustc_middle::ty::context::tls::enter_context::{closure_env#0}<rustc_query_impl::execution::load_from_disk_or_invoke_provider_green::{closure_env#0}<rustc_middle::query::caches::DefaultCache<rustc_middle::ty::PseudoCanonicalInput<rustc_middle::ty::Ty>, rustc_middle::query::erase::ErasedData<[u8; 16]>>>, rustc_middle::query::erase::ErasedData<[u8; 16]>>, rustc_middle::query::erase::ErasedData<[u8; 16]>>
+                               at /rustc/cbae9b4cae2b108f6a3d18cfe6075714bb739463/library/std/src/thread/local.rs:428:20
+ 100:        0x1101ab60c - enter_context<rustc_query_impl::execution::load_from_disk_or_invoke_provider_green::{closure_env#0}<rustc_middle::query::caches::DefaultCache<rustc_middle::ty::PseudoCanonicalInput<rustc_middle::ty::Ty>, rustc_middle::query::erase::ErasedData<[u8; 16]>>>, rustc_middle::query::erase::ErasedData<[u8; 16]>>
+                               at /Users/Abium/.local/opt/headstart/rustc/compiler/rustc_middle/src/ty/context/tls.rs:53:9
+ 101:        0x1101ab60c - {closure#0}<rustc_query_impl::execution::load_from_disk_or_invoke_provider_green::{closure_env#0}<rustc_middle::query::caches::DefaultCache<rustc_middle::ty::PseudoCanonicalInput<rustc_middle::ty::Ty>, rustc_middle::query::erase::ErasedData<[u8; 16]>>>, rustc_middle::query::erase::ErasedData<[u8; 16]>>
+                               at /Users/Abium/.local/opt/headstart/rustc/compiler/rustc_middle/src/dep_graph/mod.rs:65:9
+ 102:        0x1101ab60c - {closure#0}<rustc_middle::dep_graph::with_deps::{closure_env#0}<rustc_query_impl::execution::load_from_disk_or_invoke_provider_green::{closure_env#0}<rustc_middle::query::caches::DefaultCache<rustc_middle::ty::PseudoCanonicalInput<rustc_middle::ty::Ty>, rustc_middle::query::erase::ErasedData<[u8; 16]>>>, rustc_middle::query::erase::ErasedData<[u8; 16]>>, rustc_middle::query::erase::ErasedData<[u8; 16]>>
+                               at /Users/Abium/.local/opt/headstart/rustc/compiler/rustc_middle/src/ty/context/tls.rs:86:36
+ 103:        0x1101ab60c - with_context_opt<rustc_middle::ty::context::tls::with_context::{closure_env#0}<rustc_middle::dep_graph::with_deps::{closure_env#0}<rustc_query_impl::execution::load_from_disk_or_invoke_provider_green::{closure_env#0}<rustc_middle::query::caches::DefaultCache<rustc_middle::ty::PseudoCanonicalInput<rustc_middle::ty::Ty>, rustc_middle::query::erase::ErasedData<[u8; 16]>>>, rustc_middle::query::erase::ErasedData<[u8; 16]>>, rustc_middle::query::erase::ErasedData<[u8; 16]>>, rustc_middle::query::erase::ErasedData<[u8; 16]>>
+                               at /Users/Abium/.local/opt/headstart/rustc/compiler/rustc_middle/src/ty/context/tls.rs:75:18
+ 104:        0x1101ab60c - with_context<rustc_middle::dep_graph::with_deps::{closure_env#0}<rustc_query_impl::execution::load_from_disk_or_invoke_provider_green::{closure_env#0}<rustc_middle::query::caches::DefaultCache<rustc_middle::ty::PseudoCanonicalInput<rustc_middle::ty::Ty>, rustc_middle::query::erase::ErasedData<[u8; 16]>>>, rustc_middle::query::erase::ErasedData<[u8; 16]>>, rustc_middle::query::erase::ErasedData<[u8; 16]>>
+                               at /Users/Abium/.local/opt/headstart/rustc/compiler/rustc_middle/src/ty/context/tls.rs:86:5
+ 105:        0x1101ab60c - with_deps<rustc_query_impl::execution::load_from_disk_or_invoke_provider_green::{closure_env#0}<rustc_middle::query::caches::DefaultCache<rustc_middle::ty::PseudoCanonicalInput<rustc_middle::ty::Ty>, rustc_middle::query::erase::ErasedData<[u8; 16]>>>, rustc_middle::query::erase::ErasedData<[u8; 16]>>
+                               at /Users/Abium/.local/opt/headstart/rustc/compiler/rustc_middle/src/dep_graph/mod.rs:63:5
+ 106:        0x11005a540 - load_from_disk_or_invoke_provider_green<rustc_middle::query::caches::DefaultCache<rustc_middle::ty::PseudoCanonicalInput<rustc_middle::ty::Ty>, rustc_middle::query::erase::ErasedData<[u8; 16]>>>
+                               at /Users/Abium/.local/opt/headstart/rustc/compiler/rustc_query_impl/src/execution.rs:558:39
+ 107:        0x11005a540 - {closure#0}<rustc_middle::query::caches::DefaultCache<rustc_middle::ty::PseudoCanonicalInput<rustc_middle::ty::Ty>, rustc_middle::query::erase::ErasedData<[u8; 16]>>>
+                               at /Users/Abium/.local/opt/headstart/rustc/compiler/rustc_query_impl/src/execution.rs:485:25
+ 108:        0x11005a540 - {closure#0}<rustc_query_impl::execution::execute_job_incr::{closure_env#0}<rustc_middle::query::caches::DefaultCache<rustc_middle::ty::PseudoCanonicalInput<rustc_middle::ty::Ty>, rustc_middle::query::erase::ErasedData<[u8; 16]>>>, core::option::Option<(rustc_middle::query::erase::ErasedData<[u8; 16]>, rustc_middle::dep_graph::graph::DepNodeIndex)>>
+                               at /Users/Abium/.local/opt/headstart/rustc/compiler/rustc_middle/src/ty/context/tls.rs:56:9
+ 109:        0x11005a540 - try_with<core::cell::Cell<*const ()>, rustc_middle::ty::context::tls::enter_context::{closure_env#0}<rustc_query_impl::execution::execute_job_incr::{closure_env#0}<rustc_middle::query::caches::DefaultCache<rustc_middle::ty::PseudoCanonicalInput<rustc_middle::ty::Ty>, rustc_middle::query::erase::ErasedData<[u8; 16]>>>, core::option::Option<(rustc_middle::query::erase::ErasedData<[u8; 16]>, rustc_middle::dep_graph::graph::DepNodeIndex)>>, core::option::Option<(rustc_middle::query::erase::ErasedData<[u8; 16]>, rustc_middle::dep_graph::graph::DepNodeIndex)>>
+                               at /rustc/cbae9b4cae2b108f6a3d18cfe6075714bb739463/library/std/src/thread/local.rs:464:12
+ 110:        0x11005a540 - with<core::cell::Cell<*const ()>, rustc_middle::ty::context::tls::enter_context::{closure_env#0}<rustc_query_impl::execution::execute_job_incr::{closure_env#0}<rustc_middle::query::caches::DefaultCache<rustc_middle::ty::PseudoCanonicalInput<rustc_middle::ty::Ty>, rustc_middle::query::erase::ErasedData<[u8; 16]>>>, core::option::Option<(rustc_middle::query::erase::ErasedData<[u8; 16]>, rustc_middle::dep_graph::graph::DepNodeIndex)>>, core::option::Option<(rustc_middle::query::erase::ErasedData<[u8; 16]>, rustc_middle::dep_graph::graph::DepNodeIndex)>>
+                               at /rustc/cbae9b4cae2b108f6a3d18cfe6075714bb739463/library/std/src/thread/local.rs:428:20
+ 111:        0x10ffb3628 - enter_context<rustc_query_impl::execution::execute_job_incr::{closure_env#0}<rustc_middle::query::caches::DefaultCache<rustc_middle::ty::PseudoCanonicalInput<rustc_middle::ty::Ty>, rustc_middle::query::erase::ErasedData<[u8; 16]>>>, core::option::Option<(rustc_middle::query::erase::ErasedData<[u8; 16]>, rustc_middle::dep_graph::graph::DepNodeIndex)>>
+                               at /Users/Abium/.local/opt/headstart/rustc/compiler/rustc_middle/src/ty/context/tls.rs:53:9
+ 112:        0x10ffb3628 - {closure#0}<core::option::Option<(rustc_middle::query::erase::ErasedData<[u8; 16]>, rustc_middle::dep_graph::graph::DepNodeIndex)>, rustc_query_impl::execution::execute_job_incr::{closure_env#0}<rustc_middle::query::caches::DefaultCache<rustc_middle::ty::PseudoCanonicalInput<rustc_middle::ty::Ty>, rustc_middle::query::erase::ErasedData<[u8; 16]>>>>
+                               at /Users/Abium/.local/opt/headstart/rustc/compiler/rustc_query_impl/src/execution.rs:436:9
+ 113:        0x10ffb3628 - {closure#0}<rustc_query_impl::execution::start_query::{closure_env#0}<core::option::Option<(rustc_middle::query::erase::ErasedData<[u8; 16]>, rustc_middle::dep_graph::graph::DepNodeIndex)>, rustc_query_impl::execution::execute_job_incr::{closure_env#0}<rustc_middle::query::caches::DefaultCache<rustc_middle::ty::PseudoCanonicalInput<rustc_middle::ty::Ty>, rustc_middle::query::erase::ErasedData<[u8; 16]>>>>, core::option::Option<(rustc_middle::query::erase::ErasedData<[u8; 16]>, rustc_middle::dep_graph::graph::DepNodeIndex)>>
+                               at /Users/Abium/.local/opt/headstart/rustc/compiler/rustc_middle/src/ty/context/tls.rs:86:36
+ 114:        0x10ffb3628 - with_context_opt<rustc_middle::ty::context::tls::with_context::{closure_env#0}<rustc_query_impl::execution::start_query::{closure_env#0}<core::option::Option<(rustc_middle::query::erase::ErasedData<[u8; 16]>, rustc_middle::dep_graph::graph::DepNodeIndex)>, rustc_query_impl::execution::execute_job_incr::{closure_env#0}<rustc_middle::query::caches::DefaultCache<rustc_middle::ty::PseudoCanonicalInput<rustc_middle::ty::Ty>, rustc_middle::query::erase::ErasedData<[u8; 16]>>>>, core::option::Option<(rustc_middle::query::erase::ErasedData<[u8; 16]>, rustc_middle::dep_graph::graph::DepNodeIndex)>>, core::option::Option<(rustc_middle::query::erase::ErasedData<[u8; 16]>, rustc_middle::dep_graph::graph::DepNodeIndex)>>
+                               at /Users/Abium/.local/opt/headstart/rustc/compiler/rustc_middle/src/ty/context/tls.rs:75:18
+ 115:        0x10ffb3628 - with_context<rustc_query_impl::execution::start_query::{closure_env#0}<core::option::Option<(rustc_middle::query::erase::ErasedData<[u8; 16]>, rustc_middle::dep_graph::graph::DepNodeIndex)>, rustc_query_impl::execution::execute_job_incr::{closure_env#0}<rustc_middle::query::caches::DefaultCache<rustc_middle::ty::PseudoCanonicalInput<rustc_middle::ty::Ty>, rustc_middle::query::erase::ErasedData<[u8; 16]>>>>, core::option::Option<(rustc_middle::query::erase::ErasedData<[u8; 16]>, rustc_middle::dep_graph::graph::DepNodeIndex)>>
+                               at /Users/Abium/.local/opt/headstart/rustc/compiler/rustc_middle/src/ty/context/tls.rs:86:5
+ 116:        0x10ffb3628 - start_query<core::option::Option<(rustc_middle::query::erase::ErasedData<[u8; 16]>, rustc_middle::dep_graph::graph::DepNodeIndex)>, rustc_query_impl::execution::execute_job_incr::{closure_env#0}<rustc_middle::query::caches::DefaultCache<rustc_middle::ty::PseudoCanonicalInput<rustc_middle::ty::Ty>, rustc_middle::query::erase::ErasedData<[u8; 16]>>>>
+                               at /Users/Abium/.local/opt/headstart/rustc/compiler/rustc_query_impl/src/execution.rs:423:5
+ 117:        0x10ffb3628 - execute_job_incr<rustc_middle::query::caches::DefaultCache<rustc_middle::ty::PseudoCanonicalInput<rustc_middle::ty::Ty>, rustc_middle::query::erase::ErasedData<[u8; 16]>>>
+                               at /Users/Abium/.local/opt/headstart/rustc/compiler/rustc_query_impl/src/execution.rs:483:28
+ 118:        0x10ffb3628 - try_execute_query<rustc_middle::query::caches::DefaultCache<rustc_middle::ty::PseudoCanonicalInput<rustc_middle::ty::Ty>, rustc_middle::query::erase::ErasedData<[u8; 16]>>, true>
+                               at /Users/Abium/.local/opt/headstart/rustc/compiler/rustc_query_impl/src/execution.rs:321:17
+ 119:        0x11027229c - execute_query_incr_inner<rustc_middle::query::caches::DefaultCache<rustc_middle::ty::PseudoCanonicalInput<rustc_middle::ty::Ty>, rustc_middle::query::erase::ErasedData<[u8; 16]>>>
+                               at /Users/Abium/.local/opt/headstart/rustc/compiler/rustc_query_impl/src/execution.rs:660:9
+ 120:        0x11027229c - __rust_end_short_backtrace
+                               at /Users/Abium/.local/opt/headstart/rustc/compiler/rustc_query_impl/src/query_vtables.rs:73:25
+ 121:        0x10eae90ec - query_get_at<rustc_middle::query::caches::DefaultCache<rustc_middle::ty::PseudoCanonicalInput<rustc_middle::ty::Ty>, rustc_middle::query::erase::ErasedData<[u8; 16]>>>
+                               at /Users/Abium/.local/opt/headstart/rustc/compiler/rustc_middle/src/query/calls.rs:154:17
+ 122:        0x10eae90ec - layout_of
+                               at /Users/Abium/.local/opt/headstart/rustc/compiler/rustc_middle/src/query/query_api.rs:289:61
+ 123:        0x10eae90ec - layout_of
+                               at /Users/Abium/.local/opt/headstart/rustc/compiler/rustc_middle/src/query/query_api.rs:279:39
+ 124:        0x10eae90ec - layout_of
+                               at /Users/Abium/.local/opt/headstart/rustc/compiler/rustc_ty_utils/src/layout.rs:82:27
+ 125:        0x110023310 - __rust_begin_short_backtrace
+                               at /Users/Abium/.local/opt/headstart/rustc/compiler/rustc_query_impl/src/query_vtables.rs:130:46
+ 126:        0x1100732cc - {closure#0}<rustc_middle::query::caches::DefaultCache<rustc_middle::ty::PseudoCanonicalInput<rustc_middle::ty::Ty>, rustc_middle::query::erase::ErasedData<[u8; 16]>>>
+                               at /Users/Abium/.local/opt/headstart/rustc/compiler/rustc_query_impl/src/execution.rs:558:54
+ 127:        0x1100732cc - {closure#0}<rustc_query_impl::execution::load_from_disk_or_invoke_provider_green::{closure_env#0}<rustc_middle::query::caches::DefaultCache<rustc_middle::ty::PseudoCanonicalInput<rustc_middle::ty::Ty>, rustc_middle::query::erase::ErasedData<[u8; 16]>>>, rustc_middle::query::erase::ErasedData<[u8; 16]>>
+                               at /Users/Abium/.local/opt/headstart/rustc/compiler/rustc_middle/src/ty/context/tls.rs:56:9
+ 128:        0x1100732cc - try_with<core::cell::Cell<*const ()>, rustc_middle::ty::context::tls::enter_context::{closure_env#0}<rustc_query_impl::execution::load_from_disk_or_invoke_provider_green::{closure_env#0}<rustc_middle::query::caches::DefaultCache<rustc_middle::ty::PseudoCanonicalInput<rustc_middle::ty::Ty>, rustc_middle::query::erase::ErasedData<[u8; 16]>>>, rustc_middle::query::erase::ErasedData<[u8; 16]>>, rustc_middle::query::erase::ErasedData<[u8; 16]>>
+                               at /rustc/cbae9b4cae2b108f6a3d18cfe6075714bb739463/library/std/src/thread/local.rs:464:12
+ 129:        0x1100732cc - with<core::cell::Cell<*const ()>, rustc_middle::ty::context::tls::enter_context::{closure_env#0}<rustc_query_impl::execution::load_from_disk_or_invoke_provider_green::{closure_env#0}<rustc_middle::query::caches::DefaultCache<rustc_middle::ty::PseudoCanonicalInput<rustc_middle::ty::Ty>, rustc_middle::query::erase::ErasedData<[u8; 16]>>>, rustc_middle::query::erase::ErasedData<[u8; 16]>>, rustc_middle::query::erase::ErasedData<[u8; 16]>>
+                               at /rustc/cbae9b4cae2b108f6a3d18cfe6075714bb739463/library/std/src/thread/local.rs:428:20
+ 130:        0x1101ab60c - enter_context<rustc_query_impl::execution::load_from_disk_or_invoke_provider_green::{closure_env#0}<rustc_middle::query::caches::DefaultCache<rustc_middle::ty::PseudoCanonicalInput<rustc_middle::ty::Ty>, rustc_middle::query::erase::ErasedData<[u8; 16]>>>, rustc_middle::query::erase::ErasedData<[u8; 16]>>
+                               at /Users/Abium/.local/opt/headstart/rustc/compiler/rustc_middle/src/ty/context/tls.rs:53:9
+ 131:        0x1101ab60c - {closure#0}<rustc_query_impl::execution::load_from_disk_or_invoke_provider_green::{closure_env#0}<rustc_middle::query::caches::DefaultCache<rustc_middle::ty::PseudoCanonicalInput<rustc_middle::ty::Ty>, rustc_middle::query::erase::ErasedData<[u8; 16]>>>, rustc_middle::query::erase::ErasedData<[u8; 16]>>
+                               at /Users/Abium/.local/opt/headstart/rustc/compiler/rustc_middle/src/dep_graph/mod.rs:65:9
+ 132:        0x1101ab60c - {closure#0}<rustc_middle::dep_graph::with_deps::{closure_env#0}<rustc_query_impl::execution::load_from_disk_or_invoke_provider_green::{closure_env#0}<rustc_middle::query::caches::DefaultCache<rustc_middle::ty::PseudoCanonicalInput<rustc_middle::ty::Ty>, rustc_middle::query::erase::ErasedData<[u8; 16]>>>, rustc_middle::query::erase::ErasedData<[u8; 16]>>, rustc_middle::query::erase::ErasedData<[u8; 16]>>
+                               at /Users/Abium/.local/opt/headstart/rustc/compiler/rustc_middle/src/ty/context/tls.rs:86:36
+ 133:        0x1101ab60c - with_context_opt<rustc_middle::ty::context::tls::with_context::{closure_env#0}<rustc_middle::dep_graph::with_deps::{closure_env#0}<rustc_query_impl::execution::load_from_disk_or_invoke_provider_green::{closure_env#0}<rustc_middle::query::caches::DefaultCache<rustc_middle::ty::PseudoCanonicalInput<rustc_middle::ty::Ty>, rustc_middle::query::erase::ErasedData<[u8; 16]>>>, rustc_middle::query::erase::ErasedData<[u8; 16]>>, rustc_middle::query::erase::ErasedData<[u8; 16]>>, rustc_middle::query::erase::ErasedData<[u8; 16]>>
+                               at /Users/Abium/.local/opt/headstart/rustc/compiler/rustc_middle/src/ty/context/tls.rs:75:18
+ 134:        0x1101ab60c - with_context<rustc_middle::dep_graph::with_deps::{closure_env#0}<rustc_query_impl::execution::load_from_disk_or_invoke_provider_green::{closure_env#0}<rustc_middle::query::caches::DefaultCache<rustc_middle::ty::PseudoCanonicalInput<rustc_middle::ty::Ty>, rustc_middle::query::erase::ErasedData<[u8; 16]>>>, rustc_middle::query::erase::ErasedData<[u8; 16]>>, rustc_middle::query::erase::ErasedData<[u8; 16]>>
+                               at /Users/Abium/.local/opt/headstart/rustc/compiler/rustc_middle/src/ty/context/tls.rs:86:5
+ 135:        0x1101ab60c - with_deps<rustc_query_impl::execution::load_from_disk_or_invoke_provider_green::{closure_env#0}<rustc_middle::query::caches::DefaultCache<rustc_middle::ty::PseudoCanonicalInput<rustc_middle::ty::Ty>, rustc_middle::query::erase::ErasedData<[u8; 16]>>>, rustc_middle::query::erase::ErasedData<[u8; 16]>>
+                               at /Users/Abium/.local/opt/headstart/rustc/compiler/rustc_middle/src/dep_graph/mod.rs:63:5
+ 136:        0x11005a540 - load_from_disk_or_invoke_provider_green<rustc_middle::query::caches::DefaultCache<rustc_middle::ty::PseudoCanonicalInput<rustc_middle::ty::Ty>, rustc_middle::query::erase::ErasedData<[u8; 16]>>>
+                               at /Users/Abium/.local/opt/headstart/rustc/compiler/rustc_query_impl/src/execution.rs:558:39
+ 137:        0x11005a540 - {closure#0}<rustc_middle::query::caches::DefaultCache<rustc_middle::ty::PseudoCanonicalInput<rustc_middle::ty::Ty>, rustc_middle::query::erase::ErasedData<[u8; 16]>>>
+                               at /Users/Abium/.local/opt/headstart/rustc/compiler/rustc_query_impl/src/execution.rs:485:25
+ 138:        0x11005a540 - {closure#0}<rustc_query_impl::execution::execute_job_incr::{closure_env#0}<rustc_middle::query::caches::DefaultCache<rustc_middle::ty::PseudoCanonicalInput<rustc_middle::ty::Ty>, rustc_middle::query::erase::ErasedData<[u8; 16]>>>, core::option::Option<(rustc_middle::query::erase::ErasedData<[u8; 16]>, rustc_middle::dep_graph::graph::DepNodeIndex)>>
+                               at /Users/Abium/.local/opt/headstart/rustc/compiler/rustc_middle/src/ty/context/tls.rs:56:9
+ 139:        0x11005a540 - try_with<core::cell::Cell<*const ()>, rustc_middle::ty::context::tls::enter_context::{closure_env#0}<rustc_query_impl::execution::execute_job_incr::{closure_env#0}<rustc_middle::query::caches::DefaultCache<rustc_middle::ty::PseudoCanonicalInput<rustc_middle::ty::Ty>, rustc_middle::query::erase::ErasedData<[u8; 16]>>>, core::option::Option<(rustc_middle::query::erase::ErasedData<[u8; 16]>, rustc_middle::dep_graph::graph::DepNodeIndex)>>, core::option::Option<(rustc_middle::query::erase::ErasedData<[u8; 16]>, rustc_middle::dep_graph::graph::DepNodeIndex)>>
+                               at /rustc/cbae9b4cae2b108f6a3d18cfe6075714bb739463/library/std/src/thread/local.rs:464:12
+ 140:        0x11005a540 - with<core::cell::Cell<*const ()>, rustc_middle::ty::context::tls::enter_context::{closure_env#0}<rustc_query_impl::execution::execute_job_incr::{closure_env#0}<rustc_middle::query::caches::DefaultCache<rustc_middle::ty::PseudoCanonicalInput<rustc_middle::ty::Ty>, rustc_middle::query::erase::ErasedData<[u8; 16]>>>, core::option::Option<(rustc_middle::query::erase::ErasedData<[u8; 16]>, rustc_middle::dep_graph::graph::DepNodeIndex)>>, core::option::Option<(rustc_middle::query::erase::ErasedData<[u8; 16]>, rustc_middle::dep_graph::graph::DepNodeIndex)>>
+                               at /rustc/cbae9b4cae2b108f6a3d18cfe6075714bb739463/library/std/src/thread/local.rs:428:20
+ 141:        0x10ffb3628 - enter_context<rustc_query_impl::execution::execute_job_incr::{closure_env#0}<rustc_middle::query::caches::DefaultCache<rustc_middle::ty::PseudoCanonicalInput<rustc_middle::ty::Ty>, rustc_middle::query::erase::ErasedData<[u8; 16]>>>, core::option::Option<(rustc_middle::query::erase::ErasedData<[u8; 16]>, rustc_middle::dep_graph::graph::DepNodeIndex)>>
+                               at /Users/Abium/.local/opt/headstart/rustc/compiler/rustc_middle/src/ty/context/tls.rs:53:9
+ 142:        0x10ffb3628 - {closure#0}<core::option::Option<(rustc_middle::query::erase::ErasedData<[u8; 16]>, rustc_middle::dep_graph::graph::DepNodeIndex)>, rustc_query_impl::execution::execute_job_incr::{closure_env#0}<rustc_middle::query::caches::DefaultCache<rustc_middle::ty::PseudoCanonicalInput<rustc_middle::ty::Ty>, rustc_middle::query::erase::ErasedData<[u8; 16]>>>>
+                               at /Users/Abium/.local/opt/headstart/rustc/compiler/rustc_query_impl/src/execution.rs:436:9
+ 143:        0x10ffb3628 - {closure#0}<rustc_query_impl::execution::start_query::{closure_env#0}<core::option::Option<(rustc_middle::query::erase::ErasedData<[u8; 16]>, rustc_middle::dep_graph::graph::DepNodeIndex)>, rustc_query_impl::execution::execute_job_incr::{closure_env#0}<rustc_middle::query::caches::DefaultCache<rustc_middle::ty::PseudoCanonicalInput<rustc_middle::ty::Ty>, rustc_middle::query::erase::ErasedData<[u8; 16]>>>>, core::option::Option<(rustc_middle::query::erase::ErasedData<[u8; 16]>, rustc_middle::dep_graph::graph::DepNodeIndex)>>
+                               at /Users/Abium/.local/opt/headstart/rustc/compiler/rustc_middle/src/ty/context/tls.rs:86:36
+ 144:        0x10ffb3628 - with_context_opt<rustc_middle::ty::context::tls::with_context::{closure_env#0}<rustc_query_impl::execution::start_query::{closure_env#0}<core::option::Option<(rustc_middle::query::erase::ErasedData<[u8; 16]>, rustc_middle::dep_graph::graph::DepNodeIndex)>, rustc_query_impl::execution::execute_job_incr::{closure_env#0}<rustc_middle::query::caches::DefaultCache<rustc_middle::ty::PseudoCanonicalInput<rustc_middle::ty::Ty>, rustc_middle::query::erase::ErasedData<[u8; 16]>>>>, core::option::Option<(rustc_middle::query::erase::ErasedData<[u8; 16]>, rustc_middle::dep_graph::graph::DepNodeIndex)>>, core::option::Option<(rustc_middle::query::erase::ErasedData<[u8; 16]>, rustc_middle::dep_graph::graph::DepNodeIndex)>>
+                               at /Users/Abium/.local/opt/headstart/rustc/compiler/rustc_middle/src/ty/context/tls.rs:75:18
+ 145:        0x10ffb3628 - with_context<rustc_query_impl::execution::start_query::{closure_env#0}<core::option::Option<(rustc_middle::query::erase::ErasedData<[u8; 16]>, rustc_middle::dep_graph::graph::DepNodeIndex)>, rustc_query_impl::execution::execute_job_incr::{closure_env#0}<rustc_middle::query::caches::DefaultCache<rustc_middle::ty::PseudoCanonicalInput<rustc_middle::ty::Ty>, rustc_middle::query::erase::ErasedData<[u8; 16]>>>>, core::option::Option<(rustc_middle::query::erase::ErasedData<[u8; 16]>, rustc_middle::dep_graph::graph::DepNodeIndex)>>
+                               at /Users/Abium/.local/opt/headstart/rustc/compiler/rustc_middle/src/ty/context/tls.rs:86:5
+ 146:        0x10ffb3628 - start_query<core::option::Option<(rustc_middle::query::erase::ErasedData<[u8; 16]>, rustc_middle::dep_graph::graph::DepNodeIndex)>, rustc_query_impl::execution::execute_job_incr::{closure_env#0}<rustc_middle::query::caches::DefaultCache<rustc_middle::ty::PseudoCanonicalInput<rustc_middle::ty::Ty>, rustc_middle::query::erase::ErasedData<[u8; 16]>>>>
+                               at /Users/Abium/.local/opt/headstart/rustc/compiler/rustc_query_impl/src/execution.rs:423:5
+ 147:        0x10ffb3628 - execute_job_incr<rustc_middle::query::caches::DefaultCache<rustc_middle::ty::PseudoCanonicalInput<rustc_middle::ty::Ty>, rustc_middle::query::erase::ErasedData<[u8; 16]>>>
+                               at /Users/Abium/.local/opt/headstart/rustc/compiler/rustc_query_impl/src/execution.rs:483:28
+ 148:        0x10ffb3628 - try_execute_query<rustc_middle::query::caches::DefaultCache<rustc_middle::ty::PseudoCanonicalInput<rustc_middle::ty::Ty>, rustc_middle::query::erase::ErasedData<[u8; 16]>>, true>
+                               at /Users/Abium/.local/opt/headstart/rustc/compiler/rustc_query_impl/src/execution.rs:321:17
+ 149:        0x11027229c - execute_query_incr_inner<rustc_middle::query::caches::DefaultCache<rustc_middle::ty::PseudoCanonicalInput<rustc_middle::ty::Ty>, rustc_middle::query::erase::ErasedData<[u8; 16]>>>
+                               at /Users/Abium/.local/opt/headstart/rustc/compiler/rustc_query_impl/src/execution.rs:660:9
+ 150:        0x11027229c - __rust_end_short_backtrace
+                               at /Users/Abium/.local/opt/headstart/rustc/compiler/rustc_query_impl/src/query_vtables.rs:73:25
+ 151:        0x10e89af24 - query_get_at<rustc_middle::query::caches::DefaultCache<rustc_middle::ty::PseudoCanonicalInput<rustc_middle::ty::Ty>, rustc_middle::query::erase::ErasedData<[u8; 16]>>>
+                               at /Users/Abium/.local/opt/headstart/rustc/compiler/rustc_middle/src/query/calls.rs:154:17
+ 152:        0x10e89af24 - layout_of
+                               at /Users/Abium/.local/opt/headstart/rustc/compiler/rustc_middle/src/query/query_api.rs:289:61
+ 153:        0x10e89af24 - spanned_layout_of<rustc_codegen_llvm::context::GenericCx<rustc_codegen_llvm::context::FullCx>>
+                               at /Users/Abium/.local/opt/headstart/rustc/compiler/rustc_middle/src/ty/layout.rs:773:17
+ 154:        0x10e8986cc - build_struct_type_di_node
+                               at /Users/Abium/.local/opt/headstart/rustc/compiler/rustc_codegen_llvm/src/debuginfo/metadata.rs:1069:37
+ 155:        0x10e896e28 - spanned_type_di_node
+                               at /Users/Abium/.local/opt/headstart/rustc/compiler/rustc_codegen_llvm/src/debuginfo/metadata.rs:490:32
+ 156:        0x10e89a624 - build_pointer_or_reference_di_node
+ 157:        0x10e896b4c - spanned_type_di_node
+ 158:        0x10e92ceb0 - {closure#0}
+                               at /Users/Abium/.local/opt/headstart/rustc/compiler/rustc_codegen_llvm/src/debuginfo/metadata/enums/mod.rs:262:25
+ 159:        0x10e92ceb0 - call_once<(usize), rustc_codegen_llvm::debuginfo::metadata::enums::build_enum_variant_struct_type_di_node::{closure#0}::{closure_env#0}>
+                               at /rustc/cbae9b4cae2b108f6a3d18cfe6075714bb739463/library/core/src/ops/function.rs:310:21
+ 160:        0x10e92ceb0 - map<usize, &rustc_codegen_llvm::llvm::ffi::{extern#2}::Metadata, &mut rustc_codegen_llvm::debuginfo::metadata::enums::build_enum_variant_struct_type_di_node::{closure#0}::{closure_env#0}>
+                               at /rustc/cbae9b4cae2b108f6a3d18cfe6075714bb739463/library/core/src/option.rs:1163:29
+ 161:        0x10e92ceb0 - next<&rustc_codegen_llvm::llvm::ffi::{extern#2}::Metadata, core::ops::range::Range<usize>, rustc_codegen_llvm::debuginfo::metadata::enums::build_enum_variant_struct_type_di_node::{closure#0}::{closure_env#0}>
+                               at /rustc/cbae9b4cae2b108f6a3d18cfe6075714bb739463/library/core/src/iter/adapters/map.rs:107:26
+ 162:        0x10e928798 - extend<[&rustc_codegen_llvm::llvm::ffi::{extern#2}::Metadata; 16], core::iter::adapters::map::Map<core::ops::range::Range<usize>, rustc_codegen_llvm::debuginfo::metadata::enums::build_enum_variant_struct_type_di_node::{closure#0}::{closure_env#0}>>
+                               at /Users/Abium/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/smallvec-1.15.1/src/lib.rs:2101:41
+ 163:        0x10e91eb70 - from_iter<[&rustc_codegen_llvm::llvm::ffi::{extern#2}::Metadata; 16], core::iter::adapters::map::Map<core::ops::range::Range<usize>, rustc_codegen_llvm::debuginfo::metadata::enums::build_enum_variant_struct_type_di_node::{closure#0}::{closure_env#0}>>
+                               at /Users/Abium/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/smallvec-1.15.1/src/lib.rs:2085:11
+ 164:        0x10e91eb70 - collect<core::iter::adapters::map::Map<core::ops::range::Range<usize>, rustc_codegen_llvm::debuginfo::metadata::enums::build_enum_variant_struct_type_di_node::{closure#0}::{closure_env#0}>, smallvec::SmallVec<[&rustc_codegen_llvm::llvm::ffi::{extern#2}::Metadata; 16]>>
+                               at /rustc/cbae9b4cae2b108f6a3d18cfe6075714bb739463/library/core/src/iter/traits/iterator.rs:2086:9
+ 165:        0x10e91eb70 - {closure#0}
+                               at /Users/Abium/.local/opt/headstart/rustc/compiler/rustc_codegen_llvm/src/debuginfo/metadata/enums/mod.rs:266:18
+ 166:        0x10e91eb70 - build_type_with_children<rustc_codegen_llvm::debuginfo::metadata::enums::build_enum_variant_struct_type_di_node::{closure_env#0}, rustc_codegen_llvm::debuginfo::metadata::enums::build_enum_variant_struct_type_di_node::{closure_env#1}>
+                               at /Users/Abium/.local/opt/headstart/rustc/compiler/rustc_codegen_llvm/src/debuginfo/metadata/type_map.rs:325:9
+ 167:        0x10e876f6c - build_enum_variant_struct_type_di_node
+                               at /Users/Abium/.local/opt/headstart/rustc/compiler/rustc_codegen_llvm/src/debuginfo/metadata/enums/mod.rs:224:5
+ 168:        0x10e92caf8 - {closure#0}
+                               at /Users/Abium/.local/opt/headstart/rustc/compiler/rustc_codegen_llvm/src/debuginfo/metadata/enums/native.rs:86:50
+ 169:        0x10e92caf8 - call_once<(rustc_abi::layout::VariantIdx), rustc_codegen_llvm::debuginfo::metadata::enums::native::build_enum_type_di_node::{closure#0}::{closure_env#0}>
+                               at /rustc/cbae9b4cae2b108f6a3d18cfe6075714bb739463/library/core/src/ops/function.rs:310:21
+ 170:        0x10e92caf8 - map<rustc_abi::layout::VariantIdx, rustc_codegen_llvm::debuginfo::metadata::enums::native::VariantMemberInfo, &mut rustc_codegen_llvm::debuginfo::metadata::enums::native::build_enum_type_di_node::{closure#0}::{closure_env#0}>
+                               at /rustc/cbae9b4cae2b108f6a3d18cfe6075714bb739463/library/core/src/option.rs:1163:29
+ 171:        0x10e92caf8 - next<rustc_codegen_llvm::debuginfo::metadata::enums::native::VariantMemberInfo, core::ops::range::Range<rustc_abi::layout::VariantIdx>, rustc_codegen_llvm::debuginfo::metadata::enums::native::build_enum_type_di_node::{closure#0}::{closure_env#0}>
+                               at /rustc/cbae9b4cae2b108f6a3d18cfe6075714bb739463/library/core/src/iter/adapters/map.rs:107:26
+ 172:        0x10e92726c - extend<[rustc_codegen_llvm::debuginfo::metadata::enums::native::VariantMemberInfo; 16], core::iter::adapters::map::Map<core::ops::range::Range<rustc_abi::layout::VariantIdx>, rustc_codegen_llvm::debuginfo::metadata::enums::native::build_enum_type_di_node::{closure#0}::{closure_env#0}>>
+                               at /Users/Abium/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/smallvec-1.15.1/src/lib.rs:2101:41
+ 173:        0x10e9201c0 - from_iter<[rustc_codegen_llvm::debuginfo::metadata::enums::native::VariantMemberInfo; 16], core::iter::adapters::map::Map<core::ops::range::Range<rustc_abi::layout::VariantIdx>, rustc_codegen_llvm::debuginfo::metadata::enums::native::build_enum_type_di_node::{closure#0}::{closure_env#0}>>
+                               at /Users/Abium/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/smallvec-1.15.1/src/lib.rs:2085:11
+ 174:        0x10e9201c0 - collect<core::iter::adapters::map::Map<core::ops::range::Range<rustc_abi::layout::VariantIdx>, rustc_codegen_llvm::debuginfo::metadata::enums::native::build_enum_type_di_node::{closure#0}::{closure_env#0}>, smallvec::SmallVec<[rustc_codegen_llvm::debuginfo::metadata::enums::native::VariantMemberInfo; 16]>>
+                               at /rustc/cbae9b4cae2b108f6a3d18cfe6075714bb739463/library/core/src/iter/traits/iterator.rs:2086:9
+ 175:        0x10e9201c0 - {closure#0}
+                               at /Users/Abium/.local/opt/headstart/rustc/compiler/rustc_codegen_llvm/src/debuginfo/metadata/enums/native.rs:104:18
+ 176:        0x10e9201c0 - build_type_with_children<rustc_codegen_llvm::debuginfo::metadata::enums::native::build_enum_type_di_node::{closure_env#0}, fn(&rustc_codegen_llvm::context::GenericCx<rustc_codegen_llvm::context::FullCx>) -> smallvec::SmallVec<[core::option::Option<&rustc_codegen_llvm::llvm::ffi::{extern#2}::Metadata>; 16]>>
+                               at /Users/Abium/.local/opt/headstart/rustc/compiler/rustc_codegen_llvm/src/debuginfo/metadata/type_map.rs:325:9
+ 177:        0x10e889ba4 - build_enum_type_di_node
+                               at /Users/Abium/.local/opt/headstart/rustc/compiler/rustc_codegen_llvm/src/debuginfo/metadata/enums/native.rs:65:5
+ 178:        0x10e8764e8 - build_enum_type_di_node
+                               at /Users/Abium/.local/opt/headstart/rustc/compiler/rustc_codegen_llvm/src/debuginfo/metadata/enums/mod.rs:48:9
+ 179:        0x10e896e4c - spanned_type_di_node
+                               at /Users/Abium/.local/opt/headstart/rustc/compiler/rustc_codegen_llvm/src/debuginfo/metadata.rs:492:30
+ 180:        0x10e8cf1d4 - {closure#0}
+                               at /Users/Abium/.local/opt/headstart/rustc/compiler/rustc_codegen_llvm/src/debuginfo/metadata.rs:1448:51
+ 181:        0x10e8cf1d4 - map<rustc_middle::ty::Ty, core::option::Option<&rustc_codegen_llvm::llvm::ffi::{extern#2}::Metadata>, rustc_codegen_llvm::debuginfo::metadata::build_generic_type_param_di_nodes::{closure#0}::{closure_env#0}>
+                               at /rustc/cbae9b4cae2b108f6a3d18cfe6075714bb739463/library/core/src/option.rs:1163:29
+ 182:        0x10e8cf1d4 - {closure#0}
+                               at /Users/Abium/.local/opt/headstart/rustc/compiler/rustc_codegen_llvm/src/debuginfo/metadata.rs:1444:36
+ 183:        0x10e8cf1d4 - call_mut<((rustc_middle::ty::generic_args::GenericArg, rustc_span::symbol::Symbol)), rustc_codegen_llvm::debuginfo::metadata::build_generic_type_param_di_nodes::{closure_env#0}>
+                               at /rustc/cbae9b4cae2b108f6a3d18cfe6075714bb739463/library/core/src/ops/function.rs:298:21
+ 184:        0x10e923014 - {closure#0}<(rustc_middle::ty::generic_args::GenericArg, rustc_span::symbol::Symbol), core::option::Option<&rustc_codegen_llvm::llvm::ffi::{extern#2}::Metadata>, &mut rustc_codegen_llvm::debuginfo::metadata::build_generic_type_param_di_nodes::{closure_env#0}>
+                               at /rustc/cbae9b4cae2b108f6a3d18cfe6075714bb739463/library/core/src/iter/traits/iterator.rs:2994:32
+ 185:        0x10e923014 - try_fold<core::iter::adapters::zip::Zip<core::iter::adapters::copied::Copied<core::slice::iter::Iter<rustc_middle::ty::generic_args::GenericArg>>, alloc::vec::into_iter::IntoIter<rustc_span::symbol::Symbol, alloc::alloc::Global>>, (), core::iter::traits::iterator::Iterator::find_map::check::{closure_env#0}<(rustc_middle::ty::generic_args::GenericArg, rustc_span::symbol::Symbol), core::option::Option<&rustc_codegen_llvm::llvm::ffi::{extern#2}::Metadata>, &mut rustc_codegen_llvm::debuginfo::metadata::build_generic_type_param_di_nodes::{closure_env#0}>, core::ops::control_flow::ControlFlow<core::option::Option<&rustc_codegen_llvm::llvm::ffi::{extern#2}::Metadata>, ()>>
+                               at /rustc/cbae9b4cae2b108f6a3d18cfe6075714bb739463/library/core/src/iter/traits/iterator.rs:2490:21
+ 186:        0x10e923014 - find_map<core::iter::adapters::zip::Zip<core::iter::adapters::copied::Copied<core::slice::iter::Iter<rustc_middle::ty::generic_args::GenericArg>>, alloc::vec::into_iter::IntoIter<rustc_span::symbol::Symbol, alloc::alloc::Global>>, core::option::Option<&rustc_codegen_llvm::llvm::ffi::{extern#2}::Metadata>, &mut rustc_codegen_llvm::debuginfo::metadata::build_generic_type_param_di_nodes::{closure_env#0}>
+                               at /rustc/cbae9b4cae2b108f6a3d18cfe6075714bb739463/library/core/src/iter/traits/iterator.rs:3000:14
+ 187:        0x10e923014 - next<core::option::Option<&rustc_codegen_llvm::llvm::ffi::{extern#2}::Metadata>, core::iter::adapters::zip::Zip<core::iter::adapters::copied::Copied<core::slice::iter::Iter<rustc_middle::ty::generic_args::GenericArg>>, alloc::vec::into_iter::IntoIter<rustc_span::symbol::Symbol, alloc::alloc::Global>>, rustc_codegen_llvm::debuginfo::metadata::build_generic_type_param_di_nodes::{closure_env#0}>
+                               at /rustc/cbae9b4cae2b108f6a3d18cfe6075714bb739463/library/core/src/iter/adapters/filter_map.rs:64:19
+ 188:        0x10e923014 - extend<[core::option::Option<&rustc_codegen_llvm::llvm::ffi::{extern#2}::Metadata>; 16], core::iter::adapters::filter_map::FilterMap<core::iter::adapters::zip::Zip<core::iter::adapters::copied::Copied<core::slice::iter::Iter<rustc_middle::ty::generic_args::GenericArg>>, alloc::vec::into_iter::IntoIter<rustc_span::symbol::Symbol, alloc::alloc::Global>>, rustc_codegen_llvm::debuginfo::metadata::build_generic_type_param_di_nodes::{closure_env#0}>>
+                               at /Users/Abium/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/smallvec-1.15.1/src/lib.rs:2101:41
+ 189:        0x10e89a490 - from_iter<[core::option::Option<&rustc_codegen_llvm::llvm::ffi::{extern#2}::Metadata>; 16], core::iter::adapters::filter_map::FilterMap<core::iter::adapters::zip::Zip<core::iter::adapters::copied::Copied<core::slice::iter::Iter<rustc_middle::ty::generic_args::GenericArg>>, alloc::vec::into_iter::IntoIter<rustc_span::symbol::Symbol, alloc::alloc::Global>>, rustc_codegen_llvm::debuginfo::metadata::build_generic_type_param_di_nodes::{closure_env#0}>>
+                               at /Users/Abium/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/smallvec-1.15.1/src/lib.rs:2085:11
+ 190:        0x10e89a490 - collect<core::iter::adapters::filter_map::FilterMap<core::iter::adapters::zip::Zip<core::iter::adapters::copied::Copied<core::slice::iter::Iter<rustc_middle::ty::generic_args::GenericArg>>, alloc::vec::into_iter::IntoIter<rustc_span::symbol::Symbol, alloc::alloc::Global>>, rustc_codegen_llvm::debuginfo::metadata::build_generic_type_param_di_nodes::{closure_env#0}>, smallvec::SmallVec<[core::option::Option<&rustc_codegen_llvm::llvm::ffi::{extern#2}::Metadata>; 16]>>
+                               at /rustc/cbae9b4cae2b108f6a3d18cfe6075714bb739463/library/core/src/iter/traits/iterator.rs:2086:9
+ 191:        0x10e89a490 - build_generic_type_param_di_nodes
+                               at /Users/Abium/.local/opt/headstart/rustc/compiler/rustc_codegen_llvm/src/debuginfo/metadata.rs:1452:18
+ 192:        0x10e91cc40 - {closure#1}
+                               at /Users/Abium/.local/opt/headstart/rustc/compiler/rustc_codegen_llvm/src/debuginfo/metadata.rs:1137:14
+ 193:        0x10e91cc40 - build_type_with_children<rustc_codegen_llvm::debuginfo::metadata::build_struct_type_di_node::{closure_env#0}, rustc_codegen_llvm::debuginfo::metadata::build_struct_type_di_node::{closure_env#1}>
+                               at /Users/Abium/.local/opt/headstart/rustc/compiler/rustc_codegen_llvm/src/debuginfo/metadata/type_map.rs:326:20
+ 194:        0x10e8987d8 - build_struct_type_di_node
+                               at /Users/Abium/.local/opt/headstart/rustc/compiler/rustc_codegen_llvm/src/debuginfo/metadata.rs:1092:5
+ 195:        0x10e896e28 - spanned_type_di_node
+                               at /Users/Abium/.local/opt/headstart/rustc/compiler/rustc_codegen_llvm/src/debuginfo/metadata.rs:490:32
+ 196:        0x10e92c99c - {closure#0}
+                               at /Users/Abium/.local/opt/headstart/rustc/compiler/rustc_codegen_llvm/src/debuginfo/metadata.rs:1131:25
+ 197:        0x10e92c99c - call_once<((usize, &rustc_middle::ty::FieldDef)), rustc_codegen_llvm::debuginfo::metadata::build_struct_type_di_node::{closure#0}::{closure_env#0}>
+                               at /rustc/cbae9b4cae2b108f6a3d18cfe6075714bb739463/library/core/src/ops/function.rs:310:21
+ 198:        0x10e92c99c - map<(usize, &rustc_middle::ty::FieldDef), &rustc_codegen_llvm::llvm::ffi::{extern#2}::Metadata, &mut rustc_codegen_llvm::debuginfo::metadata::build_struct_type_di_node::{closure#0}::{closure_env#0}>
+                               at /rustc/cbae9b4cae2b108f6a3d18cfe6075714bb739463/library/core/src/option.rs:1163:29
+ 199:        0x10e92c99c - next<&rustc_codegen_llvm::llvm::ffi::{extern#2}::Metadata, core::iter::adapters::enumerate::Enumerate<core::slice::iter::Iter<rustc_middle::ty::FieldDef>>, rustc_codegen_llvm::debuginfo::metadata::build_struct_type_di_node::{closure#0}::{closure_env#0}>
+                               at /rustc/cbae9b4cae2b108f6a3d18cfe6075714bb739463/library/core/src/iter/adapters/map.rs:107:26
+ 200:        0x10e9285bc - extend<[&rustc_codegen_llvm::llvm::ffi::{extern#2}::Metadata; 16], core::iter::adapters::map::Map<core::iter::adapters::enumerate::Enumerate<core::slice::iter::Iter<rustc_middle::ty::FieldDef>>, rustc_codegen_llvm::debuginfo::metadata::build_struct_type_di_node::{closure#0}::{closure_env#0}>>
+                               at /Users/Abium/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/smallvec-1.15.1/src/lib.rs:2101:41
+ 201:        0x10e91cb78 - from_iter<[&rustc_codegen_llvm::llvm::ffi::{extern#2}::Metadata; 16], core::iter::adapters::map::Map<core::iter::adapters::enumerate::Enumerate<core::slice::iter::Iter<rustc_middle::ty::FieldDef>>, rustc_codegen_llvm::debuginfo::metadata::build_struct_type_di_node::{closure#0}::{closure_env#0}>>
+                               at /Users/Abium/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/smallvec-1.15.1/src/lib.rs:2085:11
+ 202:        0x10e91cb78 - collect<core::iter::adapters::map::Map<core::iter::adapters::enumerate::Enumerate<core::slice::iter::Iter<rustc_middle::ty::FieldDef>>, rustc_codegen_llvm::debuginfo::metadata::build_struct_type_di_node::{closure#0}::{closure_env#0}>, smallvec::SmallVec<[&rustc_codegen_llvm::llvm::ffi::{extern#2}::Metadata; 16]>>
+                               at /rustc/cbae9b4cae2b108f6a3d18cfe6075714bb739463/library/core/src/iter/traits/iterator.rs:2086:9
+ 203:        0x10e91cb78 - {closure#0}
+                               at /Users/Abium/.local/opt/headstart/rustc/compiler/rustc_codegen_llvm/src/debuginfo/metadata.rs:1135:18
+ 204:        0x10e91cb78 - build_type_with_children<rustc_codegen_llvm::debuginfo::metadata::build_struct_type_di_node::{closure_env#0}, rustc_codegen_llvm::debuginfo::metadata::build_struct_type_di_node::{closure_env#1}>
+                               at /Users/Abium/.local/opt/headstart/rustc/compiler/rustc_codegen_llvm/src/debuginfo/metadata/type_map.rs:325:9
+ 205:        0x10e8987d8 - build_struct_type_di_node
+                               at /Users/Abium/.local/opt/headstart/rustc/compiler/rustc_codegen_llvm/src/debuginfo/metadata.rs:1092:5
+ 206:        0x10e896e28 - spanned_type_di_node
+                               at /Users/Abium/.local/opt/headstart/rustc/compiler/rustc_codegen_llvm/src/debuginfo/metadata.rs:490:32
+ 207:        0x10e92c99c - {closure#0}
+                               at /Users/Abium/.local/opt/headstart/rustc/compiler/rustc_codegen_llvm/src/debuginfo/metadata.rs:1131:25
+ 208:        0x10e92c99c - call_once<((usize, &rustc_middle::ty::FieldDef)), rustc_codegen_llvm::debuginfo::metadata::build_struct_type_di_node::{closure#0}::{closure_env#0}>
+                               at /rustc/cbae9b4cae2b108f6a3d18cfe6075714bb739463/library/core/src/ops/function.rs:310:21
+ 209:        0x10e92c99c - map<(usize, &rustc_middle::ty::FieldDef), &rustc_codegen_llvm::llvm::ffi::{extern#2}::Metadata, &mut rustc_codegen_llvm::debuginfo::metadata::build_struct_type_di_node::{closure#0}::{closure_env#0}>
+                               at /rustc/cbae9b4cae2b108f6a3d18cfe6075714bb739463/library/core/src/option.rs:1163:29
+ 210:        0x10e92c99c - next<&rustc_codegen_llvm::llvm::ffi::{extern#2}::Metadata, core::iter::adapters::enumerate::Enumerate<core::slice::iter::Iter<rustc_middle::ty::FieldDef>>, rustc_codegen_llvm::debuginfo::metadata::build_struct_type_di_node::{closure#0}::{closure_env#0}>
+                               at /rustc/cbae9b4cae2b108f6a3d18cfe6075714bb739463/library/core/src/iter/adapters/map.rs:107:26
+ 211:        0x10e9285bc - extend<[&rustc_codegen_llvm::llvm::ffi::{extern#2}::Metadata; 16], core::iter::adapters::map::Map<core::iter::adapters::enumerate::Enumerate<core::slice::iter::Iter<rustc_middle::ty::FieldDef>>, rustc_codegen_llvm::debuginfo::metadata::build_struct_type_di_node::{closure#0}::{closure_env#0}>>
+                               at /Users/Abium/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/smallvec-1.15.1/src/lib.rs:2101:41
+ 212:        0x10e91cb78 - from_iter<[&rustc_codegen_llvm::llvm::ffi::{extern#2}::Metadata; 16], core::iter::adapters::map::Map<core::iter::adapters::enumerate::Enumerate<core::slice::iter::Iter<rustc_middle::ty::FieldDef>>, rustc_codegen_llvm::debuginfo::metadata::build_struct_type_di_node::{closure#0}::{closure_env#0}>>
+                               at /Users/Abium/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/smallvec-1.15.1/src/lib.rs:2085:11
+ 213:        0x10e91cb78 - collect<core::iter::adapters::map::Map<core::iter::adapters::enumerate::Enumerate<core::slice::iter::Iter<rustc_middle::ty::FieldDef>>, rustc_codegen_llvm::debuginfo::metadata::build_struct_type_di_node::{closure#0}::{closure_env#0}>, smallvec::SmallVec<[&rustc_codegen_llvm::llvm::ffi::{extern#2}::Metadata; 16]>>
+                               at /rustc/cbae9b4cae2b108f6a3d18cfe6075714bb739463/library/core/src/iter/traits/iterator.rs:2086:9
+ 214:        0x10e91cb78 - {closure#0}
+                               at /Users/Abium/.local/opt/headstart/rustc/compiler/rustc_codegen_llvm/src/debuginfo/metadata.rs:1135:18
+ 215:        0x10e91cb78 - build_type_with_children<rustc_codegen_llvm::debuginfo::metadata::build_struct_type_di_node::{closure_env#0}, rustc_codegen_llvm::debuginfo::metadata::build_struct_type_di_node::{closure_env#1}>
+                               at /Users/Abium/.local/opt/headstart/rustc/compiler/rustc_codegen_llvm/src/debuginfo/metadata/type_map.rs:325:9
+ 216:        0x10e8987d8 - build_struct_type_di_node
+                               at /Users/Abium/.local/opt/headstart/rustc/compiler/rustc_codegen_llvm/src/debuginfo/metadata.rs:1092:5
+ 217:        0x10e896e28 - spanned_type_di_node
+                               at /Users/Abium/.local/opt/headstart/rustc/compiler/rustc_codegen_llvm/src/debuginfo/metadata.rs:490:32
+ 218:        0x10e92c99c - {closure#0}
+                               at /Users/Abium/.local/opt/headstart/rustc/compiler/rustc_codegen_llvm/src/debuginfo/metadata.rs:1131:25
+ 219:        0x10e92c99c - call_once<((usize, &rustc_middle::ty::FieldDef)), rustc_codegen_llvm::debuginfo::metadata::build_struct_type_di_node::{closure#0}::{closure_env#0}>
+                               at /rustc/cbae9b4cae2b108f6a3d18cfe6075714bb739463/library/core/src/ops/function.rs:310:21
+ 220:        0x10e92c99c - map<(usize, &rustc_middle::ty::FieldDef), &rustc_codegen_llvm::llvm::ffi::{extern#2}::Metadata, &mut rustc_codegen_llvm::debuginfo::metadata::build_struct_type_di_node::{closure#0}::{closure_env#0}>
+                               at /rustc/cbae9b4cae2b108f6a3d18cfe6075714bb739463/library/core/src/option.rs:1163:29
+ 221:        0x10e92c99c - next<&rustc_codegen_llvm::llvm::ffi::{extern#2}::Metadata, core::iter::adapters::enumerate::Enumerate<core::slice::iter::Iter<rustc_middle::ty::FieldDef>>, rustc_codegen_llvm::debuginfo::metadata::build_struct_type_di_node::{closure#0}::{closure_env#0}>
+                               at /rustc/cbae9b4cae2b108f6a3d18cfe6075714bb739463/library/core/src/iter/adapters/map.rs:107:26
+ 222:        0x10e9285bc - extend<[&rustc_codegen_llvm::llvm::ffi::{extern#2}::Metadata; 16], core::iter::adapters::map::Map<core::iter::adapters::enumerate::Enumerate<core::slice::iter::Iter<rustc_middle::ty::FieldDef>>, rustc_codegen_llvm::debuginfo::metadata::build_struct_type_di_node::{closure#0}::{closure_env#0}>>
+                               at /Users/Abium/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/smallvec-1.15.1/src/lib.rs:2101:41
+ 223:        0x10e91cb78 - from_iter<[&rustc_codegen_llvm::llvm::ffi::{extern#2}::Metadata; 16], core::iter::adapters::map::Map<core::iter::adapters::enumerate::Enumerate<core::slice::iter::Iter<rustc_middle::ty::FieldDef>>, rustc_codegen_llvm::debuginfo::metadata::build_struct_type_di_node::{closure#0}::{closure_env#0}>>
+                               at /Users/Abium/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/smallvec-1.15.1/src/lib.rs:2085:11
+ 224:        0x10e91cb78 - collect<core::iter::adapters::map::Map<core::iter::adapters::enumerate::Enumerate<core::slice::iter::Iter<rustc_middle::ty::FieldDef>>, rustc_codegen_llvm::debuginfo::metadata::build_struct_type_di_node::{closure#0}::{closure_env#0}>, smallvec::SmallVec<[&rustc_codegen_llvm::llvm::ffi::{extern#2}::Metadata; 16]>>
+                               at /rustc/cbae9b4cae2b108f6a3d18cfe6075714bb739463/library/core/src/iter/traits/iterator.rs:2086:9
+ 225:        0x10e91cb78 - {closure#0}
+                               at /Users/Abium/.local/opt/headstart/rustc/compiler/rustc_codegen_llvm/src/debuginfo/metadata.rs:1135:18
+ 226:        0x10e91cb78 - build_type_with_children<rustc_codegen_llvm::debuginfo::metadata::build_struct_type_di_node::{closure_env#0}, rustc_codegen_llvm::debuginfo::metadata::build_struct_type_di_node::{closure_env#1}>
+                               at /Users/Abium/.local/opt/headstart/rustc/compiler/rustc_codegen_llvm/src/debuginfo/metadata/type_map.rs:325:9
+ 227:        0x10e8987d8 - build_struct_type_di_node
+                               at /Users/Abium/.local/opt/headstart/rustc/compiler/rustc_codegen_llvm/src/debuginfo/metadata.rs:1092:5
+ 228:        0x10e896e28 - spanned_type_di_node
+                               at /Users/Abium/.local/opt/headstart/rustc/compiler/rustc_codegen_llvm/src/debuginfo/metadata.rs:490:32
+ 229:        0x10e8cf1d4 - {closure#0}
+                               at /Users/Abium/.local/opt/headstart/rustc/compiler/rustc_codegen_llvm/src/debuginfo/metadata.rs:1448:51
+ 230:        0x10e8cf1d4 - map<rustc_middle::ty::Ty, core::option::Option<&rustc_codegen_llvm::llvm::ffi::{extern#2}::Metadata>, rustc_codegen_llvm::debuginfo::metadata::build_generic_type_param_di_nodes::{closure#0}::{closure_env#0}>
+                               at /rustc/cbae9b4cae2b108f6a3d18cfe6075714bb739463/library/core/src/option.rs:1163:29
+ 231:        0x10e8cf1d4 - {closure#0}
+                               at /Users/Abium/.local/opt/headstart/rustc/compiler/rustc_codegen_llvm/src/debuginfo/metadata.rs:1444:36
+ 232:        0x10e8cf1d4 - call_mut<((rustc_middle::ty::generic_args::GenericArg, rustc_span::symbol::Symbol)), rustc_codegen_llvm::debuginfo::metadata::build_generic_type_param_di_nodes::{closure_env#0}>
+                               at /rustc/cbae9b4cae2b108f6a3d18cfe6075714bb739463/library/core/src/ops/function.rs:298:21
+ 233:        0x10e923014 - {closure#0}<(rustc_middle::ty::generic_args::GenericArg, rustc_span::symbol::Symbol), core::option::Option<&rustc_codegen_llvm::llvm::ffi::{extern#2}::Metadata>, &mut rustc_codegen_llvm::debuginfo::metadata::build_generic_type_param_di_nodes::{closure_env#0}>
+                               at /rustc/cbae9b4cae2b108f6a3d18cfe6075714bb739463/library/core/src/iter/traits/iterator.rs:2994:32
+ 234:        0x10e923014 - try_fold<core::iter::adapters::zip::Zip<core::iter::adapters::copied::Copied<core::slice::iter::Iter<rustc_middle::ty::generic_args::GenericArg>>, alloc::vec::into_iter::IntoIter<rustc_span::symbol::Symbol, alloc::alloc::Global>>, (), core::iter::traits::iterator::Iterator::find_map::check::{closure_env#0}<(rustc_middle::ty::generic_args::GenericArg, rustc_span::symbol::Symbol), core::option::Option<&rustc_codegen_llvm::llvm::ffi::{extern#2}::Metadata>, &mut rustc_codegen_llvm::debuginfo::metadata::build_generic_type_param_di_nodes::{closure_env#0}>, core::ops::control_flow::ControlFlow<core::option::Option<&rustc_codegen_llvm::llvm::ffi::{extern#2}::Metadata>, ()>>
+                               at /rustc/cbae9b4cae2b108f6a3d18cfe6075714bb739463/library/core/src/iter/traits/iterator.rs:2490:21
+ 235:        0x10e923014 - find_map<core::iter::adapters::zip::Zip<core::iter::adapters::copied::Copied<core::slice::iter::Iter<rustc_middle::ty::generic_args::GenericArg>>, alloc::vec::into_iter::IntoIter<rustc_span::symbol::Symbol, alloc::alloc::Global>>, core::option::Option<&rustc_codegen_llvm::llvm::ffi::{extern#2}::Metadata>, &mut rustc_codegen_llvm::debuginfo::metadata::build_generic_type_param_di_nodes::{closure_env#0}>
+                               at /rustc/cbae9b4cae2b108f6a3d18cfe6075714bb739463/library/core/src/iter/traits/iterator.rs:3000:14
+ 236:        0x10e923014 - next<core::option::Option<&rustc_codegen_llvm::llvm::ffi::{extern#2}::Metadata>, core::iter::adapters::zip::Zip<core::iter::adapters::copied::Copied<core::slice::iter::Iter<rustc_middle::ty::generic_args::GenericArg>>, alloc::vec::into_iter::IntoIter<rustc_span::symbol::Symbol, alloc::alloc::Global>>, rustc_codegen_llvm::debuginfo::metadata::build_generic_type_param_di_nodes::{closure_env#0}>
+                               at /rustc/cbae9b4cae2b108f6a3d18cfe6075714bb739463/library/core/src/iter/adapters/filter_map.rs:64:19
+ 237:        0x10e923014 - extend<[core::option::Option<&rustc_codegen_llvm::llvm::ffi::{extern#2}::Metadata>; 16], core::iter::adapters::filter_map::FilterMap<core::iter::adapters::zip::Zip<core::iter::adapters::copied::Copied<core::slice::iter::Iter<rustc_middle::ty::generic_args::GenericArg>>, alloc::vec::into_iter::IntoIter<rustc_span::symbol::Symbol, alloc::alloc::Global>>, rustc_codegen_llvm::debuginfo::metadata::build_generic_type_param_di_nodes::{closure_env#0}>>
+                               at /Users/Abium/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/smallvec-1.15.1/src/lib.rs:2101:41
+ 238:        0x10e89a490 - from_iter<[core::option::Option<&rustc_codegen_llvm::llvm::ffi::{extern#2}::Metadata>; 16], core::iter::adapters::filter_map::FilterMap<core::iter::adapters::zip::Zip<core::iter::adapters::copied::Copied<core::slice::iter::Iter<rustc_middle::ty::generic_args::GenericArg>>, alloc::vec::into_iter::IntoIter<rustc_span::symbol::Symbol, alloc::alloc::Global>>, rustc_codegen_llvm::debuginfo::metadata::build_generic_type_param_di_nodes::{closure_env#0}>>
+                               at /Users/Abium/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/smallvec-1.15.1/src/lib.rs:2085:11
+ 239:        0x10e89a490 - collect<core::iter::adapters::filter_map::FilterMap<core::iter::adapters::zip::Zip<core::iter::adapters::copied::Copied<core::slice::iter::Iter<rustc_middle::ty::generic_args::GenericArg>>, alloc::vec::into_iter::IntoIter<rustc_span::symbol::Symbol, alloc::alloc::Global>>, rustc_codegen_llvm::debuginfo::metadata::build_generic_type_param_di_nodes::{closure_env#0}>, smallvec::SmallVec<[core::option::Option<&rustc_codegen_llvm::llvm::ffi::{extern#2}::Metadata>; 16]>>
+                               at /rustc/cbae9b4cae2b108f6a3d18cfe6075714bb739463/library/core/src/iter/traits/iterator.rs:2086:9
+ 240:        0x10e89a490 - build_generic_type_param_di_nodes
+                               at /Users/Abium/.local/opt/headstart/rustc/compiler/rustc_codegen_llvm/src/debuginfo/metadata.rs:1452:18
+ 241:        0x10e91ec1c - {closure#1}
+                               at /Users/Abium/.local/opt/headstart/rustc/compiler/rustc_codegen_llvm/src/debuginfo/metadata/enums/mod.rs:268:14
+ 242:        0x10e91ec1c - build_type_with_children<rustc_codegen_llvm::debuginfo::metadata::enums::build_enum_variant_struct_type_di_node::{closure_env#0}, rustc_codegen_llvm::debuginfo::metadata::enums::build_enum_variant_struct_type_di_node::{closure_env#1}>
+                               at /Users/Abium/.local/opt/headstart/rustc/compiler/rustc_codegen_llvm/src/debuginfo/metadata/type_map.rs:326:20
+ 243:        0x10e876f6c - build_enum_variant_struct_type_di_node
+                               at /Users/Abium/.local/opt/headstart/rustc/compiler/rustc_codegen_llvm/src/debuginfo/metadata/enums/mod.rs:224:5
+ 244:        0x10e92caf8 - {closure#0}
+                               at /Users/Abium/.local/opt/headstart/rustc/compiler/rustc_codegen_llvm/src/debuginfo/metadata/enums/native.rs:86:50
+ 245:        0x10e92caf8 - call_once<(rustc_abi::layout::VariantIdx), rustc_codegen_llvm::debuginfo::metadata::enums::native::build_enum_type_di_node::{closure#0}::{closure_env#0}>
+                               at /rustc/cbae9b4cae2b108f6a3d18cfe6075714bb739463/library/core/src/ops/function.rs:310:21
+ 246:        0x10e92caf8 - map<rustc_abi::layout::VariantIdx, rustc_codegen_llvm::debuginfo::metadata::enums::native::VariantMemberInfo, &mut rustc_codegen_llvm::debuginfo::metadata::enums::native::build_enum_type_di_node::{closure#0}::{closure_env#0}>
+                               at /rustc/cbae9b4cae2b108f6a3d18cfe6075714bb739463/library/core/src/option.rs:1163:29
+ 247:        0x10e92caf8 - next<rustc_codegen_llvm::debuginfo::metadata::enums::native::VariantMemberInfo, core::ops::range::Range<rustc_abi::layout::VariantIdx>, rustc_codegen_llvm::debuginfo::metadata::enums::native::build_enum_type_di_node::{closure#0}::{closure_env#0}>
+                               at /rustc/cbae9b4cae2b108f6a3d18cfe6075714bb739463/library/core/src/iter/adapters/map.rs:107:26
+ 248:        0x10e92726c - extend<[rustc_codegen_llvm::debuginfo::metadata::enums::native::VariantMemberInfo; 16], core::iter::adapters::map::Map<core::ops::range::Range<rustc_abi::layout::VariantIdx>, rustc_codegen_llvm::debuginfo::metadata::enums::native::build_enum_type_di_node::{closure#0}::{closure_env#0}>>
+                               at /Users/Abium/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/smallvec-1.15.1/src/lib.rs:2101:41
+ 249:        0x10e9201c0 - from_iter<[rustc_codegen_llvm::debuginfo::metadata::enums::native::VariantMemberInfo; 16], core::iter::adapters::map::Map<core::ops::range::Range<rustc_abi::layout::VariantIdx>, rustc_codegen_llvm::debuginfo::metadata::enums::native::build_enum_type_di_node::{closure#0}::{closure_env#0}>>
+                               at /Users/Abium/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/smallvec-1.15.1/src/lib.rs:2085:11
+ 250:        0x10e9201c0 - collect<core::iter::adapters::map::Map<core::ops::range::Range<rustc_abi::layout::VariantIdx>, rustc_codegen_llvm::debuginfo::metadata::enums::native::build_enum_type_di_node::{closure#0}::{closure_env#0}>, smallvec::SmallVec<[rustc_codegen_llvm::debuginfo::metadata::enums::native::VariantMemberInfo; 16]>>
+                               at /rustc/cbae9b4cae2b108f6a3d18cfe6075714bb739463/library/core/src/iter/traits/iterator.rs:2086:9
+ 251:        0x10e9201c0 - {closure#0}
+                               at /Users/Abium/.local/opt/headstart/rustc/compiler/rustc_codegen_llvm/src/debuginfo/metadata/enums/native.rs:104:18
+ 252:        0x10e9201c0 - build_type_with_children<rustc_codegen_llvm::debuginfo::metadata::enums::native::build_enum_type_di_node::{closure_env#0}, fn(&rustc_codegen_llvm::context::GenericCx<rustc_codegen_llvm::context::FullCx>) -> smallvec::SmallVec<[core::option::Option<&rustc_codegen_llvm::llvm::ffi::{extern#2}::Metadata>; 16]>>
+                               at /Users/Abium/.local/opt/headstart/rustc/compiler/rustc_codegen_llvm/src/debuginfo/metadata/type_map.rs:325:9
+ 253:        0x10e889ba4 - build_enum_type_di_node
+                               at /Users/Abium/.local/opt/headstart/rustc/compiler/rustc_codegen_llvm/src/debuginfo/metadata/enums/native.rs:65:5
+ 254:        0x10e8764e8 - build_enum_type_di_node
+                               at /Users/Abium/.local/opt/headstart/rustc/compiler/rustc_codegen_llvm/src/debuginfo/metadata/enums/mod.rs:48:9
+ 255:        0x10e896e4c - spanned_type_di_node
+                               at /Users/Abium/.local/opt/headstart/rustc/compiler/rustc_codegen_llvm/src/debuginfo/metadata.rs:492:30
+ 256:        0x10e8ff8c4 - create_dbg_var
+                               at /Users/Abium/.local/opt/headstart/rustc/compiler/rustc_codegen_llvm/src/debuginfo/mod.rs:440:29
+ 257:        0x10e980f14 - {closure#0}<rustc_codegen_llvm::builder::GenericBuilder<rustc_codegen_llvm::context::FullCx>>
+                               at /Users/Abium/.local/opt/headstart/rustc/compiler/rustc_codegen_ssa/src/mir/debuginfo.rs:626:24
+ 258:        0x10e980f14 - map<(&rustc_codegen_llvm::llvm::ffi::{extern#2}::Metadata, core::option::Option<&rustc_codegen_llvm::llvm::ffi::{extern#2}::Metadata>, rustc_span::span_encoding::Span), &rustc_codegen_llvm::llvm::ffi::{extern#2}::Metadata, rustc_codegen_ssa::mir::debuginfo::{impl#3}::compute_per_local_var_debug_info::{closure_env#0}<rustc_codegen_llvm::builder::GenericBuilder<rustc_codegen_llvm::context::FullCx>>>
+                               at /rustc/cbae9b4cae2b108f6a3d18cfe6075714bb739463/library/core/src/option.rs:1163:29
+ 259:        0x10e980f14 - compute_per_local_var_debug_info<rustc_codegen_llvm::builder::GenericBuilder<rustc_codegen_llvm::context::FullCx>>
+                               at /Users/Abium/.local/opt/headstart/rustc/compiler/rustc_codegen_ssa/src/mir/debuginfo.rs:590:46
+ 260:        0x10e980f14 - codegen_mir<rustc_codegen_llvm::builder::GenericBuilder<rustc_codegen_llvm::context::FullCx>>
+                               at /Users/Abium/.local/opt/headstart/rustc/compiler/rustc_codegen_ssa/src/mir/mod.rs:281:12
+ 261:        0x10e97a234 - codegen_instance<rustc_codegen_llvm::builder::GenericBuilder<rustc_codegen_llvm::context::FullCx>>
+                               at /Users/Abium/.local/opt/headstart/rustc/compiler/rustc_codegen_ssa/src/base.rs:405:5
+ 262:        0x10e8b014c - define<rustc_codegen_llvm::builder::GenericBuilder<rustc_codegen_llvm::context::FullCx>>
+                               at /Users/Abium/.local/opt/headstart/rustc/compiler/rustc_codegen_ssa/src/mono_item.rs:49:21
+ 263:        0x10e878630 - module_codegen
+                               at /Users/Abium/.local/opt/headstart/rustc/compiler/rustc_codegen_llvm/src/base.rs:128:27
+ 264:        0x10e893fac - {closure#0}
+                               at /Users/Abium/.local/opt/headstart/rustc/compiler/rustc_codegen_llvm/src/base.rs:74:12
+ 265:        0x10e893fac - {closure#0}<rustc_codegen_llvm::base::compile_codegen_unit::{closure_env#0}, rustc_codegen_ssa::ModuleCodegen<rustc_codegen_llvm::back::llvm_backend::ModuleLlvm>>
+                               at /Users/Abium/.local/opt/headstart/rustc/compiler/rustc_middle/src/ty/context/tls.rs:56:9
+ 266:        0x10e893fac - try_with<core::cell::Cell<*const ()>, rustc_middle::ty::context::tls::enter_context::{closure_env#0}<rustc_codegen_llvm::base::compile_codegen_unit::{closure_env#0}, rustc_codegen_ssa::ModuleCodegen<rustc_codegen_llvm::back::llvm_backend::ModuleLlvm>>, rustc_codegen_ssa::ModuleCodegen<rustc_codegen_llvm::back::llvm_backend::ModuleLlvm>>
+                               at /rustc/cbae9b4cae2b108f6a3d18cfe6075714bb739463/library/std/src/thread/local.rs:464:12
+ 267:        0x10e893fac - with<core::cell::Cell<*const ()>, rustc_middle::ty::context::tls::enter_context::{closure_env#0}<rustc_codegen_llvm::base::compile_codegen_unit::{closure_env#0}, rustc_codegen_ssa::ModuleCodegen<rustc_codegen_llvm::back::llvm_backend::ModuleLlvm>>, rustc_codegen_ssa::ModuleCodegen<rustc_codegen_llvm::back::llvm_backend::ModuleLlvm>>
+                               at /rustc/cbae9b4cae2b108f6a3d18cfe6075714bb739463/library/std/src/thread/local.rs:428:20
+ 268:        0x10e8bbb70 - enter_context<rustc_codegen_llvm::base::compile_codegen_unit::{closure_env#0}, rustc_codegen_ssa::ModuleCodegen<rustc_codegen_llvm::back::llvm_backend::ModuleLlvm>>
+                               at /Users/Abium/.local/opt/headstart/rustc/compiler/rustc_middle/src/ty/context/tls.rs:53:9
+ 269:        0x10e8bbb70 - {closure#0}<rustc_codegen_llvm::base::compile_codegen_unit::{closure_env#0}, rustc_codegen_ssa::ModuleCodegen<rustc_codegen_llvm::back::llvm_backend::ModuleLlvm>>
+                               at /Users/Abium/.local/opt/headstart/rustc/compiler/rustc_middle/src/dep_graph/mod.rs:65:9
+ 270:        0x10e8bbb70 - {closure#0}<rustc_middle::dep_graph::with_deps::{closure_env#0}<rustc_codegen_llvm::base::compile_codegen_unit::{closure_env#0}, rustc_codegen_ssa::ModuleCodegen<rustc_codegen_llvm::back::llvm_backend::ModuleLlvm>>, rustc_codegen_ssa::ModuleCodegen<rustc_codegen_llvm::back::llvm_backend::ModuleLlvm>>
+                               at /Users/Abium/.local/opt/headstart/rustc/compiler/rustc_middle/src/ty/context/tls.rs:86:36
+ 271:        0x10e8bbb70 - with_context_opt<rustc_middle::ty::context::tls::with_context::{closure_env#0}<rustc_middle::dep_graph::with_deps::{closure_env#0}<rustc_codegen_llvm::base::compile_codegen_unit::{closure_env#0}, rustc_codegen_ssa::ModuleCodegen<rustc_codegen_llvm::back::llvm_backend::ModuleLlvm>>, rustc_codegen_ssa::ModuleCodegen<rustc_codegen_llvm::back::llvm_backend::ModuleLlvm>>, rustc_codegen_ssa::ModuleCodegen<rustc_codegen_llvm::back::llvm_backend::ModuleLlvm>>
+                               at /Users/Abium/.local/opt/headstart/rustc/compiler/rustc_middle/src/ty/context/tls.rs:75:18
+ 272:        0x10e8bbb70 - with_context<rustc_middle::dep_graph::with_deps::{closure_env#0}<rustc_codegen_llvm::base::compile_codegen_unit::{closure_env#0}, rustc_codegen_ssa::ModuleCodegen<rustc_codegen_llvm::back::llvm_backend::ModuleLlvm>>, rustc_codegen_ssa::ModuleCodegen<rustc_codegen_llvm::back::llvm_backend::ModuleLlvm>>
+                               at /Users/Abium/.local/opt/headstart/rustc/compiler/rustc_middle/src/ty/context/tls.rs:86:5
+ 273:        0x10e8bbb70 - with_deps<rustc_codegen_llvm::base::compile_codegen_unit::{closure_env#0}, rustc_codegen_ssa::ModuleCodegen<rustc_codegen_llvm::back::llvm_backend::ModuleLlvm>>
+                               at /Users/Abium/.local/opt/headstart/rustc/compiler/rustc_middle/src/dep_graph/mod.rs:63:5
+ 274:        0x10e877fac - with_task<rustc_codegen_llvm::base::compile_codegen_unit::{closure_env#0}, rustc_codegen_ssa::ModuleCodegen<rustc_codegen_llvm::back::llvm_backend::ModuleLlvm>>
+                               at /Users/Abium/.local/opt/headstart/rustc/compiler/rustc_middle/src/dep_graph/graph.rs:394:14
+ 275:        0x10e877fac - with_task<rustc_codegen_llvm::base::compile_codegen_unit::{closure_env#0}, rustc_codegen_ssa::ModuleCodegen<rustc_codegen_llvm::back::llvm_backend::ModuleLlvm>>
+                               at /Users/Abium/.local/opt/headstart/rustc/compiler/rustc_middle/src/dep_graph/graph.rs:341:32
+ 276:        0x10e877fac - compile_codegen_unit
+                               at /Users/Abium/.local/opt/headstart/rustc/compiler/rustc_codegen_llvm/src/base.rs:71:37
+ 277:        0x10e979bb8 - codegen_crate<rustc_codegen_llvm::back::llvm_backend::LlvmCodegenBackend, rustc_codegen_llvm::back::llvm_backend::ModuleLlvm>
+                               at /Users/Abium/.local/opt/headstart/rustc/compiler/rustc_codegen_ssa/src/base.rs:862:42
+ 278:        0x10e869b18 - codegen_crate
+                               at /Users/Abium/.local/opt/headstart/rustc/compiler/rustc_codegen_llvm/src/back/llvm_backend.rs:360:18
+ 279:        0x10e80ed78 - {closure#2}
+                               at /Users/Abium/.local/opt/headstart/rustc/compiler/rustc_interface/src/passes.rs:1472:29
+ 280:        0x10e80ed78 - run<alloc::boxed::Box<dyn core::any::Any, alloc::alloc::Global>, rustc_interface::passes::start_codegen::{closure_env#2}>
+                               at /Users/Abium/.local/opt/headstart/rustc/compiler/rustc_data_structures/src/profiling.rs:847:9
+ 281:        0x10e80ed78 - time<alloc::boxed::Box<dyn core::any::Any, alloc::alloc::Global>, rustc_interface::passes::start_codegen::{closure_env#2}>
+                               at /Users/Abium/.local/opt/headstart/rustc/compiler/rustc_session/src/utils.rs:17:50
+ 282:        0x10e7f17b4 - start_codegen
+                               at /Users/Abium/.local/opt/headstart/rustc/compiler/rustc_interface/src/passes.rs:1458:28
+ 283:        0x10e82a6c8 - codegen_and_build_linker
+                               at /Users/Abium/.local/opt/headstart/rustc/compiler/rustc_interface/src/queries.rs:35:13
+ 284:        0x10e63a998 - {closure#1}
+                               at /Users/Abium/.local/opt/headstart/rustc/compiler/rustc_driver_impl/src/lib.rs:331:17
+ 285:        0x10e63a998 - {closure#0}<core::option::Option<(rustc_interface::queries::Linker, core::option::Option<rustc_metadata::fs::EarlyMetadataFiles>)>, rustc_driver_impl::run_compiler::{closure#0}::{closure_env#1}>
+                               at /Users/Abium/.local/opt/headstart/rustc/compiler/rustc_interface/src/passes.rs:1045:80
+ 286:        0x10e63a998 - call_once<core::option::Option<(rustc_interface::queries::Linker, core::option::Option<rustc_metadata::fs::EarlyMetadataFiles>)>, rustc_interface::passes::create_and_enter_global_ctxt::{closure#2}::{closure_env#0}<core::option::Option<(rustc_interface::queries::Linker, core::option::Option<rustc_metadata::fs::EarlyMetadataFiles>)>, rustc_driver_impl::run_compiler::{closure#0}::{closure_env#1}>>
+                               at /rustc/cbae9b4cae2b108f6a3d18cfe6075714bb739463/library/core/src/panic/unwind_safe.rs:275:9
+ 287:        0x10e63a998 - do_call<core::panic::unwind_safe::AssertUnwindSafe<rustc_interface::passes::create_and_enter_global_ctxt::{closure#2}::{closure_env#0}<core::option::Option<(rustc_interface::queries::Linker, core::option::Option<rustc_metadata::fs::EarlyMetadataFiles>)>, rustc_driver_impl::run_compiler::{closure#0}::{closure_env#1}>>, core::option::Option<(rustc_interface::queries::Linker, core::option::Option<rustc_metadata::fs::EarlyMetadataFiles>)>>
+                               at /rustc/cbae9b4cae2b108f6a3d18cfe6075714bb739463/library/std/src/panicking.rs:576:43
+ 288:        0x10e63a998 - catch_unwind<core::option::Option<(rustc_interface::queries::Linker, core::option::Option<rustc_metadata::fs::EarlyMetadataFiles>)>, core::panic::unwind_safe::AssertUnwindSafe<rustc_interface::passes::create_and_enter_global_ctxt::{closure#2}::{closure_env#0}<core::option::Option<(rustc_interface::queries::Linker, core::option::Option<rustc_metadata::fs::EarlyMetadataFiles>)>, rustc_driver_impl::run_compiler::{closure#0}::{closure_env#1}>>>
+                               at /rustc/cbae9b4cae2b108f6a3d18cfe6075714bb739463/library/std/src/panicking.rs:544:19
+ 289:        0x10e63a998 - catch_unwind<core::panic::unwind_safe::AssertUnwindSafe<rustc_interface::passes::create_and_enter_global_ctxt::{closure#2}::{closure_env#0}<core::option::Option<(rustc_interface::queries::Linker, core::option::Option<rustc_metadata::fs::EarlyMetadataFiles>)>, rustc_driver_impl::run_compiler::{closure#0}::{closure_env#1}>>, core::option::Option<(rustc_interface::queries::Linker, core::option::Option<rustc_metadata::fs::EarlyMetadataFiles>)>>
+                               at /rustc/cbae9b4cae2b108f6a3d18cfe6075714bb739463/library/std/src/panic.rs:359:14
+ 290:        0x10e63a998 - {closure#2}<core::option::Option<(rustc_interface::queries::Linker, core::option::Option<rustc_metadata::fs::EarlyMetadataFiles>)>, rustc_driver_impl::run_compiler::{closure#0}::{closure_env#1}>
+                               at /Users/Abium/.local/opt/headstart/rustc/compiler/rustc_interface/src/passes.rs:1045:23
+ 291:        0x10e63a998 - {closure#1}<rustc_interface::passes::create_and_enter_global_ctxt::{closure_env#2}<core::option::Option<(rustc_interface::queries::Linker, core::option::Option<rustc_metadata::fs::EarlyMetadataFiles>)>, rustc_driver_impl::run_compiler::{closure#0}::{closure_env#1}>, core::option::Option<(rustc_interface::queries::Linker, core::option::Option<rustc_metadata::fs::EarlyMetadataFiles>)>>
+                               at /Users/Abium/.local/opt/headstart/rustc/compiler/rustc_middle/src/ty/context.rs:809:37
+ 292:        0x10e63a998 - {closure#0}<rustc_middle::ty::context::{impl#15}::enter::{closure_env#1}<rustc_interface::passes::create_and_enter_global_ctxt::{closure_env#2}<core::option::Option<(rustc_interface::queries::Linker, core::option::Option<rustc_metadata::fs::EarlyMetadataFiles>)>, rustc_driver_impl::run_compiler::{closure#0}::{closure_env#1}>, core::option::Option<(rustc_interface::queries::Linker, core::option::Option<rustc_metadata::fs::EarlyMetadataFiles>)>>, core::option::Option<(rustc_interface::queries::Linker, core::option::Option<rustc_metadata::fs::EarlyMetadataFiles>)>>
+                               at /Users/Abium/.local/opt/headstart/rustc/compiler/rustc_middle/src/ty/context/tls.rs:56:9
+ 293:        0x10e63a998 - try_with<core::cell::Cell<*const ()>, rustc_middle::ty::context::tls::enter_context::{closure_env#0}<rustc_middle::ty::context::{impl#15}::enter::{closure_env#1}<rustc_interface::passes::create_and_enter_global_ctxt::{closure_env#2}<core::option::Option<(rustc_interface::queries::Linker, core::option::Option<rustc_metadata::fs::EarlyMetadataFiles>)>, rustc_driver_impl::run_compiler::{closure#0}::{closure_env#1}>, core::option::Option<(rustc_interface::queries::Linker, core::option::Option<rustc_metadata::fs::EarlyMetadataFiles>)>>, core::option::Option<(rustc_interface::queries::Linker, core::option::Option<rustc_metadata::fs::EarlyMetadataFiles>)>>, core::option::Option<(rustc_interface::queries::Linker, core::option::Option<rustc_metadata::fs::EarlyMetadataFiles>)>>
+                               at /rustc/cbae9b4cae2b108f6a3d18cfe6075714bb739463/library/std/src/thread/local.rs:464:12
+ 294:        0x10e63a998 - with<core::cell::Cell<*const ()>, rustc_middle::ty::context::tls::enter_context::{closure_env#0}<rustc_middle::ty::context::{impl#15}::enter::{closure_env#1}<rustc_interface::passes::create_and_enter_global_ctxt::{closure_env#2}<core::option::Option<(rustc_interface::queries::Linker, core::option::Option<rustc_metadata::fs::EarlyMetadataFiles>)>, rustc_driver_impl::run_compiler::{closure#0}::{closure_env#1}>, core::option::Option<(rustc_interface::queries::Linker, core::option::Option<rustc_metadata::fs::EarlyMetadataFiles>)>>, core::option::Option<(rustc_interface::queries::Linker, core::option::Option<rustc_metadata::fs::EarlyMetadataFiles>)>>, core::option::Option<(rustc_interface::queries::Linker, core::option::Option<rustc_metadata::fs::EarlyMetadataFiles>)>>
+                               at /rustc/cbae9b4cae2b108f6a3d18cfe6075714bb739463/library/std/src/thread/local.rs:428:20
+ 295:        0x10e5fcaa0 - enter_context<rustc_middle::ty::context::{impl#15}::enter::{closure_env#1}<rustc_interface::passes::create_and_enter_global_ctxt::{closure_env#2}<core::option::Option<(rustc_interface::queries::Linker, core::option::Option<rustc_metadata::fs::EarlyMetadataFiles>)>, rustc_driver_impl::run_compiler::{closure#0}::{closure_env#1}>, core::option::Option<(rustc_interface::queries::Linker, core::option::Option<rustc_metadata::fs::EarlyMetadataFiles>)>>, core::option::Option<(rustc_interface::queries::Linker, core::option::Option<rustc_metadata::fs::EarlyMetadataFiles>)>>
+                               at /Users/Abium/.local/opt/headstart/rustc/compiler/rustc_middle/src/ty/context/tls.rs:53:9
+ 296:        0x10e5fcaa0 - enter<rustc_interface::passes::create_and_enter_global_ctxt::{closure_env#2}<core::option::Option<(rustc_interface::queries::Linker, core::option::Option<rustc_metadata::fs::EarlyMetadataFiles>)>, rustc_driver_impl::run_compiler::{closure#0}::{closure_env#1}>, core::option::Option<(rustc_interface::queries::Linker, core::option::Option<rustc_metadata::fs::EarlyMetadataFiles>)>>
+                               at /Users/Abium/.local/opt/headstart/rustc/compiler/rustc_middle/src/ty/context.rs:809:9
+ 297:        0x10e5fcaa0 - create_global_ctxt<core::option::Option<(rustc_interface::queries::Linker, core::option::Option<rustc_metadata::fs::EarlyMetadataFiles>)>, rustc_interface::passes::create_and_enter_global_ctxt::{closure_env#2}<core::option::Option<(rustc_interface::queries::Linker, core::option::Option<rustc_metadata::fs::EarlyMetadataFiles>)>, rustc_driver_impl::run_compiler::{closure#0}::{closure_env#1}>>
+                               at /Users/Abium/.local/opt/headstart/rustc/compiler/rustc_middle/src/ty/context.rs:990:13
+ 298:        0x10e62b23c - create_and_enter_global_ctxt<core::option::Option<(rustc_interface::queries::Linker, core::option::Option<rustc_metadata::fs::EarlyMetadataFiles>)>, rustc_driver_impl::run_compiler::{closure#0}::{closure_env#1}>
+                               at /Users/Abium/.local/opt/headstart/rustc/compiler/rustc_interface/src/passes.rs:1005:15
+ 299:        0x10e5f1b54 - {closure#0}
+                               at /Users/Abium/.local/opt/headstart/rustc/compiler/rustc_driver_impl/src/lib.rs:294:22
+ 300:        0x10e5f1b54 - {closure#0}<(), rustc_driver_impl::run_compiler::{closure_env#0}>
+                               at /Users/Abium/.local/opt/headstart/rustc/compiler/rustc_interface/src/interface.rs:507:80
+ 301:        0x10e5f1b54 - call_once<(), rustc_interface::interface::run_compiler::{closure#2}::{closure_env#0}<(), rustc_driver_impl::run_compiler::{closure_env#0}>>
+                               at /rustc/cbae9b4cae2b108f6a3d18cfe6075714bb739463/library/core/src/panic/unwind_safe.rs:275:9
+ 302:        0x10e5f1b54 - do_call<core::panic::unwind_safe::AssertUnwindSafe<rustc_interface::interface::run_compiler::{closure#2}::{closure_env#0}<(), rustc_driver_impl::run_compiler::{closure_env#0}>>, ()>
+                               at /rustc/cbae9b4cae2b108f6a3d18cfe6075714bb739463/library/std/src/panicking.rs:576:43
+ 303:        0x10e5f1b54 - catch_unwind<(), core::panic::unwind_safe::AssertUnwindSafe<rustc_interface::interface::run_compiler::{closure#2}::{closure_env#0}<(), rustc_driver_impl::run_compiler::{closure_env#0}>>>
+                               at /rustc/cbae9b4cae2b108f6a3d18cfe6075714bb739463/library/std/src/panicking.rs:544:19
+ 304:        0x10e5f1b54 - catch_unwind<core::panic::unwind_safe::AssertUnwindSafe<rustc_interface::interface::run_compiler::{closure#2}::{closure_env#0}<(), rustc_driver_impl::run_compiler::{closure_env#0}>>, ()>
+                               at /rustc/cbae9b4cae2b108f6a3d18cfe6075714bb739463/library/std/src/panic.rs:359:14
+ 305:        0x10e5f1b54 - {closure#2}<(), rustc_driver_impl::run_compiler::{closure_env#0}>
+                               at /Users/Abium/.local/opt/headstart/rustc/compiler/rustc_interface/src/interface.rs:507:23
+ 306:        0x10e5f1b54 - {closure#0}<rustc_interface::interface::run_compiler::{closure_env#2}<(), rustc_driver_impl::run_compiler::{closure_env#0}>, ()>
+                               at /Users/Abium/.local/opt/headstart/rustc/compiler/rustc_interface/src/util.rs:244:17
+ 307:        0x10e5f1b54 - {closure#0}<rustc_interface::util::run_in_thread_pool_with_globals::{closure_env#0}<rustc_interface::interface::run_compiler::{closure_env#2}<(), rustc_driver_impl::run_compiler::{closure_env#0}>, ()>, ()>
+                               at /Users/Abium/.local/opt/headstart/rustc/compiler/rustc_interface/src/util.rs:201:24
+ 308:        0x10e5f1b54 - set<rustc_span::SessionGlobals, rustc_interface::util::run_in_thread_with_globals::{closure#0}::{closure#0}::{closure_env#0}<rustc_interface::util::run_in_thread_pool_with_globals::{closure_env#0}<rustc_interface::interface::run_compiler::{closure_env#2}<(), rustc_driver_impl::run_compiler::{closure_env#0}>, ()>, ()>, ()>
+                               at /Users/Abium/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/scoped-tls-1.0.1/src/lib.rs:137:9
+ 309:        0x10e606ae4 - create_session_globals_then<(), rustc_interface::util::run_in_thread_with_globals::{closure#0}::{closure#0}::{closure_env#0}<rustc_interface::util::run_in_thread_pool_with_globals::{closure_env#0}<rustc_interface::interface::run_compiler::{closure_env#2}<(), rustc_driver_impl::run_compiler::{closure_env#0}>, ()>, ()>>
+                               at /Users/Abium/.local/opt/headstart/rustc/compiler/rustc_span/src/lib.rs:157:21
+ 310:        0x10e61ab10 - {closure#0}<rustc_interface::util::run_in_thread_pool_with_globals::{closure_env#0}<rustc_interface::interface::run_compiler::{closure_env#2}<(), rustc_driver_impl::run_compiler::{closure_env#0}>, ()>, ()>
+                               at /Users/Abium/.local/opt/headstart/rustc/compiler/rustc_interface/src/util.rs:197:17
+ 311:        0x10e61ab10 - __rust_begin_short_backtrace<rustc_interface::util::run_in_thread_with_globals::{closure#0}::{closure_env#0}<rustc_interface::util::run_in_thread_pool_with_globals::{closure_env#0}<rustc_interface::interface::run_compiler::{closure_env#2}<(), rustc_driver_impl::run_compiler::{closure_env#0}>, ()>, ()>, ()>
+                               at /rustc/cbae9b4cae2b108f6a3d18cfe6075714bb739463/library/std/src/sys/backtrace.rs:166:18
+ 312:        0x10e603630 - {closure#0}<rustc_interface::util::run_in_thread_with_globals::{closure#0}::{closure_env#0}<rustc_interface::util::run_in_thread_pool_with_globals::{closure_env#0}<rustc_interface::interface::run_compiler::{closure_env#2}<(), rustc_driver_impl::run_compiler::{closure_env#0}>, ()>, ()>, ()>
+                               at /rustc/cbae9b4cae2b108f6a3d18cfe6075714bb739463/library/std/src/thread/lifecycle.rs:70:13
+ 313:        0x10e603630 - call_once<(), std::thread::lifecycle::spawn_unchecked::{closure#1}::{closure_env#0}<rustc_interface::util::run_in_thread_with_globals::{closure#0}::{closure_env#0}<rustc_interface::util::run_in_thread_pool_with_globals::{closure_env#0}<rustc_interface::interface::run_compiler::{closure_env#2}<(), rustc_driver_impl::run_compiler::{closure_env#0}>, ()>, ()>, ()>>
+                               at /rustc/cbae9b4cae2b108f6a3d18cfe6075714bb739463/library/core/src/panic/unwind_safe.rs:275:9
+ 314:        0x10e603630 - do_call<core::panic::unwind_safe::AssertUnwindSafe<std::thread::lifecycle::spawn_unchecked::{closure#1}::{closure_env#0}<rustc_interface::util::run_in_thread_with_globals::{closure#0}::{closure_env#0}<rustc_interface::util::run_in_thread_pool_with_globals::{closure_env#0}<rustc_interface::interface::run_compiler::{closure_env#2}<(), rustc_driver_impl::run_compiler::{closure_env#0}>, ()>, ()>, ()>>, ()>
+                               at /rustc/cbae9b4cae2b108f6a3d18cfe6075714bb739463/library/std/src/panicking.rs:576:43
+ 315:        0x10e603630 - catch_unwind<(), core::panic::unwind_safe::AssertUnwindSafe<std::thread::lifecycle::spawn_unchecked::{closure#1}::{closure_env#0}<rustc_interface::util::run_in_thread_with_globals::{closure#0}::{closure_env#0}<rustc_interface::util::run_in_thread_pool_with_globals::{closure_env#0}<rustc_interface::interface::run_compiler::{closure_env#2}<(), rustc_driver_impl::run_compiler::{closure_env#0}>, ()>, ()>, ()>>>
+                               at /rustc/cbae9b4cae2b108f6a3d18cfe6075714bb739463/library/std/src/panicking.rs:544:19
+ 316:        0x10e603630 - catch_unwind<core::panic::unwind_safe::AssertUnwindSafe<std::thread::lifecycle::spawn_unchecked::{closure#1}::{closure_env#0}<rustc_interface::util::run_in_thread_with_globals::{closure#0}::{closure_env#0}<rustc_interface::util::run_in_thread_pool_with_globals::{closure_env#0}<rustc_interface::interface::run_compiler::{closure_env#2}<(), rustc_driver_impl::run_compiler::{closure_env#0}>, ()>, ()>, ()>>, ()>
+                               at /rustc/cbae9b4cae2b108f6a3d18cfe6075714bb739463/library/std/src/panic.rs:359:14
+ 317:        0x10e603630 - {closure#1}<rustc_interface::util::run_in_thread_with_globals::{closure#0}::{closure_env#0}<rustc_interface::util::run_in_thread_pool_with_globals::{closure_env#0}<rustc_interface::interface::run_compiler::{closure_env#2}<(), rustc_driver_impl::run_compiler::{closure_env#0}>, ()>, ()>, ()>
+                               at /rustc/cbae9b4cae2b108f6a3d18cfe6075714bb739463/library/std/src/thread/lifecycle.rs:68:26
+ 318:        0x10e603630 - call_once<std::thread::lifecycle::spawn_unchecked::{closure_env#1}<rustc_interface::util::run_in_thread_with_globals::{closure#0}::{closure_env#0}<rustc_interface::util::run_in_thread_pool_with_globals::{closure_env#0}<rustc_interface::interface::run_compiler::{closure_env#2}<(), rustc_driver_impl::run_compiler::{closure_env#0}>, ()>, ()>, ()>, ()>
+                               at /rustc/cbae9b4cae2b108f6a3d18cfe6075714bb739463/library/core/src/ops/function.rs:250:5
+ 319:        0x1116104c8 - <alloc[94c0ccea778458a6]::boxed::Box<dyn core[4b17869599bacaad]::ops::function::FnOnce<(), Output = ()> + core[4b17869599bacaad]::marker::Send> as core[4b17869599bacaad]::ops::function::FnOnce<()>>::call_once
+                               at /rustc/cbae9b4cae2b108f6a3d18cfe6075714bb739463/library/alloc/src/boxed.rs:2320:9
+ 320:        0x1116104c8 - <std[c3366c75e850e32e]::sys::thread::unix::Thread>::new::thread_start
+                               at /rustc/cbae9b4cae2b108f6a3d18cfe6075714bb739463/library/std/src/sys/thread/unix.rs:123:17
+ 321:        0x193365d04 - __pthread_exit
+
+
+rustc version: 1.101.0-dev
+platform: aarch64-apple-darwin
+
+query stack during panic:
+#0 [def_span] looking up span for `objc2_foundation::generated::__NSString::NSString`
+#1 [param_env] computing normalized predicates of `objc2_foundation::generated::__NSString::NSString`
+#2 [param_env_normalized_for_post_analysis] computing revealed normalized predicates of `objc2_foundation::generated::__NSString::NSString`
+#3 [layout_of] computing layout of `objc2_foundation::generated::__NSString::NSString`
+#4 [layout_of] computing layout of `objc2_foundation::generated::__NSString::NSString`
+end of query stack

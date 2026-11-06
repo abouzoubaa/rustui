@@ -20,9 +20,34 @@ fn shell_metrics(profile: &ThemeProfile) -> (f32, f32) {
     )
 }
 
+fn toolbar_item_button_id(toolbar_id: &Identity, item_id: &Identity) -> SharedString {
+    SharedString::from(format!(
+        "rustui-toolbar-action:{}:{}:{}:{}",
+        toolbar_id.as_str().len(),
+        toolbar_id,
+        item_id.as_str().len(),
+        item_id
+    ))
+}
+
 enum ToolbarLabel {
     Literal(SharedString),
-    Message(SharedString),
+    Message {
+        id: SharedString,
+        fallback: SharedString,
+    },
+}
+
+fn resolved_message_label(
+    id: &SharedString,
+    localized: String,
+    fallback: &SharedString,
+) -> SharedString {
+    if localized.trim().is_empty() || localized.trim() == id.trim() {
+        fallback.clone()
+    } else {
+        SharedString::from(localized)
+    }
 }
 
 /// One action with a stable identity inside a toolbar.
@@ -44,16 +69,35 @@ impl ToolbarItem {
             !id.as_str().trim().is_empty(),
             "Toolbar item ID must be nonempty"
         );
+        let label = label.into();
+        assert!(
+            !label.trim().is_empty(),
+            "Toolbar item label must provide a non-empty accessible name"
+        );
         Self {
             id,
-            label: ToolbarLabel::Literal(label.into()),
+            label: ToolbarLabel::Literal(label),
             action: action.into(),
             disabled: false,
         }
     }
 
     pub fn localized(mut self, message_id: impl Into<SharedString>) -> Self {
-        self.label = ToolbarLabel::Message(message_id.into());
+        let message_id = message_id.into();
+        assert!(
+            !message_id.trim().is_empty(),
+            "Toolbar item message ID must not be empty"
+        );
+        let fallback = match &self.label {
+            ToolbarLabel::Literal(label)
+            | ToolbarLabel::Message {
+                fallback: label, ..
+            } => label.clone(),
+        };
+        self.label = ToolbarLabel::Message {
+            id: message_id,
+            fallback,
+        };
         self
     }
 
@@ -123,14 +167,22 @@ impl View for ToolbarView {
         for item in &self.items {
             let label = match &item.label {
                 ToolbarLabel::Literal(label) => label.clone(),
-                ToolbarLabel::Message(message_id) => {
-                    SharedString::from(context.localized_message(message_id.as_ref()))
+                ToolbarLabel::Message { id, fallback } => {
+                resolved_message_label(
+                    id,
+                    context.localized_message(id.as_ref()),
+                    fallback,
+                )
                 }
             };
+            assert!(
+                !label.trim().is_empty(),
+                "Toolbar item must resolve to a non-empty accessible name"
+            );
             let disabled = self.disabled || item.disabled;
             let mut button = themed_button(
                 context,
-                SharedString::from(format!("{}:{}", self.id, item.id)),
+                toolbar_item_button_id(&self.id, &item.id),
                 label.clone(),
                 label,
                 ButtonStyle::Automatic,
@@ -174,6 +226,51 @@ mod tests {
         assert!(std::panic::catch_unwind(|| item(" ")).is_err());
         assert!(std::panic::catch_unwind(|| Toolbar(" ", [item("one")])).is_err());
         assert!(std::panic::catch_unwind(|| Toolbar("bar", [item("one"), item("one")])).is_err());
+    }
+
+    #[test]
+    fn item_button_identity_unambiguously_combines_toolbar_and_item_ids() {
+        let first = toolbar_item_button_id(&Identity::from("toolbar:a"), &Identity::from("b"));
+        let second = toolbar_item_button_id(&Identity::from("toolbar"), &Identity::from("a:b"));
+
+        assert_ne!(first, second);
+        assert_eq!(
+            first,
+            toolbar_item_button_id(&Identity::from("toolbar:a"), &Identity::from("b"))
+        );
+    }
+
+    #[test]
+    fn action_labels_and_localized_keys_must_not_be_blank() {
+        assert!(
+            std::panic::catch_unwind(|| {
+                ToolbarItem::action("save", "  ", AppAction::new(|_| {}));
+            })
+            .is_err()
+        );
+        assert!(std::panic::catch_unwind(|| item("save").localized(" \t ")).is_err());
+    }
+
+    #[test]
+    fn blank_localized_action_label_keeps_its_visible_fallback() {
+        let action =
+            ToolbarItem::action("save", "Save", AppAction::new(|_| {})).localized("toolbar.save");
+        assert!(matches!(
+            action.label,
+            ToolbarLabel::Message { ref fallback, .. } if fallback == "Save"
+        ));
+        assert_eq!(
+            resolved_message_label(&"toolbar.save".into(), " \t\n".into(), &"Save".into()),
+            "Save"
+        );
+        assert_eq!(
+            resolved_message_label(
+                &"toolbar.save".into(),
+                "Enregistrer".into(),
+                &"Save".into(),
+            ),
+            "Enregistrer"
+        );
     }
 
     #[test]

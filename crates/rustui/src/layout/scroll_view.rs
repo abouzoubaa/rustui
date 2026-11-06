@@ -143,6 +143,27 @@ fn native_viewport(axis: ScrollAxis, handle: &ScrollHandle) -> Stateful<Div> {
     }
 }
 
+fn measurement(
+    measurements: Option<&serde_json::Map<String, serde_json::Value>>,
+    name: &str,
+    fallback: f32,
+    strictly_positive: bool,
+) -> f32 {
+    measurements
+        .and_then(|measurements| measurements.get(name))
+        .and_then(serde_json::Value::as_f64)
+        .map(|value| value as f32)
+        .filter(|value| {
+            value.is_finite()
+                && if strictly_positive {
+                    *value > 0.0
+                } else {
+                    *value >= 0.0
+                }
+        })
+        .unwrap_or(fallback)
+}
+
 fn themed_scrollbar(
     handle: &ScrollHandle,
     context: &RenderContext<'_>,
@@ -162,24 +183,22 @@ fn themed_scrollbar(
         .record_metadata
         .get("svg_measurements")
         .and_then(serde_json::Value::as_object);
-    let measurement = |name: &str, fallback: f32| {
-        measurements
-            .and_then(|measurements| measurements.get(name))
-            .and_then(serde_json::Value::as_f64)
-            .map(|value| value as f32)
-            .filter(|value| value.is_finite() && *value >= 0.0)
-            .unwrap_or(fallback)
-    };
-    let thickness = measurement("thumb_thickness_px", 6.0);
-    let radius = measurement("thumb_corner_radius_px", 3.0);
-    let opacity = measurement("thumb_fill_opacity", 0.5).clamp(0.0, 1.0);
+    let thickness = measurement(measurements, "thumb_thickness_px", 6.0, true);
+    let radius = style
+        .lengths
+        .get("corner_radius")
+        .copied()
+        .unwrap_or_else(|| measurement(measurements, "thumb_corner_radius_px", 3.0, false));
+    let opacity = measurement(measurements, "thumb_fill_opacity", 0.5, false).clamp(0.0, 1.0);
     let min_length = measurement(
+        measurements,
         if horizontal {
             "horizontal_thumb_length_content_8x_px"
         } else {
             "vertical_thumb_length_content_8x_px"
         },
         8.0,
+        true,
     );
     let background = style
         .colors
@@ -327,6 +346,39 @@ fn validate_dimension(value: f32, name: &str) {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn scrollbar_dimensions_fall_back_from_zero_but_opacity_and_radius_allow_zero() {
+        let measurements = serde_json::json!({
+            "thumb_thickness_px": 0.0,
+            "vertical_thumb_length_content_8x_px": 0.0,
+            "thumb_corner_radius_px": 0.0,
+            "thumb_fill_opacity": 0.0,
+        });
+        let measurements = measurements.as_object();
+
+        assert_eq!(
+            measurement(measurements, "thumb_thickness_px", 6.0, true),
+            6.0
+        );
+        assert_eq!(
+            measurement(
+                measurements,
+                "vertical_thumb_length_content_8x_px",
+                8.0,
+                true
+            ),
+            8.0
+        );
+        assert_eq!(
+            measurement(measurements, "thumb_corner_radius_px", 3.0, false),
+            0.0
+        );
+        assert_eq!(
+            measurement(measurements, "thumb_fill_opacity", 0.5, false),
+            0.0
+        );
+    }
 
     #[test]
     fn default_contract_and_dimensions_remain_bounded_vertical() {

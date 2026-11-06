@@ -91,8 +91,17 @@ pub struct ImageView {
     size: Option<(f32, f32)>,
     fit: ImageFit,
     utility: bool,
-    accessibility_label: Option<SharedString>,
+    accessibility_label: Option<ImageAccessibilityLabel>,
     accessibility_id: Option<Identity>,
+}
+
+#[derive(Clone, Debug)]
+enum ImageAccessibilityLabel {
+    Literal(SharedString),
+    Message {
+        id: SharedString,
+        fallback: SharedString,
+    },
 }
 
 impl ImageView {
@@ -132,8 +141,52 @@ impl ImageView {
     /// Gives a meaningful image an accessible name. Unlabeled images remain
     /// unannounced; provide a label for content images and omit it for decoration.
     pub fn accessibility_label(mut self, label: impl Into<SharedString>) -> Self {
-        self.accessibility_label = Some(label.into());
+        let label = label.into();
+        assert!(
+            !label.trim().is_empty(),
+            "Image accessibility label must not be empty"
+        );
+        self.accessibility_label = Some(ImageAccessibilityLabel::Literal(label));
         self
+    }
+
+    /// Localizes the image's accessible name through the active RustUI catalog.
+    ///
+    /// Set an explicit `.accessibility_label(...)` first; images have no visible
+    /// text to use as a fallback when the catalog entry is missing.
+    pub fn localized_accessibility_label(mut self, id: impl Into<SharedString>) -> Self {
+        let id = id.into();
+        assert!(
+            !id.trim().is_empty(),
+            "Image accessibility message ID must not be empty"
+        );
+        let fallback = match self.accessibility_label.as_ref() {
+            Some(ImageAccessibilityLabel::Literal(label)) => label.clone(),
+            Some(ImageAccessibilityLabel::Message { fallback, .. }) => fallback.clone(),
+            None => {
+                panic!("Image localized accessibility label requires an explicit fallback label")
+            }
+        };
+        self.accessibility_label = Some(ImageAccessibilityLabel::Message { id, fallback });
+        self
+    }
+
+    fn resolved_accessibility_label(
+        &self,
+        localized_message: impl FnOnce(&str) -> String,
+    ) -> Option<SharedString> {
+        match &self.accessibility_label {
+            Some(ImageAccessibilityLabel::Literal(label)) => Some(label.clone()),
+            Some(ImageAccessibilityLabel::Message { id, fallback }) => Some(
+                resolved_message_label(localized_message(id.as_ref()), id, fallback),
+            ),
+            None => None,
+        }
+    }
+
+    fn resolved_size(&self, theme_size: Option<(f32, f32)>) -> Option<(f32, f32)> {
+        self.size
+            .or_else(|| self.utility.then_some(theme_size).flatten())
     }
 
     /// Sets a stable accessibility element ID.
@@ -141,8 +194,25 @@ impl ImageView {
     /// Labeled images otherwise derive an ID from their source and label.
     /// Provide distinct IDs when identical labeled images appear as siblings.
     pub fn id(mut self, id: impl Into<Identity>) -> Self {
-        self.accessibility_id = Some(id.into());
+        let id = id.into();
+        assert!(
+            !id.as_str().trim().is_empty(),
+            "Image identity must not be empty"
+        );
+        self.accessibility_id = Some(id);
         self
+    }
+}
+
+fn resolved_message_label(
+    localized: String,
+    id: &SharedString,
+    fallback: &SharedString,
+) -> SharedString {
+    if localized.trim().is_empty() || localized.trim() == id.as_ref().trim() {
+        fallback.clone()
+    } else {
+        localized.into()
     }
 }
 
@@ -182,19 +252,25 @@ impl View for ImageView {
         };
         let style = required_style_with_artwork(context, "image", part, &image_selector);
         let mut image = img(self.source.native()).object_fit(self.fit.native());
-        let size = self
-            .size
-            .or_else(|| Some((*style.lengths.get("width")?, *style.lengths.get("height")?)));
+        let theme_size = style
+            .lengths
+            .get("width")
+            .zip(style.lengths.get("height"))
+            .map(|(&width, &height)| (width, height));
+        let size = self.resolved_size(theme_size);
         if let Some((width, height)) = size {
             image = image.w(px(width)).h(px(height));
         }
         // Clip image pixels to the record's corner radius; a rounded container
         // alone leaves the child image square.
-        let mut container = styled_container(div(), &style).overflow_hidden();
-        if let Some((width, height)) = self.size {
+        let mut container_style = style.clone();
+        container_style.lengths.remove("width");
+        container_style.lengths.remove("height");
+        let mut container = styled_container(div(), &container_style).overflow_hidden();
+        if let Some((width, height)) = size {
             container = container.w(px(width)).h(px(height));
         }
-        match &self.accessibility_label {
+        match self.resolved_accessibility_label(|id| context.localized_message(id)) {
             Some(label) => {
                 let id = self.accessibility_id.clone().unwrap_or_else(|| {
                     Identity::from(format!("rustui-image:{:?}:{label}", self.source))
@@ -236,6 +312,90 @@ mod tests {
     fn explicit_dimensions_are_retained() {
         let image = Image("images/logo.png").size(32.0, 24.0);
         assert_eq!(image.size, Some((32.0, 24.0)));
+    }
+
+    #[test]
+    fn default_size_uses_intrinsic_dimensions_while_utility_size_uses_theme() {
+        let theme_size = Some((24.0, 24.0));
+        assert_eq!(Image("images/photo.png").resolved_size(theme_size), None);
+        assert_eq!(
+            Image("images/tool.png").utility().resolved_size(theme_size),
+            theme_size
+        );
+        assert_eq!(
+            Image("images/photo.png")
+                .size(32.0, 20.0)
+                .resolved_size(theme_size),
+            Some((32.0, 20.0))
+        );
+    }
+
+    #[test]
+    fn accessible_name_is_retained_for_content_images() {
+        let image = Image("images/logo.png").accessibility_label("  RustUI logo  ");
+        assert!(matches!(
+            image.accessibility_label,
+            Some(ImageAccessibilityLabel::Literal(label)) if label.as_ref() == "  RustUI logo  "
+        ));
+    }
+
+    #[test]
+    fn localized_accessible_name_uses_catalog_and_explicit_fallback() {
+        let image = Image("images/logo.png")
+            .accessibility_label("RustUI logo")
+            .localized_accessibility_label("image.rustui_logo");
+        assert!(matches!(
+            &image.accessibility_label,
+            Some(ImageAccessibilityLabel::Message { id, fallback })
+                if id.as_ref() == "image.rustui_logo" && fallback.as_ref() == "RustUI logo"
+        ));
+        assert_eq!(
+            image
+                .resolved_accessibility_label(|_| "Logo RustUI".to_owned())
+                .as_deref(),
+            Some("Logo RustUI")
+        );
+        assert_eq!(
+            image
+                .resolved_accessibility_label(|_| "image.rustui_logo".to_owned())
+                .as_deref(),
+            Some("RustUI logo")
+        );
+        assert_eq!(
+            image
+                .resolved_accessibility_label(|_| " \t".to_owned())
+                .as_deref(),
+            Some("RustUI logo")
+        );
+    }
+
+    #[test]
+    #[should_panic(expected = "Image accessibility message ID must not be empty")]
+    fn localized_accessible_name_rejects_blank_message_id() {
+        Image("images/logo.png")
+            .accessibility_label("RustUI logo")
+            .localized_accessibility_label(" \t ");
+    }
+
+    #[test]
+    #[should_panic(
+        expected = "Image localized accessibility label requires an explicit fallback label"
+    )]
+    fn localized_accessible_name_requires_explicit_fallback() {
+        Image("images/logo.png").localized_accessibility_label("image.rustui_logo");
+    }
+
+    #[test]
+    #[should_panic(expected = "Image accessibility label must not be empty")]
+    fn rejects_blank_accessible_name() {
+        Image("images/logo.png").accessibility_label(" \t\n ");
+    }
+
+    #[test]
+    fn rejects_blank_explicit_identity() {
+        for id in ["", " \t\n"] {
+            assert!(std::panic::catch_unwind(|| Image("images/logo.png").id(id)).is_err());
+        }
     }
 
     #[test]

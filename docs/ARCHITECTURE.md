@@ -60,7 +60,7 @@ was already resolved and vendored by the approved GPUI Components stack.
 | Layout | Stack, grid, scroll, keyed content, logical direction contracts | GPUI layout and upstream virtualization |
 | Theme | Versioned RustUI documents, semantic roles and typed component styles | GPUI Components theme application and platform rendering |
 | I18n | Application locale, messages, formatting, fallback and invalidation | GPUI text shaping and GPUI Components built-in translations |
-| Playground | Live stories, source/events, locale and appearance controls, macOS 27 reference catalog | Public RustUI API only |
+| Playground | Live stories, source/events, locale and appearance controls, macOS 27 reference catalog | Public RustUI API plus upstream `gpui-kit-assets` provider |
 | RGPE | Measurements and explicitly approved optimizations | Existing GPUI caches and official sources |
 
 ## Declarative views
@@ -154,26 +154,33 @@ finally the message identifier. `HStack` reverses logical flow for RTL locales;
 `VStack` maps start/end alignment through the active layout direction. GPUI
 continues to own text shaping and rendering.
 
-The initial catalog parser intentionally supports comments, blank lines, and
-single-line `message-id = value` records. `rustui_i18n::interpolate` applies
-named `{name}` text/integer arguments to a resolved message; `{{` and `}}`
-represent literal braces. Integers use ordinary decimal output, independent of
-locale. Missing arguments and malformed braces are errors. Plural selection,
-terms, select expressions, locale-sensitive date/number formatting, Unicode
-bidirectional isolation, and font fallback policy remain separate contracts.
+The catalog parser intentionally supports comments, blank lines, and single-line
+`message-id = value` records. `rustui_i18n::interpolate` applies named text and
+numeric arguments, with `{{` and `}}` for literal braces. The bounded formatter
+supports `select`, cardinal `plural`, and `selectordinal` expressions; its locale
+path formats integers and decimals for English, French, and Arabic, including
+supported numbering-system overrides. Catalog validation checks message sets,
+argument names, expression structure, and malformed supported patterns. This is
+not full Fluent or CLDR support: terms, date formatting, complete locale rules,
+Unicode bidirectional isolation, and font fallback remain unsupported or
+separate contracts.
 
 ## RustUI Playground and Lab compatibility
 
 `rustui-playground` is the canonical component development and manual acceptance
-application. Its application code consumes only the public `rustui` crate; direct
-GPUI and GPUI Components dependencies stay inside the framework implementation.
+application. Its application code uses the public `rustui` API, registers
+`gpui-kit-assets::Assets` as the upstream icon provider, and wraps that provider
+with RustUI's `with_embedded_asset` helper for its sample image. It does not use
+GPUI or GPUI Components APIs directly; those dependencies stay inside the framework.
 The shell keeps the 41-key macOS 27 reference catalog alongside ten live stories:
 Button, Text, Layout, Input, List, Table, Tree, Tabs, Breadcrumb, and Navigation.
 
 The shell exposes story source, event history, English/French/Arabic locale
 selection, and Light/Dark appearance controls. Layout and performance inspection
-remain incomplete, and interaction, visual, accessibility, and GUI acceptance are
-pending. A catalog entry or successful compile does not establish acceptance.
+remain incomplete, and full-application interaction, visual, accessibility, and
+GUI acceptance remain open. Focused GUI reviews are recorded in the
+[Playground guide](RUSTUI_PLAYGROUND.md); a catalog entry or successful compile
+does not establish broader acceptance.
 
 `rustui-lab` is a compatibility package that delegates to the same Playground
 entry point. It contains no parallel UI or story implementation.

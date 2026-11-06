@@ -1,6 +1,7 @@
 """P3D fixture tests. Native launch and process sampling are always mocked."""
 
 import copy
+import hashlib
 import json
 from pathlib import Path
 import sys
@@ -75,6 +76,8 @@ class ComparisonTests(unittest.TestCase):
         git.start()
         self.addCleanup(git.stop)
         self.provenance_path = self.root / "build-provenance.json"
+        self.build_log = self.root / "build.log"
+        self.build_log.write_bytes(b"build output\n")
         captured = {
             "git_commit": revision,
             "input_file_hashes": [record_build_provenance.file_record(self.root, name)
@@ -84,6 +87,12 @@ class ComparisonTests(unittest.TestCase):
         captured["source_snapshot_sha256"] = record_build_provenance.snapshot_digest(captured)
         provenance = {
             "schema_version": 1,
+            "build_log": {
+                "path": str(self.build_log),
+                "sha256": hashlib.sha256(self.build_log.read_bytes()).hexdigest(),
+                "size_bytes": self.build_log.stat().st_size,
+                "parsed_for_success": False,
+            },
             "selected_binary": record_build_provenance.file_record(self.root, self.binary.resolve()),
             "compiler_identity": comparison.compiler_identity(),
             "build_facts_declared_by_caller": {"status": "observed_success", "exit_status": 0},
@@ -208,6 +217,20 @@ class ComparisonTests(unittest.TestCase):
         with self.assertRaisesRegex(ValueError, "wrong raw lowering counts"):
             comparison.check_workload(bad, run, 7, protocol)
 
+    def test_workload_rejects_boolean_aliases_for_integer_evidence(self):
+        run = {"run_id": "fixture", "mode": "uncached"}
+        protocol = comparison.WORKLOADS["8-leaf"]
+        for field, value in (("schema_version", True), ("values", [True] * 8)):
+            result = workload(run, 7, protocol)
+            result[field] = value
+            with self.subTest(field=field), self.assertRaisesRegex(ValueError, field):
+                comparison.check_workload(result, run, 7, protocol)
+
+    def test_workload_rejects_non_object_values(self):
+        run = {"run_id": "fixture", "mode": "uncached"}
+        with self.assertRaisesRegex(ValueError, "workload must be an object"):
+            comparison.check_workload(False, run, 7, comparison.WORKLOADS["8-leaf"])
+
     def test_diagnostics_overhead_plan_pairs_same_uncached_workload(self):
         path, plan = self.plan("32-leaf", "diag-fixture", diagnostics_overhead=True)
         self.assertEqual(plan["comparison"], "diagnostics_overhead")
@@ -259,6 +282,45 @@ class ComparisonTests(unittest.TestCase):
             comparison.make_plan("changed-source", self.binary, diagnostics_overhead=True,
                                  build_provenance=self.provenance_path)
         source.write_text(original)
+
+    def test_diagnostics_overhead_rejects_duplicate_build_input_paths(self):
+        provenance = json.loads(self.provenance_path.read_text())
+        captured = provenance["captured_current_workspace"]
+        cargo_toml = next(record for record in captured["input_file_hashes"]
+                          if record["path"] == "Cargo.toml")
+        captured["input_file_hashes"].append(copy.deepcopy(cargo_toml))
+        captured["source_snapshot_sha256"] = record_build_provenance.snapshot_digest(captured)
+        self.provenance_path.write_text(json.dumps(provenance))
+
+        with self.assertRaisesRegex(ValueError, "input paths must be unique"):
+            comparison.validate_build_provenance(
+                self.provenance_path,
+                provenance["selected_binary"],
+                provenance["compiler_identity"],
+                {name: comparison.identity(self.root / name) for name in comparison.INPUTS},
+            )
+
+    def test_diagnostics_overhead_rejects_malformed_build_log_record(self):
+        baseline = json.loads(self.provenance_path.read_text())
+        mutations = (
+            (lambda record: record.pop("build_log"), "invalid build log record"),
+            (lambda record: record.update(build_log={}), "invalid build log record"),
+            (lambda record: record["build_log"].update(sha256="bogus"), "invalid build log record"),
+            (lambda record: record["build_log"].update(size_bytes=-1), "invalid build log record"),
+            (lambda record: record["build_log"].update(parsed_for_success=True), "invalid build log record"),
+        )
+        for index, (mutate, message) in enumerate(mutations):
+            with self.subTest(index=index):
+                provenance = copy.deepcopy(baseline)
+                mutate(provenance)
+                self.provenance_path.write_text(json.dumps(provenance))
+                with self.assertRaisesRegex(ValueError, message):
+                    comparison.validate_build_provenance(
+                        self.provenance_path,
+                        provenance["selected_binary"],
+                        provenance["compiler_identity"],
+                        {name: comparison.identity(self.root / name) for name in comparison.INPUTS},
+                    )
 
     def test_diagnostics_toggle_requires_raw_per_type_timings(self):
         protocol = comparison.WORKLOADS["8-leaf"]

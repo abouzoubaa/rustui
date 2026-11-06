@@ -17,16 +17,30 @@ pub struct ErrorStateView {
     title: SharedString,
     detail: Option<SharedString>,
     id: Option<Identity>,
-    accessibility_label: Option<SharedString>,
+    accessibility_label: ErrorStateAccessibilityLabel,
+}
+
+#[derive(Clone)]
+enum ErrorStateAccessibilityLabel {
+    Literal(SharedString),
+    Message {
+        id: SharedString,
+        fallback: SharedString,
+    },
 }
 
 impl ErrorStateView {
     pub fn new(title: impl Into<SharedString>) -> Self {
+        let title = title.into();
+        assert!(
+            !title.trim().is_empty(),
+            "ErrorState title must provide a non-empty accessible name"
+        );
         Self {
-            title: title.into(),
+            title: title.clone(),
             detail: None,
             id: None,
-            accessibility_label: None,
+            accessibility_label: ErrorStateAccessibilityLabel::Literal(title),
         }
     }
 
@@ -44,8 +58,47 @@ impl ErrorStateView {
 
     /// Names the alert for assistive technology; defaults to the title.
     pub fn accessibility_label(mut self, label: impl Into<SharedString>) -> Self {
-        self.accessibility_label = Some(label.into());
+        let label = label.into();
+        assert!(
+            !label.trim().is_empty(),
+            "ErrorState accessibility label must not be empty"
+        );
+        self.accessibility_label = ErrorStateAccessibilityLabel::Literal(label);
         self
+    }
+
+    /// Resolves the alert name from the active locale, falling back to the explicit label or title.
+    pub fn localized_accessibility_label(mut self, message_id: impl Into<SharedString>) -> Self {
+        let id = message_id.into();
+        assert!(
+            !id.trim().is_empty(),
+            "ErrorState accessibility localization key must not be empty"
+        );
+        let fallback = match &self.accessibility_label {
+            ErrorStateAccessibilityLabel::Literal(label)
+            | ErrorStateAccessibilityLabel::Message {
+                fallback: label, ..
+            } => label.clone(),
+        };
+        self.accessibility_label = ErrorStateAccessibilityLabel::Message { id, fallback };
+        self
+    }
+
+    fn resolved_accessibility_label(
+        &self,
+        localized_message: impl FnOnce(&str) -> String,
+    ) -> SharedString {
+        match &self.accessibility_label {
+            ErrorStateAccessibilityLabel::Literal(label) => label.clone(),
+            ErrorStateAccessibilityLabel::Message { id, fallback } => {
+                let localized = localized_message(id.as_ref());
+                if localized.trim().is_empty() || localized.trim() == id.trim() {
+                    fallback.clone()
+                } else {
+                    localized.into()
+                }
+            }
+        }
     }
 
     fn identity(&self) -> Identity {
@@ -77,10 +130,8 @@ impl View for ErrorStateView {
         let theme = gpui_component::Theme::global(context.app());
         let danger = theme.colors.danger;
         let muted_foreground = theme.colors.muted_foreground;
-        let accessibility_label = self
-            .accessibility_label
-            .clone()
-            .unwrap_or_else(|| self.title.clone());
+        let accessibility_label =
+            self.resolved_accessibility_label(|id| context.localized_message(id));
         let mut state = div()
             .id(self.identity().to_string())
             .role(gpui::Role::Alert)
@@ -117,7 +168,10 @@ mod tests {
         assert_eq!(state.title.as_ref(), "Could not load");
         assert!(state.detail.is_none());
         assert!(state.id.is_none());
-        assert!(state.accessibility_label.is_none());
+        assert!(matches!(
+            state.accessibility_label,
+            ErrorStateAccessibilityLabel::Literal(ref label) if label == "Could not load"
+        ));
     }
 
     #[test]
@@ -132,8 +186,64 @@ mod tests {
         );
         assert_eq!(state.identity().as_str(), "load-error");
         assert_eq!(
-            state.accessibility_label.as_deref(),
-            Some("Content failed to load")
+            state
+                .resolved_accessibility_label(|_| unreachable!())
+                .as_ref(),
+            "Content failed to load"
+        );
+    }
+
+    #[test]
+    fn localized_accessibility_label_uses_catalog_and_preserves_fallback() {
+        let explicit = ErrorState("Could not load")
+            .accessibility_label("Content failed to load")
+            .localized_accessibility_label("error.load_failed");
+        assert_eq!(
+            explicit
+                .resolved_accessibility_label(|id| format!("{id} traduit"))
+                .as_ref(),
+            "error.load_failed traduit"
+        );
+        assert_eq!(
+            explicit
+                .resolved_accessibility_label(|id| id.to_owned())
+                .as_ref(),
+            "Content failed to load"
+        );
+        assert_eq!(
+            explicit
+                .resolved_accessibility_label(|_| " \t ".to_owned())
+                .as_ref(),
+            "Content failed to load"
+        );
+
+        let default = ErrorState("Could not load").localized_accessibility_label("error.title");
+        assert_eq!(
+            default
+                .resolved_accessibility_label(|_| String::new())
+                .as_ref(),
+            "Could not load"
+        );
+    }
+
+    #[test]
+    fn padded_localized_key_echo_uses_explicit_or_default_fallback() {
+        let explicit = ErrorState("Could not load")
+            .accessibility_label("Content failed to load")
+            .localized_accessibility_label("error.load_failed");
+        assert_eq!(
+            explicit
+                .resolved_accessibility_label(|_| " \terror.load_failed\n".to_owned())
+                .as_ref(),
+            "Content failed to load"
+        );
+
+        let default = ErrorState("Could not load").localized_accessibility_label("error.title");
+        assert_eq!(
+            default
+                .resolved_accessibility_label(|_| " \terror.title\n".to_owned())
+                .as_ref(),
+            "Could not load"
         );
     }
 
@@ -145,5 +255,23 @@ mod tests {
                 .detail("Check your connection.")
                 .identity()
         );
+    }
+
+    #[test]
+    #[should_panic(expected = "ErrorState title must provide a non-empty accessible name")]
+    fn error_state_rejects_a_blank_title() {
+        ErrorState("  ");
+    }
+
+    #[test]
+    #[should_panic(expected = "ErrorState accessibility label must not be empty")]
+    fn error_state_rejects_a_blank_accessible_name() {
+        ErrorState("Could not load").accessibility_label("\t ");
+    }
+
+    #[test]
+    #[should_panic(expected = "ErrorState accessibility localization key must not be empty")]
+    fn error_state_rejects_a_blank_localization_key() {
+        ErrorState("Could not load").localized_accessibility_label(" \t ");
     }
 }

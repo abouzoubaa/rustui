@@ -28,6 +28,14 @@ impl View for SemanticsGallery {
             ))
             .child(
                 Semantics(
+                    "semantics-gallery-navigation",
+                    Text("Navigation landmark example"),
+                )
+                .role(SemanticsRole::Navigation)
+                .label("Primary navigation"),
+            )
+            .child(
+                Semantics(
                     "semantics-gallery-counter",
                     HStack::new()
                         .child(Text(format!("Count: {}", self.count())))
@@ -66,7 +74,7 @@ impl View for SemanticsGallery {
                     Text("Change locale to update this group's accessible name."),
                 )
                 .role(SemanticsRole::Region)
-                .localized_label("rustui-action-close"),
+                .localized_label("rustui-semantics-example-region"),
             )
             .child(Semantics(
                 "semantics-gallery-passthrough",

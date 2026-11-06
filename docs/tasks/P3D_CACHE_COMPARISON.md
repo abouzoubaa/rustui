@@ -200,3 +200,29 @@ build log is `target/headstart/evidence/p3d-32-build-20261019-c.log`. The
 standalone benchmark app bundle and copied executable were removed after the
 session; the shared Headstart target cache remains. Visual, frame/GPU,
 accessibility, and sustained native-drag acceptance remain separate work.
+
+## Native benchmark rerun — current source (2026-10-21)
+
+The documented 32-leaf protocol was rerun against the current dirty workspace: 12 fresh native processes (six cached, six uncached), one warmup pair, and five measured pairs. Correctness passed for every run; AX activation and native drag remained false. The collector recorded 666 process samples. Across 100 parent updates, cached mode produced 0 child lowerings versus 3,200 uncached; the final mutation lowered 32 children in each mode.
+
+Median paired cached/uncached ratios were 0.07248 attached CPU (range 0.07128–0.07524), 0.12448 attached elapsed, and 0.98840 maximum sampled RSS. These are process-level measures: CPU includes instrumentation, elapsed is the collector attachment interval, and sampled RSS is not OS peak. There are no acceptance thresholds; this refresh closes no frame, GPU, pixel, or input-latency gate.
+
+Evidence: plan and summary `target/headstart/performance/cache-comparison-p3d-current-source-20261021-a-{plan,summary}.json`; build `target/headstart/evidence/p3d-current-source-build-20261021.log`; provenance `target/headstart/evidence/p3d-current-source-20261021-provenance.json`.
+
+The audit manifest `target/headstart/evidence/p3d-current-source-20261021-audit.json` binds the plan, summary, build record, and each run's config, ready, start, result, acknowledgement, final, and process-metrics artifacts by SHA-256. It records the 12 distinct PIDs, per-run correctness and eligibility flags, sample counts, and post-session cleanup. The manifest is an evidence index, not a visual or performance acceptance result.
+
+### M582 native visual capture — 2026-10-21
+
+The required four-state 32-leaf cached/uncached capture is complete for the
+`gpui_component::Root`-wrapped current build. All 32 cards and their 12 lines
+are visible in each state; initial values are `0` and post-mutation values are
+`1`. Corresponding cached/uncached screenshots are byte-identical. The
+structural evidence validator passed. CUA observation activated accessibility
+(`ax_active_seen=true`); native drag remained false. Visual text contrast is
+low. Evidence manifest: `target/headstart/evidence/
+p3d-visual-capture-20261021e2.json`; build record and plan are linked there.
+
+Remaining P3D gates are native input/drag review, accessibility and VoiceOver,
+and frame/GPU measurements with explicit review-approved criteria. This
+capture does not change process-level performance results or establish a
+general speedup claim.

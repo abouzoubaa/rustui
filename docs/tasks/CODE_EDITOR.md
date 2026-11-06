@@ -121,3 +121,5 @@ dependency feature; no syntax rendering is accepted. There is no LSP
 integration, full editor accessibility or screen-reader acceptance, or
 large-file performance result. Exact undo coalescing and native identity or
 history continuity across removal/remount are not guaranteed.
+# M409 — refresh retained CodeEditor binding
+CodeEditor now routes retained input changes through the latest owner `Binding` after same-identity rerenders. Focused CodeEditor tests passed 5/5, including the latest-writer regression. Native editor interaction, GUI, cursor/undo, and full accessibility acceptance remain open. Evidence: `target/headstart/evidence/code-editor-latest-binding-writer-20261021.log`.

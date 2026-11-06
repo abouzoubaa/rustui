@@ -9,3 +9,25 @@ RustUI owns the navigation and destination composition around the pinned native 
 ## Acceptance boundary
 
 Source-level checks confirm that RustUI supplies the region role and the resolved destination label; the focused localization regression passes. Native GUI accessibility inspection is still needed to confirm the resulting macOS accessibility tree and spoken labels. Keyboard resizing and divider discoverability remain unsupported by the pinned public API; resolving those requires an upstream API capability or an approved revision/patch change.
+
+## Label input validation — 2026-10-20
+
+`NavigationSplitItem` now rejects blank visible labels and blank localization
+keys. `NavigationSplitView` rejects blank literal tree names and blank
+localization keys. The focused regression verifies all four input boundaries.
+This is source-level validation only; localized screen-reader output and native
+accessibility acceptance remain open. The focused test passed in
+`target/headstart/evidence/navigation-split-label-validation-20261020.log`; the
+isolated all-targets check passed in
+`target/headstart/evidence/navigation-split-label-check-isolated-20261020.log`.
+## Narrow open-action localization — M468
+
+The narrow-mode “Open selected destination” action now resolves its visible
+label from the framework catalogs. Its accessibility name interpolates the
+selected destination using a localized message in English, French, and Arabic.
+When localization is inactive or interpolation fails, the localized action
+label (or English fallback) remains available. Catalog interpolation and the
+RustUI package check passed; native narrow-width rendering, focus transfer,
+and VoiceOver/Accessibility Inspector acceptance remain open. Evidence:
+`target/headstart/evidence/m468-navigation-split-i18n-test.log` and
+`target/headstart/evidence/m468-navigation-split-rustui-check.log`.

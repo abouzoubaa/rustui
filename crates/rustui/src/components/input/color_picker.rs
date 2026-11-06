@@ -1,10 +1,37 @@
 //! Controlled color selection backed by a retained GPUI ColorPickerState.
 
+use std::{cell::RefCell, rc::Rc};
+
 use gpui::prelude::FluentBuilder as _;
 use gpui::{
-    AnyElement, Focusable as _, Hsla, InteractiveElement as _, IntoElement, ParentElement as _,
-    SharedString, Styled as _, div, hsla, px,
+    AnyElement, AppContext as _, Focusable as _, Hsla, InteractiveElement as _, IntoElement,
+    ParentElement as _, SharedString, Styled as _, div, hsla, px,
 };
+
+type EventWriter<Value, Context> = Rc<dyn Fn(Value, &mut Context)>;
+
+fn replace_event_writer<Value, Context>(
+    slot: &RefCell<Option<EventWriter<Value, Context>>>,
+    writer: EventWriter<Value, Context>,
+) {
+    *slot.borrow_mut() = Some(writer);
+}
+
+fn write_with_current_writer<Value, Context>(
+    slot: &RefCell<Option<EventWriter<Value, Context>>>,
+    value: Value,
+    context: &mut Context,
+) {
+    let writer = slot.borrow().clone();
+    if let Some(writer) = writer {
+        writer(value, context);
+    }
+}
+
+struct RetainedColorPicker {
+    state: gpui::Entity<ColorPickerState>,
+    writer: Rc<RefCell<Option<EventWriter<Option<Hsla>, gpui::App>>>>,
+}
 use gpui_base::{ColorPicker as BaseColorPicker, ColorSwatch};
 use gpui_component::{
     Selectable as _, Sizable as _, Size,
@@ -25,6 +52,9 @@ use crate::{
     view::{EmptyView, RenderContext, View},
 };
 
+const HEX_INPUT_ACCESSIBILITY_MESSAGE_ID: &str = "color_picker.hex_value";
+const HEX_INPUT_ACCESSIBILITY_FALLBACK: &str = "Hex color value";
+
 /// Controlled optional color selection with a retained GPUI picker state.
 pub struct ColorPickerView {
     label: SharedString,
@@ -32,13 +62,66 @@ pub struct ColorPickerView {
     id: Option<Identity>,
     compact: bool,
     featured_colors: Option<Vec<Hsla>>,
-    accessibility_label: Option<SharedString>,
+    accessibility_label: Option<ColorPickerLabel>,
+}
+
+#[derive(Clone)]
+enum ColorPickerLabel {
+    Literal(SharedString),
+    Message {
+        id: SharedString,
+        fallback: SharedString,
+    },
+}
+
+impl ColorPickerLabel {
+    fn resolve(&self, context: &RenderContext<'_>) -> SharedString {
+        match self {
+            Self::Literal(label) => label.clone(),
+            Self::Message { id, fallback } => {
+                resolved_message_label(context.localized_message(id.as_ref()), id, fallback)
+            }
+        }
+    }
+}
+
+fn resolved_message_label(
+    localized: String,
+    id: &SharedString,
+    fallback: &SharedString,
+) -> SharedString {
+    if localized.trim().is_empty() || localized.trim() == id.trim() {
+        fallback.clone()
+    } else {
+        SharedString::from(localized)
+    }
+}
+
+fn assert_valid_color(color: Hsla) {
+    assert!(
+        [color.h, color.s, color.l, color.a]
+            .into_iter()
+            .all(|channel| channel.is_finite() && (0.0..=1.0).contains(&channel)),
+        "ColorPicker colors must have finite HSLA channels between 0 and 1"
+    );
+}
+
+fn same_picker_color(left: Hsla, right: Hsla) -> bool {
+    left.h.rem_euclid(1.0) == right.h.rem_euclid(1.0)
+        && left.s == right.s
+        && left.l == right.l
+        && left.a == right.a
 }
 
 impl ColorPickerView {
     pub fn new(label: impl Into<SharedString>, value: Binding<Option<Hsla>>) -> Self {
+        let label = label.into();
+        assert!(
+            !label.trim().is_empty(),
+            "ColorPicker label must not be blank"
+        );
         Self {
-            label: label.into(),
+            label,
             value,
             id: None,
             compact: false,
@@ -48,7 +131,12 @@ impl ColorPickerView {
     }
 
     pub fn id(mut self, id: impl Into<Identity>) -> Self {
-        self.id = Some(id.into());
+        let id = id.into();
+        assert!(
+            !id.as_str().trim().is_empty(),
+            "ColorPicker identity must not be blank"
+        );
+        self.id = Some(id);
         self
     }
 
@@ -58,19 +146,49 @@ impl ColorPickerView {
     }
 
     pub fn featured_colors(mut self, colors: impl Into<Vec<Hsla>>) -> Self {
-        self.featured_colors = Some(colors.into());
+        let colors = colors.into();
+        colors.iter().copied().for_each(assert_valid_color);
+        self.featured_colors = Some(colors);
         self
     }
 
     pub fn accessibility_label(mut self, label: impl Into<SharedString>) -> Self {
-        self.accessibility_label = Some(label.into());
+        let label = label.into();
+        assert!(
+            !label.trim().is_empty(),
+            "ColorPicker accessibility label must not be blank"
+        );
+        self.accessibility_label = Some(ColorPickerLabel::Literal(label));
         self
     }
 
-    fn identity(&self) -> Identity {
+    /// Set an accessible name resolved from the active RustUI message catalog.
+    pub fn localized_accessibility_label(mut self, message_id: impl Into<SharedString>) -> Self {
+        let id = message_id.into();
+        assert!(
+            !id.trim().is_empty(),
+            "ColorPicker accessibility localization key must not be blank"
+        );
+        let fallback = match &self.accessibility_label {
+            Some(ColorPickerLabel::Literal(label))
+            | Some(ColorPickerLabel::Message {
+                fallback: label, ..
+            }) => label.clone(),
+            None => self.label.clone(),
+        };
+        self.accessibility_label = Some(ColorPickerLabel::Message { id, fallback });
+        self
+    }
+
+    fn identity(&self, context: &mut RenderContext<'_>) -> Identity {
+        self.identity_with(|base| context.next_implicit_retained_identity(base))
+    }
+
+    fn identity_with(&self, allocate_implicit: impl FnOnce(Identity) -> Identity) -> Identity {
         self.id
             .clone()
-            .unwrap_or_else(|| Identity::from(format!("color-picker:{}", self.label)))
+            // The visible label can change with locale without changing the picker.
+            .unwrap_or_else(|| allocate_implicit(Identity::from("color-picker")))
     }
 
     fn theme_selector(context: &RenderContext<'_>) -> ButtonStyleSelector {
@@ -88,7 +206,10 @@ impl ColorPickerView {
         context: &RenderContext<'_>,
         selector: &ButtonStyleSelector,
     ) -> ColorSwatch {
-        let selected = state.read(context.app()).value() == Some(color);
+        let selected = state
+            .read(context.app())
+            .value()
+            .is_some_and(|value| same_picker_color(value, color));
         let preview_state = state.clone();
         let select_state = state.clone();
         let style = required_style(context, "color_picker", part, selector);
@@ -212,6 +333,13 @@ impl ColorPickerView {
                 )
                 .children(crayons);
         } else {
+            let hex_accessibility_id = SharedString::from(HEX_INPUT_ACCESSIBILITY_MESSAGE_ID);
+            let hex_accessibility_fallback = SharedString::from(HEX_INPUT_ACCESSIBILITY_FALLBACK);
+            let hex_accessibility_label = resolved_message_label(
+                context.localized_message(HEX_INPUT_ACCESSIBILITY_MESSAGE_ID),
+                &hex_accessibility_id,
+                &hex_accessibility_fallback,
+            );
             panel = panel
                 .child(slider_row("H", GpuiSlider::new(sliders.hue()).flex_1()))
                 .child(slider_row(
@@ -223,10 +351,202 @@ impl ColorPickerView {
                     GpuiSlider::new(sliders.lightness()).flex_1(),
                 ))
                 .child(slider_row("A", GpuiSlider::new(sliders.alpha()).flex_1()))
-                .child(Input::new(&hex_input).small().px_2p5());
+                .child(
+                    Input::new(&hex_input)
+                        .small()
+                        .px_2p5()
+                        .aria_label(hex_accessibility_label),
+                );
         }
 
         panel.into_any_element()
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    fn binding() -> Binding<Option<Hsla>> {
+        Binding::new(
+            None,
+            |value: &Option<Hsla>| value.clone(),
+            |value, next| *value = next,
+        )
+    }
+
+    #[test]
+    fn featured_colors_require_finite_unit_hsla_channels() {
+        let picker =
+            ColorPicker("Accent color", binding()).featured_colors(vec![hsla(0.0, 0.5, 0.5, 1.0)]);
+        assert_eq!(picker.featured_colors, Some(vec![hsla(0.0, 0.5, 0.5, 1.0)]));
+
+        for color in [
+            Hsla {
+                h: f32::NAN,
+                s: 0.5,
+                l: 0.5,
+                a: 1.0,
+            },
+            Hsla {
+                h: 0.0,
+                s: f32::INFINITY,
+                l: 0.5,
+                a: 1.0,
+            },
+            Hsla {
+                h: 0.0,
+                s: 0.5,
+                l: -0.1,
+                a: 1.0,
+            },
+            Hsla {
+                h: 0.0,
+                s: 0.5,
+                l: 0.5,
+                a: 1.1,
+            },
+        ] {
+            assert!(
+                std::panic::catch_unwind(|| {
+                    ColorPicker("Accent color", binding()).featured_colors(vec![color]);
+                })
+                .is_err()
+            );
+        }
+    }
+
+    #[test]
+    fn hue_endpoints_match_the_same_selected_color() {
+        let zero_hue = hsla(0.0, 1.0, 0.5, 1.0);
+        let full_turn = hsla(1.0, 1.0, 0.5, 1.0);
+
+        assert_eq!(zero_hue.to_rgb(), full_turn.to_rgb());
+        assert!(same_picker_color(zero_hue, full_turn));
+    }
+
+    #[test]
+    #[should_panic(expected = "ColorPicker identity must not be blank")]
+    fn rejects_blank_explicit_identity() {
+        ColorPicker("Accent color", binding()).id(" \t ");
+    }
+
+    #[test]
+    fn preserves_nonblank_explicit_identity() {
+        let picker = ColorPicker("Accent color", binding()).id(" picker ");
+
+        assert_eq!(picker.id.as_ref().unwrap().as_str(), " picker ");
+    }
+
+    #[test]
+    #[should_panic(expected = "ColorPicker accessibility label must not be blank")]
+    fn rejects_blank_explicit_accessible_name() {
+        ColorPicker("Accent color", binding()).accessibility_label(" \t ");
+    }
+
+    #[test]
+    fn preserves_nonblank_explicit_accessible_name() {
+        let picker = ColorPicker("Accent color", binding())
+            .accessibility_label("  Choose an accent color  ");
+
+        assert!(matches!(
+            picker.accessibility_label,
+            Some(ColorPickerLabel::Literal(label)) if label.as_ref() == "  Choose an accent color  "
+        ));
+    }
+
+    #[test]
+    #[should_panic(expected = "ColorPicker accessibility localization key must not be blank")]
+    fn rejects_blank_localized_accessible_name_key() {
+        ColorPicker("Accent color", binding()).localized_accessibility_label(" \t ");
+    }
+
+    #[test]
+    fn localized_accessible_name_keeps_literal_override_as_fallback() {
+        let picker = ColorPicker("Accent color", binding())
+            .accessibility_label("Choose an accent")
+            .localized_accessibility_label("color_picker.accent");
+
+        assert!(matches!(
+            picker.accessibility_label,
+            Some(ColorPickerLabel::Message { id, fallback })
+                if id.as_ref() == "color_picker.accent" && fallback.as_ref() == "Choose an accent"
+        ));
+    }
+
+    #[test]
+    fn localized_accessible_name_defaults_to_visible_label_fallback() {
+        let picker = ColorPicker("Accent color", binding())
+            .localized_accessibility_label("color_picker.accent");
+
+        assert!(matches!(
+            picker.accessibility_label,
+            Some(ColorPickerLabel::Message { id, fallback })
+                if id.as_ref() == "color_picker.accent" && fallback.as_ref() == "Accent color"
+        ));
+    }
+
+    #[test]
+    fn localized_accessible_name_uses_catalog_value_or_fallback() {
+        let id = SharedString::from("color_picker.accent");
+        let fallback = SharedString::from("Choose an accent");
+
+        assert_eq!(
+            resolved_message_label("Choisir une couleur accentuée".into(), &id, &fallback).as_ref(),
+            "Choisir une couleur accentuée"
+        );
+        assert_eq!(
+            resolved_message_label(id.to_string(), &id, &fallback),
+            fallback
+        );
+        assert_eq!(
+            resolved_message_label(" \t".into(), &id, &fallback),
+            fallback
+        );
+    }
+
+    #[test]
+    fn hex_input_accessible_name_uses_catalog_translation_or_english_fallback() {
+        let id = SharedString::from(HEX_INPUT_ACCESSIBILITY_MESSAGE_ID);
+        let fallback = SharedString::from(HEX_INPUT_ACCESSIBILITY_FALLBACK);
+
+        assert_eq!(
+            resolved_message_label("Valeur de couleur hexadécimale".into(), &id, &fallback)
+                .as_ref(),
+            "Valeur de couleur hexadécimale"
+        );
+        assert_eq!(
+            resolved_message_label(id.to_string(), &id, &fallback),
+            fallback
+        );
+    }
+
+    #[test]
+    #[should_panic(expected = "ColorPicker label must not be blank")]
+    fn rejects_blank_default_accessible_name() {
+        ColorPicker(" \t ", binding());
+    }
+
+    #[test]
+    fn retained_events_use_the_most_recent_owner_binding() {
+        let writer = RefCell::new(None);
+        let mut writes = Vec::new();
+        replace_event_writer(
+            &writer,
+            Rc::new(|_value: Option<Hsla>, writes: &mut Vec<&'static str>| {
+                writes.push("old");
+            }),
+        );
+        replace_event_writer(
+            &writer,
+            Rc::new(|_value: Option<Hsla>, writes: &mut Vec<&'static str>| {
+                writes.push("current");
+            }),
+        );
+
+        write_with_current_writer(&writer, None, &mut writes);
+
+        assert_eq!(writes, ["current"]);
     }
 }
 
@@ -294,15 +614,28 @@ impl View for ColorPickerView {
     }
 
     fn into_element(&self, context: &mut RenderContext<'_>) -> AnyElement {
-        let identity = self.identity();
+        let identity = self.identity(context);
         let initial_value = self.value.value();
-        let (state, created) = context.retained_entity(identity.clone(), move |window, cx| {
-            let state = ColorPickerState::new(window, cx);
-            match initial_value {
-                Some(value) => state.default_value(value),
-                None => state,
+        let (retained, created) = context.retained_entity(identity.clone(), move |window, cx| {
+            let state = cx.new(|cx| {
+                let state = ColorPickerState::new(window, cx);
+                let mut state = match initial_value {
+                    Some(value) => state.default_value(value),
+                    None => state,
+                };
+                state.sync_pending_value(window, cx);
+                state
+            });
+            RetainedColorPicker {
+                state,
+                writer: Rc::new(RefCell::new(None)),
             }
         });
+        let (state, writer) = {
+            let retained = retained.read(context.app());
+            (retained.state.clone(), retained.writer.clone())
+        };
+        replace_event_writer(&writer, context.binding_writer(self.value.clone()));
 
         let current = self.value.value();
         let retained = state.read(context.app()).value();
@@ -314,13 +647,13 @@ impl View for ColorPickerView {
         }
 
         if created {
-            let write = context.binding_writer(self.value.clone());
+            let current_writer = writer.clone();
             context.subscribe_retained(
                 &identity,
                 &state,
                 move |_state, event: &ColorPickerEvent, cx| {
                     let ColorPickerEvent::Change(value) = event;
-                    write(*value, cx);
+                    write_with_current_writer(&current_writer, *value, cx);
                 },
             );
         }
@@ -329,8 +662,8 @@ impl View for ColorPickerView {
         let open = state.read(context.app()).is_open();
         let label = self
             .accessibility_label
-            .clone()
-            .unwrap_or_else(|| self.label.clone());
+            .as_ref()
+            .map_or_else(|| self.label.clone(), |label| label.resolve(context));
         let popup_state = state.clone();
         let root_state = state.clone();
 
@@ -389,5 +722,37 @@ impl View for ColorPickerView {
             })
             .child(popup_element)
             .into_any_element()
+    }
+}
+
+#[cfg(test)]
+mod implicit_identity_tests {
+    use super::*;
+
+    fn binding() -> Binding<Option<Hsla>> {
+        Binding::new(
+            None,
+            |value: &Option<Hsla>| *value,
+            |value, next| *value = next,
+        )
+    }
+
+    #[test]
+    fn same_label_siblings_get_distinct_stable_implicit_identities() {
+        let first = ColorPicker("Accent color", binding());
+        let second = ColorPicker("Accent color", binding());
+        let allocate_at_slot = |slot| {
+            move |base: Identity| Identity::from(format!("owner:implicit-retained:{slot}:{base}"))
+        };
+
+        let first_sibling = first.identity_with(allocate_at_slot(0));
+        let second_sibling = second.identity_with(allocate_at_slot(1));
+        let first_after_rerender = first.identity_with(allocate_at_slot(0));
+        let first_after_locale_change =
+            ColorPicker("Couleur d’accent", binding()).identity_with(allocate_at_slot(0));
+
+        assert_ne!(first_sibling, second_sibling);
+        assert_eq!(first_sibling, first_after_rerender);
+        assert_eq!(first_sibling, first_after_locale_change);
     }
 }

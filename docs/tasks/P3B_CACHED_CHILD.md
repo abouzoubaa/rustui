@@ -1,5 +1,29 @@
 # P3B: Fixed-bounds retained child cache pilot
 
+## M923 — Prepare no-focus parent-only measurements
+
+The Playground gallery now uses keyboard shortcuts to tick the parent, clear
+and sample lowering counters, and sample accessibility independently. The
+operator can focus the diagnostics control once and keep focus steady while
+sampling, avoiding the focus change caused by clicking a probe button. A
+focused parent-only source regression passed 1/1. Native probe acceptance
+remains open: M117 still requires cached lowering to stay unchanged while
+uncached lowering increases, with focus/accessibility activity recorded
+separately. Details: `docs/tasks/M923_STAGE10_CACHE_GALLERY_NOFOCUS_CONTROLS.md`.
+
+## M689 — Isolate diagnostic display refreshes
+
+The Playground cache gallery now keeps counter and accessibility readouts in a
+separate retained diagnostics child. Sampling refreshes that child to render
+the captured value without refreshing the gallery parent. This removes the
+diagnostic display update from the measured parent-only path; it does not prove
+an AX-inactive cache hit. The locked/offline Playground package check passed:
+`target/headstart/m689-cache-gallery-check.log`.
+
+## M638 — Preserve fixed bounds when cached rendering falls back
+
+The ordinary fallback branches for `ComponentView` and props-driven components now retain the same fixed-size wrapper as the cached branch. Focused test `fixed_bounds_are_preserved_when_component_caching_falls_back` passed 1/1. This covers source-level bounds behavior and does not close native cache-reuse or interaction acceptance.
+
 `Component(key, initialize).cached_fixed(width, height)` opts a retained child
 without incoming props into the pinned GPUI `Entity::cached` API.
 `Component(key, initialize).props(props, reconcile).cached_fixed(width, height)`
@@ -56,10 +80,12 @@ or second cache/runtime.
 `CachedLeaf` and an uncached `UncachedLeaf` with the same fixed visible size and
 separate local counter actions. A parent-only action changes the gallery owner.
 Diagnostic controls enable, clear, sample, and disable per-type host lowering
-counts. They refresh only the gallery owner through `AppAction::then` and
-`OwnerAction::action`; calling `refresh_windows` during these steps would force
-a GPUI cache miss and invalidate the comparison. A sample displays counts from
-before its own display refresh, which itself is recorded for the next sample.
+counts. Their owner actions update the diagnostics child only; calling
+`refresh_windows` would force a GPUI cache miss and invalidate the comparison.
+The diagnostic controls and
+readouts live in a separate retained child. A sample captures the lowering
+counters, then refreshes only that child to display them; the sampling action
+does not refresh the cache gallery parent or alter the next parent-only probe.
 
 This story exercises parent and child notifications. Typed-environment fallback
 is covered by the pure eligibility unit test; no environment toggle is shown in

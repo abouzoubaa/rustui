@@ -78,6 +78,50 @@ class RecordBuildProvenanceTests(unittest.TestCase):
             missing_record = json.loads(missing_output.read_text(encoding="utf-8"))
             self.assertEqual(missing_record["selected_binary"]["status"], "missing")
 
+    def test_force_rejects_output_hard_link_to_build_log(self):
+        with tempfile.TemporaryDirectory() as temporary:
+            root = Path(temporary)
+            log = root / "build.log"
+            output = root / "build-log-alias.json"
+            log.write_text("build output\n", encoding="utf-8")
+            output.hardlink_to(log)
+
+            result = subprocess.run(
+                [
+                    sys.executable, str(SCRIPT), str(log), "--workspace", str(root),
+                    "--output", str(output), "--force",
+                ],
+                capture_output=True,
+                text=True,
+            )
+
+            self.assertNotEqual(result.returncode, 0)
+            self.assertIn("output path must not replace the supplied build log", result.stderr)
+            self.assertEqual(log.read_text(encoding="utf-8"), "build output\n")
+
+    def test_force_rejects_output_path_that_is_a_captured_build_input(self):
+        with tempfile.TemporaryDirectory() as temporary:
+            root = Path(temporary)
+            log = root / "build.log"
+            output = root / "Cargo.toml"
+            log.write_text("build output\n", encoding="utf-8")
+            original_input = "[workspace]\nmembers = []\n"
+            output.write_text(original_input, encoding="utf-8")
+
+            result = subprocess.run(
+                [
+                    sys.executable, str(SCRIPT), str(log), "--workspace", str(root),
+                    "--output", str(output), "--force",
+                ],
+                capture_output=True,
+                text=True,
+            )
+
+            self.assertNotEqual(result.returncode, 0)
+            self.assertIn("output path must not replace a file captured by build provenance",
+                          result.stderr)
+            self.assertEqual(output.read_text(encoding="utf-8"), original_input)
+
 
 if __name__ == "__main__":
     unittest.main()

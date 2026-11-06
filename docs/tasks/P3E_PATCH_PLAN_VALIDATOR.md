@@ -26,8 +26,9 @@ The JSON object has these fields:
 
 - `schema_version`: integer `1`.
 - `candidate`: exactly `id`, `snapshot_sha256`, and `parent_manifest_sha256`.
-  The ID is a safe identifier; the two digest fields are lowercase SHA-256
-  strings identifying pinned metadata. The validator checks digest syntax, not
+  ID must match `[A-Za-z0-9][A-Za-z0-9._-]{0,63}` and may not contain `..`.
+  The two digest fields are lowercase SHA-256 strings identifying pinned
+  metadata; the validator checks digest syntax, not a complete tree hash.
   a complete directory-tree hash.
 - `source`: exactly `repository`, `revision`, and `packages`. `revision` is a
   full lowercase 40-character commit SHA. Each package has exactly `name`,
@@ -46,8 +47,10 @@ dot/traversal segments, NUL bytes, missing files, and symlinks resolving
 outside root are rejected. The manifest file itself must also resolve beneath
 root. The checksum metadata file is verified against its declared SHA-256;
 license expression and at least one existing license file are required for
-each package. JSON duplicate keys and unknown or missing schema fields are
-rejected.
+each package. Manifest, checksum, and patch reads use descriptor-relative
+no-follow opens so a checked path cannot be swapped to a symlink before the
+read. Validation fails closed on platforms without that support. JSON duplicate
+keys and unknown or missing schema fields are rejected.
 
 The source revision, candidate snapshot digest and parent-manifest digest are
 declarative pins. This validator does not fetch a source revision, verify a Git
@@ -73,12 +76,23 @@ report does not include raw metadata file contents.
 
 `python3 scripts/tests/test_validate_patch_plan.py` exercises valid identity
 and default gates, raw-byte digest mismatch, path traversal and absolute/NUL
-paths, symlink escape, missing checksum/license files, duplicate patch paths,
-gate promotion, duplicate JSON keys, unknown fields, and manifest-root
-containment. Eight focused tests passed; see
-`target/headstart/p3e-validator-tests.log`. The validator does not run Cargo or
-any candidate command.
+paths, symlink escape and post-containment symlink swap, missing checksum/license
+files, duplicate patch paths, gate promotion, duplicate JSON keys, unknown
+fields, and manifest-root containment. Ten focused tests passed; the run and
+syntax-check logs are `target/headstart/evidence/p3e-validator-no-follow-race-tests-20261021.log`
+and `target/headstart/evidence/p3e-validator-no-follow-race-pycompile-20261021.log`.
+The validator does not run Cargo or any candidate command.
 
 This task implements only a local format and validator. It does not authorize
 candidate intake, patch application, dependency or revision changes, GPUI Fast,
 advanced rendering, candidate build/test/native/performance work, or promotion.
+
+## M334 — Fixed-size patch and checksum hashing
+
+Hash verification for patch and checksum files streams from the already-open,
+descriptor-verified file in 64 KiB chunks. This keeps hash memory use bounded
+independently of artifact size while preserving exact raw-byte SHA-256
+verification. Manifest JSON remains parsed as a complete document. The focused
+suite includes an instrumented stream assertion and exact-digest regression;
+see `target/headstart/evidence/p3e-bounded-hashing-tests-m334-20261021.log`
+and `target/headstart/evidence/p3e-bounded-hashing-pycompile-m334-20261021.log`.

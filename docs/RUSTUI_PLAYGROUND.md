@@ -52,9 +52,10 @@ Layout inspection is partial. The performance panel and advanced component
 inspectors remain incomplete. Each catalog row describes available API coverage;
 it does not claim complete native platform behavior.
 
-Build, automated story checks, and native GUI interaction, visual, and accessibility
-acceptance are pending for this migration. Do not treat a compiled application or a
-catalog entry as evidence that these checks passed.
+Full-application behavioral, visual, and accessibility acceptance remains pending
+for this migration. The focused builds, story checks, and GUI reviews recorded below
+cover only their stated scenarios; a compiled application or catalog entry alone is
+not evidence that broader acceptance passed.
 
 
 ## Consolidation verification — 2026-10-18

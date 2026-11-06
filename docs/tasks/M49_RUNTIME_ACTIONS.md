@@ -73,9 +73,32 @@ recorded sequence showed:
 Observations are in `target/headstart/milestone49-runtime-actions-gui.json`.
 They verify the diagnostics factory order and owner-targeted refresh behavior;
 they do not establish cache reuse because accessibility was active. The
-reduced-motion and all-window refresh factories were source/build verified but
-did not receive isolated native dispatch checks. The public `App` escape hatch
-remains supported.
+reduced-motion and all-window refresh factories have now received isolated
+native dispatch checks. Public `App` remains supported as an escape hatch.
+
+### Native dispatch follow-up (2026-10-21)
+
+The isolated two-window probe dispatched both public factories through native
+RustUI Buttons in the disposable `dev.rustui.playground.validation` bundle.
+After `AppAction::reduced_motion(true)`, its chained GPUI readback returned
+`true`. After `AppAction::refresh_windows()`, lowering counts advanced from 3 to 4 in the first window and from 4 to 5 in the second after 350 ms.
+The control-free first window supports an all-window refresh interpretation. The matched no-refresh control is implemented and compiled but has not run natively; the causal gate remains open. Evidence:
+
+The probe accepts `--idle-control`. Run the treatment and control serially in the same disposable validation app:
+
+1. Treatment: `./scripts/cargo-headstart run -p rustui --example m49_runtime_action_dispatch_probe --locked --offline`
+2. Control: `./scripts/cargo-headstart run -p rustui --example m49_runtime_action_dispatch_probe --locked --offline -- --idle-control`
+
+In both arms, click **M49 enable reduced motion**, wait for the stable baseline, then click the measurement button. The control records the trigger without calling `refresh_windows()`; both arms sample after 350 ms. Compare first-window lowering counts: treatment should advance, while control should remain unchanged. The control reports `idle_control_complete` only when no first-window advance occurred and refresh was not dispatched. The second-window count is recorded too, though its own button may lower that root.
+
+Build check: `target/headstart/evidence/m49-runtime-action-idle-control-build-20261021.log`.
+`target/headstart/evidence/m49-runtime-action-dispatch-1792590109.json`; build:
+`target/headstart/m49-runtime-action-dispatch-build-20261021.log`.
+
+The probe compiled without GPUI `test-support` and did not alter dependency
+revisions. Its disposable bundle and standalone executable were removed after
+the run. Deterministic automated dispatch tests remain a separate follow-up if
+GPUI test-support becomes available without changing the pinned dependency set.
 
 The source suite passed 135 tests across 12 binaries with zero failures
 (`target/headstart/milestone46-50-tests.log`). The final build succeeded, and
@@ -84,6 +107,7 @@ the dependency reuse verifier confirmed all three pinned GPUI packages fresh
 
 ## Next independent candidate
 
-Add focused RustUI dispatch tests for the reduced-motion and all-window refresh
-factories, whose individual effects were not isolated in the M49 native run.
-This needs no dependency or UI Studio serialization-schema decision.
+Add deterministic RustUI dispatch tests if the required GPUI test-support
+dependencies become available in the pinned offline source set. Native dispatch
+effects are now independently verified; this follow-up needs no UI Studio
+serialization-schema decision.

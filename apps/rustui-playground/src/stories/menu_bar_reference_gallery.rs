@@ -6,7 +6,10 @@ const MENU_LABELS: [&str; 6] = ["File", "Edit", "View", "Item", "Window", "Help"
 const MENU_ACTION: &str = "Show menu actions";
 
 pub fn demo() -> impl View {
-    Component("menu-bar-reference-gallery", MenuBarReferenceGallery::default)
+    Component(
+        "menu-bar-reference-gallery",
+        MenuBarReferenceGallery::default,
+    )
 }
 
 #[component]
@@ -44,6 +47,11 @@ impl MenuBarReferenceGallery {
         }
     }
 
+    fn sidebar_labels(&self) -> Option<[&'static str; 3]> {
+        self.sidebar_visible()
+            .then_some(["Favorites", "Desktop", "Downloads"])
+    }
+
     fn select_item(&mut self) {
         self.status = "Item menu action selected".into();
     }
@@ -59,6 +67,7 @@ impl MenuBarReferenceGallery {
 
 impl View for MenuBarReferenceGallery {
     fn body(&self) -> impl View {
+        let status = self.status();
         VStack::new()
             .spacing(8.0)
             .child(
@@ -138,17 +147,21 @@ impl View for MenuBarReferenceGallery {
                 HStack::new()
                     .spacing(12.0)
                     .child(
-                        self.sidebar_visible().then_some(
-                            VStack::new()
-                                .spacing(4.0)
-                                .child(Text("Favorites"))
-                                .child(Text("Desktop"))
-                                .child(Text("Downloads")),
-                        ),
+                        self.sidebar_labels()
+                            .map(|[favorites, desktop, downloads]| {
+                                VStack::new()
+                                    .spacing(4.0)
+                                    .child(Text(favorites))
+                                    .child(Text(desktop))
+                                    .child(Text(downloads))
+                            }),
                     )
                     .child(Text("Documents")),
             )
-            .child(Text(self.status()))
+            .child(
+                Semantics("menu-bar-action-status", Text(status.clone()))
+                    .live_region_value(status, LivePoliteness::Polite),
+            )
     }
 }
 
@@ -158,30 +171,77 @@ mod tests {
 
     #[test]
     fn menu_bar_composes_public_menu_controls_and_dispatches_owner_actions() {
-        assert_eq!(MENU_LABELS, ["File", "Edit", "View", "Item", "Window", "Help"]);
+        assert_eq!(
+            MENU_LABELS,
+            ["File", "Edit", "View", "Item", "Window", "Help"]
+        );
         assert_eq!(MENU_ACTION, "Show menu actions");
 
         let mut gallery = MenuBarReferenceGallery::default();
         assert!(gallery.sidebar_visible);
+        assert_eq!(
+            gallery.sidebar_labels(),
+            Some(["Favorites", "Desktop", "Downloads"])
+        );
         assert_eq!(gallery.sidebar_action_label(), "Hide Sidebar");
-        gallery.toggle_sidebar();
+        assert!(
+            gallery
+                .action(MenuBarReferenceGallery::toggle_sidebar)
+                .dispatch(&mut gallery)
+                .should_notify()
+        );
         assert!(!gallery.sidebar_visible);
+        assert_eq!(gallery.sidebar_labels(), None);
         assert_eq!(gallery.sidebar_action_label(), "Show Sidebar");
         assert_eq!(gallery.status, "Sidebar hidden");
-        gallery.toggle_sidebar();
+        assert!(
+            gallery
+                .action(MenuBarReferenceGallery::toggle_sidebar)
+                .dispatch(&mut gallery)
+                .should_notify()
+        );
         assert!(gallery.sidebar_visible);
+        assert_eq!(
+            gallery.sidebar_labels(),
+            Some(["Favorites", "Desktop", "Downloads"])
+        );
         assert_eq!(gallery.sidebar_action_label(), "Hide Sidebar");
         assert_eq!(gallery.status, "Sidebar shown");
 
-        gallery.select_file();
+        assert!(
+            gallery
+                .action(MenuBarReferenceGallery::select_file)
+                .dispatch(&mut gallery)
+                .should_notify()
+        );
         assert_eq!(gallery.status, "File menu action selected");
-        gallery.select_edit();
+        assert!(
+            gallery
+                .action(MenuBarReferenceGallery::select_edit)
+                .dispatch(&mut gallery)
+                .should_notify()
+        );
         assert_eq!(gallery.status, "Edit menu action selected");
-        gallery.select_item();
+        assert!(
+            gallery
+                .action(MenuBarReferenceGallery::select_item)
+                .dispatch(&mut gallery)
+                .should_notify()
+        );
         assert_eq!(gallery.status, "Item menu action selected");
-        gallery.select_window();
+        assert!(
+            gallery
+                .action(MenuBarReferenceGallery::select_window)
+                .dispatch(&mut gallery)
+                .should_notify()
+        );
         assert_eq!(gallery.status, "Window menu action selected");
-        gallery.select_help();
+        assert!(
+            gallery
+                .action(MenuBarReferenceGallery::select_help)
+                .dispatch(&mut gallery)
+                .should_notify()
+        );
         assert_eq!(gallery.status, "Help menu action selected");
     }
 }

@@ -2,7 +2,7 @@
 
 use std::{collections::HashMap, future::Future};
 
-use gpui::{App, Task, WeakEntity};
+use gpui::{App, BackgroundExecutor, Task, WeakEntity};
 use rustui_core::{Identity, async_state::AsyncState};
 
 use crate::{
@@ -92,6 +92,22 @@ impl<C: View> OwnerTask<C> {
         F: Fn() -> Fut + 'static,
         Fut: Future<Output = Result<T, E>> + Send + 'static,
     {
+        self.start_with_executor(id, move |_| work(), apply)
+    }
+
+    /// Restart a named task whose work needs the owning GPUI background executor.
+    pub fn start_with_executor<T, E, F, Fut>(
+        &self,
+        id: impl Into<Identity>,
+        work: F,
+        apply: fn(&mut C, AsyncState<T, E>) -> bool,
+    ) -> AppAction
+    where
+        T: Send + 'static,
+        E: Send + 'static,
+        F: Fn(&BackgroundExecutor) -> Fut + 'static,
+        Fut: Future<Output = Result<T, E>> + Send + 'static,
+    {
         let owner = self.owner.clone();
         let id = id.into();
         AppAction::new(move |cx: &mut App| {
@@ -103,7 +119,8 @@ impl<C: View> OwnerTask<C> {
                         cx.notify();
                     }
 
-                    let background = cx.background_executor().spawn(work());
+                    let executor = cx.background_executor().clone();
+                    let background = cx.background_executor().spawn(work(&executor));
                     let completion_id = id.clone();
                     let task = cx.spawn(async move |weak_host, cx| {
                         let result = background.await;

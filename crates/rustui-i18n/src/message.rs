@@ -10,7 +10,9 @@ impl MessageId {
         let value = value.as_ref().trim();
         let mut bytes = value.bytes();
         let valid = bytes.next().is_some_and(|byte| byte.is_ascii_alphabetic())
-            && bytes.all(|byte| byte.is_ascii_alphanumeric() || matches!(byte, b'-' | b'_' | b'.'));
+            && bytes.all(|byte| byte.is_ascii_alphanumeric() || matches!(byte, b'-' | b'_' | b'.'))
+            && !value.ends_with('.')
+            && !value.contains("..");
         if valid {
             Ok(Self(value.to_owned()))
         } else {
@@ -49,3 +51,16 @@ impl fmt::Display for MessageIdError {
 }
 
 impl Error for MessageIdError {}
+
+#[cfg(test)]
+mod tests {
+    use super::MessageId;
+
+    #[test]
+    fn rejects_empty_dotted_identifier_segments() {
+        for value in ["app.", "app..title"] {
+            assert!(MessageId::parse(value).is_err(), "accepted {value:?}");
+        }
+        assert_eq!(MessageId::parse("app.title").unwrap().as_str(), "app.title");
+    }
+}

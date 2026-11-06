@@ -55,7 +55,6 @@ impl View for AlertGallery {
             .spacing(8.0)
             .child(Text("Inline alert").font_weight(TextWeight::Semibold))
             .child(super::LocaleSelector::new())
-            .child(LocalizedText("rustui-action-close"))
             .child(
                 Alert(
                     "alert-gallery-saved",

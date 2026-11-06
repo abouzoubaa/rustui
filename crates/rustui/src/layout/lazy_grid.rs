@@ -89,6 +89,11 @@ where
         validate_positive(viewport_height, "viewport height");
         validate_positive(row_height, "row height");
         validate_ids(&items);
+        validate_row_span(
+            row_height,
+            0.0,
+            items.len().div_ceil(usize::from(columns.get())),
+        );
         Self {
             id,
             items,
@@ -115,9 +120,10 @@ where
 
     pub fn row_gap(mut self, gap: f32) -> Self {
         validate_gap(gap, "row gap");
-        assert!(
-            (self.row_height + gap).is_finite(),
-            "LazyGrid row height plus gap must be finite"
+        validate_row_span(
+            self.row_height,
+            gap,
+            self.items.len().div_ceil(usize::from(self.columns.get())),
         );
         self.row_gap = gap;
         self
@@ -135,6 +141,18 @@ fn validate_gap(value: f32, name: &str) {
     assert!(
         value.is_finite() && value >= 0.0,
         "LazyGrid {name} must be finite and nonnegative"
+    );
+}
+
+fn validate_row_span(row_height: f32, row_gap: f32, row_count: usize) {
+    let row_extent = row_height + row_gap;
+    assert!(
+        row_extent.is_finite(),
+        "LazyGrid row height plus gap must be finite"
+    );
+    assert!(
+        f64::from(row_extent) * row_count as f64 <= f64::from(f32::MAX),
+        "LazyGrid total row span must be finite"
     );
 }
 
@@ -313,6 +331,45 @@ where
 
 #[cfg(test)]
 mod tests {
+    #[test]
+    fn total_row_span_must_remain_finite() {
+        use super::{LazyGrid, LazyGridItem};
+        use std::{
+            num::NonZeroU16,
+            panic::{AssertUnwindSafe, catch_unwind},
+            rc::Rc,
+        };
+
+        let columns = NonZeroU16::new(1).unwrap();
+        let too_many_rows = Rc::from([
+            LazyGridItem::new("a", 0),
+            LazyGridItem::new("b", 1),
+            LazyGridItem::new("c", 2),
+        ]);
+        assert!(catch_unwind(AssertUnwindSafe(|| {
+            LazyGrid::new(
+                "grid",
+                too_many_rows,
+                columns,
+                100.0,
+                f32::MAX / 2.0,
+                |_, _| crate::view::EmptyView,
+            )
+        }))
+        .is_err());
+
+        let two_rows = Rc::from([LazyGridItem::new("a", 0), LazyGridItem::new("b", 1)]);
+        let grid = LazyGrid::new(
+            "grid",
+            two_rows,
+            columns,
+            100.0,
+            f32::MAX * 0.4,
+            |_, _| crate::view::EmptyView,
+        );
+        assert!(catch_unwind(AssertUnwindSafe(|| grid.row_gap(f32::MAX * 0.2))).is_err());
+    }
+
     use super::*;
     use std::cell::Cell;
 

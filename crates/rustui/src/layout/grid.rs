@@ -88,6 +88,9 @@ impl View for Grid {
 
     fn into_element(&self, context: &mut RenderContext<'_>) -> AnyElement {
         let columns = self.columns.get();
+        let rows = self.children.len().div_ceil(usize::from(columns));
+        validate_gap_span(self.spacing, usize::from(columns - 1));
+        validate_gap_span(self.spacing, rows.saturating_sub(1));
         let direction = context.layout_direction();
         let children = self.children.iter().enumerate().map(|(index, child)| {
             let (row, column) = grid_position(index, columns, direction)
@@ -115,6 +118,13 @@ fn grid_position(index: usize, columns: u16, direction: LayoutDirection) -> Opti
         LayoutDirection::RightToLeft => columns - logical_column,
     };
     Some((i16::try_from(row).ok()?, i16::try_from(column).ok()?))
+}
+
+fn validate_gap_span(spacing: f32, gap_count: usize) {
+    assert!(
+        f64::from(spacing) * gap_count as f64 <= f64::from(f32::MAX),
+        "Grid total gap span must be finite"
+    );
 }
 
 #[cfg(test)]
@@ -157,5 +167,14 @@ mod tests {
                 .is_err()
             );
         }
+    }
+
+    #[test]
+    fn rejects_finite_spacing_when_grid_gap_span_overflows() {
+        assert!(std::panic::catch_unwind(|| {
+            super::validate_gap_span(f32::MAX * 0.6, 2)
+        })
+        .is_err());
+        super::validate_gap_span(f32::MAX * 0.6, 1);
     }
 }

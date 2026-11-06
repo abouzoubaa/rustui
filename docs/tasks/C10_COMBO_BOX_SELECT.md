@@ -85,3 +85,5 @@ selectable result; Escape closed the popup and the rendered trigger remained
 focus traversal, VoiceOver, or pixel acceptance. The accessibility API did not
 identify the focused popup child. Evidence:
 `target/headstart/evidence/picker-combobox-keyboard-m130-20261019.json`.
+# M403 — retain search through owner rerenders
+`ComboBox` no longer reapplies an unchanged unmatched controlled value on every owner rerender. The pinned `SelectState::set_selected_value` clears the active search query, so reconciliation now runs only when the owner value or options change. Focused ComboBox tests passed 4/4; native rerender-during-search behavior and broader keyboard, focus, accessibility, visual, and cross-platform acceptance remain open. Evidence: `target/headstart/evidence/combo-box-owner-rerender-m403-20261021.log`.

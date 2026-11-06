@@ -7,13 +7,15 @@ document and returns pretty-printed JSON for the typed document. This is a
 normalized export, not a byte-preserving copy of the input. Whitespace, object
 ordering, numeric spelling, and absent optional fields may be normalized.
 
-Arbitrary JSON stored in `source`, `token_sources`, `components`,
-`derivation`, and Button `parts` remains represented as JSON values. Unknown
-fields in typed records are rejected during parsing rather than discarded.
-The current validator checks document invariants, Button records, and the
-platform snapshot; other component records are preserved but not semantically
-validated. The format does not use flattening or custom serde defaults/skip
-rules; `max_version: None` serializes as `null`.
+`source`, `token_sources`, and `derivation` are object-valued metadata. Every
+component entry is an object. Unknown component objects without typed `parts`
+or `styles` fields remain opaque JSON and round-trip unchanged. Typed component
+records are semantically validated through the shared theme resolver, including
+their selectors, declared parts, and recognized style properties; custom
+metadata and unknown property payloads remain preserved. Button `parts` values
+also remain JSON. Unknown fields in strict typed records are rejected during
+parsing rather than discarded. The format does not use custom serde
+defaults/skip rules; `max_version: None` serializes as `null`.
 
 This API exports theme documents only. It does not serialize RustUI view trees,
 component state, runtime caches, or GPUI entities. It also does not write files
@@ -21,10 +23,10 @@ or watch for external edits.
 
 ## Verification
 
-Focused tests cover typed-document round trip, preservation of arbitrary JSON
-records, invalid-document rejection, and rejection of unknown typed fields.
-No Cargo command was run for this slice; integration validation remains with the
-root task.
+Focused tests cover typed-document round trip, preservation of opaque component
+objects, invalid-document rejection, and rejection of unknown typed fields.
+The root task also ran the focused loader and resolver suites under the
+persistent Headstart profile; native visual acceptance remains separate.
 
 ## Playground consumer acceptance (M27)
 

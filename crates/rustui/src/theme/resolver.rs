@@ -4,7 +4,8 @@ use std::{collections::BTreeMap, error::Error, fmt};
 
 use crate::theme::{
     AppearanceMode, ButtonStyleRule, ButtonStyleSelector, ButtonTypographyValue, ColorProperty,
-    LengthProperty, RgbaValue, ThemeDocument, ThemeProfile, TypographyProperty,
+    ComponentThemeRecord, LengthProperty, RgbaValue, ThemeDocument, ThemeProfile,
+    TypographyProperty,
 };
 
 #[derive(Clone, Debug, PartialEq)]
@@ -17,6 +18,8 @@ pub struct ResolvedButtonTheme {
     pub hover_background: RgbaValue,
     pub pressed_background: RgbaValue,
     pub disabled_background: RgbaValue,
+    /// Platform disabled text color, kept separate from the shared muted role.
+    pub disabled_foreground: RgbaValue,
     pub focus_background: RgbaValue,
     pub hover_has_style: bool,
     pub pressed_has_style: bool,
@@ -36,14 +39,54 @@ pub fn resolve_button(
         AppearanceMode::Light => "light",
         AppearanceMode::Dark => "dark",
     };
+    resolve_button_with_selector(
+        document,
+        &ButtonStyleSelector {
+            appearance: appearance.into(),
+            material: "any".into(),
+            interaction: "any".into(),
+            text_presence: "any".into(),
+            size: "any".into(),
+            orientation: "any".into(),
+            chrome: "any".into(),
+            modality: "any".into(),
+        },
+    )
+}
+
+/// Resolve a button using the requested appearance and component variants.
+/// Interaction styles are resolved for the requested selector's other fields.
+pub fn resolve_button_with_selector(
+    document: &ThemeDocument,
+    selector: &ButtonStyleSelector,
+) -> Result<ResolvedButtonTheme, ThemeResolveError> {
+    let profile = &document.platform_snapshot;
+    let mode = match selector.appearance.as_str() {
+        "light" => AppearanceMode::Light,
+        "dark" => AppearanceMode::Dark,
+        "any" => profile.appearance.default,
+        other => {
+            return Err(ThemeResolveError::Invalid(format!(
+                "unsupported button appearance selector `{other}`"
+            )));
+        }
+    };
+    let mut query = selector.clone();
+    if query.appearance == "any" {
+        query.appearance = match mode {
+            AppearanceMode::Light => "light",
+            AppearanceMode::Dark => "dark",
+        }
+        .into();
+    }
     let button = document
         .button_theme()
         .map_err(ThemeResolveError::Invalid)?;
-    let rule = button_rule(&button.styles, appearance, "rest")?;
-    let hover_rule = button_rule(&button.styles, appearance, "hover")?;
-    let pressed_rule = button_rule(&button.styles, appearance, "pressed")?;
-    let disabled_rule = button_rule(&button.styles, appearance, "disabled")?;
-    let focus_rule = button_rule(&button.styles, appearance, "focused")?;
+    let rule = button_rule(&button.styles, &query, "rest")?;
+    let hover_rule = button_rule(&button.styles, &query, "hover")?;
+    let pressed_rule = button_rule(&button.styles, &query, "pressed")?;
+    let disabled_rule = button_rule(&button.styles, &query, "disabled")?;
+    let focus_rule = button_rule(&button.styles, &query, "focused")?;
     if (hover_rule.when.interaction != "hover" && button.theme_roles.hover != "primary")
         || (pressed_rule.when.interaction != "pressed" && button.theme_roles.pressed != "primary")
         || document.theme_roles.get("primary").map(String::as_str) != Some("accent")
@@ -84,6 +127,10 @@ pub fn resolve_button(
         hover_background: hover_rule.style.properties.background.value.rgba,
         pressed_background: pressed_rule.style.properties.background.value.rgba,
         disabled_background: disabled_rule.style.properties.background.value.rgba,
+        disabled_foreground: resolve_platform_color(
+            &profile.colors(Some(mode)).disabled_text,
+            "disabled_text",
+        )?,
         focus_background: focus_rule.style.properties.background.value.rgba,
         hover_has_style: hover_rule.when.interaction == "hover",
         pressed_has_style: pressed_rule.when.interaction == "pressed",
@@ -94,20 +141,42 @@ pub fn resolve_button(
     })
 }
 
+fn resolve_platform_color(value: &str, name: &str) -> Result<RgbaValue, ThemeResolveError> {
+    let digits = value.strip_prefix('#').ok_or_else(|| {
+        ThemeResolveError::Invalid(format!(
+            "platform color `{name}` must be a six-digit hex color"
+        ))
+    })?;
+    if digits.len() != 6 || !digits.bytes().all(|byte| byte.is_ascii_hexdigit()) {
+        return Err(ThemeResolveError::Invalid(format!(
+            "platform color `{name}` must be a six-digit hex color"
+        )));
+    }
+    let channel = |offset| {
+        u8::from_str_radix(&digits[offset..offset + 2], 16)
+            .map(|value| f32::from(value) / 255.0)
+            .map_err(|error| ThemeResolveError::Invalid(error.to_string()))
+    };
+    Ok(RgbaValue {
+        r: channel(0)?,
+        g: channel(2)?,
+        b: channel(4)?,
+        a: 1.0,
+    })
+}
+
 fn button_rule<'a>(
     rules: &'a [ButtonStyleRule],
-    appearance: &str,
+    selector: &ButtonStyleSelector,
     interaction: &str,
 ) -> Result<&'a ButtonStyleRule, ThemeResolveError> {
+    let mut query = selector.clone();
+    query.interaction = interaction.into();
     let mut best = None;
     let mut best_score = 0;
     let mut tied = false;
-    for rule in rules
-        .iter()
-        .filter(|rule| selector_matches(rule, appearance, interaction))
-    {
-        let score = usize::from(rule.when.appearance != "any")
-            + usize::from(rule.when.interaction != "any");
+    for rule in rules.iter().filter(|rule| selector_matches(rule, &query)) {
+        let score = selector_specificity(&rule.when);
         if best.is_none() || score > best_score {
             best = Some(rule);
             best_score = score;
@@ -118,31 +187,37 @@ fn button_rule<'a>(
     }
     if tied {
         return Err(ThemeResolveError::Invalid(format!(
-            "button has ambiguous body styles for {appearance}/{interaction}"
+            "button has ambiguous body styles for {}/{}",
+            selector.appearance, interaction
         )));
     }
     best.ok_or_else(|| {
         ThemeResolveError::Invalid(format!(
-            "button has no body style for {appearance}/{interaction}"
+            "button has no body style for {}/{}",
+            selector.appearance, interaction
         ))
     })
 }
 
-fn selector_matches(rule: &ButtonStyleRule, appearance: &str, interaction: &str) -> bool {
-    let selector = &rule.when;
+fn selector_matches(rule: &ButtonStyleRule, query: &ButtonStyleSelector) -> bool {
     rule.part == "body"
-        && (selector.appearance == appearance || selector.appearance == "any")
-        && (selector.interaction == interaction || selector.interaction == "any")
-        && [
-            selector.material.as_str(),
-            selector.text_presence.as_str(),
-            selector.size.as_str(),
-            selector.orientation.as_str(),
-            selector.chrome.as_str(),
-            selector.modality.as_str(),
-        ]
-        .into_iter()
-        .all(|value| value == "any")
+        && selector_fields(&rule.when)
+            .into_iter()
+            .zip(selector_fields(query))
+            .all(|(rule, query)| rule == "any" || rule == query)
+}
+
+fn selector_fields(selector: &ButtonStyleSelector) -> [&str; 8] {
+    [
+        &selector.appearance,
+        &selector.material,
+        &selector.interaction,
+        &selector.text_presence,
+        &selector.size,
+        &selector.orientation,
+        &selector.chrome,
+        &selector.modality,
+    ]
 }
 
 fn resolve_alias<'a>(
@@ -282,7 +357,10 @@ pub fn resolve_component_style_with(
                         ThemeResolveError::Invalid(format!("`{component}` `{name}`: {error}"))
                     })?;
                 let px = property.value.px;
-                if !px.is_finite() || (name != "corner_radius" && px <= 0.0) || px < 0.0 {
+                if !px.is_finite()
+                    || (matches!(name.as_str(), "width" | "height") && px <= 0.0)
+                    || px < 0.0
+                {
                     return Err(ThemeResolveError::Invalid(format!(
                         "`{component}` `{name}` must be a finite nonnegative length"
                     )));
@@ -354,22 +432,97 @@ pub fn resolve_component_style_with(
     })
 }
 
-fn component_selector_matches(rule: &ButtonStyleSelector, query: &ButtonStyleSelector) -> bool {
-    [
-        (&rule.appearance, &query.appearance),
-        (&rule.material, &query.material),
-        (&rule.interaction, &query.interaction),
-        (&rule.text_presence, &query.text_presence),
-        (&rule.size, &query.size),
-        (&rule.orientation, &query.orientation),
-        (&rule.chrome, &query.chrome),
-        (&rule.modality, &query.modality),
-    ]
-    .into_iter()
-    .all(|(rule, query)| rule == "any" || rule == query)
+/// Validate one typed component record using the same selector and property
+/// rules used by runtime resolution. Extra properties stay opaque here.
+pub(super) fn validate_component_theme(
+    document: &ThemeDocument,
+    component: &str,
+    record: &ComponentThemeRecord,
+) -> Result<(), ThemeResolveError> {
+    if record.rustui_type.trim().is_empty() {
+        return Err(ThemeResolveError::Invalid(
+            "rustui_type must not be empty".into(),
+        ));
+    }
+
+    for (index, rule) in record.styles.iter().enumerate() {
+        if rule.part.trim().is_empty() || !record.parts.contains_key(&rule.part) {
+            return Err(ThemeResolveError::Invalid(format!(
+                "style rule {index} refers to undeclared part `{}`",
+                rule.part
+            )));
+        }
+        if !matches!(rule.when.appearance.as_str(), "any" | "light" | "dark") {
+            return Err(ThemeResolveError::Invalid(format!(
+                "style rule {index} has unsupported appearance selector `{}`",
+                rule.when.appearance
+            )));
+        }
+        if component == "slider" && rule.part == "sliders" {
+            for property in ["width", "height"] {
+                if !rule.style.properties.contains_key(property) {
+                    return Err(ThemeResolveError::Invalid(format!(
+                        "slider style rule {index} is missing renderer-required `{property}` property"
+                    )));
+                }
+            }
+        }
+        for (other_index, other) in record.styles.iter().enumerate().skip(index + 1) {
+            if rule.part == other.part
+                && selector_specificity(&rule.when) == selector_specificity(&other.when)
+                && component_selectors_overlap(&rule.when, &other.when)
+            {
+                return Err(ThemeResolveError::Invalid(format!(
+                    "style rules {index} and {other_index} have ambiguous `{}` selectors",
+                    rule.part
+                )));
+            }
+        }
+
+        let handled_extras = rule
+            .style
+            .properties
+            .keys()
+            .filter(|name| {
+                !matches!(
+                    name.as_str(),
+                    "width"
+                        | "height"
+                        | "corner_radius"
+                        | "border_width"
+                        | "background"
+                        | "foreground"
+                        | "border"
+                        | "typography"
+                )
+            })
+            .map(String::as_str)
+            .collect::<Vec<_>>();
+        resolve_component_style_with(document, component, &rule.part, &rule.when, &handled_extras)
+            .map_err(|error| ThemeResolveError::Invalid(format!("style rule {index}: {error}")))?;
+    }
+
+    Ok(())
 }
 
-fn selector_specificity(selector: &ButtonStyleSelector) -> usize {
+fn component_selector_matches(rule: &ButtonStyleSelector, query: &ButtonStyleSelector) -> bool {
+    component_selector_fields(rule)
+        .into_iter()
+        .zip(component_selector_fields(query))
+        .all(|(rule, query)| rule == "any" || rule == query)
+}
+
+pub(super) fn component_selectors_overlap(
+    left: &ButtonStyleSelector,
+    right: &ButtonStyleSelector,
+) -> bool {
+    component_selector_fields(left)
+        .into_iter()
+        .zip(component_selector_fields(right))
+        .all(|(left, right)| left == "any" || right == "any" || left == right)
+}
+
+fn component_selector_fields(selector: &ButtonStyleSelector) -> [&str; 8] {
     [
         &selector.appearance,
         &selector.material,
@@ -380,9 +533,13 @@ fn selector_specificity(selector: &ButtonStyleSelector) -> usize {
         &selector.chrome,
         &selector.modality,
     ]
-    .into_iter()
-    .filter(|value| value.as_str() != "any")
-    .count()
+}
+
+pub(super) fn selector_specificity(selector: &ButtonStyleSelector) -> usize {
+    component_selector_fields(selector)
+        .into_iter()
+        .filter(|value| *value != "any")
+        .count()
 }
 
 /// Renderer-declared properties it actually applies for a component part.
@@ -587,6 +744,26 @@ mod component_tests {
     }
 
     #[test]
+    fn any_appearance_resolves_using_the_profile_default() {
+        let document = document();
+        let selector = ButtonStyleSelector {
+            appearance: "any".into(),
+            material: "any".into(),
+            interaction: "any".into(),
+            text_presence: "any".into(),
+            size: "any".into(),
+            orientation: "any".into(),
+            chrome: "any".into(),
+            modality: "any".into(),
+        };
+
+        assert_eq!(
+            resolve_button_with_selector(&document, &selector).unwrap(),
+            resolve_button(&document, None).unwrap()
+        );
+    }
+
+    #[test]
     fn button_uses_declared_interaction_rule_without_alpha_overlay() {
         let mut document = document();
         let base = document.components["button"]["styles"][0].clone();
@@ -601,6 +778,64 @@ mod component_tests {
         assert!(!resolved.hover_has_style);
         assert_eq!(resolved.pressed_background.a, 0.5);
         assert!(resolved.pressed_has_style);
+    }
+
+    #[test]
+    fn button_resolves_requested_size_variant_metrics() {
+        let mut document = document();
+        let styles = document.components.get_mut("button").unwrap()["styles"]
+            .as_array_mut()
+            .unwrap();
+        let mut small_variant = styles
+            .iter()
+            .find(|rule| rule["when"]["appearance"] == "light")
+            .unwrap()
+            .clone();
+        small_variant["when"]["size"] = serde_json::json!("small");
+        small_variant["style"]["properties"]["width"]["value"]["px"] = serde_json::json!(48.0);
+        styles.push(small_variant);
+
+        let base_selector = document
+            .component_theme("button")
+            .unwrap()
+            .styles
+            .into_iter()
+            .find(|rule| rule.when.appearance == "light")
+            .unwrap()
+            .when;
+        let mut small_selector = base_selector.clone();
+        small_selector.size = "small".into();
+        let mut large_selector = base_selector;
+        large_selector.size = "large".into();
+
+        let small = resolve_button_with_selector(&document, &small_selector).unwrap();
+        let large = resolve_button_with_selector(&document, &large_selector).unwrap();
+        let default = resolve_button(&document, Some(AppearanceMode::Light)).unwrap();
+
+        assert_eq!(small.width, 48.0);
+        assert_eq!(large.width, 67.0);
+        assert_eq!(default.width, 67.0);
+    }
+
+    #[test]
+    fn button_resolves_platform_disabled_text_without_changing_muted_role() {
+        let document = document();
+        let resolved = resolve_button(&document, Some(AppearanceMode::Dark)).unwrap();
+        let disabled_text = &document
+            .platform_snapshot
+            .colors(Some(AppearanceMode::Dark))
+            .disabled_text;
+        assert_eq!(disabled_text, "#A6A6A6");
+        assert_eq!(
+            resolved.disabled_foreground,
+            RgbaValue {
+                r: 166.0 / 255.0,
+                g: 166.0 / 255.0,
+                b: 166.0 / 255.0,
+                a: 1.0
+            }
+        );
+        assert_ne!(resolved.disabled_foreground, resolved.foreground);
     }
 
     #[test]
@@ -622,6 +857,41 @@ mod component_tests {
         );
         assert_eq!(result.rule_metadata["custom_rule"], 42);
         assert_eq!(result.style_metadata["custom_style"], true);
+    }
+
+    #[test]
+    fn accepts_zero_width_border_as_a_valid_nonnegative_length() {
+        let mut document = document();
+        document.components.get_mut("toggle").unwrap()["styles"][0]["style"]["properties"]["border_width"] =
+            serde_json::json!({"kind": "length", "value": {"px": 0.0}});
+        let selector = document.component_theme("toggle").unwrap().styles[0]
+            .when
+            .clone();
+
+        let resolved = resolve_component_style(&document, "toggle", "body", &selector).unwrap();
+
+        assert_eq!(resolved.lengths.get("border_width"), Some(&0.0));
+    }
+
+    #[test]
+    fn slider_theme_requires_renderer_thumb_dimensions() {
+        let mut document = document();
+        let styles = document.components.get_mut("slider").unwrap()["styles"]
+            .as_array_mut()
+            .unwrap();
+        let sliders = styles
+            .iter_mut()
+            .find(|rule| rule["part"] == "sliders")
+            .unwrap();
+        sliders["style"]["properties"]
+            .as_object_mut()
+            .unwrap()
+            .remove("width");
+
+        assert!(document
+            .validate()
+            .unwrap_err()
+            .contains("slider style rule 0 is missing renderer-required `width` property"));
     }
 
     #[test]

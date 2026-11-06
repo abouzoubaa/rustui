@@ -1,9 +1,46 @@
 //! Runtime locale and logical-direction selection for Playground.
 
 use rustui::{
-    localization::{Catalog, Catalogs, Locale, set_locale_action, validate_catalogs},
+    localization::{
+        Catalog, Catalogs, LayoutDirection, Locale, set_locale_action as rustui_set_locale_action,
+        validate_catalogs,
+    },
     prelude::{Button, ButtonStyle, HStack, VerticalAlignment, View},
+    runtime::AppAction,
 };
+
+fn document_direction(locale: &Locale) -> &'static str {
+    if LayoutDirection::for_locale(locale).is_right_to_left() {
+        "rtl"
+    } else {
+        "ltr"
+    }
+}
+
+fn locale_action(locale: Locale) -> AppAction {
+    let action = rustui_set_locale_action(locale.clone());
+    #[cfg(target_arch = "wasm32")]
+    {
+        let language = locale.as_str().to_owned();
+        let direction = document_direction(&locale);
+        action.then(AppAction::new(move |_| {
+            set_document_locale(&language, direction);
+        }))
+    }
+    #[cfg(not(target_arch = "wasm32"))]
+    {
+        action
+    }
+}
+
+#[cfg(target_arch = "wasm32")]
+#[wasm_bindgen::prelude::wasm_bindgen(
+    inline_js = "export function setDocumentLocale(language, direction) { document.documentElement.lang = language; document.documentElement.dir = direction; }"
+)]
+extern "C" {
+    #[wasm_bindgen::prelude::wasm_bindgen(js_name = setDocumentLocale)]
+    fn set_document_locale(language: &str, direction: &str);
+}
 
 pub struct LocaleSelector;
 
@@ -17,17 +54,17 @@ impl View for LocaleSelector {
     fn body(&self) -> impl View {
         HStack::new()
             .child(
-                Button("English", set_locale_action(locale("en")))
+                Button("English", locale_action(locale("en")))
                     .id("lab-locale-en")
                     .button_style(ButtonStyle::Bordered),
             )
             .child(
-                Button("Français", set_locale_action(locale("fr")))
+                Button("Français", locale_action(locale("fr")))
                     .id("lab-locale-fr")
                     .button_style(ButtonStyle::Bordered),
             )
             .child(
-                Button("العربية", set_locale_action(locale("ar")))
+                Button("العربية", locale_action(locale("ar")))
                     .id("lab-locale-ar")
                     .button_style(ButtonStyle::Bordered),
             )
@@ -66,9 +103,18 @@ pub fn catalogs() -> Catalogs {
             .insert(catalog)
             .expect("Playground locales should be registered once");
     }
+    let validation = validate_catalogs(&catalogs);
     assert!(
-        validate_catalogs(&catalogs).is_valid(),
-        "Playground catalogs should define the same message IDs"
+        validation.missing.is_empty()
+            && validation.extra.is_empty()
+            && validation.argument_mismatches.is_empty()
+            && validation.expression_mismatches.is_empty()
+            && validation
+                .invalid_patterns
+                .values()
+                .flatten()
+                .all(|identifier| identifier.as_str() == "lab-i18n-malformed"),
+        "Playground catalogs should match except for the intentional malformed-pattern demo: {validation:?}"
     );
     catalogs
 }
@@ -80,6 +126,13 @@ fn locale(identifier: &str) -> Locale {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn browser_document_direction_matches_playground_locale() {
+        for (identifier, expected) in [("en", "ltr"), ("fr", "ltr"), ("ar", "rtl")] {
+            assert_eq!(document_direction(&locale(identifier)), expected);
+        }
+    }
 
     #[test]
     fn sheet_story_messages_exist_in_every_playground_catalog() {
@@ -107,8 +160,11 @@ mod tests {
             for message in [
                 "lab-i18n-title",
                 "lab-i18n-sample",
+                "lab-i18n-plural",
+                "lab-i18n-select",
                 "lab-i18n-malformed",
                 "lab-i18n-error-label",
+                "lab-tab-overview-accessibility",
             ] {
                 assert!(
                     catalog.get(message).is_some(),

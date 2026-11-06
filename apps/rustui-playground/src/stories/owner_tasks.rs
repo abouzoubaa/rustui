@@ -8,6 +8,15 @@ pub fn demo() -> impl View {
     Component("owner-task-demo", TaskDemo::default)
 }
 
+fn task_result_status(result: AsyncState<String, String>) -> String {
+    match result {
+        AsyncState::Idle => "Idle".to_owned(),
+        AsyncState::Loading => "Loading".to_owned(),
+        AsyncState::Success(value) => format!("Success: {value}"),
+        AsyncState::Error(error) => format!("Error: {error}"),
+    }
+}
+
 #[component]
 struct TaskDemo {
     #[state(AsyncState::Idle)]
@@ -16,23 +25,29 @@ struct TaskDemo {
 
 impl View for TaskDemo {
     fn body(&self) -> impl View {
-        let status = match self.result() {
-            AsyncState::Idle => "Idle".to_owned(),
-            AsyncState::Loading => "Loading".to_owned(),
-            AsyncState::Success(value) => format!("Success: {value}"),
-            AsyncState::Error(error) => format!("Error: {error}"),
-        };
+        let status = task_result_status(self.result());
 
         OwnerTaskReader(move |tasks: OwnerTask<TaskDemo>| {
             VStack::new()
                 .child(Text("Owner task: shared request ID"))
-                .child(Text(format!("Current state: {status}")))
+                .child(
+                    Semantics(
+                        "owner-task-status",
+                        Text(format!("Current state: {status}")),
+                    )
+                    .live_region_value(status.clone(), LivePoliteness::Polite),
+                )
                 .child(
                     Button(
                         "Start slow success",
-                        tasks.start(
+                        tasks.start_with_executor(
                             "request",
-                            || result_after(900, Ok("original result")),
+                            |executor| {
+                                result_after(
+                                    executor.timer(Duration::from_millis(900)),
+                                    Ok("original result"),
+                                )
+                            },
                             TaskDemo::set_result,
                         ),
                     )
@@ -42,9 +57,14 @@ impl View for TaskDemo {
                 .child(
                     Button(
                         "Restart with fast success",
-                        tasks.start(
+                        tasks.start_with_executor(
                             "request",
-                            || result_after(150, Ok("restarted result")),
+                            |executor| {
+                                result_after(
+                                    executor.timer(Duration::from_millis(150)),
+                                    Ok("restarted result"),
+                                )
+                            },
                             TaskDemo::set_result,
                         ),
                     )
@@ -54,9 +74,14 @@ impl View for TaskDemo {
                 .child(
                     Button(
                         "Start error",
-                        tasks.start(
+                        tasks.start_with_executor(
                             "request",
-                            || result_after(250, Err("sample failure")),
+                            |executor| {
+                                result_after(
+                                    executor.timer(Duration::from_millis(250)),
+                                    Err("sample failure"),
+                                )
+                            },
                             TaskDemo::set_result,
                         ),
                     )
@@ -74,12 +99,30 @@ impl View for TaskDemo {
 }
 
 fn result_after(
-    delay_ms: u64,
+    delay: impl Future<Output = ()> + Send + 'static,
     result: Result<&'static str, &'static str>,
 ) -> impl Future<Output = Result<String, String>> + Send {
     async move {
-        // This future is polled only by RustUI's GPUI background executor.
-        std::thread::sleep(Duration::from_millis(delay_ms));
+        delay.await;
         result.map(str::to_owned).map_err(str::to_owned)
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn owner_task_status_text_covers_idle_loading_success_and_error() {
+        assert_eq!(task_result_status(AsyncState::Idle), "Idle");
+        assert_eq!(task_result_status(AsyncState::Loading), "Loading");
+        assert_eq!(
+            task_result_status(AsyncState::Success("saved".into())),
+            "Success: saved"
+        );
+        assert_eq!(
+            task_result_status(AsyncState::Error("offline".into())),
+            "Error: offline"
+        );
     }
 }

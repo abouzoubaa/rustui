@@ -41,11 +41,13 @@ retain children; removed tabs, popped pages and conditionally absent visible
 children release their references. Inactive contents reconcile when rendered again.
 Root values and child values belong to their respective hosts.
 
-Action/binding type mismatches now report panics instead of silent no-ops; the
-read-only Binding probe still returns Option. Lenses remain owner-relative and
-cannot detect crossing between two instances of the same concrete type. Parent
-actions/bindings must not be passed across the child boundary as a substitute for
-an explicit owner-target API.
+Action dispatch rejects owner/type mismatches with `Invalidation::None`; Binding
+reads return `None`, and writes or updates return `false`. These owner
+mismatches do not panic. Read-only Binding probes remain owner-relative and
+return `Option`. Lenses remain owner-relative and cannot detect crossing between
+two instances of the same concrete type. Parent actions/bindings must not be
+passed across the child boundary as a substitute for an explicit owner-target
+API.
 
 ## Implemented live props (F1c)
 

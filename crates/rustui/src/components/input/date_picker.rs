@@ -1,7 +1,9 @@
 //! Controlled date selection backed by a retained GPUI DatePickerState.
 
-use chrono::NaiveDate;
-use gpui::{AnyElement, IntoElement, SharedString};
+use std::{cell::RefCell, rc::Rc};
+
+use chrono::{Datelike, NaiveDate};
+use gpui::{AnyElement, AppContext as _, IntoElement, SharedString};
 use gpui_component::{
     Disableable as _,
     calendar::Date as CalendarDate,
@@ -11,9 +13,60 @@ use rustui_core::{Binding, Identity};
 
 use crate::view::{EmptyView, RenderContext, View};
 
+type EventWriter<Value, Context> = Rc<dyn Fn(Value, &mut Context)>;
+
+#[derive(Clone, Debug, PartialEq, Eq)]
+enum DatePickerLabel {
+    Literal(SharedString),
+    Message {
+        id: SharedString,
+        fallback: SharedString,
+    },
+}
+
+fn resolved_message_label(
+    id: &str,
+    localized: String,
+    fallback: &SharedString,
+) -> Option<SharedString> {
+    if !localized.trim().is_empty() && localized.trim() != id.trim() {
+        Some(SharedString::from(localized))
+    } else {
+        (!fallback.trim().is_empty()).then(|| fallback.clone())
+    }
+}
+
+fn replace_event_writer<Value, Context>(
+    slot: &RefCell<Option<EventWriter<Value, Context>>>,
+    writer: EventWriter<Value, Context>,
+) {
+    *slot.borrow_mut() = Some(writer);
+}
+
+fn write_with_current_writer<Value, Context>(
+    slot: &RefCell<Option<EventWriter<Value, Context>>>,
+    value: Value,
+    context: &mut Context,
+) {
+    let writer = slot.borrow().clone();
+    if let Some(writer) = writer {
+        writer(value, context);
+    }
+}
+
+fn year_range_around(date: NaiveDate) -> (i32, i32) {
+    (date.year() - 50, date.year() + 51)
+}
+
+struct RetainedDatePicker {
+    state: gpui::Entity<DatePickerState>,
+    writer: Rc<RefCell<Option<EventWriter<Option<NaiveDate>, gpui::App>>>>,
+}
+
 /// A controlled optional date picker whose calendar state survives body rebuilds.
 pub struct DatePickerView {
     label: SharedString,
+    accessibility_label: Option<DatePickerLabel>,
     value: Binding<Option<NaiveDate>>,
     id: Option<Identity>,
     disabled: bool,
@@ -26,6 +79,7 @@ impl DatePickerView {
     pub fn new(label: impl Into<SharedString>, value: Binding<Option<NaiveDate>>) -> Self {
         Self {
             label: label.into(),
+            accessibility_label: None,
             value,
             id: None,
             disabled: false,
@@ -36,7 +90,12 @@ impl DatePickerView {
     }
 
     pub fn id(mut self, id: impl Into<Identity>) -> Self {
-        self.id = Some(id.into());
+        let id = id.into();
+        assert!(
+            !id.as_str().trim().is_empty(),
+            "DatePicker identity must not be blank"
+        );
+        self.id = Some(id);
         self
     }
 
@@ -60,10 +119,60 @@ impl DatePickerView {
         self
     }
 
-    fn identity(&self) -> Identity {
+    /// Set a stable accessible name for the date-picker trigger.
+    pub fn accessibility_label(mut self, label: impl Into<SharedString>) -> Self {
+        let label = label.into();
+        assert!(
+            !label.trim().is_empty(),
+            "DatePicker accessible name must not be blank"
+        );
+        self.accessibility_label = Some(DatePickerLabel::Literal(label));
+        self
+    }
+
+    /// Resolve the trigger name from the active RustUI message catalog.
+    pub fn localized_accessibility_label(mut self, message_id: impl Into<SharedString>) -> Self {
+        let message_id = message_id.into();
+        assert!(
+            !message_id.trim().is_empty(),
+            "DatePicker accessibility localization key must not be blank"
+        );
+        let fallback = match &self.accessibility_label {
+            Some(DatePickerLabel::Literal(label))
+            | Some(DatePickerLabel::Message {
+                fallback: label, ..
+            }) => label.clone(),
+            None => self.label.clone(),
+        };
+        self.accessibility_label = Some(DatePickerLabel::Message {
+            id: message_id,
+            fallback,
+        });
+        self
+    }
+
+    fn trigger_accessibility_label(
+        &self,
+        localized_message: impl FnOnce(&str) -> String,
+    ) -> Option<SharedString> {
+        match &self.accessibility_label {
+            Some(DatePickerLabel::Literal(label)) => Some(label.clone()),
+            Some(DatePickerLabel::Message { id, fallback }) => {
+                resolved_message_label(id.as_ref(), localized_message(id.as_ref()), fallback)
+            }
+            None => (!self.label.trim().is_empty()).then(|| self.label.clone()),
+        }
+    }
+
+    fn identity(&self, context: &mut RenderContext<'_>) -> Identity {
+        self.identity_with(|base| context.next_implicit_retained_identity(base))
+    }
+
+    fn identity_with(&self, allocate_implicit: impl FnOnce(Identity) -> Identity) -> Identity {
         self.id
             .clone()
-            .unwrap_or_else(|| Identity::from(format!("date-picker:{}", self.label)))
+            // The visible placeholder can change with locale without changing the picker.
+            .unwrap_or_else(|| allocate_implicit(Identity::from("date-picker")))
     }
 }
 
@@ -81,14 +190,24 @@ impl View for DatePickerView {
     }
 
     fn into_element(&self, context: &mut RenderContext<'_>) -> AnyElement {
-        let identity = self.identity();
+        let identity = self.identity(context);
         let initial_value = self.value.value();
-        let (state, created) = context.retained_entity(identity.clone(), move |window, cx| {
-            let mut state = DatePickerState::new(window, cx);
-            state.set_date(CalendarDate::Single(initial_value), window, cx);
-            state
+        let (bridge, created) = context.retained_entity(identity.clone(), move |window, cx| {
+            let state = cx.new(|cx| {
+                let mut state = DatePickerState::new(window, cx);
+                state.set_date(CalendarDate::Single(initial_value), window, cx);
+                if let Some(date) = initial_value {
+                    state.set_year_range(year_range_around(date), cx);
+                }
+                state
+            });
+            RetainedDatePicker {
+                state,
+                writer: Rc::new(RefCell::new(None)),
+            }
         });
 
+        let state = bridge.read(context.app()).state.clone();
         let current = self.value.value();
         let retained = match state.read(context.app()).date() {
             CalendarDate::Single(value) => value,
@@ -97,18 +216,28 @@ impl View for DatePickerView {
         if retained != current {
             context.update_entity(&state, move |state, window, cx| {
                 state.set_date(CalendarDate::Single(current), window, cx);
+                if let Some(date) = current {
+                    state.set_year_range(year_range_around(date), cx);
+                }
             });
         }
 
+        let writer = bridge.read(context.app()).writer.clone();
+        replace_event_writer(&writer, context.binding_writer(self.value.clone()));
+
         if created {
-            let write = context.binding_writer(self.value.clone());
+            let current_writer = writer.clone();
             context.subscribe_retained(
                 &identity,
                 &state,
                 move |_state, event: &DatePickerEvent, cx| {
                     let DatePickerEvent::Change(value) = event;
                     match *value {
-                        DateTime::Single(value) => write(value.map(|value| value.date()), cx),
+                        DateTime::Single(value) => write_with_current_writer(
+                            &current_writer,
+                            value.map(|value| value.date()),
+                            cx,
+                        ),
                         DateTime::Range(_, _) => {
                             unreachable!("RustUI DatePicker retains one date")
                         }
@@ -117,12 +246,212 @@ impl View for DatePickerView {
             );
         }
 
-        GpuiDatePicker::new(&state)
+        let mut picker = GpuiDatePicker::new(&state)
             .placeholder(self.label.clone())
             .cleanable(self.cleanable)
             .number_of_months(self.number_of_months)
             .appearance(self.appearance)
-            .disabled(self.disabled)
-            .into_any_element()
+            .disabled(self.disabled);
+        if let Some(label) = self.trigger_accessibility_label(|id| context.localized_message(id)) {
+            picker = picker.accessibility_label(label);
+        }
+        picker.into_any_element()
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    fn binding() -> Binding<Option<NaiveDate>> {
+        Binding::new(
+            None,
+            |value: &Option<NaiveDate>| *value,
+            |value, next| *value = next,
+        )
+    }
+
+    #[test]
+    fn zero_month_count_is_clamped_to_one() {
+        let date = DatePicker("Choose a date", binding()).number_of_months(0);
+
+        assert_eq!(date.number_of_months, 1);
+    }
+
+    #[test]
+    fn selected_date_year_is_in_the_calendar_year_range() {
+        let date = NaiveDate::from_ymd_opt(1900, 6, 15).unwrap();
+
+        assert_eq!(year_range_around(date), (1850, 1951));
+    }
+
+    #[test]
+    #[should_panic(expected = "DatePicker identity must not be blank")]
+    fn rejects_blank_explicit_identity() {
+        DatePicker("Choose a date", binding()).id(" \t ");
+    }
+
+    #[test]
+    fn preserves_nonblank_explicit_identity() {
+        let date = DatePicker("Choose a date", binding()).id(" start-date ");
+
+        assert_eq!(
+            date.identity_with(|_| panic!("explicit identity must not allocate a fallback"))
+                .as_str(),
+            " start-date "
+        );
+    }
+
+    #[test]
+    fn implicit_identity_distinguishes_same_label_siblings_and_is_stable_by_slot() {
+        let first_binding = binding();
+        let second_binding = binding();
+        let first = DatePicker("Choose a date", first_binding);
+        let second = DatePicker("Choose a date", second_binding);
+        let allocate_at_slot = |slot| {
+            move |base: Identity| Identity::from(format!("owner:implicit-retained:{slot}:{base}"))
+        };
+
+        let first_sibling = first.identity_with(allocate_at_slot(0));
+        let second_sibling = second.identity_with(allocate_at_slot(1));
+        let first_after_rerender = first.identity_with(allocate_at_slot(0));
+        let first_after_locale_change =
+            DatePicker("Choisir une date", binding()).identity_with(allocate_at_slot(0));
+
+        assert_ne!(first_sibling, second_sibling);
+        assert_eq!(first_sibling, first_after_rerender);
+        assert_eq!(first_sibling, first_after_locale_change);
+    }
+
+    #[test]
+    fn trigger_name_defaults_to_visible_label_and_stays_stable_for_selected_values() {
+        let date = DatePicker("Choose a date", binding());
+
+        assert_eq!(
+            date.trigger_accessibility_label(|id| id.to_owned())
+                .as_deref(),
+            Some("Choose a date")
+        );
+    }
+
+    #[test]
+    fn explicit_accessible_name_overrides_the_visible_placeholder() {
+        let date = DatePicker("Choose a date", binding()).accessibility_label("Start date");
+
+        assert_eq!(
+            date.trigger_accessibility_label(|id| id.to_owned())
+                .as_deref(),
+            Some("Start date")
+        );
+    }
+
+    #[test]
+    fn blank_visible_label_has_no_implicit_accessible_name() {
+        let date = DatePicker(" \t ", binding());
+
+        assert_eq!(date.trigger_accessibility_label(|id| id.to_owned()), None);
+    }
+
+    #[test]
+    #[should_panic(expected = "DatePicker accessible name must not be blank")]
+    fn rejects_blank_explicit_accessible_name() {
+        DatePicker("Choose a date", binding()).accessibility_label(" \t ");
+    }
+
+    #[test]
+    fn localized_accessible_name_uses_the_visible_label_as_fallback() {
+        let date = DatePicker("Choose a date", binding())
+            .localized_accessibility_label("date_picker.choose");
+
+        assert!(matches!(
+            &date.accessibility_label,
+            Some(DatePickerLabel::Message { id, fallback })
+                if id.as_ref() == "date_picker.choose" && fallback.as_ref() == "Choose a date"
+        ));
+        assert_eq!(
+            date.trigger_accessibility_label(|_| "Choisir une date".to_owned())
+                .as_deref(),
+            Some("Choisir une date")
+        );
+        assert_eq!(
+            date.trigger_accessibility_label(|_| " \t".to_owned())
+                .as_deref(),
+            Some("Choose a date")
+        );
+        assert_eq!(
+            date.trigger_accessibility_label(|id| id.to_owned())
+                .as_deref(),
+            Some("Choose a date")
+        );
+    }
+
+    #[test]
+    fn localized_accessible_name_preserves_explicit_fallback_and_repeat_changes_key() {
+        let date = DatePicker("Choose a date", binding())
+            .accessibility_label("Start date")
+            .localized_accessibility_label("date_picker.start")
+            .localized_accessibility_label("date_picker.begin");
+
+        assert!(matches!(
+            &date.accessibility_label,
+            Some(DatePickerLabel::Message { id, fallback })
+                if id.as_ref() == "date_picker.begin" && fallback.as_ref() == "Start date"
+        ));
+        assert_eq!(
+            date.trigger_accessibility_label(|id| id.to_owned())
+                .as_deref(),
+            Some("Start date")
+        );
+    }
+
+    #[test]
+    fn blank_localized_result_uses_only_a_nonblank_fallback() {
+        let date =
+            DatePicker(" \t ", binding()).localized_accessibility_label("date_picker.choose");
+
+        assert_eq!(date.trigger_accessibility_label(|_| " \t".to_owned()), None);
+    }
+
+    #[test]
+    #[should_panic(expected = "DatePicker accessibility localization key must not be blank")]
+    fn rejects_blank_accessibility_localization_key() {
+        DatePicker("Choose a date", binding()).localized_accessibility_label(" \t ");
+    }
+
+    #[test]
+    fn padded_untranslated_accessibility_key_uses_fallback() {
+        let key = "date_picker.choose";
+        let fallback: SharedString = "Choose a date".into();
+
+        assert_eq!(
+            resolved_message_label(key, format!(" \t{key}\n"), &fallback),
+            Some(fallback)
+        );
+    }
+
+    #[test]
+    fn retained_events_use_the_most_recent_owner_binding() {
+        let writer = RefCell::new(None);
+        let mut writes = Vec::new();
+        replace_event_writer(
+            &writer,
+            Rc::new(|value: bool, writes: &mut Vec<&'static str>| {
+                if value {
+                    writes.push("old");
+                }
+            }),
+        );
+        replace_event_writer(
+            &writer,
+            Rc::new(|value: bool, writes: &mut Vec<&'static str>| {
+                if value {
+                    writes.push("current");
+                }
+            }),
+        );
+
+        write_with_current_writer(&writer, true, &mut writes);
+
+        assert_eq!(writes, ["current"]);
     }
 }

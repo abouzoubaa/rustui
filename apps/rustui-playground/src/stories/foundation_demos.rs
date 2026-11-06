@@ -27,11 +27,11 @@ impl View for FoundationDemos {
                     VStack::new()
                         .spacing(12.0)
                         .child(super::primitive_gallery::demo())
-                        .child(super::canvas_gallery::demo())
                         .child(super::group_gallery::demo())
                         .child(super::conditional_gallery::demo())
                         .child(super::property_inspector_gallery::demo()),
                 ),
+                TabItem::new("canvas", "Canvas", super::canvas_gallery::demo()),
                 TabItem::new(
                     "grid",
                     "Grid",

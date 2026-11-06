@@ -79,7 +79,12 @@ impl<V: View> FocusScopeView<V> {
 
     /// Name the container when assistive technology focuses it.
     pub fn label(mut self, label: impl Into<SharedString>) -> Self {
-        self.label = Some(label.into());
+        let label = label.into();
+        assert!(
+            !label.trim().is_empty(),
+            "FocusScope accessible label must be nonempty"
+        );
+        self.label = Some(label);
         self
     }
 }
@@ -205,5 +210,12 @@ mod tests {
     fn blank_identity_is_rejected() {
         let binding = Binding::new(false, |_: &bool| false, |_, _| {});
         let _ = FocusScope("  ", binding, Text("child"));
+    }
+
+    #[test]
+    #[should_panic(expected = "FocusScope accessible label must be nonempty")]
+    fn blank_accessible_label_is_rejected() {
+        let binding = Binding::new(false, |_: &bool| false, |_, _| {});
+        let _ = FocusScope("focus", binding, Text("child")).label(" \t ");
     }
 }

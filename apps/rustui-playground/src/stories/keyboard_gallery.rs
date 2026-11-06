@@ -36,26 +36,35 @@ impl KeyboardGallery {
 
 impl View for KeyboardGallery {
     fn body(&self) -> impl View {
+        let inside_text = self.inside_text_binding();
+        let primary_hits = self.primary_hits();
+        let optional_hits = self.optional_hits();
+        let optional_enabled = self.optional_enabled();
+
         VStack::new()
             .spacing(10.0)
             .child(Text("Scoped keyboard shortcuts"))
-            .child(Text("Focus a control inside the scope. Secondary-Shift-K increments the first count; Secondary-Shift-J increments the second count only while enabled."))
-            .child(
+            .child(Text("Focus a control inside the scope. Secondary-Shift-K increments the first count; Secondary-Shift-J increments the second count only while enabled. Secondary-Shift-A runs the composed AppAction and refreshes windows."))
+            .child(OwnerActionReader(move |owner: OwnerAction<KeyboardGallery>| {
                 KeyboardShortcuts(
                     "keyboard-gallery-scope",
                     VStack::new()
                         .spacing(8.0)
-                        .child(TextField("Inside scope", self.inside_text_binding()).id("keyboard-inside-input"))
-                        .child(Button("Focus here too", self.action(Self::primary)).id("keyboard-inside-button"))
-                        .child(Text(format!("Primary hits: {} · Optional hits: {}", self.primary_hits(), self.optional_hits()))),
+                        .child(TextField("Inside scope", inside_text.clone()).id("keyboard-inside-input"))
+                        .child(Button("Focus here too", owner.action(Self::primary)).id("keyboard-inside-button"))
+                        .child(Text(format!("Primary hits: {primary_hits} · Optional hits: {optional_hits}"))),
                 )
-                .shortcut("secondary-shift-k", self.action(Self::primary))
+                .shortcut("secondary-shift-k", owner.action(Self::primary))
                 .shortcut_enabled(
                     "secondary-shift-j",
-                    self.action(Self::optional),
-                    self.optional_enabled(),
-                ),
-            )
+                    owner.action(Self::optional),
+                    optional_enabled,
+                )
+                .shortcut(
+                    "secondary-shift-a",
+                    owner.action(Self::primary).then(AppAction::refresh_windows()),
+                )
+            }))
             .child(Button(
                 if self.optional_enabled() { "Disable optional shortcut" } else { "Enable optional shortcut" },
                 self.action(Self::toggle_optional),

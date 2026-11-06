@@ -1,0 +1,3 @@
+# RustUI component and Playground images
+
+This directory contains **46 image files**: 41 dark Playground candidates (including the corrected P28 variant) and five component/layout gallery candidates for #02–04. `../IMAGE_INVENTORY.json` maps each file to source chat/message, Library ID, version, SHA-256 and status. Every stored image passed recorded size/hash verification. Manual visual comparison covered the three #02 candidates; the remaining images were not all visually inspected. Historical variants are retained; byte-identical copies are mapped instead of duplicated. These are illustrative concepts, not Apple specifications or proof of implemented behavior.

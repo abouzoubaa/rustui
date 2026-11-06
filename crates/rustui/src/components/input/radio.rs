@@ -2,30 +2,70 @@
 
 use gpui::{
     AnyElement, FontWeight, InteractiveElement as _, IntoElement, ParentElement as _, SharedString,
-    Styled as _, div, prelude::FluentBuilder as _, px,
+    StatefulInteractiveElement as _, Styled as _, div, prelude::FluentBuilder as _, px,
 };
 use gpui_base::Radio as BaseRadio;
+use gpui_component::theme::try_parse_color;
 use rustui_core::{Binding, Identity};
 
 use super::checkbox::{appearance_color, rectangular_artwork_size};
 use crate::components::theme::{required_style_with_artwork, selector};
 use crate::theme::registry::active_theme;
+use crate::theme::{AppearanceMode, ThemeProfile};
 use crate::view::{EmptyView, RenderContext, View};
+
+fn radio_label_color(
+    profile: &ThemeProfile,
+    mode: AppearanceMode,
+    disabled: bool,
+    theme_foreground: Option<gpui::Hsla>,
+) -> Option<gpui::Hsla> {
+    if disabled {
+        Some(
+            try_parse_color(&profile.colors(Some(mode)).disabled_text)
+                .expect("validated RustUI radio disabled text color"),
+        )
+    } else {
+        theme_foreground
+    }
+}
+
+#[derive(Clone)]
+enum RadioAccessibilityLabel {
+    Literal(SharedString),
+    Message {
+        id: SharedString,
+        fallback: SharedString,
+    },
+}
+
+fn resolved_message_label(
+    localized: SharedString,
+    id: &SharedString,
+    fallback: &SharedString,
+) -> SharedString {
+    if localized.trim().is_empty() || localized.trim() == id.trim() {
+        fallback.clone()
+    } else {
+        localized
+    }
+}
 
 pub struct RadioView {
     label: SharedString,
     selected: Binding<bool>,
     id: Option<Identity>,
     disabled: bool,
-    accessibility_label: Option<SharedString>,
+    accessibility_label: Option<RadioAccessibilityLabel>,
     tab_index: isize,
     focusable: bool,
 }
 
 impl RadioView {
     pub fn new(label: impl Into<SharedString>, selected: Binding<bool>) -> Self {
+        let label = label.into();
         Self {
-            label: label.into(),
+            label,
             selected,
             id: None,
             disabled: false,
@@ -36,7 +76,9 @@ impl RadioView {
     }
 
     pub fn id(mut self, id: impl Into<Identity>) -> Self {
-        self.id = Some(id.into());
+        let id = id.into();
+        assert!(!id.as_str().trim().is_empty(), "Radio IDs must be nonempty");
+        self.id = Some(id);
         self
     }
 
@@ -46,8 +88,49 @@ impl RadioView {
     }
 
     pub fn accessibility_label(mut self, label: impl Into<SharedString>) -> Self {
-        self.accessibility_label = Some(label.into());
+        let label = label.into();
+        assert!(
+            !label.trim().is_empty(),
+            "radio accessibility label must not be empty"
+        );
+        self.accessibility_label = Some(RadioAccessibilityLabel::Literal(label));
         self
+    }
+
+    /// Resolves this radio's accessible name from the active RustUI message catalog.
+    pub fn localized_accessibility_label(mut self, message_id: impl Into<SharedString>) -> Self {
+        let id = message_id.into();
+        assert!(
+            !id.trim().is_empty(),
+            "Radio accessibility localization key must not be blank"
+        );
+        let fallback = match &self.accessibility_label {
+            Some(RadioAccessibilityLabel::Literal(label))
+            | Some(RadioAccessibilityLabel::Message {
+                fallback: label, ..
+            }) => label.clone(),
+            None => self.label.clone(),
+        };
+        self.accessibility_label = Some(RadioAccessibilityLabel::Message { id, fallback });
+        self
+    }
+
+    fn resolved_accessibility_label(
+        &self,
+        localized_message: impl FnOnce(&str) -> String,
+    ) -> SharedString {
+        let label = match &self.accessibility_label {
+            Some(RadioAccessibilityLabel::Literal(label)) => label.clone(),
+            Some(RadioAccessibilityLabel::Message { id, fallback }) => {
+                resolved_message_label(localized_message(id.as_ref()).into(), id, fallback)
+            }
+            None => self.label.clone(),
+        };
+        assert!(
+            !label.trim().is_empty(),
+            "radio needs a non-empty accessible name"
+        );
+        label
     }
 
     pub fn tab_index(mut self, tab_index: isize) -> Self {
@@ -60,10 +143,162 @@ impl RadioView {
         self
     }
 
-    fn identity(&self) -> Identity {
+    fn identity(&self, context: &mut RenderContext<'_>) -> Identity {
+        self.identity_with(|base| context.next_implicit_retained_identity(base))
+    }
+
+    fn identity_with(&self, allocate_implicit: impl FnOnce(Identity) -> Identity) -> Identity {
         self.id
             .clone()
-            .unwrap_or_else(|| Identity::from(format!("radio:{}", self.label)))
+            .unwrap_or_else(|| allocate_implicit(Identity::from("radio")))
+    }
+}
+
+#[cfg(test)]
+mod accessibility_tests {
+    use super::*;
+
+    fn binding() -> Binding<bool> {
+        Binding::new(false, |value: &bool| *value, |value, next| *value = next)
+    }
+
+    #[test]
+    fn visible_label_provides_the_default_accessible_name() {
+        let radio = Radio("Monthly", binding());
+
+        assert_eq!(radio.label.as_ref(), "Monthly");
+        assert!(radio.accessibility_label.is_none());
+    }
+
+    #[test]
+    fn localized_accessible_name_uses_active_catalog_and_preserves_fallback() {
+        let radio = Radio("Monthly", binding())
+            .accessibility_label("Monthly plan")
+            .localized_accessibility_label("radio.monthly");
+        let Some(RadioAccessibilityLabel::Message { id, fallback }) = &radio.accessibility_label
+        else {
+            panic!("expected localized Radio accessibility name");
+        };
+        assert_eq!(id.as_ref(), "radio.monthly");
+        assert_eq!(fallback.as_ref(), "Monthly plan");
+        assert_eq!(
+            radio
+                .resolved_accessibility_label(|_| "Forfait mensuel".to_owned())
+                .as_ref(),
+            "Forfait mensuel"
+        );
+        assert_eq!(
+            radio.resolved_accessibility_label(|_| "radio.monthly".to_owned()),
+            fallback.clone()
+        );
+        assert_eq!(
+            radio.resolved_accessibility_label(|_| " \tradio.monthly\n".to_owned()),
+            fallback.clone()
+        );
+        assert_eq!(
+            radio.resolved_accessibility_label(|_| " \t".to_owned()),
+            fallback.clone()
+        );
+        let visible_fallback = Radio("Monthly", binding())
+            .localized_accessibility_label("radio.monthly")
+            .resolved_accessibility_label(|_| String::new());
+        assert_eq!(visible_fallback.as_ref(), "Monthly");
+    }
+
+    #[test]
+    fn localized_accessible_name_rejects_blank_message_id() {
+        assert!(
+            std::panic::catch_unwind(|| {
+                Radio("Monthly", binding()).localized_accessibility_label(" \t");
+            })
+            .is_err()
+        );
+    }
+
+    #[test]
+    fn indicator_only_radio_can_use_an_explicit_accessible_name() {
+        let radio = Radio("", binding()).accessibility_label("Choose monthly");
+
+        assert!(radio.label.is_empty());
+        assert_eq!(
+            radio.resolved_accessibility_label(|_| unreachable!()).as_ref(),
+            "Choose monthly"
+        );
+
+        assert!(std::panic::catch_unwind(|| {
+            Radio(" \t", binding()).resolved_accessibility_label(|_| unreachable!());
+        })
+        .is_err());
+    }
+
+    #[test]
+    fn explicit_accessible_name_must_not_be_blank() {
+        assert!(
+            std::panic::catch_unwind(|| {
+                Radio("Monthly", binding()).accessibility_label("  ");
+            })
+            .is_err()
+        );
+    }
+
+    #[test]
+    fn disabled_label_uses_the_active_platform_disabled_text_color() {
+        let profile = crate::theme::parse_theme(include_str!("../../../../../themes/macos27.json"))
+            .unwrap()
+            .platform_snapshot;
+        for mode in [AppearanceMode::Light, AppearanceMode::Dark] {
+            let foreground = gpui::hsla(0.25, 0.5, 0.75, 1.0);
+            assert_eq!(
+                radio_label_color(&profile, mode, true, Some(foreground)),
+                Some(try_parse_color(&profile.colors(Some(mode)).disabled_text).unwrap())
+            );
+        }
+    }
+
+    #[test]
+    fn enabled_label_keeps_the_resolved_theme_foreground() {
+        let profile = crate::theme::parse_theme(include_str!("../../../../../themes/macos27.json"))
+            .unwrap()
+            .platform_snapshot;
+        let document =
+            crate::theme::parse_theme(include_str!("../../../../../themes/macos27.json")).unwrap();
+        for mode in [AppearanceMode::Light, AppearanceMode::Dark] {
+            let style = crate::theme::resolve_component_style_with(
+                &document,
+                "radio_button",
+                "body",
+                &crate::components::theme::selector_for_mode(mode),
+                &["foreground", "vector_path", "blend_mode"],
+            )
+            .unwrap();
+            let foreground = crate::theme::registry::hsla(style.colors["foreground"]);
+            assert_eq!(
+                radio_label_color(&profile, mode, false, Some(foreground)),
+                Some(foreground)
+            );
+        }
+    }
+}
+
+#[cfg(test)]
+mod implicit_identity_tests {
+    use super::*;
+
+    fn binding() -> Binding<bool> {
+        Binding::new(false, |value: &bool| *value, |value, next| *value = next)
+    }
+
+    #[test]
+    fn identity_survives_label_localization_and_distinguishes_siblings() {
+        let allocate_at_slot = |slot| {
+            move |base: Identity| Identity::from(format!("owner:implicit-retained:{slot}:{base}"))
+        };
+        let original = Radio("Monthly", binding()).identity_with(allocate_at_slot(0));
+        let translated = Radio("Mensuel", binding()).identity_with(allocate_at_slot(0));
+        let sibling = Radio("Monthly", binding()).identity_with(allocate_at_slot(1));
+
+        assert_eq!(original, translated);
+        assert_ne!(original, sibling);
     }
 }
 
@@ -101,8 +336,17 @@ impl View for RadioView {
         let focus_color = appearance_color(&active.profile, active.mode, "focus");
         let border_width = active.profile.borders.thin as f32;
         let focus_width = active.profile.accessibility.focus_width as f32;
+        let label_color = radio_label_color(
+            &active.profile,
+            active.mode,
+            self.disabled,
+            style
+                .colors
+                .get("foreground")
+                .map(|color| crate::theme::registry::hsla(*color)),
+        );
         let selected = self.selected.value();
-        let identity = self.identity();
+        let identity = self.identity(context);
         let write = context.binding_writer(self.selected.clone());
         let indicator = div()
             .w(px(width))
@@ -118,12 +362,13 @@ impl View for RadioView {
             } else {
                 unchecked_background
             })
+            .when(self.disabled, |this| this.opacity(0.5))
             .when(selected, |this| {
                 this.child(div().size(px(6.0)).rounded(px(3.0)).bg(foreground))
             });
         let mut label = div().child(self.label.clone());
-        if let Some(color) = style.colors.get("foreground") {
-            label = label.text_color(crate::theme::registry::hsla(*color));
+        if let Some(color) = label_color {
+            label = label.text_color(color);
         }
         if let Some(typography) = &style.typography {
             label = label
@@ -136,7 +381,6 @@ impl View for RadioView {
             .gap_2()
             .items_center()
             .focus(move |style| style.border(px(focus_width)).border_color(focus_color))
-            .when(self.disabled, |this| this.opacity(0.5))
             .child(indicator)
             .child(label)
             .checked(selected)
@@ -144,10 +388,13 @@ impl View for RadioView {
             .tab_index(self.tab_index)
             .tab_stop(self.focusable)
             .accessibility_label(
-                self.accessibility_label
-                    .clone()
-                    .unwrap_or_else(|| self.label.clone()),
+                self.resolved_accessibility_label(|id| context.localized_message(id)),
             )
+            .when(self.disabled, |control| {
+                control.a11y_synthetic_children(|builder| {
+                    super::mark_accessibility_node_disabled(builder.parent_node());
+                })
+            })
             .on_change(move |selected, _event, _window, cx| write(selected, cx))
             .into_any_element()
     }

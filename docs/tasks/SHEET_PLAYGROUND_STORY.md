@@ -90,3 +90,14 @@ moved to Trash, and shared build caches were preserved. Evidence:
 ## M151 — native French localization observation
 
 On macOS 27, the Playground locale was switched to French before selecting the Sheet story. The trigger rendered as **Ouvrir le panneau**. Opening it exposed the title **Détails** and a native `dialog` named **Détails et contenu du panneau**, with the body field and action present. This verifies one French native-rendering path; it does not establish Arabic/RTL, VoiceOver speech, child-focus ownership, locale changes while open, theme, or cross-platform behavior. Evidence: `target/headstart/evidence/sheet-localized-native-m151-20261020.json`.
+
+## 2026-10-21 VoiceOver capture attempt
+
+Using the current M479 Playground binary, VoiceOver was temporarily enabled
+while the `sheet` story was open. The native accessibility tree exposed a
+`dialog` named “Details and sheet contents”, the body field and action, and an
+unnamed close button; Escape removed the Sheet nodes. VoiceOver Utility's
+caption-panel preference was enabled, but CUA exposed no caption transcript or
+audio capture. This is native accessibility-tree evidence only; VoiceOver
+speech and child-focus ownership remain unverified. Evidence:
+`target/headstart/evidence/dialog-sheet-voiceover-probe-20261021.json`.

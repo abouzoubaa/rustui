@@ -105,17 +105,12 @@ impl Catalogs {
     }
 
     pub fn resolve<'a>(&'a self, locale: &Locale, identifier: &'a str) -> &'a str {
-        let requested_primary = locale.primary();
-        let fallback_primary = self.fallback.primary();
-        for candidate in [
-            Some(locale),
-            (requested_primary != *locale).then_some(&requested_primary),
-            Some(&self.fallback),
-            (fallback_primary != self.fallback).then_some(&fallback_primary),
-        ]
-        .into_iter()
-        .flatten()
-        {
+        let mut candidates = vec![locale.clone()];
+        push_extension_free_fallbacks(&mut candidates, locale);
+        candidates.push(self.fallback.clone());
+        push_extension_free_fallbacks(&mut candidates, &self.fallback);
+
+        for candidate in &candidates {
             if let Some(value) = self
                 .catalogs
                 .get(candidate)
@@ -125,6 +120,25 @@ impl Catalogs {
             }
         }
         identifier
+    }
+}
+
+fn push_extension_free_fallbacks(candidates: &mut Vec<Locale>, locale: &Locale) {
+    let mut candidate = locale.without_extensions();
+    loop {
+        if !candidates.contains(&candidate) {
+            candidates.push(candidate.clone());
+        }
+        if candidate == candidate.primary() {
+            break;
+        }
+
+        let prefix = candidate
+            .as_str()
+            .rsplit_once('-')
+            .map(|(prefix, _)| prefix)
+            .expect("non-primary locale has a trailing subtag");
+        candidate = Locale::parse(prefix).expect("prefix of a valid locale remains valid");
     }
 }
 
@@ -186,24 +200,40 @@ mod tests {
         assert_eq!(catalog.get("app.title"), Some("RustUI"));
         assert_eq!(catalog.get("missing"), None);
         assert_eq!(
-            catalog.message_ids().map(MessageId::as_str).collect::<Vec<_>>(),
+            catalog
+                .message_ids()
+                .map(MessageId::as_str)
+                .collect::<Vec<_>>(),
             ["app.title", "greeting"]
         );
     }
 
     #[test]
     fn parse_errors_report_source_line_and_cause() {
-        let malformed = Catalog::parse(locale("fr"), "# heading\nok = oui\nnot a pair").unwrap_err();
-        assert_eq!(malformed.to_string(), "catalog `fr` line 3: expected `message-id = value`");
+        let malformed =
+            Catalog::parse(locale("fr"), "# heading\nok = oui\nnot a pair").unwrap_err();
+        assert_eq!(
+            malformed.to_string(),
+            "catalog `fr` line 3: expected `message-id = value`"
+        );
 
         let invalid_id = Catalog::parse(locale("fr"), "ok = oui\n9bad = non").unwrap_err();
-        assert_eq!(invalid_id.to_string(), "catalog `fr` line 2: invalid message identifier `9bad`");
+        assert_eq!(
+            invalid_id.to_string(),
+            "catalog `fr` line 2: invalid message identifier `9bad`"
+        );
 
         let empty = Catalog::parse(locale("fr"), "\nbye =   ").unwrap_err();
-        assert_eq!(empty.to_string(), "catalog `fr` line 2: message `bye` has an empty value");
+        assert_eq!(
+            empty.to_string(),
+            "catalog `fr` line 2: message `bye` has an empty value"
+        );
 
         let duplicate = Catalog::parse(locale("fr"), "hello = bonjour\nhello = salut").unwrap_err();
-        assert_eq!(duplicate.to_string(), "catalog `fr` line 2: message `hello` is defined more than once");
+        assert_eq!(
+            duplicate.to_string(),
+            "catalog `fr` line 2: message `hello` is defined more than once"
+        );
     }
 
     #[test]
@@ -212,22 +242,81 @@ mod tests {
         catalogs.insert(catalog("fr", "hello = bonjour")).unwrap();
         let error = catalogs.insert(catalog("fr", "hello = salut")).unwrap_err();
 
-        assert_eq!(error.to_string(), "catalog `fr`: a catalog for this locale is already registered");
-        assert_eq!(catalogs.get(&locale("fr")).unwrap().get("hello"), Some("bonjour"));
+        assert_eq!(
+            error.to_string(),
+            "catalog `fr`: a catalog for this locale is already registered"
+        );
+        assert_eq!(
+            catalogs.get(&locale("fr")).unwrap().get("hello"),
+            Some("bonjour")
+        );
     }
 
     #[test]
     fn resolve_uses_full_locale_then_primary_then_fallbacks() {
         let mut catalogs = Catalogs::new(locale("en-GB"));
-        catalogs.insert(catalog("en", "shared = primary\nfallback = primary fallback\n")).unwrap();
-        catalogs.insert(catalog("en-GB", "shared = requested\n")).unwrap();
-        catalogs.insert(catalog("fr", "shared = francais\n")).unwrap();
+        catalogs
+            .insert(catalog(
+                "en",
+                "shared = primary\nfallback = primary fallback\n",
+            ))
+            .unwrap();
+        catalogs
+            .insert(catalog("en-GB", "shared = requested\n"))
+            .unwrap();
+        catalogs
+            .insert(catalog("fr", "shared = francais\n"))
+            .unwrap();
 
         assert_eq!(catalogs.resolve(&locale("en-GB"), "shared"), "requested");
         assert_eq!(catalogs.resolve(&locale("en-AU"), "shared"), "primary");
         assert_eq!(catalogs.resolve(&locale("fr-CA"), "shared"), "francais");
-        assert_eq!(catalogs.resolve(&locale("de"), "fallback"), "primary fallback");
+        assert_eq!(
+            catalogs.resolve(&locale("de"), "fallback"),
+            "primary fallback"
+        );
         assert_eq!(catalogs.resolve(&locale("de"), "absent"), "absent");
+    }
+
+    #[test]
+    fn resolve_uses_extension_free_locale_before_primary_language() {
+        let mut catalogs = Catalogs::new(locale("en"));
+        catalogs.insert(catalog("en", "hello = generic")).unwrap();
+        catalogs
+            .insert(catalog("en-GB", "hello = British"))
+            .unwrap();
+
+        assert_eq!(
+            catalogs.resolve(&locale("en-GB-u-ca-gregory"), "hello"),
+            "British"
+        );
+    }
+
+    #[test]
+    fn resolve_uses_extension_free_fallback_before_fallback_primary() {
+        let mut catalogs = Catalogs::new(locale("fr-CA-u-nu-latn"));
+        catalogs
+            .insert(catalog("fr", "hello = fallback primary"))
+            .unwrap();
+        catalogs
+            .insert(catalog("fr-CA", "hello = fallback base"))
+            .unwrap();
+
+        assert_eq!(catalogs.resolve(&locale("de"), "hello"), "fallback base");
+    }
+
+    #[test]
+    fn resolve_truncates_variants_after_removing_extensions() {
+        let mut catalogs = Catalogs::new(locale("en"));
+        catalogs.insert(catalog("sl", "hello = Slovenian")).unwrap();
+        catalogs
+            .insert(catalog("sl-rozaj", "hello = Resian"))
+            .unwrap();
+
+        assert_eq!(
+            catalogs.resolve(&locale("sl-rozaj-biske-u-nu-latn"), "hello"),
+            "Resian"
+        );
     }
 
     #[test]
@@ -236,13 +325,29 @@ mod tests {
         assert!(validate_catalogs(&no_fallback).fallback_catalog_missing);
         assert!(!validate_catalogs(&no_fallback).is_valid());
 
-        no_fallback.insert(catalog("en", "hello = Hello\nbye = Goodbye")).unwrap();
-        no_fallback.insert(catalog("fr", "hello = Bonjour\nextra = En plus")).unwrap();
+        no_fallback
+            .insert(catalog("en", "hello = Hello\nbye = Goodbye"))
+            .unwrap();
+        no_fallback
+            .insert(catalog("fr", "hello = Bonjour\nextra = En plus"))
+            .unwrap();
         let report = validate_catalogs(&no_fallback);
 
         assert!(!report.fallback_catalog_missing);
-        assert_eq!(report.missing[&locale("fr")].iter().map(MessageId::as_str).collect::<Vec<_>>(), ["bye"]);
-        assert_eq!(report.extra[&locale("fr")].iter().map(MessageId::as_str).collect::<Vec<_>>(), ["extra"]);
+        assert_eq!(
+            report.missing[&locale("fr")]
+                .iter()
+                .map(MessageId::as_str)
+                .collect::<Vec<_>>(),
+            ["bye"]
+        );
+        assert_eq!(
+            report.extra[&locale("fr")]
+                .iter()
+                .map(MessageId::as_str)
+                .collect::<Vec<_>>(),
+            ["extra"]
+        );
         assert!(!report.is_valid());
     }
 }

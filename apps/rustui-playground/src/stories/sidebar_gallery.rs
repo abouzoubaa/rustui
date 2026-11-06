@@ -47,11 +47,21 @@ impl View for SidebarGallery {
         } else {
             "Projects"
         };
-        let mut items = vec![SidebarItem::new("inbox", "Inbox")];
+        let mut items = vec![
+            SidebarItem::new("inbox", "Inbox"),
+            SidebarItem::new("settings", "Settings").disabled(true),
+        ];
         if self.projects_present() {
             items.push(SidebarItem::new("projects", projects_label));
         }
-        items.push(SidebarItem::new("settings", "Settings").disabled(true));
+        items.push(
+            SidebarItem::new("localized-components", "Components")
+                .localized("lab-navigation-components"),
+        );
+        items.push(
+            SidebarItem::new("missing-label-fallback", "Fallback sample")
+                .localized("lab-sidebar-missing"),
+        );
         if self.reversed() {
             items.reverse();
         }
@@ -62,7 +72,13 @@ impl View for SidebarGallery {
             Some("projects") if !self.projects_present() => {
                 format!("Selected ID: projects (no matching row; owner binding retained)")
             }
-            Some(id @ ("inbox" | "projects" | "settings")) => format!("Selected ID: {id}"),
+            Some(
+                id @ ("inbox"
+                | "projects"
+                | "settings"
+                | "localized-components"
+                | "missing-label-fallback"),
+            ) => format!("Selected ID: {id}"),
             Some(id) => format!("Selected ID: {id} (no matching row; owner binding retained)"),
         };
 

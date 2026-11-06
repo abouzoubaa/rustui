@@ -10,7 +10,10 @@ pub mod validation;
 
 pub use catalog::{Catalog, CatalogError, Catalogs};
 pub use direction::{BidiIsolation, LayoutDirection};
-pub use formatting::{InterpolationError, MessageArgument, MessageArguments, interpolate};
+pub use formatting::{
+    InterpolationError, MessageArgument, MessageArguments, format_decimal, format_integer,
+    interpolate, interpolate_with_locale,
+};
 pub use locale::{Locale, LocaleError};
 pub use message::{MessageId, MessageIdError};
 pub use validation::{CatalogValidation, validate_catalogs};

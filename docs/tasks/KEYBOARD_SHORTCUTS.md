@@ -39,7 +39,27 @@ the text without changing shortcut counters. The reviewed M56/M57 bundle SHA-256
 is `ede2a1525425256ab1d665c44165ebe50148bf0cf8fc62f7dcc03dc44f03c322`.
 
 Acceptance is bounded: no competing built-in binding was defined, so dispatch
-precedence conflicts were not tested. AppAction execution, nested scopes, repeat
-suppression, real IME, sibling retained-state isolation, and full platform keyboard
-and screen-reader behavior remain unverified. This is a scoped single-chord API,
-not an application menu keymap.
+precedence conflicts were not tested. Nested scopes, repeat suppression, real IME,
+sibling retained-state isolation, and full platform keyboard and screen-reader
+behavior remain unverified. This is a scoped single-chord API, not an application
+menu keymap.
+
+## M56 AppAction follow-up
+
+The Playground keyboard gallery includes Secondary-Shift-A. It increments
+the visible primary counter and composes the owner `AppAction` with the public
+`AppAction::refresh_windows()`. The isolated locked/offline Playground library
+suite passed 41/41, including compilation of this scenario. In the bounded native
+check, one press with focus inside the scope produced `Primary hits: 1 · Optional
+hits: 0`. Typing continued (`inside` became `insidex`). From the outside field,
+typing `z` worked and Secondary-Shift-A left the primary count at 1. The check
+observed the owner update; it did not independently measure the refresh call.
+Evidence: `target/headstart/evidence/roadmap-validation-m251-playground-lib.log`
+and `target/headstart/evidence/m253-keyboard-appaction-native-20261020.json`.
+
+The locked/offline Playground build passed with
+`CARGO_TARGET_DIR=target/headstart/roadmap-validation-20261020` (exit 0). The
+disposable `dev.rustui.playground.validation` process, bundle, and standalone
+executable were removed after the check. Existing `dev.rustui.playground` PID
+20036 was observed and left untouched. No screenshot or accessibility capture
+file was retained. Other M56 limits above remain open.

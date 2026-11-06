@@ -1,6 +1,7 @@
 pub use crate::accessibility::semantics::{
     LivePoliteness, Semantics, SemanticsRole, SemanticsView,
 };
+pub use crate::animation::offset::{SpringOffset, SpringOffsetError};
 pub use crate::animation::spring::{SpringConfig, SpringOpacity, SpringOpacityError};
 pub use crate::components::advanced::canvas::{
     Canvas, CanvasError, CanvasPoint, CanvasRect, CanvasScene, CanvasSceneBuilder, CanvasSize,
@@ -45,6 +46,7 @@ pub use crate::components::input::{
     text_editor::{TextEditor, TextEditorView},
     text_field::{TextField, TextFieldView},
     toggle::{Toggle, ToggleView},
+    token_field::{TokenField, TokenFieldView},
 };
 pub use crate::components::navigation::disclosure::{Disclosure, DisclosureView};
 pub use crate::components::navigation::sidebar::{Sidebar, SidebarItem, SidebarView};
@@ -88,7 +90,6 @@ pub use crate::modifiers::interaction::{PointerCursor, PointerCursorView};
 pub use crate::modifiers::opacity::{AnimatedOpacity, OpacityAnimationError};
 pub use crate::modifiers::padding::{LogicalInsets, LogicalInsetsError, PhysicalInsets};
 pub use crate::modifiers::transform::{Offset, OffsetView};
-pub use crate::animation::offset::{SpringOffset, SpringOffsetError};
 pub use crate::runtime::{AppAction, AsyncState, Binding, Identity, OwnerTask, RustUI, State};
 pub use crate::text::font_policy::{FontFallbackPolicy, FontFallbackPolicyError};
 pub use crate::view::{

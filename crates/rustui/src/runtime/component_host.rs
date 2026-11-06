@@ -130,8 +130,14 @@ impl RetainedEntities {
                     | RetentionScope::Card(_)
                     | RetentionScope::DragSource(_)
                     | RetentionScope::DropTarget(_)
+                    | RetentionScope::SpringOffset(_)
                     | RetentionScope::SpringOpacity(_)
                     | RetentionScope::AnimatedOpacity(_)
+                    | RetentionScope::Tabs(_)
+                    | RetentionScope::Tab(_)
+                    | RetentionScope::Navigation(_)
+                    | RetentionScope::NavigationSplit(_)
+                    | RetentionScope::Page(_)
             )
         ) {
             assert!(
@@ -519,6 +525,44 @@ mod context_menu_scope_tests {
     }
 
     #[test]
+    fn duplicate_spring_offset_siblings_are_rejected() {
+        let mut retained = RetainedEntities::default();
+        retained.begin_frame();
+        let scope = RetentionScope::SpringOffset(Identity::from("moving"));
+        retained.push_scope(scope.clone());
+        retained.pop_scope();
+        assert!(
+            std::panic::catch_unwind(std::panic::AssertUnwindSafe(
+                || retained.push_scope(scope)
+            ))
+            .is_err()
+        );
+    }
+
+    #[test]
+    fn remaining_keyed_retention_scopes_reject_duplicate_siblings() {
+        let scopes = [
+            RetentionScope::Tabs(Identity::from("tabs")),
+            RetentionScope::Tab("overview".to_owned()),
+            RetentionScope::NavigationSplit(Identity::from("navigation-split")),
+            RetentionScope::Page(vec!["details".to_owned()]),
+        ];
+
+        for scope in scopes {
+            let mut retained = RetainedEntities::default();
+            retained.begin_frame();
+            retained.push_scope(scope.clone());
+            retained.pop_scope();
+            assert!(
+                std::panic::catch_unwind(std::panic::AssertUnwindSafe(
+                    || retained.push_scope(scope)
+                ))
+                .is_err()
+            );
+        }
+    }
+
+    #[test]
     fn dedicated_reader_store_releases_omitted_branch() {
         let mut retained = RetainedEntities::default();
         let key = RetainedKey {
@@ -567,6 +611,21 @@ mod context_menu_scope_tests {
         assert!(
             std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| retained.push_scope(scope)))
                 .is_err()
+        );
+    }
+
+    #[test]
+    fn duplicate_navigation_stack_siblings_are_rejected_without_key_collisions() {
+        let mut retained = RetainedEntities::default();
+        retained.begin_frame();
+        let scope = RetentionScope::Navigation(Identity::from("target"));
+        retained.push_scope(scope.clone());
+        retained.pop_scope();
+        assert!(
+            std::panic::catch_unwind(std::panic::AssertUnwindSafe(
+                || retained.push_scope(scope)
+            ))
+            .is_err()
         );
     }
 

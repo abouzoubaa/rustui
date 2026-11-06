@@ -22,16 +22,38 @@ diff --git a/vendor/gpui-pre-0.3.9/src/elements/div.rs b/vendor/gpui-pre-0.3.9/s
      pub(crate) toggled: Option<accesskit::Toggled>,
      pub(crate) numeric_value: Option<f64>,
      pub(crate) min_numeric_value: Option<f64>,
-@@ -3546,6 +3553,9 @@
+@@ -3546,6 +3553,13 @@
          if let Some(expanded) = self.aria.expanded {
              node.set_expanded(expanded);
          }
 +        if let Some(disabled) = self.aria.disabled {
-+            node.set_disabled(disabled);
++            if disabled {
++                node.set_disabled();
++            } else {
++                node.clear_disabled();
++            }
 +        }
          if let Some(toggled) = self.aria.toggled {
              node.set_toggled(toggled);
          }
+@@ -5637,4 +5651,17 @@
+         assert_eq!(bounds("cell-1").origin.x, px(100.));
+         assert_eq!(bounds("cell-2").origin.x, px(300.));
+     }
++
++    #[test]
++    fn test_write_a11y_info_disabled_state() {
++        let mut node = accesskit::Node::new(accesskit::Role::TreeItem);
++        let mut disabled = div().aria_disabled(true);
++        disabled.interactivity().write_a11y_info(&mut node);
++        assert!(node.is_disabled());
++
++        let mut enabled = div().aria_disabled(false);
++        enabled.interactivity().write_a11y_info(&mut node);
++        assert!(!node.is_disabled());
++    }
++
+ }
 diff --git a/vendor/gpui-base-0.7.3/src/tree.rs b/vendor/gpui-base-0.7.3/src/tree.rs
 --- a/vendor/gpui-base-0.7.3/src/tree.rs
 +++ b/vendor/gpui-base-0.7.3/src/tree.rs

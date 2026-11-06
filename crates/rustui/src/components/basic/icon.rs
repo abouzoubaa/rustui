@@ -15,6 +15,15 @@ use crate::{
 /// The pinned GPUI Components icon-name enum and its supported icon subset.
 pub use gpui_component::IconName;
 
+#[derive(Clone)]
+enum IconAccessibilityLabel {
+    Literal(SharedString),
+    Message {
+        id: SharedString,
+        fallback: SharedString,
+    },
+}
+
 /// A named icon with optional explicit sizing and an accessible name.
 #[derive(Clone)]
 pub struct IconView {
@@ -22,7 +31,7 @@ pub struct IconView {
     size: Option<f32>,
     clear: bool,
     clear_pressed: bool,
-    accessibility_label: Option<SharedString>,
+    accessibility_label: Option<IconAccessibilityLabel>,
     id: Option<Identity>,
 }
 
@@ -68,14 +77,72 @@ impl IconView {
 
     /// Names the icon for assistive technology when it conveys meaning alone.
     pub fn accessibility_label(mut self, label: impl Into<SharedString>) -> Self {
-        self.accessibility_label = Some(label.into());
+        let label = label.into();
+        assert!(
+            !label.trim().is_empty(),
+            "Icon accessibility label must not be empty"
+        );
+        self.accessibility_label = Some(IconAccessibilityLabel::Literal(label));
         self
+    }
+
+    /// Localizes the icon's accessible name through the active RustUI catalog.
+    ///
+    /// Set an explicit `.accessibility_label(...)` first; icons have no visible
+    /// text to use as a fallback when the catalog entry is missing.
+    pub fn localized_accessibility_label(mut self, id: impl Into<SharedString>) -> Self {
+        let id = id.into();
+        assert!(
+            !id.trim().is_empty(),
+            "Icon accessibility message ID must not be empty"
+        );
+        let fallback = match self.accessibility_label.as_ref() {
+            Some(IconAccessibilityLabel::Literal(label)) => label.clone(),
+            Some(IconAccessibilityLabel::Message { fallback, .. }) => fallback.clone(),
+            None => {
+                panic!("Icon localized accessibility label requires an explicit fallback label")
+            }
+        };
+        self.accessibility_label = Some(IconAccessibilityLabel::Message { id, fallback });
+        self
+    }
+
+    fn resolved_accessibility_label(
+        &self,
+        localized_message: impl FnOnce(&str) -> String,
+    ) -> Option<SharedString> {
+        match &self.accessibility_label {
+            Some(IconAccessibilityLabel::Literal(label)) => Some(label.clone()),
+            Some(IconAccessibilityLabel::Message { id, fallback }) => Some(resolved_message_label(
+                localized_message(id.as_ref()),
+                id,
+                fallback,
+            )),
+            None => None,
+        }
     }
 
     /// Sets a stable element identity. Repeated labeled icons should use distinct IDs.
     pub fn id(mut self, id: impl Into<Identity>) -> Self {
-        self.id = Some(id.into());
+        let id = id.into();
+        assert!(
+            !id.as_str().trim().is_empty(),
+            "Icon identity must not be empty"
+        );
+        self.id = Some(id);
         self
+    }
+}
+
+fn resolved_message_label(
+    localized: String,
+    id: &SharedString,
+    fallback: &SharedString,
+) -> SharedString {
+    if localized.trim().is_empty() || localized.trim() == id.trim() {
+        fallback.clone()
+    } else {
+        localized.into()
     }
 }
 
@@ -141,7 +208,7 @@ impl View for IconView {
                 icon = icon.h(px(*height));
             }
         }
-        if let Some(label) = &self.accessibility_label {
+        if let Some(label) = self.resolved_accessibility_label(|id| context.localized_message(id)) {
             let id = self
                 .id
                 .clone()
@@ -167,6 +234,76 @@ mod tests {
     #[test]
     fn explicit_size_must_be_finite_and_positive() {
         assert!(Icon(IconName::Search).size(16.0).size.is_some());
+    }
+
+    #[test]
+    fn explicit_accessible_name_preserves_nonblank_text_verbatim() {
+        let icon = Icon(IconName::Search).accessibility_label(" Search ");
+        assert!(matches!(
+            icon.accessibility_label,
+            Some(IconAccessibilityLabel::Literal(label)) if label.as_ref() == " Search "
+        ));
+    }
+
+    #[test]
+    #[should_panic(expected = "Icon accessibility label must not be empty")]
+    fn explicit_accessible_name_rejects_whitespace_only_text() {
+        Icon(IconName::Search).accessibility_label(" \t\n ");
+    }
+
+    #[test]
+    fn rejects_blank_explicit_identity() {
+        for id in ["", " \t\n"] {
+            assert!(std::panic::catch_unwind(|| Icon(IconName::Search).id(id)).is_err());
+        }
+    }
+
+    #[test]
+    fn localized_accessible_name_uses_catalog_and_explicit_fallback() {
+        let icon = Icon(IconName::Search)
+            .accessibility_label("Search")
+            .localized_accessibility_label("icon.search");
+        assert!(matches!(
+            &icon.accessibility_label,
+            Some(IconAccessibilityLabel::Message { id, fallback })
+                if id.as_ref() == "icon.search" && fallback.as_ref() == "Search"
+        ));
+        assert_eq!(
+            icon.resolved_accessibility_label(|_| "Rechercher".to_owned())
+                .as_deref(),
+            Some("Rechercher")
+        );
+        assert_eq!(
+            icon.resolved_accessibility_label(|_| "icon.search".to_owned())
+                .as_deref(),
+            Some("Search")
+        );
+        assert_eq!(
+            icon.resolved_accessibility_label(|_| " icon.search \t".to_owned())
+                .as_deref(),
+            Some("Search")
+        );
+        assert_eq!(
+            icon.resolved_accessibility_label(|_| " \t".to_owned())
+                .as_deref(),
+            Some("Search")
+        );
+    }
+
+    #[test]
+    #[should_panic(expected = "Icon accessibility message ID must not be empty")]
+    fn localized_accessible_name_rejects_blank_message_id() {
+        Icon(IconName::Search)
+            .accessibility_label("Search")
+            .localized_accessibility_label(" \t ");
+    }
+
+    #[test]
+    #[should_panic(
+        expected = "Icon localized accessibility label requires an explicit fallback label"
+    )]
+    fn localized_accessible_name_requires_explicit_fallback() {
+        Icon(IconName::Search).localized_accessibility_label("icon.search");
     }
 
     #[test]

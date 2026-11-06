@@ -70,16 +70,36 @@ bounded M42 native sample, Latin `Hello`, connected Arabic `مرحبًا`, Chine
 does not identify which OS fonts supplied the glyphs; native fallback samples
 in other locales remain pending. See
 `target/headstart/milestone42-text-fallback-gui.json`. `Button` supports stable identity,
-style, disabled state, accessibility label, hover help, tab order, and focus traversal.
-Stacks support nonnegative spacing and cross-axis alignment. GPUI Components retains
+style, disabled state, literal or localized accessibility labels, hover help, tab order,
+and focus traversal. `.localized_accessibility_label("button.save")` resolves through
+the active message catalog and falls back to an explicit name or visible button label.
+Stacks accept finite, nonnegative spacing and panic for negative or
+nonfinite values. The total span across child gaps must also remain finite;
+they also support cross-axis alignment. GPUI Components retains
 Button pointer, Enter/Space keyboard activation, focus-ring, and accessibility behavior.
 `ViewHost` retains a root component in a GPUI entity and dispatches component
 mutation methods through GPUI listeners.
 
+## Avatars and badges
+
+`Avatar` and `Badge` support explicit or localized accessible names through
+`.accessibility_label(...)` and `.localized_accessibility_label(...)`.
+Localization keys must be nonblank. If a translation is blank or unresolved,
+the accessible name falls back to the visible Avatar name or Badge announcement;
+an explicit literal name is retained as the fallback when supplied.
+
+## Links
+
+`Link` supports literal or localized accessible names. Use
+`.localized_accessibility_label("rustui-link-open-fixture")` to resolve a name
+from the active message catalog; a missing, blank, or key-echo result falls
+back to the explicit name or visible link label.
+
 ## Tooltips
 
 `Tooltip` attaches visual descriptive text to a child view. The wrapper requires
-an explicit stable ID. Use `.localized(...)` to resolve the tooltip string from
+an explicit stable ID, and literal text or localization keys must be nonblank.
+Use `.localized(...)` to resolve the tooltip string from
 the active message catalogs:
 
 ```rust
@@ -162,7 +182,7 @@ keyboard, focus, visual, and accessibility acceptance remain pending.
 
 `Alert(id, message, visible_binding)` is an inline message, not a modal dialog.
 It supports an optional title, semantic `AlertVariant`, and localized title or
-message keys. Its close control writes `false` to the owning visibility binding;
+message keys, which must be nonblank. Its close control writes `false` to the owning visibility binding;
 the owner can also change visibility externally.
 
 ```rust
@@ -207,7 +227,9 @@ gate. Native acceptance remains pending for that version.
 uses the visible title when present, then the trigger label. Supply an explicit
 name with `.accessibility_label("Confirm saving changes")`, or resolve one from
 the active RustUI message catalog with
-`.localized_accessibility_label("dialog.save.name")`.
+`.localized_accessibility_label("dialog.save.name")`. If a localized
+override is unresolved, an earlier explicit literal name remains available
+as a fallback; a later literal override replaces it.
 
 The canonical Playground dialog story demonstrates an explicit accessible
 name. M119's macOS accessibility tree exposed a named `dialog` node. Focus
@@ -217,7 +239,8 @@ acceptance.
 ## Trigger-driven sheets
 
 `Sheet(id, trigger)` opens a side sheet using GPUI Components' default placement
-and size. Its accessible name uses an explicit
+and size. The trigger must have a nonblank visible label; optional literal
+titles and accessible-name overrides must also be nonblank. Its accessible name uses an explicit
 `.accessibility_label("Details and sheet contents")` when supplied, then the
 visible title, then the trigger label. Use
 `.localized_accessibility_label("sheet.details.name")` to resolve the explicit
@@ -327,9 +350,25 @@ Each stable ID within its composition scope owns one GPUI `InputState` retained
 by the root component host.
 The default identity is derived from the control kind and placeholder; repeated
 controls or dynamic/localized placeholders should always set `.id(...)`.
-`SecureField` enables password semantics, masking, and the upstream reveal
-control. `SearchField` enables the upstream clear affordance. `TextEditor` retains a
-multiline `TextareaState` and exposes an explicit height.
+`SecureField` enables password semantics, masking, and a RustUI-owned,
+keyboard-focusable reveal control. `SearchField` enables the upstream clear
+affordance. `TextEditor` retains a
+multiline `TextareaState` and exposes an explicit height; `.height(...)` requires
+a finite value and clamps to at least 40 logical points. Its accessible name can
+resolve through the active catalog with
+`.localized_accessibility_label("editor.notes")`; the explicit name or placeholder
+supplies the fallback.
+
+`TokenField` accepts separate bindings for committed tokens and the current
+draft. The Add action ignores blank drafts, trims committed values, and each
+token has an accessible remove action:
+
+```rust
+TokenField("Add recipients", self.recipients_binding(), self.draft_binding())
+    .id("recipients")
+```
+
+The caller owns both values and should keep the field ID stable across renders.
 
 `Toggle`, `Checkbox`, and `Radio` take `Binding<bool>` and stable IDs.
 They are controlled values: GPUI Components reports the requested value, RustUI
@@ -341,18 +380,28 @@ writes it into the owning component, and the next body pass renders that value.
 VStack! {
     Slider(self.volume_binding(), 0.0..=100.0)
         .id("volume")
+        .accessibility_label("Volume")
         .step(5.0)
     Stepper("Guests", self.guests_binding())
         .id("guests")
         .range(1..=12)
+        .localized_accessibility_label("stepper.guests")
 }
 ```
 
 `Slider` retains GPUI Components `SliderState`, synchronizes external binding
-changes into that entity, and writes `SliderEvent::Change` values back to the
-component. `Stepper` is the numeric SwiftUI-style control; it composes GPUI
-Components buttons because the upstream component named `Stepper` represents
-workflow progress rather than numeric increment and decrement.
+changes into its entity, and writes `SliderEvent::Change` values back to the
+component. Controlled values stay in the declared finite range: NaN resolves to
+the minimum, while infinities and finite out-of-range values clamp to the
+nearest endpoint. Give each slider a meaningful `.accessibility_label(...)`;
+the semantic slider exposes its current value, range, step, and orientation,
+while the label names the value control. `Stepper` is a numeric control with
+increment and decrement buttons. `.accessibility_label(...)` sets the shared
+name used by those buttons; `.localized_accessibility_label(...)` resolves that
+name through the active RustUI catalog and falls back to the explicit name or
+visible label (define `stepper.guests` in your application catalog). The button
+actions use `rustui-stepper-increment` and
+`rustui-stepper-decrement` catalog messages, each with a `{label}` argument.
 
 ## String selection
 
@@ -378,9 +427,14 @@ VStack! {
 default and supports `.searchable(true)`. `ComboBox` uses retained searchable
 `SelectState` with single selection. Both synchronize changes in either the
 component binding or option list without replacing the retained dropdown entity.
-ComboBox confirms user selections into its string binding; the visible label is
-also its accessible name. Duplicate option strings are rejected because the
-string is the selection identity. Native trigger naming, search filtering and Enter confirmation were accepted in M28 (`target/headstart/milestone28-combobox-gui.json`). Disabled/external-option replacement cases remain pending.
+ComboBox confirms user selections into its string binding; its visible label is
+also the default accessible name. Use
+`.localized_accessibility_label("combo_box.language")` to resolve an accessible
+name through the active catalog, with the visible label as fallback. Duplicate
+option strings are rejected because the string is the selection identity. Native
+trigger naming, search filtering and Enter confirmation were accepted in M28
+(`target/headstart/milestone28-combobox-gui.json`). Disabled/external-option
+replacement cases remain pending.
 
 ## Date and color selection
 
@@ -395,8 +449,7 @@ VStack! {
 ```
 
 Both controls retain the upstream picker entity across body rebuilds and synchronize
-external binding changes without emitting user events. `DatePicker` is clearable by
-default. `ColorPicker` uses the upstream form-style `ColorSelect`; `.compact(true)`
+external binding changes without emitting user events. `DatePicker` is clearable by default. Give its trigger an explicit accessible name with `.accessibility_label(...)`, or resolve one from the active message catalog with `.localized_accessibility_label("date_picker.start")`; the explicit name or visible label remains the fallback. `ColorPicker` uses the upstream form-style `ColorSelect`; `.compact(true)`
 selects the toolbar-style swatch and label presentation.
 
 ## Virtualized string list
@@ -440,7 +493,8 @@ KeyedList(
 
 Selection is `Binding<Option<String>>` and follows the selected item ID through
 insertion, reorder, and filtering. Removing that item clears selection. IDs must be
-nonempty and unique. The list reuses GPUI Components virtualization and native
+nonempty and unique. Viewport and row heights reject non-finite values;
+finite heights clamp to at least one logical point. The list reuses GPUI Components virtualization and native
 selection; native labels were verified. The upstream outer row paths remain
 position-based. Rows are strings only: arbitrary stateful RustUI row/cell builders,
 full screenreader acceptance, and measured render-call bounds are not provided.
@@ -636,6 +690,11 @@ SplitView::horizontal("editor")
     .panel(SplitPanel::new("content", Text("Content")))
 ```
 
+`SplitView` is the pane container. Its draggable divider is the splitter; the
+interactive area is also commonly called a gutter or resize handle. The
+splitter exposes its current and allowed sizes to accessibility tools and can
+be adjusted with the arrow keys.
+
 Panel IDs must be nonempty and unique. Reordering retains child owners by ID;
 removal releases them, and reinsertion creates fresh owners. Axis changes reset
 dimensional preferences. Topology and range changes remap measured preferences,
@@ -665,15 +724,28 @@ Semantics("counter-controls", HStack! {
 .description("Change the current count.")
 ```
 
-`SemanticsRole` supports `Group`, `Region`, `Section`, and `Navigation` landmarks. Use
+`SemanticsRole` supports the structural `Group`, `Region`, `Section`, and
+`Navigation` roles plus live `Status` and `Alert` roles. Use
 `.localized_label(key)` or `.localized_description(key)` for active catalog
 lookup. A label or description without an explicit role defaults to Group.
 With no metadata, the wrapper adds no accessibility node. Stable nonempty IDs
 must be unique among siblings; the wrapper retains a separate child scope.
 Group metadata leaves each descendant control's role and name intact.
+Use `.live_region_value(value, politeness)` for a literal changing status or
+`.localized_live_region_value(key, politeness)` to resolve the changing value
+from the active catalog on each render. Both expose the value and its
+`LivePoliteness::{Polite, Assertive}` through AccessKit and assign the `Status`
+role unless a later `.role(...)` call overrides it. For example, an assertive
+error value can use
+`.live_region_value("Save failed", LivePoliteness::Assertive).role(SemanticsRole::Alert)`.
+`.role(SemanticsRole::Alert)` supplies the Alert role; it does not itself set a
+live value or politeness.
+
 Accessibility-only hiding, focus policy, interactive roles and actions are not
-part of this wrapper. Screenreader announcements and keyboard traversal remain
-unverified; see `docs/tasks/SEMANTICS_GROUPS.md`.
+part of this wrapper. Screenreader announcements (including live-region
+speech), keyboard traversal, description localization, reordered native node
+identity, and wider platform support remain unverified; see
+`docs/tasks/SEMANTICS_GROUPS.md`.
 
 ## Virtualized string table API
 
@@ -726,11 +798,17 @@ Tree(
 `Tree` retains GPUI Components `TreeState`, including virtual rows, expansion, focus,
 scrolling, and keyboard navigation. Its `Binding<Option<String>>` uses caller-owned
 node IDs and synchronizes pointer, keyboard, and external selection changes. Node IDs
-must be unique across the complete hierarchy. Dynamic node replacement preserves the
-retained entity. M75 native checks observed that unchanged expansion declarations retain
-their current state and explicit expansion changes apply. Removing and restoring a branch
-reset its nested child to expanded. A selected descendant takes precedence over a collapsed
-ancestor declaration because GPUI automatically expands ancestors to reveal the selection.
+must be unique across the complete hierarchy. `.height(...)` rejects
+non-finite values and clamps finite values to at least one logical point.
+Supply a stable `.id(...)` when the tree's
+root topology can change: with an explicit ID, replacement, insertion, removal, and
+reordering preserve the retained entity. Without `.id(...)`, the fallback identity is
+derived from the root count and first root ID, so changing either can remount `TreeState`
+and reset its expansion, focus, and scroll state. M75 native checks observed that unchanged
+expansion declarations retain their current state and explicit expansion changes apply.
+Removing and restoring a branch reset its nested child to expanded. A selected descendant
+takes precedence over a collapsed ancestor declaration because GPUI automatically expands
+ancestors to reveal the selection.
 
 ## Controlled tabs
 
@@ -748,15 +826,25 @@ TabView(
 .style(TabViewStyle::Segmented)
 ```
 
-The tab bar reuses GPUI Components pointer, keyboard, accessibility, overflow, and
-indicator behavior. `Binding<String>` carries the caller-owned selected ID. Tab IDs
-must be unique. `TabItem` erases its child behind RustUI `AnyView`, so one tab set may
-contain different concrete RustUI view types without exposing GPUI elements.
-
+Pointer, overflow, and indicator behavior reuse GPUI Components. RustUI adds a
+named focus group with per-tab roving focus: Left/Right (reversed for RTL) and
+Home/End move focus among enabled tabs; Enter/Space activate the focused tab.
+Pointer activation focuses and selects that tab. The group label defaults to
+`Tabs`; callers can set `.accessibility_label(...)`. A tab’s accessible name
+defaults to its visible label and can be overridden with
+`TabItem::accessibility_label(...)` or resolved from the active locale catalog
+with `TabItem::localized_accessibility_label(message_id)`. The literal name or
+visible label remains the fallback when that catalog entry is missing. Native
+focus, screen-reader announcements, tab-to-panel association, and
+cross-platform acceptance remain open. The canonical Tabs Playground story demonstrates a localized per-tab name across the shipped English, French, and Arabic catalogs.
+`Binding<String>` carries the caller-owned selected ID. Tab IDs must be unique.
+`TabItem` erases its child behind RustUI `AnyView`, so one tab set may contain
+different concrete RustUI view types without exposing GPUI elements.
 ## Breadcrumb actions
 
 `Breadcrumb` presents an ordered path. Items with actions are interactive; the final
-item can omit an action to represent the current location:
+item can omit an action to represent the current location. Each item label must be
+nonblank:
 
 ```rust
 Breadcrumb([
@@ -770,6 +858,14 @@ Breadcrumb([
 RustUI binds each action through the owning component host while GPUI Components owns
 the separators, pointer handling, disabled state, colors, and accessibility roles.
 Breadcrumb item identity currently follows its stable position in the ordered path.
+
+## Disclosure
+
+`Disclosure(id, label, is_open, content)` renders a controlled show/hide
+region. The visible `label` must not be blank or whitespace-only; it supplies
+the default accessible name. Use `.accessibility_label(...)` to set a nonblank
+explicit accessible name, and `.disabled(true)` to prevent toggling while
+leaving the binding unchanged.
 
 ## Navigation stack
 
@@ -836,9 +932,7 @@ absent or points at a disabled item, Up starts at the last enabled item and
 Down at the first. Home and End select the first and last enabled items.
 Enter runs a current-owner binding update that preserves the selected ID; the
 control exposes no separate activation callback. The handler does not intercept
-character input or modified keys. The tree role and optional accessible label
-are supplied, but no active-descendant reference is emitted for the selected
-row.
+character input or modified keys. The tree role is named by the localized `rustui-navigation-tree` message by default, with `Navigation` as its fallback. Use `.accessibility_label("Settings navigation")` for a literal override or `.localized_accessibility_label("settings.navigation")` for an app message key. No active-descendant reference is emitted for the selected row.
 
 M37 native inspection observed AX selected state, preservation across reversal
 and relabeling, disabled pointer suppression, no active row on removal,
@@ -875,15 +969,16 @@ Only the selected detail is lowered. Switching destinations releases the
 inactive detail's retained native controls; values held in caller-owned bindings
 remain with their owner. The composition uses GPUI Components' sidebar and
 resizable split layout, with a 240-point initial sidebar width and a 140–480
-point width range. It does not adaptively collapse to a single column. Place
+point width range. Below 560 logical pixels it presents a single-column destination list/detail flow; see `docs/tasks/NAVIGATION_SPLIT_ADAPTIVE_COLLAPSE_DECISIONS.md`. Place
 the split in a parent with bounded width and height so both columns receive a
 finite layout extent. The M78 native checks used a 560×300 parent.
 
-Name the navigation tree for assistive technology with
-`.accessibility_label("Settings navigation")`. Use
-`.localized_accessibility_label("settings.navigation")` when the name should
-follow the active RustUI message catalog; it resolves on each render, like a
-localized destination label. The selected detail region uses that resolved
+The navigation tree uses the localized `rustui-navigation-tree` message by
+default (`Navigation` fallback). Override it with
+`.accessibility_label("Settings navigation")`, or use
+`.localized_accessibility_label("settings.navigation")` for an app message key.
+Both override forms resolve on render; native screen-reader acceptance remains
+open. The selected detail region uses that resolved
 destination label as its accessible name.
 
 The 560×300 native checks observed that `None` and unknown IDs hide the detail
@@ -911,17 +1006,30 @@ repeated, keyed, tuple, and arbitrary block content are not implemented yet.
 creates the root component entity, mounts it in the GPUI Components root, opens a
 window, and activates the application.
 
-The implemented minimal form is:
+`RustUI::run` does not select or activate a RustUI theme. A root that uses
+theme-dependent components, such as `Counter`, must activate a caller-selected
+theme in `on_launch`, before RustUI mounts the root:
 
 ```rust
 fn main() {
-    RustUI::new().run(Counter::default());
+    let theme = rustui::theme::parse_theme(include_str!("../themes/macos27.json"))
+        .expect("valid RustUI theme");
+
+    RustUI::new()
+        .on_launch(move |cx| {
+            rustui::theme::activate_theme(&theme, None, cx)
+                .expect("RustUI theme activation succeeds");
+        })
+        .run(Counter::default());
 }
 ```
 
-Use `.window_options(gpui::WindowOptions)` for advanced window configuration and
-`.on_launch(|cx| ...)` for setup that needs GPUI's `App`, such as applying a parsed
-RustUI theme. GPUI continues to own the application and window lifecycle.
+Choose the theme document and appearance that fit the application. Use
+`.window_options(gpui::WindowOptions)` for advanced window configuration and
+`.on_launch(|cx| ...)` for setup that needs GPUI's `App`. The launch hook runs
+after GPUI Components initialization and before root creation, so the caller's
+theme activation is in place when the root renders. GPUI continues to own the
+application and window lifecycle.
 `rustui::App` re-exports `gpui::App` for launch setup and the `View::on_mount` /
 `View::on_unmount` lifecycle hooks, so application code can name those callback
 types through RustUI without adding its own GPUI import.
@@ -953,17 +1061,42 @@ use `Button("Français", set_locale_action(locale))`; the resulting `AppAction`
 updates the GPUI global and GPUI Components locale. Missing messages render their
 identifier after exact, primary-language, and configured fallback lookup.
 
-For parameterized catalog text, resolve the message first, then call the
-`rustui-i18n` formatter. This keeps interpolation separate from locale fallback:
+For parameterized runtime text, pass named arguments to `LocalizedText`:
+
+```rust
+use rustui::localization::MessageArguments;
+
+let arguments = MessageArguments::new().with("name", "Ada");
+LocalizedText("greeting").with_arguments(arguments)
+```
+
+The message is resolved from the active locale and catalog fallback before
+interpolation. `RenderContext::localized_message_with_arguments` provides the
+same operation to custom views and returns `InterpolationError` when an
+argument is missing or malformed. `LocalizedText` displays a visible
+localization diagnostic if interpolation fails. The low-level formatter is
+also available when formatting a previously resolved template:
 
 ```rust
 let template = catalogs.resolve(&locale, "greeting");
-let arguments = rustui_i18n::MessageArguments::new().with("name", "Ada");
+let arguments = MessageArguments::new().with("name", "Ada");
 let greeting = rustui_i18n::interpolate(template, &arguments)?;
 ```
 
-The formatter accepts text and integers, requires every referenced argument,
-and uses `{{` / `}}` for literal braces. Integer output is locale-independent.
+The formatter accepts text, integers, and `f32`/`f64` decimal arguments, and
+requires every referenced argument. Use `{{` / `}}` for literal braces. The
+low-level `interpolate` function keeps numbers locale-independent;
+`interpolate_with_locale` groups integer and decimal output for English, French,
+and Arabic, including each locale's decimal separator and Arabic digit override.
+Floating-point output uses shortest round-trip text without rounding. This is
+number display formatting, not currency formatting or full CLDR number support.
+
+`Locale::parse` normalizes language/script/region casing and accepts extension
+and private-use subtag sequences such as `en-US-u-ca-gregory` and
+`en-x-company-variant`. Variant subtags must be unique case-insensitively.
+Extension singletons must be unique and have a value; private-use tags must have
+at least one subtag. This is syntax-level handling, not validation against the
+IANA language-subtag registry.
 
 ## Theme activation
 
@@ -988,7 +1121,7 @@ poll quiescence, large-file latency/CPU, missing-file/permission cases, and
 multi-root isolation remain unverified. See `docs/tasks/AUTO_THEME_RELOAD.md`.
 
 `theme::serialize_theme(&ThemeDocument)` validates a typed theme document and
-returns normalized, pretty-printed JSON or `ThemeSerializeError`. This is a
+returns normalized, pretty-printed JSON or `ThemeSerializeError`. `theme::resolve_button_with_selector(&ThemeDocument, &ButtonStyleSelector)` resolves Button rules for an explicit typed variant selector; `theme::resolve_button` keeps the appearance-only default behavior. This is a
 document export; it does not preserve source bytes or serialize view trees,
 component state, caches, or GPUI entities. The M26 workspace run passed 82 tests
 across 12 binaries; see `target/headstart/milestone25-26-tests.log`.
@@ -1272,7 +1405,9 @@ scope/child snapshot; no performance benefit or negligible cost is asserted.
 
 ## Playground layout support and application boundary
 
-RustUI Playground now consumes only the `rustui` crate. `Container(view)` supplies
+RustUI Playground uses the public `rustui` API for its UI and directly depends on
+`gpui-kit-assets` to register the default icon bundle. It does not use GPUI or
+GPUI Components APIs directly. `Container(view)` supplies
 an explicit flex-column layout box with width/height, padding, fill/grow sizing,
 border, radius and semantic `Surface::{Background, Sidebar, Panel}` styling. It
 inherits the active theme's foreground and font size. Unlike identity-only wrappers,
@@ -1294,7 +1429,7 @@ GPUI `Render` implementations and raw element construction remain inside RustUI.
 
 `OwnerActionReader(|owner: OwnerAction<Parent>| ...)` supplies a callback target for the exact mounted parent. Pass this target to child props; `owner.action(Parent::increment)` dispatches to that parent through GPUI. Targets compare by owner identity and keep only a weak update path.
 
-`OwnerTaskReader(|tasks: OwnerTask<Parent>| ...)` supplies a task target for the exact mounted owner. `tasks.start(id, work, apply)` replaces work under that ID and reports `AsyncState::{Loading, Success, Error}`. `tasks.cancel(id, apply)` reports `Idle`. The GPUI host retains task handles, and per-host generations reject stale completion after replacement or cancellation. Work factories must return a Send future; avoid blocking the UI while constructing it. Native start/restart/error/cancel checks and owner-release result suppression were exercised in M16/M25; blocking-work interruption is not guaranteed (`target/headstart/milestone25-owner-release-gui.json`).
+`OwnerTaskReader(|tasks: OwnerTask<Parent>| ...)` supplies a task target for the exact mounted owner. `tasks.start(id, work, apply)` replaces work under that ID and reports `AsyncState::{Loading, Success, Error}`. `tasks.start_with_executor(id, work, apply)` additionally supplies the owning GPUI background executor to the work factory for executor-native delays or other async work. Both preserve the same replacement, cancellation, stale-result, and owner-release lifecycle. `tasks.cancel(id, apply)` reports `Idle`. The GPUI host retains task handles, and per-host generations reject stale completion after replacement or cancellation. Work factories must return a Send future; avoid blocking the UI while constructing it. Native start/restart/error/cancel checks and owner-release result suppression were exercised in M16/M25; blocking-work interruption is not guaranteed (`target/headstart/milestone25-owner-release-gui.json`).
 
 `Spacer()` grows on the parent flex axis; `min_length(SpacerAxis, value)` requires a finite nonnegative value. `Divider()` is horizontal; `.vertical()` uses the upstream semantic separator. `LogicalInsets` resolves start/end using the current layout direction; bidi isolation helpers are opt-in and do not provide text shaping or translations. `ThemeFile` parses and validates reloads before replacing its last successful document.
 
@@ -1574,8 +1709,9 @@ The M69–M71 workspace suite passed 236 tests across 12 binaries, the build suc
 ## State-driven translation
 
 `SpringOffset::new(id, view, x, y)` uses two GPUI retained springs for finite
-signed logical-pixel targets. Keep `id` stable across renders to retarget each
-axis; newly mounted springs begin at their target. GPUI owns scheduling and
+signed logical-pixel targets. The ID must be nonblank; blank or whitespace-only
+IDs return `SpringOffsetError::EmptyIdentity`. Keep `id` stable across renders to
+retarget each axis; newly mounted springs begin at their target. GPUI owns scheduling and
 app-level reduced-motion behavior. The child keeps its layout slot; GPUI applies
 the translation to native hit-test and accessibility bounds. Parent clipping,
 overlap, stacking, and accessibility-tree behavior remain native. It does not

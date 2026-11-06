@@ -12,7 +12,7 @@ pub(crate) mod scoped_element;
 pub mod tasks;
 pub mod window;
 
-pub use application::RustUI;
+pub use application::{RustUI, with_embedded_asset};
 pub use component_host::ComponentHost;
 pub use component_host::ComponentHost as ViewHost;
 pub use events::AppAction;

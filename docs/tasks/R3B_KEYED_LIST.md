@@ -2,8 +2,9 @@
 
 `KeyedList(id, items, selection)` is an additive string-list API. `items` are
 `KeyedListItem::new(id, label)` values and `selection` is a
-`Binding<Option<String>>`. The list identity is required and stable across owner
-renders. Row IDs must be nonempty after trimming and unique within the list;
+`Binding<Option<String>>`. The list identity is required, nonempty after trimming,
+and stable across owner renders. Row IDs must be nonempty after trimming and
+unique within the list;
 invalid input panics at construction. The existing `List` source-index API is
 unchanged.
 
@@ -60,3 +61,20 @@ The canonical Playground `list · Partial` catalog route exercised the non-selec
 ## Owner update ordering
 
 The retained adapter tracks the owner selection observed at render or an accepted event. Each event captures that owner value when the adapter receives the event. Writeback applies only if the native selected index still matches the event and both the current binding and current marker still match the captured owner value; accepted writes advance the marker. A focused unit test covers the A→queued B→owner rerender C→updater ordering. This source-level guard does not claim native queued-event race acceptance.
+
+## M474 — Refreshed native KeyedList acceptance
+
+This is a current-source refresh after M408 changed retained selection event
+writers; it does not introduce a new public behavior contract. In the canonical
+macOS 27 Playground `list · Partial` KeyedList gallery, `row-0002` remained
+selected through reverse and prepend, stayed the owner selection while filtered
+out, and normalized to `None` on removal. A second selected row survived
+filter-out/filter-back; Up/Down changed its stable ID and native selected marker;
+virtualized scroll-away/restore brought its accessible row name and selection
+back. Return caused no observable accessibility-tree change. The snapshot
+reported the root window as focused, so child focus ownership and VoiceOver
+speech remain unverified. Focused tests passed 12/12; the locked/offline
+Playground all-targets check and build exited 0. Evidence is in
+`target/headstart/evidence/m474-keyed-list-native-acceptance-20261021.json` and
+the adjacent `m474-keyed-list-tests-20261021.log`,
+`m474-playground-check-20261021.log`, and `m474-playground-build-20261021.log`.
