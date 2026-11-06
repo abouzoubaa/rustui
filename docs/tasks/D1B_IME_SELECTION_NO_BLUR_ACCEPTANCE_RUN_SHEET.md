@@ -30,9 +30,7 @@ the schema inspector's `text` property editor as the mounted runtime TextField.
 
 ## Before the run
 
-- Claim `@shared/playground-gui-slot` in the shared roadmap claim ledger and
-  verify this session is its sole active owner. If it is occupied, do not launch
-  the app.
+- Check that the shared Playground GUI slot is available; if occupied, do not launch the app.
 - Use the canonical disposable validation app and bundle identifier
   `dev.rustui.playground`; do not create another app. Record the
   bundle path, executable SHA-256, macOS version, and input source in the result.

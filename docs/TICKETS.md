@@ -8,7 +8,7 @@ Phase A — process (in order)
 **Stop if:** Stable fails; report its first error without starting another ticket.
 
 ## T2 — Remove retired process references
-**Do:** Remove retired coordination instructions, obsolete tooling references, and old context-injection instructions from repository documentation.
+**Do:** Remove repository documentation references to multi-session coordination, claim DB, external skills, RTK, Headroom, and the Trail block.
 **Done when:** A repository search finds none of those retired instructions in documentation.
 **Stop if:** A reference belongs to runtime or product behavior rather than retired process documentation; leave it and report it.
 
