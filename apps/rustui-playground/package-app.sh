@@ -7,12 +7,38 @@ target_root="${CARGO_TARGET_DIR:-$repository_root/target/headstart}"
 binary="${RUSTUI_PLAYGROUND_BINARY:-$target_root/debug/rustui-playground}"
 bundle="${RUSTUI_PLAYGROUND_BUNDLE_PATH:-$target_root/debug/RustUI Playground.app}"
 references_dir="${RUSTUI_PLAYGROUND_REFERENCES_DIR:-$app_root/references}"
+replace_existing=0
+for argument in "$@"; do
+    case "$argument" in
+        --replace) replace_existing=1 ;;
+        *)
+            printf '%s\n' "unknown argument: $argument" >&2
+            exit 2
+            ;;
+    esac
+done
+if [ -e "$bundle" ] || [ -L "$bundle" ]; then
+    if [ "$replace_existing" -ne 1 ]; then
+        printf '%s\n' "Playground bundle already exists; pass --replace to replace it: $bundle" >&2
+        exit 1
+    fi
+    if [ -L "$bundle" ]; then
+        printf '%s\n' "refusing symlinked Playground bundle path: $bundle" >&2
+        exit 1
+    fi
+    if [ ! -d "$bundle" ]; then
+        printf '%s\n' "refusing to replace non-directory Playground bundle path: $bundle" >&2
+        exit 1
+    fi
+fi
 resources="$bundle/Contents/Resources"
 references_bundle="$resources/references"
 references_staging=""
 references_previous="$resources/references.previous.$$"
 references_moved=""
 output_staging=""
+replacement_backup=""
+replacement_moved=""
 release_notices_source="${RUSTUI_RELEASE_NOTICES_DIR:-}"
 release_notices_required="${RUSTUI_RELEASE_NOTICES_REQUIRED:-0}"
 case "$release_notices_required" in
@@ -61,6 +87,22 @@ cleanup() {
             rm -f "$fresh_bundle_marker"
         fi
     fi
+    if [ -n "$replacement_moved" ]; then
+        if [ "$status" -eq 0 ]; then
+            if ! rm -rf "$replacement_backup"; then
+                printf '%s\n' "could not remove replaced Playground bundle backup: $replacement_backup" >&2
+                status=1
+            fi
+        else
+            if [ -e "$bundle" ] || [ -L "$bundle" ]; then
+                rm -rf "$bundle"
+            fi
+            if ! mv "$replacement_backup" "$bundle"; then
+                printf '%s\n' "could not restore prior Playground bundle from: $replacement_backup" >&2
+                status=1
+            fi
+        fi
+    fi
     exit "$status"
 }
 trap cleanup EXIT
@@ -97,20 +139,7 @@ if [ -e "$references_previous" ]; then
     exit 1
 fi
 
-if [ -n "${RUSTUI_PLAYGROUND_BUNDLE_PATH:-}" ]; then
-    mkdir -p "$(dirname -- "$bundle")"
-    if ! mkdir "$bundle"; then
-        printf '%s\n' "cannot create fresh Playground bundle: $bundle" >&2
-        exit 1
-    fi
-    if ! fresh_bundle_marker=$(mktemp "$bundle/.rustui-package-owner.XXXXXX"); then
-        rmdir "$bundle" 2>/dev/null || :
-        exit 1
-    fi
-fi
-
-# The default bundle may be reused, but none of its output paths may redirect
-# writes into another application or file.
+# None of the output paths may redirect writes outside the selected bundle.
 for destination in \
     "$bundle" "$bundle/Contents" "$bundle/Contents/MacOS" \
     "$bundle/Contents/MacOS/rustui-playground" \
@@ -144,6 +173,31 @@ if [ -z "$release_notices_source" ] && [ -e "$resources/licenses/release" ]; the
   exit 1
 fi
 
+# Replacing is explicit and happens only after the preflight checks above.
+if [ "$replace_existing" -eq 1 ] && \
+    { [ -e "$bundle" ] || [ -L "$bundle" ]; }; then
+    replacement_backup="$bundle.previous.$$"
+    if [ -e "$replacement_backup" ] || [ -L "$replacement_backup" ]; then
+        printf '%s\n' "refusing existing Playground replacement backup path: $replacement_backup" >&2
+        exit 1
+    fi
+    if ! mv "$bundle" "$replacement_backup"; then
+        printf '%s\n' "could not move existing Playground bundle for replacement: $bundle" >&2
+        exit 1
+    fi
+    replacement_moved=1
+fi
+if [ -n "${RUSTUI_PLAYGROUND_BUNDLE_PATH:-}" ] && [ ! -e "$bundle" ]; then
+    mkdir -p "$(dirname -- "$bundle")"
+    if ! mkdir "$bundle"; then
+        printf '%s\n' "cannot create fresh Playground bundle: $bundle" >&2
+        exit 1
+    fi
+    if ! fresh_bundle_marker=$(mktemp "$bundle/.rustui-package-owner.XXXXXX"); then
+        rmdir "$bundle" 2>/dev/null || :
+        exit 1
+    fi
+fi
 mkdir -p "$bundle/Contents/MacOS" "$resources"
 mkdir -p "$resources/assets" "$resources/themes"
 copy_output "$repository_root/assets/link-fixture.html" "$resources/assets/link-fixture.html"

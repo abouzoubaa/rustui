@@ -64,13 +64,27 @@ RUSTUI_RELEASE_NOTICES_DIR="$notice_source" \
 RUSTUI_PLAYGROUND_REFERENCES_DIR="$references_source" \
     "$repository_root/apps/rustui-playground/package-app.sh" >/dev/null
 
+bundle_before_default_rejection="$temporary_root/bundle before default rejection"
+cp -R "$bundle" "$bundle_before_default_rejection"
+if CARGO_TARGET_DIR="$target_root" \
+    RUSTUI_RELEASE_NOTICES_DIR="$notice_source" \
+    RUSTUI_PLAYGROUND_REFERENCES_DIR="$references_source" \
+    "$repository_root/apps/rustui-playground/package-app.sh" >/dev/null 2>&1; then
+    printf '%s\n' 'package replaced the existing default bundle without --replace.' >&2
+    exit 1
+fi
+if ! diff -r "$bundle_before_default_rejection" "$bundle" >/dev/null; then
+    printf '%s\n' 'package modified the existing default bundle without --replace.' >&2
+    exit 1
+fi
+
 bundle_before_strict_gap_check="$temporary_root/bundle before strict gap check"
 cp -R "$bundle" "$bundle_before_strict_gap_check"
 if CARGO_TARGET_DIR="$target_root" \
     RUSTUI_RELEASE_NOTICES_REQUIRED=1 \
     RUSTUI_RELEASE_NOTICES_DIR="$notice_source" \
     RUSTUI_PLAYGROUND_REFERENCES_DIR="$references_source" \
-    "$repository_root/apps/rustui-playground/package-app.sh" >/dev/null 2>&1; then
+    "$repository_root/apps/rustui-playground/package-app.sh" --replace >/dev/null 2>&1; then
     printf '%s\n' 'strict release packaging accepted unresolved notice gaps' >&2
     exit 1
 fi
@@ -101,14 +115,14 @@ CARGO_TARGET_DIR="$target_root" \
 RUSTUI_PLAYGROUND_BINARY="$headstart_binary" \
 RUSTUI_RELEASE_NOTICES_DIR="$notice_source" \
 RUSTUI_PLAYGROUND_REFERENCES_DIR="$references_source" \
-    "$repository_root/apps/rustui-playground/package-app.sh" >/dev/null
+    "$repository_root/apps/rustui-playground/package-app.sh" --replace >/dev/null
 cmp "$headstart_binary" "$bundle/Contents/MacOS/rustui-playground"
 
 # A new executable must not inherit release notices from a prior package.
 if CARGO_TARGET_DIR="$target_root" \
     RUSTUI_RELEASE_NOTICES_DIR="" \
     RUSTUI_PLAYGROUND_REFERENCES_DIR="$references_source" \
-    "$repository_root/apps/rustui-playground/package-app.sh" >/dev/null 2>&1; then
+    "$repository_root/apps/rustui-playground/package-app.sh" --replace >/dev/null 2>&1; then
     printf '%s\n' 'package unexpectedly reused stale release notices.' >&2
     exit 1
 fi
@@ -123,7 +137,7 @@ PY
 if CARGO_TARGET_DIR="$target_root" \
     RUSTUI_PLAYGROUND_BINARY="$(dirname -- "$headstart_binary")" \
     RUSTUI_PLAYGROUND_REFERENCES_DIR="$references_source" \
-        "$repository_root/apps/rustui-playground/package-app.sh" >/dev/null 2>&1; then
+        "$repository_root/apps/rustui-playground/package-app.sh" --replace >/dev/null 2>&1; then
     printf '%s\n' "package accepted a directory as an executable" >&2
     exit 1
 fi
@@ -138,7 +152,7 @@ printf '%s\n' '<svg id="updated" />' > "$references_source/Updated Folder/Update
 
 CARGO_TARGET_DIR="$target_root" \
 RUSTUI_PLAYGROUND_REFERENCES_DIR="$references_source" \
-    "$repository_root/apps/rustui-playground/package-app.sh" >/dev/null
+    "$repository_root/apps/rustui-playground/package-app.sh" --replace >/dev/null
 
 test -x "$bundle/Contents/MacOS/rustui-playground"
 test -f "$bundle/Contents/Info.plist"
@@ -163,7 +177,7 @@ printf '%s\n' '<svg id="must-not-publish" />' > "$references_source/Failed Updat
 if PATH="$mv_shim:$PATH" \
     CARGO_TARGET_DIR="$target_root" \
     RUSTUI_PLAYGROUND_REFERENCES_DIR="$references_source" \
-        "$repository_root/apps/rustui-playground/package-app.sh" >/dev/null 2>&1; then
+        "$repository_root/apps/rustui-playground/package-app.sh" --replace >/dev/null 2>&1; then
     printf '%s\n' "package unexpectedly succeeded when staged references could not be promoted." >&2
     exit 1
 fi
@@ -185,16 +199,37 @@ RUSTUI_PLAYGROUND_REFERENCES_DIR="$references_source" \
 cmp "$headstart_binary" "$fresh_bundle/Contents/MacOS/rustui-playground"
 test -z "$(find "$fresh_bundle" -name '.rustui-package-owner.*' -print -quit)"
 test "$(cat "$bundle/sentinel")" = 'existing bundle sentinel'
+printf '%s\n' 'replace me' > "$fresh_bundle/sentinel"
+fresh_bundle_before_rejection="$temporary_root/fresh bundle before rejection"
+cp -R "$fresh_bundle" "$fresh_bundle_before_rejection"
 if CARGO_TARGET_DIR="$target_root" \
     RUSTUI_PLAYGROUND_BINARY="$headstart_binary" \
     RUSTUI_PLAYGROUND_BUNDLE_PATH="$fresh_bundle" \
     RUSTUI_PLAYGROUND_REFERENCES_DIR="$references_source" \
     "$repository_root/apps/rustui-playground/package-app.sh" >/dev/null 2>&1; then
-    printf '%s\n' 'package unexpectedly reused an explicit existing bundle.' >&2
+    printf '%s\n' 'package replaced an existing explicit bundle without --replace.' >&2
     exit 1
 fi
+if ! diff -r "$fresh_bundle_before_rejection" "$fresh_bundle" >/dev/null; then
+    printf '%s\n' 'package modified an existing explicit bundle without --replace.' >&2
+    exit 1
+fi
+if CARGO_TARGET_DIR="$target_root" \
+    RUSTUI_PLAYGROUND_BINARY="$headstart_binary" \
+    RUSTUI_PLAYGROUND_BUNDLE_PATH="$fresh_bundle" \
+    RUSTUI_PLAYGROUND_REFERENCES_DIR="$references_source" \
+    "$repository_root/apps/rustui-playground/package-app.sh" --unknown >/dev/null 2>&1; then
+    printf '%s\n' 'package accepted an unknown argument.' >&2
+    exit 1
+fi
+CARGO_TARGET_DIR="$target_root" \
+RUSTUI_PLAYGROUND_BINARY="$headstart_binary" \
+RUSTUI_PLAYGROUND_BUNDLE_PATH="$fresh_bundle" \
+RUSTUI_PLAYGROUND_REFERENCES_DIR="$references_source" \
+    "$repository_root/apps/rustui-playground/package-app.sh" --replace >/dev/null
 cmp "$headstart_binary" "$fresh_bundle/Contents/MacOS/rustui-playground"
 test "$(cat "$bundle/sentinel")" = 'existing bundle sentinel'
+test ! -e "$fresh_bundle/sentinel"
 failed_bundle="$temporary_root/failed output/RustUI Playground.app"
 if CARGO_TARGET_DIR="$target_root" \
     RUSTUI_PLAYGROUND_BINARY="$headstart_binary" \
@@ -224,7 +259,7 @@ ln -s "$protected" "$unsafe_root/debug/RustUI Playground.app"
 if CARGO_TARGET_DIR="$unsafe_root" \
     RUSTUI_PLAYGROUND_BINARY="$headstart_binary" \
     RUSTUI_PLAYGROUND_REFERENCES_DIR="$references_source" \
-    "$repository_root/apps/rustui-playground/package-app.sh" >/dev/null 2>&1; then
+    "$repository_root/apps/rustui-playground/package-app.sh" --replace >/dev/null 2>&1; then
     printf '%s\n' 'package accepted a symlinked default bundle.' >&2
     exit 1
 fi
@@ -237,7 +272,7 @@ ln -s "$protected/Contents/Resources" "$unsafe_bundle/Contents/Resources"
 if CARGO_TARGET_DIR="$unsafe_contents" \
     RUSTUI_PLAYGROUND_BINARY="$headstart_binary" \
     RUSTUI_PLAYGROUND_REFERENCES_DIR="$references_source" \
-    "$repository_root/apps/rustui-playground/package-app.sh" >/dev/null 2>&1; then
+    "$repository_root/apps/rustui-playground/package-app.sh" --replace >/dev/null 2>&1; then
     printf '%s\n' 'package accepted a symlinked Resources directory.' >&2
     exit 1
 fi
@@ -251,7 +286,7 @@ ln -s "$protected/resource" "$unsafe_bundle/Contents/Resources/assets/link-fixtu
 if CARGO_TARGET_DIR="$unsafe_file" \
     RUSTUI_PLAYGROUND_BINARY="$headstart_binary" \
     RUSTUI_PLAYGROUND_REFERENCES_DIR="$references_source" \
-    "$repository_root/apps/rustui-playground/package-app.sh" >/dev/null 2>&1; then
+    "$repository_root/apps/rustui-playground/package-app.sh" --replace >/dev/null 2>&1; then
     printf '%s\n' 'package accepted a symlinked resource file.' >&2
     exit 1
 fi
@@ -270,7 +305,7 @@ ln "$protected/hardlink-plist" "$hardlink_bundle/Contents/Info.plist"
 CARGO_TARGET_DIR="$hardlink_root" \
     RUSTUI_PLAYGROUND_BINARY="$headstart_binary" \
     RUSTUI_PLAYGROUND_REFERENCES_DIR="$references_source" \
-    "$repository_root/apps/rustui-playground/package-app.sh" >/dev/null
+    "$repository_root/apps/rustui-playground/package-app.sh" --replace >/dev/null
 test "$(cat "$protected/hardlink-resource")" = 'protected hardlinked resource'
 test "$(cat "$protected/hardlink-executable")" = 'protected hardlinked executable'
 test "$(cat "$protected/hardlink-plist")" = 'protected hardlinked plist'
@@ -290,7 +325,7 @@ chmod 755 "$copy_shim/cp"
 if PATH="$copy_shim:$PATH" CARGO_TARGET_DIR="$copy_failure_root" \
     RUSTUI_PLAYGROUND_BINARY="$headstart_binary" \
     RUSTUI_PLAYGROUND_REFERENCES_DIR="$references_source" \
-    "$repository_root/apps/rustui-playground/package-app.sh" >/dev/null 2>&1; then
+    "$repository_root/apps/rustui-playground/package-app.sh" --replace >/dev/null 2>&1; then
     printf '%s\n' 'package accepted a failed resource copy.' >&2
     exit 1
 fi
@@ -303,7 +338,7 @@ mkdir -p "$directory_bundle/Contents/Info.plist"
 if CARGO_TARGET_DIR="$directory_root" \
     RUSTUI_PLAYGROUND_BINARY="$headstart_binary" \
     RUSTUI_PLAYGROUND_REFERENCES_DIR="$references_source" \
-    "$repository_root/apps/rustui-playground/package-app.sh" >/dev/null 2>&1; then
+    "$repository_root/apps/rustui-playground/package-app.sh" --replace >/dev/null 2>&1; then
     printf '%s\n' 'package accepted a directory at the Info.plist output.' >&2
     exit 1
 fi
@@ -317,7 +352,7 @@ mkfifo "$fifo_bundle/Contents/Resources/assets/link-fixture.html"
 if CARGO_TARGET_DIR="$fifo_root" \
     RUSTUI_PLAYGROUND_BINARY="$headstart_binary" \
     RUSTUI_PLAYGROUND_REFERENCES_DIR="$references_source" \
-    "$repository_root/apps/rustui-playground/package-app.sh" >/dev/null 2>&1; then
+    "$repository_root/apps/rustui-playground/package-app.sh" --replace >/dev/null 2>&1; then
     printf '%s\n' 'package accepted a FIFO at a resource output.' >&2
     exit 1
 fi
