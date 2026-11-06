@@ -1,5 +1,6 @@
 # Changelog
 
+- T11b: Added RustUI-owned macOS GPUI platform crates with source-copy verification.
 - T11a: Added the RustUI-owned GPUI core crate while preserving the pinned upstream source and attribution.
 
 - Stable Rust 1.97.1 is the daily compiler; the Headstart script remains optional.
