@@ -1,5 +1,6 @@
 {
   "capabilities": [
+    { "name": "toolchain_checks", "source": "rust-toolchain.toml, scripts/cargo-headstart", "tests": "stable workspace check, library tests, and focused test passed", "native": "not exercised; this ticket covers compiler checks", "notes": "Stable Rust 1.97.1 is daily; Headstart is optional and its one-file rebuild remains unresolved" },
     { "name": "declarative_views", "source": "crates/rustui/src/view.rs, prelude.rs, constructors.rs", "tests": "runtime/view tests where present", "native": "macOS source present; not freshly verified", "notes": "View trait, constructors, and public prelude" },
     { "name": "application_runtime", "source": "crates/rustui/src/runtime/", "tests": "inline/runtime tests", "native": "macOS source present; not freshly verified", "notes": "GPUI owns scheduling and windows" },
     { "name": "state_actions_lifecycle", "source": "crates/rustui/src/runtime/component_host.rs, events.rs, tasks.rs", "tests": "component_host_tests.rs", "native": "source present; acceptance pending", "notes": "component state, events, host, and tasks" },

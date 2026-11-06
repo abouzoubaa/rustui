@@ -53,12 +53,9 @@ inherits = "dev"
 debug = 1
 incremental = true
 
-# Headstart's early/full metadata path can produce an SVH mismatch for a changed
-# proc-macro crate even with the approved metadata-hash workaround. Keep the
-# workspace cache incremental while compiling only RustUI's small macro crate
-# without incremental state.
-[profile.dev.package.rustui-macros]
-incremental = false
-
+# Headstart's early/full metadata path can produce an SVH mismatch for
+# rustui-macros even with the approved metadata-hash workaround.
+# Keep workspace incrementality enabled; disable it only in the explicit
+# Headstart profile below.
 [profile.headstart.package.rustui-macros]
 incremental = false

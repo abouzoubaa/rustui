@@ -11,7 +11,7 @@ Focus: native macOS. Web, localization, accessibility acceptance are deferred. W
 ## Done = these 4 things only
 1. Code written.
 2. One focused test: unit test or GPUI test window (#[gpui::test]). Prefer test windows over native GUI automation.
-3. `./scripts/cargo-headstart test -p <crate> <filter> --locked --offline` and `./scripts/cargo-headstart check --workspace --all-targets --locked --offline` pass.
+3. `rustup run 1.97.1 cargo test -p <crate> <filter> --locked --offline` and `rustup run 1.97.1 cargo check --workspace --all-targets --locked --offline` pass.
 4. One line in CHANGELOG.md; update that feature's line in docs/status.json.
 No evidence paragraphs, hashes, logs, crash reports or "Record" commits. Never commit log files.
 
@@ -24,8 +24,8 @@ No evidence paragraphs, hashes, logs, crash reports or "Record" commits. Never c
 - Run scripts/verify-release.sh only when a ticket says so or before merging to main.
 
 ## Build
-- Daily: ./scripts/cargo-headstart (Headstart compiler, keep it).
-- Stable Rust 1.97.1 (`rustup run 1.97.1 cargo …`) is used in CI to prove the code does not depend on Headstart.
+- Daily: `rustup run 1.97.1 cargo …` (stable compiler, keep it).
+- `./scripts/cargo-headstart` remains an optional script only.
 
 ## Architecture (do not break)
 - No dependency on Allui or Chorus.
