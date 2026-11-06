@@ -13,6 +13,9 @@ OWNED_VENDOR_COPIES = {
     "crates/rustui-gpui-platform": "vendor/gpui-pre-platform-0.3.9",
     "crates/rustui-gpui-macos": "vendor/gpui-pre-macos-0.3.9",
     "crates/rustui-gpui-apple": "vendor/gpui-pre-apple-0.3.9",
+    "crates/rustui-gpui-base": "vendor/gpui-base-0.7.3",
+    "crates/rustui-gpui-component": "vendor/gpui-component-0.7.3",
+    "crates/rustui-block": "vendor/block-0.1.6",
 }
 IGNORED_RELATIVE_PATHS = {"Cargo.toml"}
 
