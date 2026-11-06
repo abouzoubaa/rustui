@@ -6,7 +6,6 @@
 pub mod application;
 pub mod component_host;
 pub mod events;
-pub mod invalidation;
 pub mod render_diagnostics;
 pub(crate) mod scoped_element;
 pub mod tasks;
