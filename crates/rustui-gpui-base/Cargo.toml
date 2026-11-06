@@ -36,7 +36,10 @@ repository = "https://github.com/longbridge/gpui-kit"
 resolver = "2"
 
 [features]
-decimal = ["dep:rust_decimal"]
+inspector = [
+    "gpui_macros/inspector",
+    "gpui/inspector",
+]
 test-support = [
     "gpui/test-support",
 ]
@@ -119,10 +122,6 @@ features = [
     "metric_utf16",
 ]
 
-[dependencies.rust_decimal]
-version = "1.37.0"
-optional = true
-
 [dependencies.schemars]
 version = "1"
 
@@ -156,28 +155,18 @@ version = "1"
 version = "=0.3.9"
 features = [
     "test-support",
-    "bench-support",
 ]
 path = "../rustui-gpui"
 package = "rustui-gpui"
 
 [dev-dependencies.gpui_platform]
 version = "=0.3.9"
+path = "../rustui-gpui-platform"
 features = [
     "font-kit",
-    "x11",
-    "wayland",
     "runtime_shaders",
-    "bench-support",
 ]
-package = "gpui-pre-platform"
-
-[dev-dependencies.indoc]
-version = "2"
-
-[dev-dependencies.reqwest_client]
-version = "=0.3.9"
-package = "gpui-pre-reqwest-client"
+package = "rustui-gpui-platform"
 
 [target.'cfg(not(target_family = "wasm"))'.dependencies.smol]
 version = "2"
