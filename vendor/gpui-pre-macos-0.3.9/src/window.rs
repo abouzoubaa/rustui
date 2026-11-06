@@ -31,7 +31,9 @@ use gpui::{
     Pixels, PlatformAtlas, PlatformDisplay, PlatformFrameSignal, PlatformInput,
     PlatformInputHandler, PlatformWindow, Point, PromptButton, PromptLevel, RequestFrameOptions,
     SharedString, Size, SystemWindowTab, WindowAppearance, WindowBackgroundAppearance,
-    WindowBounds, WindowControlArea, WindowKind, WindowParams, WindowVisibility, point, px, size,
+    WindowBounds, WindowControlArea, WindowKind, WindowParams, WindowVisibility, point,
+    popup::{PopupAnchor, PopupConstraintAdjustment, PopupGravity, PopupOptions},
+    px, size,
 };
 #[cfg(any(test, feature = "test-support"))]
 use image::RgbaImage;
@@ -663,6 +665,7 @@ struct MacWindowState {
     background_executor: BackgroundExecutor,
     native_window: id,
     native_view: NonNull<Object>,
+    dismiss_popup_on_resign: bool,
     blurred_view: Option<id>,
     background_appearance: WindowBackgroundAppearance,
     cursor_style: CursorStyle,
@@ -955,6 +958,282 @@ impl MacWindowState {
     }
 }
 
+fn anchored_popup_frame(
+    parent_window: id,
+    options: &PopupOptions,
+    popup_size: Size<Pixels>,
+) -> (NSRect, Size<Pixels>, id) {
+    unsafe {
+        let parent_state = get_window_state(&*parent_window);
+        let parent_view = parent_state.lock().native_view.as_ptr() as id;
+        let anchor = NSRect::new(
+            NSPoint::new(
+                options.anchor_rect.origin.x.as_f32() as f64,
+                options.anchor_rect.origin.y.as_f32() as f64,
+            ),
+            NSSize::new(
+                options.anchor_rect.size.width.as_f32() as f64,
+                options.anchor_rect.size.height.as_f32() as f64,
+            ),
+        );
+        let anchor_in_window: NSRect = msg_send![parent_view, convertRect: anchor toView: nil];
+        let anchor_window: id = msg_send![parent_view, window];
+        let anchor: NSRect = msg_send![anchor_window, convertRectToScreen: anchor_in_window];
+        let anchor_center = NSPoint::new(
+            anchor.origin.x + anchor.size.width / 2.0,
+            anchor.origin.y + anchor.size.height / 2.0,
+        );
+
+        let screens = NSScreen::screens(nil);
+        let count: NSUInteger = NSArray::count(screens);
+        let mut selected_screen = NSScreen::mainScreen(nil);
+        for index in 0..count {
+            let screen = NSArray::objectAtIndex(screens, index);
+            let visible = NSScreen::visibleFrame(screen);
+            if anchor_center.x >= visible.origin.x
+                && anchor_center.x <= visible.origin.x + visible.size.width
+                && anchor_center.y >= visible.origin.y
+                && anchor_center.y <= visible.origin.y + visible.size.height
+            {
+                selected_screen = screen;
+                break;
+            }
+        }
+        let visible = NSScreen::visibleFrame(selected_screen);
+        let screen_width = visible.size.width.max(1.0);
+        let screen_height = visible.size.height.max(1.0);
+        let anchor_left = anchor.origin.x - visible.origin.x;
+        let anchor_top = visible.origin.y + screen_height - (anchor.origin.y + anchor.size.height);
+        let mut anchor_kind = options.anchor;
+        let mut anchor_x = popup_anchor_x(anchor_kind, anchor_left, anchor.size.width);
+        let anchor_y = popup_anchor_y(anchor_kind, anchor_top, anchor.size.height);
+
+        let mut width = (popup_size.width.as_f32() as f64).max(1.0);
+        let mut height = (popup_size.height.as_f32() as f64).max(1.0);
+        let adjustment = options.constraint_adjustment;
+        if adjustment.contains(PopupConstraintAdjustment::RESIZE_X) {
+            width = width.min(screen_width);
+        }
+        if adjustment.contains(PopupConstraintAdjustment::RESIZE_Y) {
+            height = height.min(screen_height);
+        }
+
+        let mut gravity = options.gravity;
+        let (mut left, mut top) = popup_origin(gravity, anchor_x, anchor_y, width, height);
+        if adjustment.contains(PopupConstraintAdjustment::FLIP_X)
+            && popup_overflow_x(left, width, screen_width) > 0.0
+        {
+            let flipped_anchor = flip_popup_anchor_x(anchor_kind);
+            let flipped_gravity = flip_popup_gravity_x(gravity);
+            let flipped_x = popup_anchor_x(flipped_anchor, anchor_left, anchor.size.width);
+            let (candidate, _) = popup_origin(flipped_gravity, flipped_x, anchor_y, width, height);
+            if popup_overflow_x(candidate, width, screen_width)
+                < popup_overflow_x(left, width, screen_width)
+            {
+                anchor_kind = flipped_anchor;
+                anchor_x = flipped_x;
+                gravity = flipped_gravity;
+                left = candidate;
+            }
+        }
+        if adjustment.contains(PopupConstraintAdjustment::FLIP_Y)
+            && popup_overflow_y(top, height, screen_height) > 0.0
+        {
+            let flipped_anchor = flip_popup_anchor_y(anchor_kind);
+            let flipped_gravity = flip_popup_gravity_y(gravity);
+            let flipped_y = popup_anchor_y(flipped_anchor, anchor_top, anchor.size.height);
+            let (_, candidate) = popup_origin(flipped_gravity, anchor_x, flipped_y, width, height);
+            if popup_overflow_y(candidate, height, screen_height)
+                < popup_overflow_y(top, height, screen_height)
+            {
+                gravity = flipped_gravity;
+                top = candidate;
+            }
+        }
+        left += options.offset.x.as_f32() as f64;
+        top += options.offset.y.as_f32() as f64;
+        if adjustment.contains(PopupConstraintAdjustment::SLIDE_X) {
+            left = left.clamp(0.0, (screen_width - width).max(0.0));
+        }
+        if adjustment.contains(PopupConstraintAdjustment::SLIDE_Y) {
+            top = top.clamp(0.0, (screen_height - height).max(0.0));
+        }
+
+        let frame = NSRect::new(
+            NSPoint::new(
+                visible.origin.x + left,
+                visible.origin.y + screen_height - top - height,
+            ),
+            NSSize::new(width, height),
+        );
+        (
+            frame,
+            Size::new(px(width as f32), px(height as f32)),
+            selected_screen,
+        )
+    }
+}
+
+fn popup_anchor_x(anchor: PopupAnchor, left: f64, width: f64) -> f64 {
+    match anchor {
+        PopupAnchor::Center | PopupAnchor::Top | PopupAnchor::Bottom => left + width / 2.0,
+        PopupAnchor::Left | PopupAnchor::TopLeft | PopupAnchor::BottomLeft => left,
+        PopupAnchor::Right | PopupAnchor::TopRight | PopupAnchor::BottomRight => left + width,
+    }
+}
+
+fn popup_anchor_y(anchor: PopupAnchor, top: f64, height: f64) -> f64 {
+    match anchor {
+        PopupAnchor::Center | PopupAnchor::Left | PopupAnchor::Right => top + height / 2.0,
+        PopupAnchor::Top | PopupAnchor::TopLeft | PopupAnchor::TopRight => top,
+        PopupAnchor::Bottom | PopupAnchor::BottomLeft | PopupAnchor::BottomRight => top + height,
+    }
+}
+
+fn popup_origin(gravity: PopupGravity, x: f64, y: f64, width: f64, height: f64) -> (f64, f64) {
+    match gravity {
+        PopupGravity::Center => (x - width / 2.0, y - height / 2.0),
+        PopupGravity::Top => (x - width / 2.0, y - height),
+        PopupGravity::Bottom => (x - width / 2.0, y),
+        PopupGravity::Left => (x - width, y - height / 2.0),
+        PopupGravity::Right => (x, y - height / 2.0),
+        PopupGravity::TopLeft => (x - width, y - height),
+        PopupGravity::BottomLeft => (x - width, y),
+        PopupGravity::TopRight => (x, y - height),
+        PopupGravity::BottomRight => (x, y),
+    }
+}
+
+fn popup_overflow_x(left: f64, width: f64, screen_width: f64) -> f64 {
+    (-left).max(0.0) + (left + width - screen_width).max(0.0)
+}
+
+fn popup_overflow_y(top: f64, height: f64, screen_height: f64) -> f64 {
+    (-top).max(0.0) + (top + height - screen_height).max(0.0)
+}
+
+fn flip_popup_gravity_x(gravity: PopupGravity) -> PopupGravity {
+    match gravity {
+        PopupGravity::Center | PopupGravity::Top | PopupGravity::Bottom => gravity,
+        PopupGravity::Left => PopupGravity::Right,
+        PopupGravity::Right => PopupGravity::Left,
+        PopupGravity::TopLeft => PopupGravity::TopRight,
+        PopupGravity::BottomLeft => PopupGravity::BottomRight,
+        PopupGravity::TopRight => PopupGravity::TopLeft,
+        PopupGravity::BottomRight => PopupGravity::BottomLeft,
+    }
+}
+
+fn flip_popup_anchor_x(anchor: PopupAnchor) -> PopupAnchor {
+    match anchor {
+        PopupAnchor::Center | PopupAnchor::Top | PopupAnchor::Bottom => anchor,
+        PopupAnchor::Left => PopupAnchor::Right,
+        PopupAnchor::Right => PopupAnchor::Left,
+        PopupAnchor::TopLeft => PopupAnchor::TopRight,
+        PopupAnchor::BottomLeft => PopupAnchor::BottomRight,
+        PopupAnchor::TopRight => PopupAnchor::TopLeft,
+        PopupAnchor::BottomRight => PopupAnchor::BottomLeft,
+    }
+}
+
+fn flip_popup_gravity_y(gravity: PopupGravity) -> PopupGravity {
+    match gravity {
+        PopupGravity::Center | PopupGravity::Left | PopupGravity::Right => gravity,
+        PopupGravity::Top => PopupGravity::Bottom,
+        PopupGravity::Bottom => PopupGravity::Top,
+        PopupGravity::TopLeft => PopupGravity::BottomLeft,
+        PopupGravity::BottomLeft => PopupGravity::TopLeft,
+        PopupGravity::TopRight => PopupGravity::BottomRight,
+        PopupGravity::BottomRight => PopupGravity::TopRight,
+    }
+}
+
+fn flip_popup_anchor_y(anchor: PopupAnchor) -> PopupAnchor {
+    match anchor {
+        PopupAnchor::Center | PopupAnchor::Left | PopupAnchor::Right => anchor,
+        PopupAnchor::Top => PopupAnchor::Bottom,
+        PopupAnchor::Bottom => PopupAnchor::Top,
+        PopupAnchor::TopLeft => PopupAnchor::BottomLeft,
+        PopupAnchor::BottomLeft => PopupAnchor::TopLeft,
+        PopupAnchor::TopRight => PopupAnchor::BottomRight,
+        PopupAnchor::BottomRight => PopupAnchor::TopRight,
+    }
+}
+
+#[cfg(test)]
+mod anchored_popup_placement_tests {
+    use super::*;
+
+    #[test]
+    fn anchor_points_and_gravity_follow_top_left_popup_coordinates() {
+        assert_eq!(popup_anchor_x(PopupAnchor::TopRight, 10.0, 20.0), 30.0);
+        assert_eq!(popup_anchor_y(PopupAnchor::TopRight, 5.0, 8.0), 5.0);
+        assert_eq!(popup_anchor_x(PopupAnchor::BottomLeft, 10.0, 20.0), 10.0);
+        assert_eq!(popup_anchor_y(PopupAnchor::BottomLeft, 5.0, 8.0), 13.0);
+        assert_eq!(
+            popup_origin(PopupGravity::BottomRight, 30.0, 13.0, 12.0, 6.0),
+            (30.0, 13.0)
+        );
+        assert_eq!(
+            popup_origin(PopupGravity::TopLeft, 30.0, 13.0, 12.0, 6.0),
+            (18.0, 7.0)
+        );
+    }
+
+    #[test]
+    fn anchor_and_gravity_flip_together_at_screen_edges() {
+        let right = popup_anchor_x(PopupAnchor::BottomRight, 10.0, 20.0);
+        assert_eq!(flip_popup_anchor_x(PopupAnchor::BottomLeft), PopupAnchor::BottomRight);
+        assert_eq!(
+            popup_origin(
+                flip_popup_gravity_x(PopupGravity::BottomRight),
+                right,
+                13.0,
+                12.0,
+                6.0,
+            ),
+            (18.0, 13.0)
+        );
+        assert_eq!(popup_anchor_x(PopupAnchor::BottomLeft, 10.0, 20.0), 10.0);
+
+        let top = popup_anchor_y(PopupAnchor::TopLeft, 5.0, 8.0);
+        let bottom = popup_anchor_y(PopupAnchor::BottomLeft, 5.0, 8.0);
+        assert_eq!(flip_popup_anchor_y(PopupAnchor::BottomLeft), PopupAnchor::TopLeft);
+        assert_eq!(
+            popup_origin(
+                flip_popup_gravity_y(PopupGravity::BottomRight),
+                10.0,
+                top,
+                12.0,
+                4.0,
+            ),
+            (10.0, 1.0)
+        );
+        assert_eq!(bottom, 13.0);
+    }
+
+    #[test]
+    fn gravity_flips_only_the_requested_axis() {
+        assert_eq!(
+            flip_popup_gravity_x(PopupGravity::BottomRight),
+            PopupGravity::BottomLeft
+        );
+        assert_eq!(
+            flip_popup_gravity_y(PopupGravity::BottomRight),
+            PopupGravity::TopRight
+        );
+        assert_eq!(flip_popup_gravity_x(PopupGravity::Top), PopupGravity::Top);
+        assert_eq!(flip_popup_gravity_y(PopupGravity::Left), PopupGravity::Left);
+    }
+
+    #[test]
+    fn overflow_score_reports_only_clipped_distance() {
+        assert_eq!(popup_overflow_x(-3.0, 20.0, 100.0), 3.0);
+        assert_eq!(popup_overflow_x(90.0, 20.0, 100.0), 10.0);
+        assert_eq!(popup_overflow_y(10.0, 20.0, 100.0), 0.0);
+        assert_eq!(popup_overflow_y(90.0, 20.0, 100.0), 10.0);
+    }
+}
 unsafe impl Send for MacWindowState {}
 
 pub(crate) struct MacWindow(Arc<Mutex<MacWindowState>>, MainThreadMarker);
@@ -963,7 +1242,7 @@ impl MacWindow {
     pub fn open(
         handle: AnyWindowHandle,
         WindowParams {
-            bounds,
+            mut bounds,
             titlebar,
             kind,
             is_movable,
@@ -982,7 +1261,10 @@ impl MacWindow {
         background_executor: BackgroundExecutor,
         renderer_context: renderer::Context,
         marker: MainThreadMarker,
+        popup_parent: Option<id>,
     ) -> Self {
+        let popup_grab = matches!(&kind, WindowKind::AnchoredPopup(options) if options.grab);
+        let focus = focus || popup_grab;
         unsafe {
             let pool = NSAutoreleasePool::new(nil);
 
@@ -1014,14 +1296,20 @@ impl MacWindow {
                     | NSWindowStyleMask::NSFullSizeContentViewWindowMask;
             }
 
-            let native_window: id = match kind {
+            let native_window: id = match &kind {
                 WindowKind::Normal => {
                     msg_send![WINDOW_CLASS, alloc]
                 }
                 // `AnchoredPopup` is rejected in `MacPlatform::open_window`, grouped here only
                 // for exhaustiveness.
-                WindowKind::PopUp | WindowKind::AnchoredPopup(_) => {
+                WindowKind::PopUp => {
                     style_mask |= NSWindowStyleMaskNonactivatingPanel;
+                    msg_send![PANEL_CLASS, alloc]
+                }
+                WindowKind::AnchoredPopup(options) => {
+                    if !options.grab {
+                        style_mask |= NSWindowStyleMaskNonactivatingPanel;
+                    }
                     msg_send![PANEL_CLASS, alloc]
                 }
                 WindowKind::Floating | WindowKind::Dialog => {
@@ -1056,7 +1344,7 @@ impl MacWindow {
                 NSScreen::frame(screen)
             });
 
-            let window_rect = NSRect::new(
+            let mut window_rect = NSRect::new(
                 NSPoint::new(
                     screen_frame.origin.x + bounds.origin.x.as_f32() as f64,
                     screen_frame.origin.y
@@ -1067,6 +1355,13 @@ impl MacWindow {
                     bounds.size.height.as_f32() as f64,
                 ),
             );
+            if let (Some(parent), WindowKind::AnchoredPopup(options)) = (popup_parent, &kind) {
+                let (frame, size, popup_screen) =
+                    anchored_popup_frame(parent, options, bounds.size);
+                window_rect = frame;
+                bounds.size = size;
+                target_screen = popup_screen;
+            }
 
             let native_window = native_window.initWithContentRect_styleMask_backing_defer_screen_(
                 window_rect,
@@ -1097,6 +1392,7 @@ impl MacWindow {
                 background_executor,
                 native_window,
                 native_view: NonNull::new_unchecked(native_view),
+                dismiss_popup_on_resign: popup_grab,
                 blurred_view: None,
                 background_appearance: WindowBackgroundAppearance::Opaque,
                 cursor_style: CursorStyle::Arrow,
@@ -1290,6 +1586,10 @@ impl MacWindow {
                 }
             }
 
+            if let Some(parent) = popup_parent {
+                let _: () = msg_send![parent, addChildWindow: native_window ordered: NSWindowOrderingMode::NSWindowAbove];
+            }
+
             if focus && show {
                 native_window.makeKeyAndOrderFront_(nil);
             } else if show {
@@ -1300,7 +1600,9 @@ impl MacWindow {
             // Although we already specified the position using `initWithContentRect_styleMask_backing_defer_screen_`,
             // the window position might be incorrect if the main screen (the screen that contains the window that has focus)
             //  is different from the primary screen.
-            NSWindow::setFrameTopLeftPoint_(native_window, window_rect.origin);
+            if popup_parent.is_none() {
+                NSWindow::setFrameTopLeftPoint_(native_window, window_rect.origin);
+            }
             {
                 let mut window_state = window.0.lock();
                 window_state.move_traffic_light();
@@ -1310,6 +1612,21 @@ impl MacWindow {
             pool.drain();
 
             window
+        }
+    }
+
+    pub fn native_window_for_handle(handle: AnyWindowHandle) -> Option<id> {
+        unsafe {
+            let app = NSApplication::sharedApplication(nil);
+            let windows: id = msg_send![app, windows];
+            let count: NSUInteger = msg_send![windows, count];
+            for index in 0..count {
+                let window: id = msg_send![windows, objectAtIndex: index];
+                if is_gpui_window(window) && get_window_state(&*window).lock().handle == handle {
+                    return Some(window);
+                }
+            }
+            None
         }
     }
 
@@ -3174,6 +3491,19 @@ extern "C" fn window_did_change_key_status(this: &Object, selector: Sel, _: id) 
         return;
     }
 
+    if selector == sel!(windowDidResignKey:) && lock.dismiss_popup_on_resign {
+        let native_window = lock.native_window;
+        let children: id = unsafe { msg_send![native_window, childWindows] };
+        let child_count: NSUInteger = unsafe { msg_send![children, count] };
+        drop(lock);
+        if child_count == 0 {
+            unsafe {
+                let _: () = msg_send![native_window, close];
+            }
+        }
+        return;
+    }
+
     let executor = lock.foreground_executor.clone();
     drop(lock);
 
@@ -3258,6 +3588,17 @@ extern "C" fn close_window(this: &Object, _: Sel) {
                 lock.simple_fullscreen_state.take(),
             )
         };
+
+        let children: id = msg_send![this, childWindows];
+        let child_count: NSUInteger = msg_send![children, count];
+        for index in (0..child_count).rev() {
+            let child: id = msg_send![children, objectAtIndex: index];
+            if child.is_null() || child == this as *const Object as id {
+                continue;
+            }
+            let _: () = msg_send![this, removeChildWindow: child];
+            let _: () = msg_send![child, close];
+        }
 
         if simple_fullscreen_state.is_some() {
             pop_simple_fullscreen_presentation_options();
