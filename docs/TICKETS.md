@@ -88,6 +88,8 @@ Phase B — features (after Phase A)
 - T15a — Editable DataGrid editing core: typed text columns, row identity, validation, editing and basic navigation.
 - T15b — Editable DataGrid sorting: stable view-only ascending/descending/none order.
 - T15c — Editable DataGrid navigation, conflict handling and accessibility details; Tab/Shift-Tab exit at grid edges.
+- T15c deferred: Tab exit needs GPUI focus traversal from a dropped editor.
+- T15c deferred: semantic read-only, sort-direction, and cell-to-header relationships need GPUI accessibility hooks.
 
 ## T16 — Theme capabilities
 **Do:** Add sidebar, toolbar, and tab-bar capabilities and a typed token API in `theme/tokens.rs`.
