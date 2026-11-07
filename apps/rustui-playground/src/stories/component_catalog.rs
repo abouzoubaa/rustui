@@ -21,6 +21,7 @@ pub enum StoryId {
     Navigation,
     Validation,
     EditableGrid,
+    FileDrop,
 }
 
 impl StoryId {
@@ -33,6 +34,7 @@ impl StoryId {
             Self::Input => "input",
             Self::Validation => "validation",
             Self::EditableGrid => "editable-grid",
+            Self::FileDrop => "file-drop",
             Self::List => "list",
             Self::Table => "table",
             Self::Tree => "tree",
@@ -54,6 +56,9 @@ impl StoryId {
         if self == Self::EditableGrid {
             return "Editable grid".into();
         }
+        if self == Self::FileDrop {
+            return "File drop".into();
+        }
         format!("lab-story-{}-title", self.message_slug())
     }
 
@@ -63,6 +68,9 @@ impl StoryId {
         }
         if self == Self::EditableGrid {
             return "Edit typed product rows and validate quantities.".into();
+        }
+        if self == Self::FileDrop {
+            return "Drop image files from Finder.".into();
         }
         format!("lab-story-{}-summary", self.message_slug())
     }
@@ -76,6 +84,7 @@ impl StoryId {
             Self::Input => "Text inputs",
             Self::Validation => "Validation",
             Self::EditableGrid => "Editable grid",
+            Self::FileDrop => "File drop",
             Self::List => "List",
             Self::Table => "Table",
             Self::Tree => "Tree",
@@ -98,7 +107,7 @@ pub struct StoryDefinition {
     pub summary: &'static str,
 }
 
-pub const STORIES: [StoryDefinition; 18] = [
+pub const STORIES: [StoryDefinition; 19] = [
     StoryDefinition {
         id: StoryId::Button,
         title: "Button",
@@ -188,6 +197,11 @@ pub const STORIES: [StoryDefinition; 18] = [
         id: StoryId::EditableGrid,
         title: "Editable grid",
         summary: "Edit typed product rows and validate quantities.",
+    },
+    StoryDefinition {
+        id: StoryId::FileDrop,
+        title: "File drop",
+        summary: "Drop image files from Finder.",
     },
 ];
 

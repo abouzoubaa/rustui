@@ -142,6 +142,7 @@ impl View for StoryCanvas {
     fn body(&self) -> impl View {
         match self.story {
             StoryId::EditableGrid => VStack::new().child(super::editable_grid_gallery::demo()),
+            StoryId::FileDrop => VStack::new().child(super::file_drop_gallery::demo()),
             StoryId::Validation => VStack::new().child(super::validation_gallery::demo()),
             StoryId::Button => VStack::new()
                 .child(

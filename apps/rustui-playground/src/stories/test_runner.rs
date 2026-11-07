@@ -40,6 +40,7 @@ pub const fn status_for(story: StoryId) -> VerificationStatus {
             VerificationStatus::BoundedNativeChecksRecorded
         }
         StoryId::EditableGrid
+        | StoryId::FileDrop
         | StoryId::Validation
         | StoryId::Text
         | StoryId::Card

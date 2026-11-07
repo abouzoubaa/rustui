@@ -4,6 +4,9 @@ use super::component_catalog::StoryId;
 
 pub fn source_for(story: StoryId) -> &'static str {
     match story {
+        StoryId::FileDrop => {
+            r#"DropTarget::files("images", dropped_binding, child).extensions(["png", "jpg", "jpeg", "gif"])"#
+        }
         StoryId::EditableGrid => {
             r#"EditableDataGrid("Products", rows_binding, |row: &Product| row.id.into(), columns)
     .id("editable-grid")"#
