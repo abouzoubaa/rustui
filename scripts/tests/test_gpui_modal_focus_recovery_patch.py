@@ -34,6 +34,12 @@ class ModalFocusPatchTests(unittest.TestCase):
             target = self.artifacts / relative
             target.parent.mkdir(parents=True, exist_ok=True)
             shutil.copy2(ROOT / relative, target)
+        inert_spec = importlib.util.spec_from_file_location(
+            "inert_focus_patch", ROOT / "scripts/apply_gpui_inert_focus_scope_patch.py"
+        )
+        inert = importlib.util.module_from_spec(inert_spec)
+        inert_spec.loader.exec_module(inert)
+        inert.run(self.root, ROOT, "--reverse")
         if HELPER.digest((self.root / next(iter(self.meta["files"]))).read_bytes()) == next(iter(self.meta["files"].values()))["post"]:
             self.run_mode("--reverse")
         self.pre = {name: (self.root / name).read_bytes() for name in self.meta["files"]}
