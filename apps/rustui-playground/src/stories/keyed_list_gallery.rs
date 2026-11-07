@@ -166,11 +166,11 @@ impl View for KeyedListGallery {
                         Button("Reverse", self.action(Self::reverse_rows)).id("keyed-list-reverse"),
                     )
                     .child(
-                        Button("Prepend new", self.action(Self::prepend_row))
+                        Button("Add", self.action(Self::prepend_row))
                             .id("keyed-list-prepend"),
                     )
                     .child(
-                        Button("Remove selected", self.action(Self::remove_selected))
+                        Button("Remove", self.action(Self::remove_selected))
                             .id("keyed-list-remove"),
                     )
                     .child(Button("Reset", self.action(Self::reset)).id("keyed-list-reset")),
@@ -191,6 +191,7 @@ impl View for KeyedListGallery {
                     items,
                     self.selected_row_binding(),
                 )
+                .transition(Transition::fade_slide(Edge::Leading))
                 .height(420.0)
                 .row_height(32.0)
                 .searchable(true)

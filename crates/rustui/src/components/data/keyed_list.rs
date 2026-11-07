@@ -1,10 +1,15 @@
 //! Controlled, stable-ID string list backed by retained GPUI ListState.
 
-use std::{cell::RefCell, collections::HashSet, rc::Rc};
+use std::{
+    cell::{Cell, RefCell},
+    collections::{HashMap, HashSet},
+    rc::Rc,
+};
 
 use gpui::{
-    AnyElement, App, Context, ElementId, InteractiveElement as _, IntoElement, ParentElement as _,
-    SharedString, StatefulInteractiveElement as _, Styled as _, Task, Window, div, px,
+    AnimationExt as _, AnyElement, App, Context, ElementId, FocusHandle, InteractiveElement as _,
+    IntoElement, ParentElement as _, SharedString, StatefulInteractiveElement as _, Styled as _,
+    Task, Window, div, px,
 };
 use gpui_component::{
     IndexPath,
@@ -12,7 +17,11 @@ use gpui_component::{
 };
 use rustui_core::{Binding, Identity};
 
-use crate::view::{EmptyView, RenderContext, View};
+use crate::{
+    animation::transition::{Edge, Transition},
+    view::{EmptyView, RenderContext, View},
+};
+use rustui_i18n::LayoutDirection;
 
 type SelectionUpdater<T> = Rc<dyn Fn(&mut T)>;
 
@@ -132,7 +141,19 @@ fn clear_selection_on_cancel(
     true
 }
 
+struct RowAnimation {
+    progress: Rc<Cell<f32>>,
+    finished: Rc<Cell<bool>>,
+    focus: FocusHandle,
+}
+
 struct KeyedListDelegate {
+    source_items: Vec<KeyedListItem>,
+    exits: HashMap<String, Rc<RowAnimation>>,
+    animations: HashMap<String, Rc<RowAnimation>>,
+    container_focus: Option<FocusHandle>,
+    transition: Option<Transition>,
+    direction: LayoutDirection,
     items: Vec<KeyedListItem>,
     visible: Vec<usize>,
     query: String,
@@ -155,6 +176,12 @@ impl KeyedListDelegate {
     ) -> Self {
         let visible = (0..items.len()).collect();
         Self {
+            source_items: items.clone(),
+            exits: HashMap::new(),
+            animations: HashMap::new(),
+            container_focus: None,
+            transition: None,
+            direction: LayoutDirection::LeftToRight,
             items,
             visible,
             query: String::new(),
@@ -169,7 +196,67 @@ impl KeyedListDelegate {
     }
 
     fn replace_items(&mut self, items: Vec<KeyedListItem>, row_height: f32) {
+        self.source_items = items.clone();
         self.items = items;
+        self.row_height = row_height;
+        self.apply_query();
+    }
+
+    fn replace_transition_items(
+        &mut self,
+        items: Vec<KeyedListItem>,
+        row_height: f32,
+        window: &mut Window,
+        cx: &mut Context<ListState<Self>>,
+    ) {
+        let ids: HashSet<_> = items.iter().map(|item| item.id.clone()).collect();
+        for id in &ids {
+            if let Some(exit) = self.exits.remove(id) {
+                exit.finished.set(false);
+                window.set_focus_scope_inert(&exit.focus, false);
+            }
+        }
+        for id in &ids {
+            self.animations.entry(id.clone()).or_insert_with(|| {
+                Rc::new(RowAnimation {
+                    progress: Rc::new(Cell::new(0.0)),
+                    finished: Rc::new(Cell::new(false)),
+                    focus: cx.focus_handle(),
+                })
+            });
+        }
+        let mut combined = items.clone();
+        for (index, item) in self.items.iter().enumerate() {
+            if !ids.contains(&item.id) {
+                let animation = self
+                    .animations
+                    .entry(item.id.clone())
+                    .or_insert_with(|| {
+                        Rc::new(RowAnimation {
+                            progress: Rc::new(Cell::new(1.0)),
+                            finished: Rc::new(Cell::new(true)),
+                            focus: cx.focus_handle(),
+                        })
+                    })
+                    .clone();
+                if !self.exits.contains_key(&item.id) {
+                    animation.finished.set(false);
+                    if animation.focus.contains_focused(window, cx) {
+                        window.focus_next(cx);
+                        if animation.focus.contains_focused(window, cx) {
+                            if let Some(container) = &self.container_focus {
+                                container.focus(window, cx);
+                            }
+                        }
+                    }
+                    window.set_focus_scope_inert(&animation.focus, true);
+                    self.exits.insert(item.id.clone(), animation);
+                }
+                combined.insert(index.min(combined.len()), item.clone());
+            }
+        }
+        self.source_items = items;
+        self.items = combined;
         self.row_height = row_height;
         self.apply_query();
     }
@@ -194,6 +281,7 @@ impl KeyedListDelegate {
     fn id_at(&self, index: IndexPath) -> Option<&str> {
         self.items
             .get(self.source_index(index)?)
+            .filter(|item| !self.exits.contains_key(&item.id))
             .map(|item| item.id.as_str())
     }
 
@@ -204,6 +292,45 @@ impl KeyedListDelegate {
             .position(|source| self.items[*source].id == id)
             .map(IndexPath::new)
     }
+}
+
+fn schedule_exits(window: &mut Window, weak: gpui::WeakEntity<ListState<KeyedListDelegate>>) {
+    window.on_next_frame(move |window, app| {
+        let Some(state) = weak.upgrade() else {
+            return;
+        };
+        let more = state.update(app, |state, cx| {
+            let delegate = state.delegate_mut();
+            delegate.exits.retain(|_, exit| {
+                if exit.finished.get() {
+                    window.set_focus_scope_inert(&exit.focus, false);
+                    false
+                } else {
+                    true
+                }
+            });
+            let source: HashSet<_> = delegate
+                .source_items
+                .iter()
+                .map(|item| item.id.clone())
+                .collect();
+            let before = delegate.items.len();
+            delegate
+                .items
+                .retain(|item| source.contains(&item.id) || delegate.exits.contains_key(&item.id));
+            if before != delegate.items.len() {
+                delegate
+                    .animations
+                    .retain(|id, _| source.contains(id) || delegate.exits.contains_key(id));
+                delegate.apply_query();
+                cx.notify();
+            }
+            !delegate.exits.is_empty()
+        });
+        if more {
+            schedule_exits(window, weak);
+        }
+    });
 }
 
 impl ListDelegate for KeyedListDelegate {
@@ -221,26 +348,83 @@ impl ListDelegate for KeyedListDelegate {
     ) -> Option<Self::Item> {
         let item = self.items.get(self.source_index(index)?)?;
         let label = SharedString::from(item.label.clone());
+        let exiting = self.exits.get(&item.id);
+        let label_element = div()
+            .id((ElementId::from("rustui-keyed-list-label"), item.id.clone()))
+            .role(gpui::Role::Label)
+            .aria_label(label.clone())
+            .child(label.clone());
+        #[cfg(test)]
+        let label_element = if item.id == "a" {
+            label_element.debug_selector(|| "t17-exiting-list-row".into())
+        } else {
+            label_element
+        };
+        let mut content = div().relative().w_full().h_full().child(label_element);
+        if let Some(animation) = self.animations.get(&item.id) {
+            content = content.track_focus(&animation.focus);
+        }
+        if exiting.is_some() {
+            content = content.child(div().absolute().inset_0().occlude());
+        }
+        if let (Some(transition), Some(animation)) =
+            (self.transition, self.animations.get(&item.id))
+        {
+            let progress = animation.progress.get().clamp(0.0, 1.0);
+            if transition.fade {
+                content = content.opacity(progress);
+            }
+            let offset = 16.0 * (1.0 - progress);
+            match transition.slide {
+                Some(Edge::Leading) => {
+                    content = content.left(px(if self.direction == LayoutDirection::RightToLeft {
+                        offset
+                    } else {
+                        -offset
+                    }))
+                }
+                Some(Edge::Trailing) => {
+                    content = content.left(px(if self.direction == LayoutDirection::RightToLeft {
+                        -offset
+                    } else {
+                        offset
+                    }))
+                }
+                Some(Edge::Top) => content = content.top(px(-offset)),
+                Some(Edge::Bottom) => content = content.top(px(offset)),
+                None => {}
+            }
+        }
+        let content = content.into_any_element();
         Some(
             ListItem::new((ElementId::from("rustui-keyed-list-row"), item.id.clone()))
                 .h(px(self.row_height))
-                .accessibility_label(label.clone())
-                .child(
-                    div()
-                        .id((ElementId::from("rustui-keyed-list-label"), item.id.clone()))
-                        .role(gpui::Role::Label)
-                        .aria_label(label.clone())
-                        .child(label),
-                ),
+                .accessibility_label(label)
+                .disabled(exiting.is_some())
+                .child(content),
         )
     }
 
     fn set_selected_index(
         &mut self,
-        _index: Option<IndexPath>,
-        _window: &mut Window,
-        _cx: &mut Context<ListState<Self>>,
+        index: Option<IndexPath>,
+        window: &mut Window,
+        cx: &mut Context<ListState<Self>>,
     ) {
+        if index.is_some_and(|index| {
+            self.source_index(index)
+                .is_some_and(|source| self.exits.contains_key(&self.items[source].id))
+        }) {
+            let state = cx.entity();
+            let selected = self.selection_id.clone();
+            window.defer(cx, move |window, app| {
+                state.update(app, |state, cx| {
+                    let index = state.delegate().visible_index(selected.borrow().as_deref());
+                    state.set_selected_index(index, window, cx);
+                    cx.notify();
+                })
+            });
+        }
     }
 
     fn perform_search(
@@ -282,6 +466,7 @@ pub struct KeyedListView {
     selectable: bool,
     scrollbar_visible: bool,
     search_placeholder: Option<SharedString>,
+    transition: Option<Transition>,
 }
 
 impl KeyedListView {
@@ -305,7 +490,13 @@ impl KeyedListView {
             selectable: true,
             scrollbar_visible: true,
             search_placeholder: None,
+            transition: None,
         }
+    }
+
+    pub fn transition(mut self, transition: Transition) -> Self {
+        self.transition = Some(transition);
+        self
     }
 
     pub fn height(mut self, height: f32) -> Self {
@@ -356,6 +547,8 @@ impl View for KeyedListView {
         let row_height = self.row_height;
         let searchable = self.searchable;
         let selectable = self.selectable;
+        let transition = self.transition.filter(|_| !context.app().reduce_motion());
+        let direction = context.layout_direction();
         let (state, created) = context.retained_entity(identity.clone(), |window, cx| {
             let initial_selection = valid_selection(&self.items, self.selection.value().as_deref());
             let delegate = KeyedListDelegate::new(
@@ -365,6 +558,22 @@ impl View for KeyedListView {
                 searchable,
                 selectable,
             );
+            let mut delegate = delegate;
+            delegate.transition = transition;
+            delegate.direction = direction;
+            if transition.is_some() {
+                delegate.container_focus = Some(cx.focus_handle());
+                for item in &delegate.items {
+                    delegate.animations.insert(
+                        item.id.clone(),
+                        Rc::new(RowAnimation {
+                            progress: Rc::new(Cell::new(0.0)),
+                            finished: Rc::new(Cell::new(false)),
+                            focus: cx.focus_handle(),
+                        }),
+                    );
+                }
+            }
             let selected = delegate.visible_index(initial_selection.as_deref());
             let mut state = ListState::new(delegate, window, cx)
                 .searchable(searchable)
@@ -467,14 +676,34 @@ impl View for KeyedListView {
         }
         let data_changed = {
             let state = state.read(context.app());
-            state.delegate().items != self.items || state.delegate().row_height != self.row_height
+            state.delegate().source_items != self.items
+                || state.delegate().row_height != self.row_height
+                || state.delegate().transition != transition
+                || state.delegate().direction != direction
         };
         if data_changed {
             let items = self.items.clone();
             let selection = desired.clone();
             let row_height = self.row_height;
+            let transition = self.transition.filter(|_| !context.app().reduce_motion());
+            let direction = context.layout_direction();
             context.update_entity(&state, move |state, window, cx| {
-                state.delegate_mut().replace_items(items, row_height);
+                let delegate = state.delegate_mut();
+                delegate.transition = transition;
+                delegate.direction = direction;
+                if transition.is_some() {
+                    if delegate.container_focus.is_none() {
+                        delegate.container_focus = Some(cx.focus_handle());
+                    }
+                    delegate.replace_transition_items(items, row_height, window, cx);
+                    if !delegate.exits.is_empty() {
+                        schedule_exits(window, cx.entity().downgrade());
+                    }
+                } else {
+                    delegate.exits.clear();
+                    delegate.animations.clear();
+                    delegate.replace_items(items, row_height);
+                }
                 let selected = state.delegate().visible_index(selection.as_deref());
                 state.set_selected_index(selected, window, cx);
                 cx.notify();
@@ -509,7 +738,68 @@ impl View for KeyedListView {
         if let Some(placeholder) = &self.search_placeholder {
             list = list.search_placeholder(placeholder.clone());
         }
-        list.into_any_element()
+        let trackers = {
+            let delegate = state.read(context.app()).delegate();
+            if delegate.transition.is_none() {
+                Vec::new()
+            } else {
+                delegate
+                    .items
+                    .iter()
+                    .filter_map(|item| {
+                        let animation = delegate.animations.get(&item.id)?.clone();
+                        let target = if delegate.exits.contains_key(&item.id) {
+                            0.0
+                        } else {
+                            1.0
+                        };
+                        let progress = animation.progress.clone();
+                        let finished = animation.finished.clone();
+                        Some(
+                            div()
+                                .absolute()
+                                .size_0()
+                                .with_spring(
+                                    (
+                                        ElementId::from("rustui-keyed-list-tracker"),
+                                        item.id.clone(),
+                                    ),
+                                    gpui::SpringAnimation::new(gpui::SpringConfig::new(
+                                        170.0, 26.0, 1.0,
+                                    ))
+                                    .to(target)
+                                    .from(animation.progress.get())
+                                    .with_epsilon(0.001),
+                                    move |element, value: f32| {
+                                        progress.set(value);
+                                        if value == target {
+                                            finished.set(true);
+                                        }
+                                        element
+                                    },
+                                )
+                                .into_any_element(),
+                        )
+                    })
+                    .collect::<Vec<_>>()
+            }
+        };
+        if trackers.is_empty() {
+            list.into_any_element()
+        } else {
+            let focus = state
+                .read(context.app())
+                .delegate()
+                .container_focus
+                .clone()
+                .expect("animated list has a focus container");
+            div()
+                .relative()
+                .track_focus(&focus)
+                .child(list)
+                .children(trackers)
+                .into_any_element()
+        }
     }
 }
 
@@ -865,5 +1155,257 @@ mod tests {
 
         assert!(!old_writer_called.get());
         assert!(new_writer_called.get());
+    }
+    struct TransitionOwner {
+        show: bool,
+        animated: bool,
+        selection: Option<String>,
+        writes: usize,
+    }
+    impl View for TransitionOwner {
+        fn body(&self) -> impl View {
+            EmptyView
+        }
+        fn into_element(&self, context: &mut RenderContext<'_>) -> AnyElement {
+            let binding = Binding::new(
+                self.selection.clone(),
+                |owner: &Self| owner.selection.clone(),
+                |owner, value| {
+                    owner.selection = value;
+                    owner.writes += 1;
+                },
+            );
+            let list = KeyedList(
+                "transition-list",
+                [
+                    self.show.then(|| KeyedListItem::new("a", "Alpha")),
+                    Some(KeyedListItem::new("b", "Beta")),
+                ]
+                .into_iter()
+                .flatten(),
+                binding,
+            );
+            let list = if self.animated {
+                list.transition(Transition::fade_slide(Edge::Leading))
+            } else {
+                list
+            };
+            div()
+                .w(px(320.0))
+                .h(px(280.0))
+                .child(list.into_element(context))
+                .into_any_element()
+        }
+    }
+
+    fn transition_setup(
+        cx: &mut gpui::TestAppContext,
+        reduced: bool,
+        animated: bool,
+    ) -> (
+        gpui::Entity<crate::runtime::ComponentHost<TransitionOwner>>,
+        &mut gpui::VisualTestContext,
+        gpui::Entity<ListState<KeyedListDelegate>>,
+    ) {
+        let theme = crate::theme::parse_theme(include_str!(concat!(
+            env!("CARGO_MANIFEST_DIR"),
+            "/../../themes/macos27.json"
+        )))
+        .unwrap();
+        cx.update(|app| {
+            gpui_component::init(app);
+            app.set_reduce_motion(reduced);
+            crate::theme::activate_theme(&theme, Some(crate::theme::AppearanceMode::Dark), app)
+                .unwrap();
+        });
+        let (owner, window) = cx.add_window_view(|_, app| {
+            crate::runtime::ComponentHost::new(
+                TransitionOwner {
+                    show: true,
+                    animated,
+                    selection: None,
+                    writes: 0,
+                },
+                app,
+            )
+        });
+        let state = window.update(|window, app| {
+            window.draw(app).clear(app);
+            owner
+                .read(app)
+                .retained_entity_for_test::<ListState<KeyedListDelegate>>(
+                    vec![],
+                    Identity::from("transition-list"),
+                )
+                .unwrap()
+        });
+        (owner, window, state)
+    }
+    fn transition_draw(window: &mut gpui::VisualTestContext) {
+        window.update(|window, app| {
+            window.refresh();
+            window.draw(app).clear(app);
+        });
+        window.cx.run_until_parked();
+    }
+    fn transition_frames(
+        window: &mut gpui::VisualTestContext,
+        duration: std::time::Duration,
+    ) -> usize {
+        std::thread::sleep(duration);
+        window.cx.executor().advance_clock(duration);
+        let count = window.update(|window, app| window.simulate_next_frame(app));
+        window.cx.run_until_parked();
+        transition_draw(window);
+        count
+    }
+    fn transition_show(
+        owner: &gpui::Entity<crate::runtime::ComponentHost<TransitionOwner>>,
+        window: &mut gpui::VisualTestContext,
+        show: bool,
+    ) {
+        owner.update(window, |owner, cx| {
+            owner.component_mut().show = show;
+            cx.notify();
+        });
+        transition_draw(window);
+    }
+
+    #[gpui::test]
+    fn keyed_list_insertion_exit_and_reinsertion_use_one_native_spring(
+        cx: &mut gpui::TestAppContext,
+    ) {
+        let (owner, window, state) = transition_setup(cx, false, true);
+        let initial_x = window
+            .debug_bounds("t17-exiting-list-row")
+            .unwrap()
+            .origin
+            .x;
+        window.update(|_, app| {
+            assert!(state.read(app).delegate().animations["a"].progress.get() < 1.0)
+        });
+        transition_frames(window, std::time::Duration::from_secs(2));
+        assert!(
+            window
+                .debug_bounds("t17-exiting-list-row")
+                .unwrap()
+                .origin
+                .x
+                > initial_x
+        );
+        window.update(|_, app| {
+            assert_eq!(
+                state.read(app).delegate().animations["a"].progress.get(),
+                1.0
+            )
+        });
+        transition_show(&owner, window, false);
+        window.update(|_, app| {
+            assert!(state.read(app).delegate().exits.contains_key("a"));
+            assert_eq!(state.read(app).delegate().items.len(), 2);
+        });
+        transition_show(&owner, window, true);
+        window.update(|_, app| {
+            let delegate = state.read(app).delegate();
+            assert!(!delegate.exits.contains_key("a"));
+            assert_eq!(
+                delegate.items.iter().filter(|item| item.id == "a").count(),
+                1
+            );
+        });
+        transition_show(&owner, window, false);
+        transition_frames(window, std::time::Duration::from_secs(2));
+        transition_frames(window, std::time::Duration::from_millis(20));
+        window.update(|_, app| {
+            let delegate = state.read(app).delegate();
+            assert!(!delegate.exits.contains_key("a"));
+            assert_eq!(delegate.items.len(), 1);
+        });
+    }
+
+    #[gpui::test]
+    fn keyed_list_exiting_row_cannot_be_selected(cx: &mut gpui::TestAppContext) {
+        let (owner, window, state) = transition_setup(cx, false, true);
+        transition_show(&owner, window, false);
+        window.update(|window, app| {
+            state.update(app, |state, cx| {
+                state.set_selected_index(Some(IndexPath::new(0)), window, cx);
+            });
+        });
+        window.cx.run_until_parked();
+        window.update(|_, app| {
+            assert_eq!(state.read(app).selected_index(), None);
+            assert_eq!(owner.read(app).component().selection, None);
+            assert_eq!(owner.read(app).component().writes, 0);
+        });
+    }
+
+    #[gpui::test]
+    fn clicking_an_exiting_keyed_list_row_does_not_select_or_confirm(
+        cx: &mut gpui::TestAppContext,
+    ) {
+        let (owner, window, state) = transition_setup(cx, false, true);
+        transition_frames(window, std::time::Duration::from_secs(2));
+        transition_show(&owner, window, false);
+        let point = window
+            .debug_bounds("t17-exiting-list-row")
+            .expect("exit still rendered")
+            .center();
+        window.simulate_click(point, gpui::Modifiers::default());
+        window.cx.run_until_parked();
+        window.update(|_, app| {
+            assert_eq!(state.read(app).selected_index(), None);
+            assert_eq!(owner.read(app).component().selection, None);
+            assert_eq!(owner.read(app).component().writes, 0);
+        });
+    }
+
+    #[gpui::test]
+    fn keyed_list_exit_moves_focus_and_blocks_refocus(cx: &mut gpui::TestAppContext) {
+        let (owner, window, state) = transition_setup(cx, false, true);
+        let focus =
+            window.update(|_, app| state.read(app).delegate().animations["a"].focus.clone());
+        window.update(|window, app| {
+            focus.focus(window, app);
+            assert_eq!(window.focused(app), Some(focus.clone()));
+        });
+        transition_show(&owner, window, false);
+        window.update(|window, app| {
+            assert_ne!(window.focused(app), Some(focus.clone()));
+            let previous = window.focused(app);
+            focus.focus(window, app);
+            assert_eq!(window.focused(app), previous);
+        });
+        window.simulate_keystrokes("tab");
+        window.update(|window, app| assert_ne!(window.focused(app), Some(focus.clone())));
+        window.simulate_keystrokes("shift-tab");
+        window.update(|window, app| assert_ne!(window.focused(app), Some(focus.clone())));
+    }
+
+    #[gpui::test]
+    fn keyed_list_reduced_motion_and_no_transition_remove_immediately(
+        cx: &mut gpui::TestAppContext,
+    ) {
+        let (owner, window, state) = transition_setup(cx, true, true);
+        transition_show(&owner, window, false);
+        window.update(|_, app| {
+            assert!(state.read(app).delegate().exits.is_empty());
+            assert_eq!(state.read(app).delegate().items.len(), 1);
+        });
+        assert_eq!(
+            transition_frames(window, std::time::Duration::from_millis(30)),
+            0
+        );
+        owner.update(window, |owner, cx| {
+            owner.component_mut().animated = false;
+            owner.component_mut().show = true;
+            cx.notify();
+        });
+        transition_draw(window);
+        transition_show(&owner, window, false);
+        window.update(|_, app| {
+            assert!(state.read(app).delegate().exits.is_empty());
+            assert_eq!(state.read(app).delegate().items.len(), 1);
+        });
     }
 }

@@ -1,4 +1,4 @@
-use gpui::{AnyElement, IntoElement, ParentElement, Styled, div, px};
+use gpui::{AnyElement, InteractiveElement as _, IntoElement, ParentElement, Styled, div, px};
 use rustui_i18n::LayoutDirection;
 
 use crate::view::{EmptyView, RenderContext, View};
@@ -144,13 +144,17 @@ impl View for HStack {
 
     fn into_element(&self, context: &mut RenderContext<'_>) -> AnyElement {
         let direction = context.layout_direction();
-        let children = self.children.iter().map(|child| child(context));
+        let (children, transition_focus) =
+            crate::animation::transition::render_children(context, &self.children);
         let mut stack = div().flex().gap(px(self.spacing));
         if self.fill {
             stack = stack.size_full().min_w_0().min_h_0();
         }
         if self.grow {
             stack = stack.flex_1().min_w_0().min_h_0();
+        }
+        if let Some(focus) = transition_focus {
+            stack = stack.track_focus(&focus);
         }
         let stack = match direction {
             LayoutDirection::LeftToRight => stack.flex_row(),

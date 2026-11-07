@@ -1290,6 +1290,7 @@ pub struct Window {
     pub(crate) focus: Option<FocusId>,
     focus_enabled: bool,
     modal_focus_scope: Option<(WeakFocusHandle, EntityId, bool)>,
+    inert_focus_scopes: Vec<WeakFocusHandle>,
     /// Incremented every time focus moves. Used to invalidate a
     /// pending keyboard activation state when focus changes.
     pub(crate) focus_generation: u64,
@@ -2211,6 +2212,7 @@ impl Window {
             focus: None,
             focus_enabled: true,
             modal_focus_scope: None,
+            inert_focus_scopes: Vec::new(),
             focus_generation: 0,
             pending_input: None,
             pending_modifier: ModifierState::default(),
@@ -2436,6 +2438,24 @@ impl Window {
         self.rendered_frame.dispatch_tree.modal_focus_allowed(scope.id, target.id)
     }
 
+    /// Prevent focus requests and tab traversal inside a previously rendered subtree.
+    pub fn set_focus_scope_inert(&mut self, scope: &FocusHandle, inert: bool) {
+        self.inert_focus_scopes.retain(|weak| weak.upgrade().is_some_and(|existing| existing.id != scope.id));
+        if inert { self.inert_focus_scopes.push(scope.downgrade()); }
+    }
+
+    fn has_rendered_inert_focus_scope(&self) -> bool {
+        self.inert_focus_scopes.iter().filter_map(WeakFocusHandle::upgrade).any(|scope| {
+            self.rendered_frame.dispatch_tree.focusable_node_id(scope.id).is_some()
+        })
+    }
+
+    fn inert_request_allowed(&self, target: &FocusHandle) -> bool {
+        self.inert_focus_scopes.iter().all(|scope| scope.upgrade().is_none_or(|scope| {
+            !self.rendered_frame.dispatch_tree.focus_contains(scope.id, target.id)
+        }))
+    }
+
     fn modal_request_allowed(&self, target: &FocusHandle) -> bool {
         self.modal_focus_scope.as_ref().is_none_or(|(scope, _, _)| {
             scope.upgrade().is_none_or(|scope| self.modal_focus_contains(&scope, target))
@@ -2455,7 +2475,7 @@ impl Window {
 
     pub fn focus(&mut self, handle: &FocusHandle, cx: &mut App) {
         self.prune_modal_focus_scope();
-        if !self.modal_request_allowed(handle) { return; }
+        if !self.modal_request_allowed(handle) || !self.inert_request_allowed(handle) { return; }
         if !self.focus_enabled || self.focus == Some(handle.id) {
             return;
         }
@@ -2544,6 +2564,11 @@ impl Window {
             return;
         }
 
+        if self.has_rendered_inert_focus_scope() {
+            let handle = self.rendered_frame.tab_stops.matching_preserving_order(self.focus, false, |handle| self.modal_request_allowed(handle) && self.inert_request_allowed(handle));
+            if let Some(handle) = handle { self.focus(&handle, cx); }
+            return;
+        }
         if self.modal_focus_scope.is_none() {
             if let Some(handle) = self.rendered_frame.tab_stops.next(self.focus.as_ref()) {
                 self.focus(&handle, cx);
@@ -2559,6 +2584,11 @@ impl Window {
     pub fn focus_prev(&mut self, cx: &mut App) {
         self.prune_modal_focus_scope();
         if !self.focus_enabled { return; }
+        if self.has_rendered_inert_focus_scope() {
+            let handle = self.rendered_frame.tab_stops.matching_preserving_order(self.focus, true, |handle| self.modal_request_allowed(handle) && self.inert_request_allowed(handle));
+            if let Some(handle) = handle { self.focus(&handle, cx); }
+            return;
+        }
         if self.modal_focus_scope.is_none() {
             if let Some(handle) = self.rendered_frame.tab_stops.prev(self.focus.as_ref()) {
                 self.focus(&handle, cx);

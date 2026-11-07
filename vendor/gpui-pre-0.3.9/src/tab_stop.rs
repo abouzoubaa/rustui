@@ -134,6 +134,21 @@ impl TabStopMap {
             .find(|handle| predicate(handle)).cloned()
     }
 
+    /// Filter the ordinary tab order without changing nested group traversal.
+    pub(crate) fn matching_preserving_order(
+        &self, focused: Option<FocusId>, reverse: bool,
+        mut allowed: impl FnMut(&FocusHandle) -> bool,
+    ) -> Option<FocusHandle> {
+        let mut current = focused;
+        for _ in 0..=self.by_id.len() {
+            let candidate = if reverse { self.prev(current.as_ref()) } else { self.next(current.as_ref()) }?;
+            if allowed(&candidate) { return Some(candidate); }
+            if Some(candidate.id) == focused { return None; }
+            current = Some(candidate.id);
+        }
+        None
+    }
+
     pub fn next(&self, focused_id: Option<&FocusId>) -> Option<FocusHandle> {
         let Some(focused_id) = focused_id else {
             let first = self.order.first()?;

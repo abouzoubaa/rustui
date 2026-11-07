@@ -330,6 +330,7 @@ pub struct RenderContext<'a> {
     window: &'a mut Window,
     app: &'a mut App,
     retained: &'a mut RetainedEntities,
+    pub(crate) transition_collector: Option<Rc<crate::animation::transition::Collector>>,
 }
 
 fn implicit_retained_identity(prefix: &SharedString, slot: usize, base: Identity) -> Identity {
@@ -395,6 +396,7 @@ impl RenderSeed {
             environment: &self.environment,
             button_theme: self.button_theme.clone(),
             localization: self.localization.clone(),
+            transition_collector: None,
             window,
             app,
             retained,
@@ -421,6 +423,7 @@ impl RenderSeed {
             environment: &self.environment,
             button_theme: self.button_theme.clone(),
             localization: self.localization.clone(),
+            transition_collector: None,
             window,
             app,
             retained,
@@ -519,6 +522,7 @@ impl<'a> RenderContext<'a> {
             environment: self.environment,
             button_theme: self.button_theme.clone(),
             localization: self.localization.clone(),
+            transition_collector: self.transition_collector.clone(),
             window: &mut *self.window,
             app: &mut *self.app,
             retained: &mut *self.retained,
@@ -553,6 +557,7 @@ impl<'a> RenderContext<'a> {
             environment,
             button_theme,
             localization,
+            transition_collector: None,
             window,
             app,
             retained,
@@ -640,6 +645,7 @@ impl<'a> RenderContext<'a> {
             environment,
             button_theme: self.button_theme.clone(),
             localization: self.localization.clone(),
+            transition_collector: self.transition_collector.clone(),
             window: &mut *self.window,
             app: &mut *self.app,
             retained: &mut *self.retained,
@@ -958,6 +964,10 @@ impl<'a> RenderContext<'a> {
         self.retained.retain_subscription(id, subscription);
     }
 
+    pub(crate) fn transition_window_app(&mut self) -> (&mut Window, &mut App) {
+        (&mut *self.window, &mut *self.app)
+    }
+
     pub(crate) fn app(&self) -> &App {
         self.app
     }
@@ -1024,16 +1034,37 @@ pub trait View: 'static {
 pub struct EmptyView;
 
 /// A view with a stable identity within its current logical retention scope.
+/// Maps data to sibling views for a stack's `children` builder.
+#[allow(non_snake_case)]
+pub fn ForEach<I, F, V>(items: I, render: F) -> Vec<V>
+where
+    I: IntoIterator,
+    F: FnMut(I::Item) -> V,
+    V: View,
+{
+    items.into_iter().map(render).collect()
+}
+
+/// A view with stable identity within its current logical retention scope.
 pub struct KeyedView<V> {
     key: Identity,
-    view: V,
+    view: Rc<V>,
+    transition: Option<crate::animation::transition::Transition>,
 }
 
 #[allow(non_snake_case)]
 pub fn Keyed<V: View>(key: impl Into<Identity>, view: V) -> KeyedView<V> {
     KeyedView {
         key: key.into(),
-        view,
+        view: Rc::new(view),
+        transition: None,
+    }
+}
+
+impl<V: View> KeyedView<V> {
+    pub fn transition(mut self, transition: crate::animation::transition::Transition) -> Self {
+        self.transition = Some(transition);
+        self
     }
 }
 
@@ -1043,6 +1074,19 @@ impl<V: View> View for KeyedView<V> {
     }
 
     fn into_element(&self, context: &mut RenderContext<'_>) -> AnyElement {
+        if let Some(transition) = self.transition {
+            let view = self.view.clone();
+            let render: crate::animation::transition::Renderer =
+                Rc::new(move |context| view.into_element(context));
+            if let Some(element) = crate::animation::transition::render_keyed(
+                self.key.clone(),
+                render,
+                transition,
+                context,
+            ) {
+                return element;
+            }
+        }
         context.with_element_scope(RetentionScope::Key(self.key.clone()), |context| {
             self.view.into_element(context)
         })

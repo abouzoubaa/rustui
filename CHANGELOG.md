@@ -19,3 +19,4 @@
 - Add stable view-only sorting to EditableDataGrid.
 - Add editable grid navigation, conflict recovery, and accessibility metadata.
 - Add typed theme tokens and navigation surface capabilities.
+- Add keyed appear and disappear transitions using GPUI springs and inert focus scopes.

@@ -44,6 +44,7 @@ def run(root: Path, artifacts: Path, mode: str) -> None:
     files = meta["files"]
     before = {}
     states = set()
+    stacked = False
     for relative, images in files.items():
         path = root / relative
         if path.is_symlink() or not path.is_file():
@@ -55,7 +56,25 @@ def run(root: Path, artifacts: Path, mode: str) -> None:
         elif current == images["post"]:
             states.add("post")
         else:
-            raise ValueError(f"unknown source image: {relative}")
+            inert_manifest = artifacts / "patches/approved/t17-inert-focus-scope-v1.json"
+            if not inert_manifest.is_file():
+                raise ValueError(f"unknown source image: {relative}")
+            inert_files = json.loads(inert_manifest.read_bytes())["files"]
+            if relative not in inert_files or current != inert_files[relative]["post"]:
+                raise ValueError(f"unknown source image: {relative}")
+            stacked = True
+    if stacked:
+        if mode not in ("--check", "--verify"):
+            raise ValueError("reverse the inert focus layer first")
+        with tempfile.TemporaryDirectory(prefix="rustui-modal-focus-stack-") as folder:
+            stage = Path(folder)
+            for relative, data in before.items():
+                path = stage / relative
+                path.parent.mkdir(parents=True, exist_ok=True)
+                path.write_bytes(data)
+            subprocess.run(["python3", str(artifacts / "scripts/apply_gpui_inert_focus_scope_patch.py"), "--root", str(stage), "--artifacts", str(artifacts), "--reverse"], check=True)
+            run(stage, artifacts, mode)
+        return
     if len(states) != 1:
         raise ValueError("partial modal focus patch state")
     state = states.pop()

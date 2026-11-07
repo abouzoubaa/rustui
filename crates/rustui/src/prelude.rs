@@ -3,6 +3,7 @@ pub use crate::accessibility::semantics::{
 };
 pub use crate::animation::offset::{SpringOffset, SpringOffsetError};
 pub use crate::animation::spring::{SpringConfig, SpringOpacity, SpringOpacityError};
+pub use crate::animation::transition::{Edge, Transition};
 pub use crate::components::advanced::canvas::{
     Canvas, CanvasError, CanvasPoint, CanvasRect, CanvasScene, CanvasSceneBuilder, CanvasSize,
     CanvasView,
@@ -99,8 +100,8 @@ pub use crate::runtime::{AppAction, AsyncState, Binding, Identity, OwnerTask, Ru
 pub use crate::text::font_policy::{FontFallbackPolicy, FontFallbackPolicyError};
 pub use crate::view::{
     AnyView, Component, ComponentPropsView, ComponentView, Environment, EnvironmentReader,
-    EnvironmentReaderView, EnvironmentView, Keyed, KeyedView, OwnerAction, OwnerActionReader,
-    OwnerActionReaderView, OwnerTaskReader, OwnerTaskReaderView, View, ViewHost,
+    EnvironmentReaderView, EnvironmentView, ForEach, Keyed, KeyedView, OwnerAction,
+    OwnerActionReader, OwnerActionReaderView, OwnerTaskReader, OwnerTaskReaderView, View, ViewHost,
 };
 pub use crate::{AssetResult, AssetSource, SharedString};
 pub use crate::{HStack, VStack, component};

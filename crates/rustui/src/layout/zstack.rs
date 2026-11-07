@@ -1,4 +1,5 @@
 //! Overlay stack layout backed by a single-cell GPUI grid.
+use gpui::InteractiveElement as _;
 
 use gpui::{AnyElement, IntoElement, ParentElement, Styled, div};
 use rustui_i18n::LayoutDirection;
@@ -119,8 +120,9 @@ impl View for ZStack {
 
     fn into_element(&self, context: &mut RenderContext<'_>) -> AnyElement {
         let direction = context.layout_direction();
-        let children = self.children.iter().map(|child| {
-            let content = child(context);
+        let (rendered, transition_focus) =
+            crate::animation::transition::render_children(context, &self.children);
+        let children = rendered.into_iter().map(|content| {
             let content = if self.alignment.horizontal == HorizontalAlignment::Stretch {
                 div().w_full().child(content).into_any_element()
             } else {
@@ -152,6 +154,9 @@ impl View for ZStack {
         }
         if self.grow {
             stack = stack.flex_1().min_w_0().min_h_0();
+        }
+        if let Some(focus) = transition_focus {
+            stack = stack.track_focus(&focus);
         }
         stack.children(children).into_any_element()
     }
