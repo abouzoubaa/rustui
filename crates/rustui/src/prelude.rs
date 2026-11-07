@@ -74,7 +74,8 @@ pub use crate::components::overlay::sheet::{Sheet, SheetView};
 pub use crate::components::overlay::toast::{Toast, ToastBuilder, ToastKind};
 pub use crate::components::overlay::tooltip::{Tooltip, TooltipView};
 pub use crate::interaction::drag_drop::{
-    DragOperation, DragSource, DragSourceView, DropEvent, DropTarget, DropTargetView,
+    DragOperation, DragSource, DragSourceView, DropEvent, DropTarget, DropTargetView, FileDrop,
+    FileDropTargetView,
 };
 pub use crate::interaction::focus::{FocusScope, FocusScopeView};
 pub use crate::interaction::gestures::{

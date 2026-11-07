@@ -52,6 +52,7 @@ mod drawer_gallery;
 mod editable_grid_gallery;
 mod event_inspector;
 mod feedback_gallery;
+mod file_drop_gallery;
 mod focus_gallery;
 mod form_accessories_gallery;
 mod foundation_additions;
