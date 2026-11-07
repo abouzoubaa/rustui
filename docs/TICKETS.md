@@ -115,3 +115,10 @@ Phase B — features (after Phase A)
 **Do:** Measure quad-sort V2 in an isolated candidate against the T19 baseline and report a numbers table.
 **Done when:** The isolated candidate has comparable measurements and a clear result table.
 **Stop if:** Promotion is proposed; do not promote the candidate.
+
+## Follow-ups (not scheduled)
+- A11y patch: expose accessible description (T14 validation errors), read-only, sort direction and cell→header relations (T15c) via a proposed GPUI patch; promote like T13b.
+- Grid Tab exit at edges (T15): GPUI focus traversal from a dropped editor; same patch track as above.
+- Parked: wip/native-macos-popups (native anchored popups, unfinished, vendor window.rs).
+- Parked: wip/stash-2026-10-26 (old stash, unreviewed).
+- Post-MVP: publish to crates.io (unique crate names + owned macro crate; T11 covers Git dependency only).
