@@ -16,3 +16,4 @@
 - Added validation and validity bindings for text, secure, and search fields, with a Playground story.
 - Added the editable DataGrid design for owner approval.
 - Added typed editable DataGrid cells with validation and basic navigation.
+- Add stable view-only sorting to EditableDataGrid.

@@ -48,7 +48,8 @@ impl View for Owner {
                     } else {
                         Ok(())
                     }
-                }),
+                })
+                .sortable_by(|a: &Row, b: &Row| a.name.cmp(&b.name)),
                 DataGridColumn::text(
                     "quantity",
                     "Quantity",
@@ -66,7 +67,8 @@ impl View for Owner {
                     } else {
                         Ok(())
                     }
-                }),
+                })
+                .sortable_by(|a: &Row, b: &Row| a.quantity.cmp(&b.quantity)),
                 {
                     let column = DataGridColumn::text(
                         "note",
@@ -797,4 +799,189 @@ fn virtualized_scroll_preserves_editor_draft_focus_and_single_commit(
         assert_eq!(owner.read(app).component().rows[0].name, "retained draft");
         assert_eq!(owner.read(app).component().writes, 1);
     });
+}
+
+fn click_grid_header(window: &mut gpui::VisualTestContext, name: &str) {
+    let selector = match name {
+        "name" => "editable-grid-header:name",
+        "note" => "editable-grid-header:note",
+        _ => panic!("unknown header"),
+    };
+    let position = window.debug_bounds(selector).unwrap().center();
+    window.simulate_event(gpui::MouseDownEvent {
+        button: gpui::MouseButton::Left,
+        position,
+        modifiers: gpui::Modifiers::default(),
+        click_count: 1,
+        first_mouse: false,
+    });
+    window.simulate_event(gpui::MouseUpEvent {
+        button: gpui::MouseButton::Left,
+        position,
+        modifiers: gpui::Modifiers::default(),
+        click_count: 1,
+    });
+    frame(window);
+}
+
+#[gpui::test]
+fn sort_click_cycle_is_stable_and_never_writes_bound_rows(cx: &mut gpui::TestAppContext) {
+    let (owner, window, _) = setup(cx);
+    owner.update(window, |owner, cx| {
+        owner.component_mut().rows = vec![
+            Row {
+                id: "a",
+                name: "Able".into(),
+                quantity: 2,
+                note: "".into(),
+            },
+            Row {
+                id: "b",
+                name: "Zed".into(),
+                quantity: 1,
+                note: "".into(),
+            },
+            Row {
+                id: "c",
+                name: "Able".into(),
+                quantity: 1,
+                note: "".into(),
+            },
+        ];
+        cx.notify();
+    });
+    frame(window);
+    let original = window.update(|_, app| owner.read(app).component().rows.clone());
+    for expected in [["a", "c", "b"], ["b", "a", "c"], ["a", "b", "c"]] {
+        click_grid_header(window, "name");
+        window.update(|_, app| {
+            assert_eq!(
+                grid(&owner, app)
+                    .read(app)
+                    .view_order
+                    .iter()
+                    .map(|x| x.as_ref())
+                    .collect::<Vec<_>>(),
+                expected
+            );
+            assert_eq!(owner.read(app).component().rows, original);
+            assert_eq!(owner.read(app).component().writes, 0);
+            assert_eq!(
+                grid(&owner, app)
+                    .read(app)
+                    .active
+                    .as_ref()
+                    .unwrap()
+                    .0
+                    .as_ref(),
+                "a"
+            );
+        });
+    }
+    click_grid_header(window, "note");
+    window.update(|_, app| assert!(grid(&owner, app).read(app).sort.is_none()));
+}
+
+#[gpui::test]
+fn sort_keyboard_enter_space_cycles_and_owner_updates_reapply(cx: &mut gpui::TestAppContext) {
+    let (owner, window, _) = setup(cx);
+    window.update(|window, app| {
+        let grid = grid(&owner, app);
+        let focus = grid.read(app).header_focus[0].clone();
+        focus.focus(window, app);
+    });
+    window.simulate_keystrokes("enter");
+    frame(window);
+    window.update(|_, app| {
+        assert_eq!(
+            grid(&owner, app).read(app).sort.as_ref().unwrap().1,
+            ColumnSort::Ascending
+        )
+    });
+    window.simulate_keystrokes("space");
+    frame(window);
+    window.update(|_, app| {
+        assert_eq!(
+            grid(&owner, app).read(app).sort.as_ref().unwrap().1,
+            ColumnSort::Descending
+        )
+    });
+    owner.update(window, |owner, cx| {
+        owner.component_mut().rows[0].name = "Zulu".into();
+        cx.notify();
+    });
+    frame(window);
+    window.update(|_, app| assert_eq!(grid(&owner, app).read(app).view_order[0].as_ref(), "a"));
+    window.simulate_keystrokes("enter");
+    frame(window);
+    window.update(|_, app| assert!(grid(&owner, app).read(app).sort.is_none()));
+}
+
+#[gpui::test]
+fn sort_freezes_during_edit_then_resorts_after_commit(cx: &mut gpui::TestAppContext) {
+    let (owner, window, _) = setup(cx);
+    click_grid_header(window, "name");
+    window.update(|window, app| {
+        let grid = grid(&owner, app);
+        let focus = grid.read(app).focus.clone();
+        focus.focus(window, app);
+    });
+    window.simulate_keystrokes("enter");
+    frame(window);
+    window.simulate_keystrokes("cmd-a");
+    window.simulate_input("Zulu");
+    frame(window);
+    owner.update(window, |owner, cx| {
+        owner.component_mut().rows[1].name = "Aardvark".into();
+        cx.notify();
+    });
+    frame(window);
+    window.update(|_, app| assert_eq!(grid(&owner, app).read(app).view_order[0].as_ref(), "a"));
+    window.simulate_keystrokes("enter");
+    frame(window);
+    window.update(|_, app| {
+        assert_eq!(grid(&owner, app).read(app).view_order[0].as_ref(), "b");
+        assert_eq!(
+            grid(&owner, app)
+                .read(app)
+                .active
+                .as_ref()
+                .unwrap()
+                .0
+                .as_ref(),
+            "a"
+        );
+        assert_eq!(owner.read(app).component().writes, 1);
+    });
+}
+
+#[gpui::test]
+fn sort_table_delegate_hook_cycles_current_sort(cx: &mut gpui::TestAppContext) {
+    let (owner, window, _) = setup(cx);
+    for expected in [
+        Some(ColumnSort::Ascending),
+        Some(ColumnSort::Descending),
+        None,
+    ] {
+        window.update(|window, app| {
+            let grid = grid(&owner, app);
+            let table = grid.read(app).table.as_ref().unwrap().upgrade().unwrap();
+            table.update(app, |table, cx| {
+                table
+                    .delegate_mut()
+                    .perform_sort(0, ColumnSort::Default, window, cx);
+            });
+        });
+        frame(window);
+        window.update(|_, app| {
+            assert_eq!(
+                grid(&owner, app)
+                    .read(app)
+                    .sort
+                    .as_ref()
+                    .map(|(_, order)| *order),
+                expected
+            );
+        });
+    }
 }

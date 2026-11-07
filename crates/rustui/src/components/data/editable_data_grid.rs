@@ -1,5 +1,5 @@
 //! Owner-bound editable grid with stable row and column identities.
-use std::{cell::RefCell, collections::HashSet, fmt::Display, rc::Rc};
+use std::{cell::RefCell, cmp::Ordering, collections::HashSet, fmt::Display, rc::Rc};
 
 use gpui::prelude::FluentBuilder as _;
 use gpui::{
@@ -7,7 +7,7 @@ use gpui::{
     IntoElement as _, KeyDownEvent, MouseButton, ParentElement as _, SharedString,
     StatefulInteractiveElement as _, Styled as _, Subscription, WeakEntity, Window, div, px,
 };
-use gpui_component::table::{Column, DataTable, TableDelegate, TableState};
+use gpui_component::table::{Column, ColumnSort, DataTable, TableDelegate, TableState};
 use rustui_core::{Binding, Identity};
 
 use crate::{
@@ -23,6 +23,7 @@ impl gpui::Global for GridKeyBindings {}
 
 type CellReader<R> = Rc<dyn Fn(&R) -> String>;
 type CellWriter<R> = Rc<dyn Fn(&mut R, &str) -> Result<(), String>>;
+type RowComparator<R> = Rc<dyn Fn(&R, &R) -> Ordering>;
 type CellValidator = Rc<dyn Fn(&str) -> Result<(), String>>;
 type RowIdentity<R> = Rc<dyn Fn(&R) -> SharedString>;
 type Committer = Rc<dyn Fn(Commit, &mut App) -> bool>;
@@ -35,6 +36,7 @@ pub struct DataGridColumn<R> {
     write: CellWriter<R>,
     parse: CellValidator,
     validate: Option<CellValidator>,
+    compare: Option<RowComparator<R>>,
     editable: bool,
 }
 
@@ -47,6 +49,7 @@ impl<R> Clone for DataGridColumn<R> {
             write: self.write.clone(),
             parse: self.parse.clone(),
             validate: self.validate.clone(),
+            compare: self.compare.clone(),
             editable: self.editable,
         }
     }
@@ -79,6 +82,7 @@ impl<R: 'static> DataGridColumn<R> {
             }),
             parse: Rc::new(move |value| validate_parse(value).map(|_| ())),
             validate: None,
+            compare: None,
             editable: true,
         }
     }
@@ -86,6 +90,12 @@ impl<R: 'static> DataGridColumn<R> {
     /// Adds synchronous validation for the editor's draft.
     pub fn validate(mut self, validator: impl Fn(&str) -> Result<(), String> + 'static) -> Self {
         self.validate = Some(Rc::new(validator));
+        self
+    }
+
+    /// Enables stable, view-only sorting with a typed row comparator.
+    pub fn sortable_by(mut self, compare: impl Fn(&R, &R) -> Ordering + 'static) -> Self {
+        self.compare = Some(Rc::new(compare));
         self
     }
 
@@ -185,6 +195,9 @@ struct Editing {
 
 struct GridState<R: Clone + 'static> {
     rows: Vec<R>,
+    view_order: Vec<SharedString>,
+    sort: Option<(SharedString, ColumnSort)>,
+    header_focus: Vec<FocusHandle>,
     row_id: RowIdentity<R>,
     columns: Rc<Vec<DataGridColumn<R>>>,
     active: Option<(SharedString, SharedString)>,
@@ -219,6 +232,66 @@ impl<R: Clone + 'static> GridState<R> {
         self.columns
             .iter()
             .position(|column| column.id.as_ref() == id)
+    }
+
+    fn view_index(&self, id: &str) -> Option<usize> {
+        self.view_order.iter().position(|row| row.as_ref() == id)
+    }
+
+    fn update_view_order(&mut self) {
+        if self.edit.is_some() {
+            let ids: HashSet<_> = self.rows.iter().map(|row| (self.row_id)(row)).collect();
+            self.view_order.retain(|id| ids.contains(id));
+            for row in &self.rows {
+                let id = (self.row_id)(row);
+                if !self.view_order.contains(&id) {
+                    self.view_order.push(id);
+                }
+            }
+            return;
+        }
+        let mut indices: Vec<usize> = (0..self.rows.len()).collect();
+        if let Some((column_id, direction)) = &self.sort {
+            if let Some(compare) = self
+                .columns
+                .iter()
+                .find(|c| &c.id == column_id)
+                .and_then(|c| c.compare.as_ref())
+            {
+                indices.sort_by(|&a, &b| {
+                    let result = compare(&self.rows[a], &self.rows[b]);
+                    if *direction == ColumnSort::Descending {
+                        result.reverse()
+                    } else {
+                        result
+                    }
+                });
+            }
+        }
+        self.view_order = indices
+            .into_iter()
+            .map(|ix| (self.row_id)(&self.rows[ix]))
+            .collect();
+    }
+
+    fn cycle_sort(&mut self, column: usize, window: &mut Window, cx: &mut App) {
+        let Some(column) = self.columns.get(column) else {
+            return;
+        };
+        if column.compare.is_none() {
+            return;
+        }
+        let id = column.id.clone();
+        self.sort = match &self.sort {
+            Some((active, ColumnSort::Ascending)) if *active == id => {
+                Some((id, ColumnSort::Descending))
+            }
+            Some((active, ColumnSort::Descending)) if *active == id => None,
+            _ => Some((id, ColumnSort::Ascending)),
+        };
+        self.update_view_order();
+        window.refresh();
+        cx.stop_propagation();
     }
 
     fn begin_edit(&mut self, replacement: Option<String>, window: &mut Window, cx: &mut App) {
@@ -273,6 +346,7 @@ impl<R: Clone + 'static> GridState<R> {
             *edit.focus.borrow_mut() = None;
         }
         *self.editor.borrow_mut() = None;
+        self.update_view_order();
         window.refresh();
     }
 
@@ -320,6 +394,7 @@ impl<R: Clone + 'static> GridState<R> {
                 *edit.focus.borrow_mut() = None;
             }
             *self.editor.borrow_mut() = None;
+            self.update_view_order();
             window.refresh();
         }
         true
@@ -335,7 +410,7 @@ impl<R: Clone + 'static> GridState<R> {
         let Some((row, column)) = self.active.as_ref() else {
             return false;
         };
-        let (Some(r), Some(c)) = (self.row_index(row), self.column_index(column)) else {
+        let (Some(r), Some(c)) = (self.view_index(row), self.column_index(column)) else {
             return false;
         };
         let (Some(nr), Some(nc)) = (
@@ -347,7 +422,7 @@ impl<R: Clone + 'static> GridState<R> {
         if nr >= self.rows.len() || nc >= self.columns.len() {
             return false;
         }
-        self.active = Some(((self.row_id)(&self.rows[nr]), self.columns[nc].id.clone()));
+        self.active = Some((self.view_order[nr].clone(), self.columns[nc].id.clone()));
         self.scroll_to_row(nr, cx);
         true
     }
@@ -356,7 +431,7 @@ impl<R: Clone + 'static> GridState<R> {
         let Some((row, column)) = self.active.as_ref() else {
             return false;
         };
-        let (Some(r), Some(c)) = (self.row_index(row), self.column_index(column)) else {
+        let (Some(r), Some(c)) = (self.view_index(row), self.column_index(column)) else {
             return false;
         };
         let width = self.columns.len();
@@ -373,7 +448,7 @@ impl<R: Clone + 'static> GridState<R> {
         };
         let Some(next) = next else { return false };
         self.active = Some((
-            (self.row_id)(&self.rows[next / width]),
+            self.view_order[next / width].clone(),
             self.columns[next % width].id.clone(),
         ));
         self.scroll_to_row(next / width, cx);
@@ -399,6 +474,13 @@ impl<R: Clone + 'static> GridState<R> {
     fn keyboard(&mut self, event: &KeyDownEvent, window: &mut Window, cx: &mut App) {
         let key = event.keystroke.key.as_str();
         let modifiers = event.keystroke.modifiers;
+        if self
+            .header_focus
+            .iter()
+            .any(|focus| focus.is_focused(window))
+        {
+            return;
+        }
         if self.edit.is_some() {
             match key {
                 "escape" => {
@@ -511,11 +593,89 @@ impl<R: Clone + 'static> TableDelegate for EditableGridDelegate<R> {
             col_ix
         };
         let column = &grid.columns[ix];
-        Column::new(column.id.clone(), column.title.clone())
+        let mut result = Column::new(column.id.clone(), column.title.clone())
             .width(px(160.))
             .resizable(false)
-            .movable(false)
+            .movable(false);
+        if column.compare.is_some() {
+            let current = grid
+                .sort
+                .as_ref()
+                .filter(|(id, _)| *id == column.id)
+                .map_or(ColumnSort::Default, |(_, direction)| *direction);
+            result = result.sort(current);
+        }
+        result
     }
+    fn perform_sort(
+        &mut self,
+        col_ix: usize,
+        _sort: ColumnSort,
+        window: &mut Window,
+        cx: &mut Context<TableState<Self>>,
+    ) {
+        let _ = self.owner.update(cx, |grid, cx| {
+            let index = if grid.rtl {
+                grid.columns.len() - 1 - col_ix
+            } else {
+                col_ix
+            };
+            grid.cycle_sort(index, window, cx);
+        });
+    }
+
+    fn render_th(
+        &mut self,
+        col_ix: usize,
+        _window: &mut Window,
+        cx: &mut Context<TableState<Self>>,
+    ) -> impl gpui::IntoElement {
+        let Some(owner) = self.owner.upgrade() else {
+            return div().into_any_element();
+        };
+        let grid = owner.read(cx);
+        let index = if grid.rtl {
+            grid.columns.len() - 1 - col_ix
+        } else {
+            col_ix
+        };
+        let column = &grid.columns[index];
+        let title = column.title.clone();
+        if column.compare.is_none() {
+            let selector = format!("editable-grid-header:{}", column.id);
+            return div()
+                .id(("editable-grid-header", col_ix))
+                .size_full()
+                .debug_selector(move || selector.clone())
+                .child(title)
+                .into_any_element();
+        }
+        let focus = grid.header_focus[index].clone();
+        let click_focus = focus.clone();
+        let click_owner = self.owner.clone();
+        let key_owner = self.owner.clone();
+        let selector = format!("editable-grid-header:{}", column.id);
+        div()
+            .id(("editable-grid-header", col_ix))
+            .size_full()
+            .track_focus(&focus)
+            .tab_stop(true)
+            .debug_selector(move || selector.clone())
+            .on_mouse_down(MouseButton::Left, move |_, window, cx| {
+                click_focus.focus(window, cx);
+            })
+            .on_click(move |_, window, cx| {
+                let _ = click_owner.update(cx, |grid, cx| grid.cycle_sort(index, window, cx));
+            })
+            .on_key_down(move |event, window, cx| {
+                if matches!(event.keystroke.key.as_str(), "enter" | "space") {
+                    let _ = key_owner.update(cx, |grid, cx| grid.cycle_sort(index, window, cx));
+                }
+            })
+            .child(title)
+            .into_any_element()
+    }
+
     fn render_td(
         &mut self,
         row_ix: usize,
@@ -529,7 +689,10 @@ impl<R: Clone + 'static> TableDelegate for EditableGridDelegate<R> {
             return div().into_any_element();
         };
         let grid = owner.read(cx);
-        let Some(row) = grid.rows.get(row_ix) else {
+        let Some(id) = grid.view_order.get(row_ix) else {
+            return div().into_any_element();
+        };
+        let Some(row) = grid.row_index(id).and_then(|index| grid.rows.get(index)) else {
             return div().into_any_element();
         };
         let ix = if grid.rtl {
@@ -632,6 +795,12 @@ impl<R: Clone + 'static> View for EditableDataGridView<R> {
                 .zip(initial_columns.first())
                 .map(|(row, column)| ((row_id)(row), column.id.clone()));
             GridState {
+                view_order: initial_rows.iter().map(|row| row_id(row)).collect(),
+                sort: None,
+                header_focus: initial_columns
+                    .iter()
+                    .map(|_| cx.focus_handle().tab_stop(true))
+                    .collect(),
                 rows: initial_rows,
                 row_id,
                 columns: initial_columns,
@@ -679,12 +848,16 @@ impl<R: Clone + 'static> View for EditableDataGridView<R> {
         let rtl = context.layout_direction() == rustui_i18n::LayoutDirection::RightToLeft;
         let columns = self.columns.clone();
         let row_id = self.row_id.clone();
-        context.update_entity(&state, move |state, _, _| {
+        context.update_entity(&state, move |state, _, cx| {
             state.rows = rows;
             state.columns = columns;
             state.row_id = row_id;
             state.rtl = rtl;
             state.commit = Some(update);
+            while state.header_focus.len() < state.columns.len() {
+                state.header_focus.push(cx.focus_handle().tab_stop(true));
+            }
+            state.update_view_order();
             if state.active.as_ref().is_some_and(|(row, column)| {
                 state.row_index(row).is_none() || state.column_index(column).is_none()
             }) {
@@ -739,7 +912,7 @@ impl<R: Clone + 'static> View for EditableDataGridView<R> {
             )
             .row_selectable(false)
             .col_selectable(false)
-            .sortable(false)
+            .sortable(true)
             .col_movable(false)
             .col_resizable(false)
         });
