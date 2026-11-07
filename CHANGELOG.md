@@ -10,3 +10,4 @@
 
 - Split the compiled preview gallery into focused modules without changing behavior.
 - Split graph view into model, validation, rendering, and interaction modules without changing behavior.
+- Added GPUI test-window coverage for Popover and Menu lifecycle behavior.
