@@ -57,7 +57,8 @@ impl View for EditableGridGallery {
                             } else {
                                 Ok(())
                             }
-                        }),
+                        })
+                        .sortable_by(|a: &Product, b: &Product| a.name.cmp(&b.name)),
                         DataGridColumn::text(
                             "quantity",
                             "Quantity",
@@ -75,7 +76,8 @@ impl View for EditableGridGallery {
                             } else {
                                 Err("Enter a nonnegative integer".into())
                             }
-                        }),
+                        })
+                        .sortable_by(|a: &Product, b: &Product| a.quantity.cmp(&b.quantity)),
                         DataGridColumn::text(
                             "category",
                             "Category (read-only)",
