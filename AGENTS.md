@@ -50,3 +50,4 @@ Files changed · tests added + command that passed · not done and why · follow
 - After a ticket's checks pass and CI's source job is green, open the PR and merge it with a merge commit, unless the owner says otherwise.
 - Report format: DONE / NOT DONE / GIT (branch, commit, pushed, PR, merged, final git status).
 - If a check fails only on formatting of files you changed, run `rustup run 1.97.1 cargo fmt -p <package>` and re-run the check; that is not a stop.
+- Compile errors or failing tests caused by code you wrote in this ticket are yours to fix; keep going. Stop only when a failure comes from code you did not change, or the fix would leave the ticket's scope.
