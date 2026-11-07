@@ -15,3 +15,4 @@
 - Promoted Dialog and Sheet focus recovery with active GPUI test-window coverage.
 - Added validation and validity bindings for text, secure, and search fields, with a Playground story.
 - Added the editable DataGrid design for owner approval.
+- Added typed editable DataGrid cells with validation and basic navigation.

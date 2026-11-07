@@ -49,6 +49,7 @@ pub(super) mod data_grid_accessibility;
 mod dialog_gallery;
 mod disclosure_gallery;
 mod drawer_gallery;
+mod editable_grid_gallery;
 mod event_inspector;
 mod feedback_gallery;
 mod focus_gallery;

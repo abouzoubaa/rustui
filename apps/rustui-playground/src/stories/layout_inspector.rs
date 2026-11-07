@@ -10,6 +10,7 @@ pub fn summary_key_for(story: StoryId) -> &'static str {
         StoryId::Layout => "lab-layout-layout",
         StoryId::Input => "lab-layout-input",
         StoryId::Validation => "lab-layout-input",
+        StoryId::EditableGrid => "lab-layout-table",
         StoryId::List => "lab-layout-list",
         StoryId::Table => "lab-layout-table",
         StoryId::Outline => "lab-layout-outline",

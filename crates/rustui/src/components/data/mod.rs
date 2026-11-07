@@ -2,6 +2,7 @@
 
 pub mod collection;
 pub mod data_grid;
+pub mod editable_data_grid;
 pub mod keyed_list;
 pub mod list;
 pub mod outline;
