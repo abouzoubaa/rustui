@@ -471,6 +471,20 @@ impl View for MountMarker {
     }
 }
 
+struct GuardedDialogProbe {
+    mounts: Rc<std::cell::Cell<usize>>,
+}
+
+impl View for GuardedDialogProbe {
+    fn body(&self) -> impl View {
+        crate::prelude::Dialog("nested-dialog", "Open nested dialog")
+    }
+
+    fn on_mount(&mut self, _: &mut App) {
+        self.mounts.set(self.mounts.get() + 1);
+    }
+}
+
 struct CompatibilityProbe {
     mounts: [Rc<std::cell::Cell<usize>>; 3],
 }
@@ -554,14 +568,43 @@ fn native_sheet_dialog_combination_and_sheet_replacement_remain_compatible(
         assert!(!window.has_active_dialog(app));
     });
 
-    activate_trigger(window, &triggers[2]);
+    let dialog_mounts = mounts[2].clone();
+    window.update(|window, app| {
+        let body = app.new(|cx| {
+            ComponentHost::new(
+                GuardedDialogProbe {
+                    mounts: dialog_mounts,
+                },
+                cx,
+            )
+        });
+        window.open_dialog(app, move |dialog, _, _| {
+            let body = body.clone();
+            dialog
+                .close_button(false)
+                .content(move |content, _, _| content.child(body.clone()))
+        });
+    });
+    draw(window);
     assert_eq!(mounts[2].get(), 1, "Dialog must still open above a Sheet");
     window.update(|window, app| {
         assert!(window.has_active_sheet(app));
         assert!(window.has_active_dialog(app));
     });
 
-    activate_trigger(window, &triggers[1]);
+    let sheet_mounts = mounts[1].clone();
+    window.update(|window, app| {
+        let body = app.new(|cx| {
+            ComponentHost::new(
+                MountMarker {
+                    mounts: sheet_mounts,
+                },
+                cx,
+            )
+        });
+        window.open_sheet(app, move |sheet, _, _| sheet.child(body.clone()));
+    });
+    draw(window);
     assert_eq!(
         mounts[1].get(),
         1,
@@ -572,7 +615,9 @@ fn native_sheet_dialog_combination_and_sheet_replacement_remain_compatible(
         assert!(window.has_active_dialog(app));
     });
 
-    activate_trigger(window, &triggers[2]);
+    window.update(|window, app| window.focus_next(app));
+    window.simulate_keystrokes("space");
+    draw(window);
     window.update(|window, app| {
         window.close_dialog(app);
         assert!(

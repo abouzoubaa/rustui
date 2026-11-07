@@ -84,3 +84,7 @@ pub use components::data::collection::{Collection, CollectionItem};
 mod menu_popup_lifecycle_tests;
 #[cfg(test)]
 mod popover_lifecycle_tests;
+
+#[cfg(test)]
+#[path = "components/overlay/focus_recovery_tests.rs"]
+mod overlay_focus_recovery_tests;
