@@ -1343,6 +1343,18 @@ pub trait StatefulInteractiveElement: InteractiveElement {
         self
     }
 
+    /// Expose whether this element is read-only to accessibility clients.
+    fn aria_readonly(mut self, readonly: bool) -> Self {
+        self.interactivity().aria.readonly = Some(readonly);
+        self
+    }
+
+    /// Expose a column header's sort direction.
+    fn aria_sort(mut self, direction: accesskit::SortDirection) -> Self {
+        self.interactivity().aria.sort = Some(direction);
+        self
+    }
+
     /// Set the keyboard shortcut(s) that activate this element, announced by
     /// assistive technology (maps to AccessKit's `keyboard_shortcut`).
     ///
@@ -2113,6 +2125,8 @@ pub(crate) struct AriaProperties {
     pub(crate) author_id: Option<SharedString>,
     pub(crate) label: Option<SharedString>,
     pub(crate) description: Option<SharedString>,
+    pub(crate) readonly: Option<bool>,
+    pub(crate) sort: Option<accesskit::SortDirection>,
     pub(crate) keyshortcuts: Option<SharedString>,
     pub(crate) selected: Option<bool>,
     pub(crate) expanded: Option<bool>,
@@ -3544,6 +3558,10 @@ impl Interactivity {
         if let Some(description) = &self.aria.description {
             node.set_description(description.to_string());
         }
+        if let Some(readonly) = self.aria.readonly {
+            if readonly { node.set_read_only(); } else { node.clear_read_only(); }
+        }
+        if let Some(sort) = self.aria.sort { node.set_sort_direction(sort); }
         if let Some(keyshortcuts) = &self.aria.keyshortcuts {
             node.set_keyboard_shortcut(keyshortcuts.to_string());
         }

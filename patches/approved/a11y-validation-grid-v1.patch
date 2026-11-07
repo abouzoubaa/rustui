@@ -1,0 +1,99 @@
+diff --git a/vendor/gpui-component-0.7.3/src/input/input.rs b/vendor/gpui-component-0.7.3/src/input/input.rs
+index f4622209..904aad3b 100644
+--- a/vendor/gpui-component-0.7.3/src/input/input.rs
++++ b/vendor/gpui-component-0.7.3/src/input/input.rs
+@@ -132,6 +132,7 @@ pub struct Input {
+     role: RoleOverride,
+     accessibility_id: Option<SharedString>,
+     aria_label: Option<SharedString>,
++    aria_description: Option<SharedString>,
+     placeholder_color: Option<Hsla>,
+ 
+     /// An optional context menu builder to allow a custom context menu on the input.
+@@ -251,6 +252,7 @@ impl Input {
+             role: RoleOverride::default(),
+             accessibility_id: None,
+             aria_label: None,
++            aria_description: None,
+             placeholder_color: None,
+             context_menu_builder: None,
+             paste_handler: None,
+@@ -276,6 +278,12 @@ impl Input {
+         self
+     }
+ 
++    /// Set supplementary information announced on the focused input node.
++    pub fn aria_description(mut self, description: impl Into<SharedString>) -> Self {
++        self.aria_description = Some(description.into());
++        self
++    }
++
+     pub fn aria_label(mut self, label: impl Into<SharedString>) -> Self {
+         self.aria_label = Some(label.into());
+         self
+@@ -781,6 +789,7 @@ impl RenderOnce for Input {
+             .role(accessibility_role)
+             .when_some(self.accessibility_id, |this, id| this.accessibility_id(id))
+             .when_some(aria_label, |this, label| this.aria_label(label))
++            .when_some(self.aria_description, |this, description| this.aria_description(description))
+             .when_some(placeholder, |this, placeholder| {
+                 this.aria_placeholder(placeholder)
+             })
+diff --git a/vendor/gpui-pre-0.3.9/src/elements/div.rs b/vendor/gpui-pre-0.3.9/src/elements/div.rs
+index 0939c2ef..edcb9b19 100644
+--- a/vendor/gpui-pre-0.3.9/src/elements/div.rs
++++ b/vendor/gpui-pre-0.3.9/src/elements/div.rs
+@@ -1343,6 +1343,18 @@ pub trait StatefulInteractiveElement: InteractiveElement {
+         self
+     }
+ 
++    /// Expose whether this element is read-only to accessibility clients.
++    fn aria_readonly(mut self, readonly: bool) -> Self {
++        self.interactivity().aria.readonly = Some(readonly);
++        self
++    }
++
++    /// Expose a column header's sort direction.
++    fn aria_sort(mut self, direction: accesskit::SortDirection) -> Self {
++        self.interactivity().aria.sort = Some(direction);
++        self
++    }
++
+     /// Set the keyboard shortcut(s) that activate this element, announced by
+     /// assistive technology (maps to AccessKit's `keyboard_shortcut`).
+     ///
+@@ -2113,6 +2125,8 @@ pub(crate) struct AriaProperties {
+     pub(crate) author_id: Option<SharedString>,
+     pub(crate) label: Option<SharedString>,
+     pub(crate) description: Option<SharedString>,
++    pub(crate) readonly: Option<bool>,
++    pub(crate) sort: Option<accesskit::SortDirection>,
+     pub(crate) keyshortcuts: Option<SharedString>,
+     pub(crate) selected: Option<bool>,
+     pub(crate) expanded: Option<bool>,
+@@ -3544,6 +3558,10 @@ impl Interactivity {
+         if let Some(description) = &self.aria.description {
+             node.set_description(description.to_string());
+         }
++        if let Some(readonly) = self.aria.readonly {
++            if readonly { node.set_read_only(); } else { node.clear_read_only(); }
++        }
++        if let Some(sort) = self.aria.sort { node.set_sort_direction(sort); }
+         if let Some(keyshortcuts) = &self.aria.keyshortcuts {
+             node.set_keyboard_shortcut(keyshortcuts.to_string());
+         }
+diff --git a/vendor/gpui-pre-0.3.9/src/window/a11y/debug.rs b/vendor/gpui-pre-0.3.9/src/window/a11y/debug.rs
+index ae98aa52..b6e6ed5d 100644
+--- a/vendor/gpui-pre-0.3.9/src/window/a11y/debug.rs
++++ b/vendor/gpui-pre-0.3.9/src/window/a11y/debug.rs
+@@ -259,6 +259,10 @@ fn node_to_json(
+     }
+ 
+     // Boolean / enum states.
++    if node.is_read_only() { aria.insert("read_only".into(), json!(true)); }
++    if let Some(v) = node.sort_direction() {
++        aria.insert("sort_direction".into(), json!(format!("{v:?}")));
++    }
+     if let Some(v) = node.is_selected() {
+         aria.insert("selected".into(), json!(v));
+     }

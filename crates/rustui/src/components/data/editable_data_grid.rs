@@ -832,6 +832,14 @@ impl<R: Clone + 'static> TableDelegate for EditableGridDelegate<R> {
         let key_owner = self.owner.clone();
         let selector = format!("editable-grid-header:{}", column.id);
         grid_header_accessibility(col_ix, accessible_title)
+            .when_some(
+                sort.map(|direction| match direction {
+                    ColumnSort::Ascending => gpui::accesskit::SortDirection::Ascending,
+                    ColumnSort::Descending => gpui::accesskit::SortDirection::Descending,
+                    _ => gpui::accesskit::SortDirection::Other,
+                }),
+                |header, direction| header.aria_sort(direction),
+            )
             .size_full()
             .track_focus(&focus)
             .tab_stop(true)
@@ -922,6 +930,7 @@ impl<R: Clone + 'static> TableDelegate for EditableGridDelegate<R> {
         let weak = self.owner.clone();
         let selector = format!("editable-grid-cell:{key}:{column_key}");
         grid_cell_accessibility(row_ix, col_ix, accessible_label, selected)
+            .aria_readonly(!column.editable)
             .w_full()
             .min_h(px(28.))
             .p(px(4.))

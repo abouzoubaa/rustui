@@ -1196,6 +1196,80 @@ fn external_cell_conflict_preserves_draft_and_enter_overwrites_escape_discards(
     });
 }
 
+#[gpui::test]
+fn grid_accessibility_tree_exposes_readonly_sort_and_header_indices(cx: &mut gpui::TestAppContext) {
+    let (_, window, _) = setup(cx);
+    fn snapshot(window: &mut gpui::VisualTestContext) -> serde_json::Value {
+        window.update(|window, app| {
+            let _ = window.draw(app);
+            serde_json::from_str(&window.debug_a11y_tree_json().unwrap()).unwrap()
+        })
+    }
+    fn find<'a>(tree: &'a serde_json::Value, role: &str, label: &str) -> &'a serde_json::Value {
+        tree["nodes"]
+            .as_object()
+            .unwrap()
+            .values()
+            .find(|node| node["aria"]["role"] == role && node["aria"]["label"] == label)
+            .unwrap_or_else(|| panic!("missing {role} {label}: {tree}"))
+    }
+    let tree = snapshot(window);
+    let header = find(&tree, "ColumnHeader", "Name");
+    let editable = find(&tree, "Cell", "Name, Alpha");
+    let readonly = find(&tree, "Cell", "Note, fixed A, read only");
+    assert_eq!(editable["aria"]["read_only"].as_bool(), None);
+    assert_eq!(readonly["aria"]["read_only"].as_bool(), Some(true));
+    assert_eq!(
+        editable["aria"]["column_index"],
+        header["aria"]["column_index"]
+    );
+    let grid = find(&tree, "Grid", "Products");
+    let nodes = tree["nodes"].as_object().unwrap();
+    let rows = grid["children"].as_array().unwrap();
+    let header_row = &nodes[rows[0].as_str().unwrap()];
+    let data_row = &nodes[rows[1].as_str().unwrap()];
+    assert_eq!(header_row["aria"]["row_index"], 1);
+    assert_eq!(data_row["aria"]["row_index"], 2);
+    assert!(
+        header_row["children"]
+            .as_array()
+            .unwrap()
+            .iter()
+            .any(|id| &nodes[id.as_str().unwrap()] == header)
+    );
+    assert!(
+        data_row["children"]
+            .as_array()
+            .unwrap()
+            .iter()
+            .any(|id| &nodes[id.as_str().unwrap()] == editable)
+    );
+
+    assert!(header["aria"]["sort_direction"].is_null());
+    let header_point = window
+        .debug_bounds("editable-grid-header:name")
+        .unwrap()
+        .center();
+    window.simulate_click(header_point, gpui::Modifiers::default());
+    frame(window);
+    let tree = snapshot(window);
+    assert_eq!(
+        find(&tree, "ColumnHeader", "Name, ascending")["aria"]["sort_direction"],
+        "Ascending"
+    );
+    window.simulate_click(header_point, gpui::Modifiers::default());
+    frame(window);
+    let tree = snapshot(window);
+    assert_eq!(
+        find(&tree, "ColumnHeader", "Name, descending")["aria"]["sort_direction"],
+        "Descending"
+    );
+    window.simulate_click(header_point, gpui::Modifiers::default());
+    frame(window);
+    let tree = snapshot(window);
+    assert!(find(&tree, "ColumnHeader", "Name")["aria"]["sort_direction"].is_null());
+}
+
 #[test]
 fn editable_grid_accessibility_elements_expose_roles_counts_and_indices() {
     use gpui::{Element, accesskit::Node};

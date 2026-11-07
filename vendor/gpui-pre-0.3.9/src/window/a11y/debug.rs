@@ -259,6 +259,10 @@ fn node_to_json(
     }
 
     // Boolean / enum states.
+    if node.is_read_only() { aria.insert("read_only".into(), json!(true)); }
+    if let Some(v) = node.sort_direction() {
+        aria.insert("sort_direction".into(), json!(format!("{v:?}")));
+    }
     if let Some(v) = node.is_selected() {
         aria.insert("selected".into(), json!(v));
     }

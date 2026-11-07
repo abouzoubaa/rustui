@@ -21,3 +21,4 @@
 - Add typed theme tokens and navigation surface capabilities.
 - Add keyed appear and disappear transitions using GPUI springs and inert focus scopes.
 - Fix editable grid Tab and Shift-Tab focus exit at its edges.
+- Expose validation descriptions and editable grid read-only, sort, and header semantics.

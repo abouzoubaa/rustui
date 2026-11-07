@@ -643,6 +643,9 @@ impl View for TextFieldView {
             // label. Render the same affordance below with an explicit name.
             .cleanable(false)
             .tab_index(self.tab_index);
+        if let Some(Err(message)) = &validation_result {
+            input = input.aria_description(message.clone());
+        }
         state
             .read(context.app())
             .focus_handle(context.app())

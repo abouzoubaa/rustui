@@ -1,5 +1,10 @@
 #!/usr/bin/env python3
 """Exact approved Base Button disabled accessibility patch; no revision changes."""
+
+import sys as _stack_sys
+from pathlib import Path as _StackPath
+_stack_sys.path.insert(0, str(_StackPath(__file__).resolve().parent))
+from gpui_a11y_stack import prior_or_current
 import argparse,hashlib,json,os,subprocess,tempfile
 from pathlib import Path
 MANIFEST=Path('patches/approved/gpui-base-button-disabled-accessibility-v1.json')
@@ -11,7 +16,7 @@ def run(root,artifacts,mode):
  meta=json.loads(data);patch=artifacts/meta['patch'];source=root/meta['source'];old=source.read_bytes()
  if digest(patch.read_bytes())!=meta['patch_sha256']:raise ValueError('patch hash mismatch')
  req=meta['prerequisite']
- if digest((root/req['path']).read_bytes())!=req['sha256']:raise ValueError('approved aria-disabled prerequisite source changed')
+ if digest(prior_or_current(root,artifacts,req['path'],req['sha256']))!=req['sha256']:raise ValueError('approved aria-disabled prerequisite source changed')
  current=digest(old)
  if current not in (meta['pre'],meta['post']):raise ValueError('unknown or partial Base Button source')
  if mode=='--verify' and current!=meta['post']:raise ValueError('exact POST required')

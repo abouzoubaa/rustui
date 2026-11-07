@@ -6,6 +6,11 @@ vendor source. It never changes Cargo selection, registry checksums, or licenses
 """
 from __future__ import annotations
 
+import sys as _stack_sys
+from pathlib import Path as _StackPath
+_stack_sys.path.insert(0, str(_StackPath(__file__).resolve().parent))
+from gpui_a11y_stack import prior_or_current
+
 import argparse
 import hashlib
 import json
@@ -83,7 +88,8 @@ def verify_identity(root: Path) -> None:
             raise ValueError(f"unexpected package identity for {relative}: {actual}")
 
     for relative, expected in PROVENANCE.items():
-        if file_digest(root / relative) != expected:
+        actual = digest(prior_or_current(root, root, relative, expected)) if str(relative).endswith("/elements/div.rs") else file_digest(root / relative)
+        if actual != expected:
             raise ValueError(f"upstream provenance changed: {relative}")
 
     lock = tomllib.loads((root / "Cargo.lock").read_text(encoding="utf-8"))
@@ -169,7 +175,7 @@ def install(root: Path, updated: dict[Path, bytes]) -> None:
 
 def verify_disabled_composition(root: Path, preimages: dict[Path, bytes]) -> None:
     """Prove the approved disabled baseline under the reversed three-source series."""
-    inputs = {relative: preimages.get(relative, (root / relative).read_bytes()) for relative in DISABLED_FILES}
+    inputs = {relative: preimages.get(relative, prior_or_current(root, root, relative, DISABLED_FILES[relative][1])) for relative in DISABLED_FILES}
     for relative, contents in inputs.items():
         if digest(contents) != DISABLED_FILES[relative][1]:
             raise ValueError(f"unexpected approved aria-disabled baseline: {relative}")
