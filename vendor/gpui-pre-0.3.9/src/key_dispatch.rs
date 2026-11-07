@@ -604,6 +604,26 @@ impl DispatchTree {
         &mut self.nodes[active_node_id.0]
     }
 
+    pub(crate) fn has_view(&self, view: EntityId) -> bool {
+        self.view_node_ids.contains_key(&view)
+    }
+
+    pub(crate) fn modal_focus_allowed(&self, scope: FocusId, target: FocusId) -> bool {
+        if scope == target { return true; }
+        let mut found = false;
+        for (index, _) in self.nodes.iter().enumerate().filter(|(_, node)| node.focus_id == Some(target)) {
+            found = true;
+            let mut current = Some(DispatchNodeId(index));
+            let mut inside = false;
+            while let Some(node) = current {
+                if self.nodes[node.0].focus_id == Some(scope) { inside = true; break; }
+                current = self.nodes[node.0].parent;
+            }
+            if !inside { return false; }
+        }
+        found
+    }
+
     pub fn focusable_node_id(&self, target: FocusId) -> Option<DispatchNodeId> {
         self.focusable_node_ids.get(&target).copied()
     }

@@ -1289,6 +1289,7 @@ pub struct Window {
     pub(crate) activation_observers: SubscriberSet<(), AnyObserver>,
     pub(crate) focus: Option<FocusId>,
     focus_enabled: bool,
+    modal_focus_scope: Option<(WeakFocusHandle, EntityId, bool)>,
     /// Incremented every time focus moves. Used to invalidate a
     /// pending keyboard activation state when focus changes.
     pub(crate) focus_generation: u64,
@@ -2209,6 +2210,7 @@ impl Window {
             activation_observers: SubscriberSet::new(),
             focus: None,
             focus_enabled: true,
+            modal_focus_scope: None,
             focus_generation: 0,
             pending_input: None,
             pending_modifier: ModifierState::default(),
@@ -2424,7 +2426,36 @@ impl Window {
     }
 
     /// Move focus to the element associated with the given [`FocusHandle`].
+    /// Restrict focus to a modal subtree while its owner remains alive.
+    pub fn set_modal_focus_scope(&mut self, scope: Option<&FocusHandle>, owner: EntityId) {
+        let seen = self.rendered_frame.dispatch_tree.has_view(owner);
+        self.modal_focus_scope = scope.map(|scope| (scope.downgrade(), owner, seen));
+    }
+
+    pub fn modal_focus_contains(&self, scope: &FocusHandle, target: &FocusHandle) -> bool {
+        self.rendered_frame.dispatch_tree.modal_focus_allowed(scope.id, target.id)
+    }
+
+    fn modal_request_allowed(&self, target: &FocusHandle) -> bool {
+        self.modal_focus_scope.as_ref().is_none_or(|(scope, _, _)| {
+            scope.upgrade().is_none_or(|scope| self.modal_focus_contains(&scope, target))
+        })
+    }
+
+    fn prune_modal_focus_scope(&mut self) {
+        if let Some((scope, owner, seen)) = &mut self.modal_focus_scope {
+            let present = self.rendered_frame.dispatch_tree.has_view(*owner);
+            if scope.upgrade().is_none() || (*seen && !present) {
+                self.modal_focus_scope = None;
+            } else {
+                *seen |= present;
+            }
+        }
+    }
+
     pub fn focus(&mut self, handle: &FocusHandle, cx: &mut App) {
+        self.prune_modal_focus_scope();
+        if !self.modal_request_allowed(handle) { return; }
         if !self.focus_enabled || self.focus == Some(handle.id) {
             return;
         }
@@ -2457,26 +2488,86 @@ impl Window {
         self.focus_enabled = false;
     }
 
-    /// Move focus to next tab stop.
-    pub fn focus_next(&mut self, cx: &mut App) {
-        if !self.focus_enabled {
-            return;
+    /// Restore focus within a rendered scope without focusing outside it.
+    ///
+    /// The preferred handle is used only while it remains a rendered descendant.
+    /// Otherwise it tries to find a descendant in tab order. If none is reachable,
+    /// focus stays on the scope itself. Returns false when
+    /// focus is disabled or the scope is no longer rendered.
+    pub fn restore_focus_within(
+        &mut self,
+        scope: &FocusHandle,
+        preferred: Option<&FocusHandle>,
+        cx: &mut App,
+    ) -> bool {
+        if !self.focus_enabled
+            || self
+                .rendered_frame
+                .dispatch_tree
+                .focusable_node_id(scope.id)
+                .is_none()
+        {
+            return false;
         }
 
-        if let Some(handle) = self.rendered_frame.tab_stops.next(self.focus.as_ref()) {
-            self.focus(&handle, cx)
+        if let Some(preferred) = preferred
+            && preferred.id != scope.id
+            && self
+                .rendered_frame
+                .dispatch_tree
+                .focusable_node_id(preferred.id)
+                .is_some()
+            && scope.contains(preferred, self)
+            && self.rendered_frame.dispatch_tree.modal_focus_allowed(scope.id, preferred.id)
+        {
+            self.focus(preferred, cx);
+            return self.focus == Some(preferred.id) && self.modal_request_allowed(preferred);
         }
+
+        let candidate = self.rendered_frame.tab_stops.first_matching(|candidate| {
+            candidate.id != scope.id && scope.contains(candidate, self)
+                && self.rendered_frame.dispatch_tree.modal_focus_allowed(scope.id, candidate.id)
+        });
+        if let Some(candidate) = candidate {
+            self.focus(&candidate, cx);
+            return self.focus == Some(candidate.id) && self.modal_request_allowed(&candidate);
+        }
+
+        self.focus(scope, cx);
+        self.focus == Some(scope.id) && self.modal_request_allowed(scope)
     }
 
-    /// Move focus to previous tab stop.
-    pub fn focus_prev(&mut self, cx: &mut App) {
+    /// Move focus to next tab stop.
+    pub fn focus_next(&mut self, cx: &mut App) {
+        self.prune_modal_focus_scope();
         if !self.focus_enabled {
             return;
         }
 
-        if let Some(handle) = self.rendered_frame.tab_stops.prev(self.focus.as_ref()) {
-            self.focus(&handle, cx)
+        if self.modal_focus_scope.is_none() {
+            if let Some(handle) = self.rendered_frame.tab_stops.next(self.focus.as_ref()) {
+                self.focus(&handle, cx);
+            }
+            return;
         }
+        let handle = self.rendered_frame.tab_stops.matching_in_direction(
+            self.focus, false, |handle| self.modal_request_allowed(handle));
+        if let Some(handle) = handle { self.focus(&handle, cx); }
+    }
+
+    /// Focus the previous tab stop.
+    pub fn focus_prev(&mut self, cx: &mut App) {
+        self.prune_modal_focus_scope();
+        if !self.focus_enabled { return; }
+        if self.modal_focus_scope.is_none() {
+            if let Some(handle) = self.rendered_frame.tab_stops.prev(self.focus.as_ref()) {
+                self.focus(&handle, cx);
+            }
+            return;
+        }
+        let handle = self.rendered_frame.tab_stops.matching_in_direction(
+            self.focus, true, |handle| self.modal_request_allowed(handle));
+        if let Some(handle) = handle { self.focus(&handle, cx); }
     }
 
     /// Accessor for the text system.
@@ -3525,6 +3616,7 @@ impl Window {
         let previous_focus_path = self.rendered_frame.focus_path();
         let previous_window_active = self.rendered_frame.window_active;
         mem::swap(&mut self.rendered_frame, &mut self.next_frame);
+        self.prune_modal_focus_scope();
         self.next_frame.clear();
         let current_focus_path = self.rendered_frame.focus_path();
         let current_window_active = self.rendered_frame.window_active;

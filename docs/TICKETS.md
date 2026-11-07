@@ -61,7 +61,7 @@ Phase A — process (in order)
 - T11b — Owned macOS platform chain: `rustui-gpui-platform`, `rustui-gpui-macos`, `rustui-gpui-apple`. Other platforms stay later.
 - T11c — Owned Base and Component: `rustui-gpui-base`, `rustui-gpui-component`; plus owned copies of `cosmic-text` and `block` (or a stated reason they are not needed).
 - T11d — Integration: rustui re-exports gpui/gpui_component, root `[patch]` entries removed where replaced, external consumer builds with no `[patch]` using only `rustui::gpui`, locked consumer check in source mode.
-- T11c/T11d parked on wip/t11-owned-gpui (4ffcb860). Consumer builds without [patch]. Resume: add owned-copy folders to [workspace] exclude (members glob pulls them in), restrict check.sh fmt to RustUI packages, then re-run proofs.
+- T11c/T11d parked on wip/t11-owned-gpui (4ffcb860). Consumer builds without [patch]. Resume: add owned-copy folders to [workspace] exclude (members glob pulls them in), restrict check.sh fmt to RustUI packages, then re-run proofs. Re-copy owned crates after T13b (vendor changed).
 
 Phase B — features (after Phase A)
 
