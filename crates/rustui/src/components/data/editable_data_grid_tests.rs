@@ -478,7 +478,7 @@ fn parse_error_is_visible_and_keeps_draft_uncommitted(cx: &mut gpui::TestAppCont
 }
 
 #[gpui::test]
-#[ignore = "T15c: Tab exits grid"]
+#[ignore = "Tab exit: needs GPUI focus traversal from a dropped editor"]
 fn tab_navigation_crosses_rows_and_leaves_grid_at_end(cx: &mut gpui::TestAppContext) {
     let (owner, window, outside) = setup(cx);
     window.simulate_keystrokes("tab tab tab");
@@ -540,7 +540,7 @@ fn duplicate_column_ids_are_rejected() {
 }
 
 #[gpui::test]
-#[ignore = "T15c: Tab exits grid"]
+#[ignore = "Tab exit: needs GPUI focus traversal from a dropped editor"]
 fn committing_last_cell_with_tab_moves_focus_outside(cx: &mut gpui::TestAppContext) {
     let (owner, window, outside) = setup(cx);
     owner.update(window, |owner, cx| {
@@ -984,4 +984,184 @@ fn sort_table_delegate_hook_cycles_current_sort(cx: &mut gpui::TestAppContext) {
             );
         });
     }
+}
+
+#[gpui::test]
+fn navigation_home_end_and_page_keys_clamp_and_preserve_column(cx: &mut gpui::TestAppContext) {
+    let (owner, window, _) = setup(cx);
+    owner.update(window, |owner, cx| {
+        for index in 0..60 {
+            owner.component_mut().rows.push(Row {
+                id: Box::leak(format!("nav-{index}").into_boxed_str()),
+                name: format!("Row {index}"),
+                quantity: index,
+                note: String::new(),
+            });
+        }
+        cx.notify();
+    });
+    frame(window);
+    window.simulate_keystrokes("right end");
+    frame(window);
+    window.update(|_, app| {
+        assert_eq!(
+            grid(&owner, app)
+                .read(app)
+                .active
+                .as_ref()
+                .unwrap()
+                .1
+                .as_ref(),
+            "note"
+        )
+    });
+    window.simulate_keystrokes("home");
+    frame(window);
+    window.update(|_, app| {
+        assert_eq!(
+            grid(&owner, app)
+                .read(app)
+                .active
+                .as_ref()
+                .unwrap()
+                .1
+                .as_ref(),
+            "name"
+        )
+    });
+    window.simulate_keystrokes("cmd-end");
+    frame(window);
+    window.update(|_, app| {
+        let grid = grid(&owner, app);
+        let grid = grid.read(app);
+        assert_eq!(
+            grid.active.as_ref().unwrap().0,
+            *grid.view_order.last().unwrap()
+        );
+        assert_eq!(grid.active.as_ref().unwrap().1.as_ref(), "note");
+    });
+    window.simulate_keystrokes("cmd-home right pagedown");
+    frame(window);
+    window.update(|_, app| {
+        let grid = grid(&owner, app);
+        let grid = grid.read(app);
+        assert!(grid.view_index(&grid.active.as_ref().unwrap().0).unwrap() > 0);
+        assert_eq!(grid.active.as_ref().unwrap().1.as_ref(), "quantity");
+    });
+    window.simulate_keystrokes("pageup");
+    frame(window);
+    window.update(|_, app| {
+        let grid = grid(&owner, app);
+        let grid = grid.read(app);
+        assert_eq!(grid.active.as_ref().unwrap().0.as_ref(), "a");
+        assert_eq!(grid.active.as_ref().unwrap().1.as_ref(), "quantity");
+    });
+}
+
+#[gpui::test]
+fn external_cell_conflict_preserves_draft_and_enter_overwrites_escape_discards(
+    cx: &mut gpui::TestAppContext,
+) {
+    let (owner, window, _) = setup(cx);
+    window.simulate_keystrokes("enter");
+    frame(window);
+    window.simulate_keystrokes("cmd-a");
+    window.simulate_input("draft");
+    frame(window);
+    owner.update(window, |owner, cx| {
+        owner.component_mut().rows[0].name = "external".into();
+        cx.notify();
+    });
+    frame(window);
+    assert!(
+        window
+            .debug_bounds("validation-error:Value changed elsewhere")
+            .is_some()
+    );
+    window.update(|_, app| {
+        let grid = grid(&owner, app);
+        assert_eq!(
+            &*grid.read(app).edit.as_ref().unwrap().draft.borrow(),
+            "draft"
+        );
+        assert_eq!(owner.read(app).component().writes, 0);
+    });
+    window.simulate_keystrokes("enter");
+    frame(window);
+    window.update(|_, app| {
+        assert_eq!(owner.read(app).component().rows[0].name, "draft");
+        assert_eq!(owner.read(app).component().writes, 1);
+    });
+    window.simulate_keystrokes("enter");
+    frame(window);
+    window.simulate_keystrokes("cmd-a");
+    window.simulate_input("discarded");
+    frame(window);
+    owner.update(window, |owner, cx| {
+        owner.component_mut().rows[0].name = "new owner value".into();
+        cx.notify();
+    });
+    frame(window);
+    assert!(
+        window
+            .debug_bounds("validation-error:Value changed elsewhere")
+            .is_some()
+    );
+    window.simulate_keystrokes("escape");
+    frame(window);
+    window.update(|_, app| {
+        assert_eq!(owner.read(app).component().rows[0].name, "new owner value");
+        assert_eq!(owner.read(app).component().writes, 1);
+    });
+}
+
+#[test]
+fn editable_grid_accessibility_elements_expose_roles_counts_and_indices() {
+    use gpui::{Element, accesskit::Node};
+    fn node(element: &impl Element) -> Node {
+        let mut node = Node::new(element.a11y_role().unwrap());
+        element.write_a11y_info(&mut node);
+        node
+    }
+    let grid = node(&grid_accessibility("grid".into(), "Products".into(), 3, 2));
+    assert_eq!(grid.role(), Role::Grid);
+    assert_eq!(grid.label(), Some("Products"));
+    assert_eq!(grid.row_count(), Some(4));
+    assert_eq!(grid.column_count(), Some(2));
+    let row = node(&grid_row_accessibility(1));
+    assert_eq!(row.role(), Role::Row);
+    assert_eq!(row.row_index(), Some(3));
+    let header = node(&grid_header_accessibility(1, "Quantity, ascending".into()));
+    assert_eq!(header.role(), Role::ColumnHeader);
+    assert_eq!(header.column_index(), Some(2));
+    assert_eq!(header.label(), Some("Quantity, ascending"));
+    let cell = node(&grid_cell_accessibility(
+        1,
+        1,
+        "Quantity, 2, read only".into(),
+        true,
+    ));
+    assert_eq!(cell.role(), Role::Cell);
+    assert_eq!(cell.row_index(), Some(3));
+    assert_eq!(cell.column_index(), Some(2));
+    assert_eq!(cell.is_selected(), Some(true));
+    assert_eq!(cell.label(), Some("Quantity, 2, read only"));
+}
+
+#[gpui::test]
+fn navigation_home_end_follow_logical_order_in_rtl(cx: &mut gpui::TestAppContext) {
+    let (owner, window, _) = setup(cx);
+    window.update(|_, app| {
+        let grid = grid(&owner, app);
+        grid.update(app, |grid, cx| {
+            grid.rtl = true;
+            grid.active = Some(("b".into(), "quantity".into()));
+            assert!(grid.navigate_boundary("home", false, cx));
+            assert_eq!(grid.active.as_ref().unwrap().1.as_ref(), "name");
+            assert!(grid.navigate_boundary("end", false, cx));
+            assert_eq!(grid.active.as_ref().unwrap().1.as_ref(), "note");
+            assert!(grid.navigate_boundary("home", true, cx));
+            assert_eq!(grid.active.as_ref().unwrap().0.as_ref(), "a");
+        });
+    });
 }

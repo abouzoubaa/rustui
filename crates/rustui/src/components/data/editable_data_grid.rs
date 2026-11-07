@@ -4,7 +4,7 @@ use std::{cell::RefCell, cmp::Ordering, collections::HashSet, fmt::Display, rc::
 use gpui::prelude::FluentBuilder as _;
 use gpui::{
     AnyElement, App, AppContext as _, Context, Entity, FocusHandle, InteractiveElement as _,
-    IntoElement as _, KeyDownEvent, MouseButton, ParentElement as _, SharedString,
+    IntoElement as _, KeyDownEvent, MouseButton, ParentElement as _, Role, SharedString, Stateful,
     StatefulInteractiveElement as _, Styled as _, Subscription, WeakEntity, Window, div, px,
 };
 use gpui_component::table::{Column, ColumnSort, DataTable, TableDelegate, TableState};
@@ -13,7 +13,7 @@ use rustui_core::{Binding, Identity};
 use crate::{
     components::input::text_field::TextField,
     runtime::ComponentHost,
-    view::{Component, EmptyView, RenderContext, View},
+    view::{EmptyView, RenderContext, View},
 };
 
 gpui::actions!(editable_data_grid, [NextCell, PreviousCell]);
@@ -188,6 +188,7 @@ struct Editing {
     row: SharedString,
     column: SharedString,
     draft: Rc<RefCell<String>>,
+    original: String,
     focus: Rc<RefCell<Option<FocusHandle>>>,
     error: Rc<RefCell<Option<String>>>,
     generation: usize,
@@ -313,6 +314,7 @@ impl<R: Clone + 'static> GridState<R> {
             draft: Rc::new(RefCell::new(
                 replacement.unwrap_or_else(|| (column.read)(&self.rows[row])),
             )),
+            original: (column.read)(&self.rows[row]),
             focus: Rc::new(RefCell::new(None)),
             error: Rc::new(RefCell::new(None)),
             generation: self.generation,
@@ -455,20 +457,59 @@ impl<R: Clone + 'static> GridState<R> {
         true
     }
 
+    fn navigate_boundary(&mut self, key: &str, command: bool, cx: &mut App) -> bool {
+        let Some((row, column)) = self.active.as_ref() else {
+            return false;
+        };
+        let (Some(row), Some(column)) = (self.view_index(row), self.column_index(column)) else {
+            return false;
+        };
+        if self.view_order.is_empty() || self.columns.is_empty() {
+            return false;
+        }
+        let page = self
+            .table
+            .as_ref()
+            .and_then(WeakEntity::upgrade)
+            .map(|table| {
+                let range = table.read(cx).visible_range().rows();
+                range.end.saturating_sub(range.start).max(1)
+            })
+            .unwrap_or(1);
+        let (target_row, target_column) = match key {
+            "home" => (if command { 0 } else { row }, 0),
+            "end" => (
+                if command {
+                    self.view_order.len() - 1
+                } else {
+                    row
+                },
+                self.columns.len() - 1,
+            ),
+            "pageup" => (row.saturating_sub(page), column),
+            "pagedown" => ((row + page).min(self.view_order.len() - 1), column),
+            _ => return false,
+        };
+        self.active = Some((
+            self.view_order[target_row].clone(),
+            self.columns[target_column].id.clone(),
+        ));
+        self.scroll_to_row(target_row, cx);
+        true
+    }
+
     fn navigate_tab(&mut self, backward: bool, window: &mut Window, cx: &mut App) {
         if self.edit.is_some() && !self.commit_edit(window, cx, true) {
             cx.stop_propagation();
             return;
         }
-        self.focus.focus(window, cx);
         if self.tab(backward, cx) {
+            self.focus.focus(window, cx);
             window.refresh();
-        } else if backward {
-            window.focus_prev(cx);
+            cx.stop_propagation();
         } else {
-            window.focus_next(cx);
+            cx.propagate();
         }
-        cx.stop_propagation();
     }
 
     fn keyboard(&mut self, event: &KeyDownEvent, window: &mut Window, cx: &mut App) {
@@ -493,6 +534,17 @@ impl<R: Clone + 'static> GridState<R> {
                 }
                 "tab" => self.navigate_tab(modifiers.shift, window, cx),
                 _ => {}
+            }
+            return;
+        }
+        if matches!(key, "home" | "end" | "pageup" | "pagedown")
+            && !modifiers.control
+            && !modifiers.alt
+            && (!modifiers.platform || matches!(key, "home" | "end"))
+        {
+            if self.navigate_boundary(key, modifiers.platform, cx) {
+                window.refresh();
+                cx.stop_propagation();
             }
             return;
         }
@@ -555,7 +607,9 @@ impl View for CellEditor {
             |editor, value| {
                 editor.value = value;
                 *editor.shared.borrow_mut() = editor.value.clone();
-                *editor.error.borrow_mut() = None;
+                if editor.error.borrow().as_deref() != Some("Value changed elsewhere") {
+                    *editor.error.borrow_mut() = None;
+                }
             },
         );
         let validate = self.validate.clone();
@@ -564,6 +618,51 @@ impl View for CellEditor {
             .validate(move |value| validate(value))
             .editor_focus(self.focus.clone())
     }
+}
+
+fn grid_accessibility(
+    id: String,
+    label: SharedString,
+    rows: usize,
+    columns: usize,
+) -> Stateful<gpui::Div> {
+    div()
+        .id(id)
+        .role(Role::Grid)
+        .aria_label(label)
+        .aria_row_count(rows + 1)
+        .aria_column_count(columns)
+}
+
+fn grid_row_accessibility(row: usize) -> Stateful<gpui::Div> {
+    div()
+        .id(("editable-grid-row", row))
+        .role(Role::Row)
+        .aria_row_index(row + 2)
+}
+
+fn grid_header_accessibility(col: usize, label: String) -> Stateful<gpui::Div> {
+    div()
+        .id(("editable-grid-header", col))
+        .role(Role::ColumnHeader)
+        .aria_label(label)
+        .aria_column_index(col + 1)
+}
+
+fn grid_cell_accessibility(
+    row: usize,
+    col: usize,
+    label: String,
+    selected: bool,
+) -> Stateful<gpui::Div> {
+    div()
+        .id(format!("editable-grid-cell-a11y:{row}:{col}"))
+        .role(Role::Cell)
+        .aria_label(label)
+        .aria_row_index(row + 2)
+        .aria_column_index(col + 1)
+        .aria_selected(selected)
+        .when(selected, |cell| cell.aria_active_descendant())
 }
 
 struct EditableGridDelegate<R: Clone + 'static> {
@@ -624,6 +723,26 @@ impl<R: Clone + 'static> TableDelegate for EditableGridDelegate<R> {
         });
     }
 
+    fn render_header(
+        &mut self,
+        _window: &mut Window,
+        _cx: &mut Context<TableState<Self>>,
+    ) -> Stateful<gpui::Div> {
+        div()
+            .id("editable-grid-header-row")
+            .role(Role::Row)
+            .aria_row_index(1)
+    }
+
+    fn render_tr(
+        &mut self,
+        row_ix: usize,
+        _window: &mut Window,
+        _cx: &mut Context<TableState<Self>>,
+    ) -> Stateful<gpui::Div> {
+        grid_row_accessibility(row_ix)
+    }
+
     fn render_th(
         &mut self,
         col_ix: usize,
@@ -641,10 +760,19 @@ impl<R: Clone + 'static> TableDelegate for EditableGridDelegate<R> {
         };
         let column = &grid.columns[index];
         let title = column.title.clone();
+        let sort = grid
+            .sort
+            .as_ref()
+            .filter(|(id, _)| *id == column.id)
+            .map(|(_, direction)| *direction);
+        let accessible_title = match sort {
+            Some(ColumnSort::Ascending) => format!("{}, ascending", title),
+            Some(ColumnSort::Descending) => format!("{}, descending", title),
+            _ => title.to_string(),
+        };
         if column.compare.is_none() {
             let selector = format!("editable-grid-header:{}", column.id);
-            return div()
-                .id(("editable-grid-header", col_ix))
+            return grid_header_accessibility(col_ix, accessible_title)
                 .size_full()
                 .debug_selector(move || selector.clone())
                 .child(title)
@@ -655,8 +783,7 @@ impl<R: Clone + 'static> TableDelegate for EditableGridDelegate<R> {
         let click_owner = self.owner.clone();
         let key_owner = self.owner.clone();
         let selector = format!("editable-grid-header:{}", column.id);
-        div()
-            .id(("editable-grid-header", col_ix))
+        grid_header_accessibility(col_ix, accessible_title)
             .size_full()
             .track_focus(&focus)
             .tab_stop(true)
@@ -732,11 +859,21 @@ impl<R: Clone + 'static> TableDelegate for EditableGridDelegate<R> {
         } else {
             div().child((column.read)(row)).into_any_element()
         };
+        let accessible_value = editing
+            .map(|edit| edit.draft.borrow().clone())
+            .unwrap_or_else(|| (column.read)(row));
+        let mut accessible_label = if column.editable {
+            format!("{}, {}", column.title, accessible_value)
+        } else {
+            format!("{}, {}, read only", column.title, accessible_value)
+        };
+        if let Some(error) = editing.and_then(|edit| edit.error.borrow().clone()) {
+            accessible_label.push_str(&format!(", {error}"));
+        }
         let cell_focus = grid.focus.clone();
         let weak = self.owner.clone();
         let selector = format!("editable-grid-cell:{key}:{column_key}");
-        div()
-            .id((gpui::ElementId::from(key.clone()), column_key.clone()))
+        grid_cell_accessibility(row_ix, col_ix, accessible_label, selected)
             .w_full()
             .min_h(px(28.))
             .p(px(4.))
@@ -772,6 +909,7 @@ impl<R: Clone + 'static> View for EditableDataGridView<R> {
         });
         let rows = self.rows.value();
         assert_unique_row_ids(&rows, &self.row_id);
+        let row_count = rows.len();
         let initial_rows = rows.clone();
         let initial_columns = self.columns.clone();
         let row_id = self.row_id.clone();
@@ -852,6 +990,23 @@ impl<R: Clone + 'static> View for EditableDataGridView<R> {
             state.rows = rows;
             state.columns = columns;
             state.row_id = row_id;
+            if let Some(edit) = &state.edit {
+                if let (Some(row), Some(column)) =
+                    (state.row_index(&edit.row), state.column_index(&edit.column))
+                {
+                    let changed = (state.columns[column].read)(&state.rows[row]) != edit.original;
+                    let mut error = edit.error.borrow_mut();
+                    if changed {
+                        *error = Some("Value changed elsewhere".into());
+                    } else if error.as_deref() == Some("Value changed elsewhere") {
+                        *error = None;
+                    }
+                    drop(error);
+                    if let Some(editor) = state.editor.borrow().as_ref() {
+                        editor.update(cx, |_, cx| cx.notify());
+                    }
+                }
+            }
             state.rtl = rtl;
             state.commit = Some(update);
             while state.header_focus.len() < state.columns.len() {
@@ -922,26 +1077,28 @@ impl<R: Clone + 'static> View for EditableDataGridView<R> {
         let weak = state.downgrade();
         let next = weak.clone();
         let previous = weak.clone();
-        let root = div()
-            .id(identity.to_string())
-            .track_focus(&focus)
-            .key_context("EditableDataGrid")
-            .on_action(move |_: &NextCell, window, cx| {
-                let _ = next.update(cx, |state, cx| state.navigate_tab(false, window, cx));
-            })
-            .on_action(move |_: &PreviousCell, window, cx| {
-                let _ = previous.update(cx, |state, cx| state.navigate_tab(true, window, cx));
-            })
-            .tab_stop(true)
-            .flex()
-            .flex_col()
-            .capture_key_down(move |event, window, cx| {
-                let _ = weak.update(cx, |state, cx| state.keyboard(event, window, cx));
-            });
+        let root = grid_accessibility(
+            identity.to_string(),
+            self.label.clone(),
+            row_count,
+            self.columns.len(),
+        )
+        .track_focus(&focus)
+        .key_context("EditableDataGrid")
+        .on_action(move |_: &NextCell, window, cx| {
+            let _ = next.update(cx, |state, cx| state.navigate_tab(false, window, cx));
+        })
+        .on_action(move |_: &PreviousCell, window, cx| {
+            let _ = previous.update(cx, |state, cx| state.navigate_tab(true, window, cx));
+        })
+        .tab_stop(true)
+        .flex()
+        .flex_col()
+        .capture_key_down(move |event, window, cx| {
+            let _ = weak.update(cx, |state, cx| state.keyboard(event, window, cx));
+        });
         let body = div().h(px(300.)).w_full().child(DataTable::new(&table));
-        root.child(body)
-            .aria_label(self.label.clone())
-            .into_any_element()
+        root.child(body).into_any_element()
     }
 }
 
