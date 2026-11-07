@@ -109,6 +109,16 @@ fn exercise(cx: &mut gpui::TestAppContext, kind: Kind, enabled: bool) {
         state.update(app, |state, cx| state.focus(window, cx));
     });
     window.cx.run_until_parked();
+    window.update(|window, app| {
+        let _ = window.draw(app);
+        let tree: serde_json::Value =
+            serde_json::from_str(&window.debug_a11y_tree_json().unwrap()).unwrap();
+        let focus = tree["gpui_focus"].as_str().unwrap();
+        assert_eq!(
+            tree["nodes"][focus]["aria"]["description"].as_str(),
+            enabled.then_some("invalid value")
+        );
+    });
 
     for (old_len, next, expected_valid) in [(3, "ok", true), (2, "bad", false), (3, "ok", true)] {
         window.update(|window, app| {
@@ -129,6 +139,13 @@ fn exercise(cx: &mut gpui::TestAppContext, kind: Kind, enabled: bool) {
                 "validation must not prevent the value write"
             );
             assert!(state.read(app).focus_handle(app).is_focused(window));
+            let tree: serde_json::Value =
+                serde_json::from_str(&window.debug_a11y_tree_json().unwrap()).unwrap();
+            let focus = tree["gpui_focus"].as_str().unwrap();
+            assert_eq!(
+                tree["nodes"][focus]["aria"]["description"].as_str(),
+                (enabled && !expected_valid).then_some("invalid value")
+            );
             assert_eq!(owner.valid, if enabled { expected_valid } else { true });
             if !enabled {
                 assert_eq!(owner.valid_writes, 0);
