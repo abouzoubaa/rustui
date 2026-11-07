@@ -79,3 +79,8 @@ pub use runtime::{RustUI, component_assets, with_embedded_asset};
 pub use rustui_macros::{HStack, VStack, component};
 
 pub use components::data::collection::{Collection, CollectionItem};
+
+#[cfg(test)]
+mod menu_popup_lifecycle_tests;
+#[cfg(test)]
+mod popover_lifecycle_tests;

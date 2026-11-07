@@ -49,3 +49,4 @@ Files changed · tests added + command that passed · not done and why · follow
 - Report only what a command verified in this session; otherwise write "NOT VERIFIED". Stop at a real failure (failing test, build, or check); for tool mechanics, retry with plain shell commands.
 - After a ticket's checks pass and CI's source job is green, open the PR and merge it with a merge commit, unless the owner says otherwise.
 - Report format: DONE / NOT DONE / GIT (branch, commit, pushed, PR, merged, final git status).
+- If a check fails only on formatting of files you changed, run `rustup run 1.97.1 cargo fmt -p <package>` and re-run the check; that is not a stop.
