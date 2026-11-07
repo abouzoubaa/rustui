@@ -57,6 +57,14 @@ class TreeAccessibilitySeriesTests(unittest.TestCase):
         self.root = Path(self.temporary.name)
         series = runpy.run_path(str(HELPER))
         support = set(FILES) | {str(path) for name in ("DISABLED_FILES", "PROVENANCE", "IDENTITY", "PATCH_HASHES") for path in series[name]}
+        support |= {
+            Path("scripts/gpui_a11y_stack.py"),
+            Path("scripts/apply_gpui_validation_grid_a11y_patch.py"),
+            Path("patches/approved/a11y-validation-grid-v1.json"),
+            Path("patches/approved/a11y-validation-grid-v1.patch"),
+            Path("vendor/gpui-pre-0.3.9/src/window/a11y/debug.rs"),
+            Path("vendor/gpui-component-0.7.3/src/input/input.rs"),
+        }
         for relative in support:
             target = self.root / relative
             target.parent.mkdir(parents=True, exist_ok=True)

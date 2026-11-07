@@ -21,6 +21,10 @@ class PlaceholderPatchTest(unittest.TestCase):
                 destination = root / name
                 destination.parent.mkdir(parents=True, exist_ok=True)
                 shutil.copyfile(ROOT / name, destination)
+            name = "vendor/gpui-component-0.7.3/src/input/input.rs"
+            prior = patcher.prior_or_current(ROOT, ROOT, name, patcher.IMAGES[name][1])
+            (root / name).write_bytes(prior)
+
             def run(action):
                 return subprocess.run(
                     ["python3", str(SCRIPT), "--root", str(root), action],

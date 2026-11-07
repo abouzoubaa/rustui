@@ -25,6 +25,7 @@ case "${1:-}" in
   source)
     python3 scripts/apply_gpui_modal_focus_recovery_patch.py --verify
     python3 scripts/apply_gpui_inert_focus_scope_patch.py --verify
+    python3 scripts/apply_gpui_validation_grid_a11y_patch.py --verify
     python3 scripts/verify_owned_gpui_sources.py
     verify_tree_accessibility_series
     python3 scripts/apply_block_stack_symbol_patch.py --verify
@@ -93,6 +94,7 @@ PY
     python3 scripts/apply_gpui_macos_focused_element_patch.py --verify
     python3 scripts/apply_gpui_modal_focus_recovery_patch.py --verify
     python3 scripts/apply_gpui_inert_focus_scope_patch.py --verify
+    python3 scripts/apply_gpui_validation_grid_a11y_patch.py --verify
     # GPUI's pinned macOS backend rejects AnchoredPopup unless this approved
     # patch is active. Apply it after exact-source checks, and restore the
     # pinned source on exit, including failed builds and interrupts.

@@ -3,6 +3,11 @@
 
 from __future__ import annotations
 
+import sys as _stack_sys
+from pathlib import Path as _StackPath
+_stack_sys.path.insert(0, str(_StackPath(__file__).resolve().parent))
+from gpui_a11y_stack import prior_or_current
+
 import argparse
 import hashlib
 import os
@@ -120,8 +125,10 @@ def run(root: Path, reverse: bool, check: bool) -> None:
     for rel, hashes in FILES.items():
         if composed and rel == "vendor/gpui-base-0.7.3/src/tree.rs":
             continue
-        actual = sha256(root / rel)
         expected = hashes[expected_index]
+        actual = hashlib.sha256(prior_or_current(root, root, rel, expected)).hexdigest()
+        if not check and actual != sha256(root / rel):
+            raise ValueError("reverse the validation accessibility layer first")
         if actual != expected:
             raise ValueError(f"unexpected source hash for {rel}: {actual}")
     if check:

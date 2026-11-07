@@ -132,6 +132,7 @@ pub struct Input {
     role: RoleOverride,
     accessibility_id: Option<SharedString>,
     aria_label: Option<SharedString>,
+    aria_description: Option<SharedString>,
     placeholder_color: Option<Hsla>,
 
     /// An optional context menu builder to allow a custom context menu on the input.
@@ -251,6 +252,7 @@ impl Input {
             role: RoleOverride::default(),
             accessibility_id: None,
             aria_label: None,
+            aria_description: None,
             placeholder_color: None,
             context_menu_builder: None,
             paste_handler: None,
@@ -273,6 +275,12 @@ impl Input {
 
     pub fn accessibility_id(mut self, id: impl Into<SharedString>) -> Self {
         self.accessibility_id = Some(id.into());
+        self
+    }
+
+    /// Set supplementary information announced on the focused input node.
+    pub fn aria_description(mut self, description: impl Into<SharedString>) -> Self {
+        self.aria_description = Some(description.into());
         self
     }
 
@@ -781,6 +789,7 @@ impl RenderOnce for Input {
             .role(accessibility_role)
             .when_some(self.accessibility_id, |this, id| this.accessibility_id(id))
             .when_some(aria_label, |this, label| this.aria_label(label))
+            .when_some(self.aria_description, |this, description| this.aria_description(description))
             .when_some(placeholder, |this, placeholder| {
                 this.aria_placeholder(placeholder)
             })

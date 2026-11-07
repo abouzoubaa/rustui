@@ -16,6 +16,9 @@ import tempfile
 import tomllib
 
 MANIFEST = Path("patches/proposed/gpui-row-accessibility-series-v1.json")
+A11Y_PATCH = Path("patches/approved/a11y-validation-grid-v1.patch")
+A11Y_DIV = "vendor/gpui-pre-0.3.9/src/elements/div.rs"
+A11Y_DIV_POST = "81429bdbc0a835a97e3d2c3cfa394b0b7cebd81e4289176791b952d1c819df50"
 MANIFEST_SHA256 = "ed0a205650efdb4459f01703abc259ee0dcf618e1e03efede437956ccecbba3e"
 SOURCES = {
     "gpui-pre-0.3.9": ("gpui-pre", "0.3.9", "src/elements/div.rs"),
@@ -44,6 +47,7 @@ def verify(root: Path) -> dict:
         raise ValueError("unexpected proposal source set")
     before = {}
     popup_applied = False
+    a11y_applied = False
     for record in records:
         package = record["package_directory"]
         name, version, relative = SOURCES[package]
@@ -70,6 +74,8 @@ def verify(root: Path) -> dict:
                     with contextlib.redirect_stdout(io.StringIO()):
                         POPUP.run(root, root, "--verify")
                     popup_applied = True
+                elif path == root / A11Y_DIV and actual == A11Y_DIV_POST:
+                    a11y_applied = True
                 elif not (package == "gpui-component-0.7.3"
                         and path == directory / "Cargo.toml"
                         and expected == "bc3d39631970412dd2abbe1d5e34b0a0dbc65e6e995f13f3809895cda0ecc3c8"
@@ -100,6 +106,12 @@ def verify(root: Path) -> dict:
                 ["git", "apply", "--reverse", "--whitespace=nowarn", str(root / POPUP.PATCH)],
                 cwd=stage, check=True, capture_output=True,
             )
+        if a11y_applied:
+            subprocess.run(
+                ["git", "apply", "--reverse", "--whitespace=nowarn", "--include=" + A11Y_DIV, str(root / A11Y_PATCH)],
+                cwd=stage, check=True, capture_output=True,
+            )
+            before[root / A11Y_PATCH] = digest(root / A11Y_PATCH)
         for reverse, ordered in [(False, records), (True, list(reversed(records)))]:
             for record in ordered:
                 command = ["git", "apply", "--whitespace=error-all"]

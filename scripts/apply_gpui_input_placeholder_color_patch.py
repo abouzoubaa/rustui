@@ -1,5 +1,10 @@
 #!/usr/bin/env python3
 """Apply or verify the pinned GPUI input placeholder-color patch."""
+import sys
+from pathlib import Path as _StackPath
+sys.path.insert(0, str(_StackPath(__file__).resolve().parent))
+from gpui_a11y_stack import prior_or_current
+
 import argparse
 import hashlib
 from pathlib import Path
@@ -26,7 +31,11 @@ def main():
         raise SystemExit("placeholder patch hash mismatch")
     expected = 1 if args.check or args.reverse else 0
     for name, images in IMAGES.items():
-        if digest(root / name) != images[expected]:
+        if args.check and name == "vendor/gpui-component-0.7.3/src/input/input.rs":
+            actual = hashlib.sha256(prior_or_current(root, root, name, images[expected])).hexdigest()
+        else:
+            actual = digest(root / name)
+        if actual != images[expected]:
             raise SystemExit(f"unexpected source or checksum image: {name}")
     if not args.check:
         command = ["patch", "--batch", "--fuzz=0", "-p1", "-i", str(patch)]

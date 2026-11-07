@@ -29,6 +29,19 @@ class RowAccessibilityProposalTests(unittest.TestCase):
     def test_exact_disposable_roundtrip_preserves_selected_sources(self):
         self.assertEqual(PROPOSAL.verify(ROOT), {"status": "pass", "sources": 2, "apply_reverse": "exact", "selected_sources": "unchanged"})
 
+    def test_stacked_div_reverses_only_in_temporary_stage(self):
+        with tempfile.TemporaryDirectory() as temporary:
+            root = Path(temporary)
+            self.fixture(root)
+            patch = root / PROPOSAL.A11Y_PATCH
+            patch.parent.mkdir(parents=True, exist_ok=True)
+            shutil.copyfile(ROOT / PROPOSAL.A11Y_PATCH, patch)
+            source = root / PROPOSAL.A11Y_DIV
+            before = source.read_bytes()
+            self.assertEqual(PROPOSAL.digest(source), PROPOSAL.A11Y_DIV_POST)
+            self.assertEqual(PROPOSAL.verify(root)["status"], "pass")
+            self.assertEqual(source.read_bytes(), before)
+
     def test_changed_patch_rejects_without_touching_sources(self):
         with tempfile.TemporaryDirectory() as temporary:
             root = Path(temporary)

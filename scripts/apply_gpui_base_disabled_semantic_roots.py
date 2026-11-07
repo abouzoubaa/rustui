@@ -1,5 +1,10 @@
 #!/usr/bin/env python3
 """Reproduce the approved same-version three-root disabled semantic patch."""
+
+import sys as _stack_sys
+from pathlib import Path as _StackPath
+_stack_sys.path.insert(0, str(_StackPath(__file__).resolve().parent))
+from gpui_a11y_stack import prior_or_current
 import argparse, hashlib, json, os, subprocess, tempfile, tomllib
 from pathlib import Path
 MANIFEST=Path('patches/approved/gpui-base-disabled-semantic-roots-v1.json')
@@ -17,7 +22,7 @@ def load(root, artifacts):
   if (package.get('name'),package.get('version'))!=(expected['name'],expected['version']): raise ValueError(f'package identity changed: {path}')
   if selected.get(expected['name'],{}).get('path')!=expected['path']: raise ValueError(f'local source changed: {path}')
  prerequisite=meta['prerequisite']
- if digest((root/prerequisite['path']).read_bytes())!=prerequisite['sha256']: raise ValueError('approved aria-disabled prerequisite changed')
+ if digest(prior_or_current(root,artifacts,prerequisite['path'],prerequisite['sha256']))!=prerequisite['sha256']: raise ValueError('approved aria-disabled prerequisite changed')
  if digest((artifacts/meta['patch']).read_bytes())!=meta['patch_sha256']: raise ValueError('patch artifact changed')
  return meta
 def sources(root,meta): return {p:(root/p).read_bytes() for p in meta['images']['pre']}
