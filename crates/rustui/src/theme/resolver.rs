@@ -141,7 +141,10 @@ pub fn resolve_button_with_selector(
     })
 }
 
-fn resolve_platform_color(value: &str, name: &str) -> Result<RgbaValue, ThemeResolveError> {
+pub(super) fn resolve_platform_color(
+    value: &str,
+    name: &str,
+) -> Result<RgbaValue, ThemeResolveError> {
     let digits = value.strip_prefix('#').ok_or_else(|| {
         ThemeResolveError::Invalid(format!(
             "platform color `{name}` must be a six-digit hex color"
@@ -530,7 +533,10 @@ pub(super) fn validate_component_theme(
     Ok(())
 }
 
-fn component_selector_matches(rule: &ButtonStyleSelector, query: &ButtonStyleSelector) -> bool {
+pub(super) fn component_selector_matches(
+    rule: &ButtonStyleSelector,
+    query: &ButtonStyleSelector,
+) -> bool {
     component_selector_fields(rule)
         .into_iter()
         .zip(component_selector_fields(query))
@@ -568,6 +574,7 @@ pub(super) fn selector_specificity(selector: &ButtonStyleSelector) -> usize {
 }
 
 /// Renderer-declared properties it actually applies for a component part.
+#[derive(Clone, Debug, PartialEq, Eq)]
 pub struct ComponentStyleCapability {
     pub component: &'static str,
     pub part: &'static str,
@@ -586,6 +593,8 @@ pub struct UncoveredComponentRule {
 
 #[derive(Clone, Debug, Default, PartialEq, Eq)]
 pub struct ThemeCoverageReport {
+    /// Properties each renderer declares that it applies.
+    pub renderer_capabilities: Vec<ComponentStyleCapability>,
     pub total_records: usize,
     pub total_rules: usize,
     pub covered_rules: usize,
@@ -617,6 +626,7 @@ pub fn assess_theme_coverage_with_capabilities(
     capabilities: &[ComponentStyleCapability],
 ) -> ThemeCoverageReport {
     let mut report = ThemeCoverageReport {
+        renderer_capabilities: capabilities.to_vec(),
         total_records: document.components.len(),
         total_rules: document
             .components

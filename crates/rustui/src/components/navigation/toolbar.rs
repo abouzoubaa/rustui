@@ -163,6 +163,14 @@ impl View for ToolbarView {
             .disabled(self.disabled)
             .right_to_left(context.layout_direction() == LayoutDirection::RightToLeft);
         if let Some(theme) = active_theme(context.app()) {
+            toolbar = crate::theme::apply_surface(
+                toolbar,
+                theme,
+                "toolbar",
+                &crate::components::theme::selector(context),
+                crate::theme::ThemeToken::ToolbarBackground,
+                crate::theme::ThemeToken::ToolbarForeground,
+            );
             // The toolbar record has no body artwork; its profile owns shell geometry.
             let (height, spacing) = shell_metrics(&theme.profile);
             toolbar = toolbar.h(px(height)).gap(px(spacing));

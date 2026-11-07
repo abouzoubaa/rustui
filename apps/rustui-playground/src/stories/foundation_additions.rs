@@ -88,6 +88,10 @@ pub fn foundation_additions() -> impl View {
             FoundationAdditions::new,
         ))
         .child(super::theme_inspector::demo())
+        .child(Text("Themed navigation surfaces"))
+        .child(super::sidebar_gallery::demo())
+        .child(super::toolbar_gallery::demo())
+        .child(super::tab_bar_reference_gallery::demo())
 }
 
 struct FoundationAdditions {

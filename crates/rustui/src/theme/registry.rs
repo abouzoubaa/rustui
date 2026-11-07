@@ -130,6 +130,9 @@ macro_rules! capability {
 
 // Add a capability only when the renderer or a GPUI Theme role applies every named property.
 const RENDERER_CAPABILITIES: &[ComponentStyleCapability] = &[
+    capability!("sidebar", "body", ["background", "foreground"]),
+    capability!("toolbar", "body", ["background", "foreground"]),
+    capability!("tab_bar", "body", ["background", "foreground"]),
     capability!(
         "button",
         "body",
@@ -342,6 +345,49 @@ pub struct ActiveTheme {
 }
 
 impl ActiveTheme {
+    /// Resolve a surface's optional component overrides over its existing role colors.
+    pub(crate) fn surface_colors(
+        &self,
+        component: &str,
+        selector: &ButtonStyleSelector,
+        background: super::ThemeToken,
+        foreground: super::ThemeToken,
+    ) -> Result<(crate::theme::RgbaValue, crate::theme::RgbaValue), ThemeResolveError> {
+        let mut colors = (self.token(background)?, self.token(foreground)?);
+        if !self.component_records.borrow().contains_key(component) {
+            let record = self
+                .document
+                .component_theme(component)
+                .map_err(ThemeResolveError::Invalid)?;
+            self.component_records
+                .borrow_mut()
+                .insert(component.to_owned(), record);
+        }
+        let records = self.component_records.borrow();
+        let record = records
+            .get(component)
+            .expect("component record was inserted");
+        if record.styles.iter().any(|rule| {
+            rule.part == "body" && super::resolver::component_selector_matches(&rule.when, selector)
+        }) {
+            let style = resolve_component_style_from_record(
+                &self.document,
+                component,
+                "body",
+                selector,
+                &[],
+                record,
+            )?;
+            if let Some(color) = style.colors.get("background") {
+                colors.0 = *color;
+            }
+            if let Some(color) = style.colors.get("foreground") {
+                colors.1 = *color;
+            }
+        }
+        Ok(colors)
+    }
+
     /// Identifies the successful theme activation currently owned by this app.
     /// A new successful activation advances this value, even for the same mode.
     pub fn revision(&self) -> u64 {
