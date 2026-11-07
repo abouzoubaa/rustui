@@ -353,6 +353,16 @@ impl<R: Clone + 'static> GridState<R> {
     }
 
     fn commit_edit(&mut self, window: &mut Window, cx: &mut App, restore_focus: bool) -> bool {
+        self.commit_edit_inner(window, cx, restore_focus, false)
+    }
+
+    fn commit_edit_inner(
+        &mut self,
+        window: &mut Window,
+        cx: &mut App,
+        restore_focus: bool,
+        retain_editor: bool,
+    ) -> bool {
         let Some(edit) = self.edit.clone() else {
             return true;
         };
@@ -388,6 +398,9 @@ impl<R: Clone + 'static> GridState<R> {
             }
             window.refresh();
             return false;
+        }
+        if retain_editor {
+            return true;
         }
         if restore_focus {
             self.cancel(window, cx);
@@ -499,6 +512,41 @@ impl<R: Clone + 'static> GridState<R> {
     }
 
     fn navigate_tab(&mut self, backward: bool, window: &mut Window, cx: &mut App) {
+        let edge = self.active.as_ref().is_some_and(|(row, column)| {
+            self.view_index(row)
+                .zip(self.column_index(column))
+                .is_some_and(|(row, column)| {
+                    if backward {
+                        row == 0 && column == 0
+                    } else {
+                        row + 1 == self.view_order.len() && column + 1 == self.columns.len()
+                    }
+                })
+        });
+        if edge {
+            if self.edit.is_some() && !self.commit_edit_inner(window, cx, false, true) {
+                cx.stop_propagation();
+                return;
+            }
+            window.set_focus_scope_inert(&self.focus, true);
+            if backward {
+                window.focus_prev(cx);
+            } else {
+                window.focus_next(cx);
+            }
+            if self.focus.contains_focused(window, cx) {
+                window.blur(cx);
+            }
+            if let Some(edit) = self.edit.take() {
+                *edit.focus.borrow_mut() = None;
+            }
+            *self.editor.borrow_mut() = None;
+            window.set_focus_scope_inert(&self.focus, false);
+            self.update_view_order();
+            window.refresh();
+            cx.stop_propagation();
+            return;
+        }
         if self.edit.is_some() && !self.commit_edit(window, cx, true) {
             cx.stop_propagation();
             return;

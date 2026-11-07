@@ -88,7 +88,6 @@ Phase B — features (after Phase A)
 - T15a — Editable DataGrid editing core: typed text columns, row identity, validation, editing and basic navigation.
 - T15b — Editable DataGrid sorting: stable view-only ascending/descending/none order.
 - T15c — Editable DataGrid navigation, conflict handling and accessibility details; Tab/Shift-Tab exit at grid edges.
-- T15c deferred: Tab exit needs GPUI focus traversal from a dropped editor.
 - T15c deferred: semantic read-only, sort-direction, and cell-to-header relationships need GPUI accessibility hooks.
 
 ## T16 — Theme capabilities
@@ -118,7 +117,6 @@ Phase B — features (after Phase A)
 
 ## Follow-ups (not scheduled)
 - A11y patch: expose accessible description (T14 validation errors), read-only, sort direction and cell→header relations (T15c) via a proposed GPUI patch; promote like T13b.
-- Grid Tab exit at edges (T15): GPUI focus traversal from a dropped editor; same patch track as above.
 - Parked: wip/native-macos-popups (native anchored popups, unfinished, vendor window.rs).
 - Parked: wip/stash-2026-10-26 (old stash, unreviewed).
 - Post-MVP: publish to crates.io (unique crate names + owned macro crate; T11 covers Git dependency only).
