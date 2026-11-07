@@ -19,3 +19,7 @@ pub use resolver::{
 };
 pub use schema::*;
 pub use watcher::{ThemeFile, ThemeFileError};
+
+mod tokens;
+pub use tokens::ThemeToken;
+pub(crate) use tokens::apply_surface;

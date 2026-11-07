@@ -362,6 +362,14 @@ impl View for SidebarView {
             .collapsible(false)
             .child(menu);
         if let Some(theme) = active_theme(context.app()) {
+            sidebar = crate::theme::apply_surface(
+                sidebar,
+                theme,
+                "sidebar",
+                &crate::components::theme::selector(context),
+                crate::theme::ThemeToken::SidebarBackground,
+                crate::theme::ThemeToken::SidebarForeground,
+            );
             sidebar = sidebar.w(px(theme.profile.dimensions.sidebar_width as f32));
         } else {
             sidebar = sidebar.w_full();

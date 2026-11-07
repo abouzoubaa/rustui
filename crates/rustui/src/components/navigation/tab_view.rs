@@ -354,6 +354,20 @@ impl View for TabViewControl {
             TabViewStyle::Underline => tab_bar.underline(),
         };
         if let Some(theme) = active_theme(context.app()) {
+            tab_bar = crate::theme::apply_surface(
+                tab_bar,
+                theme,
+                "tab_bar",
+                &crate::components::theme::selector(context),
+                match self.style {
+                    TabViewStyle::Automatic => crate::theme::ThemeToken::TabBarBackground,
+                    TabViewStyle::Segmented => crate::theme::ThemeToken::TabBarSegmentedBackground,
+                    TabViewStyle::Pill | TabViewStyle::Outline | TabViewStyle::Underline => {
+                        crate::theme::ThemeToken::TabBarTransparentBackground
+                    }
+                },
+                crate::theme::ThemeToken::TabBarForeground,
+            );
             tab_bar = tab_bar
                 .small()
                 .h(px(theme.profile.dimensions.control_height as f32));
