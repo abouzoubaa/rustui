@@ -19,6 +19,7 @@ pub enum StoryId {
     Tabs,
     Breadcrumb,
     Navigation,
+    Validation,
 }
 
 impl StoryId {
@@ -29,6 +30,7 @@ impl StoryId {
             Self::Card => "card",
             Self::Layout => "layout",
             Self::Input => "input",
+            Self::Validation => "validation",
             Self::List => "list",
             Self::Table => "table",
             Self::Tree => "tree",
@@ -44,10 +46,16 @@ impl StoryId {
     }
 
     pub fn title_message_id(self) -> String {
+        if self == Self::Validation {
+            return "Validation".into();
+        }
         format!("lab-story-{}-title", self.message_slug())
     }
 
     pub fn summary_message_id(self) -> String {
+        if self == Self::Validation {
+            return "Validate text, password, and search values.".into();
+        }
         format!("lab-story-{}-summary", self.message_slug())
     }
 
@@ -58,6 +66,7 @@ impl StoryId {
             Self::Card => "Card",
             Self::Layout => "VStack + HStack",
             Self::Input => "Text inputs",
+            Self::Validation => "Validation",
             Self::List => "List",
             Self::Table => "Table",
             Self::Tree => "Tree",
@@ -80,7 +89,7 @@ pub struct StoryDefinition {
     pub summary: &'static str,
 }
 
-pub const STORIES: [StoryDefinition; 16] = [
+pub const STORIES: [StoryDefinition; 17] = [
     StoryDefinition {
         id: StoryId::Button,
         title: "Button",
@@ -161,6 +170,11 @@ pub const STORIES: [StoryDefinition; 16] = [
         title: "SplitView + ResizablePanel",
         summary: "ResizablePanel panes with stable child identity, divider dragging, axis changes, reorder, insertion, removal and size limits.",
     },
+    StoryDefinition {
+        id: StoryId::Validation,
+        title: "Validation",
+        summary: "Validate text, password, and search values.",
+    },
 ];
 
 pub fn filtered_story_indices(query: &str) -> Vec<usize> {
@@ -181,6 +195,17 @@ pub fn filtered_story_indices(query: &str) -> Vec<usize> {
 #[cfg(test)]
 mod tests {
     use super::filtered_story_indices;
+
+    #[test]
+    fn validation_story_is_registered_and_searchable() {
+        let matches = filtered_story_indices("Validation");
+        let story = matches
+            .into_iter()
+            .map(|index| &super::STORIES[index])
+            .find(|story| story.id == super::StoryId::Validation)
+            .expect("Validation story must be searchable");
+        assert_eq!(story.id.title_message_id(), "Validation");
+    }
 
     #[test]
     fn story_search_trims_query_and_ignores_ascii_case() {

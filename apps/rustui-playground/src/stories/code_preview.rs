@@ -4,6 +4,11 @@ use super::component_catalog::StoryId;
 
 pub fn source_for(story: StoryId) -> &'static str {
     match story {
+        StoryId::Validation => {
+            r#"TextField("Email", email_binding)
+    .validate(|value| if value.contains('@') { Ok(()) } else { Err("Enter an email containing @".into()) })
+    .is_valid(email_valid_binding)"#
+        }
         StoryId::Button => {
             r#"Button("Increment", increment)
     .button_style(ButtonStyle::BorderedProminent)"#

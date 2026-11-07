@@ -9,6 +9,7 @@ pub fn summary_key_for(story: StoryId) -> &'static str {
         StoryId::Card => "lab-layout-card",
         StoryId::Layout => "lab-layout-layout",
         StoryId::Input => "lab-layout-input",
+        StoryId::Validation => "lab-layout-input",
         StoryId::List => "lab-layout-list",
         StoryId::Table => "lab-layout-table",
         StoryId::Outline => "lab-layout-outline",

@@ -90,6 +90,7 @@ mod toolbar_gallery;
 mod tooltip_gallery;
 mod tree_reconciliation_gallery;
 mod utility_window_gallery;
+mod validation_gallery;
 mod window_chrome_gallery;
 mod window_controls_gallery;
 

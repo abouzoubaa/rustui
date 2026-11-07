@@ -13,3 +13,4 @@
 - Added GPUI test-window coverage for Popover and Menu lifecycle behavior.
 - Added ignored Dialog and Sheet tests; focus recovery and the strict background-focus guard remain unresolved pending an incomplete proposal.
 - Promoted Dialog and Sheet focus recovery with active GPUI test-window coverage.
+- Added validation and validity bindings for text, secure, and search fields, with a Playground story.

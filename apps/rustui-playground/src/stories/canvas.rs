@@ -141,6 +141,7 @@ impl StoryCanvas {
 impl View for StoryCanvas {
     fn body(&self) -> impl View {
         match self.story {
+            StoryId::Validation => VStack::new().child(super::validation_gallery::demo()),
             StoryId::Button => VStack::new()
                 .child(
                     LocalizedText("lab-button-count")
