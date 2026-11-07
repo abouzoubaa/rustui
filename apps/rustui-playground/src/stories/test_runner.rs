@@ -39,7 +39,8 @@ pub const fn status_for(story: StoryId) -> VerificationStatus {
         StoryId::Layout | StoryId::List | StoryId::Table | StoryId::Tree | StoryId::Navigation => {
             VerificationStatus::BoundedNativeChecksRecorded
         }
-        StoryId::Text
+        StoryId::Validation
+        | StoryId::Text
         | StoryId::Card
         | StoryId::Tabs
         | StoryId::Breadcrumb

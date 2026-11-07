@@ -2,8 +2,8 @@
 
 use gpui::Focusable as _;
 use gpui::{
-    AnyElement, AppContext, Entity, EntityInputHandler, IntoElement, ParentElement as _,
-    SharedString, Styled, div, px,
+    AnyElement, AppContext, Entity, EntityInputHandler, InteractiveElement as _, IntoElement,
+    ParentElement as _, SharedString, Styled, div, px,
 };
 use gpui_component::{
     Disableable as _, Icon, IconName, Sizable,
@@ -18,6 +18,9 @@ use crate::{
     theme::{AppearanceMode, ThemeProfile},
     view::{EmptyView, RenderContext, View},
 };
+
+#[path = "validation.rs"]
+mod validation;
 
 const DEFAULT_ACCESSIBILITY_LABEL: &str = "Text field";
 const DEFAULT_PASSWORD_VISIBILITY_ACCESSIBILITY_LABEL: &str = "Toggle password visibility";
@@ -62,6 +65,7 @@ struct RetainedTextField {
     selection_before_preedit: Option<Range<usize>>,
     secure: bool,
     writer: Rc<RefCell<Option<EventWriter<String, gpui::App>>>>,
+    validation: validation::ValidationState,
 }
 
 type EventWriter<Value, Context> = Rc<dyn Fn(Value, &mut Context)>;
@@ -98,6 +102,8 @@ pub struct TextFieldView {
     placeholder: SharedString,
     placeholder_message_id: Option<SharedString>,
     value: Binding<String>,
+    validator: Option<validation::Validator>,
+    valid_binding: Option<Binding<bool>>,
     id: Option<Identity>,
     kind: TextFieldKind,
     size: TextFieldSize,
@@ -117,6 +123,8 @@ impl TextFieldView {
             placeholder: placeholder.into(),
             placeholder_message_id: None,
             value,
+            validator: None,
+            valid_binding: None,
             id: None,
             kind: TextFieldKind::Plain,
             size: TextFieldSize::Small,
@@ -129,6 +137,18 @@ impl TextFieldView {
             password_visibility_accessibility_label: None,
             tab_index: 0,
         }
+    }
+
+    /// Validates the current value on mount and whenever it changes.
+    pub fn validate(mut self, validator: impl Fn(&str) -> Result<(), String> + 'static) -> Self {
+        self.validator = Some(Rc::new(validator));
+        self
+    }
+
+    /// Receives whether the most recently validated value is valid.
+    pub fn is_valid(mut self, binding: Binding<bool>) -> Self {
+        self.valid_binding = Some(binding);
+        self
     }
 
     /// Resolves the visible placeholder from the active RustUI catalog.
@@ -455,10 +475,33 @@ impl View for TextFieldView {
                 selection_before_preedit: None,
                 secure,
                 writer: Rc::new(RefCell::new(None)),
+                validation: validation::ValidationState::default(),
             }
         });
         let state = retained.read(context.app()).state.clone();
         let current_value = self.value.value();
+        let validation_result = self
+            .validator
+            .as_ref()
+            .map(|validate| validate(&current_value));
+        let bound_valid = self.valid_binding.as_ref().map(Binding::value);
+        let result_for_state = validation_result.clone();
+        let value_for_state = current_value.clone();
+        let needs_valid_write = context.update_entity(&retained, move |retained, _, _| {
+            retained
+                .validation
+                .update(&value_for_state, result_for_state.as_ref(), bound_valid)
+        });
+        if needs_valid_write {
+            if let (Some(binding), Some(result)) = (&self.valid_binding, &validation_result) {
+                let writer = context.binding_writer(binding.clone());
+                let valid = result.is_ok();
+                context.update_entity(&retained, move |_, _, cx| {
+                    cx.defer(move |cx| writer(valid, cx));
+                });
+            }
+        }
+
         let show_clear_button =
             self.cleanable && !self.disabled && !self.readonly && !current_value.is_empty();
         let previous_owner_value = retained.read(context.app()).owner_value.clone();
@@ -674,7 +717,24 @@ impl View for TextFieldView {
             let color = search_text_color(&theme.profile, theme.mode);
             input = input.text_color(color).placeholder_color(color);
         }
-        input.into_any_element()
+        if let Some(Err(message)) = validation_result {
+            let danger = gpui_component::Theme::global(context.app()).colors.danger;
+            let error_selector = format!("validation-error:{message}");
+            div()
+                .flex()
+                .flex_col()
+                .child(input)
+                .child(
+                    div()
+                        .debug_selector(move || error_selector.clone())
+                        .text_xs()
+                        .text_color(danger)
+                        .child(message),
+                )
+                .into_any_element()
+        } else {
+            input.into_any_element()
+        }
     }
 }
 
@@ -1499,3 +1559,7 @@ mod tests {
         ));
     }
 }
+
+#[cfg(test)]
+#[path = "validation_tests.rs"]
+mod validation_tests;
