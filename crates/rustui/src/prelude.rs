@@ -23,6 +23,9 @@ pub use crate::components::basic::{
     button::{Button, ButtonStyle},
     text::{LocalizedText, Text, TextWeight},
 };
+pub use crate::components::data::editable_data_grid::{
+    DataGridColumn, EditableDataGrid, EditableDataGridView,
+};
 pub use crate::components::data::keyed_list::{KeyedList, KeyedListItem, KeyedListView};
 pub use crate::components::data::list::{List, ListView};
 pub use crate::components::data::outline::{Outline, OutlineView};

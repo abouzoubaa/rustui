@@ -20,6 +20,7 @@ pub enum StoryId {
     Breadcrumb,
     Navigation,
     Validation,
+    EditableGrid,
 }
 
 impl StoryId {
@@ -31,6 +32,7 @@ impl StoryId {
             Self::Layout => "layout",
             Self::Input => "input",
             Self::Validation => "validation",
+            Self::EditableGrid => "editable-grid",
             Self::List => "list",
             Self::Table => "table",
             Self::Tree => "tree",
@@ -49,12 +51,18 @@ impl StoryId {
         if self == Self::Validation {
             return "Validation".into();
         }
+        if self == Self::EditableGrid {
+            return "Editable grid".into();
+        }
         format!("lab-story-{}-title", self.message_slug())
     }
 
     pub fn summary_message_id(self) -> String {
         if self == Self::Validation {
             return "Validate text, password, and search values.".into();
+        }
+        if self == Self::EditableGrid {
+            return "Edit typed product rows and validate quantities.".into();
         }
         format!("lab-story-{}-summary", self.message_slug())
     }
@@ -67,6 +75,7 @@ impl StoryId {
             Self::Layout => "VStack + HStack",
             Self::Input => "Text inputs",
             Self::Validation => "Validation",
+            Self::EditableGrid => "Editable grid",
             Self::List => "List",
             Self::Table => "Table",
             Self::Tree => "Tree",
@@ -89,7 +98,7 @@ pub struct StoryDefinition {
     pub summary: &'static str,
 }
 
-pub const STORIES: [StoryDefinition; 17] = [
+pub const STORIES: [StoryDefinition; 18] = [
     StoryDefinition {
         id: StoryId::Button,
         title: "Button",
@@ -175,6 +184,11 @@ pub const STORIES: [StoryDefinition; 17] = [
         title: "Validation",
         summary: "Validate text, password, and search values.",
     },
+    StoryDefinition {
+        id: StoryId::EditableGrid,
+        title: "Editable grid",
+        summary: "Edit typed product rows and validate quantities.",
+    },
 ];
 
 pub fn filtered_story_indices(query: &str) -> Vec<usize> {
@@ -195,6 +209,17 @@ pub fn filtered_story_indices(query: &str) -> Vec<usize> {
 #[cfg(test)]
 mod tests {
     use super::filtered_story_indices;
+
+    #[test]
+    fn editable_grid_story_is_registered_and_searchable() {
+        let matches = filtered_story_indices("Editable grid");
+        let story = matches
+            .into_iter()
+            .map(|index| &super::STORIES[index])
+            .find(|story| story.id == super::StoryId::EditableGrid)
+            .expect("Editable grid story must be searchable");
+        assert_eq!(story.id.title_message_id(), "Editable grid");
+    }
 
     #[test]
     fn validation_story_is_registered_and_searchable() {

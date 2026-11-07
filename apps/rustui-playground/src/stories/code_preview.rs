@@ -4,6 +4,10 @@ use super::component_catalog::StoryId;
 
 pub fn source_for(story: StoryId) -> &'static str {
     match story {
+        StoryId::EditableGrid => {
+            r#"EditableDataGrid("Products", rows_binding, |row: &Product| row.id.into(), columns)
+    .id("editable-grid")"#
+        }
         StoryId::Validation => {
             r#"TextField("Email", email_binding)
     .validate(|value| if value.contains('@') { Ok(()) } else { Err("Enter an email containing @".into()) })

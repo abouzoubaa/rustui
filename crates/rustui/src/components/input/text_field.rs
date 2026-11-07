@@ -104,6 +104,7 @@ pub struct TextFieldView {
     value: Binding<String>,
     validator: Option<validation::Validator>,
     valid_binding: Option<Binding<bool>>,
+    editor_focus: Option<Rc<RefCell<Option<gpui::FocusHandle>>>>,
     id: Option<Identity>,
     kind: TextFieldKind,
     size: TextFieldSize,
@@ -125,6 +126,7 @@ impl TextFieldView {
             value,
             validator: None,
             valid_binding: None,
+            editor_focus: None,
             id: None,
             kind: TextFieldKind::Plain,
             size: TextFieldSize::Small,
@@ -148,6 +150,11 @@ impl TextFieldView {
     /// Receives whether the most recently validated value is valid.
     pub fn is_valid(mut self, binding: Binding<bool>) -> Self {
         self.valid_binding = Some(binding);
+        self
+    }
+
+    pub(crate) fn editor_focus(mut self, focus: Rc<RefCell<Option<gpui::FocusHandle>>>) -> Self {
+        self.editor_focus = Some(focus);
         self
     }
 
@@ -479,6 +486,20 @@ impl View for TextFieldView {
             }
         });
         let state = retained.read(context.app()).state.clone();
+        if let Some(target) = &self.editor_focus {
+            let focus = state.read(context.app()).focus_handle(context.app());
+            *target.borrow_mut() = Some(focus.clone());
+            if created {
+                let target = target.clone();
+                context.update_entity(&state, move |_, window, _| {
+                    window.on_next_frame(move |window, cx| {
+                        if target.borrow().as_ref() == Some(&focus) {
+                            focus.focus(window, cx);
+                        }
+                    });
+                });
+            }
+        }
         let current_value = self.value.value();
         let validation_result = self
             .validator

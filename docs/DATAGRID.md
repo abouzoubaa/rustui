@@ -1,3 +1,5 @@
+Status: approved (owner), implemented in T15a/T15b/T15c
+
 ## Today
 
 - `DataGrid(TableView, label)` wraps the existing table with a named table role and row/column counts.
@@ -48,7 +50,8 @@ not visual positions, across sorting and owner updates.
 - Escape discards the draft and returns focus to the cell. On a valid commit, find the row by ID in the
   latest bound vector, apply its typed column writer, and write the updated vector once.
 - If the row disappears, cancel the edit without writing. If the same cell changed externally, retain
-  the draft and report a conflict instead of overwriting it. Preserve the draft across virtual scrolling.
+  the draft and show "Value changed elsewhere" as the cell error; Enter overwrites with the draft,
+  while Escape discards it and shows the new value. Preserve the draft across virtual scrolling.
 
 ## Sorting
 
@@ -102,6 +105,6 @@ column resizing/reordering, custom editor widgets, tree grids and remote/paged d
 
 ## Open questions
 
-1. What if the owner changes the edited cell? **Recommend:** detect the conflict and keep the draft; never silently overwrite the newer value.
-2. Should sorting move the row while typing? **Recommend:** freeze view order during editing and re-sort after commit.
-3. Should the first version support asynchronous or custom editors? **Recommend:** no; ship synchronous T14 validation and typed text editors first.
+1. What if the owner changes the edited cell? **Approved:** keep the draft and show "Value changed elsewhere"; Enter overwrites, Escape discards the draft.
+2. Should sorting move the row while typing? **Approved:** freeze view order during editing and re-sort after commit.
+3. Should the first version support asynchronous or custom editors? **Approved:** no; ship synchronous T14 validation and typed text editors first.
