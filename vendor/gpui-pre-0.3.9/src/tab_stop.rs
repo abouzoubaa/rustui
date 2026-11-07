@@ -108,6 +108,32 @@ impl TabStopMap {
         self.order = SumTree::new(());
     }
 
+    pub(crate) fn first_matching(
+        &self,
+        mut predicate: impl FnMut(&FocusHandle) -> bool,
+    ) -> Option<FocusHandle> {
+        self.order
+            .iter()
+            .filter(|node| node.tab_stop)
+            .filter_map(|node| self.focus_handle_for_order(node))
+            .find(|handle| predicate(handle))
+    }
+
+    pub(crate) fn matching_in_direction(
+        &self,
+        focused: Option<FocusId>,
+        reverse: bool,
+        mut predicate: impl FnMut(&FocusHandle) -> bool,
+    ) -> Option<FocusHandle> {
+        let mut stops: Vec<_> = self.order.iter().filter(|node| node.tab_stop)
+            .filter_map(|node| self.focus_handle_for_order(node)).collect();
+        if reverse { stops.reverse(); }
+        let start = focused.and_then(|id| stops.iter().position(|h| h.id == id))
+            .map_or(0, |i| i + 1);
+        stops.iter().cycle().skip(start).take(stops.len())
+            .find(|handle| predicate(handle)).cloned()
+    }
+
     pub fn next(&self, focused_id: Option<&FocusId>) -> Option<FocusHandle> {
         let Some(focused_id) = focused_id else {
             let first = self.order.first()?;
@@ -428,6 +454,24 @@ mod tests {
         tab_index_map.insert(&tab_non_stop_0);
         let result = tab_index_map.next(Some(&tab_stop_0.id)).unwrap();
         assert_eq!(result.id, tab_stop_2.id);
+    }
+
+    #[test]
+    fn first_matching_visits_duplicate_ids() {
+        let focus_map = Arc::new(FocusMap::default());
+        let mut map = TabStopMap::default();
+        let duplicate = FocusHandle::new(&focus_map).tab_stop(true);
+        let later = FocusHandle::new(&focus_map).tab_stop(true).tab_index(2);
+        map.insert(&duplicate.clone().tab_index(0));
+        map.insert(&duplicate.clone().tab_index(1));
+        map.insert(&later);
+        let mut visited = Vec::new();
+        let result = map.first_matching(|handle| {
+            visited.push(handle.id);
+            handle.id == later.id
+        });
+        assert_eq!(visited, vec![duplicate.id, duplicate.id, later.id]);
+        assert_eq!(result, Some(later));
     }
 
     #[must_use]

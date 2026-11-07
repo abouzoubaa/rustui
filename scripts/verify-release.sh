@@ -23,6 +23,7 @@ verify_web_ime_edit_plan() (
 
 case "${1:-}" in
   source)
+    python3 scripts/apply_gpui_modal_focus_recovery_patch.py --verify
     python3 scripts/verify_owned_gpui_sources.py
     verify_tree_accessibility_series
     python3 scripts/apply_block_stack_symbol_patch.py --verify
@@ -89,6 +90,7 @@ PY
     python3 scripts/apply_cosmic_bidi_initial_span_patch.py --check
     python3 scripts/verify_gpui_web_patch_stack.py --native-only
     python3 scripts/apply_gpui_macos_focused_element_patch.py --verify
+    python3 scripts/apply_gpui_modal_focus_recovery_patch.py --verify
     # GPUI's pinned macOS backend rejects AnchoredPopup unless this approved
     # patch is active. Apply it after exact-source checks, and restore the
     # pinned source on exit, including failed builds and interrupts.

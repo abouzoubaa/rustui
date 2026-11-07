@@ -315,25 +315,86 @@ fn recover(cx: &mut gpui::TestAppContext, kind: ModalKind, remove_focused: bool)
 }
 
 #[gpui::test]
-#[ignore = "needs patches/proposed/t13-modal-focus-recovery-v1.patch"]
 fn dialog_restores_last_focused_child_after_reactivation(cx: &mut gpui::TestAppContext) {
     recover(cx, ModalKind::Dialog, false);
 }
 
 #[gpui::test]
-#[ignore = "needs patches/proposed/t13-modal-focus-recovery-v1.patch"]
 fn dialog_restores_first_child_when_focused_child_was_removed(cx: &mut gpui::TestAppContext) {
     recover(cx, ModalKind::Dialog, true);
 }
 
 #[gpui::test]
-#[ignore = "needs patches/proposed/t13-modal-focus-recovery-v1.patch"]
 fn sheet_restores_last_focused_child_after_reactivation(cx: &mut gpui::TestAppContext) {
     recover(cx, ModalKind::Sheet, false);
 }
 
 #[gpui::test]
-#[ignore = "needs patches/proposed/t13-modal-focus-recovery-v1.patch"]
 fn sheet_restores_first_child_when_focused_child_was_removed(cx: &mut gpui::TestAppContext) {
     recover(cx, ModalKind::Sheet, true);
+}
+
+struct BackgroundAfterRemoval {
+    focus: FocusHandle,
+}
+
+impl gpui::Render for BackgroundAfterRemoval {
+    fn render(
+        &mut self,
+        _: &mut gpui::Window,
+        _: &mut gpui::Context<Self>,
+    ) -> impl gpui::IntoElement {
+        div().track_focus(&self.focus).tab_stop(true)
+    }
+}
+
+#[gpui::test]
+fn modal_owner_removal_releases_focus_guard(cx: &mut gpui::TestAppContext) {
+    let theme = crate::theme::parse_theme(include_str!(concat!(
+        env!("CARGO_MANIFEST_DIR"),
+        "/../../themes/macos27.json"
+    )))
+    .unwrap();
+    cx.update(|app| {
+        gpui_component::init(app);
+        crate::theme::activate_theme(&theme, Some(crate::theme::AppearanceMode::Light), app)
+            .unwrap();
+    });
+    for kind in [ModalKind::Dialog, ModalKind::Sheet] {
+        let (first, second, behind) =
+            cx.update(|app| (app.focus_handle(), app.focus_handle(), app.focus_handle()));
+        let (retained_root, window) = cx.add_window_view({
+            let first = first.clone();
+            let second = second.clone();
+            let behind = behind.clone();
+            move |window, cx| {
+                let owner = cx.new(|cx| {
+                    ComponentHost::new(
+                        Owner {
+                            kind,
+                            first,
+                            second,
+                            behind,
+                            show_second: true,
+                        },
+                        cx,
+                    )
+                });
+                gpui_component::Root::new(owner, window, cx)
+            }
+        });
+        open_modal(window, kind, &second, &behind);
+        window.update(|window, app| {
+            window.focus(&behind, app);
+            assert_ne!(window.focused(app).as_ref(), Some(&behind));
+            let focus = behind.clone();
+            window.replace_root(app, move |_, _| BackgroundAfterRemoval { focus });
+        });
+        draw(window);
+        window.update(|window, app| {
+            window.focus(&behind, app);
+            assert_eq!(window.focused(app).as_ref(), Some(&behind));
+        });
+        drop(retained_root);
+    }
 }

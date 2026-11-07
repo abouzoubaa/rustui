@@ -11,11 +11,12 @@ use crate::{
 };
 use gpui::{
     App, AppContext, Context, DefiniteLength, ElementId, Entity, FocusHandle, InteractiveElement,
-    IntoElement, ParentElement as _, Render, RenderOnce, Styled, WeakFocusHandle, Window, div,
+    IntoElement, ParentElement as _, Render, RenderOnce, Styled, Subscription, WeakFocusHandle,
+    Window, div,
     prelude::FluentBuilder as _,
 };
 use gpui_base::{TextSelection, TextSelectionScopeId};
-use std::{any::TypeId, rc::Rc};
+use std::{any::TypeId, cell::RefCell, rc::Rc};
 
 pub(crate) fn init(cx: &mut App) {
     gpui_base::Root::register_plugin::<WindowState>(cx, WindowState::new);
@@ -32,13 +33,19 @@ pub(crate) struct WindowState {
     touch_selection_overlay: Entity<WindowTouchSelectionOverlay>,
     sheet_size: Option<DefiniteLength>,
     pending_focus_restore: Option<WeakFocusHandle>,
+    focus_recovery_epoch: u64,
+    pending_focus_recovery: Option<FocusHandle>,
 }
+
+type ModalFocusMemory = Rc<RefCell<Option<WeakFocusHandle>>>;
 
 #[derive(Clone)]
 pub(crate) struct ActiveSheet {
     focus_handle: FocusHandle,
     /// The previous focused handle before opening the Sheet.
     previous_focused_handle: Option<WeakFocusHandle>,
+    last_focused_handle: ModalFocusMemory,
+    _focus_out_subscription: Rc<Subscription>,
     placement: Placement,
     selection_scope: TextSelectionScopeId,
     builder: Rc<dyn Fn(Sheet, &mut Window, &mut App) -> Sheet + 'static>,
@@ -49,6 +56,8 @@ pub(crate) struct ActiveDialog {
     focus_handle: FocusHandle,
     /// The previous focused handle before opening the Dialog.
     previous_focused_handle: Option<WeakFocusHandle>,
+    last_focused_handle: ModalFocusMemory,
+    _focus_out_subscription: Rc<Subscription>,
     selection_scope: TextSelectionScopeId,
     builder: Rc<dyn Fn(Dialog, &mut Window, &mut App) -> Dialog + 'static>,
 }
@@ -57,12 +66,16 @@ impl ActiveDialog {
     pub(crate) fn new(
         focus_handle: FocusHandle,
         previous_focused_handle: Option<WeakFocusHandle>,
+        last_focused_handle: ModalFocusMemory,
+        focus_out_subscription: Rc<Subscription>,
         selection_scope: TextSelectionScopeId,
         builder: impl Fn(Dialog, &mut Window, &mut App) -> Dialog + 'static,
     ) -> Self {
         Self {
             focus_handle,
             previous_focused_handle,
+            last_focused_handle,
+            _focus_out_subscription: focus_out_subscription,
             selection_scope,
             builder: Rc::new(builder),
         }
@@ -71,6 +84,14 @@ impl ActiveDialog {
 
 impl WindowState {
     fn new(window: &mut Window, cx: &mut Context<Self>) -> Self {
+        cx.observe_window_activation(window, |this, window, cx| {
+            this.on_window_activation(window, cx);
+        })
+        .detach();
+        cx.on_focus_lost(window, |this, window, cx| {
+            this.on_modal_focus_lost(window, cx);
+        })
+        .detach();
         Self {
             active_sheet: None,
             active_dialogs: Vec::new(),
@@ -82,7 +103,139 @@ impl WindowState {
             touch_selection_overlay: cx.new(|cx| WindowTouchSelectionOverlay::new(window, cx)),
             sheet_size: None,
             pending_focus_restore: None,
+            focus_recovery_epoch: 0,
+            pending_focus_recovery: None,
         }
+    }
+
+    fn top_modal(&self) -> Option<(FocusHandle, ModalFocusMemory)> {
+        self.active_dialogs
+            .last()
+            .map(|dialog| (dialog.focus_handle.clone(), dialog.last_focused_handle.clone()))
+            .or_else(|| {
+                self.active_sheet
+                    .as_ref()
+                    .map(|sheet| (sheet.focus_handle.clone(), sheet.last_focused_handle.clone()))
+            })
+    }
+
+    fn sync_modal_focus_scope(&self, window: &mut Window, cx: &mut Context<Self>) {
+        let scope = self.top_modal().map(|(scope, _)| scope);
+        window.set_modal_focus_scope(scope.as_ref(), cx.entity_id());
+    }
+
+    fn is_top_modal(&self, focus_handle: &FocusHandle) -> bool {
+        self.active_dialogs
+            .last()
+            .map(|dialog| &dialog.focus_handle)
+            .or_else(|| self.active_sheet.as_ref().map(|sheet| &sheet.focus_handle))
+            .is_some_and(|current| current == focus_handle)
+    }
+
+    fn track_modal_focus(
+        focus_handle: &FocusHandle,
+        window: &mut Window,
+        cx: &mut Context<Self>,
+    ) -> (ModalFocusMemory, Rc<Subscription>) {
+        let memory = Rc::new(RefCell::new(None));
+        let last_focus = memory.clone();
+        let subscription = window.on_focus_out(focus_handle, cx, move |event, _, _| {
+            *last_focus.borrow_mut() = Some(event.blurred);
+        });
+        (memory, Rc::new(subscription))
+    }
+
+    fn on_window_activation(&mut self, window: &mut Window, cx: &mut Context<Self>) {
+        // Invalidate a delayed recovery from a previous activation transition.
+        self.focus_recovery_epoch = self.focus_recovery_epoch.wrapping_add(1);
+        self.pending_focus_recovery = None;
+        let Some((scope, memory)) = self.top_modal() else {
+            return;
+        };
+        if !window.is_window_active() {
+            if let Some(focused) = window.focused(cx)
+                && window.modal_focus_contains(&scope, &focused)
+            {
+                *memory.borrow_mut() = Some(focused.downgrade());
+            }
+            return;
+        }
+
+        let preferred = memory.borrow().clone();
+        // Do not leave an outside element focused while the tree is refreshed.
+        if !window.focused(cx).is_some_and(|focused| window.modal_focus_contains(&scope, &focused)) {
+            window.blur(cx);
+        }
+        self.schedule_modal_recovery(scope, preferred, window, cx);
+    }
+
+    fn on_modal_focus_lost(&mut self, window: &mut Window, cx: &mut Context<Self>) {
+        if !window.is_window_active() {
+            return;
+        }
+        let Some((scope, _)) = self.top_modal() else {
+            return;
+        };
+        if self.pending_focus_recovery.as_ref() == Some(&scope) {
+            return;
+        }
+        // This callback runs after the rendered frame has changed, so removed
+        // descendants are no longer candidates in the tab-stop map.
+        if !window.restore_focus_within(&scope, None, cx) {
+            self.schedule_modal_recovery(scope, None, window, cx);
+        }
+    }
+
+    fn schedule_modal_recovery(
+        &mut self,
+        scope: FocusHandle,
+        preferred: Option<WeakFocusHandle>,
+        window: &mut Window,
+        cx: &mut Context<Self>,
+    ) {
+        self.focus_recovery_epoch = self.focus_recovery_epoch.wrapping_add(1);
+        let epoch = self.focus_recovery_epoch;
+        self.pending_focus_recovery = Some(scope.clone());
+        let state = cx.weak_entity();
+        // Next-frame callbacks run before that frame's draw. Force one draw and
+        // validate in the following callback, against the resulting tree.
+        window.on_next_frame(move |window, cx| {
+            let valid = window.is_window_active()
+                && state.upgrade().is_some_and(|entity| {
+                    let state = entity.read(cx);
+                    state.focus_recovery_epoch == epoch && state.is_top_modal(&scope)
+                });
+            if !valid {
+                let _ = state.update(cx, |this, _| {
+                    if this.focus_recovery_epoch == epoch {
+                        this.pending_focus_recovery = None;
+                    }
+                });
+                return;
+            }
+            window.refresh();
+            window.on_next_frame(move |window, cx| {
+                let _ = state.update(cx, |this, cx| {
+                    if this.focus_recovery_epoch != epoch {
+                        return;
+                    }
+                    this.pending_focus_recovery = None;
+                    if !window.is_window_active() || !this.is_top_modal(&scope) {
+                        return;
+                    }
+                    // Do not override focus that has already moved to a live
+                    // descendant while the recovery was scheduled.
+                    if let Some(current) = window.focused(cx)
+                        && current != scope
+                        && window.modal_focus_contains(&scope, &current)
+                    {
+                        return;
+                    }
+                    let preferred = preferred.and_then(|handle| handle.upgrade());
+                    window.restore_focus_within(&scope, preferred.as_ref(), cx);
+                });
+            });
+        });
     }
 
     fn entity(window: &Window, cx: &App) -> Option<Entity<Self>> {
@@ -253,15 +406,19 @@ impl WindowState {
         }
 
         let focus_handle = cx.focus_handle();
-        focus_handle.focus(window, cx);
-
+        let (last_focused_handle, focus_out_subscription) =
+            Self::track_modal_focus(&focus_handle, window, cx);
         let selection_scope = self.allocate_text_selection_scope();
         self.active_dialogs.push(ActiveDialog::new(
-            focus_handle,
+            focus_handle.clone(),
             previous_focused_handle,
+            last_focused_handle,
+            focus_out_subscription,
             selection_scope,
             build,
         ));
+        self.sync_modal_focus_scope(window, cx);
+        focus_handle.focus(window, cx);
         // Opening a modal confines selection to it; drop any background
         // selection so it cannot linger (or be copied) under the modal.
         gpui_base::TextSelection::clear(window, cx);
@@ -277,7 +434,9 @@ impl WindowState {
     }
 
     pub fn close_dialog(&mut self, window: &mut Window, cx: &mut Context<'_, WindowState>) {
-        if let Some(handle) = self.close_dialog_internal() {
+        let previous = self.close_dialog_internal();
+        self.sync_modal_focus_scope(window, cx);
+        if let Some(handle) = previous {
             window.focus(&handle, cx);
         }
         gpui_base::TextSelection::clear(window, cx);
@@ -289,7 +448,9 @@ impl WindowState {
         window: &mut Window,
         cx: &mut Context<'_, WindowState>,
     ) {
-        if let Some(handle) = self.close_dialog_internal() {
+        let previous = self.close_dialog_internal();
+        self.sync_modal_focus_scope(window, cx);
+        if let Some(handle) = previous {
             let dialogs_count = self.active_dialogs.len();
 
             // Save for new dialogs opened during animation to maintain focus chain
@@ -319,6 +480,7 @@ impl WindowState {
             .first()
             .and_then(|d| d.previous_focused_handle.clone());
         self.active_dialogs.clear();
+        self.sync_modal_focus_scope(window, cx);
         if let Some(handle) = previous_focused_handle.and_then(|h| h.upgrade()) {
             window.focus(&handle, cx);
         }
@@ -342,15 +504,20 @@ impl WindowState {
             .or_else(|| window.focused(cx).map(|h| h.downgrade()));
 
         let focus_handle = cx.focus_handle();
-        focus_handle.focus(window, cx);
+        let (last_focused_handle, focus_out_subscription) =
+            Self::track_modal_focus(&focus_handle, window, cx);
         let selection_scope = self.allocate_text_selection_scope();
         self.active_sheet = Some(ActiveSheet {
-            focus_handle,
+            focus_handle: focus_handle.clone(),
             previous_focused_handle,
+            last_focused_handle,
+            _focus_out_subscription: focus_out_subscription,
             placement,
             selection_scope,
             builder: Rc::new(build),
         });
+        self.sync_modal_focus_scope(window, cx);
+        focus_handle.focus(window, cx);
         // Opening a modal confines selection to it; drop any background
         // selection so it cannot linger (or be copied) under the modal.
         gpui_base::TextSelection::clear(window, cx);
@@ -359,15 +526,13 @@ impl WindowState {
 
     pub fn close_sheet(&mut self, window: &mut Window, cx: &mut Context<'_, WindowState>) {
         self.focused_input = None;
-        if let Some(previous_handle) = self
-            .active_sheet
-            .as_ref()
-            .and_then(|s| s.previous_focused_handle.as_ref())
-            .and_then(|h| h.upgrade())
-        {
+        let previous = self.active_sheet.take()
+            .and_then(|s| s.previous_focused_handle)
+            .and_then(|h| h.upgrade());
+        self.sync_modal_focus_scope(window, cx);
+        if let Some(previous_handle) = previous {
             window.focus(&previous_handle, cx);
         }
-        self.active_sheet = None;
         gpui_base::TextSelection::clear(window, cx);
         cx.notify();
     }

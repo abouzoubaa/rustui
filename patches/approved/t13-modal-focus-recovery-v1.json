@@ -1,0 +1,22 @@
+{
+  "patch": "patches/approved/t13-modal-focus-recovery-v1.patch",
+  "patch_sha256": "703d6121ffe0dec3e92a398efa9a28ab489c0d150ed258074ee20486ea8454bf",
+  "files": {
+    "vendor/gpui-component-0.7.3/src/root.rs": {
+      "pre": "c438aabc60f18252420a40e773e0aa4447fe89b00e27033c0ad7e5980b9c2749",
+      "post": "a2c28baa0e672401cec20fd692c4820c97df4dff25d3b852d21b93c291252b55"
+    },
+    "vendor/gpui-pre-0.3.9/src/key_dispatch.rs": {
+      "pre": "82c084ec3bff07572e5e99c385daecc94ff51472523415b6ad83811ff46670ba",
+      "post": "71050fc4488ab35abf3770269a29c2031cb5ce2986f9d7a5bb3b205a892b24ec"
+    },
+    "vendor/gpui-pre-0.3.9/src/tab_stop.rs": {
+      "pre": "7f742d6d6b7e5cd6fc634f2764fc3937e1cdebcf086d4b7c166379724edd1881",
+      "post": "080b243d9f6c795fd96d187ef255c983dc56bf5ae5d64744b35bbf92c09233f3"
+    },
+    "vendor/gpui-pre-0.3.9/src/window.rs": {
+      "pre": "cefed67fddfdae9e35d8e6ab2c909a83d8a9abb0a10f6d0db1f89116aedc56d6",
+      "post": "239c67e16b23b1e4aa5fb31c37382240984d994f102bc25ecd1c68be88081bbe"
+    }
+  }
+}
