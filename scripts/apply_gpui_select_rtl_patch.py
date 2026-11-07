@@ -26,9 +26,16 @@ def digest(data):
 def run(root, artifacts, mode):
     root, artifacts = root.resolve(), artifacts.resolve()
     package = tomllib.loads((root / "vendor/gpui-component-0.7.3/Cargo.toml").read_text())["package"]
-    selected = tomllib.loads((root / "Cargo.toml").read_text())["patch"]["crates-io"]["gpui-component"]
-    if (package.get("name"), package.get("version"), selected.get("path")) != ("gpui-component", "0.7.3", "vendor/gpui-component-0.7.3"):
-        raise ValueError("pinned gpui-component package selection mismatch")
+    manifest = tomllib.loads((root / 'Cargo.toml').read_text())
+    dependencies = manifest.get('workspace', {}).get('dependencies', {})
+    patches = manifest.get('patch', {}).get('crates-io', {})
+    package = root / f'vendor/gpui-component-0.7.3'
+    metadata = tomllib.loads((package / 'Cargo.toml').read_text())['package']
+    dependency = dependencies.get('gpui-component')
+    selected_path = dependency.get('path') if dependency else patches.get('gpui-component', {}).get('path')
+    if (metadata.get('name'), metadata.get('version'), selected_path) not in (('gpui-component', '0.7.3', 'crates/rustui-gpui-component'), ('gpui-component', '0.7.3', 'vendor/gpui-component-0.7.3')):
+        raise ValueError('gpui-component package selection mismatch')
+    
     for path, expected in PRESERVED.items():
         if digest((root / path).read_bytes()) != expected:
             raise ValueError(f"upstream metadata changed: {path}")

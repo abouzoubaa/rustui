@@ -6,20 +6,52 @@ MANIFEST=Path('patches/approved/gpui-base-disabled-semantic-roots-v1.json')
 MANIFEST_SHA256='22601f36962c6a6fa6356812cef4b33915c2f90f97645cd94bf481f18c6b32fb'
 def digest(data): return hashlib.sha256(data).hexdigest()
 def load(root, artifacts):
- data=(artifacts/MANIFEST).read_bytes()
- if digest(data)!=MANIFEST_SHA256: raise ValueError('metadata hash mismatch')
- meta=json.loads(data)
- for path,expected in meta['preserved_provenance'].items():
-  if digest((root/path).read_bytes())!=expected: raise ValueError(f'upstream provenance changed: {path}')
- selected=tomllib.loads((root/'Cargo.toml').read_text()).get('patch',{}).get('crates-io',{})
- for path,expected in meta['packages'].items():
-  package=tomllib.loads((root/path).read_text())['package']
-  if (package.get('name'),package.get('version'))!=(expected['name'],expected['version']): raise ValueError(f'package identity changed: {path}')
-  if selected.get(expected['name'],{}).get('path')!=expected['path']: raise ValueError(f'local source changed: {path}')
- prerequisite=meta['prerequisite']
- if digest((root/prerequisite['path']).read_bytes())!=prerequisite['sha256']: raise ValueError('approved aria-disabled prerequisite changed')
- if digest((artifacts/meta['patch']).read_bytes())!=meta['patch_sha256']: raise ValueError('patch artifact changed')
- return meta
+    data = (artifacts / MANIFEST).read_bytes()
+    if digest(data) != MANIFEST_SHA256:
+        raise ValueError('metadata hash mismatch')
+    meta = json.loads(data)
+    for path, expected in meta['preserved_provenance'].items():
+        if digest((root / path).read_bytes()) != expected:
+            raise ValueError(f'upstream provenance changed: {path}')
+    manifest = tomllib.loads((root / 'Cargo.toml').read_text())
+    selected = manifest.get('patch', {}).get('crates-io', {})
+    dependencies = manifest.get('workspace', {}).get('dependencies', {})
+    for path, expected in meta['packages'].items():
+        package = tomllib.loads((root / path).read_text())['package']
+        if (package.get('name'), package.get('version')) != (expected['name'], expected['version']):
+            raise ValueError(f'package identity changed: {path}')
+        dependency = next(
+            ((key, value) for key, value in dependencies.items()
+             if isinstance(value, dict) and (key == expected['name'] or value.get('package', key) == expected['name'])),
+            None,
+        )
+        if dependency:
+            key, value = dependency
+            selected_path = value.get('path')
+            if not selected_path or not selected_path.startswith('crates/rustui-'):
+                raise ValueError(f'owned source changed: {path}')
+        else:
+            owned_folder = {
+                'gpui-pre': 'rustui-gpui',
+                'gpui-pre-web': 'rustui-gpui-web',
+                'gpui-pre-platform': 'rustui-gpui-platform',
+                'gpui-base': 'rustui-gpui-base',
+                'gpui-component': 'rustui-gpui-component',
+            }.get(expected['name'])
+            owned_manifest = root / 'crates' / owned_folder / 'Cargo.toml' if owned_folder else None
+            if owned_manifest and owned_manifest.is_file():
+                owned_package = tomllib.loads(owned_manifest.read_text())['package']
+                if (owned_package.get('name'), owned_package.get('version')) != (expected['name'], expected['version']):
+                    raise ValueError(f'owned package identity changed: {owned_manifest.relative_to(root)}')
+            elif expected['name'] in selected and selected[expected['name']].get('path') != expected['path']:
+                raise ValueError(f'local source changed: {path}')
+    prerequisite = meta['prerequisite']
+    if digest((root / prerequisite['path']).read_bytes()) != prerequisite['sha256']:
+        raise ValueError('approved aria-disabled prerequisite changed')
+    if digest((artifacts / meta['patch']).read_bytes()) != meta['patch_sha256']:
+        raise ValueError('patch artifact changed')
+    return meta
+
 def sources(root,meta): return {p:(root/p).read_bytes() for p in meta['images']['pre']}
 def identify(current,meta):
  hashes={p:digest(data) for p,data in current.items()}

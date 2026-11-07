@@ -80,10 +80,10 @@ class FocusedElementPatch(unittest.TestCase):
     def test_registry_source_selection_rejected(self):
         cargo = self.root / "Cargo.toml"
         content = cargo.read_text()
-        selected = f'gpui-pre-macos = {{ path = "{self.metadata["gpui"]["cargo_path"]}" }}'
+        selected = '"crates/rustui-gpui-macos",'
         self.assertIn(selected, content)
-        cargo.write_text(content.replace(selected, 'gpui-pre-macos = { git = "https://example.invalid/zed" }'))
-        with self.assertRaisesRegex(ValueError, "must select the pinned local GPUI macOS package"):
+        cargo.write_text(content.replace(selected, '"vendor/gpui-pre-macos-0.3.9",'))
+        with self.assertRaisesRegex(ValueError, "pinned local GPUI macOS package"):
             self.run_mode("--check")
 
     def test_tampered_license_rejected(self):

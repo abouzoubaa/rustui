@@ -71,6 +71,8 @@ pub mod theme;
 pub mod view;
 
 pub use animation::offset::{SpringOffset, SpringOffsetError};
+pub use gpui;
+pub use gpui_component;
 pub use gpui::{App, AssetSource, Result as AssetResult, SharedString};
 pub use modifiers::interaction::{PointerCursor, PointerCursorView};
 pub use modifiers::opacity::{AnimatedOpacity, OpacityAnimationError};

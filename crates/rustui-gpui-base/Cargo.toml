@@ -81,7 +81,7 @@ version = "0.3"
 [dependencies.gpui]
 version = "=0.3.9"
 path = "../rustui-gpui"
-package = "rustui-gpui"
+package = "gpui-pre"
 
 [dependencies.gpui_macros]
 version = "=0.3.9"
@@ -157,7 +157,7 @@ features = [
     "test-support",
 ]
 path = "../rustui-gpui"
-package = "rustui-gpui"
+package = "gpui-pre"
 
 [dev-dependencies.gpui_platform]
 version = "=0.3.9"
@@ -166,7 +166,7 @@ features = [
     "font-kit",
     "runtime_shaders",
 ]
-package = "rustui-gpui-platform"
+package = "gpui-pre-platform"
 
 [target.'cfg(not(target_family = "wasm"))'.dependencies.smol]
 version = "2"

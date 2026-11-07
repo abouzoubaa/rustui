@@ -20,8 +20,8 @@ class ExternalConsumerSetupTests(unittest.TestCase):
             self.assertEqual(
                 Path(manifest["dependencies"]["rustui"]["path"]), ROOT / "crates/rustui"
             )
-            for patch in manifest["patch"]["crates-io"].values():
-                self.assertTrue(Path(patch["path"]).is_relative_to(ROOT / "vendor"))
+            self.assertNotIn("patch", manifest)
+            self.assertEqual(set(manifest["dependencies"]), {"rustui"})
             config = tomllib.loads((destination / ".cargo/config.toml").read_text())
             self.assertEqual(
                 Path(config["source"]["vendored-sources"]["directory"]), ROOT / "vendor"

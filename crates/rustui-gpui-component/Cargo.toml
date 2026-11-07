@@ -11,7 +11,7 @@
 
 [package]
 edition = "2024"
-name = "rustui-gpui-component"
+name = "gpui-component"
 version = "0.7.3"
 build = "build.rs"
 publish = true
@@ -102,7 +102,7 @@ version = "2.1.0"
 [dependencies.gpui]
 version = "=0.3.9"
 path = "../rustui-gpui"
-package = "rustui-gpui"
+package = "gpui-pre"
 
 [dependencies.gpui-base]
 version = "0.7.1"
@@ -114,6 +114,7 @@ version = "0.7.1"
 
 [dependencies.gpui-kit-assets]
 version = "0.7.1"
+path = "../rustui-gpui-kit-assets"
 
 [dependencies.gpui_macros]
 version = "=0.3.9"
@@ -203,7 +204,7 @@ version = "1.10"
 version = "=0.3.9"
 features = ["test-support"]
 path = "../rustui-gpui"
-package = "rustui-gpui"
+package = "gpui-pre"
 
 [target.'cfg(target_os = "macos")'.dependencies.block2]
 version = "0.6"

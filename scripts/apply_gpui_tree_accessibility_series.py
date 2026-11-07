@@ -54,9 +54,9 @@ PROVENANCE = {
     "vendor/gpui-component-0.7.3/LICENSE-APACHE": "d1b0449e5478c574ba4f686c2656df7fe77d66821a61f8b6ed3378a58ed9a811",
     "vendor/gpui-pre-0.3.9/src/elements/div.rs": "de8298ce4e48f055984742a18f18206e385786f64ff495f2d5b176481033b84e",
 }
-REGISTRY_PACKAGES = {
-    "gpui-base": "2e9955b6f4b048fd50ca15fc8e225d80bb00ba9ebc8fecdddde5ad26dbef9270",
-    "gpui-component": "465a363235cd4062ef5f0953fc096fc764ed6f53dfbd9f409f669f93ea3b1ff9",
+OWNED_PACKAGES = {
+    "gpui-base": ("rustui-gpui-base", "crates/rustui-gpui-base"),
+    "gpui-component": ("gpui-component", "crates/rustui-gpui-component"),
 }
 PATCH_ORDER = (TEST_A11Y_PATCH, ARIA_LEVEL_PATCH, ROOT_NAME_PATCH)
 
@@ -87,22 +87,22 @@ def verify_identity(root: Path) -> None:
             raise ValueError(f"upstream provenance changed: {relative}")
 
     lock = tomllib.loads((root / "Cargo.lock").read_text(encoding="utf-8"))
-    for name, expected in REGISTRY_PACKAGES.items():
-        next(
-            package for package in lock["package"]
-            if package.get("name") == name and package.get("version") == "0.7.3"
-        )
-        checksums = json.loads(
-            (root / f"vendor/{name}-0.7.3/.cargo-checksum.json").read_text(encoding="utf-8")
-        )
-        if checksums.get("package") != expected:
-            raise ValueError(f"unexpected registry archive checksum for {name}")
-
     manifest = tomllib.loads((root / "Cargo.toml").read_text(encoding="utf-8"))
-    selected = manifest.get("patch", {}).get("crates-io", {})
-    for name, expected in (("gpui-base", "vendor/gpui-base-0.7.3"), ("gpui-component", "vendor/gpui-component-0.7.3")):
-        if selected.get(name, {}).get("path") != expected:
-            raise ValueError(f"Cargo no longer selects the expected local {name} source")
+    dependencies = manifest.get("workspace", {}).get("dependencies", {})
+    for alias, (package_name, expected_path) in OWNED_PACKAGES.items():
+        selected = dependencies.get(alias, {})
+        if (
+            selected.get("path") != expected_path
+            or selected.get("package", alias) != package_name
+        ):
+            raise ValueError(f"Cargo no longer selects owned {alias} at {expected_path}")
+        if not any(
+            package.get("name") == package_name
+            and package.get("version") == "0.7.3"
+            and package.get("source") is None
+            for package in lock["package"]
+        ):
+            raise ValueError(f"Cargo.lock no longer selects owned {package_name} 0.7.3")
 
     for relative, expected in PATCH_HASHES.items():
         if file_digest(root / relative) != expected:

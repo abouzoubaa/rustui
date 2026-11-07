@@ -1,5 +1,5 @@
 [package]
-name = "rustui-block"
+name = "block"
 version = "0.1.6"
 authors = ["Steven Sheldon"]
 

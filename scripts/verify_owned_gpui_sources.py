@@ -16,6 +16,15 @@ OWNED_VENDOR_COPIES = {
     "crates/rustui-gpui-base": "vendor/gpui-base-0.7.3",
     "crates/rustui-gpui-component": "vendor/gpui-component-0.7.3",
     "crates/rustui-block": "vendor/block-0.1.6",
+    "crates/rustui-cocoa": "vendor/cocoa-0.26.1",
+    "crates/rustui-cocoa-foundation": "vendor/cocoa-foundation-0.2.1",
+    "crates/rustui-metal": "vendor/metal-0.33.0",
+    "crates/rustui-objc-foundation": "vendor/objc-foundation-0.1.1",
+    "crates/rustui-gpui-kit-assets": "vendor/gpui-kit-assets-0.7.3",
+    "crates/rustui-gpui-linux": "vendor/gpui-pre-linux-0.3.9",
+    "crates/rustui-gpui-web": "vendor/gpui-pre-web-0.3.9",
+    "crates/rustui-gpui-wgpu": "vendor/gpui-pre-wgpu-0.3.9",
+    "crates/rustui-gpui-windows": "vendor/gpui-pre-windows-0.3.9",
 }
 IGNORED_RELATIVE_PATHS = {"Cargo.toml"}
 

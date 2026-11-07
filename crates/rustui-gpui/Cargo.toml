@@ -11,7 +11,7 @@
 
 [package]
 edition = "2024"
-name = "rustui-gpui"
+name = "gpui-pre"
 version = "0.3.9"
 authors = ["Nathan Sobo <nathan@zed.dev>"]
 build = "build.rs"
