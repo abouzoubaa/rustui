@@ -76,7 +76,14 @@ impl View for Owner {
                         |row: &Row| row.note.clone(),
                         |value| Ok(value.to_owned()),
                         |row, value| row.note = value,
-                    );
+                    )
+                    .validate(|value| {
+                        if value.trim().is_empty() {
+                            Err("Note required".into())
+                        } else {
+                            Ok(())
+                        }
+                    });
                     if self.note_editable {
                         column
                     } else {
@@ -92,23 +99,39 @@ impl View for Owner {
 struct Content {
     owner: Entity<ComponentHost<Owner>>,
     outside: FocusHandle,
+    outside_first: bool,
 }
 
 impl Render for Content {
     fn render(&mut self, _: &mut Window, _: &mut gpui::Context<Self>) -> impl gpui::IntoElement {
-        div().flex().flex_col().child(self.owner.clone()).child(
-            div()
-                .id("outside")
-                .track_focus(&self.outside)
-                .tab_stop(true)
-                .h(px(25.0))
-                .child("Outside"),
-        )
+        let outside = div()
+            .id("outside")
+            .track_focus(&self.outside)
+            .tab_stop(true)
+            .h(px(25.0))
+            .child("Outside");
+        let root = div().flex().flex_col();
+        if self.outside_first {
+            root.child(outside).child(self.owner.clone())
+        } else {
+            root.child(self.owner.clone()).child(outside)
+        }
     }
 }
 
 fn setup(
     cx: &mut gpui::TestAppContext,
+) -> (
+    Entity<ComponentHost<Owner>>,
+    &mut gpui::VisualTestContext,
+    FocusHandle,
+) {
+    setup_order(cx, false)
+}
+
+fn setup_order(
+    cx: &mut gpui::TestAppContext,
+    outside_first: bool,
 ) -> (
     Entity<ComponentHost<Owner>>,
     &mut gpui::VisualTestContext,
@@ -154,7 +177,11 @@ fn setup(
                 )
             });
             *save.borrow_mut() = Some(owner.clone());
-            let content = cx.new(|_| Content { owner, outside });
+            let content = cx.new(|_| Content {
+                owner,
+                outside,
+                outside_first,
+            });
             gpui_component::Root::new(content, window, cx)
         }
     });
@@ -478,7 +505,6 @@ fn parse_error_is_visible_and_keeps_draft_uncommitted(cx: &mut gpui::TestAppCont
 }
 
 #[gpui::test]
-#[ignore = "Tab exit: needs GPUI focus traversal from a dropped editor"]
 fn tab_navigation_crosses_rows_and_leaves_grid_at_end(cx: &mut gpui::TestAppContext) {
     let (owner, window, outside) = setup(cx);
     window.simulate_keystrokes("tab tab tab");
@@ -540,7 +566,62 @@ fn duplicate_column_ids_are_rejected() {
 }
 
 #[gpui::test]
-#[ignore = "Tab exit: needs GPUI focus traversal from a dropped editor"]
+fn shift_tab_at_first_cell_leaves_grid_backwards(cx: &mut gpui::TestAppContext) {
+    let (owner, window, outside) = setup(cx);
+    window.simulate_keystrokes("shift-tab");
+    frame(window);
+    window.update(|window, app| {
+        assert_eq!(window.focused(app).as_ref(), Some(&outside));
+        assert!(grid(&owner, app).read(app).edit.is_none());
+    });
+}
+
+#[gpui::test]
+fn tab_from_last_grid_wraps_to_first_focusable(cx: &mut gpui::TestAppContext) {
+    let (_, window, outside) = setup_order(cx, true);
+    window.simulate_keystrokes("tab tab tab tab tab tab");
+    frame(window);
+    window.update(|window, app| assert_eq!(window.focused(app).as_ref(), Some(&outside)));
+}
+
+#[gpui::test]
+fn invalid_last_cell_tab_stays_in_edit_with_error(cx: &mut gpui::TestAppContext) {
+    let (owner, window, _) = setup(cx);
+    owner.update(window, |owner, cx| {
+        owner.component_mut().note_editable = true;
+        cx.notify();
+    });
+    frame(window);
+    window.simulate_keystrokes("tab tab tab tab tab enter");
+    frame(window);
+    window.simulate_keystrokes("cmd-a");
+    window.simulate_input("");
+    window.simulate_keystrokes("backspace");
+    frame(window);
+    assert!(
+        window
+            .debug_bounds("validation-error:Note required")
+            .is_some()
+    );
+    window.simulate_keystrokes("tab");
+    frame(window);
+    assert!(
+        window
+            .debug_bounds("validation-error:Note required")
+            .is_some()
+    );
+    window.update(|window, app| {
+        let state = grid(&owner, app);
+        let state = state.read(app);
+        let edit = state.edit.as_ref().expect("invalid draft remains in edit");
+        assert!(edit.draft.borrow().is_empty());
+        assert_eq!(window.focused(app), edit.focus.borrow().clone());
+        assert_eq!(owner.read(app).component().rows[1].note, "fixed B");
+        assert_eq!(owner.read(app).component().writes, 0);
+    });
+}
+
+#[gpui::test]
 fn committing_last_cell_with_tab_moves_focus_outside(cx: &mut gpui::TestAppContext) {
     let (owner, window, outside) = setup(cx);
     owner.update(window, |owner, cx| {
