@@ -1,0 +1,31 @@
+{
+  "commit": "ba39ce89e2aed46bebd60c405f3e5e41079b9181",
+  "date": "2026-11-07T23:48:05Z",
+  "rustc_version": "rustc 1.97.1 (8bab26f4f 2026-07-14)",
+  "macos_version": "27.0",
+  "cpu_model": "Apple M1 Max",
+  "median_ms_per_update": {
+    "10": {
+      "update": 0.06387505,
+      "forced_draw": 0.1211896
+    },
+    "100": {
+      "update": 0.60501465,
+      "forced_draw": 1.18527915
+    },
+    "1000": {
+      "update": 6.2948167,
+      "forced_draw": 12.220539550000002
+    }
+  },
+  "forced_draw_1000_run_medians_ms": [
+    12.030025049999999,
+    12.4556896,
+    12.14368755
+  ],
+  "forced_draw_1000_spread_percent": 3.5052330541887216,
+  "spread_definition": "(max - min) / median of the three run medians * 100",
+  "reproducible": true,
+  "reference_ms": 12.2,
+  "target_ms": 8.0
+}
