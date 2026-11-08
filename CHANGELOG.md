@@ -1,5 +1,7 @@
 # Changelog
 
+## 0.1.0 — 2026-11-08
+
 - Cached theme style resolution and tuned the release profile for redraw performance.
 
 - Updated release documentation and defined the Phase C MVP plan.
