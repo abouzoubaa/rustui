@@ -7,7 +7,24 @@ use crate::{
     sheet::Sheet,
 };
 use gpui::{App, ElementId, Entity, Window};
-use std::rc::Rc;
+use std::{
+    rc::Rc,
+    sync::atomic::{AtomicU64, Ordering},
+};
+
+/// Opaque identity for one dialog opening, unique across windows.
+#[derive(Clone, Copy, Debug, PartialEq, Eq, Hash)]
+pub struct DialogId(u64);
+
+impl DialogId {
+    pub(crate) fn next() -> Self {
+        static NEXT: AtomicU64 = AtomicU64::new(1);
+        Self(
+            NEXT.fetch_update(Ordering::Relaxed, Ordering::Relaxed, |id| id.checked_add(1))
+                .expect("dialog identity space exhausted"),
+        )
+    }
+}
 
 /// Extension trait for [`Window`] to add dialog, sheet .. functionality.
 pub trait WindowExt: Sized {
@@ -272,5 +289,45 @@ impl WindowExt for Window {
             }
         });
         None
+    }
+}
+
+/// Identity-aware dialog operations that leave [`WindowExt`] source-compatible.
+pub trait TrackedDialogExt {
+    /// Opens a dialog and returns an identity for this one opening.
+    /// The builder follows [`WindowExt::open_dialog`]'s repeatable-render contract.
+    fn open_dialog_tracked<F>(&mut self, cx: &mut App, build: F) -> DialogId
+    where
+        F: Fn(Dialog, &mut Window, &mut App) -> Dialog + 'static;
+
+    /// Returns whether this opening is active in this window.
+    fn has_dialog_id(&mut self, id: DialogId, cx: &mut App) -> bool;
+
+    /// Closes only this opening, including when another dialog is above it.
+    /// Returns false for stale identities or identities from another window.
+    fn close_dialog_by_id(&mut self, id: DialogId, cx: &mut App) -> bool;
+}
+
+impl TrackedDialogExt for Window {
+    fn open_dialog_tracked<F>(&mut self, cx: &mut App, build: F) -> DialogId
+    where
+        F: Fn(Dialog, &mut Window, &mut App) -> Dialog + 'static,
+    {
+        WindowState::update(self, cx, move |root, window, cx| {
+            root.open_dialog_tracked(build, window, cx)
+        })
+    }
+
+    fn has_dialog_id(&mut self, id: DialogId, cx: &mut App) -> bool {
+        WindowState::read(self, cx)
+            .active_dialogs
+            .iter()
+            .any(|dialog| dialog.id == id)
+    }
+
+    fn close_dialog_by_id(&mut self, id: DialogId, cx: &mut App) -> bool {
+        WindowState::update(self, cx, |root, window, cx| {
+            root.close_dialog_by_id(id, window, cx)
+        })
     }
 }

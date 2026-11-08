@@ -687,3 +687,33 @@ fn sheet_close_button_uses_french_catalog_label(cx: &mut gpui::TestAppContext) {
         );
     });
 }
+
+#[gpui::test]
+fn tracked_dialog_closes_specific_opening_and_preserves_focus_chain(cx: &mut gpui::TestAppContext) {
+    use gpui_component::TrackedDialogExt as _;
+    let (_, window, _, _, behind) = setup(cx, ModalKind::Dialog);
+    window.update(|window, app| window.activate_window());
+    draw(window);
+    window.update(|window, app| window.focus(&behind, app));
+    let lower = window.update(|window, app| {
+        window.open_dialog_tracked(app, |dialog, _, _| dialog.title("Lower"))
+    });
+    draw(window);
+    let upper = window.update(|window, app| {
+        window.open_dialog_tracked(app, |dialog, _, _| dialog.title("Upper"))
+    });
+    draw(window);
+    let upper_focus = window.update(|window, app| window.focused(app).unwrap());
+    window.update(|window, app| {
+        assert!(window.close_dialog_by_id(lower, app));
+        assert!(!window.has_dialog_id(lower, app));
+        assert!(window.has_dialog_id(upper, app));
+        assert_eq!(window.focused(app), Some(upper_focus));
+        assert!(!window.close_dialog_by_id(lower, app));
+    });
+    draw(window);
+    window.update(|window, app| {
+        assert!(window.close_dialog_by_id(upper, app));
+        assert_eq!(window.focused(app), Some(behind));
+    });
+}

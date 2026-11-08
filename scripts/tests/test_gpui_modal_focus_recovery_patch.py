@@ -6,6 +6,7 @@ import io
 import json
 from pathlib import Path
 import shutil
+import subprocess
 import tempfile
 import unittest
 from unittest.mock import patch
@@ -34,6 +35,7 @@ class ModalFocusPatchTests(unittest.TestCase):
             target = self.artifacts / relative
             target.parent.mkdir(parents=True, exist_ok=True)
             shutil.copy2(ROOT / relative, target)
+        subprocess.run(["git", "apply", "--reverse", "--include=vendor/gpui-component-0.7.3/src/root.rs", str(ROOT / "patches/approved/gpui-component-tracked-dialog-focus-rebase-v2.patch")], cwd=self.root, check=True)
         inert_spec = importlib.util.spec_from_file_location(
             "inert_focus_patch", ROOT / "scripts/apply_gpui_inert_focus_scope_patch.py"
         )

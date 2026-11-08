@@ -42,6 +42,24 @@ def run(root: Path, artifacts: Path, mode: str) -> None:
     if digest(patch.read_bytes()) != meta["patch_sha256"]:
         raise ValueError("approved modal focus patch hash mismatch")
     files = meta["files"]
+    # Roll back the later tracked-dialog layer in a disposable stage.
+    tracked_manifest = Path("patches/approved/gpui-component-tracked-dialog-focus-rebase-v2.json")
+    root_source = Path("vendor/gpui-component-0.7.3/src/root.rs")
+    if digest((root / root_source).read_bytes()) == "219028505f48325b75fb403cf3f356eb13d86a115e9c61de8a21e05dfc18f8aa":
+        if mode not in ("--check", "--verify"):
+            raise ValueError("reverse tracked dialog layer first")
+        script = artifacts / "scripts/apply_gpui_component_tracked_dialog_focus_v2_patch.py"
+        subprocess.run(["python3", str(script), "--root", str(root), "--artifacts", str(artifacts), "--verify"], check=True, capture_output=True)
+        tracked = json.loads((artifacts / tracked_manifest).read_text())["files"]
+        with tempfile.TemporaryDirectory(prefix="rustui-dialog-stack-") as folder:
+            stage = Path(folder)
+            for relative in set(files) | set(tracked):
+                target = stage / relative
+                target.parent.mkdir(parents=True, exist_ok=True)
+                target.write_bytes((root / relative).read_bytes())
+            subprocess.run(["python3", str(script), "--root", str(stage), "--artifacts", str(artifacts), "--reverse"], check=True, capture_output=True)
+            run(stage, artifacts, mode)
+        return
     before = {}
     states = set()
     stacked = False
