@@ -219,6 +219,22 @@ impl<E: InteractiveElement + ParentElement + Styled + Element + 'static> Element
             cx,
         )
     }
+
+    fn a11y_role(&self) -> Option<gpui::Role> {
+        self.base.a11y_role()
+    }
+
+    fn write_a11y_info(&self, node: &mut gpui::accesskit::Node) {
+        self.base.write_a11y_info(node);
+    }
+
+    fn a11y_synthetic_children(
+        &mut self,
+        prepaint: &mut Self::PrepaintState,
+        builder: &mut gpui::A11ySubtreeBuilder,
+    ) {
+        self.base.a11y_synthetic_children(prepaint, builder);
+    }
 }
 
 /// Returns the focus handle for the active focus trap, if any.

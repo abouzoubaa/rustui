@@ -1,0 +1,8 @@
+{
+  "schema_version": 1,
+  "patch": "patches/approved/gpui-component-popup-menu-disabled-confirm-v1.patch",
+  "patch_sha256": "777bc778991c33279cfaa380817671b3b9c1550ecbcb88e8d551acda4304d7e0",
+  "source": "vendor/gpui-component-0.7.3/src/menu/popup_menu.rs",
+  "pre_sha256": "3e2e2b4a3d6fe3ced0a764adffe5afc6b0196500286fd67712767ea2cb0954f2",
+  "post_sha256": "7bc282298297c8d2a9d3f825b6c2ed6ec95b9e0ff2890ca7f1051484314b83fe"
+}

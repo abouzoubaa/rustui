@@ -398,3 +398,229 @@ fn modal_owner_removal_releases_focus_guard(cx: &mut gpui::TestAppContext) {
         drop(retained_root);
     }
 }
+
+struct AccessibleTrapProbe {
+    focus: FocusHandle,
+    label: &'static str,
+}
+
+impl View for AccessibleTrapProbe {
+    fn body(&self) -> impl View {
+        EmptyView
+    }
+
+    fn into_element(&self, _: &mut RenderContext<'_>) -> AnyElement {
+        use gpui_base::FocusTrapElement as _;
+        div()
+            .id("p1-accessible-trap")
+            .role(gpui::Role::Dialog)
+            .aria_label(self.label)
+            .track_focus(&self.focus)
+            .child("Modal content")
+            .focus_trap("p1-accessible-trap-wrapper", &self.focus)
+            .into_any_element()
+    }
+}
+
+struct AccessibleModalOwner {
+    kind: ModalKind,
+    focus: FocusHandle,
+}
+
+impl View for AccessibleModalOwner {
+    fn body(&self) -> impl View {
+        let (id, label) = match self.kind {
+            ModalKind::Dialog => ("p1-dialog", "P1 dialog focus trap"),
+            ModalKind::Sheet => ("p1-sheet", "P1 sheet focus trap"),
+        };
+        let content = AccessibleTrapProbe {
+            focus: self.focus.clone(),
+            label,
+        };
+        match self.kind {
+            ModalKind::Dialog => VStack::new().child(Dialog(id, "Open modal").content(content)),
+            ModalKind::Sheet => VStack::new().child(Sheet(id, "Open modal").content(content)),
+        }
+    }
+}
+
+fn assert_open_modal_trap_accessibility(
+    cx: &mut gpui::TestAppContext,
+    kind: ModalKind,
+    label: &str,
+) {
+    let theme = crate::theme::parse_theme(include_str!(concat!(
+        env!("CARGO_MANIFEST_DIR"),
+        "/../../themes/macos27.json"
+    )))
+    .unwrap();
+    cx.update(|app| {
+        gpui_component::init(app);
+        crate::theme::activate_theme(&theme, Some(crate::theme::AppearanceMode::Light), app)
+            .unwrap();
+    });
+    let (_, window) = cx.add_window_view(move |window, cx| {
+        let focus = cx.focus_handle();
+        let owner = cx.new(|cx| ComponentHost::new(AccessibleModalOwner { kind, focus }, cx));
+        gpui_component::Root::new(owner, window, cx)
+    });
+    window.update(|window, app| {
+        window.activate_window();
+        window.draw(app).clear(app);
+        window.focus_next(app);
+    });
+    window.run_until_parked();
+    draw(window);
+    let key = gpui::Keystroke::parse("enter").unwrap();
+    window.simulate_event(gpui::KeyDownEvent {
+        keystroke: key.clone(),
+        is_held: false,
+        prefer_character_input: false,
+    });
+    window.simulate_event(gpui::KeyUpEvent { keystroke: key });
+    draw(window);
+    window.update(|window, app| {
+        window.draw(app).clear(app);
+        match kind {
+            ModalKind::Dialog => assert!(window.has_active_dialog(app)),
+            ModalKind::Sheet => assert!(window.has_active_sheet(app)),
+        }
+        let tree: serde_json::Value =
+            serde_json::from_str(&window.debug_a11y_tree_json().unwrap()).unwrap();
+        assert!(
+            tree["nodes"]
+                .as_object()
+                .unwrap()
+                .values()
+                .any(|node| { node["aria"]["role"] == "Dialog" && node["aria"]["label"] == label }),
+            "focus-trap wrapper must forward Dialog role and label: {tree}"
+        );
+        assert!(
+            tree["nodes"].as_object().unwrap().values().any(|node| {
+                node["aria"]["role"] == "Dialog" && node["aria"]["label"] == "Open modal"
+            }),
+            "open modal must expose its own Dialog role and label: {tree}"
+        );
+    });
+}
+
+#[gpui::test]
+fn focus_trap_forwards_dialog_role_and_label_in_open_dialog(cx: &mut gpui::TestAppContext) {
+    assert_open_modal_trap_accessibility(cx, ModalKind::Dialog, "P1 dialog focus trap");
+}
+
+#[gpui::test]
+fn focus_trap_forwards_dialog_role_and_label_in_open_sheet(cx: &mut gpui::TestAppContext) {
+    assert_open_modal_trap_accessibility(cx, ModalKind::Sheet, "P1 sheet focus trap");
+}
+
+struct KeyboardMenuProbe {
+    disabled_calls: Rc<Cell<usize>>,
+    enabled_calls: Rc<Cell<usize>>,
+    menu: Rc<RefCell<Option<gpui::WeakEntity<gpui_component::menu::PopupMenu>>>>,
+}
+
+impl gpui::Render for KeyboardMenuProbe {
+    fn render(
+        &mut self,
+        _: &mut gpui::Window,
+        _: &mut gpui::Context<Self>,
+    ) -> impl gpui::IntoElement {
+        use gpui_component::menu::{DropdownMenu as _, PopupMenuItem};
+        let disabled_calls = self.disabled_calls.clone();
+        let enabled_calls = self.enabled_calls.clone();
+        let slot = self.menu.clone();
+        gpui_component::button::Button::new("p1-menu-trigger")
+            .label("Actions")
+            .w(px(120.))
+            .h(px(30.))
+            .dropdown_menu(move |menu, _, cx| {
+                *slot.borrow_mut() = Some(cx.weak_entity());
+                let disabled_calls = disabled_calls.clone();
+                let enabled_calls = enabled_calls.clone();
+                menu.item(
+                    PopupMenuItem::new("Disabled")
+                        .disabled(true)
+                        .on_click(move |_, _, _| disabled_calls.set(disabled_calls.get() + 1)),
+                )
+                .item(
+                    PopupMenuItem::new("Enabled")
+                        .on_click(move |_, _, _| enabled_calls.set(enabled_calls.get() + 1)),
+                )
+            })
+    }
+}
+
+#[gpui::test]
+fn disabled_popup_confirmation_keeps_menu_open_and_enabled_item_runs(
+    cx: &mut gpui::TestAppContext,
+) {
+    let theme = crate::theme::parse_theme(include_str!(concat!(
+        env!("CARGO_MANIFEST_DIR"),
+        "/../../themes/macos27.json"
+    )))
+    .unwrap();
+    cx.update(|app| {
+        gpui_component::init(app);
+        crate::theme::activate_theme(&theme, Some(crate::theme::AppearanceMode::Light), app)
+            .unwrap();
+    });
+    let disabled_calls = Rc::new(Cell::new(0));
+    let enabled_calls = Rc::new(Cell::new(0));
+    let menu = Rc::new(RefCell::new(None));
+    let (_, window) = cx.add_window_view({
+        let disabled_calls = disabled_calls.clone();
+        let enabled_calls = enabled_calls.clone();
+        let menu = menu.clone();
+        move |window, cx| {
+            let owner = cx.new(|_| KeyboardMenuProbe {
+                disabled_calls,
+                enabled_calls,
+                menu,
+            });
+            gpui_component::Root::new(owner, window, cx)
+        }
+    });
+    draw(window);
+    window.simulate_mouse_down(
+        gpui::point(px(10.), px(10.)),
+        gpui::MouseButton::Left,
+        Default::default(),
+    );
+    window.run_until_parked();
+    draw(window);
+    assert!(
+        menu.borrow()
+            .as_ref()
+            .and_then(|weak| weak.upgrade())
+            .is_some()
+    );
+    window.simulate_keystrokes("down enter");
+    window.run_until_parked();
+    draw(window);
+    assert_eq!(disabled_calls.get(), 0, "disabled action must not run");
+    assert_eq!(enabled_calls.get(), 0);
+    window.update(|window, app| {
+        let tree: serde_json::Value =
+            serde_json::from_str(&window.debug_a11y_tree_json().unwrap()).unwrap();
+        assert!(
+            tree["nodes"]
+                .as_object()
+                .unwrap()
+                .values()
+                .any(|node| node["aria"]["role"] == "Menu"),
+            "menu must remain open: {tree}"
+        );
+        assert!(
+            menu.borrow()
+                .as_ref()
+                .and_then(|weak| weak.upgrade())
+                .is_some()
+        );
+        let _ = app;
+    });
+    window.simulate_keystrokes("down enter");
+    window.run_until_parked();
+    assert_eq!(disabled_calls.get(), 0);
+    assert_eq!(enabled_calls.get(), 1, "enabled action must run once");
+}

@@ -1,5 +1,7 @@
 # Changelog
 
+- Promoted focus-trap accessibility and disabled popup-menu confirmation fixes.
+
 - Triaged proposed patches against the current source.
 
 - Removed retired coordination scripts and refreshed third-party notices.

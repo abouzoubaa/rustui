@@ -1,0 +1,8 @@
+{
+  "schema_version": 1,
+  "patch": "patches/approved/gpui-base-focus-trap-accessibility-v1.patch",
+  "patch_sha256": "cf5def8ebfb6284f2e63938dda4bd358b344327e3a6951b55eebc0ceffc9040c",
+  "source": "vendor/gpui-base-0.7.3/src/focus_trap.rs",
+  "pre_sha256": "5a110237efd10a3d7b2478b8d0d3588e82ab1950984bdc71a47333b1d59e8be6",
+  "post_sha256": "e189d0ec3011a5a58cdb30f7fa58e855d5df4be27d0f802e4a4b60af24d690c2"
+}
