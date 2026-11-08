@@ -1,5 +1,7 @@
 # Proposed upstream accessibility patches
 
+P1 promoted the focus-trap accessibility and disabled-menu confirmation patches and removed rejected proposals. The notes below preserve historical context; see `docs/PATCH_TRIAGE.md` for current proposal status.
+
 ## Current Tree accessibility status (supersedes historical proposal notes below)
 
 The corrected full three-source Tree series is retained here as review history;

@@ -31,9 +31,6 @@ FILES = (
     "patches/approved/gpui-component-tree-accessible-name-v1.patch",
     "patches/approved/gpui-pre-test-a11y-activation-v1.patch",
     "patches/approved/gpui-tree-accessibility-series-v1.json",
-    "patches/proposed/gpui-tree-aria-level-v1.patch",
-    "patches/proposed/gpui-component-tree-accessible-name-v1.patch",
-    "patches/proposed/gpui-pre-test-a11y-activation-v1.patch",
 )
 PRE = {
     "vendor/gpui-base-0.7.3/src/tree.rs": "9ef2efa0a44af810eef3088343b0838179d5e952c6ca8734e5306d5c74736924",
