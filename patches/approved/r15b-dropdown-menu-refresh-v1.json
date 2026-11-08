@@ -1,0 +1,8 @@
+{
+  "schema_version": 1,
+  "patch": "patches/approved/r15b-dropdown-menu-refresh-v1.patch",
+  "patch_sha256": "55475c167dd57e68e17c99c93012fba65b3c8aa259bc4a1f9532187e4ba2d68c",
+  "source": "vendor/gpui-component-0.7.3/src/menu/dropdown_menu.rs",
+  "pre_sha256": "c98577e23b87b01da2a632eaa6c739aed9a583365ce3d2d2b403af96b366bcab",
+  "post_sha256": "95113d1d1b099c2d53ced723d88e5ee98eda068e8720d62d83ed19bed7709279"
+}

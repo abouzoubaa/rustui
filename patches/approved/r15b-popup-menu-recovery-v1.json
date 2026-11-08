@@ -1,0 +1,8 @@
+{
+  "schema_version": 1,
+  "patch": "patches/approved/r15b-popup-menu-recovery-v1.patch",
+  "patch_sha256": "1a22c69cdf76400eb3ee79fd633167a3db8f9c2a177eeef9359deae8a87fc13f",
+  "source": "vendor/gpui-component-0.7.3/src/menu/popup_menu.rs",
+  "pre_sha256": "7bc282298297c8d2a9d3f825b6c2ed6ec95b9e0ff2890ca7f1051484314b83fe",
+  "post_sha256": "4c3a765dd782f40f262937679e241adf49209dc81e222be2069b19ced974f1da"
+}

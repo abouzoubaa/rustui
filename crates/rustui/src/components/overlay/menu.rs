@@ -364,8 +364,9 @@ impl View for MenuView {
             0,
             true,
         );
-        let dropdown =
-            trigger.dropdown_menu(move |menu, _window, _cx| append_menu_items(menu, &items));
+        let dropdown = trigger
+            .dropdown_menu(move |menu, _window, _cx| append_menu_items(menu, &items))
+            .refresh_on_render(true);
 
         div().flex().child(dropdown).into_any_element()
     }
