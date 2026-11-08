@@ -189,6 +189,19 @@ class CollectorTests(unittest.TestCase):
         self.assertEqual((self.out / dep["notices"][0]["path"]).read_text(), "supplement verbatim\n")
         self.assertIn("supplement", dep["notices"][0])
 
+    def test_spdx_fallback_requires_canonical_url_and_note(self):
+        record = self.add_supplement()
+        record["note"] = "Upstream ships no license file; standard SPDX text for the declared license."
+        record["files"][0]["spdx"] = "MIT"
+        record["files"][0]["url"] = "https://spdx.org/licenses/MIT.txt"
+        dump(self.args.supplement_manifest, {"schema_version": 1, "packages": [record]})
+        report = collector.collect(self.args)
+        self.assertFalse(report["unresolved_gaps"])
+        record["files"][0]["url"] = "https://example.org/MIT.txt"
+        dump(self.args.supplement_manifest, {"schema_version": 1, "packages": [record]})
+        with self.assertRaisesRegex(ValueError, "canonical SPDX URL"):
+            collector.supplement_index(self.args.supplement_manifest, self.args.supplement_root, self.args.output)
+
     def test_supplement_traversal_and_hash_mismatch_are_rejected(self):
         record = self.add_supplement()
         manifest = self.args.supplement_manifest

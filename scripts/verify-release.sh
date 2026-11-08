@@ -23,6 +23,7 @@ verify_web_ime_edit_plan() (
 
 case "${1:-}" in
   source)
+    python3 scripts/check_dependency_notices_freshness.py
     python3 scripts/apply_gpui_modal_focus_recovery_patch.py --verify
     python3 scripts/apply_gpui_inert_focus_scope_patch.py --verify
     python3 scripts/apply_gpui_validation_grid_a11y_patch.py --verify
@@ -140,8 +141,8 @@ PY
       --repo-root "$repository_root" \
       --source-root "$cargo_home/registry/src" \
       --source-root "$cargo_home/git/checkouts" \
-      --supplement-manifest docs/release/dependency-notices/manifest.json \
-      --supplement-root docs/release/dependency-notices \
+      --supplement-manifest docs/release/notice-supplements/manifest.json \
+      --supplement-root docs/release/notice-supplements \
       --fail-on-unresolved-gaps \
       --output "$notices"
     binary="$(python3 - "$evidence/native-build.jsonl" <<'PY'

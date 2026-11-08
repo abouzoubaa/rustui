@@ -182,7 +182,13 @@ def supplement_index(manifest_path: Path, supplement_root: Path, output: Path) -
             if not isinstance(digest, str) or not re.fullmatch(r"[0-9a-f]{64}", digest):
                 raise ValueError("supplement file needs an exact sha256")
             url = item.get("url", "")
-            if not isinstance(url, str) or not url.startswith("https://") or upstream["revision"] not in url:
+            spdx = item.get("spdx")
+            if spdx is not None:
+                if spdx not in ("MIT", "Apache-2.0") or url != f"https://spdx.org/licenses/{spdx}.txt":
+                    raise ValueError("supplement SPDX file needs its canonical SPDX URL")
+                if package.get("note") != "Upstream ships no license file; standard SPDX text for the declared license.":
+                    raise ValueError("supplement SPDX file needs the fallback provenance note")
+            elif not isinstance(url, str) or not url.startswith("https://") or upstream["revision"] not in url:
                 raise ValueError("supplement file needs a revision-pinned source URL")
             source = safe_path(supplement_root / relative, [supplement_root])
             if not source.is_file() or sha256(source) != digest:

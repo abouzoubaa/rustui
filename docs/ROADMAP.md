@@ -4,7 +4,7 @@ Work one item at a time; each item becomes a ticket in docs/TICKETS.md before wo
 
 ## Phase 0 Hygiene
 
-1. Delete retired claim scripts: `scripts/roadmap_claims.py`, `scripts/roadmap_session_coordinator.py`, and `scripts/tests/test_roadmap_claims.py`.
+1. Remove retired coordination scripts.
 2. Verify third-party licenses and notices.
 3. Use a single GPUI source: owned crates only; retarget patch checks and remove duplicate vendor copies.
 4. Delete merged branches.
