@@ -167,9 +167,7 @@ pub(crate) fn render_graph(
         }
         state.focus.clone().tab_stop(!view.disabled);
         if view.disabled {
-            if state.focus.contains_focused(window, cx) {
-                window.blur(cx);
-            }
+            crate::components::input::leave_disabled_focus(true, &state.focus, window, cx);
             state.drag = None;
             state.pending = None;
         }

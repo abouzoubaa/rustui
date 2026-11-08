@@ -851,7 +851,8 @@ case!(
 );
 case!(token_field, TokenField, [], [], [], [], []);
 case!(code_editor, CodeEditor, [], [], [], [], []);
-
+case!(graph_view, GraphView, [], [], [], [], []);
+case!(node_editor, NodeEditor, [], [], [], [], []);
 case!(property_text, PropertyText, [], [], [], [], []);
 case!(
     property_choice,
