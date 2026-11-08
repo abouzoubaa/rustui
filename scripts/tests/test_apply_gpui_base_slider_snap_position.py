@@ -24,6 +24,8 @@ class SliderSnapPositionPatchTests(unittest.TestCase):
         (self.root / "Cargo.toml").write_text(
             '[patch.crates-io]\ngpui-base = { path = "vendor/gpui-base-0.7.3" }\n'
         )
+        subprocess.run([sys.executable, str(ROOT / "scripts/apply_gpui_base_slider_set_value_v2_patch.py"),
+                        "--root", str(self.root), "--artifacts", str(ROOT), "--reverse"], check=True)
         subprocess.run(["git", "apply", "--unidiff-zero", "--reverse", str(ENDPOINT_PATCH)], cwd=self.root, check=True)
         subprocess.run(["git", "apply", "--reverse", str(PATCH)], cwd=self.root, check=True)
 

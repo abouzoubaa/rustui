@@ -345,6 +345,45 @@ impl View for SliderView {
     }
 }
 
+fn handle_slider_accessibility_action(
+    state: &gpui::Entity<SliderState>,
+    action: AccessibleAction,
+    data: Option<&gpui::accesskit::ActionData>,
+    window: &mut Window,
+    cx: &mut App,
+) {
+    let current = state.read(cx);
+    let adjusted;
+    let data = match action {
+        AccessibleAction::SetValue => data,
+        AccessibleAction::Increment | AccessibleAction::Decrement => {
+            let direction = if action == AccessibleAction::Increment {
+                1.0
+            } else {
+                -1.0
+            };
+            adjusted = gpui::accesskit::ActionData::NumericValue(
+                f64::from(current.value().end()) + direction * f64::from(current.step_value()),
+            );
+            Some(&adjusted)
+        }
+        _ => return,
+    };
+    let Some(value) = accessibility_set_value(
+        data,
+        false,
+        current.min_value(),
+        current.max_value(),
+        current.step_value(),
+    ) else {
+        return;
+    };
+    state.update(cx, |state, cx| {
+        state.set_value(value, window, cx);
+        cx.emit(SliderEvent::Change(SliderValue::Single(value)));
+    });
+}
+
 fn configured_slider_state(min: f32, max: f32, step: f32, value: f32) -> SliderState {
     SliderState::new()
         .min(min)
@@ -474,46 +513,17 @@ impl RenderOnce for ThemedSlider {
                         });
                     }
                     cx.stop_propagation();
-                })
-                .on_a11y_action(AccessibleAction::SetValue, {
-                    let state = slider_state.clone();
-                    move |data, window, cx| {
-                        let Some(value) = accessibility_set_value(
-                            data,
-                            false,
-                            state.read(cx).min_value(),
-                            state.read(cx).max_value(),
-                            state.read(cx).step_value(),
-                        ) else {
-                            return;
-                        };
-                        state.update(cx, |state, cx| {
-                            state.set_value(value, window, cx);
-                            cx.emit(SliderEvent::Change(SliderValue::Single(value)));
-                        });
-                    }
-                })
-                .on_a11y_action(AccessibleAction::Increment, {
-                    let state = slider_state.clone();
-                    move |_, window, cx| {
-                        state.update(cx, |state, cx| {
-                            let value =
-                                (state.value().end() + state.step_value()).min(state.max_value());
-                            state.set_value(value, window, cx);
-                            cx.emit(SliderEvent::Change(SliderValue::Single(value)));
-                        });
-                    }
-                })
-                .on_a11y_action(AccessibleAction::Decrement, {
-                    move |_, window, cx| {
-                        slider_state.update(cx, |state, cx| {
-                            let value =
-                                (state.value().end() - state.step_value()).max(state.min_value());
-                            state.set_value(value, window, cx);
-                            cx.emit(SliderEvent::Change(SliderValue::Single(value)));
-                        });
-                    }
                 });
+            for action in [
+                AccessibleAction::SetValue,
+                AccessibleAction::Increment,
+                AccessibleAction::Decrement,
+            ] {
+                let state = slider_state.clone();
+                slider = slider.on_a11y_action(action, move |data, window, cx| {
+                    handle_slider_accessibility_action(&state, action, data, window, cx);
+                });
+            }
         }
         if !self.disabled {
             slider = slider
@@ -625,6 +635,9 @@ pub(super) fn slider_keyboard_value(
 
 fn normalize_accessibility_value(value: f32, min: f32, max: f32, step: f32) -> f32 {
     let clamped = value.clamp(min, max);
+    if clamped == min || clamped == max {
+        return clamped;
+    }
     let quotient = clamped / step;
     if quotient.is_finite() {
         // Match GPUI's pointer path, which divides, rounds, and multiplies in f32.
@@ -1337,5 +1350,289 @@ mod tests {
         let mut node = gpui::accesskit::Node::new(gpui::accesskit::Role::Slider);
         set_slider_accessibility_disabled(&mut node);
         assert!(node.is_disabled());
+    }
+    #[gpui::test]
+    fn component_slider_exposes_label_and_enabled_accessibility_actions(
+        cx: &mut gpui::TestAppContext,
+    ) {
+        use gpui::{AppContext as _, Render};
+        struct Probe {
+            state: gpui::Entity<gpui_component::slider::SliderState>,
+            disabled: bool,
+        }
+        impl Render for Probe {
+            fn render(
+                &mut self,
+                _: &mut gpui::Window,
+                _: &mut gpui::Context<Self>,
+            ) -> impl gpui::IntoElement {
+                gpui_component::slider::Slider::new(&self.state)
+                    .accessibility_label("Volume")
+                    .disabled(self.disabled)
+            }
+        }
+        cx.update(gpui_component::init);
+        let (owner, window) = cx.add_window_view(|_, cx| {
+            let state = cx.new(|_| gpui_component::slider::SliderState::new());
+            Probe {
+                state,
+                disabled: false,
+            }
+        });
+        for disabled in [false, true] {
+            owner.update(window, |owner, cx| {
+                owner.disabled = disabled;
+                cx.notify();
+            });
+            window.run_until_parked();
+            window.update(|window, app| {
+                window.draw(app).clear(app);
+                let tree: serde_json::Value =
+                    serde_json::from_str(&window.debug_a11y_tree_json().unwrap()).unwrap();
+                let slider = tree["nodes"]
+                    .as_object()
+                    .unwrap()
+                    .values()
+                    .find(|node| {
+                        node["aria"]["role"] == "Slider" && node["aria"]["label"] == "Volume"
+                    })
+                    .unwrap_or_else(|| panic!("missing labeled slider: {tree}"));
+                for action in ["SetValue", "Increment", "Decrement"] {
+                    let advertised = slider["aria"]["on_action"]
+                        .as_array()
+                        .is_some_and(|actions| actions.iter().any(|v| v == action));
+                    assert_eq!(
+                        advertised, !disabled,
+                        "{action} on disabled={disabled}: {slider}"
+                    );
+                }
+            });
+        }
+    }
+
+    #[gpui::test]
+    fn rustui_slider_exposes_owner_accessibility_label(cx: &mut gpui::TestAppContext) {
+        use crate::{prelude::*, runtime::ComponentHost};
+        struct Owner {
+            value: f32,
+            disabled: bool,
+        }
+        impl View for Owner {
+            fn body(&self) -> impl View {
+                Slider(
+                    Binding::new(
+                        self.value,
+                        |owner: &Owner| owner.value,
+                        |owner, value| owner.value = value,
+                    ),
+                    0.0..=100.0,
+                )
+                .id("p2-owner-slider")
+                .accessibility_label("Owner volume")
+                .step(5.0)
+                .disabled(self.disabled)
+            }
+        }
+        let theme = parse_theme(include_str!("../../../../../themes/macos27.json")).unwrap();
+        cx.update(|app| {
+            gpui_component::init(app);
+            crate::theme::activate_theme(&theme, Some(AppearanceMode::Light), app).unwrap();
+        });
+        let (owner, window) = cx.add_window_view(|_, cx| {
+            ComponentHost::new(
+                Owner {
+                    value: 50.0,
+                    disabled: false,
+                },
+                cx,
+            )
+        });
+        for disabled in [false, true] {
+            owner.update(window, |host, cx| {
+                host.component_mut().disabled = disabled;
+                cx.notify();
+            });
+            window.run_until_parked();
+            window.update(|window, app| {
+                window.draw(app).clear(app);
+                let tree: serde_json::Value =
+                    serde_json::from_str(&window.debug_a11y_tree_json().unwrap()).unwrap();
+                let slider = tree["nodes"]
+                    .as_object()
+                    .unwrap()
+                    .values()
+                    .find(|node| {
+                        node["aria"]["role"] == "Slider" && node["aria"]["label"] == "Owner volume"
+                    })
+                    .unwrap_or_else(|| panic!("RustUI slider must expose owner label: {tree}"));
+                for action in ["SetValue", "Increment", "Decrement"] {
+                    let advertised = slider["aria"]["on_action"]
+                        .as_array()
+                        .is_some_and(|actions| actions.iter().any(|v| v == action));
+                    assert_eq!(
+                        advertised, !disabled,
+                        "{action} on disabled={disabled}: {slider}"
+                    );
+                }
+            });
+        }
+    }
+    #[gpui::test]
+    fn slider_accessibility_handlers_update_bound_value_and_respect_range_step(
+        cx: &mut gpui::TestAppContext,
+    ) {
+        use crate::{prelude::*, runtime::ComponentHost};
+        use gpui::{AccessibleAction as Action, AppContext as _};
+        struct Owner(f32);
+        impl View for Owner {
+            fn body(&self) -> impl View {
+                Slider(
+                    Binding::new(
+                        self.0,
+                        |owner: &Owner| owner.0,
+                        |owner, next| owner.0 = next,
+                    ),
+                    5.0..=95.0,
+                )
+                .id("a11y-actions")
+                .step(10.0)
+                .accessibility_label("Volume")
+            }
+        }
+        let theme = parse_theme(include_str!("../../../../../themes/macos27.json")).unwrap();
+        cx.update(|app| {
+            gpui_component::init(app);
+            crate::theme::activate_theme(&theme, Some(AppearanceMode::Light), app).unwrap();
+        });
+        let (owner, window) = cx.add_window_view(|_, cx| ComponentHost::new(Owner(50.0), cx));
+        let state = window.update(|window, app| {
+            window.draw(app).clear(app);
+            let retained = owner
+                .read(app)
+                .retained_entity_for_test::<super::RetainedSlider>(
+                    vec![],
+                    Identity::from("a11y-actions"),
+                )
+                .unwrap();
+            retained.read(app).state.clone()
+        });
+        // Window::handle_a11y_action is crate-private. Call exactly the function
+        // registered by ThemedSlider's platform callbacks, including its emitted event.
+        for (action, data, expected) in [
+            (
+                Action::SetValue,
+                Some(gpui::accesskit::ActionData::NumericValue(37.0)),
+                40.0,
+            ),
+            (Action::Increment, None, 50.0),
+            (Action::Decrement, None, 40.0),
+            (
+                Action::SetValue,
+                Some(gpui::accesskit::ActionData::NumericValue(-100.0)),
+                5.0,
+            ),
+            (Action::Decrement, None, 5.0),
+            (
+                Action::SetValue,
+                Some(gpui::accesskit::ActionData::NumericValue(5.0)),
+                5.0,
+            ),
+            (
+                Action::SetValue,
+                Some(gpui::accesskit::ActionData::NumericValue(200.0)),
+                95.0,
+            ),
+            (Action::Increment, None, 95.0),
+            (
+                Action::SetValue,
+                Some(gpui::accesskit::ActionData::NumericValue(95.0)),
+                95.0,
+            ),
+            (
+                Action::SetValue,
+                Some(gpui::accesskit::ActionData::NumericValue(f64::NAN)),
+                95.0,
+            ),
+            (
+                Action::SetValue,
+                Some(gpui::accesskit::ActionData::NumericValue(f64::INFINITY)),
+                95.0,
+            ),
+            (Action::SetValue, None, 95.0),
+        ] {
+            window.update(|window, app| {
+                super::handle_slider_accessibility_action(
+                    &state,
+                    action,
+                    data.as_ref(),
+                    window,
+                    app,
+                );
+            });
+            window.run_until_parked();
+            window.update(|window, app| {
+                assert_eq!(
+                    state.read(app).value().end(),
+                    expected,
+                    "retained value for {action:?}"
+                );
+                assert_eq!(
+                    owner.read(app).component().0,
+                    expected,
+                    "bound owner for {action:?}"
+                );
+                window.draw(app).clear(app);
+                let tree: serde_json::Value =
+                    serde_json::from_str(&window.debug_a11y_tree_json().unwrap()).unwrap();
+                let slider = tree["nodes"]
+                    .as_object()
+                    .unwrap()
+                    .values()
+                    .find(|node| node["aria"]["role"] == "Slider")
+                    .unwrap();
+                assert_eq!(slider["aria"]["numeric_value"], serde_json::json!(expected));
+            });
+        }
+        // The Base/Component registered callbacks use this same upstream handler.
+        let base = window
+            .update(|_, app| app.new(|_| super::configured_slider_state(5.0, 95.0, 10.0, 50.0)));
+        for (action, data, expected) in [
+            (
+                Action::SetValue,
+                Some(gpui::accesskit::ActionData::NumericValue(37.0)),
+                40.0,
+            ),
+            (Action::Increment, None, 50.0),
+            (Action::Decrement, None, 40.0),
+            (
+                Action::SetValue,
+                Some(gpui::accesskit::ActionData::NumericValue(200.0)),
+                95.0,
+            ),
+            (Action::Increment, None, 95.0),
+            (
+                Action::SetValue,
+                Some(gpui::accesskit::ActionData::NumericValue(95.0)),
+                95.0,
+            ),
+            (
+                Action::SetValue,
+                Some(gpui::accesskit::ActionData::NumericValue(-100.0)),
+                5.0,
+            ),
+            (Action::Decrement, None, 5.0),
+            (
+                Action::SetValue,
+                Some(gpui::accesskit::ActionData::NumericValue(5.0)),
+                5.0,
+            ),
+        ] {
+            window.update(|window, app| {
+                base.update(app, |state, cx| {
+                    state.handle_accessibility_action(action, data.as_ref(), window, cx);
+                    assert_eq!(state.value().end(), expected);
+                })
+            });
+        }
     }
 }
