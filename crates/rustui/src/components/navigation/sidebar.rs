@@ -230,7 +230,11 @@ impl SidebarView {
     pub(crate) fn focus_handle(&self, context: &mut RenderContext<'_>) -> FocusHandle {
         let focus_identity = Identity::from(format!("sidebar-focus:{}", self.id.as_str()));
         let (focus_state, _) = context.retained_entity(focus_identity, |_, cx| cx.focus_handle());
-        focus_state.read(context.app()).clone().tab_stop(true)
+        let disabled = self.items.iter().all(|item| item.disabled);
+        context.update_entity(&focus_state, |focus, window, cx| {
+            crate::components::input::leave_disabled_focus(disabled, focus, window, cx);
+            focus.clone().tab_stop(!disabled)
+        })
     }
 }
 

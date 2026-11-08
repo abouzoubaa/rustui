@@ -880,7 +880,17 @@ case!(toolbar, Toolbar, [], [], [], [], []);
 case!(breadcrumb_item, BreadcrumbItem, [], [], [], [], []);
 case!(disclosure, Disclosure, [], [], [], [], []);
 case!(navigation_link, NavigationLink, [], [], [], [], []);
-
+case!(sidebar_item, SidebarItem, [], [], [], [], []);
+case!(
+    navigation_split_item,
+    NavigationSplitItem,
+    [],
+    [],
+    [],
+    [],
+    []
+);
+case!(tab_item, TabItem, [], [], [], [], []);
 case!(tree_item, TreeItem, [], [], [], [], []);
 case!(
     menu_item,
