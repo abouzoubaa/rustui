@@ -1,11 +1,13 @@
+use super::*;
+
 impl CompiledPreviewGallery {
-    fn current_status_presentation(&self) -> Option<&PreviewStatusPresentation> {
+    pub(super) fn current_status_presentation(&self) -> Option<&PreviewStatusPresentation> {
         self.status_presentation
             .as_ref()
             .filter(|p| p.status == self.status)
     }
 
-    fn reference_owner_binding(&self) -> AnyView {
+    pub(super) fn reference_owner_binding(&self) -> AnyView {
         #[cfg(target_family = "wasm")]
         if let Some(bridge) = self.reference_bridge.clone() {
             return AnyView::new(OwnerActionReader(move |owner: OwnerAction<Self>| {
@@ -16,7 +18,7 @@ impl CompiledPreviewGallery {
         AnyView::new(EmptyView)
     }
 
-    fn reference_close(&mut self) -> bool {
+    pub(super) fn reference_close(&mut self) -> bool {
         if let Some(mut session) = self.reference_session.take() {
             session.close(crate::preview_transport::Host::Preview(&mut self.host));
         }
@@ -26,12 +28,12 @@ impl CompiledPreviewGallery {
         true
     }
 
-    fn reference_increment(owner: &mut Self) -> bool {
+    pub(super) fn reference_increment(owner: &mut Self) -> bool {
         owner.activations += 1;
         true
     }
 
-    fn reference_request(
+    pub(super) fn reference_request(
         &mut self,
         delivery: crate::preview_transport::Delivery,
     ) -> (crate::preview_transport::Reply, bool) {

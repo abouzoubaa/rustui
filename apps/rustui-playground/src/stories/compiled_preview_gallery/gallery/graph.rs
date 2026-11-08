@@ -1,4 +1,8 @@
-pub(super) fn register_graph_specimens<Context: 'static>(registry: &mut PreviewRegistry<Context>) {
+use super::*;
+
+pub(in super::super) fn register_graph_specimens<Context: 'static>(
+    registry: &mut PreviewRegistry<Context>,
+) {
     for (id, name, editor) in [
         ("graph-view-specimen", "GraphView", false),
         ("node-editor-specimen", "NodeEditor", true),
@@ -14,9 +18,9 @@ pub(super) fn register_graph_specimens<Context: 'static>(registry: &mut PreviewR
                 },
                 move |_, _context: &Context| {
                     if editor {
-                        AnyView::new(super::super::graph_gallery::editor_demo())
+                        AnyView::new(super::super::super::graph_gallery::editor_demo())
                     } else {
-                        AnyView::new(super::super::graph_gallery::graph_demo())
+                        AnyView::new(super::super::super::graph_gallery::graph_demo())
                     }
                 },
             )

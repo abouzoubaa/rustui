@@ -1,4 +1,6 @@
-pub(super) fn register_layout_specimens(registry: &mut PreviewRegistry<FactoryContext>) {
+use super::*;
+
+pub(in super::super) fn register_layout_specimens(registry: &mut PreviewRegistry<FactoryContext>) {
     {
         let scroll_view_specimen_schema = ComponentSchema {
             id: ComponentId::new("scroll-view-specimen").unwrap(),

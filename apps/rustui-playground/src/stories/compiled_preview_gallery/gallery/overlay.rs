@@ -1,4 +1,6 @@
-pub(super) fn register_overlay_specimens(registry: &mut PreviewRegistry<FactoryContext>) {
+use super::*;
+
+pub(in super::super) fn register_overlay_specimens(registry: &mut PreviewRegistry<FactoryContext>) {
     {
         let popover_specimen_schema = ComponentSchema {
             id: ComponentId::new("popover-specimen").unwrap(),
@@ -613,6 +615,5 @@ pub(super) fn register_overlay_specimens(registry: &mut PreviewRegistry<FactoryC
                 },
             )
             .unwrap();
-
     }
 }

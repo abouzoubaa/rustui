@@ -1,4 +1,6 @@
-pub(super) fn register_data_specimens(registry: &mut PreviewRegistry<FactoryContext>) {
+use super::*;
+
+pub(in super::super) fn register_data_specimens(registry: &mut PreviewRegistry<FactoryContext>) {
     {
         let keyed_list_specimen_schema = ComponentSchema {
             id: ComponentId::new("keyed-list-specimen").unwrap(),

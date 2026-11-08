@@ -1,4 +1,6 @@
-pub(super) fn register_canvas_specimens(registry: &mut PreviewRegistry<FactoryContext>) {
+use super::*;
+
+pub(in super::super) fn register_canvas_specimens(registry: &mut PreviewRegistry<FactoryContext>) {
     {
         let canvas_specimen_schema = ComponentSchema {
             id: ComponentId::new("canvas-specimen").unwrap(),
