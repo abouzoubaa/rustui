@@ -1,3 +1,5 @@
+use super::*;
+
 impl View for CompiledPreviewGallery {
     fn on_mount(&mut self, cx: &mut rustui::App) {
         #[cfg(target_family = "wasm")]

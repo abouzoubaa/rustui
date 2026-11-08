@@ -1,14 +1,11 @@
-#[cfg(test)]
-mod tests {
-    use super::super::*;
-    use super::*;
-    use rustui::localization::{Catalog, Catalogs, Locale};
-    include!("suite_01.rs");
-    include!("suite_02.rs");
-    include!("suite_03.rs");
-    include!("suite_04.rs");
-    include!("suite_05.rs");
-    include!("suite_06.rs");
-    include!("suite_07.rs");
-    include!("graph.rs");
-}
+use super::*;
+use rustui::localization::{Catalog, Catalogs, Locale};
+
+mod graph;
+mod suite_01;
+mod suite_02;
+mod suite_03;
+mod suite_04;
+mod suite_05;
+mod suite_06;
+mod suite_07;

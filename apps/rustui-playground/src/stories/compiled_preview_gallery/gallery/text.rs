@@ -1,4 +1,6 @@
-pub(super) fn register_text_specimens(registry: &mut PreviewRegistry<FactoryContext>) {
+use super::*;
+
+pub(in super::super) fn register_text_specimens(registry: &mut PreviewRegistry<FactoryContext>) {
     {
         let text_field_specimen_schema = ComponentSchema {
             id: ComponentId::new("text-field-specimen").unwrap(),
@@ -923,6 +925,5 @@ pub(super) fn register_text_specimens(registry: &mut PreviewRegistry<FactoryCont
                 },
             )
             .unwrap();
-
     }
 }
