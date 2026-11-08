@@ -1,5 +1,7 @@
 # Changelog
 
+- Promoted slider accessibility labels and value actions with bound-value regression coverage.
+
 - Updated accessibility patch proposals and promotion status.
 
 - Promoted focus-trap accessibility and disabled popup-menu confirmation fixes.

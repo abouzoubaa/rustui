@@ -49,6 +49,8 @@ case "${1:-}" in
     python3 scripts/apply_gpui_selectable_list_semantics_v2_patch.py --verify
     python3 scripts/apply_gpui_component_tracked_dialog_focus_v2_patch.py --verify
     python3 scripts/apply_gpui_base_resize_first_move.py --verify
+    python3 scripts/apply_gpui_base_slider_set_value_v2_patch.py --verify
+    python3 scripts/apply_gpui_component_slider_accessibility_label_v2_patch.py --verify
     python3 scripts/verify_gpui_base_slider_patch_stack.py
     python3 scripts/apply_gpui_base_disabled_semantic_roots.py --verify
     python3 scripts/apply_gpui_toolbar_rtl.py --verify
@@ -94,6 +96,8 @@ PY
     python3 scripts/apply_gpui_selectable_list_semantics_v2_patch.py --verify
     python3 scripts/apply_gpui_component_tracked_dialog_focus_v2_patch.py --verify
     python3 scripts/apply_gpui_base_resize_first_move.py --verify
+    python3 scripts/apply_gpui_base_slider_set_value_v2_patch.py --verify
+    python3 scripts/apply_gpui_component_slider_accessibility_label_v2_patch.py --verify
     python3 scripts/verify_gpui_base_slider_patch_stack.py
     python3 scripts/apply_block_stack_symbol_patch.py --verify
     python3 scripts/apply_gpui_component_calendar_locale_patch.py --check

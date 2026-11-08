@@ -25,6 +25,8 @@ class SliderFirstMovePatchTests(unittest.TestCase):
         (self.root / "Cargo.toml").write_text(
             '[patch.crates-io]\ngpui-base = { path = "vendor/gpui-base-0.7.3" }\n'
         )
+        subprocess.run([sys.executable, str(ROOT / "scripts/apply_gpui_base_slider_set_value_v2_patch.py"),
+                        "--root", str(self.root), "--artifacts", str(ROOT), "--reverse"], check=True)
         subprocess.run(["git", "apply", "--unidiff-zero", "--reverse", str(ENDPOINT_PATCH)], cwd=self.root, check=True)
         subprocess.run(["git", "apply", "--reverse", str(SNAP_PATCH)], cwd=self.root, check=True)
         subprocess.run(["git", "apply", "--reverse", str(PATCH)], cwd=self.root, check=True)
@@ -62,12 +64,15 @@ class SliderFirstMovePatchTests(unittest.TestCase):
         endpoint = ROOT / "scripts/apply_gpui_base_slider_endpoint.py"
         subprocess.run([sys.executable, str(endpoint), "--root", str(self.root),
                         "--artifacts", str(ROOT), "--apply"], check=True, capture_output=True)
+        accessibility = ROOT / "scripts/apply_gpui_base_slider_set_value_v2_patch.py"
+        subprocess.run([sys.executable, str(accessibility), "--root", str(self.root),
+                        "--artifacts", str(ROOT), "--apply"], check=True, capture_output=True)
         source = self.root / SOURCE
         before = source.read_bytes()
         artifacts = self.root / "artifacts"
         patches = artifacts / "patches/approved"
         patches.mkdir(parents=True)
-        for name in ("gpui-base-slider-endpoint-v1.patch", "gpui-base-slider-snap-position-v1.patch", "gpui-base-slider-first-move-v1.patch", "gpui-base-slider-zero-track-v1.patch"):
+        for name in ("gpui-base-slider-set-value-v2.patch", "gpui-base-slider-set-value-v2.json", "gpui-base-slider-endpoint-v1.patch", "gpui-base-slider-snap-position-v1.patch", "gpui-base-slider-first-move-v1.patch", "gpui-base-slider-zero-track-v1.patch"):
             shutil.copyfile(ROOT / "patches/approved" / name, patches / name)
         command = [sys.executable, str(ROOT / "scripts/verify_gpui_base_slider_patch_stack.py"),
                    "--root", str(self.root), "--artifacts", str(artifacts)]

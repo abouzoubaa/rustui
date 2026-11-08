@@ -1,0 +1,8 @@
+{
+  "schema_version": 1,
+  "patch": "patches/approved/gpui-component-slider-accessibility-label-v2.patch",
+  "patch_sha256": "a48746f601e8d8ca35b489e0fcad3b22b343354a8b1861894e710f6e25f8f6f7",
+  "source": "vendor/gpui-component-0.7.3/src/slider.rs",
+  "pre_sha256": "94afa288c201ae24c67bb176d9825eef32d2b32d849810275b5051a6bcdb984d",
+  "post_sha256": "bb67bbd59904cb335cb45483029d58fbbc3a650d2e4199277fea4e59fe9fad97"
+}
