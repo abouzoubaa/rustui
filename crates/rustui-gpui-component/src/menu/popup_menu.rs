@@ -859,6 +859,17 @@ impl PopupMenu {
     }
 
     fn confirm(&mut self, _: &Confirm, window: &mut Window, cx: &mut Context<Self>) {
+        if matches!(
+            self.selected_index.and_then(|index| self.menu_items.get(index)),
+            Some(
+                PopupMenuItem::Item { disabled: true, .. }
+                    | PopupMenuItem::ElementItem { disabled: true, .. }
+                    | PopupMenuItem::Submenu { disabled: true, .. }
+            )
+        ) {
+            return;
+        }
+
         match self.selected_index {
             Some(index) => {
                 let item = self.menu_items.get(index);

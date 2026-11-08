@@ -41,6 +41,8 @@ case "${1:-}" in
     python3 scripts/apply_cosmic_bidi_initial_span_patch.py --check
     python3 scripts/verify_gpui_web_patch_stack.py --native-only
     python3 scripts/apply_gpui_base_button_disabled_patch.py --verify
+    python3 scripts/apply_gpui_base_focus_trap_accessibility_v1_patch.py --verify
+    python3 scripts/apply_gpui_component_popup_menu_disabled_confirm_v1_patch.py --verify
     python3 scripts/apply_gpui_base_resize_first_move.py --verify
     python3 scripts/verify_gpui_base_slider_patch_stack.py
     python3 scripts/apply_gpui_base_disabled_semantic_roots.py --verify
@@ -79,6 +81,8 @@ PY
   macos)
     verify_tree_accessibility_series
     python3 scripts/apply_gpui_base_button_disabled_patch.py --verify
+    python3 scripts/apply_gpui_base_focus_trap_accessibility_v1_patch.py --verify
+    python3 scripts/apply_gpui_component_popup_menu_disabled_confirm_v1_patch.py --verify
     python3 scripts/apply_gpui_base_resize_first_move.py --verify
     python3 scripts/verify_gpui_base_slider_patch_stack.py
     python3 scripts/apply_block_stack_symbol_patch.py --verify
