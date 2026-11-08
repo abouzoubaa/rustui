@@ -70,6 +70,8 @@ Playground UI. They do not contain a second story implementation. See the
 
 ## Build
 
+Performance baseline: scripts/perf-baseline.sh (macOS, release; writes perf_baseline.json)
+
 ```sh
 ./scripts/cargo-headstart build --workspace --locked
 ./scripts/cargo-headstart check --workspace --all-targets --locked
