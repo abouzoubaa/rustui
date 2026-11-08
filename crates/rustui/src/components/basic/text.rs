@@ -3,10 +3,12 @@ use gpui::{
     SharedString, StatefulInteractiveElement, Styled, div, px,
 };
 
+#[cfg(test)]
+use crate::components::theme::selector;
 use crate::text::font_policy::FontFallbackPolicy;
 use crate::view::{EmptyView, RenderContext, View};
 use crate::{
-    components::theme::{required_style, selector},
+    components::theme::{required_style, selector_for_mode},
     localization::MessageArguments,
     theme::ButtonStyleSelector,
 };
@@ -147,6 +149,32 @@ fn text_style_part(query: &mut ButtonStyleSelector, vibrant: bool) -> String {
     )
 }
 
+pub(crate) fn cached_text_style_query(
+    mode: crate::theme::AppearanceMode,
+    vibrant: bool,
+) -> &'static (ButtonStyleSelector, String) {
+    static QUERIES: std::sync::OnceLock<[(ButtonStyleSelector, String); 4]> =
+        std::sync::OnceLock::new();
+    let queries = QUERIES.get_or_init(|| {
+        let make = |mode, vibrant| {
+            let mut selector = selector_for_mode(mode);
+            let part = text_style_part(&mut selector, vibrant);
+            (selector, part)
+        };
+        [
+            make(crate::theme::AppearanceMode::Light, false),
+            make(crate::theme::AppearanceMode::Light, true),
+            make(crate::theme::AppearanceMode::Dark, false),
+            make(crate::theme::AppearanceMode::Dark, true),
+        ]
+    });
+    let index = match mode {
+        crate::theme::AppearanceMode::Light => 0,
+        crate::theme::AppearanceMode::Dark => 2,
+    } + usize::from(vibrant);
+    &queries[index]
+}
+
 fn resolved_font_weight(weight: Option<TextWeight>, theme_weight: f32) -> FontWeight {
     weight.map_or(FontWeight(theme_weight), TextWeight::gpui)
 }
@@ -174,28 +202,37 @@ impl View for TextView {
             }
         };
         let accessible_label = nonempty_accessible_label(&value);
-        let mut query = selector(context);
-        let part = text_style_part(&mut query, self.vibrant);
-        let style = if self.vibrant {
-            // macos27's vibrant text rule also carries blend_mode. Accept the
-            // declared extra so foreground and typography can resolve; this
-            // component intentionally does not apply blend modes yet.
-            context
-                .component_style_with("text", &part, &query, &["blend_mode"])
-                .unwrap_or_else(|error| panic!("text/{part} theme cannot resolve: {error}"))
-        } else {
-            required_style(context, "text", &part, &query)
-        };
-        let typography = style
-            .typography
-            .as_ref()
-            .expect("text theme needs typography");
-        let foreground = crate::theme::registry::hsla(
-            *style
-                .colors
-                .get("foreground")
-                .expect("text theme needs foreground"),
-        );
+        let mode = crate::theme::registry::active_theme(context.app())
+            .expect("a RustUI component theme requires an active theme")
+            .mode;
+        let (query, part) = context.text_query_for_pass(mode, self.vibrant);
+        let extras: &[&str] = if self.vibrant { &["blend_mode"] } else { &[] };
+        let typography = crate::theme::registry::active_theme(context.app())
+            .unwrap()
+            .cached_text_style(query, part, extras, || {
+                let style = if self.vibrant {
+                    context.component_style_with("text", part, query, extras)?
+                } else {
+                    required_style(context, "text", part, query)
+                };
+                let typography = style
+                    .typography
+                    .as_ref()
+                    .expect("text theme needs typography");
+                Ok(crate::theme::registry::CachedTextStyle {
+                    family: typography.family.clone().into(),
+                    size: typography.size,
+                    weight: typography.weight,
+                    foreground: crate::theme::registry::hsla(
+                        *style
+                            .colors
+                            .get("foreground")
+                            .expect("text theme needs foreground"),
+                    ),
+                })
+            })
+            .unwrap_or_else(|error| panic!("text/{part} theme cannot resolve: {error}"));
+        let foreground = typography.foreground;
         let mut text = div()
             .id(context.next_text_element_id_with(self.id.as_ref()))
             .role(Role::Label);
@@ -203,7 +240,7 @@ impl View for TextView {
             text = text.aria_label(label);
         }
         text = text
-            .font_family(typography.family.clone())
+            .font_family(typography.family)
             .text_color(foreground)
             .text_size(px(self.size.unwrap_or(typography.size)))
             .font_weight(resolved_font_weight(self.weight, typography.weight));

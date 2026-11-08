@@ -71,6 +71,7 @@ Playground UI. They do not contain a second story implementation. See the
 ## Build
 
 Performance baseline: scripts/perf-baseline.sh (macOS, release; writes perf_baseline.json)
+For best performance, apps using RustUI should set the same release profile in their own Cargo.toml (Cargo profiles are not inherited by dependents).
 
 ```sh
 ./scripts/cargo-headstart build --workspace --locked

@@ -320,6 +320,7 @@ pub struct RenderContext<'a> {
     owner_id: EntityId,
     text_element_id_prefix: SharedString,
     text_element_slot: usize,
+    text_style_queries: [Option<&'static (ButtonStyleSelector, String)>; 4],
     implicit_retained_identity_slots: HashMap<String, usize>,
     owner_type: TypeId,
     task_owner: Rc<dyn Any>,
@@ -389,6 +390,7 @@ impl RenderSeed {
             owner_id: self.owner_id,
             text_element_id_prefix: geometry_text_prefix(self.owner_id, reader_instance),
             text_element_slot: 0,
+            text_style_queries: [None; 4],
             implicit_retained_identity_slots: HashMap::new(),
             owner_type: self.owner_type,
             task_owner: self.task_owner.clone(),
@@ -416,6 +418,7 @@ impl RenderSeed {
             owner_id: self.owner_id,
             text_element_id_prefix: cell_text_prefix(self.owner_id, grid_instance, cell),
             text_element_slot: 0,
+            text_style_queries: [None; 4],
             implicit_retained_identity_slots: HashMap::new(),
             owner_type: self.owner_type,
             task_owner: self.task_owner.clone(),
@@ -517,6 +520,7 @@ impl<'a> RenderContext<'a> {
             task_owner: seed.task_owner.clone(),
             text_element_id_prefix: self.text_element_id_prefix.clone(),
             text_element_slot: self.text_element_slot,
+            text_style_queries: self.text_style_queries,
             implicit_retained_identity_slots: self.implicit_retained_identity_slots.clone(),
             control_font_size: self.control_font_size,
             environment: self.environment,
@@ -529,6 +533,7 @@ impl<'a> RenderContext<'a> {
         };
         let result = render(&mut scoped);
         self.text_element_slot = scoped.text_element_slot;
+        self.text_style_queries = scoped.text_style_queries;
         self.implicit_retained_identity_slots = scoped.implicit_retained_identity_slots;
         result
     }
@@ -550,6 +555,7 @@ impl<'a> RenderContext<'a> {
             owner_id,
             text_element_id_prefix: format!("rustui-text-{}", owner_id.as_u64()).into(),
             text_element_slot: 0,
+            text_style_queries: [None; 4],
             implicit_retained_identity_slots: HashMap::new(),
             owner_type,
             task_owner,
@@ -606,6 +612,20 @@ impl<'a> RenderContext<'a> {
         }
     }
 
+    pub(crate) fn text_query_for_pass(
+        &mut self,
+        mode: crate::theme::AppearanceMode,
+        vibrant: bool,
+    ) -> &'static (ButtonStyleSelector, String) {
+        let index = match mode {
+            crate::theme::AppearanceMode::Light => 0,
+            crate::theme::AppearanceMode::Dark => 2,
+        } + usize::from(vibrant);
+        *self.text_style_queries[index].get_or_insert_with(|| {
+            crate::components::basic::text::cached_text_style_query(mode, vibrant)
+        })
+    }
+
     pub(crate) fn control_font_size(&self) -> Pixels {
         self.control_font_size
     }
@@ -638,6 +658,7 @@ impl<'a> RenderContext<'a> {
             owner_id: self.owner_id,
             text_element_id_prefix: self.text_element_id_prefix.clone(),
             text_element_slot: self.text_element_slot,
+            text_style_queries: self.text_style_queries,
             implicit_retained_identity_slots: self.implicit_retained_identity_slots.clone(),
             owner_type: self.owner_type,
             task_owner: self.task_owner.clone(),
@@ -652,6 +673,7 @@ impl<'a> RenderContext<'a> {
         };
         let result = render(&mut scoped);
         self.text_element_slot = scoped.text_element_slot;
+        self.text_style_queries = scoped.text_style_queries;
         self.implicit_retained_identity_slots = scoped.implicit_retained_identity_slots;
         result
     }
@@ -681,6 +703,7 @@ impl<'a> RenderContext<'a> {
         crate::theme::registry::active_theme(self.app)
             .ok_or_else(|| ThemeResolveError::Invalid("no active RustUI theme".into()))?
             .component_style_with(component, part, selector, handled_extras)
+            .map(|style| (*style).clone())
     }
 
     pub(crate) fn card_defaults(&self) -> Option<(f32, f32)> {

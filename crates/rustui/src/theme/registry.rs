@@ -1,6 +1,12 @@
 //! Active resolved RustUI theme stored in GPUI's application globals.
 
-use std::{cell::RefCell, collections::BTreeMap, error::Error, fmt};
+use std::{
+    cell::{Cell, RefCell},
+    collections::BTreeMap,
+    error::Error,
+    fmt,
+    rc::Rc,
+};
 
 use gpui::{App, Global, Hsla, Rgba};
 use gpui_component::Theme;
@@ -332,6 +338,14 @@ const RENDERER_CAPABILITIES: &[ComponentStyleCapability] = &[
 ];
 
 #[derive(Clone)]
+pub(crate) struct CachedTextStyle {
+    pub family: gpui::SharedString,
+    pub size: f32,
+    pub weight: f32,
+    pub foreground: gpui::Hsla,
+}
+
+#[derive(Clone)]
 pub struct ActiveTheme {
     revision: u64,
     /// Effective appearance used by the most recent successful activation.
@@ -342,6 +356,24 @@ pub struct ActiveTheme {
     pub coverage: ThemeCoverageReport,
     document: ThemeDocument,
     component_records: RefCell<BTreeMap<String, ComponentThemeRecord>>,
+    cached_appearance: Cell<AppearanceMode>,
+    resolved_styles: RefCell<
+        Vec<(
+            String,
+            String,
+            ButtonStyleSelector,
+            Vec<String>,
+            Rc<ResolvedComponentStyle>,
+        )>,
+    >,
+    resolved_text_styles: RefCell<
+        Vec<(
+            &'static ButtonStyleSelector,
+            String,
+            Vec<String>,
+            CachedTextStyle,
+        )>,
+    >,
 }
 
 impl ActiveTheme {
@@ -401,6 +433,48 @@ impl ActiveTheme {
         selector: &ButtonStyleSelector,
     ) -> Result<ResolvedComponentStyle, ThemeResolveError> {
         self.component_style_with(component, part, selector, &[])
+            .map(|style| (*style).clone())
+    }
+
+    fn refresh_style_caches_if_needed(&self) {
+        if self.cached_appearance.get() != self.mode {
+            self.resolved_styles.borrow_mut().clear();
+            self.resolved_text_styles.borrow_mut().clear();
+            self.cached_appearance.set(self.mode);
+        }
+    }
+
+    pub(crate) fn cached_text_style(
+        &self,
+        selector: &'static ButtonStyleSelector,
+        part: &str,
+        handled_extras: &[&str],
+        resolve: impl FnOnce() -> Result<CachedTextStyle, ThemeResolveError>,
+    ) -> Result<CachedTextStyle, ThemeResolveError> {
+        self.refresh_style_caches_if_needed();
+        if let Some((_, _, _, style)) = self.resolved_text_styles.borrow().iter().find(
+            |(key, cached_part, cached_extras, _)| {
+                std::ptr::eq(*key, selector)
+                    && cached_part == part
+                    && cached_extras
+                        .iter()
+                        .map(String::as_str)
+                        .eq(handled_extras.iter().copied())
+            },
+        ) {
+            return Ok(style.clone());
+        }
+        let style = resolve()?;
+        self.resolved_text_styles.borrow_mut().push((
+            selector,
+            part.to_owned(),
+            handled_extras
+                .iter()
+                .map(|value| (*value).to_owned())
+                .collect(),
+            style.clone(),
+        ));
+        Ok(style)
     }
 
     pub fn component_style_with(
@@ -409,7 +483,21 @@ impl ActiveTheme {
         part: &str,
         selector: &ButtonStyleSelector,
         handled_extras: &[&str],
-    ) -> Result<ResolvedComponentStyle, ThemeResolveError> {
+    ) -> Result<Rc<ResolvedComponentStyle>, ThemeResolveError> {
+        self.refresh_style_caches_if_needed();
+        if let Some((_, _, _, _, style)) = self.resolved_styles.borrow().iter().find(
+            |(cached_component, cached_part, cached_selector, cached_extras, _)| {
+                cached_component == component
+                    && cached_part == part
+                    && cached_selector == selector
+                    && cached_extras
+                        .iter()
+                        .map(String::as_str)
+                        .eq(handled_extras.iter().copied())
+            },
+        ) {
+            return Ok(Rc::clone(style));
+        }
         if !self.component_records.borrow().contains_key(component) {
             let record = self
                 .document
@@ -420,7 +508,7 @@ impl ActiveTheme {
                 .insert(component.to_owned(), record);
         }
         let records = self.component_records.borrow();
-        resolve_component_style_from_record(
+        let style = Rc::new(resolve_component_style_from_record(
             &self.document,
             component,
             part,
@@ -429,7 +517,18 @@ impl ActiveTheme {
             records
                 .get(component)
                 .expect("component record was inserted"),
-        )
+        )?);
+        self.resolved_styles.borrow_mut().push((
+            component.to_owned(),
+            part.to_owned(),
+            selector.clone(),
+            handled_extras
+                .iter()
+                .map(|value| (*value).to_owned())
+                .collect(),
+            Rc::clone(&style),
+        ));
+        Ok(style)
     }
 }
 
@@ -507,6 +606,9 @@ pub(super) fn activate_validated_theme(
         coverage,
         document: document.clone(),
         component_records: RefCell::new(BTreeMap::new()),
+        cached_appearance: Cell::new(mode),
+        resolved_styles: RefCell::new(Vec::new()),
+        resolved_text_styles: RefCell::new(Vec::new()),
     });
     Ok(())
 }
@@ -648,7 +750,9 @@ mod tests {
                         .map(String::as_str)
                         .collect();
                     assert_eq!(
-                        active.component_style_with(name, &rule.part, &rule.when, &extras),
+                        active
+                            .component_style_with(name, &rule.part, &rule.when, &extras)
+                            .map(|style| (*style).clone()),
                         resolve_component_style_with(
                             &document, name, &rule.part, &rule.when, &extras
                         ),
@@ -656,7 +760,9 @@ mod tests {
                         rule.part
                     );
                     assert_eq!(
-                        active.component_style_with(name, &rule.part, &rule.when, &[]),
+                        active
+                            .component_style_with(name, &rule.part, &rule.when, &[])
+                            .map(|style| (*style).clone()),
                         resolve_component_style_with(&document, name, &rule.part, &rule.when, &[]),
                         "{name}/{} without extra properties",
                         rule.part
@@ -694,6 +800,55 @@ mod tests {
                     .unwrap()
                     .record_metadata["custom_metadata"]["tag"],
                 "new-theme"
+            );
+        });
+    }
+
+    #[gpui::test]
+    fn resolved_style_cache_reuses_values_and_resets_on_appearance_change(
+        cx: &mut gpui::TestAppContext,
+    ) {
+        let document =
+            crate::theme::parse_theme(include_str!("../../../../themes/macos27.json")).unwrap();
+        cx.update(|app| {
+            gpui_component::init(app);
+            activate_theme(&document, Some(AppearanceMode::Light), app).unwrap();
+            let light_selector = crate::components::theme::selector_for_mode(AppearanceMode::Light);
+            let light_part = "text_styles_left_aligned_light_opaque_body";
+            let first = active_theme(app)
+                .unwrap()
+                .component_style_with("text", light_part, &light_selector, &[])
+                .unwrap();
+            let second = active_theme(app)
+                .unwrap()
+                .component_style_with("text", light_part, &light_selector, &[])
+                .unwrap();
+            assert!(Rc::ptr_eq(&first, &second));
+            assert_eq!(
+                *first,
+                resolve_component_style_with(&document, "text", light_part, &light_selector, &[])
+                    .unwrap()
+            );
+            app.global_mut::<ActiveTheme>().mode = AppearanceMode::Dark;
+            let after_mode_change = active_theme(app)
+                .unwrap()
+                .component_style_with("text", light_part, &light_selector, &[])
+                .unwrap();
+            assert!(!Rc::ptr_eq(&first, &after_mode_change));
+            assert_eq!(*first, *after_mode_change);
+            activate_theme(&document, Some(AppearanceMode::Dark), app).unwrap();
+            let dark_selector = crate::components::theme::selector_for_mode(AppearanceMode::Dark);
+            let dark_part = "text_styles_left_aligned_dark_opaque_body";
+            let dark = active_theme(app)
+                .unwrap()
+                .component_style_with("text", dark_part, &dark_selector, &[])
+                .unwrap();
+            assert!(!Rc::ptr_eq(&first, &dark));
+            assert_ne!(*first, *dark);
+            assert_eq!(
+                *dark,
+                resolve_component_style_with(&document, "text", dark_part, &dark_selector, &[])
+                    .unwrap()
             );
         });
     }
