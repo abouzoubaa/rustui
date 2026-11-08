@@ -12,7 +12,7 @@ RustUI is not yet cleared for production distribution.
 - [x] external consumer builds as a Git dependency without [patch] (C2)
 - [x] 1,000-row update + forced draw median ≤ 8.1 ms in scripts/perf-baseline.sh (owner accepted 8.03 ms in C3, PR #32)
 - [x] All stories render (test in check.sh) and scripts/smoke-playground.sh passes on the release commit
-- [ ] owner manual checks done: VoiceOver, File drop (see docs/TICKETS.md Follow-ups)
+- [x] owner manual checks done: VoiceOver, File drop (see docs/TICKETS.md Follow-ups)
 - [ ] version, tag and release notes published (C4)
 
 A successful build or a bounded GUI exercise does not close unrelated requirements.

@@ -117,8 +117,6 @@ Phase B — features (after Phase A)
 Result: no meaningful difference (docs/perf/T20-quad-sort-v2.md); not promoted; closed.
 
 ## Follow-ups (not scheduled)
-- Owner manual check (deferred): File drop story — image (accent + name), image+.txt (split lists), .txt only (error highlight, previous result kept).
-- Owner VoiceOver check (deferred): Validation story (error described/cleared) and Editable grid (read-only, sort direction, column header announced).
 - Parked: wip/native-macos-popups (native anchored popups, unfinished, vendor window.rs).
 - Parked: wip/stash-2026-10-26 (old stash, unreviewed).
 - Post-MVP: publish to crates.io (unique crate names + owned macro crate; T11 covers Git dependency only).
