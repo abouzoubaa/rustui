@@ -9,3 +9,8 @@ pub mod popover;
 pub mod sheet;
 pub mod toast;
 pub mod tooltip;
+
+#[cfg(test)]
+mod menu_popup_lifecycle_tests;
+#[cfg(test)]
+mod popover_lifecycle_tests;
