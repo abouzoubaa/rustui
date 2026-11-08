@@ -117,6 +117,7 @@ Phase B — features (after Phase A)
 Result: no meaningful difference (docs/perf/T20-quad-sort-v2.md); not promoted; closed.
 
 ## Follow-ups (not scheduled)
+- See docs/ROADMAP.md for the post-0.1.0 plan.
 - Parked: wip/native-macos-popups (native anchored popups, unfinished, vendor window.rs).
 - Parked: wip/stash-2026-10-26 (old stash, unreviewed).
 - Post-MVP: publish to crates.io (unique crate names + owned macro crate; T11 covers Git dependency only).

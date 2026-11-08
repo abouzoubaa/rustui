@@ -1,5 +1,7 @@
 # Changelog
 
+- Added the post-0.1.0 roadmap.
+
 ## 0.1.0 — 2026-11-08
 
 - Added registered story rendering coverage and a packaged Playground smoke check.
