@@ -256,7 +256,10 @@ impl View for TabViewControl {
         let default_for_state = default_roving_id.clone();
         let state_items = items.clone();
         let state_focus_handles = tab_focus_handles.clone();
-        context.update_entity(&roving_state, move |state, window, _| {
+        context.update_entity(&roving_state, move |state, window, cx| {
+            for ((_, disabled), focus) in state_items.iter().zip(&state_focus_handles) {
+                crate::components::input::leave_disabled_focus(*disabled, focus, window, cx);
+            }
             let focused_enabled_tab = state
                 .focused_tab
                 .as_deref()
@@ -310,6 +313,7 @@ impl View for TabViewControl {
                     .label(tab_visible_labels[index].clone())
                     .aria_label(tab_accessible_names[index].clone())
                     .disabled(tab.disabled)
+                    .aria_disabled(tab.disabled)
                     .track_focus(&tab_focus_handles[index])
                     .tab_stop(roving_tab_index == Some(index));
                 #[cfg(test)]

@@ -292,6 +292,7 @@ impl SidebarItem for SidebarMenuItem {
                     .size_full()
                     .id("item")
                     .role(Role::TreeItem)
+                    .aria_disabled(is_disabled)
                     .aria_label(accessibility_label.unwrap_or_else(|| label_text.clone()))
                     .aria_selected(is_active)
                     .overflow_x_hidden()

@@ -1,0 +1,8 @@
+{
+  "schema_version": 1,
+  "patch": "patches/approved/r15-sidebar-disabled-v1.patch",
+  "patch_sha256": "8fb3424710f7ea25cdf63defc8ebfda4395e01b915a85ba9ae5fb0dbf5fed99f",
+  "source": "vendor/gpui-component-0.7.3/src/sidebar/menu.rs",
+  "pre_sha256": "ffbe8d6f015977ee9630b55320d1c0bb134afd32be3d917a9f6b94f705aec284",
+  "post_sha256": "5700e1328a82c84628d989a4ce0822c2421d0a1de203f9810f6c479cc7c772b6"
+}

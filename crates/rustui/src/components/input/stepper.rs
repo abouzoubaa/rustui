@@ -251,9 +251,13 @@ impl View for StepperView {
         let decrement_disabled = self.disabled || current <= *self.range.start();
         let (increment_focus, decrement_focus) =
             context.update_entity(&focus, |focus, window, cx| {
-                // Keep focus in the same scope when a focused button disappears
-                // from the focus tree; Tab can then traverse from its parent.
-                if increment_disabled && focus.0.contains_focused(window, cx) {
+                if self.disabled {
+                    super::leave_disabled_focus(true, &focus.0, window, cx);
+                    super::leave_disabled_focus(true, &focus.1, window, cx);
+                    super::leave_disabled_focus(true, &focus.0, window, cx);
+                } else if increment_disabled && focus.0.contains_focused(window, cx) {
+                    // Reaching a value boundary must not redirect a repeated
+                    // activation to the opposite step button.
                     window.focus(&focus.0, cx);
                 } else if decrement_disabled && focus.1.contains_focused(window, cx) {
                     window.focus(&focus.1, cx);

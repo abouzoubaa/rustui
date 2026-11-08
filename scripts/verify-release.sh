@@ -44,13 +44,17 @@ case "${1:-}" in
     python3 scripts/apply_gpui_base_focus_trap_accessibility_v1_patch.py --verify
     python3 scripts/apply_gpui_component_popup_menu_disabled_confirm_v1_patch.py --verify
     python3 scripts/apply_gpui_component_sheet_close_accessibility_v2_patch.py --verify
-    python3 scripts/apply_gpui_tree_disabled_keyboard_v2_patch.py --verify
+    python3 scripts/verify_r15_tree_patch_stack.py
     python3 scripts/apply_gpui_primary_mousedown_click_v2_patch.py --verify
     python3 scripts/apply_gpui_selectable_list_semantics_v2_patch.py --verify
     python3 scripts/apply_gpui_component_tracked_dialog_focus_v2_patch.py --verify
     python3 scripts/apply_gpui_base_resize_first_move.py --verify
     python3 scripts/apply_gpui_base_slider_set_value_v2_patch.py --verify
     python3 scripts/apply_gpui_component_slider_accessibility_label_v2_patch.py --verify
+    python3 scripts/apply_r15_test_tree_disabled_v1_patch.py --verify
+    python3 scripts/apply_r15_button_disabled_focus_v1_patch.py --verify
+    python3 scripts/apply_r15_breadcrumb_disabled_v1_patch.py --verify
+    python3 scripts/apply_r15_sidebar_disabled_v1_patch.py --verify
     python3 scripts/verify_gpui_base_slider_patch_stack.py
     python3 scripts/apply_gpui_base_disabled_semantic_roots.py --verify
     python3 scripts/apply_gpui_toolbar_rtl.py --verify
@@ -91,13 +95,17 @@ PY
     python3 scripts/apply_gpui_base_focus_trap_accessibility_v1_patch.py --verify
     python3 scripts/apply_gpui_component_popup_menu_disabled_confirm_v1_patch.py --verify
     python3 scripts/apply_gpui_component_sheet_close_accessibility_v2_patch.py --verify
-    python3 scripts/apply_gpui_tree_disabled_keyboard_v2_patch.py --verify
+    python3 scripts/verify_r15_tree_patch_stack.py
     python3 scripts/apply_gpui_primary_mousedown_click_v2_patch.py --verify
     python3 scripts/apply_gpui_selectable_list_semantics_v2_patch.py --verify
     python3 scripts/apply_gpui_component_tracked_dialog_focus_v2_patch.py --verify
     python3 scripts/apply_gpui_base_resize_first_move.py --verify
     python3 scripts/apply_gpui_base_slider_set_value_v2_patch.py --verify
     python3 scripts/apply_gpui_component_slider_accessibility_label_v2_patch.py --verify
+    python3 scripts/apply_r15_test_tree_disabled_v1_patch.py --verify
+    python3 scripts/apply_r15_button_disabled_focus_v1_patch.py --verify
+    python3 scripts/apply_r15_breadcrumb_disabled_v1_patch.py --verify
+    python3 scripts/apply_r15_sidebar_disabled_v1_patch.py --verify
     python3 scripts/verify_gpui_base_slider_patch_stack.py
     python3 scripts/apply_block_stack_symbol_patch.py --verify
     python3 scripts/apply_gpui_component_calendar_locale_patch.py --check

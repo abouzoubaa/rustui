@@ -70,3 +70,11 @@ RTL proposals in this inventory either include deferred platform paths or alread
 - Selectable list semantics: promoted in P2 as `gpui-selectable-list-semantics-v2.patch`; selectable and non-selectable accessibility tree tests pass.
 
 - Tracked dialog focus: promoted in P2 as `gpui-component-tracked-dialog-focus-rebase-v2.patch`; identity-specific closing preserves the remaining modal and focus chain.
+
+## R15 disabled controls
+
+- `r15-test-tree-disabled-v1.patch`: promoted; pinned replay exposes existing disabled flags and device bounds in the test-tree inspector.
+- `r15-button-disabled-focus-v1.patch`: promoted; a focused button moves to the next element when disabled.
+- `r15-breadcrumb-disabled-v1.patch`: promoted; label, disabled semantics, Tab focus and disable/re-enable behavior passed the disposable test-window matrix.
+- `r15-sidebar-disabled-v1.patch`: promoted; disabled item semantics passed the disposable test-window matrix and are pinned by exact replay.
+- `r15-tree-disabled-focus-v1.patch`: promoted; disabled-group focus passed the disposable test-window matrix, and exact stack replay preserves the P2 Tree pins.

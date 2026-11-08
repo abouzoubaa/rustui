@@ -1,0 +1,21 @@
+--- a/vendor/gpui-pre-0.3.9/src/window/a11y/debug.rs
++++ b/vendor/gpui-pre-0.3.9/src/window/a11y/debug.rs
+@@ -181,6 +181,10 @@
+ 
+     let mut map = serde_json::Map::new();
+     map.insert("accesskit_id".into(), json!(id.0.to_string()));
++    if let Some(bounds) = node.bounds() {
++        map.insert("bounds".into(), json!({"x": bounds.x0, "y": bounds.y0,
++            "width": bounds.x1 - bounds.x0, "height": bounds.y1 - bounds.y0}));
++    }
+ 
+     let children: Vec<String> = node
+         .children()
+@@ -259,6 +263,7 @@
+     }
+ 
+     // Boolean / enum states.
++    if node.is_disabled() { aria.insert("disabled".into(), json!(true)); }
+     if node.is_read_only() { aria.insert("read_only".into(), json!(true)); }
+     if let Some(v) = node.sort_direction() {
+         aria.insert("sort_direction".into(), json!(format!("{v:?}")));

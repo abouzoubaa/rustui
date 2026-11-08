@@ -255,7 +255,11 @@ impl View for PropertyInspectorView {
                                     let field_id = Identity::from(format!(
                                         "property-inspector-integer:{control_id}"
                                     ));
-                                    let writer = context.binding_writer(value.clone());
+                                    let writer: Rc<dyn Fn(i64, &mut App)> = if disabled {
+                                        Rc::new(|_, _| {})
+                                    } else {
+                                        context.binding_writer(value.clone())
+                                    };
                                     let initial_writer = writer.clone();
                                     let (retained, created) = context.retained_entity(
                                         field_id.clone(),
@@ -307,6 +311,14 @@ impl View for PropertyInspectorView {
                                             },
                                         );
                                     }
+                                    context.update_entity(&state, |state, window, cx| {
+                                        use gpui::Focusable as _;
+                                        let focus = state.focus_handle(cx);
+                                        crate::components::input::leave_disabled_focus(
+                                            disabled, &focus, window, cx,
+                                        );
+                                        focus.tab_stop(!disabled);
+                                    });
                                     Input::new(&state)
                                         .id(field_id.to_string())
                                         .small()

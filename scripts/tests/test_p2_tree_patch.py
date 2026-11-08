@@ -19,6 +19,7 @@ class TreeKeyboardPatchTests(unittest.TestCase):
             source = root / meta["source"]
             source.parent.mkdir(parents=True)
             shutil.copyfile(ROOT / meta["source"], source)
+            subprocess.run([sys.executable, str(ROOT / "scripts/apply_r15_tree_disabled_focus_v1_patch.py"), "--root", str(root), "--artifacts", str(ROOT), "--reverse"], check=True, capture_output=True)
             command = [sys.executable, str(SCRIPT), "--root", str(root), "--artifacts", str(ROOT)]
             for mode in ("--check", "--verify", "--reverse", "--check", "--apply", "--verify"):
                 result = subprocess.run(command + [mode], text=True, capture_output=True)

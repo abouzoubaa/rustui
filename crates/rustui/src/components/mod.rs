@@ -10,3 +10,6 @@ pub mod input;
 pub mod navigation;
 pub mod overlay;
 pub(crate) mod theme;
+
+#[cfg(test)]
+mod disabled_tests;

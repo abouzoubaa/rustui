@@ -1,0 +1,8 @@
+{
+  "schema_version": 1,
+  "patch": "patches/approved/r15-button-disabled-focus-v1.patch",
+  "patch_sha256": "977a9d638ed52279862349685d7326cceda2bf2549eea14c398a39e602adc164",
+  "source": "vendor/gpui-component-0.7.3/src/button/button.rs",
+  "pre_sha256": "07118eb2453dbcf1f12ce495db4e6e97dd816d2d1c9b3de137af66db6234fa63",
+  "post_sha256": "0c9c1d6cd2b246524568ba3f5b576af8e64c693d91cd43661b1a7082addac3eb"
+}

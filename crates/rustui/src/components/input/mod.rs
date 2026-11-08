@@ -375,3 +375,30 @@ mod locale_transition_tests {
         });
     }
 }
+
+/// Leave a disabled control's old focus scope before its children leave the tab tree.
+pub(crate) fn leave_disabled_focus(
+    disabled: bool,
+    focus: &gpui::FocusHandle,
+    window: &mut gpui::Window,
+    app: &mut gpui::App,
+) {
+    if !disabled || !focus.contains_focused(window, app) {
+        return;
+    }
+    let mut visited = Vec::new();
+    loop {
+        let current = window.focused(app);
+        // Native focus scopes can reject a move or cycle among nested handles.
+        // With no enabled destination, clear focus instead of repeating forever.
+        if visited.contains(&current) {
+            window.blur(app);
+            break;
+        }
+        visited.push(current);
+        window.focus_next(app);
+        if !focus.contains_focused(window, app) {
+            break;
+        }
+    }
+}

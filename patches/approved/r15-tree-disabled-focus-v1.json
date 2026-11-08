@@ -1,0 +1,8 @@
+{
+  "schema_version": 1,
+  "patch": "patches/approved/r15-tree-disabled-focus-v1.patch",
+  "patch_sha256": "9c9f07b7f770b8f9b82a5f1d0e475927296cbcbb94b4b20281f69f30793e9984",
+  "source": "vendor/gpui-base-0.7.3/src/tree.rs",
+  "pre_sha256": "c05288fb312eb3817b69bc564c616fb81a67b548a5d327e2a44c187418943b42",
+  "post_sha256": "9a3310bfd7e955336699f295f3791234ff54973867a89cf24a0de90b4fb8e49d"
+}
