@@ -10,7 +10,7 @@ create a public release without the user's approval.
 
 ## Repeatable checks
 
-Run from the registered implementation checkout. Preserve persistent caches;
+Build from a clean checkout of the commit being released; process rules are in AGENTS.md. Preserve persistent caches;
 do not run `cargo clean` to repair compiler/artifact mismatches.
 
 ```sh
