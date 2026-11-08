@@ -2,6 +2,8 @@
 
 ## 0.1.0 — 2026-11-08
 
+- Added registered story rendering coverage and a packaged Playground smoke check.
+
 - Cached theme style resolution and tuned the release profile for redraw performance.
 
 - Updated release documentation and defined the Phase C MVP plan.

@@ -7,6 +7,9 @@ license.workspace = true
 publish.workspace = true
 description = "Standalone declarative GUI framework built on GPUI"
 
+[features]
+test-support = ["gpui/test-support"]
+
 [dependencies]
 rustui-core.workspace = true
 rustui-i18n.workspace = true

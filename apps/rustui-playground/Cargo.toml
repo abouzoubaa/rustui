@@ -7,6 +7,9 @@ license.workspace = true
 publish.workspace = true
 description = "Standalone RustUI component playground"
 
+[dev-dependencies]
+rustui = { workspace = true, features = ["test-support"] }
+
 [dependencies]
 rustui.workspace = true
 serde_json.workspace = true

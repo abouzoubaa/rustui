@@ -5,6 +5,8 @@ mod preview_transport;
 #[cfg(target_family = "wasm")]
 mod preview_transport_web;
 mod stories;
+#[cfg(test)]
+mod story_smoke_tests;
 
 use catalog::{CATALOG, CatalogItem, MISSING_REFERENCES, filtered_indices};
 use rustui::{
