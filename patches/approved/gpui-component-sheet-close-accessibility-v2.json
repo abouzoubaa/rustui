@@ -1,0 +1,8 @@
+{
+  "schema_version": 1,
+  "patch": "patches/approved/gpui-component-sheet-close-accessibility-v2.patch",
+  "patch_sha256": "5f90527f5bf73f92c4fe66805e142be31e035f4ab039d18cb72c346418ce3f69",
+  "source": "vendor/gpui-component-0.7.3/src/sheet.rs",
+  "pre_sha256": "0bfd572bda2ba54f9e862401705829073de2d33eb94f03d615452d428fc5d5af",
+  "post_sha256": "bf54674f0df559561004bf7676efb70fe1ce8f0109bf183e109b7dbfe9526f8e"
+}

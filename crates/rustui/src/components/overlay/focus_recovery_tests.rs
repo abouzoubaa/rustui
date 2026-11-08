@@ -624,3 +624,66 @@ fn disabled_popup_confirmation_keeps_menu_open_and_enabled_item_runs(
     assert_eq!(disabled_calls.get(), 0);
     assert_eq!(enabled_calls.get(), 1, "enabled action must run once");
 }
+
+#[gpui::test]
+fn sheet_close_button_exposes_localized_accessible_name(cx: &mut gpui::TestAppContext) {
+    let (_, window, _, second, behind) = setup(cx, ModalKind::Sheet);
+    let _ = open_modal(window, ModalKind::Sheet, &second, &behind);
+    window.update(|window, app| {
+        window.draw(app).clear(app);
+        let tree: serde_json::Value =
+            serde_json::from_str(&window.debug_a11y_tree_json().unwrap()).unwrap();
+        assert!(
+            tree["nodes"].as_object().unwrap().values().any(|node| {
+                node["aria"]["role"] == "Button" && node["aria"]["label"] == "Close"
+            }),
+            "the open sheet must expose a named close button: {tree}"
+        );
+    });
+}
+
+#[gpui::test]
+fn sheet_close_button_uses_french_catalog_label(cx: &mut gpui::TestAppContext) {
+    use crate::localization::{Catalog, Catalogs, Locale, activate_localization};
+    let en = Locale::parse("en").unwrap();
+    let fr = Locale::parse("fr").unwrap();
+    let mut catalogs = Catalogs::new(en.clone());
+    catalogs
+        .insert(
+            Catalog::parse(
+                en.clone(),
+                include_str!(concat!(
+                    env!("CARGO_MANIFEST_DIR"),
+                    "/../../locales/en/rustui.ftl"
+                )),
+            )
+            .unwrap(),
+        )
+        .unwrap();
+    catalogs
+        .insert(
+            Catalog::parse(
+                fr.clone(),
+                include_str!(concat!(
+                    env!("CARGO_MANIFEST_DIR"),
+                    "/../../locales/fr/rustui.ftl"
+                )),
+            )
+            .unwrap(),
+        )
+        .unwrap();
+    cx.update(|app| activate_localization(catalogs, fr, app));
+    let (_, window, _, second, behind) = setup(cx, ModalKind::Sheet);
+    let _ = open_modal(window, ModalKind::Sheet, &second, &behind);
+    window.update(|window, app| {
+        window.draw(app).clear(app);
+        let tree: serde_json::Value =
+            serde_json::from_str(&window.debug_a11y_tree_json().unwrap()).unwrap();
+        assert!(
+            tree["nodes"].as_object().unwrap().values().any(|node| {
+                node["aria"]["role"] == "Button" && node["aria"]["label"] == "Fermer"
+            }),
+            "the open sheet must use the French close label: {tree}"
+        );
+    });
+}
