@@ -6,7 +6,7 @@ from __future__ import annotations
 import sys as _stack_sys
 from pathlib import Path as _StackPath
 _stack_sys.path.insert(0, str(_StackPath(__file__).resolve().parent))
-from gpui_a11y_stack import prior_or_current
+from gpui_a11y_stack import prior_or_current, tree_prior_or_current
 
 import argparse
 import hashlib
@@ -114,7 +114,9 @@ def install_files(root: Path, staged_files: dict[str, bytes]) -> None:
 def run(root: Path, reverse: bool, check: bool) -> None:
     root = root.resolve()
     verify_identity(root)
-    composed = sha256(root / "vendor/gpui-base-0.7.3/src/tree.rs") == '0a1321f50154fb145b325517f9be93f262e959d21a213d61ecfdfadec38e4747'
+    tree = "vendor/gpui-base-0.7.3/src/tree.rs"
+    expected_tree = '0a1321f50154fb145b325517f9be93f262e959d21a213d61ecfdfadec38e4747'
+    composed = hashlib.sha256(tree_prior_or_current(root, root, tree, expected_tree)).hexdigest() == expected_tree
     if composed:
         if not check:
             raise ValueError("reverse the approved Tree accessibility series before changing its aria-disabled baseline")

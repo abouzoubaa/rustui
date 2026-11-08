@@ -1767,3 +1767,144 @@ mod rendered_keyboard_tests {
         });
     }
 }
+
+#[cfg(test)]
+mod p2_disabled_keyboard_tests {
+    use gpui::{AppContext as _, IntoElement, Render};
+    use gpui_base::{Tree, TreeItem, TreeState};
+
+    struct BaseTreeProbe {
+        state: gpui::Entity<TreeState>,
+    }
+
+    impl Render for BaseTreeProbe {
+        fn render(
+            &mut self,
+            _: &mut gpui::Window,
+            _: &mut gpui::Context<Self>,
+        ) -> impl IntoElement {
+            Tree::new(&self.state)
+        }
+    }
+
+    #[gpui::test]
+    fn disabled_base_tree_folders_ignore_keyboard_expansion_and_collapse(
+        cx: &mut gpui::TestAppContext,
+    ) {
+        cx.update(gpui_component::init);
+        let collapsed = TreeItem::new("collapsed", "Disabled collapsed")
+            .child(TreeItem::new("collapsed-child", "Child"))
+            .disabled(true);
+        let expanded = TreeItem::new("expanded", "Disabled expanded")
+            .child(TreeItem::new("expanded-child", "Child"))
+            .expanded(true)
+            .disabled(true);
+        let enabled =
+            TreeItem::new("enabled", "Enabled").child(TreeItem::new("enabled-child", "Child"));
+        let (owner, window) = cx.add_window_view({
+            let items = vec![collapsed.clone(), expanded.clone(), enabled.clone()];
+            move |_, cx| {
+                let state = cx.new(|cx| TreeState::new(cx).items(items));
+                BaseTreeProbe { state }
+            }
+        });
+        window.update(|window, app| {
+            window.activate_window();
+            let _ = window.draw(app);
+            let tree = owner.read(app).state.clone();
+            tree.update(app, |state, cx| {
+                state.set_selected_index(Some(0), cx);
+                state.focus(window, cx);
+            });
+            let _ = window.draw(app);
+        });
+        for key in ["right", "enter"] {
+            window.simulate_keystrokes(key);
+            window.run_until_parked();
+            assert!(
+                !collapsed.is_expanded(),
+                "disabled collapsed folder must stay closed after {key}"
+            );
+        }
+        window.update(|window, app| {
+            let tree = owner.read(app).state.clone();
+            tree.update(app, |state, cx| state.set_selected_index(Some(1), cx));
+            let _ = window.draw(app);
+        });
+        for key in ["left", "enter"] {
+            window.simulate_keystrokes(key);
+            window.run_until_parked();
+            assert!(
+                expanded.is_expanded(),
+                "disabled expanded folder must stay open after {key}"
+            );
+        }
+        window.update(|window, app| {
+            let tree = owner.read(app).state.clone();
+            tree.update(app, |state, cx| state.set_selected_index(Some(3), cx));
+            let _ = window.draw(app);
+        });
+        window.simulate_keystrokes("right");
+        window.run_until_parked();
+        assert!(enabled.is_expanded(), "enabled folder must still open");
+    }
+    #[gpui::test]
+    fn rustui_tree_disabled_folder_ignores_keyboard_expansion(cx: &mut gpui::TestAppContext) {
+        use super::{RetainedTree, TreeNode, TreeView};
+        use crate::{runtime::ComponentHost, view::View};
+        use rustui_core::{Binding, Identity};
+
+        struct Owner {
+            selection: Option<String>,
+        }
+        impl View for Owner {
+            fn body(&self) -> impl View {
+                TreeView::new(
+                    [TreeNode::new("disabled", "Disabled")
+                        .disabled(true)
+                        .child(TreeNode::new("child", "Child"))],
+                    Binding::new(
+                        self.selection.clone(),
+                        |owner: &Owner| owner.selection.clone(),
+                        |owner, value| owner.selection = value,
+                    ),
+                )
+                .id("p2-disabled-tree")
+            }
+        }
+        let theme = crate::theme::parse_theme(include_str!(concat!(
+            env!("CARGO_MANIFEST_DIR"),
+            "/../../themes/macos27.json"
+        )))
+        .unwrap();
+        cx.update(|app| {
+            gpui_component::init(app);
+            crate::theme::activate_theme(&theme, Some(crate::theme::AppearanceMode::Light), app)
+                .unwrap();
+        });
+        let (owner, window) =
+            cx.add_window_view(|_, cx| ComponentHost::new(Owner { selection: None }, cx));
+        let state = window.update(|window, app| {
+            let _ = window.draw(app);
+            let retained = owner
+                .read(app)
+                .retained_entity_for_test::<RetainedTree>(
+                    vec![],
+                    Identity::from("p2-disabled-tree"),
+                )
+                .unwrap();
+            let state = retained.read(app).tree.clone();
+            state.update(app, |state, cx| {
+                state.set_selected_index(Some(0), cx);
+                state.focus(window, cx);
+            });
+            let _ = window.draw(app);
+            state
+        });
+        for key in ["right", "enter"] {
+            window.simulate_keystrokes(key);
+            window.run_until_parked();
+            window.update(|_, app| assert!(!state.read(app).entry(0).unwrap().is_expanded()));
+        }
+    }
+}

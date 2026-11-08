@@ -38,6 +38,7 @@ class TreeAccessibilitySeriesLifecycle(unittest.TestCase):
             target = self.root / relative
             target.parent.mkdir(parents=True, exist_ok=True)
             shutil.copyfile(ROOT / relative, target)
+        subprocess.run([sys.executable, str(ROOT / "scripts/apply_gpui_tree_disabled_keyboard_v2_patch.py"), "--root", str(self.root), "--artifacts", str(ROOT), "--reverse"], check=True, capture_output=True)
         current = self.sources()
         hashes = {path: SERIES["digest"](data) for path, data in current.items()}
         if hashes == SERIES["POST"]:

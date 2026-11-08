@@ -5,6 +5,7 @@ import runpy
 from pathlib import Path
 import shutil
 import subprocess
+import sys
 import tempfile
 import unittest
 
@@ -70,6 +71,7 @@ class TreeAccessibilitySeriesTests(unittest.TestCase):
         helper.parent.mkdir(parents=True, exist_ok=True)
         shutil.copy2(HELPER, helper)
         series = runpy.run_path(str(helper))
+        subprocess.run([sys.executable, str(REPO / "scripts/apply_gpui_tree_disabled_keyboard_v2_patch.py"), "--root", str(self.root), "--artifacts", str(REPO), "--reverse"], check=True, capture_output=True)
         current = {path: (self.root / path).read_bytes() for path in series["FILES"]}
         hashes = {path: series["digest"](data) for path, data in current.items()}
         if hashes == series["POST"]:
