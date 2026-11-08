@@ -668,3 +668,7 @@ mod tests {
         assert!(tasks.is_current(&id, next));
     }
 }
+
+#[cfg(test)]
+#[path = "async_tests.rs"]
+mod async_audit_tests;

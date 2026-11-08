@@ -13,7 +13,7 @@ Work one item at a time; each item becomes a ticket in docs/TICKETS.md before wo
 
 6. Triage proposed patches (P0) and promote them.
 7. Done (R15/R15b): disabled-control focus, dropdown/popover re-enable, popup-menu disabled accessibility and live selection recovery; see docs/DISABLED_AUDIT.md.
-8. Audit async cancellation (R20).
+8. Done (R20): async task ownership, cancellation, generation-safe restart, error recovery and owner release verified for both public starters; see docs/ASYNC_AUDIT.md.
 9. Review framework tools (R22–R26): preview/inspector, composition editing, and live theme reload.
 10. Address small gaps: cell-header relation, `.accept()` description, `include!()` gallery, and test file locations.
 11. Review parked work: `wip/stash-2026-10-26` and a decision on `wip/native-macos-popups`.
