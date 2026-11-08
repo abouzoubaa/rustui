@@ -4,10 +4,18 @@
 
 Native macOS is the first release target. Web/Wasm, further localization, and accessibility/VoiceOver acceptance are deferred and incomplete. Windows and Linux come last; neither is a current release target.
 
-RustUI is not yet cleared for production distribution. Use the current
-[archived remaining-work inventory](archive/tasks/ROADMAP_REMAINING_AUDIT.md) and component
-contracts as the acceptance checklist. A successful build or a bounded GUI
-exercise does not close unrelated requirements.
+RustUI is not yet cleared for production distribution.
+
+## MVP checklist (macOS)
+
+- scripts/check.sh and ./scripts/verify-release.sh source pass on the release commit
+- external consumer builds as a Git dependency without [patch] (C2)
+- 1,000-row update + forced draw median under 8 ms in scripts/perf-baseline.sh (C3)
+- Playground packaged app launches and every story renders (native-mvp-smoke)
+- owner manual checks done: VoiceOver, File drop (see docs/TICKETS.md Follow-ups)
+- version, tag and release notes published (C4)
+
+A successful build or a bounded GUI exercise does not close unrelated requirements.
 
 ## Targets and evidence
 
@@ -32,8 +40,8 @@ bounded evidence and do not change the current priority.
 
 ## Build the reviewed source
 
-Use a clean registered isolated worktree, its verified owner claim, and the
-approved compiler configuration. Record the commit, source-input hashes, lockfile,
+Build from a clean checkout of the commit being released; process rules are in AGENTS.md.
+Use the approved compiler configuration. Record the commit, source-input hashes, lockfile,
 compiler identities, host/SDK, command output and artifact hashes. Preserve
 unrelated work and persistent dependency caches.
 

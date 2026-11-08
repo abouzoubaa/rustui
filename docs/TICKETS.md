@@ -114,9 +114,21 @@ Phase B — features (after Phase A)
 **Done when:** The isolated candidate has comparable measurements and a clear result table.
 **Stop if:** Promotion is proposed; do not promote the candidate.
 
+Result: no meaningful difference (docs/perf/T20-quad-sort-v2.md); not promoted; closed.
+
 ## Follow-ups (not scheduled)
 - Owner manual check (deferred): File drop story — image (accent + name), image+.txt (split lists), .txt only (error highlight, previous result kept).
 - Owner VoiceOver check (deferred): Validation story (error described/cleared) and Editable grid (read-only, sort direction, column header announced).
 - Parked: wip/native-macos-popups (native anchored popups, unfinished, vendor window.rs).
 - Parked: wip/stash-2026-10-26 (old stash, unreviewed).
 - Post-MVP: publish to crates.io (unique crate names + owned macro crate; T11 covers Git dependency only).
+
+Phase C — MVP release
+## C1 — Release docs and MVP checklist
+**Do:** Remove retired claim process from release docs; define the MVP checklist. **Done when:** RELEASE.md has the checklist and no claim/ownership text.
+## C2 — Resume T11 (Git consumer without [patch])
+**Do:** Continue from wip/t11-owned-gpui per the T11 resume note; re-copy owned crates from current vendor/. **Done when:** external consumer builds as a Git dependency with no [patch]; all gates green.
+## C3 — 1,000-row redraw under 8 ms
+**Do:** Profile owner_update_and_draw_workload, then optimize RustUI code only. **Done when:** perf-baseline.sh shows the 1,000-row forced-draw median under 8 ms, no test regressions.
+## C4 — Release 0.1.0
+**Do:** Version bump, CHANGELOG release section, tag v0.1.0, GitHub release notes. **Done when:** every MVP checklist item is checked.
