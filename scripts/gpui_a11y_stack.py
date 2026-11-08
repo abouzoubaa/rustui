@@ -31,6 +31,20 @@ def tree_prior_or_current(root, artifacts, relative, expected):
     import tempfile
     root, artifacts, relative = Path(root), Path(artifacts), Path(relative)
     data = prior_or_current(root, artifacts, relative, expected)
+    if str(relative) == "vendor/gpui-base-0.7.3/src/tree.rs" and (artifacts / "patches/approved/r15-tree-disabled-focus-v1.json").is_file():
+        from approved_single_source_patch import run as replay
+        from apply_r15_tree_disabled_focus_v1_patch import MANIFEST as newer_manifest, MANIFEST_SHA256 as newer_hash
+        try:
+            with tempfile.TemporaryDirectory(prefix="r15-tree-prior-") as temporary:
+                stage = Path(temporary)
+                source = stage / relative
+                source.parent.mkdir(parents=True)
+                source.write_bytes(data)
+                with contextlib.redirect_stdout(io.StringIO()):
+                    replay(stage, artifacts, newer_manifest, newer_hash, "--reverse")
+                data = source.read_bytes()
+        except (OSError, ValueError, KeyError, subprocess.CalledProcessError):
+            pass
     if hashlib.sha256(data).hexdigest() == expected:
         return data
     if str(relative) != "vendor/gpui-base-0.7.3/src/tree.rs":
@@ -64,6 +78,25 @@ def mouse_prior_or_current(root, artifacts, relative, expected):
     root, artifacts, relative = Path(root), Path(artifacts), Path(relative)
     data = (root / relative).read_bytes()
     if hashlib.sha256(data).hexdigest() == expected:
+        return data
+    if str(relative) == "vendor/gpui-pre-0.3.9/src/window/a11y/debug.rs":
+        if not (artifacts / "patches/approved/r15-test-tree-disabled-v1.json").is_file():
+            return data
+        from approved_single_source_patch import run
+        from apply_r15_test_tree_disabled_v1_patch import MANIFEST, MANIFEST_SHA256
+        try:
+            with tempfile.TemporaryDirectory(prefix="r15-debug-prior-") as temporary:
+                stage = Path(temporary)
+                source = stage / relative
+                source.parent.mkdir(parents=True)
+                source.write_bytes(data)
+                with contextlib.redirect_stdout(io.StringIO()):
+                    run(stage, artifacts, MANIFEST, MANIFEST_SHA256, "--reverse")
+                prior = source.read_bytes()
+                if hashlib.sha256(prior).hexdigest() == expected:
+                    return prior
+        except (OSError, ValueError, KeyError, subprocess.CalledProcessError):
+            pass
         return data
     if str(relative) != "vendor/gpui-pre-0.3.9/src/elements/div.rs":
         return data

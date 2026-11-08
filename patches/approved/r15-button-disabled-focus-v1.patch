@@ -1,0 +1,13 @@
+--- a/vendor/gpui-component-0.7.3/src/button/button.rs
++++ b/vendor/gpui-component-0.7.3/src/button/button.rs
+@@ -642,6 +642,10 @@
+             .read(cx)
+             .clone();
+         let is_focused = focus_handle.is_focused(window);
++        if disabled && is_focused {
++            window.focus_next(cx);
++        }
++
+ 
+         let rounding = match self.rounded {
+             ButtonRounded::Small => cx.theme().radius * 0.5,

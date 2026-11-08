@@ -89,10 +89,18 @@ impl From<SharedString> for BreadcrumbItem {
 }
 
 impl RenderOnce for BreadcrumbItem {
-    fn render(self, _: &mut Window, cx: &mut App) -> impl IntoElement {
+    fn render(self, window: &mut Window, cx: &mut App) -> impl IntoElement {
+        let actionable = self.on_click.is_some();
+        let focus = window.use_keyed_state(self.id.clone(), cx, |_, cx| cx.focus_handle()).read(cx).clone();
+        if self.disabled && focus.is_focused(window) {
+            window.focus_next(cx);
+        }
         div()
             .id(self.id)
-            .role(if self.on_click.is_some() && !self.disabled {
+            .track_focus(&focus.tab_stop(actionable && !self.disabled))
+            .aria_label(self.label.clone())
+            .aria_disabled(self.disabled)
+            .role(if actionable {
                 Role::Link
             } else {
                 Role::ListItem

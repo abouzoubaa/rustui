@@ -642,6 +642,10 @@ impl RenderOnce for Button {
             .read(cx)
             .clone();
         let is_focused = focus_handle.is_focused(window);
+        if disabled && is_focused {
+            window.focus_next(cx);
+        }
+
 
         let rounding = match self.rounded {
             ButtonRounded::Small => cx.theme().radius * 0.5,
