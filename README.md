@@ -124,3 +124,7 @@ native macOS work continues; existing implementations and evidence are retained.
 Functional and release work continues; see the
 [archived roadmap remaining-work audit](docs/archive/tasks/ROADMAP_REMAINING_AUDIT.md)
 for historical planning context.
+
+## License
+
+RustUI is MIT licensed; third-party notices are in [docs/release/dependency-notices/](docs/release/dependency-notices/) and [the current packaged notices](docs/release/current-notices/).
