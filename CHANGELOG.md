@@ -1,5 +1,7 @@
 # Changelog
 
+- Measured the proposed quad-sort V2 candidate against the baseline.
+
 - T11b: Added RustUI-owned macOS GPUI platform crates with source-copy verification.
 - T11a: Added the RustUI-owned GPUI core crate while preserving the pinned upstream source and attribution.
 
