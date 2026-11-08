@@ -38,7 +38,7 @@ class RowAccessibilityProposalTests(unittest.TestCase):
             shutil.copyfile(ROOT / PROPOSAL.A11Y_PATCH, patch)
             source = root / PROPOSAL.A11Y_DIV
             before = source.read_bytes()
-            self.assertEqual(PROPOSAL.digest(source), PROPOSAL.A11Y_DIV_POST)
+            self.assertEqual(PROPOSAL.digest(source), PROPOSAL.P2_DIV_POST)
             self.assertEqual(PROPOSAL.verify(root)["status"], "pass")
             self.assertEqual(source.read_bytes(), before)
 

@@ -19,7 +19,9 @@ MANIFEST = Path("patches/proposed/gpui-row-accessibility-series-v1.json")
 A11Y_PATCH = Path("patches/approved/a11y-validation-grid-v1.patch")
 A11Y_DIV = "vendor/gpui-pre-0.3.9/src/elements/div.rs"
 A11Y_DIV_POST = "81429bdbc0a835a97e3d2c3cfa394b0b7cebd81e4289176791b952d1c819df50"
-MANIFEST_SHA256 = "ed0a205650efdb4459f01703abc259ee0dcf618e1e03efede437956ccecbba3e"
+P2_DIV_POST = "ab2690171fc572695ca1b4910680a52ef10124fb4aae535a08e36c47b464337b"
+P2_PATCH = Path("patches/approved/gpui-primary-mousedown-click-v2.patch")
+MANIFEST_SHA256 = "4128ee813bf194b9ce370b0712d7d5e10bb6b99af710f9eb83943bef26a3e1c2"
 SOURCES = {
     "gpui-pre-0.3.9": ("gpui-pre", "0.3.9", "src/elements/div.rs"),
     "gpui-component-0.7.3": ("gpui-component", "0.7.3", "src/list/list.rs"),
@@ -48,6 +50,7 @@ def verify(root: Path) -> dict:
     before = {}
     popup_applied = False
     a11y_applied = False
+    p2_applied = False
     for record in records:
         package = record["package_directory"]
         name, version, relative = SOURCES[package]
@@ -74,6 +77,8 @@ def verify(root: Path) -> dict:
                     with contextlib.redirect_stdout(io.StringIO()):
                         POPUP.run(root, root, "--verify")
                     popup_applied = True
+                elif path == root / A11Y_DIV and actual == P2_DIV_POST:
+                    p2_applied = True
                 elif path == root / A11Y_DIV and actual == A11Y_DIV_POST:
                     a11y_applied = True
                 elif not (package == "gpui-component-0.7.3"
@@ -106,6 +111,12 @@ def verify(root: Path) -> dict:
                 ["git", "apply", "--reverse", "--whitespace=nowarn", str(root / POPUP.PATCH)],
                 cwd=stage, check=True, capture_output=True,
             )
+        if p2_applied:
+            subprocess.run(
+                ["git", "apply", "--reverse", "--whitespace=nowarn", "--include=" + A11Y_DIV, str(root / P2_PATCH)],
+                cwd=stage, check=True, capture_output=True,
+            )
+            before[root / P2_PATCH] = digest(root / P2_PATCH)
         if a11y_applied:
             subprocess.run(
                 ["git", "apply", "--reverse", "--whitespace=nowarn", "--include=" + A11Y_DIV, str(root / A11Y_PATCH)],

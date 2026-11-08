@@ -53,3 +53,36 @@ def tree_prior_or_current(root, artifacts, relative, expected):
     except (OSError, ValueError, KeyError, subprocess.CalledProcessError):
         pass
     return data
+
+
+def mouse_prior_or_current(root, artifacts, relative, expected):
+    """Read the prior A11Y div image beneath the P2 primary-mousedown fix."""
+    import contextlib
+    import io
+    import tempfile
+
+    root, artifacts, relative = Path(root), Path(artifacts), Path(relative)
+    data = (root / relative).read_bytes()
+    if hashlib.sha256(data).hexdigest() == expected:
+        return data
+    if str(relative) != "vendor/gpui-pre-0.3.9/src/elements/div.rs":
+        return data
+    if not (artifacts / "patches/approved/gpui-primary-mousedown-click-v2.json").is_file():
+        return data
+    from approved_single_source_patch import run
+    from apply_gpui_primary_mousedown_click_v2_patch import MANIFEST, MANIFEST_SHA256
+
+    try:
+        with tempfile.TemporaryDirectory(prefix="p2-mouse-prior-") as temporary:
+            stage = Path(temporary)
+            source = stage / relative
+            source.parent.mkdir(parents=True)
+            source.write_bytes(data)
+            with contextlib.redirect_stdout(io.StringIO()):
+                run(stage, artifacts, MANIFEST, MANIFEST_SHA256, "--reverse")
+            prior = source.read_bytes()
+            if hashlib.sha256(prior).hexdigest() == expected:
+                return prior
+    except (OSError, ValueError, KeyError, subprocess.CalledProcessError):
+        pass
+    return data

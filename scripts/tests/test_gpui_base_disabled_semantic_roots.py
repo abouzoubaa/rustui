@@ -16,7 +16,7 @@ class DisabledSemanticRoots(unittest.TestCase):
   paths=set(meta['images']['pre'])|set(meta['packages'])|set(meta['preserved_provenance'])|{'Cargo.toml',meta['prerequisite']['path']}
   for path in paths:
    dest=self.root/path;dest.parent.mkdir(parents=True,exist_ok=True);shutil.copy2(ROOT/path,dest)
-  for name in ('patches/approved/a11y-validation-grid-v1.json','patches/approved/a11y-validation-grid-v1.patch'):
+  for name in ('patches/approved/a11y-validation-grid-v1.json','patches/approved/a11y-validation-grid-v1.patch','patches/approved/gpui-primary-mousedown-click-v2.json','patches/approved/gpui-primary-mousedown-click-v2.patch'):
    target=self.art/name;target.parent.mkdir(parents=True,exist_ok=True);shutil.copy2(ROOT/name,target)
   for name in ('vendor/gpui-pre-0.3.9/src/window/a11y/debug.rs','vendor/gpui-component-0.7.3/src/input/input.rs'):
    target=self.root/name;target.parent.mkdir(parents=True,exist_ok=True);shutil.copy2(ROOT/name,target)

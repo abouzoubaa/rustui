@@ -244,3 +244,89 @@ mod tests {
         let _ = TapRegion("  ", EmptyView, AppAction::new(|_| {}));
     }
 }
+
+#[cfg(test)]
+mod p2_mouse_accessibility_tests {
+    use gpui::{
+        InteractiveElement as _, ParentElement as _, Render, StatefulInteractiveElement as _,
+        Styled as _,
+    };
+
+    struct MouseProbe;
+
+    impl Render for MouseProbe {
+        fn render(
+            &mut self,
+            _: &mut gpui::Window,
+            _: &mut gpui::Context<Self>,
+        ) -> impl gpui::IntoElement {
+            use gpui::{MouseButton, Role, div, px};
+            div()
+                .flex()
+                .child(
+                    div()
+                        .id("p2-primary")
+                        .role(Role::ListItem)
+                        .aria_label("Primary")
+                        .w(px(40.))
+                        .h(px(40.))
+                        .on_mouse_down(MouseButton::Left, |_, _, _| {}),
+                )
+                .child(
+                    div()
+                        .id("p2-secondary")
+                        .role(Role::ListItem)
+                        .aria_label("Secondary")
+                        .w(px(40.))
+                        .h(px(40.))
+                        .on_mouse_down(MouseButton::Right, |_, _, _| {}),
+                )
+                .child(
+                    div()
+                        .id("p2-outside")
+                        .role(Role::ListItem)
+                        .aria_label("Outside")
+                        .w(px(40.))
+                        .h(px(40.))
+                        .on_mouse_down_out(|_, _, _| {}),
+                )
+                .child(
+                    div()
+                        .id("p2-click")
+                        .role(Role::ListItem)
+                        .aria_label("Explicit click")
+                        .w(px(40.))
+                        .h(px(40.))
+                        .on_click(|_, _, _| {}),
+                )
+        }
+    }
+
+    #[gpui::test]
+    fn primary_mouse_down_advertises_accessibility_click_only_for_primary(
+        cx: &mut gpui::TestAppContext,
+    ) {
+        let (_, window) = cx.add_window_view(|_, _| MouseProbe);
+        window.update(|window, app| {
+            window.draw(app).clear(app);
+            let tree: serde_json::Value =
+                serde_json::from_str(&window.debug_a11y_tree_json().unwrap()).unwrap();
+            let nodes = tree["nodes"].as_object().unwrap();
+            for (label, expected) in [
+                ("Primary", true),
+                ("Secondary", false),
+                ("Outside", false),
+                ("Explicit click", true),
+            ] {
+                let node = nodes
+                    .values()
+                    .find(|node| node["aria"]["label"] == label)
+                    .unwrap_or_else(|| panic!("missing {label}: {tree}"));
+                let click = node["aria"]["on_action"]
+                    .as_array()
+                    .is_some_and(|actions| actions.iter().any(|action| action == "Click"));
+                assert_eq!(click, expected, "unexpected Click for {label}: {node}");
+            }
+        });
+    }
+}

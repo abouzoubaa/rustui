@@ -57,6 +57,10 @@ class TreeAccessibilitySeriesTests(unittest.TestCase):
         support = set(FILES) | {str(path) for name in ("DISABLED_FILES", "PROVENANCE", "IDENTITY", "PATCH_HASHES") for path in series[name]}
         support |= {
             Path("scripts/gpui_a11y_stack.py"),
+            Path("scripts/approved_single_source_patch.py"),
+            Path("scripts/apply_gpui_primary_mousedown_click_v2_patch.py"),
+            Path("patches/approved/gpui-primary-mousedown-click-v2.json"),
+            Path("patches/approved/gpui-primary-mousedown-click-v2.patch"),
             Path("scripts/apply_gpui_validation_grid_a11y_patch.py"),
             Path("patches/approved/a11y-validation-grid-v1.json"),
             Path("patches/approved/a11y-validation-grid-v1.patch"),
