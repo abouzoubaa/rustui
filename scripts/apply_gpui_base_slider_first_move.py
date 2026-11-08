@@ -24,7 +24,9 @@ def run(root, artifacts, mode):
     root, artifacts = root.resolve(), artifacts.resolve()
     source, patch = root / SOURCE, artifacts / PATCH
     manifest = tomllib.loads((root / "Cargo.toml").read_text())
-    if manifest.get("patch", {}).get("crates-io", {}).get("gpui-base", {}).get("path") != "vendor/gpui-base-0.7.3":
+    selected_path = manifest.get("patch", {}).get("crates-io", {}).get("gpui-base", {}).get("path")
+    selected_path = selected_path or manifest.get("workspace", {}).get("dependencies", {}).get("gpui-base", {}).get("path")
+    if selected_path not in ("vendor/gpui-base-0.7.3", "crates/rustui-gpui-base"):
         raise ValueError("the selected GPUI Base package is not the approved local snapshot")
     package = tomllib.loads((root / "vendor/gpui-base-0.7.3/Cargo.toml").read_text())
     if package.get("package", {}).get("version") != "0.7.3":

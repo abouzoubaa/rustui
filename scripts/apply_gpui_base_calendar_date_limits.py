@@ -26,9 +26,16 @@ def digest(data):
 def run(root, artifacts, mode):
     root, artifacts = root.resolve(), artifacts.resolve()
     package = tomllib.loads((root / 'vendor/gpui-base-0.7.3/Cargo.toml').read_text())['package']
-    selected = tomllib.loads((root / 'Cargo.toml').read_text())['patch']['crates-io']['gpui-base']
-    if (package.get('name'), package.get('version'), selected.get('path')) != ('gpui-base', '0.7.3', 'vendor/gpui-base-0.7.3'):
-        raise ValueError('pinned local gpui-base package selection changed')
+    manifest = tomllib.loads((root / 'Cargo.toml').read_text())
+    dependencies = manifest.get('workspace', {}).get('dependencies', {})
+    patches = manifest.get('patch', {}).get('crates-io', {})
+    package = root / f'vendor/gpui-base-0.7.3'
+    metadata = tomllib.loads((package / 'Cargo.toml').read_text())['package']
+    dependency = dependencies.get('gpui-base')
+    selected_path = dependency.get('path') if dependency else patches.get('gpui-base', {}).get('path')
+    if (metadata.get('name'), metadata.get('version'), selected_path) not in (('gpui-base', '0.7.3', 'crates/rustui-gpui-base'), ('gpui-base', '0.7.3', 'vendor/gpui-base-0.7.3')):
+        raise ValueError('gpui-base package selection mismatch')
+    
     for path, expected in PRESERVED.items():
         if digest((root / path).read_bytes()) != expected:
             raise ValueError(f'upstream provenance changed: {path}')

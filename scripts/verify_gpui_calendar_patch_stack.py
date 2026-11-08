@@ -25,6 +25,7 @@ def main():
         staged = Path(folder)
         files = [Path('Cargo.toml'), *rtl.IMAGES, *map(Path, keyboard.PRESERVED)]
         files += [Path(f'vendor/{name}-0.7.3/Cargo.toml') for name in ('gpui-base', 'gpui-component')]
+        files += [Path(f'crates/rustui-{name}/Cargo.toml') for name in ('gpui-base', 'gpui-component')]
         files += [Path('vendor/gpui-base-0.7.3/LICENSE-APACHE'),
                   Path('patches/approved/gpui-component-date-picker-localization-v2.patch')]
         for relative in files:
