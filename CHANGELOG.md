@@ -1,5 +1,7 @@
 # Changelog
 
+- Audited owner async task cancellation, restart, errors, re-render stability and release with a deterministic GPUI-window matrix.
+
 - Completed dropdown recovery coverage and live popup-menu disabled semantics, selection recovery and re-enable behavior.
 
 - Audited disabled controls with a shared GPUI-window matrix, fixed focus traversal and disabled semantics, and deferred seven cases to R15b.
