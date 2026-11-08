@@ -1,9 +1,9 @@
 [alias]
 playground = ["run", "-p", "rustui-playground", "--locked"]
 lab = ["run", "-p", "rustui-lab", "--locked"]
-warm = ["build", "--workspace", "--profile", "headstart", "--locked"]
-dev = ["run", "-p", "rustui-playground", "--profile", "headstart", "--locked"]
-audit = ["check", "--workspace", "--all-targets", "--profile", "headstart", "--locked"]
+warm = ["build", "--workspace", "--locked"]
+dev = ["run", "-p", "rustui-playground", "--locked"]
+audit = ["check", "--workspace", "--all-targets", "--locked"]
 
 [build]
 target-dir = "target/headstart"

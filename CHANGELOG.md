@@ -1,5 +1,7 @@
 # Changelog
 
+- Switched daily Cargo aliases to stable defaults and reconsidered roadmap item 3, moving crates.io publishing into Phase 1.
+
 - Promoted slider accessibility labels and value actions with bound-value regression coverage.
 
 - Updated accessibility patch proposals and promotion status.
