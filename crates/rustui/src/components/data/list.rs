@@ -1000,3 +1000,155 @@ mod tests {
         assert!(new_writer_called.get());
     }
 }
+
+#[cfg(test)]
+mod p2_list_semantics_tests {
+    use gpui::{
+        App, AppContext as _, Context, Entity, IntoElement, ParentElement as _, Render,
+        Styled as _, Window, px,
+    };
+    use gpui_component::{
+        IndexPath,
+        list::{List as ComponentList, ListDelegate, ListItem, ListState},
+    };
+
+    struct Delegate;
+    impl ListDelegate for Delegate {
+        type Item = ListItem;
+        fn set_selected_index(
+            &mut self,
+            _: Option<IndexPath>,
+            _: &mut Window,
+            _: &mut Context<ListState<Self>>,
+        ) {
+        }
+        fn items_count(&self, section: usize, _: &App) -> usize {
+            if section == 0 { 3 } else { 0 }
+        }
+        fn render_item(
+            &mut self,
+            index: IndexPath,
+            _: &mut Window,
+            _: &mut Context<ListState<Self>>,
+        ) -> Option<ListItem> {
+            Some(ListItem::new(index.row).child(format!("Row {}", index.row)))
+        }
+    }
+    struct ComponentProbe {
+        state: Entity<ListState<Delegate>>,
+    }
+    impl Render for ComponentProbe {
+        fn render(&mut self, _: &mut Window, _: &mut Context<Self>) -> impl IntoElement {
+            ComponentList::new(&self.state).w(px(320.)).h(px(180.))
+        }
+    }
+    #[gpui::test]
+    fn component_list_exposes_selectable_roles_and_selected_state(cx: &mut gpui::TestAppContext) {
+        cx.update(gpui_component::init);
+        for selectable in [true, false] {
+            let (_, window) = cx.add_window_view(move |window, cx| ComponentProbe {
+                state: cx.new(|cx| ListState::new(Delegate, window, cx).selectable(selectable)),
+            });
+            window.update(|window, app| {
+                window.draw(app).clear(app);
+                let tree: serde_json::Value =
+                    serde_json::from_str(&window.debug_a11y_tree_json().unwrap()).unwrap();
+                let nodes = tree["nodes"].as_object().unwrap();
+                let (root_role, row_role) = if selectable {
+                    ("ListBox", "ListBoxOption")
+                } else {
+                    ("List", "ListItem")
+                };
+                assert!(
+                    nodes.values().any(|node| node["aria"]["role"] == root_role),
+                    "missing {root_role}: {tree}"
+                );
+                let rows: Vec<_> = nodes
+                    .values()
+                    .filter(|node| node["aria"]["role"] == row_role)
+                    .collect();
+                assert_eq!(rows.len(), 3, "{tree}");
+                for row in rows {
+                    assert_eq!(!row["aria"]["selected"].is_null(), selectable, "{row}");
+                }
+            });
+        }
+    }
+
+    #[gpui::test]
+    fn rustui_list_exposes_selection_and_nonselectable_semantics(cx: &mut gpui::TestAppContext) {
+        use super::ListView;
+        use crate::{runtime::ComponentHost, view::View};
+        use rustui_core::Binding;
+        struct Owner {
+            selected: Option<usize>,
+            selectable: bool,
+        }
+        impl View for Owner {
+            fn body(&self) -> impl View {
+                ListView::new(
+                    ["Alpha", "Beta"],
+                    Binding::new(
+                        self.selected,
+                        |owner: &Owner| owner.selected,
+                        |owner, value| owner.selected = value,
+                    ),
+                )
+                .id("p2-list-semantics")
+                .selectable(self.selectable)
+            }
+        }
+        let theme = crate::theme::parse_theme(include_str!(concat!(
+            env!("CARGO_MANIFEST_DIR"),
+            "/../../themes/macos27.json"
+        )))
+        .unwrap();
+        cx.update(|app| {
+            gpui_component::init(app);
+            crate::theme::activate_theme(&theme, Some(crate::theme::AppearanceMode::Light), app)
+                .unwrap();
+        });
+        for (selectable, selected) in [(true, Some(0)), (true, Some(1)), (false, None)] {
+            let (_, window) = cx.add_window_view(move |_, cx| {
+                ComponentHost::new(
+                    Owner {
+                        selectable,
+                        selected,
+                    },
+                    cx,
+                )
+            });
+            window.update(|window, app| {
+                window.draw(app).clear(app);
+                let tree: serde_json::Value =
+                    serde_json::from_str(&window.debug_a11y_tree_json().unwrap()).unwrap();
+                let nodes = tree["nodes"].as_object().unwrap();
+                let (root_role, row_role) = if selectable {
+                    ("ListBox", "ListBoxOption")
+                } else {
+                    ("List", "ListItem")
+                };
+                assert!(
+                    nodes.values().any(|node| node["aria"]["role"] == root_role),
+                    "missing {root_role}: {tree}"
+                );
+                let rows: Vec<_> = nodes
+                    .values()
+                    .filter(|node| {
+                        node["aria"]["role"] == row_role
+                            && !node["aria"]["position_in_set"].is_null()
+                    })
+                    .collect();
+                assert_eq!(rows.len(), 2, "{tree}");
+                for row in rows {
+                    let index = row["aria"]["position_in_set"].as_u64().unwrap() as usize - 1;
+                    assert_eq!(
+                        row["aria"]["selected"].as_bool(),
+                        selectable.then_some(Some(index) == selected),
+                        "{row}"
+                    );
+                }
+            });
+        }
+    }
+}

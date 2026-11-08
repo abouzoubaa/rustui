@@ -21,7 +21,7 @@ A11Y_DIV = "vendor/gpui-pre-0.3.9/src/elements/div.rs"
 A11Y_DIV_POST = "81429bdbc0a835a97e3d2c3cfa394b0b7cebd81e4289176791b952d1c819df50"
 P2_DIV_POST = "ab2690171fc572695ca1b4910680a52ef10124fb4aae535a08e36c47b464337b"
 P2_PATCH = Path("patches/approved/gpui-primary-mousedown-click-v2.patch")
-MANIFEST_SHA256 = "4128ee813bf194b9ce370b0712d7d5e10bb6b99af710f9eb83943bef26a3e1c2"
+MANIFEST_SHA256 = "84e78d8eb79b5a5e790616eca67e6e4b2aa600df8cfc345923e677c9dbeb6c8b"
 SOURCES = {
     "gpui-pre-0.3.9": ("gpui-pre", "0.3.9", "src/elements/div.rs"),
     "gpui-component-0.7.3": ("gpui-component", "0.7.3", "src/list/list.rs"),
@@ -51,6 +51,7 @@ def verify(root: Path) -> dict:
     popup_applied = False
     a11y_applied = False
     p2_applied = False
+    list_applied = False
     for record in records:
         package = record["package_directory"]
         name, version, relative = SOURCES[package]
@@ -77,6 +78,10 @@ def verify(root: Path) -> dict:
                     with contextlib.redirect_stdout(io.StringIO()):
                         POPUP.run(root, root, "--verify")
                     popup_applied = True
+                elif path == root / "vendor/gpui-component-0.7.3/src/list/list.rs" and actual == "ebfe959470cf101926e3e10d4e7cb5a9431657a75b4f92aa51f27b29a9a59f46":
+                    with contextlib.redirect_stdout(io.StringIO()):
+                        POPUP.run(root, root, "--verify")
+                    list_applied = True
                 elif path == root / A11Y_DIV and actual == P2_DIV_POST:
                     p2_applied = True
                 elif path == root / A11Y_DIV and actual == A11Y_DIV_POST:
@@ -100,6 +105,9 @@ def verify(root: Path) -> dict:
             source = stage / record["source"]
             source.parent.mkdir(parents=True, exist_ok=True)
             shutil.copyfile(root / record["source"], source)
+        if list_applied:
+            subprocess.run(["git", "apply", "--reverse", "--whitespace=nowarn", str(root / "patches/approved/gpui-selectable-list-semantics-v2.patch")], cwd=stage, check=True, capture_output=True)
+            before[root / "patches/approved/gpui-selectable-list-semantics-v2.patch"] = digest(root / "patches/approved/gpui-selectable-list-semantics-v2.patch")
         if popup_applied:
             for relative in POPUP.IMAGES:
                 target = stage / relative

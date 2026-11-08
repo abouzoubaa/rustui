@@ -48,6 +48,20 @@ def run(root, artifacts, mode):
         if source.is_symlink():
             raise ValueError(f'source is a symlink: {path}')
         originals[path] = source.read_bytes()
+    # Verify the later list semantics layer without changing the selected source.
+    list_path = Path("vendor/gpui-component-0.7.3/src/list/list.rs")
+    if digest(originals[list_path]) == "ebfe959470cf101926e3e10d4e7cb5a9431657a75b4f92aa51f27b29a9a59f46":
+        if mode != "--verify":
+            raise ValueError("reverse the later list semantics patch first")
+        subprocess.run(["python3", str(artifacts / "scripts/apply_gpui_selectable_list_semantics_v2_patch.py"), "--root", str(root), "--artifacts", str(artifacts), "--verify"], check=True, capture_output=True)
+        with tempfile.TemporaryDirectory(prefix="rustui-list-stack-") as folder:
+            target = Path(folder) / list_path
+            target.parent.mkdir(parents=True)
+            target.write_bytes(originals[list_path])
+            subprocess.run(["git", "apply", "--reverse", "--whitespace=nowarn", str(artifacts / "patches/approved/gpui-selectable-list-semantics-v2.patch")], cwd=folder, check=True, capture_output=True)
+            originals[list_path] = target.read_bytes()
+        if digest(originals[list_path]) != IMAGES[list_path][1]:
+            raise ValueError("list semantics rollback mismatch")
     hashes = tuple(digest(originals[p]) for p in IMAGES)
     pre = tuple(v[0] for v in IMAGES.values())
     post = tuple(v[1] for v in IMAGES.values())

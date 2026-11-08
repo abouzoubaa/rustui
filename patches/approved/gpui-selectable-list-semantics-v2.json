@@ -1,0 +1,8 @@
+{
+  "schema_version": 1,
+  "patch": "patches/approved/gpui-selectable-list-semantics-v2.patch",
+  "patch_sha256": "296dd44eb9c23453ded5321c9256d20df870e2387889df0da10ab1e791ce2f0c",
+  "source": "vendor/gpui-component-0.7.3/src/list/list.rs",
+  "pre_sha256": "b7cc17c9e01a804d42da1dc55154fe8bccece5db64cef7a78f296dc4d4034edd",
+  "post_sha256": "ebfe959470cf101926e3e10d4e7cb5a9431657a75b4f92aa51f27b29a9a59f46"
+}

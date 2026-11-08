@@ -499,10 +499,14 @@ where
 
         div()
             .id(id)
-            .role(Role::ListItem)
+            .role(if selectable {
+                Role::ListBoxOption
+            } else {
+                Role::ListItem
+            })
             .aria_position_in_set(ix.row + 1)
             .aria_size_of_set(total_items)
-            .aria_selected(selected)
+            .when(selectable, |this| this.aria_selected(selected))
             .w_full()
             .relative()
             .overflow_hidden()
@@ -677,7 +681,11 @@ where
             .key_context("List")
             .id("list-state")
             .track_focus(&self.focus_handle)
-            .role(Role::List)
+            .role(if self.selectable {
+                Role::ListBox
+            } else {
+                Role::List
+            })
             .size_full()
             .relative()
             .overflow_hidden()
