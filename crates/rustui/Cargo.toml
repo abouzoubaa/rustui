@@ -21,7 +21,7 @@ serde_json.workspace = true
 chrono.workspace = true
 
 [target.'cfg(target_family = "wasm")'.dependencies]
-gpui_web = { package = "gpui-pre-web", version = "=0.3.9", default-features = false }
+gpui_web = { package = "gpui-pre-web", path = "../rustui-gpui-web", version = "=0.3.9", default-features = false }
 
 [dev-dependencies]
 cosmic-text = "=0.19.0"

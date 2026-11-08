@@ -1,3 +1,5 @@
+use rustui::gpui;
+use rustui::gpui_component;
 use rustui::prelude::*;
 use rustui::theme::{AppearanceMode, activate_theme, parse_theme};
 
@@ -27,6 +29,7 @@ impl View for Counter {
 }
 
 fn main() {
+    let _component_initializer: fn(&mut gpui::App) = gpui_component::init;
     let theme = parse_theme(include_str!("../../../themes/macos27.json"))
         .expect("bundled RustUI theme must be valid");
     RustUI::new()

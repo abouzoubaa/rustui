@@ -26,9 +26,19 @@ def digest(data):
 def run(root, artifacts, mode):
     root, artifacts = root.resolve(), artifacts.resolve()
     package = tomllib.loads((root / "vendor/block-0.1.6/Cargo.toml").read_text())["package"]
-    selected = tomllib.loads((root / "Cargo.toml").read_text())["patch"]["crates-io"]["block"]
-    if (package.get("name"), package.get("version"), selected.get("path")) != ("block", "0.1.6", "vendor/block-0.1.6"):
-        raise ValueError("pinned block package selection mismatch")
+    selected = tomllib.loads((root / "Cargo.toml").read_text()).get("patch", {}).get("crates-io", {}).get("block", {})
+    selected_path = selected.get("path") or ("crates/rustui-block" if (root / "crates/rustui-block/Cargo.toml").is_file() else None)
+    if selected_path == "crates/rustui-block":
+        selected_package = tomllib.loads((root / selected_path / "Cargo.toml").read_text())["package"]
+    elif selected_path == "vendor/block-0.1.6":
+        selected_package = package
+    else:
+        selected_package = {}
+    if (
+        package.get("name"), package.get("version"), selected_package.get("name"),
+        selected_package.get("version")
+    ) != ("block", "0.1.6", "block", "0.1.6"):
+        raise ValueError("owned block package selection mismatch")
     for path, expected in PRESERVED.items():
         if digest((root / path).read_bytes()) != expected:
             raise ValueError(f"upstream metadata changed: {path}")

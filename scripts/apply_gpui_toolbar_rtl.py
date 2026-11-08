@@ -23,12 +23,21 @@ def run(root, artifacts, mode):
     if digest(raw) != MANIFEST_HASH:
         raise ValueError('toolbar patch metadata hash mismatch')
     meta = json.loads(raw)
-    selected = tomllib.loads((root / 'Cargo.toml').read_text())['patch']['crates-io']
+    manifest = tomllib.loads((root / 'Cargo.toml').read_text())
+    selected = manifest.get('patch', {}).get('crates-io', {})
+    dependencies = manifest.get('workspace', {}).get('dependencies', {})
     for package in ('gpui-base', 'gpui-component'):
         path = f'vendor/{package}-0.7.3'
         identity = tomllib.loads((root / path / 'Cargo.toml').read_text())['package']
-        if (identity.get('name'), identity.get('version'), selected[package].get('path')) != (package, '0.7.3', path):
+        dependency = dependencies.get(package)
+        if dependency:
+            selected_path = dependency.get('path')
+            if selected_path != f'crates/rustui-{package}':
+                raise ValueError(f'owned package selection changed: {package}')
+        elif selected.get(package, {}).get('path') != path:
             raise ValueError(f'local package selection changed: {package}')
+        if (identity.get('name'), identity.get('version')) != (package, '0.7.3'):
+            raise ValueError(f'upstream package identity changed: {package}')
     for path, expected in meta['preserved'].items():
         if digest((root / path).read_bytes()) != expected:
             raise ValueError(f'upstream provenance changed: {path}')

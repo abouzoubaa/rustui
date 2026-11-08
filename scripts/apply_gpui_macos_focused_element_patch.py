@@ -59,11 +59,18 @@ def verify_provenance(root: Path, artifacts: Path, meta: dict) -> None:
         raise ValueError("pinned GPUI Apache license changed")
 
     root_cargo = tomllib.loads((root / "Cargo.toml").read_text())
-    selected_gpui = root_cargo.get("patch", {}).get("crates-io", {}).get(gpui["name"])
-    if selected_gpui != {"path": gpui["cargo_path"]}:
+    owned_path = "crates/rustui-gpui-macos"
+    members = root_cargo.get("workspace", {}).get("members", []) + root_cargo.get("workspace", {}).get("exclude", [])
+    owned_manifest = root / owned_path / "Cargo.toml"
+    if owned_path in members:
+        if owned_manifest.is_file():
+            owned_package = tomllib.loads(owned_manifest.read_text())["package"]
+            if (owned_package.get("name"), owned_package.get("version")) != ("rustui-gpui-macos", gpui["version"]):
+                raise ValueError("owned GPUI macOS package identity changed")
+    elif root_cargo.get("patch", {}).get("crates-io", {}).get(gpui["name"]) != {"path": gpui["cargo_path"]}:
         raise ValueError("Cargo.toml must select the pinned local GPUI macOS package")
     lock = tomllib.loads((root / "Cargo.lock").read_text())
-    gpui_lock = locked_package(lock, gpui["name"], gpui["version"])
+    gpui_lock = locked_package(lock, "rustui-gpui-macos", gpui["version"])
     if "source" in gpui_lock or "checksum" in gpui_lock:
         raise ValueError("Cargo.lock still selects registry GPUI macOS; local path patch is required")
     access = meta["accesskit_macos"]

@@ -11,7 +11,7 @@
 
 [package]
 edition = "2024"
-name = "rustui-gpui-platform"
+name = "gpui-pre-platform"
 version = "0.3.9"
 build = false
 publish = true
@@ -35,27 +35,16 @@ zed-rev = "93d745668805029476e6d7fbb19652116fed51de"
 bench-support = [
     "gpui/bench-support",
     "gpui_macos/bench-support",
-    "gpui_wgpu/bench-support",
 ]
 default = ["multithreaded"]
 font-kit = ["gpui_macos/font-kit"]
 inspector = ["gpui/inspector"]
-multithreaded = ["gpui_web/multithreaded"]
+multithreaded = []
 runtime_shaders = ["gpui_macos/runtime_shaders"]
-screen-capture = [
-    "gpui/screen-capture",
-    "gpui_macos/screen-capture",
-    "gpui_windows/screen-capture",
-    "gpui_linux/screen-capture",
-]
 test-support = [
     "gpui/test-support",
     "gpui_macos/test-support",
-    "gpui_windows/test-support",
-    "gpui_wgpu/test-support",
 ]
-wayland = ["gpui_linux/wayland"]
-x11 = ["gpui_linux/x11"]
 
 [lib]
 name = "gpui_platform"
@@ -81,43 +70,13 @@ version = "1.0.86"
 version = "=0.3.9"
 path = "../rustui-gpui"
 default-features = false
-package = "rustui-gpui"
-
-[target.'cfg(any(target_os = "linux", target_os = "freebsd"))'.dependencies.gpui_linux]
-version = "=0.3.9"
-default-features = false
-package = "gpui-pre-linux"
-
-[target.'cfg(target_family = "wasm")'.dependencies.console_error_panic_hook]
-version = "0.1.7"
-
-[target.'cfg(target_family = "wasm")'.dependencies.gpui_web]
-version = "=0.3.9"
-default-features = false
-package = "gpui-pre-web"
-
-[target.'cfg(target_os = "linux")'.dependencies.gpui_wgpu]
-version = "=0.3.9"
-optional = true
-package = "gpui-pre-wgpu"
+package = "gpui-pre"
 
 [target.'cfg(target_os = "macos")'.dependencies.gpui_macos]
 version = "=0.3.9"
 path = "../rustui-gpui-macos"
 default-features = false
 package = "rustui-gpui-macos"
-
-[target.'cfg(target_os = "windows")'.dependencies.gpui]
-version = "=0.3.9"
-path = "../rustui-gpui"
-features = ["windows-manifest"]
-default-features = false
-package = "rustui-gpui"
-
-[target.'cfg(target_os = "windows")'.dependencies.gpui_windows]
-version = "=0.3.9"
-default-features = false
-package = "gpui-pre-windows"
 
 [lints.clippy]
 dbg_macro = "deny"

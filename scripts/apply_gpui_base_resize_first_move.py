@@ -27,11 +27,14 @@ def digest(data):
 def run(root, artifacts, mode):
     root, artifacts = root.resolve(), artifacts.resolve()
     package = tomllib.loads((root / "vendor/gpui-base-0.7.3/Cargo.toml").read_text())["package"]
-    selected = tomllib.loads((root / "Cargo.toml").read_text())["patch"]["crates-io"]["gpui-base"]
-    if (package.get("name"), package.get("version"), selected.get("path")) != (
-        "gpui-base", "0.7.3", "vendor/gpui-base-0.7.3"
-    ):
-        raise ValueError("pinned GPUI Base selection mismatch")
+    selected = tomllib.loads((root / "Cargo.toml").read_text())["workspace"]["dependencies"]["gpui-base"]
+    selected_path = selected.get("path")
+    selected_package = tomllib.loads((root / selected_path / "Cargo.toml").read_text())["package"] if selected_path else {}
+    if (
+        package.get("name"), package.get("version"), selected_path,
+        selected_package.get("name"), selected_package.get("version")
+    ) != ("gpui-base", "0.7.3", "crates/rustui-gpui-base", selected.get("package", "gpui-base"), "0.7.3"):
+        raise ValueError("owned GPUI Base selection mismatch")
     for path, expected in PRESERVED.items():
         if digest((root / path).read_bytes()) != expected:
             raise ValueError(f"upstream metadata changed: {path}")

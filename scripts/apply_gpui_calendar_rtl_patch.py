@@ -25,12 +25,20 @@ def digest(data):
 
 def run(root, artifacts, mode):
     root, artifacts = root.resolve(), artifacts.resolve()
-    patches = tomllib.loads((root / 'Cargo.toml').read_text())['patch']['crates-io']
+    manifest = tomllib.loads((root / 'Cargo.toml').read_text())
+    dependencies = manifest.get('workspace', {}).get('dependencies', {})
+    patches = manifest.get('patch', {}).get('crates-io', {})
     for name in ('gpui-base', 'gpui-component'):
         package = root / f'vendor/{name}-0.7.3'
         metadata = tomllib.loads((package / 'Cargo.toml').read_text())['package']
-        if (metadata['name'], metadata['version'], patches[name]['path']) != (name, '0.7.3', f'vendor/{name}-0.7.3'):
+        dependency = dependencies.get(name)
+        selected_path = dependency.get('path') if dependency else patches.get(name, {}).get('path')
+        if (metadata.get('name'), metadata.get('version'), selected_path) not in (
+            (name, '0.7.3', f'crates/rustui-{name}'),
+            (name, '0.7.3', f'vendor/{name}-0.7.3'),
+        ):
             raise ValueError(f'{name} package selection mismatch')
+    
     for path, expected in PRESERVED.items():
         if digest((root / path).read_bytes()) != expected:
             raise ValueError(f'upstream metadata changed: {path}')

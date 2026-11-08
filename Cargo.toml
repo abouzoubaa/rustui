@@ -1,5 +1,23 @@
 [workspace]
 resolver = "3"
+exclude = [
+    "crates/rustui-gpui",
+    "crates/rustui-gpui-platform",
+    "crates/rustui-gpui-macos",
+    "crates/rustui-gpui-apple",
+    "crates/rustui-gpui-base",
+    "crates/rustui-gpui-component",
+    "crates/rustui-block",
+    "crates/rustui-cocoa",
+    "crates/rustui-cocoa-foundation",
+    "crates/rustui-metal",
+    "crates/rustui-objc-foundation",
+    "crates/rustui-gpui-kit-assets",
+    "crates/rustui-gpui-linux",
+    "crates/rustui-gpui-web",
+    "crates/rustui-gpui-wgpu",
+    "crates/rustui-gpui-windows",
+]
 members = [
     "crates/rustui",
     "crates/rustui-core",
@@ -28,25 +46,16 @@ serde_json = { version = "1", features = ["raw_value"] }
 chrono = "=0.4.45"
 
 # Approved Zed snapshot, repackaged by Longbridge; see docs/UPSTREAM_AUDIT.md.
-gpui = { package = "gpui-pre", version = "=0.3.9" }
-gpui_platform = { package = "gpui-pre-platform", version = "=0.3.9", features = ["font-kit", "wayland", "x11", "runtime_shaders"] }
-gpui-component = { version = "=0.7.3", default-features = false }
-gpui-base = { version = "=0.7.3", default-features = false }
-gpui-kit-assets = "=0.7.3"
+gpui = { package = "gpui-pre", path = "crates/rustui-gpui", version = "=0.3.9" }
+gpui_platform = { package = "gpui-pre-platform", path = "crates/rustui-gpui-platform", version = "=0.3.9", features = ["font-kit", "runtime_shaders"] }
+gpui-component = { path = "crates/rustui-gpui-component", version = "=0.7.3", default-features = false }
+gpui-base = { package = "rustui-gpui-base", path = "crates/rustui-gpui-base", version = "=0.7.3", default-features = false }
+gpui-kit-assets = { path = "crates/rustui-gpui-kit-assets", version = "=0.7.3" }
 
 [patch.crates-io]
-block = { path = "vendor/block-0.1.6" }
 cosmic-text = { path = "vendor/cosmic-text-0.19.0" }
 # Keep upstream package versions pinned while reproducibly applying the
 # approved GPUI patches; see patches/README.md.
-gpui-pre = { path = "vendor/gpui-pre-0.3.9" }
-gpui-base = { path = "vendor/gpui-base-0.7.3" }
-gpui-component = { path = "vendor/gpui-component-0.7.3" }
-gpui-pre-web = { path = "vendor/gpui-pre-web-0.3.9" }
-gpui-pre-wgpu = { path = "vendor/gpui-pre-wgpu-0.3.9" }
-gpui-pre-apple = { path = "vendor/gpui-pre-apple-0.3.9" }
-gpui-pre-windows = { path = "vendor/gpui-pre-windows-0.3.9" }
-gpui-pre-macos = { path = "vendor/gpui-pre-macos-0.3.9" }
 
 [profile.headstart]
 inherits = "dev"
