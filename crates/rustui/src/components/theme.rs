@@ -74,6 +74,7 @@ pub(crate) fn required_app_style_with_artwork(
             &selector_for_mode(active.mode),
             &["vector_path", "filter", "blend_mode"],
         )
+        .map(|style| (*style).clone())
         .unwrap_or_else(|error| panic!("{component}/{part} theme cannot resolve: {error}"))
 }
 

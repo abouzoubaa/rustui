@@ -57,6 +57,10 @@ cosmic-text = { path = "vendor/cosmic-text-0.19.0" }
 # Keep upstream package versions pinned while reproducibly applying the
 # approved GPUI patches; see patches/README.md.
 
+[profile.release]
+lto = "thin"
+codegen-units = 1
+
 [profile.headstart]
 inherits = "dev"
 debug = 1

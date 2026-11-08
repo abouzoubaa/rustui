@@ -1,5 +1,7 @@
 # Changelog
 
+- Cached theme style resolution and tuned the release profile for redraw performance.
+
 - Updated release documentation and defined the Phase C MVP plan.
 
 - Measured the proposed quad-sort V2 candidate against the baseline.
