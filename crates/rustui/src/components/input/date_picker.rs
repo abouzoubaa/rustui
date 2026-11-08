@@ -319,6 +319,12 @@ impl View for DatePickerView {
             );
         }
 
+        context.update_entity(&state, |state, window, cx| {
+            use gpui::Focusable as _;
+            let focus = state.focus_handle(cx);
+            crate::components::input::leave_disabled_focus(self.disabled, &focus, window, cx);
+            focus.tab_stop(!self.disabled);
+        });
         let mut picker = GpuiDatePicker::new(&state)
             .placeholder(self.visible_label(|id| context.localized_message(id)))
             .right_to_left(context.layout_direction() == LayoutDirection::RightToLeft)

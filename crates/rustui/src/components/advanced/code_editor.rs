@@ -294,6 +294,12 @@ impl View for CodeEditorView {
         } else {
             replace_event_writer(&writer, context.binding_writer(self.value.clone()));
         }
+        context.update_entity(&editor, |state, window, cx| {
+            use gpui::Focusable as _;
+            let focus = state.focus_handle(cx);
+            crate::components::input::leave_disabled_focus(self.disabled, &focus, window, cx);
+            focus.tab_stop(!self.disabled);
+        });
         let mut editor_view = Editor::new(&editor)
             .h(px(self.height))
             .disabled(self.disabled)

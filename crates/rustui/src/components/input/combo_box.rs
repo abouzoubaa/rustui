@@ -381,6 +381,12 @@ impl View for ComboBoxView {
             !accessible_name.trim().is_empty(),
             "ComboBox requires a nonblank visible label or accessible name"
         );
+        context.update_entity(&select, |state, window, cx| {
+            use gpui::Focusable as _;
+            let focus = state.focus_handle(cx);
+            crate::components::input::leave_disabled_focus(self.disabled, &focus, window, cx);
+            focus.tab_stop(!self.disabled);
+        });
         let mut combo_box = GpuiSelect::new(&select)
             .id(identity.to_string())
             .right_to_left(context.layout_direction() == rustui_i18n::LayoutDirection::RightToLeft)

@@ -804,7 +804,76 @@ macro_rules! case {
 }
 case!(button, Button, [], [], [], [], []);
 case!(link, Link, [], [], [], [], []);
+case!(checkbox, Checkbox, [], [], [], [], []);
+case!(radio, Radio, [], [], [], [], []);
+case!(toggle, Toggle, [], [], [], [], []);
+case!(slider, Slider, [], [], [], [], []);
+case!(stepper, Stepper, [], [], [], [], []);
+case!(
+    picker,
+    Picker,
+    [],
+    [],
+    [],
+    [],
+    [ignore = "R15b: Picker re-enabled control did not work"]
+);
+case!(
+    combo_box,
+    ComboBox,
+    [],
+    [],
+    [],
+    [],
+    [ignore = "R15b: ComboBox re-enabled control did not work"]
+);
+case!(text_field, TextField, [], [], [], [], []);
+case!(secure_field, SecureField, [], [], [], [], []);
+case!(search_field, SearchField, [], [], [], [], []);
+case!(text_editor, TextEditor, [], [], [], [], []);
+case!(
+    date_picker,
+    DatePicker,
+    [],
+    [],
+    [],
+    [],
+    [ignore = "R15b: DatePicker re-enabled control did not work"]
+);
+case!(
+    color_picker,
+    ColorPicker,
+    [],
+    [],
+    [],
+    [],
+    [ignore = "R15b: ColorPicker re-enabled control did not work"]
+);
+case!(token_field, TokenField, [], [], [], [], []);
+case!(code_editor, CodeEditor, [], [], [], [], []);
 
+case!(property_text, PropertyText, [], [], [], [], []);
+case!(
+    property_choice,
+    PropertyChoice,
+    [],
+    [],
+    [],
+    [],
+    [ignore = "R15b: PropertyChoice re-enabled control did not work"]
+);
+case!(property_toggle, PropertyToggle, [], [], [], [], []);
+case!(property_integer, PropertyInteger, [], [], [], [], []);
+case!(
+    property_integer_value,
+    PropertyIntegerValue,
+    [],
+    [],
+    [],
+    [],
+    []
+);
+case!(property_inspector, PropertyInspector, [], [], [], [], []);
 case!(toolbar_item, ToolbarItem, [], [], [], [], []);
 case!(toolbar, Toolbar, [], [], [], [], []);
 case!(breadcrumb_item, BreadcrumbItem, [], [], [], [], []);
@@ -821,3 +890,66 @@ case!(
     [ignore = "R15b: MenuItem accessibility node has no disabled flag"],
     [ignore = "R15b: popup item live-disable recovery not yet exercised"]
 );
+
+#[gpui::test]
+fn replacing_a_binding_while_disabled_never_writes_the_old_binding(cx: &mut gpui::TestAppContext) {
+    let (owner, before, after, window) = setup(cx, Kind::TextField);
+    draw(window);
+    window.update(|w, a| w.focus(&before, a));
+    window.simulate_keystrokes("tab");
+    draw(window);
+    let old_focus = window.update(|w, a| w.focused(a).unwrap());
+    assert_ne!(old_focus, before);
+    assert_ne!(old_focus, after);
+    let old = owner.read_with(window, |h, _| {
+        (
+            h.component().values[0].text.clone(),
+            h.component().writes[0],
+        )
+    });
+    owner.update(window, |h, cx| {
+        let o = h.component_mut();
+        o.disabled = true;
+        o.slot = 1;
+        o.values[1].text = "replacement".into();
+        cx.notify();
+    });
+    draw(window);
+    window.update(|w, a| w.focus(&old_focus, a));
+    draw(window);
+    keys(window);
+    window.simulate_input("blocked");
+    draw(window);
+    assert_eq!(
+        owner.read_with(window, |h, _| (
+            h.component().values[0].text.clone(),
+            h.component().writes[0]
+        )),
+        old,
+        "old binding written during disabled replacement"
+    );
+    owner.update(window, |h, cx| {
+        h.component_mut().disabled = false;
+        cx.notify();
+    });
+    draw(window);
+    window.update(|w, a| w.focus(&before, a));
+    window.simulate_keystrokes("tab");
+    draw(window);
+    window.simulate_input("new");
+    draw(window);
+    owner.read_with(window, |h, _| {
+        assert_eq!(
+            (
+                h.component().values[0].text.clone(),
+                h.component().writes[0]
+            ),
+            old,
+            "stale subscription wrote old binding after re-enable"
+        );
+        assert!(
+            h.component().writes[1] > 0,
+            "replacement binding must receive new input"
+        );
+    });
+}

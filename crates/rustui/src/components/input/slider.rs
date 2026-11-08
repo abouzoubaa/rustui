@@ -237,9 +237,7 @@ impl View for SliderView {
             |_, cx| cx.focus_handle(),
         );
         let focus_parent = context.update_entity(&focus_parent, move |focus, window, cx| {
-            if disabled && focus.contains_focused(window, cx) {
-                window.focus(focus, cx);
-            }
+            super::leave_disabled_focus(disabled, focus, window, cx);
             focus.clone()
         });
         let min = *self.range.start();

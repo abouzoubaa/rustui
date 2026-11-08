@@ -464,6 +464,14 @@ impl View for TextFieldView {
 
     fn into_element(&self, context: &mut RenderContext<'_>) -> AnyElement {
         let identity = self.identity(context);
+        let (scope, _) = context.retained_entity(
+            Identity::from(format!("text-field-focus:{identity}")),
+            |_, cx| cx.focus_handle(),
+        );
+        let scope = context.update_entity(&scope, |focus, window, cx| {
+            super::leave_disabled_focus(self.disabled, focus, window, cx);
+            focus.clone()
+        });
         let initial_value = self.value.value();
         let placeholder = self.resolved_placeholder(|id| context.localized_message(id));
         let initial_placeholder = placeholder.clone();
@@ -635,6 +643,12 @@ impl View for TextFieldView {
             });
         }
 
+        context.update_entity(&state, |state, window, cx| {
+            use gpui::Focusable as _;
+            let focus = state.focus_handle(cx);
+            crate::components::input::leave_disabled_focus(self.disabled, &focus, window, cx);
+            focus.tab_stop(!self.disabled);
+        });
         let mut input = Input::new(&state)
             .id(identity.to_string())
             .disabled(self.disabled)
@@ -741,7 +755,7 @@ impl View for TextFieldView {
             let color = search_text_color(&theme.profile, theme.mode);
             input = input.text_color(color).placeholder_color(color);
         }
-        if let Some(Err(message)) = validation_result {
+        let field = if let Some(Err(message)) = validation_result {
             let danger = gpui_component::Theme::global(context.app()).colors.danger;
             let error_selector = format!("validation-error:{message}");
             div()
@@ -758,7 +772,8 @@ impl View for TextFieldView {
                 .into_any_element()
         } else {
             input.into_any_element()
-        }
+        };
+        div().track_focus(&scope).child(field).into_any_element()
     }
 }
 

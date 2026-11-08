@@ -962,6 +962,12 @@ impl View for ColorPickerView {
                 selected.map_or(gpui::hsla(0.0, 0.0, 0.5, 0.5), |color| color.darken(0.2)),
             )
             .when_some(selected, |this, color| this.bg(color));
+        context.update_entity(&state, |state, window, cx| {
+            use gpui::Focusable as _;
+            let focus = state.focus_handle(cx);
+            crate::components::input::leave_disabled_focus(self.disabled, &focus, window, cx);
+            focus.tab_stop(!self.disabled);
+        });
         let trigger = GpuiButton::new(format!("{identity}:trigger"))
             .secondary()
             .disabled(self.disabled)
@@ -1004,6 +1010,7 @@ impl View for ColorPickerView {
             .child(popup);
 
         BaseColorPicker::new(format!("{identity}:root"))
+            .aria_disabled(self.disabled)
             .open(open)
             .disabled(self.disabled)
             .track_focus(&state.focus_handle(context.app()))

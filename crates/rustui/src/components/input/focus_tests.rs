@@ -173,16 +173,15 @@ fn disabling_a_focused_checkbox_skips_disabled_controls_on_tab(cx: &mut gpui::Te
     window.update(|window, app| {
         assert!(
             window.focused(app).is_some(),
-            "disabling the focused Checkbox must transfer focus to its retained parent"
+            "disabling the focused Checkbox must transfer focus to the next enabled control"
         );
     });
-    window.simulate_keystrokes("tab");
     press_space(window);
     window.update(|_, app| {
         assert_eq!(
             owner.read(app).component().after,
             1,
-            "Tab must reach the next enabled control after disabling the focused checkbox"
+            "Focus must immediately reach the next enabled control after disabling the focused checkbox"
         );
         assert_eq!(owner.read(app).component().before, 1);
     });
@@ -250,16 +249,15 @@ fn disabling_a_focused_toggle_skips_disabled_controls_on_tab(cx: &mut gpui::Test
         let _ = window.draw(app);
         assert!(
             window.focused(app).is_some(),
-            "disabling the focused Toggle must transfer focus to its retained parent"
+            "disabling the focused Toggle must transfer focus to the next enabled control"
         );
     });
-    window.simulate_keystrokes("tab");
     press_space(window);
     window.update(|_, app| {
         assert_eq!(
             owner.read(app).component().after,
             1,
-            "Tab must reach the next enabled control after disabling the focused Toggle"
+            "Focus must immediately reach the next enabled control after disabling the focused Toggle"
         );
     });
     window.simulate_keystrokes("shift-tab");
@@ -322,16 +320,15 @@ fn disabling_a_focused_radio_skips_disabled_controls_on_tab(cx: &mut gpui::TestA
         let _ = window.draw(app);
         assert!(
             window.focused(app).is_some(),
-            "disabling the focused Radio must transfer focus to its retained parent"
+            "disabling the focused Radio must transfer focus to the next enabled control"
         );
     });
-    window.simulate_keystrokes("tab");
     press_space(window);
     window.update(|_, app| {
         assert_eq!(
             owner.read(app).component().after,
             1,
-            "Tab must reach the next enabled control after disabling the focused Radio"
+            "Focus must immediately reach the next enabled control after disabling the focused Radio"
         );
     });
     window.simulate_keystrokes("shift-tab");
@@ -394,16 +391,15 @@ fn disabling_a_focused_slider_skips_it_on_tab(cx: &mut gpui::TestAppContext) {
         let _ = window.draw(app);
         assert!(
             window.focused(app).is_some(),
-            "disabling the focused Slider must transfer focus to its retained parent"
+            "disabling the focused Slider must transfer focus to the next enabled control"
         );
     });
-    window.simulate_keystrokes("tab");
     press_space(window);
     window.update(|_, app| {
         assert_eq!(
             owner.read(app).component().after,
             1,
-            "Tab must reach the next enabled control after disabling the focused Slider"
+            "Focus must immediately reach the next enabled control after disabling the focused Slider"
         );
     });
 }
@@ -461,16 +457,15 @@ fn disabling_a_focused_picker_skips_it_on_tab(cx: &mut gpui::TestAppContext) {
         let _ = window.draw(app);
         assert!(
             window.focused(app).is_some(),
-            "disabling the focused Picker must transfer focus to its retained parent"
+            "disabling the focused Picker must transfer focus to the next enabled control"
         );
     });
-    window.simulate_keystrokes("tab");
     press_space(window);
     window.update(|_, app| {
         assert_eq!(
             owner.read(app).component().after,
             1,
-            "Tab must reach the next enabled control after disabling the focused Picker"
+            "Focus must immediately reach the next enabled control after disabling the focused Picker"
         );
     });
 }
