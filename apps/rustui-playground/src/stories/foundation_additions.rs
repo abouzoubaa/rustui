@@ -708,3 +708,7 @@ mod tests {
         assert!(weak.upgrade().is_none());
     }
 }
+
+#[cfg(all(test, not(target_family = "wasm")))]
+#[path = "theme_reload_tests.rs"]
+mod theme_reload_tests;
