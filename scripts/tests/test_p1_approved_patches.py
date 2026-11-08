@@ -22,6 +22,8 @@ class ApprovedPatchTests(unittest.TestCase):
                 source = root / meta["source"]
                 source.parent.mkdir(parents=True)
                 shutil.copyfile(ROOT / meta["source"], source)
+                if meta["source"] == "vendor/gpui-component-0.7.3/src/menu/popup_menu.rs":
+                    subprocess.run([sys.executable, str(ROOT / "scripts/apply_r15b_popup_menu_recovery_v1_patch.py"), "--root", str(root), "--artifacts", str(ROOT), "--reverse"], check=True, capture_output=True)
                 command = [sys.executable, str(ROOT / "scripts" / script), "--root", str(root), "--artifacts", str(ROOT)]
                 for mode in ("--check", "--verify", "--reverse", "--check", "--apply", "--verify"):
                     result = subprocess.run(command + [mode], text=True, capture_output=True)

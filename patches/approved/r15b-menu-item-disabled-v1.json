@@ -1,0 +1,8 @@
+{
+  "schema_version": 1,
+  "patch": "patches/approved/r15b-menu-item-disabled-v1.patch",
+  "patch_sha256": "8fe1724fa8d2fe1a14a8c47261624a5b474206b23d14fcb4067930763ade5920",
+  "source": "vendor/gpui-component-0.7.3/src/menu/menu_item.rs",
+  "pre_sha256": "ecc1eec4ba9fd96069d7d7a613d16f8d0e960b038feb326afc87dbaa4a3a42a5",
+  "post_sha256": "e19426dd624c7709f8ec2eb5bf5ca2813d87d2167265772472a2e18302e8419f"
+}

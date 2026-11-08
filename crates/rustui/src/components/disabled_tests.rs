@@ -148,6 +148,9 @@ struct Owner {
     values: [Slot; 2],
     writes: [usize; 2],
     actions: usize,
+    menu_live: bool,
+    next_disabled: bool,
+    next_actions: usize,
 }
 impl Owner {
     fn binding<T: Clone + 'static>(
@@ -315,13 +318,20 @@ impl Owner {
                     .height(100.)
                     .on_activate(self.action())
             ),
-            Kind::MenuItem => view!(
-                Menu(
-                    "Open menu",
-                    [MenuItem::action("item", "Target", self.action()).disabled(d)]
-                )
-                .id("target")
-            ),
+            Kind::MenuItem => {
+                let mut items = vec![MenuItem::action("item", "Target", self.action()).disabled(d)];
+                if self.menu_live {
+                    items.push(
+                        MenuItem::action(
+                            "next",
+                            "Next",
+                            rustui_core::Action::new(|owner: &mut Owner| owner.next_actions += 1),
+                        )
+                        .disabled(self.next_disabled),
+                    );
+                }
+                view!(Menu("Open menu", items).id("target"))
+            }
             Kind::ListRow => view!(
                 List(["Target"], self.binding(|s| s.index, |s, v| s.index = v))
                     .id("target")
@@ -393,7 +403,10 @@ impl Owner {
         }
     }
     fn snapshot(&self) -> String {
-        format!("{:?}:{:?}:{}", self.values, self.writes, self.actions)
+        format!(
+            "{:?}:{:?}:{}:{}",
+            self.values, self.writes, self.actions, self.next_actions
+        )
     }
 }
 impl View for Owner {
@@ -448,6 +461,111 @@ impl Render for Harness {
 fn draw(window: &mut gpui::VisualTestContext) {
     window.run_until_parked();
     window.update(|window, app| window.draw(app).clear(app));
+}
+fn stroke(window: &mut gpui::VisualTestContext, key: &str) {
+    let keystroke = gpui::Keystroke::parse(key).unwrap();
+    window.simulate_event(gpui::KeyDownEvent {
+        keystroke: keystroke.clone(),
+        is_held: false,
+        prefer_character_input: false,
+    });
+    window.simulate_event(gpui::KeyUpEvent { keystroke });
+}
+fn click_node(
+    window: &mut gpui::VisualTestContext,
+    ax: &serde_json::Value,
+    node: &serde_json::Value,
+) {
+    let bounds = &node["bounds"];
+    let scale = ax["frame"]["scale_factor"].as_f64().unwrap();
+    let position = gpui::point(
+        px(
+            ((bounds["x"].as_f64().unwrap() + bounds["width"].as_f64().unwrap() / 2.) / scale)
+                as f32,
+        ),
+        px(
+            ((bounds["y"].as_f64().unwrap() + bounds["height"].as_f64().unwrap() / 2.) / scale)
+                as f32,
+        ),
+    );
+    window.simulate_click(position, gpui::Modifiers::default());
+}
+fn popup_kind(kind: Kind) -> bool {
+    matches!(
+        kind,
+        Kind::Picker | Kind::ComboBox | Kind::DatePicker | Kind::ColorPicker | Kind::PropertyChoice
+    )
+}
+fn exercise_popup(
+    kind: Kind,
+    owner: &Entity<ComponentHost<Owner>>,
+    focus: &FocusHandle,
+    window: &mut gpui::VisualTestContext,
+) {
+    assert_eq!(
+        window.update(|w, a| w.focused(a)),
+        Some(focus.clone()),
+        "{kind:?}: retained focus handle changed during disable/enable"
+    );
+    let writes = owner.read_with(window, |h, _| h.component().writes[0]);
+    stroke(window, "enter");
+    draw(window);
+    draw(window);
+    let ax = tree(window);
+    assert!(
+        ax["nodes"]
+            .as_object()
+            .unwrap()
+            .values()
+            .any(|n| n["aria"]["label"] == "Target" && n["aria"]["expanded"] == true),
+        "{kind:?}: single activation did not open the re-enabled popup"
+    );
+    match kind {
+        Kind::Picker | Kind::ComboBox | Kind::PropertyChoice => {
+            let option = ax["nodes"]
+                .as_object()
+                .unwrap()
+                .values()
+                .find(|n| n["aria"]["role"] == "ListBoxOption" && n["aria"]["position_in_set"] == 2)
+                .expect("second popup option");
+            click_node(window, &ax, option);
+            draw(window);
+            assert_eq!(
+                owner.read_with(window, |h, _| h.component().values[0].choice.clone()),
+                "Two",
+                "{kind:?}: selected popup option did not reach binding"
+            );
+        }
+        Kind::DatePicker => {
+            stroke(window, "right");
+            draw(window);
+            stroke(window, "enter");
+            draw(window);
+            assert!(
+                owner.read_with(window, |h, _| h.component().values[0].date.is_some()),
+                "DatePicker: calendar activation did not reach binding"
+            );
+        }
+        Kind::ColorPicker => {
+            let swatch = ax["nodes"]
+                .as_object()
+                .unwrap()
+                .values()
+                .find(|n| n["aria"]["role"] == "RadioButton")
+                .expect("popup palette swatch");
+            click_node(window, &ax, swatch);
+            draw(window);
+            assert!(
+                owner.read_with(window, |h, _| h.component().values[0].color.is_some()),
+                "ColorPicker: swatch activation did not reach binding"
+            );
+        }
+        _ => unreachable!(),
+    }
+    assert!(
+        owner.read_with(window, |h, _| h.component().writes[0]) > writes,
+        "{kind:?}: re-enabled popup did not write its binding"
+    );
 }
 fn keys(window: &mut gpui::VisualTestContext) {
     for key in ["enter", "space"] {
@@ -559,6 +677,9 @@ fn setup(
                     values: [Slot::default(), Slot::default()],
                     writes: [0; 2],
                     actions: 0,
+                    menu_live: false,
+                    next_disabled: false,
+                    next_actions: 0,
                 },
                 cx,
             )
@@ -576,8 +697,132 @@ fn setup(
     let (owner, before, after) = saved.borrow().clone().unwrap();
     (owner, before, after, window)
 }
+fn menu_node<'a>(ax: &'a serde_json::Value, label: &str) -> &'a serde_json::Value {
+    // GPUI gives custom element items their row index as ElementId; their
+    // visual child labels are not independent accessibility nodes.
+    let id = match label {
+        "Target" => "Integer(0)",
+        "Next" => "Integer(1)",
+        _ => unreachable!(),
+    };
+    ax["nodes"]
+        .as_object()
+        .unwrap()
+        .values()
+        .find(|node| node["aria"]["role"] == "MenuItem" && node["element_id"] == id)
+        .expect("popup menu row")
+}
+fn menu_recovery(owner: &Entity<ComponentHost<Owner>>, window: &mut gpui::VisualTestContext) {
+    owner.update(window, |host, cx| {
+        host.component_mut().menu_live = true;
+        cx.notify();
+    });
+    draw(window);
+    click_region(window);
+    draw(window);
+    stroke(window, "down");
+    draw(window);
+    let ax = tree(window);
+    assert_eq!(
+        menu_node(&ax, "Target")["aria"]["selected"],
+        true,
+        "enabled first menu item must be selected"
+    );
+    let focus = window.update(|w, a| w.focused(a)).expect("open menu focus");
+    owner.update(window, |host, cx| {
+        host.component_mut().disabled = true;
+        cx.notify();
+    });
+    draw(window);
+    let ax = tree(window);
+    assert_eq!(menu_node(&ax, "Target")["aria"]["disabled"], true);
+    assert_eq!(
+        menu_node(&ax, "Target")["aria"]["selected"],
+        false,
+        "live-disabled menu item kept selection"
+    );
+    assert_eq!(
+        menu_node(&ax, "Next")["aria"]["selected"],
+        true,
+        "selection did not move to next enabled item"
+    );
+    assert_eq!(
+        window.update(|w, a| w.focused(a)),
+        Some(focus.clone()),
+        "live update replaced menu focus"
+    );
+    stroke(window, "up");
+    draw(window);
+    assert_eq!(
+        menu_node(&tree(window), "Next")["aria"]["selected"],
+        true,
+        "keyboard selected a disabled item"
+    );
+    owner.update(window, |host, cx| {
+        host.component_mut().next_disabled = true;
+        cx.notify();
+    });
+    draw(window);
+    for key in ["down", "up", "enter"] {
+        stroke(window, key);
+        draw(window);
+        let ax = tree(window);
+        for label in ["Target", "Next"] {
+            assert_eq!(
+                menu_node(&ax, label)["aria"]["selected"],
+                false,
+                "all-disabled menu must have no selection"
+            );
+        }
+    }
+    owner.update(window, |host, cx| {
+        host.component_mut().disabled = false;
+        cx.notify();
+    });
+    draw(window);
+    assert_eq!(
+        window.update(|w, a| w.focused(a)),
+        Some(focus),
+        "re-enable replaced menu focus"
+    );
+    stroke(window, "down");
+    draw(window);
+    let ax = tree(window);
+    assert_ne!(menu_node(&ax, "Target")["aria"]["disabled"], true);
+    assert_eq!(
+        menu_node(&ax, "Target")["aria"]["selected"],
+        true,
+        "re-enabled menu item not selectable"
+    );
+    stroke(window, "enter");
+    draw(window);
+    owner.read_with(window, |host, _| {
+        assert_eq!(
+            host.component().actions,
+            1,
+            "re-enabled item did not activate exactly once"
+        );
+        assert_eq!(
+            host.component().next_actions,
+            0,
+            "wrong menu item activated"
+        );
+    });
+    assert!(
+        !tree(window)["nodes"]
+            .as_object()
+            .unwrap()
+            .values()
+            .any(|n| n["aria"]["role"] == "MenuItem"),
+        "activated menu did not close"
+    );
+}
 fn run(cx: &mut gpui::TestAppContext, kind: Kind, check: Check) {
     let (owner, before, after, window) = setup(cx, kind);
+    if kind == Kind::MenuItem && check == Check::Recovery {
+        menu_recovery(&owner, window);
+        return;
+    }
     draw(window);
     if let Some(reason) = na(kind, check) {
         println!("R15 N/A {kind:?} {check:?}: {reason}");
@@ -739,6 +984,10 @@ fn run(cx: &mut gpui::TestAppContext, kind: Kind, check: Check) {
                 window.update(|w, a| w.focused(a).is_some_and(|f| f != before && f != after)),
                 "{kind:?}: re-enabled control not focusable"
             );
+            if popup_kind(kind) {
+                exercise_popup(kind, &owner, &handles[0], window);
+                return;
+            }
             let snapshot = owner.read_with(window, |h, _| h.component().snapshot());
             let old_tree = tree(window);
             keys(window);
@@ -809,60 +1058,20 @@ case!(radio, Radio, [], [], [], [], []);
 case!(toggle, Toggle, [], [], [], [], []);
 case!(slider, Slider, [], [], [], [], []);
 case!(stepper, Stepper, [], [], [], [], []);
-case!(
-    picker,
-    Picker,
-    [],
-    [],
-    [],
-    [],
-    [ignore = "R15b: Picker re-enabled control did not work"]
-);
-case!(
-    combo_box,
-    ComboBox,
-    [],
-    [],
-    [],
-    [],
-    [ignore = "R15b: ComboBox re-enabled control did not work"]
-);
+case!(picker, Picker, [], [], [], [], []);
+case!(combo_box, ComboBox, [], [], [], [], []);
 case!(text_field, TextField, [], [], [], [], []);
 case!(secure_field, SecureField, [], [], [], [], []);
 case!(search_field, SearchField, [], [], [], [], []);
 case!(text_editor, TextEditor, [], [], [], [], []);
-case!(
-    date_picker,
-    DatePicker,
-    [],
-    [],
-    [],
-    [],
-    [ignore = "R15b: DatePicker re-enabled control did not work"]
-);
-case!(
-    color_picker,
-    ColorPicker,
-    [],
-    [],
-    [],
-    [],
-    [ignore = "R15b: ColorPicker re-enabled control did not work"]
-);
+case!(date_picker, DatePicker, [], [], [], [], []);
+case!(color_picker, ColorPicker, [], [], [], [], []);
 case!(token_field, TokenField, [], [], [], [], []);
 case!(code_editor, CodeEditor, [], [], [], [], []);
 case!(graph_view, GraphView, [], [], [], [], []);
 case!(node_editor, NodeEditor, [], [], [], [], []);
 case!(property_text, PropertyText, [], [], [], [], []);
-case!(
-    property_choice,
-    PropertyChoice,
-    [],
-    [],
-    [],
-    [],
-    [ignore = "R15b: PropertyChoice re-enabled control did not work"]
-);
+case!(property_choice, PropertyChoice, [], [], [], [], []);
 case!(property_toggle, PropertyToggle, [], [], [], [], []);
 case!(property_integer, PropertyInteger, [], [], [], [], []);
 case!(
@@ -892,15 +1101,7 @@ case!(
 );
 case!(tab_item, TabItem, [], [], [], [], []);
 case!(tree_item, TreeItem, [], [], [], [], []);
-case!(
-    menu_item,
-    MenuItem,
-    [],
-    [],
-    [],
-    [ignore = "R15b: MenuItem accessibility node has no disabled flag"],
-    [ignore = "R15b: popup item live-disable recovery not yet exercised"]
-);
+case!(menu_item, MenuItem, [], [], [], [], []);
 case!(list_row, ListRow, [], [], [], [], []);
 case!(grid_cell, GridCell, [], [], [], [], []);
 case!(drag_source, DragSource, [], [], [], [], []);

@@ -1,5 +1,7 @@
 # Changelog
 
+- Completed dropdown recovery coverage and live popup-menu disabled semantics, selection recovery and re-enable behavior.
+
 - Audited disabled controls with a shared GPUI-window matrix, fixed focus traversal and disabled semantics, and deferred seven cases to R15b.
 
 - Switched daily Cargo aliases to stable defaults and reconsidered roadmap item 3, moving crates.io publishing into Phase 1.

@@ -12,7 +12,7 @@ Work one item at a time; each item becomes a ticket in docs/TICKETS.md before wo
 ## Phase 1 Quality debt (0.2.0)
 
 6. Triage proposed patches (P0) and promote them.
-7. Address disabled-control focus (R15). Remaining in R15b: dropdown/popover controls re-enable (Picker, ComboBox, DatePicker, ColorPicker, property-choice); menu item disabled accessibility and live-disable focus.
+7. Done (R15/R15b): disabled-control focus, dropdown/popover re-enable, popup-menu disabled accessibility and live selection recovery; see docs/DISABLED_AUDIT.md.
 8. Audit async cancellation (R20).
 9. Review framework tools (R22–R26): preview/inspector, composition editing, and live theme reload.
 10. Address small gaps: cell-header relation, `.accept()` description, `include!()` gallery, and test file locations.

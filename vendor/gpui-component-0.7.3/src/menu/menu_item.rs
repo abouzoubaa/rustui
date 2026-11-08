@@ -95,6 +95,7 @@ impl RenderOnce for MenuItemElement {
             .id(self.id)
             .test_support()
             .role(Role::MenuItem)
+            .aria_disabled(self.disabled)
             .when_some(self.aria_label, |this, label| this.aria_label(label))
             .aria_selected(self.selected)
             .gap_x_1()

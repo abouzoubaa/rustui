@@ -42,7 +42,9 @@ case "${1:-}" in
     python3 scripts/verify_gpui_web_patch_stack.py --native-only
     python3 scripts/apply_gpui_base_button_disabled_patch.py --verify
     python3 scripts/apply_gpui_base_focus_trap_accessibility_v1_patch.py --verify
-    python3 scripts/apply_gpui_component_popup_menu_disabled_confirm_v1_patch.py --verify
+    python3 scripts/verify_r15b_popup_menu_patch_stack.py
+    python3 scripts/apply_r15b_menu_item_disabled_v1_patch.py --verify
+    python3 scripts/apply_r15b_dropdown_menu_refresh_v1_patch.py --verify
     python3 scripts/apply_gpui_component_sheet_close_accessibility_v2_patch.py --verify
     python3 scripts/verify_r15_tree_patch_stack.py
     python3 scripts/apply_gpui_primary_mousedown_click_v2_patch.py --verify
@@ -93,7 +95,9 @@ PY
     verify_tree_accessibility_series
     python3 scripts/apply_gpui_base_button_disabled_patch.py --verify
     python3 scripts/apply_gpui_base_focus_trap_accessibility_v1_patch.py --verify
-    python3 scripts/apply_gpui_component_popup_menu_disabled_confirm_v1_patch.py --verify
+    python3 scripts/verify_r15b_popup_menu_patch_stack.py
+    python3 scripts/apply_r15b_menu_item_disabled_v1_patch.py --verify
+    python3 scripts/apply_r15b_dropdown_menu_refresh_v1_patch.py --verify
     python3 scripts/apply_gpui_component_sheet_close_accessibility_v2_patch.py --verify
     python3 scripts/verify_r15_tree_patch_stack.py
     python3 scripts/apply_gpui_primary_mousedown_click_v2_patch.py --verify

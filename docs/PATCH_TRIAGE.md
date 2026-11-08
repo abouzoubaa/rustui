@@ -78,3 +78,9 @@ RTL proposals in this inventory either include deferred platform paths or alread
 - `r15-breadcrumb-disabled-v1.patch`: promoted; label, disabled semantics, Tab focus and disable/re-enable behavior passed the disposable test-window matrix.
 - `r15-sidebar-disabled-v1.patch`: promoted; disabled item semantics passed the disposable test-window matrix and are pinned by exact replay.
 - `r15-tree-disabled-focus-v1.patch`: promoted; disabled-group focus passed the disposable test-window matrix, and exact stack replay preserves the P2 Tree pins.
+
+## R15b popup-menu recovery
+
+- `r15b-menu-item-disabled-v1.patch`: promoted; popup-menu item nodes forward the existing aria-disabled property.
+- `r15b-popup-menu-recovery-v1.patch`: promoted; live rebuilds retain focus and choose the next enabled item or no selection; arrow and hover selection skip disabled items. Exact replay preserves the earlier disabled-confirm patch beneath it.
+- `r15b-dropdown-menu-refresh-v1.patch`: promoted; RustUI opts into refreshing live item descriptors while retaining the menu entity and focus handle.

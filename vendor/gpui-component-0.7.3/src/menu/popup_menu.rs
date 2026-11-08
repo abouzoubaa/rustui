@@ -765,6 +765,25 @@ impl PopupMenu {
         cx.notify();
     }
 
+    /// Refresh live menu contents without changing the menu or focus identity.
+    /// Keep the selected enabled row, or advance to the next enabled row (wrapping).
+    /// With no enabled rows the selection becomes empty.
+    pub fn rebuild_preserving_selection(
+        &mut self,
+        window: &mut Window,
+        cx: &mut Context<Self>,
+        f: impl FnOnce(Self, &mut Window, &mut Context<Self>) -> Self,
+    ) {
+        let selected = self.selected_index;
+        self.rebuild(window, cx, f);
+        if let Some(index) = selected {
+            self.selected_index = Some(index);
+            if !self.menu_items.get(index).is_some_and(PopupMenuItem::is_clickable) {
+                self.select_enabled(true, cx);
+            }
+        }
+    }
+
     fn add_menu_item(
         &mut self,
         label: impl Into<SharedString>,
@@ -930,43 +949,34 @@ impl PopupMenu {
         }
     }
 
+    fn select_enabled(&mut self, forward: bool, cx: &mut Context<Self>) {
+        let current = self.selected_index;
+        let next = if forward {
+            self.clickable_menu_items()
+                .find(|(index, _)| current.is_none_or(|current| *index > current))
+                .map(|(index, _)| index)
+                .or_else(|| self.clickable_menu_items().next().map(|(index, _)| index))
+        } else {
+            self.clickable_menu_items()
+                .filter(|(index, _)| current.is_none_or(|current| *index < current))
+                .last()
+                .map(|(index, _)| index)
+                .or_else(|| self.clickable_menu_items().last().map(|(index, _)| index))
+        };
+        if self.selected_index != next {
+            self.selected_index = next;
+            cx.notify();
+        }
+    }
+
     fn select_up(&mut self, _: &SelectUp, _: &mut Window, cx: &mut Context<Self>) {
         cx.stop_propagation();
-        let ix = self.selected_index.unwrap_or(0);
-
-        if let Some((prev_ix, _)) = self
-            .menu_items
-            .iter()
-            .enumerate()
-            .rev()
-            .find(|(i, item)| *i < ix && item.is_clickable())
-        {
-            self.set_selected_index(prev_ix, cx);
-            return;
-        }
-
-        let last_clickable_ix = self.clickable_menu_items().last().map(|(ix, _)| ix);
-        self.set_selected_index(last_clickable_ix.unwrap_or(0), cx);
+        self.select_enabled(false, cx);
     }
 
     fn select_down(&mut self, _: &SelectDown, _: &mut Window, cx: &mut Context<Self>) {
         cx.stop_propagation();
-        let Some(ix) = self.selected_index else {
-            self.set_selected_index(0, cx);
-            return;
-        };
-
-        if let Some((next_ix, _)) = self
-            .menu_items
-            .iter()
-            .enumerate()
-            .find(|(i, item)| *i > ix && item.is_clickable())
-        {
-            self.set_selected_index(next_ix, cx);
-            return;
-        }
-
-        self.set_selected_index(0, cx);
+        self.select_enabled(true, cx);
     }
 
     fn select_left(&mut self, _: &SelectLeft, window: &mut Window, cx: &mut Context<Self>) {
@@ -1253,6 +1263,9 @@ impl PopupMenu {
             .selected(selected)
             .on_hover(cx.listener(move |this, hovered, window, cx| {
                 if *hovered {
+                    if !this.menu_items.get(ix).is_some_and(PopupMenuItem::is_clickable) {
+                        return;
+                    }
                     // Pointing elsewhere closes the open submenu; take back
                     // the focus the keyboard may have moved into it.
                     if this.selected_index != Some(ix)

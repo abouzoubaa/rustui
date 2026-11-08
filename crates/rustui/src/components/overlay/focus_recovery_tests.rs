@@ -552,7 +552,7 @@ impl gpui::Render for KeyboardMenuProbe {
 }
 
 #[gpui::test]
-fn disabled_popup_confirmation_keeps_menu_open_and_enabled_item_runs(
+fn popup_confirmation_without_selection_keeps_menu_open_and_arrows_skip_disabled_items(
     cx: &mut gpui::TestAppContext,
 ) {
     let theme = crate::theme::parse_theme(include_str!(concat!(
@@ -595,7 +595,9 @@ fn disabled_popup_confirmation_keeps_menu_open_and_enabled_item_runs(
             .and_then(|weak| weak.upgrade())
             .is_some()
     );
-    window.simulate_keystrokes("down enter");
+    // Confirmation without a selection must leave the menu open. Down now
+    // skips the disabled first item rather than selecting it.
+    window.simulate_keystrokes("enter");
     window.run_until_parked();
     draw(window);
     assert_eq!(disabled_calls.get(), 0, "disabled action must not run");

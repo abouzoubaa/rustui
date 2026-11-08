@@ -1,0 +1,10 @@
+--- a/vendor/gpui-component-0.7.3/src/menu/menu_item.rs
++++ b/vendor/gpui-component-0.7.3/src/menu/menu_item.rs
+@@ -95,6 +95,7 @@
+             .id(self.id)
+             .test_support()
+             .role(Role::MenuItem)
++            .aria_disabled(self.disabled)
+             .when_some(self.aria_label, |this, label| this.aria_label(label))
+             .aria_selected(self.selected)
+             .gap_x_1()
