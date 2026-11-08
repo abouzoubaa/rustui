@@ -6,7 +6,7 @@ Work one item at a time; each item becomes a ticket in docs/TICKETS.md before wo
 
 1. Remove retired coordination scripts.
 2. Verify third-party licenses and notices.
-3. Use a single GPUI source: owned crates only; retarget patch checks and remove duplicate vendor copies.
+3. Reconsidered (G0 plan): GPUI duplication stays, guarded by verify_owned_gpui_sources.py; Git-consumer download size is solved by item 18 (crates.io), not by deleting files. Headstart aliases removed in G11; target/headstart directory name kept.
 4. Delete merged branches.
 
 ## Phase 1 Quality debt (0.2.0)
@@ -17,6 +17,10 @@ Work one item at a time; each item becomes a ticket in docs/TICKETS.md before wo
 9. Review framework tools (R22–R26): preview/inspector, composition editing, and live theme reload.
 10. Address small gaps: cell-header relation, `.accept()` description, `include!()` gallery, and test file locations.
 11. Review parked work: `wip/stash-2026-10-26` and a decision on `wip/native-macos-popups`.
+
+<!-- Preserve item 18's number when rendered as Markdown. -->
+
+18. Publish to crates.io (moved up: also fixes Git-consumer download size).
 
 ## Phase 2 Localization
 
@@ -40,5 +44,4 @@ Reference: [GPUI Fast feature delta](archive/tasks/GPUI_FAST_FEATURE_DELTA.md).
 
 ## Phase 6 Distribution (1.0)
 
-18. Publish to crates.io.
 19. Support other platforms (deferred).
