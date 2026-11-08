@@ -7,6 +7,10 @@ import hashlib
 import json
 import os
 from pathlib import Path
+import sys as _stack_sys
+from pathlib import Path as _StackPath
+_stack_sys.path.insert(0, str(_StackPath(__file__).resolve().parent))
+from gpui_a11y_stack import mouse_prior_or_current
 import subprocess
 import tempfile
 
@@ -43,12 +47,16 @@ def run(root: Path, artifacts: Path, mode: str) -> None:
         raise ValueError("approved validation grid accessibility patch hash mismatch")
     files = meta["files"]
     before = {}
+    actual_before = {}
     states = set()
     for relative, images in files.items():
         path = root / relative
         if path.is_symlink() or not path.is_file():
             raise ValueError(f"missing or symlinked source: {relative}")
         before[relative] = path.read_bytes()
+        actual_before[relative] = before[relative]
+        if mode in ("--check", "--verify"):
+            before[relative] = mouse_prior_or_current(root, artifacts, relative, images["post"])
         current = digest(before[relative])
         if current == images["pre"]:
             states.add("pre")
@@ -89,7 +97,7 @@ def run(root: Path, artifacts: Path, mode: str) -> None:
         if any((stage / relative).read_bytes() != data for relative, data in before.items()):
             raise ValueError("validation grid accessibility patch reverse replay mismatch")
     if mode in ("--apply", "--reverse"):
-        if any((root / relative).read_bytes() != data for relative, data in before.items()):
+        if any((root / relative).read_bytes() != data for relative, data in actual_before.items()):
             raise ValueError("source changed during patch staging")
         installed = []
         try:
@@ -117,7 +125,7 @@ def prior_source(root: Path, artifacts: Path, relative: str) -> bytes:
         for path in meta["files"]:
             target = stage / path
             target.parent.mkdir(parents=True, exist_ok=True)
-            target.write_bytes((root / path).read_bytes())
+            target.write_bytes(mouse_prior_or_current(root, artifacts, path, meta["files"][path]["post"]))
         with contextlib.redirect_stdout(io.StringIO()):
             run(stage, artifacts, "--reverse")
         return (stage / relative).read_bytes()

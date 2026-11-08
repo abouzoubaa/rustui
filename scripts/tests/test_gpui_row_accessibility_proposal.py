@@ -14,7 +14,7 @@ SPEC.loader.exec_module(PROPOSAL)
 class RowAccessibilityProposalTests(unittest.TestCase):
     def fixture(self, root):
         manifest = json.loads((ROOT / PROPOSAL.MANIFEST).read_text())
-        paths = [PROPOSAL.MANIFEST, PROPOSAL.POPUP.PATCH, Path("Cargo.toml"),
+        paths = [Path("scripts/apply_gpui_selectable_list_semantics_v2_patch.py"), Path("scripts/approved_single_source_patch.py"), Path("patches/approved/gpui-selectable-list-semantics-v2.json"), PROPOSAL.MANIFEST, PROPOSAL.POPUP.PATCH, Path("Cargo.toml"),
                  *PROPOSAL.POPUP.IMAGES, *map(Path, PROPOSAL.POPUP.PRESERVED)]
         for record in manifest["sources"]:
             package = Path("vendor") / record["package_directory"]
@@ -38,7 +38,7 @@ class RowAccessibilityProposalTests(unittest.TestCase):
             shutil.copyfile(ROOT / PROPOSAL.A11Y_PATCH, patch)
             source = root / PROPOSAL.A11Y_DIV
             before = source.read_bytes()
-            self.assertEqual(PROPOSAL.digest(source), PROPOSAL.A11Y_DIV_POST)
+            self.assertEqual(PROPOSAL.digest(source), PROPOSAL.P2_DIV_POST)
             self.assertEqual(PROPOSAL.verify(root)["status"], "pass")
             self.assertEqual(source.read_bytes(), before)
 

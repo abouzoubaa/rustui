@@ -1,0 +1,8 @@
+{
+  "schema_version": 1,
+  "patch": "patches/approved/gpui-tree-disabled-keyboard-v2.patch",
+  "patch_sha256": "90a389f58ade9848432afa6f2a5d9c17f5b73cebf32dbbc84d92e0734680bfac",
+  "source": "vendor/gpui-base-0.7.3/src/tree.rs",
+  "pre_sha256": "0a1321f50154fb145b325517f9be93f262e959d21a213d61ecfdfadec38e4747",
+  "post_sha256": "c05288fb312eb3817b69bc564c616fb81a67b548a5d327e2a44c187418943b42"
+}

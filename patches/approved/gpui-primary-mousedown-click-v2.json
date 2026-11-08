@@ -1,0 +1,8 @@
+{
+  "schema_version": 1,
+  "patch": "patches/approved/gpui-primary-mousedown-click-v2.patch",
+  "patch_sha256": "74f04e59e298d299c1ec16370aa015af85ac368d32bd59dfda65a04d8a84d0ec",
+  "source": "vendor/gpui-pre-0.3.9/src/elements/div.rs",
+  "pre_sha256": "81429bdbc0a835a97e3d2c3cfa394b0b7cebd81e4289176791b952d1c819df50",
+  "post_sha256": "ab2690171fc572695ca1b4910680a52ef10124fb4aae535a08e36c47b464337b"
+}

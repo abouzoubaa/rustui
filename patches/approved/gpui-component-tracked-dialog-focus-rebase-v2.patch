@@ -1,6 +1,80 @@
+diff --git a/vendor/gpui-component-0.7.3/src/dialog/dialog.rs b/vendor/gpui-component-0.7.3/src/dialog/dialog.rs
+index 58deb0b0..0e2fc639 100644
+--- a/vendor/gpui-component-0.7.3/src/dialog/dialog.rs
++++ b/vendor/gpui-component-0.7.3/src/dialog/dialog.rs
+@@ -1,5 +1,5 @@
+ use super::entrance::{DialogEntrance, EntranceSurface};
+-use crate::root::WindowState;
++use crate::{root::WindowState, window_ext::{DialogId, TrackedDialogExt as _}};
+ use gpui_base::TestSupportExt as _;
+ use std::{rc::Rc, sync::LazyLock, time::Duration};
+ 
+@@ -316,6 +316,7 @@ pub struct Dialog {
+     /// This will be change when open the dialog, the focus handle is create when open the dialog.
+     pub(crate) focus_handle: FocusHandle,
+     pub(crate) layer_ix: usize,
++    pub(crate) opening_id: Option<DialogId>,
+     pub(crate) selection_scope: TextSelectionScopeId,
+ }
+ 
+@@ -361,6 +362,7 @@ impl Dialog {
+             props: DialogProps::default(),
+             children: Vec::new(),
+             layer_ix: 0,
++            opening_id: None,
+             selection_scope: TextSelectionScopeId::default(),
+             button_props: DialogButtonProps::default(),
+         }
+@@ -597,6 +599,7 @@ impl RenderOnce for Dialog {
+         }
+ 
+         let layer_ix = self.layer_ix;
++        let opening_id = self.opening_id;
+         let selection_scope = self.selection_scope;
+         let on_close = self.button_props.close_handler();
+         let on_ok = self.button_props.ok_handler();
+@@ -700,10 +703,19 @@ impl RenderOnce for Dialog {
+                             .on_cancel(move |event, window, cx| on_cancel(event, window, cx))
+                             .on_close(move |event, window, cx| on_close(event, window, cx))
+                             .request_close(move |deferred, window, cx| {
+-                                if deferred {
+-                                    Self::defer_close_dialog(window, cx);
+-                                } else {
+-                                    window.close_dialog(cx);
++                                match (opening_id, deferred) {
++                                    (Some(id), true) => WindowState::update(
++                                        window,
++                                        cx,
++                                        |root, window, cx| {
++                                            root.defer_close_dialog_by_id(id, window, cx);
++                                        },
++                                    ),
++                                    (Some(id), false) => {
++                                        window.close_dialog_by_id(id, cx);
++                                    }
++                                    (None, true) => Self::defer_close_dialog(window, cx),
++                                    (None, false) => window.close_dialog(cx),
+                                 }
+                             })
+                             .popup(
+diff --git a/vendor/gpui-component-0.7.3/src/lib.rs b/vendor/gpui-component-0.7.3/src/lib.rs
+index 69a9c9ee..83ea28bb 100644
+--- a/vendor/gpui-component-0.7.3/src/lib.rs
++++ b/vendor/gpui-component-0.7.3/src/lib.rs
+@@ -122,7 +122,7 @@ pub use time::{calendar, date_picker, time_field};
+ pub use title_bar::*;
+ pub use virtual_list::{VirtualList, VirtualListScrollHandle, h_virtual_list, v_virtual_list};
+ pub use window_border::{WindowBorder, window_border, window_paddings};
+-pub use window_ext::WindowExt;
++pub use window_ext::{DialogId, TrackedDialogExt, WindowExt};
+ 
+ rust_i18n::i18n!("locales", fallback = "en");
+ 
+diff --git a/vendor/gpui-component-0.7.3/src/root.rs b/vendor/gpui-component-0.7.3/src/root.rs
+index 2c4f7284..c45a4e21 100644
 --- a/vendor/gpui-component-0.7.3/src/root.rs
 +++ b/vendor/gpui-component-0.7.3/src/root.rs
-@@ -8,6 +8,7 @@
+@@ -8,6 +8,7 @@ use crate::{
      tooltip::render_tooltip,
      touch_selection::WindowTouchSelectionOverlay,
      window_border,
@@ -8,15 +82,15 @@
  };
  use gpui::{
      App, AppContext, Context, DefiniteLength, ElementId, Entity, FocusHandle, InteractiveElement,
-@@ -32,6 +33,7 @@
+@@ -33,6 +34,7 @@ pub(crate) struct WindowState {
      touch_selection_overlay: Entity<WindowTouchSelectionOverlay>,
      sheet_size: Option<DefiniteLength>,
      pending_focus_restore: Option<WeakFocusHandle>,
 +    dialog_stack_generation: u64,
+     focus_recovery_epoch: u64,
+     pending_focus_recovery: Option<FocusHandle>,
  }
- 
- #[derive(Clone)]
-@@ -46,6 +48,7 @@
+@@ -53,6 +55,7 @@ pub(crate) struct ActiveSheet {
  
  #[derive(Clone)]
  pub(crate) struct ActiveDialog {
@@ -24,30 +98,31 @@
      focus_handle: FocusHandle,
      /// The previous focused handle before opening the Dialog.
      previous_focused_handle: Option<WeakFocusHandle>,
-@@ -55,12 +58,14 @@
+@@ -64,6 +67,7 @@ pub(crate) struct ActiveDialog {
  
  impl ActiveDialog {
      pub(crate) fn new(
 +        id: DialogId,
          focus_handle: FocusHandle,
          previous_focused_handle: Option<WeakFocusHandle>,
-         selection_scope: TextSelectionScopeId,
+         last_focused_handle: ModalFocusMemory,
+@@ -72,6 +76,7 @@ impl ActiveDialog {
          builder: impl Fn(Dialog, &mut Window, &mut App) -> Dialog + 'static,
      ) -> Self {
          Self {
 +            id,
              focus_handle,
              previous_focused_handle,
-             selection_scope,
-@@ -82,6 +87,7 @@
+             last_focused_handle,
+@@ -103,6 +108,7 @@ impl WindowState {
              touch_selection_overlay: cx.new(|cx| WindowTouchSelectionOverlay::new(window, cx)),
              sheet_size: None,
              pending_focus_restore: None,
 +            dialog_stack_generation: 0,
+             focus_recovery_epoch: 0,
+             pending_focus_recovery: None,
          }
-     }
- 
-@@ -211,6 +217,7 @@
+@@ -364,6 +370,7 @@ impl WindowState {
                  dialog.selection_scope = active_dialog.selection_scope;
  
                  dialog.layer_ix = i;
@@ -55,10 +130,11 @@
                  // Find the dialog which one needs to show overlay.
                  if dialog.has_overlay() {
                      show_overlay_ix = Some(i);
-@@ -244,6 +251,18 @@
+@@ -396,6 +403,18 @@ impl WindowState {
+         cx: &mut Context<'_, WindowState>,
      ) where
          F: Fn(Dialog, &mut Window, &mut App) -> Dialog + 'static,
-     {
++    {
 +        self.open_dialog_tracked(build, window, cx);
 +    }
 +
@@ -70,27 +146,26 @@
 +    ) -> DialogId
 +    where
 +        F: Fn(Dialog, &mut Window, &mut App) -> Dialog + 'static,
-+    {
+     {
          let mut previous_focused_handle = window.focused(cx).map(|h| h.downgrade());
  
-         // Use pending focus restore if available to maintain correct focus chain
-@@ -255,25 +274,84 @@
-         let focus_handle = cx.focus_handle();
-         focus_handle.focus(window, cx);
- 
-+        let id = DialogId::next();
+@@ -409,7 +428,9 @@ impl WindowState {
+         let (last_focused_handle, focus_out_subscription) =
+             Self::track_modal_focus(&focus_handle, window, cx);
          let selection_scope = self.allocate_text_selection_scope();
++        let id = DialogId::next();
          self.active_dialogs.push(ActiveDialog::new(
 +            id,
-             focus_handle,
+             focus_handle.clone(),
              previous_focused_handle,
+             last_focused_handle,
+@@ -417,20 +438,58 @@ impl WindowState {
              selection_scope,
              build,
          ));
-+        self.dialog_stack_generation = self
-+            .dialog_stack_generation
-+            .checked_add(1)
-+            .expect("dialog stack generation exhausted");
++        self.dialog_stack_generation += 1;
+         self.sync_modal_focus_scope(window, cx);
+         focus_handle.focus(window, cx);
          // Opening a modal confines selection to it; drop any background
          // selection so it cannot linger (or be copied) under the modal.
          gpui_base::TextSelection::clear(window, cx);
@@ -105,16 +180,9 @@
 -            .and_then(|d| d.previous_focused_handle)
 -            .and_then(|h| h.upgrade())
 +        let removed = self.active_dialogs.pop();
-+        let previous = removed
-+            .as_ref()
-+            .and_then(|dialog| dialog.previous_focused_handle.clone());
++        let previous = removed.as_ref().and_then(|dialog| dialog.previous_focused_handle.clone());
 +        if removed.is_some() {
-+            self.dialog_stack_generation = self
-+                .dialog_stack_generation
-+                .checked_add(1)
-+                .expect("dialog stack generation exhausted");
-+            // A pending deferred close may target focus inside the opening
-+            // just removed. Rebase it before another opening consumes it.
++            self.dialog_stack_generation += 1;
 +            if self.pending_focus_restore.is_some() {
 +                self.pending_focus_restore = previous.clone();
 +            }
@@ -122,37 +190,20 @@
 +        previous.and_then(|handle| handle.upgrade())
 +    }
 +
-+    pub fn close_dialog_by_id(
-+        &mut self,
-+        id: DialogId,
-+        window: &mut Window,
-+        cx: &mut Context<'_, WindowState>,
-+    ) -> bool {
-+        let Some(index) = self
-+            .active_dialogs
-+            .iter()
-+            .position(|dialog| dialog.id == id)
-+        else {
-+            return false;
-+        };
++    pub fn close_dialog_by_id(&mut self, id: DialogId, window: &mut Window, cx: &mut Context<'_, WindowState>) -> bool {
++        let Some(index) = self.active_dialogs.iter().position(|dialog| dialog.id == id) else { return false; };
 +        let removed = self.active_dialogs.remove(index);
-+        self.dialog_stack_generation = self
-+            .dialog_stack_generation
-+            .checked_add(1)
-+            .expect("dialog stack generation exhausted");
-+        if self
-+            .pending_focus_restore
-+            .as_ref()
-+            .is_some_and(|pending| pending == &removed.focus_handle)
-+        {
++        self.dialog_stack_generation += 1;
++        if self.pending_focus_restore.as_ref().is_some_and(|pending| pending == &removed.focus_handle) {
 +            self.pending_focus_restore = removed.previous_focused_handle.clone();
 +        }
 +        if let Some(successor) = self.active_dialogs.get_mut(index) {
-+            // A later top-of-stack close must skip this removed focus handle.
 +            successor.previous_focused_handle = removed.previous_focused_handle;
++            self.sync_modal_focus_scope(window, cx);
 +        } else {
 +            self.focused_input = None;
 +            self.pending_focus_restore = None;
++            self.sync_modal_focus_scope(window, cx);
 +            if let Some(handle) = removed.previous_focused_handle.and_then(|h| h.upgrade()) {
 +                window.focus(&handle, cx);
 +            }
@@ -160,40 +211,27 @@
 +        }
 +        cx.notify();
 +        true
-     }
- 
-     pub fn close_dialog(&mut self, window: &mut Window, cx: &mut Context<'_, WindowState>) {
-@@ -284,13 +362,28 @@
-         cx.notify();
-     }
- 
-+    pub(crate) fn defer_close_dialog_by_id(
-+        &mut self,
-+        id: DialogId,
-+        window: &mut Window,
-+        cx: &mut Context<'_, WindowState>,
-+    ) {
++    }
++
++    pub(crate) fn defer_close_dialog_by_id(&mut self, id: DialogId, window: &mut Window, cx: &mut Context<'_, WindowState>) {
 +        if self.active_dialogs.last().is_some_and(|dialog| dialog.id == id) {
 +            self.defer_close_dialog(window, cx);
 +        } else {
-+            // An action callback may have opened another dialog. Keep its
-+            // focus and close the opening that dispatched the action.
 +            self.close_dialog_by_id(id, window, cx);
 +        }
-+    }
-+
-     pub(crate) fn defer_close_dialog(
-         &mut self,
-         window: &mut Window,
-         cx: &mut Context<'_, WindowState>,
-     ) {
-         if let Some(handle) = self.close_dialog_internal() {
+     }
+ 
+     pub fn close_dialog(&mut self, window: &mut Window, cx: &mut Context<'_, WindowState>) {
+@@ -451,7 +510,7 @@ impl WindowState {
+         let previous = self.close_dialog_internal();
+         self.sync_modal_focus_scope(window, cx);
+         if let Some(handle) = previous {
 -            let dialogs_count = self.active_dialogs.len();
 +            let generation = self.dialog_stack_generation;
  
              // Save for new dialogs opened during animation to maintain focus chain
              self.pending_focus_restore = Some(handle.downgrade());
-@@ -298,12 +391,14 @@
+@@ -459,12 +518,14 @@ impl WindowState {
              cx.spawn_in(window, async move |this, cx| {
                  cx.background_executor().timer(*ANIMATION_DURATION).await;
                  let _ = this.update_in(cx, |this, window, cx| {
@@ -212,21 +250,20 @@
                  });
              })
              .detach();
-@@ -319,6 +414,11 @@
+@@ -480,6 +541,8 @@ impl WindowState {
              .first()
              .and_then(|d| d.previous_focused_handle.clone());
          self.active_dialogs.clear();
-+        self.dialog_stack_generation = self
-+            .dialog_stack_generation
-+            .checked_add(1)
-+            .expect("dialog stack generation exhausted");
++        self.dialog_stack_generation += 1;
 +        self.pending_focus_restore = None;
+         self.sync_modal_focus_scope(window, cx);
          if let Some(handle) = previous_focused_handle.and_then(|h| h.upgrade()) {
              window.focus(&handle, cx);
-         }
+diff --git a/vendor/gpui-component-0.7.3/src/window_ext.rs b/vendor/gpui-component-0.7.3/src/window_ext.rs
+index 7f74a021..871df788 100644
 --- a/vendor/gpui-component-0.7.3/src/window_ext.rs
 +++ b/vendor/gpui-component-0.7.3/src/window_ext.rs
-@@ -7,7 +7,24 @@
+@@ -7,7 +7,24 @@ use crate::{
      sheet::Sheet,
  };
  use gpui::{App, ElementId, Entity, Window};
@@ -252,7 +289,7 @@
  
  /// Extension trait for [`Window`] to add dialog, sheet .. functionality.
  pub trait WindowExt: Sized {
-@@ -274,3 +291,43 @@
+@@ -274,3 +291,43 @@ impl WindowExt for Window {
          None
      }
  }
@@ -296,71 +333,3 @@
 +        })
 +    }
 +}
---- a/vendor/gpui-component-0.7.3/src/lib.rs
-+++ b/vendor/gpui-component-0.7.3/src/lib.rs
-@@ -122,7 +122,7 @@
- pub use title_bar::*;
- pub use virtual_list::{VirtualList, VirtualListScrollHandle, h_virtual_list, v_virtual_list};
- pub use window_border::{WindowBorder, window_border, window_paddings};
--pub use window_ext::WindowExt;
-+pub use window_ext::{DialogId, TrackedDialogExt, WindowExt};
- 
- rust_i18n::i18n!("locales", fallback = "en");
- 
---- a/vendor/gpui-component-0.7.3/src/dialog/dialog.rs
-+++ b/vendor/gpui-component-0.7.3/src/dialog/dialog.rs
-@@ -1,5 +1,5 @@
- use super::entrance::{DialogEntrance, EntranceSurface};
--use crate::root::WindowState;
-+use crate::{root::WindowState, window_ext::{DialogId, TrackedDialogExt as _}};
- use gpui_base::TestSupportExt as _;
- use std::{rc::Rc, sync::LazyLock, time::Duration};
- 
-@@ -316,6 +316,7 @@
-     /// This will be change when open the dialog, the focus handle is create when open the dialog.
-     pub(crate) focus_handle: FocusHandle,
-     pub(crate) layer_ix: usize,
-+    pub(crate) opening_id: Option<DialogId>,
-     pub(crate) selection_scope: TextSelectionScopeId,
- }
- 
-@@ -361,6 +362,7 @@
-             props: DialogProps::default(),
-             children: Vec::new(),
-             layer_ix: 0,
-+            opening_id: None,
-             selection_scope: TextSelectionScopeId::default(),
-             button_props: DialogButtonProps::default(),
-         }
-@@ -597,6 +599,7 @@
-         }
- 
-         let layer_ix = self.layer_ix;
-+        let opening_id = self.opening_id;
-         let selection_scope = self.selection_scope;
-         let on_close = self.button_props.close_handler();
-         let on_ok = self.button_props.ok_handler();
-@@ -700,10 +703,19 @@
-                             .on_cancel(move |event, window, cx| on_cancel(event, window, cx))
-                             .on_close(move |event, window, cx| on_close(event, window, cx))
-                             .request_close(move |deferred, window, cx| {
--                                if deferred {
--                                    Self::defer_close_dialog(window, cx);
--                                } else {
--                                    window.close_dialog(cx);
-+                                match (opening_id, deferred) {
-+                                    (Some(id), true) => WindowState::update(
-+                                        window,
-+                                        cx,
-+                                        |root, window, cx| {
-+                                            root.defer_close_dialog_by_id(id, window, cx);
-+                                        },
-+                                    ),
-+                                    (Some(id), false) => {
-+                                        window.close_dialog_by_id(id, cx);
-+                                    }
-+                                    (None, true) => Self::defer_close_dialog(window, cx),
-+                                    (None, false) => window.close_dialog(cx),
-                                 }
-                             })
-                             .popup(

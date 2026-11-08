@@ -1,5 +1,5 @@
 use super::entrance::{DialogEntrance, EntranceSurface};
-use crate::root::WindowState;
+use crate::{root::WindowState, window_ext::{DialogId, TrackedDialogExt as _}};
 use gpui_base::TestSupportExt as _;
 use std::{rc::Rc, sync::LazyLock, time::Duration};
 
@@ -316,6 +316,7 @@ pub struct Dialog {
     /// This will be change when open the dialog, the focus handle is create when open the dialog.
     pub(crate) focus_handle: FocusHandle,
     pub(crate) layer_ix: usize,
+    pub(crate) opening_id: Option<DialogId>,
     pub(crate) selection_scope: TextSelectionScopeId,
 }
 
@@ -361,6 +362,7 @@ impl Dialog {
             props: DialogProps::default(),
             children: Vec::new(),
             layer_ix: 0,
+            opening_id: None,
             selection_scope: TextSelectionScopeId::default(),
             button_props: DialogButtonProps::default(),
         }
@@ -597,6 +599,7 @@ impl RenderOnce for Dialog {
         }
 
         let layer_ix = self.layer_ix;
+        let opening_id = self.opening_id;
         let selection_scope = self.selection_scope;
         let on_close = self.button_props.close_handler();
         let on_ok = self.button_props.ok_handler();
@@ -700,10 +703,19 @@ impl RenderOnce for Dialog {
                             .on_cancel(move |event, window, cx| on_cancel(event, window, cx))
                             .on_close(move |event, window, cx| on_close(event, window, cx))
                             .request_close(move |deferred, window, cx| {
-                                if deferred {
-                                    Self::defer_close_dialog(window, cx);
-                                } else {
-                                    window.close_dialog(cx);
+                                match (opening_id, deferred) {
+                                    (Some(id), true) => WindowState::update(
+                                        window,
+                                        cx,
+                                        |root, window, cx| {
+                                            root.defer_close_dialog_by_id(id, window, cx);
+                                        },
+                                    ),
+                                    (Some(id), false) => {
+                                        window.close_dialog_by_id(id, cx);
+                                    }
+                                    (None, true) => Self::defer_close_dialog(window, cx),
+                                    (None, false) => window.close_dialog(cx),
                                 }
                             })
                             .popup(

@@ -4,7 +4,7 @@ use std::{rc::Rc, time::Duration};
 use gpui::{
     Animation, AnimationExt as _, AnyElement, App, ClickEvent, DefiniteLength, DismissEvent, Edges,
     EventEmitter, FocusHandle, InteractiveElement as _, IntoElement, ParentElement, Pixels,
-    RenderOnce, StyleRefinement, Styled, Window, div, prelude::FluentBuilder as _, px,
+    RenderOnce, SharedString, StyleRefinement, Styled, Window, div, prelude::FluentBuilder as _, px,
 };
 use gpui_base::{ElementExt as _, Sheet as BaseSheet, TextSelectionScopeId, actions::Cancel};
 use schemars::JsonSchema;
@@ -46,6 +46,7 @@ pub struct Sheet {
     pub(crate) selection_scope: TextSelectionScopeId,
     resizable: bool,
     on_close: Rc<dyn Fn(&ClickEvent, &mut Window, &mut App) + 'static>,
+    close_accessibility_label: Option<SharedString>,
     title: Option<AnyElement>,
     footer: Option<AnyElement>,
     style: StyleRefinement,
@@ -63,6 +64,7 @@ impl Sheet {
             size: DefiniteLength::Absolute(px(350.).into()),
             selection_scope: TextSelectionScopeId::default(),
             resizable: true,
+            close_accessibility_label: None,
             title: None,
             footer: None,
             style: StyleRefinement::default(),
@@ -76,6 +78,14 @@ impl Sheet {
     /// Sets the title of the sheet.
     pub fn title(mut self, title: impl IntoElement) -> Self {
         self.title = Some(title.into_any_element());
+        self
+    }
+
+    /// Sets an accessible name for the sheet's icon-only close button.
+    ///
+    /// The value is forwarded to the close button's accessibility label.
+    pub fn close_accessibility_label(mut self, label: impl Into<SharedString>) -> Self {
+        self.close_accessibility_label = Some(label.into());
         self
     }
 
@@ -202,6 +212,9 @@ impl RenderOnce for Sheet {
                             .small()
                             .ghost()
                             .icon(IconName::Close)
+                            .when_some(self.close_accessibility_label.clone(), |button, label| {
+                                button.accessibility_label(label)
+                            })
                             .on_click(|_, window, cx| {
                                 window.dispatch_action(Box::new(Cancel), cx);
                             }),

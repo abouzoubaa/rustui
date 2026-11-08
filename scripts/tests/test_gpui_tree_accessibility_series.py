@@ -27,6 +27,10 @@ class TreeAccessibilitySeriesLifecycle(unittest.TestCase):
         support |= {Path("Cargo.toml"), Path("Cargo.lock"), SERIES_SCRIPT, BASELINE_SCRIPT, LEVEL_SCRIPT}
         support |= {
             Path("scripts/gpui_a11y_stack.py"),
+            Path("scripts/approved_single_source_patch.py"),
+            Path("scripts/apply_gpui_primary_mousedown_click_v2_patch.py"),
+            Path("patches/approved/gpui-primary-mousedown-click-v2.json"),
+            Path("patches/approved/gpui-primary-mousedown-click-v2.patch"),
             Path("scripts/apply_gpui_validation_grid_a11y_patch.py"),
             Path("patches/approved/a11y-validation-grid-v1.json"),
             Path("patches/approved/a11y-validation-grid-v1.patch"),
@@ -38,6 +42,7 @@ class TreeAccessibilitySeriesLifecycle(unittest.TestCase):
             target = self.root / relative
             target.parent.mkdir(parents=True, exist_ok=True)
             shutil.copyfile(ROOT / relative, target)
+        subprocess.run([sys.executable, str(ROOT / "scripts/apply_gpui_tree_disabled_keyboard_v2_patch.py"), "--root", str(self.root), "--artifacts", str(ROOT), "--reverse"], check=True, capture_output=True)
         current = self.sources()
         hashes = {path: SERIES["digest"](data) for path, data in current.items()}
         if hashes == SERIES["POST"]:

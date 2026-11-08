@@ -624,3 +624,96 @@ fn disabled_popup_confirmation_keeps_menu_open_and_enabled_item_runs(
     assert_eq!(disabled_calls.get(), 0);
     assert_eq!(enabled_calls.get(), 1, "enabled action must run once");
 }
+
+#[gpui::test]
+fn sheet_close_button_exposes_localized_accessible_name(cx: &mut gpui::TestAppContext) {
+    let (_, window, _, second, behind) = setup(cx, ModalKind::Sheet);
+    let _ = open_modal(window, ModalKind::Sheet, &second, &behind);
+    window.update(|window, app| {
+        window.draw(app).clear(app);
+        let tree: serde_json::Value =
+            serde_json::from_str(&window.debug_a11y_tree_json().unwrap()).unwrap();
+        assert!(
+            tree["nodes"].as_object().unwrap().values().any(|node| {
+                node["aria"]["role"] == "Button" && node["aria"]["label"] == "Close"
+            }),
+            "the open sheet must expose a named close button: {tree}"
+        );
+    });
+}
+
+#[gpui::test]
+fn sheet_close_button_uses_french_catalog_label(cx: &mut gpui::TestAppContext) {
+    use crate::localization::{Catalog, Catalogs, Locale, activate_localization};
+    let en = Locale::parse("en").unwrap();
+    let fr = Locale::parse("fr").unwrap();
+    let mut catalogs = Catalogs::new(en.clone());
+    catalogs
+        .insert(
+            Catalog::parse(
+                en.clone(),
+                include_str!(concat!(
+                    env!("CARGO_MANIFEST_DIR"),
+                    "/../../locales/en/rustui.ftl"
+                )),
+            )
+            .unwrap(),
+        )
+        .unwrap();
+    catalogs
+        .insert(
+            Catalog::parse(
+                fr.clone(),
+                include_str!(concat!(
+                    env!("CARGO_MANIFEST_DIR"),
+                    "/../../locales/fr/rustui.ftl"
+                )),
+            )
+            .unwrap(),
+        )
+        .unwrap();
+    cx.update(|app| activate_localization(catalogs, fr, app));
+    let (_, window, _, second, behind) = setup(cx, ModalKind::Sheet);
+    let _ = open_modal(window, ModalKind::Sheet, &second, &behind);
+    window.update(|window, app| {
+        window.draw(app).clear(app);
+        let tree: serde_json::Value =
+            serde_json::from_str(&window.debug_a11y_tree_json().unwrap()).unwrap();
+        assert!(
+            tree["nodes"].as_object().unwrap().values().any(|node| {
+                node["aria"]["role"] == "Button" && node["aria"]["label"] == "Fermer"
+            }),
+            "the open sheet must use the French close label: {tree}"
+        );
+    });
+}
+
+#[gpui::test]
+fn tracked_dialog_closes_specific_opening_and_preserves_focus_chain(cx: &mut gpui::TestAppContext) {
+    use gpui_component::TrackedDialogExt as _;
+    let (_, window, _, _, behind) = setup(cx, ModalKind::Dialog);
+    window.update(|window, app| window.activate_window());
+    draw(window);
+    window.update(|window, app| window.focus(&behind, app));
+    let lower = window.update(|window, app| {
+        window.open_dialog_tracked(app, |dialog, _, _| dialog.title("Lower"))
+    });
+    draw(window);
+    let upper = window.update(|window, app| {
+        window.open_dialog_tracked(app, |dialog, _, _| dialog.title("Upper"))
+    });
+    draw(window);
+    let upper_focus = window.update(|window, app| window.focused(app).unwrap());
+    window.update(|window, app| {
+        assert!(window.close_dialog_by_id(lower, app));
+        assert!(!window.has_dialog_id(lower, app));
+        assert!(window.has_dialog_id(upper, app));
+        assert_eq!(window.focused(app), Some(upper_focus));
+        assert!(!window.close_dialog_by_id(lower, app));
+    });
+    draw(window);
+    window.update(|window, app| {
+        assert!(window.close_dialog_by_id(upper, app));
+        assert_eq!(window.focused(app), Some(behind));
+    });
+}

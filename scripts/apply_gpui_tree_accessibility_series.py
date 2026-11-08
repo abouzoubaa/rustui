@@ -9,7 +9,7 @@ from __future__ import annotations
 import sys as _stack_sys
 from pathlib import Path as _StackPath
 _stack_sys.path.insert(0, str(_StackPath(__file__).resolve().parent))
-from gpui_a11y_stack import prior_or_current
+from gpui_a11y_stack import prior_or_current, tree_prior_or_current
 
 import argparse
 import hashlib
@@ -210,6 +210,8 @@ def run(root: Path, mode: str) -> None:
     root = root.resolve()
     verify_identity(root)
     current = {relative: (root / relative).read_bytes() for relative in FILES}
+    if mode == "--verify":
+        current[BASE] = tree_prior_or_current(root, root, BASE, POST[BASE])
     expected = POST if mode in ("--reverse", "--verify") else PRE
     for relative, expected_hash in expected.items():
         if digest(current[relative]) != expected_hash:

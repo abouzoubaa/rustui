@@ -273,6 +273,12 @@ impl View for SheetView {
                     .0
             });
             let title = self.title.as_ref().map(|title| title.resolve(context));
+            let close_key: SharedString = "rustui-action-close".into();
+            let close_label = resolved_localized_accessibility_candidate(
+                &close_key,
+                context.localized_message(close_key.as_ref()).into(),
+            )
+            .unwrap_or_else(|| "Close".into());
             let title_id = format!("{}:title", self.id);
             let id = self.id.clone();
             let open = AppAction::with_window_action(move |_, window: &mut Window, cx| {
@@ -282,7 +288,9 @@ impl View for SheetView {
                 let content = content.clone();
                 let title = title.clone();
                 let title_id = title_id.clone();
+                let close_label = close_label.clone();
                 window.open_sheet(cx, move |mut sheet, _, _| {
+                    sheet = sheet.close_accessibility_label(close_label.clone());
                     if let Some(title) = title.clone() {
                         let accessible_title = div()
                             .id(title_id.clone())

@@ -350,7 +350,7 @@ impl TreeState {
         let Some(entry) = self.entries.get(ix) else {
             return;
         };
-        if !entry.is_folder() {
+        if !entry.is_folder() || entry.is_disabled() {
             return;
         }
 

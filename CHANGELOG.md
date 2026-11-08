@@ -1,5 +1,7 @@
 # Changelog
 
+- Updated accessibility patch proposals and promotion status.
+
 - Promoted focus-trap accessibility and disabled popup-menu confirmation fixes.
 
 - Triaged proposed patches against the current source.

@@ -5,6 +5,7 @@ import runpy
 from pathlib import Path
 import shutil
 import subprocess
+import sys
 import tempfile
 import unittest
 
@@ -56,6 +57,10 @@ class TreeAccessibilitySeriesTests(unittest.TestCase):
         support = set(FILES) | {str(path) for name in ("DISABLED_FILES", "PROVENANCE", "IDENTITY", "PATCH_HASHES") for path in series[name]}
         support |= {
             Path("scripts/gpui_a11y_stack.py"),
+            Path("scripts/approved_single_source_patch.py"),
+            Path("scripts/apply_gpui_primary_mousedown_click_v2_patch.py"),
+            Path("patches/approved/gpui-primary-mousedown-click-v2.json"),
+            Path("patches/approved/gpui-primary-mousedown-click-v2.patch"),
             Path("scripts/apply_gpui_validation_grid_a11y_patch.py"),
             Path("patches/approved/a11y-validation-grid-v1.json"),
             Path("patches/approved/a11y-validation-grid-v1.patch"),
@@ -70,6 +75,7 @@ class TreeAccessibilitySeriesTests(unittest.TestCase):
         helper.parent.mkdir(parents=True, exist_ok=True)
         shutil.copy2(HELPER, helper)
         series = runpy.run_path(str(helper))
+        subprocess.run([sys.executable, str(REPO / "scripts/apply_gpui_tree_disabled_keyboard_v2_patch.py"), "--root", str(self.root), "--artifacts", str(REPO), "--reverse"], check=True, capture_output=True)
         current = {path: (self.root / path).read_bytes() for path in series["FILES"]}
         hashes = {path: series["digest"](data) for path, data in current.items()}
         if hashes == series["POST"]:

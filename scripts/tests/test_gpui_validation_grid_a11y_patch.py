@@ -6,6 +6,8 @@ import io
 import json
 from pathlib import Path
 import shutil
+import subprocess
+import sys
 import tempfile
 import unittest
 from unittest.mock import patch
@@ -34,6 +36,7 @@ class ValidationGridA11yPatchTests(unittest.TestCase):
             target = self.artifacts / relative
             target.parent.mkdir(parents=True, exist_ok=True)
             shutil.copy2(ROOT / relative, target)
+        subprocess.run([sys.executable, str(ROOT / "scripts/apply_gpui_primary_mousedown_click_v2_patch.py"), "--root", str(self.root), "--artifacts", str(ROOT), "--reverse"], check=True, capture_output=True)
         if HELPER.digest((self.root / next(iter(self.meta["files"]))).read_bytes()) == next(iter(self.meta["files"].values()))["post"]:
             self.run_mode("--reverse")
         self.pre = {name: (self.root / name).read_bytes() for name in self.meta["files"]}

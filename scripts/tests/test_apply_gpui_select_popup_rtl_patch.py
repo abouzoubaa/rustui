@@ -1,6 +1,7 @@
 import importlib.util
 from pathlib import Path
 import shutil
+import subprocess
 import tempfile
 import unittest
 from unittest.mock import patch
@@ -23,6 +24,7 @@ class SelectPopupPatchTest(unittest.TestCase):
         (self.root / 'Cargo.toml').write_text(
             '[patch.crates-io]\ngpui-component = { path = "vendor/gpui-component-0.7.3" }\n'
         )
+        subprocess.run(["git", "apply", "--reverse", str(ROOT / "patches/approved/gpui-selectable-list-semantics-v2.patch")], cwd=self.root, check=True)
         patcher.run(self.root, ROOT, '--reverse')
 
     def test_replay_and_tampering(self):
