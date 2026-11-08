@@ -1,12 +1,6 @@
 [workspace]
 resolver = "3"
-exclude = ["crates/rustui-metal"]
-members = [
-    "crates/rustui",
-    "crates/rustui-core",
-    "crates/rustui-macros",
-    "crates/rustui-i18n",
-    "crates/rustui-rgpe",
+exclude = [
     "crates/rustui-gpui",
     "crates/rustui-gpui-platform",
     "crates/rustui-gpui-macos",
@@ -16,8 +10,20 @@ members = [
     "crates/rustui-block",
     "crates/rustui-cocoa",
     "crates/rustui-cocoa-foundation",
+    "crates/rustui-metal",
     "crates/rustui-objc-foundation",
     "crates/rustui-gpui-kit-assets",
+    "crates/rustui-gpui-linux",
+    "crates/rustui-gpui-web",
+    "crates/rustui-gpui-wgpu",
+    "crates/rustui-gpui-windows",
+]
+members = [
+    "crates/rustui",
+    "crates/rustui-core",
+    "crates/rustui-macros",
+    "crates/rustui-i18n",
+    "crates/rustui-rgpe",
     "apps/rustui-lab",
     "apps/rustui-playground",
 ]
@@ -47,7 +53,6 @@ gpui-base = { package = "rustui-gpui-base", path = "crates/rustui-gpui-base", ve
 gpui-kit-assets = { path = "crates/rustui-gpui-kit-assets", version = "=0.7.3" }
 
 [patch.crates-io]
-block = { path = "crates/rustui-block" }
 cosmic-text = { path = "vendor/cosmic-text-0.19.0" }
 # Keep upstream package versions pinned while reproducibly applying the
 # approved GPUI patches; see patches/README.md.

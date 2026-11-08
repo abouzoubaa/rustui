@@ -26,8 +26,8 @@ def digest(data):
 def run(root, artifacts, mode):
     root, artifacts = root.resolve(), artifacts.resolve()
     package = tomllib.loads((root / "vendor/block-0.1.6/Cargo.toml").read_text())["package"]
-    selected = tomllib.loads((root / "Cargo.toml").read_text())["patch"]["crates-io"]["block"]
-    selected_path = selected.get("path")
+    selected = tomllib.loads((root / "Cargo.toml").read_text()).get("patch", {}).get("crates-io", {}).get("block", {})
+    selected_path = selected.get("path") or ("crates/rustui-block" if (root / "crates/rustui-block/Cargo.toml").is_file() else None)
     if selected_path == "crates/rustui-block":
         selected_package = tomllib.loads((root / selected_path / "Cargo.toml").read_text())["package"]
     elif selected_path == "vendor/block-0.1.6":

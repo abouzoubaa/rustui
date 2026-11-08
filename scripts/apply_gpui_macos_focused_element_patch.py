@@ -60,7 +60,7 @@ def verify_provenance(root: Path, artifacts: Path, meta: dict) -> None:
 
     root_cargo = tomllib.loads((root / "Cargo.toml").read_text())
     owned_path = "crates/rustui-gpui-macos"
-    members = root_cargo.get("workspace", {}).get("members", [])
+    members = root_cargo.get("workspace", {}).get("members", []) + root_cargo.get("workspace", {}).get("exclude", [])
     owned_manifest = root / owned_path / "Cargo.toml"
     if owned_path in members:
         if owned_manifest.is_file():
