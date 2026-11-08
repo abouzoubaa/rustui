@@ -901,6 +901,11 @@ case!(
     [ignore = "R15b: MenuItem accessibility node has no disabled flag"],
     [ignore = "R15b: popup item live-disable recovery not yet exercised"]
 );
+case!(list_row, ListRow, [], [], [], [], []);
+case!(grid_cell, GridCell, [], [], [], [], []);
+case!(drag_source, DragSource, [], [], [], [], []);
+case!(drop_target, DropTarget, [], [], [], [], []);
+case!(file_drop_target, FileDropTarget, [], [], [], [], []);
 
 #[gpui::test]
 fn replacing_a_binding_while_disabled_never_writes_the_old_binding(cx: &mut gpui::TestAppContext) {

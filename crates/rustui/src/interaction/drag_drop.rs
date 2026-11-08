@@ -315,6 +315,7 @@ impl<V: View> View for FileDropTargetView<V> {
                 .id(format!("rustui-file-drop-{}", self.id.as_str()))
                 .role(gpui::Role::Group)
                 .aria_label("File drop target")
+                .aria_disabled(!self.enabled)
                 .aria_description(self.description.clone())
                 .child(child);
             if let Some(accepted) = hover.get() {
