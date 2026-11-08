@@ -8,12 +8,12 @@ RustUI is not yet cleared for production distribution.
 
 ## MVP checklist (macOS)
 
-- scripts/check.sh and ./scripts/verify-release.sh source pass on the release commit
-- external consumer builds as a Git dependency without [patch] (C2)
-- 1,000-row update + forced draw median under 8 ms in scripts/perf-baseline.sh (C3)
-- Playground packaged app launches and every story renders (native-mvp-smoke)
-- owner manual checks done: VoiceOver, File drop (see docs/TICKETS.md Follow-ups)
-- version, tag and release notes published (C4)
+- [x] scripts/check.sh and ./scripts/verify-release.sh source pass on the release commit
+- [x] external consumer builds as a Git dependency without [patch] (C2)
+- [x] 1,000-row update + forced draw median ≤ 8.1 ms in scripts/perf-baseline.sh (owner accepted 8.03 ms in C3, PR #32)
+- [ ] Playground packaged app launches and every story renders (native-mvp-smoke)
+- [ ] owner manual checks done: VoiceOver, File drop (see docs/TICKETS.md Follow-ups)
+- [ ] version, tag and release notes published (C4)
 
 A successful build or a bounded GUI exercise does not close unrelated requirements.
 
