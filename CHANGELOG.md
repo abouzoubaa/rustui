@@ -1,5 +1,7 @@
 # Changelog
 
+- Verified live theme auto-reload, stop, visible invalid-update recovery and owner release with deterministic GPUI-window tests.
+
 - Reviewed framework tools R22–R26, verified native preview/composition and explicit theme reload paths, and identified deferred adapter and automatic-reload coverage work.
 
 - Audited owner async task cancellation, restart, errors, re-render stability and release with a deterministic GPUI-window matrix.

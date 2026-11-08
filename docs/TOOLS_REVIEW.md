@@ -1,11 +1,12 @@
 # Framework tools review (T9R)
 
-Review of the current native source and tests. No product code, public API,
-capability status, roadmap, or verification scripts changed. Physical line counts
+T9R reviewed the native source and tests; R26 subsequently completed the native
+automatic-reload coverage below. No production behavior, public API, capability
+status, or verification scripts changed. Physical line counts
 include inline tests and comments; shared files are identified rather than counted
 as separate implementations. PASS below applies to the stated focused path, not
-unmeasured visual, accessibility, or performance acceptance. No failing test or
-compiler error was observed in the focused runs.
+unmeasured visual, accessibility, or performance acceptance. The T9R focused runs
+and the two executed R26 cases have no failing assertions.
 
 | Tool | Works? | Tests exercised now | Used by | Recommendation |
 | --- | --- | --- | --- | --- |
@@ -13,10 +14,13 @@ compiler error was observed in the focused runs.
 | R23 compiled preview/inspector | PASS: property feedback → export → reimport; initial story draw | 4 host + 103 gallery; shared draw smoke | Playground Layout story; component specimens | KEEP |
 | R24 structural composition editing | PASS: add/move/remove/rename → compiled factory; codec/remount | 16 core + 4 story; shared draw smoke | Playground Layout story; deferred reference adapter | KEEP |
 | R25 external consumer adapter | deferred platform; end-to-end NOT VERIFIED | 9 native protocol fixtures pass in global check; 10 JS fixtures not run | Playground reference host/client; not the standalone external-consumer example | DEFER |
-| R26 live theme/data reload | PASS: explicit file reload and invalid-update recovery; automatic dispatched path NOT VERIFIED | 10 file + 3 ownership + 3 inspector; shared draw smoke | Playground Divider/Theme Layout demo; ThemeFile public API | FIX |
+| R26 live theme/data reload | PASS: automatic rendered updates, stop, visible error/recovery and owner release | 2 new deterministic window tests; 16 existing reload tests and shared smoke in workspace check | Playground Divider/Theme Layout demo; ThemeFile public API | KEEP |
 
-The shared smoke is one test, not three additional tests. The seven focused
+The shared smoke is one test, not three additional tests. The seven T9R focused
 commands exercised **178 distinct tests: 178 passed, 0 failed, 0 ignored**.
+R26 adds two deterministic window tests; its current focused and workspace results
+are recorded below. R22–R25 measurements and focused commands retain their T9R
+review context.
 The required workspace check also exercises native protocol fixtures; that is
 source coverage, not execution or acceptance of R25's deferred adapter path.
 
@@ -371,85 +375,94 @@ Public entry points: `rustui::theme::{ThemeFile,ThemeFileError}` with
 uses `parse_theme`, `load_theme`, `serialize_theme`, `activate_theme`, and
 `theme::registry::{active_theme,theme_coverage}`. `ReloadState`, `ReloadLease`,
 `FoundationAdditions::{reload_action,toggle_auto_action}`, and the theme inspector
-are private Playground implementation details. `ThemeFile` explicitly does not
-create a watcher; the caller chooses when to reload. The native Playground
-uses `RUSTUI_THEME_RELOAD_PATH` when set, otherwise its resolved
+are private Playground implementation details. `ThemeFile` does not create a
+watcher; the caller chooses when to reload. Native Playground uses
+`RUSTUI_THEME_RELOAD_PATH` when set, otherwise its resolved
 `themes/macos27.json` resource path.
+
+Current R26 source/test measurements:
 
 ```sh
 wc -l crates/rustui/src/theme/watcher.rs \
-  apps/rustui-playground/src/stories/{foundation_additions,theme_inspector}.rs
+  apps/rustui-playground/src/stories/{foundation_additions,theme_inspector,theme_reload_tests}.rs
 ```
 
 ```text
  559 crates/rustui/src/theme/watcher.rs
- 710 apps/rustui-playground/src/stories/foundation_additions.rs
+ 714 apps/rustui-playground/src/stories/foundation_additions.rs
  353 apps/rustui-playground/src/stories/theme_inspector.rs
-1622 total
+ 357 apps/rustui-playground/src/stories/theme_reload_tests.rs
+1983 total
 ```
 
-Shared theme support, measured with `wc -l crates/rustui/src/theme/*.rs`:
-`invalidation.rs` 13, `loader.rs` 367, `mod.rs` 25, `registry.rs` 999,
-`resolver.rs` 1003, `schema.rs` 2450, `tokens.rs` 360; the whole theme directory
-including `watcher.rs` is 5,776 lines. These files also support ordinary theming.
+Shared theme support, measured in T9R: `invalidation.rs` 13, `loader.rs` 367,
+`mod.rs` 25, `registry.rs` 999, `resolver.rs` 1003, `schema.rs` 2450,
+`tokens.rs` 360. The whole theme directory including `watcher.rs` is 5,776 lines.
 
-Test files/counts: `watcher.rs` **10** (three GPUI app tests and seven unit tests),
-`foundation_additions.rs` **3**, `theme_inspector.rs` **3**, plus the shared initial
-draw smoke. Shared theme parsing/resolution/registry tests also run in check.sh;
-they are not counted as additional reload-path tests here.
+Existing coverage: `watcher.rs` 10 tests (three GPUI app and seven unit tests),
+`foundation_additions.rs` 3 ownership/status tests, `theme_inspector.rs` 3 tests,
+and one shared registered-story draw smoke. T9R's focused runs passed these 16
+reload tests and the smoke; the current workspace check reruns them. The two new
+cases are together in `theme_reload_tests.rs`, linked by a test-only module
+in `foundation_additions.rs`.
 
 ```sh
-rustup run 1.97.1 cargo test -p rustui --lib theme::watcher:: --locked --offline
-rustup run 1.97.1 cargo test -p rustui-playground --lib foundation_additions --locked --offline
-rustup run 1.97.1 cargo test -p rustui-playground --lib theme_inspector --locked --offline
+rustup run 1.97.1 cargo test -p rustui-playground --lib theme_reload_tests --locked --offline
 ```
 
 ```text
-watcher_exit=0; 10 passed; 0 failed; 0 ignored
-foundation_exit=0; 3 passed; 0 failed; 0 ignored
-inspector_exit=0; 3 passed; 0 failed; 0 ignored
+focused_exit=0
+auto_reload_updates_mounted_swatch_and_stops ... ok
+invalid_reload_recovers_and_unmount_releases_owner ... ok
+2 passed; 0 failed; 0 ignored
 ```
 
-**End-to-end PASS for explicit reload**:
-`theme::watcher::tests::file_reload_recovers_after_invalid_update_in_app` writes a
-real temporary theme file, calls the public reload method in a GPUI app, rejects
-invalid JSON without changing the active revision/document, repairs the file,
-and observes an active revision increment for changed valid source. The final
-change is trailing whitespace, not a changed rendered color. The forced-reload
-test separately restores Light after another activation selected Dark.
+**End-to-end PASS**, using the actual rendered Playground controls and polling
+loop in GPUI test windows. Each case mounts the real `FoundationAdditions` owner
+and a normal RustUI `Container` swatch. A private test fixture points the owner at
+an owned temporary theme file, without setting process environment or changing
+public APIs. Raw mouse-down/up events target the rendered Start auto/Stop auto
+button bounds, invoking the existing `toggle_auto_action` through its real handler.
 
-**Automatic dispatched path NOT VERIFIED**: no existing focused test dispatches
-`toggle_auto_action`, advances its polling timer, changes a theme token, and
-asserts a mounted app updates. The only watcher lifecycle test,
-`reload_actions_do_not_keep_owner_alive_or_survive_unmount`, constructs the actions
-and checks weak leases/strong counts without dispatching either action. This is
-a coverage gap, not an observed runtime failure; there is no failing assertion
-or error to quote. The initial-draw smoke does not enable automatic reload.
+The tests drain only runnable tasks through `TestAppContext::run_until_parked`
+and advance the fake clock explicitly. They do not use real sleeps or helpers
+that automatically advance to future timers. Both assert no reload at 349 ms,
+then change activation revision and color after advancing 2 ms further.
 
-Usage: `stories/mod.rs:115` maps Divider to the live-theme/layout demo, which also
-mounts `theme_inspector::demo`. `foundation_additions.rs:169,313` opens ThemeFile.
-`docs/PUBLIC_API.md:1515` describes transactional ThemeFile replacement; archived
-R26 notes contain the earlier reload investigation. The standalone
-external-consumer example only parses/activates its bundled theme; it does not
-reload. The tool is used, not dead code.
+- `auto_reload_updates_mounted_swatch_and_stops`: changes the Light
+  `window_background` token, checks `ActiveTheme`'s revision and exact token value,
+  and checks the new solid color on the mounted swatch's 41 × 29 logical-point
+  painted scene quad. The swatch's ordinary `ComponentHost` must re-render.
+  Clicking Stop auto removes its polling task; another file edit and four polling
+  intervals leave both the active theme and painted swatch unchanged.
+- `invalid_reload_recovers_and_unmount_releases_owner`: while polling, writes
+  invalid JSON and verifies the active revision/token, last-good ThemeFile document,
+  and painted swatch remain unchanged. It asserts stored error state and the
+  reload error in rendered control accessibility labels. A valid changed token
+  increments the active revision, paints the new color, and clears stored and
+  rendered errors. It then removes the owner view with polling still enabled,
+  drains runnable work, and asserts both its weak GPUI entity and weak reload
+  state can no longer upgrade. Later file edits and four intervals cannot cause
+  another activation; the remaining swatch retains the recovered color.
 
-Old row R26 (`:4444`) said ownership/unit checks did not establish dispatched
-native event-path acceptance and invalid-update recovery remained open. Recovery
-is now verified for the explicit public API and inspector state. The dispatched
-automatic path and actual changed-token rendering remain open.
+Paint assertions inspect the actual rendered scene through `painted_quads`, not
+just parsed JSON or a test-only color renderer. This is deterministic native
+render-path coverage, not OS compositor or pixel-rasterization acceptance.
 
-**Recommendation: FIX**, as two independently bounded follow-up tickets:
+Usage remains the same: `stories/mod.rs:115` maps Divider to this live-theme/layout
+demo and its theme inspector; `foundation_additions.rs:169,313` opens ThemeFile.
+`docs/PUBLIC_API.md:1515` describes transactional ThemeFile replacement. The
+standalone external-consumer example only parses/activates its bundled theme;
+it does not reload. The tool is used, not dead code.
 
-1. **At most 2 hours:** add a deterministic GPUI-window test dispatching the
-   Playground auto action against a temporary theme file; advance executor time,
-   change a visible token, and assert both ActiveTheme and a mounted view update.
-   Stop the watcher and prove later file edits do not activate a theme.
-2. **At most 2 hours:** extend that dispatched path with invalid JSON → preserved
-   last-good theme/error → repaired valid data/error cleared, then remove the
-   owner while polling and verify no task/owner retention or later activation.
-
-These are test/verification repairs; this review found no justified production
-fix or need to add a generic reload API.
+Old audit row R26 (`docs/archive/tasks/ROADMAP_REMAINING_AUDIT.md:4444`) left
+native dispatched reload, invalid-update recovery and broader acceptance open.
+T9R verified explicit reload but identified the missing dispatched automatic
+path. R26 now verifies that path, real changed-token rendering, visible error
+recovery, stop, and owner release. Both proposed follow-ups are complete; no
+production bug was exposed, no production fix was made, and there are no R26b
+ignores or remainders. `docs/status.json` stays unchanged because behavior is
+unchanged. **Recommendation: KEEP**.
 
 ## Required check
 
@@ -463,13 +476,14 @@ check_exit=0
    9 passed; 0 failed; 0 ignored  (rustui-core)
   86 passed; 0 failed; 0 ignored  (rustui-i18n)
   40 passed; 0 failed; 0 ignored  (rustui-macros)
- 253 passed; 0 failed; 0 ignored  (rustui-playground)
+ 255 passed; 0 failed; 0 ignored  (rustui-playground)
    0 passed; 0 failed; 0 ignored  (rustui-rgpe)
 ```
 
-Total: **1,809 passed, 0 failed, 4 existing ignored**. Formatting and the locked,
+Current R26 total: **1,811 passed, 0 failed, 4 existing ignored**. Formatting and the locked,
 offline workspace all-target check also exited 0 through this script.
-No tests were added, removed, changed, or newly ignored for this review.
+R26 adds only the two test cases above; no existing tests were removed, changed,
+or newly ignored.
 
-Before merging, `./scripts/verify-release.sh source` also exited 0;
-its script-test suite reported `Ran 644 tests` and `OK`.
+Current R26 `./scripts/verify-release.sh source`: exit 0; its script-test suite
+reported `Ran 644 tests` and `OK`.
