@@ -2,6 +2,8 @@
 
 ## 0.2.0 — 2026-11-09
 
+- Added the A2-4d Kit 0.8 candidate menu patches with a disabled-confirm proof and cumulative compile gate.
+
 - Improved source CI cache reuse with workspace artifact caching and stable checkout mtimes.
 
 - Rebased Button disabled focus recovery for GPUI Kit 0.8 while preserving upstream #3606 traversal behavior.

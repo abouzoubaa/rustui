@@ -362,7 +362,7 @@ After those patch-only fixes, `python3 scripts/check_kit08_kit_stack.py --compil
 
 ### Approved patch destination ledger (71 patches)
 
-Every approved patch has exactly one destination. **Totals after A2-4c: CANDIDATE 19 / REMAINDER 0 / A2-4 QUEUE 38 / OBSOLETE 5 / PARKED 5 / POPUP STAGE 4 = 71.** `t13-modal-focus-recovery-v1.patch` is assigned to the **A2-4 QUEUE — Dialog / modal focus** despite its GPUI-pre focus hunks; `a11y-validation-grid-v1.patch` is assigned to the **A2-4 QUEUE — Input / validation / DataGrid** despite its GPUI-pre accessibility-tree hunks. Their feature families are outside A2-2 core candidate scope.
+Every approved patch has exactly one destination. **Totals after A2-4d: CANDIDATE 23 / REMAINDER 0 / A2-4 QUEUE 34 / OBSOLETE 5 / PARKED 5 / POPUP STAGE 4 = 71.** `t13-modal-focus-recovery-v1.patch` is assigned to the **A2-4 QUEUE — Dialog / modal focus** despite its GPUI-pre focus hunks; `a11y-validation-grid-v1.patch` remains assigned to the **A2-4 QUEUE — Input / validation / DataGrid** despite its GPUI-pre accessibility-tree hunks. Their feature families were outside A2-2 core candidate scope.
 
 ### A2-4 families
 
@@ -374,7 +374,7 @@ The queue is split into isolated candidate stacks. Each ticket is estimated at n
 | A2-4b — Sheet accessibility | `gpui-component-sheet-close-accessibility-v2.patch` | None | 1h |
 | A2-4c0 — GPUI core aria-disabled dependency | GPUI-pre hunk split from `gpui-tree-aria-disabled-v1.patch` as `gpui-tree-aria-disabled-v1-kit08.patch` | Base Tree-row delta stays for A2-4g. | 1h |
 | A2-4c — Button / sidebar / breadcrumb disabled behavior | `r15-button-disabled-focus-v1-kit08.patch` → `r15-sidebar-disabled-v1.patch` → `r15-breadcrumb-disabled-v1.patch` | Button: GPUI Base 0.8.1 includes #3606 focus-binding retention; the Component patch adds immediate focus recovery. Sidebar/Breadcrumb use the core `aria_disabled` API supplied by A2-4c0. | 1.5h |
-| A2-4d — Menus / popup items | `gpui-component-popup-menu-disabled-confirm-v1.patch` → `r15b-menu-item-disabled-v1.patch` → `r15b-popup-menu-recovery-v1.patch` → `r15b-dropdown-menu-refresh-v1.patch` | Core `aria_disabled` is provided by A2-4c0; popup recovery provides `rebuild_preserving_selection` to dropdown refresh. | 1.5h |
+| A2-4d — Menus / popup items | `gpui-component-popup-menu-disabled-confirm-v1.patch` → `r15b-menu-item-disabled-v1.patch` → `r15b-popup-menu-recovery-v1.patch` → `r15b-dropdown-menu-refresh-v1.patch` | Core `aria_disabled` is provided by A2-4c0; popup recovery provides `rebuild_preserving_selection` to dropdown refresh. | DONE: 1 rebased, 3 copied; `disabled_selected_popup_menu_item_ignores_confirm` passed on the patched fixture; compile gate and exact reverse passed. |
 | A2-4e — Select / Picker popup layout | `gpui-component-select-popup-rtl-v1.patch` → `gpui-component-select-rtl-alignment-v1.patch` → `gpui-component-select-rtl-alignment-v2.patch` → `gpui-component-select-rtl-alignment-v3.patch` → `gpui-component-select-rtl-auto-width-v4.patch` → `gpui-component-select-rtl-auto-width-v6.patch` | None | 2h |
 | A2-4f — Selectable list semantics | `gpui-selectable-list-semantics-v2.patch` | None | 1h |
 | A2-4g — Tree | `gpui-component-tree-accessible-name-v1.patch` → `gpui-tree-aria-disabled-v1.patch` (Base Tree-row delta only) → `gpui-tree-aria-level-v1.patch` → `gpui-tree-disabled-keyboard-v2.patch` → `r15-tree-disabled-focus-v1.patch` | Core `aria_disabled` comes from A2-4c0; Tree-row delta must precede the aria-level patch, whose context uses that row call. #3531 covers Switch. | 2h |
@@ -416,7 +416,7 @@ Original queue total: **45 patches**. A2-4a is first because its tracked dialog 
 | `gpui-component-date-picker-accessibility-v1.patch` | A2-4 QUEUE — Calendar / DatePicker |
 | `gpui-component-date-picker-localization-v2.patch` | A2-4 QUEUE — Calendar / DatePicker |
 | `gpui-component-date-picker-rtl-alignment-v1.patch` | A2-4 QUEUE — Calendar / DatePicker |
-| `gpui-component-popup-menu-disabled-confirm-v1.patch` | A2-4 QUEUE — Menu |
+| `gpui-component-popup-menu-disabled-confirm-v1.patch` | CANDIDATE — `patches/candidate-kit-0.8/gpui-component-popup-menu-disabled-confirm-v1-kit08.patch` |
 | `gpui-component-select-committed-title-v1.patch` | OBSOLETE — A2-3 |
 | `gpui-component-select-popup-rtl-v1.patch` | A2-4 QUEUE — Picker / ComboBox |
 | `gpui-component-select-rtl-alignment-v1.patch` | A2-4 QUEUE — Picker / ComboBox |
@@ -456,9 +456,9 @@ Original queue total: **45 patches**. A2-4a is first because its tracked dialog 
 | `r15-sidebar-disabled-v1.patch` | CANDIDATE — `patches/candidate-kit-0.8/r15-sidebar-disabled-v1.patch` |
 | `r15-test-tree-disabled-v1.patch` | CANDIDATE — `patches/candidate-kit-0.8/r15-test-tree-disabled-v1-kit08.patch` |
 | `r15-tree-disabled-focus-v1.patch` | A2-4 QUEUE — Tree |
-| `r15b-dropdown-menu-refresh-v1.patch` | A2-4 QUEUE — Menu |
-| `r15b-menu-item-disabled-v1.patch` | A2-4 QUEUE — Menu |
-| `r15b-popup-menu-recovery-v1.patch` | A2-4 QUEUE — Menu |
+| `r15b-dropdown-menu-refresh-v1.patch` | CANDIDATE — `patches/candidate-kit-0.8/r15b-dropdown-menu-refresh-v1.patch` |
+| `r15b-menu-item-disabled-v1.patch` | CANDIDATE — `patches/candidate-kit-0.8/r15b-menu-item-disabled-v1.patch` |
+| `r15b-popup-menu-recovery-v1.patch` | CANDIDATE — `patches/candidate-kit-0.8/r15b-popup-menu-recovery-v1.patch` |
 | `t13-modal-focus-recovery-v1.patch` | CANDIDATE — `patches/candidate-kit-0.8/t13-modal-focus-recovery-v1-kit08.patch` |
 | `t17-inert-focus-scope-v1.patch` | CANDIDATE — `patches/candidate-kit-0.8/t17-inert-focus-scope-v1-kit08.patch` |
 
@@ -466,10 +466,16 @@ A2-2b rebased `t17-inert-focus-scope-v1.patch` against the 0.3.10 `TabStopMap` o
 
 Anchored-popup v1–v4 remain excluded for the native-popups stage; the v5 proposal is unchanged. The five patches under “Parked for later stages” remain untouched. Mixed GPUI Base/Component accessibility and modal patches remain assigned to A2-4.
 
+### A2-4d result — Menus / popup items
+
+- Rebased `gpui-component-popup-menu-disabled-confirm-v1` against GPUI Component 0.8.1 and copied the three R15b menu patches unchanged, preserving provider-before-consumer ordering.
+- `disabled_selected_popup_menu_item_ignores_confirm` passed in the disposable patched fixture; the full stack compiled offline locally and reverse application restored the fixture exactly. CI uses `--compile-online` because its Cargo cache lacks `aho-corasick` and the offline registry lookup fails.
+- Remaining A2-4 QUEUE after A2-4d: 34 patches.
+
 ### A2-4c result — Button / Sidebar / Breadcrumb
 
 - Reclassified `r15-button-disabled-focus-v1` from PARTIAL to REBASE after inspecting GPUI Kit #3606 in the pinned v0.8.1 fixture: GPUI Base preserves the focused binding/tab traversal; it does not move focus immediately. The candidate Component patch adds only the immediate `window.focus_next(cx)` recovery when the focused Button renders disabled.
 - Copied the Sidebar and Breadcrumb patches unchanged. The `aria_disabled` core provider from A2-4c0 precedes both consumers.
 - Focus proof passed in a disposable 0.3.10/0.8.1 workspace with all core and A2-4a/b/c patches applied: `disabling_a_focused_button_moves_focus_to_the_next_control` (1 passed).
 - Stack check and offline Base/Component compile gate passed: 13 core, 2 A2-4a, 1 A2-4b, 3 A2-4c; 31 archives verified; 30 target files hashed; 34 stack files; exact reverse.
-- Remaining A2-4 QUEUE after A2-4c: 38 patches.
+- Remaining A2-4 QUEUE after A2-4d: 34 patches.
