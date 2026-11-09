@@ -27,6 +27,7 @@ case "${1:-}" in
     python3 scripts/apply_gpui_modal_focus_recovery_patch.py --verify
     python3 scripts/apply_gpui_inert_focus_scope_patch.py --verify
     python3 scripts/apply_gpui_validation_grid_a11y_patch.py --verify
+    python3 scripts/apply_g10_parent_node_id_v1_patch.py --verify
     python3 scripts/verify_owned_gpui_sources.py
     verify_tree_accessibility_series
     python3 scripts/apply_block_stack_symbol_patch.py --verify
@@ -53,7 +54,7 @@ case "${1:-}" in
     python3 scripts/apply_gpui_base_resize_first_move.py --verify
     python3 scripts/apply_gpui_base_slider_set_value_v2_patch.py --verify
     python3 scripts/apply_gpui_component_slider_accessibility_label_v2_patch.py --verify
-    python3 scripts/apply_r15_test_tree_disabled_v1_patch.py --verify
+    python3 scripts/verify_g10_grid_debug_patch_stack.py
     python3 scripts/apply_r15_button_disabled_focus_v1_patch.py --verify
     python3 scripts/apply_r15_breadcrumb_disabled_v1_patch.py --verify
     python3 scripts/apply_r15_sidebar_disabled_v1_patch.py --verify
@@ -106,7 +107,7 @@ PY
     python3 scripts/apply_gpui_base_resize_first_move.py --verify
     python3 scripts/apply_gpui_base_slider_set_value_v2_patch.py --verify
     python3 scripts/apply_gpui_component_slider_accessibility_label_v2_patch.py --verify
-    python3 scripts/apply_r15_test_tree_disabled_v1_patch.py --verify
+    python3 scripts/verify_g10_grid_debug_patch_stack.py
     python3 scripts/apply_r15_button_disabled_focus_v1_patch.py --verify
     python3 scripts/apply_r15_breadcrumb_disabled_v1_patch.py --verify
     python3 scripts/apply_r15_sidebar_disabled_v1_patch.py --verify
@@ -126,6 +127,7 @@ PY
     python3 scripts/apply_gpui_modal_focus_recovery_patch.py --verify
     python3 scripts/apply_gpui_inert_focus_scope_patch.py --verify
     python3 scripts/apply_gpui_validation_grid_a11y_patch.py --verify
+    python3 scripts/apply_g10_parent_node_id_v1_patch.py --verify
     # GPUI's pinned macOS backend rejects AnchoredPopup unless this approved
     # patch is active. Apply it after exact-source checks, and restore the
     # pinned source on exit, including failed builds and interrupts.

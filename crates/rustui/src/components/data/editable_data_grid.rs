@@ -1,5 +1,11 @@
 //! Owner-bound editable grid with stable row and column identities.
-use std::{cell::RefCell, cmp::Ordering, collections::HashSet, fmt::Display, rc::Rc};
+use std::{
+    cell::RefCell,
+    cmp::Ordering,
+    collections::{HashMap, HashSet},
+    fmt::Display,
+    rc::Rc,
+};
 
 use gpui::prelude::FluentBuilder as _;
 use gpui::{
@@ -199,6 +205,7 @@ struct GridState<R: Clone + 'static> {
     view_order: Vec<SharedString>,
     sort: Option<(SharedString, ColumnSort)>,
     header_focus: Vec<FocusHandle>,
+    header_nodes: Rc<RefCell<HashMap<usize, gpui::accesskit::NodeId>>>,
     row_id: RowIdentity<R>,
     columns: Rc<Vec<DataGridColumn<R>>>,
     active: Option<(SharedString, SharedString)>,
@@ -774,8 +781,11 @@ impl<R: Clone + 'static> TableDelegate for EditableGridDelegate<R> {
     fn render_header(
         &mut self,
         _window: &mut Window,
-        _cx: &mut Context<TableState<Self>>,
+        cx: &mut Context<TableState<Self>>,
     ) -> Stateful<gpui::Div> {
+        if let Some(owner) = self.owner.upgrade() {
+            owner.read(cx).header_nodes.borrow_mut().clear();
+        }
         div()
             .id("editable-grid-header-row")
             .role(Role::Row)
@@ -818,9 +828,17 @@ impl<R: Clone + 'static> TableDelegate for EditableGridDelegate<R> {
             Some(ColumnSort::Descending) => format!("{}, descending", title),
             _ => title.to_string(),
         };
+        let header_nodes = grid.header_nodes.clone();
+        let header = grid_header_accessibility(col_ix, accessible_title).a11y_synthetic_children(
+            move |tree| {
+                header_nodes
+                    .borrow_mut()
+                    .insert(col_ix, tree.parent_node_id());
+            },
+        );
         if column.compare.is_none() {
             let selector = format!("editable-grid-header:{}", column.id);
-            return grid_header_accessibility(col_ix, accessible_title)
+            return header
                 .size_full()
                 .debug_selector(move || selector.clone())
                 .child(title)
@@ -831,7 +849,7 @@ impl<R: Clone + 'static> TableDelegate for EditableGridDelegate<R> {
         let click_owner = self.owner.clone();
         let key_owner = self.owner.clone();
         let selector = format!("editable-grid-header:{}", column.id);
-        grid_header_accessibility(col_ix, accessible_title)
+        header
             .when_some(
                 sort.map(|direction| match direction {
                     ColumnSort::Ascending => gpui::accesskit::SortDirection::Ascending,
@@ -929,7 +947,13 @@ impl<R: Clone + 'static> TableDelegate for EditableGridDelegate<R> {
         let cell_focus = grid.focus.clone();
         let weak = self.owner.clone();
         let selector = format!("editable-grid-cell:{key}:{column_key}");
+        let header_nodes = grid.header_nodes.clone();
         grid_cell_accessibility(row_ix, col_ix, accessible_label, selected)
+            .a11y_synthetic_children(move |tree| {
+                if let Some(header) = header_nodes.borrow().get(&col_ix).copied() {
+                    tree.parent_node().set_labelled_by(vec![header]);
+                }
+            })
             .aria_readonly(!column.editable)
             .w_full()
             .min_h(px(28.))
@@ -996,6 +1020,7 @@ impl<R: Clone + 'static> View for EditableDataGridView<R> {
                     .iter()
                     .map(|_| cx.focus_handle().tab_stop(true))
                     .collect(),
+                header_nodes: Rc::new(RefCell::new(HashMap::new())),
                 rows: initial_rows,
                 row_id,
                 columns: initial_columns,

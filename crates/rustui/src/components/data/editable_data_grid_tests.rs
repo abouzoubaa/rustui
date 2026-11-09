@@ -1320,3 +1320,55 @@ fn navigation_home_end_follow_logical_order_in_rtl(cx: &mut gpui::TestAppContext
         });
     });
 }
+
+#[gpui::test]
+fn grid_cells_reference_actual_header_nodes_across_updates(cx: &mut gpui::TestAppContext) {
+    fn assert_links(window: &mut gpui::VisualTestContext) -> usize {
+        let tree: serde_json::Value = window.update(|window, app| {
+            window.draw(app).clear(app);
+            serde_json::from_str(&window.debug_a11y_tree_json().unwrap()).unwrap()
+        });
+        let nodes = tree["nodes"].as_object().unwrap();
+        let mut cells = 0;
+        for cell in nodes.values().filter(|node| node["aria"]["role"] == "Cell") {
+            let header = nodes
+                .values()
+                .find(|node| {
+                    node["aria"]["role"] == "ColumnHeader"
+                        && node["aria"]["column_index"] == cell["aria"]["column_index"]
+                })
+                .expect("rendered cell column has a rendered header");
+            assert_eq!(
+                cell["labelled_by"],
+                serde_json::json!([header["accesskit_id"].as_str().unwrap()]),
+                "cell relation must target the actual header NodeId: {cell}"
+            );
+            assert!(
+                cell["aria"]["label"].as_str().unwrap().contains(", "),
+                "preserve the cell's existing value/name"
+            );
+            cells += 1;
+        }
+        assert!(cells >= 6, "expected all mounted cells");
+        cells
+    }
+    let (owner, window, _) = setup(cx);
+    assert_eq!(assert_links(window), 6);
+    for _ in 0..3 {
+        click_grid_header(window, "name");
+        assert_eq!(assert_links(window), 6);
+    }
+    window.update(|_, app| {
+        owner.update(app, |owner, cx| {
+            owner.component_mut().rows.push(Row {
+                id: "c",
+                name: "Gamma".into(),
+                quantity: 3,
+                note: "fixed C".into(),
+            });
+            cx.notify();
+        })
+    });
+    draw(window);
+    assert_eq!(assert_links(window), 9);
+}

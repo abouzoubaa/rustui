@@ -80,6 +80,10 @@ def mouse_prior_or_current(root, artifacts, relative, expected):
     if hashlib.sha256(data).hexdigest() == expected:
         return data
     if str(relative) == "vendor/gpui-pre-0.3.9/src/window/a11y/debug.rs":
+        try:
+            data = grid_debug_prior_or_current(root, artifacts, relative)
+        except (OSError, ValueError, KeyError, subprocess.CalledProcessError):
+            return data
         if not (artifacts / "patches/approved/r15-test-tree-disabled-v1.json").is_file():
             return data
         from approved_single_source_patch import run
@@ -119,3 +123,18 @@ def mouse_prior_or_current(root, artifacts, relative, expected):
     except (OSError, ValueError, KeyError, subprocess.CalledProcessError):
         pass
     return data
+
+
+def grid_debug_prior_or_current(root, artifacts, relative):
+    """Recover R15's exact debug source beneath G10, with full pinned replay."""
+    import contextlib
+    import io
+    root, artifacts, relative = Path(root), Path(artifacts), Path(relative)
+    data = (root / relative).read_bytes()
+    manifest = Path("patches/approved/g10-labelled-by-tree-v1.json")
+    if not (artifacts / manifest).is_file():
+        return data
+    from g10_owned_source_patch import vendor_prior_image
+    from apply_g10_labelled_by_tree_v1_patch import MANIFEST_SHA256
+    with contextlib.redirect_stdout(io.StringIO()):
+        return vendor_prior_image(root, artifacts, manifest, MANIFEST_SHA256)

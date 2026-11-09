@@ -372,6 +372,12 @@ impl<'a> A11ySubtreeBuilder<'a> {
         pushed
     }
 
+    /// The AccessKit ID of the real element whose node is being extended.
+    /// This identifies the existing node, rather than allocating a synthetic child.
+    pub fn parent_node_id(&self) -> NodeId {
+        self.parent_id
+    }
+
     /// A mutable reference to the parent node.
     pub fn parent_node(&mut self) -> &mut accesskit::Node {
         self.nodes
