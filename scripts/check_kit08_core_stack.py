@@ -44,6 +44,9 @@ LATER_FAMILY_CANDIDATES = {
     "t13-modal-focus-recovery-v1-kit08.patch",
     "gpui-component-tracked-dialog-focus-rebase-v2-kit08.patch",
     "gpui-component-sheet-close-accessibility-v2.patch",
+    "r15-button-disabled-focus-v1-kit08.patch",
+    "r15-sidebar-disabled-v1.patch",
+    "r15-breadcrumb-disabled-v1.patch",
 }
 
 
