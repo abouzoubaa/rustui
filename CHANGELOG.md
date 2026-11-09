@@ -1,5 +1,7 @@
 # Changelog
 
+- Added roadmap stages A–N, release targets, and two-hour ticket planning.
+
 - Converted gallery includes to modules, colocated overlay lifecycle tests, added described file acceptance, and linked editable-grid cells to their accessibility headers.
 
 - Verified live theme auto-reload, stop, visible invalid-update recovery and owner release with deterministic GPUI-window tests.
