@@ -2,6 +2,8 @@
 
 ## 0.2.0 — 2026-11-09
 
+- Added the Sheet close-button accessibility label patch to the GPUI Kit 0.8 candidate stack.
+
 - Fixed the GPUI Kit 0.8.1 candidate bidi layout and tracked-dialog compile blockers; added an optional Base/Component compile gate.
 
 - Added candidate GPUI Kit 0.8.1 modal focus recovery and tracked dialog closing patches.

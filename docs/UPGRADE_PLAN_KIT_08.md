@@ -325,6 +325,10 @@ Status: **copied 0 / rebased 2 / partial 0 / remainder 0**.
 
 Fixture stack proof passes. The t13 core behavior test passed in a disposable GPUI 0.3.10 test window (`cargo test -p a2-4a-modal-proof --test modal_scope`: 1 passed). A2-4-compat resolved the Base/Component source-graph errors; the tracked Component-dialog proof now passes in the patched fixture (`cargo test -p a2-4a-modal-proof --test tracked_dialog`: 1 passed).
 
+### A2-4b result — Sheet accessibility
+
+Copied the approved `gpui-component-sheet-close-accessibility-v2.patch` unchanged into the candidate stack (1 copied, 0 rebased, 0 partial, 0 remainder). Its test-window proof passed in the disposable 0.3.10/0.8.1 fixture: `sheet_close_accessibility_label_is_exposed_in_the_test_window_tree` (1 passed), asserting the accessibility tree exposes “Dismiss details.” The cumulative candidate stack applies and reverses exactly; the Base/Component compile gate is recorded by `scripts/check_kit08_kit_stack.py`.
+
 ### A2-4 compatibility check
 
 The optional fixture compile gate is `python3 scripts/check_kit08_kit_stack.py --compile`. It applies all 12 core candidates and both A2-4a candidates, reconstructs the verified crate archives in a disposable workspace, overlays the applied patch outputs, runs `cargo check --offline -p gpui-base -p gpui-component`, then verifies exact reverse application. Use `--compile-online` if the Cargo registry/index or dependency archives are not cached. Crate source archives are downloaded and SHA-256 checked by the fixture harness. In this run an initial Cargo resolution needed an online refresh for `gpui-fast-platform ^0.1.12`; after fetching that package metadata and dependencies, the compile gate passed offline.
@@ -341,7 +345,7 @@ After those patch-only fixes, `python3 scripts/check_kit08_kit_stack.py --compil
 
 ### Approved patch destination ledger (71 patches)
 
-Every approved patch has exactly one destination. **Totals: CANDIDATE 14 / REMAINDER 0 / A2-4 QUEUE 43 / OBSOLETE 5 / PARKED 5 / POPUP STAGE 4 = 71.** `t13-modal-focus-recovery-v1.patch` is assigned to the **A2-4 QUEUE — Dialog / modal focus** despite its GPUI-pre focus hunks; `a11y-validation-grid-v1.patch` is assigned to the **A2-4 QUEUE — Input / validation / DataGrid** despite its GPUI-pre accessibility-tree hunks. Their feature families are outside A2-2 core candidate scope.
+Every approved patch has exactly one destination. **Totals: CANDIDATE 15 / REMAINDER 0 / A2-4 QUEUE 42 / OBSOLETE 5 / PARKED 5 / POPUP STAGE 4 = 71.** `t13-modal-focus-recovery-v1.patch` is assigned to the **A2-4 QUEUE — Dialog / modal focus** despite its GPUI-pre focus hunks; `a11y-validation-grid-v1.patch` is assigned to the **A2-4 QUEUE — Input / validation / DataGrid** despite its GPUI-pre accessibility-tree hunks. Their feature families are outside A2-2 core candidate scope.
 
 ### A2-4 families
 
@@ -402,7 +406,7 @@ Queue totals by family: **45 patches**. A2-4a is first because its tracked dialo
 | `gpui-component-select-rtl-alignment-v3.patch` | A2-4 QUEUE — Picker / ComboBox |
 | `gpui-component-select-rtl-auto-width-v4.patch` | A2-4 QUEUE — Picker / ComboBox |
 | `gpui-component-select-rtl-auto-width-v6.patch` | A2-4 QUEUE — Picker / ComboBox |
-| `gpui-component-sheet-close-accessibility-v2.patch` | A2-4 QUEUE — Sheet |
+| `gpui-component-sheet-close-accessibility-v2.patch` | CANDIDATE — `patches/candidate-kit-0.8/gpui-component-sheet-close-accessibility-v2.patch` |
 | `gpui-component-slider-accessibility-label-v2.patch` | OBSOLETE — A2-3 |
 | `gpui-component-tracked-dialog-focus-rebase-v2.patch` | CANDIDATE — `patches/candidate-kit-0.8/gpui-component-tracked-dialog-focus-rebase-v2-kit08.patch` |
 | `gpui-component-tree-accessible-name-v1.patch` | A2-4 QUEUE — Tree |
