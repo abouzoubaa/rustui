@@ -1,5 +1,7 @@
 # Changelog
 
+- Assessed native macOS popup patch integration, existing coverage and bounded completion work; preserved remaining stash history and cleaned merged branches.
+
 - Reviewed and permanently archived old stash/presync/T11 sources; no recovery tickets remain, and native popup review stays pending.
 
 - Added roadmap stages A–N, release targets, and two-hour ticket planning.
