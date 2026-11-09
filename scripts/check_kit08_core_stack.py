@@ -36,6 +36,7 @@ CANDIDATE_ORDER = (
     "gpui-pre-web-accessible-name-v1.patch",
     "gpui-primary-mousedown-click-v2.patch",
     "r15-test-tree-disabled-v1-kit08.patch",
+    "t17-inert-focus-scope-v1-kit08.patch",
 )
 
 
