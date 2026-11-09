@@ -36,6 +36,10 @@ jobs:
         run: ./scripts/verify-release.sh source
       - name: Test the GPUI Kit 0.8.1 source fixture harness
         run: python3 -m unittest discover -s scripts/tests -p 'test_prepare_gpui_kit_08_fixture.py' -v
+      - name: Test the GPUI Kit 0.8 core patch stack
+        run: python3 -m unittest discover -s scripts/tests -p 'test_check_kit08_core_stack.py' -v
+      - name: Verify the GPUI Kit 0.8 core candidate stack
+        run: python3 scripts/check_kit08_core_stack.py
       - name: Stable Rust formatting, workspace check, and library tests
         run: ./scripts/check.sh
 

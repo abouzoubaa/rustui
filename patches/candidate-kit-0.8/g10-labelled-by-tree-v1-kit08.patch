@@ -1,0 +1,22 @@
+--- a/vendor/gpui-pre-0.3.10/src/window/a11y/debug.rs
++++ b/vendor/gpui-pre-0.3.10/src/window/a11y/debug.rs
+@@ -182,4 +182,8 @@
+     let mut map = serde_json::Map::new();
+     map.insert("accesskit_id".into(), json!(id.0.to_string()));
+ 
++    if !node.labelled_by().is_empty() {
++        map.insert("labelled_by".into(), json!(node.labelled_by().iter()
++            .map(|id| id.0.to_string()).collect::<Vec<_>>()));
++    }
+     let children: Vec<String> = node
+--- a/crates/rustui-gpui/src/window/a11y/debug.rs
++++ b/crates/rustui-gpui/src/window/a11y/debug.rs
+@@ -182,4 +182,8 @@
+     let mut map = serde_json::Map::new();
+     map.insert("accesskit_id".into(), json!(id.0.to_string()));
+ 
++    if !node.labelled_by().is_empty() {
++        map.insert("labelled_by".into(), json!(node.labelled_by().iter()
++            .map(|id| id.0.to_string()).collect::<Vec<_>>()));
++    }
+     let children: Vec<String> = node
