@@ -80,6 +80,10 @@ def mouse_prior_or_current(root, artifacts, relative, expected):
     if hashlib.sha256(data).hexdigest() == expected:
         return data
     if str(relative) == "vendor/gpui-pre-0.3.9/src/window/a11y/debug.rs":
+        try:
+            data = grid_debug_prior_or_current(root, artifacts, relative)
+        except (OSError, ValueError, KeyError, subprocess.CalledProcessError):
+            return data
         if not (artifacts / "patches/approved/r15-test-tree-disabled-v1.json").is_file():
             return data
         from approved_single_source_patch import run
@@ -119,3 +123,28 @@ def mouse_prior_or_current(root, artifacts, relative, expected):
     except (OSError, ValueError, KeyError, subprocess.CalledProcessError):
         pass
     return data
+
+
+def grid_debug_prior_or_current(root, artifacts, relative):
+    """Recover R15's exact debug source beneath G10, with full pinned replay."""
+    import contextlib
+    import io
+    import json
+    import tempfile
+    from approved_single_source_patch import run
+    from apply_g10_labelled_by_tree_v1_patch import MANIFEST, MANIFEST_SHA256
+    root, artifacts, relative = Path(root), Path(artifacts), Path(relative)
+    data = (root / relative).read_bytes()
+    if not (artifacts / MANIFEST).is_file():
+        return data
+    with tempfile.TemporaryDirectory(prefix="g10-grid-debug-prior-") as tmp:
+        stage = Path(tmp)
+        source = stage / relative
+        source.parent.mkdir(parents=True)
+        source.write_bytes(data)
+        with contextlib.redirect_stdout(io.StringIO()):
+            run(stage, artifacts, MANIFEST, MANIFEST_SHA256, "--check")
+            meta = json.loads((artifacts / MANIFEST).read_text())
+            if hashlib.sha256(data).hexdigest() == meta["post_sha256"]:
+                run(stage, artifacts, MANIFEST, MANIFEST_SHA256, "--reverse")
+        return source.read_bytes()

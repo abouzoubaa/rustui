@@ -84,3 +84,9 @@ RTL proposals in this inventory either include deferred platform paths or alread
 - `r15b-menu-item-disabled-v1.patch`: promoted; popup-menu item nodes forward the existing aria-disabled property.
 - `r15b-popup-menu-recovery-v1.patch`: promoted; live rebuilds retain focus and choose the next enabled item or no selection; arrow and hover selection skip disabled items. Exact replay preserves the earlier disabled-confirm patch beneath it.
 - `r15b-dropdown-menu-refresh-v1.patch`: promoted; RustUI opts into refreshing live item descriptors while retaining the menu entity and focus handle.
+
+## G10 — cell/header relations
+
+- `g10-parent-node-id-v1`: promoted; exposes the actual current element node ID to its accessibility callback.
+- `g10-labelled-by-tree-v1`: promoted; exposes actual labelled-by IDs in test-window tree inspection, stacked over the approved R15 disabled/bounds layer.
+- Disposable-worktree grid tree, full stable checks and source-release gates passed; apply/reverse/tamper script tests and owned mirrors are complete.

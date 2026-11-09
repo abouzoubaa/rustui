@@ -25,6 +25,8 @@ class DisabledControlPatchTests(unittest.TestCase):
                 source = root / meta["source"]
                 source.parent.mkdir(parents=True)
                 shutil.copyfile(ROOT / meta["source"], source)
+                if meta["source"] == "vendor/gpui-pre-0.3.9/src/window/a11y/debug.rs":
+                    subprocess.run([sys.executable, str(ROOT / "scripts/apply_g10_labelled_by_tree_v1_patch.py"), "--root", str(root), "--artifacts", str(ROOT), "--reverse"], check=True, capture_output=True)
                 command = [sys.executable, str(ROOT / "scripts" / script), "--root", str(root), "--artifacts", str(ROOT)]
                 for mode in ("--check", "--verify", "--reverse", "--check", "--apply", "--verify"):
                     result = subprocess.run(command + [mode], capture_output=True, text=True)

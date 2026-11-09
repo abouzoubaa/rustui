@@ -15,7 +15,7 @@ Work one item at a time; each item becomes a ticket in docs/TICKETS.md before wo
 7. Done (R15/R15b): disabled-control focus, dropdown/popover re-enable, popup-menu disabled accessibility and live selection recovery; see docs/DISABLED_AUDIT.md.
 8. Done (R20): async task ownership, cancellation, generation-safe restart, error recovery and owner release verified for both public starters; see docs/ASYNC_AUDIT.md.
 9. Done (T9R/R26): framework tools reviewed and native live theme reload verified with deterministic rendered-window, recovery and unmount tests; the external adapter remains deferred per docs/TOOLS_REVIEW.md.
-10. G10: gallery modules done (103 tests and identical registration-order dump); test locations done (5 Popover and 4 Menu tests); file-drop description done (11 tests, formerly 9); cell-header relation pending.
+10. G10: gallery modules done (103 tests and identical registration-order dump); test locations done (5 Popover and 4 Menu tests); file-drop description done (11 tests, formerly 9); cell-header relation done (actual header NodeIds; 32 grid tests, formerly 31; two GPUI patches promoted).
 11. Review parked work: `wip/stash-2026-10-26` and a decision on `wip/native-macos-popups`.
 
 <!-- Preserve item 18's number when rendered as Markdown. -->

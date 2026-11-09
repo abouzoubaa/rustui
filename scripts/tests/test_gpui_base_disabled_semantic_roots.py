@@ -21,6 +21,7 @@ class DisabledSemanticRoots(unittest.TestCase):
   for name in ('vendor/gpui-pre-0.3.9/src/window/a11y/debug.rs','vendor/gpui-component-0.7.3/src/input/input.rs'):
    target=self.root/name;target.parent.mkdir(parents=True,exist_ok=True);shutil.copy2(ROOT/name,target)
   import subprocess,sys
+  subprocess.run([sys.executable,str(ROOT/'scripts/apply_g10_labelled_by_tree_v1_patch.py'),'--root',str(self.root),'--artifacts',str(ROOT),'--reverse'],check=True,capture_output=True)
   subprocess.run([sys.executable,str(ROOT/'scripts/apply_r15_test_tree_disabled_v1_patch.py'),'--root',str(self.root),'--artifacts',str(ROOT),'--reverse'],check=True,capture_output=True)
   self.meta=PATCH.load(self.root,self.art)
   if PATCH.identify(self.image(),self.meta)=='pre':self.run_mode('--apply')

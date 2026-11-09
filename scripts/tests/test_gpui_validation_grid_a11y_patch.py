@@ -36,6 +36,7 @@ class ValidationGridA11yPatchTests(unittest.TestCase):
             target = self.artifacts / relative
             target.parent.mkdir(parents=True, exist_ok=True)
             shutil.copy2(ROOT / relative, target)
+        subprocess.run([sys.executable, str(ROOT / "scripts/apply_g10_labelled_by_tree_v1_patch.py"), "--root", str(self.root), "--artifacts", str(ROOT), "--reverse"], check=True, capture_output=True)
         subprocess.run([sys.executable, str(ROOT / "scripts/apply_r15_test_tree_disabled_v1_patch.py"), "--root", str(self.root), "--artifacts", str(ROOT), "--reverse"], check=True, capture_output=True)
         subprocess.run([sys.executable, str(ROOT / "scripts/apply_gpui_primary_mousedown_click_v2_patch.py"), "--root", str(self.root), "--artifacts", str(ROOT), "--reverse"], check=True, capture_output=True)
         if HELPER.digest((self.root / next(iter(self.meta["files"]))).read_bytes()) == next(iter(self.meta["files"].values()))["post"]:
