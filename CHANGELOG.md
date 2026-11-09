@@ -2,6 +2,8 @@
 
 ## 0.2.0 — 2026-11-09
 
+- Added a hash-pinned GPUI Kit 0.8.1 source harness and staged deferred-platform patches for A2-7.
+
 - Reclassified all approved GPUI patches against 0.8.1 behavior, separating upstream-fixed, partial, and still-needed changes.
 
 - Added a source-verified GPUI Kit 0.8.1 upgrade plan, patch compatibility matrix and bounded migration sequence.

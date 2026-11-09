@@ -241,6 +241,18 @@ Required RustUI regressions for retiring OBSOLETE patches (the Select trigger re
 | `gpui-component-slider-accessibility-label-v2.patch` | `components::input::slider::rustui_slider_exposes_owner_accessibility_label` |
 | `gpui-component-select-committed-title-v1.patch` | Add/retain `picker_trigger_uses_committed_selection_while_filter_cursor_moves` in the Picker component ticket. |
 
+### Parked for later stages
+
+These patches remain unchanged and active in `patches/approved/` during A2-1 through A2-6. A2-7 moves them unchanged, with their manifests, into `patches/parked/`.
+
+| Patch | Reason |
+|---|---|
+| `gpui-pre-web-enter-composition-v1.patch` | Its only target is the deferred platform event adapter. |
+| `gpui-pre-web-keyboard-focus-activation-v3.patch` | Its targets are confined to the deferred platform window and event adapter. |
+| `gpui-pre-web-noopener-v1.patch` | Its only target is deferred-platform window creation. |
+| `gpui-web-combobox-enter-v1.patch` | UNKNOWN in the intent review; its target source path was removed in 0.8.1 and belongs to the deferred platform adapter. |
+| `gpui-web-semantic-adapter-v9.patch` | UNKNOWN in the intent review; its cross-crate adapter paths were reorganized, and the owner directed this unresolved platform patch to remain parked. |
+
 ## 4. RustUI API impact
 
 Release notes v0.8.1 “Breaking Changes” and “Upstream GPUI compatibility” describe these changes ([release notes](https://github.com/longbridge/gpui-kit/releases/tag/v0.8.1)):
@@ -271,7 +283,7 @@ Before source migration, create and push an annotated archive tag at the verifie
 
 Prepare target files and patch rebases as inert proposals first. Do not replace the active dependency graph until a complete candidate passes on one integration branch; each preparation PR should affect only proposal tooling/data and leave current sources/build graph intact.
 
-1. **A2-1 — Snapshot and rebase harness (≤2h):** download/pin exact v0.8.1/0.3.10 sources in a temporary fixture; add an inventory/check command or fixture test for target paths and hashes. Current source remains selected; CI validates the harness.
+1. **A2-1 — Snapshot and rebase harness (≤2h):** pin the exact GPUI Kit v0.8.1 / gpui-pre 0.3.10 crate archives by SHA-256; add a temporary-fixture download/check command and an inventory of approved patch target paths with source hashes; add source-gate tests for a mismatched archive hash and a missing file. Current source remains selected; CI validates the harness. Deferred-platform patches are listed under “Parked for later stages” and remain unchanged until A2-7.
 2. **A2-2 — Rebase remaining GPUI core/platform patches (≤2h):** rebase still-needed core, macOS, platform, text and input patches into proposed patches; resolve the two UNKNOWN relocated-source intents first; per-stack disposable apply scripts/tests/manifests; no activation. Split by family if any series exceeds the timebox.
 3. **A2-3 — Retire OBSOLETE patches (≤2h):** remove the five obsolete patch/manifests/scripts/tests from the candidate only after their listed RustUI regressions pass against v0.8.1; leave main’s current patch set intact until candidate activation.
 4. **A2-4 — Component-ticket PARTIAL deltas (≤2h each):** carry the remaining resize, Tree-row, and immediate Button focus-recovery behavior into their component-family tickets; keep upstream-covered hunks out of the rebased patches. Then rebase remaining Base/Component patches by family with stack tests and manifests.
