@@ -1,5 +1,7 @@
 # Changelog
 
+- Clarified Stage A assessment scope and scheduled native popup implementation and crates.io publishing after the Stage A2 upgrade.
+
 - Added Stage A2 for the GPUI Kit upgrade and ecosystem integration guidance for Stages C, E, F, K and M.
 
 - Assessed native macOS popup patch integration, existing coverage and bounded completion work; preserved remaining stash history and cleaned merged branches.
