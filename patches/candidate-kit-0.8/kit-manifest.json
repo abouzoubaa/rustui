@@ -20,6 +20,7 @@
     "gpui-primary-mousedown-click-v2.patch",
     "r15-test-tree-disabled-v1-kit08.patch",
     "t17-inert-focus-scope-v1-kit08.patch",
+    "gpui-tree-aria-disabled-v1-kit08.patch",
     "t13-modal-focus-recovery-v1-kit08.patch",
     "gpui-component-tracked-dialog-focus-rebase-v2-kit08.patch",
     "gpui-component-sheet-close-accessibility-v2.patch"
@@ -214,6 +215,16 @@
       }
     },
     {
+      "patch": "gpui-tree-aria-disabled-v1-kit08.patch",
+      "patch_sha256": "c97d9380f01c1902a90d565ec5aefe9e785d32904605bf32408e87a5cedba499",
+      "files": {
+        "vendor/gpui-pre-0.3.10/src/elements/div.rs": {
+          "pre_sha256": "3e3fada72485b0dea4987feab7eab7827b476dd91ad83845f8b2aa92565fcd30",
+          "post_sha256": "a2eeda63db9589c6991093c5b4dffe5943f29ce71446aa5c9557b1dae976fee2"
+        }
+      }
+    },
+    {
       "patch": "t13-modal-focus-recovery-v1-kit08.patch",
       "patch_sha256": "1f69336b0f16c31e7479af173bae4328ebb6d5aae36dfc3618d02fb636fec256",
       "files": {
@@ -308,6 +319,10 @@
     "vendor/gpui-component-0.7.3/src/window_ext.rs": {
       "pre_sha256": "2470eb24a74cd23573cec9fb09df56e0185bf30cad07afd88037453736bf3e89",
       "post_sha256": "c5cb5c4c601f89ec97c7cf0c495be425583309ae6013dd8a81d3f4e5240657cf"
+    },
+    "vendor/gpui-pre-0.3.10/src/elements/div.rs": {
+      "pre_sha256": "3e3fada72485b0dea4987feab7eab7827b476dd91ad83845f8b2aa92565fcd30",
+      "post_sha256": "a2eeda63db9589c6991093c5b4dffe5943f29ce71446aa5c9557b1dae976fee2"
     },
     "vendor/gpui-pre-0.3.10/src/key_dispatch.rs": {
       "pre_sha256": "a830735c490a265ffd666d34a22a1033c9ae6aea0226747839d1d7821a1d198c",

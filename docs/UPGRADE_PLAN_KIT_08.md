@@ -329,6 +329,23 @@ Fixture stack proof passes. The t13 core behavior test passed in a disposable GP
 
 Copied the approved `gpui-component-sheet-close-accessibility-v2.patch` unchanged into the candidate stack (1 copied, 0 rebased, 0 partial, 0 remainder). Its test-window proof passed in the disposable 0.3.10/0.8.1 fixture: `sheet_close_accessibility_label_is_exposed_in_the_test_window_tree` (1 passed), asserting the accessibility tree exposes “Dismiss details.” The cumulative candidate stack applies and reverses exactly; the Base/Component compile gate is recorded by `scripts/check_kit08_kit_stack.py`.
 
+### A2-4c0 result — core aria-disabled provider
+
+Split the approved `gpui-tree-aria-disabled-v1.patch`: its GPUI-pre core hunks are candidate `gpui-tree-aria-disabled-v1-kit08.patch`, applied last in the 13-patch core stack. The patch applies to GPUI-pre 0.3.10 with its original hunk content. Its GPUI Base Tree-row delta remains for A2-4g; the Switch comment hunk is not carried because #3531 covers that behavior. The minimal disposable fixture test `aria_disabled_sets_disabled_on_the_accessibility_tree_node` passed (1 passed) and the debug accessibility tree reported `"role": "TreeItem"` with `"disabled": true`. The full candidate stack compiled Base and Component offline and reversed exactly.
+
+### Candidate patch API dependency audit
+
+Reviewed added GPUI methods and cross-patch calls across the remaining queued patches. The concrete stack dependencies are:
+
+- `gpui-tree-aria-disabled-v1-kit08.patch` provides core `aria_disabled`; it now precedes A2-4c Breadcrumb/Sidebar, A2-4d MenuItem, and A2-4g Tree consumers.
+- The A2-4g Base Tree-row `aria_disabled` call must precede `gpui-tree-aria-level-v1.patch`, whose hunk uses it as context. The family plan now orders it that way.
+- `r15b-popup-menu-recovery-v1.patch` provides `rebuild_preserving_selection`, called by `r15b-dropdown-menu-refresh-v1.patch`; A2-4d now orders the provider first.
+- `gpui-calendar-rtl-v1.patch` provides `CalendarState::right_to_left`, used by `gpui-calendar-multi-month-heading-v1.patch`; A2-4k now orders the provider first.
+- `gpui-component-select-popup-rtl-v1.patch` provides Select RTL state/setters used by later alignment and auto-width patches; the A2-4e order already places it first.
+- `gpui-bidi-wrapped-rows-v1-kit08.patch` provides row hit/position helpers used by `gpui-bidi-input-hit-v1-kit08.patch`; the core order already places it first.
+- A2-4a `t13-modal-focus-recovery-v1-kit08.patch` provides modal focus APIs consumed by the tracked-dialog patch; its family order already places it first.
+- The queued patch scan found no other cross-patch GPUI API dependencies. Calls to existing target APIs such as `aria_label`, `role`, and `update` do not require patch ordering.
+
 ### A2-4 compatibility check
 
 The optional fixture compile gate is `python3 scripts/check_kit08_kit_stack.py --compile`. It applies all 12 core candidates and both A2-4a candidates, reconstructs the verified crate archives in a disposable workspace, overlays the applied patch outputs, runs `cargo check --offline -p gpui-base -p gpui-component`, then verifies exact reverse application. Use `--compile-online` if the Cargo registry/index or dependency archives are not cached. Crate source archives are downloaded and SHA-256 checked by the fixture harness. In this run an initial Cargo resolution needed an online refresh for `gpui-fast-platform ^0.1.12`; after fetching that package metadata and dependencies, the compile gate passed offline.
@@ -345,7 +362,7 @@ After those patch-only fixes, `python3 scripts/check_kit08_kit_stack.py --compil
 
 ### Approved patch destination ledger (71 patches)
 
-Every approved patch has exactly one destination. **Totals: CANDIDATE 15 / REMAINDER 0 / A2-4 QUEUE 42 / OBSOLETE 5 / PARKED 5 / POPUP STAGE 4 = 71.** `t13-modal-focus-recovery-v1.patch` is assigned to the **A2-4 QUEUE — Dialog / modal focus** despite its GPUI-pre focus hunks; `a11y-validation-grid-v1.patch` is assigned to the **A2-4 QUEUE — Input / validation / DataGrid** despite its GPUI-pre accessibility-tree hunks. Their feature families are outside A2-2 core candidate scope.
+Every approved patch has exactly one destination. **Totals: CANDIDATE 16 / REMAINDER 0 / A2-4 QUEUE 41 / OBSOLETE 5 / PARKED 5 / POPUP STAGE 4 = 71.** `t13-modal-focus-recovery-v1.patch` is assigned to the **A2-4 QUEUE — Dialog / modal focus** despite its GPUI-pre focus hunks; `a11y-validation-grid-v1.patch` is assigned to the **A2-4 QUEUE — Input / validation / DataGrid** despite its GPUI-pre accessibility-tree hunks. Their feature families are outside A2-2 core candidate scope.
 
 ### A2-4 families
 
@@ -355,15 +372,16 @@ The queue is split into isolated candidate stacks. Each ticket is estimated at n
 |---|---|---|---|
 | A2-4a — Dialog / modal focus | `t13-modal-focus-recovery-v1.patch` → `gpui-component-tracked-dialog-focus-rebase-v2.patch` | None | 2h |
 | A2-4b — Sheet accessibility | `gpui-component-sheet-close-accessibility-v2.patch` | None | 1h |
-| A2-4c — Button / sidebar / breadcrumb disabled behavior | `r15-button-disabled-focus-v1.patch` → `r15-sidebar-disabled-v1.patch` → `r15-breadcrumb-disabled-v1.patch` | Button: retain immediate focus recovery when a focused Button becomes disabled; #3606 only preserves traversal out of it. | 1.5h |
-| A2-4d — Menus / popup items | `gpui-component-popup-menu-disabled-confirm-v1.patch` → `r15b-menu-item-disabled-v1.patch` → `r15b-dropdown-menu-refresh-v1.patch` → `r15b-popup-menu-recovery-v1.patch` | None | 1.5h |
+| A2-4c0 — GPUI core aria-disabled dependency | GPUI-pre hunk split from `gpui-tree-aria-disabled-v1.patch` as `gpui-tree-aria-disabled-v1-kit08.patch` | Base Tree-row delta stays for A2-4g. | 1h |
+| A2-4c — Button / sidebar / breadcrumb disabled behavior | `r15-button-disabled-focus-v1.patch` → `r15-sidebar-disabled-v1.patch` → `r15-breadcrumb-disabled-v1.patch` | Button: retain immediate focus recovery when a focused Button becomes disabled; #3606 only preserves traversal out of it. Sidebar/Breadcrumb use the core `aria_disabled` API supplied by A2-4c0. | 1.5h |
+| A2-4d — Menus / popup items | `gpui-component-popup-menu-disabled-confirm-v1.patch` → `r15b-menu-item-disabled-v1.patch` → `r15b-popup-menu-recovery-v1.patch` → `r15b-dropdown-menu-refresh-v1.patch` | Core `aria_disabled` is provided by A2-4c0; popup recovery provides `rebuild_preserving_selection` to dropdown refresh. | 1.5h |
 | A2-4e — Select / Picker popup layout | `gpui-component-select-popup-rtl-v1.patch` → `gpui-component-select-rtl-alignment-v1.patch` → `gpui-component-select-rtl-alignment-v2.patch` → `gpui-component-select-rtl-alignment-v3.patch` → `gpui-component-select-rtl-auto-width-v4.patch` → `gpui-component-select-rtl-auto-width-v6.patch` | None | 2h |
 | A2-4f — Selectable list semantics | `gpui-selectable-list-semantics-v2.patch` | None | 1h |
-| A2-4g — Tree | `gpui-component-tree-accessible-name-v1.patch` → `gpui-tree-aria-level-v1.patch` → `gpui-tree-aria-disabled-v1.patch` → `gpui-tree-disabled-keyboard-v2.patch` → `r15-tree-disabled-focus-v1.patch` | Tree disabled semantics: mark the Tree row node disabled; #3531 supplies the reusable extension but covers Switch only. | 2h |
+| A2-4g — Tree | `gpui-component-tree-accessible-name-v1.patch` → `gpui-tree-aria-disabled-v1.patch` (Base Tree-row delta only) → `gpui-tree-aria-level-v1.patch` → `gpui-tree-disabled-keyboard-v2.patch` → `r15-tree-disabled-focus-v1.patch` | Core `aria_disabled` comes from A2-4c0; Tree-row delta must precede the aria-level patch, whose context uses that row call. #3531 covers Switch. | 2h |
 | A2-4h — DataGrid validation and header metadata | `a11y-validation-grid-v1.patch` | None | 2h |
 | A2-4i — Slider | `gpui-base-slider-endpoint-v1.patch` → `gpui-base-slider-first-move-v1.patch` → `gpui-base-slider-set-value-v2.patch` → `gpui-base-slider-snap-position-v1.patch` → `gpui-base-slider-zero-track-v1.patch` | None | 2h |
 | A2-4j — Resizable panels | `gpui-base-resize-first-move-v1.patch` → `gpui-base-resize-first-move-v2.patch` → `gpui-base-resize-first-move-v3.patch` | Keep immediate initial-pointer sizing; v3 also retains explicit left-button release handling. #3629 supplies active-drag-state reads only. | 2h |
-| A2-4k — Calendar / DatePicker | `gpui-base-calendar-date-limits-v1.patch` → `gpui-calendar-keyboard-v1.patch` → `gpui-calendar-multi-month-heading-v1.patch` → `gpui-calendar-rtl-v1.patch` → `gpui-component-calendar-fr-ar-v1.patch` → `gpui-component-date-picker-accessibility-v1.patch` → `gpui-component-date-picker-localization-v2.patch` → `gpui-component-date-picker-rtl-alignment-v1.patch` | None | 2h |
+| A2-4k — Calendar / DatePicker | `gpui-base-calendar-date-limits-v1.patch` → `gpui-calendar-keyboard-v1.patch` → `gpui-calendar-rtl-v1.patch` → `gpui-calendar-multi-month-heading-v1.patch` → `gpui-component-calendar-fr-ar-v1.patch` → `gpui-component-date-picker-accessibility-v1.patch` → `gpui-component-date-picker-localization-v2.patch` → `gpui-component-date-picker-rtl-alignment-v1.patch` | Calendar RTL provides the `CalendarState::right_to_left` API used by multi-month heading. | 2h |
 | A2-4l — Input placeholder | `gpui-input-placeholder-color-v1.patch` | None | 1h |
 | A2-4m — Toolbar RTL | `gpui-toolbar-rtl-v1.patch` | None | 1h |
 | A2-4n — Diff / syntax registry | `gpui-component-web-syntax-v1.patch` → `gpui-component-web-syntax-runtime-v1.patch` → `gpui-component-web-syntax-runtime-v2.patch` → `gpui-component-web-syntax-runtime-v3.patch` | None | 2h |
@@ -428,7 +446,7 @@ Queue totals by family: **45 patches**. A2-4a is first because its tracked dialo
 | `gpui-primary-mousedown-click-v2.patch` | CANDIDATE — `patches/candidate-kit-0.8/gpui-primary-mousedown-click-v2.patch` |
 | `gpui-selectable-list-semantics-v2.patch` | A2-4 QUEUE — Picker / ComboBox |
 | `gpui-toolbar-rtl-v1.patch` | A2-4 QUEUE — Toolbar |
-| `gpui-tree-aria-disabled-v1.patch` | A2-4 QUEUE — Tree |
+| `gpui-tree-aria-disabled-v1.patch` | Split: CANDIDATE core API `gpui-tree-aria-disabled-v1-kit08.patch`; Base Tree-row delta remains in A2-4g |
 | `gpui-tree-aria-level-v1.patch` | A2-4 QUEUE — Tree |
 | `gpui-tree-disabled-keyboard-v2.patch` | A2-4 QUEUE — Tree |
 | `gpui-web-combobox-enter-v1.patch` | PARKED — A2-7 (deferred platform) |

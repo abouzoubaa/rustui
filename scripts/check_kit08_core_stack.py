@@ -38,6 +38,7 @@ CANDIDATE_ORDER = (
     "gpui-primary-mousedown-click-v2.patch",
     "r15-test-tree-disabled-v1-kit08.patch",
     "t17-inert-focus-scope-v1-kit08.patch",
+    "gpui-tree-aria-disabled-v1-kit08.patch",
 )
 LATER_FAMILY_CANDIDATES = {
     "t13-modal-focus-recovery-v1-kit08.patch",
