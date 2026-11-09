@@ -165,7 +165,7 @@ index 00000000..00000000 100644
  
  pub(crate) fn init(cx: &mut App) {
      gpui_base::Root::register_plugin::<WindowState>(cx, WindowState::new);
-@@ -40,13 +40,20 @@
+@@ -40,13 +40,19 @@
      pending_focus_restore: Option<WeakFocusHandle>,
      /// Source of stable dialog identities, including their rendered subtrees.
      next_dialog_id: usize,
@@ -174,7 +174,6 @@ index 00000000..00000000 100644
 +    pending_focus_recovery: Option<FocusHandle>,
 +}
 +
-+#[derive(Clone)]
 +type ModalFocusMemory = Rc<RefCell<Option<WeakFocusHandle>>>;
  
  #[derive(Clone)]
