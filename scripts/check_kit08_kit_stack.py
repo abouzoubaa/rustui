@@ -65,7 +65,15 @@ A2_4E_ORDER = (
     "gpui-component-select-rtl-auto-width-v4-kit08.patch",
     "gpui-component-select-rtl-auto-width-v6-kit08.patch",
 )
-FAMILY_ORDER = A2_4A_ORDER + A2_4B_ORDER + A2_4C_ORDER + A2_4D_ORDER + A2_4E_ORDER
+A2_4F_ORDER = ("gpui-selectable-list-semantics-v2.patch",)
+FAMILY_ORDER = (
+    A2_4A_ORDER
+    + A2_4B_ORDER
+    + A2_4C_ORDER
+    + A2_4D_ORDER
+    + A2_4E_ORDER
+    + A2_4F_ORDER
+)
 
 
 def compile_candidate_workspace(
@@ -208,7 +216,7 @@ def run(write_manifest: bool = False) -> dict:
         raise FixtureError(f"recorded stack manifest is stale: {OUTPUT}; use --write-manifest")
     OUTPUT.write_bytes(data)
     print(
-        "core patches={}; A2-4a patches={}; A2-4b patches={}; A2-4c patches={}; A2-4d patches={}; A2-4e patches={}; fixture archives verified={}; "
+        "core patches={}; A2-4a patches={}; A2-4b patches={}; A2-4c patches={}; A2-4d patches={}; A2-4e patches={}; A2-4f patches={}; fixture archives verified={}; "
         "target files hashed={}; stack files={}; reverse=exact".format(
             len(CORE_ORDER),
             len(A2_4A_ORDER),
@@ -216,6 +224,7 @@ def run(write_manifest: bool = False) -> dict:
             len(A2_4C_ORDER),
             len(A2_4D_ORDER),
             len(A2_4E_ORDER),
+            len(A2_4F_ORDER),
             archive_count,
             target_count,
             len(result["files"]),
