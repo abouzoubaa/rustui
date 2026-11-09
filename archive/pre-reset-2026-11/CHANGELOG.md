@@ -1,0 +1,86 @@
+# Changelog
+
+## 0.2.0 — 2026-11-09
+
+- Added an inert-focus-scope patch candidate rebased and tested against the GPUI Kit 0.8.1 fixture.
+
+- Added an inert GPUI Kit 0.8 core patch candidate with a pinned, reversible stack check.
+
+- Added a hash-pinned GPUI Kit 0.8.1 source harness and staged deferred-platform patches for A2-7.
+
+- Reclassified all approved GPUI patches against 0.8.1 behavior, separating upstream-fixed, partial, and still-needed changes.
+
+- Added a source-verified GPUI Kit 0.8.1 upgrade plan, patch compatibility matrix and bounded migration sequence.
+
+- Clarified Stage A assessment scope and scheduled native popup implementation and crates.io publishing after the Stage A2 upgrade.
+
+- Added Stage A2 for the GPUI Kit upgrade and ecosystem integration guidance for Stages C, E, F, K and M.
+
+- Assessed native macOS popup patch integration, existing coverage and bounded completion work; preserved remaining stash history and cleaned merged branches.
+
+- Reviewed and permanently archived old stash/presync/T11 sources; no recovery tickets remain, and native popup review stays pending.
+
+- Added roadmap stages A–N, release targets, and two-hour ticket planning.
+
+- Converted gallery includes to modules, colocated overlay lifecycle tests, added described file acceptance, and linked editable-grid cells to their accessibility headers.
+
+- Verified live theme auto-reload, stop, visible invalid-update recovery and owner release with deterministic GPUI-window tests.
+
+- Reviewed framework tools R22–R26, verified native preview/composition and explicit theme reload paths, and identified deferred adapter and automatic-reload coverage work.
+
+- Audited owner async task cancellation, restart, errors, re-render stability and release with a deterministic GPUI-window matrix.
+
+- Completed dropdown recovery coverage and live popup-menu disabled semantics, selection recovery and re-enable behavior.
+
+- Audited disabled controls with a shared GPUI-window matrix, fixed focus traversal and disabled semantics, and deferred seven cases to R15b.
+
+- Switched daily Cargo aliases to stable defaults and reconsidered roadmap item 3, moving crates.io publishing into Phase 1.
+
+- Promoted slider accessibility labels and value actions with bound-value regression coverage.
+
+- Updated accessibility patch proposals and promotion status.
+
+- Promoted focus-trap accessibility and disabled popup-menu confirmation fixes.
+
+- Triaged proposed patches against the current source.
+
+- Removed retired coordination scripts and refreshed third-party notices.
+
+- Added the post-0.1.0 roadmap.
+
+## 0.1.0 — 2026-11-08
+
+- Added registered story rendering coverage and a packaged Playground smoke check.
+
+- Cached theme style resolution and tuned the release profile for redraw performance.
+
+- Updated release documentation and defined the Phase C MVP plan.
+
+- Measured the proposed quad-sort V2 candidate against the baseline.
+
+- T11c: Added RustUI-owned GPUI Base and Component sources and the patched block source.
+
+- T11b: Added RustUI-owned macOS GPUI platform crates with source-copy verification.
+- T11a: Added the RustUI-owned GPUI core crate while preserving the pinned upstream source and attribution.
+
+- Stable Rust 1.97.1 is the daily compiler; the Headstart script remains optional.
+- Removed retired development-process instructions from repository documentation.
+- T3: archived retired planning documents; native macOS is first, with Web/localization/accessibility deferred and Windows/Linux last.
+- Playground packaging now refuses an existing app bundle unless --replace is supplied.
+
+- Split the compiled preview gallery into focused modules without changing behavior.
+- Split graph view into model, validation, rendering, and interaction modules without changing behavior.
+- Added GPUI test-window coverage for Popover and Menu lifecycle behavior.
+- Added ignored Dialog and Sheet tests; focus recovery and the strict background-focus guard remain unresolved pending an incomplete proposal.
+- Promoted Dialog and Sheet focus recovery with active GPUI test-window coverage.
+- Added validation and validity bindings for text, secure, and search fields, with a Playground story.
+- Added the editable DataGrid design for owner approval.
+- Added typed editable DataGrid cells with validation and basic navigation.
+- Add stable view-only sorting to EditableDataGrid.
+- Add editable grid navigation, conflict recovery, and accessibility metadata.
+- Add typed theme tokens and navigation surface capabilities.
+- Add keyed appear and disappear transitions using GPUI springs and inert focus scopes.
+- Fix editable grid Tab and Shift-Tab focus exit at its edges.
+- Expose validation descriptions and editable grid read-only, sort, and header semantics.
+- Add filtered Finder file drops and a Playground example.
+- Add a reproducible owner-update performance baseline command.

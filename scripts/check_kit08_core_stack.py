@@ -6,6 +6,7 @@ from __future__ import annotations
 import argparse
 import hashlib
 import json
+import shutil
 import subprocess
 import sys
 import tempfile
@@ -38,6 +39,10 @@ CANDIDATE_ORDER = (
     "r15-test-tree-disabled-v1-kit08.patch",
     "t17-inert-focus-scope-v1-kit08.patch",
 )
+LATER_FAMILY_CANDIDATES = {
+    "t13-modal-focus-recovery-v1-kit08.patch",
+    "gpui-component-tracked-dialog-focus-rebase-v2-kit08.patch",
+}
 
 
 def sha256(data: bytes) -> str:
@@ -59,12 +64,20 @@ def apply_stack(
     patch_dir: Path,
     fixture_root: Path,
     source_manifest_sha256: str,
+    patch_order: tuple[str, ...] | None = None,
 ) -> dict[str, Any]:
     sources = {source["name"]: source for source in manifest["sources"]}
     package_names = sorted(sources, key=len, reverse=True)
     patch_paths = {path.name: path for path in patch_dir.glob("*.patch")}
-    if patch_dir.resolve() == DEFAULT_PATCH_DIR.resolve():
-        unexpected = sorted(set(patch_paths) - set(CANDIDATE_ORDER))
+    if patch_order is not None:
+        unexpected = sorted(set(patch_paths) - set(patch_order))
+        if unexpected:
+            raise FixtureError("candidate patch order is undefined for: " + ", ".join(unexpected))
+        patches = [patch_paths[name] for name in patch_order if name in patch_paths]
+    elif patch_dir.resolve() == DEFAULT_PATCH_DIR.resolve():
+        unexpected = sorted(
+            set(patch_paths) - set(CANDIDATE_ORDER) - LATER_FAMILY_CANDIDATES
+        )
         if unexpected:
             raise FixtureError("candidate patch order is undefined for: " + ", ".join(unexpected))
         patches = [patch_paths[name] for name in CANDIDATE_ORDER if name in patch_paths]
@@ -179,8 +192,17 @@ def run(
     manifest = load_manifest(manifest_path)
     with tempfile.TemporaryDirectory(prefix="rustui-kit08-core-fixture-") as temp_name:
         fixture_root = Path(temp_name)
+        core_inventory = fixture_root / "core-candidate-inventory"
+        core_inventory.mkdir()
+        inventory_order = (
+            CANDIDATE_ORDER
+            if patch_dir.resolve() == DEFAULT_PATCH_DIR.resolve()
+            else tuple(path.name for path in sorted(patch_dir.glob("*.patch")))
+        )
+        for name in inventory_order:
+            shutil.copyfile(patch_dir / name, core_inventory / name)
         archive_count, target_count, unavailable_count = build_fixture(
-            manifest, fixture_root, patch_dir
+            manifest, fixture_root, core_inventory
         )
         result = apply_stack(
             manifest,

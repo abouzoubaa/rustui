@@ -2,6 +2,8 @@
 
 ## 0.2.0 — 2026-11-09
 
+- Added candidate GPUI Kit 0.8.1 modal focus recovery and tracked dialog closing patches.
+
 - Added an inert-focus-scope patch candidate rebased and tested against the GPUI Kit 0.8.1 fixture.
 
 - Added an inert GPUI Kit 0.8 core patch candidate with a pinned, reversible stack check.

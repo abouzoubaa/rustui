@@ -1,0 +1,585 @@
+diff --git a/vendor/gpui-component-0.7.3/src/root.rs b/vendor/gpui-component-0.7.3/src/root.rs
+index 00000000..00000000 100644
+--- a/vendor/gpui-component-0.7.3/src/root.rs
++++ b/vendor/gpui-component-0.7.3/src/root.rs
+@@ -8,6 +8,7 @@
+     tooltip::render_tooltip,
+     touch_selection::WindowTouchSelectionOverlay,
+     window_border,
++    window_ext::DialogId,
+ };
+ use gpui::{
+     App, AppContext, Bounds, Context, DefiniteLength, DispatchPhase, ElementId, Entity,
+@@ -77,6 +78,7 @@
+     exit_enabled: Rc<Cell<bool>>,
+     /// Retained after closing until its exit transition finishes.
+     pub(crate) closing: bool,
++    tracked_id: Option<DialogId>,
+ }
+ 
+ impl ActiveDialog {
+@@ -99,6 +101,7 @@
+             builder: Rc::new(builder),
+             exit_enabled: Rc::new(Cell::new(false)),
+             closing: false,
++            tracked_id: None,
+         }
+     }
+ 
+@@ -357,6 +360,7 @@
+ 
+             dialog.layer_ix = index;
+             dialog.id = active_dialog.id;
++            dialog.opening_id = active_dialog.tracked_id;
+ 
+             // Refreshed every frame so closing decides in one step whether an
+             // exit transition has to play at all.
+@@ -510,6 +514,44 @@
+         cx.notify();
+     }
+ 
++    pub fn open_dialog_tracked<F>(&mut self, build: F, window: &mut Window, cx: &mut Context<'_, WindowState>) -> DialogId
++    where F: Fn(Dialog, &mut Window, &mut App) -> Dialog + 'static,
++    {
++        let id = DialogId::next();
++        self.open_dialog(build, window, cx);
++        if let Some(dialog) = self.active_dialogs.iter_mut().rev().find(|dialog| !dialog.closing) {
++            dialog.tracked_id = Some(id);
++        }
++        id
++    }
++
++    pub fn has_dialog_id(&self, id: DialogId) -> bool {
++        self.active_dialogs.iter().any(|dialog| dialog.tracked_id == Some(id))
++    }
++
++    pub fn close_dialog_by_id(&mut self, id: DialogId, window: &mut Window, cx: &mut Context<'_, WindowState>) -> bool {
++        let Some(index) = self.active_dialogs.iter().position(|dialog| dialog.tracked_id == Some(id)) else { return false; };
++        let top = self.active_dialogs.iter().rposition(|dialog| !dialog.closing) == Some(index);
++        if top {
++            self.close_dialog(window, cx);
++        } else if self.active_dialogs[index].exit_enabled.get() {
++            Self::begin_dialog_exit(&mut self.active_dialogs[index], window, cx);
++            self.sync_modal_focus_scope(window, cx);
++            cx.notify();
++        } else {
++            self.active_dialogs.remove(index);
++            self.sync_modal_focus_scope(window, cx);
++            cx.notify();
++        }
++        true
++    }
++
++    pub(crate) fn defer_close_dialog_by_id(&mut self, id: DialogId, window: &mut Window, cx: &mut Context<'_, WindowState>) {
++        let is_top = self.active_dialogs.iter().rposition(|dialog| !dialog.closing)
++            .is_some_and(|index| self.active_dialogs[index].tracked_id == Some(id));
++        if is_top { self.defer_close_dialog(window, cx); } else { self.close_dialog_by_id(id, window, cx); }
++    }
++
+     /// Closes the newest dialog that is not already closing.
+     ///
+     /// A dialog with an exit transition stays in `active_dialogs`, marked
+diff --git a/vendor/gpui-component-0.7.3/src/dialog/dialog.rs b/vendor/gpui-component-0.7.3/src/dialog/dialog.rs
+index 00000000..00000000 100644
+--- a/vendor/gpui-component-0.7.3/src/dialog/dialog.rs
++++ b/vendor/gpui-component-0.7.3/src/dialog/dialog.rs
+@@ -1,5 +1,5 @@
+ use super::entrance::{DialogEntrance, EntranceSurface};
+-use crate::root::WindowState;
++use crate::{root::WindowState, window_ext::{DialogId, TrackedDialogExt as _}};
+ use gpui_base::TestSupportExt as _;
+ use std::{rc::Rc, sync::LazyLock, time::Duration};
+ 
+@@ -330,6 +330,7 @@
+     pub(crate) selection_scope: TextSelectionScopeId,
+     pub(crate) motion: Option<DialogMotion>,
+     pub(crate) id: usize,
++    pub(crate) opening_id: Option<DialogId>,
+ }
+ 
+ pub(crate) fn overlay_color(overlay: bool, cx: &App) -> Hsla {
+@@ -378,6 +379,7 @@
+             button_props: DialogButtonProps::default(),
+             motion: None,
+             id: 0,
++            opening_id: None,
+         }
+     }
+ 
+@@ -754,12 +756,14 @@
+                             })
+                             .on_close(move |event, window, cx| on_close(event, window, cx))
+                             .request_close(move |deferred, window, cx| {
+-                                // A dialog already leaving must not close
+-                                // whatever sits below it.
+-                                if closing {
+-                                    return;
+-                                }
+-                                if deferred {
++                                if closing { return; }
++                                if let Some(id) = opening_id {
++                                    if deferred {
++                                        WindowState::update(window, cx, |root, window, cx| root.defer_close_dialog_by_id(id, window, cx));
++                                    } else {
++                                        window.close_dialog_by_id(id, cx);
++                                    }
++                                } else if deferred {
+                                     Self::defer_close_dialog(window, cx);
+                                 } else {
+                                     window.close_dialog(cx);
+diff --git a/vendor/gpui-component-0.7.3/src/window_ext.rs b/vendor/gpui-component-0.7.3/src/window_ext.rs
+index 00000000..00000000 100644
+--- a/vendor/gpui-component-0.7.3/src/window_ext.rs
++++ b/vendor/gpui-component-0.7.3/src/window_ext.rs
+@@ -7,7 +7,19 @@
+     sheet::Sheet,
+ };
+ use gpui::{App, ElementId, Entity, Window};
+-use std::rc::Rc;
++use std::{rc::Rc, sync::atomic::{AtomicU64, Ordering}};
++
++
++/// Opaque identity for one dialog opening.
++#[derive(Clone, Copy, Debug, PartialEq, Eq, Hash)]
++pub struct DialogId(u64);
++
++impl DialogId {
++    pub(crate) fn next() -> Self {
++        static NEXT: AtomicU64 = AtomicU64::new(1);
++        Self(NEXT.fetch_add(1, Ordering::Relaxed))
++    }
++}
+ 
+ /// Extension trait for [`Window`] to add dialog, sheet .. functionality.
+ pub trait WindowExt: Sized {
+@@ -280,3 +292,26 @@
+         None
+     }
+ }
++
++
++/// Identity-aware dialog operations that leave [`WindowExt`] source-compatible.
++pub trait TrackedDialogExt {
++    fn open_dialog_tracked<F>(&mut self, cx: &mut App, build: F) -> DialogId
++    where F: Fn(Dialog, &mut Window, &mut App) -> Dialog + 'static;
++    fn has_dialog_id(&mut self, id: DialogId, cx: &mut App) -> bool;
++    fn close_dialog_by_id(&mut self, id: DialogId, cx: &mut App) -> bool;
++}
++
++impl TrackedDialogExt for Window {
++    fn open_dialog_tracked<F>(&mut self, cx: &mut App, build: F) -> DialogId
++    where F: Fn(Dialog, &mut Window, &mut App) -> Dialog + 'static,
++    {
++        WindowState::update(self, cx, move |root, window, cx| root.open_dialog_tracked(build, window, cx))
++    }
++    fn has_dialog_id(&mut self, id: DialogId, cx: &mut App) -> bool {
++        WindowState::read(self, cx).has_dialog_id(id)
++    }
++    fn close_dialog_by_id(&mut self, id: DialogId, cx: &mut App) -> bool {
++        WindowState::update(self, cx, |root, window, cx| root.close_dialog_by_id(id, window, cx))
++    }
++}
+diff --git a/vendor/gpui-component-0.7.3/src/lib.rs b/vendor/gpui-component-0.7.3/src/lib.rs
+index 00000000..00000000 100644
+--- a/vendor/gpui-component-0.7.3/src/lib.rs
++++ b/vendor/gpui-component-0.7.3/src/lib.rs
+@@ -120,7 +120,7 @@
+ pub use title_bar::*;
+ pub use virtual_list::{VirtualList, VirtualListScrollHandle, h_virtual_list, v_virtual_list};
+ pub use window_border::{WindowBorder, window_border, window_paddings};
+-pub use window_ext::WindowExt;
++pub use window_ext::{DialogId, TrackedDialogExt, WindowExt};
+ 
+ rust_i18n::i18n!("locales", fallback = "en");
+ 
+diff --git a/vendor/gpui-component-0.7.3/src/root.rs b/vendor/gpui-component-0.7.3/src/root.rs
+index 00000000..00000000 100644
+--- a/vendor/gpui-component-0.7.3/src/root.rs
++++ b/vendor/gpui-component-0.7.3/src/root.rs
+@@ -13,11 +13,15 @@
+ use gpui::{
+     App, AppContext, Bounds, Context, DefiniteLength, DispatchPhase, ElementId, Entity,
+     FocusHandle, GlobalElementId, InteractiveElement, IntoElement, MouseMoveEvent,
+-    ParentElement as _, Pixels, Render, RenderOnce, Styled, Subscription, WeakFocusHandle, Window, canvas, div,
+-    prelude::FluentBuilder as _,
++    ParentElement as _, Pixels, Render, RenderOnce, Styled, Subscription, WeakFocusHandle, Window,
++    canvas, div, prelude::FluentBuilder as _,
+ };
+ use gpui_base::{TextSelection, TextSelectionScopeId, motion::Presence};
+-use std::{any::TypeId, cell::{Cell, RefCell}, rc::Rc};
++use std::{
++    any::TypeId,
++    cell::{Cell, RefCell},
++    rc::Rc,
++};
+ 
+ pub(crate) fn init(cx: &mut App) {
+     gpui_base::Root::register_plugin::<WindowState>(cx, WindowState::new);
+@@ -120,10 +124,12 @@
+     fn new(window: &mut Window, cx: &mut Context<Self>) -> Self {
+         cx.observe_window_activation(window, |this, window, cx| {
+             this.on_window_activation(window, cx);
+-        }).detach();
++        })
++        .detach();
+         cx.on_focus_lost(window, |this, window, cx| {
+             this.on_modal_focus_lost(window, cx);
+-        }).detach();
++        })
++        .detach();
+         Self {
+             active_sheet: None,
+             active_dialogs: Vec::new(),
+@@ -145,9 +151,24 @@
+     }
+ 
+     fn top_modal(&self) -> Option<(FocusHandle, ModalFocusMemory)> {
+-        self.active_dialogs.iter().rev().find(|dialog| !dialog.closing)
+-            .map(|dialog| (dialog.focus_handle.clone(), dialog.last_focused_handle.clone()))
+-            .or_else(|| self.active_sheet.as_ref().map(|sheet| (sheet.focus_handle.clone(), sheet.last_focused_handle.clone())))
++        self.active_dialogs
++            .iter()
++            .rev()
++            .find(|dialog| !dialog.closing)
++            .map(|dialog| {
++                (
++                    dialog.focus_handle.clone(),
++                    dialog.last_focused_handle.clone(),
++                )
++            })
++            .or_else(|| {
++                self.active_sheet.as_ref().map(|sheet| {
++                    (
++                        sheet.focus_handle.clone(),
++                        sheet.last_focused_handle.clone(),
++                    )
++                })
++            })
+     }
+ 
+     fn sync_modal_focus_scope(&self, window: &mut Window, cx: &mut Context<Self>) {
+@@ -156,10 +177,15 @@
+     }
+ 
+     fn is_top_modal(&self, focus_handle: &FocusHandle) -> bool {
+-        self.top_modal().is_some_and(|(current, _)| current == *focus_handle)
+-    }
+-
+-    fn track_modal_focus(focus_handle: &FocusHandle, window: &mut Window, cx: &mut Context<Self>) -> (ModalFocusMemory, Rc<Subscription>) {
++        self.top_modal()
++            .is_some_and(|(current, _)| current == *focus_handle)
++    }
++
++    fn track_modal_focus(
++        focus_handle: &FocusHandle,
++        window: &mut Window,
++        cx: &mut Context<Self>,
++    ) -> (ModalFocusMemory, Rc<Subscription>) {
+         let memory = Rc::new(RefCell::new(None));
+         let last_focus = memory.clone();
+         let subscription = window.on_focus_out(focus_handle, cx, move |event, _, _| {
+@@ -171,50 +197,83 @@
+     fn on_window_activation(&mut self, window: &mut Window, cx: &mut Context<Self>) {
+         self.focus_recovery_epoch = self.focus_recovery_epoch.wrapping_add(1);
+         self.pending_focus_recovery = None;
+-        let Some((scope, memory)) = self.top_modal() else { return; };
++        let Some((scope, memory)) = self.top_modal() else {
++            return;
++        };
+         if !window.is_window_active() {
+-            if let Some(focused) = window.focused(cx) && window.modal_focus_contains(&scope, &focused) {
++            if let Some(focused) = window.focused(cx)
++                && window.modal_focus_contains(&scope, &focused)
++            {
+                 *memory.borrow_mut() = Some(focused.downgrade());
+             }
+             return;
+         }
+         let preferred = memory.borrow().clone();
+-        if !window.focused(cx).is_some_and(|focused| window.modal_focus_contains(&scope, &focused)) {
++        if !window
++            .focused(cx)
++            .is_some_and(|focused| window.modal_focus_contains(&scope, &focused))
++        {
+             window.blur(cx);
+         }
+         self.schedule_modal_recovery(scope, preferred, window, cx);
+     }
+ 
+     fn on_modal_focus_lost(&mut self, window: &mut Window, cx: &mut Context<Self>) {
+-        if !window.is_window_active() { return; }
+-        let Some((scope, _)) = self.top_modal() else { return; };
+-        if self.pending_focus_recovery.as_ref() == Some(&scope) { return; }
++        if !window.is_window_active() {
++            return;
++        }
++        let Some((scope, _)) = self.top_modal() else {
++            return;
++        };
++        if self.pending_focus_recovery.as_ref() == Some(&scope) {
++            return;
++        }
+         if !window.restore_focus_within(&scope, None, cx) {
+             self.schedule_modal_recovery(scope, None, window, cx);
+         }
+     }
+ 
+-    fn schedule_modal_recovery(&mut self, scope: FocusHandle, preferred: Option<WeakFocusHandle>, window: &mut Window, cx: &mut Context<Self>) {
++    fn schedule_modal_recovery(
++        &mut self,
++        scope: FocusHandle,
++        preferred: Option<WeakFocusHandle>,
++        window: &mut Window,
++        cx: &mut Context<Self>,
++    ) {
+         self.focus_recovery_epoch = self.focus_recovery_epoch.wrapping_add(1);
+         let epoch = self.focus_recovery_epoch;
+         self.pending_focus_recovery = Some(scope.clone());
+         let state = cx.weak_entity();
+         window.on_next_frame(move |window, cx| {
+-            let valid = window.is_window_active() && state.upgrade().is_some_and(|entity| {
+-                let state = entity.read(cx);
+-                state.focus_recovery_epoch == epoch && state.is_top_modal(&scope)
+-            });
++            let valid = window.is_window_active()
++                && state.upgrade().is_some_and(|entity| {
++                    let state = entity.read(cx);
++                    state.focus_recovery_epoch == epoch && state.is_top_modal(&scope)
++                });
+             if !valid {
+-                let _ = state.update(cx, |this, _| if this.focus_recovery_epoch == epoch { this.pending_focus_recovery = None; });
++                let _ = state.update(cx, |this, _| {
++                    if this.focus_recovery_epoch == epoch {
++                        this.pending_focus_recovery = None;
++                    }
++                });
+                 return;
+             }
+             window.refresh();
+             window.on_next_frame(move |window, cx| {
+                 let _ = state.update(cx, |this, cx| {
+-                    if this.focus_recovery_epoch != epoch { return; }
++                    if this.focus_recovery_epoch != epoch {
++                        return;
++                    }
+                     this.pending_focus_recovery = None;
+-                    if !window.is_window_active() || !this.is_top_modal(&scope) { return; }
+-                    if let Some(current) = window.focused(cx) && current != scope && window.modal_focus_contains(&scope, &current) { return; }
++                    if !window.is_window_active() || !this.is_top_modal(&scope) {
++                        return;
++                    }
++                    if let Some(current) = window.focused(cx)
++                        && current != scope
++                        && window.modal_focus_contains(&scope, &current)
++                    {
++                        return;
++                    }
+                     let preferred = preferred.and_then(|handle| handle.upgrade());
+                     window.restore_focus_within(&scope, preferred.as_ref(), cx);
+                 });
+@@ -492,7 +551,8 @@
+         }
+ 
+         let focus_handle = cx.focus_handle();
+-        let (last_focused_handle, focus_out_subscription) = Self::track_modal_focus(&focus_handle, window, cx);
++        let (last_focused_handle, focus_out_subscription) =
++            Self::track_modal_focus(&focus_handle, window, cx);
+ 
+         let id = self.next_dialog_id;
+         self.next_dialog_id += 1;
+@@ -514,24 +574,52 @@
+         cx.notify();
+     }
+ 
+-    pub fn open_dialog_tracked<F>(&mut self, build: F, window: &mut Window, cx: &mut Context<'_, WindowState>) -> DialogId
+-    where F: Fn(Dialog, &mut Window, &mut App) -> Dialog + 'static,
++    pub fn open_dialog_tracked<F>(
++        &mut self,
++        build: F,
++        window: &mut Window,
++        cx: &mut Context<'_, WindowState>,
++    ) -> DialogId
++    where
++        F: Fn(Dialog, &mut Window, &mut App) -> Dialog + 'static,
+     {
+         let id = DialogId::next();
+         self.open_dialog(build, window, cx);
+-        if let Some(dialog) = self.active_dialogs.iter_mut().rev().find(|dialog| !dialog.closing) {
++        if let Some(dialog) = self
++            .active_dialogs
++            .iter_mut()
++            .rev()
++            .find(|dialog| !dialog.closing)
++        {
+             dialog.tracked_id = Some(id);
+         }
+         id
+     }
+ 
+     pub fn has_dialog_id(&self, id: DialogId) -> bool {
+-        self.active_dialogs.iter().any(|dialog| dialog.tracked_id == Some(id))
+-    }
+-
+-    pub fn close_dialog_by_id(&mut self, id: DialogId, window: &mut Window, cx: &mut Context<'_, WindowState>) -> bool {
+-        let Some(index) = self.active_dialogs.iter().position(|dialog| dialog.tracked_id == Some(id)) else { return false; };
+-        let top = self.active_dialogs.iter().rposition(|dialog| !dialog.closing) == Some(index);
++        self.active_dialogs
++            .iter()
++            .any(|dialog| dialog.tracked_id == Some(id))
++    }
++
++    pub fn close_dialog_by_id(
++        &mut self,
++        id: DialogId,
++        window: &mut Window,
++        cx: &mut Context<'_, WindowState>,
++    ) -> bool {
++        let Some(index) = self
++            .active_dialogs
++            .iter()
++            .position(|dialog| dialog.tracked_id == Some(id))
++        else {
++            return false;
++        };
++        let top = self
++            .active_dialogs
++            .iter()
++            .rposition(|dialog| !dialog.closing)
++            == Some(index);
+         if top {
+             self.close_dialog(window, cx);
+         } else if self.active_dialogs[index].exit_enabled.get() {
+@@ -546,10 +634,22 @@
+         true
+     }
+ 
+-    pub(crate) fn defer_close_dialog_by_id(&mut self, id: DialogId, window: &mut Window, cx: &mut Context<'_, WindowState>) {
+-        let is_top = self.active_dialogs.iter().rposition(|dialog| !dialog.closing)
++    pub(crate) fn defer_close_dialog_by_id(
++        &mut self,
++        id: DialogId,
++        window: &mut Window,
++        cx: &mut Context<'_, WindowState>,
++    ) {
++        let is_top = self
++            .active_dialogs
++            .iter()
++            .rposition(|dialog| !dialog.closing)
+             .is_some_and(|index| self.active_dialogs[index].tracked_id == Some(id));
+-        if is_top { self.defer_close_dialog(window, cx); } else { self.close_dialog_by_id(id, window, cx); }
++        if is_top {
++            self.defer_close_dialog(window, cx);
++        } else {
++            self.close_dialog_by_id(id, window, cx);
++        }
+     }
+ 
+     /// Closes the newest dialog that is not already closing.
+@@ -677,7 +777,8 @@
+             .or_else(|| window.focused(cx).map(|h| h.downgrade()));
+ 
+         let focus_handle = cx.focus_handle();
+-        let (last_focused_handle, focus_out_subscription) = Self::track_modal_focus(&focus_handle, window, cx);
++        let (last_focused_handle, focus_out_subscription) =
++            Self::track_modal_focus(&focus_handle, window, cx);
+         let selection_scope = self.allocate_text_selection_scope();
+         self.active_sheet = Some(ActiveSheet {
+             focus_handle: focus_handle.clone(),
+@@ -698,7 +799,9 @@
+ 
+     pub fn close_sheet(&mut self, window: &mut Window, cx: &mut Context<'_, WindowState>) {
+         self.focused_input = None;
+-        let previous_handle = self.active_sheet.take()
++        let previous_handle = self
++            .active_sheet
++            .take()
+             .and_then(|sheet| sheet.previous_focused_handle)
+             .and_then(|handle| handle.upgrade());
+         self.sync_modal_focus_scope(window, cx);
+diff --git a/vendor/gpui-component-0.7.3/src/dialog/dialog.rs b/vendor/gpui-component-0.7.3/src/dialog/dialog.rs
+index 00000000..00000000 100644
+--- a/vendor/gpui-component-0.7.3/src/dialog/dialog.rs
++++ b/vendor/gpui-component-0.7.3/src/dialog/dialog.rs
+@@ -1,5 +1,8 @@
+ use super::entrance::{DialogEntrance, EntranceSurface};
+-use crate::{root::WindowState, window_ext::{DialogId, TrackedDialogExt as _}};
++use crate::{
++    root::WindowState,
++    window_ext::{DialogId, TrackedDialogExt as _},
++};
+ use gpui_base::TestSupportExt as _;
+ use std::{rc::Rc, sync::LazyLock, time::Duration};
+ 
+@@ -756,10 +759,14 @@
+                             })
+                             .on_close(move |event, window, cx| on_close(event, window, cx))
+                             .request_close(move |deferred, window, cx| {
+-                                if closing { return; }
++                                if closing {
++                                    return;
++                                }
+                                 if let Some(id) = opening_id {
+                                     if deferred {
+-                                        WindowState::update(window, cx, |root, window, cx| root.defer_close_dialog_by_id(id, window, cx));
++                                        WindowState::update(window, cx, |root, window, cx| {
++                                            root.defer_close_dialog_by_id(id, window, cx)
++                                        });
+                                     } else {
+                                         window.close_dialog_by_id(id, cx);
+                                     }
+diff --git a/vendor/gpui-component-0.7.3/src/window_ext.rs b/vendor/gpui-component-0.7.3/src/window_ext.rs
+index 00000000..00000000 100644
+--- a/vendor/gpui-component-0.7.3/src/window_ext.rs
++++ b/vendor/gpui-component-0.7.3/src/window_ext.rs
+@@ -7,8 +7,10 @@
+     sheet::Sheet,
+ };
+ use gpui::{App, ElementId, Entity, Window};
+-use std::{rc::Rc, sync::atomic::{AtomicU64, Ordering}};
+-
++use std::{
++    rc::Rc,
++    sync::atomic::{AtomicU64, Ordering},
++};
+ 
+ /// Opaque identity for one dialog opening.
+ #[derive(Clone, Copy, Debug, PartialEq, Eq, Hash)]
+@@ -293,25 +295,30 @@
+     }
+ }
+ 
+-
+ /// Identity-aware dialog operations that leave [`WindowExt`] source-compatible.
+ pub trait TrackedDialogExt {
+     fn open_dialog_tracked<F>(&mut self, cx: &mut App, build: F) -> DialogId
+-    where F: Fn(Dialog, &mut Window, &mut App) -> Dialog + 'static;
++    where
++        F: Fn(Dialog, &mut Window, &mut App) -> Dialog + 'static;
+     fn has_dialog_id(&mut self, id: DialogId, cx: &mut App) -> bool;
+     fn close_dialog_by_id(&mut self, id: DialogId, cx: &mut App) -> bool;
+ }
+ 
+ impl TrackedDialogExt for Window {
+     fn open_dialog_tracked<F>(&mut self, cx: &mut App, build: F) -> DialogId
+-    where F: Fn(Dialog, &mut Window, &mut App) -> Dialog + 'static,
+-    {
+-        WindowState::update(self, cx, move |root, window, cx| root.open_dialog_tracked(build, window, cx))
++    where
++        F: Fn(Dialog, &mut Window, &mut App) -> Dialog + 'static,
++    {
++        WindowState::update(self, cx, move |root, window, cx| {
++            root.open_dialog_tracked(build, window, cx)
++        })
+     }
+     fn has_dialog_id(&mut self, id: DialogId, cx: &mut App) -> bool {
+         WindowState::read(self, cx).has_dialog_id(id)
+     }
+     fn close_dialog_by_id(&mut self, id: DialogId, cx: &mut App) -> bool {
+-        WindowState::update(self, cx, |root, window, cx| root.close_dialog_by_id(id, window, cx))
+-    }
+-}
++        WindowState::update(self, cx, |root, window, cx| {
++            root.close_dialog_by_id(id, window, cx)
++        })
++    }
++}

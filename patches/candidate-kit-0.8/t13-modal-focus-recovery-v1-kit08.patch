@@ -1,0 +1,537 @@
+diff --git a/vendor/gpui-pre-0.3.10/src/key_dispatch.rs b/vendor/gpui-pre-0.3.10/src/key_dispatch.rs
+index 00000000..00000000 100644
+--- a/vendor/gpui-pre-0.3.10/src/key_dispatch.rs
++++ b/vendor/gpui-pre-0.3.10/src/key_dispatch.rs
+@@ -604,6 +604,26 @@
+         &mut self.nodes[active_node_id.0]
+     }
+ 
++    pub(crate) fn has_view(&self, view: EntityId) -> bool {
++        self.view_node_ids.contains_key(&view)
++    }
++
++    pub(crate) fn modal_focus_allowed(&self, scope: FocusId, target: FocusId) -> bool {
++        if scope == target { return true; }
++        let mut found = false;
++        for (index, _) in self.nodes.iter().enumerate().filter(|(_, node)| node.focus_id == Some(target)) {
++            found = true;
++            let mut current = Some(DispatchNodeId(index));
++            let mut inside = false;
++            while let Some(node) = current {
++                if self.nodes[node.0].focus_id == Some(scope) { inside = true; break; }
++                current = self.nodes[node.0].parent;
++            }
++            if !inside { return false; }
++        }
++        found
++    }
++
+     pub fn focusable_node_id(&self, target: FocusId) -> Option<DispatchNodeId> {
+         self.focusable_node_ids.get(&target).copied()
+     }
+diff --git a/vendor/gpui-pre-0.3.10/src/window.rs b/vendor/gpui-pre-0.3.10/src/window.rs
+index 00000000..00000000 100644
+--- a/vendor/gpui-pre-0.3.10/src/window.rs
++++ b/vendor/gpui-pre-0.3.10/src/window.rs
+@@ -1296,6 +1296,7 @@
+     pub(crate) focus: Option<FocusId>,
+     focus_enabled: bool,
+     inert_focus_scopes: Vec<WeakFocusHandle>,
++    modal_focus_scope: Option<(WeakFocusHandle, EntityId, bool)>,
+     /// Incremented every time focus moves. Used to invalidate a
+     /// pending keyboard activation state when focus changes.
+     pub(crate) focus_generation: u64,
+@@ -2202,6 +2203,7 @@
+             focus: None,
+             focus_enabled: true,
+             inert_focus_scopes: Vec::new(),
++            modal_focus_scope: None,
+             focus_generation: 0,
+             pending_input: None,
+             pending_modifier: ModifierState::default(),
+@@ -2449,9 +2451,66 @@
+         })
+     }
+ 
++    /// Restrict focus to a modal subtree while its owner remains rendered.
++    pub fn set_modal_focus_scope(&mut self, scope: Option<&FocusHandle>, owner: EntityId) {
++        let seen = self.rendered_frame.dispatch_tree.has_view(owner);
++        self.modal_focus_scope = scope.map(|scope| (scope.downgrade(), owner, seen));
++    }
++
++    pub fn modal_focus_contains(&self, scope: &FocusHandle, target: &FocusHandle) -> bool {
++        self.rendered_frame.dispatch_tree.modal_focus_allowed(scope.id, target.id)
++    }
++
++    fn modal_request_allowed(&self, target: &FocusHandle) -> bool {
++        self.modal_focus_scope.as_ref().is_none_or(|(scope, _, _)| {
++            scope.upgrade().is_none_or(|scope| self.modal_focus_contains(&scope, target))
++        })
++    }
++
++    fn prune_modal_focus_scope(&mut self) {
++        if let Some((scope, owner, seen)) = &mut self.modal_focus_scope {
++            let present = self.rendered_frame.dispatch_tree.has_view(*owner);
++            if scope.upgrade().is_none() || (*seen && !present) {
++                self.modal_focus_scope = None;
++            } else {
++                *seen |= present;
++            }
++        }
++    }
++
++    /// Restore focus inside a rendered modal scope, preferring the last live descendant.
++    pub fn restore_focus_within(&mut self, scope: &FocusHandle, preferred: Option<&FocusHandle>, cx: &mut App) -> bool {
++        self.prune_modal_focus_scope();
++        if !self.focus_enabled || self.rendered_frame.dispatch_tree.focusable_node_id(scope.id).is_none() {
++            return false;
++        }
++        if let Some(preferred) = preferred
++            && preferred.id != scope.id
++            && self.rendered_frame.dispatch_tree.focusable_node_id(preferred.id).is_some()
++            && scope.contains(preferred, self)
++            && self.rendered_frame.dispatch_tree.modal_focus_allowed(scope.id, preferred.id)
++        {
++            self.focus(preferred, cx);
++            return self.focus == Some(preferred.id) && self.modal_request_allowed(preferred);
++        }
++        let candidate = self.rendered_frame.tab_stops.matching_preserving_order(
++            None, false, |candidate| candidate.id != scope.id && scope.contains(candidate, self)
++                && self.rendered_frame.dispatch_tree.modal_focus_allowed(scope.id, candidate.id)
++                && self.inert_request_allowed(candidate),
++        );
++        if let Some(candidate) = candidate {
++            self.focus(&candidate, cx);
++            return self.focus == Some(candidate.id) && self.modal_request_allowed(&candidate);
++        }
++        self.focus(scope, cx);
++        self.focus == Some(scope.id) && self.modal_request_allowed(scope)
++    }
++
+     /// Move focus to the element associated with the given [`FocusHandle`].
+     pub fn focus(&mut self, handle: &FocusHandle, cx: &mut App) {
+-        if !self.inert_request_allowed(handle)
++        self.prune_modal_focus_scope();
++        if !self.modal_request_allowed(handle)
++            || !self.inert_request_allowed(handle)
+             || !self.focus_enabled
+             || self.focus == Some(handle.id)
+         {
+@@ -2492,11 +2551,12 @@
+             return;
+         }
+ 
+-        if self.has_rendered_inert_focus_scope() {
++        self.prune_modal_focus_scope();
++        if self.has_rendered_inert_focus_scope() || self.modal_focus_scope.is_some() {
+             let handle = self.rendered_frame.tab_stops.matching_preserving_order(
+                 self.focus,
+                 false,
+-                |handle| self.inert_request_allowed(handle),
++                |handle| self.inert_request_allowed(handle) && self.modal_request_allowed(handle),
+             );
+             if let Some(handle) = handle {
+                 self.focus(&handle, cx);
+@@ -2515,11 +2575,12 @@
+             return;
+         }
+ 
+-        if self.has_rendered_inert_focus_scope() {
++        self.prune_modal_focus_scope();
++        if self.has_rendered_inert_focus_scope() || self.modal_focus_scope.is_some() {
+             let handle = self.rendered_frame.tab_stops.matching_preserving_order(
+                 self.focus,
+                 true,
+-                |handle| self.inert_request_allowed(handle),
++                |handle| self.inert_request_allowed(handle) && self.modal_request_allowed(handle),
+             );
+             if let Some(handle) = handle {
+                 self.focus(&handle, cx);
+diff --git a/vendor/gpui-component-0.7.3/src/root.rs b/vendor/gpui-component-0.7.3/src/root.rs
+index 00000000..00000000 100644
+--- a/vendor/gpui-component-0.7.3/src/root.rs
++++ b/vendor/gpui-component-0.7.3/src/root.rs
+@@ -12,11 +12,11 @@
+ use gpui::{
+     App, AppContext, Bounds, Context, DefiniteLength, DispatchPhase, ElementId, Entity,
+     FocusHandle, GlobalElementId, InteractiveElement, IntoElement, MouseMoveEvent,
+-    ParentElement as _, Pixels, Render, RenderOnce, Styled, WeakFocusHandle, Window, canvas, div,
++    ParentElement as _, Pixels, Render, RenderOnce, Styled, Subscription, WeakFocusHandle, Window, canvas, div,
+     prelude::FluentBuilder as _,
+ };
+ use gpui_base::{TextSelection, TextSelectionScopeId, motion::Presence};
+-use std::{any::TypeId, cell::Cell, rc::Rc};
++use std::{any::TypeId, cell::{Cell, RefCell}, rc::Rc};
+ 
+ pub(crate) fn init(cx: &mut App) {
+     gpui_base::Root::register_plugin::<WindowState>(cx, WindowState::new);
+@@ -40,13 +40,20 @@
+     pending_focus_restore: Option<WeakFocusHandle>,
+     /// Source of stable dialog identities, including their rendered subtrees.
+     next_dialog_id: usize,
+-}
++    focus_recovery_epoch: u64,
++    pending_focus_recovery: Option<FocusHandle>,
++}
++
++#[derive(Clone)]
++type ModalFocusMemory = Rc<RefCell<Option<WeakFocusHandle>>>;
+ 
+ #[derive(Clone)]
+ pub(crate) struct ActiveSheet {
+     focus_handle: FocusHandle,
+     /// The previous focused handle before opening the Sheet.
+     previous_focused_handle: Option<WeakFocusHandle>,
++    last_focused_handle: ModalFocusMemory,
++    _focus_out_subscription: Rc<Subscription>,
+     placement: Placement,
+     selection_scope: TextSelectionScopeId,
+     builder: Rc<dyn Fn(Sheet, &mut Window, &mut App) -> Sheet + 'static>,
+@@ -59,6 +66,8 @@
+     focus_handle: FocusHandle,
+     /// The previous focused handle before opening the Dialog.
+     previous_focused_handle: Option<WeakFocusHandle>,
++    last_focused_handle: ModalFocusMemory,
++    _focus_out_subscription: Rc<Subscription>,
+     selection_scope: TextSelectionScopeId,
+     builder: Rc<dyn Fn(Dialog, &mut Window, &mut App) -> Dialog + 'static>,
+     /// Whether closing plays an exit transition, refreshed on every render.
+@@ -75,6 +84,8 @@
+         id: usize,
+         focus_handle: FocusHandle,
+         previous_focused_handle: Option<WeakFocusHandle>,
++        last_focused_handle: ModalFocusMemory,
++        focus_out_subscription: Rc<Subscription>,
+         selection_scope: TextSelectionScopeId,
+         builder: impl Fn(Dialog, &mut Window, &mut App) -> Dialog + 'static,
+     ) -> Self {
+@@ -82,6 +93,8 @@
+             id,
+             focus_handle,
+             previous_focused_handle,
++            last_focused_handle,
++            _focus_out_subscription: focus_out_subscription,
+             selection_scope,
+             builder: Rc::new(builder),
+             exit_enabled: Rc::new(Cell::new(false)),
+@@ -102,6 +115,12 @@
+ 
+ impl WindowState {
+     fn new(window: &mut Window, cx: &mut Context<Self>) -> Self {
++        cx.observe_window_activation(window, |this, window, cx| {
++            this.on_window_activation(window, cx);
++        }).detach();
++        cx.on_focus_lost(window, |this, window, cx| {
++            this.on_modal_focus_lost(window, cx);
++        }).detach();
+         Self {
+             active_sheet: None,
+             active_dialogs: Vec::new(),
+@@ -117,7 +136,87 @@
+             sheet_size: None,
+             pending_focus_restore: None,
+             next_dialog_id: 0,
+-        }
++            focus_recovery_epoch: 0,
++            pending_focus_recovery: None,
++        }
++    }
++
++    fn top_modal(&self) -> Option<(FocusHandle, ModalFocusMemory)> {
++        self.active_dialogs.iter().rev().find(|dialog| !dialog.closing)
++            .map(|dialog| (dialog.focus_handle.clone(), dialog.last_focused_handle.clone()))
++            .or_else(|| self.active_sheet.as_ref().map(|sheet| (sheet.focus_handle.clone(), sheet.last_focused_handle.clone())))
++    }
++
++    fn sync_modal_focus_scope(&self, window: &mut Window, cx: &mut Context<Self>) {
++        let scope = self.top_modal().map(|(scope, _)| scope);
++        window.set_modal_focus_scope(scope.as_ref(), cx.entity_id());
++    }
++
++    fn is_top_modal(&self, focus_handle: &FocusHandle) -> bool {
++        self.top_modal().is_some_and(|(current, _)| current == *focus_handle)
++    }
++
++    fn track_modal_focus(focus_handle: &FocusHandle, window: &mut Window, cx: &mut Context<Self>) -> (ModalFocusMemory, Rc<Subscription>) {
++        let memory = Rc::new(RefCell::new(None));
++        let last_focus = memory.clone();
++        let subscription = window.on_focus_out(focus_handle, cx, move |event, _, _| {
++            *last_focus.borrow_mut() = Some(event.blurred);
++        });
++        (memory, Rc::new(subscription))
++    }
++
++    fn on_window_activation(&mut self, window: &mut Window, cx: &mut Context<Self>) {
++        self.focus_recovery_epoch = self.focus_recovery_epoch.wrapping_add(1);
++        self.pending_focus_recovery = None;
++        let Some((scope, memory)) = self.top_modal() else { return; };
++        if !window.is_window_active() {
++            if let Some(focused) = window.focused(cx) && window.modal_focus_contains(&scope, &focused) {
++                *memory.borrow_mut() = Some(focused.downgrade());
++            }
++            return;
++        }
++        let preferred = memory.borrow().clone();
++        if !window.focused(cx).is_some_and(|focused| window.modal_focus_contains(&scope, &focused)) {
++            window.blur(cx);
++        }
++        self.schedule_modal_recovery(scope, preferred, window, cx);
++    }
++
++    fn on_modal_focus_lost(&mut self, window: &mut Window, cx: &mut Context<Self>) {
++        if !window.is_window_active() { return; }
++        let Some((scope, _)) = self.top_modal() else { return; };
++        if self.pending_focus_recovery.as_ref() == Some(&scope) { return; }
++        if !window.restore_focus_within(&scope, None, cx) {
++            self.schedule_modal_recovery(scope, None, window, cx);
++        }
++    }
++
++    fn schedule_modal_recovery(&mut self, scope: FocusHandle, preferred: Option<WeakFocusHandle>, window: &mut Window, cx: &mut Context<Self>) {
++        self.focus_recovery_epoch = self.focus_recovery_epoch.wrapping_add(1);
++        let epoch = self.focus_recovery_epoch;
++        self.pending_focus_recovery = Some(scope.clone());
++        let state = cx.weak_entity();
++        window.on_next_frame(move |window, cx| {
++            let valid = window.is_window_active() && state.upgrade().is_some_and(|entity| {
++                let state = entity.read(cx);
++                state.focus_recovery_epoch == epoch && state.is_top_modal(&scope)
++            });
++            if !valid {
++                let _ = state.update(cx, |this, _| if this.focus_recovery_epoch == epoch { this.pending_focus_recovery = None; });
++                return;
++            }
++            window.refresh();
++            window.on_next_frame(move |window, cx| {
++                let _ = state.update(cx, |this, cx| {
++                    if this.focus_recovery_epoch != epoch { return; }
++                    this.pending_focus_recovery = None;
++                    if !window.is_window_active() || !this.is_top_modal(&scope) { return; }
++                    if let Some(current) = window.focused(cx) && current != scope && window.modal_focus_contains(&scope, &current) { return; }
++                    let preferred = preferred.and_then(|handle| handle.upgrade());
++                    window.restore_focus_within(&scope, preferred.as_ref(), cx);
++                });
++            });
++        });
+     }
+ 
+     fn entity(window: &Window, cx: &App) -> Option<Entity<Self>> {
+@@ -389,18 +488,22 @@
+         }
+ 
+         let focus_handle = cx.focus_handle();
+-        focus_handle.focus(window, cx);
++        let (last_focused_handle, focus_out_subscription) = Self::track_modal_focus(&focus_handle, window, cx);
+ 
+         let id = self.next_dialog_id;
+         self.next_dialog_id += 1;
+         let selection_scope = self.allocate_text_selection_scope();
+         self.active_dialogs.push(ActiveDialog::new(
+             id,
+-            focus_handle,
++            focus_handle.clone(),
+             previous_focused_handle,
++            last_focused_handle,
++            focus_out_subscription,
+             selection_scope,
+             build,
+         ));
++        self.sync_modal_focus_scope(window, cx);
++        focus_handle.focus(window, cx);
+         // Opening a modal confines selection to it; drop any background
+         // selection so it cannot linger (or be copied) under the modal.
+         gpui_base::TextSelection::clear(window, cx);
+@@ -445,7 +548,9 @@
+     }
+ 
+     pub fn close_dialog(&mut self, window: &mut Window, cx: &mut Context<'_, WindowState>) {
+-        if let Some(handle) = self.close_dialog_internal(window, cx) {
++        let previous = self.close_dialog_internal(window, cx);
++        self.sync_modal_focus_scope(window, cx);
++        if let Some(handle) = previous {
+             window.focus(&handle, cx);
+         }
+         gpui_base::TextSelection::clear(window, cx);
+@@ -457,7 +562,9 @@
+         window: &mut Window,
+         cx: &mut Context<'_, WindowState>,
+     ) {
+-        if let Some(handle) = self.close_dialog_internal(window, cx) {
++        let previous = self.close_dialog_internal(window, cx);
++        self.sync_modal_focus_scope(window, cx);
++        if let Some(handle) = previous {
+             // The dialog left behind for its exit transition must not look
+             // like a newly opened dialog later, so compare what stays open.
+             let open_dialogs = self
+@@ -503,6 +610,7 @@
+         for dialog in &mut self.active_dialogs {
+             Self::begin_dialog_exit(dialog, window, cx);
+         }
++        self.sync_modal_focus_scope(window, cx);
+ 
+         if let Some(handle) = previous_focused_handle.and_then(|h| h.upgrade()) {
+             window.focus(&handle, cx);
+@@ -527,15 +635,19 @@
+             .or_else(|| window.focused(cx).map(|h| h.downgrade()));
+ 
+         let focus_handle = cx.focus_handle();
+-        focus_handle.focus(window, cx);
++        let (last_focused_handle, focus_out_subscription) = Self::track_modal_focus(&focus_handle, window, cx);
+         let selection_scope = self.allocate_text_selection_scope();
+         self.active_sheet = Some(ActiveSheet {
+-            focus_handle,
++            focus_handle: focus_handle.clone(),
+             previous_focused_handle,
++            last_focused_handle,
++            _focus_out_subscription: focus_out_subscription,
+             placement,
+             selection_scope,
+             builder: Rc::new(build),
+         });
++        self.sync_modal_focus_scope(window, cx);
++        focus_handle.focus(window, cx);
+         // Opening a modal confines selection to it; drop any background
+         // selection so it cannot linger (or be copied) under the modal.
+         gpui_base::TextSelection::clear(window, cx);
+@@ -544,15 +656,13 @@
+ 
+     pub fn close_sheet(&mut self, window: &mut Window, cx: &mut Context<'_, WindowState>) {
+         self.focused_input = None;
+-        if let Some(previous_handle) = self
+-            .active_sheet
+-            .as_ref()
+-            .and_then(|s| s.previous_focused_handle.as_ref())
+-            .and_then(|h| h.upgrade())
+-        {
++        let previous_handle = self.active_sheet.take()
++            .and_then(|sheet| sheet.previous_focused_handle)
++            .and_then(|handle| handle.upgrade());
++        self.sync_modal_focus_scope(window, cx);
++        if let Some(previous_handle) = previous_handle {
+             window.focus(&previous_handle, cx);
+         }
+-        self.active_sheet = None;
+         gpui_base::TextSelection::clear(window, cx);
+         cx.notify();
+     }
+diff --git a/vendor/gpui-pre-0.3.10/src/key_dispatch.rs b/vendor/gpui-pre-0.3.10/src/key_dispatch.rs
+index 00000000..00000000 100644
+--- a/vendor/gpui-pre-0.3.10/src/key_dispatch.rs
++++ b/vendor/gpui-pre-0.3.10/src/key_dispatch.rs
+@@ -609,17 +609,29 @@
+     }
+ 
+     pub(crate) fn modal_focus_allowed(&self, scope: FocusId, target: FocusId) -> bool {
+-        if scope == target { return true; }
++        if scope == target {
++            return true;
++        }
+         let mut found = false;
+-        for (index, _) in self.nodes.iter().enumerate().filter(|(_, node)| node.focus_id == Some(target)) {
++        for (index, _) in self
++            .nodes
++            .iter()
++            .enumerate()
++            .filter(|(_, node)| node.focus_id == Some(target))
++        {
+             found = true;
+             let mut current = Some(DispatchNodeId(index));
+             let mut inside = false;
+             while let Some(node) = current {
+-                if self.nodes[node.0].focus_id == Some(scope) { inside = true; break; }
++                if self.nodes[node.0].focus_id == Some(scope) {
++                    inside = true;
++                    break;
++                }
+                 current = self.nodes[node.0].parent;
+             }
+-            if !inside { return false; }
++            if !inside {
++                return false;
++            }
+         }
+         found
+     }
+diff --git a/vendor/gpui-pre-0.3.10/src/window.rs b/vendor/gpui-pre-0.3.10/src/window.rs
+index 00000000..00000000 100644
+--- a/vendor/gpui-pre-0.3.10/src/window.rs
++++ b/vendor/gpui-pre-0.3.10/src/window.rs
+@@ -2458,12 +2458,16 @@
+     }
+ 
+     pub fn modal_focus_contains(&self, scope: &FocusHandle, target: &FocusHandle) -> bool {
+-        self.rendered_frame.dispatch_tree.modal_focus_allowed(scope.id, target.id)
++        self.rendered_frame
++            .dispatch_tree
++            .modal_focus_allowed(scope.id, target.id)
+     }
+ 
+     fn modal_request_allowed(&self, target: &FocusHandle) -> bool {
+         self.modal_focus_scope.as_ref().is_none_or(|(scope, _, _)| {
+-            scope.upgrade().is_none_or(|scope| self.modal_focus_contains(&scope, target))
++            scope
++                .upgrade()
++                .is_none_or(|scope| self.modal_focus_contains(&scope, target))
+         })
+     }
+ 
+@@ -2479,25 +2483,50 @@
+     }
+ 
+     /// Restore focus inside a rendered modal scope, preferring the last live descendant.
+-    pub fn restore_focus_within(&mut self, scope: &FocusHandle, preferred: Option<&FocusHandle>, cx: &mut App) -> bool {
++    pub fn restore_focus_within(
++        &mut self,
++        scope: &FocusHandle,
++        preferred: Option<&FocusHandle>,
++        cx: &mut App,
++    ) -> bool {
+         self.prune_modal_focus_scope();
+-        if !self.focus_enabled || self.rendered_frame.dispatch_tree.focusable_node_id(scope.id).is_none() {
++        if !self.focus_enabled
++            || self
++                .rendered_frame
++                .dispatch_tree
++                .focusable_node_id(scope.id)
++                .is_none()
++        {
+             return false;
+         }
+         if let Some(preferred) = preferred
+             && preferred.id != scope.id
+-            && self.rendered_frame.dispatch_tree.focusable_node_id(preferred.id).is_some()
++            && self
++                .rendered_frame
++                .dispatch_tree
++                .focusable_node_id(preferred.id)
++                .is_some()
+             && scope.contains(preferred, self)
+-            && self.rendered_frame.dispatch_tree.modal_focus_allowed(scope.id, preferred.id)
++            && self
++                .rendered_frame
++                .dispatch_tree
++                .modal_focus_allowed(scope.id, preferred.id)
+         {
+             self.focus(preferred, cx);
+             return self.focus == Some(preferred.id) && self.modal_request_allowed(preferred);
+         }
+-        let candidate = self.rendered_frame.tab_stops.matching_preserving_order(
+-            None, false, |candidate| candidate.id != scope.id && scope.contains(candidate, self)
+-                && self.rendered_frame.dispatch_tree.modal_focus_allowed(scope.id, candidate.id)
+-                && self.inert_request_allowed(candidate),
+-        );
++        let candidate =
++            self.rendered_frame
++                .tab_stops
++                .matching_preserving_order(None, false, |candidate| {
++                    candidate.id != scope.id
++                        && scope.contains(candidate, self)
++                        && self
++                            .rendered_frame
++                            .dispatch_tree
++                            .modal_focus_allowed(scope.id, candidate.id)
++                        && self.inert_request_allowed(candidate)
++                });
+         if let Some(candidate) = candidate {
+             self.focus(&candidate, cx);
+             return self.focus == Some(candidate.id) && self.modal_request_allowed(&candidate);
