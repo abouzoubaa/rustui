@@ -70,10 +70,7 @@ that launches the same UI through the thin `rustui-lab` package.
 
 ## Local dependency sources and persistent build cache
 
-Both live inside this RustUI folder, as requested:
-
-- `vendor/`: unmodified Cargo-vendored source packages, including GPUI and Components.
-- `target/headstart/`: compiled dependencies, incremental state, binaries, and evidence.
+Vendored sources live in `vendor/`. All repository checkouts and disposable worktrees share compiled artifacts at `$HOME/.cache/rustui-target`; pass it as `CARGO_TARGET_DIR` for Cargo commands.
 
 The approved direct pins are `gpui-pre = 0.3.9`, `gpui-pre-platform = 0.3.9`, and
 `gpui-component = 0.7.3`. Rust uses the dependency aliases `gpui` and `gpui_platform`.
@@ -87,10 +84,8 @@ presence in `vendor/` does not mean a package is compiled or enabled. Preserve
 upstream license files and `.cargo-checksum.json` files, and do not edit vendored
 code directly. Controlled source patches require their own approval.
 
-The launcher and Cargo configuration default to `target/headstart/`. A caller can
-explicitly override `CARGO_TARGET_DIR`, but keep it inside RustUI for this workflow.
-`RUSTUI_CACHE_DIR` and `XDG_CACHE_HOME` no longer select RustUI's build location.
-Deleting this RustUI folder or running `cargo clean` deletes its compiled cache.
+The launcher honors `CARGO_TARGET_DIR`; set it to `$HOME/.cache/rustui-target` in this repo and every disposable worktree. `RUSTUI_CACHE_DIR` and `XDG_CACHE_HOME` do not select RustUI's build location.
+Keep the shared cache outside the checkout so disposable worktrees reuse the same artifacts.
 Cargo may retain duplicate download copies in its usual registry cache, but this
 workspace resolves and compiles its dependency sources from `vendor/`.
 
@@ -100,19 +95,25 @@ to stay fresh while RustUI recompiles. Changes to those inputs legitimately requ
 rebuilding. Build scripts may also invalidate dependencies. No cache can guarantee
 a binary remains valid forever.
 
-Do not run `cargo clean` during routine work. Do not share this cache with Chorus:
-its patched sources/features/compiler configuration can differ. Sharing the same
-cache path alone does not make those artifacts compatible.
+Do not run `cargo clean` after tickets. Once a week, or when free disk is below 50 GB, run `CARGO_TARGET_DIR="$HOME/.cache/rustui-target" cargo sweep --time 7 .`. Do not share this cache with Chorus: its patched sources/features/compiler configuration can differ.
+
+## Build-cache maintenance
+
+`cargo-sweep` prunes stale artifacts from the shared target directory; install it with `cargo install cargo-sweep --locked`.
+Run `CARGO_TARGET_DIR="$HOME/.cache/rustui-target" cargo sweep --time 7 .` weekly or when free disk is below 50 GB.
+
+`sccache` is optional and is not enabled by repository configuration; install it with `cargo install sccache --locked` if desired.
+Opt in per command with `RUSTC_WRAPPER=sccache CARGO_TARGET_DIR="$HOME/.cache/rustui-target" rustup run 1.97.1 cargo check --workspace --all-targets --locked --offline`.
 
 ## Warmup and evidence
 
 Warm the full native development build, then verify an unchanged rebuild:
 
 ```sh
-mkdir -p target/headstart/evidence
-./scripts/cargo-headstart build --workspace --frozen
-./scripts/cargo-headstart build --workspace --frozen --message-format=json > target/headstart/evidence/reuse.jsonl
-python3 scripts/verify_dependency_reuse.py target/headstart/evidence/reuse.jsonl
+mkdir -p "$HOME/.cache/rustui-target/headstart/evidence"
+CARGO_TARGET_DIR="$HOME/.cache/rustui-target" ./scripts/cargo-headstart build --workspace --frozen
+CARGO_TARGET_DIR="$HOME/.cache/rustui-target" ./scripts/cargo-headstart build --workspace --frozen --message-format=json > "$HOME/.cache/rustui-target/headstart/evidence/reuse.jsonl"
+python3 scripts/verify_dependency_reuse.py "$HOME/.cache/rustui-target/headstart/evidence/reuse.jsonl"
 ```
 
 The verification script requires one successful Cargo build event and fresh
@@ -149,8 +150,8 @@ Pass `--report PATH` to the existing reuse checker to save its result with the
 source log hash and per-artifact Cargo metadata:
 
 ```sh
-python3 scripts/verify_dependency_reuse.py target/headstart/evidence/reuse.jsonl \
-  --report target/headstart/evidence/reuse-report.json
+python3 scripts/verify_dependency_reuse.py "$HOME/.cache/rustui-target/headstart/evidence/reuse.jsonl" \
+  --report "$HOME/.cache/rustui-target/headstart/evidence/reuse-report.json"
 ```
 
 The default package set and success criteria are unchanged. Exit 0 means all
