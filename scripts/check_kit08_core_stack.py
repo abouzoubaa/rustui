@@ -47,6 +47,10 @@ LATER_FAMILY_CANDIDATES = {
     "r15-button-disabled-focus-v1-kit08.patch",
     "r15-sidebar-disabled-v1.patch",
     "r15-breadcrumb-disabled-v1.patch",
+    "gpui-component-popup-menu-disabled-confirm-v1-kit08.patch",
+    "r15b-menu-item-disabled-v1.patch",
+    "r15b-popup-menu-recovery-v1.patch",
+    "r15b-dropdown-menu-refresh-v1.patch",
 }
 
 

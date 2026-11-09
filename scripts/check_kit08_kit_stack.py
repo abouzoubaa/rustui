@@ -51,7 +51,13 @@ A2_4C_ORDER = (
     "r15-sidebar-disabled-v1.patch",
     "r15-breadcrumb-disabled-v1.patch",
 )
-FAMILY_ORDER = A2_4A_ORDER + A2_4B_ORDER + A2_4C_ORDER
+A2_4D_ORDER = (
+    "gpui-component-popup-menu-disabled-confirm-v1-kit08.patch",
+    "r15b-menu-item-disabled-v1.patch",
+    "r15b-popup-menu-recovery-v1.patch",
+    "r15b-dropdown-menu-refresh-v1.patch",
+)
+FAMILY_ORDER = A2_4A_ORDER + A2_4B_ORDER + A2_4C_ORDER + A2_4D_ORDER
 
 
 def compile_candidate_workspace(
@@ -105,6 +111,20 @@ def compile_candidate_workspace(
         + "\n"
     )
     (workspace / "Cargo.toml").write_text(cargo_toml, encoding="utf-8")
+    if "--proof-disabled-menu" in sys.argv[1:]:
+        # GPUI Component's crate archive omits several repository-level
+        # include_str! fixtures that are only needed to compile its unit tests.
+        test_assets = {
+            "sources/assets/assets/icons/arrow-up.svg": "<svg/>",
+            "sources/assets/assets/icons/search.svg": "<svg/>",
+            "sources/base/src/dock/mod.rs": "",
+            "examples/fixtures/test.md": "fixture",
+            "themes/aurora.json": "{}",
+        }
+        for relative, content in test_assets.items():
+            test_asset = workspace / relative
+            test_asset.parent.mkdir(parents=True, exist_ok=True)
+            test_asset.write_text(content, encoding="utf-8")
     target_dir = fixture_root / "compile-target"
     command = ["rustup", "run", "1.97.1", "cargo", "check"]
     offline = "--compile-online" not in sys.argv[1:]
@@ -125,6 +145,30 @@ def compile_candidate_workspace(
             + result.stderr
         )
     print(f"compile gate: {' '.join(command[3:])}: passed")
+    if "--proof-disabled-menu" in sys.argv[1:]:
+        proof_command = ["rustup", "run", "1.97.1", "cargo", "test"]
+        if offline:
+            proof_command.append("--offline")
+        proof_command.extend([
+            "-p",
+            "gpui-component",
+            "--lib",
+            "disabled_selected_popup_menu_item_ignores_confirm",
+        ])
+        proof = subprocess.run(
+            proof_command,
+            cwd=workspace,
+            env={**os.environ, "CARGO_TARGET_DIR": str(target_dir)},
+            capture_output=True,
+            text=True,
+        )
+        if proof.returncode:
+            raise FixtureError(
+                f"menu proof failed ({' '.join(proof_command[3:])}):\n"
+                + proof.stdout
+                + proof.stderr
+            )
+        print("proof: disabled_selected_popup_menu_item_ignores_confirm: passed")
 
 
 def run(write_manifest: bool = False) -> dict:
@@ -156,9 +200,15 @@ def run(write_manifest: bool = False) -> dict:
         raise FixtureError(f"recorded stack manifest is stale: {OUTPUT}; use --write-manifest")
     OUTPUT.write_bytes(data)
     print(
-        "core patches={}; A2-4a patches={}; A2-4b patches={}; A2-4c patches={}; fixture archives verified={}; "
+        "core patches={}; A2-4a patches={}; A2-4b patches={}; A2-4c patches={}; A2-4d patches={}; fixture archives verified={}; "
         "target files hashed={}; stack files={}; reverse=exact".format(
-            len(CORE_ORDER), len(A2_4A_ORDER), len(A2_4B_ORDER), len(A2_4C_ORDER), archive_count, target_count,
+            len(CORE_ORDER),
+            len(A2_4A_ORDER),
+            len(A2_4B_ORDER),
+            len(A2_4C_ORDER),
+            len(A2_4D_ORDER),
+            archive_count,
+            target_count,
             len(result["files"]),
         )
     )

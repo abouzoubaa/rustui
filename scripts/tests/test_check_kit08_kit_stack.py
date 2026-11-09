@@ -10,9 +10,21 @@ ROOT = Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(ROOT / "scripts"))
 
 from check_kit08_core_stack import apply_stack  # noqa: E402
+from check_kit08_kit_stack import A2_4D_ORDER  # noqa: E402
 
 
 class Kit08FamilyStackTests(unittest.TestCase):
+    def test_menu_provider_precedes_dropdown_refresh_consumer(self):
+        self.assertEqual(
+            A2_4D_ORDER,
+            (
+                "gpui-component-popup-menu-disabled-confirm-v1-kit08.patch",
+                "r15b-menu-item-disabled-v1.patch",
+                "r15b-popup-menu-recovery-v1.patch",
+                "r15b-dropdown-menu-refresh-v1.patch",
+            ),
+        )
+
     def test_core_then_family_applies_and_reverse_restores_fixture(self):
         with tempfile.TemporaryDirectory() as directory:
             root = Path(directory)
