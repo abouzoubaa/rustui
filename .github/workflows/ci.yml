@@ -30,6 +30,11 @@ jobs:
       - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
         with:
           persist-credentials: false
+      - name: Cache Cargo build artifacts
+        uses: Swatinem/rust-cache@d1527c8f67ef9af357290475d4af4b0fab8f12e0
+        with:
+          workspaces: ". -> target/headstart"
+          key: ${{ hashFiles('Cargo.lock', 'rust-toolchain.toml', 'patches/approved/*.json') }}
       - name: Install Rust 1.97.1
         run: rustup toolchain install 1.97.1 --profile minimal --component rustfmt
       - name: Verify approved Tree sources, replay lifecycle, and source release gates
