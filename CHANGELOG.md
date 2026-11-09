@@ -2,6 +2,8 @@
 
 ## 0.2.0 — 2026-11-09
 
+- Fixed the GPUI Kit 0.8.1 candidate bidi layout and tracked-dialog compile blockers; added an optional Base/Component compile gate.
+
 - Added candidate GPUI Kit 0.8.1 modal focus recovery and tracked dialog closing patches.
 
 - Added an inert-focus-scope patch candidate rebased and tested against the GPUI Kit 0.8.1 fixture.

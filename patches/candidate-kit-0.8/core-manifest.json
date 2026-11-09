@@ -98,11 +98,15 @@
     },
     {
       "patch": "gpui-bidi-input-hit-v1-kit08.patch",
-      "patch_sha256": "1c713f068d11abf5c136837735b669ec6d2849df200cef1d5b99762715a8ff19",
+      "patch_sha256": "b94f534b2245af1bc5f70523d8db8bb243f6d1dd9586b5c0972e3e55a9647cad",
       "files": {
         "vendor/gpui-base-0.7.3/src/text/inline.rs": {
           "pre_sha256": "7cc393c3b02e176799aef97fedf294c88e82d3265b10fe678a0cb1efc1b1d333",
           "post_sha256": "71b1c9c4616ed6966dbbe6d0a57f390c3eabb1d063b4a43f45769efef4800dd9"
+        },
+        "vendor/gpui-base-0.8.1/src/input/base/tab_stops.rs": {
+          "pre_sha256": "a41467f4d5e37d435dc35b29964d85c1a8388bda4bca9126c01814a4c92d770b",
+          "post_sha256": "d8e2bc71d88824c4d87563c136e54118ec46763e02bb692df4e2d09feba6572d"
         },
         "vendor/gpui-pre-0.3.10/src/platform.rs": {
           "pre_sha256": "b0dab99151fb41873c9938c32727df4c5f7aa39b4469b495ecdcd579ad957b44",
@@ -228,6 +232,10 @@
       "pre_sha256": "7cc393c3b02e176799aef97fedf294c88e82d3265b10fe678a0cb1efc1b1d333",
       "post_sha256": "71b1c9c4616ed6966dbbe6d0a57f390c3eabb1d063b4a43f45769efef4800dd9"
     },
+    "vendor/gpui-base-0.8.1/src/input/base/tab_stops.rs": {
+      "pre_sha256": "a41467f4d5e37d435dc35b29964d85c1a8388bda4bca9126c01814a4c92d770b",
+      "post_sha256": "d8e2bc71d88824c4d87563c136e54118ec46763e02bb692df4e2d09feba6572d"
+    },
     "vendor/gpui-pre-0.3.10/src/platform.rs": {
       "pre_sha256": "d5a1f49466edafc882f2646c0d97b7febcec61aa2a3df43f08035a812c9be7b5",
       "post_sha256": "cc268afff69920a63ca7af8aff26d7feaec95dd70f61490da29ba25c2e74dc8d"
@@ -304,7 +312,7 @@
   "reverse_verified": true,
   "fixture": {
     "archives_verified": 31,
-    "target_files_hashed": 20,
+    "target_files_hashed": 21,
     "known_unavailable_targets": 0
   }
 }

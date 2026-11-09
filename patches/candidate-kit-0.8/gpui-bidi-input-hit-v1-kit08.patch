@@ -318,3 +318,49 @@
              })
          }
      }
+--- a/vendor/gpui-base-0.8.1/src/input/base/tab_stops.rs
++++ b/vendor/gpui-base-0.8.1/src/input/base/tab_stops.rs
+@@ -114,5 +114,14 @@ fn expanded_layout(layout: &LineLayout, text: &str, stop: Pixels) -> Option<LineLayout> {
+         descent: layout.descent,
+         runs,
+         len: layout.len,
++        bidi_clusters: layout.bidi_clusters.as_ref().map(|clusters| {
++            clusters
++                .iter()
++                .map(|cluster| gpui::WrappedGlyphCluster {
++                    x: cluster.x + shift_after(cluster.bytes.start),
++                    ..cluster.clone()
++                })
++                .collect()
++        }),
+     })
+ }
+@@ -147,5 +156,6 @@ mod tests {
+                 glyphs,
+             }],
+             len: text.len(),
++            bidi_clusters: None,
+         }
+     }
+--- a/vendor/gpui-base-0.8.1/src/input/base/tab_stops.rs
++++ b/vendor/gpui-base-0.8.1/src/input/base/tab_stops.rs
+@@ -235,4 +235,19 @@
+     }
+ 
+     #[test]
++    fn bidi_clusters_move_with_expanded_tab_stops() {
++        let text = "\ta";
++        let mut shaped = layout(text, 1., 1.);
++        shaped.bidi_clusters = Some(vec![gpui::WrappedGlyphCluster {
++            bytes: 1..2,
++            x: px(1.),
++            width: px(1.),
++            rtl: true,
++        }]);
++
++        let expanded = expanded_layout(&shaped, text, px(4.)).unwrap();
++
++        assert_eq!(expanded.bidi_clusters.unwrap()[0].x, px(4.));
++    }
++
+     fn tab_stops_cross_shaped_runs_and_multibyte_characters() {

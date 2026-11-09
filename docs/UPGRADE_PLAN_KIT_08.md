@@ -323,7 +323,21 @@ Status: **copied 0 / rebased 2 / partial 0 / remainder 0**.
 | `t13-modal-focus-recovery-v1.patch` | `t13-modal-focus-recovery-v1-kit08.patch`; composed modal traversal with the 0.3.10 `matching_preserving_order` API from the preceding inert-focus candidate. |
 | `gpui-component-tracked-dialog-focus-rebase-v2.patch` | `gpui-component-tracked-dialog-focus-rebase-v2-kit08.patch`; maps tracked close requests to the target's stable dialog IDs and exit lifecycle. |
 
-Fixture stack proof passes. The t13 core behavior test passed in a disposable GPUI 0.3.10 test window (`cargo test -p a2-4a-modal-proof --test modal_scope`: 1 passed). Tracked Component-dialog proof is deferred to A2-7: the isolated full-source compile stops in the pre-existing Base candidate at `gpui-base/src/input/base/tab_stops.rs:110` because its `gpui::LineLayout` initializer lacks `bidi_clusters`; Component tests cannot compile until that source-graph blocker is resolved.
+Fixture stack proof passes. The t13 core behavior test passed in a disposable GPUI 0.3.10 test window (`cargo test -p a2-4a-modal-proof --test modal_scope`: 1 passed). A2-4-compat resolved the Base/Component source-graph errors; the tracked Component-dialog proof now passes in the patched fixture (`cargo test -p a2-4a-modal-proof --test tracked_dialog`: 1 passed).
+
+### A2-4 compatibility check
+
+The optional fixture compile gate is `python3 scripts/check_kit08_kit_stack.py --compile`. It applies all 12 core candidates and both A2-4a candidates, reconstructs the verified crate archives in a disposable workspace, overlays the applied patch outputs, runs `cargo check --offline -p gpui-base -p gpui-component`, then verifies exact reverse application. Use `--compile-online` if the Cargo registry/index or dependency archives are not cached. Crate source archives are downloaded and SHA-256 checked by the fixture harness. In this run an initial Cargo resolution needed an online refresh for `gpui-fast-platform ^0.1.12`; after fetching that package metadata and dependencies, the compile gate passed offline.
+
+The first package checks found these errors:
+
+| Check | Error | Cause and candidate fix |
+|---|---|---|
+| `gpui-base` | `src/input/base/tab_stops.rs:110`: `E0063`, missing `bidi_clusters` in `gpui::LineLayout` | The pristine `gpui-pre 0.3.10` `LineLayout` has no `bidi_clusters` field; `gpui-bidi-input-hit-v1-kit08.patch` adds it. GPUI Base 0.8.1's tab-stop output constructor and test helper therefore need that field. The candidate now shifts each bidi cluster's x by the same tab delta as its glyphs, initializes the test helper to `None`, and adds `bidi_clusters_move_with_expanded_tab_stops`. This preserves bidi hit-testing coordinates when tab stops widen a line. |
+| `gpui-component` | `src/root.rs:48`: `E0774`, derive applied to a type alias | The t13 candidate placed `#[derive(Clone)]` on `ModalFocusMemory`, a type alias. Removed the derive; the alias is an `Rc` and its uses clone the `Rc` itself. |
+| `gpui-component` | `src/dialog/dialog.rs:760`: `E0425`, `opening_id` not found | The tracked-dialog close closure did not capture the dialog's identity. The candidate now copies `self.opening_id` before creating the closure. |
+
+After those patch-only fixes, `python3 scripts/check_kit08_kit_stack.py --compile --write-manifest` passed: both package checks passed offline; 31 fixture archives verified, 26 target files hashed, 29 stack files, reverse exact. The tracked-dialog GPUI test and modal-focus test each passed (1/1). A separate bidi-layout integration proof passed (1/1); running GPUI Base's unit-test target itself is blocked by upstream `gpui-fast-macos 0.1.12` use of unstable `Option::map_or_default` under Rust 1.97.1, so the new tab-stop unit test remains unexecuted here.
 
 ### Approved patch destination ledger (71 patches)
 

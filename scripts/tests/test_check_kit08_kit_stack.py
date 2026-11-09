@@ -48,12 +48,26 @@ class Kit08FamilyStackTests(unittest.TestCase):
                 "@@ -1,2 +1,3 @@\n pub fn seed() {}\n pub fn core() {}\n+pub fn family() {}\n",
                 encoding="utf-8",
             )
+            observed = {}
+
+            def after_apply(stage, targets, _manifest, _fixture):
+                observed["targets"] = targets
+                observed["content"] = (stage / "vendor/gpui-pre-0.3.10/src/sample.rs").read_text(
+                    encoding="utf-8"
+                )
+
             result = apply_stack(
                 manifest, patches, fixture, "manifest-hash",
                 patch_order=("core.patch", "family.patch"),
+                after_apply=after_apply,
             )
             self.assertTrue(result["reverse_verified"])
             self.assertEqual(result["order"], ["core.patch", "family.patch"])
+            self.assertEqual(observed["content"], "pub fn seed() {}\npub fn core() {}\npub fn family() {}\n")
+            self.assertEqual(
+                observed["targets"]["vendor/gpui-pre-0.3.10/src/sample.rs"],
+                ("gpui-pre", "src/sample.rs"),
+            )
             self.assertEqual(
                 result["files"]["vendor/gpui-pre-0.3.10/src/sample.rs"]["pre_sha256"],
                 hashlib.sha256(b"pub fn seed() {}\n").hexdigest(),

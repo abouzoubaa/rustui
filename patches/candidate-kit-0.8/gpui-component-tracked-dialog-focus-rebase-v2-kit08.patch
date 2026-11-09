@@ -583,3 +583,13 @@ index 00000000..00000000 100644
 +        })
 +    }
 +}
+
+--- a/vendor/gpui-component-0.7.3/src/dialog/dialog.rs
++++ b/vendor/gpui-component-0.7.3/src/dialog/dialog.rs
+@@ -680,5 +680,6 @@
+         let motion = cx.theme().motion_tokens();
+         let closing = self.motion.is_some_and(|motion| motion.closing);
++        let opening_id = self.opening_id;
+         let visibility = self
+             .motion
+             .map_or(1.0, |motion| motion.visibility.clamp(0., 1.));

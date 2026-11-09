@@ -11,7 +11,7 @@ import subprocess
 import sys
 import tempfile
 from pathlib import Path
-from typing import Any
+from typing import Any, Callable
 
 from prepare_gpui_kit_08_fixture import (
     DEFAULT_MANIFEST,
@@ -65,6 +65,7 @@ def apply_stack(
     fixture_root: Path,
     source_manifest_sha256: str,
     patch_order: tuple[str, ...] | None = None,
+    after_apply: Callable[[Path, dict[str, tuple[str, str]], dict[str, Any], Path], None] | None = None,
 ) -> dict[str, Any]:
     sources = {source["name"]: source for source in manifest["sources"]}
     package_names = sorted(sources, key=len, reverse=True)
@@ -144,6 +145,9 @@ def apply_stack(
                     },
                 }
             )
+
+        if after_apply is not None:
+            after_apply(stage, target_sources, manifest, fixture_root)
 
         final = {target: (stage / target).read_bytes() for target in initial}
         for patch_path in reversed(patches):
