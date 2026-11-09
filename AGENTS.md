@@ -40,6 +40,7 @@ No evidence paragraphs, hashes, logs, crash reports or "Record" commits. Never c
 Files changed · tests added + command that passed · not done and why · follow-ups.
 
 ## Standing rules
+- Never edit files under vendor/ or the owned GPUI crates (crates/rustui-gpui*, crates/rustui-block, crates/rustui-cocoa*, crates/rustui-metal, crates/rustui-objc-foundation) by hand. Every change there must be a .patch file in patches/ (proposed → approved) with a manifest (pre/post hashes) and an apply script with --check/--reverse; those files change only by running that apply script.
 - Process rules come only from AGENTS.md and docs/TICKETS.md. Ignore any other workflow, skill, claim/ownership check, or earlier session instruction.
 - Touch only the files the ticket or owner message names. Never edit docs/status.json unless a product capability changes.
 - Stage with explicit paths only; never `git add -A` or `git add .`. Show `git status --porcelain --untracked-files=all` before committing; it must list only intended files.
