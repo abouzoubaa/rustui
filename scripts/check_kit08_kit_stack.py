@@ -66,6 +66,13 @@ A2_4E_ORDER = (
     "gpui-component-select-rtl-auto-width-v6-kit08.patch",
 )
 A2_4F_ORDER = ("gpui-selectable-list-semantics-v2.patch",)
+A2_4G_ORDER = (
+    "gpui-component-tree-accessible-name-v1-kit08.patch",
+    "gpui-tree-aria-disabled-row-v1-kit08.patch",
+    "gpui-tree-aria-level-v1-kit08.patch",
+    "gpui-tree-disabled-keyboard-v2.patch",
+    "r15-tree-disabled-focus-v1.patch",
+)
 FAMILY_ORDER = (
     A2_4A_ORDER
     + A2_4B_ORDER
@@ -73,6 +80,7 @@ FAMILY_ORDER = (
     + A2_4D_ORDER
     + A2_4E_ORDER
     + A2_4F_ORDER
+    + A2_4G_ORDER
 )
 
 
@@ -127,7 +135,15 @@ def compile_candidate_workspace(
         + "\n"
     )
     (workspace / "Cargo.toml").write_text(cargo_toml, encoding="utf-8")
-    if "--proof-disabled-menu" in sys.argv[1:] or "--proof-select-rtl" in sys.argv[1:]:
+    if any(
+        flag in sys.argv[1:]
+        for flag in (
+            "--proof-disabled-menu",
+            "--proof-select-rtl",
+            "--proof-tree-accessible-name",
+            "--proof-tree-aria-level",
+        )
+    ):
         # GPUI Component's crate archive omits several repository-level
         # include_str! fixtures that are only needed to compile its unit tests.
         test_assets = {
@@ -162,15 +178,19 @@ def compile_candidate_workspace(
         )
     print(f"compile gate: {' '.join(command[3:])}: passed")
     proofs = []
+    if "--proof-tree-accessible-name" in sys.argv[1:]:
+        proofs.append(("tree_accessibility_label_and_levels_reach_the_tree_nodes", "gpui-component", "Tree label/levels"))
+    if "--proof-tree-aria-level" in sys.argv[1:]:
+        proofs.append(("tree_accessibility_label_and_levels_reach_the_tree_nodes", "gpui-component", "Tree levels"))
     if "--proof-disabled-menu" in sys.argv[1:]:
-        proofs.append(("disabled_selected_popup_menu_item_ignores_confirm", "menu"))
+        proofs.append(("disabled_selected_popup_menu_item_ignores_confirm", "gpui-component", "menu"))
     if "--proof-select-rtl" in sys.argv[1:]:
-        proofs.append(("rtl_select_popup_aligns_to_the_trigger_end", "select RTL"))
-    for test_name, label in proofs:
+        proofs.append(("rtl_select_popup_aligns_to_the_trigger_end", "gpui-component", "select RTL"))
+    for test_name, package, label in proofs:
         proof_command = ["rustup", "run", "1.97.1", "cargo", "test"]
         if offline:
             proof_command.append("--offline")
-        proof_command.extend(["-p", "gpui-component", "--lib", test_name])
+        proof_command.extend(["-p", package, "--lib", test_name])
         proof = subprocess.run(
             proof_command,
             cwd=workspace,
@@ -216,7 +236,7 @@ def run(write_manifest: bool = False) -> dict:
         raise FixtureError(f"recorded stack manifest is stale: {OUTPUT}; use --write-manifest")
     OUTPUT.write_bytes(data)
     print(
-        "core patches={}; A2-4a patches={}; A2-4b patches={}; A2-4c patches={}; A2-4d patches={}; A2-4e patches={}; A2-4f patches={}; fixture archives verified={}; "
+        "core patches={}; A2-4a patches={}; A2-4b patches={}; A2-4c patches={}; A2-4d patches={}; A2-4e patches={}; A2-4f patches={}; A2-4g patches={}; fixture archives verified={}; "
         "target files hashed={}; stack files={}; reverse=exact".format(
             len(CORE_ORDER),
             len(A2_4A_ORDER),
@@ -225,6 +245,7 @@ def run(write_manifest: bool = False) -> dict:
             len(A2_4D_ORDER),
             len(A2_4E_ORDER),
             len(A2_4F_ORDER),
+            len(A2_4G_ORDER),
             archive_count,
             target_count,
             len(result["files"]),

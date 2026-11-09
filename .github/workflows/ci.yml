@@ -113,7 +113,7 @@ jobs:
       - name: Test the GPUI Kit 0.8 cumulative candidate stack
         run: python3 -m unittest scripts.tests.test_check_kit08_kit_stack -v
       - name: Verify the GPUI Kit 0.8 cumulative candidate stack
-        run: python3 scripts/check_kit08_kit_stack.py --compile-online --proof-disabled-menu --proof-select-rtl
+        run: python3 scripts/check_kit08_kit_stack.py --compile-online --proof-disabled-menu --proof-select-rtl --proof-tree-accessible-name
       - name: Stable Rust formatting, workspace check, and library tests
         run: ./scripts/check.sh
 

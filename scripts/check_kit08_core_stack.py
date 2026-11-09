@@ -58,6 +58,11 @@ LATER_FAMILY_CANDIDATES = {
     "gpui-component-select-rtl-auto-width-v4-kit08.patch",
     "gpui-component-select-rtl-auto-width-v6-kit08.patch",
     "gpui-selectable-list-semantics-v2.patch",
+    "gpui-component-tree-accessible-name-v1-kit08.patch",
+    "gpui-tree-aria-disabled-row-v1-kit08.patch",
+    "gpui-tree-aria-level-v1-kit08.patch",
+    "gpui-tree-disabled-keyboard-v2.patch",
+    "r15-tree-disabled-focus-v1.patch",
 }
 
 
