@@ -362,7 +362,7 @@ After those patch-only fixes, `python3 scripts/check_kit08_kit_stack.py --compil
 
 ### Approved patch destination ledger (71 patches)
 
-Every approved patch has exactly one destination. **Totals after A2-4d: CANDIDATE 23 / REMAINDER 0 / A2-4 QUEUE 34 / OBSOLETE 5 / PARKED 5 / POPUP STAGE 4 = 71.** `t13-modal-focus-recovery-v1.patch` is assigned to the **A2-4 QUEUE — Dialog / modal focus** despite its GPUI-pre focus hunks; `a11y-validation-grid-v1.patch` remains assigned to the **A2-4 QUEUE — Input / validation / DataGrid** despite its GPUI-pre accessibility-tree hunks. Their feature families were outside A2-2 core candidate scope.
+Every approved patch has exactly one destination. **Totals after A2-4e: CANDIDATE 29 / REMAINDER 0 / A2-4 QUEUE 28 / OBSOLETE 5 / PARKED 5 / POPUP STAGE 4 = 71.** `t13-modal-focus-recovery-v1.patch` is assigned to the **A2-4 QUEUE — Dialog / modal focus** despite its GPUI-pre focus hunks; `a11y-validation-grid-v1.patch` remains assigned to the **A2-4 QUEUE — Input / validation / DataGrid** despite its GPUI-pre accessibility-tree hunks. Their feature families were outside A2-2 core candidate scope.
 
 ### A2-4 families
 
@@ -375,7 +375,7 @@ The queue is split into isolated candidate stacks. Each ticket is estimated at n
 | A2-4c0 — GPUI core aria-disabled dependency | GPUI-pre hunk split from `gpui-tree-aria-disabled-v1.patch` as `gpui-tree-aria-disabled-v1-kit08.patch` | Base Tree-row delta stays for A2-4g. | 1h |
 | A2-4c — Button / sidebar / breadcrumb disabled behavior | `r15-button-disabled-focus-v1-kit08.patch` → `r15-sidebar-disabled-v1.patch` → `r15-breadcrumb-disabled-v1.patch` | Button: GPUI Base 0.8.1 includes #3606 focus-binding retention; the Component patch adds immediate focus recovery. Sidebar/Breadcrumb use the core `aria_disabled` API supplied by A2-4c0. | 1.5h |
 | A2-4d — Menus / popup items | `gpui-component-popup-menu-disabled-confirm-v1.patch` → `r15b-menu-item-disabled-v1.patch` → `r15b-popup-menu-recovery-v1.patch` → `r15b-dropdown-menu-refresh-v1.patch` | Core `aria_disabled` is provided by A2-4c0; popup recovery provides `rebuild_preserving_selection` to dropdown refresh. | DONE: 1 rebased, 3 copied; `disabled_selected_popup_menu_item_ignores_confirm` passed on the patched fixture; compile gate and exact reverse passed. |
-| A2-4e — Select / Picker popup layout | `gpui-component-select-popup-rtl-v1.patch` → `gpui-component-select-rtl-alignment-v1.patch` → `gpui-component-select-rtl-alignment-v2.patch` → `gpui-component-select-rtl-alignment-v3.patch` → `gpui-component-select-rtl-auto-width-v4.patch` → `gpui-component-select-rtl-auto-width-v6.patch` | None | STOPPED: cumulative Base/Component compile and exact reverse passed; fixture proof compilation failed at `gpui-component/src/select.rs:1309` because the test module lacks imports for `Entity`, `Window`, and `IntoElement` (E0425/E0405). No assertion ran. |
+| A2-4e — Select / Picker popup layout | `gpui-component-select-popup-rtl-v1.patch` → `gpui-component-select-rtl-alignment-v1.patch` → `gpui-component-select-rtl-alignment-v2.patch` → `gpui-component-select-rtl-alignment-v3.patch` → `gpui-component-select-rtl-auto-width-v4.patch` → `gpui-component-select-rtl-auto-width-v6.patch` | None | DONE: 1 copied, 1 rebased, 4 incremental deltas; cumulative Base/Component compile and exact reverse passed; `rtl_select_popup_aligns_to_the_trigger_end` passed. |
 | A2-4f — Selectable list semantics | `gpui-selectable-list-semantics-v2.patch` | None | 1h |
 | A2-4g — Tree | `gpui-component-tree-accessible-name-v1.patch` → `gpui-tree-aria-disabled-v1.patch` (Base Tree-row delta only) → `gpui-tree-aria-level-v1.patch` → `gpui-tree-disabled-keyboard-v2.patch` → `r15-tree-disabled-focus-v1.patch` | Core `aria_disabled` comes from A2-4c0; Tree-row delta must precede the aria-level patch, whose context uses that row call. #3531 covers Switch. | 2h |
 | A2-4h — DataGrid validation and header metadata | `a11y-validation-grid-v1.patch` | None | 2h |
@@ -418,12 +418,12 @@ Original queue total: **45 patches**. A2-4a is first because its tracked dialog 
 | `gpui-component-date-picker-rtl-alignment-v1.patch` | A2-4 QUEUE — Calendar / DatePicker |
 | `gpui-component-popup-menu-disabled-confirm-v1.patch` | CANDIDATE — `patches/candidate-kit-0.8/gpui-component-popup-menu-disabled-confirm-v1-kit08.patch` |
 | `gpui-component-select-committed-title-v1.patch` | OBSOLETE — A2-3 |
-| `gpui-component-select-popup-rtl-v1.patch` | A2-4 QUEUE — Picker / ComboBox |
-| `gpui-component-select-rtl-alignment-v1.patch` | A2-4 QUEUE — Picker / ComboBox |
-| `gpui-component-select-rtl-alignment-v2.patch` | A2-4 QUEUE — Picker / ComboBox |
-| `gpui-component-select-rtl-alignment-v3.patch` | A2-4 QUEUE — Picker / ComboBox |
-| `gpui-component-select-rtl-auto-width-v4.patch` | A2-4 QUEUE — Picker / ComboBox |
-| `gpui-component-select-rtl-auto-width-v6.patch` | A2-4 QUEUE — Picker / ComboBox |
+| `gpui-component-select-popup-rtl-v1.patch` | CANDIDATE — `patches/candidate-kit-0.8/gpui-component-select-popup-rtl-v1-kit08.patch` |
+| `gpui-component-select-rtl-alignment-v1.patch` | CANDIDATE — `patches/candidate-kit-0.8/gpui-component-select-rtl-alignment-v1.patch` |
+| `gpui-component-select-rtl-alignment-v2.patch` | CANDIDATE — `patches/candidate-kit-0.8/gpui-component-select-rtl-alignment-v2-kit08.patch` |
+| `gpui-component-select-rtl-alignment-v3.patch` | CANDIDATE — `patches/candidate-kit-0.8/gpui-component-select-rtl-alignment-v3-kit08.patch` |
+| `gpui-component-select-rtl-auto-width-v4.patch` | CANDIDATE — `patches/candidate-kit-0.8/gpui-component-select-rtl-auto-width-v4-kit08.patch` |
+| `gpui-component-select-rtl-auto-width-v6.patch` | CANDIDATE — `patches/candidate-kit-0.8/gpui-component-select-rtl-auto-width-v6-kit08.patch` |
 | `gpui-component-sheet-close-accessibility-v2.patch` | CANDIDATE — `patches/candidate-kit-0.8/gpui-component-sheet-close-accessibility-v2.patch` |
 | `gpui-component-slider-accessibility-label-v2.patch` | OBSOLETE — A2-3 |
 | `gpui-component-tracked-dialog-focus-rebase-v2.patch` | CANDIDATE — `patches/candidate-kit-0.8/gpui-component-tracked-dialog-focus-rebase-v2-kit08.patch` |
@@ -472,9 +472,11 @@ Anchored-popup v1–v4 remain excluded for the native-popups stage; the v5 propo
 - `disabled_selected_popup_menu_item_ignores_confirm` passed in the disposable patched fixture; the full stack compiled offline locally and reverse application restored the fixture exactly. CI uses `--compile-online` because its Cargo cache lacks `aho-corasick` and the offline registry lookup fails.
 - Remaining A2-4 QUEUE after A2-4d: 34 patches.
 
-### A2-4e stop diagnosis
+### A2-4e result — Select / Picker popup layout
 
-The candidate stack applied and reversed exactly; offline Base/Component compilation passed. The fixture's `gpui-component` lib-test build then failed before either proof assertion ran: `gpui-component/src/select.rs:1309:16` reports `cannot find type Entity in this scope`; `:1313:38` reports `cannot find type Window in this scope`; `:1313:77` reports `cannot find trait IntoElement in this scope`. The new RTL test module uses these names without importing them. Per the family stop rule, A2-4e remains in the queue pending this proof compilation failure; queue count remains 34.
+- Restored the uncommitted candidate draft and fixed only the test import hunk in `gpui-component-select-rtl-auto-width-v6-kit08.patch` (`Entity`, `IntoElement`, and `Window`); behavior hunks stayed unchanged.
+- The fixture proof `rtl_select_popup_aligns_to_the_trigger_end` passed. Base/Component compile and exact reverse passed with 13 core patches, 2 A2-4a, 1 A2-4b, 3 A2-4c, 4 A2-4d, and 6 A2-4e patches; 31 fixture archives verified, 37 target files hashed, 41 stack files.
+- Remaining A2-4 QUEUE after A2-4e: 28 patches.
 
 ### A2-4c result — Button / Sidebar / Breadcrumb
 
