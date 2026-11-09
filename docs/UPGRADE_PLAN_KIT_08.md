@@ -485,3 +485,7 @@ Anchored-popup v1–v4 remain excluded for the native-popups stage; the v5 propo
 - Focus proof passed in a disposable 0.3.10/0.8.1 workspace with all core and A2-4a/b/c patches applied: `disabling_a_focused_button_moves_focus_to_the_next_control` (1 passed).
 - Stack check and offline Base/Component compile gate passed: 13 core, 2 A2-4a, 1 A2-4b, 3 A2-4c; 31 archives verified; 30 target files hashed; 34 stack files; exact reverse.
 - Remaining A2-4 QUEUE after A2-4d: 34 patches.
+
+### A2-4h stop diagnosis — DataGrid validation/header metadata
+
+The candidate Base/Component compile gate passed, but the GPUI Component test-window proof `validation_description_and_grid_aria_metadata_reach_the_tree` failed at `sources/gpui-component-0.8.1/src/input/input.rs:878`: `assertion failed: nodes.values().any(|node| node["aria"]["description"] == "Validation error: required")`. In 0.8.1, `Input::aria_description` forwards through `InputBase` to the outer frame, whose role is `Presentational`; that frame does not surface the description on the native text-input accessibility node. The Input description path needs to attach the description to the editor-owned semantic node before this candidate can be accepted. The family stopped before testing the separate header/cell metadata assertion.
