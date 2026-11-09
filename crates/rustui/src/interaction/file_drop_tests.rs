@@ -269,3 +269,130 @@ fn custom_accept_composes_with_extensions_and_defaults_accept_all() {
     assert!(!(filtered.accept)(Path::new("skip.png")));
     assert!(!(filtered.accept)(Path::new("keep.txt")));
 }
+
+#[gpui::test]
+fn described_file_drop_exposes_description_and_applies_predicate(cx: &mut gpui::TestAppContext) {
+    struct DescribedOwner {
+        dropped: Option<FileDrop>,
+        writes: usize,
+    }
+    impl View for DescribedOwner {
+        fn body(&self) -> impl View {
+            DropTarget::files(
+                "described-files",
+                Binding::new(
+                    self.dropped.clone(),
+                    |owner: &Self| owner.dropped.clone(),
+                    |owner, value| {
+                        owner.dropped = value;
+                        owner.writes += 1;
+                    },
+                ),
+                Zone,
+            )
+            .accept_described(SharedString::from("files named keep"), |path| {
+                path.file_stem().is_some_and(|name| name == "keep")
+            })
+        }
+    }
+    cx.update(gpui_component::init);
+    let (owner, window) = cx.add_window_view(|_, app| {
+        ComponentHost::new(
+            DescribedOwner {
+                dropped: None,
+                writes: 0,
+            },
+            app,
+        )
+    });
+    window.update(|window, app| {
+        window.activate_window();
+        window.draw(app).clear(app);
+        let tree: serde_json::Value =
+            serde_json::from_str(&window.debug_a11y_tree_json().unwrap()).unwrap();
+        let node = tree["nodes"]
+            .as_object()
+            .unwrap()
+            .values()
+            .find(|node| node["aria"]["label"] == "File drop target")
+            .unwrap();
+        assert_eq!(node["aria"]["description"], "Accepts files named keep");
+    });
+    let files = Files::new();
+    let keep_image = files.path("keep.png");
+    let keep_text = files.path("keep.txt");
+    let skip = files.path("skip.png");
+    enter(
+        window,
+        vec![skip.clone(), keep_image.clone(), keep_text.clone()],
+    );
+    submit(window);
+    window.update(|_, app| {
+        let owner = owner.read(app).component();
+        assert_eq!(owner.writes, 1);
+        assert_eq!(
+            owner.dropped,
+            Some(FileDrop {
+                accepted: vec![keep_image, keep_text],
+                rejected: vec![skip],
+            })
+        );
+    });
+}
+
+#[test]
+fn described_accept_preserves_extension_composition_in_both_orders() {
+    fn keep(path: &Path) -> bool {
+        path.file_stem().is_some_and(|name| name == "keep")
+    }
+    for custom_first in [true, false] {
+        let binding = Binding::new(None, |_: &()| None, |_: &mut (), _| {});
+        let legacy = DropTarget::files("legacy", binding.clone(), Zone);
+        let described = DropTarget::files("described", binding, Zone);
+        let (legacy, described) = if custom_first {
+            (
+                legacy.accept(keep).extensions(["png"]),
+                described
+                    .accept_described("files named keep", keep)
+                    .extensions(["png"]),
+            )
+        } else {
+            (
+                legacy.extensions(["png"]).accept(keep),
+                described
+                    .extensions(["png"])
+                    .accept_described("files named keep", keep),
+            )
+        };
+        for (name, before_extensions, after_extensions) in [
+            ("keep.PNG", true, true),
+            ("skip.png", false, false),
+            ("keep.txt", false, true),
+            ("keep", false, true),
+        ] {
+            let expected = if custom_first {
+                before_extensions
+            } else {
+                after_extensions
+            };
+            assert_eq!(
+                (legacy.accept)(Path::new(name)),
+                expected,
+                "legacy: {name}, custom_first={custom_first}"
+            );
+            assert_eq!(
+                (described.accept)(Path::new(name)),
+                expected,
+                "described: {name}, custom_first={custom_first}"
+            );
+        }
+        assert_eq!(
+            described.description,
+            if custom_first {
+                "Accepted file types: png"
+            } else {
+                "Accepts files named keep"
+            }
+        );
+    }
+}
