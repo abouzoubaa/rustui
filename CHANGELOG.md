@@ -2,7 +2,9 @@
 
 ## 0.2.0 — 2026-11-09
 
-- Added an inert GPUI Kit 0.8 core patch candidate with a pinned, reversible stack check; deferred focus-scope rebasing to A2-2b.
+- Added an inert-focus-scope patch candidate rebased and tested against the GPUI Kit 0.8.1 fixture.
+
+- Added an inert GPUI Kit 0.8 core patch candidate with a pinned, reversible stack check.
 
 - Added a hash-pinned GPUI Kit 0.8.1 source harness and staged deferred-platform patches for A2-7.
 

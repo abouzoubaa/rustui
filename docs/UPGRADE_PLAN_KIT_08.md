@@ -295,7 +295,7 @@ Prepare target files and patch rebases as inert proposals first. Do not replace 
 
 The 0.8.1 candidate stack is in `patches/candidate-kit-0.8/`. `scripts/check_kit08_core_stack.py` downloads and verifies the A2-1 fixture, applies the listed stack in order, writes each file's pre/post SHA-256 to `core-manifest.json`, reverses the stack, and checks byte-for-byte restoration. No vendor, owned-mirror, dependency manifest, or lockfile source was activated.
 
-Status totals: **copied 6 / rebased 5 / remainder 1**.
+Status totals: **copied 6 / rebased 6 / remainder 0**.
 
 | Approved patch | Candidate status | Candidate file / note |
 |---|---|---|
@@ -310,6 +310,86 @@ Status totals: **copied 6 / rebased 5 / remainder 1**.
 | `gpui-pre-web-accessible-name-v1.patch` | copied | `gpui-pre-web-accessible-name-v1.patch` |
 | `gpui-primary-mousedown-click-v2.patch` | copied | `gpui-primary-mousedown-click-v2.patch` |
 | `r15-test-tree-disabled-v1.patch` | rebased | `r15-test-tree-disabled-v1-kit08.patch`; stacked after labelled-by output. |
-| `t17-inert-focus-scope-v1.patch` | remainder | **A2-2 remainder:** `patch --fuzz=3` applied the `tab_stop.rs` helper, but all six hunks in `gpui-pre/src/window.rs` failed against 0.3.10; the window focus state and traversal context have changed. Rebase in A2-2b. |
+| `t17-inert-focus-scope-v1.patch` | rebased | `t17-inert-focus-scope-v1-kit08.patch`; uses 0.3.10's `TabStopMap::next` / `prev` traversal so SumTree tab-index and group ordering remain authoritative while inert descendants are filtered. |
+
+### Approved patch destination ledger (71 patches)
+
+Every approved patch has exactly one destination. **Totals: CANDIDATE 12 / REMAINDER 0 / A2-4 QUEUE 45 / OBSOLETE 5 / PARKED 5 / POPUP STAGE 4 = 71.** `t13-modal-focus-recovery-v1.patch` is assigned to the **A2-4 QUEUE — Dialog / modal focus** despite its GPUI-pre focus hunks; `a11y-validation-grid-v1.patch` is assigned to the **A2-4 QUEUE — Input / validation / DataGrid** despite its GPUI-pre accessibility-tree hunks. Their feature families are outside A2-2 core candidate scope.
+
+| Approved patch | Sole destination |
+|---|---|
+| `a11y-validation-grid-v1.patch` | A2-4 QUEUE — Input / validation / DataGrid |
+| `block-0.1.6-stack-symbol-v1.patch` | CANDIDATE — `patches/candidate-kit-0.8/block-0.1.6-stack-symbol-v1.patch` |
+| `cosmic-text-initial-bidi-span-v1.patch` | CANDIDATE — `patches/candidate-kit-0.8/cosmic-text-initial-bidi-span-v1.patch` |
+| `g10-labelled-by-tree-v1.patch` | CANDIDATE — `patches/candidate-kit-0.8/g10-labelled-by-tree-v1-kit08.patch` |
+| `g10-parent-node-id-v1.patch` | CANDIDATE — `patches/candidate-kit-0.8/g10-parent-node-id-v1.patch` |
+| `gpui-base-button-disabled-accessibility-v1.patch` | OBSOLETE — A2-3 |
+| `gpui-base-calendar-date-limits-v1.patch` | A2-4 QUEUE — Calendar / DatePicker |
+| `gpui-base-disabled-semantic-roots-v1.patch` | OBSOLETE — A2-3 |
+| `gpui-base-focus-trap-accessibility-v1.patch` | OBSOLETE — A2-3 |
+| `gpui-base-resize-first-move-v1.patch` | A2-4 QUEUE — Resizable panels |
+| `gpui-base-resize-first-move-v2.patch` | A2-4 QUEUE — Resizable panels |
+| `gpui-base-resize-first-move-v3.patch` | A2-4 QUEUE — Resizable panels |
+| `gpui-base-slider-endpoint-v1.patch` | A2-4 QUEUE — Slider |
+| `gpui-base-slider-first-move-v1.patch` | A2-4 QUEUE — Slider |
+| `gpui-base-slider-set-value-v2.patch` | A2-4 QUEUE — Slider |
+| `gpui-base-slider-snap-position-v1.patch` | A2-4 QUEUE — Slider |
+| `gpui-base-slider-zero-track-v1.patch` | A2-4 QUEUE — Slider |
+| `gpui-bidi-input-hit-v1.patch` | CANDIDATE — `patches/candidate-kit-0.8/gpui-bidi-input-hit-v1-kit08.patch` |
+| `gpui-bidi-wrapped-rows-v1.patch` | CANDIDATE — `patches/candidate-kit-0.8/gpui-bidi-wrapped-rows-v1-kit08.patch` |
+| `gpui-calendar-keyboard-v1.patch` | A2-4 QUEUE — Calendar / DatePicker |
+| `gpui-calendar-multi-month-heading-v1.patch` | A2-4 QUEUE — Calendar / DatePicker |
+| `gpui-calendar-rtl-v1.patch` | A2-4 QUEUE — Calendar / DatePicker |
+| `gpui-component-calendar-fr-ar-v1.patch` | A2-4 QUEUE — Calendar / DatePicker |
+| `gpui-component-date-picker-accessibility-v1.patch` | A2-4 QUEUE — Calendar / DatePicker |
+| `gpui-component-date-picker-localization-v2.patch` | A2-4 QUEUE — Calendar / DatePicker |
+| `gpui-component-date-picker-rtl-alignment-v1.patch` | A2-4 QUEUE — Calendar / DatePicker |
+| `gpui-component-popup-menu-disabled-confirm-v1.patch` | A2-4 QUEUE — Menu |
+| `gpui-component-select-committed-title-v1.patch` | OBSOLETE — A2-3 |
+| `gpui-component-select-popup-rtl-v1.patch` | A2-4 QUEUE — Picker / ComboBox |
+| `gpui-component-select-rtl-alignment-v1.patch` | A2-4 QUEUE — Picker / ComboBox |
+| `gpui-component-select-rtl-alignment-v2.patch` | A2-4 QUEUE — Picker / ComboBox |
+| `gpui-component-select-rtl-alignment-v3.patch` | A2-4 QUEUE — Picker / ComboBox |
+| `gpui-component-select-rtl-auto-width-v4.patch` | A2-4 QUEUE — Picker / ComboBox |
+| `gpui-component-select-rtl-auto-width-v6.patch` | A2-4 QUEUE — Picker / ComboBox |
+| `gpui-component-sheet-close-accessibility-v2.patch` | A2-4 QUEUE — Sheet |
+| `gpui-component-slider-accessibility-label-v2.patch` | OBSOLETE — A2-3 |
+| `gpui-component-tracked-dialog-focus-rebase-v2.patch` | A2-4 QUEUE — Dialog / modal focus |
+| `gpui-component-tree-accessible-name-v1.patch` | A2-4 QUEUE — Tree |
+| `gpui-component-web-syntax-runtime-v1.patch` | A2-4 QUEUE — Syntax highlighting / Diff |
+| `gpui-component-web-syntax-runtime-v2.patch` | A2-4 QUEUE — Syntax highlighting / Diff |
+| `gpui-component-web-syntax-runtime-v3.patch` | A2-4 QUEUE — Syntax highlighting / Diff |
+| `gpui-component-web-syntax-v1.patch` | A2-4 QUEUE — Syntax highlighting / Diff |
+| `gpui-input-placeholder-color-v1.patch` | A2-4 QUEUE — Input / validation / DataGrid |
+| `gpui-macos-anchored-popup-v1.patch` | POPUP STAGE — native macOS popups |
+| `gpui-macos-anchored-popup-v2.patch` | POPUP STAGE — native macOS popups |
+| `gpui-macos-anchored-popup-v3.patch` | POPUP STAGE — native macOS popups |
+| `gpui-macos-anchored-popup-v4.patch` | POPUP STAGE — native macOS popups |
+| `gpui-macos-focused-element-forwarder-v1.patch` | CANDIDATE — `patches/candidate-kit-0.8/gpui-macos-focused-element-forwarder-v1-kit08.patch` |
+| `gpui-pre-test-a11y-activation-v1.patch` | CANDIDATE — `patches/candidate-kit-0.8/gpui-pre-test-a11y-activation-v1.patch` |
+| `gpui-pre-web-accessible-name-v1.patch` | CANDIDATE — `patches/candidate-kit-0.8/gpui-pre-web-accessible-name-v1.patch` |
+| `gpui-pre-web-enter-composition-v1.patch` | PARKED — A2-7 (deferred platform) |
+| `gpui-pre-web-keyboard-focus-activation-v3.patch` | PARKED — A2-7 (deferred platform) |
+| `gpui-pre-web-noopener-v1.patch` | PARKED — A2-7 (deferred platform) |
+| `gpui-primary-mousedown-click-v2.patch` | CANDIDATE — `patches/candidate-kit-0.8/gpui-primary-mousedown-click-v2.patch` |
+| `gpui-selectable-list-semantics-v2.patch` | A2-4 QUEUE — Picker / ComboBox |
+| `gpui-toolbar-rtl-v1.patch` | A2-4 QUEUE — Toolbar |
+| `gpui-tree-aria-disabled-v1.patch` | A2-4 QUEUE — Tree |
+| `gpui-tree-aria-level-v1.patch` | A2-4 QUEUE — Tree |
+| `gpui-tree-disabled-keyboard-v2.patch` | A2-4 QUEUE — Tree |
+| `gpui-web-combobox-enter-v1.patch` | PARKED — A2-7 (deferred platform) |
+| `gpui-web-semantic-adapter-v9.patch` | PARKED — A2-7 (deferred platform) |
+| `r15-breadcrumb-disabled-v1.patch` | A2-4 QUEUE — Breadcrumb |
+| `r15-button-disabled-focus-v1.patch` | A2-4 QUEUE — Button |
+| `r15-sidebar-disabled-v1.patch` | A2-4 QUEUE — Sidebar |
+| `r15-test-tree-disabled-v1.patch` | CANDIDATE — `patches/candidate-kit-0.8/r15-test-tree-disabled-v1-kit08.patch` |
+| `r15-tree-disabled-focus-v1.patch` | A2-4 QUEUE — Tree |
+| `r15b-dropdown-menu-refresh-v1.patch` | A2-4 QUEUE — Menu |
+| `r15b-menu-item-disabled-v1.patch` | A2-4 QUEUE — Menu |
+| `r15b-popup-menu-recovery-v1.patch` | A2-4 QUEUE — Menu |
+| `t13-modal-focus-recovery-v1.patch` | A2-4 QUEUE — Dialog / modal focus |
+| `t17-inert-focus-scope-v1.patch` | CANDIDATE — `patches/candidate-kit-0.8/t17-inert-focus-scope-v1-kit08.patch` |
+
+A2-2b rebased `t17-inert-focus-scope-v1.patch` against the 0.3.10 `TabStopMap` ordering and added a GPUI test-window regression. Inert filtering is used only while a rendered inert scope exists; otherwise `focus_next` and `focus_prev` retain their original direct `next` / `prev` calls. The test covers ordinary traversal with no inert scope, forward/backward traversal past nested inert descendants, direct focus rejection, and traversal restored after clearing inert state.
 
 Anchored-popup v1–v4 remain excluded for the native-popups stage; the v5 proposal is unchanged. The five patches under “Parked for later stages” remain untouched. Mixed GPUI Base/Component accessibility and modal patches remain assigned to A2-4.
