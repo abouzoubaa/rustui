@@ -42,6 +42,10 @@ class TreeAccessibilitySeriesLifecycle(unittest.TestCase):
             target = self.root / relative
             target.parent.mkdir(parents=True, exist_ok=True)
             shutil.copyfile(ROOT / relative, target)
+        mirror = self.root / "crates/rustui-gpui/src/window/a11y/debug.rs"
+        mirror.parent.mkdir(parents=True, exist_ok=True)
+        shutil.copyfile(ROOT / "crates/rustui-gpui/src/window/a11y/debug.rs", mirror)
+        subprocess.run([sys.executable, str(ROOT / "scripts/apply_g10_labelled_by_tree_v1_patch.py"), "--root", str(self.root), "--artifacts", str(ROOT), "--reverse"], check=True, capture_output=True)
         subprocess.run([sys.executable, str(ROOT / "scripts/apply_r15_test_tree_disabled_v1_patch.py"), "--root", str(self.root), "--artifacts", str(ROOT), "--reverse"], check=True, capture_output=True)
         subprocess.run([sys.executable, str(ROOT / "scripts/apply_r15_tree_disabled_focus_v1_patch.py"), "--root", str(self.root), "--artifacts", str(ROOT), "--reverse"], check=True, capture_output=True)
         subprocess.run([sys.executable, str(ROOT / "scripts/apply_gpui_tree_disabled_keyboard_v2_patch.py"), "--root", str(self.root), "--artifacts", str(ROOT), "--reverse"], check=True, capture_output=True)

@@ -1,0 +1,18 @@
+{
+  "schema_version": 1,
+  "patch": "patches/approved/g10-parent-node-id-v1.patch",
+  "patch_sha256": "7d73d251e42f0e1447102497adde456f6b209e212eb73830ceece7de7e6eeed1",
+  "source": "vendor/gpui-pre-0.3.9/src/window/a11y.rs",
+  "pre_sha256": "e8403059924d022695e3bea6888d14a0e65317785b393f3b4a75bac5858fae53",
+  "post_sha256": "a373e933c580763d9814a7d5635bd9cc7c8ccc203e0ca572095a97f442131903",
+  "files": {
+    "vendor/gpui-pre-0.3.9/src/window/a11y.rs": {
+      "pre": "e8403059924d022695e3bea6888d14a0e65317785b393f3b4a75bac5858fae53",
+      "post": "a373e933c580763d9814a7d5635bd9cc7c8ccc203e0ca572095a97f442131903"
+    },
+    "crates/rustui-gpui/src/window/a11y.rs": {
+      "pre": "e8403059924d022695e3bea6888d14a0e65317785b393f3b4a75bac5858fae53",
+      "post": "a373e933c580763d9814a7d5635bd9cc7c8ccc203e0ca572095a97f442131903"
+    }
+  }
+}

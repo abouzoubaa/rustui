@@ -1,4 +1,6 @@
-pub(super) fn register_basic_specimens(registry: &mut PreviewRegistry<FactoryContext>) {
+use super::*;
+
+pub(in super::super) fn register_basic_specimens(registry: &mut PreviewRegistry<FactoryContext>) {
     {
         for name in ["text", "button", "text-field"] {
             let mut events = BTreeMap::new();

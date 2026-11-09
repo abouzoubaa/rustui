@@ -1,4 +1,8 @@
-pub(super) fn register_feedback_specimens(registry: &mut PreviewRegistry<FactoryContext>) {
+use super::*;
+
+pub(in super::super) fn register_feedback_specimens(
+    registry: &mut PreviewRegistry<FactoryContext>,
+) {
     {
         let empty_state_specimen_schema = ComponentSchema {
             id: ComponentId::new("empty-state-specimen").unwrap(),
@@ -758,7 +762,7 @@ pub(super) fn register_feedback_specimens(registry: &mut PreviewRegistry<Factory
                     let title = property_string(snapshot, "title").expect("validated Drawer title");
                     let body_text =
                         property_string(snapshot, "body_text").expect("validated Drawer body text");
-                    AnyView::new(super::super::drawer_gallery::specimen(
+                    AnyView::new(super::super::super::drawer_gallery::specimen(
                         format!("compiled-preview-drawer-{}", snapshot.stamp.generation),
                         trigger_label,
                         title,
@@ -851,6 +855,5 @@ pub(super) fn register_feedback_specimens(registry: &mut PreviewRegistry<Factory
                 },
             )
             .unwrap();
-
     }
 }

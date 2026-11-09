@@ -1,5 +1,7 @@
+use super::*;
+
 impl CompiledPreviewGallery {
-    pub(super) fn mount(&mut self, component: &str) {
+    pub(in super::super) fn mount(&mut self, component: &str) {
         // Secure values are ephemeral and never enter the serializable preview
         // document. A remount clears the previous field value.
         self.secure_value.clear();
@@ -625,277 +627,277 @@ impl CompiledPreviewGallery {
             Err(error) => error.to_string(),
         };
     }
-    fn mount_text(&mut self) {
+    pub(super) fn mount_text(&mut self) {
         self.mount("text");
     }
-    fn mount_text_specimen(&mut self) {
+    pub(super) fn mount_text_specimen(&mut self) {
         self.mount("text-specimen");
     }
 
-    fn mount_localized_text_specimen(&mut self) {
+    pub(super) fn mount_localized_text_specimen(&mut self) {
         self.mount("localized-text-specimen");
     }
-    fn mount_button(&mut self) {
+    pub(super) fn mount_button(&mut self) {
         self.mount("button");
     }
-    fn mount_field(&mut self) {
+    pub(super) fn mount_field(&mut self) {
         self.mount("text-field");
     }
-    fn mount_toggle(&mut self) {
+    pub(super) fn mount_toggle(&mut self) {
         self.mount("toggle");
     }
-    fn mount_checkbox(&mut self) {
+    pub(super) fn mount_checkbox(&mut self) {
         self.mount("checkbox");
     }
-    fn mount_radio(&mut self) {
+    pub(super) fn mount_radio(&mut self) {
         self.mount("radio");
     }
-    fn mount_picker(&mut self) {
+    pub(super) fn mount_picker(&mut self) {
         self.mount("picker");
     }
-    fn mount_combo_box_specimen(&mut self) {
+    pub(super) fn mount_combo_box_specimen(&mut self) {
         self.mount("combo-box-specimen");
     }
-    fn mount_tab_view_specimen(&mut self) {
+    pub(super) fn mount_tab_view_specimen(&mut self) {
         self.mount("tab-view-specimen");
     }
-    fn mount_slider(&mut self) {
+    pub(super) fn mount_slider(&mut self) {
         self.mount("slider");
     }
 
-    fn mount_progress(&mut self) {
+    pub(super) fn mount_progress(&mut self) {
         self.mount("progress");
     }
 
-    fn mount_stepper(&mut self) {
+    pub(super) fn mount_stepper(&mut self) {
         self.mount("stepper");
     }
 
-    fn mount_text_field_specimen(&mut self) {
+    pub(super) fn mount_text_field_specimen(&mut self) {
         self.mount("text-field-specimen");
     }
-    fn mount_search_field_specimen(&mut self) {
+    pub(super) fn mount_search_field_specimen(&mut self) {
         self.mount("search-field-specimen");
     }
-    fn mount_token_field_specimen(&mut self) {
+    pub(super) fn mount_token_field_specimen(&mut self) {
         self.mount("token-field-specimen");
     }
-    fn mount_text_editor_specimen(&mut self) {
+    pub(super) fn mount_text_editor_specimen(&mut self) {
         self.mount("text-editor-specimen");
     }
-    fn mount_code_editor_specimen(&mut self) {
+    pub(super) fn mount_code_editor_specimen(&mut self) {
         self.mount("code-editor-specimen");
     }
 
-    fn mount_secure_field_specimen(&mut self) {
+    pub(super) fn mount_secure_field_specimen(&mut self) {
         self.mount("secure-field-specimen");
     }
-    fn mount_button_specimen(&mut self) {
+    pub(super) fn mount_button_specimen(&mut self) {
         self.mount("button-specimen");
     }
-    fn mount_toolbar_specimen(&mut self) {
+    pub(super) fn mount_toolbar_specimen(&mut self) {
         self.mount("toolbar-specimen");
     }
-    fn mount_image_specimen(&mut self) {
+    pub(super) fn mount_image_specimen(&mut self) {
         self.mount("image-specimen");
     }
-    fn mount_breadcrumb_specimen(&mut self) {
+    pub(super) fn mount_breadcrumb_specimen(&mut self) {
         self.mount("breadcrumb-specimen");
     }
-    fn mount_context_menu_specimen(&mut self) {
+    pub(super) fn mount_context_menu_specimen(&mut self) {
         self.mount("context-menu-specimen");
     }
-    fn mount_menu_specimen(&mut self) {
+    pub(super) fn mount_menu_specimen(&mut self) {
         self.mount("menu-specimen");
     }
-    fn mount_link_specimen(&mut self) {
+    pub(super) fn mount_link_specimen(&mut self) {
         self.mount("link-specimen");
     }
-    fn mount_alert_specimen(&mut self) {
+    pub(super) fn mount_alert_specimen(&mut self) {
         self.mount("alert-specimen");
     }
-    fn mount_toast_specimen(&mut self) {
+    pub(super) fn mount_toast_specimen(&mut self) {
         self.mount("toast-specimen");
     }
-    fn mount_sheet_specimen(&mut self) {
+    pub(super) fn mount_sheet_specimen(&mut self) {
         self.mount("sheet-specimen");
     }
-    fn mount_drawer_specimen(&mut self) {
+    pub(super) fn mount_drawer_specimen(&mut self) {
         self.mount("drawer-specimen");
     }
-    fn mount_sidebar_specimen(&mut self) {
+    pub(super) fn mount_sidebar_specimen(&mut self) {
         self.mount("sidebar-specimen");
     }
-    fn mount_keyed_list_specimen(&mut self) {
+    pub(super) fn mount_keyed_list_specimen(&mut self) {
         self.mount("keyed-list-specimen");
     }
 
-    fn mount_data_grid_specimen(&mut self) {
+    pub(super) fn mount_data_grid_specimen(&mut self) {
         self.mount("data-grid-specimen");
     }
 
-    fn mount_list_specimen(&mut self) {
+    pub(super) fn mount_list_specimen(&mut self) {
         self.mount("list-specimen");
     }
 
-    fn mount_table_specimen(&mut self) {
+    pub(super) fn mount_table_specimen(&mut self) {
         self.mount("table-specimen");
     }
 
-    fn mount_tree_specimen(&mut self) {
+    pub(super) fn mount_tree_specimen(&mut self) {
         self.mount("tree-specimen");
     }
 
-    fn mount_outline_specimen(&mut self) {
+    pub(super) fn mount_outline_specimen(&mut self) {
         self.mount("outline-specimen");
     }
-    fn mount_navigation_split_specimen(&mut self) {
+    pub(super) fn mount_navigation_split_specimen(&mut self) {
         self.mount("navigation-split-specimen");
     }
 
-    fn mount_navigation_stack_specimen(&mut self) {
+    pub(super) fn mount_navigation_stack_specimen(&mut self) {
         self.mount("navigation-stack-specimen");
     }
 
-    fn mount_collection_specimen(&mut self) {
+    pub(super) fn mount_collection_specimen(&mut self) {
         self.mount("collection-specimen");
     }
-    fn mount_canvas_specimen(&mut self) {
+    pub(super) fn mount_canvas_specimen(&mut self) {
         self.mount("canvas-specimen");
     }
-    fn mount_disclosure_specimen(&mut self) {
+    pub(super) fn mount_disclosure_specimen(&mut self) {
         self.mount("disclosure-specimen");
     }
-    fn mount_dialog_specimen(&mut self) {
+    pub(super) fn mount_dialog_specimen(&mut self) {
         self.mount("dialog-specimen");
     }
-    fn mount_popover_specimen(&mut self) {
+    pub(super) fn mount_popover_specimen(&mut self) {
         self.mount("popover-specimen");
     }
-    fn mount_date_picker_specimen(&mut self) {
+    pub(super) fn mount_date_picker_specimen(&mut self) {
         self.mount("date-picker-specimen");
     }
 
-    fn mount_property_inspector_specimen(&mut self) {
+    pub(super) fn mount_property_inspector_specimen(&mut self) {
         self.mount("property-inspector-specimen");
     }
 
-    fn mount_group_specimen(&mut self) {
+    pub(super) fn mount_group_specimen(&mut self) {
         self.mount("group-specimen");
     }
 
-    fn mount_animated_opacity_specimen(&mut self) {
+    pub(super) fn mount_animated_opacity_specimen(&mut self) {
         self.mount("animated-opacity-specimen");
     }
 
-    fn mount_spring_opacity_specimen(&mut self) {
+    pub(super) fn mount_spring_opacity_specimen(&mut self) {
         self.mount("spring-opacity-specimen");
     }
 
-    fn mount_shadow_specimen(&mut self) {
+    pub(super) fn mount_shadow_specimen(&mut self) {
         self.mount("shadow-specimen");
     }
 
-    fn mount_background_specimen(&mut self) {
+    pub(super) fn mount_background_specimen(&mut self) {
         self.mount("background-specimen");
     }
 
-    fn mount_border_specimen(&mut self) {
+    pub(super) fn mount_border_specimen(&mut self) {
         self.mount("border-specimen");
     }
 
-    fn mount_semantics_specimen(&mut self) {
+    pub(super) fn mount_semantics_specimen(&mut self) {
         self.mount("semantics-specimen");
     }
 
-    fn mount_card_specimen(&mut self) {
+    pub(super) fn mount_card_specimen(&mut self) {
         self.mount("card-specimen");
     }
 
-    fn mount_container_specimen(&mut self) {
+    pub(super) fn mount_container_specimen(&mut self) {
         self.mount("container-specimen");
     }
 
-    fn mount_split_view_specimen(&mut self) {
+    pub(super) fn mount_split_view_specimen(&mut self) {
         self.mount("split-view-specimen");
     }
 
-    fn mount_frame_specimen(&mut self) {
+    pub(super) fn mount_frame_specimen(&mut self) {
         self.mount("frame-specimen");
     }
 
-    fn mount_hstack_specimen(&mut self) {
+    pub(super) fn mount_hstack_specimen(&mut self) {
         self.mount("hstack-specimen");
     }
 
-    fn mount_vstack_specimen(&mut self) {
+    pub(super) fn mount_vstack_specimen(&mut self) {
         self.mount("vstack-specimen");
     }
 
-    fn mount_grid_specimen(&mut self) {
+    pub(super) fn mount_grid_specimen(&mut self) {
         self.mount("grid-specimen");
     }
 
-    fn mount_lazy_grid_specimen(&mut self) {
+    pub(super) fn mount_lazy_grid_specimen(&mut self) {
         self.mount("lazy-grid-specimen");
     }
 
-    fn mount_spacer_specimen(&mut self) {
+    pub(super) fn mount_spacer_specimen(&mut self) {
         self.mount("spacer-specimen");
     }
 
-    fn mount_geometry_reader_specimen(&mut self) {
+    pub(super) fn mount_geometry_reader_specimen(&mut self) {
         self.mount("geometry-reader-specimen");
     }
 
     #[cfg(test)]
-    fn mount_scroll_view_specimen(&mut self) {
+    pub(super) fn mount_scroll_view_specimen(&mut self) {
         self.mount("scroll-view-specimen");
     }
-    fn mount_avatar_specimen(&mut self) {
+    pub(super) fn mount_avatar_specimen(&mut self) {
         self.mount("avatar-specimen");
     }
-    fn mount_empty_state_specimen(&mut self) {
+    pub(super) fn mount_empty_state_specimen(&mut self) {
         self.mount("empty-state-specimen");
     }
-    fn mount_error_state_specimen(&mut self) {
+    pub(super) fn mount_error_state_specimen(&mut self) {
         self.mount("error-state-specimen");
     }
 
-    fn mount_badge_specimen(&mut self) {
+    pub(super) fn mount_badge_specimen(&mut self) {
         self.mount("badge-specimen");
     }
 
-    fn mount_label_specimen(&mut self) {
+    pub(super) fn mount_label_specimen(&mut self) {
         self.mount("label-specimen");
     }
 
-    fn mount_tooltip_specimen(&mut self) {
+    pub(super) fn mount_tooltip_specimen(&mut self) {
         self.mount("tooltip-specimen");
     }
 
-    fn mount_spinner_specimen(&mut self) {
+    pub(super) fn mount_spinner_specimen(&mut self) {
         self.mount("spinner-specimen");
     }
 
-    fn mount_divider_specimen(&mut self) {
+    pub(super) fn mount_divider_specimen(&mut self) {
         self.mount("divider-specimen");
     }
 
-    fn mount_skeleton_specimen(&mut self) {
+    pub(super) fn mount_skeleton_specimen(&mut self) {
         self.mount("skeleton-specimen");
     }
-    fn mount_icon_specimen(&mut self) {
+    pub(super) fn mount_icon_specimen(&mut self) {
         self.mount("icon-specimen");
     }
-    fn mount_color_picker_specimen(&mut self) {
+    pub(super) fn mount_color_picker_specimen(&mut self) {
         self.mount("color-picker-specimen");
     }
-    fn rerender(&mut self) {
+    pub(super) fn rerender(&mut self) {
         self.renders += 1;
     }
 
-    fn finish_delayed_rerender(&mut self, state: AsyncState<(), String>) -> bool {
+    pub(super) fn finish_delayed_rerender(&mut self, state: AsyncState<(), String>) -> bool {
         match state {
             AsyncState::Success(()) => {
                 self.renders += 1;
@@ -909,7 +911,7 @@ impl CompiledPreviewGallery {
             AsyncState::Idle | AsyncState::Loading => false,
         }
     }
-    pub(super) fn export_descriptor(&mut self) {
+    pub(in super::super) fn export_descriptor(&mut self) {
         let Some(snapshot) = self.host.snapshot() else {
             self.status = "No mounted preview to export".into();
             return;
@@ -927,7 +929,7 @@ impl CompiledPreviewGallery {
             Err(error) => self.status = format!("Export rejected: {error}"),
         }
     }
-    fn import_descriptor(&mut self) {
+    pub(super) fn import_descriptor(&mut self) {
         let parsed = match decode_preview(&self.descriptor_json, self.host.catalog()) {
             Ok(preview) => preview.document,
             Err(error) => {

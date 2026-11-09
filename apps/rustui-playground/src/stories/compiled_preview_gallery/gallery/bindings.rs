@@ -1,17 +1,19 @@
+use super::*;
+
 impl CompiledPreviewGallery {
-    fn read_descriptor(owner: &Self) -> String {
+    pub(super) fn read_descriptor(owner: &Self) -> String {
         owner.descriptor_json.clone()
     }
-    fn write_descriptor(owner: &mut Self, value: String) {
+    pub(super) fn write_descriptor(owner: &mut Self, value: String) {
         owner.descriptor_json = value;
     }
-    fn teardown(&mut self) {
+    pub(super) fn teardown(&mut self) {
         self.secure_value.clear();
         if let Some(stamp) = self.host.snapshot().map(|s| s.stamp.clone()) {
             self.status = format!("Teardown: {:?}", self.host.teardown(&stamp));
         }
     }
-    fn string_selection_binding(
+    pub(super) fn string_selection_binding(
         selected_id: Option<String>,
         context: PropertyBindingContext,
     ) -> Binding<Option<String>> {
@@ -23,7 +25,7 @@ impl CompiledPreviewGallery {
         )
     }
 
-    fn read_string_selection(&self, context: &PropertyBindingContext) -> Option<String> {
+    pub(super) fn read_string_selection(&self, context: &PropertyBindingContext) -> Option<String> {
         let snapshot = self.host.snapshot()?;
         if context.stamp.borrow().as_ref() != Some(&snapshot.stamp) {
             return None;
@@ -31,7 +33,7 @@ impl CompiledPreviewGallery {
         property_string(&snapshot, context.property.as_str())
     }
 
-    fn write_string_selection(
+    pub(super) fn write_string_selection(
         &mut self,
         context: &PropertyBindingContext,
         selected_id: Option<String>,
@@ -39,7 +41,7 @@ impl CompiledPreviewGallery {
         selected_id.is_some_and(|selected_id| self.write_text(context, selected_id))
     }
 
-    fn navigation_stack_path_binding(
+    pub(super) fn navigation_stack_path_binding(
         path: Vec<String>,
         context: PropertyBindingContext,
     ) -> Binding<Vec<String>> {
@@ -51,14 +53,17 @@ impl CompiledPreviewGallery {
         )
     }
 
-    fn read_navigation_stack_path(&self, context: &PropertyBindingContext) -> Vec<String> {
+    pub(super) fn read_navigation_stack_path(
+        &self,
+        context: &PropertyBindingContext,
+    ) -> Vec<String> {
         match self.read_string_selection(context).as_deref() {
             Some("details") => vec!["details".into()],
             _ => Vec::new(),
         }
     }
 
-    fn write_navigation_stack_path(
+    pub(super) fn write_navigation_stack_path(
         &mut self,
         context: &PropertyBindingContext,
         path: Vec<String>,
@@ -71,7 +76,7 @@ impl CompiledPreviewGallery {
         self.write_text(context, selected_id.into())
     }
 
-    fn collection_selection_binding(
+    pub(super) fn collection_selection_binding(
         selected_id: Option<Identity>,
         context: PropertyBindingContext,
     ) -> Binding<Option<Identity>> {
@@ -83,13 +88,16 @@ impl CompiledPreviewGallery {
         )
     }
 
-    fn read_collection_selection(&self, context: &PropertyBindingContext) -> Option<Identity> {
+    pub(super) fn read_collection_selection(
+        &self,
+        context: &PropertyBindingContext,
+    ) -> Option<Identity> {
         self.read_string_selection(context)
             .filter(|selected_id| selected_id != "none")
             .map(Identity::from)
     }
 
-    fn write_collection_selection(
+    pub(super) fn write_collection_selection(
         &mut self,
         context: &PropertyBindingContext,
         selected_id: Option<Identity>,
@@ -103,7 +111,7 @@ impl CompiledPreviewGallery {
         self.write_text(context, selected_id)
     }
 
-    fn data_grid_selection_binding(
+    pub(super) fn data_grid_selection_binding(
         selected_row: Option<usize>,
         context: PropertyBindingContext,
     ) -> Binding<Option<usize>> {
@@ -115,7 +123,7 @@ impl CompiledPreviewGallery {
         )
     }
 
-    fn list_selection_binding(
+    pub(super) fn list_selection_binding(
         selected_index: Option<usize>,
         context: PropertyBindingContext,
     ) -> Binding<Option<usize>> {
@@ -127,7 +135,7 @@ impl CompiledPreviewGallery {
         )
     }
 
-    fn read_list_selection(&self, context: &PropertyBindingContext) -> Option<usize> {
+    pub(super) fn read_list_selection(&self, context: &PropertyBindingContext) -> Option<usize> {
         self.read_string_selection(context).and_then(|selection| {
             selection
                 .strip_prefix("row-")
@@ -135,7 +143,7 @@ impl CompiledPreviewGallery {
         })
     }
 
-    fn write_list_selection(
+    pub(super) fn write_list_selection(
         &mut self,
         context: &PropertyBindingContext,
         selected_index: Option<usize>,
@@ -148,7 +156,10 @@ impl CompiledPreviewGallery {
         self.write_text(context, selected_id)
     }
 
-    fn read_data_grid_selection(&self, context: &PropertyBindingContext) -> Option<usize> {
+    pub(super) fn read_data_grid_selection(
+        &self,
+        context: &PropertyBindingContext,
+    ) -> Option<usize> {
         self.read_string_selection(context).and_then(|selection| {
             selection
                 .strip_prefix("row-")
@@ -156,7 +167,7 @@ impl CompiledPreviewGallery {
         })
     }
 
-    fn write_data_grid_selection(
+    pub(super) fn write_data_grid_selection(
         &mut self,
         context: &PropertyBindingContext,
         selected_row: Option<usize>,
@@ -168,7 +179,7 @@ impl CompiledPreviewGallery {
         self.write_text(context, selected_id)
     }
 
-    fn tree_selection_binding(
+    pub(super) fn tree_selection_binding(
         selected_id: Option<String>,
         context: PropertyBindingContext,
     ) -> Binding<Option<String>> {
@@ -180,7 +191,7 @@ impl CompiledPreviewGallery {
         )
     }
 
-    fn outline_expansion_binding(
+    pub(super) fn outline_expansion_binding(
         value: String,
         context: PropertyBindingContext,
     ) -> Binding<std::collections::HashSet<String>> {
@@ -216,12 +227,12 @@ impl CompiledPreviewGallery {
         )
     }
 
-    fn read_tree_selection(&self, context: &PropertyBindingContext) -> Option<String> {
+    pub(super) fn read_tree_selection(&self, context: &PropertyBindingContext) -> Option<String> {
         self.read_string_selection(context)
             .filter(|selection| selection != "none")
     }
 
-    fn write_tree_selection(
+    pub(super) fn write_tree_selection(
         &mut self,
         context: &PropertyBindingContext,
         selected_id: Option<String>,
@@ -235,13 +246,17 @@ impl CompiledPreviewGallery {
         self.write_text(context, selected_id.unwrap_or_else(|| "none".into()))
     }
 
-    fn read_disclosure_open(&self, context: &PropertyBindingContext) -> bool {
+    pub(super) fn read_disclosure_open(&self, context: &PropertyBindingContext) -> bool {
         self.preview_snapshot_for_component(context, "disclosure-specimen")
             .and_then(|snapshot| property_boolean(&snapshot, "open"))
             .unwrap_or(false)
     }
 
-    fn write_disclosure_open(&mut self, context: &PropertyBindingContext, open: bool) -> bool {
+    pub(super) fn write_disclosure_open(
+        &mut self,
+        context: &PropertyBindingContext,
+        open: bool,
+    ) -> bool {
         let Some(stamp) = context.stamp.borrow().clone() else {
             return false;
         };
@@ -275,7 +290,7 @@ impl CompiledPreviewGallery {
         }
     }
 
-    fn dismiss_alert(&mut self, signal: &PreviewSignal) {
+    pub(super) fn dismiss_alert(&mut self, signal: &PreviewSignal) {
         match self.host.dispatch(signal) {
             Ok(target) if target.as_str() == "dismiss" => {
                 let context = PropertyBindingContext {
@@ -290,7 +305,7 @@ impl CompiledPreviewGallery {
         }
     }
 
-    fn show_toast(&mut self, signal: &PreviewSignal) {
+    pub(super) fn show_toast(&mut self, signal: &PreviewSignal) {
         match self.host.dispatch(signal) {
             Ok(target) if target.as_str() == "toast_show" => {
                 self.activations += 1;
@@ -300,7 +315,7 @@ impl CompiledPreviewGallery {
         }
     }
 
-    fn toolbar_primary(&mut self, signal: &PreviewSignal) {
+    pub(super) fn toolbar_primary(&mut self, signal: &PreviewSignal) {
         match self.host.dispatch(signal) {
             Ok(target) if target.as_str() == "toolbar_primary" => {
                 self.activations += 1;
@@ -310,7 +325,7 @@ impl CompiledPreviewGallery {
         }
     }
 
-    fn toolbar_secondary(&mut self, signal: &PreviewSignal) {
+    pub(super) fn toolbar_secondary(&mut self, signal: &PreviewSignal) {
         match self.host.dispatch(signal) {
             Ok(target) if target.as_str() == "toolbar_secondary" => {
                 self.activations += 1;
@@ -320,7 +335,7 @@ impl CompiledPreviewGallery {
         }
     }
 
-    fn navigate_breadcrumb_parent(&mut self, signal: &PreviewSignal) {
+    pub(super) fn navigate_breadcrumb_parent(&mut self, signal: &PreviewSignal) {
         match self.host.dispatch(signal) {
             Ok(target) if target.as_str() == "breadcrumb_parent" => {
                 self.activations += 1;
@@ -330,7 +345,7 @@ impl CompiledPreviewGallery {
         }
     }
 
-    fn activate_context_menu_item(&mut self, signal: &PreviewSignal) {
+    pub(super) fn activate_context_menu_item(&mut self, signal: &PreviewSignal) {
         match self.host.dispatch(signal) {
             Ok(target) if target.as_str() == "context_menu_open_preview" => {
                 self.activations += 1;
@@ -340,7 +355,7 @@ impl CompiledPreviewGallery {
         }
     }
 
-    fn activate(&mut self, signal: &PreviewSignal) {
+    pub(super) fn activate(&mut self, signal: &PreviewSignal) {
         match self.host.dispatch(signal) {
             Ok(target) if target.as_str() == "increment" => {
                 self.activations += 1;
@@ -350,7 +365,7 @@ impl CompiledPreviewGallery {
         }
     }
 
-    fn record_hover_enter(&mut self, signal: &PreviewSignal) {
+    pub(super) fn record_hover_enter(&mut self, signal: &PreviewSignal) {
         match self.host.dispatch(signal) {
             Ok(target) if target.as_str() == "increment" => {
                 self.activations += 1;
@@ -360,7 +375,7 @@ impl CompiledPreviewGallery {
         }
     }
 
-    fn record_hover_exit(&mut self, signal: &PreviewSignal) {
+    pub(super) fn record_hover_exit(&mut self, signal: &PreviewSignal) {
         match self.host.dispatch(signal) {
             Ok(target) if target.as_str() == "increment" => {
                 self.activations += 1;
@@ -369,7 +384,7 @@ impl CompiledPreviewGallery {
             result => self.status = format!("Rejected HoverRegion exit signal: {result:?}"),
         }
     }
-    fn reject_stale(&mut self) {
+    pub(super) fn reject_stale(&mut self) {
         let Some(current) = self.host.snapshot().map(|snapshot| snapshot.stamp.clone()) else {
             return;
         };
@@ -394,7 +409,7 @@ impl CompiledPreviewGallery {
             "Stale action rejected: {action_rejected}; stale binding rejected: {feedback_rejected}"
         );
     }
-    fn capture_stale_amount_callback(&mut self) {
+    pub(super) fn capture_stale_amount_callback(&mut self) {
         let Some(stamp) = self.host.snapshot().map(|snapshot| snapshot.stamp.clone()) else {
             self.status = "No mounted preview to capture".into();
             return;
@@ -413,7 +428,7 @@ impl CompiledPreviewGallery {
             stamp.generation, stamp.revision
         );
     }
-    fn replay_stale_amount_callback(&mut self) {
+    pub(super) fn replay_stale_amount_callback(&mut self) {
         let Some(callback) = self.stale_amount_callback.clone() else {
             self.status = "Capture an amount callback before replay".into();
             return;
@@ -432,7 +447,7 @@ impl CompiledPreviewGallery {
         self.status =
             format!("Stale amount callback accepted={accepted}; state unchanged={unchanged}");
     }
-    fn reject_wrong_type(&mut self) {
+    pub(super) fn reject_wrong_type(&mut self) {
         let Some(stamp) = self.host.snapshot().map(|snapshot| snapshot.stamp.clone()) else {
             return;
         };
@@ -448,7 +463,7 @@ impl CompiledPreviewGallery {
             .is_err();
         self.status = format!("Wrong property type rejected: {rejected}");
     }
-    fn read_text(&self, context: &PropertyBindingContext) -> String {
+    pub(super) fn read_text(&self, context: &PropertyBindingContext) -> String {
         let snapshot = self.host.snapshot();
         if snapshot.as_ref().map(|snapshot| &snapshot.stamp) != context.stamp.borrow().as_ref() {
             return String::new();
@@ -475,7 +490,7 @@ impl CompiledPreviewGallery {
             property_string(&snapshot, context.property.as_str()).unwrap_or_default()
         }
     }
-    fn read_token_values(&self, context: &PropertyBindingContext) -> Vec<String> {
+    pub(super) fn read_token_values(&self, context: &PropertyBindingContext) -> Vec<String> {
         let Some(snapshot) = self.host.snapshot() else {
             return Vec::new();
         };
@@ -488,7 +503,7 @@ impl CompiledPreviewGallery {
             .and_then(|value| parse_preview_token_values(&value).ok())
             .unwrap_or_default()
     }
-    fn write_token_values(
+    pub(super) fn write_token_values(
         &mut self,
         context: &PropertyBindingContext,
         values: Vec<String>,
@@ -529,7 +544,7 @@ impl CompiledPreviewGallery {
             }
         }
     }
-    fn write_text(&mut self, context: &PropertyBindingContext, text: String) -> bool {
+    pub(super) fn write_text(&mut self, context: &PropertyBindingContext, text: String) -> bool {
         let Some(stamp) = context.stamp.borrow().clone() else {
             return false;
         };
@@ -611,7 +626,7 @@ impl CompiledPreviewGallery {
             }
         }
     }
-    fn read_secure_value(&self, context: &PropertyBindingContext) -> String {
+    pub(super) fn read_secure_value(&self, context: &PropertyBindingContext) -> String {
         if self
             .preview_snapshot_for_component(context, "secure-field-specimen")
             .is_none()
@@ -620,7 +635,11 @@ impl CompiledPreviewGallery {
         }
         self.secure_value.clone()
     }
-    fn write_secure_value(&mut self, context: &PropertyBindingContext, secret: String) -> bool {
+    pub(super) fn write_secure_value(
+        &mut self,
+        context: &PropertyBindingContext,
+        secret: String,
+    ) -> bool {
         let Some(stamp) = context.stamp.borrow().clone() else {
             return false;
         };
@@ -636,7 +655,7 @@ impl CompiledPreviewGallery {
         self.secure_value = secret;
         true
     }
-    fn preview_snapshot_for_binding(
+    pub(super) fn preview_snapshot_for_binding(
         &self,
         context: &PropertyBindingContext,
     ) -> Option<PreviewSnapshot> {
@@ -647,7 +666,7 @@ impl CompiledPreviewGallery {
             .cloned()
     }
 
-    fn preview_snapshot_for_component(
+    pub(super) fn preview_snapshot_for_component(
         &self,
         context: &PropertyBindingContext,
         component_id: &str,
@@ -656,24 +675,27 @@ impl CompiledPreviewGallery {
             .filter(|snapshot| snapshot.preview.document.component_id.as_str() == component_id)
     }
 
-    fn read_enabled(&self, context: &PropertyBindingContext) -> bool {
+    pub(super) fn read_enabled(&self, context: &PropertyBindingContext) -> bool {
         let Some(snapshot) = self.preview_snapshot_for_binding(context) else {
             return false;
         };
         property_boolean(&snapshot, context.property.as_str()).unwrap_or(self.enabled)
     }
 
-    fn preview_inspector_boolean_binding(&self, context: PropertyBindingContext) -> Binding<bool> {
+    pub(super) fn preview_inspector_boolean_binding(
+        &self,
+        context: PropertyBindingContext,
+    ) -> Binding<bool> {
         let initial = self.read_enabled(&context);
         Binding::new_with(initial, context, Self::read_enabled, Self::write_enabled)
     }
 
-    fn read_date_value(&self, context: &PropertyBindingContext) -> Option<NaiveDate> {
+    pub(super) fn read_date_value(&self, context: &PropertyBindingContext) -> Option<NaiveDate> {
         let snapshot = self.preview_snapshot_for_component(context, "date-picker-specimen")?;
         property_date(&snapshot)
     }
 
-    fn write_date_value(
+    pub(super) fn write_date_value(
         &mut self,
         context: &PropertyBindingContext,
         value: Option<NaiveDate>,
@@ -709,18 +731,22 @@ impl CompiledPreviewGallery {
         }
     }
 
-    fn read_color_value(&self, context: &PropertyBindingContext) -> Option<Hsla> {
+    pub(super) fn read_color_value(&self, context: &PropertyBindingContext) -> Option<Hsla> {
         let snapshot = self.preview_snapshot_for_component(context, "color-picker-specimen")?;
         property_color(&snapshot).flatten()
     }
 
-    fn read_color_presence(&self, context: &PropertyBindingContext) -> bool {
+    pub(super) fn read_color_presence(&self, context: &PropertyBindingContext) -> bool {
         self.preview_snapshot_for_component(context, "color-picker-specimen")
             .and_then(|snapshot| property_boolean(&snapshot, "has_color"))
             .unwrap_or(false)
     }
 
-    fn write_color_presence(&mut self, context: &PropertyBindingContext, has_color: bool) -> bool {
+    pub(super) fn write_color_presence(
+        &mut self,
+        context: &PropertyBindingContext,
+        has_color: bool,
+    ) -> bool {
         let color = self
             .preview_snapshot_for_component(context, "color-picker-specimen")
             .and_then(|snapshot| {
@@ -740,7 +766,11 @@ impl CompiledPreviewGallery {
         self.write_color_value(context, has_color.then_some(color))
     }
 
-    fn write_color_value(&mut self, context: &PropertyBindingContext, value: Option<Hsla>) -> bool {
+    pub(super) fn write_color_value(
+        &mut self,
+        context: &PropertyBindingContext,
+        value: Option<Hsla>,
+    ) -> bool {
         let Some(stamp) = context.stamp.borrow().clone() else {
             return false;
         };
@@ -808,7 +838,11 @@ impl CompiledPreviewGallery {
         }
     }
 
-    fn write_enabled(&mut self, context: &PropertyBindingContext, enabled: bool) -> bool {
+    pub(super) fn write_enabled(
+        &mut self,
+        context: &PropertyBindingContext,
+        enabled: bool,
+    ) -> bool {
         let Some(stamp) = context.stamp.borrow().clone() else {
             return false;
         };
@@ -832,7 +866,7 @@ impl CompiledPreviewGallery {
             }
         }
     }
-    fn refresh_number_drafts(&mut self) {
+    pub(super) fn refresh_number_drafts(&mut self) {
         let drafts = self
             .host
             .snapshot()
@@ -851,7 +885,7 @@ impl CompiledPreviewGallery {
         self.number_drafts = drafts;
     }
 
-    fn read_number_draft(&self, context: &PropertyBindingContext) -> String {
+    pub(super) fn read_number_draft(&self, context: &PropertyBindingContext) -> String {
         let Some(stamp) = context.stamp.borrow().clone() else {
             return String::new();
         };
@@ -870,7 +904,11 @@ impl CompiledPreviewGallery {
             .unwrap_or_default()
     }
 
-    fn write_number_draft(&mut self, context: &PropertyBindingContext, draft: String) -> bool {
+    pub(super) fn write_number_draft(
+        &mut self,
+        context: &PropertyBindingContext,
+        draft: String,
+    ) -> bool {
         let Some(stamp) = context.stamp.borrow().clone() else {
             return false;
         };
@@ -917,12 +955,16 @@ impl CompiledPreviewGallery {
         }
     }
 
-    fn read_amount_draft(&self, context: &PropertyBindingContext) -> String {
+    pub(super) fn read_amount_draft(&self, context: &PropertyBindingContext) -> String {
         self.preview_snapshot_for_binding(context)
             .map(|_| self.amount_draft.clone())
             .unwrap_or_default()
     }
-    fn write_amount_draft(&mut self, context: &PropertyBindingContext, draft: String) -> bool {
+    pub(super) fn write_amount_draft(
+        &mut self,
+        context: &PropertyBindingContext,
+        draft: String,
+    ) -> bool {
         let Some(stamp) = context.stamp.borrow().clone() else {
             return false;
         };
@@ -957,13 +999,17 @@ impl CompiledPreviewGallery {
             }
         }
     }
-    fn read_stepper_value(&self, context: &PropertyBindingContext) -> i32 {
+    pub(super) fn read_stepper_value(&self, context: &PropertyBindingContext) -> i32 {
         self.preview_snapshot_for_component(context, "stepper")
             .map(|_| self.stepper_count)
             .unwrap_or(PREVIEW_STEPPER_MIN)
     }
 
-    fn write_stepper_value(&mut self, context: &PropertyBindingContext, value: i32) -> bool {
+    pub(super) fn write_stepper_value(
+        &mut self,
+        context: &PropertyBindingContext,
+        value: i32,
+    ) -> bool {
         let Some(stamp) = context.stamp.borrow().clone() else {
             return false;
         };
@@ -991,7 +1037,7 @@ impl CompiledPreviewGallery {
         }
     }
 
-    fn read_integer_property(&self, context: &PropertyBindingContext) -> i64 {
+    pub(super) fn read_integer_property(&self, context: &PropertyBindingContext) -> i64 {
         let Some(stamp) = context.stamp.borrow().clone() else {
             return 0;
         };
@@ -1002,7 +1048,11 @@ impl CompiledPreviewGallery {
             .unwrap_or_default()
     }
 
-    fn write_integer_property(&mut self, context: &PropertyBindingContext, value: i64) -> bool {
+    pub(super) fn write_integer_property(
+        &mut self,
+        context: &PropertyBindingContext,
+        value: i64,
+    ) -> bool {
         let Some(stamp) = context.stamp.borrow().clone() else {
             return false;
         };
@@ -1042,12 +1092,16 @@ impl CompiledPreviewGallery {
         }
     }
 
-    fn read_slider_value(&self, context: &PropertyBindingContext) -> f32 {
+    pub(super) fn read_slider_value(&self, context: &PropertyBindingContext) -> f32 {
         self.preview_snapshot_for_component(context, "slider")
             .map(|_| self.amount as f32)
             .unwrap_or(PREVIEW_SLIDER_MIN)
     }
-    fn write_slider_value(&mut self, context: &PropertyBindingContext, value: f32) -> bool {
+    pub(super) fn write_slider_value(
+        &mut self,
+        context: &PropertyBindingContext,
+        value: f32,
+    ) -> bool {
         let Some(stamp) = context.stamp.borrow().clone() else {
             return false;
         };
@@ -1078,7 +1132,7 @@ impl CompiledPreviewGallery {
             }
         }
     }
-    fn text_binding(&self) -> Binding<String> {
+    pub(super) fn text_binding(&self) -> Binding<String> {
         let context = PropertyBindingContext {
             property: self
                 .host
