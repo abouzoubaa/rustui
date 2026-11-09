@@ -99,6 +99,10 @@ Do not run `cargo clean` after tickets. Once a week, or when free disk is below 
 
 ## Build-cache maintenance
 
+### CI cache
+
+Known: rustui-gpui-apple's build script reruns on every CI run, rebuilding its dependents (~14 targets); follow-up candidate.
+
 `cargo-sweep` prunes stale artifacts from the shared target directory; install it with `cargo install cargo-sweep --locked`.
 Run `CARGO_TARGET_DIR="$HOME/.cache/rustui-target" cargo sweep --time 7 .` weekly or when free disk is below 50 GB.
 
