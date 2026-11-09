@@ -2,6 +2,8 @@
 
 ## 0.2.0 — 2026-11-09
 
+- Reclassified all approved GPUI patches against 0.8.1 behavior, separating upstream-fixed, partial, and still-needed changes.
+
 - Added a source-verified GPUI Kit 0.8.1 upgrade plan, patch compatibility matrix and bounded migration sequence.
 
 - Clarified Stage A assessment scope and scheduled native popup implementation and crates.io publishing after the Stage A2 upgrade.
