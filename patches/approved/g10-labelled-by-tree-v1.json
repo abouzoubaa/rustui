@@ -1,0 +1,8 @@
+{
+  "schema_version": 1,
+  "patch": "patches/approved/g10-labelled-by-tree-v1.patch",
+  "patch_sha256": "f6f19001783c074b68b443904af56f7bdfef004dbf6f8ec631f170b8958cba76",
+  "source": "vendor/gpui-pre-0.3.9/src/window/a11y/debug.rs",
+  "pre_sha256": "c77840017e3ce65c4ca892b17016bd3608af4da6d61e6f584e7df237d755a712",
+  "post_sha256": "a7026af86d1e91c01ce5c272cda204254bc39aec03bb13edbb4d4558727ece5d"
+}

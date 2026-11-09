@@ -1,0 +1,8 @@
+{
+  "schema_version": 1,
+  "patch": "patches/approved/g10-parent-node-id-v1.patch",
+  "patch_sha256": "85454b54c817f66a2a18dc6e14cae6bbedc714367702b6c7c12a86b73c294632",
+  "source": "vendor/gpui-pre-0.3.9/src/window/a11y.rs",
+  "pre_sha256": "e8403059924d022695e3bea6888d14a0e65317785b393f3b4a75bac5858fae53",
+  "post_sha256": "a373e933c580763d9814a7d5635bd9cc7c8ccc203e0ca572095a97f442131903"
+}
