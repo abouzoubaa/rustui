@@ -4786,7 +4786,7 @@ dependencies = [
 
 [[package]]
 name = "rustui"
-version = "0.1.0"
+version = "0.2.0"
 dependencies = [
  "chrono",
  "gpui-component",
@@ -4804,7 +4804,7 @@ dependencies = [
 
 [[package]]
 name = "rustui-core"
-version = "0.1.0"
+version = "0.2.0"
 
 [[package]]
 name = "rustui-external-consumer-example"
@@ -4932,7 +4932,7 @@ dependencies = [
 
 [[package]]
 name = "rustui-i18n"
-version = "0.1.0"
+version = "0.2.0"
 dependencies = [
  "fluent-bundle",
  "fluent-syntax",
@@ -4948,7 +4948,7 @@ dependencies = [
 
 [[package]]
 name = "rustui-macros"
-version = "0.1.0"
+version = "0.2.0"
 dependencies = [
  "proc-macro2",
  "quote",
