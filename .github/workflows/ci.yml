@@ -34,6 +34,8 @@ jobs:
         run: rustup toolchain install 1.97.1 --profile minimal --component rustfmt
       - name: Verify approved Tree sources, replay lifecycle, and source release gates
         run: ./scripts/verify-release.sh source
+      - name: Test the GPUI Kit 0.8.1 source fixture harness
+        run: python3 -m unittest discover -s scripts/tests -p 'test_prepare_gpui_kit_08_fixture.py' -v
       - name: Stable Rust formatting, workspace check, and library tests
         run: ./scripts/check.sh
 

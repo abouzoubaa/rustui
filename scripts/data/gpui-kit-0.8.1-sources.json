@@ -1,0 +1,263 @@
+{
+  "schema_version": 1,
+  "upstream": {
+    "repository": "https://github.com/longbridge/gpui-kit",
+    "tag": "v0.8.1",
+    "commit": "99576db58ec8103417c41a092e891b4022d24e7e",
+    "gpui_pre_version": "0.3.10"
+  },
+  "sources": [
+    {
+      "name": "block",
+      "version": "0.1.6",
+      "archive_url": "https://static.crates.io/crates/block/block-0.1.6.crate",
+      "archive_sha256": "0d8c1fef690941d3e7788d328517591fecc684c084084702d6ff1641e993699a",
+      "group": "patch-target-dependency"
+    },
+    {
+      "name": "cosmic-text",
+      "version": "0.19.0",
+      "archive_url": "https://static.crates.io/crates/cosmic-text/cosmic-text-0.19.0.crate",
+      "archive_sha256": "be17b688510d934ce13f48a2beba700e11583e281e0fda99c22bb256a14eda73",
+      "group": "patch-target-dependency"
+    },
+    {
+      "name": "gpui-base",
+      "version": "0.8.1",
+      "archive_url": "https://static.crates.io/crates/gpui-base/gpui-base-0.8.1.crate",
+      "archive_sha256": "d862bc8f2e27710039013d075ac4995892e9687ff207fa530f880cbcd513936f",
+      "group": "gpui-kit"
+    },
+    {
+      "name": "gpui-component",
+      "version": "0.8.1",
+      "archive_url": "https://static.crates.io/crates/gpui-component/gpui-component-0.8.1.crate",
+      "archive_sha256": "46ce53430332e30f303364eaabfa10ed2aa23dfaf2a147e04370e0e9c423578b",
+      "group": "gpui-kit"
+    },
+    {
+      "name": "gpui-component-macros",
+      "version": "0.8.1",
+      "archive_url": "https://static.crates.io/crates/gpui-component-macros/gpui-component-macros-0.8.1.crate",
+      "archive_sha256": "a512c830553e7dddc43c3f8faffc2d2d7bd24db21fe3dc1326dde9c470013768",
+      "group": "gpui-kit"
+    },
+    {
+      "name": "gpui-kit",
+      "version": "0.8.1",
+      "archive_url": "https://static.crates.io/crates/gpui-kit/gpui-kit-0.8.1.crate",
+      "archive_sha256": "25210f6e59ea9ffac3a033dbce9edafe5ff0dd2900f894fd1316f54da2fe2b89",
+      "group": "gpui-kit"
+    },
+    {
+      "name": "gpui-kit-assets",
+      "version": "0.8.1",
+      "archive_url": "https://static.crates.io/crates/gpui-kit-assets/gpui-kit-assets-0.8.1.crate",
+      "archive_sha256": "c214017b45e5654665f18faa551f58a2c2c8d25efe6632b1a443ba8edf365e96",
+      "group": "gpui-kit"
+    },
+    {
+      "name": "gpui-pre",
+      "version": "0.3.10",
+      "archive_url": "https://static.crates.io/crates/gpui-pre/gpui-pre-0.3.10.crate",
+      "archive_sha256": "df4b5f8d0c278308df2f11e0bfe0212dd77d7848ce1bdc4b9d513334414396f6",
+      "group": "gpui-pre"
+    },
+    {
+      "name": "gpui-pre-apple",
+      "version": "0.3.10",
+      "archive_url": "https://static.crates.io/crates/gpui-pre-apple/gpui-pre-apple-0.3.10.crate",
+      "archive_sha256": "e97cd068d8134b4e073321b946491760aa1e4511e486084a92e73b9174bff78a",
+      "group": "gpui-pre"
+    },
+    {
+      "name": "gpui-pre-bench-metrics",
+      "version": "0.3.10",
+      "archive_url": "https://static.crates.io/crates/gpui-pre-bench-metrics/gpui-pre-bench-metrics-0.3.10.crate",
+      "archive_sha256": "365fda34251705189d185a19d44da39741d2f182fece3dd0a3e8ef2819305e24",
+      "group": "gpui-pre"
+    },
+    {
+      "name": "gpui-pre-collections",
+      "version": "0.3.10",
+      "archive_url": "https://static.crates.io/crates/gpui-pre-collections/gpui-pre-collections-0.3.10.crate",
+      "archive_sha256": "8f89bf8941a7437dd761161c552543fb8268b9633fe74e29eafbe0014cd2164b",
+      "group": "gpui-pre"
+    },
+    {
+      "name": "gpui-pre-derive-refineable",
+      "version": "0.3.10",
+      "archive_url": "https://static.crates.io/crates/gpui-pre-derive-refineable/gpui-pre-derive-refineable-0.3.10.crate",
+      "archive_sha256": "2998b1cebbaa0fa004fe4939a513bbf4103c7fb69ae2e84ee73634554e3f7edc",
+      "group": "gpui-pre"
+    },
+    {
+      "name": "gpui-pre-http-client",
+      "version": "0.3.10",
+      "archive_url": "https://static.crates.io/crates/gpui-pre-http-client/gpui-pre-http-client-0.3.10.crate",
+      "archive_sha256": "e516820ee56ac357a87ff97b1a2c5f22c8d5dcd2a50cdd15c16949f24464d98e",
+      "group": "gpui-pre"
+    },
+    {
+      "name": "gpui-pre-http-client-tls",
+      "version": "0.3.10",
+      "archive_url": "https://static.crates.io/crates/gpui-pre-http-client-tls/gpui-pre-http-client-tls-0.3.10.crate",
+      "archive_sha256": "13a487328e5cf704b44f3e6ca0b86b7688f2c488ce66cace071e713df94810d7",
+      "group": "gpui-pre"
+    },
+    {
+      "name": "gpui-pre-ios",
+      "version": "0.3.10",
+      "archive_url": "https://static.crates.io/crates/gpui-pre-ios/gpui-pre-ios-0.3.10.crate",
+      "archive_sha256": "5773a1e3a399df64f3ecc5538727fd0575279bd190959cf97a9e2b698c0310b8",
+      "group": "gpui-pre"
+    },
+    {
+      "name": "gpui-pre-linux",
+      "version": "0.3.10",
+      "archive_url": "https://static.crates.io/crates/gpui-pre-linux/gpui-pre-linux-0.3.10.crate",
+      "archive_sha256": "7c6ffd2dce7b75cce0bb3382994912f84c2a05389a4a236bb8bd72cb098fc083",
+      "group": "gpui-pre"
+    },
+    {
+      "name": "gpui-pre-macos",
+      "version": "0.3.10",
+      "archive_url": "https://static.crates.io/crates/gpui-pre-macos/gpui-pre-macos-0.3.10.crate",
+      "archive_sha256": "7e07a5e5c84f0b2160c194a1c852cc89d1942db66867938ceabcd7f763cb4386",
+      "group": "gpui-pre"
+    },
+    {
+      "name": "gpui-pre-macros",
+      "version": "0.3.10",
+      "archive_url": "https://static.crates.io/crates/gpui-pre-macros/gpui-pre-macros-0.3.10.crate",
+      "archive_sha256": "9c95d70a9fe10701533606c6135f9a1d4cd96e87e4e6062b3d426eb57b415daf",
+      "group": "gpui-pre"
+    },
+    {
+      "name": "gpui-pre-platform",
+      "version": "0.3.10",
+      "archive_url": "https://static.crates.io/crates/gpui-pre-platform/gpui-pre-platform-0.3.10.crate",
+      "archive_sha256": "e8a7f07a15187e82ec76491492c7e3245db1b59633d3bedb00b828ffaf67c4b8",
+      "group": "gpui-pre"
+    },
+    {
+      "name": "gpui-pre-refineable",
+      "version": "0.3.10",
+      "archive_url": "https://static.crates.io/crates/gpui-pre-refineable/gpui-pre-refineable-0.3.10.crate",
+      "archive_sha256": "4ce7e83592bc6c1ead2affd91b333f11b60c3eb7d06cae1605dd56f149fe8674",
+      "group": "gpui-pre"
+    },
+    {
+      "name": "gpui-pre-reqwest",
+      "version": "0.12.15",
+      "archive_url": "https://static.crates.io/crates/gpui-pre-reqwest/gpui-pre-reqwest-0.12.15.crate",
+      "archive_sha256": "05be23908e707966824f8c51a609904b7f30739e8d915e120a53c1b995ba964c",
+      "group": "gpui-pre"
+    },
+    {
+      "name": "gpui-pre-reqwest-client",
+      "version": "0.3.10",
+      "archive_url": "https://static.crates.io/crates/gpui-pre-reqwest-client/gpui-pre-reqwest-client-0.3.10.crate",
+      "archive_sha256": "ca7eada23ad3c3cff486fd7ab5d92abb82236188cca61cde708adf54cb436226",
+      "group": "gpui-pre"
+    },
+    {
+      "name": "gpui-pre-scheduler",
+      "version": "0.3.10",
+      "archive_url": "https://static.crates.io/crates/gpui-pre-scheduler/gpui-pre-scheduler-0.3.10.crate",
+      "archive_sha256": "87c2c6b0fabcd20e6773a0be30afa1f25637c53a06201bb80ab24a21fe198865",
+      "group": "gpui-pre"
+    },
+    {
+      "name": "gpui-pre-shared-string",
+      "version": "0.3.10",
+      "archive_url": "https://static.crates.io/crates/gpui-pre-shared-string/gpui-pre-shared-string-0.3.10.crate",
+      "archive_sha256": "8068f94355f173558a51998a32985a434af54cc6c7262a060fffc369a505998f",
+      "group": "gpui-pre"
+    },
+    {
+      "name": "gpui-pre-sum-tree",
+      "version": "0.3.10",
+      "archive_url": "https://static.crates.io/crates/gpui-pre-sum-tree/gpui-pre-sum-tree-0.3.10.crate",
+      "archive_sha256": "c1ce66c57e9b5fd6c7a90fa9f9de2f9bb342127d670ca3c8fe5885270079eefa",
+      "group": "gpui-pre"
+    },
+    {
+      "name": "gpui-pre-util",
+      "version": "0.3.10",
+      "archive_url": "https://static.crates.io/crates/gpui-pre-util/gpui-pre-util-0.3.10.crate",
+      "archive_sha256": "162dc29b2d2c0223ee4bb4e9f5e913eab4f62cad0943eb0c1122a74ac82b0768",
+      "group": "gpui-pre"
+    },
+    {
+      "name": "gpui-pre-web",
+      "version": "0.3.10",
+      "archive_url": "https://static.crates.io/crates/gpui-pre-web/gpui-pre-web-0.3.10.crate",
+      "archive_sha256": "1acd86af2347f0dd8b63c441a5dbd43b3fcd7dac69b340827c3497da5a13d6fb",
+      "group": "gpui-pre"
+    },
+    {
+      "name": "gpui-pre-wgpu",
+      "version": "0.3.10",
+      "archive_url": "https://static.crates.io/crates/gpui-pre-wgpu/gpui-pre-wgpu-0.3.10.crate",
+      "archive_sha256": "ce693915768aae38bf788f245af75aae78e3e1179245860fc80ce831d0a8f74e",
+      "group": "gpui-pre"
+    },
+    {
+      "name": "gpui-pre-windows",
+      "version": "0.3.10",
+      "archive_url": "https://static.crates.io/crates/gpui-pre-windows/gpui-pre-windows-0.3.10.crate",
+      "archive_sha256": "80670f987b920fba019917b2e222ecf2b377f2a6d77872010c7d284c235837b3",
+      "group": "gpui-pre"
+    },
+    {
+      "name": "gpui-pre-ztracing",
+      "version": "0.3.10",
+      "archive_url": "https://static.crates.io/crates/gpui-pre-ztracing/gpui-pre-ztracing-0.3.10.crate",
+      "archive_sha256": "814cc08c526961c88703806a68ba4cf216a1d988ffbbdc673304f4dd25858952",
+      "group": "gpui-pre"
+    },
+    {
+      "name": "gpui-pre-ztracing-macro",
+      "version": "0.3.10",
+      "archive_url": "https://static.crates.io/crates/gpui-pre-ztracing-macro/gpui-pre-ztracing-macro-0.3.10.crate",
+      "archive_sha256": "e0f9dae92b9bc15baa6e530c90bdd4c689d3710bd4d18c3566deb1d6ae182daf",
+      "group": "gpui-pre"
+    }
+  ],
+  "known_unavailable_targets": [
+    {
+      "package": "gpui-pre-web",
+      "path": "src/a11y_dom.js",
+      "patches": [
+        "gpui-web-combobox-enter-v1.patch",
+        "gpui-web-semantic-adapter-v9.patch"
+      ],
+      "reason": "The 0.8.1 archive has no src/a11y_dom.js; the relevant adapter code was reorganized."
+    },
+    {
+      "package": "gpui-pre-web",
+      "path": "src/a11y.rs",
+      "patches": [
+        "gpui-web-semantic-adapter-v9.patch"
+      ],
+      "reason": "The 0.8.1 archive has no src/a11y.rs; the relevant adapter code was reorganized."
+    },
+    {
+      "package": "gpui-pre-web",
+      "path": "src/a11y_dom.rs",
+      "patches": [
+        "gpui-web-semantic-adapter-v9.patch"
+      ],
+      "reason": "The 0.8.1 archive has no src/a11y_dom.rs; the relevant adapter code was reorganized."
+    },
+    {
+      "package": "gpui-pre-web",
+      "path": "src/ime_edit.rs",
+      "patches": [
+        "gpui-web-semantic-adapter-v9.patch"
+      ],
+      "reason": "The 0.8.1 archive has no src/ime_edit.rs; the relevant adapter code was reorganized."
+    }
+  ]
+}
