@@ -46,7 +46,12 @@ A2_4A_ORDER = (
     "gpui-component-tracked-dialog-focus-rebase-v2-kit08.patch",
 )
 A2_4B_ORDER = ("gpui-component-sheet-close-accessibility-v2.patch",)
-FAMILY_ORDER = A2_4A_ORDER + A2_4B_ORDER
+A2_4C_ORDER = (
+    "r15-button-disabled-focus-v1-kit08.patch",
+    "r15-sidebar-disabled-v1.patch",
+    "r15-breadcrumb-disabled-v1.patch",
+)
+FAMILY_ORDER = A2_4A_ORDER + A2_4B_ORDER + A2_4C_ORDER
 
 
 def compile_candidate_workspace(
@@ -151,9 +156,9 @@ def run(write_manifest: bool = False) -> dict:
         raise FixtureError(f"recorded stack manifest is stale: {OUTPUT}; use --write-manifest")
     OUTPUT.write_bytes(data)
     print(
-        "core patches={}; A2-4a patches={}; A2-4b patches={}; fixture archives verified={}; "
+        "core patches={}; A2-4a patches={}; A2-4b patches={}; A2-4c patches={}; fixture archives verified={}; "
         "target files hashed={}; stack files={}; reverse=exact".format(
-            len(CORE_ORDER), len(A2_4A_ORDER), len(A2_4B_ORDER), archive_count, target_count,
+            len(CORE_ORDER), len(A2_4A_ORDER), len(A2_4B_ORDER), len(A2_4C_ORDER), archive_count, target_count,
             len(result["files"]),
         )
     )

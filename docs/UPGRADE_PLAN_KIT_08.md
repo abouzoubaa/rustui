@@ -208,7 +208,7 @@ Commands: `git -C /tmp/a2-plan-gpui-kit-v0.8.1 show v0.8.1:Cargo.toml`; `curl -L
 | `gpui-web-combobox-enter-v1.patch` | Keep Enter behavior consistent for focused combobox options. | **UNKNOWN** — The target removed `src/a11y_dom.js`; behavior moved into the event/keyboard path and the same-node ownership contract was not established from the target diff. Resolve the new path before rebase/removal. |
 | `gpui-web-semantic-adapter-v9.patch` | Forward semantic input roles, values, descriptions, and state through the platform adapter. | **UNKNOWN** — Four target files in the patch were removed or substantially relocated across GPUI core, Base, and platform sources; without mapping the new semantic adapter end to end, equivalence and remaining behavior cannot be decided. Resolve the relocated implementation before classification. |
 | `r15-breadcrumb-disabled-v1.patch` | Preserve disabled Breadcrumb item semantics and interaction behavior. | **APPLIES** — Corresponding target file diff was inspected; no upstream implementation of this behavior appeared, and the patch applies cleanly to the v0.8.1/0.3.10 source image. |
-| `r15-button-disabled-focus-v1.patch` | Move focus onward when a focused Button becomes disabled. | **PARTIAL** — [#3606](https://github.com/longbridge/gpui-kit/pull/3606): the target preserves the focused button’s binding so forward/reverse Tab can leave it after disable; it does not move focus immediately when disabled, which remains the RustUI recovery behavior. |
+| `r15-button-disabled-focus-v1.patch` | Move focus onward when a focused Button becomes disabled. | **REBASE** — [#3606](https://github.com/longbridge/gpui-kit/pull/3606) preserves the focused Button binding in GPUI Base so forward/reverse Tab can leave it after disable. It does not move focus immediately. The Kit 0.8 candidate keeps that upstream Base implementation and adds only `window.focus_next(cx)` in the focused disabled Component Button render path. |
 | `r15-sidebar-disabled-v1.patch` | Preserve disabled Sidebar item semantics and interaction behavior. | **APPLIES** — Corresponding target file diff was inspected; no upstream implementation of this behavior appeared, and the patch applies cleanly to the v0.8.1/0.3.10 source image. |
 | `r15-test-tree-disabled-v1.patch` | Expose disabled state and bounds in the GPUI test accessibility tree. | **REBASE** — Corresponding target file diff was inspected; no upstream implementation of this behavior appeared. The syntactic matrix above records the first conflict: `vendor/gpui-pre-0.3.9/src/window/a11y/debug.rs`. |
 | `r15-tree-disabled-focus-v1.patch` | Move focus past a Tree group when it becomes disabled. | **APPLIES** — Corresponding target file diff was inspected; no upstream implementation of this behavior appeared, and the patch applies cleanly to the v0.8.1/0.3.10 source image. |
@@ -218,12 +218,12 @@ Commands: `git -C /tmp/a2-plan-gpui-kit-v0.8.1 show v0.8.1:Cargo.toml`; `curl -L
 | `t13-modal-focus-recovery-v1.patch` | Restore focus to the next modal or owner after modal removal. | **REBASE** — Corresponding target file diff was inspected; no upstream implementation of this behavior appeared. The syntactic matrix above records the first conflict: `vendor/gpui-component-0.7.3/src/root.rs`. |
 | `t17-inert-focus-scope-v1.patch` | Exclude inert focus scopes from keyboard traversal and restore traversal after changes. | **REBASE** — Corresponding target file diff was inspected; no upstream implementation of this behavior appeared. The syntactic matrix above records the first conflict: `vendor/gpui-pre-0.3.9/src/tab_stop.rs; vendor/gpui-pre-0.3.9/src/window.rs`. |
 
-**Intent counts (71 patches): OBSOLETE 5 / PARTIAL 5 / APPLIES 30 / REBASE 29 / UNKNOWN 2.** `APPLIES` means still needed and cleanly applicable; `REBASE` means still needed but the target hunk conflicts; `PARTIAL` means upstream covers only a named subset; `OBSOLETE` means the target source implements the same behavior. The earlier syntactic counts (29 APPLIES / 40 REBASE / 2 UNKNOWN) remain in the original matrix as apply-check results only. Of the 42 rows in those two groups, 40 were resolved as still-needed REBASE and two relocated-source cases remain UNKNOWN; all earlier clean-apply rows were reviewed for duplicate behavior.
+**Intent counts (71 patches): OBSOLETE 5 / PARTIAL 4 / APPLIES 30 / REBASE 30 / UNKNOWN 2.** `APPLIES` means still needed and cleanly applicable; `REBASE` means still needed but the target hunk conflicts; `PARTIAL` means upstream covers only a named subset; `OBSOLETE` means the target source implements the same behavior. The earlier syntactic counts (29 APPLIES / 40 REBASE / 2 UNKNOWN) remain in the original matrix as apply-check results only. Of the 42 rows in those two groups, 40 were resolved as still-needed REBASE and two relocated-source cases remain UNKNOWN; all earlier clean-apply rows were reviewed for duplicate behavior.
 
 Candidate verification:
 
 - `gpui-component-slider-accessibility-label-v2` is OBSOLETE via #3494, not #3524. #3524 names settings boolean fields after their setting title. The target Slider forwards its stored label to Base `aria_label`.
-- `r15-button-disabled-focus-v1` is PARTIAL via #3606: Tab traversal is preserved, but immediate focus recovery is not implemented. `gpui-base-button-disabled-accessibility-v1` and `gpui-base-disabled-semantic-roots-v1` are OBSOLETE via #3531.
+- `r15-button-disabled-focus-v1` is REBASE via #3606: GPUI Base retains the existing focused binding for Tab traversal; the candidate Component hunk adds immediate `focus_next` on disable. `gpui-base-button-disabled-accessibility-v1` and `gpui-base-disabled-semantic-roots-v1` are OBSOLETE via #3531.
 - `gpui-base-focus-trap-accessibility-v1` is OBSOLETE via #3443. #3642 addresses repeated Tab-stop search termination, a separate behavior.
 - `gpui-component-select-committed-title-v1` is OBSOLETE via #3446: the target trigger title reads the committed selection. Keep a RustUI regression for filtering without changing the displayed committed value.
 - No patch that creates a cell-to-header relation is made obsolete by #3667. That PR adds DataTable roles and `TableDelegate::cell_label`; target code still has no `labelled_by` link from a RustUI grid cell to its header. #3758/#3773 postdate v0.8.1 and are outside this target comparison.
@@ -362,7 +362,7 @@ After those patch-only fixes, `python3 scripts/check_kit08_kit_stack.py --compil
 
 ### Approved patch destination ledger (71 patches)
 
-Every approved patch has exactly one destination. **Totals: CANDIDATE 16 / REMAINDER 0 / A2-4 QUEUE 41 / OBSOLETE 5 / PARKED 5 / POPUP STAGE 4 = 71.** `t13-modal-focus-recovery-v1.patch` is assigned to the **A2-4 QUEUE — Dialog / modal focus** despite its GPUI-pre focus hunks; `a11y-validation-grid-v1.patch` is assigned to the **A2-4 QUEUE — Input / validation / DataGrid** despite its GPUI-pre accessibility-tree hunks. Their feature families are outside A2-2 core candidate scope.
+Every approved patch has exactly one destination. **Totals after A2-4c: CANDIDATE 19 / REMAINDER 0 / A2-4 QUEUE 38 / OBSOLETE 5 / PARKED 5 / POPUP STAGE 4 = 71.** `t13-modal-focus-recovery-v1.patch` is assigned to the **A2-4 QUEUE — Dialog / modal focus** despite its GPUI-pre focus hunks; `a11y-validation-grid-v1.patch` is assigned to the **A2-4 QUEUE — Input / validation / DataGrid** despite its GPUI-pre accessibility-tree hunks. Their feature families are outside A2-2 core candidate scope.
 
 ### A2-4 families
 
@@ -373,7 +373,7 @@ The queue is split into isolated candidate stacks. Each ticket is estimated at n
 | A2-4a — Dialog / modal focus | `t13-modal-focus-recovery-v1.patch` → `gpui-component-tracked-dialog-focus-rebase-v2.patch` | None | 2h |
 | A2-4b — Sheet accessibility | `gpui-component-sheet-close-accessibility-v2.patch` | None | 1h |
 | A2-4c0 — GPUI core aria-disabled dependency | GPUI-pre hunk split from `gpui-tree-aria-disabled-v1.patch` as `gpui-tree-aria-disabled-v1-kit08.patch` | Base Tree-row delta stays for A2-4g. | 1h |
-| A2-4c — Button / sidebar / breadcrumb disabled behavior | `r15-button-disabled-focus-v1.patch` → `r15-sidebar-disabled-v1.patch` → `r15-breadcrumb-disabled-v1.patch` | Button: retain immediate focus recovery when a focused Button becomes disabled; #3606 only preserves traversal out of it. Sidebar/Breadcrumb use the core `aria_disabled` API supplied by A2-4c0. | 1.5h |
+| A2-4c — Button / sidebar / breadcrumb disabled behavior | `r15-button-disabled-focus-v1-kit08.patch` → `r15-sidebar-disabled-v1.patch` → `r15-breadcrumb-disabled-v1.patch` | Button: GPUI Base 0.8.1 includes #3606 focus-binding retention; the Component patch adds immediate focus recovery. Sidebar/Breadcrumb use the core `aria_disabled` API supplied by A2-4c0. | 1.5h |
 | A2-4d — Menus / popup items | `gpui-component-popup-menu-disabled-confirm-v1.patch` → `r15b-menu-item-disabled-v1.patch` → `r15b-popup-menu-recovery-v1.patch` → `r15b-dropdown-menu-refresh-v1.patch` | Core `aria_disabled` is provided by A2-4c0; popup recovery provides `rebuild_preserving_selection` to dropdown refresh. | 1.5h |
 | A2-4e — Select / Picker popup layout | `gpui-component-select-popup-rtl-v1.patch` → `gpui-component-select-rtl-alignment-v1.patch` → `gpui-component-select-rtl-alignment-v2.patch` → `gpui-component-select-rtl-alignment-v3.patch` → `gpui-component-select-rtl-auto-width-v4.patch` → `gpui-component-select-rtl-auto-width-v6.patch` | None | 2h |
 | A2-4f — Selectable list semantics | `gpui-selectable-list-semantics-v2.patch` | None | 1h |
@@ -386,7 +386,7 @@ The queue is split into isolated candidate stacks. Each ticket is estimated at n
 | A2-4m — Toolbar RTL | `gpui-toolbar-rtl-v1.patch` | None | 1h |
 | A2-4n — Diff / syntax registry | `gpui-component-web-syntax-v1.patch` → `gpui-component-web-syntax-runtime-v1.patch` → `gpui-component-web-syntax-runtime-v2.patch` → `gpui-component-web-syntax-runtime-v3.patch` | None | 2h |
 
-Queue totals by family: **45 patches**. A2-4a is first because its tracked dialog patch stacks on the modal focus recovery change. A2-4a includes only the two dialog/focus patches; Sheet is separated into A2-4b because its patch touches an independent file and has no stack dependency.
+Original queue total: **45 patches**. A2-4a is first because its tracked dialog patch stacks on the modal focus recovery change. A2-4a includes only the two dialog/focus patches; Sheet is separated into A2-4b because its patch touches an independent file and has no stack dependency.
 
 | Approved patch | Sole destination |
 |---|---|
@@ -451,9 +451,9 @@ Queue totals by family: **45 patches**. A2-4a is first because its tracked dialo
 | `gpui-tree-disabled-keyboard-v2.patch` | A2-4 QUEUE — Tree |
 | `gpui-web-combobox-enter-v1.patch` | PARKED — A2-7 (deferred platform) |
 | `gpui-web-semantic-adapter-v9.patch` | PARKED — A2-7 (deferred platform) |
-| `r15-breadcrumb-disabled-v1.patch` | A2-4 QUEUE — Breadcrumb |
-| `r15-button-disabled-focus-v1.patch` | A2-4 QUEUE — Button |
-| `r15-sidebar-disabled-v1.patch` | A2-4 QUEUE — Sidebar |
+| `r15-breadcrumb-disabled-v1.patch` | CANDIDATE — `patches/candidate-kit-0.8/r15-breadcrumb-disabled-v1.patch` |
+| `r15-button-disabled-focus-v1.patch` | CANDIDATE — `patches/candidate-kit-0.8/r15-button-disabled-focus-v1-kit08.patch` |
+| `r15-sidebar-disabled-v1.patch` | CANDIDATE — `patches/candidate-kit-0.8/r15-sidebar-disabled-v1.patch` |
 | `r15-test-tree-disabled-v1.patch` | CANDIDATE — `patches/candidate-kit-0.8/r15-test-tree-disabled-v1-kit08.patch` |
 | `r15-tree-disabled-focus-v1.patch` | A2-4 QUEUE — Tree |
 | `r15b-dropdown-menu-refresh-v1.patch` | A2-4 QUEUE — Menu |
@@ -465,3 +465,11 @@ Queue totals by family: **45 patches**. A2-4a is first because its tracked dialo
 A2-2b rebased `t17-inert-focus-scope-v1.patch` against the 0.3.10 `TabStopMap` ordering and added a GPUI test-window regression. Inert filtering is used only while a rendered inert scope exists; otherwise `focus_next` and `focus_prev` retain their original direct `next` / `prev` calls. The test covers ordinary traversal with no inert scope, forward/backward traversal past nested inert descendants, direct focus rejection, and traversal restored after clearing inert state.
 
 Anchored-popup v1–v4 remain excluded for the native-popups stage; the v5 proposal is unchanged. The five patches under “Parked for later stages” remain untouched. Mixed GPUI Base/Component accessibility and modal patches remain assigned to A2-4.
+
+### A2-4c result — Button / Sidebar / Breadcrumb
+
+- Reclassified `r15-button-disabled-focus-v1` from PARTIAL to REBASE after inspecting GPUI Kit #3606 in the pinned v0.8.1 fixture: GPUI Base preserves the focused binding/tab traversal; it does not move focus immediately. The candidate Component patch adds only the immediate `window.focus_next(cx)` recovery when the focused Button renders disabled.
+- Copied the Sidebar and Breadcrumb patches unchanged. The `aria_disabled` core provider from A2-4c0 precedes both consumers.
+- Focus proof passed in a disposable 0.3.10/0.8.1 workspace with all core and A2-4a/b/c patches applied: `disabling_a_focused_button_moves_focus_to_the_next_control` (1 passed).
+- Stack check and offline Base/Component compile gate passed: 13 core, 2 A2-4a, 1 A2-4b, 3 A2-4c; 31 archives verified; 30 target files hashed; 34 stack files; exact reverse.
+- Remaining A2-4 QUEUE after A2-4c: 38 patches.
