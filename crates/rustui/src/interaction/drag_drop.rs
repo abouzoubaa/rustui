@@ -235,6 +235,20 @@ impl<V: View> FileDropTargetView<V> {
         self.description = "Accepted files are filtered".into();
         self
     }
+    /// Replace the predicate and describe accepted files to accessibility clients.
+    ///
+    /// Like `accept`, this replaces a previous predicate. A later `extensions`
+    /// call narrows the predicate and supplies its usual file-type description.
+    pub fn accept_described(
+        self,
+        description: impl Into<SharedString>,
+        accept: impl Fn(&Path) -> bool + 'static,
+    ) -> Self {
+        let mut target = self.accept(accept);
+        target.description = format!("Accepts {}", description.into());
+        target
+    }
+
     pub fn extensions<I, S>(mut self, extensions: I) -> Self
     where
         I: IntoIterator<Item = S>,

@@ -21,7 +21,15 @@ impl View for FileDropGallery {
                     .width(420.0)
                     .height(120.0),
             )
-            .extensions(["png", "jpg", "jpeg", "gif"]),
+            .accept_described("PNG, JPG, JPEG or GIF images", |path| {
+                path.extension()
+                    .and_then(|extension| extension.to_str())
+                    .is_some_and(|extension| {
+                        ["png", "jpg", "jpeg", "gif"]
+                            .iter()
+                            .any(|allowed| allowed.eq_ignore_ascii_case(extension))
+                    })
+            }),
         );
         if let Some(drop) = self.dropped() {
             content = content.child(Text("Accepted files:"));
