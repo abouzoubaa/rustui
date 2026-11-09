@@ -2,6 +2,8 @@
 
 ## 0.2.0 — 2026-11-09
 
+- Improved source CI cache reuse with workspace artifact caching and stable checkout mtimes.
+
 - Rebased Button disabled focus recovery for GPUI Kit 0.8 while preserving upstream #3606 traversal behavior.
 
 - Moved the GPUI aria-disabled provider into the Kit 0.8 core candidate stack and recorded patch API dependencies.
