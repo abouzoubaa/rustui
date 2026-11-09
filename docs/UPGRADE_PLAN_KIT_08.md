@@ -375,7 +375,7 @@ The queue is split into isolated candidate stacks. Each ticket is estimated at n
 | A2-4c0 — GPUI core aria-disabled dependency | GPUI-pre hunk split from `gpui-tree-aria-disabled-v1.patch` as `gpui-tree-aria-disabled-v1-kit08.patch` | Base Tree-row delta stays for A2-4g. | 1h |
 | A2-4c — Button / sidebar / breadcrumb disabled behavior | `r15-button-disabled-focus-v1-kit08.patch` → `r15-sidebar-disabled-v1.patch` → `r15-breadcrumb-disabled-v1.patch` | Button: GPUI Base 0.8.1 includes #3606 focus-binding retention; the Component patch adds immediate focus recovery. Sidebar/Breadcrumb use the core `aria_disabled` API supplied by A2-4c0. | 1.5h |
 | A2-4d — Menus / popup items | `gpui-component-popup-menu-disabled-confirm-v1.patch` → `r15b-menu-item-disabled-v1.patch` → `r15b-popup-menu-recovery-v1.patch` → `r15b-dropdown-menu-refresh-v1.patch` | Core `aria_disabled` is provided by A2-4c0; popup recovery provides `rebuild_preserving_selection` to dropdown refresh. | DONE: 1 rebased, 3 copied; `disabled_selected_popup_menu_item_ignores_confirm` passed on the patched fixture; compile gate and exact reverse passed. |
-| A2-4e — Select / Picker popup layout | `gpui-component-select-popup-rtl-v1.patch` → `gpui-component-select-rtl-alignment-v1.patch` → `gpui-component-select-rtl-alignment-v2.patch` → `gpui-component-select-rtl-alignment-v3.patch` → `gpui-component-select-rtl-auto-width-v4.patch` → `gpui-component-select-rtl-auto-width-v6.patch` | None | 2h |
+| A2-4e — Select / Picker popup layout | `gpui-component-select-popup-rtl-v1.patch` → `gpui-component-select-rtl-alignment-v1.patch` → `gpui-component-select-rtl-alignment-v2.patch` → `gpui-component-select-rtl-alignment-v3.patch` → `gpui-component-select-rtl-auto-width-v4.patch` → `gpui-component-select-rtl-auto-width-v6.patch` | None | STOPPED: cumulative Base/Component compile and exact reverse passed; fixture proof compilation failed at `gpui-component/src/select.rs:1309` because the test module lacks imports for `Entity`, `Window`, and `IntoElement` (E0425/E0405). No assertion ran. |
 | A2-4f — Selectable list semantics | `gpui-selectable-list-semantics-v2.patch` | None | 1h |
 | A2-4g — Tree | `gpui-component-tree-accessible-name-v1.patch` → `gpui-tree-aria-disabled-v1.patch` (Base Tree-row delta only) → `gpui-tree-aria-level-v1.patch` → `gpui-tree-disabled-keyboard-v2.patch` → `r15-tree-disabled-focus-v1.patch` | Core `aria_disabled` comes from A2-4c0; Tree-row delta must precede the aria-level patch, whose context uses that row call. #3531 covers Switch. | 2h |
 | A2-4h — DataGrid validation and header metadata | `a11y-validation-grid-v1.patch` | None | 2h |
@@ -471,6 +471,10 @@ Anchored-popup v1–v4 remain excluded for the native-popups stage; the v5 propo
 - Rebased `gpui-component-popup-menu-disabled-confirm-v1` against GPUI Component 0.8.1 and copied the three R15b menu patches unchanged, preserving provider-before-consumer ordering.
 - `disabled_selected_popup_menu_item_ignores_confirm` passed in the disposable patched fixture; the full stack compiled offline locally and reverse application restored the fixture exactly. CI uses `--compile-online` because its Cargo cache lacks `aho-corasick` and the offline registry lookup fails.
 - Remaining A2-4 QUEUE after A2-4d: 34 patches.
+
+### A2-4e stop diagnosis
+
+The candidate stack applied and reversed exactly; offline Base/Component compilation passed. The fixture's `gpui-component` lib-test build then failed before either proof assertion ran: `gpui-component/src/select.rs:1309:16` reports `cannot find type Entity in this scope`; `:1313:38` reports `cannot find type Window in this scope`; `:1313:77` reports `cannot find trait IntoElement in this scope`. The new RTL test module uses these names without importing them. Per the family stop rule, A2-4e remains in the queue pending this proof compilation failure; queue count remains 34.
 
 ### A2-4c result — Button / Sidebar / Breadcrumb
 
