@@ -37,7 +37,12 @@
     "gpui-component-select-rtl-alignment-v3-kit08.patch",
     "gpui-component-select-rtl-auto-width-v4-kit08.patch",
     "gpui-component-select-rtl-auto-width-v6-kit08.patch",
-    "gpui-selectable-list-semantics-v2.patch"
+    "gpui-selectable-list-semantics-v2.patch",
+    "gpui-component-tree-accessible-name-v1-kit08.patch",
+    "gpui-tree-aria-disabled-row-v1-kit08.patch",
+    "gpui-tree-aria-level-v1-kit08.patch",
+    "gpui-tree-disabled-keyboard-v2.patch",
+    "r15-tree-disabled-focus-v1.patch"
   ],
   "patches": [
     {
@@ -435,6 +440,60 @@
           "post_sha256": "e1e9aa8f4e6ef164a326f56407d7a66f407906187a4148a0592a85a32f5812c7"
         }
       }
+    },
+    {
+      "patch": "gpui-component-tree-accessible-name-v1-kit08.patch",
+      "patch_sha256": "4612043b927a488659d9ebd33ac85f40f29929b5921d567df12049df07e47d35",
+      "files": {
+        "vendor/gpui-base-0.7.3/src/tree.rs": {
+          "pre_sha256": "6a8f108cafc850f2fc82f4259f617fb0724dd9f86e33ffc5e2b00bde722713fc",
+          "post_sha256": "2243f0603745ae09bdf0b4d79fd7a92a27882f3e035159b0d829379b7e200572"
+        },
+        "vendor/gpui-component-0.7.3/src/tree.rs": {
+          "pre_sha256": "f822fff4f4c00f56fd311f2fe8398881d73a8e1921d5b8151fc6eb1f4617d584",
+          "post_sha256": "bf225ac6b435e800eada4a2b477162fc74ba7a6e12d861cd46ce82d86e5dfce8"
+        }
+      }
+    },
+    {
+      "patch": "gpui-tree-aria-disabled-row-v1-kit08.patch",
+      "patch_sha256": "e3934b7dfe7306db0eab8a64ac625fa25a8f7e87c96e4af4daafe2e3a269747e",
+      "files": {
+        "vendor/gpui-base-0.7.3/src/tree.rs": {
+          "pre_sha256": "2243f0603745ae09bdf0b4d79fd7a92a27882f3e035159b0d829379b7e200572",
+          "post_sha256": "46e5756ed3c40dde298df892bae36b32ae62be10fe1ef41f075cfdd4cf0cde44"
+        }
+      }
+    },
+    {
+      "patch": "gpui-tree-aria-level-v1-kit08.patch",
+      "patch_sha256": "9117b2ee760168bd7b68af4ff111ded8dcd1e79c3769be8a0370d83258dbf49e",
+      "files": {
+        "vendor/gpui-base-0.7.3/src/tree.rs": {
+          "pre_sha256": "46e5756ed3c40dde298df892bae36b32ae62be10fe1ef41f075cfdd4cf0cde44",
+          "post_sha256": "1e872f921b5963ba14adc5d506afdc583e047b4a650d7a91c40ef55c7dadc492"
+        }
+      }
+    },
+    {
+      "patch": "gpui-tree-disabled-keyboard-v2.patch",
+      "patch_sha256": "90a389f58ade9848432afa6f2a5d9c17f5b73cebf32dbbc84d92e0734680bfac",
+      "files": {
+        "vendor/gpui-base-0.7.3/src/tree.rs": {
+          "pre_sha256": "1e872f921b5963ba14adc5d506afdc583e047b4a650d7a91c40ef55c7dadc492",
+          "post_sha256": "a28ca059f0b5b4e0e7c0faa009106d9c07cd90b898a48a9223b4a8af4ea1741f"
+        }
+      }
+    },
+    {
+      "patch": "r15-tree-disabled-focus-v1.patch",
+      "patch_sha256": "9c9f07b7f770b8f9b82a5f1d0e475927296cbcbb94b4b20281f69f30793e9984",
+      "files": {
+        "vendor/gpui-base-0.7.3/src/tree.rs": {
+          "pre_sha256": "a28ca059f0b5b4e0e7c0faa009106d9c07cd90b898a48a9223b4a8af4ea1741f",
+          "post_sha256": "9b9a243ffc83d61106ccdeabb23fa4de52d873ee9f7b64d232afa2f3de81d45d"
+        }
+      }
     }
   ],
   "files": {
@@ -457,6 +516,10 @@
     "vendor/gpui-base-0.7.3/src/text/inline.rs": {
       "pre_sha256": "7cc393c3b02e176799aef97fedf294c88e82d3265b10fe678a0cb1efc1b1d333",
       "post_sha256": "71b1c9c4616ed6966dbbe6d0a57f390c3eabb1d063b4a43f45769efef4800dd9"
+    },
+    "vendor/gpui-base-0.7.3/src/tree.rs": {
+      "pre_sha256": "6a8f108cafc850f2fc82f4259f617fb0724dd9f86e33ffc5e2b00bde722713fc",
+      "post_sha256": "9b9a243ffc83d61106ccdeabb23fa4de52d873ee9f7b64d232afa2f3de81d45d"
     },
     "vendor/gpui-base-0.8.1/src/input/base/tab_stops.rs": {
       "pre_sha256": "a41467f4d5e37d435dc35b29964d85c1a8388bda4bca9126c01814a4c92d770b",
@@ -513,6 +576,10 @@
     "vendor/gpui-component-0.7.3/src/sidebar/menu.rs": {
       "pre_sha256": "d0489b63aa25e47d47a8958b165599b9660860cfca688960871291c32cf5d842",
       "post_sha256": "8cdeef2106c68eaa3e95481c848913bfe849790c8b831110ba49dcd98a42bb3a"
+    },
+    "vendor/gpui-component-0.7.3/src/tree.rs": {
+      "pre_sha256": "f822fff4f4c00f56fd311f2fe8398881d73a8e1921d5b8151fc6eb1f4617d584",
+      "post_sha256": "bf225ac6b435e800eada4a2b477162fc74ba7a6e12d861cd46ce82d86e5dfce8"
     },
     "vendor/gpui-component-0.7.3/src/window_ext.rs": {
       "pre_sha256": "2470eb24a74cd23573cec9fb09df56e0185bf30cad07afd88037453736bf3e89",
@@ -606,7 +673,7 @@
   "reverse_verified": true,
   "fixture": {
     "archives_verified": 31,
-    "target_files_hashed": 37,
+    "target_files_hashed": 39,
     "known_unavailable_targets": 0
   }
 }

@@ -2,6 +2,8 @@
 
 ## 0.2.0 — 2026-11-09
 
+- Added Kit 0.8 Tree naming, row disabled state, and hierarchy-level candidates with a fixture tree test.
+
 - Added the unchanged selectable-list semantics patch to the GPUI Kit 0.8 candidate stack.
 
 - Added GPUI Kit 0.8 select and picker RTL popup layout candidates with a fixture proof.

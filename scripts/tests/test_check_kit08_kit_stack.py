@@ -10,7 +10,12 @@ ROOT = Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(ROOT / "scripts"))
 
 from check_kit08_core_stack import apply_stack  # noqa: E402
-from check_kit08_kit_stack import A2_4D_ORDER, A2_4E_ORDER, A2_4F_ORDER  # noqa: E402
+from check_kit08_kit_stack import (  # noqa: E402
+    A2_4D_ORDER,
+    A2_4E_ORDER,
+    A2_4F_ORDER,
+    A2_4G_ORDER,
+)
 
 
 class Kit08FamilyStackTests(unittest.TestCase):
@@ -40,6 +45,22 @@ class Kit08FamilyStackTests(unittest.TestCase):
 
     def test_selectable_list_semantics_follows_select_stack(self):
         self.assertEqual(A2_4F_ORDER, ("gpui-selectable-list-semantics-v2.patch",))
+
+    def test_tree_aria_disabled_provider_precedes_tree_level_consumer(self):
+        self.assertEqual(
+            A2_4G_ORDER,
+            (
+                "gpui-component-tree-accessible-name-v1-kit08.patch",
+                "gpui-tree-aria-disabled-row-v1-kit08.patch",
+                "gpui-tree-aria-level-v1-kit08.patch",
+                "gpui-tree-disabled-keyboard-v2.patch",
+                "r15-tree-disabled-focus-v1.patch",
+            ),
+        )
+        self.assertLess(
+            A2_4G_ORDER.index("gpui-tree-aria-disabled-row-v1-kit08.patch"),
+            A2_4G_ORDER.index("gpui-tree-aria-level-v1-kit08.patch"),
+        )
 
     def test_core_then_family_applies_and_reverse_restores_fixture(self):
         with tempfile.TemporaryDirectory() as directory:
