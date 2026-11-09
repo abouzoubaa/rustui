@@ -284,9 +284,32 @@ Before source migration, create and push an annotated archive tag at the verifie
 Prepare target files and patch rebases as inert proposals first. Do not replace the active dependency graph until a complete candidate passes on one integration branch; each preparation PR should affect only proposal tooling/data and leave current sources/build graph intact.
 
 1. **A2-1 — Snapshot and rebase harness (≤2h):** pin the exact GPUI Kit v0.8.1 / gpui-pre 0.3.10 crate archives by SHA-256; add a temporary-fixture download/check command and an inventory of approved patch target paths with source hashes; add source-gate tests for a mismatched archive hash and a missing file. Current source remains selected; CI validates the harness. Deferred-platform patches are listed under “Parked for later stages” and remain unchanged until A2-7.
-2. **A2-2 — Rebase remaining GPUI core/platform patches (≤2h):** rebase still-needed core, macOS, platform, text and input patches into proposed patches; resolve the two UNKNOWN relocated-source intents first; per-stack disposable apply scripts/tests/manifests; no activation. Split by family if any series exceeds the timebox.
+2. **A2-2 — Rebase remaining GPUI core/platform patches (≤2h):** rebase still-needed GPUI core, macOS, Apple/platform, text, input, window, accessibility, focus, and tab-stop patches into `patches/candidate-kit-0.8/`; copy cleanly applicable patches unchanged; record every target file pre/post hash; no activation. The deferred web adapter UNKNOWNs stay parked. Any unresolved target conflict is listed as an A2-2 remainder and split into A2-2b.
 3. **A2-3 — Retire OBSOLETE patches (≤2h):** remove the five obsolete patch/manifests/scripts/tests from the candidate only after their listed RustUI regressions pass against v0.8.1; leave main’s current patch set intact until candidate activation.
 4. **A2-4 — Component-ticket PARTIAL deltas (≤2h each):** carry the remaining resize, Tree-row, and immediate Button focus-recovery behavior into their component-family tickets; keep upstream-covered hunks out of the rebased patches. Then rebase remaining Base/Component patches by family with stack tests and manifests.
 5. **A2-5 — RustUI API compatibility (≤2h):** migrate the 69 grep sites, especially dynamic shortcut parsing; add focused tests; test against an isolated 0.8.1 source graph. Split API families into further ≤2h tickets if needed.
 6. **A2-6 — Owned mirrors, lock, notices, consumers (≤2h):** refresh owned mirrors via scripts, update verifier/manifests, resolve the full workspace lock only in the candidate, regenerate notices, and run fresh external consumer checks. Split by verifier/notices/consumer if any exceeds two hours.
 7. **A2-7 — Activate and release gates (≤2h):** apply the complete approved patch stacks, switch manifests to the candidate, run `scripts/check.sh`, `./scripts/verify-release.sh source`, owned-source verification and external consumer; merge only if all pass. If the integrated port cannot fit this bound, split activation/gates and keep each pre-activation PR CI-green.
+
+### A2-2 candidate status (inert; current sources remain selected)
+
+The 0.8.1 candidate stack is in `patches/candidate-kit-0.8/`. `scripts/check_kit08_core_stack.py` downloads and verifies the A2-1 fixture, applies the listed stack in order, writes each file's pre/post SHA-256 to `core-manifest.json`, reverses the stack, and checks byte-for-byte restoration. No vendor, owned-mirror, dependency manifest, or lockfile source was activated.
+
+Status totals: **copied 6 / rebased 5 / remainder 1**.
+
+| Approved patch | Candidate status | Candidate file / note |
+|---|---|---|
+| `block-0.1.6-stack-symbol-v1.patch` | copied | `block-0.1.6-stack-symbol-v1.patch` |
+| `cosmic-text-initial-bidi-span-v1.patch` | copied | `cosmic-text-initial-bidi-span-v1.patch` |
+| `g10-parent-node-id-v1.patch` | copied | `g10-parent-node-id-v1.patch` |
+| `g10-labelled-by-tree-v1.patch` | rebased | `g10-labelled-by-tree-v1-kit08.patch` |
+| `gpui-bidi-wrapped-rows-v1.patch` | rebased | `gpui-bidi-wrapped-rows-v1-kit08.patch`; the 0.8.1 `Corners` import ordering was carried into the target context. |
+| `gpui-bidi-input-hit-v1.patch` | rebased | `gpui-bidi-input-hit-v1-kit08.patch`; stacked after wrapped rows, which defines `WrappedGlyphCluster`. |
+| `gpui-macos-focused-element-forwarder-v1.patch` | rebased | `gpui-macos-focused-element-forwarder-v1-kit08.patch` |
+| `gpui-pre-test-a11y-activation-v1.patch` | copied | `gpui-pre-test-a11y-activation-v1.patch` |
+| `gpui-pre-web-accessible-name-v1.patch` | copied | `gpui-pre-web-accessible-name-v1.patch` |
+| `gpui-primary-mousedown-click-v2.patch` | copied | `gpui-primary-mousedown-click-v2.patch` |
+| `r15-test-tree-disabled-v1.patch` | rebased | `r15-test-tree-disabled-v1-kit08.patch`; stacked after labelled-by output. |
+| `t17-inert-focus-scope-v1.patch` | remainder | **A2-2 remainder:** `patch --fuzz=3` applied the `tab_stop.rs` helper, but all six hunks in `gpui-pre/src/window.rs` failed against 0.3.10; the window focus state and traversal context have changed. Rebase in A2-2b. |
+
+Anchored-popup v1–v4 remain excluded for the native-popups stage; the v5 proposal is unchanged. The five patches under “Parked for later stages” remain untouched. Mixed GPUI Base/Component accessibility and modal patches remain assigned to A2-4.
