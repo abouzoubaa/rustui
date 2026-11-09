@@ -93,6 +93,8 @@ jobs:
       - name: Verify the GPUI Kit 0.8 core candidate stack
         run: python3 scripts/check_kit08_core_stack.py
       - name: Stable Rust formatting, workspace check, and library tests
+        env:
+          CARGO_LOG: cargo::core::compiler::fingerprint=info
         run: ./scripts/check.sh
 
   # Run only after a maintainer selects a trusted revision. Never execute PR
