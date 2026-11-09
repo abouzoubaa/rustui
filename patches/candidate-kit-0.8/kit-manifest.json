@@ -30,7 +30,13 @@
     "gpui-component-popup-menu-disabled-confirm-v1-kit08.patch",
     "r15b-menu-item-disabled-v1.patch",
     "r15b-popup-menu-recovery-v1.patch",
-    "r15b-dropdown-menu-refresh-v1.patch"
+    "r15b-dropdown-menu-refresh-v1.patch",
+    "gpui-component-select-popup-rtl-v1-kit08.patch",
+    "gpui-component-select-rtl-alignment-v1.patch",
+    "gpui-component-select-rtl-alignment-v2-kit08.patch",
+    "gpui-component-select-rtl-alignment-v3-kit08.patch",
+    "gpui-component-select-rtl-auto-width-v4-kit08.patch",
+    "gpui-component-select-rtl-auto-width-v6-kit08.patch"
   ],
   "patches": [
     {
@@ -350,6 +356,74 @@
           "post_sha256": "95113d1d1b099c2d53ced723d88e5ee98eda068e8720d62d83ed19bed7709279"
         }
       }
+    },
+    {
+      "patch": "gpui-component-select-popup-rtl-v1-kit08.patch",
+      "patch_sha256": "3089718e2a8d1f9e370a5b4c6589b11a28f323e790f39452fd7177e6fa9b3a2d",
+      "files": {
+        "vendor/gpui-component-0.7.3/src/list/list.rs": {
+          "pre_sha256": "50665f00508d9bcc92201d26cca253cc543d59b62f867410cdf940b05d6da9d9",
+          "post_sha256": "00f2622ae21fa20755925dc9bd25ae051c12101f6947779870bab7c13589e468"
+        },
+        "vendor/gpui-component-0.7.3/src/searchable_list/adapter.rs": {
+          "pre_sha256": "41766a0014d344f4bd700f3aa6b1288aa2bd0fb6f10920f5a438d062836abc9f",
+          "post_sha256": "ac1e36762b7fbcf10bbda7ee01bfb06e176f2b4d85255423a7e975b3a30f5c0a"
+        },
+        "vendor/gpui-component-0.7.3/src/searchable_list/item.rs": {
+          "pre_sha256": "4bd6b6973feb7444ace040468d58bf4b3b30d5d2c313c024d86ecde473066ae3",
+          "post_sha256": "dfcd893228ffafd58863f4748f3c4015c67c5934876c3f1ceb0c60ab542bdcbb"
+        }
+      }
+    },
+    {
+      "patch": "gpui-component-select-rtl-alignment-v1.patch",
+      "patch_sha256": "d0689063a3f6e24de67527e9c83da5334f07667bf816a620e220d52dae0e5355",
+      "files": {
+        "vendor/gpui-component-0.7.3/src/select.rs": {
+          "pre_sha256": "c2650d30aa966c9649155ddb287a5a6cdf987d8ee0916ad5f1f5b202ee0a44ef",
+          "post_sha256": "8d854a55b0a088820990bfd3cf75b12c0fa1ad98fbea8146bbce8794e54dd52b"
+        }
+      }
+    },
+    {
+      "patch": "gpui-component-select-rtl-alignment-v2-kit08.patch",
+      "patch_sha256": "cc4cd29b7745213df3c11563ad00df8727110b8e7ab8badb0d998bce6f1806ee",
+      "files": {
+        "vendor/gpui-component-0.7.3/src/select.rs": {
+          "pre_sha256": "8d854a55b0a088820990bfd3cf75b12c0fa1ad98fbea8146bbce8794e54dd52b",
+          "post_sha256": "e3fb235d92ecae1414717321a87ce13328ad95a4f92fdf0cbe337641a50585bc"
+        }
+      }
+    },
+    {
+      "patch": "gpui-component-select-rtl-alignment-v3-kit08.patch",
+      "patch_sha256": "573058977b11eaba087d9b528b8f7bf69ce757fb6843dd0149fd005e7cd314a6",
+      "files": {
+        "vendor/gpui-component-0.7.3/src/select.rs": {
+          "pre_sha256": "e3fb235d92ecae1414717321a87ce13328ad95a4f92fdf0cbe337641a50585bc",
+          "post_sha256": "1b56139399866dea1f674740e77be3d90b0a388d906c0050a96df31dc328a497"
+        }
+      }
+    },
+    {
+      "patch": "gpui-component-select-rtl-auto-width-v4-kit08.patch",
+      "patch_sha256": "135d8f35e8fad142417ced6cbb657774bb62117cf49fa75902eae496994f0ab0",
+      "files": {
+        "vendor/gpui-component-0.7.3/src/select.rs": {
+          "pre_sha256": "1b56139399866dea1f674740e77be3d90b0a388d906c0050a96df31dc328a497",
+          "post_sha256": "11490857a2789a2a2cb18ed06258debecec258dbb02c3c53a96fa57e6ce441ab"
+        }
+      }
+    },
+    {
+      "patch": "gpui-component-select-rtl-auto-width-v6-kit08.patch",
+      "patch_sha256": "416e4e9251c048cf9b3e5d08be3da6979522d2f9f17a850e6287e3efef37f0cd",
+      "files": {
+        "vendor/gpui-component-0.7.3/src/select.rs": {
+          "pre_sha256": "11490857a2789a2a2cb18ed06258debecec258dbb02c3c53a96fa57e6ce441ab",
+          "post_sha256": "36a5e802c36cd2cb92850ffb8d90ffd0a92f3d29e0cee8934f44f4adcedcd41c"
+        }
+      }
     }
   ],
   "files": {
@@ -389,6 +463,10 @@
       "pre_sha256": "cb2a4cfb718e7608ffda91edd3f0dddebb26252248ccc8388d0fbb9781d88429",
       "post_sha256": "2ce60750cf457070cfa286df08120f66ad303818f03d7580c31d00cdef92e563"
     },
+    "vendor/gpui-component-0.7.3/src/list/list.rs": {
+      "pre_sha256": "50665f00508d9bcc92201d26cca253cc543d59b62f867410cdf940b05d6da9d9",
+      "post_sha256": "00f2622ae21fa20755925dc9bd25ae051c12101f6947779870bab7c13589e468"
+    },
     "vendor/gpui-component-0.7.3/src/menu/dropdown_menu.rs": {
       "pre_sha256": "c98577e23b87b01da2a632eaa6c739aed9a583365ce3d2d2b403af96b366bcab",
       "post_sha256": "95113d1d1b099c2d53ced723d88e5ee98eda068e8720d62d83ed19bed7709279"
@@ -404,6 +482,18 @@
     "vendor/gpui-component-0.7.3/src/root.rs": {
       "pre_sha256": "0d0a2be0e4beadbfea881f0dbe3f183a840e6cfc2e5b2edd2093924eb2017ba4",
       "post_sha256": "5766718fe0fd08388e6c268581311b54e5a151df6d48656edb953c06c50a6992"
+    },
+    "vendor/gpui-component-0.7.3/src/searchable_list/adapter.rs": {
+      "pre_sha256": "41766a0014d344f4bd700f3aa6b1288aa2bd0fb6f10920f5a438d062836abc9f",
+      "post_sha256": "ac1e36762b7fbcf10bbda7ee01bfb06e176f2b4d85255423a7e975b3a30f5c0a"
+    },
+    "vendor/gpui-component-0.7.3/src/searchable_list/item.rs": {
+      "pre_sha256": "4bd6b6973feb7444ace040468d58bf4b3b30d5d2c313c024d86ecde473066ae3",
+      "post_sha256": "dfcd893228ffafd58863f4748f3c4015c67c5934876c3f1ceb0c60ab542bdcbb"
+    },
+    "vendor/gpui-component-0.7.3/src/select.rs": {
+      "pre_sha256": "c2650d30aa966c9649155ddb287a5a6cdf987d8ee0916ad5f1f5b202ee0a44ef",
+      "post_sha256": "36a5e802c36cd2cb92850ffb8d90ffd0a92f3d29e0cee8934f44f4adcedcd41c"
     },
     "vendor/gpui-component-0.7.3/src/sheet.rs": {
       "pre_sha256": "94c72ed8c8fb0181da421c90a8ae72f3f3a21b5fc5fa30893dd14d3ba3ef87ba",
@@ -505,7 +595,7 @@
   "reverse_verified": true,
   "fixture": {
     "archives_verified": 31,
-    "target_files_hashed": 33,
+    "target_files_hashed": 37,
     "known_unavailable_targets": 0
   }
 }

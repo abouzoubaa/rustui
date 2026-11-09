@@ -51,6 +51,12 @@ LATER_FAMILY_CANDIDATES = {
     "r15b-menu-item-disabled-v1.patch",
     "r15b-popup-menu-recovery-v1.patch",
     "r15b-dropdown-menu-refresh-v1.patch",
+    "gpui-component-select-popup-rtl-v1-kit08.patch",
+    "gpui-component-select-rtl-alignment-v1.patch",
+    "gpui-component-select-rtl-alignment-v2-kit08.patch",
+    "gpui-component-select-rtl-alignment-v3-kit08.patch",
+    "gpui-component-select-rtl-auto-width-v4-kit08.patch",
+    "gpui-component-select-rtl-auto-width-v6-kit08.patch",
 }
 
 
