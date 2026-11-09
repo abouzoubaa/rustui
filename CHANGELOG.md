@@ -1,5 +1,7 @@
 # Changelog
 
+- Reviewed and permanently archived old stash/presync/T11 sources; no recovery tickets remain, and native popup review stays pending.
+
 - Added roadmap stages A–N, release targets, and two-hour ticket planning.
 
 - Converted gallery includes to modules, colocated overlay lifecycle tests, added described file acceptance, and linked editable-grid cells to their accessibility headers.
