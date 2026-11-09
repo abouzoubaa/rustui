@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Apply and reverse the GPUI Kit 0.8 core plus the A2-4a candidate stack."""
+"""Apply, optionally compile, and reverse the GPUI Kit 0.8 candidate stack."""
 
 from __future__ import annotations
 
@@ -40,10 +40,12 @@ CORE_ORDER = (
     "r15-test-tree-disabled-v1-kit08.patch",
     "t17-inert-focus-scope-v1-kit08.patch",
 )
-FAMILY_ORDER = (
+A2_4A_ORDER = (
     "t13-modal-focus-recovery-v1-kit08.patch",
     "gpui-component-tracked-dialog-focus-rebase-v2-kit08.patch",
 )
+A2_4B_ORDER = ("gpui-component-sheet-close-accessibility-v2.patch",)
+FAMILY_ORDER = A2_4A_ORDER + A2_4B_ORDER
 
 
 def compile_candidate_workspace(
@@ -148,9 +150,9 @@ def run(write_manifest: bool = False) -> dict:
         raise FixtureError(f"recorded stack manifest is stale: {OUTPUT}; use --write-manifest")
     OUTPUT.write_bytes(data)
     print(
-        "core patches={}; A2-4a patches={}; fixture archives verified={}; "
+        "core patches={}; A2-4a patches={}; A2-4b patches={}; fixture archives verified={}; "
         "target files hashed={}; stack files={}; reverse=exact".format(
-            len(CORE_ORDER), len(FAMILY_ORDER), archive_count, target_count,
+            len(CORE_ORDER), len(A2_4A_ORDER), len(A2_4B_ORDER), archive_count, target_count,
             len(result["files"]),
         )
     )

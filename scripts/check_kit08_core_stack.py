@@ -42,6 +42,7 @@ CANDIDATE_ORDER = (
 LATER_FAMILY_CANDIDATES = {
     "t13-modal-focus-recovery-v1-kit08.patch",
     "gpui-component-tracked-dialog-focus-rebase-v2-kit08.patch",
+    "gpui-component-sheet-close-accessibility-v2.patch",
 }
 
 
