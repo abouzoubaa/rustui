@@ -312,9 +312,45 @@ Status totals: **copied 6 / rebased 6 / remainder 0**.
 | `r15-test-tree-disabled-v1.patch` | rebased | `r15-test-tree-disabled-v1-kit08.patch`; stacked after labelled-by output. |
 | `t17-inert-focus-scope-v1.patch` | rebased | `t17-inert-focus-scope-v1-kit08.patch`; uses 0.3.10's `TabStopMap::next` / `prev` traversal so SumTree tab-index and group ordering remain authoritative while inert descendants are filtered. |
 
+### A2-4a candidate status — Dialog / modal focus
+
+The A2-4a stack applies after all 12 core candidates. `scripts/check_kit08_kit_stack.py` records the combined pre/post file hashes in `patches/candidate-kit-0.8/kit-manifest.json` and verifies exact reverse application. No source selection or dependency graph is activated.
+
+Status: **copied 0 / rebased 2 / partial 0 / remainder 0**.
+
+| Approved patch | Candidate file / rebase note |
+|---|---|
+| `t13-modal-focus-recovery-v1.patch` | `t13-modal-focus-recovery-v1-kit08.patch`; composed modal traversal with the 0.3.10 `matching_preserving_order` API from the preceding inert-focus candidate. |
+| `gpui-component-tracked-dialog-focus-rebase-v2.patch` | `gpui-component-tracked-dialog-focus-rebase-v2-kit08.patch`; maps tracked close requests to the target's stable dialog IDs and exit lifecycle. |
+
+Fixture stack proof passes. The t13 core behavior test passed in a disposable GPUI 0.3.10 test window (`cargo test -p a2-4a-modal-proof --test modal_scope`: 1 passed). Tracked Component-dialog proof is deferred to A2-7: the isolated full-source compile stops in the pre-existing Base candidate at `gpui-base/src/input/base/tab_stops.rs:110` because its `gpui::LineLayout` initializer lacks `bidi_clusters`; Component tests cannot compile until that source-graph blocker is resolved.
+
 ### Approved patch destination ledger (71 patches)
 
-Every approved patch has exactly one destination. **Totals: CANDIDATE 12 / REMAINDER 0 / A2-4 QUEUE 45 / OBSOLETE 5 / PARKED 5 / POPUP STAGE 4 = 71.** `t13-modal-focus-recovery-v1.patch` is assigned to the **A2-4 QUEUE — Dialog / modal focus** despite its GPUI-pre focus hunks; `a11y-validation-grid-v1.patch` is assigned to the **A2-4 QUEUE — Input / validation / DataGrid** despite its GPUI-pre accessibility-tree hunks. Their feature families are outside A2-2 core candidate scope.
+Every approved patch has exactly one destination. **Totals: CANDIDATE 14 / REMAINDER 0 / A2-4 QUEUE 43 / OBSOLETE 5 / PARKED 5 / POPUP STAGE 4 = 71.** `t13-modal-focus-recovery-v1.patch` is assigned to the **A2-4 QUEUE — Dialog / modal focus** despite its GPUI-pre focus hunks; `a11y-validation-grid-v1.patch` is assigned to the **A2-4 QUEUE — Input / validation / DataGrid** despite its GPUI-pre accessibility-tree hunks. Their feature families are outside A2-2 core candidate scope.
+
+### A2-4 families
+
+The queue is split into isolated candidate stacks. Each ticket is estimated at no more than two hours. Patches in a row apply in the listed order; PARTIAL entries carry only the named delta left after the cited upstream change.
+
+| Ticket / family | Patch list and stacking order | PARTIAL delta | Estimate |
+|---|---|---|---|
+| A2-4a — Dialog / modal focus | `t13-modal-focus-recovery-v1.patch` → `gpui-component-tracked-dialog-focus-rebase-v2.patch` | None | 2h |
+| A2-4b — Sheet accessibility | `gpui-component-sheet-close-accessibility-v2.patch` | None | 1h |
+| A2-4c — Button / sidebar / breadcrumb disabled behavior | `r15-button-disabled-focus-v1.patch` → `r15-sidebar-disabled-v1.patch` → `r15-breadcrumb-disabled-v1.patch` | Button: retain immediate focus recovery when a focused Button becomes disabled; #3606 only preserves traversal out of it. | 1.5h |
+| A2-4d — Menus / popup items | `gpui-component-popup-menu-disabled-confirm-v1.patch` → `r15b-menu-item-disabled-v1.patch` → `r15b-dropdown-menu-refresh-v1.patch` → `r15b-popup-menu-recovery-v1.patch` | None | 1.5h |
+| A2-4e — Select / Picker popup layout | `gpui-component-select-popup-rtl-v1.patch` → `gpui-component-select-rtl-alignment-v1.patch` → `gpui-component-select-rtl-alignment-v2.patch` → `gpui-component-select-rtl-alignment-v3.patch` → `gpui-component-select-rtl-auto-width-v4.patch` → `gpui-component-select-rtl-auto-width-v6.patch` | None | 2h |
+| A2-4f — Selectable list semantics | `gpui-selectable-list-semantics-v2.patch` | None | 1h |
+| A2-4g — Tree | `gpui-component-tree-accessible-name-v1.patch` → `gpui-tree-aria-level-v1.patch` → `gpui-tree-aria-disabled-v1.patch` → `gpui-tree-disabled-keyboard-v2.patch` → `r15-tree-disabled-focus-v1.patch` | Tree disabled semantics: mark the Tree row node disabled; #3531 supplies the reusable extension but covers Switch only. | 2h |
+| A2-4h — DataGrid validation and header metadata | `a11y-validation-grid-v1.patch` | None | 2h |
+| A2-4i — Slider | `gpui-base-slider-endpoint-v1.patch` → `gpui-base-slider-first-move-v1.patch` → `gpui-base-slider-set-value-v2.patch` → `gpui-base-slider-snap-position-v1.patch` → `gpui-base-slider-zero-track-v1.patch` | None | 2h |
+| A2-4j — Resizable panels | `gpui-base-resize-first-move-v1.patch` → `gpui-base-resize-first-move-v2.patch` → `gpui-base-resize-first-move-v3.patch` | Keep immediate initial-pointer sizing; v3 also retains explicit left-button release handling. #3629 supplies active-drag-state reads only. | 2h |
+| A2-4k — Calendar / DatePicker | `gpui-base-calendar-date-limits-v1.patch` → `gpui-calendar-keyboard-v1.patch` → `gpui-calendar-multi-month-heading-v1.patch` → `gpui-calendar-rtl-v1.patch` → `gpui-component-calendar-fr-ar-v1.patch` → `gpui-component-date-picker-accessibility-v1.patch` → `gpui-component-date-picker-localization-v2.patch` → `gpui-component-date-picker-rtl-alignment-v1.patch` | None | 2h |
+| A2-4l — Input placeholder | `gpui-input-placeholder-color-v1.patch` | None | 1h |
+| A2-4m — Toolbar RTL | `gpui-toolbar-rtl-v1.patch` | None | 1h |
+| A2-4n — Diff / syntax registry | `gpui-component-web-syntax-v1.patch` → `gpui-component-web-syntax-runtime-v1.patch` → `gpui-component-web-syntax-runtime-v2.patch` → `gpui-component-web-syntax-runtime-v3.patch` | None | 2h |
+
+Queue totals by family: **45 patches**. A2-4a is first because its tracked dialog patch stacks on the modal focus recovery change. A2-4a includes only the two dialog/focus patches; Sheet is separated into A2-4b because its patch touches an independent file and has no stack dependency.
 
 | Approved patch | Sole destination |
 |---|---|
@@ -354,7 +390,7 @@ Every approved patch has exactly one destination. **Totals: CANDIDATE 12 / REMAI
 | `gpui-component-select-rtl-auto-width-v6.patch` | A2-4 QUEUE — Picker / ComboBox |
 | `gpui-component-sheet-close-accessibility-v2.patch` | A2-4 QUEUE — Sheet |
 | `gpui-component-slider-accessibility-label-v2.patch` | OBSOLETE — A2-3 |
-| `gpui-component-tracked-dialog-focus-rebase-v2.patch` | A2-4 QUEUE — Dialog / modal focus |
+| `gpui-component-tracked-dialog-focus-rebase-v2.patch` | CANDIDATE — `patches/candidate-kit-0.8/gpui-component-tracked-dialog-focus-rebase-v2-kit08.patch` |
 | `gpui-component-tree-accessible-name-v1.patch` | A2-4 QUEUE — Tree |
 | `gpui-component-web-syntax-runtime-v1.patch` | A2-4 QUEUE — Syntax highlighting / Diff |
 | `gpui-component-web-syntax-runtime-v2.patch` | A2-4 QUEUE — Syntax highlighting / Diff |
@@ -387,7 +423,7 @@ Every approved patch has exactly one destination. **Totals: CANDIDATE 12 / REMAI
 | `r15b-dropdown-menu-refresh-v1.patch` | A2-4 QUEUE — Menu |
 | `r15b-menu-item-disabled-v1.patch` | A2-4 QUEUE — Menu |
 | `r15b-popup-menu-recovery-v1.patch` | A2-4 QUEUE — Menu |
-| `t13-modal-focus-recovery-v1.patch` | A2-4 QUEUE — Dialog / modal focus |
+| `t13-modal-focus-recovery-v1.patch` | CANDIDATE — `patches/candidate-kit-0.8/t13-modal-focus-recovery-v1-kit08.patch` |
 | `t17-inert-focus-scope-v1.patch` | CANDIDATE — `patches/candidate-kit-0.8/t17-inert-focus-scope-v1-kit08.patch` |
 
 A2-2b rebased `t17-inert-focus-scope-v1.patch` against the 0.3.10 `TabStopMap` ordering and added a GPUI test-window regression. Inert filtering is used only while a rendered inert scope exists; otherwise `focus_next` and `focus_prev` retain their original direct `next` / `prev` calls. The test covers ordinary traversal with no inert scope, forward/backward traversal past nested inert descendants, direct focus rejection, and traversal restored after clearing inert state.
