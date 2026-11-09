@@ -57,6 +57,7 @@ LATER_FAMILY_CANDIDATES = {
     "gpui-component-select-rtl-alignment-v3-kit08.patch",
     "gpui-component-select-rtl-auto-width-v4-kit08.patch",
     "gpui-component-select-rtl-auto-width-v6-kit08.patch",
+    "gpui-selectable-list-semantics-v2.patch",
 }
 
 

@@ -362,7 +362,7 @@ After those patch-only fixes, `python3 scripts/check_kit08_kit_stack.py --compil
 
 ### Approved patch destination ledger (71 patches)
 
-Every approved patch has exactly one destination. **Totals after A2-4e: CANDIDATE 29 / REMAINDER 0 / A2-4 QUEUE 28 / OBSOLETE 5 / PARKED 5 / POPUP STAGE 4 = 71.** `t13-modal-focus-recovery-v1.patch` is assigned to the **A2-4 QUEUE — Dialog / modal focus** despite its GPUI-pre focus hunks; `a11y-validation-grid-v1.patch` remains assigned to the **A2-4 QUEUE — Input / validation / DataGrid** despite its GPUI-pre accessibility-tree hunks. Their feature families were outside A2-2 core candidate scope.
+Every approved patch has exactly one destination. **Totals after A2-4f: CANDIDATE 30 / REMAINDER 0 / A2-4 QUEUE 27 / OBSOLETE 5 / PARKED 5 / POPUP STAGE 4 = 71.** `t13-modal-focus-recovery-v1.patch` is assigned to the **A2-4 QUEUE — Dialog / modal focus** despite its GPUI-pre focus hunks; `a11y-validation-grid-v1.patch` remains assigned to the **A2-4 QUEUE — Input / validation / DataGrid** despite its GPUI-pre accessibility-tree hunks. Their feature families were outside A2-2 core candidate scope.
 
 ### A2-4 families
 
@@ -376,7 +376,7 @@ The queue is split into isolated candidate stacks. Each ticket is estimated at n
 | A2-4c — Button / sidebar / breadcrumb disabled behavior | `r15-button-disabled-focus-v1-kit08.patch` → `r15-sidebar-disabled-v1.patch` → `r15-breadcrumb-disabled-v1.patch` | Button: GPUI Base 0.8.1 includes #3606 focus-binding retention; the Component patch adds immediate focus recovery. Sidebar/Breadcrumb use the core `aria_disabled` API supplied by A2-4c0. | 1.5h |
 | A2-4d — Menus / popup items | `gpui-component-popup-menu-disabled-confirm-v1.patch` → `r15b-menu-item-disabled-v1.patch` → `r15b-popup-menu-recovery-v1.patch` → `r15b-dropdown-menu-refresh-v1.patch` | Core `aria_disabled` is provided by A2-4c0; popup recovery provides `rebuild_preserving_selection` to dropdown refresh. | DONE: 1 rebased, 3 copied; `disabled_selected_popup_menu_item_ignores_confirm` passed on the patched fixture; compile gate and exact reverse passed. |
 | A2-4e — Select / Picker popup layout | `gpui-component-select-popup-rtl-v1.patch` → `gpui-component-select-rtl-alignment-v1.patch` → `gpui-component-select-rtl-alignment-v2.patch` → `gpui-component-select-rtl-alignment-v3.patch` → `gpui-component-select-rtl-auto-width-v4.patch` → `gpui-component-select-rtl-auto-width-v6.patch` | None | DONE: 1 copied, 1 rebased, 4 incremental deltas; cumulative Base/Component compile and exact reverse passed; `rtl_select_popup_aligns_to_the_trigger_end` passed. |
-| A2-4f — Selectable list semantics | `gpui-selectable-list-semantics-v2.patch` | None | 1h |
+| A2-4f — Selectable list semantics | `gpui-selectable-list-semantics-v2.patch` | None | DONE: copied unchanged (APPLIES); cumulative Base/Component compile gate and exact reverse passed. No patch-specific proof was required because this family had no rebased patch. |
 | A2-4g — Tree | `gpui-component-tree-accessible-name-v1.patch` → `gpui-tree-aria-disabled-v1.patch` (Base Tree-row delta only) → `gpui-tree-aria-level-v1.patch` → `gpui-tree-disabled-keyboard-v2.patch` → `r15-tree-disabled-focus-v1.patch` | Core `aria_disabled` comes from A2-4c0; Tree-row delta must precede the aria-level patch, whose context uses that row call. #3531 covers Switch. | 2h |
 | A2-4h — DataGrid validation and header metadata | `a11y-validation-grid-v1.patch` | None | 2h |
 | A2-4i — Slider | `gpui-base-slider-endpoint-v1.patch` → `gpui-base-slider-first-move-v1.patch` → `gpui-base-slider-set-value-v2.patch` → `gpui-base-slider-snap-position-v1.patch` → `gpui-base-slider-zero-track-v1.patch` | None | 2h |
@@ -444,7 +444,7 @@ Original queue total: **45 patches**. A2-4a is first because its tracked dialog 
 | `gpui-pre-web-keyboard-focus-activation-v3.patch` | PARKED — A2-7 (deferred platform) |
 | `gpui-pre-web-noopener-v1.patch` | PARKED — A2-7 (deferred platform) |
 | `gpui-primary-mousedown-click-v2.patch` | CANDIDATE — `patches/candidate-kit-0.8/gpui-primary-mousedown-click-v2.patch` |
-| `gpui-selectable-list-semantics-v2.patch` | A2-4 QUEUE — Picker / ComboBox |
+| `gpui-selectable-list-semantics-v2.patch` | CANDIDATE — `patches/candidate-kit-0.8/gpui-selectable-list-semantics-v2.patch` |
 | `gpui-toolbar-rtl-v1.patch` | A2-4 QUEUE — Toolbar |
 | `gpui-tree-aria-disabled-v1.patch` | Split: CANDIDATE core API `gpui-tree-aria-disabled-v1-kit08.patch`; Base Tree-row delta remains in A2-4g |
 | `gpui-tree-aria-level-v1.patch` | A2-4 QUEUE — Tree |

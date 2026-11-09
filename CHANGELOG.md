@@ -2,6 +2,8 @@
 
 ## 0.2.0 — 2026-11-09
 
+- Added the unchanged selectable-list semantics patch to the GPUI Kit 0.8 candidate stack.
+
 - Added GPUI Kit 0.8 select and picker RTL popup layout candidates with a fixture proof.
 
 - Added the A2-4d Kit 0.8 candidate menu patches with a disabled-confirm proof and cumulative compile gate.
