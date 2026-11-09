@@ -3,19 +3,20 @@
 ## Stages and releases
 
 - A — finish Phase 1 (items 10, 11, 18) → 0.2.0
+- A2 — upgrade to GPUI Kit 0.8.x (formerly GPUI Component) and its matching gpui-pre snapshot; rebase approved patches (patch-only rule), retire patches fixed upstream → before B
 - B — theme engine rework (professional, robust; owner-provided materials) → 0.3.0
-- C — components: chat bubbles + message list, diff viewer, Markdown/rich text, dock/panel layout, command palette, charts/plots, status bar, time picker, accordion, hover card, kbd, form layout, settings panel, rating, pagination, carousel, attachments, description list, async images + SVG → 0.4.0
+- C — components: chat bubbles + message list, diff viewer, Markdown/rich text, dock/panel layout, command palette, charts/plots, status bar, time picker, accordion, hover card, kbd, form layout, settings panel, rating, pagination, carousel, attachments, description list, async images + SVG → 0.4.0 Mostly wrap components GPUI Kit already ships (Command, NativeMenu, StatusBar, Message/Bubble/MessageScroller, Diff, Markdown TextView, charts, Dock, TimeField, HoverCard, Rating, Pagination, Carousel).
 - D — macOS desktop app features: native menu bar + keyboard shortcut system, clipboard, open/save dialogs, multi-window + window state restore, custom title bar, undo/redo, settings persistence, system notifications, menu-bar extra, drag out to Finder, trackpad gestures → 0.5.0
-- E — developer experience: Rust hot reload (research spike first: function hot-patching; fallback: fast rebuild + relaunch with restored state), API docs, getting-started guide, examples, project template, test helpers for apps → 0.6.0
-- F — performance, GPUI Fast track (Phase 3) → 0.7.0
+- E — developer experience: Rust hot reload (research spike first: function hot-patching; fallback: fast rebuild + relaunch with restored state), API docs, getting-started guide, examples, project template, test helpers for apps → 0.6.0 Hot reload: integrate cargo-gpui / gpui-hot (built on Subsecond) instead of a from-scratch spike. Test helpers: evaluate gpui_kit::test.
+- F — performance, GPUI Fast track (Phase 3) → 0.7.0 Adopt GPUI Fast (published crate, optional GPUI Kit backend) and measure, instead of re-implementing retained mode and scroll layers.
 - G — damage tracking, inside RustUI (Phase 4) → 0.8.0
 - After G: start the UI Studio rewrite on RustUI and finish Chorus, in parallel with the stages below.
 - H — localization: French, Arabic, RTL, IME, bidi patches, locale catalog live reload (Phase 2) → 0.9.0
 - I — accessibility settings (increase contrast, reduce transparency, text scaling, owner VoiceOver check) + app shipping (code signing, notarization, DMG, auto-update, crash reporting, logging) → 0.10.0
 - J — deferred platform 1 (owner starts it explicitly)
-- K — iOS (new GPUI platform backend)
+- K — iOS (new GPUI platform backend) Build on gpui-mobile (iOS Metal, Android Vulkan); IME, accessibility and lifecycle hooks still need work there.
 - L — Windows
-- M — Android (new GPUI platform backend)
+- M — Android (new GPUI platform backend) Build on gpui-mobile (iOS Metal, Android Vulkan); IME, accessibility and lifecycle hooks still need work there.
 - N — Linux → 1.0
 
 Each stage is split into tickets of at most two hours before work starts.
