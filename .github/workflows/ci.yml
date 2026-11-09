@@ -2,6 +2,7 @@ name: RustUI checks
 
 on:
   push:
+    branches: [main]
   pull_request:
   workflow_dispatch:
     inputs:
@@ -29,12 +30,58 @@ jobs:
     steps:
       - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
         with:
+          fetch-depth: 0
           persist-credentials: false
+      - name: Normalize tracked file mtimes from Git history
+        shell: bash
+        run: |
+          # Inline Python maps each tracked path to its newest reachable commit timestamp.
+          python3 - <<'PY'
+          import os
+          import re
+          import subprocess
+
+          history = subprocess.check_output([
+              "git", "log", "-z", "--format=%ct%x00", "--name-only"
+          ])
+          fields = history.split(b"\0")
+          last_commit = {}
+          timestamp = None
+          index = 0
+          while index < len(fields):
+              field = fields[index]
+              if (re.fullmatch(rb"[0-9]{9,10}", field)
+                      and index + 1 < len(fields)
+                      and fields[index + 1] == b""):
+                  timestamp = int(field)
+                  index += 2
+                  continue
+              index += 1
+              if timestamp is None or not field:
+                  continue
+              path = field[1:] if field.startswith(b"\n") else field
+              if path and path not in last_commit:
+                  last_commit[path] = timestamp
+
+          tracked = subprocess.check_output(["git", "ls-files", "-z"]).split(b"\0")
+          normalized = 0
+          for path in tracked:
+              if not path or path not in last_commit:
+                  continue
+              try:
+                  os.utime(path, (last_commit[path], last_commit[path]), follow_symlinks=False)
+              except (FileNotFoundError, IsADirectoryError):
+                  continue
+              normalized += 1
+          print(f"Normalized mtimes for {normalized} tracked files from their last Git commit time.")
+          PY
       - name: Cache Cargo build artifacts
         uses: Swatinem/rust-cache@d1527c8f67ef9af357290475d4af4b0fab8f12e0
         with:
           workspaces: ". -> target/headstart"
-          key: ${{ hashFiles('Cargo.lock', 'rust-toolchain.toml', 'patches/approved/*.json') }}
+          cache-workspace-crates: true
+          # Bumped once for CI-CACHE-2 cold/warm measurement; bump to force a new cache seed.
+          key: ${{ hashFiles('Cargo.lock', 'rust-toolchain.toml', 'patches/approved/*.json') }}-ci-cache-2-v1
       - name: Install Rust 1.97.1
         run: rustup toolchain install 1.97.1 --profile minimal --component rustfmt
       - name: Verify approved Tree sources, replay lifecycle, and source release gates
