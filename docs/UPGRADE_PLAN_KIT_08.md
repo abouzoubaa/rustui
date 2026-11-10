@@ -511,3 +511,9 @@ GPUI Component 0.8.1 exposes `InputAccessibility::with_label` and applies that l
 The shared files were `gpui-pre/src/elements/div.rs` (A2-4c0 `aria_disabled` and A2-4h read-only/sort setters) and `gpui-pre/src/window/a11y/debug.rs` (A2-2/R15 disabled-state JSON serialization and A2-4h read-only/sort serialization). The faulty A2-4h diff headers still used `gpui-pre-0.3.9`, `gpui-base-0.7.3`, and `gpui-component-0.7.3` while the candidate stack used 0.3.10 / 0.8.1 paths. The fixture harness staged the duplicate paths separately, then its source overlay let the old-prefix debug file replace the current-prefix file, dropping the earlier `disabled` JSON entry. Rebased all A2-4h patch paths to the fixture versions and anchored the debug addition on the existing disabled serialization line; the setters still mutate only their own read-only/sort fields.
 
 Added `scripts/check_kit08_kit_stack.py --compile-online --proof-all-families`, which applies the cumulative stack once, runs the previously recorded A2-2 and A2-4a–h proofs, then verifies exact reverse. The run passed all 14 proofs and the Base/Component compile gate; 31 fixture archives verified, 41 target files hashed, 45 stack files, reverse exact.
+
+## Newer upstream
+
+GPUI Kit v0.9.0 was released on 2026-11-02 and published to crates.io as both gpui-component 0.9.0 and gpui-kit 0.9.0 (both non-yanked). This is for owner decision before A2-7; the A2 target remains v0.8.1 / gpui-pre 0.3.10.
+
+Key changes include editor and Diff decorations, configurable cursor blinking and Input edit events, an application icon resolver, accessibility fixes for tables and menus, and Markdown/text-rendering fixes. The release moves its default backend to gpui-pre 0.3.11 (optional GPUI Fast 0.1.13). Public theme structs become #[non_exhaustive], so external struct literals break; GPUI API changes include Window::text_system() returning &Rc<WindowTextSystem> instead of &Arc, and animations using executor time.
