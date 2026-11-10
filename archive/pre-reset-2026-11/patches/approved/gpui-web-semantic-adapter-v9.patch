@@ -1,0 +1,2575 @@
+diff --git a/vendor/gpui-base-0.7.3/src/input/base/state.rs b/vendor/gpui-base-0.7.3/src/input/base/state.rs
+--- a/vendor/gpui-base-0.7.3/src/input/base/state.rs
++++ b/vendor/gpui-base-0.7.3/src/input/base/state.rs
+@@ -245,19 +245,19 @@
+         KeyBinding::new("ctrl-shift-right", SelectToNextWordEnd, Some(CONTEXT)),
+         #[cfg(target_os = "macos")]
+         KeyBinding::new("ctrl-cmd-space", ShowCharacterPalette, Some(CONTEXT)),
+-        #[cfg(target_os = "macos")]
++        #[cfg(any(target_os = "macos", target_family = "wasm"))]
+         KeyBinding::new("cmd-a", SelectAll, Some(CONTEXT)),
+         #[cfg(not(target_os = "macos"))]
+         KeyBinding::new("ctrl-a", SelectAll, Some(CONTEXT)),
+-        #[cfg(target_os = "macos")]
++        #[cfg(any(target_os = "macos", target_family = "wasm"))]
+         KeyBinding::new("cmd-c", Copy, Some(CONTEXT)),
+         #[cfg(not(target_os = "macos"))]
+         KeyBinding::new("ctrl-c", Copy, Some(CONTEXT)),
+-        #[cfg(target_os = "macos")]
++        #[cfg(any(target_os = "macos", target_family = "wasm"))]
+         KeyBinding::new("cmd-x", Cut, Some(CONTEXT)),
+         #[cfg(not(target_os = "macos"))]
+         KeyBinding::new("ctrl-x", Cut, Some(CONTEXT)),
+-        #[cfg(target_os = "macos")]
++        #[cfg(any(target_os = "macos", target_family = "wasm"))]
+         KeyBinding::new("cmd-v", Paste, Some(CONTEXT)),
+         #[cfg(not(target_os = "macos"))]
+         KeyBinding::new("ctrl-v", Paste, Some(CONTEXT)),
+@@ -470,6 +470,7 @@
+     pub(crate) readonly: bool,
+     pub(crate) text_align: TextAlign,
+     pub(super) masked: bool,
++    platform_secure_input: bool,
+     pub(super) clean_on_escape: bool,
+     pub(super) submit_on_enter: bool,
+     pub(super) show_whitespaces: bool,
+@@ -622,6 +623,11 @@
+ impl<M: InputModeKind> EventEmitter<InputEvent> for InputBaseState<M> {}
+ 
+ impl<M: InputModeKind> InputBaseState<M> {
++    /// Renderer-owned input security metadata; does not schedule or mutate text.
++    pub fn sync_platform_secure_input(&mut self, secure: bool) {
++        self.platform_secure_input = secure;
++    }
++
+     #[doc(hidden)]
+     pub fn cursor_layout(&self) -> Option<(Bounds<Pixels>, Pixels)> {
+         let layout = self.last_layout.as_ref()?;
+@@ -836,6 +842,7 @@
+             readonly: false,
+             text_align: TextAlign::Left,
+             masked: false,
++            platform_secure_input: false,
+             clean_on_escape: false,
+             submit_on_enter: false,
+             show_whitespaces: false,
+@@ -4092,6 +4099,9 @@
+ }
+ 
+ impl<M: InputModeKind> EntityInputHandler for InputBaseState<M> {
++    fn is_secure_input(&mut self, _window: &mut Window, _cx: &mut Context<Self>) -> bool {
++        self.masked || self.platform_secure_input
++    }
+     fn text_for_range(
+         &mut self,
+         range_utf16: Range<usize>,
+@@ -4114,6 +4124,19 @@
+             range: self.range_to_utf16(&self.selected_range()),
+             reversed: self.active_selection().reversed,
+         })
++    }
++
++    fn set_selected_text_range(
++        &mut self,
++        range_utf16: Range<usize>,
++        _window: &mut Window,
++        cx: &mut Context<Self>,
++    ) {
++        if self.disabled {
++            return;
++        }
++        let range = self.range_from_utf16(&range_utf16);
++        self.set_selected_range(range, cx);
+     }
+ 
+     fn marked_text_range(
+@@ -10914,6 +10937,54 @@
+             });
+         });
+     }
++
++    #[gpui::test]
++    fn test_native_utf16_selection_replacement_and_clear(cx: &mut TestAppContext) {
++        let input_view = InputView::build_textarea(cx, |state| state.default_value("tree"));
++        let mut visual = VisualTestContext::from_window(input_view.window_handle.into(), cx);
++        visual.update(|window, cx| {
++            input_view.input.update(cx, |state, cx| {
++                state.set_cursor_to(4);
++                state.set_selected_text_range(0..4, window, cx);
++                assert_eq!(
++                    state.selected_text_range(false, window, cx).unwrap().range,
++                    0..4
++                );
++                state.replace_text_in_range(None, "button", window, cx);
++                assert_eq!(state.text.to_string(), "button");
++                state.set_selected_text_range(0..6, window, cx);
++                state.replace_text_in_range(None, "button", window, cx);
++                assert_eq!(state.text.to_string(), "button");
++                state.set_selected_text_range(0..6, window, cx);
++                state.replace_text_in_range(None, "", window, cx);
++                assert_eq!(state.text.to_string(), "");
++            });
++        });
++    }
++
++    #[gpui::test]
++    fn test_native_selection_uses_utf16_and_respects_disabled(cx: &mut TestAppContext) {
++        let input_view = InputView::build_textarea(cx, |state| state.default_value("a😀b"));
++        let mut visual = VisualTestContext::from_window(input_view.window_handle.into(), cx);
++        visual.update(|window, cx| {
++            input_view.input.update(cx, |state, cx| {
++                state.set_selected_text_range(1..3, window, cx);
++                assert_eq!(
++                    state.selected_text_range(false, window, cx).unwrap().range,
++                    1..3
++                );
++                state.replace_text_in_range(None, "x", window, cx);
++                assert_eq!(state.text.to_string(), "axb");
++                state.set_disabled(true, cx);
++                let before = state.selected_text_range(true, window, cx).unwrap().range;
++                state.set_selected_text_range(0..3, window, cx);
++                assert_eq!(
++                    state.selected_text_range(true, window, cx).unwrap().range,
++                    before
++                );
++            });
++        });
++    }
+ }
+ 
+ /// Methods that only a single-line input offers.
+diff --git a/vendor/gpui-component-0.7.3/src/input/input.rs b/vendor/gpui-component-0.7.3/src/input/input.rs
+--- a/vendor/gpui-component-0.7.3/src/input/input.rs
++++ b/vendor/gpui-component-0.7.3/src/input/input.rs
+@@ -686,6 +686,13 @@
+         let input_focused =
+             presentation.focus_handle().is_focused(window) && !presentation.is_disabled();
+         if input_focused {
++            state.sync_platform_secure_input(
++                matches!(
++                    content_type,
++                    Some(InputContentType::Password | InputContentType::NewPassword)
++                ),
++                cx,
++            );
+             sync_native_content_type(window, content_type, presentation.is_editable());
+         }
+         let frame_focus_handle = window
+diff --git a/vendor/gpui-component-0.7.3/src/input/state.rs b/vendor/gpui-component-0.7.3/src/input/state.rs
+--- a/vendor/gpui-component-0.7.3/src/input/state.rs
++++ b/vendor/gpui-component-0.7.3/src/input/state.rs
+@@ -76,6 +76,11 @@
+             .install_token_hover_presentation(hover_listener)))
+     }
+ 
++    pub(crate) fn sync_platform_secure_input(&self, secure: bool, cx: &mut App) {
++        dispatch!(self, |state| state
++            .update(cx, |state, _| state.sync_platform_secure_input(secure)))
++    }
++
+     pub(crate) fn entity_id(&self) -> gpui::EntityId {
+         dispatch!(self, |state| state.entity_id())
+     }
+diff --git a/vendor/gpui-pre-0.3.9/src/input.rs b/vendor/gpui-pre-0.3.9/src/input.rs
+--- a/vendor/gpui-pre-0.3.9/src/input.rs
++++ b/vendor/gpui-pre-0.3.9/src/input.rs
+@@ -11,6 +11,11 @@
+ ///
+ /// See [`InputHandler`] for details on how to implement each method.
+ pub trait EntityInputHandler: 'static + Sized {
++    /// Whether the native input owner requires protected-value semantics.
++    fn is_secure_input(&mut self, _window: &mut Window, _cx: &mut Context<Self>) -> bool {
++        false
++    }
++
+     /// See [`InputHandler::text_for_range`] for details
+     fn text_for_range(
+         &mut self,
+@@ -143,6 +148,23 @@
+ }
+ 
+ impl<V: EntityInputHandler> InputHandler for ElementInputHandler<V> {
++    fn is_secure_input(&mut self, window: &mut Window, cx: &mut App) -> bool {
++        self.view
++            .update(cx, |view, cx| view.is_secure_input(window, cx))
++    }
++
++    fn input_lifecycle(&self) -> Option<crate::InputHandlerLifecycle> {
++        let owner = self.view.entity_id();
++        let weak = self.view.downgrade();
++        Some(crate::InputHandlerLifecycle {
++            owner,
++            cancel_composition: std::rc::Rc::new(move |window, cx| {
++                weak.update(cx, |view, cx| view.unmark_text(window, cx))
++                    .ok();
++            }),
++        })
++    }
++
+     fn selected_text_range(
+         &mut self,
+         ignore_disabled_input: bool,
+diff --git a/vendor/gpui-pre-0.3.9/src/platform.rs b/vendor/gpui-pre-0.3.9/src/platform.rs
+--- a/vendor/gpui-pre-0.3.9/src/platform.rs
++++ b/vendor/gpui-pre-0.3.9/src/platform.rs
+@@ -1228,6 +1228,12 @@
+     /// platform's text input session (e.g. attributes of the hidden editable
+     /// element on web). Called only when the configuration changes, because
+     /// reconfiguring a live input session can restart the IME connection.
++    fn text_input_owner_changed(&mut self) {}
++    /// Commit semantics after the frame tree and native input configuration.
++    fn text_input_owner_ready(&mut self) {}
++
++    fn set_secure_input(&mut self, _secure: bool) {}
++
+     fn set_text_input_configuration(&mut self, _configuration: TextInputConfiguration) {}
+     fn prompt(
+         &self,
+@@ -1994,6 +2000,16 @@
+     allow(dead_code)
+ )]
+ impl PlatformInputHandler {
++    /// Whether native protected-value input is required.
++    pub fn is_secure_input(&mut self, window: &mut crate::Window, cx: &mut crate::App) -> bool {
++        self.handler.is_secure_input(window, cx)
++    }
++
++    /// Existing input-owner lifecycle metadata, when available.
++    pub fn input_lifecycle(&self) -> Option<InputHandlerLifecycle> {
++        self.handler.input_lifecycle()
++    }
++
+     pub fn new(cx: AsyncWindowContext, handler: Box<dyn InputHandler>) -> Self {
+         Self { cx, handler }
+     }
+@@ -2237,7 +2253,25 @@
+ /// This is currently a 1:1 exposure of the NSTextInputClient API:
+ ///
+ /// <https://developer.apple.com/documentation/appkit/nstextinputclient>
++/// Existing input entity identity and a weak composition cleanup callback.
++pub struct InputHandlerLifecycle {
++    /// Identity of the existing input entity.
++    pub owner: crate::EntityId,
++    /// Weak cleanup of its marked range before an owner transition.
++    pub cancel_composition: std::rc::Rc<dyn Fn(&mut crate::Window, &mut crate::App)>,
++}
++
++/// Text and composition operations of the platform input owner.
+ pub trait InputHandler: 'static {
++    /// Optional stable identity and weak composition cleanup.
++    fn input_lifecycle(&self) -> Option<InputHandlerLifecycle> {
++        None
++    }
++    /// Protected native input; defaults preserve existing third-party handlers.
++    fn is_secure_input(&mut self, _window: &mut crate::Window, _cx: &mut crate::App) -> bool {
++        false
++    }
++
+     /// Get the range of the user's currently selected text, if any
+     /// Corresponds to [selectedRange()](https://developer.apple.com/documentation/appkit/nstextinputclient/1438242-selectedrange)
+     ///
+diff --git a/vendor/gpui-pre-0.3.9/src/window.rs b/vendor/gpui-pre-0.3.9/src/window.rs
+--- a/vendor/gpui-pre-0.3.9/src/window.rs
++++ b/vendor/gpui-pre-0.3.9/src/window.rs
+@@ -71,7 +71,6 @@
+ pub use a11y::A11ySubtreeBuilder;
+ 
+ use self::a11y::A11y;
+-#[cfg(not(target_family = "wasm"))]
+ use self::a11y::ROOT_NODE_ID;
+ use crate::util::{
+     atomic_incr_if_not_zero, ceil_to_device_pixel, floor_to_device_pixel, round_half_toward_zero,
+@@ -1245,6 +1244,9 @@
+     /// window, so that only actual changes are forwarded (reconfiguring a live
+     /// input session can restart the IME connection).
+     last_text_input_configuration: Option<TextInputConfiguration>,
++    last_secure_input: bool,
++    #[cfg(target_family = "wasm")]
++    last_input_lifecycle: Option<crate::InputHandlerLifecycle>,
+     focused_text_input_active: bool,
+     pub(crate) image_cache_stack: Vec<AnyImageCache>,
+     pub(crate) rendered_frame: Frame,
+@@ -1668,7 +1670,6 @@
+             cfg!(target_family = "wasm") && !accessibility_force_disabled,
+         ));
+ 
+-        #[cfg(not(target_family = "wasm"))]
+         if !accessibility_force_disabled {
+             let mut initial_root_node = accesskit::Node::new(accesskit::Role::Window);
+             if let Some(title) = &initial_window_title {
+@@ -1691,19 +1692,34 @@
+                     Box::new(move || {
+                         log::info!("Accessibility activated");
+                         active_flag.store(true, SeqCst);
++                        #[cfg(not(target_family = "wasm"))]
+                         activation_sender.send_blocking(()).log_err();
++                        #[cfg(target_family = "wasm")]
++                        if activation_sender.try_send(()).is_err() {
++                            log::warn!("Web accessibility activation channel closed");
++                        }
+                         Some(initial_tree.clone())
+                     })
+                 },
+                 action: Box::new(move |request| {
++                    #[cfg(not(target_family = "wasm"))]
+                     action_sender.send_blocking(request).log_err();
++                    #[cfg(target_family = "wasm")]
++                    if action_sender.try_send(request).is_err() {
++                        log::warn!("Web accessibility action channel closed");
++                    }
+                 }),
+                 deactivation: {
+                     let active_flag = a11y_active_flag.clone();
+                     Box::new(move || {
+                         log::info!("Accessibility deactivated");
+                         active_flag.store(false, SeqCst);
++                        #[cfg(not(target_family = "wasm"))]
+                         deactivation_sender.send_blocking(()).log_err();
++                        #[cfg(target_family = "wasm")]
++                        if deactivation_sender.try_send(()).is_err() {
++                            log::warn!("Web accessibility deactivation channel closed");
++                        }
+                     })
+                 },
+             });
+@@ -2148,6 +2164,9 @@
+             element_opacity: 1.0,
+             requested_autoscroll: None,
+             last_text_input_configuration: None,
++            last_secure_input: false,
++            #[cfg(target_family = "wasm")]
++            last_input_lifecycle: None,
+             focused_text_input_active: false,
+             rendered_frame: Frame::new(DispatchTree::new(cx.keymap.clone(), cx.actions.clone())),
+             next_frame: Frame::new(DispatchTree::new(cx.keymap.clone(), cx.actions.clone())),
+@@ -3481,20 +3500,13 @@
+         // paint_range indices remain valid for reuse_paint on the next frame.
+         // Search backwards to find the last Some entry, since reuse_paint may
+         // have copied None slots from the previous frame. (Fixes #50456)
+-        let focused_text_input_active = if let Some(mut input_handler) = self
++        let input_handler = self
+             .next_frame
+             .input_handlers
+             .iter_mut()
+             .rev()
+-            .find_map(|h| h.take())
+-        {
+-            let accepts_text_input = input_handler.accepts_text_input(self, cx);
+-            self.platform_window.set_input_handler(input_handler);
+-            accepts_text_input
+-        } else {
+-            false
+-        };
+-        self.apply_text_input_configuration(cx);
++            .find_map(|handler| handler.take());
++        let focused_text_input_active = self.install_platform_input_handler(input_handler, cx);
+         if focused_text_input_active != self.focused_text_input_active {
+             self.focused_text_input_active = focused_text_input_active;
+             self.platform_window
+@@ -5410,20 +5422,52 @@
+     /// platform window when it differs from the last forwarded value. With no
+     /// input handler the default configuration applies, so a field's
+     /// preferences don't outlive its focus.
+-    fn apply_text_input_configuration(&mut self, cx: &mut App) {
+-        let configuration = match self.platform_window.take_input_handler() {
+-            Some(mut input_handler) => {
+-                let configuration = input_handler.text_input_configuration(self, cx);
+-                self.platform_window.set_input_handler(input_handler);
+-                configuration
+-            }
+-            None => TextInputConfiguration::default(),
++    fn install_platform_input_handler(
++        &mut self,
++        mut handler: Option<PlatformInputHandler>,
++        cx: &mut App,
++    ) -> bool {
++        let (accepts, configuration, secure) = match handler.as_mut() {
++            Some(handler) => (
++                handler.accepts_text_input(self, cx),
++                handler.text_input_configuration(self, cx),
++                handler.is_secure_input(self, cx),
++            ),
++            None => (false, TextInputConfiguration::default(), false),
+         };
++        #[cfg(target_family = "wasm")]
++        {
++            let lifecycle = handler
++                .as_ref()
++                .and_then(PlatformInputHandler::input_lifecycle);
++            let previous = self.last_input_lifecycle.as_ref().map(|owner| owner.owner);
++            let next = lifecycle.as_ref().map(|owner| owner.owner);
++            let security_changed = self.last_secure_input != secure;
++            if previous != next || security_changed || (self.focused_text_input_active && !accepts)
++            {
++                if let Some(old) = self.last_input_lifecycle.take() {
++                    (old.cancel_composition)(self, cx);
++                }
++                self.platform_window.text_input_owner_changed();
++            }
++            self.last_input_lifecycle = lifecycle;
++        }
++        if let Some(handler) = handler {
++            self.platform_window.set_input_handler(handler);
++        }
++        if self.last_secure_input != secure {
++            self.platform_window.set_secure_input(secure);
++            self.last_secure_input = secure;
++        }
+         if self.last_text_input_configuration.as_ref() != Some(&configuration) {
+             self.platform_window
+                 .set_text_input_configuration(configuration.clone());
+             self.last_text_input_configuration = Some(configuration);
+         }
++        // draw_roots has already queued this frame's AccessKit tree.
++        // Commit even when no text input is focused; no redraw is required.
++        self.platform_window.text_input_owner_ready();
++        accepts
+     }
+ 
+     /// Register a mouse event listener on the window for the next frame. The type of event
+@@ -7032,7 +7076,6 @@
+             .push((action, Box::new(listener)));
+     }
+ 
+-    #[cfg(not(target_family = "wasm"))]
+     pub(crate) fn handle_a11y_action(&mut self, request: accesskit::ActionRequest, cx: &mut App) {
+         // Take listeners out temporarily so the closures can borrow Window
+         // mutably, then restore them afterward.
+diff --git a/vendor/gpui-pre-0.3.9/src/window/a11y.rs b/vendor/gpui-pre-0.3.9/src/window/a11y.rs
+--- a/vendor/gpui-pre-0.3.9/src/window/a11y.rs
++++ b/vendor/gpui-pre-0.3.9/src/window/a11y.rs
+@@ -246,9 +246,21 @@
+             // later focus on a node-less element logs again.
+             self.last_focus_without_node = None;
+             self.nodes.set_focus(node_id);
++        } else if let Some(ancestor) = self
++            .nodes
++            .ids_stack
++            .last()
++            .copied()
++            .filter(|id| *id != ROOT_NODE_ID)
++        {
++            // A role-less editing/focus implementation can live inside an
++            // exposed semantic control. Report that closest control while
++            // preserving the implementation's actual GPUI focus handle.
++            self.last_focus_without_node = None;
++            self.nodes.set_focus(ancestor);
+         } else {
+-            // The element registered a focus handle and an id, but never got a
+-            // node because it has no role.
++            // The element registered a focus handle and an id, but has no
++            // semantic node or exposed control ancestor.
+             if let Some(focus_id) = self.focus_ids.get(&node_id).copied() {
+                 self.note_focus_without_node(focus_id, "it has an id but no role");
+             }
+@@ -902,4 +914,27 @@
+         let update = a11y.end_frame(Default::default());
+         assert_eq!(update.focus, a);
+     }
++    #[test]
++    fn roleless_focus_reports_closest_semantic_ancestor() {
++        let mut a11y = new_a11y();
++        let control = NodeId(1);
++        let implementation = NodeId(2);
++        assert!(a11y.nodes.push(control, test_node()));
++        a11y.set_focusable(implementation, FocusId::default());
++        a11y.set_focus(implementation);
++        assert_eq!(a11y.nodes.focus, Some(control));
++        assert_eq!(
++            a11y.focus_ids.get(&implementation),
++            Some(&FocusId::default())
++        );
++    }
++
++    #[test]
++    fn roleless_focus_without_semantic_control_keeps_root_fallback() {
++        let mut a11y = new_a11y();
++        let implementation = NodeId(2);
++        a11y.set_focusable(implementation, FocusId::default());
++        a11y.set_focus(implementation);
++        assert_eq!(a11y.nodes.focus, None);
++    }
+ }
+diff --git a/vendor/gpui-pre-web-0.3.9/src/a11y.rs b/vendor/gpui-pre-web-0.3.9/src/a11y.rs
+new file mode 100644
+--- /dev/null
++++ b/vendor/gpui-pre-web-0.3.9/src/a11y.rs
+@@ -0,0 +1,709 @@
++//! Retained semantic projection of GPUI's authoritative AccessKit tree.
++//! This cache owns no application value, layout, selection or event scheduler.
++use crate::a11y_dom::{ImeHost, SemanticDom};
++use gpui::{
++    A11yCallbacks,
++    accesskit::{self, Action, ActionData, Node, NodeId, Role, TreeId, TreeUpdate},
++};
++use std::{
++    cell::RefCell,
++    collections::{HashMap, HashSet},
++    rc::Rc,
++};
++use wasm_bindgen::{JsCast as _, prelude::*};
++
++struct State {
++    nodes: HashMap<NodeId, Node>,
++    root: Option<NodeId>,
++    focus: NodeId,
++    visible: HashSet<NodeId>,
++    disabled: HashSet<NodeId>,
++    healthy: bool,
++    protected: HashSet<NodeId>,
++    callbacks: Rc<A11yCallbacks>,
++}
++pub(crate) struct Adapter {
++    state: Rc<RefCell<State>>,
++    dom: SemanticDom,
++    ime: ImeHost,
++    _dispatch: Closure<dyn FnMut(String, String, JsValue)>,
++    pending: Vec<TreeUpdate>,
++}
++impl Adapter {
++    pub(crate) fn new(
++        document: &web_sys::Document,
++        body: &web_sys::HtmlElement,
++        canvas: &web_sys::HtmlCanvasElement,
++        ime: ImeHost,
++        callbacks: A11yCallbacks,
++    ) -> Result<Self, JsValue> {
++        let callbacks = Rc::new(callbacks);
++        let state = Rc::new(RefCell::new(State {
++            nodes: HashMap::new(),
++            root: None,
++            focus: NodeId(0),
++            visible: HashSet::new(),
++            disabled: HashSet::new(),
++            healthy: false,
++            protected: HashSet::new(),
++            callbacks: callbacks.clone(),
++        }));
++        let weak = Rc::downgrade(&state);
++        let dispatch = Closure::new(move |id: String, name: String, data: JsValue| {
++            let Some(state) = weak.upgrade() else {
++                return;
++            };
++            let Ok(id) = id.parse::<u64>() else {
++                return;
++            };
++            let id = NodeId(id);
++            let Some(action) = action(&name) else {
++                return;
++            };
++            let (callback, payload) = {
++                let state = state.borrow();
++                if !state.healthy || !state.visible.contains(&id) || state.disabled.contains(&id) {
++                    return;
++                }
++                let Some(node) = state.nodes.get(&id) else {
++                    return;
++                };
++                if !node.supports_action(action)
++                    || (action == Action::SetValue
++                        && (node.is_read_only()
++                            || state.protected.contains(&id)
++                            || matches!(node.role(), Role::PasswordInput)
++                            || node.numeric_value().is_none()))
++                {
++                    return;
++                }
++                let payload = if action == Action::SetValue {
++                    let Some(value) = data.as_f64().filter(|v| v.is_finite()) else {
++                        return;
++                    };
++                    Some(ActionData::NumericValue(value))
++                } else {
++                    None
++                };
++                (state.callbacks.clone(), payload)
++            };
++            (callback.action)(accesskit::ActionRequest {
++                action,
++                target_tree: TreeId::ROOT,
++                target_node: id,
++                data: payload,
++            });
++        });
++        let dom = match crate::a11y_dom::create_semantic_dom(
++            document,
++            body,
++            canvas,
++            &ime,
++            dispatch.as_ref().unchecked_ref(),
++        ) {
++            Ok(dom) => dom,
++            Err(error) => {
++                (callbacks.deactivation)();
++                return Err(error);
++            }
++        };
++        let mut adapter = Self {
++            state,
++            dom,
++            ime,
++            _dispatch: dispatch,
++            pending: Vec::new(),
++        };
++        if let Some(initial) = (callbacks.activation)() {
++            adapter.update(initial, false);
++        }
++        Ok(adapter)
++    }
++    pub(crate) fn update(&mut self, update: TreeUpdate, _composing: bool) {
++        // Painting precedes native input installation. Buffer AccessKit updates;
++        // serialize values/focus only after this frame's protected owner is ready.
++        self.pending.push(update);
++    }
++    pub(crate) fn frame_ready(&mut self, composing: bool) {
++        let mut snapshot = None;
++        for update in std::mem::take(&mut self.pending) {
++            let result = {
++                let mut state = self.state.borrow_mut();
++                project(&mut state, update, self.ime.is_secure())
++            };
++            match result {
++                Ok(next) => snapshot = Some(next),
++                Err(error) => {
++                    self.state.borrow_mut().healthy = false;
++                    self.dom.fail_closed();
++                    log::warn!("Web semantic tree rejected: {error}");
++                    return;
++                }
++            }
++        }
++        if let Some(snapshot) = snapshot {
++            if self.dom.update(&snapshot, composing).is_err() {
++                self.state.borrow_mut().healthy = false;
++                self.dom.fail_closed();
++                return;
++            }
++        }
++        if self.dom.frame_ready().is_err() {
++            self.state.borrow_mut().healthy = false;
++            self.dom.fail_closed();
++        }
++    }
++    pub(crate) fn composition_started(&self) {
++        self.dom.composition_started();
++    }
++    pub(crate) fn owner_changed(&self) {
++        self.dom.semantic_owner_changed();
++    }
++    pub(crate) fn owns_target(&self, target: &web_sys::EventTarget) -> bool {
++        self.dom.owns_target(target)
++    }
++    pub(crate) fn native_keyboard(&self, event: &web_sys::KeyboardEvent) -> bool {
++        self.dom.native_keyboard(event)
++    }
++    pub(crate) fn composition_ended(&self) {
++        if self.dom.composition_ended().is_err() {
++            self.state.borrow_mut().healthy = false;
++            self.dom.fail_closed();
++        }
++    }
++}
++impl Drop for Adapter {
++    fn drop(&mut self) {
++        self.state.borrow_mut().healthy = false;
++        self.dom.close();
++        let callbacks = self.state.borrow().callbacks.clone();
++        (callbacks.deactivation)();
++    }
++}
++
++fn action(name: &str) -> Option<Action> {
++    Some(match name {
++        "Focus" => Action::Focus,
++        "Click" => Action::Click,
++        "SetValue" => Action::SetValue,
++        "Increment" => Action::Increment,
++        "Decrement" => Action::Decrement,
++        "Expand" => Action::Expand,
++        "Collapse" => Action::Collapse,
++        "ScrollIntoView" => Action::ScrollIntoView,
++        "ShowContextMenu" => Action::ShowContextMenu,
++        _ => return None,
++    })
++}
++fn put(object: &js_sys::Object, key: &str, value: impl Into<JsValue>) {
++    js_sys::Reflect::set(object, &JsValue::from_str(key), &value.into())
++        .expect("fresh semantic descriptor object");
++}
++fn attr(object: &js_sys::Object, key: &str, value: Option<String>) {
++    if let Some(value) = value {
++        put(object, key, value);
++    }
++}
++fn text_role(role: Role) -> bool {
++    matches!(
++        role,
++        Role::TextInput
++            | Role::MultilineTextInput
++            | Role::SearchInput
++            | Role::EmailInput
++            | Role::PhoneNumberInput
++            | Role::UrlInput
++            | Role::PasswordInput
++            | Role::EditableComboBox
++            | Role::NumberInput
++            | Role::DateInput
++            | Role::DateTimeInput
++            | Role::WeekInput
++            | Role::MonthInput
++            | Role::TimeInput
++    )
++}
++fn role(role: Role) -> Option<&'static str> {
++    Some(match role {
++        Role::Window | Role::Application | Role::RootWebArea => "application",
++        Role::Button | Role::DefaultButton => "button",
++        Role::Link => "link",
++        Role::CheckBox => "checkbox",
++        Role::RadioButton => "radio",
++        Role::Switch => "switch",
++        Role::TextInput
++        | Role::MultilineTextInput
++        | Role::PasswordInput
++        | Role::EmailInput
++        | Role::PhoneNumberInput
++        | Role::UrlInput => "textbox",
++        Role::SearchInput => "searchbox",
++        Role::NumberInput => "spinbutton",
++        Role::DateInput
++        | Role::DateTimeInput
++        | Role::WeekInput
++        | Role::MonthInput
++        | Role::TimeInput => "textbox",
++        Role::ComboBox | Role::EditableComboBox => "combobox",
++        Role::Tree => "tree",
++        Role::TreeItem => "treeitem",
++        Role::TreeGrid => "treegrid",
++        Role::List => "list",
++        Role::ListItem => "listitem",
++        Role::ListBox => "listbox",
++        Role::ListBoxOption | Role::MenuListOption => "option",
++        Role::Menu | Role::MenuListPopup => "menu",
++        Role::MenuBar => "menubar",
++        Role::MenuItem => "menuitem",
++        Role::MenuItemCheckBox => "menuitemcheckbox",
++        Role::MenuItemRadio => "menuitemradio",
++        Role::Tab => "tab",
++        Role::TabList => "tablist",
++        Role::TabPanel => "tabpanel",
++        Role::Table => "table",
++        Role::Grid => "grid",
++        Role::Row => "row",
++        Role::RowGroup => "rowgroup",
++        Role::Cell => "cell",
++        Role::GridCell => "gridcell",
++        Role::RowHeader => "rowheader",
++        Role::ColumnHeader => "columnheader",
++        Role::Slider => "slider",
++        Role::SpinButton => "spinbutton",
++        Role::ProgressIndicator => "progressbar",
++        Role::Meter => "meter",
++        Role::ScrollBar => "scrollbar",
++        Role::Splitter => "separator",
++        Role::Group | Role::Pane => "group",
++        Role::Region | Role::Section => "region",
++        Role::Navigation => "navigation",
++        Role::Toolbar => "toolbar",
++        Role::Heading => "heading",
++        Role::Image => "img",
++        Role::Alert => "alert",
++        Role::Status => "status",
++        Role::Log => "log",
++        Role::Dialog => "dialog",
++        Role::AlertDialog => "alertdialog",
++        Role::Tooltip => "tooltip",
++        Role::Form => "form",
++        Role::Article => "article",
++        Role::Document => "document",
++        Role::Main => "main",
++        Role::Banner => "banner",
++        Role::ContentInfo => "contentinfo",
++        Role::Complementary => "complementary",
++        _ => return None,
++    })
++}
++fn project(state: &mut State, update: TreeUpdate, secure: bool) -> Result<JsValue, &'static str> {
++    if update.tree_id != TreeId::ROOT {
++        return Err("embedded AccessKit trees are not supported");
++    }
++    let root = update
++        .tree
++        .as_ref()
++        .map(|tree| tree.root)
++        .or(state.root)
++        .ok_or("missing initial root")?;
++    let mut nodes = state.nodes.clone();
++    let mut changed = HashSet::new();
++    for (id, node) in update.nodes {
++        if !changed.insert(id) {
++            return Err("duplicate update ID");
++        }
++        nodes.insert(id, node);
++    }
++    let mut visited = HashSet::new();
++    let mut visible = HashSet::new();
++    let mut disabled = HashSet::new();
++    let mut protected_ids = HashSet::new();
++    let mut order = Vec::new();
++    let mut stack = vec![(root, false, false, false, accesskit::Affine::IDENTITY)];
++    let output = js_sys::Array::new();
++    while let Some((id, hidden, parent_disabled, parent_protected, transform)) = stack.pop() {
++        if !visited.insert(id) {
++            return Err("cyclic or multiply parented node");
++        }
++        let node = nodes.get(&id).ok_or("missing child node")?;
++        let transform = node
++            .transform()
++            .map_or(transform, |local| transform * (*local));
++        let hidden = hidden || node.is_hidden();
++        let is_disabled = parent_disabled || node.is_disabled();
++        let protected = parent_protected
++            || node.role() == Role::PasswordInput
++            || (id == update.focus && secure);
++        if protected {
++            protected_ids.insert(id);
++        }
++        for child in node.children().iter().rev() {
++            stack.push((*child, hidden, is_disabled, protected, transform));
++        }
++        if hidden || parent_protected {
++            continue;
++        }
++        visible.insert(id);
++        if is_disabled {
++            disabled.insert(id);
++        }
++        order.push((id, transform, is_disabled));
++    }
++    if changed.iter().any(|id| !visited.contains(id)) {
++        return Err("orphan update ID");
++    }
++    for (id, transform, is_disabled) in order {
++        let node = nodes.get(&id).ok_or("missing projected node")?;
++        let attrs = js_sys::Object::new();
++        attr(&attrs, "role", role(node.role()).map(str::to_owned));
++        attr(
++            &attrs,
++            "aria-label",
++            node.label()
++                .map(str::to_owned)
++                .or_else(|| relation_text(node.labelled_by(), &nodes, &protected_ids)),
++        );
++        attr(
++            &attrs,
++            "aria-description",
++            node.description()
++                .map(str::to_owned)
++                .or_else(|| relation_text(node.described_by(), &nodes, &protected_ids)),
++        );
++        if is_disabled {
++            put(&attrs, "aria-disabled", "true");
++        }
++        if node.is_read_only() {
++            put(&attrs, "aria-readonly", "true");
++        }
++        if node.is_required() {
++            put(&attrs, "aria-required", "true");
++        }
++        if node.is_busy() {
++            put(&attrs, "aria-busy", "true");
++        }
++        if node.is_modal() {
++            put(&attrs, "aria-modal", "true");
++        }
++        if node.is_multiselectable() {
++            put(&attrs, "aria-multiselectable", "true");
++        }
++        attr(
++            &attrs,
++            "aria-selected",
++            node.is_selected().map(|v| v.to_string()),
++        );
++        attr(
++            &attrs,
++            "aria-expanded",
++            node.is_expanded().map(|v| v.to_string()),
++        );
++        attr(
++            &attrs,
++            "aria-checked",
++            node.toggled().map(|value| {
++                match value {
++                    accesskit::Toggled::True => "true",
++                    accesskit::Toggled::False => "false",
++                    accesskit::Toggled::Mixed => "mixed",
++                }
++                .into()
++            }),
++        );
++        attr(
++            &attrs,
++            "aria-live",
++            node.live().map(|value| {
++                match value {
++                    accesskit::Live::Off => "off",
++                    accesskit::Live::Polite => "polite",
++                    accesskit::Live::Assertive => "assertive",
++                }
++                .into()
++            }),
++        );
++        if node.is_live_atomic() {
++            put(&attrs, "aria-atomic", "true");
++        }
++        attr(
++            &attrs,
++            "aria-orientation",
++            node.orientation().map(|value| {
++                match value {
++                    accesskit::Orientation::Horizontal => "horizontal",
++                    accesskit::Orientation::Vertical => "vertical",
++                }
++                .into()
++            }),
++        );
++        for (name, value) in [
++            ("aria-level", node.level()),
++            ("aria-posinset", node.position_in_set()),
++            ("aria-setsize", node.size_of_set()),
++            ("aria-rowcount", node.row_count()),
++            ("aria-colcount", node.column_count()),
++            ("aria-rowindex", node.row_index()),
++            ("aria-colindex", node.column_index()),
++            ("aria-rowspan", node.row_span()),
++            ("aria-colspan", node.column_span()),
++        ] {
++            attr(&attrs, name, value.map(|v| v.to_string()));
++        }
++        for (name, ids) in [
++            ("aria-labelledby", node.labelled_by()),
++            ("aria-describedby", node.described_by()),
++            ("aria-controls", node.controls()),
++        ] {
++            if !ids.is_empty() && ids.iter().all(|id| visible.contains(id)) {
++                put(
++                    &attrs,
++                    name,
++                    ids.iter()
++                        .map(|id| format!("gpui-ax-{}", id.0))
++                        .collect::<Vec<_>>()
++                        .join(" "),
++                );
++            }
++        }
++        if text_role(node.role()) {
++            put(
++                &attrs,
++                "aria-multiline",
++                if node.role() == Role::MultilineTextInput {
++                    "true"
++                } else {
++                    "false"
++                },
++            );
++        }
++        attr(
++            &attrs,
++            "aria-invalid",
++            node.invalid().map(|invalid| {
++                match invalid {
++                    accesskit::Invalid::True => "true",
++                    accesskit::Invalid::Grammar => "grammar",
++                    accesskit::Invalid::Spelling => "spelling",
++                }
++                .into()
++            }),
++        );
++        attr(
++            &attrs,
++            "aria-activedescendant",
++            node.active_descendant()
++                .filter(|id| visible.contains(id))
++                .map(|id| format!("gpui-ax-{}", id.0)),
++        );
++        let protected = protected_ids.contains(&id);
++        let numeric = if protected {
++            None
++        } else {
++            node.numeric_value().filter(|v| v.is_finite())
++        };
++        let minimum = if protected {
++            None
++        } else {
++            node.min_numeric_value().filter(|v| v.is_finite())
++        };
++        let maximum = if protected {
++            None
++        } else {
++            node.max_numeric_value().filter(|v| v.is_finite())
++        };
++        for (name, value) in [
++            ("aria-valuenow", numeric),
++            ("aria-valuemin", minimum),
++            ("aria-valuemax", maximum),
++        ] {
++            attr(&attrs, name, value.map(|v| v.to_string()));
++        }
++        if !protected && !text_role(node.role()) {
++            attr(&attrs, "aria-valuetext", node.value().map(str::to_owned));
++        }
++        let kind = if protected {
++            "protected"
++        } else if text_role(node.role()) {
++            "text"
++        } else if node.role() == Role::SpinButton {
++            "spin"
++        } else if matches!(
++            node.role(),
++            Role::CheckBox | Role::Switch | Role::MenuItemCheckBox
++        ) {
++            "checkbox"
++        } else if matches!(node.role(), Role::RadioButton | Role::MenuItemRadio) {
++            "radio"
++        } else if node.role() == Role::Slider
++            && numeric.is_some()
++            && minimum.zip(maximum).is_some_and(|(min, max)| min < max)
++        {
++            "range"
++        } else if matches!(
++            node.role(),
++            Role::Button
++                | Role::DefaultButton
++                | Role::Link
++                | Role::MenuItem
++                | Role::Tab
++                | Role::DisclosureTriangle
++                | Role::ComboBox
++        ) {
++            "button"
++        } else {
++            "generic"
++        };
++        let descriptor = js_sys::Object::new();
++        put(&descriptor, "id", id.0.to_string());
++        put(&descriptor, "kind", kind);
++        put(&descriptor, "attrs", attrs);
++        put(&descriptor, "disabled", is_disabled);
++        put(&descriptor, "readOnly", node.is_read_only());
++        put(
++            &descriptor,
++            "focusable",
++            node.supports_action(Action::Focus),
++        );
++        let actions = js_sys::Array::new();
++        for name in [
++            "Focus",
++            "Click",
++            "SetValue",
++            "Increment",
++            "Decrement",
++            "Expand",
++            "Collapse",
++            "ScrollIntoView",
++            "ShowContextMenu",
++        ] {
++            if node.supports_action(action(name).unwrap()) {
++                actions.push(&JsValue::from_str(name));
++            }
++        }
++        put(&descriptor, "actions", actions);
++        let children = js_sys::Array::new();
++        for child in node.children() {
++            if visible.contains(child) {
++                children.push(&JsValue::from_str(&child.0.to_string()));
++            }
++        }
++        put(&descriptor, "children", children);
++        // Protected values are never materialized in semantic descriptors. A
++        // focused text field's only DOM value is the existing native IME host.
++        let text = if protected || (text_role(node.role()) && id == update.focus) {
++            ""
++        } else if text_role(node.role())
++            || matches!(
++                node.role(),
++                Role::Label | Role::TextRun | Role::Paragraph | Role::Heading
++            )
++        {
++            node.value().unwrap_or("")
++        } else {
++            ""
++        };
++        put(&descriptor, "text", text);
++        put(
++            &descriptor,
++            "checked",
++            node.toggled()
++                .map(|v| match v {
++                    accesskit::Toggled::True => "true",
++                    accesskit::Toggled::False => "false",
++                    accesskit::Toggled::Mixed => "mixed",
++                })
++                .unwrap_or("false"),
++        );
++        if let Some(value) = numeric {
++            put(&descriptor, "numeric", value);
++        }
++        if let Some(value) = minimum {
++            put(&descriptor, "min", value);
++        }
++        if let Some(value) = maximum {
++            put(&descriptor, "max", value);
++        }
++        put(
++            &descriptor,
++            "step",
++            node.numeric_value_step()
++                .filter(|v| v.is_finite() && *v > 0.0)
++                .map(|v| v.to_string())
++                .unwrap_or_else(|| "any".into()),
++        );
++        if let Some(bounds) = node.bounds() {
++            let bounds = transform.transform_rect_bbox(bounds);
++            let values = [
++                bounds.x0,
++                bounds.y0,
++                bounds.x1 - bounds.x0,
++                bounds.y1 - bounds.y0,
++            ];
++            if !values.iter().all(|value| value.is_finite()) || values[2] < 0.0 || values[3] < 0.0 {
++                return Err("nonfinite semantic bounds");
++            }
++            let array = js_sys::Array::new();
++            for value in values {
++                array.push(&JsValue::from_f64(value));
++            }
++            put(&descriptor, "bounds", array);
++        }
++        output.push(&descriptor);
++    }
++    if changed.iter().any(|id| !visited.contains(id)) {
++        return Err("orphan update ID");
++    }
++    nodes.retain(|id, _| visited.contains(id));
++    state.nodes = nodes;
++    state.root = Some(root);
++    state.focus = update.focus;
++    state.visible = visible;
++    state.disabled = disabled;
++    state.protected = protected_ids;
++    state.healthy = true;
++    let snapshot = js_sys::Object::new();
++    put(&snapshot, "root", root.0.to_string());
++    put(
++        &snapshot,
++        "focus",
++        if state.visible.contains(&update.focus) {
++            update.focus.0.to_string()
++        } else {
++            root.0.to_string()
++        },
++    );
++    put(&snapshot, "nodes", output);
++    Ok(snapshot.into())
++}
++
++fn relation_text(
++    ids: &[NodeId],
++    nodes: &HashMap<NodeId, Node>,
++    protected: &HashSet<NodeId>,
++) -> Option<String> {
++    let mut result = Vec::new();
++    let mut seen = HashSet::new();
++    let mut stack = ids.iter().rev().copied().collect::<Vec<_>>();
++    while let Some(id) = stack.pop() {
++        if !seen.insert(id) || protected.contains(&id) {
++            continue;
++        }
++        let Some(node) = nodes.get(&id) else {
++            continue;
++        };
++        if let Some(text) = node
++            .label()
++            .or(node.value())
++            .filter(|text| !text.is_empty())
++        {
++            result.push(text.to_string());
++        } else {
++            stack.extend(node.children().iter().rev().copied());
++        }
++    }
++    if result.is_empty() {
++        None
++    } else {
++        Some(result.join(" "))
++    }
++}
+diff --git a/vendor/gpui-pre-web-0.3.9/src/a11y_dom.js b/vendor/gpui-pre-web-0.3.9/src/a11y_dom.js
+new file mode 100644
+--- /dev/null
++++ b/vendor/gpui-pre-web-0.3.9/src/a11y_dom.js
+@@ -0,0 +1,276 @@
++function attribute(element,name,value) {value=String(value);if(element.getAttribute(name)!==value) element.setAttribute(name,value);}
++// Semantic projection only. GPUI owns layout, focus, value, selection and actions.
++// Never interpret application text as HTML and never copy a protected value here.
++export class GpuiImeHost {
++  constructor(document, body, touch) {
++    this.document = document;
++    this.host = document.createElement("div");
++    this.host.setAttribute("data-gpui-ime-host", "");
++    Object.assign(this.host.style, {position:"fixed",top:"0",left:"0",width:"1px",height:"1px",opacity:"0"});
++    this.attributes = new Map();
++    if (touch) this.attributes.set("inputmode", "none");
++    this.secure = false;
++ this.ownerActive = false;
++    this.alive = true;
++    this.readOnly = false;
++    this.spellcheck = false;
++    body.appendChild(this.host);
++    this.replaceOwner();
++    this.focus();
++  }
++  replaceOwner() {
++    if (this.current) {
++      this.current.value = "";
++      this.current.remove();
++    }
++    const input = this.document.createElement(this.secure ? "input" : "textarea");
++ input.setAttribute("aria-hidden","true");
++ input.setAttribute("tabindex","-1");
++ input.disabled = !this.ownerActive;
++    if (this.secure) input.setAttribute("type", "password");
++    Object.assign(input.style, {width:"1px",height:"1px",fontSize:"16px",padding:"0",border:"0"});
++    for (const [name,value] of this.attributes) input.setAttribute(name,value);
++    input.readOnly = this.readOnly;
++    input.spellcheck = this.secure ? false : this.spellcheck;
++    if (this.secure) {
++      input.setAttribute("autocorrect","off");
++      input.setAttribute("autocapitalize","off");
++      input.setAttribute("autocomplete","off");
++    }
++    this.current = input;
++    this.host.appendChild(input);
++  }
++  ownerChanged() { if (this.alive) {this.ownerActive=false;this.replaceOwner();} }
++ setOwnerActive(active) {
++  this.ownerActive=!!active;
++  this.current.disabled=!this.ownerActive;
++  if(!this.ownerActive) {
++   this.current.value="";
++   if(this.isFocused()) this.blur();
++   this.current.setAttribute("aria-hidden","true");
++   this.current.setAttribute("tabindex","-1");
++  }
++ }
++ hasOwner() {return this.alive && this.ownerActive;}
++  setSecure(secure) { if (this.secure !== secure) {this.secure=secure;this.replaceOwner();} }
++  isSecure() { return this.secure; }
++  activeElement() { return this.current; }
++  setSemanticBounds(bounds) {
++    if(!bounds) return;
++    const [x,y,width,height]=bounds;
++    Object.assign(this.host.style,{left:x+"px",top:y+"px",width:width+"px",height:height+"px",pointerEvents:"none"});
++    Object.assign(this.current.style,{width:"100%",height:"100%"});
++  }
++  eventTarget() { return this.host; }
++  containsTarget(target) { return target === this.current || this.current.contains(target); }
++  value() { return this.alive ? this.current.value : ""; }
++  setValue(value) { if (this.alive) this.current.value=value; }
++  selectionStart() { return this.current.selectionStart; }
++  selectionEnd() { return this.current.selectionEnd; }
++  setSelectionRange(start,end) { this.current.setSelectionRange(start,end); }
++  setReadOnly(value) {this.readOnly=value;this.current.readOnly=value;}
++  setSpellcheck(value) {this.spellcheck=value;this.current.spellcheck=this.secure?false:value;}
++  setAttribute(name,value) {
++    this.attributes.set(name,value);
++    if (this.secure && ["autocorrect","autocapitalize","autocomplete"].includes(name)) value="off";
++    this.current.setAttribute(name,value);
++  }
++  removeAttribute(name) {this.attributes.delete(name);this.current.removeAttribute(name);}
++  getAttribute(name) {return this.current.getAttribute(name);}
++  focus() { if (this.alive && this.ownerActive && !this.isFocused()) this.current.focus({preventScroll:true}); }
++  blur() { if (this.alive) this.current.blur(); }
++  isFocused() {return this.document.activeElement === this.current;}
++  remove() {
++    if (!this.alive) return;
++    this.alive=false;
++    this.current.value="";
++    this.host.remove();
++    this.attributes.clear();
++  }
++}
++
++export class GpuiSemanticDom {
++  constructor(document, body, canvas, ime, dispatch) {
++    this.document=document;this.canvas=canvas;this.ime=ime;this.dispatch=dispatch;
++    this.nodes=new Map();this.elements=new Map();this.listeners=[];
++    this.alive=true;this.restoring=false;this.pending=null;this.composing=false;
++    this.root=document.createElement("div");
++    this.root.setAttribute("data-gpui-semantic-root","");
++    Object.assign(this.root.style,{position:"fixed",top:"0",left:"0",width:"0",height:"0",opacity:"0",pointerEvents:"none"});
++    body.appendChild(this.root);
++    this.canvasHidden=canvas.getAttribute("aria-hidden");
++    this.canvasTab=canvas.getAttribute("tabindex");
++    canvas.setAttribute("aria-hidden","true");canvas.setAttribute("tabindex","-1");
++    this.listen("focusin",event=>{
++      if (this.restoring) return;
++      const node=this.eventNode(event);if(node) {
++        this.action(node,"ScrollIntoView");this.action(node,"Focus");
++      }
++    });
++    this.listen("click",event=>{
++      const node=this.eventNode(event);if(node && this.action(node,"Click")) event.preventDefault();
++    });
++    this.listen("contextmenu",event=>{
++      const node=this.eventNode(event);if(node && this.action(node,"ShowContextMenu")) event.preventDefault();
++    });
++    this.listen("input",event=>{
++      const node=this.eventNode(event);if(!node || node.kind!=="range") return;
++      const value=Number(event.target.value);
++      if(Number.isFinite(value)) {
++        if(!this.action(node,"SetValue",value)) this.action(node,value>Number(node.numeric)?"Increment":"Decrement");
++      }
++      event.target.value=String(node.numeric);
++    });
++    this.listen("keydown",event=>{
++      const node=this.eventNode(event);
++      if(!node || event.isComposing || event.keyCode===229 || event.altKey || event.ctrlKey || event.metaKey) return;
++      if(node.kind==="range" || node.kind==="spin") {
++        const command=["ArrowRight","ArrowUp","PageUp"].includes(event.key)?"Increment":["ArrowLeft","ArrowDown","PageDown"].includes(event.key)?"Decrement":null;
++        if(command && this.action(node,command)) event.preventDefault();
++        if(event.key==="Home" && this.action(node,"SetValue",node.min)) event.preventDefault();
++        if(event.key==="End" && this.action(node,"SetValue",node.max)) event.preventDefault();
++      }
++      if(event.key==="ArrowRight" && node.attrs["aria-expanded"]==="false" && this.action(node,"Expand")) event.preventDefault();
++      if(event.key==="ArrowLeft" && node.attrs["aria-expanded"]==="true" && this.action(node,"Collapse")) event.preventDefault();
++    });
++  }
++  listen(name,callback) {this.root.addEventListener(name,callback);this.listeners.push([name,callback]);}
++  cssBounds(bounds) {
++  const [x,y,width,height]=bounds||[0,0,1,1];
++  const rect=this.canvas.getBoundingClientRect?.()||{left:0,top:0,width:0,height:0};
++  const scaleX=rect.width>0 && Number(this.canvas.width)>0?Number(this.canvas.width)/rect.width:1;
++  const scaleY=rect.height>0 && Number(this.canvas.height)>0?Number(this.canvas.height)/rect.height:1;
++  return [Number(rect.left||0)+x/scaleX,Number(rect.top||0)+y/scaleY,width/scaleX,height/scaleY];
++ }
++ id(id) {return "gpui-ax-"+id;}
++  eventNode(event) {
++    if(!this.alive) return null;
++    let element=event.target;
++    while(element && element!==this.root) {
++      const id=element.getAttribute && element.getAttribute("data-gpui-node");
++      if(id && this.elements.get(id)===element) return this.nodes.get(id)||null;
++      element=element.parentNode;
++    }
++    return null;
++  }
++  action(node,action,data=null) {
++    if(!this.alive || this.composing || node.disabled || !node.actions.includes(action) || this.nodes.get(node.id)!==node) return false;
++    if(node.readOnly && ["SetValue","ReplaceSelectedText"].includes(action)) return false;
++    this.dispatch(node.id,action,data);return true;
++  }
++  ownsTarget(target) {return this.alive && this.root.contains(target);}
++  nativeKeyboard(event) {
++    const node=this.eventNode(event);if(!node || node.disabled) return false;
++    if(event.altKey || event.ctrlKey || event.metaKey || event.isComposing || event.keyCode===229) return false;
++    return ((node.kind==="button" || node.kind==="checkbox" || node.kind==="radio") && ["Enter"," "].includes(event.key)) ||
++      (node.kind==="range" && ["ArrowLeft","ArrowRight","ArrowUp","ArrowDown","Home","End","PageUp","PageDown"].includes(event.key));
++  }
++  update(snapshot,composing) {
++    if(!this.alive) return;
++    this.pending=snapshot;this.composing=composing;
++    // Actions always consult the newest authoritative snapshot, even while DOM
++    // mutations are deferred to avoid perturbing an active input composition.
++    this.nodes=new Map(snapshot.nodes.map(node=>[node.id,node]));
++    // GPUI commits this after the current native input owner/security mode is
++    // installed, never from the middle of painting/accessibility collection.
++  }
++  frameReady() {if(!this.composing && this.pending) this.reconcile();}
++  compositionStarted() {this.composing=true;}
++  ownerChanged() {this.composing=false;}
++  compositionEnded() {this.composing=false;if(this.pending) this.reconcile();}
++  failClosed() {this.nodes.clear();this.root.setAttribute("aria-hidden","true");}
++  reconcile() {
++    const snapshot=this.pending;if(!snapshot) return;
++    this.root.removeAttribute("aria-hidden");
++    for(const [id,element] of this.elements) if(!this.nodes.has(id)) {element.remove();this.elements.delete(id);}
++    for(const node of snapshot.nodes) {
++      let element=this.elements.get(node.id);
++      const tag=node.kind==="button"?"button":["range","checkbox","radio","protected"].includes(node.kind)?"input":"div";
++      if(element && element.tagName.toLowerCase()!==tag) {element.remove();this.elements.delete(node.id);element=null;}
++      if(!element) {element=this.document.createElement(tag);element.setAttribute("id",this.id(node.id));element.setAttribute("data-gpui-node",node.id);this.elements.set(node.id,element);}
++      if(tag==="button") element.setAttribute("type","button");
++      if(tag==="input") element.setAttribute("type",node.kind==="protected"?"password":node.kind);
++      if(node.kind==="protected") {element.readOnly=true;element.value="";}
++      // Remove stale attributes as names/states/relations change. Application
++      // strings are exclusively textContent and attribute values, never HTML.
++      const retained=new Set(["id","data-gpui-node","type","tabindex","aria-hidden","aria-owns"]);
++      for(const attr of Array.from(element.attributes)) if(!retained.has(attr.name)&&!(attr.name in node.attrs)) element.removeAttribute(attr.name);
++      for(const [name,value] of Object.entries(node.attrs)) {if(node.kind==="protected" && name.startsWith("aria-value")) {element.removeAttribute(name);continue;}attribute(element,name,value);}
++      attribute(element,"tabindex",node.focusable && !node.disabled?"0":"-1");
++      if(tag==="button" || tag==="input") element.disabled=node.disabled;
++      element.onclick=event=>{const current=this.eventNode(event);if(current&&this.action(current,"Click")){event.preventDefault();event.stopPropagation();}};
++      if(node.kind==="range") {
++        element.min=String(node.min);element.max=String(node.max);element.step=String(node.step);element.value=String(node.numeric);
++      }
++      if(node.kind==="checkbox" || node.kind==="radio") {element.checked=node.checked==="true";element.indeterminate=node.checked==="mixed";}
++      // Only a dedicated text span owns projected text. Never replace an entire
++      // retained subtree's textContent while its descendants have focus.
++      if(tag!=="input") {
++        if(!element._gpuiText) {element._gpuiText=this.document.createElement("span");element.appendChild(element._gpuiText);}
++        if(element._gpuiText.textContent!==(node.text||"")) element._gpuiText.textContent=node.text||"";
++      }
++      const [x,y,width,height]=this.cssBounds(node.bounds);
++      Object.assign(element.style,{position:"fixed",left:x+"px",top:y+"px",width:width+"px",height:height+"px",pointerEvents:"none"});
++    }
++    const byId=this.elements;
++    for(const node of snapshot.nodes) {
++      const element=byId.get(node.id);
++      // AccessKit children on native input leaves are text-run internals; native
++      // controls/IME expose their own values/selection instead of duplicate runs.
++      if(["range","checkbox","radio","text","protected"].includes(node.kind)) continue;
++      const wanted=node.children.filter(id=>byId.has(id));
++      let cursor=element._gpuiText.nextSibling;
++      for(const id of wanted) {
++        const child=byId.get(id);
++        if(child!==cursor) element.insertBefore(child,cursor);else cursor=cursor.nextSibling;
++      }
++    }
++    const root=byId.get(snapshot.root);
++    if(root && root.parentNode!==this.root) this.root.appendChild(root);
++    const focused=this.nodes.get(snapshot.focus);
++    // The input-handler metadata normally selects this before focus/sync.
++    // Fail safe for a custom producer advertising a protected AccessKit role.
++    if(focused?.kind==="protected" && !this.ime.isSecure()) this.ime.setSecure(true);
++    const mirror=this.ime.activeElement();
++    mirror.setAttribute("id","gpui-ime-owner");
++    const textFocused=this.ime.hasOwner() && focused && ["text","protected"].includes(focused.kind);
++    for(const node of snapshot.nodes) {
++      const element=byId.get(node.id);
++      if(["text","protected"].includes(node.kind)) attribute(element,"aria-hidden",textFocused && node.id===focused.id?"true":"false");
++      const children=node.children.map(id=>textFocused&&id===focused.id?"gpui-ime-owner":this.id(id));
++      if(children.length) attribute(element,"aria-owns",children.join(" "));else element.removeAttribute("aria-owns");
++    }
++    if(textFocused) {
++      mirror.removeAttribute("aria-hidden");
++      this.ime.setSemanticBounds(this.cssBounds(focused.bounds));
++      if(focused.kind==="protected") {
++        mirror.removeAttribute("role");for(const name of ["aria-valuetext","aria-valuenow","value"]) mirror.removeAttribute(name);
++      } else if(focused.attrs.role) attribute(mirror,"role",focused.attrs.role);
++      for(const name of ["aria-label","aria-description","aria-required","aria-invalid","aria-readonly","aria-multiline","aria-expanded","aria-controls","aria-activedescendant"]) {
++        if(focused.attrs[name]!==undefined) attribute(mirror,name,focused.attrs[name]);else mirror.removeAttribute(name);
++      }
++    }
++    this.restoring=true;
++    try {
++      if(textFocused) this.ime.focus();
++      else {
++        const target=byId.get(snapshot.focus)||root;
++        if(target && this.document.activeElement!==target) target.focus({preventScroll:true});
++        mirror.setAttribute("aria-hidden","true");
++      }
++    } finally {this.restoring=false;}
++  }
++  close() {
++    if(!this.alive) return;
++    this.alive=false;
++    for(const [name,callback] of this.listeners) this.root.removeEventListener(name,callback);
++    this.listeners=[];this.nodes.clear();this.elements.clear();this.pending=null;this.dispatch=null;
++    this.root.remove();
++    for(const [name,value] of [["aria-hidden",this.canvasHidden],["tabindex",this.canvasTab]]) {
++      if(value===null) this.canvas.removeAttribute(name);else this.canvas.setAttribute(name,value);
++    }
++  }
++}
++
++export function createImeHost(document,body,touch) {return new GpuiImeHost(document,body,touch);}
++export function createSemanticDom(document,body,canvas,ime,dispatch) {return new GpuiSemanticDom(document,body,canvas,ime,dispatch);}
+diff --git a/vendor/gpui-pre-web-0.3.9/src/a11y_dom.rs b/vendor/gpui-pre-web-0.3.9/src/a11y_dom.rs
+new file mode 100644
+--- /dev/null
++++ b/vendor/gpui-pre-web-0.3.9/src/a11y_dom.rs
+@@ -0,0 +1,90 @@
++//! Browser-owned native semantic controls and the one GPUI-owned IME host.
++use wasm_bindgen::prelude::*;
++
++#[wasm_bindgen(module = "/src/a11y_dom.js")]
++extern "C" {
++    #[wasm_bindgen(js_name = GpuiImeHost)]
++    #[derive(Clone)]
++    pub(crate) type ImeHost;
++    #[wasm_bindgen(catch, js_name=createImeHost)]
++    pub(crate) fn create_ime_host(
++        document: &web_sys::Document,
++        body: &web_sys::HtmlElement,
++        touch: bool,
++    ) -> Result<ImeHost, JsValue>;
++    #[wasm_bindgen(method, js_name = setOwnerActive)]
++    pub(crate) fn set_owner_active(this: &ImeHost, active: bool);
++    #[wasm_bindgen(method, js_name = ownerChanged)]
++    pub(crate) fn owner_changed(this: &ImeHost);
++    #[wasm_bindgen(method, js_name=setSecure)]
++    pub(crate) fn set_secure(this: &ImeHost, secure: bool);
++    #[wasm_bindgen(method, js_name=isSecure)]
++    pub(crate) fn is_secure(this: &ImeHost) -> bool;
++    #[wasm_bindgen(method, js_name=activeElement)]
++    pub(crate) fn active_element(this: &ImeHost) -> web_sys::HtmlElement;
++    #[wasm_bindgen(method, js_name=eventTarget)]
++    pub(crate) fn event_target(this: &ImeHost) -> web_sys::EventTarget;
++    #[wasm_bindgen(method, js_name=containsTarget)]
++    pub(crate) fn contains_target(this: &ImeHost, target: &web_sys::EventTarget) -> bool;
++    #[wasm_bindgen(method)]
++    pub(crate) fn value(this: &ImeHost) -> String;
++    #[wasm_bindgen(method, js_name=setValue)]
++    pub(crate) fn set_value(this: &ImeHost, value: &str);
++    #[wasm_bindgen(method, catch, js_name=selectionStart)]
++    pub(crate) fn selection_start(this: &ImeHost) -> Result<Option<u32>, JsValue>;
++    #[wasm_bindgen(method, catch, js_name=selectionEnd)]
++    pub(crate) fn selection_end(this: &ImeHost) -> Result<Option<u32>, JsValue>;
++    #[wasm_bindgen(method, catch, js_name=setSelectionRange)]
++    pub(crate) fn set_selection_range(this: &ImeHost, start: u32, end: u32) -> Result<(), JsValue>;
++    #[wasm_bindgen(method, js_name=setReadOnly)]
++    pub(crate) fn set_read_only(this: &ImeHost, value: bool);
++    #[wasm_bindgen(method, js_name=setSpellcheck)]
++    pub(crate) fn set_spellcheck(this: &ImeHost, value: bool);
++    #[wasm_bindgen(method, catch, js_name=setAttribute)]
++    pub(crate) fn set_attribute(this: &ImeHost, name: &str, value: &str) -> Result<(), JsValue>;
++    #[wasm_bindgen(method, catch, js_name=removeAttribute)]
++    pub(crate) fn remove_attribute(this: &ImeHost, name: &str) -> Result<(), JsValue>;
++    #[wasm_bindgen(method, js_name=getAttribute)]
++    pub(crate) fn get_attribute(this: &ImeHost, name: &str) -> Option<String>;
++    #[wasm_bindgen(method)]
++    pub(crate) fn focus(this: &ImeHost);
++    #[wasm_bindgen(method, catch)]
++    pub(crate) fn blur(this: &ImeHost) -> Result<(), JsValue>;
++    #[wasm_bindgen(method, js_name=isFocused)]
++    pub(crate) fn is_focused(this: &ImeHost) -> bool;
++    #[wasm_bindgen(method)]
++    pub(crate) fn remove(this: &ImeHost);
++
++    #[wasm_bindgen(js_name = GpuiSemanticDom)]
++    pub(crate) type SemanticDom;
++    #[wasm_bindgen(catch, js_name=createSemanticDom)]
++    pub(crate) fn create_semantic_dom(
++        document: &web_sys::Document,
++        body: &web_sys::HtmlElement,
++        canvas: &web_sys::HtmlCanvasElement,
++        ime: &ImeHost,
++        dispatch: &js_sys::Function,
++    ) -> Result<SemanticDom, JsValue>;
++    #[wasm_bindgen(method, catch)]
++    pub(crate) fn update(
++        this: &SemanticDom,
++        snapshot: &JsValue,
++        composing: bool,
++    ) -> Result<(), JsValue>;
++    #[wasm_bindgen(method, js_name=ownsTarget)]
++    pub(crate) fn owns_target(this: &SemanticDom, target: &web_sys::EventTarget) -> bool;
++    #[wasm_bindgen(method, js_name=nativeKeyboard)]
++    pub(crate) fn native_keyboard(this: &SemanticDom, event: &web_sys::KeyboardEvent) -> bool;
++    #[wasm_bindgen(method, catch, js_name=frameReady)]
++    pub(crate) fn frame_ready(this: &SemanticDom) -> Result<(), JsValue>;
++    #[wasm_bindgen(method, js_name=compositionStarted)]
++    pub(crate) fn composition_started(this: &SemanticDom);
++    #[wasm_bindgen(method, js_name=ownerChanged)]
++    pub(crate) fn semantic_owner_changed(this: &SemanticDom);
++    #[wasm_bindgen(method, catch, js_name=compositionEnded)]
++    pub(crate) fn composition_ended(this: &SemanticDom) -> Result<(), JsValue>;
++    #[wasm_bindgen(method, js_name=failClosed)]
++    pub(crate) fn fail_closed(this: &SemanticDom);
++    #[wasm_bindgen(method)]
++    pub(crate) fn close(this: &SemanticDom);
++}
+diff --git a/vendor/gpui-pre-web-0.3.9/src/events.rs b/vendor/gpui-pre-web-0.3.9/src/events.rs
+--- a/vendor/gpui-pre-web-0.3.9/src/events.rs
++++ b/vendor/gpui-pre-web-0.3.9/src/events.rs
+@@ -206,15 +206,33 @@
+     fn listen_input(
+         self: &Rc<Self>,
+         event_name: &'static str,
+-        handler: impl FnMut(JsValue) + 'static,
++        mut handler: impl FnMut(JsValue) + 'static,
+     ) -> EventListenerHandle {
+-        EventListenerHandle::add(self.ime_mirror.event_target(), event_name, handler)
++        let window = Rc::downgrade(self);
++        EventListenerHandle::add(self.ime_mirror.event_target(), event_name, move |event| {
++            let Some(window) = window.upgrade() else {
++                return;
++            };
++            if !event
++                .unchecked_ref::<web_sys::Event>()
++                .target()
++                .is_some_and(|target| window.ime_mirror.contains_target(&target))
++            {
++                return;
++            }
++            handler(event);
++        })
+     }
+ 
+     fn is_keyboard_event_target(&self, event: &web_sys::KeyboardEvent) -> bool {
+         event.target().is_some_and(|target| {
+             js_sys::Object::is(target.as_ref(), self.canvas.as_ref())
+-                || js_sys::Object::is(target.as_ref(), self.ime_mirror.event_target())
++                || self.ime_mirror.contains_target(&target)
++                || self
++                    .a11y
++                    .borrow()
++                    .as_ref()
++                    .is_some_and(|adapter| adapter.owns_target(&target))
+         })
+     }
+ 
+@@ -486,7 +504,7 @@
+     }
+ 
+     /// See [`ImeMirror::schedule_sync`].
+-    fn schedule_ime_mirror_sync(self: &Rc<Self>) {
++    pub(crate) fn schedule_ime_mirror_sync(self: &Rc<Self>) {
+         ImeMirror::schedule_sync(self);
+     }
+ 
+@@ -738,9 +756,28 @@
+                     return;
+                 }
+ 
++                if this.a11y.borrow().as_ref().is_some_and(|adapter| {
++                    adapter.owns_target(
++                        event
++                            .target()
++                            .as_ref()
++                            .unwrap_or(this.ime_mirror.event_target()),
++                    ) && (event.default_prevented() || adapter.native_keyboard(&event))
++                }) {
++                    return;
++                }
++
+                 let key = dom_key_to_gpui_key(&event);
+ 
+                 if is_modifier_only_key(&key) {
++                    return;
++                }
++
++                if crate::ime_mirror::import_current_selection(&this)
++                    == crate::ime_mirror::SelectionImport::Rejected
++                {
++                    event.prevent_default();
++                    this.schedule_ime_mirror_sync();
+                     return;
+                 }
+ 
+@@ -775,7 +812,7 @@
+                 }));
+ 
+                 if let Some(result) = result {
+-                    if !result.propagate {
++                    if !result.propagate || result.default_prevented {
+                         event.prevent_default();
+                         this.schedule_ime_mirror_sync();
+                         return;
+@@ -825,6 +862,17 @@
+                     event.is_composing(),
+                     event.key_code(),
+                 ) {
++                    return;
++                }
++
++                if this.a11y.borrow().as_ref().is_some_and(|adapter| {
++                    adapter.owns_target(
++                        event
++                            .target()
++                            .as_ref()
++                            .unwrap_or(this.ime_mirror.event_target()),
++                    ) && (event.default_prevented() || adapter.native_keyboard(&event))
++                }) {
+                     return;
+                 }
+ 
+@@ -889,76 +937,41 @@
+                 return;
+             }
+ 
+-            let old_units: Vec<u16> = old_value.encode_utf16().collect();
+-            let new_units: Vec<u16> = new_value.encode_utf16().collect();
+-
+-            // A prefix/suffix diff is ambiguous when the inserted text
+-            // shares characters with what follows it (inserting "pactor "
+-            // before "pact" also reads as inserting "or pact" four units
+-            // later). The edit's true position is not ambiguous: the browser
+-            // leaves the caret at the end of an IME edit, so the suffix is
+-            // anchored as "everything after the post-edit caret", and the
+-            // prefix is capped to fit. Greedy matching is only a fallback
+-            // for edits where the anchored suffix doesn't verify.
+-            let post_edit_caret = this
+-                .ime_mirror
+-                .selection_start()
+-                .map(|caret| caret as usize);
+-            let anchored_suffix_length = post_edit_caret
+-                .map(|caret| new_units.len().saturating_sub(caret))
+-                .filter(|&suffix_length| {
+-                    suffix_length <= old_units.len()
+-                        && old_units[old_units.len() - suffix_length..]
+-                            == new_units[new_units.len() - suffix_length..]
+-                });
+-            let suffix_length = anchored_suffix_length.unwrap_or_else(|| {
+-                old_units
+-                    .iter()
+-                    .rev()
+-                    .zip(new_units.iter().rev())
+-                    .take_while(|(old_unit, new_unit)| old_unit == new_unit)
+-                    .count()
+-            });
+-            let prefix_length = old_units
+-                .iter()
+-                .zip(&new_units)
+-                .take_while(|(old_unit, new_unit)| old_unit == new_unit)
+-                .count()
+-                .min(old_units.len() - suffix_length)
+-                .min(new_units.len() - suffix_length);
+-
+-            let inserted_text = String::from_utf16_lossy(
+-                &new_units[prefix_length..new_units.len() - suffix_length],
+-            );
+-            let replaced_old_end = old_units.len() - suffix_length;
+-
+-            // The edit's shape relative to the element's pre-edit selection.
+-            // The element is private to the IME and these syncs, so the
+-            // stored selection is exact.
+-            let (element_selection_start, element_selection_end) =
+-                this.ime_mirror.stored_selection();
+-            let removed_before_selection =
+-                (element_selection_start as usize).saturating_sub(prefix_length);
+-            let removed_after_selection =
+-                replaced_old_end.saturating_sub(element_selection_end as usize);
+-
++            let Some(edit) = crate::ime_edit::plan_ime_edit(
++                &old_value,
++                &new_value,
++                this.ime_mirror
++                    .selection_start()
++                    .map(|caret| caret as usize),
++                this.ime_mirror.window_start(),
++            ) else {
++                this.ime_mirror.reject_selection_import();
++                this.schedule_ime_mirror_sync();
++                return;
++            };
++            // A keybinding, remote edit or selection event may have changed
++            // the application since this DOM window was captured. Verify text
++            // at its absolute alignment before importing; a newer selection
++            // must never reinterpret the old window's deletion range.
+             let applied = this.with_input_handler(|handler| {
+-                let Some(selection) = handler.selected_text_range(false) else {
++                if !crate::ime_mirror::text_window_matches(
++                    handler,
++                    this.ime_mirror.window_start(),
++                    &old_value,
++                ) {
+                     return false;
+-                };
+-                let range = selection
+-                    .range
+-                    .start
+-                    .saturating_sub(removed_before_selection)
+-                    ..selection.range.end + removed_after_selection;
+-                handler.replace_text_in_range(Some(range), &inserted_text);
++                }
++                handler.replace_text_in_range(Some(edit.range), &edit.text);
+                 true
+             });
+-            if applied != Some(true) {
+-                return;
+-            }
+-
+-            this.ime_mirror.adopt_element_state();
++            if applied == Some(true) {
++                this.ime_mirror.adopt_element_state();
++            } else {
++                this.ime_mirror.reject_selection_import();
++            }
++            // The application may normalize or reject an edit. Reconcile its
++            // accepted value after this browser gesture, including empty text.
++            this.schedule_ime_mirror_sync();
+         })
+     }
+ 
+@@ -994,47 +1007,8 @@
+                 if this.ime_mirror.value() != this.ime_mirror.stored_text() {
+                     return;
+                 }
+-                let Some(element_start) = this.ime_mirror.selection_start() else {
+-                    return;
+-                };
+-                let element_end = this
+-                    .ime_mirror
+-                    .element_selection_end()
+-                    .unwrap_or(element_start);
+-                let (stored_start, stored_end) = this.ime_mirror.stored_selection();
+-                if (element_start, element_end) == (stored_start, stored_end) {
+-                    return;
+-                }
+-                let applied = this.with_input_handler(|handler| {
+-                    let Some(selection) = handler.selected_text_range(false) else {
+-                        return false;
+-                    };
+-                    // The app range corresponding to the stored element
+-                    // selection is exactly `selection`; a single consistent
+-                    // alignment between the two maps the moved endpoints.
+-                    // Disagreeing alignments mean the app selection changed
+-                    // underneath and the pending resync owns the element.
+-                    let alignment = selection.range.start.checked_sub(stored_start as usize);
+-                    if alignment.is_none()
+-                        || alignment != selection.range.end.checked_sub(stored_end as usize)
+-                    {
+-                        return false;
+-                    }
+-                    let alignment = alignment.unwrap();
+-                    handler.set_selected_text_range(
+-                        alignment + element_start as usize..alignment + element_end as usize,
+-                    );
+-                    true
+-                });
+-                if applied == Some(true) {
+-                    this.ime_mirror.adopt_element_state();
+-                } else {
+-                    // No import is coming for this move; without a forced
+-                    // sync the mirror would keep deferring to it and show
+-                    // the IME a selection the app never adopted.
+-                    this.ime_mirror.reject_selection_import();
+-                    this.schedule_ime_mirror_sync();
+-                }
++                crate::ime_mirror::import_current_selection(&this);
++                this.schedule_ime_mirror_sync();
+             },
+         ))
+     }
+@@ -1055,6 +1029,14 @@
+             // During composition the composition{update,end} handlers own
+             // the text.
+             if this.is_composing.get() || event.is_composing() {
++                return;
++            }
++
++            if crate::ime_mirror::import_current_selection(&this)
++                != crate::ime_mirror::SelectionImport::Current
++            {
++                event.prevent_default();
++                this.schedule_ime_mirror_sync();
+                 return;
+             }
+ 
+@@ -1166,6 +1148,9 @@
+         let this = Rc::clone(self);
+         self.listen_input("compositionstart", move |_event: JsValue| {
+             this.is_composing.set(true);
++            if let Some(adapter) = this.a11y.borrow().as_ref() {
++                adapter.composition_started();
++            }
+         })
+     }
+ 
+@@ -1175,6 +1160,9 @@
+             let event: web_sys::CompositionEvent = event.unchecked_into();
+             let data = event.data().unwrap_or_default();
+             this.is_composing.set(true);
++            if let Some(adapter) = this.a11y.borrow().as_ref() {
++                adapter.composition_started();
++            }
+             this.with_input_handler(|handler| {
+                 handler.replace_and_mark_text_in_range(None, &data, None);
+             });
+@@ -1205,6 +1193,9 @@
+             // app-side divergence afterwards.
+             this.ime_mirror.adopt_element_state();
+             this.schedule_ime_mirror_sync();
++            if let Some(adapter) = this.a11y.borrow().as_ref() {
++                adapter.composition_ended();
++            }
+         })
+     }
+ 
+diff --git a/vendor/gpui-pre-web-0.3.9/src/gpui_web.rs b/vendor/gpui-pre-web-0.3.9/src/gpui_web.rs
+--- a/vendor/gpui-pre-web-0.3.9/src/gpui_web.rs
++++ b/vendor/gpui-pre-web-0.3.9/src/gpui_web.rs
+@@ -7,6 +7,10 @@
+ 
+ pub use canvas_fallback::CanvasFontFallback;
+ 
++#[cfg(target_family = "wasm")]
++mod a11y;
++#[cfg(target_family = "wasm")]
++mod a11y_dom;
+ #[cfg(target_family = "wasm")]
+ mod canvas_text;
+ #[cfg(target_family = "wasm")]
+@@ -20,6 +24,7 @@
+ #[cfg(target_family = "wasm")]
+ mod http_client;
+ #[cfg(target_family = "wasm")]
++mod ime_edit;
+ mod ime_mirror;
+ #[cfg(target_family = "wasm")]
+ mod keyboard;
+diff --git a/vendor/gpui-pre-web-0.3.9/src/ime_edit.rs b/vendor/gpui-pre-web-0.3.9/src/ime_edit.rs
+new file mode 100644
+--- /dev/null
++++ b/vendor/gpui-pre-web-0.3.9/src/ime_edit.rs
+@@ -0,0 +1,275 @@
++//! Pure edit planning for the native IME owner's verified UTF-16 text window.
++use std::ops::Range;
++
++#[derive(Debug, PartialEq, Eq)]
++pub(crate) struct ImeEdit {
++    pub(crate) range: Range<usize>,
++    pub(crate) text: String,
++}
++
++/// A DOM edit is relative to the stored text window, never a newer app selection.
++/// The caller must verify that the application still contains `old` at `start`.
++pub(crate) fn plan_ime_edit(
++    old: &str,
++    new: &str,
++    caret: Option<usize>,
++    start: usize,
++) -> Option<ImeEdit> {
++    if old == new {
++        return None;
++    }
++    let old: Vec<u16> = old.encode_utf16().collect();
++    let new: Vec<u16> = new.encode_utf16().collect();
++    let anchored_suffix = caret
++        .filter(|caret| *caret <= new.len())
++        .map(|caret| new.len() - caret)
++        .filter(|suffix| {
++            *suffix <= old.len() && old[old.len() - suffix..] == new[new.len() - suffix..]
++        });
++    let mut suffix = anchored_suffix.unwrap_or_else(|| {
++        old.iter()
++            .rev()
++            .zip(new.iter().rev())
++            .take_while(|(a, b)| a == b)
++            .count()
++    });
++    // Never split a surrogate pair at either end of the replacement.
++    while suffix > 0
++        && (splits_pair(&old, old.len() - suffix) || splits_pair(&new, new.len() - suffix))
++    {
++        suffix -= 1;
++    }
++    let mut prefix = old
++        .iter()
++        .zip(&new)
++        .take_while(|(a, b)| a == b)
++        .count()
++        .min(old.len() - suffix)
++        .min(new.len() - suffix);
++    while prefix > 0 && (splits_pair(&old, prefix) || splits_pair(&new, prefix)) {
++        prefix -= 1;
++    }
++    Some(ImeEdit {
++        range: start.checked_add(prefix)?..start.checked_add(old.len() - suffix)?,
++        text: String::from_utf16(&new[prefix..new.len() - suffix]).ok()?,
++    })
++}
++fn splits_pair(units: &[u16], index: usize) -> bool {
++    index > 0
++        && index < units.len()
++        && (0xD800..=0xDBFF).contains(&units[index - 1])
++        && (0xDC00..=0xDFFF).contains(&units[index])
++}
++
++#[cfg(test)]
++mod tests {
++    use super::*;
++    #[test]
++    fn full_selection_deletion_ignores_new_application_caret() {
++        // App caret may already have moved to zero; the stored window is fixed.
++        let edit = plan_ime_edit("te", "", Some(0), 0).unwrap();
++        assert_eq!(
++            edit,
++            ImeEdit {
++                range: 0..2,
++                text: String::new()
++            }
++        );
++    }
++    #[test]
++    fn empty_replacement_deletes_entire_window() {
++        assert_eq!(
++            plan_ime_edit("tre", "", Some(0), 40),
++            Some(ImeEdit {
++                range: 40..43,
++                text: String::new()
++            })
++        );
++    }
++    #[test]
++    fn ordinary_partial_deletion_preserves_absolute_alignment() {
++        assert_eq!(
++            plan_ime_edit("tree", "tre", Some(3), 100),
++            Some(ImeEdit {
++                range: 103..104,
++                text: String::new()
++            })
++        );
++    }
++    #[test]
++    fn repeated_text_uses_post_edit_caret_to_anchor_insertion() {
++        assert_eq!(
++            plan_ime_edit("pact", "pactor pact", Some(7), 0),
++            Some(ImeEdit {
++                range: 0..0,
++                text: "pactor ".into()
++            })
++        );
++    }
++    #[test]
++    fn supplementary_scalar_deletion_uses_utf16_offsets() {
++        assert_eq!(
++            plan_ime_edit("a😀b", "ab", Some(1), 100),
++            Some(ImeEdit {
++                range: 101..103,
++                text: String::new()
++            })
++        );
++    }
++    #[test]
++    fn supplementary_scalar_replacement_does_not_split_shared_surrogates() {
++        assert_eq!(
++            plan_ime_edit("😀", "😁", Some(2), 0),
++            Some(ImeEdit {
++                range: 0..2,
++                text: "😁".into()
++            })
++        );
++    }
++    #[test]
++    fn identical_text_needs_no_edit() {
++        assert_eq!(plan_ime_edit("", "", Some(0), 0), None);
++    }
++    #[test]
++    fn offset_overflow_is_rejected() {
++        assert_eq!(plan_ime_edit("a", "", Some(0), usize::MAX), None);
++    }
++}
++
++#[derive(Debug, PartialEq, Eq)]
++pub(crate) enum SelectionPlan {
++    /// An unchanged DOM selection must not overwrite a newer GPUI selection.
++    KeepApplication,
++    Import(Range<usize>),
++    Reject,
++}
++
++/// Resolve native selection movement against the same absolute text baseline.
++/// Callers verify baseline text first; independently changed selections conflict.
++pub(crate) fn plan_ime_selection(
++    text: &str,
++    start: usize,
++    stored: (u32, u32),
++    live: (u32, u32),
++    application: Range<usize>,
++) -> SelectionPlan {
++    let units: Vec<u16> = text.encode_utf16().collect();
++    let map = |(left, right): (u32, u32)| {
++        let (left, right) = (left as usize, right as usize);
++        if left > right
++            || right > units.len()
++            || splits_pair(&units, left)
++            || splits_pair(&units, right)
++        {
++            return None;
++        }
++        Some(start.checked_add(left)?..start.checked_add(right)?)
++    };
++    let (Some(baseline), Some(native)) = (map(stored), map(live)) else {
++        return SelectionPlan::Reject;
++    };
++    if live == stored && application != baseline {
++        return SelectionPlan::KeepApplication;
++    }
++    if application == baseline || application == native {
++        SelectionPlan::Import(native)
++    } else {
++        SelectionPlan::Reject
++    }
++}
++
++#[cfg(test)]
++mod selection_tests {
++    use super::*;
++    #[test]
++    fn native_select_all_before_next_key_imports_full_absolute_range() {
++        assert_eq!(
++            plan_ime_selection("tree", 40, (4, 4), (0, 4), 44..44),
++            SelectionPlan::Import(40..44)
++        );
++    }
++    #[test]
++    fn gpui_select_all_before_mirror_sync_is_preserved() {
++        assert_eq!(
++            plan_ime_selection("tree", 40, (4, 4), (4, 4), 40..44),
++            SelectionPlan::KeepApplication
++        );
++    }
++    #[test]
++    fn already_imported_native_selection_is_idempotent() {
++        assert_eq!(
++            plan_ime_selection("tree", 40, (4, 4), (0, 4), 40..44),
++            SelectionPlan::Import(40..44)
++        );
++    }
++    #[test]
++    fn conflicting_model_and_native_selection_is_rejected() {
++        assert_eq!(
++            plan_ime_selection("tree", 40, (4, 4), (0, 4), 41..42),
++            SelectionPlan::Reject
++        );
++    }
++    #[test]
++    fn native_partial_selection_is_independent_of_model_caret_delta() {
++        assert_eq!(
++            plan_ime_selection("tree", 100, (4, 4), (1, 3), 104..104),
++            SelectionPlan::Import(101..103)
++        );
++    }
++    #[test]
++    fn supplementary_scalar_selection_maps_utf16_and_rejects_split_pairs() {
++        assert_eq!(
++            plan_ime_selection("a😀b", 10, (4, 4), (1, 3), 14..14),
++            SelectionPlan::Import(11..13)
++        );
++        assert_eq!(
++            plan_ime_selection("a😀b", 10, (4, 4), (2, 3), 14..14),
++            SelectionPlan::Reject
++        );
++    }
++    #[test]
++    fn invalid_native_ranges_and_offset_overflow_are_rejected() {
++        for live in [(3, 1), (0, 5)] {
++            assert_eq!(
++                plan_ime_selection("tree", 0, (4, 4), live, 4..4),
++                SelectionPlan::Reject
++            );
++        }
++        assert_eq!(
++            plan_ime_selection("tree", usize::MAX, (4, 4), (0, 4), 0..0),
++            SelectionPlan::Reject
++        );
++    }
++    #[test]
++    fn empty_native_and_application_selection_is_stable() {
++        assert_eq!(
++            plan_ime_selection("", 0, (0, 0), (0, 0), 0..0),
++            SelectionPlan::Import(0..0)
++        );
++    }
++}
++
++#[cfg(test)]
++mod replacement_tests {
++    use super::*;
++    #[test]
++    fn settled_native_replacement_removes_old_window() {
++        assert_eq!(
++            plan_ime_edit("tree", "button", Some(6), 0),
++            Some(ImeEdit {
++                range: 0..4,
++                text: "button".into()
++            })
++        );
++    }
++    #[test]
++    fn repeated_native_replacement_does_not_append_to_existing_window() {
++        assert_eq!(
++            plan_ime_edit("treebutton", "button", Some(6), 0),
++            Some(ImeEdit {
++                range: 0..10,
++                text: "button".into()
++            })
++        );
++    }
++}
+diff --git a/vendor/gpui-pre-web-0.3.9/src/ime_mirror.rs b/vendor/gpui-pre-web-0.3.9/src/ime_mirror.rs
+--- a/vendor/gpui-pre-web-0.3.9/src/ime_mirror.rs
++++ b/vendor/gpui-pre-web-0.3.9/src/ime_mirror.rs
+@@ -54,7 +54,8 @@
+ /// module; other code interacts through read accessors, focus and
+ /// virtual-keyboard control, and [`ImeMirror::schedule_sync`].
+ pub(crate) struct ImeMirror {
+-    element: web_sys::HtmlTextAreaElement,
++    pub(crate) element: crate::a11y_dom::ImeHost,
++    event_target: web_sys::EventTarget,
+     /// The mirror text most recently synced to (or observed in) the hidden
+     /// element. `input` events diff the element's new value against this to
+     /// recover what edit the IME performed.
+@@ -89,41 +90,12 @@
+         body: &web_sys::HtmlElement,
+         touch_input: bool,
+     ) -> anyhow::Result<Self> {
+-        // A textarea rather than an input: single-line inputs silently strip
+-        // newlines from assigned values, which would make the mirror text
+-        // disagree with what was written into it.
+-        let element: web_sys::HtmlTextAreaElement = document
+-            .create_element("textarea")
+-            .map_err(|e| anyhow::anyhow!("Failed to create textarea element: {e:?}"))?
+-            .dyn_into()
+-            .map_err(|e| anyhow::anyhow!("Created element is not a textarea: {e:?}"))?;
+-        let style = element.style();
+-        style.set_property("position", "fixed").ok();
+-        style.set_property("top", "0").ok();
+-        style.set_property("left", "0").ok();
+-        style.set_property("width", "1px").ok();
+-        style.set_property("height", "1px").ok();
+-        style.set_property("opacity", "0").ok();
+-        // Android Chrome zooms the visual viewport onto a focused text input
+-        // whose font is smaller than 16px; with page zoom disabled the user
+-        // can never zoom back out, so keep the hidden IME input at 16px.
+-        style.set_property("font-size", "16px").ok();
+-        body.append_child(&element)
+-            .map_err(|e| anyhow::anyhow!("Failed to append input to body: {e:?}"))?;
+-        Self::focus_element(&element);
+-        // The element must stay focused to receive hardware-key and IME
+-        // events, but on touch-first devices a focused *editable* element
+-        // invites the browser to summon the virtual keyboard on the next
+-        // user gesture — including a scroll. Suppress the virtual keyboard
+-        // until an editable tap, without disabling hardware IME composition.
+-        if touch_input {
+-            element
+-                .set_attribute("inputmode", "none")
+-                .map_err(|error| anyhow::anyhow!("Failed to configure input mode: {error:?}"))?;
+-        }
+-
++        let element = crate::a11y_dom::create_ime_host(document, body, touch_input)
++            .map_err(|error| anyhow::anyhow!("Failed to create IME host: {error:?}"))?;
++        let event_target = element.event_target();
+         let this = Self {
+             element,
++            event_target,
+             text: RefCell::new(String::new()),
+             selection: Cell::new((0, 0)),
+             window_hint: Cell::new(0),
+@@ -142,7 +114,7 @@
+     /// changes (GPUI diffs before forwarding): mutating the focused element
+     /// can restart the IME's input connection.
+     pub(crate) fn apply_configuration(&self, configuration: &TextInputConfiguration) {
+-        let element: &web_sys::Element = self.element.as_ref();
++        let element = &self.element;
+         self.element.set_spellcheck(configuration.suggestions);
+         let on_off = |enabled: bool| if enabled { "on" } else { "off" };
+         element
+@@ -179,29 +151,19 @@
+     }
+ 
+     pub(crate) fn event_target(&self) -> &web_sys::EventTarget {
+-        self.element.as_ref()
++        &self.event_target
+     }
+ 
+     pub(crate) fn focus(&self) {
+         Self::focus_element(&self.element);
+     }
+ 
+-    fn focus_element(element: &web_sys::HtmlTextAreaElement) {
+-        // The hidden mirror is not a scroll target: revealing its caret can
+-        // pan Android Chrome's visual viewport when the keyboard opens.
+-        let options = web_sys::FocusOptions::new();
+-        options.set_prevent_scroll(true);
+-        if let Err(error) = element.focus_with_options(&options) {
+-            log::warn!("Failed to focus IME mirror: {error:?}");
+-        }
++    fn focus_element(element: &crate::a11y_dom::ImeHost) {
++        element.focus();
+     }
+ 
+     pub(crate) fn is_focused(&self) -> bool {
+-        let element: &web_sys::Element = self.element.as_ref();
+-        web_sys::window()
+-            .and_then(|window| window.document())
+-            .and_then(|document| document.active_element())
+-            .is_some_and(|active| &active == element)
++        self.element.is_focused()
+     }
+ 
+     pub(crate) fn blur(&self) {
+@@ -227,8 +189,11 @@
+ 
+     pub(crate) fn set_accessible_label(&self, label: Option<&str>) {
+         let result = match label {
+-            Some(label) => self.element.set_attribute("aria-label", label),
+-            None => self.element.remove_attribute("aria-label"),
++            Some(label) => self
++                .element
++                .active_element()
++                .set_attribute("aria-label", label),
++            None => self.element.active_element().remove_attribute("aria-label"),
+         };
+         if let Err(error) = result {
+             log::warn!("Failed to update accessible input label: {error:?}");
+@@ -236,8 +201,18 @@
+     }
+ 
+     pub(crate) fn remove(&self) {
+-        let element: &web_sys::Element = self.element.as_ref();
+-        element.remove();
++        self.element.remove();
++    }
++
++    pub(crate) fn contains_target(&self, target: &web_sys::EventTarget) -> bool {
++        self.element.contains_target(target)
++    }
++    pub(crate) fn owner_changed(&self) {
++        self.element.owner_changed();
++        self.text.borrow_mut().clear();
++        self.selection.set((0, 0));
++        self.window_hint.set(0);
++        self.selection_import_rejected.set(false);
+     }
+ 
+     pub(crate) fn value(&self) -> String {
+@@ -280,6 +255,10 @@
+     /// Records that an element selection move could not be imported, so
+     /// the next sync reasserts the app's state rather than deferring to an
+     /// import that is no longer coming.
++    pub(crate) fn window_start(&self) -> usize {
++        self.window_hint.get()
++    }
++
+     pub(crate) fn reject_selection_import(&self) {
+         self.selection_import_rejected.set(true);
+     }
+@@ -354,6 +333,9 @@
+             // schedules a fresh sync when it cannot adopt the move.
+             if !mirror.selection_import_rejected.replace(false)
+                 && *mirror.text.borrow() == mirror.element.value()
++                && window.with_input_handler(|handler| {
++                    text_window_matches(handler, mirror.window_hint.get(), &mirror.text.borrow())
++                }) == Some(true)
+             {
+                 let live_start = mirror.selection_start().unwrap_or(0);
+                 let live_end = mirror.element_selection_end().unwrap_or(live_start);
+@@ -365,7 +347,7 @@
+                 .with_input_handler(|handler| handler.selected_text_range(false))
+                 .flatten();
+             let Some(selection) = selection else {
+-                if !mirror.text.borrow().is_empty() {
++                if !mirror.text.borrow().is_empty() || !mirror.element.value().is_empty() {
+                     mirror.element.set_value("");
+                     mirror.text.borrow_mut().clear();
+                 }
+@@ -626,3 +608,93 @@
+     // The element selection corresponds to the app selection end too?
+     app_selection.end.checked_sub(app_window_start) == Some(element_selection_end)
+ }
++
++/// Check the exact text behind a DOM window before using its edit/selection.
++pub(crate) fn text_window_matches(
++    handler: &mut gpui::PlatformInputHandler,
++    start: usize,
++    expected: &str,
++) -> bool {
++    let Some(end) = start.checked_add(expected.encode_utf16().count()) else {
++        return false;
++    };
++    let range = start..end;
++    let mut adjusted = None;
++    let actual = handler.text_for_range(range.clone(), &mut adjusted);
++    actual.as_deref() == Some(expected)
++        && adjusted.as_ref().is_none_or(|adjusted| *adjusted == range)
++}
++
++#[derive(Clone, Copy, Debug, PartialEq, Eq)]
++pub(crate) enum SelectionImport {
++    Current,
++    ApplicationNewer,
++    Rejected,
++}
++
++/// Import a newer native selection before a key or editing intent consumes it.
++/// A newer application selection wins over an unchanged native baseline.
++pub(crate) fn import_current_selection(window: &WebWindowInner) -> SelectionImport {
++    let mirror = &window.ime_mirror;
++    if window.is_composing.get() || !mirror.is_focused() {
++        return SelectionImport::Current;
++    }
++    let baseline = mirror.stored_text();
++    if mirror.value() != baseline {
++        mirror.reject_selection_import();
++        return SelectionImport::Rejected;
++    }
++    let Some(left) = mirror.selection_start() else {
++        mirror.reject_selection_import();
++        return SelectionImport::Rejected;
++    };
++    let right = mirror.element_selection_end().unwrap_or(left);
++    let mut adopt = false;
++    let result = window
++        .with_input_handler(|handler| {
++            if !text_window_matches(handler, mirror.window_start(), &baseline) {
++                // A prior GPUI key may have edited the model before the coalesced
++                // mirror write. Further keys must operate on that latest model;
++                // stale native beforeinput defaults must wait for reconciliation.
++                return SelectionImport::ApplicationNewer;
++            }
++            let Some(application) = handler.selected_text_range(false) else {
++                return SelectionImport::Rejected;
++            };
++            match crate::ime_edit::plan_ime_selection(
++                &baseline,
++                mirror.window_start(),
++                mirror.stored_selection(),
++                (left, right),
++                application.range,
++            ) {
++                crate::ime_edit::SelectionPlan::KeepApplication => {
++                    SelectionImport::ApplicationNewer
++                }
++                crate::ime_edit::SelectionPlan::Import(range) => {
++                    handler.set_selected_text_range(range.clone());
++                    if handler
++                        .selected_text_range(false)
++                        .is_some_and(|accepted| accepted.range == range)
++                    {
++                        adopt = true;
++                        SelectionImport::Current
++                    } else {
++                        // EntityInputHandler's default setter may be a no-op;
++                        // do not bless a native range the model never accepted.
++                        SelectionImport::Rejected
++                    }
++                }
++                crate::ime_edit::SelectionPlan::Reject => SelectionImport::Rejected,
++            }
++        })
++        .unwrap_or(SelectionImport::Rejected);
++    if result == SelectionImport::Current {
++        if adopt {
++            mirror.adopt_element_state();
++        }
++    } else {
++        mirror.reject_selection_import();
++    }
++    result
++}
+diff --git a/vendor/gpui-pre-web-0.3.9/src/window.rs b/vendor/gpui-pre-web-0.3.9/src/window.rs
+--- a/vendor/gpui-pre-web-0.3.9/src/window.rs
++++ b/vendor/gpui-pre-web-0.3.9/src/window.rs
+@@ -55,6 +55,7 @@
+     pub(crate) browser_window: web_sys::Window,
+     pub(crate) canvas: web_sys::HtmlCanvasElement,
+     pub(crate) ime_mirror: ImeMirror,
++    pub(crate) a11y: RefCell<Option<crate::a11y::Adapter>>,
+     pub(crate) viewport: RefCell<WebViewport>,
+     pub(crate) has_device_pixel_support: bool,
+     pub(crate) is_mac: bool,
+@@ -209,6 +210,7 @@
+             browser_window,
+             canvas,
+             ime_mirror,
++            a11y: RefCell::new(None),
+             viewport: RefCell::new(viewport),
+             has_device_pixel_support,
+             is_mac,
+@@ -624,6 +626,7 @@
+         // out so the inner can actually be freed.
+         self.inner.mql_handle.borrow_mut().take();
+ 
++        self.inner.a11y.borrow_mut().take();
+         let canvas: &web_sys::Element = self.inner.canvas.as_ref();
+         canvas.remove();
+         self.inner.ime_mirror.remove();
+@@ -776,6 +779,32 @@
+ 
+     fn take_input_handler(&mut self) -> Option<PlatformInputHandler> {
+         self.inner.state.borrow_mut().input_handler.take()
++    }
++
++    fn text_input_owner_ready(&mut self) {
++        self.inner.suppress_focus_status_events.set(true);
++        let has_owner = self.inner.state.borrow().input_handler.is_some();
++        self.inner.ime_mirror.element.set_owner_active(has_owner);
++        if let Some(adapter) = self.inner.a11y.borrow_mut().as_mut() {
++            adapter.frame_ready(self.inner.is_composing.get());
++        }
++        self.inner.suppress_focus_status_events.set(false);
++        self.inner.schedule_ime_mirror_sync();
++    }
++
++    fn set_secure_input(&mut self, secure: bool) {
++        self.inner.ime_mirror.element.set_secure(secure);
++    }
++
++    fn text_input_owner_changed(&mut self) {
++        self.inner.is_composing.set(false);
++        self.inner.suppress_focus_status_events.set(true);
++        self.inner.ime_mirror.owner_changed();
++        if let Some(adapter) = self.inner.a11y.borrow().as_ref() {
++            adapter.owner_changed();
++        }
++        self.inner.is_composing.set(false);
++        self.inner.suppress_focus_status_events.set(false);
+     }
+ 
+     fn set_text_input_configuration(&mut self, configuration: TextInputConfiguration) {
+@@ -807,7 +836,11 @@
+                     && inner.state.borrow().is_active
+                 {
+                     inner.suppress_focus_status_events.set(true);
+-                    inner.ime_mirror.focus();
++                    if let Some(adapter) = inner.a11y.borrow_mut().as_mut() {
++                        adapter.frame_ready(inner.is_composing.get());
++                    } else {
++                        inner.ime_mirror.focus();
++                    }
+                     inner.suppress_focus_status_events.set(false);
+                 }
+             }
+@@ -865,18 +898,37 @@
+         }
+     }
+ 
++    fn a11y_init(&self, callbacks: gpui::A11yCallbacks) {
++        self.inner.a11y.borrow_mut().take();
++        let Some(document) = self.inner.browser_window.document() else {
++            (callbacks.deactivation)();
++            return;
++        };
++        let Some(body) = document.body() else {
++            (callbacks.deactivation)();
++            return;
++        };
++        self.inner.suppress_focus_status_events.set(true);
++        let adapter = crate::a11y::Adapter::new(
++            &document,
++            &body,
++            &self.inner.canvas,
++            self.inner.ime_mirror.element.clone(),
++            callbacks,
++        );
++        self.inner.suppress_focus_status_events.set(false);
++        match adapter {
++            Ok(adapter) => *self.inner.a11y.borrow_mut() = Some(adapter),
++            Err(_) => log::warn!("Failed to initialize Web semantic accessibility adapter"),
++        }
++    }
++
+     fn a11y_tree_update(&self, tree_update: gpui::accesskit::TreeUpdate) {
+-        let label = tree_update
+-            .nodes
+-            .iter()
+-            .find(|(id, _)| *id == tree_update.focus)
+-            .and_then(|(_, node)| {
+-                (node.role() == gpui::accesskit::Role::TextInput)
+-                    .then(|| node.label())
+-                    .flatten()
+-            })
+-            .filter(|label| !label.is_empty());
+-        self.inner.ime_mirror.set_accessible_label(label);
++        self.inner.suppress_focus_status_events.set(true);
++        if let Some(adapter) = self.inner.a11y.borrow_mut().as_mut() {
++            adapter.update(tree_update, self.inner.is_composing.get());
++        }
++        self.inner.suppress_focus_status_events.set(false);
+     }
+ 
+     fn prompt(

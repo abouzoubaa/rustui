@@ -1,8 +1,17 @@
 {
   "schema_version": 1,
-  "patch": "patches/approved/gpui-tree-disabled-keyboard-v2.patch",
-  "patch_sha256": "90a389f58ade9848432afa6f2a5d9c17f5b73cebf32dbbc84d92e0734680bfac",
-  "source": "vendor/gpui-base-0.7.3/src/tree.rs",
-  "pre_sha256": "0a1321f50154fb145b325517f9be93f262e959d21a213d61ecfdfadec38e4747",
-  "post_sha256": "c05288fb312eb3817b69bc564c616fb81a67b548a5d327e2a44c187418943b42"
+  "upstream": {
+    "repository": "https://github.com/longbridge/gpui-kit",
+    "tag": "v0.8.1",
+    "commit": "99576db58ec8103417c41a092e891b4022d24e7e",
+    "gpui_pre_version": "0.3.10"
+  },
+  "candidate": "gpui-tree-disabled-keyboard-v2.patch",
+  "patch_sha256": "98d8c2e5ec2f66d0c4dfc4b71c4dde64a582b3c2ae56b0431f73ea257455bcf0",
+  "files": {
+    "vendor/gpui-base-0.8.1/src/tree.rs": {
+      "pre_sha256": "1e872f921b5963ba14adc5d506afdc583e047b4a650d7a91c40ef55c7dadc492",
+      "post_sha256": "a28ca059f0b5b4e0e7c0faa009106d9c07cd90b898a48a9223b4a8af4ea1741f"
+    }
+  }
 }

@@ -707,7 +707,7 @@
     },
     {
       "patch": "gpui-input-placeholder-color-v1.patch",
-      "patch_sha256": "59e6e2cc615fa5fd5abf975e997642a507ea3bea447168a022a3ebc4f5afee89",
+      "patch_sha256": "6e660a042d177b9fd9ba2dfb55f5a1d45ab473eb7e49742861c82797d0ea3aa8",
       "files": {
         "vendor/gpui-base-0.7.3/src/input/base/element.rs": {
           "pre_sha256": "5d85f146b46605fc48a5bcc2426357c566a9e49c0a095c81e3a0b9e86c484a9b",
@@ -717,9 +717,9 @@
           "pre_sha256": "a8ddf22a7e48437da874e5f4f665b0826660a39ea364a564bfdf77e90f218155",
           "post_sha256": "79c38573136ed2745af6db9dd7bd74579ef6c86462a217c851a83fc7e3c9bc8b"
         },
-        "vendor/gpui-component-0.7.3/src/input/input.rs": {
-          "pre_sha256": "5d78b99979d232a28789d299adaab5760bdd1b056d29dd997aa85fca11dd6bc7",
-          "post_sha256": "f33e16c4a76d32d4aa0ce76cecd7175e1e1760edda4f148b8ab34aecf84e77cd"
+        "vendor/gpui-component-0.8.1/src/input/input.rs": {
+          "pre_sha256": "cba63ae82138bf7461c20aa7efe6fcea86c5b892a82c9b114bc9cd0ffe63a66a",
+          "post_sha256": "cc69b63deaebbc1b902bf19be30ccc49f2901c8cf755c643a35c06caf7d075ce"
         }
       }
     },
@@ -855,10 +855,6 @@
       "pre_sha256": "2a03c0e1636cb576a9430817fb413384b7434fb0c7e66fb549e16bd9d7805a05",
       "post_sha256": "f61e4d106499a34dc2715adb9e9383ed2b30f554f21ad2fc160c00a94b4fcf12"
     },
-    "vendor/gpui-component-0.7.3/src/input/input.rs": {
-      "pre_sha256": "5d78b99979d232a28789d299adaab5760bdd1b056d29dd997aa85fca11dd6bc7",
-      "post_sha256": "f33e16c4a76d32d4aa0ce76cecd7175e1e1760edda4f148b8ab34aecf84e77cd"
-    },
     "vendor/gpui-component-0.7.3/src/lib.rs": {
       "pre_sha256": "cb2a4cfb718e7608ffda91edd3f0dddebb26252248ccc8388d0fbb9781d88429",
       "post_sha256": "2ce60750cf457070cfa286df08120f66ad303818f03d7580c31d00cdef92e563"
@@ -933,7 +929,7 @@
     },
     "vendor/gpui-component-0.8.1/src/input/input.rs": {
       "pre_sha256": "5d78b99979d232a28789d299adaab5760bdd1b056d29dd997aa85fca11dd6bc7",
-      "post_sha256": "cba63ae82138bf7461c20aa7efe6fcea86c5b892a82c9b114bc9cd0ffe63a66a"
+      "post_sha256": "cc69b63deaebbc1b902bf19be30ccc49f2901c8cf755c643a35c06caf7d075ce"
     },
     "vendor/gpui-component-0.8.1/src/input/syntax_context.rs": {
       "pre_sha256": "7fb9a64557191822c559943091b451e316ba9b32e0cddb59ebfc04562b440acd",

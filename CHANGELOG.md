@@ -1,5 +1,7 @@
 # Changelog
 
+- A2-5a: Activated the GPUI Kit 0.8.1 candidate stack on the integration branch; recorded the remaining RustUI migration errors.
+
 - Bumped the project toolchain to Rust 1.98.0 for `Option::map_or_default`; added the A3 GPUI Kit 0.9.x upgrade stage after A2.
 
 - Reference: copied GPUI Kit v0.8.1 skills and design guides as documentation-only reference material.

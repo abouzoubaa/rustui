@@ -1,8 +1,0 @@
-{
-  "schema_version": 1,
-  "patch": "patches/approved/r15-test-tree-disabled-v1.patch",
-  "patch_sha256": "99af0307abb9b7c2b2ec8db5bad0a80c32304514864763534f4d50dd44b4e60e",
-  "source": "vendor/gpui-pre-0.3.9/src/window/a11y/debug.rs",
-  "pre_sha256": "e0f84d113c3c5420569f4a8157ab483db8fea0acfcda7e0b9018bfc265355fa0",
-  "post_sha256": "c77840017e3ce65c4ca892b17016bd3608af4da6d61e6f584e7df237d755a712"
-}

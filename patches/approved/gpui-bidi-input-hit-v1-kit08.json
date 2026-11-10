@@ -1,0 +1,49 @@
+{
+  "schema_version": 1,
+  "upstream": {
+    "repository": "https://github.com/longbridge/gpui-kit",
+    "tag": "v0.8.1",
+    "commit": "99576db58ec8103417c41a092e891b4022d24e7e",
+    "gpui_pre_version": "0.3.10"
+  },
+  "candidate": "gpui-bidi-input-hit-v1-kit08.patch",
+  "patch_sha256": "c9170b18af0c5a3b3c8fc278277e1cbb2be492d7cf089aff3c17ef7749bb9366",
+  "files": {
+    "vendor/gpui-base-0.8.1/src/input/base/tab_stops.rs": {
+      "pre_sha256": "a41467f4d5e37d435dc35b29964d85c1a8388bda4bca9126c01814a4c92d770b",
+      "post_sha256": "d8e2bc71d88824c4d87563c136e54118ec46763e02bb692df4e2d09feba6572d"
+    },
+    "vendor/gpui-base-0.8.1/src/text/inline.rs": {
+      "pre_sha256": "7cc393c3b02e176799aef97fedf294c88e82d3265b10fe678a0cb1efc1b1d333",
+      "post_sha256": "71b1c9c4616ed6966dbbe6d0a57f390c3eabb1d063b4a43f45769efef4800dd9"
+    },
+    "vendor/gpui-pre-0.3.10/src/platform.rs": {
+      "pre_sha256": "b0dab99151fb41873c9938c32727df4c5f7aa39b4469b495ecdcd579ad957b44",
+      "post_sha256": "cc268afff69920a63ca7af8aff26d7feaec95dd70f61490da29ba25c2e74dc8d"
+    },
+    "vendor/gpui-pre-0.3.10/src/text_system/line.rs": {
+      "pre_sha256": "42ef1913f7955d896716d8d98c1f495ccb7d6b0dc59ee5979bd9a97694813644",
+      "post_sha256": "10b268f7e7c1353ca4ec8e8514bb35551c3e8ea01c277bf1a061b6ee6f71cc8e"
+    },
+    "vendor/gpui-pre-0.3.10/src/text_system/line_layout.rs": {
+      "pre_sha256": "e133b3b78d04daeeee0f4cbb23a69d3b01e1c33bda4a4a6c60efdf803418de9f",
+      "post_sha256": "7c09c4b826d3d8cf13e3012062d11b036e3f384654da4bdd50aa90c17a1cb643"
+    },
+    "vendor/gpui-pre-apple-0.3.10/src/text_system.rs": {
+      "pre_sha256": "932774c521b1bfd99a2552572cf09769e0dd39b2b2e306a3f6df80f57522b375",
+      "post_sha256": "c1863dbc4eadf105ca5d82da2f657e71a0b3b6d67ef3cb25dba90a49abaa2425"
+    },
+    "vendor/gpui-pre-web-0.3.10/src/run_replacements.rs": {
+      "pre_sha256": "c00a0f957f156b3744a90d3687f773de0a0e259c6c8beb1c86bd3f17614c3f43",
+      "post_sha256": "4c23e3d8569aeb1134e3b8fd2d0fe260d30721d9bbd822b51649ff5c608f2cf3"
+    },
+    "vendor/gpui-pre-wgpu-0.3.10/src/cosmic_text_system.rs": {
+      "pre_sha256": "1a89e1d3d2d2de4568ce7c719db3507cfb6608b810e60cc4431478935f4bd693",
+      "post_sha256": "afea5b4e507f13aaddbbe8abac49377e6493150e6151a7c71e31df76d8019fe0"
+    },
+    "vendor/gpui-pre-windows-0.3.10/src/direct_write.rs": {
+      "pre_sha256": "27ff8aa902705794c5b9c0405bb7c3063e4b63e0d3ac44d92148d9ed18ee866c",
+      "post_sha256": "5a1ddc871ebc4eed8131fe1259391b800e1a2ccc650954417c8f0f23b3077296"
+    }
+  }
+}

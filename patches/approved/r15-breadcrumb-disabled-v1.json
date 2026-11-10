@@ -1,8 +1,17 @@
 {
   "schema_version": 1,
-  "patch": "patches/approved/r15-breadcrumb-disabled-v1.patch",
-  "patch_sha256": "649e26bced8f80aba99a9fefc0b623de9e9540a52844c1e694ad5902f4efce08",
-  "source": "vendor/gpui-component-0.7.3/src/breadcrumb.rs",
-  "pre_sha256": "05c2cb5562080a29196cd60eed965161bffb61fdb3e512629d6652b97fd18e64",
-  "post_sha256": "831113ff5956a9a1992da3b5e3e659af9d015476be3049cec8cdcfc02729462a"
+  "upstream": {
+    "repository": "https://github.com/longbridge/gpui-kit",
+    "tag": "v0.8.1",
+    "commit": "99576db58ec8103417c41a092e891b4022d24e7e",
+    "gpui_pre_version": "0.3.10"
+  },
+  "candidate": "r15-breadcrumb-disabled-v1.patch",
+  "patch_sha256": "8aeb54fd4376b50cf0b56ffc377d4a88047bbfdaa20f2b014b2fda47de47c334",
+  "files": {
+    "vendor/gpui-component-0.8.1/src/breadcrumb.rs": {
+      "pre_sha256": "05c2cb5562080a29196cd60eed965161bffb61fdb3e512629d6652b97fd18e64",
+      "post_sha256": "831113ff5956a9a1992da3b5e3e659af9d015476be3049cec8cdcfc02729462a"
+    }
+  }
 }

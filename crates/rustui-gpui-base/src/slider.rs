@@ -5,11 +5,11 @@ use gpui::{
     AccessibleAction, Along, AnyElement, App, AppContext as _, Axis, Bounds, Context, Div,
     DragMoveEvent, Empty, Entity, EntityId, EventEmitter, HitboxBehavior, InteractiveElement,
     IntoElement, MouseButton, MouseDownEvent, Orientation, ParentElement, Pixels, Point, Render,
-    RenderOnce, Role, StatefulInteractiveElement, StyleRefinement, Styled, TouchDragEvent,
-    TouchPhase, Window, div, prelude::FluentBuilder as _, px,
+    RenderOnce, Role, SharedString, StatefulInteractiveElement, StyleRefinement, Styled,
+    TouchDragEvent, TouchPhase, Window, div, prelude::FluentBuilder as _, px,
 };
 
-use crate::{element_ext::ElementExt, geometry::AxisExt};
+use crate::{a11y_disabled::A11yDisabledExt as _, element_ext::ElementExt, geometry::AxisExt};
 
 /// Events emitted by the [`SliderState`].
 pub enum SliderEvent {
@@ -62,10 +62,6 @@ impl Default for SliderValue {
     fn default() -> Self {
         SliderValue::Single(0.)
     }
-}
-
-fn snap_to_step(value: f32, step: f32) -> f32 {
-    (value / step).round() * step
 }
 
 impl SliderValue {
@@ -285,13 +281,12 @@ impl SliderState {
         cx.notify();
     }
 
-    /// Handles the value actions registered on the slider's accessibility node.
-    /// Disabled controls must not register or forward these actions.
+    /// Handles value actions registered on this slider's accessibility node.
     pub fn handle_accessibility_action(
         &mut self,
         action: AccessibleAction,
         data: Option<&gpui::accesskit::ActionData>,
-        window: &mut Window,
+        _window: &mut Window,
         cx: &mut Context<Self>,
     ) {
         let value = match action {
@@ -305,18 +300,14 @@ impl SliderState {
             AccessibleAction::Decrement => self.value.end() - self.step,
             _ => return,
         };
-        if value.is_finite() {
-            self.set_value_from_accessibility(value, window, cx);
+        if !value.is_finite() {
+            return;
         }
-    }
-
-    fn set_value_from_accessibility(&mut self, value: f32, _: &mut Window, cx: &mut Context<Self>) {
-        let step = self.step;
         let value = value.clamp(self.min, self.max);
         let value = if value == self.min || value == self.max {
             value
-        } else if step.is_finite() && step > 0.0 {
-            snap_to_step(value, step).clamp(self.min, self.max)
+        } else if self.step.is_finite() && self.step > 0.0 {
+            ((value / self.step).round() * self.step).clamp(self.min, self.max)
         } else {
             value
         };
@@ -432,7 +423,7 @@ impl SliderState {
         };
 
         let value = self.percentage_to_value(percentage);
-        let value = snap_to_step(value, step).clamp(self.min, self.max);
+        let value = ((value / step).round() * step).clamp(self.min, self.max);
 
         if is_start {
             self.percentage.start = percentage;
@@ -497,7 +488,7 @@ pub struct Slider {
     state: Entity<SliderState>,
     axis: Axis,
     disabled: bool,
-    accessibility_label: Option<gpui::SharedString>,
+    accessibility_label: Option<SharedString>,
     base: Div,
     children: Vec<AnyElement>,
 }
@@ -534,8 +525,8 @@ impl Slider {
         self
     }
 
-    /// Sets the accessibility label on the slider node.
-    pub fn aria_label(mut self, label: impl Into<gpui::SharedString>) -> Self {
+    /// Sets the label exposed to accessibility clients.
+    pub fn accessibility_label(mut self, label: impl Into<SharedString>) -> Self {
         self.accessibility_label = Some(label.into());
         self
     }
@@ -559,10 +550,6 @@ impl RenderOnce for Slider {
         let entity_id = self.state.entity_id();
         let state = self.state.read(cx);
         let slider_state = self.state.clone();
-        let min_value = match state.value() {
-            SliderValue::Single(_) => state.min_value(),
-            SliderValue::Range(start, _) => start.max(state.min_value()),
-        };
 
         self.base
             .id(("slider", entity_id))
@@ -572,7 +559,7 @@ impl RenderOnce for Slider {
                 this.aria_label(label)
             })
             .aria_numeric_value(state.value().end() as f64)
-            .aria_min_numeric_value(min_value as f64)
+            .aria_min_numeric_value(state.min_value() as f64)
             .aria_max_numeric_value(state.max_value() as f64)
             .aria_numeric_value_step(state.step_value() as f64)
             .aria_orientation(if axis.is_vertical() {
@@ -580,6 +567,8 @@ impl RenderOnce for Slider {
             } else {
                 Orientation::Horizontal
             })
+            // A disabled slider takes no value, from the pointer or from
+            // assistive technology.
             .when(!self.disabled, |mut this| {
                 for action in [
                     AccessibleAction::SetValue,
@@ -606,6 +595,7 @@ impl RenderOnce for Slider {
                 )
             })
             .children(self.children)
+            .a11y_disabled(self.disabled)
     }
 }
 
@@ -837,7 +827,14 @@ impl RenderOnce for SliderIndicator {
             .children(self.children)
             .on_prepaint({
                 let state = self.state;
-                move |bounds, _, cx| state.update(cx, |state, _| state.set_bounds(bounds))
+                // Only when they moved: with retained views, an update while
+                // the window draws renders every view that reads the state
+                // again.
+                move |bounds, _, cx| {
+                    if state.read(cx).bounds != bounds {
+                        state.update(cx, |state, _| state.set_bounds(bounds));
+                    }
+                }
             })
     }
 }
@@ -999,5 +996,89 @@ mod tests {
     #[should_panic(expected = "`min` must be greater than 0")]
     fn legacy_logarithmic_validation_is_preserved() {
         let _ = SliderState::new().scale(SliderScale::Logarithmic);
+    }
+
+    /// A slider's bar beside a view that reads its state, under retained views.
+    #[cfg(feature = "gpui-fast")]
+    mod retained {
+        use std::{cell::Cell, rc::Rc};
+
+        use gpui::{
+            AppContext as _, Context, Entity, IntoElement, ParentElement as _, Render, Styled as _,
+            TestAppContext, Window, div, px,
+        };
+
+        use super::super::{SliderIndicator, SliderState};
+
+        /// A view that shows a slider's value, counting its renders.
+        struct Readout {
+            state: Entity<SliderState>,
+            renders: Rc<Cell<usize>>,
+        }
+
+        impl Render for Readout {
+            fn render(&mut self, _: &mut Window, cx: &mut Context<Self>) -> impl IntoElement {
+                self.renders.set(self.renders.get() + 1);
+                div().child(self.state.read(cx).value().to_string())
+            }
+        }
+
+        /// A slider's bar in a view of its own.
+        struct Bar {
+            state: Entity<SliderState>,
+        }
+
+        impl Render for Bar {
+            fn render(&mut self, _: &mut Window, _: &mut Context<Self>) -> impl IntoElement {
+                div()
+                    .w(px(120.))
+                    .h(px(24.))
+                    .child(SliderIndicator::new(&self.state).size_full())
+            }
+        }
+
+        /// The bar and the readout side by side.
+        struct Pair {
+            bar: Entity<Bar>,
+            readout: Entity<Readout>,
+        }
+
+        impl Render for Pair {
+            fn render(&mut self, _: &mut Window, _: &mut Context<Self>) -> impl IntoElement {
+                div()
+                    .flex()
+                    .child(self.bar.clone())
+                    .child(self.readout.clone())
+            }
+        }
+
+        /// Drawing a slider's bar again where it was changes nothing in the
+        /// slider's state: a view beside it that reads the state is not built
+        /// again for it.
+        #[gpui::test]
+        fn drawing_a_slider_again_leaves_its_readers_retained(cx: &mut TestAppContext) {
+            let renders = Rc::new(Cell::new(0));
+            let (view, cx) = cx.add_window_view({
+                let renders = renders.clone();
+                move |_, cx| {
+                    let state = cx.new(|_| SliderState::new());
+                    Pair {
+                        bar: cx.new(|_| Bar {
+                            state: state.clone(),
+                        }),
+                        readout: cx.new(|_| Readout { state, renders }),
+                    }
+                }
+            });
+            cx.update(|window, cx| window.draw(cx).clear(cx));
+            cx.update(|window, cx| window.draw(cx).clear(cx));
+            let rendered = renders.get();
+            for _ in 0..3 {
+                view.update(cx, |pair, cx| pair.bar.update(cx, |_, cx| cx.notify()));
+                cx.update(|window, cx| window.draw(cx).clear(cx));
+            }
+            cx.update(|window, cx| window.draw(cx).clear(cx));
+            assert_eq!(renders.get(), rendered, "the readout was built again");
+        }
     }
 }

@@ -1,8 +1,17 @@
 {
   "schema_version": 1,
-  "patch": "patches/approved/gpui-primary-mousedown-click-v2.patch",
-  "patch_sha256": "74f04e59e298d299c1ec16370aa015af85ac368d32bd59dfda65a04d8a84d0ec",
-  "source": "vendor/gpui-pre-0.3.9/src/elements/div.rs",
-  "pre_sha256": "81429bdbc0a835a97e3d2c3cfa394b0b7cebd81e4289176791b952d1c819df50",
-  "post_sha256": "ab2690171fc572695ca1b4910680a52ef10124fb4aae535a08e36c47b464337b"
+  "upstream": {
+    "repository": "https://github.com/longbridge/gpui-kit",
+    "tag": "v0.8.1",
+    "commit": "99576db58ec8103417c41a092e891b4022d24e7e",
+    "gpui_pre_version": "0.3.10"
+  },
+  "candidate": "gpui-primary-mousedown-click-v2.patch",
+  "patch_sha256": "07965921c02896b5a1a9c335f79b8b608e596a6ff3f90b73ca0b9ad00b390a5d",
+  "files": {
+    "vendor/gpui-pre-0.3.10/src/elements/div.rs": {
+      "pre_sha256": "3e3fada72485b0dea4987feab7eab7827b476dd91ad83845f8b2aa92565fcd30",
+      "post_sha256": "6a1be7e876bc7bd7f598ebc9dcd4dadc6acab2cb2a9bc63a254a3eb1ef9502e4"
+    }
+  }
 }

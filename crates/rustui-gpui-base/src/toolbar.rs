@@ -64,16 +64,16 @@ impl Toolbar {
         }
     }
 
-    /// Reverse horizontal arrow navigation for right-to-left visual order.
-    pub fn right_to_left(mut self, right_to_left: bool) -> Self {
-        self.right_to_left = right_to_left;
-        self
-    }
-
     /// Disables the toolbar's own keyboard navigation. Hosted controls are
     /// not automatically disabled.
     pub fn disabled(mut self, disabled: bool) -> Self {
         self.disabled = disabled;
+        self
+    }
+
+    /// Reverse horizontal arrow navigation for right-to-left visual order.
+    pub fn right_to_left(mut self, right_to_left: bool) -> Self {
+        self.right_to_left = right_to_left;
         self
     }
 }
@@ -194,6 +194,11 @@ impl RenderOnce for Toolbar {
             .role(Role::Toolbar)
             .aria_orientation(accesskit::Orientation::Horizontal)
             .on_key_down(key_handler)
+            // The handle exists for containment checks only. Without this, a
+            // press on blank space or non-focusable content would focus the
+            // toolbar itself and take focus away from the rest of the window.
+            // Focusable items handle the press first and keep their focus.
+            .on_any_mouse_down(|_, window, _| window.prevent_default())
             .children(children)
             .refine_style(&style)
     }
@@ -309,8 +314,8 @@ mod tests {
     mod behavior {
         use super::*;
         use gpui::{
-            Context, Element as _, FocusHandle, Render, TestAppContext, VisualTestContext, canvas,
-            px,
+            Context, Element as _, FocusHandle, Modifiers, Render, TestAppContext,
+            VisualTestContext, canvas, point, px,
         };
         use std::sync::{Arc, Mutex};
 
@@ -465,6 +470,51 @@ mod tests {
 
             cx.simulate_keystrokes("right");
             assert_focused(cx, &items[0], "first (disabled toolbar)");
+        }
+
+        #[gpui::test]
+        fn clicking_blank_toolbar_space_keeps_focus_outside(cx: &mut gpui::TestAppContext) {
+            struct ClickHarness {
+                outside: FocusHandle,
+                item: FocusHandle,
+            }
+
+            impl Render for ClickHarness {
+                fn render(&mut self, _: &mut Window, _: &mut Context<Self>) -> impl IntoElement {
+                    div()
+                        .child(div().id("outside").size(px(20.)).track_focus(&self.outside))
+                        .child(
+                            Toolbar::new("click-toolbar")
+                                .flex()
+                                .w(px(100.))
+                                .h(px(20.))
+                                .child(div().id("item").size(px(20.)).track_focus(&self.item)),
+                        )
+                }
+            }
+
+            let (state, cx) = cx.add_window_view(|window, cx| {
+                let outside = cx.focus_handle().tab_stop(true);
+                outside.focus(window, cx);
+                ClickHarness {
+                    outside,
+                    item: cx.focus_handle().tab_stop(true),
+                }
+            });
+            let (outside, item) = state.read_with(cx, |harness, _| {
+                (harness.outside.clone(), harness.item.clone())
+            });
+            cx.update(|window, cx| {
+                window.draw(cx).clear(cx);
+            });
+
+            // Blank space to the right of the item: focus stays where it was.
+            cx.simulate_click(point(px(80.), px(30.)), Modifiers::default());
+            assert_focused(cx, &outside, "outside (blank toolbar click)");
+
+            // A focusable item still takes focus when clicked.
+            cx.simulate_click(point(px(10.), px(30.)), Modifiers::default());
+            assert_focused(cx, &item, "item (clicked)");
         }
     }
 }

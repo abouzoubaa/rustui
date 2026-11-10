@@ -1,6 +1,7 @@
 mod app_menu;
 mod keyboard;
 mod keystroke;
+mod platform_info;
 
 #[cfg(all(target_os = "linux", feature = "wayland"))]
 #[expect(missing_docs)]
@@ -36,10 +37,10 @@ pub(crate) type PlatformScreenCaptureFrame =
     objc2_core_foundation::CFRetained<objc2_core_video::CVImageBuffer>;
 
 use crate::{
-    Action, AnyWindowHandle, App, AsyncWindowContext, BackendWrappedRow, BackgroundExecutor,
-    Bounds, DEFAULT_WINDOW_SIZE, DevicePixels, DispatchEventResult, Edges, ExternalDragPayload,
-    Font, FontId, FontMetrics, FontRun, ForegroundExecutor, GlyphId, GpuSpecs, Hsla, ImageSource,
-    Keymap, LineLayout, MissingGlyphSink, Pixels, PlatformGestures, PlatformInput, Point, Priority,
+    Action, AnyWindowHandle, App, AsyncWindowContext, BackendWrappedRow, BackgroundExecutor, Bounds, Corners,
+    DEFAULT_WINDOW_SIZE, DevicePixels, DispatchEventResult, Edges, ExternalDragPayload, Font,
+    FontId, FontMetrics, FontRun, ForegroundExecutor, GlyphId, GpuSpecs, Hsla, ImageSource, Keymap,
+    LineLayout, MissingGlyphSink, Pixels, PlatformGestures, PlatformInput, Point, Priority,
     RenderGlyphParams, RenderImage, RenderImageParams, RenderSvgParams, Scene, ShapedGlyph,
     ShapedRun, SharedString, Size, SvgRenderer, SystemWindowTab, Task, Window, WindowControlArea,
     hash, point, px, size,
@@ -359,8 +360,13 @@ bitflags::bitflags! {
     }
 }
 
+pub use platform_info::{OperatingSystem, PlatformInfo, PlatformTarget};
+
 #[expect(missing_docs)]
 pub trait Platform: 'static {
+    /// Returns the host OS and application target reported by this backend.
+    fn platform_info(&self) -> PlatformInfo;
+
     fn background_executor(&self) -> BackgroundExecutor;
     fn foreground_executor(&self) -> ForegroundExecutor;
     fn text_system(&self) -> Arc<dyn PlatformTextSystem>;
@@ -595,6 +601,22 @@ pub trait Platform: 'static {
     fn write_to_find_pasteboard(&self, item: ClipboardItem);
 
     fn write_credentials(&self, url: &str, username: &str, password: &[u8]) -> Task<Result<()>>;
+
+    /// Atomically writes credentials unless an item with this URL and username exists.
+    ///
+    /// Returns `true` if written, or `false` if the existing item was left unchanged.
+    #[cfg(target_os = "macos")]
+    fn write_credentials_if_not_exists(
+        &self,
+        _url: &str,
+        _username: &str,
+        _password: &[u8],
+    ) -> Task<Result<bool>> {
+        Task::ready(Err(anyhow::anyhow!(
+            "this platform does not support atomic credential writes"
+        )))
+    }
+
     fn read_credentials(&self, url: &str) -> Task<Result<Option<(String, Vec<u8>)>>>;
     fn delete_credentials(&self, url: &str) -> Task<Result<()>>;
 
@@ -1143,6 +1165,10 @@ pub enum AppLifecyclePhase {
     Background,
     /// Becoming visible again, before input is restored.
     Foreground,
+    /// The native scene has disconnected. Its windows may reconnect later.
+    /// This is not a process-termination notification or a guaranteed final
+    /// opportunity to save state.
+    Disconnected,
 }
 
 /// Regions of a window that are obscured or reserved by the system.
@@ -1162,6 +1188,11 @@ pub struct WindowInsets {
     /// (iOS: derived from `keyboardWillShow`/frame-change notifications.
     /// Android: `WindowInsets.Type.ime()`.)
     pub ime: Edges<Pixels>,
+    /// The radii of the window's visible corners where the display rounds
+    /// them, and zero where corners are square or the platform can't say.
+    /// Content inset from an edge by `d` lines up with the display by using a
+    /// radius of `radius - d`. (iOS 26+: a concentric `UICornerConfiguration`.)
+    pub corner_radii: Corners<Pixels>,
 }
 
 impl WindowInsets {
@@ -1228,12 +1259,6 @@ pub trait PlatformWindow: HasWindowHandle + HasDisplayHandle {
     /// platform's text input session (e.g. attributes of the hidden editable
     /// element on web). Called only when the configuration changes, because
     /// reconfiguring a live input session can restart the IME connection.
-    fn text_input_owner_changed(&mut self) {}
-    /// Commit semantics after the frame tree and native input configuration.
-    fn text_input_owner_ready(&mut self) {}
-
-    fn set_secure_input(&mut self, _secure: bool) {}
-
     fn set_text_input_configuration(&mut self, _configuration: TextInputConfiguration) {}
     fn prompt(
         &self,
@@ -2004,6 +2029,7 @@ impl From<TileId> for etagere::AllocId {
 pub struct PlatformInputHandler {
     cx: AsyncWindowContext,
     handler: Box<dyn InputHandler>,
+    focus_id: Option<crate::FocusId>,
 }
 
 #[expect(missing_docs)]
@@ -2015,18 +2041,25 @@ pub struct PlatformInputHandler {
     allow(dead_code)
 )]
 impl PlatformInputHandler {
-    /// Whether native protected-value input is required.
-    pub fn is_secure_input(&mut self, window: &mut crate::Window, cx: &mut crate::App) -> bool {
-        self.handler.is_secure_input(window, cx)
-    }
-
-    /// Existing input-owner lifecycle metadata, when available.
-    pub fn input_lifecycle(&self) -> Option<InputHandlerLifecycle> {
-        self.handler.input_lifecycle()
-    }
-
     pub fn new(cx: AsyncWindowContext, handler: Box<dyn InputHandler>) -> Self {
-        Self { cx, handler }
+        Self {
+            cx,
+            handler,
+            focus_id: None,
+        }
+    }
+
+    pub(crate) fn with_focus(mut self, focus_id: crate::FocusId) -> Self {
+        self.focus_id = Some(focus_id);
+        self
+    }
+
+    /// Identifies the input field registered through [`Window::handle_input`].
+    ///
+    /// This identity survives adapter replacement during repaint. Backends can
+    /// use it to detect a field change without restarting the keyboard session.
+    pub fn focus_id(&self) -> Option<crate::FocusId> {
+        self.focus_id
     }
 
     pub fn selected_text_range(&mut self, ignore_disabled_input: bool) -> Option<UTF16Selection> {
@@ -2111,6 +2144,15 @@ impl PlatformInputHandler {
             .update(|window, cx| self.handler.bounds_for_range(range_utf16, window, cx))
             .ok()
             .flatten()
+    }
+
+    pub fn selection_bounds_for_range(&mut self, range_utf16: Range<usize>) -> Vec<Bounds<Pixels>> {
+        self.cx
+            .update(|window, cx| {
+                self.handler
+                    .selection_bounds_for_range(range_utf16, window, cx)
+            })
+            .unwrap_or_default()
     }
 
     #[allow(dead_code)]
@@ -2219,6 +2261,21 @@ impl PlatformInputHandler {
             .unwrap_or(true)
     }
 
+    /// Checks eligibility against the current focus, including before the next frame is drawn.
+    ///
+    /// Unlike the legacy acceptance query, this fails closed when the window cannot
+    /// be updated and requires registration through `Window::handle_input`.
+    pub fn query_accepts_focused_text_input(&mut self) -> bool {
+        let focus_id = self.focus_id;
+        self.cx
+            .update(|window, cx| {
+                focus_id.is_some()
+                    && window.focus == focus_id
+                    && self.handler.accepts_text_input(window, cx)
+            })
+            .unwrap_or(false)
+    }
+
     /// See [`InputHandler::prefers_ime_for_printable_keys`].
     ///
     /// This is not a pure delegation to the handler: while a multi-stroke binding is pending this
@@ -2264,29 +2321,11 @@ pub struct UTF16Selection {
     pub reversed: bool,
 }
 
-/// Zed's interface for handling text input from the platform's IME system
-/// This is currently a 1:1 exposure of the NSTextInputClient API:
+/// GPUI's interface for native text input, IME composition, and selection.
+/// Platform backends translate their native text protocols into these operations.
 ///
-/// <https://developer.apple.com/documentation/appkit/nstextinputclient>
-/// Existing input entity identity and a weak composition cleanup callback.
-pub struct InputHandlerLifecycle {
-    /// Identity of the existing input entity.
-    pub owner: crate::EntityId,
-    /// Weak cleanup of its marked range before an owner transition.
-    pub cancel_composition: std::rc::Rc<dyn Fn(&mut crate::Window, &mut crate::App)>,
-}
-
-/// Text and composition operations of the platform input owner.
+/// Text offsets and ranges use UTF-16 code units unless stated otherwise.
 pub trait InputHandler: 'static {
-    /// Optional stable identity and weak composition cleanup.
-    fn input_lifecycle(&self) -> Option<InputHandlerLifecycle> {
-        None
-    }
-    /// Protected native input; defaults preserve existing third-party handlers.
-    fn is_secure_input(&mut self, _window: &mut crate::Window, _cx: &mut crate::App) -> bool {
-        false
-    }
-
     /// Get the range of the user's currently selected text, if any
     /// Corresponds to [selectedRange()](https://developer.apple.com/documentation/appkit/nstextinputclient/1438242-selectedrange)
     ///
@@ -2359,7 +2398,7 @@ pub trait InputHandler: 'static {
         }
     }
 
-    /// Get the bounds of the given document range in screen coordinates
+    /// Get the bounds of the given document range in window coordinates.
     /// Corresponds to [firstRect(forCharacterRange:actualRange:)](https://developer.apple.com/documentation/appkit/nstextinputclient/1438240-firstrect)
     ///
     /// This is used for positioning the IME candidate window
@@ -2369,6 +2408,21 @@ pub trait InputHandler: 'static {
         window: &mut Window,
         cx: &mut App,
     ) -> Option<Bounds<Pixels>>;
+
+    /// Returns selection rectangles in document order, in window coordinates.
+    ///
+    /// Return line or shaped-run fragments, not one rectangle per character. The
+    /// first and last rectangles contain the range's start and end respectively.
+    /// Empty means native selection geometry is unavailable; caret/IME geometry can
+    /// still be supplied by `bounds_for_range`.
+    fn selection_bounds_for_range(
+        &mut self,
+        _range_utf16: Range<usize>,
+        _window: &mut Window,
+        _cx: &mut App,
+    ) -> Vec<Bounds<Pixels>> {
+        Vec::new()
+    }
 
     /// Get the character offset for the given point in terms of UTF16 characters
     ///
@@ -2606,6 +2660,9 @@ pub struct WindowOptions {
 
     /// Tab group name, allows opening the window as a native tab on macOS 10.12+. Windows with the same tabbing identifier will be grouped together.
     pub tabbing_identifier: Option<String>,
+
+    /// Whether to render the window using the Display P3 color space on macOS.
+    pub use_display_p3: bool,
 }
 
 /// The variables that can be configured when creating a new window
@@ -2671,6 +2728,9 @@ pub struct WindowParams {
 
     #[cfg(target_os = "macos")]
     pub tabbing_identifier: Option<String>,
+
+    #[cfg(target_os = "macos")]
+    pub use_display_p3: bool,
 }
 
 /// Represents the status of how a window should be opened.
@@ -2732,6 +2792,7 @@ impl Default for WindowOptions {
             window_min_size: None,
             window_decorations: None,
             tabbing_identifier: None,
+            use_display_p3: false,
         }
     }
 }

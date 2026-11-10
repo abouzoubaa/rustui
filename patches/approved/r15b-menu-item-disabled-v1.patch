@@ -1,5 +1,5 @@
---- a/vendor/gpui-component-0.7.3/src/menu/menu_item.rs
-+++ b/vendor/gpui-component-0.7.3/src/menu/menu_item.rs
+--- a/vendor/gpui-component-0.8.1/src/menu/menu_item.rs
++++ b/vendor/gpui-component-0.8.1/src/menu/menu_item.rs
 @@ -95,6 +95,7 @@
              .id(self.id)
              .test_support()

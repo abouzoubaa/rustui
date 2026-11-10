@@ -1,8 +1,17 @@
 {
   "schema_version": 1,
-  "patch": "patches/approved/gpui-selectable-list-semantics-v2.patch",
-  "patch_sha256": "296dd44eb9c23453ded5321c9256d20df870e2387889df0da10ab1e791ce2f0c",
-  "source": "vendor/gpui-component-0.7.3/src/list/list.rs",
-  "pre_sha256": "b7cc17c9e01a804d42da1dc55154fe8bccece5db64cef7a78f296dc4d4034edd",
-  "post_sha256": "ebfe959470cf101926e3e10d4e7cb5a9431657a75b4f92aa51f27b29a9a59f46"
+  "upstream": {
+    "repository": "https://github.com/longbridge/gpui-kit",
+    "tag": "v0.8.1",
+    "commit": "99576db58ec8103417c41a092e891b4022d24e7e",
+    "gpui_pre_version": "0.3.10"
+  },
+  "candidate": "gpui-selectable-list-semantics-v2.patch",
+  "patch_sha256": "3bc03f0be8d2c50b079b10e0c73ac309135661375ce607eced8d8d344efebc9a",
+  "files": {
+    "vendor/gpui-component-0.8.1/src/list/list.rs": {
+      "pre_sha256": "00f2622ae21fa20755925dc9bd25ae051c12101f6947779870bab7c13589e468",
+      "post_sha256": "e1e9aa8f4e6ef164a326f56407d7a66f407906187a4148a0592a85a32f5812c7"
+    }
+  }
 }

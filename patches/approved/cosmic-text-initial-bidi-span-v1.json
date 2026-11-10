@@ -1,0 +1,17 @@
+{
+  "schema_version": 1,
+  "upstream": {
+    "repository": "https://github.com/longbridge/gpui-kit",
+    "tag": "v0.8.1",
+    "commit": "99576db58ec8103417c41a092e891b4022d24e7e",
+    "gpui_pre_version": "0.3.10"
+  },
+  "candidate": "cosmic-text-initial-bidi-span-v1.patch",
+  "patch_sha256": "25e91c7a89f5963c4e93b8203bdf4a20025248e6d40f2858f9695599eb7e07ce",
+  "files": {
+    "vendor/cosmic-text-0.19.0/src/shape.rs": {
+      "pre_sha256": "d94983d9b811c8f7f8b3d3dd8e2dc118d260c28eca829aba9af036ee68582837",
+      "post_sha256": "6d183b0243467f7033d32ae61d7bba44c34da9fa4b3cecf514962e5207dc681b"
+    }
+  }
+}

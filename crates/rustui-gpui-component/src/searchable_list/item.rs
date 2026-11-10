@@ -133,7 +133,6 @@ impl RenderOnce for SearchableListItemElement {
                     .items_center()
                     .justify_between()
                     .gap_x_1()
-                    .when(self.right_to_left, |this| this.flex_row_reverse())
                     .child(
                         h_flex()
                             .flex_1()

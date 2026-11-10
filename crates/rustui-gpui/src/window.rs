@@ -21,8 +21,8 @@ use crate::{
     SystemWindowTabController, TabStopMap, TaffyLayoutEngine, Task, TextInputConfiguration,
     TextInputStateChange, TextRenderingMode, TextStyle, TextStyleRefinement, ThermalState,
     TransformationMatrix, Underline, UnderlineStyle, WindowAppearance, WindowBackgroundAppearance,
-    WindowBounds, WindowControls, WindowDecorations, WindowOptions, WindowParams, WindowTextSystem,
-    WindowVisibility, point, prelude::*, px, rems, size, transparent_black,
+    WindowBounds, WindowControls, WindowDecorations, WindowInsets, WindowOptions, WindowParams,
+    WindowTextSystem, WindowVisibility, point, prelude::*, px, rems, size, transparent_black,
 };
 
 use crate::gestures::{GestureTuning, RecognizedTouchGesture, TouchGestureRecognizer};
@@ -39,7 +39,7 @@ use itertools::Itertools;
 use objc2_core_foundation::CFRetained;
 #[cfg(any(target_os = "macos", target_os = "ios"))]
 use objc2_core_video::CVPixelBuffer;
-use parking_lot::RwLock;
+use parking_lot::{RwLock, RwLockUpgradableReadGuard};
 use raw_window_handle::{HandleError, HasDisplayHandle, HasWindowHandle};
 use refineable::Refineable;
 use scheduler::Instant;
@@ -71,6 +71,7 @@ mod prompts;
 pub use a11y::A11ySubtreeBuilder;
 
 use self::a11y::A11y;
+#[cfg(not(target_family = "wasm"))]
 use self::a11y::ROOT_NODE_ID;
 use crate::util::{
     atomic_incr_if_not_zero, ceil_to_device_pixel, floor_to_device_pixel, round_half_toward_zero,
@@ -496,7 +497,12 @@ impl ArenaClearNeeded {
     }
 }
 
-pub(crate) type FocusMap = RwLock<SlotMap<FocusId, FocusRef>>;
+#[derive(Default)]
+pub(crate) struct FocusMap {
+    pub(crate) handles: SlotMap<FocusId, FocusRef>,
+    pub(crate) dropped_handles: Vec<FocusId>,
+}
+
 pub(crate) struct FocusRef {
     pub(crate) ref_count: AtomicUsize,
     pub(crate) tab_index: isize,
@@ -536,7 +542,7 @@ impl FocusId {
 /// A handle which can be used to track and manipulate the focused element in a window.
 pub struct FocusHandle {
     pub(crate) id: FocusId,
-    handles: Arc<FocusMap>,
+    handles: Arc<RwLock<FocusMap>>,
     /// The index of this element in the tab order.
     pub tab_index: isize,
     /// Whether this element can be focused by tab navigation.
@@ -550,8 +556,8 @@ impl std::fmt::Debug for FocusHandle {
 }
 
 impl FocusHandle {
-    pub(crate) fn new(handles: &Arc<FocusMap>) -> Self {
-        let id = handles.write().insert(FocusRef {
+    pub(crate) fn new(handles: &Arc<RwLock<FocusMap>>) -> Self {
+        let id = handles.write().handles.insert(FocusRef {
             ref_count: AtomicUsize::new(1),
             tab_index: 0,
             tab_stop: false,
@@ -565,9 +571,9 @@ impl FocusHandle {
         }
     }
 
-    pub(crate) fn for_id(id: FocusId, handles: &Arc<FocusMap>) -> Option<Self> {
+    pub(crate) fn for_id(id: FocusId, handles: &Arc<RwLock<FocusMap>>) -> Option<Self> {
         let lock = handles.read();
-        let focus = lock.get(id)?;
+        let focus = lock.handles.get(id)?;
         if atomic_incr_if_not_zero(&focus.ref_count) == 0 {
             return None;
         }
@@ -582,7 +588,7 @@ impl FocusHandle {
     /// Sets the tab index of the element associated with this handle.
     pub fn tab_index(mut self, index: isize) -> Self {
         self.tab_index = index;
-        if let Some(focus) = self.handles.write().get_mut(self.id) {
+        if let Some(focus) = self.handles.write().handles.get_mut(self.id) {
             focus.tab_index = index;
         }
         self
@@ -593,7 +599,7 @@ impl FocusHandle {
     /// When `false`, the element will not be included in the tab order.
     pub fn tab_stop(mut self, tab_stop: bool) -> Self {
         self.tab_stop = tab_stop;
-        if let Some(focus) = self.handles.write().get_mut(self.id) {
+        if let Some(focus) = self.handles.write().handles.get_mut(self.id) {
             focus.tab_stop = tab_stop;
         }
         self
@@ -662,12 +668,15 @@ impl Eq for FocusHandle {}
 
 impl Drop for FocusHandle {
     fn drop(&mut self) {
-        self.handles
-            .read()
-            .get(self.id)
-            .unwrap()
-            .ref_count
-            .fetch_sub(1, SeqCst);
+        let handles = self.handles.upgradable_read();
+        let focus = handles.handles.get(self.id).expect("focus handle missing");
+        let previous_count = focus.ref_count.fetch_sub(1, SeqCst);
+        assert_ne!(previous_count, 0, "over-released focus handle");
+        if previous_count == 1 {
+            RwLockUpgradableReadGuard::upgrade(handles)
+                .dropped_handles
+                .push(self.id);
+        }
     }
 }
 
@@ -675,7 +684,7 @@ impl Drop for FocusHandle {
 #[derive(Clone, Debug)]
 pub struct WeakFocusHandle {
     pub(crate) id: FocusId,
-    pub(crate) handles: Weak<FocusMap>,
+    pub(crate) handles: Weak<RwLock<FocusMap>>,
 }
 
 impl WeakFocusHandle {
@@ -776,7 +785,7 @@ impl HitboxId {
 impl HitboxId {
     /// Checks if the hitbox with this ID is currently hovered. Returns `false` during keyboard
     /// input modality so that keyboard navigation suppresses hover highlights. Except when handling
-    /// `ScrollWheelEvent`, this is typically what you want when determining whether to handle mouse
+    /// `ScrollEvent`, this is typically what you want when determining whether to handle mouse
     /// events or paint hover styles.
     ///
     /// See [`Hitbox::is_hovered`] for details.
@@ -814,7 +823,7 @@ impl HitboxId {
     }
 
     /// Checks if the hitbox with this ID contains the mouse and should handle scroll events.
-    /// Typically this should only be used when handling `ScrollWheelEvent`, and otherwise
+    /// Typically this should only be used when handling `ScrollEvent`, and otherwise
     /// `is_hovered` should be used. See the documentation of `Hitbox::is_hovered` for details about
     /// this distinction.
     pub fn should_handle_scroll(self, window: &Window) -> bool {
@@ -844,7 +853,7 @@ pub struct Hitbox {
 impl Hitbox {
     /// Checks if the hitbox is currently hovered. Returns `false` during keyboard input modality
     /// so that keyboard navigation suppresses hover highlights. Except when handling
-    /// `ScrollWheelEvent`, this is typically what you want when determining whether to handle mouse
+    /// `ScrollEvent`, this is typically what you want when determining whether to handle mouse
     /// events or paint hover styles.
     ///
     /// This can return `false` even when the hitbox contains the mouse, if a hitbox in front of
@@ -852,7 +861,7 @@ impl Hitbox {
     /// `HitboxBehavior::BlockMouseExceptScroll` (`InteractiveElement::block_mouse_except_scroll`),
     /// or if the current input modality is keyboard (see [`Window::last_input_was_keyboard`]).
     ///
-    /// Handling of `ScrollWheelEvent` should typically use `should_handle_scroll` instead.
+    /// Handling of `ScrollEvent` should typically use `should_handle_scroll` instead.
     /// Concretely, this is due to use-cases like overlays that cause the elements under to be
     /// non-interactive while still allowing scrolling. More abstractly, this is because
     /// `is_hovered` is about element interactions directly under the mouse - mouse moves, clicks,
@@ -874,7 +883,7 @@ impl Hitbox {
     }
 
     /// Checks if the hitbox contains the mouse and should handle scroll events. Typically this
-    /// should only be used when handling `ScrollWheelEvent`, and otherwise `is_hovered` should be
+    /// should only be used when handling `ScrollEvent`, and otherwise `is_hovered` should be
     /// used. See the documentation of `Hitbox::is_hovered` for details about this distinction.
     ///
     /// This can return `false` even when the hitbox contains the mouse, if a hitbox in front of
@@ -921,7 +930,7 @@ pub enum HitboxBehavior {
     /// [`InteractiveElement::block_mouse_except_scroll`].
     ///
     /// For mouse handlers that check those hitboxes, this behaves the same as registering a
-    /// bubble-phase handler for every mouse event type **except** `ScrollWheelEvent`:
+    /// bubble-phase handler for every mouse event type **except** `ScrollEvent`:
     ///
     /// ```ignore
     /// window.on_mouse_event(move |_: &EveryMouseEventTypeExceptScroll, phase, window, cx| {
@@ -931,7 +940,7 @@ pub enum HitboxBehavior {
     /// })
     /// ```
     ///
-    /// See the documentation of [`Hitbox::is_hovered`] for details of why `ScrollWheelEvent` is
+    /// See the documentation of [`Hitbox::is_hovered`] for details of why `ScrollEvent` is
     /// handled differently than other mouse events. If also blocking these scroll events is
     /// desired, then a `cx.stop_propagation()` handler like the one above can be used.
     ///
@@ -1244,10 +1253,7 @@ pub struct Window {
     /// window, so that only actual changes are forwarded (reconfiguring a live
     /// input session can restart the IME connection).
     last_text_input_configuration: Option<TextInputConfiguration>,
-    last_secure_input: bool,
-    #[cfg(target_family = "wasm")]
-    last_input_lifecycle: Option<crate::InputHandlerLifecycle>,
-    focused_text_input_active: bool,
+    focused_text_input: Option<FocusId>,
     pub(crate) image_cache_stack: Vec<AnyImageCache>,
     pub(crate) rendered_frame: Frame,
     pub(crate) next_frame: Frame,
@@ -1289,8 +1295,8 @@ pub struct Window {
     pub(crate) activation_observers: SubscriberSet<(), AnyObserver>,
     pub(crate) focus: Option<FocusId>,
     focus_enabled: bool,
-    modal_focus_scope: Option<(WeakFocusHandle, EntityId, bool)>,
     inert_focus_scopes: Vec<WeakFocusHandle>,
+    modal_focus_scope: Option<(WeakFocusHandle, EntityId, bool)>,
     /// Incremented every time focus moves. Used to invalidate a
     /// pending keyboard activation state when focus changes.
     pub(crate) focus_generation: u64,
@@ -1603,6 +1609,8 @@ impl Window {
             icon,
             #[cfg_attr(not(target_os = "macos"), allow(unused_variables))]
             tabbing_identifier,
+            #[cfg_attr(not(target_os = "macos"), allow(unused_variables))]
+            use_display_p3,
         } = options;
 
         let initial_window_title = titlebar
@@ -1628,6 +1636,8 @@ impl Window {
                 icon,
                 #[cfg(target_os = "macos")]
                 tabbing_identifier,
+                #[cfg(target_os = "macos")]
+                use_display_p3,
             },
         )?;
 
@@ -1672,6 +1682,7 @@ impl Window {
             cfg!(target_family = "wasm") && !accessibility_force_disabled,
         ));
 
+        #[cfg(not(target_family = "wasm"))]
         if !accessibility_force_disabled {
             let mut initial_root_node = accesskit::Node::new(accesskit::Role::Window);
             if let Some(title) = &initial_window_title {
@@ -1694,34 +1705,19 @@ impl Window {
                     Box::new(move || {
                         log::info!("Accessibility activated");
                         active_flag.store(true, SeqCst);
-                        #[cfg(not(target_family = "wasm"))]
                         activation_sender.send_blocking(()).log_err();
-                        #[cfg(target_family = "wasm")]
-                        if activation_sender.try_send(()).is_err() {
-                            log::warn!("Web accessibility activation channel closed");
-                        }
                         Some(initial_tree.clone())
                     })
                 },
                 action: Box::new(move |request| {
-                    #[cfg(not(target_family = "wasm"))]
                     action_sender.send_blocking(request).log_err();
-                    #[cfg(target_family = "wasm")]
-                    if action_sender.try_send(request).is_err() {
-                        log::warn!("Web accessibility action channel closed");
-                    }
                 }),
                 deactivation: {
                     let active_flag = a11y_active_flag.clone();
                     Box::new(move || {
                         log::info!("Accessibility deactivated");
                         active_flag.store(false, SeqCst);
-                        #[cfg(not(target_family = "wasm"))]
                         deactivation_sender.send_blocking(()).log_err();
-                        #[cfg(target_family = "wasm")]
-                        if deactivation_sender.try_send(()).is_err() {
-                            log::warn!("Web accessibility deactivation channel closed");
-                        }
                     })
                 },
             });
@@ -2166,10 +2162,7 @@ impl Window {
             element_opacity: 1.0,
             requested_autoscroll: None,
             last_text_input_configuration: None,
-            last_secure_input: false,
-            #[cfg(target_family = "wasm")]
-            last_input_lifecycle: None,
-            focused_text_input_active: false,
+            focused_text_input: None,
             rendered_frame: Frame::new(DispatchTree::new(cx.keymap.clone(), cx.actions.clone())),
             next_frame: Frame::new(DispatchTree::new(cx.keymap.clone(), cx.actions.clone())),
             next_frame_callbacks,
@@ -2211,8 +2204,8 @@ impl Window {
             activation_observers: SubscriberSet::new(),
             focus: None,
             focus_enabled: true,
-            modal_focus_scope: None,
             inert_focus_scopes: Vec::new(),
+            modal_focus_scope: None,
             focus_generation: 0,
             pending_input: None,
             pending_modifier: ModifierState::default(),
@@ -2427,38 +2420,56 @@ impl Window {
         })
     }
 
-    /// Move focus to the element associated with the given [`FocusHandle`].
-    /// Restrict focus to a modal subtree while its owner remains alive.
+    /// Mark a rendered focus subtree inert for direct focus requests and tab traversal.
+    pub fn set_focus_scope_inert(&mut self, scope: &FocusHandle, inert: bool) {
+        self.inert_focus_scopes.retain(|weak| {
+            weak.upgrade()
+                .is_some_and(|existing| existing.id != scope.id)
+        });
+        if inert {
+            self.inert_focus_scopes.push(scope.downgrade());
+        }
+    }
+
+    fn has_rendered_inert_focus_scope(&self) -> bool {
+        self.inert_focus_scopes.iter().any(|scope| {
+            scope.upgrade().is_some_and(|scope| {
+                self.rendered_frame
+                    .dispatch_tree
+                    .focusable_node_id(scope.id)
+                    .is_some()
+            })
+        })
+    }
+
+    fn inert_request_allowed(&self, target: &FocusHandle) -> bool {
+        self.inert_focus_scopes.iter().all(|scope| {
+            scope.upgrade().is_none_or(|scope| {
+                !self
+                    .rendered_frame
+                    .dispatch_tree
+                    .focus_contains(scope.id, target.id)
+            })
+        })
+    }
+
+    /// Restrict focus to a modal subtree while its owner remains rendered.
     pub fn set_modal_focus_scope(&mut self, scope: Option<&FocusHandle>, owner: EntityId) {
         let seen = self.rendered_frame.dispatch_tree.has_view(owner);
         self.modal_focus_scope = scope.map(|scope| (scope.downgrade(), owner, seen));
     }
 
     pub fn modal_focus_contains(&self, scope: &FocusHandle, target: &FocusHandle) -> bool {
-        self.rendered_frame.dispatch_tree.modal_focus_allowed(scope.id, target.id)
-    }
-
-    /// Prevent focus requests and tab traversal inside a previously rendered subtree.
-    pub fn set_focus_scope_inert(&mut self, scope: &FocusHandle, inert: bool) {
-        self.inert_focus_scopes.retain(|weak| weak.upgrade().is_some_and(|existing| existing.id != scope.id));
-        if inert { self.inert_focus_scopes.push(scope.downgrade()); }
-    }
-
-    fn has_rendered_inert_focus_scope(&self) -> bool {
-        self.inert_focus_scopes.iter().filter_map(WeakFocusHandle::upgrade).any(|scope| {
-            self.rendered_frame.dispatch_tree.focusable_node_id(scope.id).is_some()
-        })
-    }
-
-    fn inert_request_allowed(&self, target: &FocusHandle) -> bool {
-        self.inert_focus_scopes.iter().all(|scope| scope.upgrade().is_none_or(|scope| {
-            !self.rendered_frame.dispatch_tree.focus_contains(scope.id, target.id)
-        }))
+        self.rendered_frame
+            .dispatch_tree
+            .modal_focus_allowed(scope.id, target.id)
     }
 
     fn modal_request_allowed(&self, target: &FocusHandle) -> bool {
         self.modal_focus_scope.as_ref().is_none_or(|(scope, _, _)| {
-            scope.upgrade().is_none_or(|scope| self.modal_focus_contains(&scope, target))
+            scope
+                .upgrade()
+                .is_none_or(|scope| self.modal_focus_contains(&scope, target))
         })
     }
 
@@ -2473,10 +2484,67 @@ impl Window {
         }
     }
 
+    /// Restore focus inside a rendered modal scope, preferring the last live descendant.
+    pub fn restore_focus_within(
+        &mut self,
+        scope: &FocusHandle,
+        preferred: Option<&FocusHandle>,
+        cx: &mut App,
+    ) -> bool {
+        self.prune_modal_focus_scope();
+        if !self.focus_enabled
+            || self
+                .rendered_frame
+                .dispatch_tree
+                .focusable_node_id(scope.id)
+                .is_none()
+        {
+            return false;
+        }
+        if let Some(preferred) = preferred
+            && preferred.id != scope.id
+            && self
+                .rendered_frame
+                .dispatch_tree
+                .focusable_node_id(preferred.id)
+                .is_some()
+            && scope.contains(preferred, self)
+            && self
+                .rendered_frame
+                .dispatch_tree
+                .modal_focus_allowed(scope.id, preferred.id)
+        {
+            self.focus(preferred, cx);
+            return self.focus == Some(preferred.id) && self.modal_request_allowed(preferred);
+        }
+        let candidate =
+            self.rendered_frame
+                .tab_stops
+                .matching_preserving_order(None, false, |candidate| {
+                    candidate.id != scope.id
+                        && scope.contains(candidate, self)
+                        && self
+                            .rendered_frame
+                            .dispatch_tree
+                            .modal_focus_allowed(scope.id, candidate.id)
+                        && self.inert_request_allowed(candidate)
+                });
+        if let Some(candidate) = candidate {
+            self.focus(&candidate, cx);
+            return self.focus == Some(candidate.id) && self.modal_request_allowed(&candidate);
+        }
+        self.focus(scope, cx);
+        self.focus == Some(scope.id) && self.modal_request_allowed(scope)
+    }
+
+    /// Move focus to the element associated with the given [`FocusHandle`].
     pub fn focus(&mut self, handle: &FocusHandle, cx: &mut App) {
         self.prune_modal_focus_scope();
-        if !self.modal_request_allowed(handle) || !self.inert_request_allowed(handle) { return; }
-        if !self.focus_enabled || self.focus == Some(handle.id) {
+        if !self.modal_request_allowed(handle)
+            || !self.inert_request_allowed(handle)
+            || !self.focus_enabled
+            || self.focus == Some(handle.id)
+        {
             return;
         }
 
@@ -2508,96 +2576,52 @@ impl Window {
         self.focus_enabled = false;
     }
 
-    /// Restore focus within a rendered scope without focusing outside it.
-    ///
-    /// The preferred handle is used only while it remains a rendered descendant.
-    /// Otherwise it tries to find a descendant in tab order. If none is reachable,
-    /// focus stays on the scope itself. Returns false when
-    /// focus is disabled or the scope is no longer rendered.
-    pub fn restore_focus_within(
-        &mut self,
-        scope: &FocusHandle,
-        preferred: Option<&FocusHandle>,
-        cx: &mut App,
-    ) -> bool {
-        if !self.focus_enabled
-            || self
-                .rendered_frame
-                .dispatch_tree
-                .focusable_node_id(scope.id)
-                .is_none()
-        {
-            return false;
-        }
-
-        if let Some(preferred) = preferred
-            && preferred.id != scope.id
-            && self
-                .rendered_frame
-                .dispatch_tree
-                .focusable_node_id(preferred.id)
-                .is_some()
-            && scope.contains(preferred, self)
-            && self.rendered_frame.dispatch_tree.modal_focus_allowed(scope.id, preferred.id)
-        {
-            self.focus(preferred, cx);
-            return self.focus == Some(preferred.id) && self.modal_request_allowed(preferred);
-        }
-
-        let candidate = self.rendered_frame.tab_stops.first_matching(|candidate| {
-            candidate.id != scope.id && scope.contains(candidate, self)
-                && self.rendered_frame.dispatch_tree.modal_focus_allowed(scope.id, candidate.id)
-        });
-        if let Some(candidate) = candidate {
-            self.focus(&candidate, cx);
-            return self.focus == Some(candidate.id) && self.modal_request_allowed(&candidate);
-        }
-
-        self.focus(scope, cx);
-        self.focus == Some(scope.id) && self.modal_request_allowed(scope)
-    }
-
     /// Move focus to next tab stop.
     pub fn focus_next(&mut self, cx: &mut App) {
-        self.prune_modal_focus_scope();
         if !self.focus_enabled {
             return;
         }
 
-        if self.has_rendered_inert_focus_scope() {
-            let handle = self.rendered_frame.tab_stops.matching_preserving_order(self.focus, false, |handle| self.modal_request_allowed(handle) && self.inert_request_allowed(handle));
-            if let Some(handle) = handle { self.focus(&handle, cx); }
-            return;
-        }
-        if self.modal_focus_scope.is_none() {
-            if let Some(handle) = self.rendered_frame.tab_stops.next(self.focus.as_ref()) {
+        self.prune_modal_focus_scope();
+        if self.has_rendered_inert_focus_scope() || self.modal_focus_scope.is_some() {
+            let handle = self.rendered_frame.tab_stops.matching_preserving_order(
+                self.focus,
+                false,
+                |handle| self.inert_request_allowed(handle) && self.modal_request_allowed(handle),
+            );
+            if let Some(handle) = handle {
                 self.focus(&handle, cx);
             }
             return;
         }
-        let handle = self.rendered_frame.tab_stops.matching_in_direction(
-            self.focus, false, |handle| self.modal_request_allowed(handle));
-        if let Some(handle) = handle { self.focus(&handle, cx); }
+
+        if let Some(handle) = self.rendered_frame.tab_stops.next(self.focus.as_ref()) {
+            self.focus(&handle, cx)
+        }
     }
 
-    /// Focus the previous tab stop.
+    /// Move focus to previous tab stop.
     pub fn focus_prev(&mut self, cx: &mut App) {
-        self.prune_modal_focus_scope();
-        if !self.focus_enabled { return; }
-        if self.has_rendered_inert_focus_scope() {
-            let handle = self.rendered_frame.tab_stops.matching_preserving_order(self.focus, true, |handle| self.modal_request_allowed(handle) && self.inert_request_allowed(handle));
-            if let Some(handle) = handle { self.focus(&handle, cx); }
+        if !self.focus_enabled {
             return;
         }
-        if self.modal_focus_scope.is_none() {
-            if let Some(handle) = self.rendered_frame.tab_stops.prev(self.focus.as_ref()) {
+
+        self.prune_modal_focus_scope();
+        if self.has_rendered_inert_focus_scope() || self.modal_focus_scope.is_some() {
+            let handle = self.rendered_frame.tab_stops.matching_preserving_order(
+                self.focus,
+                true,
+                |handle| self.inert_request_allowed(handle) && self.modal_request_allowed(handle),
+            );
+            if let Some(handle) = handle {
                 self.focus(&handle, cx);
             }
             return;
         }
-        let handle = self.rendered_frame.tab_stops.matching_in_direction(
-            self.focus, true, |handle| self.modal_request_allowed(handle));
-        if let Some(handle) = handle { self.focus(&handle, cx); }
+
+        if let Some(handle) = self.rendered_frame.tab_stops.prev(self.focus.as_ref()) {
+            self.focus(&handle, cx)
+        }
     }
 
     /// Accessor for the text system.
@@ -3004,6 +3028,11 @@ impl Window {
     /// Returns the bounds of the current window in the global coordinate space, which could span across multiple displays.
     pub fn bounds(&self) -> Bounds<Pixels> {
         self.platform_window.bounds()
+    }
+
+    /// Returns the regions of this window obscured by system UI and the keyboard.
+    pub fn insets(&self) -> WindowInsets {
+        self.platform_window.insets()
     }
 
     /// Renders the current frame's scene to a texture and returns the pixel data as an RGBA image.
@@ -3550,7 +3579,8 @@ impl Window {
         self.last_input_modality == InputModality::Keyboard
     }
 
-    pub(crate) fn last_input_was_touch(&self) -> bool {
+    /// Returns whether the last input event came from a touch screen.
+    pub fn last_input_was_touch(&self) -> bool {
         self.last_input_modality == InputModality::Touch
     }
 
@@ -3621,17 +3651,24 @@ impl Window {
         // paint_range indices remain valid for reuse_paint on the next frame.
         // Search backwards to find the last Some entry, since reuse_paint may
         // have copied None slots from the previous frame. (Fixes #50456)
-        let input_handler = self
+        let focused_text_input = if let Some(mut input_handler) = self
             .next_frame
             .input_handlers
             .iter_mut()
             .rev()
-            .find_map(|handler| handler.take());
-        let focused_text_input_active = self.install_platform_input_handler(input_handler, cx);
-        if focused_text_input_active != self.focused_text_input_active {
-            self.focused_text_input_active = focused_text_input_active;
+            .find_map(|h| h.take())
+        {
+            let accepts_text_input = input_handler.accepts_text_input(self, cx);
+            self.platform_window.set_input_handler(input_handler);
+            self.focus.filter(|_| accepts_text_input)
+        } else {
+            None
+        };
+        self.apply_text_input_configuration(cx);
+        let previous = mem::replace(&mut self.focused_text_input, focused_text_input);
+        if previous.is_some() != focused_text_input.is_some() {
             self.platform_window
-                .text_input_state_changed(if focused_text_input_active {
+                .text_input_state_changed(if focused_text_input.is_some() {
                     TextInputStateChange::FocusGained
                 } else {
                     TextInputStateChange::FocusLost
@@ -3646,7 +3683,6 @@ impl Window {
         let previous_focus_path = self.rendered_frame.focus_path();
         let previous_window_active = self.rendered_frame.window_active;
         mem::swap(&mut self.rendered_frame, &mut self.next_frame);
-        self.prune_modal_focus_scope();
         self.next_frame.clear();
         let current_focus_path = self.rendered_frame.focus_path();
         let current_window_active = self.rendered_frame.window_active;
@@ -5534,9 +5570,31 @@ impl Window {
 
         if focus_handle.is_focused(self) {
             let cx = self.to_async(cx);
-            self.next_frame
-                .input_handlers
-                .push(Some(PlatformInputHandler::new(cx, Box::new(input_handler))));
+            self.next_frame.input_handlers.push(Some(
+                PlatformInputHandler::new(cx, Box::new(input_handler)).with_focus(focus_handle.id),
+            ));
+        }
+    }
+
+    /// Notifies native text services that the focused component's text changed.
+    ///
+    /// Text components should call this after application-driven edits, in addition
+    /// to notifying GPUI to redraw. Unfocused or unregistered components are ignored.
+    pub fn notify_text_input_changed(&self, focus_handle: &FocusHandle) {
+        if self.focused_text_input == Some(focus_handle.id) && focus_handle.is_focused(self) {
+            self.platform_window
+                .text_input_state_changed(TextInputStateChange::ContentChanged);
+        }
+    }
+
+    /// Notifies native text services that the focused component's selection changed.
+    ///
+    /// Text components should call this after application-driven selection changes,
+    /// in addition to notifying GPUI to redraw.
+    pub fn notify_text_selection_changed(&self, focus_handle: &FocusHandle) {
+        if self.focused_text_input == Some(focus_handle.id) && focus_handle.is_focused(self) {
+            self.platform_window
+                .text_input_state_changed(TextInputStateChange::SelectionChanged);
         }
     }
 
@@ -5544,52 +5602,20 @@ impl Window {
     /// platform window when it differs from the last forwarded value. With no
     /// input handler the default configuration applies, so a field's
     /// preferences don't outlive its focus.
-    fn install_platform_input_handler(
-        &mut self,
-        mut handler: Option<PlatformInputHandler>,
-        cx: &mut App,
-    ) -> bool {
-        let (accepts, configuration, secure) = match handler.as_mut() {
-            Some(handler) => (
-                handler.accepts_text_input(self, cx),
-                handler.text_input_configuration(self, cx),
-                handler.is_secure_input(self, cx),
-            ),
-            None => (false, TextInputConfiguration::default(), false),
-        };
-        #[cfg(target_family = "wasm")]
-        {
-            let lifecycle = handler
-                .as_ref()
-                .and_then(PlatformInputHandler::input_lifecycle);
-            let previous = self.last_input_lifecycle.as_ref().map(|owner| owner.owner);
-            let next = lifecycle.as_ref().map(|owner| owner.owner);
-            let security_changed = self.last_secure_input != secure;
-            if previous != next || security_changed || (self.focused_text_input_active && !accepts)
-            {
-                if let Some(old) = self.last_input_lifecycle.take() {
-                    (old.cancel_composition)(self, cx);
-                }
-                self.platform_window.text_input_owner_changed();
+    fn apply_text_input_configuration(&mut self, cx: &mut App) {
+        let configuration = match self.platform_window.take_input_handler() {
+            Some(mut input_handler) => {
+                let configuration = input_handler.text_input_configuration(self, cx);
+                self.platform_window.set_input_handler(input_handler);
+                configuration
             }
-            self.last_input_lifecycle = lifecycle;
-        }
-        if let Some(handler) = handler {
-            self.platform_window.set_input_handler(handler);
-        }
-        if self.last_secure_input != secure {
-            self.platform_window.set_secure_input(secure);
-            self.last_secure_input = secure;
-        }
+            None => TextInputConfiguration::default(),
+        };
         if self.last_text_input_configuration.as_ref() != Some(&configuration) {
             self.platform_window
                 .set_text_input_configuration(configuration.clone());
             self.last_text_input_configuration = Some(configuration);
         }
-        // draw_roots has already queued this frame's AccessKit tree.
-        // Commit even when no text input is focused; no redraw is required.
-        self.platform_window.text_input_owner_ready();
-        accepts
     }
 
     /// Register a mouse event listener on the window for the next frame. The type of event
@@ -5743,13 +5769,13 @@ impl Window {
 
     /// Return a key binding string for an action, to display in the UI. Uses the highest precedence
     /// binding for the action (last binding added to the keymap).
-    pub fn keystroke_text_for(&self, action: &dyn Action) -> String {
+    pub fn keystroke_text_for(&self, action: &dyn Action, cx: &App) -> String {
         self.highest_precedence_binding_for_action(action)
             .map(|binding| {
                 binding
                     .keystrokes()
                     .iter()
-                    .map(ToString::to_string)
+                    .map(|keystroke| keystroke.display(cx.platform_info().os).to_string())
                     .collect::<Vec<_>>()
                     .join(" ")
             })
@@ -5811,10 +5837,10 @@ impl Window {
                 self.capslock = modifiers_changed.capslock;
                 PlatformInput::ModifiersChanged(modifiers_changed)
             }
-            PlatformInput::ScrollWheel(scroll_wheel) => {
+            PlatformInput::Scroll(scroll_wheel) => {
                 self.mouse_position = scroll_wheel.position;
                 self.modifiers = scroll_wheel.modifiers;
-                PlatformInput::ScrollWheel(scroll_wheel)
+                PlatformInput::Scroll(scroll_wheel)
             }
             PlatformInput::Pinch(pinch) => {
                 self.mouse_position = pinch.position;
@@ -5888,6 +5914,10 @@ impl Window {
             PlatformInput::TouchDrag(touch_drag) => {
                 self.mouse_position = touch_drag.start_position;
                 PlatformInput::TouchDrag(touch_drag)
+            }
+            PlatformInput::BackGesture(back) => {
+                self.mouse_position = back.start_position;
+                PlatformInput::BackGesture(back)
             }
             PlatformInput::KeyDown(_) | PlatformInput::KeyUp(_) => event,
         };
@@ -7198,6 +7228,7 @@ impl Window {
             .push((action, Box::new(listener)));
     }
 
+    #[cfg(not(target_family = "wasm"))]
     pub(crate) fn handle_a11y_action(&mut self, request: accesskit::ActionRequest, cx: &mut App) {
         // Take listeners out temporarily so the closures can borrow Window
         // mutably, then restore them afterward.
@@ -7409,7 +7440,7 @@ impl Window {
                     inspector.select(inspector_id, self);
                 }
             });
-        } else if let Some(event) = event.downcast_ref::<crate::ScrollWheelEvent>() {
+        } else if let Some(event) = event.downcast_ref::<crate::ScrollEvent>() {
             // This should be kept in sync with SCROLL_LINES in x11 platform.
             const SCROLL_LINES: f32 = 3.0;
             const SCROLL_PIXELS_PER_LAYER: f32 = 36.0;
@@ -8046,15 +8077,189 @@ mod tests {
     };
 
     use crate::{
-        AnyWindowHandle, AppContext as _, Bounds, ContentMask, Context, DispatchPhase,
-        DragMoveEvent, Empty, ExternalDragPayload, ExternalPaths, FileDragPaths, FileDropEvent,
-        FocusHandle, InputEvent as _, InteractiveElement as _, IntoElement, KeyDownEvent,
-        Keystroke, LongPressEvent, MouseButton, MouseDownEvent, MouseMoveEvent, ParentElement,
-        Pixels, PlatformInput, Point, Render, RequestFrameOptions, ScaledPixels,
-        StatefulInteractiveElement as _, Styled, TestAppContext, TouchDragEvent, TouchEvent,
-        TouchId, TouchPhase, Underline, UnderlineStyle, Window, WindowAppearance, WindowOptions,
-        canvas, div, hsla, point, px, size,
+        AnyWindowHandle, AppContext as _, BackGestureEvent, BackGesturePhase, Bounds, ContentMask,
+        Context, DispatchPhase, DragMoveEvent, Empty, ExternalDragPayload, ExternalPaths,
+        FileDragPaths, FileDropEvent, FocusHandle, InputEvent as _, InteractiveElement as _,
+        IntoElement, KeyDownEvent, Keystroke, LongPressEvent, MouseButton, MouseDownEvent,
+        MouseMoveEvent, ParentElement, Pixels, PlatformInput, Point, Render, RequestFrameOptions,
+        ScaledPixels, StatefulInteractiveElement as _, Styled, TestAppContext, TouchDragEvent,
+        TouchEvent, TouchId, TouchPhase, Underline, UnderlineStyle, Window, WindowAppearance,
+        WindowOptions, canvas, div, hsla, point, px, size,
     };
+
+    #[gpui::test]
+    fn inert_scope_skips_tab_and_rejects_direct_focus(cx: &mut TestAppContext) {
+        struct InertScopeView {
+            before: FocusHandle,
+            scope: FocusHandle,
+            child: FocusHandle,
+            nested: FocusHandle,
+            after: FocusHandle,
+        }
+
+        impl Render for InertScopeView {
+            fn render(&mut self, _: &mut Window, _: &mut Context<Self>) -> impl IntoElement {
+                div()
+                    .child(div().track_focus(&self.before).tab_stop(true))
+                    .child(
+                        div().track_focus(&self.scope).child(
+                            div()
+                                .track_focus(&self.child)
+                                .tab_stop(true)
+                                .child(div().track_focus(&self.nested).tab_stop(true)),
+                        ),
+                    )
+                    .child(div().track_focus(&self.after).tab_stop(true))
+            }
+        }
+
+        let (before, scope, child, nested, after) = cx.update(|cx| {
+            (
+                cx.focus_handle().tab_stop(true),
+                cx.focus_handle(),
+                cx.focus_handle().tab_stop(true),
+                cx.focus_handle().tab_stop(true),
+                cx.focus_handle().tab_stop(true),
+            )
+        });
+        let window: AnyWindowHandle = cx
+            .add_window({
+                let (before, scope, child, nested, after) = (
+                    before.clone(),
+                    scope.clone(),
+                    child.clone(),
+                    nested.clone(),
+                    after.clone(),
+                );
+                move |_, _| InertScopeView {
+                    before,
+                    scope,
+                    child,
+                    nested,
+                    after,
+                }
+            })
+            .into();
+        cx.update_window(window, |_, window, cx| window.draw(cx).clear(cx))
+            .unwrap();
+
+        cx.update_window(window, |_, window, cx| {
+            window.focus(&before, cx);
+            window.focus_next(cx);
+            assert_eq!(window.focused(cx), Some(child.clone()));
+            window.focus(&after, cx);
+            window.focus_prev(cx);
+            assert_eq!(window.focused(cx), Some(nested.clone()));
+
+            window.set_focus_scope_inert(&scope, true);
+            window.focus(&before, cx);
+            window.focus_next(cx);
+            assert_eq!(window.focused(cx), Some(after.clone()));
+            window.focus_prev(cx);
+            assert_eq!(window.focused(cx), Some(before.clone()));
+
+            window.focus(&scope, cx);
+            assert_eq!(window.focused(cx), Some(before.clone()));
+            window.focus(&child, cx);
+            assert_eq!(window.focused(cx), Some(before.clone()));
+            window.focus(&nested, cx);
+            assert_eq!(window.focused(cx), Some(before.clone()));
+
+            window.set_focus_scope_inert(&scope, false);
+            window.focus_next(cx);
+            assert_eq!(window.focused(cx), Some(child.clone()));
+        })
+        .unwrap();
+    }
+
+    #[gpui::test]
+    async fn test_focus_handle_release(cx: &mut TestAppContext) {
+        let (handle, survivor) = cx.update(|cx| (cx.focus_handle(), cx.focus_handle()));
+        let handle_id = handle.id;
+        let weak_handle = handle.downgrade();
+        let retained = handle.clone();
+        drop(handle);
+
+        cx.update(|_| {});
+        cx.read(|cx| {
+            let handles = cx.focus_handles.read();
+            assert_eq!(handles.handles.len(), 2);
+            assert!(handles.dropped_handles.is_empty());
+        });
+        assert_eq!(weak_handle.upgrade().as_ref(), Some(&retained));
+
+        cx.background_spawn(async move { drop(retained) }).await;
+        assert_eq!(weak_handle.upgrade(), None);
+        cx.read(|cx| {
+            assert_eq!(cx.focus_handles.read().dropped_handles, [handle_id]);
+        });
+        cx.update(|_| {});
+        cx.read(|cx| {
+            let handles = cx.focus_handles.read();
+            assert_eq!(handles.handles.keys().collect::<Vec<_>>(), [survivor.id]);
+            assert!(handles.dropped_handles.is_empty());
+        });
+
+        let replacements = cx.update(|cx| [cx.focus_handle(), cx.focus_handle()]);
+        assert_eq!(weak_handle.upgrade(), None);
+        cx.update(|cx| {
+            drop(replacements);
+            cx.defer(move |_| drop(survivor));
+        });
+        cx.read(|cx| {
+            let handles = cx.focus_handles.read();
+            assert_eq!(handles.handles.len(), 0);
+            assert!(handles.dropped_handles.is_empty());
+        });
+    }
+
+    #[gpui::test]
+    fn test_dropped_focus_handle_blurs_only_its_windows(cx: &mut TestAppContext) {
+        let windows = [
+            cx.add_window(|_, _| EmptyView),
+            cx.add_window(|_, _| EmptyView),
+            cx.add_window(|_, _| EmptyView),
+            cx.add_window(|_, _| EmptyView),
+            cx.add_window(|_, _| EmptyView),
+        ];
+        let (handle, other_handle, survivor) =
+            cx.update(|cx| (cx.focus_handle(), cx.focus_handle(), cx.focus_handle()));
+        for window in &windows[..2] {
+            window
+                .update(cx, |_, window, cx| window.focus(&handle, cx))
+                .expect("window exists");
+        }
+        windows[2]
+            .update(cx, |_, window, cx| window.focus(&other_handle, cx))
+            .expect("window exists");
+        windows[3]
+            .update(cx, |_, window, cx| window.focus(&survivor, cx))
+            .expect("window exists");
+
+        cx.update(|cx| {
+            for _ in 0..1_000 {
+                drop(cx.focus_handle());
+            }
+            drop((handle, other_handle));
+        });
+        for window in &windows[..3] {
+            window
+                .update(cx, |_, window, _| assert_eq!(window.focus, None))
+                .expect("window exists");
+        }
+        windows[3]
+            .update(cx, |_, window, cx| {
+                assert_eq!(window.focused(cx).as_ref(), Some(&survivor));
+                assert_eq!(window.focus_generation, 1);
+            })
+            .expect("window exists");
+        windows[4]
+            .update(cx, |_, window, _| {
+                assert_eq!(window.focus, None);
+                assert_eq!(window.focus_generation, 0);
+            })
+            .expect("window exists");
+    }
 
     #[cfg(feature = "profiler")]
     #[gpui::test]
@@ -8396,7 +8601,7 @@ mod tests {
         assert!(platform_window.frame_wake_count() > wakes);
         platform_window.simulate_frame_request(RequestFrameOptions::default());
         let wakes = platform_window.frame_wake_count();
-        platform_window.simulate_insets_change(crate::WindowInsets {
+        let insets = crate::WindowInsets {
             safe_area: crate::Edges {
                 top: px(60.),
                 right: px(20.),
@@ -8407,10 +8612,15 @@ mod tests {
                 bottom: px(350.),
                 ..Default::default()
             },
-        });
+            ..Default::default()
+        };
+        platform_window.simulate_insets_change(insets.clone());
         assert!(platform_window.frame_wake_count() > wakes);
         window
-            .update(cx, |_, window, _| {
+            .update(cx, |_, window, cx| {
+                let focus = cx.focus_handle();
+                window.focus(&focus, cx);
+                assert_eq!(window.insets(), insets);
                 assert_eq!(window.viewport_size(), size(px(400.), px(800.)));
                 assert_eq!(window.visual_viewport_bounds(), visual_bounds);
                 assert_eq!(
@@ -8419,6 +8629,7 @@ mod tests {
                 );
                 window.request_virtual_keyboard();
                 window.dismiss_virtual_keyboard();
+                assert!(focus.is_focused(window));
                 assert_eq!(window.viewport_size(), size(px(400.), px(800.)));
             })
             .unwrap();
@@ -8439,6 +8650,16 @@ mod tests {
                     window.fully_visible_bounds().size,
                     size(Pixels::ZERO, Pixels::ZERO)
                 );
+            })
+            .unwrap();
+
+        // Some backends update geometry snapshots without delivering inset callbacks.
+        use crate::PlatformWindow as _;
+        platform_window.on_insets_changed(Box::new(|_| {}));
+        platform_window.simulate_insets_change(crate::WindowInsets::default());
+        window
+            .update(cx, |_, window, _| {
+                assert_eq!(window.insets(), crate::WindowInsets::default());
             })
             .unwrap();
     }
@@ -9266,6 +9487,58 @@ mod tests {
                 (TouchPhase::Ended, px(40.)),
             ]
         );
+    }
+
+    #[gpui::test]
+    fn back_gesture_is_claimed_by_the_innermost_listener(cx: &mut TestAppContext) {
+        let claims = Rc::new(RefCell::new(Vec::new()));
+        let window = cx.add_window({
+            let claims = claims.clone();
+            move |_, _| BackListeners { claims }
+        });
+        let dispatch_back = |cx: &mut TestAppContext, x: f32| {
+            window
+                .update(cx, |_, window, cx| {
+                    window
+                        .dispatch_event(
+                            BackGestureEvent {
+                                phase: BackGesturePhase::Started,
+                                start_position: point(px(x), px(10.)),
+                                progress: 0.,
+                            }
+                            .to_platform_input(),
+                            cx,
+                        )
+                        .default_prevented
+                })
+                .unwrap()
+        };
+        assert!(dispatch_back(cx, 10.));
+        assert!(dispatch_back(cx, 80.));
+        assert!(!dispatch_back(cx, 150.));
+        assert_eq!(claims.borrow().as_slice(), ["inner", "outer"]);
+    }
+
+    struct BackListeners {
+        claims: Rc<RefCell<Vec<&'static str>>>,
+    }
+
+    impl Render for BackListeners {
+        fn render(&mut self, _window: &mut Window, _cx: &mut Context<Self>) -> impl IntoElement {
+            let claim = |name: &'static str| {
+                let claims = self.claims.clone();
+                move |_: &BackGestureEvent, _: &mut Window, _: &mut crate::App| {
+                    claims.borrow_mut().push(name)
+                }
+            };
+            div().size_full().child(
+                div()
+                    .w(px(100.))
+                    .h_full()
+                    .on_back_gesture(claim("outer"))
+                    .child(div().w(px(50.)).h_full().on_back_gesture(claim("inner"))),
+            )
+        }
     }
 
     struct TouchDragListener {

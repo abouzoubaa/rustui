@@ -6,6 +6,7 @@ from __future__ import annotations
 import argparse
 import hashlib
 import json
+import os
 import sys
 import tarfile
 import tempfile
@@ -104,6 +105,59 @@ def read_crate_file(archive_path: Path, package: str, version: str, relative_pat
         raise FixtureError(f"invalid crate archive {archive_path.name}: {error}") from error
 
 
+def extract_verified_crate(
+    archive_path: Path, source: dict[str, str], destination: Path
+) -> str:
+    """Extract a complete hash-verified crate and write Cargo vendor metadata."""
+    verify_archive_file(archive_path, source["archive_sha256"])
+    package, version = source["name"], source["version"]
+    expected_root = f"{package}-{version}"
+    destination.mkdir(parents=True, exist_ok=False)
+    try:
+        with tarfile.open(archive_path, "r:gz") as archive:
+            for member in archive.getmembers():
+                relative = PurePosixPath(member.name)
+                if (
+                    relative.is_absolute()
+                    or ".." in relative.parts
+                    or not relative.parts
+                    or relative.parts[0] != expected_root
+                    or member.issym()
+                    or member.islnk()
+                    or not (member.isdir() or member.isfile())
+                ):
+                    raise FixtureError(f"unsafe or unexpected archive entry: {member.name}")
+                parts = relative.parts[1:]
+                if not parts:
+                    continue
+                target = destination.joinpath(*parts)
+                if member.isdir():
+                    target.mkdir(parents=True, exist_ok=True)
+                    continue
+                target.parent.mkdir(parents=True, exist_ok=True)
+                contents = archive.extractfile(member)
+                if contents is None:
+                    raise FixtureError(f"cannot read archive entry: {member.name}")
+                with target.open("xb") as output:
+                    output.write(contents.read())
+                os.chmod(target, member.mode & 0o777)
+    except (tarfile.TarError, OSError) as error:
+        raise FixtureError(f"cannot extract {package}-{version}: {error}") from error
+
+    files = {
+        path.relative_to(destination).as_posix(): hashlib.sha256(path.read_bytes()).hexdigest()
+        for path in sorted(destination.rglob("*"))
+        if path.is_file()
+    }
+    checksum = {"files": files, "package": source["archive_sha256"]}
+    checksum_path = destination / ".cargo-checksum.json"
+    checksum_path.write_text(
+        json.dumps(checksum, sort_keys=True, separators=(",", ":")) + "\n",
+        encoding="utf-8",
+    )
+    return hashlib.sha256(checksum_path.read_bytes()).hexdigest()
+
+
 def target_source_path(target: str, package_names: list[str]) -> tuple[str, str] | None:
     parts = PurePosixPath(target).parts
     if len(parts) < 3:
@@ -181,6 +235,20 @@ def build_fixture(manifest: dict[str, Any], fixture_dir: Path, patch_dir: Path) 
     return len(sources), hashes, unresolved
 
 
+def extract_crate_set(manifest: dict[str, Any], fixture_dir: Path) -> int:
+    count = 0
+    for source in manifest["sources"]:
+        archive_path = fixture_dir / "archives" / f"{source['name']}-{source['version']}.crate"
+        destination = fixture_dir / "crates" / f"{source['name']}-{source['version']}"
+        checksum_hash = extract_verified_crate(archive_path, source, destination)
+        print(
+            f"EXTRACTED {source['name']}-{source['version']} "
+            f"checksum-file-sha256={checksum_hash}"
+        )
+        count += 1
+    return count
+
+
 def load_manifest(path: Path) -> dict[str, Any]:
     try:
         manifest = json.loads(path.read_text(encoding="utf-8"))
@@ -200,6 +268,11 @@ def main(argv: list[str] | None = None) -> int:
         type=Path,
         help="retain fixture files in a new directory; omitted means a disposable temporary directory",
     )
+    parser.add_argument(
+        "--extract-crates",
+        action="store_true",
+        help="also extract every verified archive to fixture/crates with Cargo checksum metadata",
+    )
     args = parser.parse_args(argv)
     try:
         manifest = load_manifest(args.manifest)
@@ -210,10 +283,12 @@ def main(argv: list[str] | None = None) -> int:
             archive_count, target_count, unresolved_count = build_fixture(
                 manifest, args.fixture_dir, args.patch_dir
             )
+            extracted_count = extract_crate_set(manifest, args.fixture_dir) if args.extract_crates else 0
             print(
                 f"verified crate archives={archive_count}; "
                 f"target file hashes={target_count}; "
                 f"known unavailable target paths={unresolved_count}; "
+                f"full crates extracted={extracted_count}; "
                 f"fixture={args.fixture_dir}"
             )
         else:
@@ -221,10 +296,12 @@ def main(argv: list[str] | None = None) -> int:
                 archive_count, target_count, unresolved_count = build_fixture(
                     manifest, Path(temporary), args.patch_dir
                 )
+                extracted_count = extract_crate_set(manifest, Path(temporary)) if args.extract_crates else 0
                 print(
                     f"verified crate archives={archive_count}; "
                     f"target file hashes={target_count}; "
                     f"known unavailable target paths={unresolved_count}; "
+                    f"full crates extracted={extracted_count}; "
                     "fixture=temporary (removed on exit)"
                 )
     except FixtureError as error:

@@ -1,5 +1,5 @@
---- a/vendor/gpui-component-0.7.3/src/time/date_picker.rs
-+++ b/vendor/gpui-component-0.7.3/src/time/date_picker.rs
+--- a/vendor/gpui-component-0.8.1/src/time/date_picker.rs
++++ b/vendor/gpui-component-0.8.1/src/time/date_picker.rs
 @@ -551,6 +551,7 @@
      appearance: bool,
      focus_ring_enabled: bool,

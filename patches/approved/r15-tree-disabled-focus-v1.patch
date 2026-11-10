@@ -1,5 +1,5 @@
---- a/vendor/gpui-base-0.7.3/src/tree.rs
-+++ b/vendor/gpui-base-0.7.3/src/tree.rs
+--- a/vendor/gpui-base-0.8.1/src/tree.rs
++++ b/vendor/gpui-base-0.8.1/src/tree.rs
 @@ -546,7 +546,12 @@
  
  impl RenderOnce for Tree {

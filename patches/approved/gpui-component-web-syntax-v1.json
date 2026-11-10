@@ -1,0 +1,17 @@
+{
+  "schema_version": 1,
+  "upstream": {
+    "repository": "https://github.com/longbridge/gpui-kit",
+    "tag": "v0.8.1",
+    "commit": "99576db58ec8103417c41a092e891b4022d24e7e",
+    "gpui_pre_version": "0.3.10"
+  },
+  "candidate": "gpui-component-web-syntax-v1.patch",
+  "patch_sha256": "25ef1345c99dad724ed1ba46c003208ddb58b336b9bed2df8c6a1452020d599a",
+  "files": {
+    "vendor/gpui-component-0.8.1/Cargo.toml": {
+      "pre_sha256": "8566ccb02a187f36dfb26fe0f373265f9361ace2fb3cce28a5ce0f90df0c399e",
+      "post_sha256": "731e9f2b4b2f88fe5b4ac437416376f8fad4221fc4bda182981ada84f28dbe2b"
+    }
+  }
+}

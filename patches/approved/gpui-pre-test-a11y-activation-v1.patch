@@ -1,7 +1,7 @@
-diff --git a/vendor/gpui-pre-0.3.9/src/platform/test/window.rs b/vendor/gpui-pre-0.3.9/src/platform/test/window.rs
+diff --git a/vendor/gpui-pre-0.3.10/src/platform/test/window.rs b/vendor/gpui-pre-0.3.10/src/platform/test/window.rs
 index 5692b1e..ee9514e 100644
---- a/vendor/gpui-pre-0.3.9/src/platform/test/window.rs
-+++ b/vendor/gpui-pre-0.3.9/src/platform/test/window.rs
+--- a/vendor/gpui-pre-0.3.10/src/platform/test/window.rs
++++ b/vendor/gpui-pre-0.3.10/src/platform/test/window.rs
 @@ -1,4 +1,4 @@
  use crate::{
 -    AnyWindowHandle, Bounds, DevicePixels, DispatchEventResult, DisplayId, GpuSpecs, HeadlessAtlas,

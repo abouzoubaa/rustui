@@ -4,8 +4,8 @@ use gpui::{
     Capslock, ClipboardEntry, ClipboardItem, ClipboardString, DispatchEventResult, GestureTuning,
     Image, ImageFormat, KeyDownEvent, KeyUpEvent, Keystroke, Modifiers, ModifiersChangedEvent,
     MouseButton, MouseDownEvent, MouseExitEvent, MouseMoveEvent, MouseUpEvent, NavigationDirection,
-    Pixels, PlatformInput, Point, ScrollDelta, ScrollWheelEvent, TouchEvent, TouchId, TouchPhase,
-    point, px,
+    Pixels, PlatformInput, Point, ScrollDelta, ScrollEvent, ScrollSource, TouchEvent, TouchId,
+    TouchPhase, point, px,
 };
 use wasm_bindgen::prelude::*;
 
@@ -206,34 +206,9 @@ impl WebWindowInner {
     fn listen_input(
         self: &Rc<Self>,
         event_name: &'static str,
-        mut handler: impl FnMut(JsValue) + 'static,
+        handler: impl FnMut(JsValue) + 'static,
     ) -> EventListenerHandle {
-        let window = Rc::downgrade(self);
-        EventListenerHandle::add(self.ime_mirror.event_target(), event_name, move |event| {
-            let Some(window) = window.upgrade() else {
-                return;
-            };
-            if !event
-                .unchecked_ref::<web_sys::Event>()
-                .target()
-                .is_some_and(|target| window.ime_mirror.contains_target(&target))
-            {
-                return;
-            }
-            handler(event);
-        })
-    }
-
-    fn is_keyboard_event_target(&self, event: &web_sys::KeyboardEvent) -> bool {
-        event.target().is_some_and(|target| {
-            js_sys::Object::is(target.as_ref(), self.canvas.as_ref())
-                || self.ime_mirror.contains_target(&target)
-                || self
-                    .a11y
-                    .borrow()
-                    .as_ref()
-                    .is_some_and(|adapter| adapter.owns_target(&target))
-        })
+        EventListenerHandle::add(self.ime_mirror.event_target(), event_name, handler)
     }
 
     fn listen_non_passive(
@@ -504,7 +479,7 @@ impl WebWindowInner {
     }
 
     /// See [`ImeMirror::schedule_sync`].
-    pub(crate) fn schedule_ime_mirror_sync(self: &Rc<Self>) {
+    fn schedule_ime_mirror_sync(self: &Rc<Self>) {
         ImeMirror::schedule_sync(self);
     }
 
@@ -571,7 +546,7 @@ impl WebWindowInner {
         let keystroke = Keystroke {
             modifiers,
             key: key.to_string(),
-            key_char: command_key_char(key),
+            key_char: None,
         };
         self.dispatch_input(PlatformInput::KeyDown(KeyDownEvent {
             keystroke: keystroke.clone(),
@@ -688,11 +663,12 @@ impl WebWindowInner {
                 current_state.modifiers = modifiers;
             }
 
-            this.dispatch_input(PlatformInput::ScrollWheel(ScrollWheelEvent {
+            this.dispatch_input(PlatformInput::Scroll(ScrollEvent {
                 position,
                 delta,
                 modifiers,
                 touch_phase: TouchPhase::Moved,
+                source: ScrollSource::Pointer,
             }));
         })
     }
@@ -726,178 +702,119 @@ impl WebWindowInner {
 
     fn register_key_down(self: &Rc<Self>) -> EventListenerHandle {
         let this = Rc::clone(self);
-        EventListenerHandle::add(
-            self.browser_window.as_ref(),
-            "keydown",
-            move |event: JsValue| {
-                let event: web_sys::KeyboardEvent = event.unchecked_into();
-                if !this.is_keyboard_event_target(&event) {
-                    return;
-                }
+        self.listen_input("keydown", move |event: JsValue| {
+            let event: web_sys::KeyboardEvent = event.unchecked_into();
 
-                let modifiers = modifiers_from_keyboard_event(&event, this.is_mac);
-                let capslock = capslock_from_keyboard_event(&event);
+            let modifiers = modifiers_from_keyboard_event(&event, this.is_mac);
+            let capslock = capslock_from_keyboard_event(&event);
 
-                if this.update_modifiers(modifiers, capslock) {
-                    this.dispatch_input(PlatformInput::ModifiersChanged(ModifiersChangedEvent {
-                        modifiers,
-                        capslock,
-                    }));
-                }
+            if this.update_modifiers(modifiers, capslock) {
+                this.dispatch_input(PlatformInput::ModifiersChanged(ModifiersChangedEvent {
+                    modifiers,
+                    capslock,
+                }));
+            }
 
-                // Composition belongs to the browser/IME lifecycle, including
-                // the Enter which commits marked text. Do not dispatch command
-                // handlers (or cancel the browser default) before this check.
-                if dom_key_event_is_composing(
-                    this.is_composing.get(),
-                    event.is_composing(),
-                    event.key_code(),
-                ) {
-                    return;
-                }
+            let key = dom_key_to_gpui_key(&event);
 
-                if this.a11y.borrow().as_ref().is_some_and(|adapter| {
-                    adapter.owns_target(
-                        event
-                            .target()
-                            .as_ref()
-                            .unwrap_or(this.ime_mirror.event_target()),
-                    ) && (event.default_prevented() || adapter.native_keyboard(&event))
-                }) {
-                    return;
-                }
+            if is_modifier_only_key(&key) {
+                return;
+            }
 
-                let key = dom_key_to_gpui_key(&event);
+            let is_held = event.repeat();
+            let key_char = compute_key_char(&event, &key, &modifiers);
 
-                if is_modifier_only_key(&key) {
-                    return;
-                }
+            // The software keyboard must edit the mirror itself: cancelling
+            // keydown prevents iOS from updating its autocorrect context and
+            // from delivering the corresponding beforeinput/input events.
+            if this.touch_input
+                && this.ime_mirror.virtual_keyboard_enabled()
+                && this.state.borrow().input_handler.is_some()
+                && !modifiers.platform
+                && !modifiers.control
+                && !modifiers.alt
+                && (key_char.is_some() || matches!(key.as_str(), "backspace" | "delete" | "enter"))
+            {
+                return;
+            }
 
-                if crate::ime_mirror::import_current_selection(&this)
-                    == crate::ime_mirror::SelectionImport::Rejected
-                {
+            let keystroke = Keystroke {
+                modifiers,
+                key,
+                key_char: key_char.clone(),
+            };
+
+            let result = this.dispatch_input(PlatformInput::KeyDown(KeyDownEvent {
+                keystroke,
+                is_held,
+                prefer_character_input: false,
+            }));
+
+            if let Some(result) = result {
+                if !result.propagate {
                     event.prevent_default();
                     this.schedule_ime_mirror_sync();
                     return;
                 }
+            }
 
-                let is_held = event.repeat();
-                let key_char = compute_key_char(&event, &key, &modifiers);
+            if this.is_composing.get() || event.is_composing() {
+                event.prevent_default();
+                return;
+            }
 
-                // The software keyboard must edit the mirror itself: cancelling
-                // keydown prevents iOS from updating its autocorrect context and
-                // from delivering the corresponding beforeinput/input events.
-                if this.touch_input
-                    && this.ime_mirror.virtual_keyboard_enabled()
-                    && this.state.borrow().input_handler.is_some()
-                    && !modifiers.platform
-                    && !modifiers.control
-                    && !modifiers.alt
-                    && (key_char.is_some()
-                        || matches!(key.as_str(), "backspace" | "delete" | "enter"))
-                {
-                    return;
-                }
-
-                let keystroke = Keystroke {
-                    modifiers,
-                    key,
-                    key_char: key_char.clone(),
-                };
-
-                let result = this.dispatch_input(PlatformInput::KeyDown(KeyDownEvent {
-                    keystroke,
-                    is_held,
-                    prefer_character_input: false,
-                }));
-
-                if let Some(result) = result {
-                    if !result.propagate || result.default_prevented {
-                        event.prevent_default();
-                        this.schedule_ime_mirror_sync();
-                        return;
-                    }
-                }
-
-                if keystroke_inserts_text(&modifiers, this.is_mac)
-                    && let Some(text) = key_char
-                {
-                    this.with_input_handler(|handler| {
-                        handler.replace_text_in_range(None, &text);
-                    });
-                    // The character went into the input handler; suppress browser
-                    // side-effects for the same keystroke (space scrolling the
-                    // page, quick-find, etc.). Everything not handled above falls
-                    // through so browser shortcuts keep their defaults.
-                    event.prevent_default();
-                }
-                this.schedule_ime_mirror_sync();
-            },
-        )
+            if keystroke_inserts_text(&modifiers, this.is_mac)
+                && let Some(text) = key_char
+            {
+                this.with_input_handler(|handler| {
+                    handler.replace_text_in_range(None, &text);
+                });
+                // The character went into the input handler; suppress browser
+                // side-effects for the same keystroke (space scrolling the
+                // page, quick-find, etc.). Everything not handled above falls
+                // through so browser shortcuts keep their defaults.
+                event.prevent_default();
+            }
+            this.schedule_ime_mirror_sync();
+        })
     }
 
     fn register_key_up(self: &Rc<Self>) -> EventListenerHandle {
         let this = Rc::clone(self);
-        EventListenerHandle::add(
-            self.browser_window.as_ref(),
-            "keyup",
-            move |event: JsValue| {
-                let event: web_sys::KeyboardEvent = event.unchecked_into();
-                if !this.is_keyboard_event_target(&event) {
-                    return;
-                }
+        self.listen_input("keyup", move |event: JsValue| {
+            let event: web_sys::KeyboardEvent = event.unchecked_into();
 
-                let modifiers = modifiers_from_keyboard_event(&event, this.is_mac);
-                let capslock = capslock_from_keyboard_event(&event);
+            let modifiers = modifiers_from_keyboard_event(&event, this.is_mac);
+            let capslock = capslock_from_keyboard_event(&event);
 
-                if this.update_modifiers(modifiers, capslock) {
-                    this.dispatch_input(PlatformInput::ModifiersChanged(ModifiersChangedEvent {
-                        modifiers,
-                        capslock,
-                    }));
-                }
-
-                if dom_key_event_is_composing(
-                    this.is_composing.get(),
-                    event.is_composing(),
-                    event.key_code(),
-                ) {
-                    return;
-                }
-
-                if this.a11y.borrow().as_ref().is_some_and(|adapter| {
-                    adapter.owns_target(
-                        event
-                            .target()
-                            .as_ref()
-                            .unwrap_or(this.ime_mirror.event_target()),
-                    ) && (event.default_prevented() || adapter.native_keyboard(&event))
-                }) {
-                    return;
-                }
-
-                let key = dom_key_to_gpui_key(&event);
-
-                if is_modifier_only_key(&key) {
-                    return;
-                }
-
-                let key_char = compute_key_char(&event, &key, &modifiers);
-
-                let keystroke = Keystroke {
+            if this.update_modifiers(modifiers, capslock) {
+                this.dispatch_input(PlatformInput::ModifiersChanged(ModifiersChangedEvent {
                     modifiers,
-                    key,
-                    key_char,
-                };
+                    capslock,
+                }));
+            }
 
-                let result = this.dispatch_input(PlatformInput::KeyUp(KeyUpEvent { keystroke }));
-                if let Some(result) = result {
-                    if !result.propagate {
-                        event.prevent_default();
-                    }
+            let key = dom_key_to_gpui_key(&event);
+
+            if is_modifier_only_key(&key) {
+                return;
+            }
+
+            let key_char = compute_key_char(&event, &key, &modifiers);
+
+            let keystroke = Keystroke {
+                modifiers,
+                key,
+                key_char,
+            };
+
+            let result = this.dispatch_input(PlatformInput::KeyUp(KeyUpEvent { keystroke }));
+            if let Some(result) = result {
+                if !result.propagate {
+                    event.prevent_default();
                 }
-            },
-        )
+            }
+        })
     }
 
     /// Imports IME edits from the hidden input into the app.
@@ -937,41 +854,76 @@ impl WebWindowInner {
                 return;
             }
 
-            let Some(edit) = crate::ime_edit::plan_ime_edit(
-                &old_value,
-                &new_value,
-                this.ime_mirror
-                    .selection_start()
-                    .map(|caret| caret as usize),
-                this.ime_mirror.window_start(),
-            ) else {
-                this.ime_mirror.reject_selection_import();
-                this.schedule_ime_mirror_sync();
-                return;
-            };
-            // A keybinding, remote edit or selection event may have changed
-            // the application since this DOM window was captured. Verify text
-            // at its absolute alignment before importing; a newer selection
-            // must never reinterpret the old window's deletion range.
+            let old_units: Vec<u16> = old_value.encode_utf16().collect();
+            let new_units: Vec<u16> = new_value.encode_utf16().collect();
+
+            // A prefix/suffix diff is ambiguous when the inserted text
+            // shares characters with what follows it (inserting "pactor "
+            // before "pact" also reads as inserting "or pact" four units
+            // later). The edit's true position is not ambiguous: the browser
+            // leaves the caret at the end of an IME edit, so the suffix is
+            // anchored as "everything after the post-edit caret", and the
+            // prefix is capped to fit. Greedy matching is only a fallback
+            // for edits where the anchored suffix doesn't verify.
+            let post_edit_caret = this
+                .ime_mirror
+                .selection_start()
+                .map(|caret| caret as usize);
+            let anchored_suffix_length = post_edit_caret
+                .map(|caret| new_units.len().saturating_sub(caret))
+                .filter(|&suffix_length| {
+                    suffix_length <= old_units.len()
+                        && old_units[old_units.len() - suffix_length..]
+                            == new_units[new_units.len() - suffix_length..]
+                });
+            let suffix_length = anchored_suffix_length.unwrap_or_else(|| {
+                old_units
+                    .iter()
+                    .rev()
+                    .zip(new_units.iter().rev())
+                    .take_while(|(old_unit, new_unit)| old_unit == new_unit)
+                    .count()
+            });
+            let prefix_length = old_units
+                .iter()
+                .zip(&new_units)
+                .take_while(|(old_unit, new_unit)| old_unit == new_unit)
+                .count()
+                .min(old_units.len() - suffix_length)
+                .min(new_units.len() - suffix_length);
+
+            let inserted_text = String::from_utf16_lossy(
+                &new_units[prefix_length..new_units.len() - suffix_length],
+            );
+            let replaced_old_end = old_units.len() - suffix_length;
+
+            // The edit's shape relative to the element's pre-edit selection.
+            // The element is private to the IME and these syncs, so the
+            // stored selection is exact.
+            let (element_selection_start, element_selection_end) =
+                this.ime_mirror.stored_selection();
+            let removed_before_selection =
+                (element_selection_start as usize).saturating_sub(prefix_length);
+            let removed_after_selection =
+                replaced_old_end.saturating_sub(element_selection_end as usize);
+
             let applied = this.with_input_handler(|handler| {
-                if !crate::ime_mirror::text_window_matches(
-                    handler,
-                    this.ime_mirror.window_start(),
-                    &old_value,
-                ) {
+                let Some(selection) = handler.selected_text_range(false) else {
                     return false;
-                }
-                handler.replace_text_in_range(Some(edit.range), &edit.text);
+                };
+                let range = selection
+                    .range
+                    .start
+                    .saturating_sub(removed_before_selection)
+                    ..selection.range.end + removed_after_selection;
+                handler.replace_text_in_range(Some(range), &inserted_text);
                 true
             });
-            if applied == Some(true) {
-                this.ime_mirror.adopt_element_state();
-            } else {
-                this.ime_mirror.reject_selection_import();
+            if applied != Some(true) {
+                return;
             }
-            // The application may normalize or reject an edit. Reconcile its
-            // accepted value after this browser gesture, including empty text.
-            this.schedule_ime_mirror_sync();
+
+            this.ime_mirror.adopt_element_state();
         })
     }
 
@@ -1007,8 +959,47 @@ impl WebWindowInner {
                 if this.ime_mirror.value() != this.ime_mirror.stored_text() {
                     return;
                 }
-                crate::ime_mirror::import_current_selection(&this);
-                this.schedule_ime_mirror_sync();
+                let Some(element_start) = this.ime_mirror.selection_start() else {
+                    return;
+                };
+                let element_end = this
+                    .ime_mirror
+                    .element_selection_end()
+                    .unwrap_or(element_start);
+                let (stored_start, stored_end) = this.ime_mirror.stored_selection();
+                if (element_start, element_end) == (stored_start, stored_end) {
+                    return;
+                }
+                let applied = this.with_input_handler(|handler| {
+                    let Some(selection) = handler.selected_text_range(false) else {
+                        return false;
+                    };
+                    // The app range corresponding to the stored element
+                    // selection is exactly `selection`; a single consistent
+                    // alignment between the two maps the moved endpoints.
+                    // Disagreeing alignments mean the app selection changed
+                    // underneath and the pending resync owns the element.
+                    let alignment = selection.range.start.checked_sub(stored_start as usize);
+                    if alignment.is_none()
+                        || alignment != selection.range.end.checked_sub(stored_end as usize)
+                    {
+                        return false;
+                    }
+                    let alignment = alignment.unwrap();
+                    handler.set_selected_text_range(
+                        alignment + element_start as usize..alignment + element_end as usize,
+                    );
+                    true
+                });
+                if applied == Some(true) {
+                    this.ime_mirror.adopt_element_state();
+                } else {
+                    // No import is coming for this move; without a forced
+                    // sync the mirror would keep deferring to it and show
+                    // the IME a selection the app never adopted.
+                    this.ime_mirror.reject_selection_import();
+                    this.schedule_ime_mirror_sync();
+                }
             },
         ))
     }
@@ -1029,14 +1020,6 @@ impl WebWindowInner {
             // During composition the composition{update,end} handlers own
             // the text.
             if this.is_composing.get() || event.is_composing() {
-                return;
-            }
-
-            if crate::ime_mirror::import_current_selection(&this)
-                != crate::ime_mirror::SelectionImport::Current
-            {
-                event.prevent_default();
-                this.schedule_ime_mirror_sync();
                 return;
             }
 
@@ -1148,9 +1131,6 @@ impl WebWindowInner {
         let this = Rc::clone(self);
         self.listen_input("compositionstart", move |_event: JsValue| {
             this.is_composing.set(true);
-            if let Some(adapter) = this.a11y.borrow().as_ref() {
-                adapter.composition_started();
-            }
         })
     }
 
@@ -1160,9 +1140,6 @@ impl WebWindowInner {
             let event: web_sys::CompositionEvent = event.unchecked_into();
             let data = event.data().unwrap_or_default();
             this.is_composing.set(true);
-            if let Some(adapter) = this.a11y.borrow().as_ref() {
-                adapter.composition_started();
-            }
             this.with_input_handler(|handler| {
                 handler.replace_and_mark_text_in_range(None, &data, None);
             });
@@ -1193,9 +1170,6 @@ impl WebWindowInner {
             // app-side divergence afterwards.
             this.ime_mirror.adopt_element_state();
             this.schedule_ime_mirror_sync();
-            if let Some(adapter) = this.a11y.borrow().as_ref() {
-                adapter.composition_ended();
-            }
         })
     }
 
@@ -1327,21 +1301,46 @@ fn capslock_from_keyboard_event(event: &web_sys::KeyboardEvent) -> Capslock {
 }
 
 pub(crate) fn is_mac_platform(browser_window: &web_sys::Window) -> bool {
-    let navigator = browser_window.navigator();
+    // iOS hardware keyboards also use Option for text composition.
+    matches!(
+        platform_info(browser_window).os,
+        gpui::OperatingSystem::Mac | gpui::OperatingSystem::Ios
+    )
+}
 
+pub(crate) fn platform_info(browser_window: &web_sys::Window) -> gpui::PlatformInfo {
+    let navigator = browser_window.navigator();
+    let user_agent = navigator.user_agent().unwrap_or_default();
     #[allow(deprecated)]
     // navigator.platform() is deprecated but navigator.userAgentData is not widely available yet
-    if let Ok(platform) = navigator.platform() {
-        if platform.contains("Mac") {
-            return true;
-        }
+    let platform = navigator.platform().unwrap_or_default();
+    let os = if user_agent.contains("Android") {
+        gpui::OperatingSystem::Android
+    } else if user_agent.contains("iPhone")
+        || user_agent.contains("iPad")
+        || user_agent.contains("iPod")
+        || (platform.contains("Mac") && navigator.max_touch_points() > 1)
+    {
+        // iPadOS can advertise a desktop Mac user agent.
+        gpui::OperatingSystem::Ios
+    } else if platform.contains("Mac") || user_agent.contains("Mac") {
+        gpui::OperatingSystem::Mac
+    } else if platform.contains("Win") || user_agent.contains("Windows") {
+        gpui::OperatingSystem::Windows
+    } else if platform.contains("FreeBSD") || user_agent.contains("FreeBSD") {
+        gpui::OperatingSystem::FreeBsd
+    } else if platform.contains("Linux")
+        || user_agent.contains("Linux")
+        || user_agent.contains("CrOS")
+    {
+        gpui::OperatingSystem::Linux
+    } else {
+        gpui::OperatingSystem::Unknown
+    };
+    gpui::PlatformInfo {
+        os,
+        target: gpui::PlatformTarget::Web,
     }
-
-    if let Ok(user_agent) = navigator.user_agent() {
-        return user_agent.contains("Mac");
-    }
-
-    false
 }
 
 fn is_modifier_only_key(key: &str) -> bool {
@@ -1370,11 +1369,6 @@ fn compute_key_char(
     gpui_key: &str,
     modifiers: &Modifiers,
 ) -> Option<String> {
-    // Match the native macOS Enter metadata. A missing key_char makes the
-    // shared GPUI heuristic mistake ordinary Enter for incomplete IME input.
-    if let Some(key_char) = command_key_char(gpui_key) {
-        return Some(key_char);
-    }
     // AltGr arrives as control+alt with the composed character in
     // `event.key()`; bare Command/Control combinations are not text.
     if (modifiers.platform || modifiers.control) && !(modifiers.control && modifiers.alt) {
@@ -1483,18 +1477,5 @@ mod tests {
         let reused = touch_ids.start(7).expect("reused pointer touch id");
         assert_ne!(reused, first);
         assert_ne!(reused, concurrent);
-    }
-}
-
-// DOM keyCode 229 identifies IME-owned input on browsers which expose
-// isComposing=false for a composition transition. No GPUI command may run.
-fn dom_key_event_is_composing(adapter_composing: bool, dom_composing: bool, key_code: u32) -> bool {
-    adapter_composing || dom_composing || key_code == 229
-}
-
-fn command_key_char(key: &str) -> Option<String> {
-    match key {
-        "enter" => Some("\n".to_string()),
-        _ => None,
     }
 }

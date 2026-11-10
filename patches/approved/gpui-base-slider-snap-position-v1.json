@@ -1,0 +1,17 @@
+{
+  "schema_version": 1,
+  "upstream": {
+    "repository": "https://github.com/longbridge/gpui-kit",
+    "tag": "v0.8.1",
+    "commit": "99576db58ec8103417c41a092e891b4022d24e7e",
+    "gpui_pre_version": "0.3.10"
+  },
+  "candidate": "gpui-base-slider-snap-position-v1.patch",
+  "patch_sha256": "e4b6287ddf0998c0da8c8da45dfec60213e72374a34c302dd21be7f7555a7582",
+  "files": {
+    "vendor/gpui-base-0.8.1/src/slider.rs": {
+      "pre_sha256": "4448d9b424ed9256cb758a4ad26b391d6a8660b50abb32ee710dc8eb3e12cc0a",
+      "post_sha256": "b33f8860745f97966da9a59f7994a0cbcab1a5fe74c73a3cb5c332bf2ac308c3"
+    }
+  }
+}
