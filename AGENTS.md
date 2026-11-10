@@ -1,57 +1,54 @@
 # RustUI — rules for coding agents
-Focus: native macOS. Accessibility is in scope; localization is roadmap Phase 2; other platforms later.
+Focus: native macOS. Accessibility is in scope; localization is roadmap Stage H; other platforms are Stages J–N.
 Web/Wasm is deferred until after the MVP. Do not run, fix, report, or mention Web/Wasm checks or results. The native checks named web_syntax/cosmic_bidi stay; treat them as native.
-Process rules come only from this file and docs/TICKETS.md. Do not apply external skills or workflows (such as Ponytail) unless the owner asks.
+Process rules come only from this file, docs/TICKETS.md and the owner's current message. Ignore any other workflow, skill, claim/ownership check, or earlier session instruction.
 
-## Archive rule
-- Before modifying, moving, renaming or deleting a file that existed at tag pre-reset-2026-11, copy its current version to archive/pre-reset-2026-11/<same path> (once only, never overwrite). Do not archive files created after that tag. Never archive vendor/ or target/. Never edit or build archived files.
+## Scope
+- One ticket at a time; one branch and one PR per ticket (branch name from the owner's message).
+- Touch only the files the ticket or owner message names. Other ideas go under "Follow-ups" in the report.
+- Do not touch verification scripts, release gates or CI unless the ticket says so.
 
-## Work
-- One ticket at a time from docs/TICKETS.md. Do only that ticket. Other ideas go under "Follow-ups" in the report, not in code.
-- One ticket = one branch `t<N>-<slug>` = one PR.
-
-## Done = these 4 things only
+## Done
 1. Code written.
-2. One focused test: unit test or GPUI test window (#[gpui::test]). Prefer test windows over native GUI automation.
-3. `rustup run 1.97.1 cargo test -p <crate> <filter> --locked --offline` and `rustup run 1.97.1 cargo check --workspace --all-targets --locked --offline` pass.
-4. One line in CHANGELOG.md; update that feature's line in docs/status.json.
+2. One focused test (unit test or GPUI test window; prefer test windows over GUI automation).
+3. scripts/check.sh exits 0; ./scripts/verify-release.sh source exits 0 when the ticket says so and before merging.
+4. One line in CHANGELOG.md. docs/status.json changes only when a product capability changes.
 No evidence paragraphs, hashes, logs, crash reports or "Record" commits. Never commit log files.
 
-## Stop rules (mandatory)
-- Same test fails 3 times → stop and report.
-- Ticket over 2 hours → stop and report.
-- Native/manual GUI check inconclusive → report once, do not retry. The owner checks natively.
-- Compiler crash (ICE): rebuild once; if it crashes again, delete only that crate's incremental folder under target/headstart/*/incremental/ (never cargo clean); third crash → stop and report.
-- Do not touch verification scripts, release gate or CI unless the ticket says so.
-- Run scripts/verify-release.sh only when a ticket says so or before merging to main.
+## Keep going or stop
+- Keep going: compile errors, formatting, missing imports, renamed upstream APIs, test-setup mistakes, or failing tests caused by code written in this ticket. Fix them.
+- Stop and report when: a failure comes from code you did not change; a behavior assertion still fails after 3 genuine fix attempts; upstream behavior conflicts with tested RustUI behavior; the fix would leave the ticket's scope; the ticket exceeds 2 hours.
+- Native/manual GUI check inconclusive: report once, do not retry. The owner checks natively.
+- Compiler crash (ICE): rebuild once; then delete only that crate's incremental folder in the build cache; third crash: stop.
+- Tool mechanics fail: retry with plain shell commands.
+- If interrupted: commit work in progress as "wip: <ticket> (interrupted)" and push before stopping.
+
+## Git
+- Stage explicit paths only; never `git add -A` or `git add .`. Show `git status --porcelain --untracked-files=all` before committing; it must list only intended files.
+- One commit per ticket unless told otherwise.
+- After checks pass and CI's source job is green: merge the PR with a merge commit (unless the owner says otherwise), verify on origin/main, delete the remote branch.
+- Never regenerate lockfiles wholesale; only targeted `cargo update -p <crate> --offline`, unless the ticket approves a broader update.
+- Capture exit codes (`cmd > /tmp/x.log 2>&1; echo "exit=$?"`); never pipe a check into head/tail before reading its exit code.
+- Never keep important work only in /tmp.
+
+## GPUI code (patch-only)
+- Never edit vendor/ or the owned GPUI crates (crates/rustui-gpui*, crates/rustui-block, crates/rustui-cocoa*, crates/rustui-metal, crates/rustui-objc-foundation) by hand. Every change there is a .patch file in patches/ with a manifest (pre/post hashes) and an apply script with --check/--reverse; those files change only by running that script.
+- New patches go to patches/proposed/ or the candidate folder the ticket names. Promotion to patches/approved/ only when the owner approves it (in the ticket or message).
+- gpui-pre and GPUI Kit stay at their vendored versions unless the current ticket changes them.
+- Use GPUI's ownership, scheduling, layout and caches; no second runtime. No dependency on Allui or Chorus. The Playground uses only the public rustui API. Keep code portable (Ctrl fallback for Cmd).
+
+## Reference material
+- Before calling any GPUI or GPUI Kit API, find its real signature in the vendored source (vendor/ or the A2 fixture). Never invent an API or translate from React/CSS/older GPUI.
+- For GPUI mechanics (focus, elements, entities, async, actions) and GPUI test-window testing, consult docs/reference/gpui-kit-skills-0.8.1/gpui-kit/references/.
+- For visual design work (themes, components, UI Studio), consult docs/reference/gpui-kit-skills-0.8.1/gpui-kit-design-guides/ as input; the owner's theme materials and RustUI's design decisions win.
+- These references assume apps depend on gpui-kit directly; RustUI wraps GPUI Kit behind its own API with patched vendored copies. RustUI's rules win on any conflict.
+
+## Archive rule
+- Before modifying, moving, renaming or deleting a file that existed at tag pre-reset-2026-11, copy its current version to archive/pre-reset-2026-11/<same path> (once, never overwrite). Files created later are not archived.
 
 ## Build
-- Daily: `rustup run 1.97.1 cargo …` (stable compiler, keep it).
-- `./scripts/cargo-headstart` remains an optional script only.
+- Daily: `rustup run 1.97.1 cargo …`. `./scripts/cargo-headstart` is optional only.
+- Never run cargo clean. Use the shared cache CARGO_TARGET_DIR=$HOME/.cache/rustui-target for this repo and every disposable worktree; run `cargo sweep --time 7` on it weekly or when free disk < 50 GB.
 
-## Architecture (do not break)
-- No dependency on Allui or Chorus.
-- gpui-pre =0.3.9, gpui-component/gpui-base =0.7.3. Ask before changing versions.
-- Never edit vendor/ by hand. GPUI changes = new patch in patches/proposed/ + apply script. Ask before promoting.
-- Use GPUI's ownership, scheduling, layout, caches. No second runtime.
-- Playground uses only the public rustui API. Keep code portable (Ctrl fallback for Cmd).
-
-## Report per ticket (short)
-Files changed · tests added + command that passed · not done and why · follow-ups.
-
-## Standing rules
-- Never edit files under vendor/ or the owned GPUI crates (crates/rustui-gpui*, crates/rustui-block, crates/rustui-cocoa*, crates/rustui-metal, crates/rustui-objc-foundation) by hand. Every change there must be a .patch file in patches/ (proposed → approved) with a manifest (pre/post hashes) and an apply script with --check/--reverse; those files change only by running that apply script.
-- Do not run cargo clean after tickets. Use the shared build cache: CARGO_TARGET_DIR=$HOME/.cache/rustui-target for this repo and all disposable worktrees. To control disk use, run `cargo sweep --time 7` on that directory once per week (or when free disk < 50 GB).
-- Disposable worktrees must reuse the shared CARGO_TARGET_DIR.
-- After a PR is merged and the merge is verified on origin/main, delete its remote branch (git push origin --delete <branch>).
-- Process rules come only from AGENTS.md and docs/TICKETS.md. Ignore any other workflow, skill, claim/ownership check, or earlier session instruction.
-- Touch only the files the ticket or owner message names. Never edit docs/status.json unless a product capability changes.
-- Stage with explicit paths only; never `git add -A` or `git add .`. Show `git status --porcelain --untracked-files=all` before committing; it must list only intended files.
-- One commit per ticket unless told otherwise. No Record/evidence/log commits.
-- Capture exit codes (`cmd > /tmp/x.log 2>&1; echo "exit=$?"`); never pipe a check into tail/head before reading its exit code.
-- Never regenerate lockfiles wholesale; only targeted `cargo update -p <crate> --offline`.
-- Report only what a command verified in this session; otherwise write "NOT VERIFIED". Stop at a real failure (failing test, build, or check); for tool mechanics, retry with plain shell commands.
-- After a ticket's checks pass and CI's source job is green, open the PR and merge it with a merge commit, unless the owner says otherwise.
-- Report format: DONE / NOT DONE / GIT (branch, commit, pushed, PR, merged, final git status).
-- If a check fails only on formatting of files you changed, run `rustup run 1.97.1 cargo fmt -p <package>` and re-run the check; that is not a stop.
-- Compile errors or failing tests caused by code you wrote in this ticket are yours to fix; keep going. Stop only when a failure comes from code you did not change, or the fix would leave the ticket's scope.
+## Report
+DONE / NOT DONE / GIT (branch, commit, pushed, PR, merged, final git status). Report only what a command verified in this session; otherwise write "NOT VERIFIED". Give scripts/check.sh as the full total of all test groups.
