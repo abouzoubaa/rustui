@@ -104,3 +104,4 @@
 - Expose validation descriptions and editable grid read-only, sort, and header semantics.
 - Add filtered Finder file drops and a Playground example.
 - Add a reproducible owner-update performance baseline command.
+- Rebased DataGrid validation and accessibility metadata for GPUI Kit 0.8.

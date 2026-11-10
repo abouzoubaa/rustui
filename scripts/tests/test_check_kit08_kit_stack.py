@@ -15,6 +15,7 @@ from check_kit08_kit_stack import (  # noqa: E402
     A2_4E_ORDER,
     A2_4F_ORDER,
     A2_4G_ORDER,
+    A2_4H_ORDER,
 )
 
 
@@ -61,6 +62,9 @@ class Kit08FamilyStackTests(unittest.TestCase):
             A2_4G_ORDER.index("gpui-tree-aria-disabled-row-v1-kit08.patch"),
             A2_4G_ORDER.index("gpui-tree-aria-level-v1-kit08.patch"),
         )
+
+    def test_datagrid_a11y_patch_follows_tree_stack(self):
+        self.assertEqual(A2_4H_ORDER, ("a11y-validation-grid-v1-kit08.patch",))
 
     def test_core_then_family_applies_and_reverse_restores_fixture(self):
         with tempfile.TemporaryDirectory() as directory:

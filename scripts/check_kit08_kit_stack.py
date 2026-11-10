@@ -73,6 +73,7 @@ A2_4G_ORDER = (
     "gpui-tree-disabled-keyboard-v2.patch",
     "r15-tree-disabled-focus-v1.patch",
 )
+A2_4H_ORDER = ("a11y-validation-grid-v1-kit08.patch",)
 FAMILY_ORDER = (
     A2_4A_ORDER
     + A2_4B_ORDER
@@ -81,6 +82,7 @@ FAMILY_ORDER = (
     + A2_4E_ORDER
     + A2_4F_ORDER
     + A2_4G_ORDER
+    + A2_4H_ORDER
 )
 
 
@@ -123,13 +125,33 @@ def compile_candidate_workspace(
         f'"sources/{name}-{source_by_name[name]["version"]}"'
         for name in ("gpui-base", "gpui-component")
     ]
+    if "--proof-grid-a11y" in sys.argv[1:]:
+        gpui_pre = sources_root / f'gpui-pre-{source_by_name["gpui-pre"]["version"]}'
+        with (gpui_pre / "Cargo.toml").open("a", encoding="utf-8") as cargo_toml:
+            cargo_toml.write("\n[dev-dependencies]\nutil_macros = { path = \"../../util_macros\" }\n")
+        util_macros = workspace / "util_macros"
+        (util_macros / "src").mkdir(parents=True, exist_ok=True)
+        (util_macros / "Cargo.toml").write_text(
+            "[package]\nname = \"util_macros\"\nversion = \"0.1.0\"\nedition = \"2021\"\n[lib]\nproc-macro = true\n",
+            encoding="utf-8",
+        )
+        (util_macros / "src/lib.rs").write_text(
+            "use proc_macro::TokenStream;\n#[proc_macro_attribute]\npub fn perf(_: TokenStream, item: TokenStream) -> TokenStream { item }\n",
+            encoding="utf-8",
+        )
+        (workspace / "assets/fonts/ibm-plex-sans").mkdir(parents=True, exist_ok=True)
+        (workspace / "assets/fonts/lilex").mkdir(parents=True, exist_ok=True)
+        (workspace / "assets/fonts/ibm-plex-sans/IBMPlexSans-Regular.ttf").write_bytes(b"")
+        (workspace / "assets/fonts/lilex/Lilex-Regular.ttf").write_bytes(b"")
+        members.append(f'"sources/gpui-pre-{source_by_name["gpui-pre"]["version"]}"')
+        members.append('"util_macros"')
     patch_entries = [
         f'"{name}" = {{ path = "sources/{name}-{source["version"]}" }}'
         for name, source in sorted(source_by_name.items())
     ]
     cargo_toml = (
         "[workspace]\nresolver = \"2\"\nmembers = ["
-        + ", ".join(members)
+        + ", ".join(members + [f'"sources/gpui-pre-{source_by_name["gpui-pre"]["version"]}"'])
         + "]\n\n[patch.crates-io]\n"
         + "\n".join(patch_entries)
         + "\n"
@@ -142,6 +164,7 @@ def compile_candidate_workspace(
             "--proof-select-rtl",
             "--proof-tree-accessible-name",
             "--proof-tree-aria-level",
+            "--proof-grid-a11y",
         )
     ):
         # GPUI Component's crate archive omits several repository-level
@@ -186,11 +209,20 @@ def compile_candidate_workspace(
         proofs.append(("disabled_selected_popup_menu_item_ignores_confirm", "gpui-component", "menu"))
     if "--proof-select-rtl" in sys.argv[1:]:
         proofs.append(("rtl_select_popup_aligns_to_the_trigger_end", "gpui-component", "select RTL"))
+    if "--proof-grid-a11y" in sys.argv[1:]:
+        proofs.extend(
+            [
+                ("validation_description_and_grid_aria_metadata_reach_the_tree", "gpui-component", "editor validation description"),
+                ("data_grid_sort_and_readonly_metadata_reach_accessibility_nodes", "gpui-pre", "grid header/cell metadata"),
+            ]
+        )
     for test_name, package, label in proofs:
         proof_command = ["rustup", "run", "1.97.1", "cargo", "test"]
         if offline:
             proof_command.append("--offline")
         proof_command.extend(["-p", package, "--lib", test_name])
+        if package == "gpui-pre":
+            proof_command.extend(["--features", "test-support"])
         proof = subprocess.run(
             proof_command,
             cwd=workspace,
@@ -236,7 +268,7 @@ def run(write_manifest: bool = False) -> dict:
         raise FixtureError(f"recorded stack manifest is stale: {OUTPUT}; use --write-manifest")
     OUTPUT.write_bytes(data)
     print(
-        "core patches={}; A2-4a patches={}; A2-4b patches={}; A2-4c patches={}; A2-4d patches={}; A2-4e patches={}; A2-4f patches={}; A2-4g patches={}; fixture archives verified={}; "
+        "core patches={}; A2-4a patches={}; A2-4b patches={}; A2-4c patches={}; A2-4d patches={}; A2-4e patches={}; A2-4f patches={}; A2-4g patches={}; A2-4h patches={}; fixture archives verified={}; "
         "target files hashed={}; stack files={}; reverse=exact".format(
             len(CORE_ORDER),
             len(A2_4A_ORDER),
@@ -246,6 +278,7 @@ def run(write_manifest: bool = False) -> dict:
             len(A2_4E_ORDER),
             len(A2_4F_ORDER),
             len(A2_4G_ORDER),
+            len(A2_4H_ORDER),
             archive_count,
             target_count,
             len(result["files"]),
