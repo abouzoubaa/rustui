@@ -1,0 +1,11 @@
+--- a/vendor/gpui-base-0.8.1/src/slider.rs
++++ b/vendor/gpui-base-0.8.1/src/slider.rs
+@@ -379,7 +379,7 @@
+         };
+ 
+         let value = self.percentage_to_value(percentage);
+-        let value = (value / step).round() * step;
++        let value = ((value / step).round() * step).clamp(self.min, self.max);
+ 
+         if is_start {
+             self.percentage.start = percentage;

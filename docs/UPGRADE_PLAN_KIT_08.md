@@ -379,7 +379,7 @@ The queue is split into isolated candidate stacks. Each ticket is estimated at n
 | A2-4f — Selectable list semantics | `gpui-selectable-list-semantics-v2.patch` | None | DONE: copied unchanged (APPLIES); cumulative Base/Component compile gate and exact reverse passed. No patch-specific proof was required because this family had no rebased patch. |
 | A2-4g — Tree | `gpui-component-tree-accessible-name-v1-kit08.patch` → `gpui-tree-aria-disabled-row-v1-kit08.patch` → `gpui-tree-aria-level-v1-kit08.patch` → `gpui-tree-disabled-keyboard-v2.patch` → `r15-tree-disabled-focus-v1.patch` | Core `aria_disabled` comes from A2-4c0; Tree-row delta must precede the aria-level patch, whose context uses that row call. #3531 covers Switch. | DONE: 2 copied, 2 rebased, 1 partial; fixture test `tree_accessibility_label_and_levels_reach_the_tree_nodes` passed (label, levels, disabled row); Base/Component compile and exact reverse passed. |
 | A2-4h — DataGrid validation and header metadata | `a11y-validation-grid-v1-kit08.patch` | Description is projected onto the editor-owned node through GPUI Base `InputAccessibility`; readonly and sort metadata remain in the core delta. | DONE: 1 rebased; cumulative proof runner passes A2-2, A2-4a through A2-4h; Base/Component compile and exact reverse passed. |
-| A2-4i — Slider | `gpui-base-slider-endpoint-v1.patch` → `gpui-base-slider-first-move-v1.patch` → `gpui-base-slider-set-value-v2.patch` → `gpui-base-slider-snap-position-v1.patch` → `gpui-base-slider-zero-track-v1.patch` | None | 2h |
+| A2-4i — Slider | `gpui-base-slider-endpoint-v1.patch` → `gpui-base-slider-first-move-v1.patch` → `gpui-base-slider-set-value-v2.patch` → `gpui-base-slider-snap-position-v1.patch` → `gpui-base-slider-zero-track-v1.patch` | 0.8.1 Base already provides the component slider's accessible-label forwarding; the candidate keeps only the remaining Base action/clamping behavior. | DONE: 3 copied with behavior hunks unchanged (target paths normalized), 2 rebased; cumulative Base/Component compile and exact reverse passed; test-window proofs `slider_accessibility_actions_are_advertised_and_clamp_to_range` and `slider_pointer_snapping_clamps_to_configured_maximum` passed; all earlier cumulative proofs passed. |
 | A2-4j — Resizable panels | `gpui-base-resize-first-move-v1.patch` → `gpui-base-resize-first-move-v2.patch` → `gpui-base-resize-first-move-v3.patch` | Keep immediate initial-pointer sizing; v3 also retains explicit left-button release handling. #3629 supplies active-drag-state reads only. | 2h |
 | A2-4k — Calendar / DatePicker | `gpui-base-calendar-date-limits-v1.patch` → `gpui-calendar-keyboard-v1.patch` → `gpui-calendar-rtl-v1.patch` → `gpui-calendar-multi-month-heading-v1.patch` → `gpui-component-calendar-fr-ar-v1.patch` → `gpui-component-date-picker-accessibility-v1.patch` → `gpui-component-date-picker-localization-v2.patch` → `gpui-component-date-picker-rtl-alignment-v1.patch` | Calendar RTL provides the `CalendarState::right_to_left` API used by multi-month heading. | 2h |
 | A2-4l — Input placeholder | `gpui-input-placeholder-color-v1.patch` | None | 1h |
@@ -402,11 +402,11 @@ Original queue total: **45 patches**. A2-4a is first because its tracked dialog 
 | `gpui-base-resize-first-move-v1.patch` | A2-4 QUEUE — Resizable panels |
 | `gpui-base-resize-first-move-v2.patch` | A2-4 QUEUE — Resizable panels |
 | `gpui-base-resize-first-move-v3.patch` | A2-4 QUEUE — Resizable panels |
-| `gpui-base-slider-endpoint-v1.patch` | A2-4 QUEUE — Slider |
-| `gpui-base-slider-first-move-v1.patch` | A2-4 QUEUE — Slider |
-| `gpui-base-slider-set-value-v2.patch` | A2-4 QUEUE — Slider |
-| `gpui-base-slider-snap-position-v1.patch` | A2-4 QUEUE — Slider |
-| `gpui-base-slider-zero-track-v1.patch` | A2-4 QUEUE — Slider |
+| `gpui-base-slider-endpoint-v1.patch` | CANDIDATE — `patches/candidate-kit-0.8/gpui-base-slider-endpoint-v1-kit08.patch` |
+| `gpui-base-slider-first-move-v1.patch` | CANDIDATE — `patches/candidate-kit-0.8/gpui-base-slider-first-move-v1.patch` |
+| `gpui-base-slider-set-value-v2.patch` | CANDIDATE — `patches/candidate-kit-0.8/gpui-base-slider-set-value-v2-kit08.patch` |
+| `gpui-base-slider-snap-position-v1.patch` | CANDIDATE — `patches/candidate-kit-0.8/gpui-base-slider-snap-position-v1.patch` |
+| `gpui-base-slider-zero-track-v1.patch` | CANDIDATE — `patches/candidate-kit-0.8/gpui-base-slider-zero-track-v1.patch` |
 | `gpui-bidi-input-hit-v1.patch` | CANDIDATE — `patches/candidate-kit-0.8/gpui-bidi-input-hit-v1-kit08.patch` |
 | `gpui-bidi-wrapped-rows-v1.patch` | CANDIDATE — `patches/candidate-kit-0.8/gpui-bidi-wrapped-rows-v1-kit08.patch` |
 | `gpui-calendar-keyboard-v1.patch` | A2-4 QUEUE — Calendar / DatePicker |

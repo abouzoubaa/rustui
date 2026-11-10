@@ -1,5 +1,7 @@
 # Changelog
 
+- A2-4i: rebased the slider candidate stack and added cumulative accessibility-action and endpoint-clamp proofs for GPUI Kit 0.8.1.
+
 ## 0.2.0 — 2026-11-09
 
 - Added Kit 0.8 Tree naming, row disabled state, and hierarchy-level candidates with a fixture tree test.

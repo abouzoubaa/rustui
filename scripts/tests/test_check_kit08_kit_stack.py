@@ -16,6 +16,7 @@ from check_kit08_kit_stack import (  # noqa: E402
     A2_4F_ORDER,
     A2_4G_ORDER,
     A2_4H_ORDER,
+    A2_4I_ORDER,
     FAMILY_PROOF_CRATE,
 )
 
@@ -66,6 +67,19 @@ class Kit08FamilyStackTests(unittest.TestCase):
 
     def test_datagrid_a11y_patch_follows_tree_stack(self):
         self.assertEqual(A2_4H_ORDER, ("a11y-validation-grid-v1-kit08.patch",))
+
+    def test_slider_patches_follow_the_cumulative_stack(self):
+        self.assertEqual(
+            A2_4I_ORDER,
+            (
+                "gpui-base-slider-endpoint-v1-kit08.patch",
+                "gpui-base-slider-first-move-v1.patch",
+                "gpui-base-slider-set-value-v2-kit08.patch",
+                "gpui-base-slider-snap-position-v1.patch",
+                "gpui-base-slider-zero-track-v1.patch",
+            ),
+        )
+        self.assertTrue((FAMILY_PROOF_CRATE / "tests/slider_accessibility.rs").is_file())
 
     def test_datagrid_patch_uses_fixture_paths_and_preserves_tree_disabled_context(self):
         patch = (ROOT / "patches/candidate-kit-0.8/a11y-validation-grid-v1-kit08.patch").read_text(

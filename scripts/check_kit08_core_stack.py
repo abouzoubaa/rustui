@@ -64,6 +64,11 @@ LATER_FAMILY_CANDIDATES = {
     "gpui-tree-aria-level-v1-kit08.patch",
     "gpui-tree-disabled-keyboard-v2.patch",
     "r15-tree-disabled-focus-v1.patch",
+    "gpui-base-slider-endpoint-v1-kit08.patch",
+    "gpui-base-slider-first-move-v1.patch",
+    "gpui-base-slider-set-value-v2-kit08.patch",
+    "gpui-base-slider-snap-position-v1.patch",
+    "gpui-base-slider-zero-track-v1.patch",
 }
 
 
