@@ -3,7 +3,7 @@
 Phase A — process (in order)
 
 ## T1 — Toolchain
-**Do:** Keep Headstart for daily work; run `rustup run 1.97.1 cargo check --workspace --all-targets --locked --offline` and `rustup run 1.97.1 cargo test --workspace --lib --locked --offline`; measure one clean build and one-file-change build with Headstart and stable.
+**Do:** Keep Headstart for daily work; run `rustup run 1.98.0 cargo check --workspace --all-targets --locked --offline` and `rustup run 1.98.0 cargo test --workspace --lib --locked --offline`; measure one clean build and one-file-change build with Headstart and stable.
 **Done when:** Both stable commands pass; report the one-time timing comparison.
 **Stop if:** Stable fails; report its first error without starting another ticket.
 

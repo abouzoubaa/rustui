@@ -25,7 +25,7 @@ if [ -x "$REPO_ROOT/target/headstart/tools/bin/wasm-bindgen" ]; then
 fi
 
 if ! command -v rust-lld >/dev/null 2>&1 && command -v rustup >/dev/null 2>&1; then
-  HOST_RUSTC="$(rustup which rustc --toolchain 1.97.1)"
+  HOST_RUSTC="$(rustup which rustc --toolchain 1.98.0)"
   HOST_TRIPLE="$("$HOST_RUSTC" -vV | sed -n 's/^host: //p')"
   HOST_LLD_DIR="$(dirname -- "$HOST_RUSTC")/../lib/rustlib/$HOST_TRIPLE/bin"
   if [ -x "$HOST_LLD_DIR/rust-lld" ]; then

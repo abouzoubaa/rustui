@@ -47,7 +47,7 @@ No evidence paragraphs, hashes, logs, crash reports or "Record" commits. Never c
 - Before modifying, moving, renaming or deleting a file that existed at tag pre-reset-2026-11, copy its current version to archive/pre-reset-2026-11/<same path> (once, never overwrite). Files created later are not archived.
 
 ## Build
-- Daily: `rustup run 1.97.1 cargo …`. `./scripts/cargo-headstart` is optional only.
+- Daily: `rustup run 1.98.0 cargo …`. `./scripts/cargo-headstart` is optional only.
 - Never run cargo clean. Use the shared cache CARGO_TARGET_DIR=$HOME/.cache/rustui-target for this repo and every disposable worktree; run `cargo sweep --time 7` on it weekly or when free disk < 50 GB.
 
 ## Report

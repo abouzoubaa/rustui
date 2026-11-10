@@ -100,8 +100,8 @@ jobs:
           key: ${{ runner.os }}-headstart-${{ hashFiles('Cargo.lock', 'rust-toolchain.toml', '.cargo/config.toml', 'patches/approved/*.json', 'crates/rustui-gpui*/**', 'crates/rustui-block/**', 'crates/rustui-cocoa*/**', 'crates/rustui-metal/**', 'crates/rustui-objc-foundation/**', 'vendor/gpui-*/**') }}-v2
           restore-keys: |
             ${{ runner.os }}-headstart-
-      - name: Install Rust 1.97.1
-        run: rustup toolchain install 1.97.1 --profile minimal --component rustfmt
+      - name: Install Rust 1.98.0
+        run: rustup toolchain install 1.98.0 --profile minimal --component rustfmt
       - name: Verify approved Tree sources, replay lifecycle, and source release gates
         run: ./scripts/verify-release.sh source
       - name: Test the GPUI Kit 0.8.1 source fixture harness
@@ -158,6 +158,6 @@ jobs:
           EXPECTED_SHA: ${{ github.sha }}
         run: ./scripts/verify-ci-checkout.sh "$EXPECTED_SHA"
       - name: Render every registered Playground story
-        run: rustup run 1.97.1 cargo test -p rustui-playground --lib every_registered_story_mounts_draws_and_exposes_its_title --locked --offline
+        run: rustup run 1.98.0 cargo test -p rustui-playground --lib every_registered_story_mounts_draws_and_exposes_its_title --locked --offline
       - name: Smoke the packaged Playground
         run: scripts/smoke-playground.sh
