@@ -21,6 +21,7 @@ from check_kit08_kit_stack import (  # noqa: E402
     A2_4K_ORDER,
     A2_4L_ORDER,
     A2_4M_ORDER,
+    A2_4N_ORDER,
     FAMILY_PROOF_CRATE,
 )
 
@@ -116,6 +117,17 @@ class Kit08FamilyStackTests(unittest.TestCase):
 
     def test_toolbar_rtl_patch_follows_input_placeholder(self):
         self.assertEqual(A2_4M_ORDER, ("gpui-toolbar-rtl-v1-kit08.patch",))
+
+    def test_diff_syntax_patches_stack_runtime_deltas_in_order(self):
+        self.assertEqual(
+            A2_4N_ORDER,
+            (
+                "gpui-component-web-syntax-v1.patch",
+                "gpui-component-web-syntax-runtime-v1-kit08.patch",
+                "gpui-component-web-syntax-runtime-v2-kit08.patch",
+                "gpui-component-web-syntax-runtime-v3-kit08.patch",
+            ),
+        )
 
     def test_datagrid_patch_uses_fixture_paths_and_preserves_tree_disabled_context(self):
         patch = (ROOT / "patches/candidate-kit-0.8/a11y-validation-grid-v1-kit08.patch").read_text(
