@@ -2045,8 +2045,11 @@ where
         header
             // One header row holds every column header, including the pinned
             // ones, which are laid out in a separate container.
-            .role(gpui::Role::Row)
-            .aria_row_index(0)
+            .when(!self.delegate_accessibility, |header| {
+                header
+                    .role(gpui::Role::Row)
+                    .aria_row_index(0)
+            })
             .h_flex()
             .w_full()
             .flex_shrink_0()
@@ -2246,7 +2249,7 @@ where
             tr.test_support()
                 .role(gpui::Role::Row)
                 // Row 0 is the header row.
-                .aria_row_index(row_ix + 1)
+                .when(!self.delegate_accessibility, |tr| tr.aria_row_index(row_ix + 1))
                 .aria_selected(is_selected)
                 .h_flex()
                 .w_full()

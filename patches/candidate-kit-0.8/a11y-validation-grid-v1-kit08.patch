@@ -250,19 +250,19 @@ diff --git a/vendor/gpui-component-0.8.1/src/table/state.rs b/vendor/gpui-compon
              row_header: true,
              sortable: true,
              col_movable: true,
-@@ -415,6 +418,12 @@
-         self
-     }
- 
-+    /// Use accessibility roles and metadata supplied by the table delegate.
-+    pub fn delegate_accessibility(mut self, enabled: bool) -> Self {
-+        self.delegate_accessibility = enabled;
+@@ -412,6 +415,12 @@
+     /// ```
+     pub fn cell_selectable(mut self, cell_selectable: bool) -> Self {
+         self.cell_selectable = cell_selectable;
 +        self
 +    }
 +
-     /// Set whether the row header column is shown, default is `true`.
-     ///
-     /// Only effective when `cell_selectable` is `true` — otherwise the row header
++    /// Use accessibility roles and metadata supplied by the table delegate.
++    pub fn delegate_accessibility(mut self, enabled: bool) -> Self {
++        self.delegate_accessibility = enabled;
+         self
+     }
+ 
 @@ -1550,6 +1559,9 @@
      where
          E: gpui::StatefulInteractiveElement + FluentBuilder,
@@ -289,7 +289,30 @@ diff --git a/vendor/gpui-component-0.8.1/src/table/state.rs b/vendor/gpui-compon
                      .on_click(cx.listener(move |this, _, window, cx| {
                          this.on_col_head_click(col_ix, window, cx);
                      }))
-@@ -2696,13 +2710,15 @@
+@@ -2031,8 +2045,11 @@
+         header
+             // One header row holds every column header, including the pinned
+             // ones, which are laid out in a separate container.
+-            .role(gpui::Role::Row)
+-            .aria_row_index(0)
++            .when(!self.delegate_accessibility, |header| {
++                header
++                    .role(gpui::Role::Row)
++                    .aria_row_index(0)
++            })
+             .h_flex()
+             .w_full()
+             .flex_shrink_0()
+@@ -2232,7 +2249,7 @@
+             tr.test_support()
+                 .role(gpui::Role::Row)
+                 // Row 0 is the header row.
+-                .aria_row_index(row_ix + 1)
++                .when(!self.delegate_accessibility, |tr| tr.aria_row_index(row_ix + 1))
+                 .aria_selected(is_selected)
+                 .h_flex()
+                 .w_full()
+@@ -2696,13 +2713,15 @@
              .test_support()
              // A table that selects rows or cells is a grid. The counts cover
              // every row, not just the rendered ones, plus the header row.
