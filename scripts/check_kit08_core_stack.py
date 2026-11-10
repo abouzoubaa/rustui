@@ -41,6 +41,7 @@ CANDIDATE_ORDER = (
     "gpui-tree-aria-disabled-v1-kit08.patch",
 )
 LATER_FAMILY_CANDIDATES = {
+    "a11y-validation-grid-v1-kit08.patch",
     "t13-modal-focus-recovery-v1-kit08.patch",
     "gpui-component-tracked-dialog-focus-rebase-v2-kit08.patch",
     "gpui-component-sheet-close-accessibility-v2.patch",
