@@ -44,11 +44,11 @@ diff --git a/vendor/gpui-pre-0.3.10/src/elements/div.rs b/vendor/gpui-pre-0.3.10
 +    #[test]
 +    fn test_write_a11y_info_disabled_state() {
 +        let mut node = accesskit::Node::new(accesskit::Role::TreeItem);
-+        let mut disabled = div().aria_disabled(true);
++        let mut disabled = div().id("disabled").aria_disabled(true);
 +        disabled.interactivity().write_a11y_info(&mut node);
 +        assert!(node.is_disabled());
 +
-+        let mut enabled = div().aria_disabled(false);
++        let mut enabled = div().id("enabled").aria_disabled(false);
 +        enabled.interactivity().write_a11y_info(&mut node);
 +        assert!(!node.is_disabled());
 +    }

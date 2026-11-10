@@ -15,6 +15,8 @@ from check_kit08_kit_stack import (  # noqa: E402
     A2_4E_ORDER,
     A2_4F_ORDER,
     A2_4G_ORDER,
+    A2_4H_ORDER,
+    FAMILY_PROOF_CRATE,
 )
 
 
@@ -61,6 +63,29 @@ class Kit08FamilyStackTests(unittest.TestCase):
             A2_4G_ORDER.index("gpui-tree-aria-disabled-row-v1-kit08.patch"),
             A2_4G_ORDER.index("gpui-tree-aria-level-v1-kit08.patch"),
         )
+
+    def test_datagrid_a11y_patch_follows_tree_stack(self):
+        self.assertEqual(A2_4H_ORDER, ("a11y-validation-grid-v1-kit08.patch",))
+
+    def test_datagrid_patch_uses_fixture_paths_and_preserves_tree_disabled_context(self):
+        patch = (ROOT / "patches/candidate-kit-0.8/a11y-validation-grid-v1-kit08.patch").read_text(
+            encoding="utf-8"
+        )
+        self.assertNotIn("gpui-base-0.7.3", patch)
+        self.assertNotIn("gpui-component-0.7.3", patch)
+        self.assertNotIn("gpui-pre-0.3.9", patch)
+        self.assertIn("gpui-base-0.8.1", patch)
+        self.assertIn("gpui-component-0.8.1", patch)
+        self.assertIn("gpui-pre-0.3.10", patch)
+        self.assertIn('if node.is_disabled() { aria.insert("disabled".into(), json!(true)); }', patch)
+        for proof in (
+            "modal_scope.rs",
+            "tracked_dialog.rs",
+            "sheet_accessibility.rs",
+            "aria_disabled_tree.rs",
+            "bidi_layout.rs",
+        ):
+            self.assertTrue((FAMILY_PROOF_CRATE / "tests" / proof).is_file())
 
     def test_core_then_family_applies_and_reverse_restores_fixture(self):
         with tempfile.TemporaryDirectory() as directory:

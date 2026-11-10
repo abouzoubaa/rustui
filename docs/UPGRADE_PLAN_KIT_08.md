@@ -362,7 +362,7 @@ After those patch-only fixes, `python3 scripts/check_kit08_kit_stack.py --compil
 
 ### Approved patch destination ledger (71 patches)
 
-Every approved patch has exactly one destination. **Totals after A2-4g: CANDIDATE 35 / REMAINDER 0 / A2-4 QUEUE 22 / OBSOLETE 5 / PARKED 5 / POPUP STAGE 4 = 71.** `t13-modal-focus-recovery-v1.patch` is assigned to the **A2-4 QUEUE — Dialog / modal focus** despite its GPUI-pre focus hunks; `a11y-validation-grid-v1.patch` remains assigned to the **A2-4 QUEUE — Input / validation / DataGrid** despite its GPUI-pre accessibility-tree hunks. Their feature families were outside A2-2 core candidate scope.
+Every approved patch has exactly one destination. **Totals after A2-4h: CANDIDATE 36 / REMAINDER 0 / A2-4 QUEUE 21 / OBSOLETE 5 / PARKED 5 / POPUP STAGE 4 = 71.** `t13-modal-focus-recovery-v1.patch` is assigned to the **A2-4 QUEUE — Dialog / modal focus** despite its GPUI-pre focus hunks; `a11y-validation-grid-v1.patch` moved from the **A2-4 QUEUE — Input / validation / DataGrid** to its candidate destination in A2-4h. Their feature families were outside A2-2 core candidate scope.
 
 ### A2-4 families
 
@@ -378,7 +378,7 @@ The queue is split into isolated candidate stacks. Each ticket is estimated at n
 | A2-4e — Select / Picker popup layout | `gpui-component-select-popup-rtl-v1.patch` → `gpui-component-select-rtl-alignment-v1.patch` → `gpui-component-select-rtl-alignment-v2.patch` → `gpui-component-select-rtl-alignment-v3.patch` → `gpui-component-select-rtl-auto-width-v4.patch` → `gpui-component-select-rtl-auto-width-v6.patch` | None | DONE: 1 copied, 1 rebased, 4 incremental deltas; cumulative Base/Component compile and exact reverse passed; `rtl_select_popup_aligns_to_the_trigger_end` passed. |
 | A2-4f — Selectable list semantics | `gpui-selectable-list-semantics-v2.patch` | None | DONE: copied unchanged (APPLIES); cumulative Base/Component compile gate and exact reverse passed. No patch-specific proof was required because this family had no rebased patch. |
 | A2-4g — Tree | `gpui-component-tree-accessible-name-v1-kit08.patch` → `gpui-tree-aria-disabled-row-v1-kit08.patch` → `gpui-tree-aria-level-v1-kit08.patch` → `gpui-tree-disabled-keyboard-v2.patch` → `r15-tree-disabled-focus-v1.patch` | Core `aria_disabled` comes from A2-4c0; Tree-row delta must precede the aria-level patch, whose context uses that row call. #3531 covers Switch. | DONE: 2 copied, 2 rebased, 1 partial; fixture test `tree_accessibility_label_and_levels_reach_the_tree_nodes` passed (label, levels, disabled row); Base/Component compile and exact reverse passed. |
-| A2-4h — DataGrid validation and header metadata | `a11y-validation-grid-v1.patch` | None | 2h |
+| A2-4h — DataGrid validation and header metadata | `a11y-validation-grid-v1-kit08.patch` | Description is projected onto the editor-owned node through GPUI Base `InputAccessibility`; readonly and sort metadata remain in the core delta. | DONE: 1 rebased; cumulative proof runner passes A2-2, A2-4a through A2-4h; Base/Component compile and exact reverse passed. |
 | A2-4i — Slider | `gpui-base-slider-endpoint-v1.patch` → `gpui-base-slider-first-move-v1.patch` → `gpui-base-slider-set-value-v2.patch` → `gpui-base-slider-snap-position-v1.patch` → `gpui-base-slider-zero-track-v1.patch` | None | 2h |
 | A2-4j — Resizable panels | `gpui-base-resize-first-move-v1.patch` → `gpui-base-resize-first-move-v2.patch` → `gpui-base-resize-first-move-v3.patch` | Keep immediate initial-pointer sizing; v3 also retains explicit left-button release handling. #3629 supplies active-drag-state reads only. | 2h |
 | A2-4k — Calendar / DatePicker | `gpui-base-calendar-date-limits-v1.patch` → `gpui-calendar-keyboard-v1.patch` → `gpui-calendar-rtl-v1.patch` → `gpui-calendar-multi-month-heading-v1.patch` → `gpui-component-calendar-fr-ar-v1.patch` → `gpui-component-date-picker-accessibility-v1.patch` → `gpui-component-date-picker-localization-v2.patch` → `gpui-component-date-picker-rtl-alignment-v1.patch` | Calendar RTL provides the `CalendarState::right_to_left` API used by multi-month heading. | 2h |
@@ -390,7 +390,7 @@ Original queue total: **45 patches**. A2-4a is first because its tracked dialog 
 
 | Approved patch | Sole destination |
 |---|---|
-| `a11y-validation-grid-v1.patch` | A2-4 QUEUE — Input / validation / DataGrid |
+| `a11y-validation-grid-v1.patch` | CANDIDATE — `patches/candidate-kit-0.8/a11y-validation-grid-v1-kit08.patch` |
 | `block-0.1.6-stack-symbol-v1.patch` | CANDIDATE — `patches/candidate-kit-0.8/block-0.1.6-stack-symbol-v1.patch` |
 | `cosmic-text-initial-bidi-span-v1.patch` | CANDIDATE — `patches/candidate-kit-0.8/cosmic-text-initial-bidi-span-v1.patch` |
 | `g10-labelled-by-tree-v1.patch` | CANDIDATE — `patches/candidate-kit-0.8/g10-labelled-by-tree-v1-kit08.patch` |
@@ -486,6 +486,12 @@ Anchored-popup v1–v4 remain excluded for the native-popups stage; the v5 propo
 - Stack check and offline Base/Component compile gate passed: 13 core, 2 A2-4a, 1 A2-4b, 3 A2-4c; 31 archives verified; 30 target files hashed; 34 stack files; exact reverse.
 - Remaining A2-4 QUEUE after A2-4d: 34 patches.
 
-### A2-4h stop diagnosis — DataGrid validation/header metadata
+### A2-4h resolution — DataGrid validation/header metadata
 
-The candidate Base/Component compile gate passed, but the GPUI Component test-window proof `validation_description_and_grid_aria_metadata_reach_the_tree` failed at `sources/gpui-component-0.8.1/src/input/input.rs:878`: `assertion failed: nodes.values().any(|node| node["aria"]["description"] == "Validation error: required")`. In 0.8.1, `Input::aria_description` forwards through `InputBase` to the outer frame, whose role is `Presentational`; that frame does not surface the description on the native text-input accessibility node. The Input description path needs to attach the description to the editor-owned semantic node before this candidate can be accepted. The family stopped before testing the separate header/cell metadata assertion.
+GPUI Component 0.8.1 exposes `InputAccessibility::with_label` and applies that label directly to the editor element in `InputBaseState::render`; it has no description field or setter. The rebased candidate adds `InputAccessibility::with_description` and projects the value onto that same editor-owned element. The test-window proof `validation_description_and_grid_aria_metadata_reach_the_tree` passed, as did `data_grid_sort_and_readonly_metadata_reach_accessibility_nodes`. The cumulative Base/Component compile gate and exact reverse check passed. The earlier wrapper-path proof failure was resolved by placing the description on the editor node.
+
+### A2-4h cumulative regression — resolved
+
+The shared files were `gpui-pre/src/elements/div.rs` (A2-4c0 `aria_disabled` and A2-4h read-only/sort setters) and `gpui-pre/src/window/a11y/debug.rs` (A2-2/R15 disabled-state JSON serialization and A2-4h read-only/sort serialization). The faulty A2-4h diff headers still used `gpui-pre-0.3.9`, `gpui-base-0.7.3`, and `gpui-component-0.7.3` while the candidate stack used 0.3.10 / 0.8.1 paths. The fixture harness staged the duplicate paths separately, then its source overlay let the old-prefix debug file replace the current-prefix file, dropping the earlier `disabled` JSON entry. Rebased all A2-4h patch paths to the fixture versions and anchored the debug addition on the existing disabled serialization line; the setters still mutate only their own read-only/sort fields.
+
+Added `scripts/check_kit08_kit_stack.py --compile-online --proof-all-families`, which applies the cumulative stack once, runs the previously recorded A2-2 and A2-4a–h proofs, then verifies exact reverse. The run passed all 14 proofs and the Base/Component compile gate; 31 fixture archives verified, 41 target files hashed, 45 stack files, reverse exact.
