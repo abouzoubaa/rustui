@@ -1,5 +1,6 @@
 # Changelog
 
+- Reference: copied GPUI Kit v0.8.1 skills and design guides as documentation-only reference material.
 - A2-4n: rebased Diff and syntax registry candidate patches for Kit 0.8; deferred runtime behavior proof to A2-7.
 - A2-4m: rebased GPUI Kit 0.8 toolbar RTL layout and arrow navigation with a cumulative fixture proof.
 - A2-4l: added the GPUI Kit 0.8 input placeholder color candidate and cumulative fixture proof.
