@@ -27,7 +27,7 @@ Use the project-local launcher for Cargo commands:
 ./scripts/cargo-headstart build --workspace --locked
 ./scripts/cargo-headstart check --workspace --locked
 ./scripts/cargo-headstart playground
-rustup run 1.97.1 cargo fmt --all -- --check
+rustup run 1.98.0 cargo fmt --all -- --check
 ```
 
 The launcher selects installed Headstart Cargo and stage1 rustc from
@@ -48,7 +48,7 @@ Otherwise the workaround is supplied via Cargo's `build.rustflags` configuration
 Keep flags consistent across warmup and development. Do not silently change
 compiler binaries, features, profiles, targets, source pins, or wrapper settings.
 
-`rust-toolchain.toml` pins 1.97.1 for host tooling such as rustfmt and clippy.
+`rust-toolchain.toml` pins 1.98.0 for host tooling such as rustfmt and clippy.
 The Headstart launcher deliberately chooses a different experimental compiler.
 It does not download or upgrade that installation.
 Use `rustup run` explicitly: the current PATH resolves `cargo` to Homebrew, whose
@@ -107,7 +107,7 @@ Known: rustui-gpui-apple's build script reruns on every CI run, rebuilding its d
 Run `CARGO_TARGET_DIR="$HOME/.cache/rustui-target" cargo sweep --time 7 .` weekly or when free disk is below 50 GB.
 
 `sccache` is optional and is not enabled by repository configuration; install it with `cargo install sccache --locked` if desired.
-Opt in per command with `RUSTC_WRAPPER=sccache CARGO_TARGET_DIR="$HOME/.cache/rustui-target" rustup run 1.97.1 cargo check --workspace --all-targets --locked --offline`.
+Opt in per command with `RUSTC_WRAPPER=sccache CARGO_TARGET_DIR="$HOME/.cache/rustui-target" rustup run 1.98.0 cargo check --workspace --all-targets --locked --offline`.
 
 ## Warmup and evidence
 

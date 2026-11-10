@@ -238,7 +238,7 @@ def compile_candidate_workspace(
             test_asset.parent.mkdir(parents=True, exist_ok=True)
             test_asset.write_text(content, encoding="utf-8")
     target_dir = Path(os.environ.get("CARGO_TARGET_DIR", str(ROOT / "target/headstart")))
-    command = ["rustup", "run", "1.97.1", "cargo", "check"]
+    command = ["rustup", "run", "1.98.0", "cargo", "check"]
     offline = "--compile-online" not in sys.argv[1:]
     if offline:
         command.append("--offline")
@@ -329,7 +329,7 @@ def compile_candidate_workspace(
         )
     outcomes: list[tuple[str, int, str]] = []
     for test_name, package, label, integration_test in proofs:
-        proof_command = ["rustup", "run", "1.97.1", "cargo", "test"]
+        proof_command = ["rustup", "run", "1.98.0", "cargo", "test"]
         if offline:
             proof_command.append("--offline")
         if integration_test is not None:

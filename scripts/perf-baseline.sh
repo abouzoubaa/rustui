@@ -7,7 +7,7 @@ work_dir="$(mktemp -d "${TMPDIR:-/tmp}/rustui-perf-baseline.XXXXXX")"
 trap 'rm -rf "$work_dir"' EXIT
 for run in 1 2 3; do
   printf 'Running workload %s/3...\n' "$run" >&2
-  if rustup run 1.97.1 cargo test --release -p rustui --lib owner_update_and_draw_workload --locked --offline -- --ignored --nocapture > "$work_dir/run-$run.log" 2>&1; then
+  if rustup run 1.98.0 cargo test --release -p rustui --lib owner_update_and_draw_workload --locked --offline -- --ignored --nocapture > "$work_dir/run-$run.log" 2>&1; then
     :
   else
     status=$?
@@ -18,7 +18,7 @@ done
 python3 scripts/perf_baseline.py \
   --commit "$(git rev-parse HEAD)" \
   --date "$(date -u +%Y-%m-%dT%H:%M:%SZ)" \
-  --rustc "$(rustup run 1.97.1 rustc --version)" \
+  --rustc "$(rustup run 1.98.0 rustc --version)" \
   --macos "$(sw_vers -productVersion)" \
   --cpu "$(sysctl -n machdep.cpu.brand_string)" \
   --output perf_baseline.json \

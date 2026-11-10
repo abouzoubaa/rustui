@@ -16,7 +16,7 @@ verify_web_ime_edit_plan() (
   mkdir -p "$binary_dir"
   test_binary="$binary_dir/ime_edit_tests"
   trap 'rm -f "$test_binary"' EXIT
-  rustup run 1.97.1 rustc --edition 2024 --test \
+  rustup run 1.98.0 rustc --edition 2024 --test \
     vendor/gpui-pre-web-0.3.9/src/ime_edit.rs -o "$test_binary"
   "$test_binary"
 )
@@ -149,7 +149,7 @@ PY
       echo 'The macos release check requires a macOS host.' >&2
       exit 2
     fi
-    rustup run 1.97.1 cargo fmt --all -- --check
+    rustup run 1.98.0 cargo fmt --all -- --check
     python3 scripts/verify_dependency_boundary.py
     ./scripts/cargo-headstart check --workspace --all-targets --profile headstart --locked --offline
     ./scripts/cargo-headstart check --manifest-path examples/external-consumer/Cargo.toml --profile headstart --locked --offline
