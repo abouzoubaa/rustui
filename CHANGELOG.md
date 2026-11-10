@@ -1,5 +1,6 @@
 # Changelog
 
+- A2-4k: added Kit 0.8.1 calendar and DatePicker candidates with RTL, localization, date-limit, accessibility, and cumulative fixture proofs.
 - A2-4i: rebased the slider candidate stack and added cumulative accessibility-action and endpoint-clamp proofs for GPUI Kit 0.8.1.
 - A2-4j: rebased resize first-move and left-button-loss behavior, retiring the state-read delta already covered upstream.
 
