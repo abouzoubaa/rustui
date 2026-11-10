@@ -364,9 +364,13 @@ After those patch-only fixes, `python3 scripts/check_kit08_kit_stack.py --compil
 
 Added eight candidate patches: calendar keyboard behavior and DatePicker accessibility were copied; date limits, RTL, multi-month heading, French/Arabic names, DatePicker localization, and RTL alignment were rebased. The localization candidate carries only the remaining week-start/display-value behavior because the preceding accessibility candidate supplies the label field. The cumulative runner passed all 23 proofs (A2-2 and A2-4a through A2-4k), the GPUI Base/Component compile gate, and exact reverse application. Proofs added for this family: `calendar_keyboard_cursor_stays_uncommitted_until_activation`, `date_picker_arrow_cursor_activates_only_on_confirm`, `rtl_multi_month_navigation_and_date_picker_accessibility_are_exposed`, `calendar_multi_month_count_stays_within_date_limits`, and `calendar_month_names_include_french_and_arabic_translations`.
 
+### A2-4l result — Input placeholder
+
+Copied `gpui-input-placeholder-color-v1.patch` unchanged into the candidate stack. The cumulative runner passed all 24 proofs (A2-2 and A2-4a through A2-4l), the GPUI Base/Component compile gate, and exact reverse application. The added fixture proof `placeholder_override_survives_palette_resolution` passed.
+
 ### Approved patch destination ledger (71 patches)
 
-Every approved patch has exactly one destination. **Totals after A2-4k: CANDIDATE 50 / REMAINDER 0 / A2-4 QUEUE 6 / OBSOLETE 6 / PARKED 5 / POPUP STAGE 4 = 71.** `t13-modal-focus-recovery-v1.patch` is assigned to the **A2-4 QUEUE — Dialog / modal focus** despite its GPUI-pre focus hunks; `a11y-validation-grid-v1.patch` moved from the **A2-4 QUEUE — Input / validation / DataGrid** to its candidate destination in A2-4h. Their feature families were outside A2-2 core candidate scope.
+Every approved patch has exactly one destination. **Totals after A2-4l: CANDIDATE 51 / REMAINDER 0 / A2-4 QUEUE 5 / OBSOLETE 6 / PARKED 5 / POPUP STAGE 4 = 71.** `t13-modal-focus-recovery-v1.patch` is assigned to the **A2-4 QUEUE — Dialog / modal focus** despite its GPUI-pre focus hunks; `a11y-validation-grid-v1.patch` moved from the **A2-4 QUEUE — Input / validation / DataGrid** to its candidate destination in A2-4h. Their feature families were outside A2-2 core candidate scope.
 
 ### A2-4 families
 
@@ -386,7 +390,7 @@ The queue is split into isolated candidate stacks. Each ticket is estimated at n
 | A2-4i — Slider | `gpui-base-slider-endpoint-v1.patch` → `gpui-base-slider-first-move-v1.patch` → `gpui-base-slider-set-value-v2.patch` → `gpui-base-slider-snap-position-v1.patch` → `gpui-base-slider-zero-track-v1.patch` | 0.8.1 Base already provides the component slider's accessible-label forwarding; the candidate keeps only the remaining Base action/clamping behavior. | DONE: 3 copied with behavior hunks unchanged (target paths normalized), 2 rebased; cumulative Base/Component compile and exact reverse passed; test-window proofs `slider_accessibility_actions_are_advertised_and_clamp_to_range` and `slider_pointer_snapping_clamps_to_configured_maximum` passed; all earlier cumulative proofs passed. |
 | A2-4j — Resizable panels | `gpui-base-resize-first-move-v1.patch` → `gpui-base-resize-first-move-v2.patch` → `gpui-base-resize-first-move-v3.patch` | Kit 0.8.1 already includes #3629's live active-drag state reads; keep immediate initial-pointer sizing and the v3 left-button-loss cleanup. | DONE: 2 rebased; v2 is OBSOLETE because #3629 already provides its live state reads; cumulative Base/Component compile and exact reverse passed; test-window proofs `resize_handle_applies_the_first_pointer_position_immediately` and `resize_drag_finishes_when_left_button_is_no_longer_pressed` passed; all earlier cumulative proofs passed. |
 | A2-4k — Calendar / DatePicker | `gpui-base-calendar-date-limits-v1.patch` → `gpui-calendar-keyboard-v1.patch` → `gpui-calendar-rtl-v1.patch` → `gpui-calendar-multi-month-heading-v1.patch` → `gpui-component-calendar-fr-ar-v1.patch` → `gpui-component-date-picker-accessibility-v1.patch` → `gpui-component-date-picker-localization-v2.patch` → `gpui-component-date-picker-rtl-alignment-v1.patch` | Calendar RTL provides the `CalendarState::right_to_left` API used by multi-month heading. | DONE: 2 copied, 5 rebased, 1 partial localization delta; cumulative compile and exact reverse passed; all five A2-4k proofs passed, along with the 18 prior proofs. |
-| A2-4l — Input placeholder | `gpui-input-placeholder-color-v1.patch` | None | 1h |
+| A2-4l — Input placeholder | `gpui-input-placeholder-color-v1.patch` | None | DONE: 1 copied; cumulative 24 proofs, Base/Component compile gate, and exact reverse passed; `placeholder_override_survives_palette_resolution` passed. |
 | A2-4m — Toolbar RTL | `gpui-toolbar-rtl-v1.patch` | None | 1h |
 | A2-4n — Diff / syntax registry | `gpui-component-web-syntax-v1.patch` → `gpui-component-web-syntax-runtime-v1.patch` → `gpui-component-web-syntax-runtime-v2.patch` → `gpui-component-web-syntax-runtime-v3.patch` | None | 2h |
 
@@ -436,7 +440,7 @@ Original queue total: **45 patches**. A2-4a is first because its tracked dialog 
 | `gpui-component-web-syntax-runtime-v2.patch` | A2-4 QUEUE — Syntax highlighting / Diff |
 | `gpui-component-web-syntax-runtime-v3.patch` | A2-4 QUEUE — Syntax highlighting / Diff |
 | `gpui-component-web-syntax-v1.patch` | A2-4 QUEUE — Syntax highlighting / Diff |
-| `gpui-input-placeholder-color-v1.patch` | A2-4 QUEUE — Input / validation / DataGrid |
+| `gpui-input-placeholder-color-v1.patch` | CANDIDATE — `patches/candidate-kit-0.8/gpui-input-placeholder-color-v1.patch` |
 | `gpui-macos-anchored-popup-v1.patch` | POPUP STAGE — native macOS popups |
 | `gpui-macos-anchored-popup-v2.patch` | POPUP STAGE — native macOS popups |
 | `gpui-macos-anchored-popup-v3.patch` | POPUP STAGE — native macOS popups |
