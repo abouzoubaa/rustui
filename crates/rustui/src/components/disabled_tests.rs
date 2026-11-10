@@ -463,7 +463,7 @@ fn draw(window: &mut gpui::VisualTestContext) {
     window.update(|window, app| window.draw(app).clear(app));
 }
 fn stroke(window: &mut gpui::VisualTestContext, key: &str) {
-    let keystroke = gpui::Keystroke::parse(key).unwrap();
+    let keystroke = gpui::Keystroke::parse_with_os(key, gpui::OperatingSystem::Unknown).unwrap();
     window.simulate_event(gpui::KeyDownEvent {
         keystroke: keystroke.clone(),
         is_held: false,

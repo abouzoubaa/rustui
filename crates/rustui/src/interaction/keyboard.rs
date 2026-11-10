@@ -4,7 +4,7 @@ use std::{error::Error, fmt};
 
 use gpui::{
     AnyElement, InteractiveElement as _, IntoElement as _, KeyDownEvent, KeybindingKeystroke,
-    Keystroke, ParentElement as _, div,
+    Keystroke, OperatingSystem, ParentElement as _, div,
 };
 use rustui_core::Identity;
 
@@ -141,7 +141,8 @@ fn parse_chord(chord: &str) -> Result<KeybindingKeystroke, KeyboardShortcutError
     if chord.trim() != chord || chord.chars().any(char::is_whitespace) || chord.is_empty() {
         return Err(KeyboardShortcutError::InvalidChord);
     }
-    let keystroke = Keystroke::parse(chord).map_err(|_| KeyboardShortcutError::InvalidChord)?;
+    let keystroke = Keystroke::parse_with_os(chord, shortcut_operating_system())
+        .map_err(|_| KeyboardShortcutError::InvalidChord)?;
     if keystroke.key_char.is_some() {
         return Err(KeyboardShortcutError::InvalidChord);
     }
@@ -149,6 +150,16 @@ fn parse_chord(chord: &str) -> Result<KeybindingKeystroke, KeyboardShortcutError
         return Err(KeyboardShortcutError::RequiresCommandOrControl);
     }
     Ok(KeybindingKeystroke::from_keystroke(keystroke))
+}
+
+#[cfg(target_os = "macos")]
+fn shortcut_operating_system() -> OperatingSystem {
+    OperatingSystem::Mac
+}
+
+#[cfg(not(target_os = "macos"))]
+fn shortcut_operating_system() -> OperatingSystem {
+    OperatingSystem::Unknown
 }
 
 /// A shortcut definition that cannot be safely installed.
@@ -180,10 +191,20 @@ mod tests {
 
     fn event(chord: &str) -> KeyDownEvent {
         KeyDownEvent {
-            keystroke: Keystroke::parse(chord).unwrap(),
+            keystroke: Keystroke::parse_with_os(chord, shortcut_operating_system()).unwrap(),
             is_held: false,
             prefer_character_input: false,
         }
+    }
+
+    #[test]
+    fn parses_owned_dynamic_shortcut_strings() {
+        let chord = String::from("ctrl-shift-k");
+        let parsed = parse_chord(&chord).unwrap();
+
+        assert_eq!(parsed.key(), "k");
+        assert!(parsed.modifiers().control);
+        assert!(parsed.modifiers().shift);
     }
 
     #[test]
