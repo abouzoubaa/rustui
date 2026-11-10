@@ -1,7 +1,7 @@
-diff --git a/vendor/gpui-base-0.7.3/src/input/base/state.rs b/vendor/gpui-base-0.7.3/src/input/base/state.rs
+diff --git a/vendor/gpui-base-0.8.1/src/input/base/state.rs b/vendor/gpui-base-0.8.1/src/input/base/state.rs
 index 62831b2..075dae4 100644
---- a/vendor/gpui-base-0.7.3/src/input/base/state.rs
-+++ b/vendor/gpui-base-0.7.3/src/input/base/state.rs
+--- a/vendor/gpui-base-0.8.1/src/input/base/state.rs
++++ b/vendor/gpui-base-0.8.1/src/input/base/state.rs
 @@ -588,6 +588,7 @@ pub struct InputBaseState<M: InputModeKind> {
  pub struct InputAccessibility {
      role: Option<gpui::Role>,
@@ -51,10 +51,10 @@ index 62831b2..075dae4 100644
                      .when_some(accessibility.placeholder.clone(), |this, placeholder| {
                          this.aria_placeholder(placeholder)
                      })
-diff --git a/vendor/gpui-component-0.7.3/src/input/input.rs b/vendor/gpui-component-0.7.3/src/input/input.rs
+diff --git a/vendor/gpui-component-0.8.1/src/input/input.rs b/vendor/gpui-component-0.8.1/src/input/input.rs
 index 5d563a8..67fd844 100644
---- a/vendor/gpui-component-0.7.3/src/input/input.rs
-+++ b/vendor/gpui-component-0.7.3/src/input/input.rs
+--- a/vendor/gpui-component-0.8.1/src/input/input.rs
++++ b/vendor/gpui-component-0.8.1/src/input/input.rs
 @@ -130,6 +130,7 @@ pub struct Input {
      role: RoleOverride,
      accessibility_id: Option<SharedString>,
@@ -125,10 +125,10 @@ index 5d563a8..67fd844 100644
      #[test]
      fn content_types_map_to_accessibility_roles() {
          let cases = [
-diff --git a/vendor/gpui-pre-0.3.9/src/elements/div.rs b/vendor/gpui-pre-0.3.9/src/elements/div.rs
+diff --git a/vendor/gpui-pre-0.3.10/src/elements/div.rs b/vendor/gpui-pre-0.3.10/src/elements/div.rs
 index 11f0b72..46a3bbf 100644
---- a/vendor/gpui-pre-0.3.9/src/elements/div.rs
-+++ b/vendor/gpui-pre-0.3.9/src/elements/div.rs
+--- a/vendor/gpui-pre-0.3.10/src/elements/div.rs
++++ b/vendor/gpui-pre-0.3.10/src/elements/div.rs
 @@ -1390,6 +1390,18 @@ pub trait StatefulInteractiveElement: InteractiveElement {
          self
      }
@@ -168,7 +168,7 @@ index 11f0b72..46a3bbf 100644
          if let Some(keyshortcuts) = &self.aria.keyshortcuts {
              node.set_keyboard_shortcut(keyshortcuts.to_string());
          }
-@@ -5708,6 +5726,32 @@ mod tests {
+@@ -5708,6 +5726,38 @@ mod tests {
          assert_eq!(focused, Some(item_b.id));
      }
  
@@ -183,7 +183,13 @@ index 11f0b72..46a3bbf 100644
 +                        .aria_sort(accesskit::SortDirection::Ascending)
 +                        .child("Name"),
 +                )
-+                .child(div().id("grid-cell").aria_readonly(true).child("Ada"))
++                .child(
++                    div()
++                        .id("grid-cell")
++                        .role(accesskit::Role::Cell)
++                        .aria_readonly(true)
++                        .child("Ada"),
++                )
 +        }
 +    }
 +
@@ -201,14 +207,15 @@ index 11f0b72..46a3bbf 100644
      #[gpui::test]
      fn test_fractional_padding_does_not_make_a_fitting_container_scrollable(
          cx: &mut TestAppContext,
-diff --git a/vendor/gpui-pre-0.3.9/src/window/a11y/debug.rs b/vendor/gpui-pre-0.3.9/src/window/a11y/debug.rs
+diff --git a/vendor/gpui-pre-0.3.10/src/window/a11y/debug.rs b/vendor/gpui-pre-0.3.10/src/window/a11y/debug.rs
 index ae98aa5..b6e6ed5 100644
---- a/vendor/gpui-pre-0.3.9/src/window/a11y/debug.rs
-+++ b/vendor/gpui-pre-0.3.9/src/window/a11y/debug.rs
-@@ -259,6 +259,10 @@ fn node_to_json(
+--- a/vendor/gpui-pre-0.3.10/src/window/a11y/debug.rs
++++ b/vendor/gpui-pre-0.3.10/src/window/a11y/debug.rs
+@@ -261,7 +261,11 @@ fn node_to_json(
      }
  
      // Boolean / enum states.
+     if node.is_disabled() { aria.insert("disabled".into(), json!(true)); }
 +    if node.is_read_only() { aria.insert("read_only".into(), json!(true)); }
 +    if let Some(v) = node.sort_direction() {
 +        aria.insert("sort_direction".into(), json!(format!("{v:?}")));

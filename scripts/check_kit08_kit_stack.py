@@ -74,6 +74,7 @@ A2_4G_ORDER = (
     "r15-tree-disabled-focus-v1.patch",
 )
 A2_4H_ORDER = ("a11y-validation-grid-v1-kit08.patch",)
+FAMILY_PROOF_CRATE = ROOT / "scripts/kit08_family_proofs"
 FAMILY_ORDER = (
     A2_4A_ORDER
     + A2_4B_ORDER
@@ -91,7 +92,7 @@ def compile_candidate_workspace(
     target_sources: dict[str, tuple[str, str]],
     manifest: dict[str, Any],
     fixture_root: Path,
-) -> None:
+) -> list[tuple[str, int, str]]:
     """Compile Base and Component from the verified archives plus applied stack."""
     workspace = fixture_root / "compile-workspace"
     sources_root = workspace / "sources"
@@ -125,7 +126,8 @@ def compile_candidate_workspace(
         f'"sources/{name}-{source_by_name[name]["version"]}"'
         for name in ("gpui-base", "gpui-component")
     ]
-    if "--proof-grid-a11y" in sys.argv[1:]:
+    proof_all = "--proof-all-families" in sys.argv[1:]
+    if "--proof-grid-a11y" in sys.argv[1:] or proof_all:
         gpui_pre = sources_root / f'gpui-pre-{source_by_name["gpui-pre"]["version"]}'
         with (gpui_pre / "Cargo.toml").open("a", encoding="utf-8") as cargo_toml:
             cargo_toml.write("\n[dev-dependencies]\nutil_macros = { path = \"../../util_macros\" }\n")
@@ -145,6 +147,17 @@ def compile_candidate_workspace(
         (workspace / "assets/fonts/lilex/Lilex-Regular.ttf").write_bytes(b"")
         members.append(f'"sources/gpui-pre-{source_by_name["gpui-pre"]["version"]}"')
         members.append('"util_macros"')
+    if proof_all:
+        proof_dir = workspace / "family-proofs"
+        shutil.copytree(FAMILY_PROOF_CRATE / "tests", proof_dir / "tests")
+        (proof_dir / "Cargo.toml").write_text(
+            "[package]\nname = \"a2-4a-modal-proof\"\nversion = \"0.1.0\"\nedition = \"2024\"\n\n"
+            "[dependencies]\n"
+            f"gpui = {{ package = \"gpui-pre\", path = \"../sources/gpui-pre-{source_by_name['gpui-pre']['version']}\", default-features = false, features = [\"test-support\"] }}\n"
+            f"gpui-component = {{ path = \"../sources/gpui-component-{source_by_name['gpui-component']['version']}\", default-features = false }}\n",
+            encoding="utf-8",
+        )
+        members.append('"family-proofs"')
     patch_entries = [
         f'"{name}" = {{ path = "sources/{name}-{source["version"]}" }}'
         for name, source in sorted(source_by_name.items())
@@ -165,6 +178,7 @@ def compile_candidate_workspace(
             "--proof-tree-accessible-name",
             "--proof-tree-aria-level",
             "--proof-grid-a11y",
+            "--proof-all-families",
         )
     ):
         # GPUI Component's crate archive omits several repository-level
@@ -200,27 +214,55 @@ def compile_candidate_workspace(
             + result.stderr
         )
     print(f"compile gate: {' '.join(command[3:])}: passed")
-    proofs = []
+    proofs: list[tuple[str, str, str, str | None]] = []
+    if proof_all:
+        proofs.extend(
+            [
+                ("backend_wrapped_rows_use_row_local_bidi_geometry_for_caret_and_hits", "gpui-pre", "A2-2 wrapped-row bidi", None),
+                ("inert_scope_skips_tab_and_rejects_direct_focus", "gpui-pre", "A2-2 inert focus", None),
+                ("test_write_a11y_info_disabled_state", "gpui-pre", "A2-2 disabled accessibility writer", None),
+                ("modal_scope_restores_focus_and_restricts_traversal", "a2-4a-modal-proof", "A2-4a modal focus", "modal_scope"),
+                ("tracked_dialog_can_be_queried_and_closed_by_id", "a2-4a-modal-proof", "A2-4a tracked dialog", "tracked_dialog"),
+                ("sheet_close_accessibility_label_is_exposed_in_the_test_window_tree", "a2-4a-modal-proof", "A2-4b sheet close label", "sheet_accessibility"),
+                ("disabling_a_focused_button_moves_focus_to_the_next_control", "gpui-component", "A2-4c Button focus recovery", None),
+                ("aria_disabled_sets_disabled_on_the_accessibility_tree_node", "a2-4a-modal-proof", "A2-4c0 aria-disabled tree", "aria_disabled_tree"),
+                ("single_line_pointer_hit_uses_visual_bidi_clusters", "a2-4a-modal-proof", "A2-2 bidi pointer integration", "bidi_layout"),
+            ]
+        )
     if "--proof-tree-accessible-name" in sys.argv[1:]:
-        proofs.append(("tree_accessibility_label_and_levels_reach_the_tree_nodes", "gpui-component", "Tree label/levels"))
+        proofs.append(("tree_accessibility_label_and_levels_reach_the_tree_nodes", "gpui-component", "Tree label/levels", None))
     if "--proof-tree-aria-level" in sys.argv[1:]:
-        proofs.append(("tree_accessibility_label_and_levels_reach_the_tree_nodes", "gpui-component", "Tree levels"))
+        proofs.append(("tree_accessibility_label_and_levels_reach_the_tree_nodes", "gpui-component", "Tree levels", None))
     if "--proof-disabled-menu" in sys.argv[1:]:
-        proofs.append(("disabled_selected_popup_menu_item_ignores_confirm", "gpui-component", "menu"))
+        proofs.append(("disabled_selected_popup_menu_item_ignores_confirm", "gpui-component", "menu", None))
     if "--proof-select-rtl" in sys.argv[1:]:
-        proofs.append(("rtl_select_popup_aligns_to_the_trigger_end", "gpui-component", "select RTL"))
+        proofs.append(("rtl_select_popup_aligns_to_the_trigger_end", "gpui-component", "select RTL", None))
     if "--proof-grid-a11y" in sys.argv[1:]:
         proofs.extend(
             [
-                ("validation_description_and_grid_aria_metadata_reach_the_tree", "gpui-component", "editor validation description"),
-                ("data_grid_sort_and_readonly_metadata_reach_accessibility_nodes", "gpui-pre", "grid header/cell metadata"),
+                ("validation_description_and_grid_aria_metadata_reach_the_tree", "gpui-component", "editor validation description", None),
+                ("data_grid_sort_and_readonly_metadata_reach_accessibility_nodes", "gpui-pre", "grid header/cell metadata", None),
             ]
         )
-    for test_name, package, label in proofs:
+    if proof_all:
+        proofs.extend(
+            [
+                ("disabled_selected_popup_menu_item_ignores_confirm", "gpui-component", "A2-4d disabled menu confirm", None),
+                ("rtl_select_popup_aligns_to_the_trigger_end", "gpui-component", "A2-4e select RTL", None),
+                ("tree_accessibility_label_and_levels_reach_the_tree_nodes", "gpui-component", "A2-4g Tree label/disabled/levels", None),
+                ("validation_description_and_grid_aria_metadata_reach_the_tree", "gpui-component", "A2-4h editor validation description", None),
+                ("data_grid_sort_and_readonly_metadata_reach_accessibility_nodes", "gpui-pre", "A2-4h grid header/cell relation", None),
+            ]
+        )
+    outcomes: list[tuple[str, int, str]] = []
+    for test_name, package, label, integration_test in proofs:
         proof_command = ["rustup", "run", "1.97.1", "cargo", "test"]
         if offline:
             proof_command.append("--offline")
-        proof_command.extend(["-p", package, "--lib", test_name])
+        if integration_test is not None:
+            proof_command.extend(["-p", package, "--test", integration_test, test_name])
+        else:
+            proof_command.extend(["-p", package, "--lib", test_name])
         if package == "gpui-pre":
             proof_command.extend(["--features", "test-support"])
         proof = subprocess.run(
@@ -230,17 +272,29 @@ def compile_candidate_workspace(
             capture_output=True,
             text=True,
         )
+        output = proof.stdout + proof.stderr
+        outcomes.append((label, proof.returncode, output))
         if proof.returncode:
-            raise FixtureError(
-                f"{label} proof failed ({' '.join(proof_command[3:])}):\n"
-                + proof.stdout
-                + proof.stderr
-            )
-        print(f"proof: {test_name}: passed")
+            print(f"proof: {label}: FAIL")
+        else:
+            print(f"proof: {label}: PASS")
+    return outcomes
 
 
 def run(write_manifest: bool = False) -> dict:
     manifest = load_manifest(DEFAULT_MANIFEST)
+    proof_outcomes: list[tuple[str, int, str]] = []
+
+    def run_compile_and_proofs(
+        stage: Path,
+        target_sources: dict[str, tuple[str, str]],
+        fixture_manifest: dict[str, Any],
+        fixture_root: Path,
+    ) -> None:
+        proof_outcomes.extend(
+            compile_candidate_workspace(stage, target_sources, fixture_manifest, fixture_root)
+        )
+
     with tempfile.TemporaryDirectory(prefix="rustui-kit08-kit-stack-") as temp_name:
         fixture = Path(temp_name)
         archive_count, target_count, unavailable_count = build_fixture(
@@ -252,11 +306,7 @@ def run(write_manifest: bool = False) -> dict:
             fixture,
             hashlib.sha256(DEFAULT_MANIFEST.read_bytes()).hexdigest(),
             patch_order=CORE_ORDER + FAMILY_ORDER,
-            after_apply=(
-                compile_candidate_workspace
-                if "--compile" in sys.argv[1:] or "--compile-online" in sys.argv[1:]
-                else None
-            ),
+            after_apply=(run_compile_and_proofs if "--compile" in sys.argv[1:] or "--compile-online" in sys.argv[1:] else None),
         )
     result["fixture"] = {
         "archives_verified": archive_count,
@@ -284,6 +334,10 @@ def run(write_manifest: bool = False) -> dict:
             len(result["files"]),
         )
     )
+    failed_proofs = [(label, output) for label, code, output in proof_outcomes if code]
+    if failed_proofs:
+        details = "\n\n".join(f"{label}:\n{output}" for label, output in failed_proofs)
+        raise FixtureError(f"{len(failed_proofs)} cumulative family proof(s) failed after exact reverse:\n{details}")
     return result
 
 
