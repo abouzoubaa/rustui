@@ -97,6 +97,12 @@ A2_4K_ORDER = (
 )
 A2_4L_ORDER = ("gpui-input-placeholder-color-v1.patch",)
 A2_4M_ORDER = ("gpui-toolbar-rtl-v1-kit08.patch",)
+A2_4N_ORDER = (
+    "gpui-component-web-syntax-v1.patch",
+    "gpui-component-web-syntax-runtime-v1-kit08.patch",
+    "gpui-component-web-syntax-runtime-v2-kit08.patch",
+    "gpui-component-web-syntax-runtime-v3-kit08.patch",
+)
 FAMILY_PROOF_CRATE = ROOT / "scripts/kit08_family_proofs"
 FAMILY_ORDER = (
     A2_4A_ORDER
@@ -112,6 +118,7 @@ FAMILY_ORDER = (
     + A2_4K_ORDER
     + A2_4L_ORDER
     + A2_4M_ORDER
+    + A2_4N_ORDER
 )
 
 
@@ -384,7 +391,7 @@ def run(write_manifest: bool = False) -> dict:
         raise FixtureError(f"recorded stack manifest is stale: {OUTPUT}; use --write-manifest")
     OUTPUT.write_bytes(data)
     print(
-        "core patches={}; A2-4a patches={}; A2-4b patches={}; A2-4c patches={}; A2-4d patches={}; A2-4e patches={}; A2-4f patches={}; A2-4g patches={}; A2-4h patches={}; A2-4i patches={}; A2-4j patches={}; A2-4k patches={}; A2-4l patches={}; A2-4m patches={}; fixture archives verified={}; "
+        "core patches={}; A2-4a patches={}; A2-4b patches={}; A2-4c patches={}; A2-4d patches={}; A2-4e patches={}; A2-4f patches={}; A2-4g patches={}; A2-4h patches={}; A2-4i patches={}; A2-4j patches={}; A2-4k patches={}; A2-4l patches={}; A2-4m patches={}; A2-4n patches={}; fixture archives verified={}; "
         "target files hashed={}; stack files={}; reverse=exact".format(
             len(CORE_ORDER),
             len(A2_4A_ORDER),
@@ -400,6 +407,7 @@ def run(write_manifest: bool = False) -> dict:
             len(A2_4K_ORDER),
             len(A2_4L_ORDER),
             len(A2_4M_ORDER),
+            len(A2_4N_ORDER),
             archive_count,
             target_count,
             len(result["files"]),

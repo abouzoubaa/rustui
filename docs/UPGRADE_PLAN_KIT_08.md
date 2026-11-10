@@ -372,9 +372,13 @@ Copied `gpui-input-placeholder-color-v1.patch` unchanged into the candidate stac
 
 Rebased `gpui-toolbar-rtl-v1.patch` onto GPUI Kit 0.8.1 and gpui-pre 0.3.10, adding RTL layout and visual-order arrow navigation to Base and Component. The cumulative runner passed all 25 proofs (A2-2 and A2-4a through A2-4m), the GPUI Base/Component compile gate, and exact reverse application. Fixture test `rtl_toolbar_arrows_follow_visual_order` passed.
 
+### A2-4n result — Diff / syntax registry
+
+Copied `gpui-component-web-syntax-v1.patch` unchanged and rebased the three runtime registry deltas onto GPUI Kit 0.8.1. Native Base/Component compilation passed; the cumulative runner passed all 25 existing proofs and exact reverse application. Runtime-specific behavior proof: **proof at A2-7**.
+
 ### Approved patch destination ledger (71 patches)
 
-Every approved patch has exactly one destination. **Totals after A2-4m: CANDIDATE 52 / REMAINDER 0 / A2-4 QUEUE 4 / OBSOLETE 6 / PARKED 5 / POPUP STAGE 4 = 71.** `t13-modal-focus-recovery-v1.patch` is assigned to the **A2-4 QUEUE — Dialog / modal focus** despite its GPUI-pre focus hunks; `a11y-validation-grid-v1.patch` moved from the **A2-4 QUEUE — Input / validation / DataGrid** to its candidate destination in A2-4h. Their feature families were outside A2-2 core candidate scope.
+Every approved patch has exactly one destination. **Totals after A2-4n: CANDIDATE 56 / REMAINDER 0 / A2-4 QUEUE 0 / OBSOLETE 6 / PARKED 5 / POPUP STAGE 4 = 71.** `t13-modal-focus-recovery-v1.patch` is assigned to the **A2-4 QUEUE — Dialog / modal focus** despite its GPUI-pre focus hunks; `a11y-validation-grid-v1.patch` moved from the **A2-4 QUEUE — Input / validation / DataGrid** to its candidate destination in A2-4h. Their feature families were outside A2-2 core candidate scope.
 
 ### A2-4 families
 
@@ -396,7 +400,7 @@ The queue is split into isolated candidate stacks. Each ticket is estimated at n
 | A2-4k — Calendar / DatePicker | `gpui-base-calendar-date-limits-v1.patch` → `gpui-calendar-keyboard-v1.patch` → `gpui-calendar-rtl-v1.patch` → `gpui-calendar-multi-month-heading-v1.patch` → `gpui-component-calendar-fr-ar-v1.patch` → `gpui-component-date-picker-accessibility-v1.patch` → `gpui-component-date-picker-localization-v2.patch` → `gpui-component-date-picker-rtl-alignment-v1.patch` | Calendar RTL provides the `CalendarState::right_to_left` API used by multi-month heading. | DONE: 2 copied, 5 rebased, 1 partial localization delta; cumulative compile and exact reverse passed; all five A2-4k proofs passed, along with the 18 prior proofs. |
 | A2-4l — Input placeholder | `gpui-input-placeholder-color-v1.patch` | None | DONE: 1 copied; cumulative 24 proofs, Base/Component compile gate, and exact reverse passed; `placeholder_override_survives_palette_resolution` passed. |
 | A2-4m — Toolbar RTL | `gpui-toolbar-rtl-v1.patch` | None | DONE: 1 rebased; cumulative 25 proofs, Base/Component compile gate, and exact reverse passed; `rtl_toolbar_arrows_follow_visual_order` passed. |
-| A2-4n — Diff / syntax registry | `gpui-component-web-syntax-v1.patch` → `gpui-component-web-syntax-runtime-v1.patch` → `gpui-component-web-syntax-runtime-v2.patch` → `gpui-component-web-syntax-runtime-v3.patch` | None | 2h |
+| A2-4n — Diff / syntax registry | `gpui-component-web-syntax-v1.patch` → `gpui-component-web-syntax-runtime-v1.patch` → `gpui-component-web-syntax-runtime-v2.patch` → `gpui-component-web-syntax-runtime-v3.patch` | None | DONE: 1 copied, 3 rebased; native Base/Component compile gate, cumulative 25 prior proofs, and exact reverse passed; behavior proof at A2-7. |
 
 Original queue total: **45 patches**. A2-4a is first because its tracked dialog patch stacks on the modal focus recovery change. A2-4a includes only the two dialog/focus patches; Sheet is separated into A2-4b because its patch touches an independent file and has no stack dependency.
 
@@ -440,10 +444,10 @@ Original queue total: **45 patches**. A2-4a is first because its tracked dialog 
 | `gpui-component-slider-accessibility-label-v2.patch` | OBSOLETE — A2-3 |
 | `gpui-component-tracked-dialog-focus-rebase-v2.patch` | CANDIDATE — `patches/candidate-kit-0.8/gpui-component-tracked-dialog-focus-rebase-v2-kit08.patch` |
 | `gpui-component-tree-accessible-name-v1.patch` | CANDIDATE — `patches/candidate-kit-0.8/gpui-component-tree-accessible-name-v1-kit08.patch` |
-| `gpui-component-web-syntax-runtime-v1.patch` | A2-4 QUEUE — Syntax highlighting / Diff |
-| `gpui-component-web-syntax-runtime-v2.patch` | A2-4 QUEUE — Syntax highlighting / Diff |
-| `gpui-component-web-syntax-runtime-v3.patch` | A2-4 QUEUE — Syntax highlighting / Diff |
-| `gpui-component-web-syntax-v1.patch` | A2-4 QUEUE — Syntax highlighting / Diff |
+| `gpui-component-web-syntax-runtime-v1.patch` | CANDIDATE — `patches/candidate-kit-0.8/gpui-component-web-syntax-runtime-v1-kit08.patch` |
+| `gpui-component-web-syntax-runtime-v2.patch` | CANDIDATE — `patches/candidate-kit-0.8/gpui-component-web-syntax-runtime-v2-kit08.patch` |
+| `gpui-component-web-syntax-runtime-v3.patch` | CANDIDATE — `patches/candidate-kit-0.8/gpui-component-web-syntax-runtime-v3-kit08.patch` |
+| `gpui-component-web-syntax-v1.patch` | CANDIDATE — `patches/candidate-kit-0.8/gpui-component-web-syntax-v1.patch` |
 | `gpui-input-placeholder-color-v1.patch` | CANDIDATE — `patches/candidate-kit-0.8/gpui-input-placeholder-color-v1.patch` |
 | `gpui-macos-anchored-popup-v1.patch` | POPUP STAGE — native macOS popups |
 | `gpui-macos-anchored-popup-v2.patch` | POPUP STAGE — native macOS popups |
