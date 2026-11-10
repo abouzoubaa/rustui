@@ -1,5 +1,5 @@
---- a/vendor/gpui-component-0.7.3/Cargo.toml
-+++ b/vendor/gpui-component-0.7.3/Cargo.toml
+--- a/vendor/gpui-component-0.8.1/Cargo.toml
++++ b/vendor/gpui-component-0.8.1/Cargo.toml
 @@ -421,8 +421,11 @@
  [target.'cfg(not(target_family = "wasm"))'.dependencies.smol]
  version = "2"

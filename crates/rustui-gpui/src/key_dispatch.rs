@@ -609,17 +609,29 @@ impl DispatchTree {
     }
 
     pub(crate) fn modal_focus_allowed(&self, scope: FocusId, target: FocusId) -> bool {
-        if scope == target { return true; }
+        if scope == target {
+            return true;
+        }
         let mut found = false;
-        for (index, _) in self.nodes.iter().enumerate().filter(|(_, node)| node.focus_id == Some(target)) {
+        for (index, _) in self
+            .nodes
+            .iter()
+            .enumerate()
+            .filter(|(_, node)| node.focus_id == Some(target))
+        {
             found = true;
             let mut current = Some(DispatchNodeId(index));
             let mut inside = false;
             while let Some(node) = current {
-                if self.nodes[node.0].focus_id == Some(scope) { inside = true; break; }
+                if self.nodes[node.0].focus_id == Some(scope) {
+                    inside = true;
+                    break;
+                }
                 current = self.nodes[node.0].parent;
             }
-            if !inside { return false; }
+            if !inside {
+                return false;
+            }
         }
         found
     }
@@ -1137,7 +1149,7 @@ mod tests {
         fn dispatch(
             tree: &mut DispatchTree,
             pending: SmallVec<[Keystroke; 1]>,
-            key: &str,
+            key: &'static str,
             path: &DispatchPath,
         ) -> DispatchResult {
             tree.dispatch_key(pending, Keystroke::parse(key).unwrap(), path)
@@ -1371,6 +1383,14 @@ mod tests {
             let count_after_focus_change = *pending_input_changed_count.borrow();
             assert!(count_after_focus_change > *count_after_pending_for_assertion.borrow());
         });
+        assert_eq!(
+            cx.test_window(cx.window_handle())
+                .text_input_state_changes(),
+            [
+                crate::TextInputStateChange::FocusGained,
+                crate::TextInputStateChange::FocusLost,
+            ]
+        );
 
         cx.update(|window, cx| window.focus(&focus_handle, cx));
         cx.simulate_keystrokes("ctrl-b");
@@ -1386,6 +1406,18 @@ mod tests {
         cx.update(|_, _| {
             assert!(*pending_input_changed_count.borrow() > count_before_blur);
         });
+
+        let temporary_focus = cx.update(|window, cx| {
+            let handle = cx.focus_handle();
+            window.focus(&handle, cx);
+            handle
+        });
+        cx.simulate_keystrokes("ctrl-d");
+        cx.update(|window, _| assert!(window.has_pending_keystrokes()));
+        let count_before_drop = *pending_input_changed_count.borrow();
+        cx.update(|_, _| drop(temporary_focus));
+        cx.update(|window, _| assert!(window.pending_input_is_none()));
+        assert_eq!(*pending_input_changed_count.borrow(), count_before_drop + 1);
 
         cx.update(|window, cx| window.disable_focus(cx));
         cx.simulate_keystrokes("ctrl-d");

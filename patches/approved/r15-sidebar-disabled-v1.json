@@ -1,8 +1,17 @@
 {
   "schema_version": 1,
-  "patch": "patches/approved/r15-sidebar-disabled-v1.patch",
-  "patch_sha256": "8fb3424710f7ea25cdf63defc8ebfda4395e01b915a85ba9ae5fb0dbf5fed99f",
-  "source": "vendor/gpui-component-0.7.3/src/sidebar/menu.rs",
-  "pre_sha256": "ffbe8d6f015977ee9630b55320d1c0bb134afd32be3d917a9f6b94f705aec284",
-  "post_sha256": "5700e1328a82c84628d989a4ce0822c2421d0a1de203f9810f6c479cc7c772b6"
+  "upstream": {
+    "repository": "https://github.com/longbridge/gpui-kit",
+    "tag": "v0.8.1",
+    "commit": "99576db58ec8103417c41a092e891b4022d24e7e",
+    "gpui_pre_version": "0.3.10"
+  },
+  "candidate": "r15-sidebar-disabled-v1.patch",
+  "patch_sha256": "21bde4646fd5f77aaa06b39b6a132e519009686c45c8190cce2ffec7b970bd3d",
+  "files": {
+    "vendor/gpui-component-0.8.1/src/sidebar/menu.rs": {
+      "pre_sha256": "d0489b63aa25e47d47a8958b165599b9660860cfca688960871291c32cf5d842",
+      "post_sha256": "8cdeef2106c68eaa3e95481c848913bfe849790c8b831110ba49dcd98a42bb3a"
+    }
+  }
 }

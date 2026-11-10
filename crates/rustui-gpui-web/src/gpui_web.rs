@@ -8,10 +8,6 @@ pub mod canvas_fallback;
 pub use canvas_fallback::CanvasFontFallback;
 
 #[cfg(target_family = "wasm")]
-mod a11y;
-#[cfg(target_family = "wasm")]
-mod a11y_dom;
-#[cfg(target_family = "wasm")]
 mod canvas_text;
 #[cfg(target_family = "wasm")]
 mod dispatcher;
@@ -24,7 +20,6 @@ mod glyph_cache;
 #[cfg(target_family = "wasm")]
 mod http_client;
 #[cfg(target_family = "wasm")]
-mod ime_edit;
 mod ime_mirror;
 #[cfg(target_family = "wasm")]
 mod keyboard;

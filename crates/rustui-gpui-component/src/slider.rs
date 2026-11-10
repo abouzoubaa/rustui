@@ -88,8 +88,8 @@ pub struct Slider {
     axis: Axis,
     style: StyleRefinement,
     disabled: bool,
-    reverse: bool,
     accessibility_label: Option<SharedString>,
+    reverse: bool,
 }
 
 impl Slider {
@@ -100,8 +100,8 @@ impl Slider {
             state: state.clone(),
             style: StyleRefinement::default(),
             disabled: false,
-            reverse: false,
             accessibility_label: None,
+            reverse: false,
         }
     }
 
@@ -123,7 +123,7 @@ impl Slider {
         self
     }
 
-    /// Set the accessible name of the slider.
+    /// Sets the label exposed to accessibility clients.
     pub fn accessibility_label(mut self, label: impl Into<SharedString>) -> Self {
         self.accessibility_label = Some(label.into());
         self
@@ -270,7 +270,7 @@ impl RenderOnce for Slider {
             .axis(axis)
             .disabled(self.disabled)
             .when_some(self.accessibility_label, |this, label| {
-                this.aria_label(label)
+                this.accessibility_label(label)
             })
             .flex()
             .flex_1()

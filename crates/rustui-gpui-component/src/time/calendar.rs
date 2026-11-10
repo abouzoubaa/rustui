@@ -212,7 +212,7 @@ impl RenderOnce for Calendar {
 
 #[cfg(test)]
 mod tests {
-    use super::{CalendarItemKind, Date, uses_compact_text};
+    use super::{CalendarItemKind, Date, month_name, uses_compact_text};
     use chrono::NaiveDate;
 
     #[test]
@@ -229,5 +229,14 @@ mod tests {
         assert!(uses_compact_text(CalendarItemKind::Month));
         assert!(!uses_compact_text(CalendarItemKind::MonthToggle));
         assert!(!uses_compact_text(CalendarItemKind::Day));
+    }
+
+    #[test]
+    fn calendar_month_names_include_french_and_arabic_translations() {
+        rust_i18n::set_locale("fr");
+        assert_eq!(month_name(1), "janvier");
+        rust_i18n::set_locale("ar");
+        assert_eq!(month_name(1), "يناير");
+        rust_i18n::set_locale("en");
     }
 }

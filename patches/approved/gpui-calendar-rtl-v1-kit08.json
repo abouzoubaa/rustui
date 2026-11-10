@@ -1,0 +1,25 @@
+{
+  "schema_version": 1,
+  "upstream": {
+    "repository": "https://github.com/longbridge/gpui-kit",
+    "tag": "v0.8.1",
+    "commit": "99576db58ec8103417c41a092e891b4022d24e7e",
+    "gpui_pre_version": "0.3.10"
+  },
+  "candidate": "gpui-calendar-rtl-v1-kit08.patch",
+  "patch_sha256": "ab9c5588339bebfe7b7e68e8e1746a9515a111509f04c8a51af849ed1c9861de",
+  "files": {
+    "vendor/gpui-base-0.8.1/src/calendar.rs": {
+      "pre_sha256": "da5784e86d2062170e1dcc893b018f2ffa0a7a723f1356d314d82d77cc9f4869",
+      "post_sha256": "17b393d5b86465908ccfc4db78e42905fafd3146f86f1599ba62bc401c1f7318"
+    },
+    "vendor/gpui-component-0.8.1/src/time/calendar.rs": {
+      "pre_sha256": "842e291959ebec26887599289a3e1b52da24870be785ef415efa11f824321251",
+      "post_sha256": "e55837a29719714c1a1e3c23e8de1bca76af015ad186f2167340358da8d4f9a9"
+    },
+    "vendor/gpui-component-0.8.1/src/time/date_picker.rs": {
+      "pre_sha256": "147635e97bffa36a1bdb8782f884d51cd7b8bbb6fc86e6a093a2a264584a8146",
+      "post_sha256": "7a4de80dd9c3ac82c4604a3dd261c84a35117ec8e329df633f133cae3b43b2c3"
+    }
+  }
+}

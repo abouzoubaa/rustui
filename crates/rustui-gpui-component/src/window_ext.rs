@@ -12,17 +12,14 @@ use std::{
     sync::atomic::{AtomicU64, Ordering},
 };
 
-/// Opaque identity for one dialog opening, unique across windows.
+/// Opaque identity for one dialog opening.
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Hash)]
 pub struct DialogId(u64);
 
 impl DialogId {
     pub(crate) fn next() -> Self {
         static NEXT: AtomicU64 = AtomicU64::new(1);
-        Self(
-            NEXT.fetch_update(Ordering::Relaxed, Ordering::Relaxed, |id| id.checked_add(1))
-                .expect("dialog identity space exhausted"),
-        )
+        Self(NEXT.fetch_add(1, Ordering::Relaxed))
     }
 }
 
@@ -120,6 +117,9 @@ pub trait WindowExt: Sized {
         F: Fn(AlertDialog, &mut Window, &mut App) -> AlertDialog + 'static;
 
     /// Return true, if there is an active Dialog.
+    ///
+    /// A dialog that is playing its exit transition is no longer active: it
+    /// accepts no input and will unmount when the transition finishes.
     fn has_active_dialog(&mut self, cx: &mut App) -> bool;
 
     /// Closes the last active Dialog.
@@ -208,7 +208,10 @@ impl WindowExt for Window {
 
     #[inline]
     fn has_active_dialog(&mut self, cx: &mut App) -> bool {
-        !WindowState::read(self, cx).active_dialogs.is_empty()
+        WindowState::read(self, cx)
+            .active_dialogs
+            .iter()
+            .any(|dialog| !dialog.closing)
     }
 
     #[inline]
@@ -294,17 +297,10 @@ impl WindowExt for Window {
 
 /// Identity-aware dialog operations that leave [`WindowExt`] source-compatible.
 pub trait TrackedDialogExt {
-    /// Opens a dialog and returns an identity for this one opening.
-    /// The builder follows [`WindowExt::open_dialog`]'s repeatable-render contract.
     fn open_dialog_tracked<F>(&mut self, cx: &mut App, build: F) -> DialogId
     where
         F: Fn(Dialog, &mut Window, &mut App) -> Dialog + 'static;
-
-    /// Returns whether this opening is active in this window.
     fn has_dialog_id(&mut self, id: DialogId, cx: &mut App) -> bool;
-
-    /// Closes only this opening, including when another dialog is above it.
-    /// Returns false for stale identities or identities from another window.
     fn close_dialog_by_id(&mut self, id: DialogId, cx: &mut App) -> bool;
 }
 
@@ -317,14 +313,9 @@ impl TrackedDialogExt for Window {
             root.open_dialog_tracked(build, window, cx)
         })
     }
-
     fn has_dialog_id(&mut self, id: DialogId, cx: &mut App) -> bool {
-        WindowState::read(self, cx)
-            .active_dialogs
-            .iter()
-            .any(|dialog| dialog.id == id)
+        WindowState::read(self, cx).has_dialog_id(id)
     }
-
     fn close_dialog_by_id(&mut self, id: DialogId, cx: &mut App) -> bool {
         WindowState::update(self, cx, |root, window, cx| {
             root.close_dialog_by_id(id, window, cx)

@@ -1,5 +1,5 @@
---- a/vendor/gpui-base-0.7.3/src/slider.rs
-+++ b/vendor/gpui-base-0.7.3/src/slider.rs
+--- a/vendor/gpui-base-0.8.1/src/slider.rs
++++ b/vendor/gpui-base-0.8.1/src/slider.rs
 @@ -705,8 +705,13 @@
                      ),
                  )

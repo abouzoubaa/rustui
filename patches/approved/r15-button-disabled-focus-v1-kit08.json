@@ -1,0 +1,17 @@
+{
+  "schema_version": 1,
+  "upstream": {
+    "repository": "https://github.com/longbridge/gpui-kit",
+    "tag": "v0.8.1",
+    "commit": "99576db58ec8103417c41a092e891b4022d24e7e",
+    "gpui_pre_version": "0.3.10"
+  },
+  "candidate": "r15-button-disabled-focus-v1-kit08.patch",
+  "patch_sha256": "946cdf0f13a75b0d236782d44d2026741bca7eb3e7c04420e147a0acc3373122",
+  "files": {
+    "vendor/gpui-component-0.8.1/src/button/button.rs": {
+      "pre_sha256": "1d74270f1913c4e42e21eab596af266599ff87f4f40c66f6c3fce1ac4dd77227",
+      "post_sha256": "e40d8d585aad915f264e8852efbfc1054931c2dabcf388457f4e083880f80f56"
+    }
+  }
+}

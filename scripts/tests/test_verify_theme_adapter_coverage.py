@@ -15,8 +15,8 @@ class RendererCoverageTests(unittest.TestCase):
         registry = coverage.REGISTRY.read_text(encoding="utf-8")
         popup_path = "@gpui/menu/popup_menu.rs"
         styled_path = "@gpui/styled.rs"
-        popup = (coverage.ROOT / "vendor/gpui-component-0.7.3/src/menu/popup_menu.rs").read_text()
-        styled = (coverage.ROOT / "vendor/gpui-component-0.7.3/src/styled.rs").read_text()
+        popup = (coverage.ROOT / "vendor/gpui-component-0.8.1/src/menu/popup_menu.rs").read_text()
+        styled = (coverage.ROOT / "vendor/gpui-component-0.8.1/src/styled.rs").read_text()
         menu_path = "components/overlay/menu.rs"
         menu = (coverage.ROOT / "crates/rustui/src" / menu_path).read_text()
         diagnostic = "menu activation-to-popover theme path is incomplete"

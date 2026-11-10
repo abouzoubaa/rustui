@@ -517,3 +517,15 @@ Added `scripts/check_kit08_kit_stack.py --compile-online --proof-all-families`, 
 GPUI Kit v0.9.0 was released on 2026-11-02 and published to crates.io as both gpui-component 0.9.0 and gpui-kit 0.9.0 (both non-yanked). This is for owner decision before A2-7; the A2 target remains v0.8.1 / gpui-pre 0.3.10.
 
 Key changes include editor and Diff decorations, configurable cursor blinking and Input edit events, an application icon resolver, accessibility fixes for tables and menus, and Markdown/text-rendering fixes. The release moves its default backend to gpui-pre 0.3.11 (optional GPUI Fast 0.1.13). Public theme structs become #[non_exhaustive], so external struct literals break; GPUI API changes include Window::text_system() returning &Rc<WindowTextSystem> instead of &Arc, and animations using executor time.
+
+## A2-5a activation compile inventory for A2-5b
+
+After the Rust 1.98.0 bump and the owned macOS manifest fix, the full command `RUSTC="$(rustup which rustc --toolchain 1.98.0)" CARGO_TARGET_DIR="$HOME/.cache/rustui-target" rustup run 1.98.0 cargo check --workspace --all-targets --locked --offline` exited 101 with **5 RustUI compiler errors**; GPUI Base and Component compiled successfully. The errors group as follows:
+
+- `Keystroke::parse` lifetime/API change: **4 E0521 errors**, because the 0.8.1 parser requires its input to outlive `'static`. One library error is at `crates/rustui/src/interaction/keyboard.rs:144`; three test-helper errors are at `crates/rustui/src/components/advanced/graph_view/interaction.rs:1136`, `crates/rustui/src/components/disabled_tests.rs:466`, and `crates/rustui/src/interaction/keyboard.rs:183`.
+- GPUI Kit assets path: **1 missing-file error** at `crates/rustui/src/runtime/application.rs:487`; the source still includes `vendor/gpui-kit-assets-0.7.3/default-icons.txt`, while the activated source is 0.8.1.
+- Other APIs, including `KeyBinding::new`: **0 errors in this check**.
+
+The integration source gate now verifies the active approved Kit 0.8 stack and owned mirrors. It omits legacy patch-specific tests whose fixtures hard-code the retired 0.3.9 / 0.7.3 source paths; their behavior proofs are tracked in the A2-4 family fixture records and will be revalidated on activation. The current upstream theme coverage check also has one old 0.7.3 source path and is deferred with that legacy suite.
+
+These 5 errors are recorded for A2-5b. The workspace check reached and compiled both GPUI Base and GPUI Component; only RustUI source crates failed.

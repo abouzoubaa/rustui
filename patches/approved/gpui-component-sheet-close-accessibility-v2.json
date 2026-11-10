@@ -1,8 +1,17 @@
 {
   "schema_version": 1,
-  "patch": "patches/approved/gpui-component-sheet-close-accessibility-v2.patch",
-  "patch_sha256": "5f90527f5bf73f92c4fe66805e142be31e035f4ab039d18cb72c346418ce3f69",
-  "source": "vendor/gpui-component-0.7.3/src/sheet.rs",
-  "pre_sha256": "0bfd572bda2ba54f9e862401705829073de2d33eb94f03d615452d428fc5d5af",
-  "post_sha256": "bf54674f0df559561004bf7676efb70fe1ce8f0109bf183e109b7dbfe9526f8e"
+  "upstream": {
+    "repository": "https://github.com/longbridge/gpui-kit",
+    "tag": "v0.8.1",
+    "commit": "99576db58ec8103417c41a092e891b4022d24e7e",
+    "gpui_pre_version": "0.3.10"
+  },
+  "candidate": "gpui-component-sheet-close-accessibility-v2.patch",
+  "patch_sha256": "4a2c189dd82af35c2201ef398d976a093da593d8d5755c01206f98a6622a02d5",
+  "files": {
+    "vendor/gpui-component-0.8.1/src/sheet.rs": {
+      "pre_sha256": "94c72ed8c8fb0181da421c90a8ae72f3f3a21b5fc5fa30893dd14d3ba3ef87ba",
+      "post_sha256": "a5de531f9e61e7a96e0cd17c0024da0c7ff9069f7d976ea14f846a790ed2c393"
+    }
+  }
 }

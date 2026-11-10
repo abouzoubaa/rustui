@@ -1,7 +1,7 @@
-diff --git a/vendor/gpui-component-0.7.3/src/list/list.rs b/vendor/gpui-component-0.7.3/src/list/list.rs
+diff --git a/vendor/gpui-component-0.8.1/src/list/list.rs b/vendor/gpui-component-0.8.1/src/list/list.rs
 index 027a4719..03a2b31b 100644
---- a/vendor/gpui-component-0.7.3/src/list/list.rs
-+++ b/vendor/gpui-component-0.7.3/src/list/list.rs
+--- a/vendor/gpui-component-0.8.1/src/list/list.rs
++++ b/vendor/gpui-component-0.8.1/src/list/list.rs
 @@ -499,10 +499,14 @@ where
  
          div()

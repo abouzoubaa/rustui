@@ -1,5 +1,5 @@
---- a/vendor/gpui-component-0.7.3/src/breadcrumb.rs
-+++ b/vendor/gpui-component-0.7.3/src/breadcrumb.rs
+--- a/vendor/gpui-component-0.8.1/src/breadcrumb.rs
++++ b/vendor/gpui-component-0.8.1/src/breadcrumb.rs
 @@ -89,10 +89,18 @@
  }
  

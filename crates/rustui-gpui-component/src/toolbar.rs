@@ -177,16 +177,16 @@ impl Toolbar {
         }
     }
 
-    /// Lay out and navigate toolbar items in right-to-left order.
-    pub fn right_to_left(mut self, right_to_left: bool) -> Self {
-        self.right_to_left = right_to_left;
-        self
-    }
-
     /// Disable the toolbar's roving keyboard navigation.
     /// Hosted controls must be disabled by their owner.
     pub fn disabled(mut self, disabled: bool) -> Self {
         self.disabled = disabled;
+        self
+    }
+
+    /// Lay out and navigate toolbar items in right-to-left order.
+    pub fn right_to_left(mut self, right_to_left: bool) -> Self {
+        self.right_to_left = right_to_left;
         self
     }
 
@@ -257,12 +257,12 @@ impl RenderOnce for Toolbar {
             .right_to_left(self.right_to_left)
             .flex()
             .items_center()
-            .flex_shrink_0()
             .when(self.right_to_left, |this| this.w_full().flex_row_reverse())
+            .flex_shrink_0()
             .map(|this| match size {
-                Size::XSmall => this.h_7().p_1().gap_1().text_xs(),
-                Size::Small => this.h_8().p_1().gap_1().text_sm(),
-                _ => this.h_12().p_2().gap_2().text_sm(),
+                Size::XSmall => this.min_h_7().p_1().gap_1().text_xs(),
+                Size::Small => this.min_h_8().p_1().gap_1().text_sm(),
+                _ => this.min_h_12().p_2().gap_2().text_sm(),
             })
             .refine_style(&self.style)
             .children(items)

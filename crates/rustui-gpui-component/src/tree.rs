@@ -2,7 +2,7 @@ use std::rc::Rc;
 
 use gpui::{
     App, Context, ElementId, Entity, InteractiveElement as _, IntoElement, ParentElement as _,
-    RenderOnce, SharedString, StyleRefinement, Styled, Window, div,
+    RenderOnce, SharedString, StyleRefinement, Styled, Window, div, prelude::FluentBuilder as _,
 };
 
 use crate::{
@@ -36,6 +36,7 @@ pub struct Tree {
     accessibility_label: Option<SharedString>,
     render_item: Rc<RenderItem>,
     context_menu_builder: Option<Rc<ContextMenuBuilder>>,
+    scroll_bounce: Option<bool>,
 }
 
 impl Tree {
@@ -50,6 +51,7 @@ impl Tree {
             accessibility_label: None,
             render_item: Rc::new(render_item),
             context_menu_builder: None,
+            scroll_bounce: None,
         }
     }
 
@@ -68,6 +70,13 @@ impl Tree {
         self.context_menu_builder = Some(Rc::new(f));
         self
     }
+
+    /// Bounce at the vertical boundaries. On by default on iOS, Android and
+    /// macOS, off elsewhere; reduced motion disables displacement.
+    pub fn scroll_bounce(mut self, enabled: bool) -> Self {
+        self.scroll_bounce = Some(enabled);
+        self
+    }
 }
 
 impl Styled for Tree {
@@ -82,6 +91,7 @@ impl RenderOnce for Tree {
         let render_item = self.render_item;
         let context_menu_builder = self.context_menu_builder;
         let scroll_handle = self.state.read(cx).scroll_handle().clone();
+
         let mut tree = gpui_base::Tree::new(&self.state);
         if let Some(label) = self.accessibility_label {
             tree = tree.accessibility_label(label);
@@ -125,7 +135,11 @@ impl RenderOnce for Tree {
                     })
                     .list_style(StyleRefinement::default().flex_grow_1().size_full())
                     .relative()
-                    .size_full(),
+                    .size_full()
+                    .map(|tree| {
+                        gpui_base::ScrollBounce::new("tree-scroll-bounce", &scroll_handle, tree)
+                            .when_some(self.scroll_bounce, |bounce, on| bounce.enabled(on))
+                    }),
             )
             .refine_style(&self.style)
             .vertical_scrollbar(&scroll_handle)
@@ -135,10 +149,79 @@ impl RenderOnce for Tree {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use gpui::{AppContext as _, TestAppContext};
 
     #[test]
     fn legacy_tree_types_are_base_types() {
         fn accepts_base(_: gpui_base::TreeItem) {}
         accepts_base(TreeItem::new("id", "Label"));
+    }
+
+    struct NamedTreeRoot {
+        state: Entity<TreeState>,
+    }
+
+    impl gpui::Render for NamedTreeRoot {
+        fn render(&mut self, _: &mut Window, _: &mut Context<Self>) -> impl IntoElement {
+            div().size_full().child(
+                Tree::new(&self.state, |_, entry, _, _, _| {
+                    ListItem::new(entry.item().id.clone()).child(entry.item().label.clone())
+                })
+                .accessibility_label("Workspace files"),
+            )
+        }
+    }
+
+    #[gpui::test]
+    fn tree_accessibility_label_and_levels_reach_the_tree_nodes(cx: &mut TestAppContext) {
+        cx.update(|cx| crate::init(cx));
+        let items = vec![
+            TreeItem::new("root", "Root")
+                .expanded(true)
+                .child(
+                    TreeItem::new("branch", "Branch")
+                        .expanded(true)
+                        .child(TreeItem::new("leaf", "Leaf")),
+                )
+                .child(TreeItem::new("disabled", "Disabled").disabled(true)),
+        ];
+        let state = cx.new(|cx| TreeState::new(cx).items(items));
+        let (_, cx) = cx.add_window_view({
+            let state = state.clone();
+            move |_, _| NamedTreeRoot { state }
+        });
+        cx.update(|window, cx| window.draw(cx).clear(cx));
+        let tree = cx.update(|window, _| window.debug_a11y_tree_json()).unwrap();
+        let tree: serde_json::Value = serde_json::from_str(&tree).unwrap();
+        let mut rows = tree["nodes"]
+            .as_object()
+            .expect("debug accessibility nodes are keyed by ephemeral ID")
+            .values()
+            .filter(|node| node["aria"]["role"] == "TreeItem")
+            .map(|node| {
+                (
+                    node["aria"]["label"].as_str().unwrap().to_owned(),
+                    node["aria"]["level"].as_u64().unwrap(),
+                    node["aria"]["disabled"].as_bool().unwrap_or(false),
+                )
+            })
+            .collect::<Vec<_>>();
+        rows.sort_by_key(|(_, level, _)| *level);
+        let tree_node = tree["nodes"]
+            .as_object()
+            .unwrap()
+            .values()
+            .find(|node| node["aria"]["role"] == "Tree")
+            .unwrap();
+        assert_eq!(tree_node["aria"]["label"], "Workspace files");
+        assert_eq!(
+            rows,
+            vec![
+                ("Root".to_owned(), 1, false),
+                ("Branch".to_owned(), 2, false),
+                ("Disabled".to_owned(), 2, true),
+                ("Leaf".to_owned(), 3, false),
+            ]
+        );
     }
 }
