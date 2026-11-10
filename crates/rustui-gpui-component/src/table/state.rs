@@ -247,6 +247,8 @@ pub struct TableState<D: TableDelegate> {
     /// - Keyboard navigation works at the cell level (arrow keys move between cells)
     /// - Right-click and double-click events are supported for cells
     pub cell_selectable: bool,
+    /// Use the delegate's accessibility nodes instead of generated table wrappers.
+    delegate_accessibility: bool,
     /// Whether the row header column is visible when `cell_selectable` is enabled,
     /// default is `true`.
     ///
@@ -327,6 +329,7 @@ where
             row_selectable: true,
             select_on_modifier_click: true,
             cell_selectable: false,
+            delegate_accessibility: false,
             row_header: true,
             sortable: true,
             col_movable: true,
@@ -412,6 +415,12 @@ where
     /// ```
     pub fn cell_selectable(mut self, cell_selectable: bool) -> Self {
         self.cell_selectable = cell_selectable;
+        self
+    }
+
+    /// Use accessibility roles and metadata supplied by the table delegate.
+    pub fn delegate_accessibility(mut self, enabled: bool) -> Self {
+        self.delegate_accessibility = enabled;
         self
     }
 
@@ -1550,6 +1559,9 @@ where
     where
         E: gpui::StatefulInteractiveElement + FluentBuilder,
     {
+        if self.delegate_accessibility {
+            return cell;
+        }
         let cell = if self.cell_selectable {
             cell.role(gpui::Role::GridCell)
                 .aria_selected(self.selected_cell() == Some((row_ix, col_ix)))
@@ -1860,10 +1872,12 @@ where
             .child(
                 self.render_cell(None, col_ix, window, cx)
                     .id(("col-header", col_ix))
-                    .role(gpui::Role::ColumnHeader)
-                    .aria_label(name.clone())
-                    .aria_column_index(col_ix)
                     .test_support()
+                    .when(!self.delegate_accessibility, |cell| {
+                        cell.role(gpui::Role::ColumnHeader)
+                            .aria_label(name.clone())
+                            .aria_column_index(col_ix)
+                    })
                     .on_click(cx.listener(move |this, _, window, cx| {
                         this.on_col_head_click(col_ix, window, cx);
                     }))
@@ -2031,8 +2045,11 @@ where
         header
             // One header row holds every column header, including the pinned
             // ones, which are laid out in a separate container.
-            .role(gpui::Role::Row)
-            .aria_row_index(0)
+            .when(!self.delegate_accessibility, |header| {
+                header
+                    .role(gpui::Role::Row)
+                    .aria_row_index(0)
+            })
             .h_flex()
             .w_full()
             .flex_shrink_0()
@@ -2232,7 +2249,7 @@ where
             tr.test_support()
                 .role(gpui::Role::Row)
                 // Row 0 is the header row.
-                .aria_row_index(row_ix + 1)
+                .when(!self.delegate_accessibility, |tr| tr.aria_row_index(row_ix + 1))
                 .aria_selected(is_selected)
                 .h_flex()
                 .w_full()
@@ -2696,13 +2713,15 @@ where
             .test_support()
             // A table that selects rows or cells is a grid. The counts cover
             // every row, not just the rendered ones, plus the header row.
-            .role(if self.row_selectable || self.cell_selectable {
-                gpui::Role::Grid
-            } else {
-                gpui::Role::Table
+            .when(!self.delegate_accessibility, |this| {
+                this.role(if self.row_selectable || self.cell_selectable {
+                    gpui::Role::Grid
+                } else {
+                    gpui::Role::Table
+                })
+                .aria_row_count(rows_count + 1)
+                .aria_column_count(columns_count)
             })
-            .aria_row_count(rows_count + 1)
-            .aria_column_count(columns_count)
             .size_full()
             .overflow_hidden()
             .child(self.render_table_header(left_columns_count, window, cx))

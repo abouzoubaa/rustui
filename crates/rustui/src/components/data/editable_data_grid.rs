@@ -1152,6 +1152,7 @@ impl<R: Clone + 'static> View for EditableDataGridView<R> {
             .sortable(true)
             .col_movable(false)
             .col_resizable(false)
+            .delegate_accessibility(true)
         });
         context.update_entity(&table, |table, _, cx| table.refresh(cx));
         let table_weak = table.downgrade();

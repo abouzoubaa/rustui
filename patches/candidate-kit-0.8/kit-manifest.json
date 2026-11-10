@@ -285,7 +285,7 @@
     },
     {
       "patch": "gpui-component-tracked-dialog-focus-rebase-v2-kit08.patch",
-      "patch_sha256": "7464591dcd3dae9f694a571271149435933d080b19f80f225c7b09ce13bd365a",
+      "patch_sha256": "e96018bbba01cf1f89b234b6d90da6f8174628b8e160a126de87a8e8b90e694b",
       "files": {
         "vendor/gpui-component-0.7.3/src/dialog/dialog.rs": {
           "pre_sha256": "2a03c0e1636cb576a9430817fb413384b7434fb0c7e66fb549e16bd9d7805a05",
@@ -297,7 +297,7 @@
         },
         "vendor/gpui-component-0.7.3/src/root.rs": {
           "pre_sha256": "eaabab30afbeca71d0cc193be04c8f150b192e3c691dbac9bfd76944988e7d0e",
-          "post_sha256": "5766718fe0fd08388e6c268581311b54e5a151df6d48656edb953c06c50a6992"
+          "post_sha256": "2355df8db397aec79fddbf10dacf8a7ee6625a78e17c18ae60adca0494b16d67"
         },
         "vendor/gpui-component-0.7.3/src/window_ext.rs": {
           "pre_sha256": "2470eb24a74cd23573cec9fb09df56e0185bf30cad07afd88037453736bf3e89",
@@ -519,15 +519,19 @@
     },
     {
       "patch": "a11y-validation-grid-v1-kit08.patch",
-      "patch_sha256": "558ccc905a15a17db7afd0d653dfc924f9d621b68da04472e49a2000a0c6d015",
+      "patch_sha256": "90725587fb490b527a4b258308200d984cdfb0980bb01a1641b23eceddd0438b",
       "files": {
         "vendor/gpui-base-0.8.1/src/input/base/state.rs": {
           "pre_sha256": "3da5756412bd66422ecfc51eb43d30270f35c4e22df18ba254e9312bd643eaaa",
-          "post_sha256": "f63dfbe37c4eec48052a09992fd99442cd158d7e869c0197c9ba3f35d5472ce5"
+          "post_sha256": "293723a1200e5309648d0d6c4a50b099c7be71fea155b6967e5fca09656c81f7"
         },
         "vendor/gpui-component-0.8.1/src/input/input.rs": {
           "pre_sha256": "5d78b99979d232a28789d299adaab5760bdd1b056d29dd997aa85fca11dd6bc7",
           "post_sha256": "cba63ae82138bf7461c20aa7efe6fcea86c5b892a82c9b114bc9cd0ffe63a66a"
+        },
+        "vendor/gpui-component-0.8.1/src/table/state.rs": {
+          "pre_sha256": "7c3ecddd2d0cd41e1e46b29d043ee21160331a45e630628d57d139f3a85e7412",
+          "post_sha256": "74f648d0ba87c4cbf2ea8b3e6bb4b4effa40e911c89bcd92a801d917469c7d76"
         },
         "vendor/gpui-pre-0.3.10/src/elements/div.rs": {
           "pre_sha256": "8bdd5d7cf6727c499718cfb209ab08ea0fc8cda9047a700216c82b829e3430d0",
@@ -601,11 +605,11 @@
     },
     {
       "patch": "gpui-base-resize-first-move-v3-kit08.patch",
-      "patch_sha256": "ef772b9c6b36425ce51cb1f2301cf5a4da972059acb96a05b4ffb86c5846766c",
+      "patch_sha256": "e00c682eb716f111ff80783900e0ae578f035a4c73688b0716bc548281bb3e5c",
       "files": {
         "vendor/gpui-base-0.8.1/src/resizable/panel.rs": {
           "pre_sha256": "ec26e97d4e94ee74059b7a7b120b986d2f39b4eedf1c95909782669779afcb0d",
-          "post_sha256": "fd1b9e06a2ec2f3061c1d4d9854330fbbcf17b242314519f5ad469a93e3bc9d6"
+          "post_sha256": "d939c2b483d1569c4cbc541eabd36e1487470b3be0c1a2093398e795cdb7e929"
         }
       }
     },
@@ -825,7 +829,7 @@
     },
     "vendor/gpui-base-0.8.1/src/input/base/state.rs": {
       "pre_sha256": "3da5756412bd66422ecfc51eb43d30270f35c4e22df18ba254e9312bd643eaaa",
-      "post_sha256": "f63dfbe37c4eec48052a09992fd99442cd158d7e869c0197c9ba3f35d5472ce5"
+      "post_sha256": "293723a1200e5309648d0d6c4a50b099c7be71fea155b6967e5fca09656c81f7"
     },
     "vendor/gpui-base-0.8.1/src/input/base/tab_stops.rs": {
       "pre_sha256": "a41467f4d5e37d435dc35b29964d85c1a8388bda4bca9126c01814a4c92d770b",
@@ -833,7 +837,7 @@
     },
     "vendor/gpui-base-0.8.1/src/resizable/panel.rs": {
       "pre_sha256": "bd8438eadd5181ef5dfc98eda2518cb510d72c816c78f885586142692e5b5f1d",
-      "post_sha256": "fd1b9e06a2ec2f3061c1d4d9854330fbbcf17b242314519f5ad469a93e3bc9d6"
+      "post_sha256": "d939c2b483d1569c4cbc541eabd36e1487470b3be0c1a2093398e795cdb7e929"
     },
     "vendor/gpui-base-0.8.1/src/slider.rs": {
       "pre_sha256": "71b801a92588d12f7931a5a9e1745fb62f4283ae87d651d4004ae9b41ad72da3",
@@ -877,7 +881,7 @@
     },
     "vendor/gpui-component-0.7.3/src/root.rs": {
       "pre_sha256": "0d0a2be0e4beadbfea881f0dbe3f183a840e6cfc2e5b2edd2093924eb2017ba4",
-      "post_sha256": "5766718fe0fd08388e6c268581311b54e5a151df6d48656edb953c06c50a6992"
+      "post_sha256": "2355df8db397aec79fddbf10dacf8a7ee6625a78e17c18ae60adca0494b16d67"
     },
     "vendor/gpui-component-0.7.3/src/searchable_list/adapter.rs": {
       "pre_sha256": "41766a0014d344f4bd700f3aa6b1288aa2bd0fb6f10920f5a438d062836abc9f",
@@ -934,6 +938,10 @@
     "vendor/gpui-component-0.8.1/src/input/syntax_context.rs": {
       "pre_sha256": "7fb9a64557191822c559943091b451e316ba9b32e0cddb59ebfc04562b440acd",
       "post_sha256": "f9684895428cf5ad594889fdfa5c20d40cb1bab08854e09115d39709386b745e"
+    },
+    "vendor/gpui-component-0.8.1/src/table/state.rs": {
+      "pre_sha256": "7c3ecddd2d0cd41e1e46b29d043ee21160331a45e630628d57d139f3a85e7412",
+      "post_sha256": "74f648d0ba87c4cbf2ea8b3e6bb4b4effa40e911c89bcd92a801d917469c7d76"
     },
     "vendor/gpui-component-0.8.1/src/time/calendar.rs": {
       "pre_sha256": "842e291959ebec26887599289a3e1b52da24870be785ef415efa11f824321251",
@@ -1031,7 +1039,7 @@
   "reverse_verified": true,
   "fixture": {
     "archives_verified": 31,
-    "target_files_hashed": 56,
+    "target_files_hashed": 57,
     "known_unavailable_targets": 0
   }
 }

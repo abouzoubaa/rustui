@@ -1133,7 +1133,8 @@ mod interaction_followup_tests {
     use super::*;
     fn key(name: &str) -> gpui::KeyDownEvent {
         gpui::KeyDownEvent {
-            keystroke: gpui::Keystroke::parse(name).unwrap(),
+            keystroke: gpui::Keystroke::parse_with_os(name, gpui::OperatingSystem::Unknown)
+                .unwrap(),
             is_held: false,
             prefer_character_input: false,
         }

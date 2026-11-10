@@ -7,15 +7,19 @@
     "gpui_pre_version": "0.3.10"
   },
   "candidate": "a11y-validation-grid-v1-kit08.patch",
-  "patch_sha256": "558ccc905a15a17db7afd0d653dfc924f9d621b68da04472e49a2000a0c6d015",
+  "patch_sha256": "90725587fb490b527a4b258308200d984cdfb0980bb01a1641b23eceddd0438b",
   "files": {
     "vendor/gpui-base-0.8.1/src/input/base/state.rs": {
       "pre_sha256": "3da5756412bd66422ecfc51eb43d30270f35c4e22df18ba254e9312bd643eaaa",
-      "post_sha256": "f63dfbe37c4eec48052a09992fd99442cd158d7e869c0197c9ba3f35d5472ce5"
+      "post_sha256": "293723a1200e5309648d0d6c4a50b099c7be71fea155b6967e5fca09656c81f7"
     },
     "vendor/gpui-component-0.8.1/src/input/input.rs": {
       "pre_sha256": "5d78b99979d232a28789d299adaab5760bdd1b056d29dd997aa85fca11dd6bc7",
       "post_sha256": "cba63ae82138bf7461c20aa7efe6fcea86c5b892a82c9b114bc9cd0ffe63a66a"
+    },
+    "vendor/gpui-component-0.8.1/src/table/state.rs": {
+      "pre_sha256": "7c3ecddd2d0cd41e1e46b29d043ee21160331a45e630628d57d139f3a85e7412",
+      "post_sha256": "74f648d0ba87c4cbf2ea8b3e6bb4b4effa40e911c89bcd92a801d917469c7d76"
     },
     "vendor/gpui-pre-0.3.10/src/elements/div.rs": {
       "pre_sha256": "7cc93fd59cbbccc22ee49d1370e02c199655bf058c56885157f5720e516c9f0e",

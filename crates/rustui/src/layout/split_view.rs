@@ -358,6 +358,7 @@ impl View for SplitView {
                 Axis::Vertical => v_resizable("rustui-split"),
             }
             .with_state(&native);
+            group = group.finish_without_final_resize(true);
             for (index, panel) in panels.iter().enumerate() {
                 let content = context
                     .with_element_scope(RetentionScope::Key(panel.id.clone()), |context| {

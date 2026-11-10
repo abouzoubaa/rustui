@@ -773,6 +773,75 @@ mod tests {
         window.update(|_, app| assert_eq!(owner.read(app).component().value, "three"));
     }
 
+    #[gpui::test]
+    fn picker_trigger_uses_committed_selection_while_filter_cursor_moves(
+        cx: &mut gpui::TestAppContext,
+    ) {
+        use crate::{runtime::component_host::ComponentHost, view::View};
+
+        struct Owner {
+            value: String,
+        }
+        impl View for Owner {
+            fn body(&self) -> impl View {
+                Picker(
+                    "Choice",
+                    Binding::new(
+                        self.value.clone(),
+                        |owner: &Owner| owner.value.clone(),
+                        |owner, value| owner.value = value,
+                    ),
+                    ["Rust", "Swift"],
+                )
+                .id("committed-picker-selection")
+                .searchable(true)
+            }
+        }
+
+        let theme = crate::theme::parse_theme(include_str!(concat!(
+            env!("CARGO_MANIFEST_DIR"),
+            "/../../themes/macos27.json"
+        )))
+        .unwrap();
+        cx.update(|app| {
+            gpui_component::init(app);
+            crate::theme::activate_theme(&theme, Some(crate::theme::AppearanceMode::Dark), app)
+                .unwrap();
+        });
+        let (_, window) = cx.add_window_view(|_, cx| {
+            ComponentHost::new(
+                Owner {
+                    value: "Rust".into(),
+                },
+                cx,
+            )
+        });
+        window.update(|window, app| {
+            let _ = window.draw(app);
+            window.focus_next(app);
+            let _ = window.draw(app);
+        });
+        window.simulate_keystrokes("enter");
+        window.simulate_keystrokes("down");
+
+        let tree = window.update(|window, app| {
+            let _ = window.draw(app);
+            serde_json::from_str::<serde_json::Value>(
+                &window
+                    .debug_a11y_tree_json()
+                    .expect("Picker accessibility tree"),
+            )
+            .unwrap()
+        });
+        let trigger = tree["nodes"]
+            .as_object()
+            .unwrap()
+            .values()
+            .find(|node| node["aria"]["role"] == "ComboBox" && node["aria"]["label"] == "Choice")
+            .expect("Picker trigger node");
+        assert_eq!(trigger["aria"]["value"], "Rust");
+    }
+
     fn binding() -> Binding<String> {
         Binding::new(
             String::new(),

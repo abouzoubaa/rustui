@@ -4986,6 +4986,7 @@ impl<M: InputModeKind> Render for InputBaseState<M> {
 
         let element = div()
             .id(EDITOR_ELEMENT_ID)
+            .aria_disabled(self.disabled)
             .key_context(CONTEXT)
             .when_some(self.accessibility.as_ref(), |this, accessibility| {
                 this.when_some(accessibility.role, |this, role| this.role(role))

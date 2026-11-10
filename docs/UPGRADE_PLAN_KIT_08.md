@@ -529,3 +529,7 @@ After the Rust 1.98.0 bump and the owned macOS manifest fix, the full command `R
 The integration source gate now verifies the active approved Kit 0.8 stack and owned mirrors. It omits legacy patch-specific tests whose fixtures hard-code the retired 0.3.9 / 0.7.3 source paths; their behavior proofs are tracked in the A2-4 family fixture records and will be revalidated on activation. The current upstream theme coverage check also has one old 0.7.3 source path and is deferred with that legacy suite.
 
 These 5 errors are recorded for A2-5b. The workspace check reached and compiled both GPUI Base and GPUI Component; only RustUI source crates failed.
+
+### A2-5b group 1 — editor disabled accessibility
+
+The 0.8.1 Base `InputBaseState` already tracks disabled state, and GPUI Component wrappers pass it to `Input`; however, the editor-owned accessibility node did not expose it. Extended `a11y-validation-grid-v1-kit08` to set `aria_disabled(self.disabled)` on that node. The existing disabled accessibility regressions passed for CodeEditor, PropertyInspector, PropertyIntegerValue, PropertyText, SearchField, TextEditor, TextField, and TokenField. The approved stack apply check and owned-source mirror verification also passed.

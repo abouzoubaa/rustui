@@ -33,6 +33,7 @@ pub struct ResizablePanelGroup {
     children: Vec<ResizablePanel>,
     on_resize: Rc<dyn Fn(&Entity<ResizableState>, &mut Window, &mut App)>,
     handle_appearance: Option<ResizeHandleRenderer>,
+    finish_without_final_resize: bool,
 }
 
 impl ResizablePanelGroup {
@@ -46,6 +47,7 @@ impl ResizablePanelGroup {
             size: None,
             on_resize: Rc::new(|_, _, _| {}),
             handle_appearance: None,
+            finish_without_final_resize: false,
         }
     }
 
@@ -63,6 +65,13 @@ impl ResizablePanelGroup {
     /// If not provided, it will handle its own state internally.
     pub fn with_state(mut self, state: &Entity<ResizableState>) -> Self {
         self.state = Some(state.clone());
+        self
+    }
+
+    /// Finish a drag when the left button is no longer pressed without applying
+    /// that event's pointer position as a final size change.
+    pub fn finish_without_final_resize(mut self, enabled: bool) -> Self {
+        self.finish_without_final_resize = enabled;
         self
     }
 
@@ -205,6 +214,7 @@ impl RenderOnce for ResizablePanelGroup {
                 state: state.clone(),
                 axis: self.axis,
                 on_resize: self.on_resize.clone(),
+                finish_without_final_resize: self.finish_without_final_resize,
             })
     }
 }
@@ -425,6 +435,7 @@ struct ResizePanelGroupElement {
     state: Entity<ResizableState>,
     on_resize: Rc<dyn Fn(&Entity<ResizableState>, &mut Window, &mut App)>,
     axis: Axis,
+    finish_without_final_resize: bool,
 }
 
 impl IntoElement for ResizePanelGroupElement {
@@ -483,6 +494,7 @@ impl Element for ResizePanelGroupElement {
             let state = self.state.clone();
             let axis = self.axis;
             let on_resize = self.on_resize.clone();
+            let finish_without_final_resize = self.finish_without_final_resize;
             move |e: &MouseMoveEvent, phase, window, cx| {
                 if !phase.bubble() {
                     return;
@@ -491,15 +503,17 @@ impl Element for ResizePanelGroupElement {
                     return;
                 };
                 if e.pressed_button != Some(gpui::MouseButton::Left) {
-                    let bounds = state.read(cx).panels[ix].bounds;
                     state.update(cx, |state, cx| {
-                        match axis {
-                            Axis::Horizontal => state.resize_panel_at_handle(
-                                ix, e.position.x - bounds.left(), window, cx,
-                            ),
-                            Axis::Vertical => state.resize_panel_at_handle(
-                                ix, e.position.y - bounds.top(), window, cx,
-                            ),
+                        if !finish_without_final_resize {
+                            let bounds = state.panels[ix].bounds;
+                            match axis {
+                                Axis::Horizontal => state.resize_panel_at_handle(
+                                    ix, e.position.x - bounds.left(), window, cx,
+                                ),
+                                Axis::Vertical => state.resize_panel_at_handle(
+                                    ix, e.position.y - bounds.top(), window, cx,
+                                ),
+                            }
                         }
                         state.done_resizing(cx);
                     });
