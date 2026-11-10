@@ -96,6 +96,7 @@ A2_4K_ORDER = (
     "gpui-component-date-picker-rtl-alignment-v1-kit08.patch",
 )
 A2_4L_ORDER = ("gpui-input-placeholder-color-v1.patch",)
+A2_4M_ORDER = ("gpui-toolbar-rtl-v1-kit08.patch",)
 FAMILY_PROOF_CRATE = ROOT / "scripts/kit08_family_proofs"
 FAMILY_ORDER = (
     A2_4A_ORDER
@@ -110,6 +111,7 @@ FAMILY_ORDER = (
     + A2_4J_ORDER
     + A2_4K_ORDER
     + A2_4L_ORDER
+    + A2_4M_ORDER
 )
 
 
@@ -155,6 +157,7 @@ def compile_candidate_workspace(
     proof_all = "--proof-all-families" in sys.argv[1:]
     proof_calendar = "--proof-calendar" in sys.argv[1:]
     proof_placeholder = "--proof-placeholder" in sys.argv[1:]
+    proof_toolbar = "--proof-toolbar" in sys.argv[1:]
     if "--proof-grid-a11y" in sys.argv[1:] or proof_all:
         gpui_pre = sources_root / f'gpui-pre-{source_by_name["gpui-pre"]["version"]}'
         with (gpui_pre / "Cargo.toml").open("a", encoding="utf-8") as cargo_toml:
@@ -175,7 +178,7 @@ def compile_candidate_workspace(
         (workspace / "assets/fonts/lilex/Lilex-Regular.ttf").write_bytes(b"")
         members.append(f'"sources/gpui-pre-{source_by_name["gpui-pre"]["version"]}"')
         members.append('"util_macros"')
-    if proof_all or proof_calendar or proof_placeholder:
+    if proof_all or proof_calendar or proof_placeholder or proof_toolbar:
         proof_dir = workspace / "family-proofs"
         shutil.copytree(FAMILY_PROOF_CRATE / "tests", proof_dir / "tests")
         (proof_dir / "Cargo.toml").write_text(
@@ -210,6 +213,7 @@ def compile_candidate_workspace(
             "--proof-grid-a11y",
             "--proof-calendar",
             "--proof-placeholder",
+            "--proof-toolbar",
             "--proof-all-families",
         )
     ):
@@ -276,6 +280,10 @@ def compile_candidate_workspace(
         proofs.append(
             ("placeholder_override_survives_palette_resolution", "a2-4a-modal-proof", "A2-4l input placeholder color", "input_placeholder")
         )
+    if proof_toolbar and not proof_all:
+        proofs.append(
+            ("rtl_toolbar_arrows_follow_visual_order", "a2-4a-modal-proof", "A2-4m toolbar RTL", "toolbar_rtl")
+        )
     if "--proof-tree-accessible-name" in sys.argv[1:]:
         proofs.append(("tree_accessibility_label_and_levels_reach_the_tree_nodes", "gpui-component", "Tree label/levels", None))
     if "--proof-tree-aria-level" in sys.argv[1:]:
@@ -309,6 +317,7 @@ def compile_candidate_workspace(
                 ("calendar_multi_month_count_stays_within_date_limits", "a2-4a-modal-proof", "A2-4k DatePicker/calendar limits", "calendar_date_picker"),
                 ("calendar_month_names_include_french_and_arabic_translations", "gpui-component", "A2-4k French/Arabic calendar translations", None),
                 ("placeholder_override_survives_palette_resolution", "a2-4a-modal-proof", "A2-4l input placeholder color", "input_placeholder"),
+                ("rtl_toolbar_arrows_follow_visual_order", "a2-4a-modal-proof", "A2-4m toolbar RTL", "toolbar_rtl"),
             ]
         )
     outcomes: list[tuple[str, int, str]] = []
@@ -375,7 +384,7 @@ def run(write_manifest: bool = False) -> dict:
         raise FixtureError(f"recorded stack manifest is stale: {OUTPUT}; use --write-manifest")
     OUTPUT.write_bytes(data)
     print(
-        "core patches={}; A2-4a patches={}; A2-4b patches={}; A2-4c patches={}; A2-4d patches={}; A2-4e patches={}; A2-4f patches={}; A2-4g patches={}; A2-4h patches={}; A2-4i patches={}; A2-4j patches={}; A2-4k patches={}; A2-4l patches={}; fixture archives verified={}; "
+        "core patches={}; A2-4a patches={}; A2-4b patches={}; A2-4c patches={}; A2-4d patches={}; A2-4e patches={}; A2-4f patches={}; A2-4g patches={}; A2-4h patches={}; A2-4i patches={}; A2-4j patches={}; A2-4k patches={}; A2-4l patches={}; A2-4m patches={}; fixture archives verified={}; "
         "target files hashed={}; stack files={}; reverse=exact".format(
             len(CORE_ORDER),
             len(A2_4A_ORDER),
@@ -390,6 +399,7 @@ def run(write_manifest: bool = False) -> dict:
             len(A2_4J_ORDER),
             len(A2_4K_ORDER),
             len(A2_4L_ORDER),
+            len(A2_4M_ORDER),
             archive_count,
             target_count,
             len(result["files"]),

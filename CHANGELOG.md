@@ -1,5 +1,6 @@
 # Changelog
 
+- A2-4m: rebased GPUI Kit 0.8 toolbar RTL layout and arrow navigation with a cumulative fixture proof.
 - A2-4l: added the GPUI Kit 0.8 input placeholder color candidate and cumulative fixture proof.
 - A2-4k: added Kit 0.8.1 calendar and DatePicker candidates with RTL, localization, date-limit, accessibility, and cumulative fixture proofs.
 - A2-4i: rebased the slider candidate stack and added cumulative accessibility-action and endpoint-clamp proofs for GPUI Kit 0.8.1.

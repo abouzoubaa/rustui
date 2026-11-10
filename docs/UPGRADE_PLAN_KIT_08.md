@@ -368,9 +368,13 @@ Added eight candidate patches: calendar keyboard behavior and DatePicker accessi
 
 Copied `gpui-input-placeholder-color-v1.patch` unchanged into the candidate stack. The cumulative runner passed all 24 proofs (A2-2 and A2-4a through A2-4l), the GPUI Base/Component compile gate, and exact reverse application. The added fixture proof `placeholder_override_survives_palette_resolution` passed.
 
+### A2-4m result — Toolbar RTL
+
+Rebased `gpui-toolbar-rtl-v1.patch` onto GPUI Kit 0.8.1 and gpui-pre 0.3.10, adding RTL layout and visual-order arrow navigation to Base and Component. The cumulative runner passed all 25 proofs (A2-2 and A2-4a through A2-4m), the GPUI Base/Component compile gate, and exact reverse application. Fixture test `rtl_toolbar_arrows_follow_visual_order` passed.
+
 ### Approved patch destination ledger (71 patches)
 
-Every approved patch has exactly one destination. **Totals after A2-4l: CANDIDATE 51 / REMAINDER 0 / A2-4 QUEUE 5 / OBSOLETE 6 / PARKED 5 / POPUP STAGE 4 = 71.** `t13-modal-focus-recovery-v1.patch` is assigned to the **A2-4 QUEUE — Dialog / modal focus** despite its GPUI-pre focus hunks; `a11y-validation-grid-v1.patch` moved from the **A2-4 QUEUE — Input / validation / DataGrid** to its candidate destination in A2-4h. Their feature families were outside A2-2 core candidate scope.
+Every approved patch has exactly one destination. **Totals after A2-4m: CANDIDATE 52 / REMAINDER 0 / A2-4 QUEUE 4 / OBSOLETE 6 / PARKED 5 / POPUP STAGE 4 = 71.** `t13-modal-focus-recovery-v1.patch` is assigned to the **A2-4 QUEUE — Dialog / modal focus** despite its GPUI-pre focus hunks; `a11y-validation-grid-v1.patch` moved from the **A2-4 QUEUE — Input / validation / DataGrid** to its candidate destination in A2-4h. Their feature families were outside A2-2 core candidate scope.
 
 ### A2-4 families
 
@@ -391,7 +395,7 @@ The queue is split into isolated candidate stacks. Each ticket is estimated at n
 | A2-4j — Resizable panels | `gpui-base-resize-first-move-v1.patch` → `gpui-base-resize-first-move-v2.patch` → `gpui-base-resize-first-move-v3.patch` | Kit 0.8.1 already includes #3629's live active-drag state reads; keep immediate initial-pointer sizing and the v3 left-button-loss cleanup. | DONE: 2 rebased; v2 is OBSOLETE because #3629 already provides its live state reads; cumulative Base/Component compile and exact reverse passed; test-window proofs `resize_handle_applies_the_first_pointer_position_immediately` and `resize_drag_finishes_when_left_button_is_no_longer_pressed` passed; all earlier cumulative proofs passed. |
 | A2-4k — Calendar / DatePicker | `gpui-base-calendar-date-limits-v1.patch` → `gpui-calendar-keyboard-v1.patch` → `gpui-calendar-rtl-v1.patch` → `gpui-calendar-multi-month-heading-v1.patch` → `gpui-component-calendar-fr-ar-v1.patch` → `gpui-component-date-picker-accessibility-v1.patch` → `gpui-component-date-picker-localization-v2.patch` → `gpui-component-date-picker-rtl-alignment-v1.patch` | Calendar RTL provides the `CalendarState::right_to_left` API used by multi-month heading. | DONE: 2 copied, 5 rebased, 1 partial localization delta; cumulative compile and exact reverse passed; all five A2-4k proofs passed, along with the 18 prior proofs. |
 | A2-4l — Input placeholder | `gpui-input-placeholder-color-v1.patch` | None | DONE: 1 copied; cumulative 24 proofs, Base/Component compile gate, and exact reverse passed; `placeholder_override_survives_palette_resolution` passed. |
-| A2-4m — Toolbar RTL | `gpui-toolbar-rtl-v1.patch` | None | 1h |
+| A2-4m — Toolbar RTL | `gpui-toolbar-rtl-v1.patch` | None | DONE: 1 rebased; cumulative 25 proofs, Base/Component compile gate, and exact reverse passed; `rtl_toolbar_arrows_follow_visual_order` passed. |
 | A2-4n — Diff / syntax registry | `gpui-component-web-syntax-v1.patch` → `gpui-component-web-syntax-runtime-v1.patch` → `gpui-component-web-syntax-runtime-v2.patch` → `gpui-component-web-syntax-runtime-v3.patch` | None | 2h |
 
 Original queue total: **45 patches**. A2-4a is first because its tracked dialog patch stacks on the modal focus recovery change. A2-4a includes only the two dialog/focus patches; Sheet is separated into A2-4b because its patch touches an independent file and has no stack dependency.
@@ -453,7 +457,7 @@ Original queue total: **45 patches**. A2-4a is first because its tracked dialog 
 | `gpui-pre-web-noopener-v1.patch` | PARKED — A2-7 (deferred platform) |
 | `gpui-primary-mousedown-click-v2.patch` | CANDIDATE — `patches/candidate-kit-0.8/gpui-primary-mousedown-click-v2.patch` |
 | `gpui-selectable-list-semantics-v2.patch` | CANDIDATE — `patches/candidate-kit-0.8/gpui-selectable-list-semantics-v2.patch` |
-| `gpui-toolbar-rtl-v1.patch` | A2-4 QUEUE — Toolbar |
+| `gpui-toolbar-rtl-v1.patch` | CANDIDATE — `patches/candidate-kit-0.8/gpui-toolbar-rtl-v1-kit08.patch` |
 | `gpui-tree-aria-disabled-v1.patch` | Split: CANDIDATE core API `gpui-tree-aria-disabled-v1-kit08.patch`; CANDIDATE Base Tree-row delta `gpui-tree-aria-disabled-row-v1-kit08.patch` |
 | `gpui-tree-aria-level-v1.patch` | CANDIDATE — `patches/candidate-kit-0.8/gpui-tree-aria-level-v1-kit08.patch` |
 | `gpui-tree-disabled-keyboard-v2.patch` | CANDIDATE — `patches/candidate-kit-0.8/gpui-tree-disabled-keyboard-v2.patch` |
