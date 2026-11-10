@@ -41,7 +41,13 @@ index 62831b2..075dae4 100644
      pub fn placeholder(&self) -> Option<&SharedString> {
          self.placeholder.as_ref()
      }
-@@ -4981,6 +4992,9 @@ impl<M: InputModeKind> Render for InputBaseState<M> {
+@@ -4987,11 +4987,15 @@ impl<M: InputModeKind> Render for InputBaseState<M> {
+         let element = div()
+             .id(EDITOR_ELEMENT_ID)
++            .aria_disabled(self.disabled)
+             .key_context(CONTEXT)
+             .when_some(self.accessibility.as_ref(), |this, accessibility| {
+                 this.when_some(accessibility.role, |this, role| this.role(role))
                      .when_some(accessibility.label.clone(), |this, label| {
                          this.aria_label(label)
                      })
