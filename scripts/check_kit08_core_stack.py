@@ -80,6 +80,7 @@ LATER_FAMILY_CANDIDATES = {
     "gpui-component-date-picker-localization-v2-kit08.patch",
     "gpui-component-date-picker-rtl-alignment-v1-kit08.patch",
     "gpui-input-placeholder-color-v1.patch",
+    "gpui-toolbar-rtl-v1-kit08.patch",
 }
 
 
