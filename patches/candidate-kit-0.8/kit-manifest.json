@@ -58,7 +58,8 @@
     "gpui-component-calendar-fr-ar-v1-kit08.patch",
     "gpui-component-date-picker-accessibility-v1.patch",
     "gpui-component-date-picker-localization-v2-kit08.patch",
-    "gpui-component-date-picker-rtl-alignment-v1-kit08.patch"
+    "gpui-component-date-picker-rtl-alignment-v1-kit08.patch",
+    "gpui-input-placeholder-color-v1.patch"
   ],
   "patches": [
     {
@@ -698,6 +699,24 @@
           "post_sha256": "8d8e8a7fd2549ffd0f88f90f6a619dd8f519fc408e657cdae30129a99d179712"
         }
       }
+    },
+    {
+      "patch": "gpui-input-placeholder-color-v1.patch",
+      "patch_sha256": "59e6e2cc615fa5fd5abf975e997642a507ea3bea447168a022a3ebc4f5afee89",
+      "files": {
+        "vendor/gpui-base-0.7.3/src/input/base/element.rs": {
+          "pre_sha256": "5d85f146b46605fc48a5bcc2426357c566a9e49c0a095c81e3a0b9e86c484a9b",
+          "post_sha256": "1c94b3fe40237b4d67be1422576bc1c3001fb3f44efa1d705d4ce96de6489a9e"
+        },
+        "vendor/gpui-base-0.7.3/src/input/editor/highlighting.rs": {
+          "pre_sha256": "a8ddf22a7e48437da874e5f4f665b0826660a39ea364a564bfdf77e90f218155",
+          "post_sha256": "79c38573136ed2745af6db9dd7bd74579ef6c86462a217c851a83fc7e3c9bc8b"
+        },
+        "vendor/gpui-component-0.7.3/src/input/input.rs": {
+          "pre_sha256": "5d78b99979d232a28789d299adaab5760bdd1b056d29dd997aa85fca11dd6bc7",
+          "post_sha256": "f33e16c4a76d32d4aa0ce76cecd7175e1e1760edda4f148b8ab34aecf84e77cd"
+        }
+      }
     }
   ],
   "files": {
@@ -716,6 +735,14 @@
     "vendor/cosmic-text-0.19.0/src/shape.rs": {
       "pre_sha256": "d94983d9b811c8f7f8b3d3dd8e2dc118d260c28eca829aba9af036ee68582837",
       "post_sha256": "6d183b0243467f7033d32ae61d7bba44c34da9fa4b3cecf514962e5207dc681b"
+    },
+    "vendor/gpui-base-0.7.3/src/input/base/element.rs": {
+      "pre_sha256": "5d85f146b46605fc48a5bcc2426357c566a9e49c0a095c81e3a0b9e86c484a9b",
+      "post_sha256": "1c94b3fe40237b4d67be1422576bc1c3001fb3f44efa1d705d4ce96de6489a9e"
+    },
+    "vendor/gpui-base-0.7.3/src/input/editor/highlighting.rs": {
+      "pre_sha256": "a8ddf22a7e48437da874e5f4f665b0826660a39ea364a564bfdf77e90f218155",
+      "post_sha256": "79c38573136ed2745af6db9dd7bd74579ef6c86462a217c851a83fc7e3c9bc8b"
     },
     "vendor/gpui-base-0.7.3/src/text/inline.rs": {
       "pre_sha256": "7cc393c3b02e176799aef97fedf294c88e82d3265b10fe678a0cb1efc1b1d333",
@@ -752,6 +779,10 @@
     "vendor/gpui-component-0.7.3/src/dialog/dialog.rs": {
       "pre_sha256": "2a03c0e1636cb576a9430817fb413384b7434fb0c7e66fb549e16bd9d7805a05",
       "post_sha256": "f61e4d106499a34dc2715adb9e9383ed2b30f554f21ad2fc160c00a94b4fcf12"
+    },
+    "vendor/gpui-component-0.7.3/src/input/input.rs": {
+      "pre_sha256": "5d78b99979d232a28789d299adaab5760bdd1b056d29dd997aa85fca11dd6bc7",
+      "post_sha256": "f33e16c4a76d32d4aa0ce76cecd7175e1e1760edda4f148b8ab34aecf84e77cd"
     },
     "vendor/gpui-component-0.7.3/src/lib.rs": {
       "pre_sha256": "cb2a4cfb718e7608ffda91edd3f0dddebb26252248ccc8388d0fbb9781d88429",
@@ -909,7 +940,7 @@
   "reverse_verified": true,
   "fixture": {
     "archives_verified": 31,
-    "target_files_hashed": 47,
+    "target_files_hashed": 49,
     "known_unavailable_targets": 0
   }
 }

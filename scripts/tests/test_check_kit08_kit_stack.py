@@ -19,6 +19,7 @@ from check_kit08_kit_stack import (  # noqa: E402
     A2_4I_ORDER,
     A2_4J_ORDER,
     A2_4K_ORDER,
+    A2_4L_ORDER,
     FAMILY_PROOF_CRATE,
 )
 
@@ -108,6 +109,9 @@ class Kit08FamilyStackTests(unittest.TestCase):
             ),
         )
         self.assertTrue((FAMILY_PROOF_CRATE / "tests/calendar_date_picker.rs").is_file())
+
+    def test_input_placeholder_patch_follows_calendar_stack(self):
+        self.assertEqual(A2_4L_ORDER, ("gpui-input-placeholder-color-v1.patch",))
 
     def test_datagrid_patch_uses_fixture_paths_and_preserves_tree_disabled_context(self):
         patch = (ROOT / "patches/candidate-kit-0.8/a11y-validation-grid-v1-kit08.patch").read_text(
