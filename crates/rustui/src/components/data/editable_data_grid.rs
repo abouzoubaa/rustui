@@ -693,7 +693,7 @@ fn grid_row_accessibility(row: usize) -> Stateful<gpui::Div> {
     div()
         .id(("editable-grid-row", row))
         .role(Role::Row)
-        .aria_row_index(row + 2)
+        .aria_row_index(row + 3)
 }
 
 fn grid_header_accessibility(col: usize, label: String) -> Stateful<gpui::Div> {
@@ -789,7 +789,7 @@ impl<R: Clone + 'static> TableDelegate for EditableGridDelegate<R> {
         div()
             .id("editable-grid-header-row")
             .role(Role::Row)
-            .aria_row_index(1)
+            .aria_row_index(2)
     }
 
     fn render_tr(
@@ -1152,6 +1152,7 @@ impl<R: Clone + 'static> View for EditableDataGridView<R> {
             .sortable(true)
             .col_movable(false)
             .col_resizable(false)
+            .delegate_accessibility(true)
         });
         context.update_entity(&table, |table, _, cx| table.refresh(cx));
         let table_weak = table.downgrade();
