@@ -18,6 +18,7 @@ from check_kit08_kit_stack import (  # noqa: E402
     A2_4H_ORDER,
     A2_4I_ORDER,
     A2_4J_ORDER,
+    A2_4K_ORDER,
     FAMILY_PROOF_CRATE,
 )
 
@@ -91,6 +92,22 @@ class Kit08FamilyStackTests(unittest.TestCase):
             ),
         )
         self.assertTrue((FAMILY_PROOF_CRATE / "tests/resize_panel.rs").is_file())
+
+    def test_calendar_patches_follow_the_cumulative_stack(self):
+        self.assertEqual(
+            A2_4K_ORDER,
+            (
+                "gpui-base-calendar-date-limits-v1-kit08.patch",
+                "gpui-calendar-keyboard-v1.patch",
+                "gpui-calendar-rtl-v1-kit08.patch",
+                "gpui-calendar-multi-month-heading-v1-kit08.patch",
+                "gpui-component-calendar-fr-ar-v1-kit08.patch",
+                "gpui-component-date-picker-accessibility-v1.patch",
+                "gpui-component-date-picker-localization-v2-kit08.patch",
+                "gpui-component-date-picker-rtl-alignment-v1-kit08.patch",
+            ),
+        )
+        self.assertTrue((FAMILY_PROOF_CRATE / "tests/calendar_date_picker.rs").is_file())
 
     def test_datagrid_patch_uses_fixture_paths_and_preserves_tree_disabled_context(self):
         patch = (ROOT / "patches/candidate-kit-0.8/a11y-validation-grid-v1-kit08.patch").read_text(
