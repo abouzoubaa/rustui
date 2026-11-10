@@ -74,6 +74,13 @@ A2_4G_ORDER = (
     "r15-tree-disabled-focus-v1.patch",
 )
 A2_4H_ORDER = ("a11y-validation-grid-v1-kit08.patch",)
+A2_4I_ORDER = (
+    "gpui-base-slider-endpoint-v1-kit08.patch",
+    "gpui-base-slider-first-move-v1.patch",
+    "gpui-base-slider-set-value-v2-kit08.patch",
+    "gpui-base-slider-snap-position-v1.patch",
+    "gpui-base-slider-zero-track-v1.patch",
+)
 FAMILY_PROOF_CRATE = ROOT / "scripts/kit08_family_proofs"
 FAMILY_ORDER = (
     A2_4A_ORDER
@@ -84,6 +91,7 @@ FAMILY_ORDER = (
     + A2_4F_ORDER
     + A2_4G_ORDER
     + A2_4H_ORDER
+    + A2_4I_ORDER
 )
 
 
@@ -154,6 +162,7 @@ def compile_candidate_workspace(
             "[package]\nname = \"a2-4a-modal-proof\"\nversion = \"0.1.0\"\nedition = \"2024\"\n\n"
             "[dependencies]\n"
             f"gpui = {{ package = \"gpui-pre\", path = \"../sources/gpui-pre-{source_by_name['gpui-pre']['version']}\", default-features = false, features = [\"test-support\"] }}\n"
+            f"gpui-base = {{ path = \"../sources/gpui-base-{source_by_name['gpui-base']['version']}\", default-features = false }}\n"
             f"gpui-component = {{ path = \"../sources/gpui-component-{source_by_name['gpui-component']['version']}\", default-features = false }}\n",
             encoding="utf-8",
         )
@@ -252,6 +261,8 @@ def compile_candidate_workspace(
                 ("tree_accessibility_label_and_levels_reach_the_tree_nodes", "gpui-component", "A2-4g Tree label/disabled/levels", None),
                 ("validation_description_and_grid_aria_metadata_reach_the_tree", "gpui-component", "A2-4h editor validation description", None),
                 ("data_grid_sort_and_readonly_metadata_reach_accessibility_nodes", "gpui-pre", "A2-4h grid header/cell relation", None),
+                ("slider_accessibility_actions_are_advertised_and_clamp_to_range", "a2-4a-modal-proof", "A2-4i slider accessibility actions", "slider_accessibility"),
+                ("slider_pointer_snapping_clamps_to_configured_maximum", "a2-4a-modal-proof", "A2-4i slider endpoint clamp", "slider_accessibility"),
             ]
         )
     outcomes: list[tuple[str, int, str]] = []
@@ -318,7 +329,7 @@ def run(write_manifest: bool = False) -> dict:
         raise FixtureError(f"recorded stack manifest is stale: {OUTPUT}; use --write-manifest")
     OUTPUT.write_bytes(data)
     print(
-        "core patches={}; A2-4a patches={}; A2-4b patches={}; A2-4c patches={}; A2-4d patches={}; A2-4e patches={}; A2-4f patches={}; A2-4g patches={}; A2-4h patches={}; fixture archives verified={}; "
+        "core patches={}; A2-4a patches={}; A2-4b patches={}; A2-4c patches={}; A2-4d patches={}; A2-4e patches={}; A2-4f patches={}; A2-4g patches={}; A2-4h patches={}; A2-4i patches={}; fixture archives verified={}; "
         "target files hashed={}; stack files={}; reverse=exact".format(
             len(CORE_ORDER),
             len(A2_4A_ORDER),
@@ -329,6 +340,7 @@ def run(write_manifest: bool = False) -> dict:
             len(A2_4F_ORDER),
             len(A2_4G_ORDER),
             len(A2_4H_ORDER),
+            len(A2_4I_ORDER),
             archive_count,
             target_count,
             len(result["files"]),

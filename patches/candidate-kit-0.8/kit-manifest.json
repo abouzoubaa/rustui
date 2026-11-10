@@ -43,7 +43,12 @@
     "gpui-tree-aria-level-v1-kit08.patch",
     "gpui-tree-disabled-keyboard-v2.patch",
     "r15-tree-disabled-focus-v1.patch",
-    "a11y-validation-grid-v1-kit08.patch"
+    "a11y-validation-grid-v1-kit08.patch",
+    "gpui-base-slider-endpoint-v1-kit08.patch",
+    "gpui-base-slider-first-move-v1.patch",
+    "gpui-base-slider-set-value-v2-kit08.patch",
+    "gpui-base-slider-snap-position-v1.patch",
+    "gpui-base-slider-zero-track-v1.patch"
   ],
   "patches": [
     {
@@ -517,6 +522,56 @@
           "post_sha256": "8c532b0ebfec4ca78fef1378b4c37e61105b6d5778eda25887e0a79a9471ec2c"
         }
       }
+    },
+    {
+      "patch": "gpui-base-slider-endpoint-v1-kit08.patch",
+      "patch_sha256": "2854cf47cce18ad807d721a88e9ff4a12adc79958f9907917aeb7df8835ef9c2",
+      "files": {
+        "vendor/gpui-base-0.8.1/src/slider.rs": {
+          "pre_sha256": "71b801a92588d12f7931a5a9e1745fb62f4283ae87d651d4004ae9b41ad72da3",
+          "post_sha256": "abaf2a03fc436d0bf588ba51f657c599e673962c5664a3ffea67164eeffe15c8"
+        }
+      }
+    },
+    {
+      "patch": "gpui-base-slider-first-move-v1.patch",
+      "patch_sha256": "05d617e49c84aba3b0764fe38de251096bb04d7c419a57de76a114d5d258572c",
+      "files": {
+        "vendor/gpui-base-0.8.1/src/slider.rs": {
+          "pre_sha256": "abaf2a03fc436d0bf588ba51f657c599e673962c5664a3ffea67164eeffe15c8",
+          "post_sha256": "452c26bc0c1bcd318408c63af2511866b2e73d75e7f3e117b4ffe01050e03573"
+        }
+      }
+    },
+    {
+      "patch": "gpui-base-slider-set-value-v2-kit08.patch",
+      "patch_sha256": "eb1946d28c4010d8b97dbd4e04da1157f79d26b50054b9a9511c84f0b4303581",
+      "files": {
+        "vendor/gpui-base-0.8.1/src/slider.rs": {
+          "pre_sha256": "452c26bc0c1bcd318408c63af2511866b2e73d75e7f3e117b4ffe01050e03573",
+          "post_sha256": "4448d9b424ed9256cb758a4ad26b391d6a8660b50abb32ee710dc8eb3e12cc0a"
+        }
+      }
+    },
+    {
+      "patch": "gpui-base-slider-snap-position-v1.patch",
+      "patch_sha256": "e4b6287ddf0998c0da8c8da45dfec60213e72374a34c302dd21be7f7555a7582",
+      "files": {
+        "vendor/gpui-base-0.8.1/src/slider.rs": {
+          "pre_sha256": "4448d9b424ed9256cb758a4ad26b391d6a8660b50abb32ee710dc8eb3e12cc0a",
+          "post_sha256": "b33f8860745f97966da9a59f7994a0cbcab1a5fe74c73a3cb5c332bf2ac308c3"
+        }
+      }
+    },
+    {
+      "patch": "gpui-base-slider-zero-track-v1.patch",
+      "patch_sha256": "ca1ff45d47aca73b2dcad2b1c5105a2e09ecbd4325cb3b719354af9346b5bf95",
+      "files": {
+        "vendor/gpui-base-0.8.1/src/slider.rs": {
+          "pre_sha256": "b33f8860745f97966da9a59f7994a0cbcab1a5fe74c73a3cb5c332bf2ac308c3",
+          "post_sha256": "4a38d1ccf354b05190e3924902a0d3a3f6eac3c3a9f534d6cd9046b5dbfa1119"
+        }
+      }
     }
   ],
   "files": {
@@ -551,6 +606,10 @@
     "vendor/gpui-base-0.8.1/src/input/base/tab_stops.rs": {
       "pre_sha256": "a41467f4d5e37d435dc35b29964d85c1a8388bda4bca9126c01814a4c92d770b",
       "post_sha256": "d8e2bc71d88824c4d87563c136e54118ec46763e02bb692df4e2d09feba6572d"
+    },
+    "vendor/gpui-base-0.8.1/src/slider.rs": {
+      "pre_sha256": "71b801a92588d12f7931a5a9e1745fb62f4283ae87d651d4004ae9b41ad72da3",
+      "post_sha256": "4a38d1ccf354b05190e3924902a0d3a3f6eac3c3a9f534d6cd9046b5dbfa1119"
     },
     "vendor/gpui-component-0.7.3/src/breadcrumb.rs": {
       "pre_sha256": "05c2cb5562080a29196cd60eed965161bffb61fdb3e512629d6652b97fd18e64",
@@ -704,7 +763,7 @@
   "reverse_verified": true,
   "fixture": {
     "archives_verified": 31,
-    "target_files_hashed": 41,
+    "target_files_hashed": 42,
     "known_unavailable_targets": 0
   }
 }
