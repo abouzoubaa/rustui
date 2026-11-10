@@ -276,7 +276,7 @@
     },
     {
       "patch": "gpui-component-tracked-dialog-focus-rebase-v2-kit08.patch",
-      "patch_sha256": "23aa8c0c18310660c9450398a9cc3f6d38d3c5082b3a3ca21198b4f081631dd4",
+      "patch_sha256": "0c4df660d93b1a7ce54c00a4f6f60de8ab76b7ea6aec754caa9db1f8cdda287d",
       "files": {
         "vendor/gpui-component-0.8.1/src/dialog/dialog.rs": {
           "pre_sha256": "2a03c0e1636cb576a9430817fb413384b7434fb0c7e66fb549e16bd9d7805a05",
@@ -288,7 +288,7 @@
         },
         "vendor/gpui-component-0.8.1/src/root.rs": {
           "pre_sha256": "eaabab30afbeca71d0cc193be04c8f150b192e3c691dbac9bfd76944988e7d0e",
-          "post_sha256": "5766718fe0fd08388e6c268581311b54e5a151df6d48656edb953c06c50a6992"
+          "post_sha256": "2355df8db397aec79fddbf10dacf8a7ee6625a78e17c18ae60adca0494b16d67"
         },
         "vendor/gpui-component-0.8.1/src/window_ext.rs": {
           "pre_sha256": "2470eb24a74cd23573cec9fb09df56e0185bf30cad07afd88037453736bf3e89",
@@ -892,7 +892,7 @@
     },
     "vendor/gpui-component-0.8.1/src/root.rs": {
       "pre_sha256": "0d0a2be0e4beadbfea881f0dbe3f183a840e6cfc2e5b2edd2093924eb2017ba4",
-      "post_sha256": "5766718fe0fd08388e6c268581311b54e5a151df6d48656edb953c06c50a6992"
+      "post_sha256": "2355df8db397aec79fddbf10dacf8a7ee6625a78e17c18ae60adca0494b16d67"
     },
     "vendor/gpui-component-0.8.1/src/searchable_list/adapter.rs": {
       "pre_sha256": "41766a0014d344f4bd700f3aa6b1288aa2bd0fb6f10920f5a438d062836abc9f",

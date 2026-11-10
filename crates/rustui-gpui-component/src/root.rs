@@ -598,7 +598,7 @@ impl WindowState {
     pub fn has_dialog_id(&self, id: DialogId) -> bool {
         self.active_dialogs
             .iter()
-            .any(|dialog| dialog.tracked_id == Some(id))
+            .any(|dialog| !dialog.closing && dialog.tracked_id == Some(id))
     }
 
     pub fn close_dialog_by_id(
@@ -610,7 +610,7 @@ impl WindowState {
         let Some(index) = self
             .active_dialogs
             .iter()
-            .position(|dialog| dialog.tracked_id == Some(id))
+            .position(|dialog| !dialog.closing && dialog.tracked_id == Some(id))
         else {
             return false;
         };
@@ -619,6 +619,17 @@ impl WindowState {
             .iter()
             .rposition(|dialog| !dialog.closing)
             == Some(index);
+        if !top {
+            let previous_focus = self.active_dialogs[index].previous_focused_handle.clone();
+            if let Some(next) = self
+                .active_dialogs
+                .iter_mut()
+                .skip(index + 1)
+                .find(|dialog| !dialog.closing)
+            {
+                next.previous_focused_handle = previous_focus;
+            }
+        }
         if top {
             self.close_dialog(window, cx);
         } else if self.active_dialogs[index].exit_enabled.get() {
