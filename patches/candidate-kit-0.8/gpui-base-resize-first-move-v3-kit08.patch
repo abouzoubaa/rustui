@@ -1,0 +1,33 @@
+--- a/vendor/gpui-base-0.8.1/src/resizable/panel.rs
++++ b/vendor/gpui-base-0.8.1/src/resizable/panel.rs
+@@ -481,6 +481,7 @@
+         window.on_mouse_event({
+             let state = self.state.clone();
+             let axis = self.axis;
++            let on_resize = self.on_resize.clone();
+             move |e: &MouseMoveEvent, phase, window, cx| {
+                 if !phase.bubble() {
+                     return;
+@@ -488,6 +489,22 @@
+                 let Some(ix) = state.read(cx).resizing_panel_ix else {
+                     return;
+                 };
++                if e.pressed_button != Some(gpui::MouseButton::Left) {
++                    let bounds = state.read(cx).panels[ix].bounds;
++                    state.update(cx, |state, cx| {
++                        match axis {
++                            Axis::Horizontal => state.resize_panel_at_handle(
++                                ix, e.position.x - bounds.left(), window, cx,
++                            ),
++                            Axis::Vertical => state.resize_panel_at_handle(
++                                ix, e.position.y - bounds.top(), window, cx,
++                            ),
++                        }
++                        state.done_resizing(cx);
++                    });
++                    on_resize(&state, window, cx);
++                    return;
++                }
+ 
+                 state.update(cx, |state, cx| {
+                     let panel = state.panels.get(ix).expect("BUG: invalid panel index");
