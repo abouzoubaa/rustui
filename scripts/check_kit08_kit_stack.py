@@ -81,6 +81,10 @@ A2_4I_ORDER = (
     "gpui-base-slider-snap-position-v1.patch",
     "gpui-base-slider-zero-track-v1.patch",
 )
+A2_4J_ORDER = (
+    "gpui-base-resize-first-move-v1-kit08.patch",
+    "gpui-base-resize-first-move-v3-kit08.patch",
+)
 FAMILY_PROOF_CRATE = ROOT / "scripts/kit08_family_proofs"
 FAMILY_ORDER = (
     A2_4A_ORDER
@@ -92,6 +96,7 @@ FAMILY_ORDER = (
     + A2_4G_ORDER
     + A2_4H_ORDER
     + A2_4I_ORDER
+    + A2_4J_ORDER
 )
 
 
@@ -263,6 +268,8 @@ def compile_candidate_workspace(
                 ("data_grid_sort_and_readonly_metadata_reach_accessibility_nodes", "gpui-pre", "A2-4h grid header/cell relation", None),
                 ("slider_accessibility_actions_are_advertised_and_clamp_to_range", "a2-4a-modal-proof", "A2-4i slider accessibility actions", "slider_accessibility"),
                 ("slider_pointer_snapping_clamps_to_configured_maximum", "a2-4a-modal-proof", "A2-4i slider endpoint clamp", "slider_accessibility"),
+                ("resize_handle_applies_the_first_pointer_position_immediately", "a2-4a-modal-proof", "A2-4j resize first pointer move", "resize_panel"),
+                ("resize_drag_finishes_when_left_button_is_no_longer_pressed", "a2-4a-modal-proof", "A2-4j resize left-button release", "resize_panel"),
             ]
         )
     outcomes: list[tuple[str, int, str]] = []
@@ -329,7 +336,7 @@ def run(write_manifest: bool = False) -> dict:
         raise FixtureError(f"recorded stack manifest is stale: {OUTPUT}; use --write-manifest")
     OUTPUT.write_bytes(data)
     print(
-        "core patches={}; A2-4a patches={}; A2-4b patches={}; A2-4c patches={}; A2-4d patches={}; A2-4e patches={}; A2-4f patches={}; A2-4g patches={}; A2-4h patches={}; A2-4i patches={}; fixture archives verified={}; "
+        "core patches={}; A2-4a patches={}; A2-4b patches={}; A2-4c patches={}; A2-4d patches={}; A2-4e patches={}; A2-4f patches={}; A2-4g patches={}; A2-4h patches={}; A2-4i patches={}; A2-4j patches={}; fixture archives verified={}; "
         "target files hashed={}; stack files={}; reverse=exact".format(
             len(CORE_ORDER),
             len(A2_4A_ORDER),
@@ -341,6 +348,7 @@ def run(write_manifest: bool = False) -> dict:
             len(A2_4G_ORDER),
             len(A2_4H_ORDER),
             len(A2_4I_ORDER),
+            len(A2_4J_ORDER),
             archive_count,
             target_count,
             len(result["files"]),
