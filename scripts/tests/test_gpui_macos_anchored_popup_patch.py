@@ -258,6 +258,15 @@ struct PopupOptions {
         patch = PATCH.read_text(encoding="utf-8")
         self.assertIn("for index in (0..child_count).rev()", patch)
         self.assertIn("removeChildWindow: child", patch)
+
+    def test_open_popup_reposition_reaches_the_appkit_frame(self) -> None:
+        patch = PATCH.read_text(encoding="utf-8")
+        rustui = (ROOT / "crates/rustui/src/runtime/window.rs").read_text(encoding="utf-8")
+        self.assertIn("fn set_anchored_popup_anchor_rect", patch)
+        self.assertIn("observe_window_bounds", patch)
+        self.assertIn("observe_window_display", rustui)
+        self.assertIn("setFrame: frame display: Bool::YES", patch)
+        self.assertIn("last_anchored_popup_anchor_rect", patch)
         self.assertNotIn("+        loop {", patch)
 
     def test_reverse_restores_exact_preimages(self) -> None:
@@ -279,7 +288,7 @@ struct PopupOptions {
     def test_approved_patch_manifest_binds_vendor_and_owned_images(self) -> None:
         manifest = json.loads((PATCH.parent / "gpui-macos-anchored-popup-kit08-v1.json").read_text())
         self.assertEqual(manifest["candidate"], PATCH.name)
-        self.assertEqual(len(manifest["files"]), 4)
+        self.assertEqual(len(manifest["files"]), 12)
         self.assertTrue(any(path.startswith("vendor/") for path in manifest["files"]))
         self.assertTrue(any(path.startswith("crates/rustui-gpui-macos/") for path in manifest["files"]))
 

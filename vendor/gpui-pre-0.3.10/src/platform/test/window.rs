@@ -20,6 +20,7 @@ use std::{
 
 pub(crate) struct TestWindowState {
     pub(crate) bounds: Bounds<Pixels>,
+    pub(crate) last_anchored_popup_anchor_rect: Option<Bounds<Pixels>>,
     pub(crate) handle: AnyWindowHandle,
     display: Rc<dyn PlatformDisplay>,
     pub(crate) title: Option<String>,
@@ -95,6 +96,7 @@ impl TestWindow {
         };
         Self(Rc::new(Mutex::new(TestWindowState {
             bounds: params.bounds,
+            last_anchored_popup_anchor_rect: None,
             display,
             platform,
             handle,
@@ -353,6 +355,11 @@ impl PlatformWindow for TestWindow {
 
     fn content_size(&self) -> Size<Pixels> {
         self.bounds().size
+    }
+
+    fn set_anchored_popup_anchor_rect(&mut self, anchor_rect: Bounds<Pixels>) -> bool {
+        self.0.lock().last_anchored_popup_anchor_rect = Some(anchor_rect);
+        true
     }
 
     fn resize(&mut self, size: Size<Pixels>) {

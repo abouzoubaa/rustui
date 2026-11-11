@@ -2,6 +2,7 @@
 
 ## 0.3.0 — 2026-11-11
 
+- NP-4: anchored native popups follow trigger layout and scrolling, and reposition after parent bounds or display changes.
 - NP-3: covered negative and stacked display origins, main-screen fallback, and oversized popup resizing in deterministic geometry tests.
 - NP-2: added fractional logical-coordinate coverage for anchored popup placement and verified AppKit conversion does not multiply by backing scale.
 - NP-1: activated the approved macOS anchored-popup backend patch; native popups remain opt-in and the in-window default is unchanged.

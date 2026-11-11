@@ -40,8 +40,8 @@ def _manifest() -> dict:
     if not PATCH.is_file() or sha256(PATCH) != value.get("patch_sha256"):
         raise PatchError("popup patch is missing or its hash differs from the manifest")
     files = value.get("files")
-    if not isinstance(files, dict) or len(files) != 4:
-        raise PatchError("popup patch manifest must bind four vendor and owned files")
+    if not isinstance(files, dict) or not files:
+        raise PatchError("popup patch manifest must bind at least one vendor or owned file")
     for relative, hashes in files.items():
         if set(hashes) != {"pre_sha256", "post_sha256"}:
             raise PatchError(f"popup patch file hashes are invalid: {relative}")

@@ -467,6 +467,11 @@ impl TestAppContext {
         self.test_window(window_handle).simulate_resize(size);
     }
 
+    /// Returns the last anchor rectangle sent to a test popup window.
+    pub fn anchored_popup_anchor_rect(&self, window_handle: AnyWindowHandle) -> Option<Bounds<Pixels>> {
+        self.test_window(window_handle).0.lock().last_anchored_popup_anchor_rect
+    }
+
     /// Simulates a change in whether the platform is presenting the window.
     pub fn simulate_window_visibility_change(
         &self,
