@@ -3,6 +3,7 @@
 set -euo pipefail
 repository_root="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")/.." && pwd)"
 cd "$repository_root"
+. "$repository_root/scripts/pinned-toolchain.sh"
 
 verify_tree_accessibility_series() {
   python3 scripts/apply_gpui_tree_accessibility_series.py --verify
@@ -16,7 +17,7 @@ verify_web_ime_edit_plan() (
   mkdir -p "$binary_dir"
   test_binary="$binary_dir/ime_edit_tests"
   trap 'rm -f "$test_binary"' EXIT
-  rustup run 1.98.0 rustc --edition 2024 --test \
+  pinned_rustc --edition 2024 --test \
     vendor/gpui-pre-web-0.3.9/src/ime_edit.rs -o "$test_binary"
   "$test_binary"
 )
@@ -162,7 +163,7 @@ PY
       echo 'The macos release check requires a macOS host.' >&2
       exit 2
     fi
-    rustup run 1.98.0 cargo fmt --all -- --check
+    pinned_cargo fmt --all -- --check
     python3 scripts/verify_dependency_boundary.py
     ./scripts/cargo-headstart check --workspace --all-targets --profile headstart --locked --offline
     ./scripts/cargo-headstart check --manifest-path examples/external-consumer/Cargo.toml --profile headstart --locked --offline
