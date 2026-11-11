@@ -1282,11 +1282,20 @@ mod anchored_popup_placement_tests {
         assert_eq!(popup_screen_index(NSPoint::new(-500.0, 800.0), &[], 2), 2);
     }
 
-    #[test]
-    fn oversized_popup_resizes_to_negative_origin_visible_frame() {
+    #[gpui::test]
+    fn oversized_popup_resizes_to_negative_origin_visible_frame(cx: &mut gpui::TestAppContext) {
+        let parent_cell = std::rc::Rc::new(std::cell::Cell::new(None));
+        let captured_parent = parent_cell.clone();
+        let (_root, _window) = cx.add_window_view(move |window, _| {
+            captured_parent.set(Some(window.window_handle()));
+            gpui::EmptyView
+        });
+        let parent = parent_cell.get().expect("test window handle");
         let visible = NSRect::new(NSPoint::new(-1920.0, 23.0), NSSize::new(1920.0, 1057.0));
         let anchor = NSRect::new(NSPoint::new(-1910.0, 900.0), NSSize::new(20.0, 12.0));
         let options = PopupOptions {
+            parent,
+            anchor_rect: Bounds::new(point(px(-1910.0), px(900.0)), size(px(20.0), px(12.0))),
             anchor: PopupAnchor::BottomLeft,
             gravity: PopupGravity::BottomRight,
             constraint_adjustment: PopupConstraintAdjustment::FLIP_X
@@ -1296,6 +1305,7 @@ mod anchored_popup_placement_tests {
                 | PopupConstraintAdjustment::RESIZE_X
                 | PopupConstraintAdjustment::RESIZE_Y,
             offset: point(px(0.0), px(0.0)),
+            grab: true,
         };
         let (frame, size) =
             popup_frame_for_visible_screen(anchor, visible, size(px(2400.0), px(1400.0)), &options);
@@ -3623,6 +3633,11 @@ fn report_display_change(window_state: &Arc<Mutex<MacWindowState>>) {
         .detach();
 }
 
+fn close_resigned_popup(dismiss_on_resign: bool, child_count: usize) -> bool {
+    // Nested popups dismiss deepest-first; a parent stays open while it still owns children.
+    dismiss_on_resign && child_count == 0
+}
+
 extern "C" fn window_did_change_key_status(this: &AnyObject, selector: Sel, _: *mut AnyObject) {
     let signal_at = PlatformFrameSignal::capture(scheduler::Instant::now);
     let window_state = unsafe { get_window_state(this) };
@@ -3633,8 +3648,9 @@ extern "C" fn window_did_change_key_status(this: &AnyObject, selector: Sel, _: *
         let native_window = lock.native_window;
         let children: *mut AnyObject = unsafe { msg_send![native_window, childWindows] };
         let child_count: NSUInteger = unsafe { msg_send![children, count] };
+        let should_close = close_resigned_popup(lock.dismiss_popup_on_resign, child_count);
         drop(lock);
-        if child_count == 0 {
+        if should_close {
             unsafe {
                 let _: () = msg_send![native_window, close];
             }
@@ -4504,6 +4520,14 @@ extern "C" fn toggle_tab_bar(this: &AnyObject, _sel: Sel, _id: *mut AnyObject) {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn nested_grabbing_popups_dismiss_leaf_before_parent() {
+        assert!(!close_resigned_popup(false, 0));
+        assert!(!close_resigned_popup(true, 1));
+        assert!(!close_resigned_popup(true, 2));
+        assert!(close_resigned_popup(true, 0));
+    }
 
     #[test]
     fn display_id_for_screen_handles_missing_metadata() {

@@ -39,6 +39,11 @@ bench-support = [
 default = ["gpui/default"]
 font-kit = ["gpui_apple/font-kit"]
 runtime_shaders = ["gpui_apple/runtime_shaders"]
+screen-capture = [
+    "gpui/screen-capture",
+    "dep:objc2-core-media",
+    "dep:objc2-screen-capture-kit",
+]
 test-support = [
     "gpui/test-support",
     "gpui_apple/test-support",
@@ -168,6 +173,18 @@ features = [
     "NSWorkspace",
     "block2",
     "objc2-core-foundation",
+    "NSAppearance",
+    "NSCell",
+    "NSColor",
+    "NSCursor",
+    "NSDocumentController",
+    "NSDragging",
+    "NSEvent",
+    "NSMenu",
+    "NSMenuItem",
+    "NSRunningApplication",
+    "NSScroller",
+    "NSVisualEffectView",
 ]
 default-features = false
 
@@ -178,6 +195,15 @@ features = [
     "CGColor",
     "objc2",
 ]
+default-features = false
+
+[target.'cfg(target_os = "macos")'.dependencies.objc2-core-media]
+version = "0.3.2"
+features = [
+    "CMSampleBuffer",
+    "objc2-core-video",
+]
+optional = true
 default-features = false
 
 [target.'cfg(target_os = "macos")'.dependencies.objc2-core-video]
@@ -213,7 +239,22 @@ features = [
     "NSValue",
     "objc2-core-foundation",
     "std",
+    "NSBundle",
 ]
+default-features = false
+
+[target.'cfg(target_os = "macos")'.dependencies.objc2-screen-capture-kit]
+version = "0.3.2"
+features = [
+    "block2",
+    "dispatch2",
+    "objc2-core-graphics",
+    "objc2-core-media",
+    "SCShareableContent",
+    "SCStream",
+    "std",
+]
+optional = true
 default-features = false
 
 [target.'cfg(target_os = "macos")'.dependencies.objc2-user-notifications]

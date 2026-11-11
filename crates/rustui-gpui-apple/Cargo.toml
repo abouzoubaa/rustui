@@ -216,6 +216,7 @@ features = [
     "NSOperation",
     "NSProcessInfo",
     "block2",
+    "NSBundle",
 ]
 default-features = false
 

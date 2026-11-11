@@ -34,6 +34,8 @@ pub struct AnchoredPopupOptions {
 pub struct AnchoredPopupHandle {
     window: AnyWindowHandle,
     anchor_rect: std::rc::Rc<std::cell::Cell<Bounds<Pixels>>>,
+    anchor_prepaint_generation: std::rc::Rc<std::cell::Cell<u64>>,
+    anchor_detach_watch_started: std::rc::Rc<std::cell::Cell<bool>>,
     _parent_observers: std::rc::Rc<PopupParentObservers>,
 }
 
@@ -89,19 +91,60 @@ impl AnchoredPopupHandle {
     {
         let popup = self.clone();
         let anchor_rect = self.anchor_rect.clone();
+        let prepaint_generation = self.anchor_prepaint_generation.clone();
+        let detach_watch_started = self.anchor_detach_watch_started.clone();
         element
             .on_prepaint(move |anchor_bounds, window, cx| {
+                prepaint_generation.set(prepaint_generation.get().wrapping_add(1));
                 let visible = anchor_bounds
                     .intersect(&window.content_mask().bounds)
                     .intersect(&window.fully_visible_bounds());
                 if visible.size.width <= px(0.0) || visible.size.height <= px(0.0) {
+                    detach_watch_started.set(false);
                     let _ = popup.update(cx, |_, popup_window, _| popup_window.remove_window());
-                } else if anchor_rect.get() != anchor_bounds {
-                    let _ = popup.set_anchor_rect(anchor_bounds, cx);
+                } else {
+                    if anchor_rect.get() != anchor_bounds {
+                        let _ = popup.set_anchor_rect(anchor_bounds, cx);
+                    }
+                    if !detach_watch_started.replace(true) {
+                        schedule_anchor_detach_watch(
+                            popup.clone(),
+                            prepaint_generation.clone(),
+                            detach_watch_started.clone(),
+                            window,
+                        );
+                    }
                 }
             })
             .into_any_element()
     }
+}
+
+#[cfg(not(target_family = "wasm"))]
+fn schedule_anchor_detach_watch(
+    popup: AnchoredPopupHandle,
+    prepaint_generation: std::rc::Rc<std::cell::Cell<u64>>,
+    detach_watch_started: std::rc::Rc<std::cell::Cell<bool>>,
+    window: &mut Window,
+) {
+    // One callback runs after the current frame; it arms the check for the following frame.
+    // That lets the trigger's prepaint run in that frame before we decide it was detached.
+    window.on_next_frame(move |window, _| {
+        let expected_generation = prepaint_generation.get();
+        window.on_next_frame(move |window, cx| {
+            if prepaint_generation.get() == expected_generation {
+                let _ = popup.update(cx, |_, popup_window, _| popup_window.remove_window());
+                detach_watch_started.set(false);
+            } else {
+                schedule_anchor_detach_watch(
+                    popup,
+                    prepaint_generation,
+                    detach_watch_started,
+                    window,
+                );
+            }
+        });
+    });
 }
 
 /// Opens a parent-anchored native popup.
@@ -159,6 +202,8 @@ pub fn open_anchored_popup<V: View>(
         grab: true,
     };
     let anchor_rect = std::rc::Rc::new(std::cell::Cell::new(popup.anchor_rect));
+    let anchor_prepaint_generation = std::rc::Rc::new(std::cell::Cell::new(0));
+    let anchor_detach_watch_started = std::rc::Rc::new(std::cell::Cell::new(false));
     let window_options = WindowOptions {
         kind: WindowKind::AnchoredPopup(popup),
         window_bounds: Some(WindowBounds::Windowed(Bounds::new(
@@ -183,6 +228,8 @@ pub fn open_anchored_popup<V: View>(
     Ok(AnchoredPopupHandle {
         window,
         anchor_rect,
+        anchor_prepaint_generation,
+        anchor_detach_watch_started,
         _parent_observers: std::rc::Rc::new(PopupParentObservers {
             _bounds: bounds_subscription,
             _display: display_subscription,
@@ -264,6 +311,7 @@ mod tests {
         y: std::rc::Rc<std::cell::Cell<f32>>,
         measured: std::rc::Rc<std::cell::Cell<Option<gpui::Bounds<gpui::Pixels>>>>,
         scroll: gpui::ScrollHandle,
+        show_anchor: bool,
     }
 
     #[cfg(not(target_family = "wasm"))]
@@ -280,24 +328,28 @@ mod tests {
             use gpui_component::ElementExt as _;
 
             self.parent.set(Some(window.window_handle()));
-            let measured = self.measured.clone();
-            let anchor = gpui::div()
-                .debug_selector(|| "NP4_TRIGGER".into())
-                .ml(gpui::px(self.x.get()))
-                .mt(gpui::px(self.y.get()))
-                .w(gpui::px(24.0))
-                .h(gpui::px(24.0))
-                .on_prepaint(move |bounds, _, _| measured.set(Some(bounds)))
-                .child("popup anchor");
-            let anchor = if let Some(popup) = self.popup.borrow().clone() {
-                popup.track_anchor(anchor)
+            let content = if self.show_anchor {
+                let measured = self.measured.clone();
+                let anchor = gpui::div()
+                    .debug_selector(|| "NP4_TRIGGER".into())
+                    .ml(gpui::px(self.x.get()))
+                    .mt(gpui::px(self.y.get()))
+                    .w(gpui::px(24.0))
+                    .h(gpui::px(24.0))
+                    .on_prepaint(move |bounds, _, _| measured.set(Some(bounds)))
+                    .child("popup anchor");
+                if let Some(popup) = self.popup.borrow().clone() {
+                    popup.track_anchor(anchor)
+                } else {
+                    anchor.into_any_element()
+                }
             } else {
-                anchor.into_any_element()
+                gpui::div().into_any_element()
             };
             let content = gpui::div()
                 .w(gpui::px(160.0))
                 .h(gpui::px(360.0))
-                .child(anchor);
+                .child(content);
             gpui::div()
                 .id("np4-anchor-list")
                 .w(gpui::px(160.0))
@@ -331,6 +383,7 @@ mod tests {
             y,
             measured: measured.clone(),
             scroll,
+            show_anchor: true,
         });
         test_window.update(|window, app| {
             let _ = window.draw(app);
@@ -476,6 +529,48 @@ mod tests {
             .unwrap();
         cx.run_until_parked();
         assert!(popup.update(cx, |_, _, _| ()).is_err());
+    }
+
+    #[cfg(not(target_family = "wasm"))]
+    #[gpui::test]
+    fn removing_a_visible_anchor_closes_its_popup(cx: &mut gpui::TestAppContext) {
+        use gpui::AppContext as _;
+        use std::{cell::Cell, rc::Rc};
+
+        cx.update(gpui_component::init);
+        let popup_cell = Rc::new(std::cell::RefCell::new(None));
+        let parent_cell = Rc::new(Cell::new(None));
+        let (owner, parent, popup) = open_tracked_popup(
+            cx,
+            popup_cell,
+            parent_cell,
+            Rc::new(Cell::new(10.0)),
+            Rc::new(Cell::new(20.0)),
+            Rc::new(Cell::new(None)),
+            gpui::ScrollHandle::default(),
+        );
+
+        parent
+            .update(cx, |_, window, app| {
+                window.simulate_next_frame(app);
+            })
+            .unwrap();
+        owner.update(cx, |probe, cx| {
+            probe.show_anchor = false;
+            cx.notify();
+        });
+        parent
+            .update(cx, |_, window, app| {
+                window.refresh();
+                let _ = window.draw(app);
+                window.simulate_next_frame(app);
+            })
+            .unwrap();
+
+        assert!(
+            popup.update(cx, |_, _, _| ()).is_err(),
+            "removing a still-visible trigger must close its anchored popup"
+        );
     }
 
     #[cfg(not(target_family = "wasm"))]
