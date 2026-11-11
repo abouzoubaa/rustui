@@ -173,7 +173,7 @@ These are prospective gains. Normal RustUI controls currently keep their in-wind
 
 | Ticket | Rechecked status on 0.3.10 / 0.8.1 | Work and proof | Estimate |
 |---|---|---|---|
-| NP-1 | **CHANGED** — consolidated backend patch is prepared but inactive. | Activate only by the owner-approved patch script; compile the selected macOS backend and prove open/close/reopen plus mirror equality. | ≤2h |
+| NP-1 | **DONE** — approved Kit 0.8.1 backend patch is active and mirrors match. | The RustUI public API test proves open/close/reopen on GPUI's test platform; full and source checks pass. Native AppKit acceptance remains for NP-10. | ≤2h |
 | NP-2 | **CHANGED** — v5 view-bounds and flipped/unflipped conversion is folded into the patch. | Add geometry tests for view bounds, flipped state, logical coordinates and scale; confirm anchor placement feeds AppKit conversion. | ≤2h |
 | NP-3 | **STILL NEEDED** — initial display selection and flip/slide/resize logic exist in the candidate, but edge cases are unverified. | Test negative/stacked display origins, visible frames, oversized popups and display fallback; owner native check for actual multi-display placement. | ≤2h |
 | NP-4 | **STILL NEEDED** — popup frame is calculated only at open. | Track trigger layout/scroll, parent move/resize and display/scale changes without replacing popup identity; deterministic owner/update tests. | ≤2h |
@@ -186,7 +186,7 @@ These are prospective gains. Normal RustUI controls currently keep their in-wind
 
 Unit and GPUI test-window coverage can prove geometry, error/fallback policy, explicit open/close, owner unmount, weak release, key-action handling, environment retention and patch replay. Real screen layouts, outside-click across windows, AppKit activation/focus ordering and native teardown remain **owner native check** items. Keep all existing in-window popover/menu/picker tests unchanged and passing. Native popups remain opt-in.
 
-Every GPUI vendor or owned-source change must come from a patch and its apply script; preserve the mirror hashes and reverse exactly. The NP-0 candidate is proposed; activation/promotion occurs only in a later ticket when needed.
+Every GPUI vendor or owned-source change must come from a patch and its apply script; preserve the mirror hashes and reverse exactly. NP-1 promoted and activated the consolidated macOS patch; subsequent popup changes remain patch-only.
 
 ## Housekeeping and validation
 

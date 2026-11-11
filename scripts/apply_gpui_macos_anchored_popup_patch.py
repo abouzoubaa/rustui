@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Apply or verify the proposed GPUI Kit 0.8 macOS anchored-popup patch."""
+"""Apply or verify the approved GPUI Kit 0.8 macOS anchored-popup patch."""
 
 from __future__ import annotations
 
@@ -14,8 +14,8 @@ from pathlib import Path
 
 
 ROOT = Path(__file__).resolve().parents[1]
-PATCH = ROOT / "patches/proposed/gpui-macos-anchored-popup-kit08-v1.patch"
-MANIFEST = ROOT / "patches/proposed/gpui-macos-anchored-popup-kit08-v1.json"
+PATCH = ROOT / "patches/approved/gpui-macos-anchored-popup-kit08-v1.patch"
+MANIFEST = ROOT / "patches/approved/gpui-macos-anchored-popup-kit08-v1.json"
 
 
 class PatchError(ValueError):
@@ -116,13 +116,28 @@ def apply_patch(root: Path = ROOT, *, reverse: bool = False, check_only: bool = 
         temporary.cleanup()
 
 
+def verify_applied(root: Path = ROOT) -> str:
+    manifest = _manifest()
+    current = _state(root, manifest["files"])
+    expected = {path: hashes["post_sha256"] for path, hashes in manifest["files"].items()}
+    if current != expected:
+        raise PatchError(f"approved popup patch is not active: {current}")
+    return "verified"
+
+
 def main() -> int:
     parser = argparse.ArgumentParser()
     parser.add_argument("--check", action="store_true", help="verify in a temporary copy")
     parser.add_argument("--reverse", action="store_true", help="reverse the patch")
+    parser.add_argument("--verify", action="store_true", help="verify approved postimages are active")
     arguments = parser.parse_args()
+    if arguments.verify and (arguments.check or arguments.reverse):
+        parser.error("--verify cannot be combined with --check or --reverse")
     try:
-        print(apply_patch(reverse=arguments.reverse, check_only=arguments.check))
+        if arguments.verify:
+            print(verify_applied())
+        else:
+            print(apply_patch(reverse=arguments.reverse, check_only=arguments.check))
     except (OSError, PatchError) as error:
         parser.error(str(error))
     return 0
