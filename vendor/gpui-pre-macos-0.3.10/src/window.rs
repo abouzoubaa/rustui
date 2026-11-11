@@ -699,6 +699,9 @@ struct MacWindowState {
     accesskit_adapter: Option<accesskit_macos::SubclassingAdapter>,
     // The parent window if this window is a sheet (Dialog kind)
     sheet_parent: Option<*mut AnyObject>,
+    popup_parent: Option<*mut AnyObject>,
+    popup_options: Option<PopupOptions>,
+    popup_size: Option<Size<Pixels>>,
 }
 
 impl MacWindowState {
@@ -1369,6 +1372,11 @@ impl MacWindow {
         marker: MainThreadMarker,
         popup_parent: Option<*mut AnyObject>,
     ) -> Self {
+        let popup_options = match &kind {
+            WindowKind::AnchoredPopup(options) => Some(options.clone()),
+            _ => None,
+        };
+        let popup_size = popup_options.as_ref().map(|_| bounds.size);
         let popup_grab = matches!(&kind, WindowKind::AnchoredPopup(options) if options.grab);
         let focus = focus || popup_grab;
         autoreleasepool(|_| unsafe {
@@ -1545,6 +1553,9 @@ impl MacWindow {
                 closed: Arc::new(AtomicBool::new(false)),
                 accesskit_adapter: None,
                 sheet_parent: None,
+                popup_parent,
+                popup_options,
+                popup_size,
             }));
             let mut window = Self(state, marker);
 
@@ -1859,6 +1870,27 @@ impl PlatformWindow for MacWindow {
 
     fn content_size(&self) -> Size<Pixels> {
         self.0.as_ref().lock().content_size()
+    }
+
+    fn set_anchored_popup_anchor_rect(&mut self, anchor_rect: Bounds<Pixels>) -> bool {
+        let mut state = self.0.lock();
+        let Some(parent) = state.popup_parent else {
+            return false;
+        };
+        let Some(mut options) = state.popup_options.clone() else {
+            return false;
+        };
+        let Some(size) = state.popup_size else {
+            return false;
+        };
+        options.anchor_rect = anchor_rect;
+        let (frame, size, _) = anchored_popup_frame(parent, &options, size, self.1);
+        unsafe {
+            let _: () = msg_send![state.native_window, setFrame: frame display: Bool::YES];
+        }
+        state.popup_options = Some(options);
+        state.popup_size = Some(size);
+        true
     }
 
     fn resize(&mut self, size: Size<Pixels>) {
