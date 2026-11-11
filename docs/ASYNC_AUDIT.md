@@ -81,6 +81,6 @@ public signature changed, and no R20b tests were ignored. `docs/status.json` is
 unchanged because this ticket verifies existing capabilities rather than changing
 a product capability.
 
-Focused command: `rustup run 1.97.1 cargo test -p rustui async_audit_tests --locked --offline`.
+Focused command: `rustup run 1.98.0 cargo test -p rustui async_audit_tests --locked --offline`.
 Full validation: `scripts/check.sh` and `./scripts/verify-release.sh source`.
 
