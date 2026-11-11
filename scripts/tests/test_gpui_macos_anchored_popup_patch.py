@@ -13,6 +13,7 @@ from scripts.apply_gpui_macos_anchored_popup_patch import (
     PatchError,
     apply_patch,
     sha256,
+    verify_applied,
 )
 
 
@@ -51,7 +52,7 @@ class AnchoredPopupPatchTests(unittest.TestCase):
 
     def test_screen_conversion_uses_anchor_views_native_window(self) -> None:
         patch = PATCH.read_text(encoding="utf-8")
-        self.assertIn("let anchor_window: id = msg_send![parent_view, window];", patch)
+        self.assertIn("let anchor_window: *mut AnyObject = msg_send![parent_view, window];", patch)
         self.assertIn("msg_send![anchor_window, convertRectToScreen: anchor_in_window]", patch)
 
     def test_parent_teardown_closes_popup_children_without_unbounded_loop(self) -> None:
@@ -76,15 +77,18 @@ class AnchoredPopupPatchTests(unittest.TestCase):
             apply_patch(self.root)
         self.assertEqual(source.read_bytes(), before)
 
-    def test_candidate_patch_manifest_binds_vendor_and_owned_images(self) -> None:
+    def test_approved_patch_manifest_binds_vendor_and_owned_images(self) -> None:
         manifest = json.loads((PATCH.parent / "gpui-macos-anchored-popup-kit08-v1.json").read_text())
         self.assertEqual(manifest["candidate"], PATCH.name)
         self.assertEqual(len(manifest["files"]), 4)
         self.assertTrue(any(path.startswith("vendor/") for path in manifest["files"]))
         self.assertTrue(any(path.startswith("crates/rustui-gpui-macos/") for path in manifest["files"]))
 
-    def test_candidate_patch_is_present(self) -> None:
+    def test_approved_patch_is_present(self) -> None:
         self.assertTrue(PATCH.is_file())
+
+    def test_approved_patch_postimages_are_active(self) -> None:
+        self.assertEqual(verify_applied(), "verified")
 
 
 if __name__ == "__main__":

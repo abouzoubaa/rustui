@@ -25,9 +25,29 @@ verify_web_ime_edit_plan() (
 case "${1:-}" in
   source)
     python3 scripts/check_dependency_notices_freshness.py
+    # The popup patch shares macOS source files with the Kit 0.8 stack. Reverse
+    # it before cycling that stack, then restore it even if a later check fails.
+    python3 scripts/apply_gpui_macos_anchored_popup_patch.py --reverse --check
+    python3 scripts/apply_gpui_macos_anchored_popup_patch.py --reverse
+    popup_patch_armed=1
+    restore_popup_patch() {
+      result=$?
+      trap - EXIT
+      if [ "$popup_patch_armed" -eq 1 ]; then
+        if ! python3 scripts/apply_gpui_macos_anchored_popup_patch.py; then
+          result=1
+        fi
+      fi
+      exit "$result"
+    }
+    trap restore_popup_patch EXIT
     python3 scripts/apply_gpui_kit_08_stack.py --reverse
     python3 scripts/apply_gpui_kit_08_stack.py --apply
     python3 scripts/apply_gpui_kit_08_stack.py --check
+    python3 scripts/apply_gpui_macos_anchored_popup_patch.py
+    popup_patch_armed=0
+    trap - EXIT
+    python3 scripts/apply_gpui_macos_anchored_popup_patch.py --verify
     python3 scripts/verify_owned_gpui_sources.py
     python3 - <<'PY'
 import unittest
@@ -53,7 +73,6 @@ legacy_gpui_snapshot_test_modules = {
     "test_gpui_date_picker_patch",
     "test_gpui_input_placeholder_color_patch",
     "test_gpui_inert_focus_scope_patch",
-    "test_gpui_macos_anchored_popup_patch",
     "test_gpui_macos_focused_element_patch",
     "test_gpui_modal_focus_recovery_patch",
     "test_gpui_row_accessibility_proposal",
@@ -142,23 +161,8 @@ PY
     python3 scripts/apply_gpui_inert_focus_scope_patch.py --verify
     python3 scripts/apply_gpui_validation_grid_a11y_patch.py --verify
     python3 scripts/apply_g10_parent_node_id_v1_patch.py --verify
-    # GPUI's pinned macOS backend rejects AnchoredPopup unless the proposed candidate
-    # patch is active. Apply it after exact-source checks, and restore the
-    # pinned source on exit, including failed builds and interrupts.
-    python3 scripts/apply_gpui_macos_anchored_popup_patch.py --reverse --check
-    popup_patch_armed=1
-    restore_popup_patch() {
-      result=$?
-      trap - EXIT
-      if [ "$popup_patch_armed" -eq 1 ]; then
-        if ! python3 scripts/apply_gpui_macos_anchored_popup_patch.py --reverse; then
-          result=1
-        fi
-      fi
-      exit "$result"
-    }
-    trap restore_popup_patch EXIT
-    python3 scripts/apply_gpui_macos_anchored_popup_patch.py
+    # Native anchored popups are an approved, opt-in backend capability.
+    python3 scripts/apply_gpui_macos_anchored_popup_patch.py --verify
     if [[ "$(uname -s)" != Darwin ]]; then
       echo 'The macos release check requires a macOS host.' >&2
       exit 2

@@ -15,7 +15,6 @@ use gpui::{
     OsMenu, OwnedMenu, PathPromptOptions, Platform, PlatformDisplay, PlatformKeyboardLayout,
     PlatformKeyboardMapper, PlatformTextSystem, PlatformWindow, Result, SystemMenuType, Task,
     ThermalState, WindowAppearance, WindowKind, WindowParams, WindowingRequest,
-    popup::PopupNotSupportedError,
 };
 use gpui_apple::{
     keychain,
@@ -746,11 +745,14 @@ impl Platform for MacPlatform {
         handle: AnyWindowHandle,
         options: WindowParams,
     ) -> Result<Box<dyn PlatformWindow>> {
-        // Native popups are not implemented on macOS yet. Rejecting lets callers fall back to
-        // gpui's in-window popovers.
-        if let WindowKind::AnchoredPopup(_) = options.kind {
-            return Err(PopupNotSupportedError.into());
-        }
+        let popup_parent = if let WindowKind::AnchoredPopup(popup) = &options.kind {
+            Some(
+                MacWindow::native_window_for_handle(popup.parent)
+                    .ok_or_else(|| anyhow!("popup parent window not found"))?,
+            )
+        } else {
+            None
+        };
 
         let (cursor_visible, foreground_executor, background_executor, renderer_context) = {
             let guard = self.0.lock();
@@ -770,6 +772,7 @@ impl Platform for MacPlatform {
             background_executor,
             renderer_context,
             self.1,
+            popup_parent,
         )))
     }
 

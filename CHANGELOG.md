@@ -2,6 +2,7 @@
 
 ## 0.3.0 — 2026-11-11
 
+- NP-1: activated the approved macOS anchored-popup backend patch; native popups remain opt-in and the in-window default is unchanged.
 - Pinned check, smoke, performance, and release scripts to the repository Rust toolchain, ignoring ambient compiler overrides.
 - NP-0: refreshed native popup planning for GPUI Kit 0.8.1 and rebased the opt-in macOS candidate patch.
 - A2: completed the GPUI Kit 0.8.1 / gpui-pre 0.3.10 upgrade and native Rust/JSON syntax coverage; 1,000-row forced-draw median was 8.24 ms vs 8.03 ms before.
