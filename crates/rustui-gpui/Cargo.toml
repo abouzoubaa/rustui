@@ -59,6 +59,7 @@ default = [
 font-kit = []
 inspector = ["gpui_macros/inspector"]
 leak-detection = []
+screen-capture = ["scap"]
 test-support = [
     "collections/test-support",
     "http_client/test-support",
@@ -540,6 +541,12 @@ optional = true
 [target.'cfg(all(target_arch = "wasm32", target_os = "unknown"))'.dependencies.async-channel]
 version = "2.5"
 default-features = false
+
+[target.'cfg(any(target_os = "linux", target_os = "freebsd", target_os = "windows"))'.dependencies.scap]
+version = "0.0.8-zed"
+optional = true
+default-features = false
+package = "zed-scap"
 
 [target.'cfg(any(target_os = "linux", target_os = "android"))'.dependencies.libc]
 version = "0.2"
