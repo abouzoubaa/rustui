@@ -26,6 +26,8 @@ from prepare_gpui_kit_08_fixture import (
 ROOT = Path(__file__).resolve().parent.parent
 PATCH_DIR = ROOT / "patches/candidate-kit-0.8"
 OUTPUT = PATCH_DIR / "kit-manifest.json"
+FIXTURE_BUILD_CACHE = "kit08-fixture-build"
+FIXTURE_MTIME_EPOCH = 1_600_000_000
 CORE_ORDER = (
     "block-0.1.6-stack-symbol-v1.patch",
     "cosmic-text-initial-bidi-span-v1.patch",
@@ -104,6 +106,51 @@ A2_4N_ORDER = (
     "gpui-component-web-syntax-runtime-v3-kit08.patch",
 )
 FAMILY_PROOF_CRATE = ROOT / "scripts/kit08_family_proofs"
+
+
+def candidate_build_key() -> str:
+    """Key fixture artifacts by every input that shapes the temporary workspace."""
+    inputs = [
+        DEFAULT_MANIFEST,
+        ROOT / "scripts/check_kit08_kit_stack.py",
+        ROOT / "scripts/check_kit08_core_stack.py",
+        ROOT / "scripts/prepare_gpui_kit_08_fixture.py",
+        *(path for path in PATCH_DIR.rglob("*") if path.is_file()),
+        *(path for path in FAMILY_PROOF_CRATE.glob("tests/**/*") if path.is_file()),
+    ]
+    return input_digest(inputs)
+
+
+def input_digest(paths: list[Path]) -> str:
+    digest = hashlib.sha256()
+    for path in sorted(set(paths), key=lambda item: item.as_posix()):
+        try:
+            label = path.relative_to(ROOT).as_posix()
+        except ValueError:
+            label = path.as_posix()
+        digest.update(label.encode())
+        digest.update(b"\0")
+        digest.update(path.read_bytes())
+        digest.update(b"\0")
+    return digest.hexdigest()[:20]
+
+
+def normalize_fixture_mtimes(workspace: Path) -> None:
+    """Keep identical cached fixture inputs older than their saved Cargo outputs."""
+    for path in workspace.rglob("*"):
+        if path.is_file():
+            os.utime(path, (FIXTURE_MTIME_EPOCH, FIXTURE_MTIME_EPOCH))
+
+
+def fixture_workspace_path(shared_target_dir: Path) -> Path:
+    """Use a stable path outside the repository's vendored Cargo config."""
+    parent = Path(os.environ.get("RUNNER_TEMP", str(shared_target_dir.parent))).resolve()
+    if parent == ROOT or ROOT in parent.parents:
+        parent = shared_target_dir.parent.resolve()
+    path = parent / "rustui-kit08-fixture-workspace"
+    if path == ROOT or ROOT in path.parents:
+        raise FixtureError(f"fixture workspace must be outside the repository: {path}")
+    return path
 FAMILY_ORDER = (
     A2_4A_ORDER
     + A2_4B_ORDER
@@ -237,7 +284,12 @@ def compile_candidate_workspace(
             test_asset = workspace / relative
             test_asset.parent.mkdir(parents=True, exist_ok=True)
             test_asset.write_text(content, encoding="utf-8")
-    target_dir = Path(os.environ.get("CARGO_TARGET_DIR", str(ROOT / "target/headstart")))
+    shared_target_dir = Path(
+        os.environ.get("CARGO_TARGET_DIR", str(ROOT / "target/headstart"))
+    ).resolve()
+    target_dir = shared_target_dir / "debug" / FIXTURE_BUILD_CACHE / candidate_build_key()
+    target_dir.mkdir(parents=True, exist_ok=True)
+    normalize_fixture_mtimes(workspace)
     command = ["rustup", "run", "1.98.0", "cargo", "check"]
     offline = "--compile-online" not in sys.argv[1:]
     if offline:
@@ -368,19 +420,24 @@ def run(write_manifest: bool = False) -> dict:
             compile_candidate_workspace(stage, target_sources, fixture_manifest, fixture_root)
         )
 
-    with tempfile.TemporaryDirectory(prefix="rustui-kit08-kit-stack-") as temp_name:
-        fixture = Path(temp_name)
-        archive_count, target_count, unavailable_count = build_fixture(
-            manifest, fixture, PATCH_DIR
-        )
-        result = apply_stack(
-            manifest,
-            PATCH_DIR,
-            fixture,
-            hashlib.sha256(DEFAULT_MANIFEST.read_bytes()).hexdigest(),
-            patch_order=CORE_ORDER + FAMILY_ORDER,
-            after_apply=(run_compile_and_proofs if "--compile" in sys.argv[1:] or "--compile-online" in sys.argv[1:] else None),
-        )
+    shared_target_dir = Path(
+        os.environ.get("CARGO_TARGET_DIR", str(ROOT / "target/headstart"))
+    ).resolve()
+    fixture = fixture_workspace_path(shared_target_dir)
+    if fixture.exists():
+        shutil.rmtree(fixture)
+    fixture.mkdir(parents=True)
+    archive_count, target_count, unavailable_count = build_fixture(
+        manifest, fixture, PATCH_DIR
+    )
+    result = apply_stack(
+        manifest,
+        PATCH_DIR,
+        fixture,
+        hashlib.sha256(DEFAULT_MANIFEST.read_bytes()).hexdigest(),
+        patch_order=CORE_ORDER + FAMILY_ORDER,
+        after_apply=(run_compile_and_proofs if "--compile" in sys.argv[1:] or "--compile-online" in sys.argv[1:] else None),
+    )
     result["fixture"] = {
         "archives_verified": archive_count,
         "target_files_hashed": target_count,

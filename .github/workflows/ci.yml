@@ -97,7 +97,7 @@ jobs:
         uses: actions/cache@0057852bfaa89a56745cba8c7296529d2fc39830
         with:
           path: ${{ steps.cargo-cache-paths.outputs.paths }}
-          key: ${{ runner.os }}-headstart-${{ hashFiles('Cargo.lock', 'rust-toolchain.toml', '.cargo/config.toml', 'patches/approved/*.json', 'crates/rustui-gpui*/**', 'crates/rustui-block/**', 'crates/rustui-cocoa*/**', 'crates/rustui-metal/**', 'crates/rustui-objc-foundation/**', 'vendor/gpui-*/**') }}-v2
+          key: ${{ runner.os }}-headstart-${{ hashFiles('Cargo.lock', 'rust-toolchain.toml', '.cargo/config.toml', 'patches/approved/*.json', 'patches/candidate-kit-0.8/**', 'scripts/check_kit08_kit_stack.py', 'scripts/check_kit08_core_stack.py', 'scripts/prepare_gpui_kit_08_fixture.py', 'scripts/kit08_family_proofs/**', 'crates/rustui-gpui*/**', 'crates/rustui-block/**', 'crates/rustui-cocoa*/**', 'crates/rustui-metal/**', 'crates/rustui-objc-foundation/**', 'vendor/gpui-*/**') }}-v2
           restore-keys: |
             ${{ runner.os }}-headstart-
       - name: Install Rust 1.98.0
