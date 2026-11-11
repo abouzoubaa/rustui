@@ -21,7 +21,7 @@ No evidence paragraphs, hashes, logs, crash reports or "Record" commits. Never c
 - Native/manual GUI check inconclusive: report once, do not retry. The owner checks natively.
 - Compiler crash (ICE): rebuild once; then delete only that crate's incremental folder in the build cache; third crash: stop.
 - Tool mechanics fail: retry with plain shell commands.
-- If interrupted: commit work in progress as "wip: <ticket> (interrupted)" and push before stopping.
+- Before stopping for ANY reason (interrupted, blocked, or reporting a failure): commit work in progress as "wip: <ticket>" and push. Never leave uncommitted work.
 
 ## Git
 - Stage explicit paths only; never `git add -A` or `git add .`. Show `git status --porcelain --untracked-files=all` before committing; it must list only intended files.
