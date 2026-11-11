@@ -3,7 +3,7 @@
 ## Stages and releases
 
 - A — finish Phase 1 (items 10, 11a stash review, 11b native popups assessment) → 0.2.0
-- A2 — upgrade to GPUI Kit 0.8.x (formerly GPUI Component) and its matching gpui-pre snapshot; rebase approved patches (patch-only rule), retire patches fixed upstream → before B Then, on the new base: native macOS popups (10 tickets from docs/NATIVE_POPUPS_ASSESSMENT.md) and item 18 crates.io publishing.
+- A2 — DONE: upgraded to GPUI Kit 0.8.1 / gpui-pre 0.3.10; 1,000-row forced-draw median 8.24 ms vs 8.03 ms before. Next on the new base: native popups and crates.io, then A3 (Kit 0.9).
 - A3 — upgrade GPUI Kit 0.8.1 → 0.9.x after A2 (same harness and process).
 - B — theme engine rework (professional, robust; owner-provided materials) → 0.3.0
 - C — components: chat bubbles + message list, diff viewer, Markdown/rich text, dock/panel layout, command palette, charts/plots, status bar, time picker, accordion, hover card, kbd, form layout, settings panel, rating, pagination, carousel, attachments, description list, async images + SVG → 0.4.0 Mostly wrap components GPUI Kit already ships (Command, NativeMenu, StatusBar, Message/Bubble/MessageScroller, Diff, Markdown TextView, charts, Dock, TimeField, HoverCard, Rating, Pagination, Carousel).

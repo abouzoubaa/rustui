@@ -78,7 +78,8 @@ if [ "$console_user" != "$(id -un)" ] || ! launchctl print "gui/$(id -u)" >/dev/
     exit 1
 fi
 cd "$repo_root"
-if ! rustup run 1.98.0 cargo build -p rustui-playground --locked --offline; then
+rustc_bin=$(rustup which rustc --toolchain 1.98.0)
+if ! RUSTC="$rustc_bin" rustup run 1.98.0 cargo build -p rustui-playground --locked --offline; then
     printf '%s\n' 'error: Playground build failed' >&2
     exit 1
 fi

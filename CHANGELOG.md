@@ -1,5 +1,6 @@
 # Changelog
 
+- A2: completed the GPUI Kit 0.8.1 / gpui-pre 0.3.10 upgrade and native Rust/JSON syntax coverage; 1,000-row forced-draw median was 8.24 ms vs 8.03 ms before.
 - A2-6: refreshed the Kit 0.8.1 external-consumer lock and verified local and fresh Git consumers.
 - A2-5a: Activated the GPUI Kit 0.8.1 candidate stack on the integration branch; recorded the remaining RustUI migration errors.
 
