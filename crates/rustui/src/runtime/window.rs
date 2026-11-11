@@ -311,6 +311,7 @@ mod tests {
         y: std::rc::Rc<std::cell::Cell<f32>>,
         measured: std::rc::Rc<std::cell::Cell<Option<gpui::Bounds<gpui::Pixels>>>>,
         scroll: gpui::ScrollHandle,
+        show_anchor: bool,
     }
 
     #[cfg(not(target_family = "wasm"))]
@@ -327,24 +328,28 @@ mod tests {
             use gpui_component::ElementExt as _;
 
             self.parent.set(Some(window.window_handle()));
-            let measured = self.measured.clone();
-            let anchor = gpui::div()
-                .debug_selector(|| "NP4_TRIGGER".into())
-                .ml(gpui::px(self.x.get()))
-                .mt(gpui::px(self.y.get()))
-                .w(gpui::px(24.0))
-                .h(gpui::px(24.0))
-                .on_prepaint(move |bounds, _, _| measured.set(Some(bounds)))
-                .child("popup anchor");
-            let anchor = if let Some(popup) = self.popup.borrow().clone() {
-                popup.track_anchor(anchor)
+            let content = if self.show_anchor {
+                let measured = self.measured.clone();
+                let anchor = gpui::div()
+                    .debug_selector(|| "NP4_TRIGGER".into())
+                    .ml(gpui::px(self.x.get()))
+                    .mt(gpui::px(self.y.get()))
+                    .w(gpui::px(24.0))
+                    .h(gpui::px(24.0))
+                    .on_prepaint(move |bounds, _, _| measured.set(Some(bounds)))
+                    .child("popup anchor");
+                if let Some(popup) = self.popup.borrow().clone() {
+                    popup.track_anchor(anchor)
+                } else {
+                    anchor.into_any_element()
+                }
             } else {
-                anchor.into_any_element()
+                gpui::div().into_any_element()
             };
             let content = gpui::div()
                 .w(gpui::px(160.0))
                 .h(gpui::px(360.0))
-                .child(anchor);
+                .child(content);
             gpui::div()
                 .id("np4-anchor-list")
                 .w(gpui::px(160.0))
@@ -378,6 +383,7 @@ mod tests {
             y,
             measured: measured.clone(),
             scroll,
+            show_anchor: true,
         });
         test_window.update(|window, app| {
             let _ = window.draw(app);
@@ -523,6 +529,48 @@ mod tests {
             .unwrap();
         cx.run_until_parked();
         assert!(popup.update(cx, |_, _, _| ()).is_err());
+    }
+
+    #[cfg(not(target_family = "wasm"))]
+    #[gpui::test]
+    fn removing_a_visible_anchor_closes_its_popup(cx: &mut gpui::TestAppContext) {
+        use gpui::AppContext as _;
+        use std::{cell::Cell, rc::Rc};
+
+        cx.update(gpui_component::init);
+        let popup_cell = Rc::new(std::cell::RefCell::new(None));
+        let parent_cell = Rc::new(Cell::new(None));
+        let (owner, parent, popup) = open_tracked_popup(
+            cx,
+            popup_cell,
+            parent_cell,
+            Rc::new(Cell::new(10.0)),
+            Rc::new(Cell::new(20.0)),
+            Rc::new(Cell::new(None)),
+            gpui::ScrollHandle::default(),
+        );
+
+        parent
+            .update(cx, |_, window, app| {
+                window.simulate_next_frame(app);
+            })
+            .unwrap();
+        owner.update(cx, |probe, cx| {
+            probe.show_anchor = false;
+            cx.notify();
+        });
+        parent
+            .update(cx, |_, window, app| {
+                window.refresh();
+                let _ = window.draw(app);
+                window.simulate_next_frame(app);
+            })
+            .unwrap();
+
+        assert!(
+            popup.update(cx, |_, _, _| ()).is_err(),
+            "removing a still-visible trigger must close its anchored popup"
+        );
     }
 
     #[cfg(not(target_family = "wasm"))]

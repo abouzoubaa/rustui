@@ -2,6 +2,7 @@
 
 ## 0.3.0 — 2026-11-11
 
+- NP-5: nested popup dismissal is leaf-first, and anchored popups close when their visible trigger is removed.
 - NP-4: anchored native popups follow trigger layout and scrolling, and reposition after parent bounds or display changes.
 - NP-3: covered negative and stacked display origins, main-screen fallback, and oversized popup resizing in deterministic geometry tests.
 - NP-2: added fractional logical-coordinate coverage for anchored popup placement and verified AppKit conversion does not multiply by backing scale.
