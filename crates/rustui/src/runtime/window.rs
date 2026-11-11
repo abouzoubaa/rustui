@@ -1,10 +1,11 @@
 //! Root-window creation using GPUI and GPUI Components ownership.
 
 use gpui::{
-    AnyWindowHandle, App, AppContext as _, Bounds, Window, WindowBounds, WindowKind, WindowOptions,
-    point, px, size,
+    AnyElement, AnyWindowHandle, App, AppContext as _, Bounds, IntoElement, ParentElement as _,
+    Pixels, Window, WindowBounds, WindowKind, WindowOptions, div, point, px, size,
 };
 use rustui_core::EnvironmentValues;
+use gpui_component::ElementExt as _;
 
 use super::ComponentHost;
 use crate::view::View;
@@ -29,7 +30,59 @@ pub struct AnchoredPopupOptions {
 
 /// Handle used by RustUI applications to inspect or close an anchored popup.
 #[cfg(not(target_family = "wasm"))]
-pub type AnchoredPopupHandle = AnyWindowHandle;
+#[derive(Clone, Copy, Debug)]
+pub struct AnchoredPopupHandle {
+    window: AnyWindowHandle,
+    parent_bounds: Bounds<Pixels>,
+}
+
+#[cfg(not(target_family = "wasm"))]
+impl AnchoredPopupHandle {
+    /// Updates the popup's root window, matching GPUI's window handle API.
+    pub fn update<C, R>(
+        self,
+        cx: &mut C,
+        update: impl FnOnce(gpui::AnyView, &mut Window, &mut App) -> R,
+    ) -> gpui::Result<R>
+    where
+        C: gpui::AppContext,
+    {
+        self.window.update(cx, update)
+    }
+
+    /// Closes this popup if its anchor moves or its parent window is resized.
+    ///
+    /// Wrap the element that opened the popup with this method. Movement caused
+    /// by scrolling is treated as an anchor move. Live repositioning is deferred
+    /// until GPUI exposes a way to update an open native window's frame.
+    pub fn track_anchor(self, element: impl IntoElement) -> AnyElement {
+        use std::{cell::Cell, rc::Rc};
+
+        let popup = self.window;
+        let initial_parent_bounds = self.parent_bounds;
+        let last_anchor_bounds = Rc::new(Cell::new(None::<Bounds<Pixels>>));
+        let closed = Rc::new(Cell::new(false));
+        div()
+            .child(element)
+            .on_prepaint(move |anchor_bounds, window, cx| {
+                let parent_resized = window.bounds() != initial_parent_bounds;
+                let anchor_moved = match last_anchor_bounds.get() {
+                    Some(previous) => previous != anchor_bounds,
+                    None => {
+                        last_anchor_bounds.set(Some(anchor_bounds));
+                        false
+                    }
+                };
+                #[cfg(test)]
+                eprintln!("NP4_TRACK anchor={anchor_bounds:?} parent={:?} parent_resized={parent_resized} anchor_moved={anchor_moved}", window.bounds());
+                if !closed.get() && (parent_resized || anchor_moved) {
+                    closed.set(true);
+                    let _ = popup.update(cx, |_, popup_window, _| popup_window.remove_window());
+                }
+            })
+            .into_any_element()
+    }
+}
 
 /// Opens a parent-anchored native popup.
 ///
@@ -93,7 +146,12 @@ pub fn open_anchored_popup<V: View>(
         ))),
         ..WindowOptions::default()
     };
+    let parent_bounds = parent.bounds();
     open_root_window_handle(root, environment, window_options, cx)
+        .map(|window| AnchoredPopupHandle {
+            window,
+            parent_bounds,
+        })
 }
 
 fn open_root_window_handle<V: View>(
@@ -161,6 +219,150 @@ fn install_initial_focus_traversal(
 
 #[cfg(test)]
 mod tests {
+    #[cfg(not(target_family = "wasm"))]
+    #[derive(Clone)]
+    struct AnchorTrackingProbe {
+        popup: std::rc::Rc<std::cell::Cell<Option<super::AnchoredPopupHandle>>>,
+        parent: std::rc::Rc<std::cell::Cell<Option<gpui::AnyWindowHandle>>>,
+        x: std::rc::Rc<std::cell::Cell<f32>>,
+        y: std::rc::Rc<std::cell::Cell<f32>>,
+    }
+
+    #[cfg(not(target_family = "wasm"))]
+    impl gpui::Render for AnchorTrackingProbe {
+        fn render(
+            &mut self,
+            window: &mut gpui::Window,
+            _: &mut gpui::Context<Self>,
+        ) -> impl gpui::IntoElement {
+            use gpui::{ParentElement as _, Styled as _};
+
+            self.parent.set(Some(window.window_handle()));
+            let anchor = gpui::div()
+                .ml(gpui::px(self.x.get()))
+                .mt(gpui::px(self.y.get()))
+                .w(gpui::px(24.0))
+                .h(gpui::px(24.0))
+                .child("popup anchor");
+            if let Some(popup) = self.popup.get() {
+                gpui::div()
+                    .size_full()
+                    .child(popup.track_anchor(anchor))
+            } else {
+                gpui::div().size_full().child(anchor)
+            }
+        }
+    }
+
+    #[cfg(not(target_family = "wasm"))]
+    fn open_tracked_popup(
+        cx: &mut gpui::TestAppContext,
+        popup_cell: std::rc::Rc<std::cell::Cell<Option<super::AnchoredPopupHandle>>>,
+        parent_cell: std::rc::Rc<std::cell::Cell<Option<gpui::AnyWindowHandle>>>,
+        x: std::rc::Rc<std::cell::Cell<f32>>,
+        y: std::rc::Rc<std::cell::Cell<f32>>,
+    ) -> (
+        gpui::Entity<AnchorTrackingProbe>,
+        gpui::AnyWindowHandle,
+        super::AnchoredPopupHandle,
+    ) {
+        use gpui::AppContext as _;
+
+        let (owner, test_window) = cx.add_window_view(|_, _| AnchorTrackingProbe {
+            popup: popup_cell.clone(),
+            parent: parent_cell.clone(),
+            x,
+            y,
+        });
+        test_window.update(|window, app| {
+            let _ = window.draw(app);
+        });
+        let parent = parent_cell.get().expect("probe records its parent window");
+        let popup = test_window
+            .update_window(parent, |_, window, app| {
+                super::open_anchored_popup(
+                    crate::view::EmptyView,
+                    rustui_core::EnvironmentValues::default(),
+                    super::AnchoredPopupOptions {
+                        anchor_rect: (10.0, 20.0, 24.0, 24.0),
+                        size: (120.0, 80.0),
+                    },
+                    window,
+                    app,
+                )
+                .unwrap()
+            })
+            .unwrap();
+        popup_cell.set(Some(popup));
+        test_window.run_until_parked();
+        test_window.update(|window, app| {
+            window.refresh();
+            let _ = window.draw(app);
+        });
+        drop(test_window);
+        (owner, parent, popup)
+    }
+
+    #[cfg(not(target_family = "wasm"))]
+    #[gpui::test]
+    fn moving_an_anchor_closes_its_popup(cx: &mut gpui::TestAppContext) {
+        use gpui::AppContext as _;
+        use std::{cell::Cell, rc::Rc};
+
+        cx.update(gpui_component::init);
+        let popup_cell = Rc::new(Cell::new(None));
+        let parent_cell = Rc::new(Cell::new(None));
+        let x = Rc::new(Cell::new(10.0));
+        let y = Rc::new(Cell::new(20.0));
+        let (owner, parent, popup) = open_tracked_popup(
+            cx,
+            popup_cell,
+            parent_cell,
+            x.clone(),
+            y,
+        );
+
+        x.set(60.0);
+        owner.update(cx, |_, cx| cx.notify());
+        parent
+            .update(cx, |_, window, app| {
+                window.refresh();
+                let _ = window.draw(app);
+            })
+            .unwrap();
+        cx.run_until_parked();
+        assert!(popup.update(cx, |_, _, _| ()).is_err());
+    }
+
+    #[cfg(not(target_family = "wasm"))]
+    #[gpui::test]
+    fn resizing_the_parent_closes_its_popup(cx: &mut gpui::TestAppContext) {
+        use gpui::AppContext as _;
+        use std::{cell::Cell, rc::Rc};
+
+        cx.update(gpui_component::init);
+        let popup_cell = Rc::new(Cell::new(None));
+        let parent_cell = Rc::new(Cell::new(None));
+        let (_owner, parent, popup) = open_tracked_popup(
+            cx,
+            popup_cell,
+            parent_cell,
+            Rc::new(Cell::new(10.0)),
+            Rc::new(Cell::new(20.0)),
+        );
+
+        cx.simulate_window_resize(parent, gpui::size(gpui::px(720.0), gpui::px(540.0)));
+        cx.run_until_parked();
+        parent
+            .update(cx, |_, window, app| {
+                window.refresh();
+                let _ = window.draw(app);
+            })
+            .unwrap();
+        cx.run_until_parked();
+        assert!(popup.update(cx, |_, _, _| ()).is_err());
+    }
+
     #[cfg(not(target_family = "wasm"))]
     #[gpui::test]
     fn root_tab_focuses_and_activates_button(cx: &mut gpui::TestAppContext) {
