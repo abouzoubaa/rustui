@@ -28,6 +28,39 @@ pub struct AnchoredPopupOptions {
     pub size: (f32, f32),
 }
 
+/// Failure to open a native anchored popup.
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub enum AnchoredPopupError {
+    /// The current platform has no native anchored-popup implementation.
+    /// Keep or render the existing in-window `Popover` in this case.
+    Unsupported,
+    /// The requested anchor or popup dimensions are invalid.
+    InvalidOptions,
+    /// The platform rejected the native window for another reason.
+    Open(String),
+}
+
+impl AnchoredPopupError {
+    /// Returns whether the existing in-window Popover is the appropriate fallback.
+    pub fn should_use_in_window_fallback(&self) -> bool {
+        matches!(self, Self::Unsupported)
+    }
+}
+
+impl std::fmt::Display for AnchoredPopupError {
+    fn fmt(&self, formatter: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            Self::Unsupported => formatter.write_str("popups are not supported on this platform"),
+            Self::InvalidOptions => formatter.write_str(
+                "popup values must be finite; anchor size must be non-negative and popup size positive",
+            ),
+            Self::Open(message) => formatter.write_str(message),
+        }
+    }
+}
+
+impl std::error::Error for AnchoredPopupError {}
+
 /// Handle used by RustUI applications to inspect or close an anchored popup.
 #[cfg(not(target_family = "wasm"))]
 #[derive(Clone)]
@@ -214,6 +247,23 @@ pub fn open_anchored_popup<V: View>(
     parent: &mut Window,
     cx: &mut App,
 ) -> Result<AnchoredPopupHandle, String> {
+    try_open_anchored_popup(root, environment, options, parent, cx)
+        .map_err(|error| error.to_string())
+}
+
+/// Opens a native anchored popup while preserving the unsupported-platform reason.
+///
+/// If this returns [`AnchoredPopupError::Unsupported`], use the existing in-window
+/// [`crate::components::overlay::Popover`] behavior. Invalid options and other native
+/// open failures should be handled as errors instead of silently changing presentation.
+#[cfg(not(target_family = "wasm"))]
+pub fn try_open_anchored_popup<V: View>(
+    root: V,
+    environment: EnvironmentValues,
+    options: AnchoredPopupOptions,
+    parent: &mut Window,
+    cx: &mut App,
+) -> Result<AnchoredPopupHandle, AnchoredPopupError> {
     let parent_handle = parent.window_handle();
     let owner_focus = parent.focused(cx).map(|focus| focus.downgrade());
     let root = PopupEscapeRoot {
@@ -240,9 +290,7 @@ pub fn open_anchored_popup<V: View>(
         || width <= 0.0
         || height <= 0.0
     {
-        return Err(String::from(
-            "popup values must be finite; anchor size must be non-negative and popup size positive",
-        ));
+        return Err(AnchoredPopupError::InvalidOptions);
     }
 
     let popup = gpui::popup::PopupOptions {
@@ -273,7 +321,10 @@ pub fn open_anchored_popup<V: View>(
         ))),
         ..WindowOptions::default()
     };
-    let window = open_root_window_handle(root, environment, window_options, cx)?;
+    let window: AnyWindowHandle =
+        open_root_window_handle_result(root, environment, window_options, cx)
+            .map_err(classify_anchored_popup_error)?
+            .into();
     let bounds_window = window;
     let bounds_anchor = anchor_rect.clone();
     let bounds_subscription = parent.observe_window_bounds(move |_, cx| {
@@ -298,12 +349,35 @@ pub fn open_anchored_popup<V: View>(
     })
 }
 
+#[cfg(not(target_family = "wasm"))]
+fn classify_anchored_popup_error(error: gpui::private::anyhow::Error) -> AnchoredPopupError {
+    if error
+        .downcast_ref::<gpui::popup::PopupNotSupportedError>()
+        .is_some()
+    {
+        AnchoredPopupError::Unsupported
+    } else {
+        AnchoredPopupError::Open(format!("{error:#}"))
+    }
+}
+
 fn open_root_window_handle<V: View>(
     root: V,
     environment: EnvironmentValues,
     options: WindowOptions,
     cx: &mut App,
 ) -> Result<AnyWindowHandle, String> {
+    open_root_window_handle_result(root, environment, options, cx)
+        .map(Into::into)
+        .map_err(|error| format!("{error:#}"))
+}
+
+fn open_root_window_handle_result<V: View>(
+    root: V,
+    environment: EnvironmentValues,
+    options: WindowOptions,
+    cx: &mut App,
+) -> gpui::Result<gpui::WindowHandle<gpui_component::Root>> {
     cx.open_window(options, |window, cx| {
         let content = cx.new(|cx| ComponentHost::with_environment(root, environment, cx));
         let root = cx.new(|cx| gpui_component::Root::new(content, window, cx));
@@ -315,8 +389,6 @@ fn open_root_window_handle<V: View>(
         }
         root
     })
-    .map(Into::into)
-    .map_err(|error| format!("{error:#}"))
 }
 
 #[cfg(not(target_family = "wasm"))]
@@ -826,6 +898,24 @@ mod tests {
 
         assert!(handled.get(), "popup content should receive Escape first");
         assert!(popup.update(cx, |_, _, _| ()).is_ok());
+    }
+
+    #[test]
+    fn only_unsupported_popup_errors_select_the_in_window_fallback() {
+        assert!(super::AnchoredPopupError::Unsupported.should_use_in_window_fallback());
+        assert!(!super::AnchoredPopupError::InvalidOptions.should_use_in_window_fallback());
+        assert!(
+            !super::AnchoredPopupError::Open("native window failed".into())
+                .should_use_in_window_fallback()
+        );
+
+        let unsupported = super::classify_anchored_popup_error(gpui::private::anyhow::Error::new(
+            gpui::popup::PopupNotSupportedError,
+        ));
+        assert_eq!(unsupported, super::AnchoredPopupError::Unsupported);
+        let other =
+            super::classify_anchored_popup_error(gpui::private::anyhow::anyhow!("open failed"));
+        assert_eq!(other, super::AnchoredPopupError::Open("open failed".into()));
     }
 
     #[cfg(not(target_family = "wasm"))]
