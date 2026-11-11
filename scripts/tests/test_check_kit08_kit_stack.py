@@ -1,9 +1,11 @@
 import hashlib
 import json
+import os
 import sys
 import tarfile
 import tempfile
 import unittest
+from unittest.mock import patch
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[2]
@@ -23,10 +25,42 @@ from check_kit08_kit_stack import (  # noqa: E402
     A2_4M_ORDER,
     A2_4N_ORDER,
     FAMILY_PROOF_CRATE,
+    FIXTURE_MTIME_EPOCH,
+    input_digest,
+    normalize_fixture_mtimes,
+    fixture_workspace_path,
 )
 
 
 class Kit08FamilyStackTests(unittest.TestCase):
+    def test_fixture_cache_key_changes_when_a_build_input_changes(self):
+        with tempfile.TemporaryDirectory() as directory:
+            source = Path(directory) / "Cargo.toml"
+            source.write_text("[package]\nversion = '0.1.0'\n", encoding="utf-8")
+            original = input_digest([source])
+            source.write_text("[package]\nversion = '0.1.1'\n", encoding="utf-8")
+            self.assertNotEqual(original, input_digest([source]))
+
+    def test_fixture_inputs_get_stable_old_mtimes(self):
+        with tempfile.TemporaryDirectory() as directory:
+            workspace = Path(directory)
+            source = workspace / "src/lib.rs"
+            source.parent.mkdir()
+            source.write_text("pub fn fixture() {}\n", encoding="utf-8")
+            normalize_fixture_mtimes(workspace)
+            self.assertEqual(source.stat().st_mtime, FIXTURE_MTIME_EPOCH)
+
+    def test_fixture_workspace_uses_stable_runner_temp_path(self):
+        with tempfile.TemporaryDirectory() as directory:
+            runner_temp = Path(directory)
+            with patch.dict(os.environ, {"RUNNER_TEMP": str(runner_temp)}):
+                target_dir = ROOT / "target/headstart"
+                first = fixture_workspace_path(target_dir)
+                second = fixture_workspace_path(target_dir)
+            self.assertEqual(first, second)
+            self.assertEqual(first.parent, runner_temp.resolve())
+            self.assertFalse(first.is_relative_to(ROOT))
+
     def test_menu_provider_precedes_dropdown_refresh_consumer(self):
         self.assertEqual(
             A2_4D_ORDER,
