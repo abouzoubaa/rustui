@@ -27,13 +27,21 @@ OWNED_VENDOR_COPIES = {
     "crates/rustui-gpui-windows": "vendor/gpui-pre-windows-0.3.10",
 }
 IGNORED_RELATIVE_PATHS = {"Cargo.toml"}
+OWNED_ONLY_IGNORED_PATHS = {
+    # This test-only standalone lock is intentionally resolved offline for the
+    # macOS crate and is not the published/vendor snapshot's source lock.
+    "crates/rustui-gpui-macos": {"Cargo.lock"},
+}
 
 
-def snapshot(root: Path) -> dict[str, tuple[str, bytes | str | None]]:
+def snapshot(
+    root: Path, ignored_relative_paths: set[str] | None = None
+) -> dict[str, tuple[str, bytes | str | None]]:
     entries: dict[str, tuple[str, bytes | str | None]] = {}
+    ignored = IGNORED_RELATIVE_PATHS | (ignored_relative_paths or set())
     for path in root.rglob("*"):
         relative = path.relative_to(root).as_posix()
-        if relative in IGNORED_RELATIVE_PATHS:
+        if relative in ignored:
             continue
         if path.is_symlink():
             entries[relative] = ("symlink", os.readlink(path))
@@ -46,15 +54,19 @@ def snapshot(root: Path) -> dict[str, tuple[str, bytes | str | None]]:
     return entries
 
 
-def compare_trees(owned: Path, vendor: Path) -> tuple[list[str], int]:
+def compare_trees(
+    owned: Path,
+    vendor: Path,
+    ignored_relative_paths: set[str] | None = None,
+) -> tuple[list[str], int]:
     """Return mismatched relative paths and the number of equal files checked."""
     if not owned.is_dir():
         return [f"owned copy is missing: {owned}"], 0
     if not vendor.is_dir():
         return [f"vendor source is missing: {vendor}"], 0
 
-    owned_snapshot = snapshot(owned)
-    vendor_snapshot = snapshot(vendor)
+    owned_snapshot = snapshot(owned, ignored_relative_paths)
+    vendor_snapshot = snapshot(vendor, ignored_relative_paths)
     mismatches = [
         path
         for path in sorted(owned_snapshot.keys() | vendor_snapshot.keys())
@@ -69,7 +81,11 @@ def verify_repository(root: Path) -> list[str]:
     for owned_relative, vendor_relative in OWNED_VENDOR_COPIES.items():
         owned = root / owned_relative
         vendor = root / vendor_relative
-        mismatches, file_count = compare_trees(owned, vendor)
+        mismatches, file_count = compare_trees(
+            owned,
+            vendor,
+            OWNED_ONLY_IGNORED_PATHS.get(owned_relative),
+        )
         if mismatches:
             preview = ", ".join(mismatches[:12])
             extra = len(mismatches) - min(len(mismatches), 12)
@@ -77,9 +93,12 @@ def verify_repository(root: Path) -> list[str]:
                 preview += f", and {extra} more"
             errors.append(f"{owned_relative} differs from {vendor_relative}: {preview}")
         else:
+            exceptions = "Cargo.toml"
+            if OWNED_ONLY_IGNORED_PATHS.get(owned_relative):
+                exceptions += " and standalone test Cargo.lock"
             print(
                 f"PASS: {owned_relative} matches {vendor_relative} byte-for-byte "
-                f"except Cargo.toml ({file_count} files checked)"
+                f"except {exceptions} ({file_count} files checked)"
             )
     return errors
 

@@ -1,7 +1,7 @@
 # Changelog
 
 ## Unreleased
-- NP-7: recorded the macOS test blocker after offline lock regeneration exposed missing vendored dependencies.
+- NP-7: removed screen-capture-only manifest dependencies and recorded the remaining Rust 1.98.0 `map_or_default` test blocker.
 - NP-10: added the owner checklist for native macOS popup acceptance.
 
 ## 0.3.0 — 2026-11-11
