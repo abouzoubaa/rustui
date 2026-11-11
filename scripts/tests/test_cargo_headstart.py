@@ -164,7 +164,7 @@ class CargoHeadstartTests(unittest.TestCase):
                 "os.environ.get('PATCH_APPLY_STATE', 'applied'))\n",
                 encoding="utf-8",
             )
-            (root / "vendor/gpui-pre-macos-0.3.9/src").mkdir(parents=True)
+            (root / "vendor/gpui-pre-macos-0.3.10/src").mkdir(parents=True)
             fake_bin = root / "fake-bin"
             fake_bin.mkdir()
             uname = fake_bin / "uname"

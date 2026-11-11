@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import json
 import shutil
 import tempfile
 import unittest
@@ -55,10 +56,9 @@ class AnchoredPopupPatchTests(unittest.TestCase):
 
     def test_parent_teardown_closes_popup_children_without_unbounded_loop(self) -> None:
         patch = PATCH.read_text(encoding="utf-8")
-        shutdown = patch.split("@@ -3260,0 +3591,11 @@", 1)[1]
-        self.assertIn("for index in (0..child_count).rev()", shutdown)
-        self.assertIn("removeChildWindow: child", shutdown)
-        self.assertNotIn("+        loop {", shutdown)
+        self.assertIn("for index in (0..child_count).rev()", patch)
+        self.assertIn("removeChildWindow: child", patch)
+        self.assertNotIn("+        loop {", patch)
 
     def test_reverse_restores_exact_preimages(self) -> None:
         apply_patch(self.root)
@@ -76,7 +76,14 @@ class AnchoredPopupPatchTests(unittest.TestCase):
             apply_patch(self.root)
         self.assertEqual(source.read_bytes(), before)
 
-    def test_approved_patch_is_present(self) -> None:
+    def test_candidate_patch_manifest_binds_vendor_and_owned_images(self) -> None:
+        manifest = json.loads((PATCH.parent / "gpui-macos-anchored-popup-kit08-v1.json").read_text())
+        self.assertEqual(manifest["candidate"], PATCH.name)
+        self.assertEqual(len(manifest["files"]), 4)
+        self.assertTrue(any(path.startswith("vendor/") for path in manifest["files"]))
+        self.assertTrue(any(path.startswith("crates/rustui-gpui-macos/") for path in manifest["files"]))
+
+    def test_candidate_patch_is_present(self) -> None:
         self.assertTrue(PATCH.is_file())
 
 

@@ -142,7 +142,7 @@ PY
     python3 scripts/apply_gpui_inert_focus_scope_patch.py --verify
     python3 scripts/apply_gpui_validation_grid_a11y_patch.py --verify
     python3 scripts/apply_g10_parent_node_id_v1_patch.py --verify
-    # GPUI's pinned macOS backend rejects AnchoredPopup unless this approved
+    # GPUI's pinned macOS backend rejects AnchoredPopup unless the proposed candidate
     # patch is active. Apply it after exact-source checks, and restore the
     # pinned source on exit, including failed builds and interrupts.
     python3 scripts/apply_gpui_macos_anchored_popup_patch.py --reverse --check
