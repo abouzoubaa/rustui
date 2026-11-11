@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import json
+import re
 import shutil
 import subprocess
 import tempfile
@@ -19,6 +20,24 @@ from scripts.apply_gpui_macos_anchored_popup_patch import (
 
 
 ROOT = Path(__file__).resolve().parents[2]
+
+
+def extract_function(source: str, name: str) -> str:
+    declaration = re.compile(rf"(?m)^\s*fn\s+{re.escape(name)}\s*\(")
+    matches = list(declaration.finditer(source))
+    if len(matches) != 1:
+        raise ValueError(f"expected one exact function named {name}, found {len(matches)}")
+    start = matches[0].start()
+    opening = source.index("{", matches[0].end())
+    depth = 0
+    for index in range(opening, len(source)):
+        if source[index] == "{":
+            depth += 1
+        elif source[index] == "}":
+            depth -= 1
+            if depth == 0:
+                return source[start : index + 1]
+    raise ValueError(f"unterminated function {name}")
 
 
 class AnchoredPopupPatchTests(unittest.TestCase):
@@ -90,19 +109,6 @@ class AnchoredPopupPatchTests(unittest.TestCase):
     def test_rust_logical_anchor_geometry_functions(self) -> None:
         source = (ROOT / "crates/rustui-gpui-macos/src/window.rs").read_text(encoding="utf-8")
 
-        def extract_function(name: str) -> str:
-            start = source.index(f"fn {name}(")
-            opening = source.index("{", start)
-            depth = 0
-            for index in range(opening, len(source)):
-                if source[index] == "{":
-                    depth += 1
-                elif source[index] == "}":
-                    depth -= 1
-                    if depth == 0:
-                        return source[start : index + 1]
-            self.fail(f"unterminated function {name}")
-
         geometry = """#[derive(Clone, Copy)]
 struct Pixels(f32);
 impl Pixels { fn as_f32(self) -> f32 { self.0 } }
@@ -126,12 +132,15 @@ impl NSSize { fn new(width: f64, height: f64) -> Self { Self { width, height } }
 struct NSRect { origin: NSPoint, size: NSSize }
 impl NSRect { fn new(origin: NSPoint, size: NSSize) -> Self { Self { origin, size } } }
 """
-        test = extract_function("fractional_logical_anchor_pixels_convert_to_appkit_points_without_scaling")
+        test = extract_function(
+            source,
+            "fractional_logical_anchor_pixels_convert_to_appkit_points_without_scaling",
+        )
         rust_source = "\n".join(
             [
                 geometry,
-                extract_function("logical_anchor_rect_to_appkit_points"),
-                extract_function("popup_anchor_rect_in_view"),
+                extract_function(source, "logical_anchor_rect_to_appkit_points"),
+                extract_function(source, "popup_anchor_rect_in_view"),
                 "#[test]",
                 test,
             ]
@@ -155,19 +164,6 @@ impl NSRect { fn new(origin: NSPoint, size: NSSize) -> Self { Self { origin, siz
     def test_rust_screen_selection_and_visible_frame_geometry(self) -> None:
         source = (ROOT / "crates/rustui-gpui-macos/src/window.rs").read_text(encoding="utf-8")
 
-        def extract_function(name: str) -> str:
-            start = source.index(f"fn {name}(")
-            opening = source.index("{", start)
-            depth = 0
-            for index in range(opening, len(source)):
-                if source[index] == "{":
-                    depth += 1
-                elif source[index] == "}":
-                    depth -= 1
-                    if depth == 0:
-                        return source[start : index + 1]
-            self.fail(f"unterminated function {name}")
-
         geometry = """#[derive(Clone, Copy)]
 struct Pixels(f32);
 impl Pixels { fn as_f32(self) -> f32 { self.0 } }
@@ -176,6 +172,9 @@ struct Point<T> { x: T, y: T }
 #[derive(Clone, Copy)]
 struct Size<T> { width: T, height: T }
 impl<T> Size<T> { fn new(width: T, height: T) -> Self { Self { width, height } } }
+#[derive(Clone, Copy)]
+struct Bounds<T> { origin: Point<T>, size: Size<T> }
+impl<T> Bounds<T> { fn new(origin: Point<T>, size: Size<T>) -> Self { Self { origin, size } } }
 #[derive(Clone, Copy)]
 struct NSPoint { x: f64, y: f64 }
 impl NSPoint { fn new(x: f64, y: f64) -> Self { Self { x, y } } }
@@ -208,10 +207,13 @@ impl std::ops::BitOr for PopupConstraintAdjustment {
     fn bitor(self, rhs: Self) -> Self { Self(self.0 | rhs.0) }
 }
 struct PopupOptions {
+    parent: (),
+    anchor_rect: Bounds<Pixels>,
     anchor: PopupAnchor,
     gravity: PopupGravity,
     constraint_adjustment: PopupConstraintAdjustment,
     offset: Point<Pixels>,
+    grab: bool,
 }
 """
         helpers = [
@@ -229,13 +231,41 @@ struct PopupOptions {
         ]
         tests = [
             "screen_selection_handles_negative_stacked_origins_and_main_fallback",
-            "oversized_popup_resizes_to_negative_origin_visible_frame",
         ]
+        visible_frame_test = """#[test]
+fn oversized_popup_resizes_to_negative_origin_visible_frame() {
+    let options = PopupOptions {
+        parent: (),
+        anchor_rect: Bounds::new(point(px(-1910.0), px(900.0)), size(px(20.0), px(12.0))),
+        anchor: PopupAnchor::BottomLeft,
+        gravity: PopupGravity::BottomRight,
+        constraint_adjustment: PopupConstraintAdjustment::FLIP_X
+            | PopupConstraintAdjustment::FLIP_Y
+            | PopupConstraintAdjustment::SLIDE_X
+            | PopupConstraintAdjustment::SLIDE_Y
+            | PopupConstraintAdjustment::RESIZE_X
+            | PopupConstraintAdjustment::RESIZE_Y,
+        offset: point(px(0.0), px(0.0)),
+        grab: true,
+    };
+    let visible = NSRect::new(NSPoint::new(-1920.0, 23.0), NSSize::new(1920.0, 1057.0));
+    let anchor = NSRect::new(NSPoint::new(-1910.0, 900.0), NSSize::new(20.0, 12.0));
+    let (frame, popup_size) =
+        popup_frame_for_visible_screen(anchor, visible, size(px(2400.0), px(1400.0)), &options);
+    assert_eq!(frame.origin.x, -1920.0);
+    assert_eq!(frame.origin.y, 23.0);
+    assert_eq!(frame.size.width, 1920.0);
+    assert_eq!(frame.size.height, 1057.0);
+    assert_eq!(popup_size.width.as_f32(), 1920.0);
+    assert_eq!(popup_size.height.as_f32(), 1057.0);
+}
+"""
         rust_source = "\n".join(
             [
                 geometry,
-                *(extract_function(name) for name in helpers),
-                *("#[test]\n" + extract_function(name) for name in tests),
+                *(extract_function(source, name) for name in helpers),
+                *("#[test]\n" + extract_function(source, name) for name in tests),
+                visible_frame_test,
             ]
         )
         with tempfile.TemporaryDirectory(prefix="rustui-popup-screen-test-") as directory:
@@ -253,6 +283,28 @@ struct PopupOptions {
             executed = subprocess.run([str(binary_path)], capture_output=True, text=True, check=False)
             self.assertEqual(executed.returncode, 0, executed.stdout + executed.stderr)
             self.assertIn("2 passed", executed.stdout)
+
+    def test_extractor_rejects_prefix_matches_and_gpui_context_tests(self) -> None:
+        source = """fn screen_selection_handles_negative_stacked_origins_and_main_fallback() { assert!(true); }
+fn screen_selection_handles_negative_stacked_origins_and_main_fallback_extended() { panic!(); }
+fn oversized_popup_resizes_to_negative_origin_visible_frame(cx: &mut gpui::TestAppContext) { panic!(); }
+fn nested_grabbing_popups_dismiss_leaf_before_parent() { panic!(); }
+"""
+        extracted = extract_function(
+            source,
+            "screen_selection_handles_negative_stacked_origins_and_main_fallback",
+        )
+        self.assertEqual(
+            extracted,
+            "fn screen_selection_handles_negative_stacked_origins_and_main_fallback() { assert!(true); }",
+        )
+        for unintended in (
+            "oversized_popup_resizes_to_negative_origin_visible_frame",
+            "nested_grabbing_popups_dismiss_leaf_before_parent",
+        ):
+            self.assertNotIn(f"fn {unintended}", extracted)
+        with self.assertRaisesRegex(ValueError, "found 0"):
+            extract_function(source, "screen_selection_handles_negative_stacked_origins_and")
 
     def test_parent_teardown_closes_popup_children_without_unbounded_loop(self) -> None:
         patch = PATCH.read_text(encoding="utf-8")
