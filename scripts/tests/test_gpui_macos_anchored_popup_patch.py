@@ -17,6 +17,9 @@ from scripts.apply_gpui_macos_anchored_popup_patch import (
     sha256,
     verify_applied,
 )
+from scripts.apply_gpui_macos_popup_child_teardown_patch import (
+    apply_patch as apply_child_teardown_patch,
+)
 
 
 ROOT = Path(__file__).resolve().parents[2]
@@ -48,6 +51,10 @@ class AnchoredPopupPatchTests(unittest.TestCase):
             destination = self.root / relative
             destination.parent.mkdir(parents=True, exist_ok=True)
             shutil.copy2(ROOT / relative, destination)
+        self.assertEqual(
+            apply_child_teardown_patch(self.root, reverse=True),
+            "reversed",
+        )
         state = apply_patch(self.root, check_only=True)
         if state == "already-applied":
             self.assertEqual(apply_patch(self.root, reverse=True), "reversed")
@@ -348,7 +355,17 @@ fn nested_grabbing_popups_dismiss_leaf_before_parent() { panic!(); }
         self.assertTrue(PATCH.is_file())
 
     def test_approved_patch_postimages_are_active(self) -> None:
-        self.assertEqual(verify_applied(), "verified")
+        with tempfile.TemporaryDirectory(prefix="rustui-popup-verify-test-") as temporary:
+            fixture = Path(temporary)
+            for relative in PREIMAGES:
+                target = fixture / relative
+                target.parent.mkdir(parents=True, exist_ok=True)
+                shutil.copy2(ROOT / relative, target)
+            self.assertEqual(
+                apply_child_teardown_patch(fixture, reverse=True),
+                "reversed",
+            )
+            self.assertEqual(verify_applied(fixture), "verified")
 
 
 if __name__ == "__main__":

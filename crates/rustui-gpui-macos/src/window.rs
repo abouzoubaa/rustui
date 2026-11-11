@@ -3638,6 +3638,10 @@ fn close_resigned_popup(dismiss_on_resign: bool, child_count: usize) -> bool {
     dismiss_on_resign && child_count == 0
 }
 
+fn should_close_child_popup(is_gpui_window: bool, dismiss_popup_on_resign: bool) -> bool {
+    is_gpui_window && dismiss_popup_on_resign
+}
+
 extern "C" fn window_did_change_key_status(this: &AnyObject, selector: Sel, _: *mut AnyObject) {
     let signal_at = PlatformFrameSignal::capture(scheduler::Instant::now);
     let window_state = unsafe { get_window_state(this) };
@@ -3777,6 +3781,13 @@ extern "C" fn close_window(this: &AnyObject, _: Sel) {
         for index in (0..child_count).rev() {
             let child: *mut AnyObject = msg_send![children, objectAtIndex: index];
             if child.is_null() || child as *const AnyObject == this as *const AnyObject {
+                continue;
+            }
+            if !is_gpui_window(child) {
+                continue;
+            }
+            let child_is_popup = get_window_state(&*child).lock().dismiss_popup_on_resign;
+            if !should_close_child_popup(true, child_is_popup) {
                 continue;
             }
             let _: () = msg_send![this, removeChildWindow: child];
@@ -4527,6 +4538,13 @@ mod tests {
         assert!(!close_resigned_popup(true, 1));
         assert!(!close_resigned_popup(true, 2));
         assert!(close_resigned_popup(true, 0));
+    }
+
+    #[test]
+    fn parent_close_only_dismisses_managed_grabbing_popups() {
+        assert!(should_close_child_popup(true, true));
+        assert!(!should_close_child_popup(true, false));
+        assert!(!should_close_child_popup(false, true));
     }
 
     #[test]
