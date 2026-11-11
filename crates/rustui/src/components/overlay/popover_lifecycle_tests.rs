@@ -1,6 +1,6 @@
 use crate::{
     components::overlay::popover::Popover,
-    runtime::{Binding, ComponentHost},
+    runtime::{Binding, ComponentHost, EnvironmentValues},
     view::{EmptyView, RenderContext, View},
 };
 use gpui::{
@@ -21,6 +21,9 @@ struct Probe {
     lifetime: Option<Rc<()>>,
     renders: Rc<Cell<usize>>,
     writes: usize,
+    native: bool,
+    force_native_unsupported: bool,
+    environment_seen: Rc<RefCell<Option<String>>>,
 }
 
 impl Default for Probe {
@@ -33,6 +36,9 @@ impl Default for Probe {
             lifetime: Some(Rc::new(())),
             renders: Rc::new(Cell::new(0)),
             writes: 0,
+            native: false,
+            force_native_unsupported: false,
+            environment_seen: Rc::new(RefCell::new(None)),
         }
     }
 }
@@ -47,24 +53,37 @@ impl View for Probe {
                 owner.writes += 1;
             },
         );
+        let writes = Binding::new(
+            self.writes,
+            |owner: &Self| owner.writes,
+            |owner, value| owner.writes = value,
+        );
         ProbeScene {
             open,
+            writes,
             mounted: self.mounted,
             generation: self.generation,
             origin: self.origin,
             lifetime: self.lifetime.clone(),
             renders: self.renders.clone(),
+            native: self.native,
+            force_native_unsupported: self.force_native_unsupported,
+            environment_seen: self.environment_seen.clone(),
         }
     }
 }
 
 struct ProbeScene {
     open: Binding<bool>,
+    writes: Binding<usize>,
     mounted: bool,
     generation: u8,
     origin: (f32, f32),
     lifetime: Option<Rc<()>>,
     renders: Rc<Cell<usize>>,
+    native: bool,
+    force_native_unsupported: bool,
+    environment_seen: Rc<RefCell<Option<String>>>,
 }
 
 impl View for ProbeScene {
@@ -75,7 +94,7 @@ impl View for ProbeScene {
     fn into_element(&self, context: &mut RenderContext<'_>) -> AnyElement {
         let mut scene = div().size_full();
         if self.mounted {
-            let popup = Popover(
+            let mut popup = Popover(
                 "lifecycle-popover",
                 "Options",
                 self.open.clone(),
@@ -83,8 +102,16 @@ impl View for ProbeScene {
                     generation: self.generation,
                     lifetime: self.lifetime.as_ref().unwrap().clone(),
                     renders: self.renders.clone(),
+                    writes: self.writes.clone(),
+                    environment_seen: self.environment_seen.clone(),
                 },
             );
+            if self.native {
+                popup = popup.native_popup((120.0, 80.0));
+                if self.force_native_unsupported {
+                    popup = popup.force_native_unsupported_for_test();
+                }
+            }
             scene = scene.child(
                 div()
                     .absolute()
@@ -102,14 +129,23 @@ struct ContentProbe {
     generation: u8,
     lifetime: Rc<()>,
     renders: Rc<Cell<usize>>,
+    writes: Binding<usize>,
+    environment_seen: Rc<RefCell<Option<String>>>,
 }
+
+struct PopupEnvironment(&'static str);
 
 impl View for ContentProbe {
     fn body(&self) -> impl View {
         EmptyView
     }
 
-    fn into_element(&self, _: &mut RenderContext<'_>) -> AnyElement {
+    fn into_element(&self, context: &mut RenderContext<'_>) -> AnyElement {
+        if let Some(environment) = context.environment::<PopupEnvironment>() {
+            self.environment_seen
+                .borrow_mut()
+                .replace(environment.0.to_owned());
+        }
         let selector = if self.generation == 0 {
             "popover-test-content-0"
         } else {
@@ -117,6 +153,10 @@ impl View for ContentProbe {
         };
         let lifetime = self.lifetime.clone();
         let renders = self.renders.clone();
+        let update_writes = context.binding_updater(self.writes.clone(), |writes| {
+            *writes += 1;
+            true
+        });
         div()
             .id("popover-test-content")
             .size(px(60.0))
@@ -128,8 +168,9 @@ impl View for ContentProbe {
                 )
                 .size_full(),
             )
-            .on_click(move |_, _, _| {
+            .on_click(move |_, _, cx| {
                 let _ = &lifetime;
+                update_writes(cx);
             })
             .into_any_element()
     }
@@ -153,8 +194,11 @@ fn window(
 ) -> (Entity<ComponentHost<Probe>>, &mut gpui::VisualTestContext) {
     let owner = Rc::new(RefCell::new(None));
     let slot = owner.clone();
+    let mut environment = EnvironmentValues::default();
+    environment.set(PopupEnvironment("native-popover-owner"));
     let (_, window) = cx.add_window_view(|window, cx| {
-        let entity = cx.new(|cx| ComponentHost::new(Probe::default(), cx));
+        let entity =
+            cx.new(|cx| ComponentHost::with_environment(Probe::default(), environment, cx));
         *slot.borrow_mut() = Some(entity.clone());
         Root::new(entity, window, cx)
     });
@@ -310,4 +354,104 @@ fn popover_owner_removal_drops_open_popup_context(cx: &mut gpui::TestAppContext)
     assert!(window.debug_bounds("popover-test-content-0").is_none());
     window.update(|_, app| assert!(!GlobalState::is_in_deferred_context(app)));
     assert!(lifetime.upgrade().is_none(), "popup content was retained");
+}
+
+#[gpui::test]
+fn native_popover_opt_in_owns_environment_and_reopens(cx: &mut gpui::TestAppContext) {
+    setup(cx);
+    let (owner, window) = window(cx);
+    update(&owner, window, |owner| owner.native = true);
+    draw(window);
+    let parent = window.update(|window, _| window.window_handle());
+    let trigger = window.debug_bounds("popover-test-owner").unwrap();
+    window.simulate_click(trigger.center(), Default::default());
+    draw(window);
+
+    window.update(|_, app| assert!(owner.read(app).component().open));
+    assert_eq!(window.cx.windows().len(), 2, "native popup was not opened");
+    let environment_seen = window.update(|_, app| {
+        owner
+            .read(app)
+            .component()
+            .environment_seen
+            .borrow()
+            .clone()
+    });
+    assert_eq!(
+        environment_seen.as_deref(),
+        Some("native-popover-owner"),
+        "native popup did not inherit its owner's environment"
+    );
+    assert!(window.update(|_, app| owner.read(app).component().renders.get()) > 0);
+
+    let popup = window
+        .cx
+        .windows()
+        .into_iter()
+        .find(|handle| *handle != parent)
+        .expect("native popup window handle");
+    let mut popup_context = gpui::VisualTestContext::from_window(popup, &window.cx);
+    let content_bounds = popup_context
+        .debug_bounds("popover-test-content-0")
+        .expect("native popup content bounds");
+    popup_context.simulate_click(content_bounds.center(), Default::default());
+    draw(window);
+    window.update(|_, app| {
+        assert!(owner.read(app).component().open);
+        assert_eq!(owner.read(app).component().writes, 2);
+    });
+    assert_eq!(
+        window.cx.windows().len(),
+        2,
+        "owner binding update closed the popup"
+    );
+
+    window.cx.simulate_keystrokes(popup, "escape");
+    draw(window);
+    window.update(|_, app| assert!(!owner.read(app).component().open));
+    assert_eq!(
+        window.cx.windows().len(),
+        1,
+        "Escape left native popup open"
+    );
+
+    update(&owner, window, |owner| owner.generation = 1);
+    let trigger = window.debug_bounds("popover-test-owner").unwrap();
+    window.simulate_click(trigger.center(), Default::default());
+    draw(window);
+    window.update(|_, app| assert!(owner.read(app).component().open));
+    assert_eq!(window.cx.windows().len(), 2, "native popup did not reopen");
+    let popup = window
+        .cx
+        .windows()
+        .into_iter()
+        .find(|handle| *handle != parent)
+        .expect("reopened native popup window handle");
+    window.cx.simulate_keystrokes(popup, "escape");
+    draw(window);
+    window.update(|_, app| assert!(!owner.read(app).component().open));
+}
+
+#[gpui::test]
+fn unsupported_native_popover_uses_the_existing_in_window_fallback(cx: &mut gpui::TestAppContext) {
+    setup(cx);
+    let (owner, window) = window(cx);
+    update(&owner, window, |owner| {
+        owner.native = true;
+        owner.force_native_unsupported = true;
+    });
+    draw(window);
+    let trigger = window.debug_bounds("popover-test-owner").unwrap();
+    window.simulate_click(trigger.center(), Default::default());
+    draw(window);
+    window.update(|_, app| assert!(owner.read(app).component().open));
+    assert_eq!(
+        window.cx.windows().len(),
+        1,
+        "fallback opened a native window"
+    );
+    assert!(window.debug_bounds("popover-test-content-0").is_some());
+    window.simulate_keystrokes("escape");
+    draw(window);
+    window.update(|_, app| assert!(!owner.read(app).component().open));
 }

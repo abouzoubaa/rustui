@@ -648,6 +648,10 @@ impl<'a> RenderContext<'a> {
         self.environment.get()
     }
 
+    pub(crate) fn environment_values(&self) -> EnvironmentValues {
+        self.environment.clone()
+    }
+
     fn with_environment<R>(
         &mut self,
         environment: &EnvironmentValues,
