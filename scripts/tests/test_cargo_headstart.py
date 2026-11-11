@@ -159,9 +159,18 @@ class CargoHeadstartTests(unittest.TestCase):
             helper.write_text(
                 "import os, sys\n"
                 "with open(os.environ['PATCH_LOG'], 'a') as log:\n"
-                "    log.write('reverse\\n' if '--reverse' in sys.argv else 'apply\\n')\n"
+                "    log.write(('base-reverse\\n' if '--reverse' in sys.argv else 'base-apply\\n'))\n"
                 "print('reversed' if '--reverse' in sys.argv else "
                 "os.environ.get('PATCH_APPLY_STATE', 'applied'))\n",
+                encoding="utf-8",
+            )
+            child_helper = scripts / "apply_gpui_macos_popup_child_teardown_patch.py"
+            child_helper.write_text(
+                "import os, sys\n"
+                "with open(os.environ['PATCH_LOG'], 'a') as log:\n"
+                "    log.write(('child-reverse\\n' if '--reverse' in sys.argv else 'child-apply\\n'))\n"
+                "print(os.environ.get('PATCH_CHILD_REVERSE_STATE', 'already-reversed') "
+                "if '--reverse' in sys.argv else 'applied')\n",
                 encoding="utf-8",
             )
             (root / "vendor/gpui-pre-macos-0.3.10/src").mkdir(parents=True)
@@ -197,20 +206,29 @@ class CargoHeadstartTests(unittest.TestCase):
 
             result = subprocess.run([str(launcher), "check"], env=env, capture_output=True, text=True)
             self.assertEqual(result.returncode, 0, result.stderr)
-            self.assertEqual(log.read_text(encoding="utf-8").splitlines(), ["apply", "reverse"])
+            self.assertEqual(
+                log.read_text(encoding="utf-8").splitlines(),
+                ["child-reverse", "base-apply", "child-apply", "child-reverse", "base-reverse"],
+            )
 
             log.write_text("", encoding="utf-8")
             env["PATCH_APPLY_STATE"] = "already-applied"
             result = subprocess.run([str(launcher), "check"], env=env, capture_output=True, text=True)
             self.assertEqual(result.returncode, 0, result.stderr)
-            self.assertEqual(log.read_text(encoding="utf-8").splitlines(), ["apply"])
+            self.assertEqual(
+                log.read_text(encoding="utf-8").splitlines(),
+                ["child-reverse", "base-apply", "child-apply", "child-reverse"],
+            )
 
             log.write_text("", encoding="utf-8")
             env.pop("PATCH_APPLY_STATE")
             env["CARGO_FAKE_EXIT"] = "23"
             result = subprocess.run([str(launcher), "check"], env=env, capture_output=True, text=True)
             self.assertEqual(result.returncode, 23)
-            self.assertEqual(log.read_text(encoding="utf-8").splitlines(), ["apply", "reverse"])
+            self.assertEqual(
+                log.read_text(encoding="utf-8").splitlines(),
+                ["child-reverse", "base-apply", "child-apply", "child-reverse", "base-reverse"],
+            )
 
 
 if __name__ == "__main__":

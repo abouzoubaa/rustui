@@ -2,6 +2,7 @@
 
 ## 0.3.0 — 2026-11-11
 
+- NP-7: parent teardown closes only owned GPUI popup children and preserves unrelated child windows.
 - NP-6: native popup Escape dismissal restores weak owner focus while allowing popup content to consume Escape.
 - NP-5: nested popup dismissal is leaf-first, and anchored popups close when their visible trigger is removed.
 - NP-4: anchored native popups follow trigger layout and scrolling, and reposition after parent bounds or display changes.

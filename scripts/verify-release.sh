@@ -26,28 +26,43 @@ case "${1:-}" in
   source)
     python3 scripts/check_dependency_notices_freshness.py
     # The popup patch shares macOS source files with the Kit 0.8 stack. Reverse
-    # it before cycling that stack, then restore it even if a later check fails.
-    python3 scripts/apply_gpui_macos_anchored_popup_patch.py --reverse --check
-    python3 scripts/apply_gpui_macos_anchored_popup_patch.py --reverse
-    popup_patch_armed=1
+    # patches before cycling that stack, then restore them in dependency order.
+    popup_child_teardown_armed=0
+    popup_patch_armed=0
     restore_popup_patch() {
       result=$?
       trap - EXIT
       if [ "$popup_patch_armed" -eq 1 ]; then
         if ! python3 scripts/apply_gpui_macos_anchored_popup_patch.py; then
           result=1
+        else
+          popup_patch_armed=0
+        fi
+      fi
+      if [ "$popup_child_teardown_armed" -eq 1 ]; then
+        if ! python3 scripts/apply_gpui_macos_popup_child_teardown_patch.py; then
+          result=1
         fi
       fi
       exit "$result"
     }
     trap restore_popup_patch EXIT
+    python3 scripts/apply_gpui_macos_popup_child_teardown_patch.py --reverse --check
+    python3 scripts/apply_gpui_macos_popup_child_teardown_patch.py --reverse
+    popup_child_teardown_armed=1
+    python3 scripts/apply_gpui_macos_anchored_popup_patch.py --reverse --check
+    python3 scripts/apply_gpui_macos_anchored_popup_patch.py --reverse
+    popup_patch_armed=1
     python3 scripts/apply_gpui_kit_08_stack.py --reverse
     python3 scripts/apply_gpui_kit_08_stack.py --apply
     python3 scripts/apply_gpui_kit_08_stack.py --check
     python3 scripts/apply_gpui_macos_anchored_popup_patch.py
     popup_patch_armed=0
-    trap - EXIT
     python3 scripts/apply_gpui_macos_anchored_popup_patch.py --verify
+    python3 scripts/apply_gpui_macos_popup_child_teardown_patch.py
+    popup_child_teardown_armed=0
+    trap - EXIT
+    python3 scripts/apply_gpui_macos_popup_child_teardown_patch.py --verify
     python3 scripts/verify_owned_gpui_sources.py
     python3 - <<'PY'
 import unittest
@@ -162,7 +177,26 @@ PY
     python3 scripts/apply_gpui_validation_grid_a11y_patch.py --verify
     python3 scripts/apply_g10_parent_node_id_v1_patch.py --verify
     # Native anchored popups are an approved, opt-in backend capability.
+    popup_child_teardown_armed=0
+    python3 scripts/apply_gpui_macos_popup_child_teardown_patch.py --reverse --check
+    python3 scripts/apply_gpui_macos_popup_child_teardown_patch.py --reverse
+    popup_child_teardown_armed=1
+    restore_popup_child_teardown() {
+      result=$?
+      trap - EXIT
+      if [ "$popup_child_teardown_armed" -eq 1 ]; then
+        if ! python3 scripts/apply_gpui_macos_popup_child_teardown_patch.py; then
+          result=1
+        fi
+      fi
+      exit "$result"
+    }
+    trap restore_popup_child_teardown EXIT
     python3 scripts/apply_gpui_macos_anchored_popup_patch.py --verify
+    python3 scripts/apply_gpui_macos_popup_child_teardown_patch.py
+    popup_child_teardown_armed=0
+    trap - EXIT
+    python3 scripts/apply_gpui_macos_popup_child_teardown_patch.py --verify
     if [[ "$(uname -s)" != Darwin ]]; then
       echo 'The macos release check requires a macOS host.' >&2
       exit 2

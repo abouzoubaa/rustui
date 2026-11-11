@@ -1,0 +1,82 @@
+--- a/vendor/gpui-pre-macos-0.3.10/src/window.rs
++++ b/vendor/gpui-pre-macos-0.3.10/src/window.rs
+@@ -3638,6 +3638,10 @@
+     dismiss_on_resign && child_count == 0
+ }
+ 
++fn should_close_child_popup(is_gpui_window: bool, dismiss_popup_on_resign: bool) -> bool {
++    is_gpui_window && dismiss_popup_on_resign
++}
++
+ extern "C" fn window_did_change_key_status(this: &AnyObject, selector: Sel, _: *mut AnyObject) {
+     let signal_at = PlatformFrameSignal::capture(scheduler::Instant::now);
+     let window_state = unsafe { get_window_state(this) };
+@@ -3777,6 +3781,13 @@
+         for index in (0..child_count).rev() {
+             let child: *mut AnyObject = msg_send![children, objectAtIndex: index];
+             if child.is_null() || child as *const AnyObject == this as *const AnyObject {
++                continue;
++            }
++            if !is_gpui_window(child) {
++                continue;
++            }
++            let child_is_popup = get_window_state(&*child).lock().dismiss_popup_on_resign;
++            if !should_close_child_popup(true, child_is_popup) {
+                 continue;
+             }
+             let _: () = msg_send![this, removeChildWindow: child];
+@@ -4530,6 +4541,13 @@
+     }
+ 
+     #[test]
++    fn parent_close_only_dismisses_managed_grabbing_popups() {
++        assert!(should_close_child_popup(true, true));
++        assert!(!should_close_child_popup(true, false));
++        assert!(!should_close_child_popup(false, true));
++    }
++
++    #[test]
+     fn display_id_for_screen_handles_missing_metadata() {
+         assert_eq!(display_id_for_screen(ptr::null_mut::<AnyObject>()), None);
+         autoreleasepool(|_| unsafe {
+--- a/crates/rustui-gpui-macos/src/window.rs
++++ b/crates/rustui-gpui-macos/src/window.rs
+@@ -3638,6 +3638,10 @@
+     dismiss_on_resign && child_count == 0
+ }
+ 
++fn should_close_child_popup(is_gpui_window: bool, dismiss_popup_on_resign: bool) -> bool {
++    is_gpui_window && dismiss_popup_on_resign
++}
++
+ extern "C" fn window_did_change_key_status(this: &AnyObject, selector: Sel, _: *mut AnyObject) {
+     let signal_at = PlatformFrameSignal::capture(scheduler::Instant::now);
+     let window_state = unsafe { get_window_state(this) };
+@@ -3777,6 +3781,13 @@
+         for index in (0..child_count).rev() {
+             let child: *mut AnyObject = msg_send![children, objectAtIndex: index];
+             if child.is_null() || child as *const AnyObject == this as *const AnyObject {
++                continue;
++            }
++            if !is_gpui_window(child) {
++                continue;
++            }
++            let child_is_popup = get_window_state(&*child).lock().dismiss_popup_on_resign;
++            if !should_close_child_popup(true, child_is_popup) {
+                 continue;
+             }
+             let _: () = msg_send![this, removeChildWindow: child];
+@@ -4530,6 +4541,13 @@
+     }
+ 
+     #[test]
++    fn parent_close_only_dismisses_managed_grabbing_popups() {
++        assert!(should_close_child_popup(true, true));
++        assert!(!should_close_child_popup(true, false));
++        assert!(!should_close_child_popup(false, true));
++    }
++
++    #[test]
+     fn display_id_for_screen_handles_missing_metadata() {
+         assert_eq!(display_id_for_screen(ptr::null_mut::<AnyObject>()), None);
+         autoreleasepool(|_| unsafe {

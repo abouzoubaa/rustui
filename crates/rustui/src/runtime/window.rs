@@ -1007,6 +1007,10 @@ mod tests {
         });
         cx.run_until_parked();
         assert_eq!(unmounts.get(), 1);
+        assert!(
+            popup.update(cx, |_, _, _| ()).is_err(),
+            "closed popup handles should become stale"
+        );
     }
 
     #[cfg(not(target_family = "wasm"))]
