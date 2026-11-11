@@ -7,7 +7,7 @@
     "gpui_pre_version": "0.3.10"
   },
   "candidate": "gpui-macos-anchored-popup-kit08-v1.patch",
-  "patch_sha256": "559b3c477e34c14e47e3e5709ef9d09253ae2529c060670e5de35334f0919c98",
+  "patch_sha256": "673c864bb6705bc4ac840dc214a54271d52f6abacee44225235aa23e52edd958",
   "files": {
     "vendor/gpui-pre-macos-0.3.10/src/platform.rs": {
       "pre_sha256": "c790996c4ce334fe43446b8af8fe2c6a2dcc8f908fb2fb0a0e187c81ab013146",
@@ -15,7 +15,7 @@
     },
     "vendor/gpui-pre-macos-0.3.10/src/window.rs": {
       "pre_sha256": "0a93e3c3414a92bfca2f02a83712c32e95e3e5f21b7c8e1b88db61ab594d6999",
-      "post_sha256": "0772a2c8a547c08a12ed2a69528b265738bc0f439a16b0353ec928a9a511ec5f"
+      "post_sha256": "3b067440f624b23f06fe9873395900cbec18d1ea32012cdc943c1784d317ab4d"
     },
     "crates/rustui-gpui-macos/src/platform.rs": {
       "pre_sha256": "c790996c4ce334fe43446b8af8fe2c6a2dcc8f908fb2fb0a0e187c81ab013146",
@@ -23,7 +23,7 @@
     },
     "crates/rustui-gpui-macos/src/window.rs": {
       "pre_sha256": "0a93e3c3414a92bfca2f02a83712c32e95e3e5f21b7c8e1b88db61ab594d6999",
-      "post_sha256": "0772a2c8a547c08a12ed2a69528b265738bc0f439a16b0353ec928a9a511ec5f"
+      "post_sha256": "3b067440f624b23f06fe9873395900cbec18d1ea32012cdc943c1784d317ab4d"
     }
   }
 }

@@ -174,7 +174,7 @@ These are prospective gains. Normal RustUI controls currently keep their in-wind
 | Ticket | Rechecked status on 0.3.10 / 0.8.1 | Work and proof | Estimate |
 |---|---|---|---|
 | NP-1 | **DONE** — approved Kit 0.8.1 backend patch is active and mirrors match. | The RustUI public API test proves open/close/reopen on GPUI's test platform; full and source checks pass. Native AppKit acceptance remains for NP-10. | ≤2h |
-| NP-2 | **CHANGED** — v5 view-bounds and flipped/unflipped conversion is folded into the patch. | Add geometry tests for view bounds, flipped state, logical coordinates and scale; confirm anchor placement feeds AppKit conversion. | ≤2h |
+| NP-2 | **DONE** — the rebased patch covers view-bounds offsets and flipped/unflipped conversion. | Added fractional logical-point geometry assertions and verified the scale-independent points → view → window → screen path. Native multi-display placement remains an owner native check in NP-3/NP-10. | ≤2h |
 | NP-3 | **STILL NEEDED** — initial display selection and flip/slide/resize logic exist in the candidate, but edge cases are unverified. | Test negative/stacked display origins, visible frames, oversized popups and display fallback; owner native check for actual multi-display placement. | ≤2h |
 | NP-4 | **STILL NEEDED** — popup frame is calculated only at open. | Track trigger layout/scroll, parent move/resize and display/scale changes without replacing popup identity; deterministic owner/update tests. | ≤2h |
 | NP-5 | **STILL NEEDED** — resign-key behavior covers a grabbing leaf panel only. | Define outside-click, click-through and nested dismissal order; deterministic controller tests, with cross-window click behavior marked owner native check. | ≤2h |

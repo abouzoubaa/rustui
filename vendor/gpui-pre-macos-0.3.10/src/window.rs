@@ -938,6 +938,21 @@ impl MacWindowState {
 
 unsafe impl Send for MacWindowState {}
 
+fn logical_anchor_rect_to_appkit_points(anchor: Bounds<Pixels>) -> NSRect {
+    // GPUI Pixels are logical points, which match AppKit's NSView coordinate units.
+    // Do not multiply by the display backing scale before AppKit converts view → window → screen.
+    NSRect::new(
+        NSPoint::new(
+            anchor.origin.x.as_f32() as f64,
+            anchor.origin.y.as_f32() as f64,
+        ),
+        NSSize::new(
+            anchor.size.width.as_f32() as f64,
+            anchor.size.height.as_f32() as f64,
+        ),
+    )
+}
+
 fn popup_anchor_rect_in_view(anchor: NSRect, bounds: NSRect, is_flipped: bool) -> NSRect {
     let y = if is_flipped {
         bounds.origin.y + anchor.origin.y
@@ -959,20 +974,13 @@ fn anchored_popup_frame(
     unsafe {
         let parent_state = get_window_state(&*parent_window);
         let parent_view = parent_state.lock().native_view.as_ptr() as *mut AnyObject;
-        let anchor = NSRect::new(
-            NSPoint::new(
-                options.anchor_rect.origin.x.as_f32() as f64,
-                options.anchor_rect.origin.y.as_f32() as f64,
-            ),
-            NSSize::new(
-                options.anchor_rect.size.width.as_f32() as f64,
-                options.anchor_rect.size.height.as_f32() as f64,
-            ),
-        );
+        let anchor = logical_anchor_rect_to_appkit_points(options.anchor_rect);
         let parent_bounds: NSRect = msg_send![parent_view, bounds];
         let parent_is_flipped: Bool = msg_send![parent_view, isFlipped];
-        let anchor = popup_anchor_rect_in_view(anchor, parent_bounds, parent_is_flipped == Bool::YES);
-        let anchor_in_window: NSRect = msg_send![parent_view, convertRect: anchor, toView: ptr::null_mut::<AnyObject>()];
+        let anchor =
+            popup_anchor_rect_in_view(anchor, parent_bounds, parent_is_flipped == Bool::YES);
+        let anchor_in_window: NSRect =
+            msg_send![parent_view, convertRect: anchor, toView: ptr::null_mut::<AnyObject>()];
         let anchor_window: *mut AnyObject = msg_send![parent_view, window];
         let anchor: NSRect = msg_send![anchor_window, convertRectToScreen: anchor_in_window];
         let anchor_center = NSPoint::new(
@@ -1227,6 +1235,24 @@ mod anchored_popup_placement_tests {
         assert_eq!(popup_overflow_x(90.0, 20.0, 100.0), 10.0);
         assert_eq!(popup_overflow_y(10.0, 20.0, 100.0), 0.0);
         assert_eq!(popup_overflow_y(90.0, 20.0, 100.0), 10.0);
+    }
+
+    #[test]
+    fn fractional_logical_anchor_pixels_convert_to_appkit_points_without_scaling() {
+        let logical = Bounds::new(point(px(5.5), px(30.25)), size(px(10.5), px(8.25)));
+        let appkit_points = logical_anchor_rect_to_appkit_points(logical);
+        assert_eq!(appkit_points.origin.x, 5.5);
+        assert_eq!(appkit_points.origin.y, 30.25);
+        assert_eq!(appkit_points.size.width, 10.5);
+        assert_eq!(appkit_points.size.height, 8.25);
+
+        let bounds = NSRect::new(NSPoint::new(10.25, 20.5), NSSize::new(300.5, 200.25));
+        let flipped = popup_anchor_rect_in_view(appkit_points, bounds, true);
+        assert_eq!(flipped.origin.x, 15.75);
+        assert_eq!(flipped.origin.y, 50.75);
+        let unflipped = popup_anchor_rect_in_view(appkit_points, bounds, false);
+        assert_eq!(unflipped.origin.x, 15.75);
+        assert_eq!(unflipped.origin.y, 182.25);
     }
 
     #[test]
