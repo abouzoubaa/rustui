@@ -1,5 +1,8 @@
 # Changelog
 
+## Unreleased
+- NP-10: added the owner checklist for native macOS popup acceptance.
+
 ## 0.3.0 — 2026-11-11
 
 - NP-9: added an opt-in native Popover adapter with owner environment propagation, reopen behavior, and in-window fallback on unsupported platforms.
