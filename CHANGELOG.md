@@ -2,6 +2,7 @@
 
 ## 0.3.0 — 2026-11-11
 
+- NP-9: added an opt-in native Popover adapter with owner environment propagation, reopen behavior, and in-window fallback on unsupported platforms.
 - NP-8: added typed native-popup errors and an explicit unsupported-platform decision for the existing in-window Popover fallback.
 - NP-7: parent teardown closes only owned GPUI popup children and preserves unrelated child windows.
 - NP-6: native popup Escape dismissal restores weak owner focus while allowing popup content to consume Escape.

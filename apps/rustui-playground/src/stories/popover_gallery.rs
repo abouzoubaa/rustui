@@ -210,76 +210,73 @@ impl View for PopoverOwner {
         let status = MessageArguments::new()
             .with("count", count as i64)
             .with("notes", self.notes());
+        let popover = Popover(
+            "owner-popover",
+            "Open editor popover",
+            self.open_binding(),
+            VStack::new()
+                .spacing(8.0)
+                .child(
+                    LocalizedText("lab-popover-owner-count")
+                        .with_arguments(MessageArguments::new().with("count", count as i64)),
+                )
+                .child(
+                    TextField("Popover notes", self.notes_binding())
+                        .localized_placeholder("lab-popover-notes")
+                        .id("popover-notes"),
+                )
+                .child(
+                    HStack::new().child(
+                        Button("Increment owner", self.action(Self::increment))
+                            .localized_label("lab-popover-increment-owner")
+                            .id("popover-increment-owner"),
+                    ),
+                )
+                .child(EnvironmentReader::<InheritedVersion, _, _>(|value| {
+                    LocalizedText("lab-popover-inherited").with_arguments(
+                        MessageArguments::new()
+                            .with("version", i64::from(value.map_or(0, |value| value.0))),
+                    )
+                }))
+                .child(
+                    HStack::new().child(
+                        Button(
+                            "Change inherited value",
+                            harness.action(PopoverHarness::change_inherited),
+                        )
+                        .localized_label("lab-popover-change-inherited")
+                        .id("popover-change-inherited"),
+                    ),
+                )
+                .child(Component("popover-child", move || {
+                    PopoverChild::new(probe.clone())
+                }))
+                .child(LocaleSelector::new())
+                .child(LocalizedText("lab-navigation-locales"))
+                .child(
+                    HStack::new().child(
+                        Button("Close popover", self.action(Self::close))
+                            .localized_label("lab-popover-close")
+                            .id("popover-close"),
+                    ),
+                )
+                .child(
+                    HStack::new().child(
+                        Button(
+                            "Remove popover owner",
+                            harness.action(PopoverHarness::remove_owner),
+                        )
+                        .localized_label("lab-popover-remove")
+                        .id("popover-remove-owner"),
+                    ),
+                ),
+        );
+        #[cfg(not(target_family = "wasm"))]
+        let popover = popover.native_popup((360.0, 320.0));
         VStack::new()
             .spacing(8.0)
             .child(LocalizedText(status_key).with_arguments(status))
-            .child(
-                HStack::new().child(
-                    Popover(
-                        "owner-popover",
-                        "Open editor popover",
-                        self.open_binding(),
-                        VStack::new()
-                            .spacing(8.0)
-                            .child(LocalizedText("lab-popover-owner-count").with_arguments(
-                                MessageArguments::new().with("count", count as i64),
-                            ))
-                            .child(
-                                TextField("Popover notes", self.notes_binding())
-                                    .localized_placeholder("lab-popover-notes")
-                                    .id("popover-notes"),
-                            )
-                            .child(
-                                HStack::new().child(
-                                    Button("Increment owner", self.action(Self::increment))
-                                        .localized_label("lab-popover-increment-owner")
-                                        .id("popover-increment-owner"),
-                                ),
-                            )
-                            .child(EnvironmentReader::<InheritedVersion, _, _>(|value| {
-                                LocalizedText("lab-popover-inherited").with_arguments(
-                                    MessageArguments::new().with(
-                                        "version",
-                                        i64::from(value.map_or(0, |value| value.0)),
-                                    ),
-                                )
-                            }))
-                            .child(
-                                HStack::new().child(
-                                    Button(
-                                        "Change inherited value",
-                                        harness.action(PopoverHarness::change_inherited),
-                                    )
-                                    .localized_label("lab-popover-change-inherited")
-                                    .id("popover-change-inherited"),
-                                ),
-                            )
-                            .child(Component("popover-child", move || {
-                                PopoverChild::new(probe.clone())
-                            }))
-                            .child(LocaleSelector::new())
-                            .child(LocalizedText("lab-navigation-locales"))
-                            .child(
-                                HStack::new().child(
-                                    Button("Close popover", self.action(Self::close))
-                                        .localized_label("lab-popover-close")
-                                        .id("popover-close"),
-                                ),
-                            )
-                            .child(
-                                HStack::new().child(
-                                    Button(
-                                        "Remove popover owner",
-                                        harness.action(PopoverHarness::remove_owner),
-                                    )
-                                    .localized_label("lab-popover-remove")
-                                    .id("popover-remove-owner"),
-                                ),
-                            ),
-                    )
-                    .localized_label("lab-popover-open"),
-                ),
-            )
+            .child(HStack::new().child(popover.localized_label("lab-popover-open")))
     }
 }
 
