@@ -1,0 +1,29 @@
+{
+  "schema_version": 1,
+  "upstream": {
+    "repository": "https://github.com/longbridge/gpui-kit",
+    "tag": "v0.8.1",
+    "commit": "99576db58ec8103417c41a092e891b4022d24e7e",
+    "gpui_pre_version": "0.3.10"
+  },
+  "candidate": "gpui-macos-anchored-popup-kit08-v1.patch",
+  "patch_sha256": "5cd1e93795f7cf4ed03d1c6bec89109b6ca9f5a07a3aaf41a46dab1bd9ed3af2",
+  "files": {
+    "vendor/gpui-pre-macos-0.3.10/src/platform.rs": {
+      "pre_sha256": "c790996c4ce334fe43446b8af8fe2c6a2dcc8f908fb2fb0a0e187c81ab013146",
+      "post_sha256": "fd3ff2ec1dd4281047bcb5a38bc3cb5b135ee59e540b6e7ac3fe49088d625d0f"
+    },
+    "vendor/gpui-pre-macos-0.3.10/src/window.rs": {
+      "pre_sha256": "0a93e3c3414a92bfca2f02a83712c32e95e3e5f21b7c8e1b88db61ab594d6999",
+      "post_sha256": "61d75cf1c145faf0a8923d0242461029dd4523450cb1166bc2918b02ae3f966a"
+    },
+    "crates/rustui-gpui-macos/src/platform.rs": {
+      "pre_sha256": "c790996c4ce334fe43446b8af8fe2c6a2dcc8f908fb2fb0a0e187c81ab013146",
+      "post_sha256": "fd3ff2ec1dd4281047bcb5a38bc3cb5b135ee59e540b6e7ac3fe49088d625d0f"
+    },
+    "crates/rustui-gpui-macos/src/window.rs": {
+      "pre_sha256": "0a93e3c3414a92bfca2f02a83712c32e95e3e5f21b7c8e1b88db61ab594d6999",
+      "post_sha256": "61d75cf1c145faf0a8923d0242461029dd4523450cb1166bc2918b02ae3f966a"
+    }
+  }
+}

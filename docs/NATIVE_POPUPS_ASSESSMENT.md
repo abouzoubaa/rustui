@@ -1,12 +1,20 @@
 # Native macOS popups assessment (N11)
 
+## NP-0 refresh — GPUI Kit 0.8.1 / gpui-pre 0.3.10
+
+Rechecked on `origin/main` commit `deb8c095a421ce34182ab1780f46f9d0f591b192` (2026-11-11). The selected macOS backend still rejects anchored popups: `vendor/gpui-pre-macos-0.3.10/src/platform.rs:751` checks `WindowKind::AnchoredPopup(_)`, and line 752 returns `PopupNotSupportedError`. `src/window.rs:998` still groups `AnchoredPopup` with the unsupported `PopUp` panel branch. GPUI Kit 0.8.1 continues to provide the existing in-window popover/menu behavior; it does not provide the native AppKit implementation.
+
+NP-0 rebased v1–v4 plus the v5 coordinate correction into `patches/proposed/gpui-macos-anchored-popup-kit08-v1.patch`, with pre/post hashes for the vendor source and owned `crates/rustui-gpui-macos` mirror, plus the reversible apply helper. `--check` passed against temporary copies; current vendor and owned source remain unmodified. The four approved v1–v4 artifacts and the now-incorporated v5 proposal are in `patches/retired/`, each with the requested supersession reason. The new patch remains proposed and is not active.
+
+The prior N11 observations below are historical where they name gpui-pre 0.3.9 or the old v4-only helper. This refresh replaces the former N11a–N11j ticket list with NP-1–NP-10.
+
 ## Decision and scope
 
-**FINISH, through separate tickets of at most two hours each.** RustUI already has a low-level API and the saved AppKit implementation is recoverable, but native popups are **not production-ready in the selected source tree**. The primary integration gap is that the old helper applies v4 only to `vendor/`, while Cargo uses the owned macOS crate. Placement, dismissal and focus still need native acceptance. Keep `wip/native-macos-popups` and the existing patch versions; do not merge that old branch wholesale.
+**FINISH, through separate tickets of at most two hours each.** RustUI has a low-level API and NP-0 prepared a replayable candidate patch, but native popups are **not production-ready or active in the selected source tree**. Placement tracking, dismissal, focus behavior and owner native acceptance remain. The older N11 assessment below is retained as historical context; the NP-0 refresh and NP-1–NP-10 plan above are authoritative for current source versions.
 
-Assessment date: 2026-11-09. Production-source baseline: `788bf3a7b7a75d0d6f8d71a910b5419a2bb441b7` (S11). The separate N11 housekeeping PR changes only the standing branch-deletion rule. No code, patch, apply script, manifest, release gate or CI configuration was changed for this assessment. Commands below inspect current sources or run existing focused/source checks. Native AppKit GUI behavior is **NOT VERIFIED**; no GUI acceptance was attempted.
+Assessment refresh date: 2026-11-11. Production-source baseline: `deb8c095a421ce34182ab1780f46f9d0f591b192` (`origin/main`). Native AppKit GUI behavior is **NOT VERIFIED**; no GUI acceptance was attempted.
 
-## 1a. Approved assets versus selected runtime
+## 1a. Approved assets versus selected runtime (historical gpui-pre 0.3.9 baseline)
 
 Both current macOS platform sources still reject native popups:
 
@@ -161,22 +169,24 @@ A TestWindow passing lifecycle tests cannot certify NSPanel integration. Product
 
 These are prospective gains. Normal RustUI controls currently keep their in-window implementations; this assessment enables none of them.
 
-## Recommendation: FINISH in bounded tickets
+## NP-1–NP-10 plan — each ticket capped at two hours
 
-Budget **ten tickets × at most two hours = approximately 20 hours**, including owner acceptance. Estimates are planning limits, not claims that all native edge cases are solved. Stop/split if a ticket needs more work. Do not resume all ten as one ticket.
+| Ticket | Rechecked status on 0.3.10 / 0.8.1 | Work and proof | Estimate |
+|---|---|---|---|
+| NP-1 | **CHANGED** — consolidated backend patch is prepared but inactive. | Activate only by the owner-approved patch script; compile the selected macOS backend and prove open/close/reopen plus mirror equality. | ≤2h |
+| NP-2 | **CHANGED** — v5 view-bounds and flipped/unflipped conversion is folded into the patch. | Add geometry tests for view bounds, flipped state, logical coordinates and scale; confirm anchor placement feeds AppKit conversion. | ≤2h |
+| NP-3 | **STILL NEEDED** — initial display selection and flip/slide/resize logic exist in the candidate, but edge cases are unverified. | Test negative/stacked display origins, visible frames, oversized popups and display fallback; owner native check for actual multi-display placement. | ≤2h |
+| NP-4 | **STILL NEEDED** — popup frame is calculated only at open. | Track trigger layout/scroll, parent move/resize and display/scale changes without replacing popup identity; deterministic owner/update tests. | ≤2h |
+| NP-5 | **STILL NEEDED** — resign-key behavior covers a grabbing leaf panel only. | Define outside-click, click-through and nested dismissal order; deterministic controller tests, with cross-window click behavior marked owner native check. | ≤2h |
+| NP-6 | **STILL NEEDED** — no native Escape policy or verified focus return to the owner element. | Close the topmost popup, preserve text-editing semantics, restore weak owner focus; key-dispatch tests plus owner native focus check. | ≤2h |
+| NP-7 | **CHANGED** — bounded native child-window close logic exists in the candidate, not in active source. | Prove nested popup teardown, owner release, stale handles and unrelated child-window safety; owner native check for AppKit close callbacks. | ≤2h |
+| NP-8 | **STILL NEEDED** — RustUI exposes an explicit low-level popup API; no native-preferred policy with in-window fallback is integrated. | Keep the API opt-in, classify unsupported/native errors, and preserve the existing GPUI Kit in-window fallback. The default in-window behavior is already covered by Kit 0.8.1. | ≤2h |
+| NP-9 | **STILL NEEDED** — no component uses the native API. | Add the first opt-in Popover adapter with real trigger bounds, environment/state ownership, reopen and in-window fallback tests. Menus and pickers remain separate follow-ups. | ≤2h |
+| NP-10 | **STILL NEEDED — owner native check.** | Run the final AppKit matrix for placement, activation, click dismissal, Escape, focus, teardown and accessibility; no automation substitutes for the owner session. | ≤2h |
 
-1. **N11a — Align native popup patch with owned Cargo sources (2h).** New proposed patch, paired vendor/owned manifest pre/post hashes, `--check`/`--reverse` apply script, script tests and correct release lists. Prove reverse/reapply in a disposable worktree. Remove reliance on transient vendor-only build mutation as part of the separately authorized integration change.
-2. **N11b — Rebase coordinate fix on exact popup baseline (2h).** Contextual v5 successor, flipped/unflipped bounds and logical/scale coverage, native backend compile proof.
-3. **N11c — Screen and edge placement matrix (2h).** Negative/stacked screens, visible frames, anchors/gravity, oversized panels and fallback display selection.
-4. **N11d — Live anchor tracking (2h).** Trigger layout/scroll, parent resize/move and display/scale changes without losing popup identity.
-5. **N11e — Outside-click and nested dismissal (2h).** Same-app/other-app activation, nested stack order, click-through policy and observer cleanup.
-6. **N11f — Escape and owner focus recovery (2h).** Topmost popup close, editing semantics and weak owner focus return.
-7. **N11g — Parent/owner teardown and release (2h).** Nested children, stale probe handles, weak ownership and unrelated child-window safety.
-8. **N11h — Opt-in policy and in-window fallback (2h).** Preserve the existing low-level API; seek owner approval for any additive public signature. Include passive/grabbing distinction and error classification.
-9. **N11i — First opt-in Popover adapter (2h).** Real trigger bounds, inherited environment, state ownership, reopen and fallback tests. Menus, pickers and tooltips require later family-sized tickets; they are not included in this first adapter estimate.
-10. **N11j — Owner AppKit acceptance (2h).** Real screen/activation/focus/teardown/accessibility matrix. Production-ready only after this passes; report inconclusive native checks once.
+Unit and GPUI test-window coverage can prove geometry, error/fallback policy, explicit open/close, owner unmount, weak release, key-action handling, environment retention and patch replay. Real screen layouts, outside-click across windows, AppKit activation/focus ordering and native teardown remain **owner native check** items. Keep all existing in-window popover/menu/picker tests unchanged and passing. Native popups remain opt-in.
 
-Every GPUI vendor or owned-source change must originate in a versioned `patches/proposed/` patch with pre/post manifest and an apply script supporting `--check`/`--reverse`. Those source files change only by that script. Promotion requires proof and owner approval under AGENTS.md; N11 is assessment authorization, not promotion authorization. No `.cargo-checksum.json` edits or dependency-version changes. Retain upstream compatibility and mirror equality throughout.
+Every GPUI vendor or owned-source change must come from a patch and its apply script; preserve the mirror hashes and reverse exactly. The NP-0 candidate is proposed; activation/promotion occurs only in a later ticket when needed.
 
 ## Housekeeping and validation
 
