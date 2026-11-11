@@ -1,7 +1,4 @@
-use std::{
-    ops::{Deref, Range},
-    rc::Rc,
-};
+use std::{ops::Range, rc::Rc};
 
 use gpui::{
     Along, AnyElement, App, AppContext, Axis, Bounds, Context, Element, ElementId, Empty, Entity,
@@ -36,6 +33,7 @@ pub struct ResizablePanelGroup {
     children: Vec<ResizablePanel>,
     on_resize: Rc<dyn Fn(&Entity<ResizableState>, &mut Window, &mut App)>,
     handle_appearance: Option<ResizeHandleRenderer>,
+    finish_without_final_resize: bool,
 }
 
 impl ResizablePanelGroup {
@@ -49,6 +47,7 @@ impl ResizablePanelGroup {
             size: None,
             on_resize: Rc::new(|_, _, _| {}),
             handle_appearance: None,
+            finish_without_final_resize: false,
         }
     }
 
@@ -66,6 +65,13 @@ impl ResizablePanelGroup {
     /// If not provided, it will handle its own state internally.
     pub fn with_state(mut self, state: &Entity<ResizableState>) -> Self {
         self.state = Some(state.clone());
+        self
+    }
+
+    /// Finish a drag when the left button is no longer pressed without applying
+    /// that event's pointer position as a final size change.
+    pub fn finish_without_final_resize(mut self, enabled: bool) -> Self {
+        self.finish_without_final_resize = enabled;
         self
     }
 
@@ -208,6 +214,7 @@ impl RenderOnce for ResizablePanelGroup {
                 state: state.clone(),
                 axis: self.axis,
                 on_resize: self.on_resize.clone(),
+                finish_without_final_resize: self.finish_without_final_resize,
             })
     }
 }
@@ -225,6 +232,9 @@ impl RenderOnce for ResizablePanelGroup {
 /// A common override is `.flex_none()`: the panel sets `flex_grow: 1`
 /// internally, so a sized panel that should hold its width when a
 /// sibling collapses needs to opt out of growth via `.flex_none()`.
+///
+/// To keep a panel's size when the group's container resizes, use
+/// [`ResizablePanel::fixed`].
 ///
 /// ```ignore
 /// h_resizable("layout")
@@ -252,6 +262,7 @@ pub struct ResizablePanel {
     visible: bool,
     style: StyleRefinement,
     handle_appearance: Option<ResizeHandleRenderer>,
+    fixed: bool,
 }
 
 impl ResizablePanel {
@@ -267,6 +278,7 @@ impl ResizablePanel {
             visible: true,
             style: StyleRefinement::default(),
             handle_appearance: None,
+            fixed: false,
         }
     }
 
@@ -287,6 +299,18 @@ impl ResizablePanel {
     /// Default is [`PANEL_MIN_SIZE`] to [`Pixels::MAX`].
     pub fn size_range(mut self, range: impl Into<Range<Pixels>>) -> Self {
         self.size_range = range.into();
+        self
+    }
+
+    /// Keep this panel's size when the group's container resizes.
+    ///
+    /// When the container grows or shrinks, the other panels share the
+    /// difference in proportion to their sizes, so a sidebar or an inspector
+    /// keeps the width the user gave it. Dragging its own handle still resizes
+    /// it. It needs a [`Self::size`], and at least one panel in the group
+    /// should not be fixed.
+    pub fn fixed(mut self) -> Self {
+        self.fixed = true;
         self
     }
 }
@@ -318,6 +342,9 @@ impl RenderOnce for ResizablePanel {
             .get(self.panel_ix)
             .expect("BUG: The `index` of ResizablePanel should be one of in `state`.");
         let size_range = self.size_range.clone();
+        // A fixed panel needs a size to keep; without one it lays out as usual.
+        let fixed = self.fixed && self.initial_size.is_some();
+        let axis = self.axis;
 
         div()
             .id(("resizable-panel", self.panel_ix))
@@ -356,24 +383,29 @@ impl RenderOnce for ResizablePanel {
                 Some(size) => this.flex_basis(size.min(size_range.end).max(size_range.start)),
                 None => this,
             })
+            // A fixed panel neither grows nor shrinks with the container, so
+            // the first frame of a resize already has its size. Not
+            // `flex_none`, which also resets the basis set above.
+            .when(fixed, |this| this.flex_grow_0().flex_shrink_0())
             .on_prepaint({
                 let state = state.clone();
                 move |bounds, _, cx| {
-                    if !state
-                        .read(cx)
-                        .panel_size_changes(self.panel_ix, bounds, &self.size_range)
-                    {
+                    if !state.read(cx).panel_size_changes(
+                        self.panel_ix,
+                        bounds,
+                        &self.size_range,
+                        fixed,
+                    ) {
                         return;
                     }
                     state.update(cx, |state, cx| {
-                        state.update_panel_size(self.panel_ix, bounds, self.size_range, cx)
+                        state.update_panel_size(self.panel_ix, bounds, self.size_range, fixed, cx)
                     })
                 }
             })
             .children(self.children)
             .when(self.panel_ix > 0, |this| {
                 let ix = self.panel_ix - 1;
-                let axis = self.axis;
                 this.child(
                     resize_handle(("resizable-handle", ix), self.axis)
                         .when_some(self.handle_appearance.clone(), |handle, appearance| {
@@ -392,7 +424,7 @@ impl RenderOnce for ResizablePanel {
                                 state.resize_panel_at_handle(ix, size, window, cx);
                                 cx.notify();
                             });
-                            cx.new(|_| drag_panel.deref().clone())
+                            cx.new(|_| drag_panel.clone())
                         }),
                 )
             })
@@ -403,6 +435,7 @@ struct ResizePanelGroupElement {
     state: Entity<ResizableState>,
     on_resize: Rc<dyn Fn(&Entity<ResizableState>, &mut Window, &mut App)>,
     axis: Axis,
+    finish_without_final_resize: bool,
 }
 
 impl IntoElement for ResizePanelGroupElement {
@@ -455,19 +488,35 @@ impl Element for ResizePanelGroupElement {
         _: &mut Self::RequestLayoutState,
         _: &mut Self::PrepaintState,
         window: &mut Window,
-        cx: &mut App,
+        _: &mut App,
     ) {
         window.on_mouse_event({
             let state = self.state.clone();
             let axis = self.axis;
             let on_resize = self.on_resize.clone();
+            let finish_without_final_resize = self.finish_without_final_resize;
             move |e: &MouseMoveEvent, phase, window, cx| {
                 if !phase.bubble() {
                     return;
                 }
-                let Some(ix) = state.read(cx).resizing_panel_ix else { return };
+                let Some(ix) = state.read(cx).resizing_panel_ix else {
+                    return;
+                };
                 if e.pressed_button != Some(gpui::MouseButton::Left) {
-                    state.update(cx, |state, cx| state.done_resizing(cx));
+                    state.update(cx, |state, cx| {
+                        if !finish_without_final_resize {
+                            let bounds = state.panels[ix].bounds;
+                            match axis {
+                                Axis::Horizontal => state.resize_panel_at_handle(
+                                    ix, e.position.x - bounds.left(), window, cx,
+                                ),
+                                Axis::Vertical => state.resize_panel_at_handle(
+                                    ix, e.position.y - bounds.top(), window, cx,
+                                ),
+                            }
+                        }
+                        state.done_resizing(cx);
+                    });
                     on_resize(&state, window, cx);
                     return;
                 }

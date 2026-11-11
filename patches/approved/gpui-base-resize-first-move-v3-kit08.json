@@ -1,0 +1,17 @@
+{
+  "schema_version": 1,
+  "upstream": {
+    "repository": "https://github.com/longbridge/gpui-kit",
+    "tag": "v0.8.1",
+    "commit": "99576db58ec8103417c41a092e891b4022d24e7e",
+    "gpui_pre_version": "0.3.10"
+  },
+  "candidate": "gpui-base-resize-first-move-v3-kit08.patch",
+  "patch_sha256": "e00c682eb716f111ff80783900e0ae578f035a4c73688b0716bc548281bb3e5c",
+  "files": {
+    "vendor/gpui-base-0.8.1/src/resizable/panel.rs": {
+      "pre_sha256": "ec26e97d4e94ee74059b7a7b120b986d2f39b4eedf1c95909782669779afcb0d",
+      "post_sha256": "d939c2b483d1569c4cbc541eabd36e1487470b3be0c1a2093398e795cdb7e929"
+    }
+  }
+}

@@ -1,0 +1,11 @@
+--- a/vendor/gpui-component-0.8.1/src/input/syntax_context.rs
++++ b/vendor/gpui-component-0.8.1/src/input/syntax_context.rs
+@@ -84,7 +84,7 @@
+             .as_ref()
+             .is_none_or(|(cached_text, _)| cached_text != text)
+         {
+-            let start = std::time::Instant::now();
++            let start = web_time::Instant::now();
+             let mut progress = |_: &tree_sitter::ParseState| -> ControlFlow<()> {
+                 if start.elapsed() > Self::PARSE_BUDGET {
+                     ControlFlow::Break(())

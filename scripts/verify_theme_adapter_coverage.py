@@ -10,7 +10,7 @@ from pathlib import Path
 
 
 ROOT = Path(__file__).resolve().parents[1]
-THEME_COLORS = ROOT / "vendor/gpui-component-0.7.3/src/theme/theme_color.rs"
+THEME_COLORS = ROOT / "vendor/gpui-component-0.8.1/src/theme/theme_color.rs"
 ADAPTER = ROOT / "crates/rustui/src/adapters/themes.rs"
 REGISTRY = ROOT / "crates/rustui/src/theme/registry.rs"
 MACOS = ROOT / "themes/macos27.json"
@@ -77,10 +77,10 @@ def check_renderer_calls(source_overrides: dict[str, str] | None = None) -> list
             styled_path = "@gpui/styled.rs"
             popup = source_overrides.get(popup_path)
             if popup is None:
-                popup = (ROOT / "vendor/gpui-component-0.7.3/src/menu/popup_menu.rs").read_text(encoding="utf-8")
+                popup = (ROOT / "vendor/gpui-component-0.8.1/src/menu/popup_menu.rs").read_text(encoding="utf-8")
             styled_source = source_overrides.get(styled_path)
             if styled_source is None:
-                styled_source = (ROOT / "vendor/gpui-component-0.7.3/src/styled.rs").read_text(encoding="utf-8")
+                styled_source = (ROOT / "vendor/gpui-component-0.8.1/src/styled.rs").read_text(encoding="utf-8")
             menu_function = menu_registry.partition("fn menu_background(")[2].partition("\n}")[0]
             menu_markers = (
                 r'resolve_component_style_with\s*\(\s*document\s*,\s*"menu"\s*,\s*"body"',

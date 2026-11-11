@@ -1,0 +1,30 @@
+--- a/vendor/gpui-base-0.7.3/src/resizable/panel.rs
++++ b/vendor/gpui-base-0.7.3/src/resizable/panel.rs
+@@ -375,0 +376 @@
++                let axis = self.axis;
+@@ -381 +382 @@
+-                        .on_drag(DragPanel, move |drag_panel, _, _, cx| {
++                        .on_drag(DragPanel, move |drag_panel, _, window, cx| {
+@@ -383,2 +384,2 @@
+-                            // Set current resizing panel ix
+-                            state.update(cx, |state, _| {
++                            let position = window.mouse_position();
++                            state.update(cx, |state, cx| {
+@@ -385,0 +387,7 @@
++                                let bounds = state.panels[ix].bounds;
++                                let size = match axis {
++                                    Axis::Horizontal => position.x - bounds.left(),
++                                    Axis::Vertical => position.y - bounds.top(),
++                                };
++                                state.resize_panel_at_handle(ix, size, window, cx);
++                                cx.notify();
+@@ -455 +462,0 @@
+-            let current_ix = state.read(cx).resizing_panel_ix;
+@@ -460 +467 @@
+-                let Some(ix) = current_ix else { return };
++                let Some(ix) = state.read(cx).resizing_panel_ix else { return };
+@@ -487 +493,0 @@
+-            let current_ix = state.read(cx).resizing_panel_ix;
+@@ -490 +496 @@
+-                if current_ix.is_none() {
++                if state.read(cx).resizing_panel_ix.is_none() {

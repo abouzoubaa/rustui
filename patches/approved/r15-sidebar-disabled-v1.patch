@@ -1,5 +1,5 @@
---- a/vendor/gpui-component-0.7.3/src/sidebar/menu.rs
-+++ b/vendor/gpui-component-0.7.3/src/sidebar/menu.rs
+--- a/vendor/gpui-component-0.8.1/src/sidebar/menu.rs
++++ b/vendor/gpui-component-0.8.1/src/sidebar/menu.rs
 @@ -292,6 +292,7 @@
                      .size_full()
                      .id("item")

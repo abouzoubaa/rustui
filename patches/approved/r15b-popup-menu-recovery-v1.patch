@@ -1,5 +1,5 @@
---- a/vendor/gpui-component-0.7.3/src/menu/popup_menu.rs
-+++ b/vendor/gpui-component-0.7.3/src/menu/popup_menu.rs
+--- a/vendor/gpui-component-0.8.1/src/menu/popup_menu.rs
++++ b/vendor/gpui-component-0.8.1/src/menu/popup_menu.rs
 @@ -765,6 +765,25 @@
          cx.notify();
      }

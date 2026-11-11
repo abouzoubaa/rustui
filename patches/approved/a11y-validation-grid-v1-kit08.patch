@@ -1,0 +1,336 @@
+diff --git a/vendor/gpui-base-0.8.1/src/input/base/state.rs b/vendor/gpui-base-0.8.1/src/input/base/state.rs
+index 62831b2..075dae4 100644
+--- a/vendor/gpui-base-0.8.1/src/input/base/state.rs
++++ b/vendor/gpui-base-0.8.1/src/input/base/state.rs
+@@ -588,6 +588,7 @@ pub struct InputBaseState<M: InputModeKind> {
+ pub struct InputAccessibility {
+     role: Option<gpui::Role>,
+     label: Option<SharedString>,
++    description: Option<SharedString>,
+     placeholder: Option<SharedString>,
+     accessibility_id: Option<SharedString>,
+     value_exposed: bool,
+@@ -598,6 +599,7 @@ impl InputAccessibility {
+         Self {
+             role,
+             label: None,
++            description: None,
+             placeholder: None,
+             accessibility_id: None,
+             value_exposed: true,
+@@ -609,6 +611,11 @@ impl InputAccessibility {
+         self
+     }
+ 
++    pub fn with_description(mut self, description: Option<SharedString>) -> Self {
++        self.description = description;
++        self
++    }
++
+     pub fn with_placeholder(mut self, placeholder: Option<SharedString>) -> Self {
+         self.placeholder = placeholder;
+         self
+@@ -633,6 +640,10 @@ impl InputAccessibility {
+         self.label.as_ref()
+     }
+ 
++    pub fn description(&self) -> Option<&SharedString> {
++        self.description.as_ref()
++    }
++
+     pub fn placeholder(&self) -> Option<&SharedString> {
+         self.placeholder.as_ref()
+     }
+@@ -4987,11 +4987,15 @@ impl<M: InputModeKind> Render for InputBaseState<M> {
+         let element = div()
+             .id(EDITOR_ELEMENT_ID)
++            .aria_disabled(self.disabled)
+             .key_context(CONTEXT)
+             .when_some(self.accessibility.as_ref(), |this, accessibility| {
+                 this.when_some(accessibility.role, |this, role| this.role(role))
+                     .when_some(accessibility.label.clone(), |this, label| {
+                         this.aria_label(label)
+                     })
++                    .when_some(accessibility.description.clone(), |this, description| {
++                        this.aria_description(description)
++                    })
+                     .when_some(accessibility.placeholder.clone(), |this, placeholder| {
+                         this.aria_placeholder(placeholder)
+                     })
+diff --git a/vendor/gpui-component-0.8.1/src/input/input.rs b/vendor/gpui-component-0.8.1/src/input/input.rs
+index 5d563a8..67fd844 100644
+--- a/vendor/gpui-component-0.8.1/src/input/input.rs
++++ b/vendor/gpui-component-0.8.1/src/input/input.rs
+@@ -130,6 +130,7 @@ pub struct Input {
+     role: RoleOverride,
+     accessibility_id: Option<SharedString>,
+     aria_label: Option<SharedString>,
++    aria_description: Option<SharedString>,
+ 
+     /// An optional context menu builder to allow a custom context menu on the input.
+     ///
+@@ -242,6 +243,7 @@ impl Input {
+             role: RoleOverride::default(),
+             accessibility_id: None,
+             aria_label: None,
++            aria_description: None,
+             context_menu_builder: None,
+             paste_handler: None,
+             token_renderer: None,
+@@ -271,6 +273,12 @@ impl Input {
+         self
+     }
+ 
++    /// Set supplementary information announced on the input editor node.
++    pub fn aria_description(mut self, description: impl Into<SharedString>) -> Self {
++        self.aria_description = Some(description.into());
++        self
++    }
++
+     pub fn prefix(mut self, prefix: impl IntoElement) -> Self {
+         self.prefix = Some(prefix.into_any_element());
+         self
+@@ -722,6 +730,7 @@ impl RenderOnce for Input {
+         state.set_accessibility(
+             gpui_base::input::InputAccessibility::new(accessibility_role)
+                 .with_label(aria_label)
++                .with_description(self.aria_description)
+                 .with_placeholder(placeholder)
+                 .with_accessibility_id(self.accessibility_id)
+                 .with_value_exposed(exposes_accessibility_value(content_type)),
+@@ -844,6 +853,32 @@ mod tests {
+     use crate::ElementExt as _;
+     use crate::input::AnyInputState;
+ 
++    struct ValidationDescriptionProbe {
++        input: Entity<InputState>,
++    }
++
++    impl gpui::Render for ValidationDescriptionProbe {
++        fn render(&mut self, _: &mut Window, _: &mut gpui::Context<Self>) -> impl IntoElement {
++            div().size_full().child(
++                Input::new(&self.input).aria_description("Validation error: required"),
++            )
++        }
++    }
++
++    #[gpui::test]
++    fn validation_description_and_grid_aria_metadata_reach_the_tree(cx: &mut gpui::TestAppContext) {
++        use gpui::AppContext as _;
++        cx.update(crate::init);
++        let (_, cx) = cx.add_window_view(|window, cx| ValidationDescriptionProbe {
++            input: cx.new(|cx| InputState::new(window, cx)),
++        });
++        cx.update(|window, cx| window.draw(cx).clear(cx));
++        let tree = cx.update(|window, _| window.debug_a11y_tree_json()).unwrap();
++        let tree: serde_json::Value = serde_json::from_str(&tree).unwrap();
++        let nodes = tree["nodes"].as_object().unwrap();
++        assert!(nodes.values().any(|node| node["aria"]["description"] == "Validation error: required"));
++    }
++
+     #[test]
+     fn content_types_map_to_accessibility_roles() {
+         let cases = [
+diff --git a/vendor/gpui-pre-0.3.10/src/elements/div.rs b/vendor/gpui-pre-0.3.10/src/elements/div.rs
+index 11f0b72..46a3bbf 100644
+--- a/vendor/gpui-pre-0.3.10/src/elements/div.rs
++++ b/vendor/gpui-pre-0.3.10/src/elements/div.rs
+@@ -1390,6 +1390,18 @@ pub trait StatefulInteractiveElement: InteractiveElement {
+         self
+     }
+ 
++    /// Expose whether this element is read-only to accessibility clients.
++    fn aria_readonly(mut self, readonly: bool) -> Self {
++        self.interactivity().aria.readonly = Some(readonly);
++        self
++    }
++
++    /// Expose a column header's sort direction.
++    fn aria_sort(mut self, direction: accesskit::SortDirection) -> Self {
++        self.interactivity().aria.sort = Some(direction);
++        self
++    }
++
+     /// Set the keyboard shortcut(s) that activate this element, announced by
+     /// assistive technology (maps to AccessKit's `keyboard_shortcut`).
+     ///
+@@ -2157,6 +2169,8 @@ pub(crate) struct AriaProperties {
+     pub(crate) author_id: Option<SharedString>,
+     pub(crate) label: Option<SharedString>,
+     pub(crate) description: Option<SharedString>,
++    pub(crate) readonly: Option<bool>,
++    pub(crate) sort: Option<accesskit::SortDirection>,
+     pub(crate) keyshortcuts: Option<SharedString>,
+     pub(crate) selected: Option<bool>,
+     pub(crate) expanded: Option<bool>,
+@@ -3596,6 +3610,10 @@ impl Interactivity {
+         if let Some(description) = &self.aria.description {
+             node.set_description(description.to_string());
+         }
++        if let Some(readonly) = self.aria.readonly {
++            if readonly { node.set_read_only(); } else { node.clear_read_only(); }
++        }
++        if let Some(sort) = self.aria.sort { node.set_sort_direction(sort); }
+         if let Some(keyshortcuts) = &self.aria.keyshortcuts {
+             node.set_keyboard_shortcut(keyshortcuts.to_string());
+         }
+@@ -5708,6 +5726,38 @@ mod tests {
+         assert_eq!(focused, Some(item_b.id));
+     }
+ 
++    struct GridAriaMetadataView;
++
++    impl Render for GridAriaMetadataView {
++        fn render(&mut self, _: &mut Window, _: &mut Context<Self>) -> impl IntoElement {
++            div().size_full()
++                .child(
++                    div().id("grid-header")
++                        .role(accesskit::Role::ColumnHeader)
++                        .aria_sort(accesskit::SortDirection::Ascending)
++                        .child("Name"),
++                )
++                .child(
++                    div()
++                        .id("grid-cell")
++                        .role(accesskit::Role::Cell)
++                        .aria_readonly(true)
++                        .child("Ada"),
++                )
++        }
++    }
++
++    #[gpui::test]
++    fn data_grid_sort_and_readonly_metadata_reach_accessibility_nodes(cx: &mut TestAppContext) {
++        let window = cx.add_window(|_, _| GridAriaMetadataView).into();
++        cx.update_window(window, |_, window, cx| window.draw(cx).clear(cx)).unwrap();
++        let tree = cx.update_window(window, |_, window, _| window.debug_a11y_tree_json()).unwrap().unwrap();
++        let tree: serde_json::Value = serde_json::from_str(&tree).unwrap();
++        let nodes = tree["nodes"].as_object().unwrap();
++        assert!(nodes.values().any(|node| node["aria"]["read_only"] == true));
++        assert!(nodes.values().any(|node| node["aria"]["sort_direction"] == "Ascending"));
++    }
++
+     #[gpui::test]
+     fn test_fractional_padding_does_not_make_a_fitting_container_scrollable(
+         cx: &mut TestAppContext,
+diff --git a/vendor/gpui-pre-0.3.10/src/window/a11y/debug.rs b/vendor/gpui-pre-0.3.10/src/window/a11y/debug.rs
+index ae98aa5..b6e6ed5 100644
+--- a/vendor/gpui-pre-0.3.10/src/window/a11y/debug.rs
++++ b/vendor/gpui-pre-0.3.10/src/window/a11y/debug.rs
+@@ -261,7 +261,11 @@ fn node_to_json(
+     }
+ 
+     // Boolean / enum states.
+     if node.is_disabled() { aria.insert("disabled".into(), json!(true)); }
++    if node.is_read_only() { aria.insert("read_only".into(), json!(true)); }
++    if let Some(v) = node.sort_direction() {
++        aria.insert("sort_direction".into(), json!(format!("{v:?}")));
++    }
+     if let Some(v) = node.is_selected() {
+         aria.insert("selected".into(), json!(v));
+     }
+
+diff --git a/vendor/gpui-component-0.8.1/src/table/state.rs b/vendor/gpui-component-0.8.1/src/table/state.rs
+--- a/vendor/gpui-component-0.8.1/src/table/state.rs
++++ b/vendor/gpui-component-0.8.1/src/table/state.rs
+@@ -247,6 +247,8 @@
+     /// - Keyboard navigation works at the cell level (arrow keys move between cells)
+     /// - Right-click and double-click events are supported for cells
+     pub cell_selectable: bool,
++    /// Use the delegate's accessibility nodes instead of generated table wrappers.
++    delegate_accessibility: bool,
+     /// Whether the row header column is visible when `cell_selectable` is enabled,
+     /// default is `true`.
+     ///
+@@ -327,6 +329,7 @@
+             row_selectable: true,
+             select_on_modifier_click: true,
+             cell_selectable: false,
++            delegate_accessibility: false,
+             row_header: true,
+             sortable: true,
+             col_movable: true,
+@@ -412,6 +415,12 @@
+     /// ```
+     pub fn cell_selectable(mut self, cell_selectable: bool) -> Self {
+         self.cell_selectable = cell_selectable;
++        self
++    }
++
++    /// Use accessibility roles and metadata supplied by the table delegate.
++    pub fn delegate_accessibility(mut self, enabled: bool) -> Self {
++        self.delegate_accessibility = enabled;
+         self
+     }
+ 
+@@ -1550,6 +1559,9 @@
+     where
+         E: gpui::StatefulInteractiveElement + FluentBuilder,
+     {
++        if self.delegate_accessibility {
++            return cell;
++        }
+         let cell = if self.cell_selectable {
+             cell.role(gpui::Role::GridCell)
+                 .aria_selected(self.selected_cell() == Some((row_ix, col_ix)))
+@@ -1860,10 +1872,12 @@
+             .child(
+                 self.render_cell(None, col_ix, window, cx)
+                     .id(("col-header", col_ix))
+-                    .role(gpui::Role::ColumnHeader)
+-                    .aria_label(name.clone())
+-                    .aria_column_index(col_ix)
+                     .test_support()
++                    .when(!self.delegate_accessibility, |cell| {
++                        cell.role(gpui::Role::ColumnHeader)
++                            .aria_label(name.clone())
++                            .aria_column_index(col_ix)
++                    })
+                     .on_click(cx.listener(move |this, _, window, cx| {
+                         this.on_col_head_click(col_ix, window, cx);
+                     }))
+@@ -2031,8 +2045,11 @@
+         header
+             // One header row holds every column header, including the pinned
+             // ones, which are laid out in a separate container.
+-            .role(gpui::Role::Row)
+-            .aria_row_index(0)
++            .when(!self.delegate_accessibility, |header| {
++                header
++                    .role(gpui::Role::Row)
++                    .aria_row_index(0)
++            })
+             .h_flex()
+             .w_full()
+             .flex_shrink_0()
+@@ -2232,7 +2249,7 @@
+             tr.test_support()
+                 .role(gpui::Role::Row)
+                 // Row 0 is the header row.
+-                .aria_row_index(row_ix + 1)
++                .when(!self.delegate_accessibility, |tr| tr.aria_row_index(row_ix + 1))
+                 .aria_selected(is_selected)
+                 .h_flex()
+                 .w_full()
+@@ -2696,13 +2713,15 @@
+             .test_support()
+             // A table that selects rows or cells is a grid. The counts cover
+             // every row, not just the rendered ones, plus the header row.
+-            .role(if self.row_selectable || self.cell_selectable {
+-                gpui::Role::Grid
+-            } else {
+-                gpui::Role::Table
++            .when(!self.delegate_accessibility, |this| {
++                this.role(if self.row_selectable || self.cell_selectable {
++                    gpui::Role::Grid
++                } else {
++                    gpui::Role::Table
++                })
++                .aria_row_count(rows_count + 1)
++                .aria_column_count(columns_count)
+             })
+-            .aria_row_count(rows_count + 1)
+-            .aria_column_count(columns_count)
+             .size_full()
+             .overflow_hidden()
+             .child(self.render_table_header(left_columns_count, window, cx))

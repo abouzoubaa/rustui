@@ -1,5 +1,9 @@
 # Changelog
 
+- A2: completed the GPUI Kit 0.8.1 / gpui-pre 0.3.10 upgrade and native Rust/JSON syntax coverage; 1,000-row forced-draw median was 8.24 ms vs 8.03 ms before.
+- A2-6: refreshed the Kit 0.8.1 external-consumer lock and verified local and fresh Git consumers.
+- A2-5a: Activated the GPUI Kit 0.8.1 candidate stack on the integration branch; recorded the remaining RustUI migration errors.
+
 - Bumped the project toolchain to Rust 1.98.0 for `Option::map_or_default`; added the A3 GPUI Kit 0.9.x upgrade stage after A2.
 
 - Reference: copied GPUI Kit v0.8.1 skills and design guides as documentation-only reference material.
@@ -115,3 +119,4 @@
 - Add filtered Finder file drops and a Playground example.
 - Add a reproducible owner-update performance baseline command.
 - Rebased DataGrid validation and accessibility metadata for GPUI Kit 0.8.
+- Preserve disabled accessibility on GPUI Kit 0.8 editor-owned input nodes.

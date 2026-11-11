@@ -1,8 +1,0 @@
-{
-  "schema_version": 1,
-  "patch": "patches/approved/gpui-base-slider-set-value-v2.patch",
-  "patch_sha256": "f9b2bc86ab70ac9bf388ecb5eb3a04e7b83f746dc5f910555e78ae5c4c115228",
-  "source": "vendor/gpui-base-0.7.3/src/slider.rs",
-  "pre_sha256": "f9c3b88ae5cda1ea65499fc1d6ddb198584cf1831b92336eea2c2566bbb15f1f",
-  "post_sha256": "c6fbf0fe0a9a6dc30a6c0e95f765b38a679ae66dc2d7b773f5fa71991f8d4560"
-}

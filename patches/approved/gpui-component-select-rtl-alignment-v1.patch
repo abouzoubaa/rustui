@@ -1,5 +1,5 @@
---- a/vendor/gpui-component-0.7.3/src/select.rs
-+++ b/vendor/gpui-component-0.7.3/src/select.rs
+--- a/vendor/gpui-component-0.8.1/src/select.rs
++++ b/vendor/gpui-component-0.8.1/src/select.rs
 @@ -91,6 +91,7 @@
      disabled: bool,
      appearance: bool,

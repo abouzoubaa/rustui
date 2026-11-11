@@ -1,5 +1,5 @@
---- a/vendor/gpui-base-0.7.3/src/calendar.rs
-+++ b/vendor/gpui-base-0.7.3/src/calendar.rs
+--- a/vendor/gpui-base-0.8.1/src/calendar.rs
++++ b/vendor/gpui-base-0.8.1/src/calendar.rs
 @@ -172,2 +172,3 @@
      date: Date,
 +    keyboard_cursor: Option<NaiveDate>,
@@ -31,8 +31,8 @@
 -                                .active(s.date().is_active(&date))
 +                                .active(s.keyboard_cursor().map_or_else(|| s.date().is_active(&date), |cursor| cursor == date))
                                  .in_range(s.date().is_in_range(&date))
---- a/vendor/gpui-component-0.7.3/src/time/date_picker.rs
-+++ b/vendor/gpui-component-0.7.3/src/time/date_picker.rs
+--- a/vendor/gpui-component-0.8.1/src/time/date_picker.rs
++++ b/vendor/gpui-component-0.8.1/src/time/date_picker.rs
 @@ -436,2 +436,3 @@
              view.set_date(date, window, cx);
 +            view.set_keyboard_cursor(None, cx);

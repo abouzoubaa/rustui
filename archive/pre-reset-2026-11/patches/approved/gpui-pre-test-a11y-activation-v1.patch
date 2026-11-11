@@ -1,0 +1,20 @@
+diff --git a/vendor/gpui-pre-0.3.9/src/platform/test/window.rs b/vendor/gpui-pre-0.3.9/src/platform/test/window.rs
+index 5692b1e..ee9514e 100644
+--- a/vendor/gpui-pre-0.3.9/src/platform/test/window.rs
++++ b/vendor/gpui-pre-0.3.9/src/platform/test/window.rs
+@@ -1,4 +1,4 @@
+ use crate::{
+-    AnyWindowHandle, Bounds, DevicePixels, DispatchEventResult, DisplayId, GpuSpecs, HeadlessAtlas,
+-    Pixels, PlatformAtlas, PlatformDisplay, PlatformHeadlessRenderer, PlatformInput,
++    A11yCallbacks, AnyWindowHandle, Bounds, DevicePixels, DispatchEventResult, DisplayId, GpuSpecs,
++    HeadlessAtlas, Pixels, PlatformAtlas, PlatformDisplay, PlatformHeadlessRenderer, PlatformInput,
+     PlatformInputHandler, PlatformWindow, Point, PromptButton, RequestFrameOptions, Scene, Size,
+@@ -308,2 +308,8 @@ impl TestWindow {
+ impl PlatformWindow for TestWindow {
++    fn a11y_init(&self, callbacks: A11yCallbacks) {
++        // Test windows have no native accessibility adapter. Activate GPUI's
++        // existing callback so tests can inspect the rendered AX tree.
++        (callbacks.activation)();
++    }
++
+     fn visual_viewport_bounds(&self) -> Bounds<Pixels> {

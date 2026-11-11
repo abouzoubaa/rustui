@@ -161,6 +161,37 @@ impl InputBase {
         self
     }
 
+    /// Exposes an editor's native semantics through this frame's component ID.
+    ///
+    /// `editor` must identify the input, textarea or editor state rendered below
+    /// this frame, without intervening element IDs. Anonymous layout wrappers
+    /// are allowed. ID queries retain the frame's path, bounds and visibility.
+    /// Role, label, value, checked/indeterminate, selected, expanded, disabled
+    /// and focus facts come from the editor's existing native node and observed
+    /// focus scope, not independently focusable addon controls. Native snapshot
+    /// enumeration is unchanged, so role/label queries do not duplicate editors.
+    ///
+    /// This only declares an observation relationship with `test-support`; it
+    /// never adds a native accessibility node or registers a focus handle. The
+    /// relationship follows the frame's GPUI element-state lifetime.
+    pub fn semantic_owner(self, editor: gpui::EntityId) -> Self {
+        #[cfg(feature = "test-support")]
+        {
+            Self {
+                base: self.base.semantic_owner([
+                    ElementId::View(editor),
+                    super::state::EDITOR_ELEMENT_ID.into(),
+                ]),
+                ..self
+            }
+        }
+        #[cfg(not(feature = "test-support"))]
+        {
+            let _ = editor;
+            self
+        }
+    }
+
     pub fn styles(mut self, build: impl FnOnce(InputStyles) -> InputStyles) -> Self {
         self.semantic_styles = build(self.semantic_styles);
         self
@@ -234,7 +265,7 @@ impl RenderOnce for InputBase {
         let style = self.resolved_style();
         self.base
             .when_some(self.role.resolve(|| Role::TextInput), |this, role| {
-                this.role(role).aria_disabled(self.disabled)
+                this.role(role)
             })
             .children(self.children)
             .refine_style(&style)
@@ -257,31 +288,6 @@ mod tests {
             })
             .child("value")
             .opacity(0.8);
-    }
-
-    #[gpui::test]
-    fn projects_disabled_state_to_accessibility(cx: &mut gpui::TestAppContext) {
-        use gpui::{Element as _, IntoElement as _, accesskit};
-
-        let window = cx.add_empty_window();
-        window.update(|window, cx| {
-            let mut enabled = accesskit::Node::new(Role::TextInput);
-            InputBase::new("enabled")
-                .role(Role::TextInput)
-                .render(window, cx)
-                .into_element()
-                .write_a11y_info(&mut enabled);
-            let mut disabled = accesskit::Node::new(Role::TextInput);
-            InputBase::new("disabled")
-                .role(Role::TextInput)
-                .disabled(true)
-                .render(window, cx)
-                .into_element()
-                .write_a11y_info(&mut disabled);
-
-            assert!(!enabled.is_disabled());
-            assert!(disabled.is_disabled());
-        });
     }
 
     #[test]

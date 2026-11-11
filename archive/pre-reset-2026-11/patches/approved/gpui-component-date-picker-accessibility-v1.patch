@@ -1,0 +1,34 @@
+--- a/vendor/gpui-component-0.7.3/src/time/date_picker.rs
++++ b/vendor/gpui-component-0.7.3/src/time/date_picker.rs
+@@ -551,6 +551,7 @@
+     appearance: bool,
+     focus_ring_enabled: bool,
+     disabled: bool,
++    accessibility_label: Option<SharedString>,
+ }
+ 
+ impl Sizable for DatePicker {
+@@ -610,7 +611,14 @@
+             appearance: true,
+             focus_ring_enabled: true,
+             disabled: false,
+-        }
++            accessibility_label: None,
++        }
++    }
++
++    /// Set an accessible name for the date picker.
++    pub fn accessibility_label(mut self, label: impl Into<SharedString>) -> Self {
++        self.accessibility_label = Some(label.into());
++        self
+     }
+ 
+     /// Set the placeholder of the date picker, default: "".
+@@ -695,6 +703,7 @@
+         let picker_state = self.state.clone();
+ 
+         BaseDatePicker::new(self.id, &state.focus_handle)
++            .when_some(self.accessibility_label, |this, label| this.aria_label(label))
+             .open(state.open)
+             .when(state.date.is_some(), |this| {
+                 this.aria_value(display_title.clone())

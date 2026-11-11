@@ -1,5 +1,5 @@
---- a/vendor/gpui-pre-0.3.9/src/window.rs
-+++ b/vendor/gpui-pre-0.3.9/src/window.rs
+--- a/vendor/gpui-pre-0.3.10/src/window.rs
++++ b/vendor/gpui-pre-0.3.10/src/window.rs
 @@ -1664,7 +1664,9 @@
          }
  
@@ -11,8 +11,8 @@
  
          #[cfg(not(target_family = "wasm"))]
          if !accessibility_force_disabled {
---- a/vendor/gpui-pre-web-0.3.9/src/window.rs
-+++ b/vendor/gpui-pre-web-0.3.9/src/window.rs
+--- a/vendor/gpui-pre-web-0.3.10/src/window.rs
++++ b/vendor/gpui-pre-web-0.3.10/src/window.rs
 @@ -865,6 +865,20 @@
          }
      }
@@ -34,8 +34,8 @@
      fn prompt(
          &self,
          _level: PromptLevel,
---- a/vendor/gpui-pre-web-0.3.9/src/ime_mirror.rs
-+++ b/vendor/gpui-pre-web-0.3.9/src/ime_mirror.rs
+--- a/vendor/gpui-pre-web-0.3.10/src/ime_mirror.rs
++++ b/vendor/gpui-pre-web-0.3.10/src/ime_mirror.rs
 @@ -225,6 +225,16 @@
          }
      }

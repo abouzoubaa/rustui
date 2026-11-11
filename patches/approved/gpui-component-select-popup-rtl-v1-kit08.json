@@ -1,0 +1,25 @@
+{
+  "schema_version": 1,
+  "upstream": {
+    "repository": "https://github.com/longbridge/gpui-kit",
+    "tag": "v0.8.1",
+    "commit": "99576db58ec8103417c41a092e891b4022d24e7e",
+    "gpui_pre_version": "0.3.10"
+  },
+  "candidate": "gpui-component-select-popup-rtl-v1-kit08.patch",
+  "patch_sha256": "e1fe94f8566d6a3cff9a24e1a1fdb34b3888db79bc5dec9773d1890052429a92",
+  "files": {
+    "vendor/gpui-component-0.8.1/src/list/list.rs": {
+      "pre_sha256": "50665f00508d9bcc92201d26cca253cc543d59b62f867410cdf940b05d6da9d9",
+      "post_sha256": "00f2622ae21fa20755925dc9bd25ae051c12101f6947779870bab7c13589e468"
+    },
+    "vendor/gpui-component-0.8.1/src/searchable_list/adapter.rs": {
+      "pre_sha256": "41766a0014d344f4bd700f3aa6b1288aa2bd0fb6f10920f5a438d062836abc9f",
+      "post_sha256": "ac1e36762b7fbcf10bbda7ee01bfb06e176f2b4d85255423a7e975b3a30f5c0a"
+    },
+    "vendor/gpui-component-0.8.1/src/searchable_list/item.rs": {
+      "pre_sha256": "4bd6b6973feb7444ace040468d58bf4b3b30d5d2c313c024d86ecde473066ae3",
+      "post_sha256": "dfcd893228ffafd58863f4748f3c4015c67c5934876c3f1ceb0c60ab542bdcbb"
+    }
+  }
+}

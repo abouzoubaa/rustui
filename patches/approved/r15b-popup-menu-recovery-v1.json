@@ -1,8 +1,17 @@
 {
   "schema_version": 1,
-  "patch": "patches/approved/r15b-popup-menu-recovery-v1.patch",
-  "patch_sha256": "1a22c69cdf76400eb3ee79fd633167a3db8f9c2a177eeef9359deae8a87fc13f",
-  "source": "vendor/gpui-component-0.7.3/src/menu/popup_menu.rs",
-  "pre_sha256": "7bc282298297c8d2a9d3f825b6c2ed6ec95b9e0ff2890ca7f1051484314b83fe",
-  "post_sha256": "4c3a765dd782f40f262937679e241adf49209dc81e222be2069b19ced974f1da"
+  "upstream": {
+    "repository": "https://github.com/longbridge/gpui-kit",
+    "tag": "v0.8.1",
+    "commit": "99576db58ec8103417c41a092e891b4022d24e7e",
+    "gpui_pre_version": "0.3.10"
+  },
+  "candidate": "r15b-popup-menu-recovery-v1.patch",
+  "patch_sha256": "775638b0ac3e1fdef9d0dd2d02aa45427291d1fc8b54a051b5531c8c7b558070",
+  "files": {
+    "vendor/gpui-component-0.8.1/src/menu/popup_menu.rs": {
+      "pre_sha256": "460787930c46a1ffb71dbc82a151abc2d2308fe6f1e9bdd89a1f61c91752f9f1",
+      "post_sha256": "26d76f03c6cdb89163381e5eb0cf3fcc3ec2b9dadb04cbfac228d6e07ae041af"
+    }
+  }
 }

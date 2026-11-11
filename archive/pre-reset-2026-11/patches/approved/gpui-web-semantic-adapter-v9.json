@@ -1,0 +1,137 @@
+{
+  "schema_version": 1,
+  "package": "gpui-web-semantic-adapter-v9",
+  "images": {
+    "base": {
+      "vendor/gpui-base-0.7.3/src/input/base/state.rs": "a9641aaf0c107351af892e89bf7af06b5a3c3d52290346769b7983fe6353f539",
+      "vendor/gpui-component-0.7.3/src/input/input.rs": "842e488bc016f20c904c2c073573effbc04ea9487c8cf5ab5aa9f3a0f09de7a2",
+      "vendor/gpui-component-0.7.3/src/input/state.rs": "bdf4647703f84d29dd8cf92ca14dc0b4f7d7453abdee9754d7e3d8349d9466fe",
+      "vendor/gpui-pre-0.3.9/src/input.rs": "212ab29d9ac70756d2e480a246b56c5028257746cd5f1b49a3a59a12b7a19db9",
+      "vendor/gpui-pre-0.3.9/src/platform.rs": "148dc1c498fdc812c1c37ac92021efeb2acc17ab0dbf3a59b071a660c6951c07",
+      "vendor/gpui-pre-0.3.9/src/window.rs": "44f32319b9385fa6dbc15c36b3edea00a26208309b37283ae4f9bd4bead674f8",
+      "vendor/gpui-pre-web-0.3.9/src/a11y.rs": null,
+      "vendor/gpui-pre-web-0.3.9/src/a11y_dom.js": null,
+      "vendor/gpui-pre-web-0.3.9/src/a11y_dom.rs": null,
+      "vendor/gpui-pre-web-0.3.9/src/events.rs": "3dca61104bce15bffdd7d9155af769dc166c68508fb6458b4952261b2c3244cb",
+      "vendor/gpui-pre-web-0.3.9/src/gpui_web.rs": "51360d028a5f0e495557732e7e257ccfd5de960a17a9a57487aeaa8562b10979",
+      "vendor/gpui-pre-web-0.3.9/src/ime_mirror.rs": "4061ebd319b5928c2a25f659c4f1db9adb193d5873bbbfeba36468ca2706895d",
+      "vendor/gpui-pre-web-0.3.9/src/window.rs": "3779ba8d5647009b80d0ea52dc7823806640741d3a1cfa9a0a7752ec35fe7dd8",
+      "vendor/gpui-pre-0.3.9/src/window/a11y.rs": "1579b5772038313635feda4ad5c32a46f5bd843396268c8b573d68e7c57488b5",
+      "vendor/gpui-pre-web-0.3.9/src/ime_edit.rs": null
+    },
+    "name": {
+      "vendor/gpui-base-0.7.3/src/input/base/state.rs": "a9641aaf0c107351af892e89bf7af06b5a3c3d52290346769b7983fe6353f539",
+      "vendor/gpui-component-0.7.3/src/input/input.rs": "842e488bc016f20c904c2c073573effbc04ea9487c8cf5ab5aa9f3a0f09de7a2",
+      "vendor/gpui-component-0.7.3/src/input/state.rs": "bdf4647703f84d29dd8cf92ca14dc0b4f7d7453abdee9754d7e3d8349d9466fe",
+      "vendor/gpui-pre-0.3.9/src/input.rs": "212ab29d9ac70756d2e480a246b56c5028257746cd5f1b49a3a59a12b7a19db9",
+      "vendor/gpui-pre-0.3.9/src/platform.rs": "148dc1c498fdc812c1c37ac92021efeb2acc17ab0dbf3a59b071a660c6951c07",
+      "vendor/gpui-pre-0.3.9/src/window.rs": "66d78f6ca924808cba8a9121fd6e44e6537ccf87865c6b443b11a4fe1c140855",
+      "vendor/gpui-pre-web-0.3.9/src/a11y.rs": null,
+      "vendor/gpui-pre-web-0.3.9/src/a11y_dom.js": null,
+      "vendor/gpui-pre-web-0.3.9/src/a11y_dom.rs": null,
+      "vendor/gpui-pre-web-0.3.9/src/events.rs": "3dca61104bce15bffdd7d9155af769dc166c68508fb6458b4952261b2c3244cb",
+      "vendor/gpui-pre-web-0.3.9/src/gpui_web.rs": "51360d028a5f0e495557732e7e257ccfd5de960a17a9a57487aeaa8562b10979",
+      "vendor/gpui-pre-web-0.3.9/src/ime_mirror.rs": "5647cf3f467837f1b1747aac15fb0f4e6bac1bbe862d040427ba9e48b841088f",
+      "vendor/gpui-pre-web-0.3.9/src/window.rs": "07f241ba3476ce5b3e76927e768a00a84207869115482b7dba1297971d9d4bfa",
+      "vendor/gpui-pre-0.3.9/src/window/a11y.rs": "1579b5772038313635feda4ad5c32a46f5bd843396268c8b573d68e7c57488b5",
+      "vendor/gpui-pre-web-0.3.9/src/ime_edit.rs": null
+    },
+    "prerequisites": {
+      "vendor/gpui-base-0.7.3/src/input/base/state.rs": "a9641aaf0c107351af892e89bf7af06b5a3c3d52290346769b7983fe6353f539",
+      "vendor/gpui-component-0.7.3/src/input/input.rs": "842e488bc016f20c904c2c073573effbc04ea9487c8cf5ab5aa9f3a0f09de7a2",
+      "vendor/gpui-component-0.7.3/src/input/state.rs": "bdf4647703f84d29dd8cf92ca14dc0b4f7d7453abdee9754d7e3d8349d9466fe",
+      "vendor/gpui-pre-0.3.9/src/input.rs": "212ab29d9ac70756d2e480a246b56c5028257746cd5f1b49a3a59a12b7a19db9",
+      "vendor/gpui-pre-0.3.9/src/platform.rs": "148dc1c498fdc812c1c37ac92021efeb2acc17ab0dbf3a59b071a660c6951c07",
+      "vendor/gpui-pre-0.3.9/src/window.rs": "66d78f6ca924808cba8a9121fd6e44e6537ccf87865c6b443b11a4fe1c140855",
+      "vendor/gpui-pre-web-0.3.9/src/a11y.rs": null,
+      "vendor/gpui-pre-web-0.3.9/src/a11y_dom.js": null,
+      "vendor/gpui-pre-web-0.3.9/src/a11y_dom.rs": null,
+      "vendor/gpui-pre-web-0.3.9/src/events.rs": "e8f457bc40dbf5fbcbe0e7a6b8f90d567242078efcde7ba786d87afe4a698b20",
+      "vendor/gpui-pre-web-0.3.9/src/gpui_web.rs": "51360d028a5f0e495557732e7e257ccfd5de960a17a9a57487aeaa8562b10979",
+      "vendor/gpui-pre-web-0.3.9/src/ime_mirror.rs": "5647cf3f467837f1b1747aac15fb0f4e6bac1bbe862d040427ba9e48b841088f",
+      "vendor/gpui-pre-web-0.3.9/src/window.rs": "07f241ba3476ce5b3e76927e768a00a84207869115482b7dba1297971d9d4bfa",
+      "vendor/gpui-pre-0.3.9/src/window/a11y.rs": "1579b5772038313635feda4ad5c32a46f5bd843396268c8b573d68e7c57488b5",
+      "vendor/gpui-pre-web-0.3.9/src/ime_edit.rs": null
+    },
+    "post": {
+      "vendor/gpui-base-0.7.3/src/input/base/state.rs": "87f899f6132cc2733ea7c8a082a9de464ca4a8cc15de6b7f3f171afc02a75f42",
+      "vendor/gpui-component-0.7.3/src/input/input.rs": "a07a59963b06006a37f8ed0a2180dd732957b5d1a77d41d4a5cc9d00779c17a1",
+      "vendor/gpui-component-0.7.3/src/input/state.rs": "7c9e31f0842fef541ba1a556381b0df01383bdc8f58a01bed5de7ffb8aef9c2e",
+      "vendor/gpui-pre-0.3.9/src/input.rs": "11069c176624459630b8829c416bd777d418c511027a8c9ce5c01e6cdaa91d78",
+      "vendor/gpui-pre-0.3.9/src/platform.rs": "d6dfff87c74e8aa6b6db65fe0caba9425de1478fe0144f524f37a2cde1d4f47d",
+      "vendor/gpui-pre-0.3.9/src/window.rs": "cefed67fddfdae9e35d8e6ab2c909a83d8a9abb0a10f6d0db1f89116aedc56d6",
+      "vendor/gpui-pre-0.3.9/src/window/a11y.rs": "e8403059924d022695e3bea6888d14a0e65317785b393f3b4a75bac5858fae53",
+      "vendor/gpui-pre-web-0.3.9/src/a11y.rs": "a45d410d9252d8e32515745e5af6d338a4c6e870b7403eef24401500bb228664",
+      "vendor/gpui-pre-web-0.3.9/src/a11y_dom.js": "31cc24e332db33a84630bc24c4210eb745bbb09d787938bede416aa46b9cc834",
+      "vendor/gpui-pre-web-0.3.9/src/a11y_dom.rs": "45469a565657890048e3d2debf3cf1f30b4a1e2c9907e6e4e80841725032ad78",
+      "vendor/gpui-pre-web-0.3.9/src/events.rs": "7db75ff760cfab98ad39a37abd137d1ad31b6deda85661aa8f3f9a6dfc072980",
+      "vendor/gpui-pre-web-0.3.9/src/gpui_web.rs": "a4f3c1a918c65bb4fef20a343aa494f1f065c681783c79ff9ad88387c1438329",
+      "vendor/gpui-pre-web-0.3.9/src/ime_edit.rs": "4b2f6ed1de704d5e0583533fd897e9feded55da21a142317413ac9dca03fe267",
+      "vendor/gpui-pre-web-0.3.9/src/ime_mirror.rs": "a0920ee39b6683912872354c34d4d9d88ac9752e2fccd71e6d764ac475ab01c1",
+      "vendor/gpui-pre-web-0.3.9/src/window.rs": "b9139222467e5862f0cf81cc81e56bccf620982f02fb14b4bc808079deb5fdf4"
+    }
+  },
+  "ordered_patches": [
+    {
+      "name": "name",
+      "path": "patches/approved/gpui-pre-web-accessible-name-v1.patch",
+      "sha256": "8fbb44e848e423978c7a216dcd3e814fdf477e520657dba7a7a8bd8653ed9881"
+    },
+    {
+      "name": "enter",
+      "path": "patches/approved/gpui-pre-web-enter-composition-v1.patch",
+      "sha256": "c6b4fc1eda3a4a2b5344447caa6a46d5e40f5c72b25f88fb6f60f774daac0127"
+    },
+    {
+      "name": "semantic-adapter-v9",
+      "path": "patches/approved/gpui-web-semantic-adapter-v9.patch",
+      "sha256": "f44159b63e446b70d5e6d050c2131a70a658d459482cffa143a7f383ac5b2fd1"
+    }
+  ],
+  "keyboard_baseline": {
+    "path": "patches/approved/gpui-pre-web-keyboard-focus-activation-v3.patch",
+    "sha256": "df97bcbf43490e1e60e582da87b5bd63ebc2eb275e662f5c49d622f77b7de59a",
+    "sources": {
+      "vendor/gpui-pre-web-0.3.9/src/window.rs": {
+        "pre": "eda543e585912fcb012e2a3559d8fb2e9ad7570ba58746747af380d044085cb8",
+        "post": "3779ba8d5647009b80d0ea52dc7823806640741d3a1cfa9a0a7752ec35fe7dd8"
+      },
+      "vendor/gpui-pre-web-0.3.9/src/events.rs": {
+        "pre": "9fdfc3695a93083fe881153dcc66356df00eb09761190664cc093520bc3ae001",
+        "post": "3dca61104bce15bffdd7d9155af769dc166c68508fb6458b4952261b2c3244cb"
+      }
+    }
+  },
+  "packages": {
+    "vendor/gpui-pre-0.3.9/Cargo.toml": {
+      "name": "gpui-pre",
+      "version": "0.3.9",
+      "path": "vendor/gpui-pre-0.3.9"
+    },
+    "vendor/gpui-pre-web-0.3.9/Cargo.toml": {
+      "name": "gpui-pre-web",
+      "version": "0.3.9",
+      "path": "vendor/gpui-pre-web-0.3.9"
+    },
+    "vendor/gpui-base-0.7.3/Cargo.toml": {
+      "name": "gpui-base",
+      "version": "0.7.3",
+      "path": "vendor/gpui-base-0.7.3"
+    },
+    "vendor/gpui-component-0.7.3/Cargo.toml": {
+      "name": "gpui-component",
+      "version": "0.7.3",
+      "path": "vendor/gpui-component-0.7.3"
+    }
+  },
+  "preserved_provenance": {
+    "vendor/gpui-pre-0.3.9/.cargo-checksum.json": "7b8e889ae4ac0cbe651b654f5e39d9003969d09ae4a70aff4147f521eda8faa0",
+    "vendor/gpui-pre-0.3.9/LICENSE-APACHE": "752daf2fb234ca4a1fa372c073fe127f44b7b90fd2529ae44273a64f9d53da7a",
+    "vendor/gpui-pre-web-0.3.9/.cargo-checksum.json": "aad9503f554e462d582461d008ea4bc0dda00021812ccf6b876734b55757579e",
+    "vendor/gpui-pre-web-0.3.9/LICENSE-APACHE": "752daf2fb234ca4a1fa372c073fe127f44b7b90fd2529ae44273a64f9d53da7a",
+    "vendor/gpui-base-0.7.3/.cargo-checksum.json": "9e96d55b0071b60576bc6ac18c3e9c48e6d0de5ff848821af7623bd151f7c3ed",
+    "vendor/gpui-base-0.7.3/LICENSE-APACHE": "d1b0449e5478c574ba4f686c2656df7fe77d66821a61f8b6ed3378a58ed9a811",
+    "vendor/gpui-component-0.7.3/.cargo-checksum.json": "d5b533efba197cc15bcb6756b935a786e846463c1ee431f876e8c334a7e638c6",
+    "vendor/gpui-component-0.7.3/LICENSE-APACHE": "d1b0449e5478c574ba4f686c2656df7fe77d66821a61f8b6ed3378a58ed9a811"
+  }
+}

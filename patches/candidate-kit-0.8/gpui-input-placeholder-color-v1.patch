@@ -54,12 +54,13 @@
              )
          } else if state.masked {
              (
---- a/vendor/gpui-component-0.7.3/src/input/input.rs
-+++ b/vendor/gpui-component-0.7.3/src/input/input.rs
-@@ -132,6 +132,7 @@
+--- a/vendor/gpui-component-0.8.1/src/input/input.rs
++++ b/vendor/gpui-component-0.8.1/src/input/input.rs
+@@ -132,7 +132,8 @@
      role: RoleOverride,
      accessibility_id: Option<SharedString>,
      aria_label: Option<SharedString>,
+     aria_description: Option<SharedString>,
 +    placeholder_color: Option<Hsla>,
  
      /// An optional context menu builder to allow a custom context menu on the input.
@@ -77,10 +78,11 @@
          self
      }
  
-@@ -244,6 +251,7 @@
+@@ -244,7 +253,8 @@
              role: RoleOverride::default(),
              accessibility_id: None,
              aria_label: None,
+             aria_description: None,
 +            placeholder_color: None,
              context_menu_builder: None,
              paste_handler: None,

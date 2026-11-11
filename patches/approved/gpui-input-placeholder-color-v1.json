@@ -1,0 +1,25 @@
+{
+  "schema_version": 1,
+  "upstream": {
+    "repository": "https://github.com/longbridge/gpui-kit",
+    "tag": "v0.8.1",
+    "commit": "99576db58ec8103417c41a092e891b4022d24e7e",
+    "gpui_pre_version": "0.3.10"
+  },
+  "candidate": "gpui-input-placeholder-color-v1.patch",
+  "patch_sha256": "9b6fdcf6d76ce4b3ba46c7e5855bef30d5b5fc3f8c2f87906b92a206381ea01f",
+  "files": {
+    "vendor/gpui-base-0.8.1/src/input/base/element.rs": {
+      "pre_sha256": "5d85f146b46605fc48a5bcc2426357c566a9e49c0a095c81e3a0b9e86c484a9b",
+      "post_sha256": "1c94b3fe40237b4d67be1422576bc1c3001fb3f44efa1d705d4ce96de6489a9e"
+    },
+    "vendor/gpui-base-0.8.1/src/input/editor/highlighting.rs": {
+      "pre_sha256": "a8ddf22a7e48437da874e5f4f665b0826660a39ea364a564bfdf77e90f218155",
+      "post_sha256": "79c38573136ed2745af6db9dd7bd74579ef6c86462a217c851a83fc7e3c9bc8b"
+    },
+    "vendor/gpui-component-0.8.1/src/input/input.rs": {
+      "pre_sha256": "cba63ae82138bf7461c20aa7efe6fcea86c5b892a82c9b114bc9cd0ffe63a66a",
+      "post_sha256": "cc69b63deaebbc1b902bf19be30ccc49f2901c8cf755c643a35c06caf7d075ce"
+    }
+  }
+}

@@ -1,0 +1,29 @@
+{
+  "schema_version": 1,
+  "upstream": {
+    "repository": "https://github.com/longbridge/gpui-kit",
+    "tag": "v0.8.1",
+    "commit": "99576db58ec8103417c41a092e891b4022d24e7e",
+    "gpui_pre_version": "0.3.10"
+  },
+  "candidate": "gpui-component-tracked-dialog-focus-rebase-v2-kit08.patch",
+  "patch_sha256": "0c4df660d93b1a7ce54c00a4f6f60de8ab76b7ea6aec754caa9db1f8cdda287d",
+  "files": {
+    "vendor/gpui-component-0.8.1/src/dialog/dialog.rs": {
+      "pre_sha256": "2a03c0e1636cb576a9430817fb413384b7434fb0c7e66fb549e16bd9d7805a05",
+      "post_sha256": "f61e4d106499a34dc2715adb9e9383ed2b30f554f21ad2fc160c00a94b4fcf12"
+    },
+    "vendor/gpui-component-0.8.1/src/lib.rs": {
+      "pre_sha256": "cb2a4cfb718e7608ffda91edd3f0dddebb26252248ccc8388d0fbb9781d88429",
+      "post_sha256": "2ce60750cf457070cfa286df08120f66ad303818f03d7580c31d00cdef92e563"
+    },
+    "vendor/gpui-component-0.8.1/src/root.rs": {
+      "pre_sha256": "eaabab30afbeca71d0cc193be04c8f150b192e3c691dbac9bfd76944988e7d0e",
+      "post_sha256": "2355df8db397aec79fddbf10dacf8a7ee6625a78e17c18ae60adca0494b16d67"
+    },
+    "vendor/gpui-component-0.8.1/src/window_ext.rs": {
+      "pre_sha256": "2470eb24a74cd23573cec9fb09df56e0185bf30cad07afd88037453736bf3e89",
+      "post_sha256": "c5cb5c4c601f89ec97c7cf0c495be425583309ae6013dd8a81d3f4e5240657cf"
+    }
+  }
+}

@@ -486,7 +486,7 @@ mod tests {
         let source = component_assets();
         let paths = include_str!(concat!(
             env!("CARGO_MANIFEST_DIR"),
-            "/../../vendor/gpui-kit-assets-0.7.3/default-icons.txt"
+            "/../../vendor/gpui-kit-assets-0.8.1/default-icons.txt"
         ));
         for path in paths.lines().filter(|line| !line.is_empty()) {
             let bytes = source.load(path).unwrap().expect("default component icon");

@@ -1,0 +1,25 @@
+{
+  "schema_version": 1,
+  "upstream": {
+    "repository": "https://github.com/longbridge/gpui-kit",
+    "tag": "v0.8.1",
+    "commit": "99576db58ec8103417c41a092e891b4022d24e7e",
+    "gpui_pre_version": "0.3.10"
+  },
+  "candidate": "t13-modal-focus-recovery-v1-kit08.patch",
+  "patch_sha256": "a994ffb2e3e0a82616f681939891ec48e665dc7639f7dae6be12baf7c6adfe5f",
+  "files": {
+    "vendor/gpui-component-0.8.1/src/root.rs": {
+      "pre_sha256": "0d0a2be0e4beadbfea881f0dbe3f183a840e6cfc2e5b2edd2093924eb2017ba4",
+      "post_sha256": "eaabab30afbeca71d0cc193be04c8f150b192e3c691dbac9bfd76944988e7d0e"
+    },
+    "vendor/gpui-pre-0.3.10/src/key_dispatch.rs": {
+      "pre_sha256": "a830735c490a265ffd666d34a22a1033c9ae6aea0226747839d1d7821a1d198c",
+      "post_sha256": "205c596a5cdb9a1d2851505c0dccdbad087c3d81fef2a0cd2c8190f76167851d"
+    },
+    "vendor/gpui-pre-0.3.10/src/window.rs": {
+      "pre_sha256": "da71c936bf47e9d6b8bc777caa1ec558a1049e2ee3b7b82fbea14d87b90e19ac",
+      "post_sha256": "38fad8f97474c663cf1f7bd670645d1e05d60a67807e1f2428eb468e3e70ad8a"
+    }
+  }
+}

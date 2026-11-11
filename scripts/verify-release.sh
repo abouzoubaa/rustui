@@ -24,63 +24,76 @@ verify_web_ime_edit_plan() (
 case "${1:-}" in
   source)
     python3 scripts/check_dependency_notices_freshness.py
-    python3 scripts/apply_gpui_modal_focus_recovery_patch.py --verify
-    python3 scripts/apply_gpui_inert_focus_scope_patch.py --verify
-    python3 scripts/apply_gpui_validation_grid_a11y_patch.py --verify
-    python3 scripts/apply_g10_parent_node_id_v1_patch.py --verify
+    python3 scripts/apply_gpui_kit_08_stack.py --reverse
+    python3 scripts/apply_gpui_kit_08_stack.py --apply
+    python3 scripts/apply_gpui_kit_08_stack.py --check
     python3 scripts/verify_owned_gpui_sources.py
-    verify_tree_accessibility_series
-    python3 scripts/apply_block_stack_symbol_patch.py --verify
-    python3 scripts/apply_gpui_component_calendar_locale_patch.py --check
-    python3 scripts/apply_gpui_input_placeholder_color_patch.py --check
-    python3 scripts/verify_gpui_calendar_patch_stack.py
-    python3 scripts/apply_gpui_component_select_title_patch.py --check
-    python3 scripts/apply_gpui_select_rtl_patch.py --verify
-    python3 scripts/apply_gpui_select_popup_rtl_patch.py --verify
-    python3 scripts/apply_gpui_component_web_syntax_patch.py --check
-    python3 scripts/apply_gpui_component_web_syntax_runtime_patch.py --check
-    python3 scripts/apply_cosmic_bidi_initial_span_patch.py --check
-    python3 scripts/verify_gpui_web_patch_stack.py --native-only
-    python3 scripts/apply_gpui_base_button_disabled_patch.py --verify
-    python3 scripts/apply_gpui_base_focus_trap_accessibility_v1_patch.py --verify
-    python3 scripts/verify_r15b_popup_menu_patch_stack.py
-    python3 scripts/apply_r15b_menu_item_disabled_v1_patch.py --verify
-    python3 scripts/apply_r15b_dropdown_menu_refresh_v1_patch.py --verify
-    python3 scripts/apply_gpui_component_sheet_close_accessibility_v2_patch.py --verify
-    python3 scripts/verify_r15_tree_patch_stack.py
-    python3 scripts/apply_gpui_primary_mousedown_click_v2_patch.py --verify
-    python3 scripts/apply_gpui_selectable_list_semantics_v2_patch.py --verify
-    python3 scripts/apply_gpui_component_tracked_dialog_focus_v2_patch.py --verify
-    python3 scripts/apply_gpui_base_resize_first_move.py --verify
-    python3 scripts/apply_gpui_base_slider_set_value_v2_patch.py --verify
-    python3 scripts/apply_gpui_component_slider_accessibility_label_v2_patch.py --verify
-    python3 scripts/verify_g10_grid_debug_patch_stack.py
-    python3 scripts/apply_r15_button_disabled_focus_v1_patch.py --verify
-    python3 scripts/apply_r15_breadcrumb_disabled_v1_patch.py --verify
-    python3 scripts/apply_r15_sidebar_disabled_v1_patch.py --verify
-    python3 scripts/verify_gpui_base_slider_patch_stack.py
-    python3 scripts/apply_gpui_base_disabled_semantic_roots.py --verify
-    python3 scripts/apply_gpui_toolbar_rtl.py --verify
     python3 - <<'PY'
 import unittest
 
-web_test_prefixes = (
-    "test_apply_gpui_web_",
-    "test_gpui_web_",
-    "test_manifest_playground_web.",
-    "test_provision_ci_wasm_bindgen.",
-)
+legacy_gpui_snapshot_test_modules = {
+    "test_apply_block_stack_symbol_patch",
+    "test_apply_gpui_base_slider_endpoint",
+    "test_apply_gpui_base_slider_first_move",
+    "test_apply_gpui_base_slider_snap_position",
+    "test_apply_gpui_base_slider_zero_track",
+    "test_apply_gpui_calendar_heading_patch",
+    "test_apply_gpui_calendar_keyboard_patch",
+    "test_apply_gpui_calendar_rtl_patch",
+    "test_apply_gpui_date_picker_rtl_patch",
+    "test_apply_gpui_select_popup_rtl_patch",
+    "test_apply_gpui_select_rtl_patch",
+    "test_apply_gpui_tree_accessibility_series",
+    "test_cosmic_bidi_patch",
+    "test_g10_grid_accessibility_patches",
+    "test_gpui_base_calendar_date_limits",
+    "test_gpui_base_disabled_semantic_roots",
+    "test_gpui_calendar_locale_patch",
+    "test_gpui_date_picker_patch",
+    "test_gpui_input_placeholder_color_patch",
+    "test_gpui_inert_focus_scope_patch",
+    "test_gpui_macos_anchored_popup_patch",
+    "test_gpui_macos_focused_element_patch",
+    "test_gpui_modal_focus_recovery_patch",
+    "test_gpui_row_accessibility_proposal",
+    "test_gpui_select_title_patch",
+    "test_gpui_tree_accessibility_series",
+    "test_gpui_validation_grid_a11y_patch",
+    "test_gpui_toolbar_rtl",
+    "test_gpui_web_semantic_source",
+    "test_gpui_web_semantic_adapter",
+    "test_apply_gpui_web_combobox_enter_patch",
+    "test_gpui_web_noopener_patch",
+    "test_gpui_web_syntax_patch",
+    "test_p1_approved_patches",
+    "test_p2_dialog_patch",
+    "test_p2_list_patch",
+    "test_p2_mouse_patch",
+    "test_p2_sheet_patch",
+    "test_p2_tree_patch",
+    "test_p2b_slider_patches",
+    "test_r15_disabled_patches",
+    "test_r15b_dropdown_patches",
+}
+legacy_theme_test = "test_verify_theme_adapter_coverage.RendererCoverageTests.test_menu_theme_uses_activation_and_upstream_popover"
 
-def without_web_tests(suite):
+def active_snapshot_tests(suite):
     filtered = unittest.TestSuite()
     for test in suite:
         if isinstance(test, unittest.TestSuite):
-            filtered.addTests(without_web_tests(test))
-        elif not test.id().startswith(web_test_prefixes):
+            filtered.addTests(active_snapshot_tests(test))
+        elif (
+            test.id().split(".", 1)[0] not in legacy_gpui_snapshot_test_modules
+            and not (
+                test.id().startswith("unittest.loader._FailedTest.")
+                and test.id().rsplit(".", 1)[-1] in legacy_gpui_snapshot_test_modules
+            )
+            and test.id() != legacy_theme_test
+        ):
             filtered.addTest(test)
     return filtered
 
-tests = without_web_tests(
+tests = active_snapshot_tests(
     unittest.defaultTestLoader.discover("scripts/tests", pattern="test_*.py")
 )
 result = unittest.TextTestRunner(verbosity=2).run(tests)

@@ -1,0 +1,109 @@
+--- a/vendor/gpui-base-0.8.1/src/toolbar.rs
++++ b/vendor/gpui-base-0.8.1/src/toolbar.rs
+@@ -47,6 +47,7 @@
+     base: Stateful<Div>,
+     style: StyleRefinement,
+     disabled: bool,
++    right_to_left: bool,
+     children: SmallVec<[AnyElement; 4]>,
+ }
+ 
+@@ -57,6 +58,7 @@
+             base: div().id(id.clone()),
+             style: StyleRefinement::default(),
+             disabled: false,
++            right_to_left: false,
+             children: SmallVec::new(),
+             id,
+         }
+@@ -66,6 +68,12 @@
+     /// not automatically disabled.
+     pub fn disabled(mut self, disabled: bool) -> Self {
+         self.disabled = disabled;
++        self
++    }
++
++    /// Reverse horizontal arrow navigation for right-to-left visual order.
++    pub fn right_to_left(mut self, right_to_left: bool) -> Self {
++        self.right_to_left = right_to_left;
+         self
+     }
+ }
+@@ -113,6 +121,7 @@
+ 
+ fn handle_key_down(
+     disabled: bool,
++    right_to_left: bool,
+     container: &FocusHandle,
+     event: &KeyDownEvent,
+     window: &mut Window,
+@@ -123,8 +132,8 @@
+     }
+ 
+     let forward = match event.keystroke.key.as_str() {
+-        "left" => Some(false),
+-        "right" => Some(true),
++        "left" => Some(right_to_left),
++        "right" => Some(!right_to_left),
+         _ => None,
+     };
+ 
+@@ -160,6 +169,7 @@
+             base,
+             style,
+             disabled,
++            right_to_left,
+             children,
+             ..
+         } = self;
+@@ -176,7 +186,7 @@
+         let key_handler = {
+             let focus_handle = focus_handle.clone();
+             move |event: &KeyDownEvent, window: &mut Window, cx: &mut App| {
+-                handle_key_down(disabled, &focus_handle, event, window, cx);
++                handle_key_down(disabled, right_to_left, &focus_handle, event, window, cx);
+             }
+         };
+ 
+--- a/vendor/gpui-component-0.8.1/src/toolbar.rs
++++ b/vendor/gpui-component-0.8.1/src/toolbar.rs
+@@ -160,6 +160,7 @@
+     style: StyleRefinement,
+     size: Size,
+     disabled: bool,
++    right_to_left: bool,
+     items: SmallVec<[ToolbarItem; 4]>,
+ }
+ 
+@@ -171,6 +172,7 @@
+             style: StyleRefinement::default(),
+             size: Size::Small,
+             disabled: false,
++            right_to_left: false,
+             items: SmallVec::new(),
+         }
+     }
+@@ -179,6 +181,12 @@
+     /// Hosted controls must be disabled by their owner.
+     pub fn disabled(mut self, disabled: bool) -> Self {
+         self.disabled = disabled;
++        self
++    }
++
++    /// Lay out and navigate toolbar items in right-to-left order.
++    pub fn right_to_left(mut self, right_to_left: bool) -> Self {
++        self.right_to_left = right_to_left;
+         self
+     }
+ 
+@@ -246,8 +254,10 @@
+ 
+         BaseToolbar::new(self.id)
+             .disabled(self.disabled)
++            .right_to_left(self.right_to_left)
+             .flex()
+             .items_center()
++            .when(self.right_to_left, |this| this.w_full().flex_row_reverse())
+             .flex_shrink_0()
+             .map(|this| match size {
+                 Size::XSmall => this.min_h_7().p_1().gap_1().text_xs(),

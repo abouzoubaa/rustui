@@ -1,0 +1,21 @@
+{
+  "schema_version": 1,
+  "upstream": {
+    "repository": "https://github.com/longbridge/gpui-kit",
+    "tag": "v0.8.1",
+    "commit": "99576db58ec8103417c41a092e891b4022d24e7e",
+    "gpui_pre_version": "0.3.10"
+  },
+  "candidate": "gpui-component-calendar-fr-ar-v1-kit08.patch",
+  "patch_sha256": "f8da4d80f411e60a0283ff3e3807108ef67a6cd8e6509f14f464b7941fbcc0eb",
+  "files": {
+    "vendor/gpui-component-0.8.1/locales/ui.yml": {
+      "pre_sha256": "2d20f7f464cf95f905a5e152dbab45f21884720b73b960f2fb267f85614cd8d1",
+      "post_sha256": "2518569c68e157fdccbe342765f356e96d630869d10b68a05a340e168b24d2d5"
+    },
+    "vendor/gpui-component-0.8.1/src/time/calendar.rs": {
+      "pre_sha256": "e55837a29719714c1a1e3c23e8de1bca76af015ad186f2167340358da8d4f9a9",
+      "post_sha256": "380cf4e09300aec90bcf2439c99f53ae23439a9fe4556dcc54a311f7a946515b"
+    }
+  }
+}

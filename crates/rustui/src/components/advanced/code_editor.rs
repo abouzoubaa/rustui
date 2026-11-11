@@ -585,6 +585,110 @@ mod tests {
         }
     }
 
+    #[gpui::test]
+    fn code_editor_renders_native_rust_and_json_with_registered_syntax_styles(
+        cx: &mut gpui::TestAppContext,
+    ) {
+        use crate::runtime::component_host::ComponentHost;
+        use gpui_base::input::Rope;
+        use gpui_component::highlighter::SyntaxHighlighter;
+
+        const RUST_SOURCE: &str = "fn main() { let greeting = \"hello\"; }";
+        const JSON_SOURCE: &str = r#"{"enabled": true, "label": "hello"}"#;
+
+        struct Owner {
+            rust: String,
+            json: String,
+        }
+
+        impl View for Owner {
+            fn body(&self) -> impl View {
+                crate::layout::VStack::new()
+                    .child(
+                        CodeEditor(
+                            "rust-source",
+                            Binding::new(
+                                self.rust.clone(),
+                                |owner: &Owner| owner.rust.clone(),
+                                |owner, value| owner.rust = value,
+                            ),
+                        )
+                        .language("rust"),
+                    )
+                    .child(
+                        CodeEditor(
+                            "json-source",
+                            Binding::new(
+                                self.json.clone(),
+                                |owner: &Owner| owner.json.clone(),
+                                |owner, value| owner.json = value,
+                            ),
+                        )
+                        .language("json"),
+                    )
+            }
+        }
+
+        let (owner, window) = cx.add_window_view(|_, cx| {
+            gpui_component::init(cx);
+            ComponentHost::new(
+                Owner {
+                    rust: RUST_SOURCE.into(),
+                    json: JSON_SOURCE.into(),
+                },
+                cx,
+            )
+        });
+
+        let (rust_editor, json_editor, highlight_theme) = window.update(|window, app| {
+            let _ = window.draw(app);
+            let retained = |id| {
+                owner
+                    .read(app)
+                    .retained_entity_for_test::<RetainedCodeEditor>(vec![], Identity::from(id))
+                    .expect("public CodeEditor should retain its native editor")
+                    .read(app)
+                    .editor
+                    .clone()
+            };
+            (
+                retained("rust-source"),
+                retained("json-source"),
+                gpui_component::theme::Theme::global(app)
+                    .highlight_theme
+                    .clone(),
+            )
+        });
+
+        window.update(|_, app| {
+            assert_eq!(rust_editor.read(app).language_name().as_ref(), "rust");
+            assert_eq!(rust_editor.read(app).value().to_string(), RUST_SOURCE);
+            assert_eq!(json_editor.read(app).language_name().as_ref(), "json");
+            assert_eq!(json_editor.read(app).value().to_string(), JSON_SOURCE);
+        });
+
+        let style_for = |language: &str, source: &str, span: &str| {
+            let mut highlighter = SyntaxHighlighter::new(language);
+            assert!(highlighter.update(None, &Rope::from_str(source), None));
+            let styles = highlighter.styles(&(0..source.len()), highlight_theme.as_ref());
+            let start = source.find(span).expect("syntax span must occur in source");
+            let end = start + span.len();
+            styles
+                .into_iter()
+                .find(|(range, _)| range.start <= start && range.end >= end)
+                .map(|(_, style)| style)
+                .unwrap_or_else(|| panic!("{language} syntax style missing for {span:?}"))
+        };
+
+        let rust_keyword = style_for("rust", RUST_SOURCE, "fn");
+        let rust_string = style_for("rust", RUST_SOURCE, "\"hello\"");
+        assert_ne!(rust_keyword, rust_string, "Rust keyword and string styles");
+
+        let json_boolean = style_for("json", JSON_SOURCE, "true");
+        let json_string = style_for("json", JSON_SOURCE, "\"hello\"");
+        assert_ne!(json_boolean, json_string, "JSON boolean and string styles");
+    }
+
     #[test]
     fn retained_editor_event_uses_latest_owner_binding_writer() {
         let slot = RefCell::new(None);

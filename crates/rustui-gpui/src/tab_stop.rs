@@ -108,42 +108,27 @@ impl TabStopMap {
         self.order = SumTree::new(());
     }
 
-    pub(crate) fn first_matching(
-        &self,
-        mut predicate: impl FnMut(&FocusHandle) -> bool,
-    ) -> Option<FocusHandle> {
-        self.order
-            .iter()
-            .filter(|node| node.tab_stop)
-            .filter_map(|node| self.focus_handle_for_order(node))
-            .find(|handle| predicate(handle))
-    }
-
-    pub(crate) fn matching_in_direction(
-        &self,
-        focused: Option<FocusId>,
-        reverse: bool,
-        mut predicate: impl FnMut(&FocusHandle) -> bool,
-    ) -> Option<FocusHandle> {
-        let mut stops: Vec<_> = self.order.iter().filter(|node| node.tab_stop)
-            .filter_map(|node| self.focus_handle_for_order(node)).collect();
-        if reverse { stops.reverse(); }
-        let start = focused.and_then(|id| stops.iter().position(|h| h.id == id))
-            .map_or(0, |i| i + 1);
-        stops.iter().cycle().skip(start).take(stops.len())
-            .find(|handle| predicate(handle)).cloned()
-    }
-
-    /// Filter the ordinary tab order without changing nested group traversal.
+    /// Find the next tab stop accepted by a predicate, preserving SumTree tab order.
+    /// `next` and `prev` remain the fast path when filtering is not needed.
     pub(crate) fn matching_preserving_order(
-        &self, focused: Option<FocusId>, reverse: bool,
+        &self,
+        focused_id: Option<FocusId>,
+        reverse: bool,
         mut allowed: impl FnMut(&FocusHandle) -> bool,
     ) -> Option<FocusHandle> {
-        let mut current = focused;
+        let mut current = focused_id;
         for _ in 0..=self.by_id.len() {
-            let candidate = if reverse { self.prev(current.as_ref()) } else { self.next(current.as_ref()) }?;
-            if allowed(&candidate) { return Some(candidate); }
-            if Some(candidate.id) == focused { return None; }
+            let candidate = if reverse {
+                self.prev(current.as_ref())
+            } else {
+                self.next(current.as_ref())
+            }?;
+            if allowed(&candidate) {
+                return Some(candidate);
+            }
+            if Some(candidate.id) == focused_id {
+                return None;
+            }
             current = Some(candidate.id);
         }
         None
@@ -356,13 +341,14 @@ mod sum_tree_impl {
 #[cfg(test)]
 mod tests {
     use itertools::Itertools as _;
+    use parking_lot::RwLock;
 
     use crate::{FocusHandle, FocusId, FocusMap, TabStopMap};
     use std::sync::Arc;
 
     #[test]
     fn test_tab_handles() {
-        let focus_map = Arc::new(FocusMap::default());
+        let focus_map = Arc::new(RwLock::new(FocusMap::default()));
         let mut tab_index_map = TabStopMap::default();
 
         let focus_handles = [
@@ -451,7 +437,7 @@ mod tests {
 
     #[test]
     fn test_tab_non_stop_filtering() {
-        let focus_map = Arc::new(FocusMap::default());
+        let focus_map = Arc::new(RwLock::new(FocusMap::default()));
         let mut tab_index_map = TabStopMap::default();
 
         // Check that we can query next from a non-stop tab
@@ -471,28 +457,10 @@ mod tests {
         assert_eq!(result.id, tab_stop_2.id);
     }
 
-    #[test]
-    fn first_matching_visits_duplicate_ids() {
-        let focus_map = Arc::new(FocusMap::default());
-        let mut map = TabStopMap::default();
-        let duplicate = FocusHandle::new(&focus_map).tab_stop(true);
-        let later = FocusHandle::new(&focus_map).tab_stop(true).tab_index(2);
-        map.insert(&duplicate.clone().tab_index(0));
-        map.insert(&duplicate.clone().tab_index(1));
-        map.insert(&later);
-        let mut visited = Vec::new();
-        let result = map.first_matching(|handle| {
-            visited.push(handle.id);
-            handle.id == later.id
-        });
-        assert_eq!(visited, vec![duplicate.id, duplicate.id, later.id]);
-        assert_eq!(result, Some(later));
-    }
-
     #[must_use]
     struct TabStopMapTest {
         tab_map: TabStopMap,
-        focus_map: Arc<FocusMap>,
+        focus_map: Arc<RwLock<FocusMap>>,
         expected: Vec<(usize, FocusId)>,
     }
 
@@ -501,7 +469,7 @@ mod tests {
         fn new() -> Self {
             Self {
                 tab_map: TabStopMap::default(),
-                focus_map: Arc::new(FocusMap::default()),
+                focus_map: Arc::new(RwLock::new(FocusMap::default())),
                 expected: Vec::default(),
             }
         }
