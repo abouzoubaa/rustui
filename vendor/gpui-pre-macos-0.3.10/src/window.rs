@@ -989,92 +989,112 @@ fn anchored_popup_frame(
         );
 
         let screens = NSScreen::screens(marker);
-        let mut selected_screen = NSScreen::mainScreen(marker);
-        for screen in screens.iter() {
-            let visible = screen.visibleFrame();
-            if anchor_center.x >= visible.origin.x
+        let main_screen = NSScreen::mainScreen(marker).expect("main screen exists");
+        let visible_frames = screens
+            .iter()
+            .map(|screen| screen.visibleFrame())
+            .collect::<Vec<_>>();
+        let main_screen_index = screens
+            .iter()
+            .position(|screen| Retained::as_ptr(&screen) == Retained::as_ptr(&main_screen))
+            .unwrap_or(0);
+        let screen_index = popup_screen_index(anchor_center, &visible_frames, main_screen_index);
+        let selected_screen = screens
+            .iter()
+            .nth(screen_index)
+            .unwrap_or(main_screen);
+        let visible = selected_screen.visibleFrame();
+        let (frame, popup_size) =
+            popup_frame_for_visible_screen(anchor, visible, popup_size, options);
+        (frame, popup_size, selected_screen)
+    }
+}
+
+fn popup_screen_index(anchor_center: NSPoint, visible_frames: &[NSRect], fallback: usize) -> usize {
+    visible_frames
+        .iter()
+        .position(|visible| {
+            anchor_center.x >= visible.origin.x
                 && anchor_center.x <= visible.origin.x + visible.size.width
                 && anchor_center.y >= visible.origin.y
                 && anchor_center.y <= visible.origin.y + visible.size.height
-            {
-                selected_screen = Some(screen.clone());
-                break;
-            }
-        }
-        let selected_screen = selected_screen.expect("main screen exists");
-        let visible = selected_screen.visibleFrame();
-        let screen_width = visible.size.width.max(1.0);
-        let screen_height = visible.size.height.max(1.0);
-        let anchor_left = anchor.origin.x - visible.origin.x;
-        let anchor_top = visible.origin.y + screen_height - (anchor.origin.y + anchor.size.height);
-        let mut anchor_kind = options.anchor;
-        let mut anchor_x = popup_anchor_x(anchor_kind, anchor_left, anchor.size.width);
-        let anchor_y = popup_anchor_y(anchor_kind, anchor_top, anchor.size.height);
+        })
+        .unwrap_or(fallback)
+}
 
-        let mut width = (popup_size.width.as_f32() as f64).max(1.0);
-        let mut height = (popup_size.height.as_f32() as f64).max(1.0);
-        let adjustment = options.constraint_adjustment;
-        if adjustment.contains(PopupConstraintAdjustment::RESIZE_X) {
-            width = width.min(screen_width);
-        }
-        if adjustment.contains(PopupConstraintAdjustment::RESIZE_Y) {
-            height = height.min(screen_height);
-        }
+fn popup_frame_for_visible_screen(
+    anchor: NSRect,
+    visible: NSRect,
+    popup_size: Size<Pixels>,
+    options: &PopupOptions,
+) -> (NSRect, Size<Pixels>) {
+    let screen_width = visible.size.width.max(1.0);
+    let screen_height = visible.size.height.max(1.0);
+    let anchor_left = anchor.origin.x - visible.origin.x;
+    let anchor_top = visible.origin.y + screen_height - (anchor.origin.y + anchor.size.height);
+    let mut anchor_kind = options.anchor;
+    let mut anchor_x = popup_anchor_x(anchor_kind, anchor_left, anchor.size.width);
+    let anchor_y = popup_anchor_y(anchor_kind, anchor_top, anchor.size.height);
 
-        let mut gravity = options.gravity;
-        let (mut left, mut top) = popup_origin(gravity, anchor_x, anchor_y, width, height);
-        if adjustment.contains(PopupConstraintAdjustment::FLIP_X)
-            && popup_overflow_x(left, width, screen_width) > 0.0
-        {
-            let flipped_anchor = flip_popup_anchor_x(anchor_kind);
-            let flipped_gravity = flip_popup_gravity_x(gravity);
-            let flipped_x = popup_anchor_x(flipped_anchor, anchor_left, anchor.size.width);
-            let (candidate, _) = popup_origin(flipped_gravity, flipped_x, anchor_y, width, height);
-            if popup_overflow_x(candidate, width, screen_width)
-                < popup_overflow_x(left, width, screen_width)
-            {
-                anchor_kind = flipped_anchor;
-                anchor_x = flipped_x;
-                gravity = flipped_gravity;
-                left = candidate;
-            }
-        }
-        if adjustment.contains(PopupConstraintAdjustment::FLIP_Y)
-            && popup_overflow_y(top, height, screen_height) > 0.0
-        {
-            let flipped_anchor = flip_popup_anchor_y(anchor_kind);
-            let flipped_gravity = flip_popup_gravity_y(gravity);
-            let flipped_y = popup_anchor_y(flipped_anchor, anchor_top, anchor.size.height);
-            let (_, candidate) = popup_origin(flipped_gravity, anchor_x, flipped_y, width, height);
-            if popup_overflow_y(candidate, height, screen_height)
-                < popup_overflow_y(top, height, screen_height)
-            {
-                gravity = flipped_gravity;
-                top = candidate;
-            }
-        }
-        left += options.offset.x.as_f32() as f64;
-        top += options.offset.y.as_f32() as f64;
-        if adjustment.contains(PopupConstraintAdjustment::SLIDE_X) {
-            left = left.clamp(0.0, (screen_width - width).max(0.0));
-        }
-        if adjustment.contains(PopupConstraintAdjustment::SLIDE_Y) {
-            top = top.clamp(0.0, (screen_height - height).max(0.0));
-        }
-
-        let frame = NSRect::new(
-            NSPoint::new(
-                visible.origin.x + left,
-                visible.origin.y + screen_height - top - height,
-            ),
-            NSSize::new(width, height),
-        );
-        (
-            frame,
-            Size::new(px(width as f32), px(height as f32)),
-            selected_screen,
-        )
+    let mut width = (popup_size.width.as_f32() as f64).max(1.0);
+    let mut height = (popup_size.height.as_f32() as f64).max(1.0);
+    let adjustment = options.constraint_adjustment;
+    if adjustment.contains(PopupConstraintAdjustment::RESIZE_X) {
+        width = width.min(screen_width);
     }
+    if adjustment.contains(PopupConstraintAdjustment::RESIZE_Y) {
+        height = height.min(screen_height);
+    }
+
+    let mut gravity = options.gravity;
+    let (mut left, mut top) = popup_origin(gravity, anchor_x, anchor_y, width, height);
+    if adjustment.contains(PopupConstraintAdjustment::FLIP_X)
+        && popup_overflow_x(left, width, screen_width) > 0.0
+    {
+        let flipped_anchor = flip_popup_anchor_x(anchor_kind);
+        let flipped_gravity = flip_popup_gravity_x(gravity);
+        let flipped_x = popup_anchor_x(flipped_anchor, anchor_left, anchor.size.width);
+        let (candidate, _) = popup_origin(flipped_gravity, flipped_x, anchor_y, width, height);
+        if popup_overflow_x(candidate, width, screen_width)
+            < popup_overflow_x(left, width, screen_width)
+        {
+            anchor_kind = flipped_anchor;
+            anchor_x = flipped_x;
+            gravity = flipped_gravity;
+            left = candidate;
+        }
+    }
+    if adjustment.contains(PopupConstraintAdjustment::FLIP_Y)
+        && popup_overflow_y(top, height, screen_height) > 0.0
+    {
+        let flipped_anchor = flip_popup_anchor_y(anchor_kind);
+        let flipped_gravity = flip_popup_gravity_y(gravity);
+        let flipped_y = popup_anchor_y(flipped_anchor, anchor_top, anchor.size.height);
+        let (_, candidate) = popup_origin(flipped_gravity, anchor_x, flipped_y, width, height);
+        if popup_overflow_y(candidate, height, screen_height)
+            < popup_overflow_y(top, height, screen_height)
+        {
+            gravity = flipped_gravity;
+            top = candidate;
+        }
+    }
+    left += options.offset.x.as_f32() as f64;
+    top += options.offset.y.as_f32() as f64;
+    if adjustment.contains(PopupConstraintAdjustment::SLIDE_X) {
+        left = left.clamp(0.0, (screen_width - width).max(0.0));
+    }
+    if adjustment.contains(PopupConstraintAdjustment::SLIDE_Y) {
+        top = top.clamp(0.0, (screen_height - height).max(0.0));
+    }
+
+    let frame = NSRect::new(
+        NSPoint::new(
+            visible.origin.x + left,
+            visible.origin.y + screen_height - top - height,
+        ),
+        NSSize::new(width, height),
+    );
+    (frame, Size::new(px(width as f32), px(height as f32)))
 }
 
 fn popup_anchor_x(anchor: PopupAnchor, left: f64, width: f64) -> f64 {
@@ -1235,6 +1255,53 @@ mod anchored_popup_placement_tests {
         assert_eq!(popup_overflow_x(90.0, 20.0, 100.0), 10.0);
         assert_eq!(popup_overflow_y(10.0, 20.0, 100.0), 0.0);
         assert_eq!(popup_overflow_y(90.0, 20.0, 100.0), 10.0);
+    }
+
+    #[test]
+    fn screen_selection_handles_negative_stacked_origins_and_main_fallback() {
+        let visible_frames = [
+            NSRect::new(NSPoint::new(0.0, 0.0), NSSize::new(1440.0, 900.0)),
+            NSRect::new(NSPoint::new(-1920.0, 0.0), NSSize::new(1920.0, 1080.0)),
+            NSRect::new(NSPoint::new(0.0, 900.0), NSSize::new(1440.0, 900.0)),
+        ];
+        assert_eq!(
+            popup_screen_index(NSPoint::new(-500.0, 800.0), &visible_frames, 0),
+            1
+        );
+        assert_eq!(
+            popup_screen_index(NSPoint::new(500.0, 1200.0), &visible_frames, 0),
+            2
+        );
+        assert_eq!(
+            popup_screen_index(NSPoint::new(4000.0, 2000.0), &visible_frames, 0),
+            0
+        );
+        assert_eq!(popup_screen_index(NSPoint::new(-500.0, 800.0), &[], 2), 2);
+    }
+
+    #[test]
+    fn oversized_popup_resizes_to_negative_origin_visible_frame() {
+        let visible = NSRect::new(NSPoint::new(-1920.0, 23.0), NSSize::new(1920.0, 1057.0));
+        let anchor = NSRect::new(NSPoint::new(-1910.0, 900.0), NSSize::new(20.0, 12.0));
+        let options = PopupOptions {
+            anchor: PopupAnchor::BottomLeft,
+            gravity: PopupGravity::BottomRight,
+            constraint_adjustment: PopupConstraintAdjustment::FLIP_X
+                | PopupConstraintAdjustment::FLIP_Y
+                | PopupConstraintAdjustment::SLIDE_X
+                | PopupConstraintAdjustment::SLIDE_Y
+                | PopupConstraintAdjustment::RESIZE_X
+                | PopupConstraintAdjustment::RESIZE_Y,
+            offset: point(px(0.0), px(0.0)),
+        };
+        let (frame, size) =
+            popup_frame_for_visible_screen(anchor, visible, size(px(2400.0), px(1400.0)), &options);
+        assert_eq!(frame.origin.x, -1920.0);
+        assert_eq!(frame.origin.y, 23.0);
+        assert_eq!(frame.size.width, 1920.0);
+        assert_eq!(frame.size.height, 1057.0);
+        assert_eq!(size.width.as_f32(), 1920.0);
+        assert_eq!(size.height.as_f32(), 1057.0);
     }
 
     #[test]
