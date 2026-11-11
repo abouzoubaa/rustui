@@ -2,6 +2,7 @@
 # Package and check one isolated Playground instance without touching other instances.
 set -eu
 repo_root=$(CDPATH= cd -- "$(dirname -- "$0")/.." && pwd)
+. "$repo_root/scripts/pinned-toolchain.sh"
 dry_run=0
 case "$#" in
     0) ;;
@@ -78,8 +79,7 @@ if [ "$console_user" != "$(id -un)" ] || ! launchctl print "gui/$(id -u)" >/dev/
     exit 1
 fi
 cd "$repo_root"
-rustc_bin=$(rustup which rustc --toolchain 1.98.0)
-if ! RUSTC="$rustc_bin" rustup run 1.98.0 cargo build -p rustui-playground --locked --offline; then
+if ! pinned_cargo build -p rustui-playground --locked --offline; then
     printf '%s\n' 'error: Playground build failed' >&2
     exit 1
 fi
