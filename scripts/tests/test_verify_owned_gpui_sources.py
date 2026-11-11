@@ -27,6 +27,27 @@ class VerifyOwnedGpuSourcesTests(unittest.TestCase):
             self.assertEqual(mismatches, [])
             self.assertEqual(files_checked, 1)
 
+    def test_accepts_independently_regenerated_macos_test_lock(self):
+        with tempfile.TemporaryDirectory() as temporary:
+            root = Path(temporary)
+            owned = root / "owned"
+            vendor = root / "vendor"
+            owned.mkdir()
+            vendor.mkdir()
+            (owned / "Cargo.toml").write_text("[package]\nname='rustui-gpui-macos'\n")
+            (vendor / "Cargo.toml").write_text("[package]\nname='gpui-pre-macos'\n")
+            (owned / "Cargo.lock").write_text("version = 4\n")
+            (vendor / "Cargo.lock").write_text("version = 3\n")
+            (owned / "lib.rs").write_bytes(b"same\n")
+            (vendor / "lib.rs").write_bytes(b"same\n")
+
+            mismatches, files_checked = compare_trees(
+                owned, vendor, {"Cargo.lock"}
+            )
+
+            self.assertEqual(mismatches, [])
+            self.assertEqual(files_checked, 1)
+
     def test_rejects_changed_source_file(self):
         with tempfile.TemporaryDirectory() as temporary:
             root = Path(temporary)
