@@ -121,6 +121,58 @@ impl AnchoredPopupHandle {
 }
 
 #[cfg(not(target_family = "wasm"))]
+struct PopupEscapeRoot<V: View> {
+    child: V,
+    parent: AnyWindowHandle,
+    owner_focus: Option<gpui::WeakFocusHandle>,
+    popup_focus: gpui::FocusHandle,
+    focus_initialized: std::rc::Rc<std::cell::Cell<bool>>,
+}
+
+#[cfg(not(target_family = "wasm"))]
+impl<V: View> View for PopupEscapeRoot<V> {
+    fn body(&self) -> impl View {
+        self.child.body()
+    }
+
+    fn on_mount(&mut self, cx: &mut App) {
+        self.child.on_mount(cx);
+    }
+
+    fn on_unmount(&mut self, cx: &mut App) {
+        self.child.on_unmount(cx);
+    }
+
+    fn into_element(&self, context: &mut crate::view::RenderContext<'_>) -> AnyElement {
+        use gpui::{InteractiveElement as _, ParentElement as _, Styled as _};
+
+        let child = self.child.into_element(context);
+        let parent = self.parent;
+        let owner_focus = self.owner_focus.clone();
+        if !self.focus_initialized.replace(true) {
+            let (window, app) = context.transition_window_app();
+            self.popup_focus.focus(window, app);
+        }
+        gpui::div()
+            .size_full()
+            .track_focus(&self.popup_focus)
+            .on_key_down(move |event, popup_window, cx| {
+                if event.keystroke.key == "escape" {
+                    popup_window.remove_window();
+                    if let Some(focus) = owner_focus.as_ref().and_then(|focus| focus.upgrade()) {
+                        let _ = parent.update(cx, |_, owner_window, app| {
+                            focus.focus(owner_window, app);
+                        });
+                    }
+                    cx.stop_propagation();
+                }
+            })
+            .child(child)
+            .into_any_element()
+    }
+}
+
+#[cfg(not(target_family = "wasm"))]
 fn schedule_anchor_detach_watch(
     popup: AnchoredPopupHandle,
     prepaint_generation: std::rc::Rc<std::cell::Cell<u64>>,
@@ -162,6 +214,15 @@ pub fn open_anchored_popup<V: View>(
     parent: &mut Window,
     cx: &mut App,
 ) -> Result<AnchoredPopupHandle, String> {
+    let parent_handle = parent.window_handle();
+    let owner_focus = parent.focused(cx).map(|focus| focus.downgrade());
+    let root = PopupEscapeRoot {
+        child: root,
+        parent: parent_handle,
+        owner_focus,
+        popup_focus: cx.focus_handle(),
+        focus_initialized: std::rc::Rc::new(std::cell::Cell::new(false)),
+    };
     let (anchor_x, anchor_y, anchor_width, anchor_height) = options.anchor_rect;
     let (width, height) = options.size;
     if ![
@@ -628,6 +689,143 @@ mod tests {
         window.update(|window, app| window.blur(app));
         window.simulate_keystrokes("shift-tab");
         window.update(|window, app| assert!(window.focused(app).is_some()));
+    }
+
+    #[cfg(not(target_family = "wasm"))]
+    #[gpui::test]
+    fn escape_closes_anchored_popup_and_restores_owner_focus(cx: &mut gpui::TestAppContext) {
+        use gpui::{
+            InteractiveElement as _, ParentElement as _, StatefulInteractiveElement as _,
+            Styled as _,
+        };
+
+        struct FocusOwner {
+            focus: gpui::FocusHandle,
+        }
+        impl gpui::Render for FocusOwner {
+            fn render(
+                &mut self,
+                _: &mut gpui::Window,
+                _: &mut gpui::Context<Self>,
+            ) -> impl gpui::IntoElement {
+                gpui::div()
+                    .track_focus(&self.focus)
+                    .tab_stop(true)
+                    .child("owner focus target")
+            }
+        }
+
+        cx.update(gpui_component::init);
+        let (owner, parent_window) = cx.add_window_view(|_, cx| FocusOwner {
+            focus: cx.focus_handle(),
+        });
+        let (parent, owner_focus) = parent_window.update(|window, app| {
+            let _ = window.draw(app);
+            let focus = owner.read(app).focus.clone();
+            window.focus(&focus, app);
+            (window.window_handle(), focus)
+        });
+        let popup = parent
+            .update(cx, |_, window, app| {
+                super::open_anchored_popup(
+                    crate::view::EmptyView,
+                    rustui_core::EnvironmentValues::default(),
+                    super::AnchoredPopupOptions {
+                        anchor_rect: (10.0, 20.0, 24.0, 24.0),
+                        size: (120.0, 80.0),
+                    },
+                    window,
+                    app,
+                )
+                .unwrap()
+            })
+            .unwrap();
+
+        cx.simulate_keystrokes(popup.window_handle(), "escape");
+        cx.run_until_parked();
+
+        assert!(popup.update(cx, |_, _, _| ()).is_err());
+        assert!(
+            parent
+                .update(cx, |_, window, app| window.focused(app).as_ref()
+                    == Some(&owner_focus))
+                .unwrap()
+        );
+    }
+
+    #[cfg(not(target_family = "wasm"))]
+    #[gpui::test]
+    fn popup_child_can_consume_escape_for_text_editing(cx: &mut gpui::TestAppContext) {
+        struct EscapeConsumer {
+            handled: std::rc::Rc<std::cell::Cell<bool>>,
+            focus: gpui::FocusHandle,
+        }
+        impl crate::view::View for EscapeConsumer {
+            fn body(&self) -> impl crate::view::View {
+                crate::view::EmptyView
+            }
+
+            fn into_element(&self, _: &mut crate::view::RenderContext<'_>) -> gpui::AnyElement {
+                use gpui::{InteractiveElement as _, IntoElement as _, Styled as _};
+
+                let handled = self.handled.clone();
+                gpui::div()
+                    .size_full()
+                    .track_focus(&self.focus)
+                    .tab_stop(true)
+                    .on_key_down(move |event, _, cx| {
+                        if event.keystroke.key == "escape" {
+                            handled.set(true);
+                            cx.stop_propagation();
+                        }
+                    })
+                    .into_any_element()
+            }
+        }
+
+        struct Parent;
+        impl gpui::Render for Parent {
+            fn render(
+                &mut self,
+                _: &mut gpui::Window,
+                _: &mut gpui::Context<Self>,
+            ) -> impl gpui::IntoElement {
+                gpui::div()
+            }
+        }
+
+        cx.update(gpui_component::init);
+        let child_focus = cx.update(|app| app.focus_handle());
+        let handled = std::rc::Rc::new(std::cell::Cell::new(false));
+        let (_, parent_window) = cx.add_window_view(|_, _| Parent);
+        let parent = parent_window.update(|window, _| window.window_handle());
+        let popup = parent
+            .update(cx, |_, window, app| {
+                super::open_anchored_popup(
+                    EscapeConsumer {
+                        handled: handled.clone(),
+                        focus: child_focus.clone(),
+                    },
+                    rustui_core::EnvironmentValues::default(),
+                    super::AnchoredPopupOptions {
+                        anchor_rect: (10.0, 20.0, 24.0, 24.0),
+                        size: (120.0, 80.0),
+                    },
+                    window,
+                    app,
+                )
+                .unwrap()
+            })
+            .unwrap();
+
+        popup
+            .update(cx, |_, window, app| window.focus(&child_focus, app))
+            .unwrap();
+        cx.simulate_keystrokes(popup.window_handle(), "escape");
+        cx.run_until_parked();
+
+        assert!(handled.get(), "popup content should receive Escape first");
+        assert!(popup.update(cx, |_, _, _| ()).is_ok());
     }
 
     #[cfg(not(target_family = "wasm"))]
