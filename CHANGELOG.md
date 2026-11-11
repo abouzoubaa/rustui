@@ -2,6 +2,7 @@
 
 ## 0.3.0 — 2026-11-11
 
+- NP-2: added fractional logical-coordinate coverage for anchored popup placement and verified AppKit conversion does not multiply by backing scale.
 - NP-1: activated the approved macOS anchored-popup backend patch; native popups remain opt-in and the in-window default is unchanged.
 - Pinned check, smoke, performance, and release scripts to the repository Rust toolchain, ignoring ambient compiler overrides.
 - NP-0: refreshed native popup planning for GPUI Kit 0.8.1 and rebased the opt-in macOS candidate patch.
