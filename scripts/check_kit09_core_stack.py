@@ -47,6 +47,12 @@ CANDIDATE_ORDER = (
     "gpui-tree-aria-disabled-v1-kit08.patch",
 )
 LATER_FAMILY_CANDIDATES = {
+    "gpui-base-slider-endpoint-v1-kit09.patch",
+    "gpui-base-slider-first-move-v1.patch",
+    "gpui-base-slider-set-value-v2-kit09.patch",
+    "gpui-base-slider-zero-track-v1.patch",
+    "gpui-base-resize-first-move-v1-kit08.patch",
+    "gpui-base-resize-first-move-v3-kit08.patch",
     "t13-modal-focus-recovery-v1-kit09.patch",
     "gpui-component-tracked-dialog-focus-v1-kit09.patch",
     "gpui-component-sheet-close-accessibility-v1-kit09.patch",

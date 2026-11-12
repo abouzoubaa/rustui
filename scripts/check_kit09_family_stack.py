@@ -57,7 +57,15 @@ A3_4C_ORDER = (
     "r15-tree-disabled-focus-v1.patch",
     "gpui-component-table-delegate-accessibility-v1-kit09.patch",
 )
-FAMILY_ORDER = A3_4A_ORDER + A3_4B_ORDER + A3_4C_ORDER
+A3_4D_ORDER = (
+    "gpui-base-slider-endpoint-v1-kit09.patch",
+    "gpui-base-slider-first-move-v1.patch",
+    "gpui-base-slider-set-value-v2-kit09.patch",
+    "gpui-base-slider-zero-track-v1.patch",
+    "gpui-base-resize-first-move-v1-kit08.patch",
+    "gpui-base-resize-first-move-v3-kit08.patch",
+)
+FAMILY_ORDER = A3_4A_ORDER + A3_4B_ORDER + A3_4C_ORDER + A3_4D_ORDER
 
 
 FAMILY_PROOF_CRATE = ROOT / "scripts/kit08_family_proofs"
@@ -154,6 +162,7 @@ def compile_candidate_workspace(
     proof_toolbar = "--proof-toolbar" in sys.argv[1:]
     proof_a3_4b = "--proof-a3-4b" in sys.argv[1:]
     proof_a3_4c = "--proof-a3-4c" in sys.argv[1:]
+    proof_a3_4d = "--proof-a3-4d" in sys.argv[1:]
     if "--proof-grid-a11y" in sys.argv[1:] or proof_all or proof_a3_4c:
         gpui_pre = sources_root / f'gpui-pre-{source_by_name["gpui-pre"]["version"]}'
         with (gpui_pre / "Cargo.toml").open("a", encoding="utf-8") as cargo_toml:
@@ -174,7 +183,7 @@ def compile_candidate_workspace(
         (workspace / "assets/fonts/lilex/Lilex-Regular.ttf").write_bytes(b"")
         members.append(f'"sources/gpui-pre-{source_by_name["gpui-pre"]["version"]}"')
         members.append('"util_macros"')
-    if proof_all or proof_calendar or proof_placeholder or proof_toolbar or proof_a3_4b or proof_a3_4c:
+    if proof_all or proof_calendar or proof_placeholder or proof_toolbar or proof_a3_4b or proof_a3_4c or proof_a3_4d:
         proof_dir = workspace / "family-proofs"
         shutil.copytree(FAMILY_PROOF_CRATE / "tests", proof_dir / "tests")
         (proof_dir / "Cargo.toml").write_text(
@@ -213,6 +222,7 @@ def compile_candidate_workspace(
             "--proof-a3-4a",
             "--proof-a3-4b",
             "--proof-a3-4c",
+            "--proof-a3-4d",
         )
     ):
         # GPUI Component's crate archive omits several repository-level
@@ -306,6 +316,41 @@ def compile_candidate_workspace(
                 ),
             ]
         )
+    if proof_a3_4d:
+        proofs.extend(
+            [
+                (
+                    "slider_accessibility_actions_are_advertised_and_clamp_to_range",
+                    "a2-4a-modal-proof",
+                    "A3-4d Slider SetValue/Increment/Decrement",
+                    "slider_accessibility",
+                ),
+                (
+                    "slider_set_value_uses_zero_origin_steps_and_preserves_range_start",
+                    "a2-4a-modal-proof",
+                    "A3-4d Slider SetValue preserves tested snapping",
+                    "slider_accessibility",
+                ),
+                (
+                    "slider_pointer_snapping_clamps_to_configured_maximum",
+                    "a2-4a-modal-proof",
+                    "A3-4d Slider endpoint and thumb geometry",
+                    "slider_accessibility",
+                ),
+                (
+                    "resize_handle_applies_the_first_pointer_position_immediately",
+                    "a2-4a-modal-proof",
+                    "A3-4d resize first pointer position",
+                    "resize_panel",
+                ),
+                (
+                    "resize_drag_finishes_when_left_button_is_no_longer_pressed",
+                    "a2-4a-modal-proof",
+                    "A3-4d resize release handling",
+                    "resize_panel",
+                ),
+            ]
+        )
     outcomes: list[tuple[str, int, str]] = []
     for test_name, package, label, integration_test in proofs:
         proof_command = ["rustup", "run", "1.98.0", "cargo", "test"]
@@ -377,12 +422,13 @@ def run(write_manifest: bool = False) -> dict:
         raise FixtureError(f"recorded stack manifest is stale: {OUTPUT}; use --write-manifest")
     OUTPUT.write_bytes(data)
     print(
-        "A3-2 core patches={}; A3-4a patches={}; A3-4b patches={}; A3-4c patches={}; "
+        "A3-2 core patches={}; A3-4a patches={}; A3-4b patches={}; A3-4c patches={}; A3-4d patches={}; "
         "fixture archives verified={}; target files hashed={}; stack files={}; reverse=exact".format(
             len(CORE_ORDER),
             len(A3_4A_ORDER),
             len(A3_4B_ORDER),
             len(A3_4C_ORDER),
+            len(A3_4D_ORDER),
             archive_count,
             target_count,
             len(result["files"]),

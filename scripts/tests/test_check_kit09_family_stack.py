@@ -26,6 +26,24 @@ class Kit09FamilyStackTests(unittest.TestCase):
         self.assertEqual(set(STACK.FAMILY_ORDER), family_files)
         self.assertEqual(len(STACK.FAMILY_ORDER), len(set(STACK.FAMILY_ORDER)))
 
+    def test_slider_resize_family_follows_the_tree_grid_family(self) -> None:
+        order = STACK.CORE_ORDER + STACK.FAMILY_ORDER
+        self.assertLess(
+            order.index("gpui-component-table-delegate-accessibility-v1-kit09.patch"),
+            order.index("gpui-base-slider-endpoint-v1-kit09.patch"),
+        )
+        self.assertEqual(
+            STACK.A3_4D_ORDER,
+            (
+                "gpui-base-slider-endpoint-v1-kit09.patch",
+                "gpui-base-slider-first-move-v1.patch",
+                "gpui-base-slider-set-value-v2-kit09.patch",
+                "gpui-base-slider-zero-track-v1.patch",
+                "gpui-base-resize-first-move-v1-kit08.patch",
+                "gpui-base-resize-first-move-v3-kit08.patch",
+            ),
+        )
+
     def test_inert_focus_provider_precedes_modal_focus_consumer(self) -> None:
         order = STACK.CORE_ORDER + STACK.FAMILY_ORDER
         self.assertLess(

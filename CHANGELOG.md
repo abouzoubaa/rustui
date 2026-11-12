@@ -147,3 +147,4 @@
 - Rebased DataGrid validation and accessibility metadata for GPUI Kit 0.8.
 - Preserve disabled accessibility on GPUI Kit 0.8 editor-owned input nodes.
 - Added the GPUI Kit 0.9.x upgrade plan.
+- A3-4d: rebase Slider accessibility and endpoint behavior for Kit 0.9; retain tested resize interactions.

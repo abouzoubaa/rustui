@@ -1,7 +1,8 @@
 use gpui::{
+    AppContext as _, Context, Entity, IntoElement, ParentElement as _, Render, Styled as _,
+    TestAppContext, Window,
     accesskit::{Action, ActionData},
-    div, px, AppContext as _, Context, Entity, IntoElement, ParentElement as _, Render,
-    Styled as _, TestAppContext, Window,
+    div, px,
 };
 use gpui_base::slider::{Slider, SliderState};
 
@@ -52,27 +53,50 @@ fn slider_accessibility_actions_are_advertised_and_clamp_to_range(cx: &mut TestA
 
     window.update(|window, cx| {
         state.update(cx, |state, cx| {
-            state.handle_accessibility_action(
-                Action::SetValue,
-                Some(&ActionData::NumericValue(8.8)),
-                window,
-                cx,
-            );
+            state.set_accessibility_value(Some(&ActionData::NumericValue(8.8)), window, cx);
         });
     });
     assert_eq!(window.update(|_, cx| state.read(cx).value().end()), 9.);
 
     window.update(|window, cx| {
         state.update(cx, |state, cx| {
-            state.handle_accessibility_action(Action::Increment, None, window, cx);
+            state.step_thumb(false, state.accessibility_step(), window, cx);
         });
     });
     assert_eq!(window.update(|_, cx| state.read(cx).value().end()), 10.);
     window.update(|window, cx| {
         state.update(cx, |state, cx| {
-            state.handle_accessibility_action(Action::Decrement, None, window, cx);
+            state.step_thumb(false, -state.accessibility_step(), window, cx);
         });
     });
+    assert_eq!(window.update(|_, cx| state.read(cx).value().end()), 6.);
+}
+
+#[gpui::test]
+fn slider_set_value_uses_zero_origin_steps_and_preserves_range_start(cx: &mut TestAppContext) {
+    let state = cx.update(|cx| {
+        cx.new(|_| {
+            SliderState::new()
+                .min(-10.)
+                .max(10.)
+                .step(6.)
+                .default_value((-10., 0.))
+        })
+    });
+    let (view, window) = cx.add_window_view({
+        let state = state.clone();
+        move |_, _| SliderHost { state }
+    });
+    window.update(|window, cx| {
+        let _ = view.read(cx);
+        window.draw(cx).clear(cx);
+    });
+    window.update(|window, cx| {
+        state.update(cx, |state, cx| {
+            state.set_accessibility_value(Some(&ActionData::NumericValue(8.8)), window, cx);
+        });
+    });
+    assert_eq!(window.update(|_, cx| state.read(cx).value().start()), -10.);
     assert_eq!(window.update(|_, cx| state.read(cx).value().end()), 6.);
 }
 
@@ -81,10 +105,10 @@ fn slider_pointer_snapping_clamps_to_configured_maximum(cx: &mut TestAppContext)
     let state = cx.update(|cx| {
         cx.new(|_| {
             SliderState::new()
-                .min(0.)
+                .min(2.)
                 .max(10.)
                 .step(6.)
-                .default_value(0.)
+                .default_value(2.)
         })
     });
     let (view, window) = cx.add_window_view({
@@ -111,4 +135,5 @@ fn slider_pointer_snapping_clamps_to_configured_maximum(cx: &mut TestAppContext)
         });
     });
     assert_eq!(window.update(|_, cx| state.read(cx).value().end()), 10.);
+    assert_eq!(window.update(|_, cx| state.read(cx).percentage().end), 1.);
 }
