@@ -1,0 +1,15 @@
+--- a/vendor/gpui-base-0.8.1/src/tree.rs
++++ b/vendor/gpui-base-0.8.1/src/tree.rs
+@@ -546,7 +546,12 @@
+ 
+ impl RenderOnce for Tree {
+     fn render(self, window: &mut Window, cx: &mut App) -> impl IntoElement {
++        let disabled = self.state.read(cx).entries.iter().all(TreeEntry::is_disabled);
+         let focus_handle = self.state.read(cx).focus_handle.clone();
++        if disabled && focus_handle.contains_focused(window, cx) {
++            window.focus_next(cx);
++        }
++        let focus_handle = focus_handle.tab_stop(!disabled);
+         self.state.update(cx, |state, _| {
+             state.render_item = self.render_item;
+             state.list_style = self.list_style;

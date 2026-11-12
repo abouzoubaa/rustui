@@ -21,6 +21,7 @@
     "gpui-pre-web-accessible-name-v1.patch",
     "gpui-primary-mousedown-click-v2.patch",
     "r15-test-tree-disabled-v1-kit08.patch",
+    "a11y-grid-readonly-sort-v1-kit09.patch",
     "t17-inert-focus-scope-v1-kit08-kit09.patch",
     "gpui-tree-aria-disabled-v1-kit08.patch",
     "t13-modal-focus-recovery-v1-kit09.patch",
@@ -35,7 +36,14 @@
     "gpui-component-select-rtl-alignment-v2-kit08.patch",
     "gpui-component-select-rtl-alignment-v3-kit08.patch",
     "gpui-component-select-rtl-auto-width-v4-kit08.patch",
-    "gpui-component-select-rtl-auto-width-v6-kit08.patch"
+    "gpui-component-select-rtl-auto-width-v6-kit08.patch",
+    "gpui-selectable-list-semantics-v2.patch",
+    "gpui-component-tree-accessible-name-v1-kit08.patch",
+    "gpui-tree-aria-disabled-row-v1-kit08.patch",
+    "gpui-tree-aria-level-v1-kit08.patch",
+    "gpui-tree-disabled-keyboard-v2.patch",
+    "r15-tree-disabled-focus-v1.patch",
+    "gpui-component-table-delegate-accessibility-v1-kit09.patch"
   ],
   "patches": [
     {
@@ -223,6 +231,20 @@
       }
     },
     {
+      "patch": "a11y-grid-readonly-sort-v1-kit09.patch",
+      "patch_sha256": "a15e235fc95b4cdf3405120b92901ad8a261368f9c78ec609a3f9510ddd1fefd",
+      "files": {
+        "vendor/gpui-pre-0.3.10/src/elements/div.rs": {
+          "pre_sha256": "27c02a94d692b7c468db50517ade786811364187e7239c5d69a5c92e0edae03a",
+          "post_sha256": "2947ce8faa3c3ce25b1e65ed6e95fe536adbca4cb8437ff06340bea47797d32b"
+        },
+        "vendor/gpui-pre-0.3.10/src/window/a11y/debug.rs": {
+          "pre_sha256": "a838bad5f53fb4dbeae936cc7c0a29daa464d1d058dbcb20f6f7b721bc6b16b9",
+          "post_sha256": "8c532b0ebfec4ca78fef1378b4c37e61105b6d5778eda25887e0a79a9471ec2c"
+        }
+      }
+    },
+    {
       "patch": "t17-inert-focus-scope-v1-kit08-kit09.patch",
       "patch_sha256": "4f55d97ef427af0803b6afea7cb19700468bbe4e6b0900bd80ac2925c719355f",
       "files": {
@@ -231,8 +253,8 @@
           "post_sha256": "24d41e963dd0beea2f1612955399153f9572493b55b3adf39ed284a886c9ddbc"
         },
         "vendor/gpui-pre-0.3.10/src/window.rs": {
-          "pre_sha256": "9f4891f1e9c323d8d14a0624ce86c436cb9e623a52e8300a9b67ec0119f4aaa5",
-          "post_sha256": "84a33897419237f0e7967c102aadc59ac59fddd6eab5707248faa99b03bf93de"
+          "pre_sha256": "0d15407b32262da2eae4db66d931d6e97fc5c1cdb65384162b104d570d6c66d5",
+          "post_sha256": "fb81a508463b64cd3d4755cd55b169ed853deb175d4a15962de8099b38270881"
         }
       }
     },
@@ -241,8 +263,8 @@
       "patch_sha256": "271f781d06805e8149e5762a15255fe7a3098c8dbd8af6a22d554eaec64dea7e",
       "files": {
         "vendor/gpui-pre-0.3.10/src/elements/div.rs": {
-          "pre_sha256": "73b930227fe8f3c1fb703c2e7529d16a3f372cf52ec2afe95397ed0ff63f65d7",
-          "post_sha256": "d092ac4cd8e516cd11d778393e958babb1c1033421268d344d3156ebe26f963e"
+          "pre_sha256": "2947ce8faa3c3ce25b1e65ed6e95fe536adbca4cb8437ff06340bea47797d32b",
+          "post_sha256": "4d0adecd0bfd268ccbea4d45bc0a45a267edb284c2f2a6a2a54b44638ef5b4a8"
         }
       }
     },
@@ -259,8 +281,8 @@
           "post_sha256": "6c1095845f9f0cf18224a68c76b128f368153b680784916476200e5a3481c318"
         },
         "vendor/gpui-pre-0.3.10/src/window.rs": {
-          "pre_sha256": "84a33897419237f0e7967c102aadc59ac59fddd6eab5707248faa99b03bf93de",
-          "post_sha256": "569b7d6f4ea42e33b5a8d5d2fe42297d068fa270e5510b873bec02aca263fc7f"
+          "pre_sha256": "fb81a508463b64cd3d4755cd55b169ed853deb175d4a15962de8099b38270881",
+          "post_sha256": "8869c8594b70c3f247a287c74efaafc65043703cdcea28b8dba9fa3a20af4fdd"
         }
       }
     },
@@ -403,6 +425,80 @@
           "post_sha256": "36a5e802c36cd2cb92850ffb8d90ffd0a92f3d29e0cee8934f44f4adcedcd41c"
         }
       }
+    },
+    {
+      "patch": "gpui-selectable-list-semantics-v2.patch",
+      "patch_sha256": "3bc03f0be8d2c50b079b10e0c73ac309135661375ce607eced8d8d344efebc9a",
+      "files": {
+        "vendor/gpui-component-0.8.1/src/list/list.rs": {
+          "pre_sha256": "00f2622ae21fa20755925dc9bd25ae051c12101f6947779870bab7c13589e468",
+          "post_sha256": "e1e9aa8f4e6ef164a326f56407d7a66f407906187a4148a0592a85a32f5812c7"
+        }
+      }
+    },
+    {
+      "patch": "gpui-component-tree-accessible-name-v1-kit08.patch",
+      "patch_sha256": "e2cf442dabe407250f6fab2e2eadbea958b79e96b5995bd2945129f36b1300ef",
+      "files": {
+        "vendor/gpui-base-0.8.1/src/tree.rs": {
+          "pre_sha256": "6a8f108cafc850f2fc82f4259f617fb0724dd9f86e33ffc5e2b00bde722713fc",
+          "post_sha256": "2243f0603745ae09bdf0b4d79fd7a92a27882f3e035159b0d829379b7e200572"
+        },
+        "vendor/gpui-component-0.8.1/src/tree.rs": {
+          "pre_sha256": "f822fff4f4c00f56fd311f2fe8398881d73a8e1921d5b8151fc6eb1f4617d584",
+          "post_sha256": "bf225ac6b435e800eada4a2b477162fc74ba7a6e12d861cd46ce82d86e5dfce8"
+        }
+      }
+    },
+    {
+      "patch": "gpui-tree-aria-disabled-row-v1-kit08.patch",
+      "patch_sha256": "1df8f955019e1ea535e58563f3445114e0dd1ce9fb20197d905f1bc7192ed310",
+      "files": {
+        "vendor/gpui-base-0.8.1/src/tree.rs": {
+          "pre_sha256": "2243f0603745ae09bdf0b4d79fd7a92a27882f3e035159b0d829379b7e200572",
+          "post_sha256": "46e5756ed3c40dde298df892bae36b32ae62be10fe1ef41f075cfdd4cf0cde44"
+        }
+      }
+    },
+    {
+      "patch": "gpui-tree-aria-level-v1-kit08.patch",
+      "patch_sha256": "1a52a5ce6cbe57b66027cbdbbcec4e775a86d98bb18f9ab456dc21e5f455e6ed",
+      "files": {
+        "vendor/gpui-base-0.8.1/src/tree.rs": {
+          "pre_sha256": "46e5756ed3c40dde298df892bae36b32ae62be10fe1ef41f075cfdd4cf0cde44",
+          "post_sha256": "1e872f921b5963ba14adc5d506afdc583e047b4a650d7a91c40ef55c7dadc492"
+        }
+      }
+    },
+    {
+      "patch": "gpui-tree-disabled-keyboard-v2.patch",
+      "patch_sha256": "98d8c2e5ec2f66d0c4dfc4b71c4dde64a582b3c2ae56b0431f73ea257455bcf0",
+      "files": {
+        "vendor/gpui-base-0.8.1/src/tree.rs": {
+          "pre_sha256": "1e872f921b5963ba14adc5d506afdc583e047b4a650d7a91c40ef55c7dadc492",
+          "post_sha256": "a28ca059f0b5b4e0e7c0faa009106d9c07cd90b898a48a9223b4a8af4ea1741f"
+        }
+      }
+    },
+    {
+      "patch": "r15-tree-disabled-focus-v1.patch",
+      "patch_sha256": "a66e0a8cd47f615539c0b1389df5bc36088128930029dccd113d9b13f24645a0",
+      "files": {
+        "vendor/gpui-base-0.8.1/src/tree.rs": {
+          "pre_sha256": "a28ca059f0b5b4e0e7c0faa009106d9c07cd90b898a48a9223b4a8af4ea1741f",
+          "post_sha256": "9b9a243ffc83d61106ccdeabb23fa4de52d873ee9f7b64d232afa2f3de81d45d"
+        }
+      }
+    },
+    {
+      "patch": "gpui-component-table-delegate-accessibility-v1-kit09.patch",
+      "patch_sha256": "11e45b89bb28d80ca4d5d78f04d1ab21095f60fd773addc0e84bd68320af92f1",
+      "files": {
+        "vendor/gpui-component-0.8.1/src/table/state.rs": {
+          "pre_sha256": "90f91e2499f3df086be8ef5cfe07aabe4c9cc9df93dc24bd1aed50980ee076c0",
+          "post_sha256": "3b338700b7ca3844cccdd796af46154c6c7ed1fa525c43941a0a3c378ae50e71"
+        }
+      }
     }
   ],
   "files": {
@@ -412,7 +508,7 @@
     },
     "crates/rustui-gpui/src/window/a11y/debug.rs": {
       "pre_sha256": "2055ed9e63900a601a973191ff82ebbd91557178036826a4d2c04b09f5cf4dc2",
-      "post_sha256": "419875df004bf750fb78260e67064e903920b67775ce787081d9bae880c6ae54"
+      "post_sha256": "8c532b0ebfec4ca78fef1378b4c37e61105b6d5778eda25887e0a79a9471ec2c"
     },
     "vendor/block-0.1.6/src/lib.rs": {
       "pre_sha256": "eb31678adf63b53109d9b94eba23699fd5f9ebfdb950f6e1a57ad51bb6a146fa",
@@ -430,9 +526,13 @@
       "pre_sha256": "14cdc558e261516b96c0387d7e84878e46e1e660425c9e566e0478338d23d1c1",
       "post_sha256": "1627625388278f9c13f7b1e592d295e8402d8be69349b2828eacb2d94d9d5a94"
     },
+    "vendor/gpui-base-0.8.1/src/tree.rs": {
+      "pre_sha256": "6a8f108cafc850f2fc82f4259f617fb0724dd9f86e33ffc5e2b00bde722713fc",
+      "post_sha256": "9b9a243ffc83d61106ccdeabb23fa4de52d873ee9f7b64d232afa2f3de81d45d"
+    },
     "vendor/gpui-component-0.8.1/src/list/list.rs": {
       "pre_sha256": "50665f00508d9bcc92201d26cca253cc543d59b62f867410cdf940b05d6da9d9",
-      "post_sha256": "00f2622ae21fa20755925dc9bd25ae051c12101f6947779870bab7c13589e468"
+      "post_sha256": "e1e9aa8f4e6ef164a326f56407d7a66f407906187a4148a0592a85a32f5812c7"
     },
     "vendor/gpui-component-0.8.1/src/menu/dropdown_menu.rs": {
       "pre_sha256": "c98577e23b87b01da2a632eaa6c739aed9a583365ce3d2d2b403af96b366bcab",
@@ -458,6 +558,14 @@
       "pre_sha256": "c2650d30aa966c9649155ddb287a5a6cdf987d8ee0916ad5f1f5b202ee0a44ef",
       "post_sha256": "36a5e802c36cd2cb92850ffb8d90ffd0a92f3d29e0cee8934f44f4adcedcd41c"
     },
+    "vendor/gpui-component-0.8.1/src/table/state.rs": {
+      "pre_sha256": "90f91e2499f3df086be8ef5cfe07aabe4c9cc9df93dc24bd1aed50980ee076c0",
+      "post_sha256": "3b338700b7ca3844cccdd796af46154c6c7ed1fa525c43941a0a3c378ae50e71"
+    },
+    "vendor/gpui-component-0.8.1/src/tree.rs": {
+      "pre_sha256": "f822fff4f4c00f56fd311f2fe8398881d73a8e1921d5b8151fc6eb1f4617d584",
+      "post_sha256": "bf225ac6b435e800eada4a2b477162fc74ba7a6e12d861cd46ce82d86e5dfce8"
+    },
     "vendor/gpui-component-0.9.1/src/dialog/dialog.rs": {
       "pre_sha256": "f664c7393ae208b6382c7ce5991764ab18053d1381c7ee41d3fb4aa67eeab312",
       "post_sha256": "00718c05f2444ff8cd81c9570c9f6ac8644aa16d41fe09eff31091919641ce7e"
@@ -480,7 +588,7 @@
     },
     "vendor/gpui-pre-0.3.10/src/elements/div.rs": {
       "pre_sha256": "73b930227fe8f3c1fb703c2e7529d16a3f372cf52ec2afe95397ed0ff63f65d7",
-      "post_sha256": "d092ac4cd8e516cd11d778393e958babb1c1033421268d344d3156ebe26f963e"
+      "post_sha256": "4d0adecd0bfd268ccbea4d45bc0a45a267edb284c2f2a6a2a54b44638ef5b4a8"
     },
     "vendor/gpui-pre-0.3.10/src/key_dispatch.rs": {
       "pre_sha256": "a6ed027b9e532dd3c96601a7e6e9564ea7dd1d7b431f0d54277fa13fca27b9a6",
@@ -504,15 +612,15 @@
     },
     "vendor/gpui-pre-0.3.10/src/window.rs": {
       "pre_sha256": "9f4891f1e9c323d8d14a0624ce86c436cb9e623a52e8300a9b67ec0119f4aaa5",
-      "post_sha256": "569b7d6f4ea42e33b5a8d5d2fe42297d068fa270e5510b873bec02aca263fc7f"
+      "post_sha256": "8869c8594b70c3f247a287c74efaafc65043703cdcea28b8dba9fa3a20af4fdd"
     },
     "vendor/gpui-pre-0.3.10/src/window/a11y/debug.rs": {
       "pre_sha256": "2055ed9e63900a601a973191ff82ebbd91557178036826a4d2c04b09f5cf4dc2",
-      "post_sha256": "a838bad5f53fb4dbeae936cc7c0a29daa464d1d058dbcb20f6f7b721bc6b16b9"
+      "post_sha256": "8c532b0ebfec4ca78fef1378b4c37e61105b6d5778eda25887e0a79a9471ec2c"
     },
     "vendor/gpui-pre-0.3.9/src/elements/div.rs": {
       "pre_sha256": "73b930227fe8f3c1fb703c2e7529d16a3f372cf52ec2afe95397ed0ff63f65d7",
-      "post_sha256": "27c02a94d692b7c468db50517ade786811364187e7239c5d69a5c92e0edae03a"
+      "post_sha256": "4d0adecd0bfd268ccbea4d45bc0a45a267edb284c2f2a6a2a54b44638ef5b4a8"
     },
     "vendor/gpui-pre-0.3.9/src/platform/test/window.rs": {
       "pre_sha256": "0a9e1c0a0ce8885e64439bfda766a5c39fed5f2fffae3781e56104031ee4012e",
@@ -520,7 +628,7 @@
     },
     "vendor/gpui-pre-0.3.9/src/window.rs": {
       "pre_sha256": "9f4891f1e9c323d8d14a0624ce86c436cb9e623a52e8300a9b67ec0119f4aaa5",
-      "post_sha256": "0d15407b32262da2eae4db66d931d6e97fc5c1cdb65384162b104d570d6c66d5"
+      "post_sha256": "8869c8594b70c3f247a287c74efaafc65043703cdcea28b8dba9fa3a20af4fdd"
     },
     "vendor/gpui-pre-0.3.9/src/window/a11y.rs": {
       "pre_sha256": "1579b5772038313635feda4ad5c32a46f5bd843396268c8b573d68e7c57488b5",
@@ -562,7 +670,7 @@
   "reverse_verified": true,
   "fixture": {
     "archives_verified": 82,
-    "target_files_hashed": 34,
+    "target_files_hashed": 37,
     "known_unavailable_targets": 0
   }
 }
