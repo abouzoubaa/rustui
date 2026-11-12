@@ -3,6 +3,7 @@
 ## Unreleased
 - A3: isolate A2/A3 GPUI fixture compilation caches from the workspace target directory.
 - A3-4a: rebased modal focus, tracked-dialog focus, and sheet close accessibility patches for GPUI Kit 0.9.1; provider-first cumulative proofs pass.
+- A3-4b: rebased popup-menu disabled recovery and staged the menu/select RTL candidate family for GPUI Kit 0.9.1.
 - A3-3: confirmed no Kit 0.9.1 patch is proven fully obsolete; retained all three partial behavior deltas with passing RustUI regression checks.
 - A3-2: added the inert GPUI Kit 0.9 core/macOS candidate stack, Rust 1.98 compatibility delta, compile gate, and core regression proofs.
 - A3-1: added the hash-pinned GPUI Kit 0.9.1 / gpui-pre 0.3.12 source fixture and disposable lock-graph inventory.

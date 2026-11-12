@@ -36,7 +36,19 @@ A3_4A_ORDER = (
     "gpui-component-tracked-dialog-focus-v1-kit09.patch",
     "gpui-component-sheet-close-accessibility-v1-kit09.patch",
 )
-FAMILY_ORDER = A3_4A_ORDER
+A3_4B_ORDER = (
+    "gpui-component-popup-menu-disabled-confirm-v1-kit08.patch",
+    "r15b-menu-item-disabled-v1-kit09.patch",
+    "r15b-popup-menu-recovery-v1-kit09.patch",
+    "r15b-dropdown-menu-refresh-v1.patch",
+    "gpui-component-select-popup-rtl-v1-kit08.patch",
+    "gpui-component-select-rtl-alignment-v1.patch",
+    "gpui-component-select-rtl-alignment-v2-kit08.patch",
+    "gpui-component-select-rtl-alignment-v3-kit08.patch",
+    "gpui-component-select-rtl-auto-width-v4-kit08.patch",
+    "gpui-component-select-rtl-auto-width-v6-kit08.patch",
+)
+FAMILY_ORDER = A3_4A_ORDER + A3_4B_ORDER
 
 
 FAMILY_PROOF_CRATE = ROOT / "scripts/kit08_family_proofs"
@@ -131,6 +143,7 @@ def compile_candidate_workspace(
     proof_calendar = "--proof-calendar" in sys.argv[1:]
     proof_placeholder = "--proof-placeholder" in sys.argv[1:]
     proof_toolbar = "--proof-toolbar" in sys.argv[1:]
+    proof_a3_4b = "--proof-a3-4b" in sys.argv[1:]
     if "--proof-grid-a11y" in sys.argv[1:] or proof_all:
         gpui_pre = sources_root / f'gpui-pre-{source_by_name["gpui-pre"]["version"]}'
         with (gpui_pre / "Cargo.toml").open("a", encoding="utf-8") as cargo_toml:
@@ -151,7 +164,7 @@ def compile_candidate_workspace(
         (workspace / "assets/fonts/lilex/Lilex-Regular.ttf").write_bytes(b"")
         members.append(f'"sources/gpui-pre-{source_by_name["gpui-pre"]["version"]}"')
         members.append('"util_macros"')
-    if proof_all or proof_calendar or proof_placeholder or proof_toolbar:
+    if proof_all or proof_calendar or proof_placeholder or proof_toolbar or proof_a3_4b:
         proof_dir = workspace / "family-proofs"
         shutil.copytree(FAMILY_PROOF_CRATE / "tests", proof_dir / "tests")
         (proof_dir / "Cargo.toml").write_text(
@@ -188,6 +201,7 @@ def compile_candidate_workspace(
             "--proof-placeholder",
             "--proof-toolbar",
             "--proof-a3-4a",
+            "--proof-a3-4b",
         )
     ):
         # GPUI Component's crate archive omits several repository-level
@@ -241,6 +255,23 @@ def compile_candidate_workspace(
                 ("sheet_close_accessibility_label_is_exposed_in_the_test_window_tree", "a2-4a-modal-proof", "A3-4a sheet close label", "sheet_accessibility"),
             ]
         )
+    if proof_a3_4b:
+        proofs.extend(
+            [
+                (
+                    "disabled_selected_popup_menu_item_ignores_confirm",
+                    "gpui-component",
+                    "A3-4b disabled popup-menu confirmation",
+                    None,
+                ),
+                (
+                    "selection_recovery_skips_disabled_items_and_wraps",
+                    "gpui-component",
+                    "A3-4b popup-menu selection recovery",
+                    None,
+                ),
+            ]
+        )
     outcomes: list[tuple[str, int, str]] = []
     for test_name, package, label, integration_test in proofs:
         proof_command = ["rustup", "run", "1.98.0", "cargo", "test"]
@@ -251,6 +282,8 @@ def compile_candidate_workspace(
         else:
             proof_command.extend(["-p", package, "--lib", test_name])
         if package == "gpui-pre":
+            proof_command.extend(["--features", "test-support"])
+        elif package == "gpui-component":
             proof_command.extend(["--features", "test-support"])
         proof = subprocess.run(
             proof_command,
@@ -310,9 +343,14 @@ def run(write_manifest: bool = False) -> dict:
         raise FixtureError(f"recorded stack manifest is stale: {OUTPUT}; use --write-manifest")
     OUTPUT.write_bytes(data)
     print(
-        "A3-2 core patches={}; A3-4a patches={}; fixture archives verified={}; "
-        "target files hashed={}; stack files={}; reverse=exact".format(
-            len(CORE_ORDER), len(FAMILY_ORDER), archive_count, target_count, len(result["files"])
+        "A3-2 core patches={}; A3-4a patches={}; A3-4b patches={}; "
+        "fixture archives verified={}; target files hashed={}; stack files={}; reverse=exact".format(
+            len(CORE_ORDER),
+            len(A3_4A_ORDER),
+            len(A3_4B_ORDER),
+            archive_count,
+            target_count,
+            len(result["files"]),
         )
     )
     failed_proofs = [(label, output) for label, code, output in proof_outcomes if code]

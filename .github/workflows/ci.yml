@@ -122,7 +122,7 @@ jobs:
       - name: Test the GPUI Kit 0.9 cumulative family stack
         run: python3 -m unittest scripts.tests.test_check_kit09_family_stack -v
       - name: Verify the GPUI Kit 0.9 cumulative family stack
-        run: python3 scripts/check_kit09_family_stack.py --compile-online --proof-a3-4a
+        run: python3 scripts/check_kit09_family_stack.py --compile-online --proof-a3-4a --proof-a3-4b
       - name: Test the GPUI Kit 0.8 core patch stack
         run: python3 -m unittest discover -s scripts/tests -p 'test_check_kit08_core_stack.py' -v
       - name: Verify the GPUI Kit 0.8 core candidate stack
