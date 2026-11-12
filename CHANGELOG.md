@@ -1,6 +1,7 @@
 # Changelog
 
 ## Unreleased
+- A3-2: added the inert GPUI Kit 0.9 core/macOS candidate stack, Rust 1.98 compatibility delta, compile gate, and core regression proofs.
 - A3-1: added the hash-pinned GPUI Kit 0.9.1 / gpui-pre 0.3.12 source fixture and disposable lock-graph inventory.
 - Reordered post-A2 roadmap work: A3 and RustUI 0.4.0 precede Stage B, crates.io follows Stage B, and the NP-7 macOS crate test is parked until A3.
 - Added the crates.io distribution plan, renamed GPUI package map, and bounded publishing ticket sequence.
