@@ -148,3 +148,4 @@
 - Preserve disabled accessibility on GPUI Kit 0.8 editor-owned input nodes.
 - Added the GPUI Kit 0.9.x upgrade plan.
 - A3-4d: rebase Slider accessibility and endpoint behavior for Kit 0.9; retain tested resize interactions.
+- A3-4e: carry calendar and DatePicker accessibility, localization, RTL, and date-limit deltas to the Kit 0.9 candidate.
