@@ -123,7 +123,7 @@ jobs:
       - name: Test the GPUI Kit 0.9 cumulative family stack
         run: python3 -m unittest scripts.tests.test_check_kit09_family_stack -v
       - name: Verify the GPUI Kit 0.9 cumulative family stack
-        run: python3 scripts/check_kit09_family_stack.py --compile-online --proof-a3-4a --proof-a3-4b --proof-a3-4c --proof-a3-4d --proof-a3-4e --proof-a3-4f --proof-a3-4g
+        run: python3 scripts/check_kit09_family_stack.py --compile-online --proof-a3-4a --proof-a3-4b --proof-a3-4c --proof-a3-4d --proof-a3-4e --proof-a3-4f --proof-a3-4g --proof-a3-4i
       - name: Remove Kit 0.9 fixture build outputs after verification
         run: rm -rf "$HOME/.cache/rustui-target-fixture-kit9" "$RUNNER_TEMP/gpui-kit-0.9.1-fixture"
       - name: Stable Rust formatting, workspace check, and library tests

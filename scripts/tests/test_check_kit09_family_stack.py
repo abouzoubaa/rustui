@@ -1,9 +1,11 @@
 from __future__ import annotations
 
 import importlib.util
+import io
 import sys
 import tempfile
 import unittest
+from contextlib import redirect_stdout
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[2]
@@ -17,6 +19,28 @@ SPEC.loader.exec_module(STACK)
 
 
 class Kit09FamilyStackTests(unittest.TestCase):
+    def test_proof_runner_keeps_cargo_test_output_in_the_log(self) -> None:
+        output = io.StringIO()
+        with redirect_stdout(output):
+            code, _ = STACK.report_proof_output(
+                "popup teardown", 0,
+                "running 1 test\ntest parent_close_only_dismisses_managed_grabbing_popups ... ok\n"
+                "test result: ok. 1 passed; 0 failed; 0 ignored\n",
+            )
+        self.assertEqual(code, 0)
+        self.assertIn("proof: popup teardown: PASS", output.getvalue())
+        self.assertIn("running 1 test", output.getvalue())
+        self.assertIn("parent_close_only_dismisses_managed_grabbing_popups ... ok", output.getvalue())
+        self.assertIn("test result: ok. 1 passed; 0 failed; 0 ignored", output.getvalue())
+
+    def test_proof_runner_rejects_zero_tests(self) -> None:
+        output = io.StringIO()
+        with redirect_stdout(output):
+            code, _ = STACK.report_proof_output("stale filter", 0, "running 0 tests\ntest result: ok. 0 passed; 0 failed; 0 ignored\n")
+        self.assertNotEqual(code, 0)
+        self.assertIn("proof: stale filter: FAIL", output.getvalue())
+        self.assertIn("without any passing tests", output.getvalue())
+
     def test_family_order_covers_each_candidate_once(self) -> None:
         family_files = {
             path.name
@@ -75,7 +99,7 @@ class Kit09FamilyStackTests(unittest.TestCase):
     def test_toolbar_rtl_candidate_is_in_the_later_family_stack(self) -> None:
         self.assertEqual(STACK.A3_4G_ORDER, ("gpui-toolbar-rtl-v1-kit09.patch",))
         self.assertEqual(
-            STACK.FAMILY_ORDER[-len(STACK.A3_4H_ORDER) - 1],
+            STACK.FAMILY_ORDER[-len(STACK.A3_4H_ORDER) - len(STACK.A3_4I_ORDER) - 1],
             "gpui-toolbar-rtl-v1-kit09.patch",
         )
 
@@ -93,6 +117,21 @@ class Kit09FamilyStackTests(unittest.TestCase):
             order.index("gpui-component-web-syntax-runtime-v2-kit08.patch"),
             order.index("gpui-component-web-syntax-runtime-v3-kit08.patch"),
         )
+
+    def test_native_popup_provider_precedes_child_teardown(self) -> None:
+        order = STACK.CORE_ORDER + STACK.FAMILY_ORDER
+        self.assertLess(
+            order.index("gpui-macos-anchored-popup-v1-kit09.patch"),
+            order.index("gpui-macos-popup-child-teardown-v1-kit09.patch"),
+        )
+        self.assertEqual(
+            STACK.FAMILY_ORDER[-len(STACK.A3_4I_ORDER):],
+            STACK.A3_4I_ORDER,
+        )
+        runner = (ROOT / "scripts/check_kit09_family_stack.py").read_text(
+            encoding="utf-8"
+        )
+        self.assertIn("parent_close_only_dismisses_managed_grabbing_popups", runner)
 
     def test_inert_focus_provider_precedes_modal_focus_consumer(self) -> None:
         order = STACK.CORE_ORDER + STACK.FAMILY_ORDER

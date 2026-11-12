@@ -6,6 +6,7 @@ from __future__ import annotations
 import hashlib
 import json
 import os
+import re
 import shutil
 import subprocess
 import sys
@@ -86,9 +87,13 @@ A3_4H_ORDER = (
     "gpui-component-web-syntax-runtime-v2-kit08.patch",
     "gpui-component-web-syntax-runtime-v3-kit08.patch",
 )
+A3_4I_ORDER = (
+    "gpui-macos-anchored-popup-v1-kit09.patch",
+    "gpui-macos-popup-child-teardown-v1-kit09.patch",
+)
 FAMILY_ORDER = (
     A3_4A_ORDER + A3_4B_ORDER + A3_4C_ORDER + A3_4D_ORDER + A3_4E_ORDER
-    + A3_4F_ORDER + A3_4G_ORDER + A3_4H_ORDER
+    + A3_4F_ORDER + A3_4G_ORDER + A3_4H_ORDER + A3_4I_ORDER
 )
 
 
@@ -121,6 +126,25 @@ def input_digest(paths: list[Path]) -> str:
         digest.update(path.read_bytes())
         digest.update(b"\0")
     return digest.hexdigest()[:20]
+
+
+def report_proof_output(label: str, returncode: int, output: str) -> tuple[int, str]:
+    has_executed_test = any(
+        match.group(1) != "0"
+        for match in re.finditer(r"test result: ok\. (\d+) passed;", output)
+    )
+    if not has_executed_test:
+        returncode = returncode or 1
+        output += "\nproof runner error: cargo test completed without any passing tests\n"
+    outcome = "FAIL" if returncode else "PASS"
+    print(f"proof: {label}: {outcome}", flush=True)
+    if output:
+        print(f"--- {label}: cargo test output ---", flush=True)
+        sys.stdout.write(output)
+        if not output.endswith("\n"):
+            sys.stdout.write("\n")
+        sys.stdout.flush()
+    return returncode, output
 
 
 def normalize_fixture_mtimes(workspace: Path) -> None:
@@ -190,9 +214,12 @@ def compile_candidate_workspace(
     proof_a3_4e = "--proof-a3-4e" in sys.argv[1:]
     proof_a3_4f = "--proof-a3-4f" in sys.argv[1:]
     proof_a3_4g = "--proof-a3-4g" in sys.argv[1:]
+    proof_a3_4i = "--proof-a3-4i" in sys.argv[1:]
     proof_calendar = proof_calendar or proof_a3_4e
     proof_placeholder = proof_placeholder or proof_a3_4f
     proof_toolbar = proof_toolbar or proof_a3_4g
+    if proof_a3_4i:
+        members.append(f'"sources/gpui-pre-macos-{source_by_name["gpui-pre-macos"]["version"]}"')
     if "--proof-grid-a11y" in sys.argv[1:] or proof_all or proof_a3_4c:
         gpui_pre = sources_root / f'gpui-pre-{source_by_name["gpui-pre"]["version"]}'
         with (gpui_pre / "Cargo.toml").open("a", encoding="utf-8") as cargo_toml:
@@ -256,6 +283,7 @@ def compile_candidate_workspace(
             "--proof-a3-4e",
             "--proof-a3-4f",
             "--proof-a3-4g",
+            "--proof-a3-4i",
         )
     ):
         # GPUI Component's crate archive omits several repository-level
@@ -283,6 +311,8 @@ def compile_candidate_workspace(
     if offline:
         command.append("--offline")
     command.extend(["-p", "gpui-base", "-p", "gpui-component"])
+    if proof_a3_4i:
+        command.extend(["-p", "gpui-pre", "-p", "gpui-pre-macos"])
     result = subprocess.run(
         command,
         cwd=workspace,
@@ -330,10 +360,10 @@ def compile_candidate_workspace(
         proofs.extend(
             [
                 (
-                    "data_grid_sort_and_readonly_metadata_reach_accessibility_nodes",
-                    "gpui-pre",
+                    "table_delegate_accessibility_nodes_keep_roles_indices_and_readonly",
+                    "a2-4a-modal-proof",
                     "A3-4c GPUI ARIA sort/read-only metadata",
-                    None,
+                    "grid_delegation",
                 ),
                 (
                     "tree_accessibility_label_and_levels_reach_the_tree_nodes",
@@ -445,6 +475,29 @@ def compile_candidate_workspace(
                 "toolbar_rtl",
             )
         )
+    if proof_a3_4i:
+        proofs.extend(
+            [
+                (
+                    "anchored_popup_placement_tests",
+                    "gpui-pre-macos",
+                    "A3-4i native popup placement",
+                    None,
+                ),
+                (
+                    "nested_grabbing_popups_dismiss_leaf_before_parent",
+                    "gpui-pre-macos",
+                    "A3-4i nested popup dismissal",
+                    None,
+                ),
+                (
+                    "parent_close_only_dismisses_managed_grabbing_popups",
+                    "gpui-pre-macos",
+                    "A3-4i parent closes only managed popups",
+                    None,
+                ),
+            ]
+        )
     outcomes: list[tuple[str, int, str]] = []
     for test_name, package, label, integration_test in proofs:
         proof_command = ["rustup", "run", "1.98.0", "cargo", "test"]
@@ -458,6 +511,8 @@ def compile_candidate_workspace(
             proof_command.extend(["--features", "test-support"])
         elif package == "gpui-component":
             proof_command.extend(["--features", "test-support"])
+        elif package == "gpui-pre-macos":
+            proof_command.extend(["--features", "test-support"])
         proof = subprocess.run(
             proof_command,
             cwd=workspace,
@@ -466,11 +521,8 @@ def compile_candidate_workspace(
             text=True,
         )
         output = proof.stdout + proof.stderr
-        outcomes.append((label, proof.returncode, output))
-        if proof.returncode:
-            print(f"proof: {label}: FAIL")
-        else:
-            print(f"proof: {label}: PASS")
+        outcome, output = report_proof_output(label, proof.returncode, output)
+        outcomes.append((label, outcome, output))
     return outcomes
 
 
@@ -516,7 +568,8 @@ def run(write_manifest: bool = False) -> dict:
         raise FixtureError(f"recorded stack manifest is stale: {OUTPUT}; use --write-manifest")
     OUTPUT.write_bytes(data)
     print(
-        "A3-2 core patches={}; A3-4a patches={}; A3-4b patches={}; A3-4c patches={}; A3-4d patches={}; A3-4e patches={}; "
+        "A3-2 core patches={}; A3-4a patches={}; A3-4b patches={}; A3-4c patches={}; A3-4d patches={}; "
+        "A3-4e patches={}; A3-4f patches={}; A3-4g patches={}; A3-4h patches={}; A3-4i patches={}; "
         "fixture archives verified={}; target files hashed={}; stack files={}; reverse=exact".format(
             len(CORE_ORDER),
             len(A3_4A_ORDER),
@@ -524,6 +577,10 @@ def run(write_manifest: bool = False) -> dict:
             len(A3_4C_ORDER),
             len(A3_4D_ORDER),
             len(A3_4E_ORDER),
+            len(A3_4F_ORDER),
+            len(A3_4G_ORDER),
+            len(A3_4H_ORDER),
+            len(A3_4I_ORDER),
             archive_count,
             target_count,
             len(result["files"]),

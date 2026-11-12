@@ -2,6 +2,7 @@
 
 ## Unreleased
 - CI: retired the activated Kit 0.8 fixture gates and free runner disk after Kit 0.9 verification.
+- A3-4i: rebased anchored native popup and child teardown candidates for Kit 0.9.1; cumulative compile and popup proofs pass.
 - A3-4c: staged tree/list and delegated grid accessibility candidates with passing cumulative Kit 0.9 proofs.
 - A3: isolate A2/A3 GPUI fixture compilation caches from the workspace target directory.
 - A3-4a: rebased modal focus, tracked-dialog focus, and sheet close accessibility patches for GPUI Kit 0.9.1; provider-first cumulative proofs pass.
