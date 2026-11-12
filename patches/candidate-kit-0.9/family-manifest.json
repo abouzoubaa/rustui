@@ -25,7 +25,17 @@
     "gpui-tree-aria-disabled-v1-kit08.patch",
     "t13-modal-focus-recovery-v1-kit09.patch",
     "gpui-component-tracked-dialog-focus-v1-kit09.patch",
-    "gpui-component-sheet-close-accessibility-v1-kit09.patch"
+    "gpui-component-sheet-close-accessibility-v1-kit09.patch",
+    "gpui-component-popup-menu-disabled-confirm-v1-kit08.patch",
+    "r15b-menu-item-disabled-v1-kit09.patch",
+    "r15b-popup-menu-recovery-v1-kit09.patch",
+    "r15b-dropdown-menu-refresh-v1.patch",
+    "gpui-component-select-popup-rtl-v1-kit08.patch",
+    "gpui-component-select-rtl-alignment-v1.patch",
+    "gpui-component-select-rtl-alignment-v2-kit08.patch",
+    "gpui-component-select-rtl-alignment-v3-kit08.patch",
+    "gpui-component-select-rtl-auto-width-v4-kit08.patch",
+    "gpui-component-select-rtl-auto-width-v6-kit08.patch"
   ],
   "patches": [
     {
@@ -285,6 +295,114 @@
           "post_sha256": "1313a2c37acc77fcb7234d1f3c814bbc5e93f1d828085c4c3d34e05bbba9599c"
         }
       }
+    },
+    {
+      "patch": "gpui-component-popup-menu-disabled-confirm-v1-kit08.patch",
+      "patch_sha256": "2fd0d5b1c6890a457bdeb3bd0c3d5e6f083158443d1ccbba404adc670ce129bf",
+      "files": {
+        "vendor/gpui-component-0.8.1/src/menu/popup_menu.rs": {
+          "pre_sha256": "bd001870bc94305f32c5728486bb909513823dabcf6c3395e99668d06fd3655a",
+          "post_sha256": "43593b02fbf69a9e1e0069cd800faa2fb986c6c45d11a9d0274184813d28b965"
+        }
+      }
+    },
+    {
+      "patch": "r15b-menu-item-disabled-v1-kit09.patch",
+      "patch_sha256": "ea976362cd33f661e0bcd5556b6c6f0594416bff782d0f3f2c72964ad3ec0051",
+      "files": {
+        "vendor/gpui-component-0.8.1/src/menu/menu_item.rs": {
+          "pre_sha256": "2034967ecb94898cb45e127f828c9f195d2ba2e9ace413897414b3023f6b8e48",
+          "post_sha256": "9d5cf4ee8cd802178e23298cde4985f91feb95e6e7c9b36299478657d489a1fc"
+        }
+      }
+    },
+    {
+      "patch": "r15b-popup-menu-recovery-v1-kit09.patch",
+      "patch_sha256": "1cfd67236dba9b99ad349efbf6982d3568d3a44c50190396d9f8c11ef22b5e76",
+      "files": {
+        "vendor/gpui-component-0.8.1/src/menu/popup_menu.rs": {
+          "pre_sha256": "43593b02fbf69a9e1e0069cd800faa2fb986c6c45d11a9d0274184813d28b965",
+          "post_sha256": "8ce409ed4848c3d55069ac57031ea2661200e1b991a257c9865649032c172474"
+        }
+      }
+    },
+    {
+      "patch": "r15b-dropdown-menu-refresh-v1.patch",
+      "patch_sha256": "24d5227f33170ac187e26debfef3fb34e770edd9ed30208647791e1b88d3ab61",
+      "files": {
+        "vendor/gpui-component-0.8.1/src/menu/dropdown_menu.rs": {
+          "pre_sha256": "c98577e23b87b01da2a632eaa6c739aed9a583365ce3d2d2b403af96b366bcab",
+          "post_sha256": "95113d1d1b099c2d53ced723d88e5ee98eda068e8720d62d83ed19bed7709279"
+        }
+      }
+    },
+    {
+      "patch": "gpui-component-select-popup-rtl-v1-kit08.patch",
+      "patch_sha256": "e1fe94f8566d6a3cff9a24e1a1fdb34b3888db79bc5dec9773d1890052429a92",
+      "files": {
+        "vendor/gpui-component-0.8.1/src/list/list.rs": {
+          "pre_sha256": "50665f00508d9bcc92201d26cca253cc543d59b62f867410cdf940b05d6da9d9",
+          "post_sha256": "00f2622ae21fa20755925dc9bd25ae051c12101f6947779870bab7c13589e468"
+        },
+        "vendor/gpui-component-0.8.1/src/searchable_list/adapter.rs": {
+          "pre_sha256": "41766a0014d344f4bd700f3aa6b1288aa2bd0fb6f10920f5a438d062836abc9f",
+          "post_sha256": "ac1e36762b7fbcf10bbda7ee01bfb06e176f2b4d85255423a7e975b3a30f5c0a"
+        },
+        "vendor/gpui-component-0.8.1/src/searchable_list/item.rs": {
+          "pre_sha256": "84d912410e4face07b2a022a396c5917e3898dd1eb1d711f3c7eb684503bd1a2",
+          "post_sha256": "bb0953b3506e89b0708907c534b9c311cadb04ee204272bf2e41d1c7beb915b6"
+        }
+      }
+    },
+    {
+      "patch": "gpui-component-select-rtl-alignment-v1.patch",
+      "patch_sha256": "90ea8bfc7c5b52514b7fa0b634399ad32699dbfbb4e1d5ae405f9384a570a64d",
+      "files": {
+        "vendor/gpui-component-0.8.1/src/select.rs": {
+          "pre_sha256": "c2650d30aa966c9649155ddb287a5a6cdf987d8ee0916ad5f1f5b202ee0a44ef",
+          "post_sha256": "8d854a55b0a088820990bfd3cf75b12c0fa1ad98fbea8146bbce8794e54dd52b"
+        }
+      }
+    },
+    {
+      "patch": "gpui-component-select-rtl-alignment-v2-kit08.patch",
+      "patch_sha256": "510687ee031e93b3624cf932fda72b7fb6b82d8d47cb7f0937c5d970d9ffac93",
+      "files": {
+        "vendor/gpui-component-0.8.1/src/select.rs": {
+          "pre_sha256": "8d854a55b0a088820990bfd3cf75b12c0fa1ad98fbea8146bbce8794e54dd52b",
+          "post_sha256": "e3fb235d92ecae1414717321a87ce13328ad95a4f92fdf0cbe337641a50585bc"
+        }
+      }
+    },
+    {
+      "patch": "gpui-component-select-rtl-alignment-v3-kit08.patch",
+      "patch_sha256": "10df21b8d44661d2d8b23c212dbd8595d567159d69bfda3e86040ee7927c9b53",
+      "files": {
+        "vendor/gpui-component-0.8.1/src/select.rs": {
+          "pre_sha256": "e3fb235d92ecae1414717321a87ce13328ad95a4f92fdf0cbe337641a50585bc",
+          "post_sha256": "1b56139399866dea1f674740e77be3d90b0a388d906c0050a96df31dc328a497"
+        }
+      }
+    },
+    {
+      "patch": "gpui-component-select-rtl-auto-width-v4-kit08.patch",
+      "patch_sha256": "a5e2df756c439669f17d19f6643e7f4e6cd6a12425bda544f55401b24fd2302e",
+      "files": {
+        "vendor/gpui-component-0.8.1/src/select.rs": {
+          "pre_sha256": "1b56139399866dea1f674740e77be3d90b0a388d906c0050a96df31dc328a497",
+          "post_sha256": "11490857a2789a2a2cb18ed06258debecec258dbb02c3c53a96fa57e6ce441ab"
+        }
+      }
+    },
+    {
+      "patch": "gpui-component-select-rtl-auto-width-v6-kit08.patch",
+      "patch_sha256": "50cdec1a21c71cb5ab2b5bf0c2c8699d5f4812b10a997fac5e0c9f2a37948764",
+      "files": {
+        "vendor/gpui-component-0.8.1/src/select.rs": {
+          "pre_sha256": "11490857a2789a2a2cb18ed06258debecec258dbb02c3c53a96fa57e6ce441ab",
+          "post_sha256": "36a5e802c36cd2cb92850ffb8d90ffd0a92f3d29e0cee8934f44f4adcedcd41c"
+        }
+      }
     }
   ],
   "files": {
@@ -311,6 +429,34 @@
     "vendor/gpui-base-0.8.1/src/text/inline.rs": {
       "pre_sha256": "14cdc558e261516b96c0387d7e84878e46e1e660425c9e566e0478338d23d1c1",
       "post_sha256": "1627625388278f9c13f7b1e592d295e8402d8be69349b2828eacb2d94d9d5a94"
+    },
+    "vendor/gpui-component-0.8.1/src/list/list.rs": {
+      "pre_sha256": "50665f00508d9bcc92201d26cca253cc543d59b62f867410cdf940b05d6da9d9",
+      "post_sha256": "00f2622ae21fa20755925dc9bd25ae051c12101f6947779870bab7c13589e468"
+    },
+    "vendor/gpui-component-0.8.1/src/menu/dropdown_menu.rs": {
+      "pre_sha256": "c98577e23b87b01da2a632eaa6c739aed9a583365ce3d2d2b403af96b366bcab",
+      "post_sha256": "95113d1d1b099c2d53ced723d88e5ee98eda068e8720d62d83ed19bed7709279"
+    },
+    "vendor/gpui-component-0.8.1/src/menu/menu_item.rs": {
+      "pre_sha256": "2034967ecb94898cb45e127f828c9f195d2ba2e9ace413897414b3023f6b8e48",
+      "post_sha256": "9d5cf4ee8cd802178e23298cde4985f91feb95e6e7c9b36299478657d489a1fc"
+    },
+    "vendor/gpui-component-0.8.1/src/menu/popup_menu.rs": {
+      "pre_sha256": "bd001870bc94305f32c5728486bb909513823dabcf6c3395e99668d06fd3655a",
+      "post_sha256": "8ce409ed4848c3d55069ac57031ea2661200e1b991a257c9865649032c172474"
+    },
+    "vendor/gpui-component-0.8.1/src/searchable_list/adapter.rs": {
+      "pre_sha256": "41766a0014d344f4bd700f3aa6b1288aa2bd0fb6f10920f5a438d062836abc9f",
+      "post_sha256": "ac1e36762b7fbcf10bbda7ee01bfb06e176f2b4d85255423a7e975b3a30f5c0a"
+    },
+    "vendor/gpui-component-0.8.1/src/searchable_list/item.rs": {
+      "pre_sha256": "84d912410e4face07b2a022a396c5917e3898dd1eb1d711f3c7eb684503bd1a2",
+      "post_sha256": "bb0953b3506e89b0708907c534b9c311cadb04ee204272bf2e41d1c7beb915b6"
+    },
+    "vendor/gpui-component-0.8.1/src/select.rs": {
+      "pre_sha256": "c2650d30aa966c9649155ddb287a5a6cdf987d8ee0916ad5f1f5b202ee0a44ef",
+      "post_sha256": "36a5e802c36cd2cb92850ffb8d90ffd0a92f3d29e0cee8934f44f4adcedcd41c"
     },
     "vendor/gpui-component-0.9.1/src/dialog/dialog.rs": {
       "pre_sha256": "f664c7393ae208b6382c7ce5991764ab18053d1381c7ee41d3fb4aa67eeab312",
@@ -416,7 +562,7 @@
   "reverse_verified": true,
   "fixture": {
     "archives_verified": 82,
-    "target_files_hashed": 27,
+    "target_files_hashed": 34,
     "known_unavailable_targets": 0
   }
 }

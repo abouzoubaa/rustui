@@ -1,0 +1,50 @@
+--- a/vendor/gpui-component-0.8.1/src/menu/dropdown_menu.rs
++++ b/vendor/gpui-component-0.8.1/src/menu/dropdown_menu.rs
+@@ -39,6 +39,7 @@
+     trigger: T,
+     builder: Rc<dyn Fn(PopupMenu, &mut Window, &mut Context<PopupMenu>) -> PopupMenu>,
+     on_open_change: Option<Rc<dyn Fn(&bool, &mut Window, &mut App)>>,
++    refresh_on_render: bool,
+ }
+ 
+ impl<T> DropdownMenuPopover<T>
+@@ -57,7 +58,15 @@
+             trigger,
+             builder: Rc::new(builder),
+             on_open_change: None,
++            refresh_on_render: false,
+         }
++    }
++
++    /// Re-run an idempotent live-data builder on owner renders while the menu is open.
++    /// The menu entity, focus handle and enabled selection are retained.
++    pub fn refresh_on_render(mut self, refresh: bool) -> Self {
++        self.refresh_on_render = refresh;
++        self
+     }
+ 
+     /// Set the anchor corner for the dropdown menu popover.
+@@ -106,6 +115,7 @@
+         cx: &mut App,
+     ) -> Popover {
+         let builder = self.builder.clone();
++        let refresh_on_render = self.refresh_on_render;
+         let menu_state =
+             window.use_keyed_state(self.id.clone(), cx, |_, _| DropdownMenuState::default());
+ 
+@@ -125,7 +135,14 @@
+                 // And we also need to rebuild the menu when it is dismissed, to rebuild menu items
+                 // dynamically for support `dropdown_menu` method, so we listen for DismissEvent below.
+                 let menu = match menu_state.read(cx).menu.clone() {
+-                    Some(menu) => menu,
++                    Some(menu) => {
++                        if refresh_on_render {
++                            menu.update(cx, |menu, cx| {
++                                menu.rebuild_preserving_selection(window, cx, |menu, window, cx| builder(menu, window, cx));
++                            });
++                        }
++                        menu
++                    }
+                     None => {
+                         let builder = builder.clone();
+                         let menu = PopupMenu::build(window, cx, move |menu, window, cx| {

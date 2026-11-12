@@ -32,6 +32,11 @@ class Kit09FamilyStackTests(unittest.TestCase):
             order.index("t13-modal-focus-recovery-v1-kit09.patch"),
         )
 
+    def test_menu_select_provider_order_is_preserved(self) -> None:
+        order = STACK.CORE_ORDER + STACK.FAMILY_ORDER
+        self.assertLess(order.index("gpui-component-popup-menu-disabled-confirm-v1-kit08.patch"), order.index("r15b-menu-item-disabled-v1-kit09.patch"))
+        self.assertLess(order.index("r15b-menu-item-disabled-v1-kit09.patch"), order.index("r15b-popup-menu-recovery-v1-kit09.patch"))
+
     def test_sheet_patch_preserves_default_close_name_and_optional_override(self) -> None:
         patch = (
             STACK.PATCH_DIR / "gpui-component-sheet-close-accessibility-v1-kit09.patch"
