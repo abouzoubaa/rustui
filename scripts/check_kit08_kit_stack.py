@@ -14,6 +14,7 @@ import tempfile
 from pathlib import Path
 from typing import Any
 
+from fixture_target_dir import fixture_target_root
 from check_kit08_core_stack import apply_stack
 from prepare_gpui_kit_08_fixture import (
     DEFAULT_MANIFEST,
@@ -114,6 +115,7 @@ def candidate_build_key() -> str:
         DEFAULT_MANIFEST,
         ROOT / "scripts/check_kit08_kit_stack.py",
         ROOT / "scripts/check_kit08_core_stack.py",
+        ROOT / "scripts/fixture_target_dir.py",
         ROOT / "scripts/prepare_gpui_kit_08_fixture.py",
         *(path for path in PATCH_DIR.rglob("*") if path.is_file()),
         *(path for path in FAMILY_PROOF_CRATE.glob("tests/**/*") if path.is_file()),
@@ -287,8 +289,10 @@ def compile_candidate_workspace(
     shared_target_dir = Path(
         os.environ.get("CARGO_TARGET_DIR", str(ROOT / "target/headstart"))
     ).resolve()
-    target_dir = shared_target_dir / "debug" / FIXTURE_BUILD_CACHE / candidate_build_key()
+    fixture_cache = fixture_target_root(8, shared_target_dir)
+    target_dir = fixture_cache / FIXTURE_BUILD_CACHE / candidate_build_key()
     target_dir.mkdir(parents=True, exist_ok=True)
+    print(f"fixture CARGO_TARGET_DIR={target_dir}")
     normalize_fixture_mtimes(workspace)
     command = ["rustup", "run", "1.98.0", "cargo", "check"]
     offline = "--compile-online" not in sys.argv[1:]
