@@ -80,7 +80,16 @@ A3_4F_ORDER = (
     "gpui-input-placeholder-color-v1-kit09.patch",
 )
 A3_4G_ORDER = ("gpui-toolbar-rtl-v1-kit09.patch",)
-FAMILY_ORDER = A3_4A_ORDER + A3_4B_ORDER + A3_4C_ORDER + A3_4D_ORDER + A3_4E_ORDER + A3_4F_ORDER + A3_4G_ORDER
+A3_4H_ORDER = (
+    "gpui-component-web-syntax-v1-kit09.patch",
+    "gpui-component-web-syntax-runtime-v1-kit08.patch",
+    "gpui-component-web-syntax-runtime-v2-kit08.patch",
+    "gpui-component-web-syntax-runtime-v3-kit08.patch",
+)
+FAMILY_ORDER = (
+    A3_4A_ORDER + A3_4B_ORDER + A3_4C_ORDER + A3_4D_ORDER + A3_4E_ORDER
+    + A3_4F_ORDER + A3_4G_ORDER + A3_4H_ORDER
+)
 
 
 FAMILY_PROOF_CRATE = ROOT / "scripts/kit08_family_proofs"
