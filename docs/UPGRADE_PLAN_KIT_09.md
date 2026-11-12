@@ -113,6 +113,10 @@ The inert core stack contains **10 copied patches, 3 rebased patches, and 1 new 
 
 NP-7 was retried once while inspecting the macOS package, with `env -u RUSTC -u RUSTDOC CARGO_TARGET_DIR="$HOME/.cache/rustui-target" rustup run 1.98.0 cargo test --manifest-path crates/rustui-gpui-macos/Cargo.toml nested_grabbing_popups_dismiss_leaf_before_parent --features test-support --locked --offline`. It remains parked: the currently selected 0.3.10 owned source reports E0658 for `Option::map_or_default` at `crates/rustui-gpui-macos/src/window.rs:862`, `:923`, and `:1454` (issue #138099). The new 0.9.1 candidate has a patch-only compatibility delta; it does not change the current owned source or complete the NP-7 native test.
 
+### A3-3 retirement decision
+
+Completed the intent/proof gate with **0 additional retirements**. None of the approved patches is proven fully obsolete on v0.9.1; the three already classified `PARTIAL` (`a11y-validation-grid-v1-kit08.patch`, `gpui-base-slider-endpoint-v1-kit08.patch`, and `gpui-base-slider-set-value-v2-kit08.patch`) retain only their uncovered behavior and stay in the candidate queue for their component families. The corresponding RustUI regression checks passed on the current baseline: `text_field_validation_lifecycle`, `grid_cells_reference_actual_header_nodes_across_updates`, and `slider_accessibility_set_value_clamps_and_applies_step`. These baseline passes do not establish that the upstream fixture covers the full behavior, so they do not justify retirement. Previously retired A2 patches remain untouched.
+
 ## 4. Owned manifests, test support, and locks
 
 Read-only TOML comparison against v0.9.1 manifests found intentional A2 differences that need an explicit rebase decision:
