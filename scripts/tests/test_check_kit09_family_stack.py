@@ -75,7 +75,7 @@ class Kit09FamilyStackTests(unittest.TestCase):
     def test_toolbar_rtl_candidate_is_in_the_later_family_stack(self) -> None:
         self.assertEqual(STACK.A3_4G_ORDER, ("gpui-toolbar-rtl-v1-kit09.patch",))
         self.assertEqual(
-            STACK.FAMILY_ORDER[-len(STACK.A3_4H_ORDER) - 1],
+            STACK.FAMILY_ORDER[-len(STACK.A3_4H_ORDER) - len(STACK.A3_4I_ORDER) - 1],
             "gpui-toolbar-rtl-v1-kit09.patch",
         )
 
@@ -93,6 +93,21 @@ class Kit09FamilyStackTests(unittest.TestCase):
             order.index("gpui-component-web-syntax-runtime-v2-kit08.patch"),
             order.index("gpui-component-web-syntax-runtime-v3-kit08.patch"),
         )
+
+    def test_native_popup_provider_precedes_child_teardown(self) -> None:
+        order = STACK.CORE_ORDER + STACK.FAMILY_ORDER
+        self.assertLess(
+            order.index("gpui-macos-anchored-popup-v1-kit09.patch"),
+            order.index("gpui-macos-popup-child-teardown-v1-kit09.patch"),
+        )
+        self.assertEqual(
+            STACK.FAMILY_ORDER[-len(STACK.A3_4I_ORDER):],
+            STACK.A3_4I_ORDER,
+        )
+        runner = (ROOT / "scripts/check_kit09_family_stack.py").read_text(
+            encoding="utf-8"
+        )
+        self.assertIn("parent_close_only_dismisses_managed_grabbing_popups", runner)
 
     def test_inert_focus_provider_precedes_modal_focus_consumer(self) -> None:
         order = STACK.CORE_ORDER + STACK.FAMILY_ORDER

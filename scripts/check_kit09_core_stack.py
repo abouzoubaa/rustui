@@ -62,6 +62,8 @@ LATER_FAMILY_CANDIDATES = {
     "gpui-component-web-syntax-runtime-v1-kit08.patch",
     "gpui-component-web-syntax-runtime-v2-kit08.patch",
     "gpui-component-web-syntax-runtime-v3-kit08.patch",
+    "gpui-macos-anchored-popup-v1-kit09.patch",
+    "gpui-macos-popup-child-teardown-v1-kit09.patch",
     "gpui-base-slider-endpoint-v1-kit09.patch",
     "gpui-base-slider-first-move-v1.patch",
     "gpui-base-slider-set-value-v2-kit09.patch",
