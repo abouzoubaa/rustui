@@ -57,7 +57,9 @@
     "gpui-component-calendar-fr-ar-v1-kit09.patch",
     "gpui-component-date-picker-accessibility-v1.patch",
     "gpui-component-date-picker-localization-v2-kit08.patch",
-    "gpui-component-date-picker-rtl-alignment-v1-kit08.patch"
+    "gpui-component-date-picker-rtl-alignment-v1-kit08.patch",
+    "gpui-base-input-validation-description-v1-kit09.patch",
+    "gpui-input-placeholder-color-v1-kit09.patch"
   ],
   "patches": [
     {
@@ -665,6 +667,38 @@
           "post_sha256": "8d8e8a7fd2549ffd0f88f90f6a619dd8f519fc408e657cdae30129a99d179712"
         }
       }
+    },
+    {
+      "patch": "gpui-base-input-validation-description-v1-kit09.patch",
+      "patch_sha256": "11887a46a6db3a3d4d66b73276d03c5d6564851f038f4afa3c51950d5a2b9dad",
+      "files": {
+        "vendor/gpui-base-0.9.1/src/input/base/state.rs": {
+          "pre_sha256": "51f7e350c1d944b7715be20559d31e768a172c5f256ad6151a9f0173800111a9",
+          "post_sha256": "2726c29cb53d02974229d83a9848be46fe4725a2da68d732c90b800a2a5d13d6"
+        },
+        "vendor/gpui-component-0.9.1/src/input/input.rs": {
+          "pre_sha256": "62c4f0bf40b17547868a2b16c265200361a7a78a30fb15562c40a473df844135",
+          "post_sha256": "2096ba87a8e596f6c90e7e9c7573382f806535a7edf49f9d8521b2d7b7de3b29"
+        }
+      }
+    },
+    {
+      "patch": "gpui-input-placeholder-color-v1-kit09.patch",
+      "patch_sha256": "86c753e9866e819f2c1f22d38763cc7e19cfdaebbeceb85b1110bab346b09378",
+      "files": {
+        "vendor/gpui-base-0.9.1/src/input/base/element.rs": {
+          "pre_sha256": "952852e19d8d48126ac6742ebbe29dd93310d7326faec8f1e58e79a56f78c4b1",
+          "post_sha256": "e7c1378bcff6b83c2d8f2740fa43ee8017564c961ec37205aadeaa15e963cff2"
+        },
+        "vendor/gpui-base-0.9.1/src/input/editor/highlighting.rs": {
+          "pre_sha256": "acfcf112bbbd45295bce5a932bc3faa0b3e989f675464b3c29c46e14d2b65c57",
+          "post_sha256": "ab7c5a6c5d4ec426881d0797dab83bc7431092c66683f2c53842da2d52984d7c"
+        },
+        "vendor/gpui-component-0.9.1/src/input/input.rs": {
+          "pre_sha256": "2096ba87a8e596f6c90e7e9c7573382f806535a7edf49f9d8521b2d7b7de3b29",
+          "post_sha256": "793d98bac6dec76bae388460c0701913d4087326e823ad825cb3a393acedbd00"
+        }
+      }
     }
   ],
   "files": {
@@ -707,6 +741,18 @@
     "vendor/gpui-base-0.8.1/src/tree.rs": {
       "pre_sha256": "6a8f108cafc850f2fc82f4259f617fb0724dd9f86e33ffc5e2b00bde722713fc",
       "post_sha256": "9b9a243ffc83d61106ccdeabb23fa4de52d873ee9f7b64d232afa2f3de81d45d"
+    },
+    "vendor/gpui-base-0.9.1/src/input/base/element.rs": {
+      "pre_sha256": "952852e19d8d48126ac6742ebbe29dd93310d7326faec8f1e58e79a56f78c4b1",
+      "post_sha256": "e7c1378bcff6b83c2d8f2740fa43ee8017564c961ec37205aadeaa15e963cff2"
+    },
+    "vendor/gpui-base-0.9.1/src/input/base/state.rs": {
+      "pre_sha256": "51f7e350c1d944b7715be20559d31e768a172c5f256ad6151a9f0173800111a9",
+      "post_sha256": "2726c29cb53d02974229d83a9848be46fe4725a2da68d732c90b800a2a5d13d6"
+    },
+    "vendor/gpui-base-0.9.1/src/input/editor/highlighting.rs": {
+      "pre_sha256": "acfcf112bbbd45295bce5a932bc3faa0b3e989f675464b3c29c46e14d2b65c57",
+      "post_sha256": "ab7c5a6c5d4ec426881d0797dab83bc7431092c66683f2c53842da2d52984d7c"
     },
     "vendor/gpui-component-0.8.1/locales/ui.yml": {
       "pre_sha256": "09290b9678d77846e8fef1f72ebad7d22af5c80ab2c25a014c614042fb0cd16a",
@@ -759,6 +805,10 @@
     "vendor/gpui-component-0.9.1/src/dialog/dialog.rs": {
       "pre_sha256": "f664c7393ae208b6382c7ce5991764ab18053d1381c7ee41d3fb4aa67eeab312",
       "post_sha256": "00718c05f2444ff8cd81c9570c9f6ac8644aa16d41fe09eff31091919641ce7e"
+    },
+    "vendor/gpui-component-0.9.1/src/input/input.rs": {
+      "pre_sha256": "62c4f0bf40b17547868a2b16c265200361a7a78a30fb15562c40a473df844135",
+      "post_sha256": "793d98bac6dec76bae388460c0701913d4087326e823ad825cb3a393acedbd00"
     },
     "vendor/gpui-component-0.9.1/src/lib.rs": {
       "pre_sha256": "84204bfca3c7a5781c451d3f8d4f98abc9d0853926ad68529d90ef29c7ce1499",
@@ -860,7 +910,7 @@
   "reverse_verified": true,
   "fixture": {
     "archives_verified": 82,
-    "target_files_hashed": 43,
+    "target_files_hashed": 47,
     "known_unavailable_targets": 0
   }
 }
