@@ -12,6 +12,7 @@ import subprocess
 import sys
 import tarfile
 import tempfile
+from collections import defaultdict
 from pathlib import Path
 from typing import Any, Callable
 
@@ -41,6 +42,7 @@ CANDIDATE_ORDER = (
     "gpui-pre-web-accessible-name-v1.patch",
     "gpui-primary-mousedown-click-v2.patch",
     "r15-test-tree-disabled-v1-kit08.patch",
+    "a11y-grid-readonly-sort-v1-kit09.patch",
     "t17-inert-focus-scope-v1-kit08-kit09.patch",
     "gpui-tree-aria-disabled-v1-kit08.patch",
 )
@@ -48,6 +50,12 @@ LATER_FAMILY_CANDIDATES = {
     "t13-modal-focus-recovery-v1-kit09.patch",
     "gpui-component-tracked-dialog-focus-v1-kit09.patch",
     "gpui-component-sheet-close-accessibility-v1-kit09.patch",
+    "gpui-selectable-list-semantics-v2.patch",
+    "gpui-component-tree-accessible-name-v1-kit08.patch",
+    "gpui-tree-aria-disabled-row-v1-kit08.patch",
+    "gpui-tree-aria-level-v1-kit08.patch",
+    "gpui-tree-disabled-keyboard-v2.patch",
+    "r15-tree-disabled-focus-v1.patch",
     "gpui-component-popup-menu-disabled-confirm-v1-kit08.patch",
     "r15b-menu-item-disabled-v1-kit09.patch",
     "r15b-popup-menu-recovery-v1-kit09.patch",
@@ -58,6 +66,7 @@ LATER_FAMILY_CANDIDATES = {
     "gpui-component-select-rtl-alignment-v3-kit08.patch",
     "gpui-component-select-rtl-auto-width-v4-kit08.patch",
     "gpui-component-select-rtl-auto-width-v6-kit08.patch",
+    "gpui-component-table-delegate-accessibility-v1-kit09.patch",
 }
 
 
@@ -208,6 +217,34 @@ def patch_targets(patch_path: Path) -> list[str]:
     )
 
 
+def sync_source_aliases(
+    stage: Path,
+    target_sources: dict[str, tuple[str, str]],
+    changed_targets: list[str],
+) -> None:
+    """Keep historical vendor paths for one crate source in the same state."""
+    aliases: dict[tuple[str, str], list[str]] = defaultdict(list)
+    for target, source in target_sources.items():
+        aliases[source].append(target)
+
+    changed_by_source: dict[tuple[str, str], list[str]] = defaultdict(list)
+    for target in changed_targets:
+        changed_by_source[target_sources[target]].append(target)
+
+    for source, changed in changed_by_source.items():
+        contents = {(stage / target).read_bytes() for target in changed}
+        if len(contents) != 1:
+            raise FixtureError(
+                "patch changed aliases of the same fixture source differently: "
+                + ", ".join(changed)
+            )
+        content = contents.pop()
+        for alias in aliases[source]:
+            alias_path = stage / alias
+            if alias_path.read_bytes() != content:
+                alias_path.write_bytes(content)
+
+
 def apply_stack(
     manifest: dict[str, Any],
     patch_dir: Path,
@@ -280,6 +317,7 @@ def apply_stack(
                 capture_output=True,
                 text=True,
             )
+            sync_source_aliases(stage, target_sources, patch_targets(patch_path))
             after = {target: (stage / target).read_bytes() for target in before}
             patch_records.append(
                 {
@@ -314,6 +352,7 @@ def apply_stack(
                 capture_output=True,
                 text=True,
             )
+            sync_source_aliases(stage, target_sources, patch_targets(patch_path))
         restored = {target: (stage / target).read_bytes() for target in initial}
         mismatches = [target for target in initial if restored[target] != initial[target]]
         if mismatches:

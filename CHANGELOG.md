@@ -1,6 +1,7 @@
 # Changelog
 
 ## Unreleased
+- A3-4c: staged tree/list and delegated grid accessibility candidates with passing cumulative Kit 0.9 proofs.
 - A3: isolate A2/A3 GPUI fixture compilation caches from the workspace target directory.
 - A3-4a: rebased modal focus, tracked-dialog focus, and sheet close accessibility patches for GPUI Kit 0.9.1; provider-first cumulative proofs pass.
 - A3-4b: rebased popup-menu disabled recovery and staged the menu/select RTL candidate family for GPUI Kit 0.9.1.

@@ -21,6 +21,7 @@
     "gpui-pre-web-accessible-name-v1.patch",
     "gpui-primary-mousedown-click-v2.patch",
     "r15-test-tree-disabled-v1-kit08.patch",
+    "a11y-grid-readonly-sort-v1-kit09.patch",
     "t17-inert-focus-scope-v1-kit08-kit09.patch",
     "gpui-tree-aria-disabled-v1-kit08.patch"
   ],
@@ -210,6 +211,20 @@
       }
     },
     {
+      "patch": "a11y-grid-readonly-sort-v1-kit09.patch",
+      "patch_sha256": "a15e235fc95b4cdf3405120b92901ad8a261368f9c78ec609a3f9510ddd1fefd",
+      "files": {
+        "vendor/gpui-pre-0.3.10/src/elements/div.rs": {
+          "pre_sha256": "27c02a94d692b7c468db50517ade786811364187e7239c5d69a5c92e0edae03a",
+          "post_sha256": "2947ce8faa3c3ce25b1e65ed6e95fe536adbca4cb8437ff06340bea47797d32b"
+        },
+        "vendor/gpui-pre-0.3.10/src/window/a11y/debug.rs": {
+          "pre_sha256": "a838bad5f53fb4dbeae936cc7c0a29daa464d1d058dbcb20f6f7b721bc6b16b9",
+          "post_sha256": "8c532b0ebfec4ca78fef1378b4c37e61105b6d5778eda25887e0a79a9471ec2c"
+        }
+      }
+    },
+    {
       "patch": "t17-inert-focus-scope-v1-kit08-kit09.patch",
       "patch_sha256": "4f55d97ef427af0803b6afea7cb19700468bbe4e6b0900bd80ac2925c719355f",
       "files": {
@@ -218,8 +233,8 @@
           "post_sha256": "24d41e963dd0beea2f1612955399153f9572493b55b3adf39ed284a886c9ddbc"
         },
         "vendor/gpui-pre-0.3.10/src/window.rs": {
-          "pre_sha256": "9f4891f1e9c323d8d14a0624ce86c436cb9e623a52e8300a9b67ec0119f4aaa5",
-          "post_sha256": "84a33897419237f0e7967c102aadc59ac59fddd6eab5707248faa99b03bf93de"
+          "pre_sha256": "0d15407b32262da2eae4db66d931d6e97fc5c1cdb65384162b104d570d6c66d5",
+          "post_sha256": "fb81a508463b64cd3d4755cd55b169ed853deb175d4a15962de8099b38270881"
         }
       }
     },
@@ -228,8 +243,8 @@
       "patch_sha256": "271f781d06805e8149e5762a15255fe7a3098c8dbd8af6a22d554eaec64dea7e",
       "files": {
         "vendor/gpui-pre-0.3.10/src/elements/div.rs": {
-          "pre_sha256": "73b930227fe8f3c1fb703c2e7529d16a3f372cf52ec2afe95397ed0ff63f65d7",
-          "post_sha256": "d092ac4cd8e516cd11d778393e958babb1c1033421268d344d3156ebe26f963e"
+          "pre_sha256": "2947ce8faa3c3ce25b1e65ed6e95fe536adbca4cb8437ff06340bea47797d32b",
+          "post_sha256": "4d0adecd0bfd268ccbea4d45bc0a45a267edb284c2f2a6a2a54b44638ef5b4a8"
         }
       }
     }
@@ -241,7 +256,7 @@
     },
     "crates/rustui-gpui/src/window/a11y/debug.rs": {
       "pre_sha256": "2055ed9e63900a601a973191ff82ebbd91557178036826a4d2c04b09f5cf4dc2",
-      "post_sha256": "419875df004bf750fb78260e67064e903920b67775ce787081d9bae880c6ae54"
+      "post_sha256": "8c532b0ebfec4ca78fef1378b4c37e61105b6d5778eda25887e0a79a9471ec2c"
     },
     "vendor/block-0.1.6/src/lib.rs": {
       "pre_sha256": "eb31678adf63b53109d9b94eba23699fd5f9ebfdb950f6e1a57ad51bb6a146fa",
@@ -261,7 +276,7 @@
     },
     "vendor/gpui-pre-0.3.10/src/elements/div.rs": {
       "pre_sha256": "73b930227fe8f3c1fb703c2e7529d16a3f372cf52ec2afe95397ed0ff63f65d7",
-      "post_sha256": "d092ac4cd8e516cd11d778393e958babb1c1033421268d344d3156ebe26f963e"
+      "post_sha256": "4d0adecd0bfd268ccbea4d45bc0a45a267edb284c2f2a6a2a54b44638ef5b4a8"
     },
     "vendor/gpui-pre-0.3.10/src/platform.rs": {
       "pre_sha256": "1a1002581b0afcc816cfa92473c928791faf49fb8a94ef359fc10b1a372065ba",
@@ -281,15 +296,15 @@
     },
     "vendor/gpui-pre-0.3.10/src/window.rs": {
       "pre_sha256": "9f4891f1e9c323d8d14a0624ce86c436cb9e623a52e8300a9b67ec0119f4aaa5",
-      "post_sha256": "84a33897419237f0e7967c102aadc59ac59fddd6eab5707248faa99b03bf93de"
+      "post_sha256": "fb81a508463b64cd3d4755cd55b169ed853deb175d4a15962de8099b38270881"
     },
     "vendor/gpui-pre-0.3.10/src/window/a11y/debug.rs": {
       "pre_sha256": "2055ed9e63900a601a973191ff82ebbd91557178036826a4d2c04b09f5cf4dc2",
-      "post_sha256": "a838bad5f53fb4dbeae936cc7c0a29daa464d1d058dbcb20f6f7b721bc6b16b9"
+      "post_sha256": "8c532b0ebfec4ca78fef1378b4c37e61105b6d5778eda25887e0a79a9471ec2c"
     },
     "vendor/gpui-pre-0.3.9/src/elements/div.rs": {
       "pre_sha256": "73b930227fe8f3c1fb703c2e7529d16a3f372cf52ec2afe95397ed0ff63f65d7",
-      "post_sha256": "27c02a94d692b7c468db50517ade786811364187e7239c5d69a5c92e0edae03a"
+      "post_sha256": "4d0adecd0bfd268ccbea4d45bc0a45a267edb284c2f2a6a2a54b44638ef5b4a8"
     },
     "vendor/gpui-pre-0.3.9/src/platform/test/window.rs": {
       "pre_sha256": "0a9e1c0a0ce8885e64439bfda766a5c39fed5f2fffae3781e56104031ee4012e",
@@ -297,7 +312,7 @@
     },
     "vendor/gpui-pre-0.3.9/src/window.rs": {
       "pre_sha256": "9f4891f1e9c323d8d14a0624ce86c436cb9e623a52e8300a9b67ec0119f4aaa5",
-      "post_sha256": "0d15407b32262da2eae4db66d931d6e97fc5c1cdb65384162b104d570d6c66d5"
+      "post_sha256": "fb81a508463b64cd3d4755cd55b169ed853deb175d4a15962de8099b38270881"
     },
     "vendor/gpui-pre-0.3.9/src/window/a11y.rs": {
       "pre_sha256": "1579b5772038313635feda4ad5c32a46f5bd843396268c8b573d68e7c57488b5",

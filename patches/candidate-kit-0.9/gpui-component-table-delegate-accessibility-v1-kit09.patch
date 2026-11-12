@@ -1,0 +1,100 @@
+--- a/vendor/gpui-component-0.8.1/src/table/state.rs
++++ b/vendor/gpui-component-0.8.1/src/table/state.rs
+@@ -254,6 +254,8 @@
+     /// - Keyboard navigation works at the cell level (arrow keys move between cells)
+     /// - Right-click and double-click events are supported for cells
+     pub cell_selectable: bool,
++    /// Use the accessibility roles and metadata supplied by the table delegate.
++    pub delegate_accessibility: bool,
+     /// Whether the row header column is visible when `cell_selectable` is enabled,
+     /// default is `true`.
+     ///
+@@ -338,6 +340,7 @@
+             row_selectable: true,
+             select_on_modifier_click: true,
+             cell_selectable: false,
++            delegate_accessibility: false,
+             row_header: true,
+             sortable: true,
+             col_movable: true,
+@@ -423,6 +426,12 @@
+     /// ```
+     pub fn cell_selectable(mut self, cell_selectable: bool) -> Self {
+         self.cell_selectable = cell_selectable;
++        self
++    }
++
++    /// Use accessibility roles and metadata supplied by the table delegate.
++    pub fn delegate_accessibility(mut self, enabled: bool) -> Self {
++        self.delegate_accessibility = enabled;
+         self
+     }
+ 
+@@ -1597,6 +1606,9 @@
+     where
+         E: gpui::StatefulInteractiveElement + FluentBuilder,
+     {
++        if self.delegate_accessibility {
++            return cell;
++        }
+         let cell = if self.cell_selectable {
+             let is_selected = self.selected_cell() == Some((row_ix, col_ix));
+             cell.role(gpui::Role::GridCell)
+@@ -1947,9 +1959,11 @@
+                         |this| this.py_0(),
+                     )
+                     .id(("col-header", col_ix))
+-                    .role(gpui::Role::ColumnHeader)
+-                    .aria_label(name.clone())
+-                    .aria_column_index(col_ix)
++                    .when(!self.delegate_accessibility, |this| {
++                        this.role(gpui::Role::ColumnHeader)
++                            .aria_label(name.clone())
++                            .aria_column_index(col_ix)
++                    })
+                     .test_support()
+                     .on_click(cx.listener(move |this, _, window, cx| {
+                         this.on_col_head_click(col_ix, window, cx);
+@@ -2123,8 +2137,9 @@
+         header
+             // One header row holds every column header, including the pinned
+             // ones, which are laid out in a separate container.
+-            .role(gpui::Role::Row)
+-            .aria_row_index(0)
++            .when(!self.delegate_accessibility, |header| {
++                header.role(gpui::Role::Row).aria_row_index(0)
++            })
+             .h_flex()
+             .w_full()
+             .flex_shrink_0()
+@@ -2357,17 +2372,19 @@
+             };
+ 
+             tr.test_support()
+-                .role(gpui::Role::Row)
+-                // Row 0 is the header row.
+-                .aria_row_index(row_ix + 1)
+-                .when_some(label, |this, label| this.aria_label(label))
+-                .aria_selected(is_selected)
+-                // While the table has focus, the selected row is the focused
+-                // node for assistive technology.
+-                .when(
+-                    is_selected && self.focus_handle.is_focused(window),
+-                    |this| this.aria_active_descendant(),
+-                )
++                .when(!self.delegate_accessibility, |tr| {
++                    tr.role(gpui::Role::Row)
++                        // Row 0 is the header row.
++                        .aria_row_index(row_ix + 1)
++                        .when_some(label, |this, label| this.aria_label(label))
++                        .aria_selected(is_selected)
++                        // While the table has focus, the selected row is the focused
++                        // node for assistive technology.
++                        .when(
++                            is_selected && self.focus_handle.is_focused(window),
++                            |this| this.aria_active_descendant(),
++                        )
++                })
+                 .h_flex()
+                 .w_full()
+                 .h(row_height)

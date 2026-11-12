@@ -48,7 +48,16 @@ A3_4B_ORDER = (
     "gpui-component-select-rtl-auto-width-v4-kit08.patch",
     "gpui-component-select-rtl-auto-width-v6-kit08.patch",
 )
-FAMILY_ORDER = A3_4A_ORDER + A3_4B_ORDER
+A3_4C_ORDER = (
+    "gpui-selectable-list-semantics-v2.patch",
+    "gpui-component-tree-accessible-name-v1-kit08.patch",
+    "gpui-tree-aria-disabled-row-v1-kit08.patch",
+    "gpui-tree-aria-level-v1-kit08.patch",
+    "gpui-tree-disabled-keyboard-v2.patch",
+    "r15-tree-disabled-focus-v1.patch",
+    "gpui-component-table-delegate-accessibility-v1-kit09.patch",
+)
+FAMILY_ORDER = A3_4A_ORDER + A3_4B_ORDER + A3_4C_ORDER
 
 
 FAMILY_PROOF_CRATE = ROOT / "scripts/kit08_family_proofs"
@@ -144,7 +153,8 @@ def compile_candidate_workspace(
     proof_placeholder = "--proof-placeholder" in sys.argv[1:]
     proof_toolbar = "--proof-toolbar" in sys.argv[1:]
     proof_a3_4b = "--proof-a3-4b" in sys.argv[1:]
-    if "--proof-grid-a11y" in sys.argv[1:] or proof_all:
+    proof_a3_4c = "--proof-a3-4c" in sys.argv[1:]
+    if "--proof-grid-a11y" in sys.argv[1:] or proof_all or proof_a3_4c:
         gpui_pre = sources_root / f'gpui-pre-{source_by_name["gpui-pre"]["version"]}'
         with (gpui_pre / "Cargo.toml").open("a", encoding="utf-8") as cargo_toml:
             cargo_toml.write("\n[dev-dependencies]\nutil_macros = { path = \"../../util_macros\" }\n")
@@ -164,7 +174,7 @@ def compile_candidate_workspace(
         (workspace / "assets/fonts/lilex/Lilex-Regular.ttf").write_bytes(b"")
         members.append(f'"sources/gpui-pre-{source_by_name["gpui-pre"]["version"]}"')
         members.append('"util_macros"')
-    if proof_all or proof_calendar or proof_placeholder or proof_toolbar or proof_a3_4b:
+    if proof_all or proof_calendar or proof_placeholder or proof_toolbar or proof_a3_4b or proof_a3_4c:
         proof_dir = workspace / "family-proofs"
         shutil.copytree(FAMILY_PROOF_CRATE / "tests", proof_dir / "tests")
         (proof_dir / "Cargo.toml").write_text(
@@ -172,8 +182,8 @@ def compile_candidate_workspace(
             "[dependencies]\n"
             f"gpui = {{ package = \"gpui-pre\", path = \"../sources/gpui-pre-{source_by_name['gpui-pre']['version']}\", default-features = false, features = [\"test-support\"] }}\n"
             f"gpui-base = {{ path = \"../sources/gpui-base-{source_by_name['gpui-base']['version']}\", default-features = false }}\n"
-            f"gpui-component = {{ path = \"../sources/gpui-component-{source_by_name['gpui-component']['version']}\", default-features = false }}\n"
-            "chrono = \"0.4\"\n",
+            f"gpui-component = {{ path = \"../sources/gpui-component-{source_by_name['gpui-component']['version']}\", default-features = false, features = [\"test-support\"] }}\n"
+            "chrono = \"0.4\"\nserde_json = \"1\"\n",
             encoding="utf-8",
         )
         members.append('"family-proofs"')
@@ -202,6 +212,7 @@ def compile_candidate_workspace(
             "--proof-toolbar",
             "--proof-a3-4a",
             "--proof-a3-4b",
+            "--proof-a3-4c",
         )
     ):
         # GPUI Component's crate archive omits several repository-level
@@ -269,6 +280,29 @@ def compile_candidate_workspace(
                     "gpui-component",
                     "A3-4b popup-menu selection recovery",
                     None,
+                ),
+            ]
+        )
+    if proof_a3_4c:
+        proofs.extend(
+            [
+                (
+                    "data_grid_sort_and_readonly_metadata_reach_accessibility_nodes",
+                    "gpui-pre",
+                    "A3-4c GPUI ARIA sort/read-only metadata",
+                    None,
+                ),
+                (
+                    "tree_accessibility_label_and_levels_reach_the_tree_nodes",
+                    "gpui-component",
+                    "A3-4c Tree accessible name and levels",
+                    None,
+                ),
+                (
+                    "table_delegate_accessibility_nodes_keep_roles_indices_and_readonly",
+                    "a2-4a-modal-proof",
+                    "A3-4c DataTable delegate accessibility",
+                    "grid_delegation",
                 ),
             ]
         )
@@ -343,11 +377,12 @@ def run(write_manifest: bool = False) -> dict:
         raise FixtureError(f"recorded stack manifest is stale: {OUTPUT}; use --write-manifest")
     OUTPUT.write_bytes(data)
     print(
-        "A3-2 core patches={}; A3-4a patches={}; A3-4b patches={}; "
+        "A3-2 core patches={}; A3-4a patches={}; A3-4b patches={}; A3-4c patches={}; "
         "fixture archives verified={}; target files hashed={}; stack files={}; reverse=exact".format(
             len(CORE_ORDER),
             len(A3_4A_ORDER),
             len(A3_4B_ORDER),
+            len(A3_4C_ORDER),
             archive_count,
             target_count,
             len(result["files"]),
