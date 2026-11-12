@@ -1,9 +1,11 @@
 from __future__ import annotations
 
 import importlib.util
+import io
 import sys
 import tempfile
 import unittest
+from contextlib import redirect_stdout
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[2]
@@ -17,6 +19,28 @@ SPEC.loader.exec_module(STACK)
 
 
 class Kit09FamilyStackTests(unittest.TestCase):
+    def test_proof_runner_keeps_cargo_test_output_in_the_log(self) -> None:
+        output = io.StringIO()
+        with redirect_stdout(output):
+            code, _ = STACK.report_proof_output(
+                "popup teardown", 0,
+                "running 1 test\ntest parent_close_only_dismisses_managed_grabbing_popups ... ok\n"
+                "test result: ok. 1 passed; 0 failed; 0 ignored\n",
+            )
+        self.assertEqual(code, 0)
+        self.assertIn("proof: popup teardown: PASS", output.getvalue())
+        self.assertIn("running 1 test", output.getvalue())
+        self.assertIn("parent_close_only_dismisses_managed_grabbing_popups ... ok", output.getvalue())
+        self.assertIn("test result: ok. 1 passed; 0 failed; 0 ignored", output.getvalue())
+
+    def test_proof_runner_rejects_zero_tests(self) -> None:
+        output = io.StringIO()
+        with redirect_stdout(output):
+            code, _ = STACK.report_proof_output("stale filter", 0, "running 0 tests\ntest result: ok. 0 passed; 0 failed; 0 ignored\n")
+        self.assertNotEqual(code, 0)
+        self.assertIn("proof: stale filter: FAIL", output.getvalue())
+        self.assertIn("without any passing tests", output.getvalue())
+
     def test_family_order_covers_each_candidate_once(self) -> None:
         family_files = {
             path.name

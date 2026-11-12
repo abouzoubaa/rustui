@@ -6,6 +6,7 @@ from __future__ import annotations
 import hashlib
 import json
 import os
+import re
 import shutil
 import subprocess
 import sys
@@ -125,6 +126,25 @@ def input_digest(paths: list[Path]) -> str:
         digest.update(path.read_bytes())
         digest.update(b"\0")
     return digest.hexdigest()[:20]
+
+
+def report_proof_output(label: str, returncode: int, output: str) -> tuple[int, str]:
+    has_executed_test = any(
+        match.group(1) != "0"
+        for match in re.finditer(r"test result: ok\. (\d+) passed;", output)
+    )
+    if not has_executed_test:
+        returncode = returncode or 1
+        output += "\nproof runner error: cargo test completed without any passing tests\n"
+    outcome = "FAIL" if returncode else "PASS"
+    print(f"proof: {label}: {outcome}", flush=True)
+    if output:
+        print(f"--- {label}: cargo test output ---", flush=True)
+        sys.stdout.write(output)
+        if not output.endswith("\n"):
+            sys.stdout.write("\n")
+        sys.stdout.flush()
+    return returncode, output
 
 
 def normalize_fixture_mtimes(workspace: Path) -> None:
@@ -340,10 +360,10 @@ def compile_candidate_workspace(
         proofs.extend(
             [
                 (
-                    "data_grid_sort_and_readonly_metadata_reach_accessibility_nodes",
-                    "gpui-pre",
+                    "table_delegate_accessibility_nodes_keep_roles_indices_and_readonly",
+                    "a2-4a-modal-proof",
                     "A3-4c GPUI ARIA sort/read-only metadata",
-                    None,
+                    "grid_delegation",
                 ),
                 (
                     "tree_accessibility_label_and_levels_reach_the_tree_nodes",
@@ -501,11 +521,8 @@ def compile_candidate_workspace(
             text=True,
         )
         output = proof.stdout + proof.stderr
-        outcomes.append((label, proof.returncode, output))
-        if proof.returncode:
-            print(f"proof: {label}: FAIL")
-        else:
-            print(f"proof: {label}: PASS")
+        outcome, output = report_proof_output(label, proof.returncode, output)
+        outcomes.append((label, outcome, output))
     return outcomes
 
 

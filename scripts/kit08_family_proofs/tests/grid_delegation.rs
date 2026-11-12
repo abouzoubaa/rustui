@@ -39,6 +39,7 @@ impl TableDelegate for Delegate {
             .role(Role::ColumnHeader)
             .aria_label("Name")
             .aria_column_index(1)
+            .aria_sort(gpui::accesskit::SortDirection::Ascending)
             .child("Name")
     }
 
@@ -112,6 +113,7 @@ fn table_delegate_accessibility_nodes_keep_roles_indices_and_readonly() {
         .find(|node| node["aria"]["role"] == "Cell")
         .unwrap();
     assert_eq!(header["aria"]["column_index"], 1);
+    assert_eq!(header["aria"]["sort_direction"], "Ascending");
     assert_eq!(cell["aria"]["column_index"], 1);
     assert_eq!(cell["aria"]["read_only"], true);
 }

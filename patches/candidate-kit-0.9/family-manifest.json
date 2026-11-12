@@ -637,11 +637,15 @@
     },
     {
       "patch": "gpui-component-calendar-fr-ar-v1-kit09.patch",
-      "patch_sha256": "e631c32580b4726e38f88a50908ec73a07717fabebc2c05e28f097edafb24bfd",
+      "patch_sha256": "558e7a10e342f778ed7982ad58238405d2abee3e45509beb036e93a7334f805d",
       "files": {
         "vendor/gpui-component-0.8.1/locales/ui.yml": {
           "pre_sha256": "09290b9678d77846e8fef1f72ebad7d22af5c80ab2c25a014c614042fb0cd16a",
           "post_sha256": "0f689ec1733ca1a58b9b7c834781c54cb8dcf792766cfc5b2cfa483fb2adf460"
+        },
+        "vendor/gpui-component-0.9.1/src/time/calendar.rs": {
+          "pre_sha256": "e55837a29719714c1a1e3c23e8de1bca76af015ad186f2167340358da8d4f9a9",
+          "post_sha256": "f45d24e22f349b8399c852857f495d435a046beb116cc440f12fb0cb997e723d"
         }
       }
     },
@@ -921,7 +925,7 @@
     },
     "vendor/gpui-component-0.8.1/src/time/calendar.rs": {
       "pre_sha256": "842e291959ebec26887599289a3e1b52da24870be785ef415efa11f824321251",
-      "post_sha256": "e55837a29719714c1a1e3c23e8de1bca76af015ad186f2167340358da8d4f9a9"
+      "post_sha256": "f45d24e22f349b8399c852857f495d435a046beb116cc440f12fb0cb997e723d"
     },
     "vendor/gpui-component-0.8.1/src/time/date_picker.rs": {
       "pre_sha256": "e7c8c87c76b253703a955c578f28278212d54545d9c9a62a76892a3140095248",
@@ -954,6 +958,10 @@
     "vendor/gpui-component-0.9.1/src/sheet.rs": {
       "pre_sha256": "10aa7d19b63afb4e3cac5bca257b5b0c58f5871aa1b9458008f367db81b8648e",
       "post_sha256": "1313a2c37acc77fcb7234d1f3c814bbc5e93f1d828085c4c3d34e05bbba9599c"
+    },
+    "vendor/gpui-component-0.9.1/src/time/calendar.rs": {
+      "pre_sha256": "842e291959ebec26887599289a3e1b52da24870be785ef415efa11f824321251",
+      "post_sha256": "f45d24e22f349b8399c852857f495d435a046beb116cc440f12fb0cb997e723d"
     },
     "vendor/gpui-component-0.9.1/src/toolbar.rs": {
       "pre_sha256": "156adbfe3e1e185b856e5f0e28f4cbc65e273b4c499a9595f821a301c42b0ae4",
