@@ -105,6 +105,14 @@ Rebuild the stack order before rebasing families; use the existing A2 stack chec
 
 Before each A3-4 family, scan candidate diffs for calls to APIs introduced by other candidate patches; include the provider edge in the stack manifest and test the full cumulative stack. Do not assume the A2 order is still valid merely because names are unchanged.
 
+### A3-2 core/macOS candidate status
+
+The inert core stack contains **10 copied patches, 3 rebased patches, and 1 new Rust 1.98 compatibility delta** (14 total); no patch was retired or marked partial in this step. Rebased files are `gpui-bidi-wrapped-rows-v1-kit08-kit09.patch`, `gpui-bidi-input-hit-v1-kit08-kit09.patch`, and `t17-inert-focus-scope-v1-kit08-kit09.patch`. The new `gpui-macos-map-or-default-v1-kit09.patch` replaces three upstream `Option::map_or_default` calls with equivalent `map_or_else(Default::default, ...)` on the macOS source, because the 0.3.12 source does not compile with the repository's Rust 1.98.0 toolchain.
+
+`python3 scripts/check_kit09_core_stack.py --compile-online --proof-core` passed: 14 candidates applied and reversed exactly (82 verified archives, 21 target sources hashed, 25 files in the resulting stack); `cargo check -p gpui-pre -p gpui-pre-macos` passed. The GPUI fixture tests passed: `inert_scope_skips_tab_and_rejects_direct_focus` (1/1) and the `bidi_` filter (2/2: single-line visual hit and wrapped-row geometry). The test harness adds only disposable missing upstream workspace assets and a no-op test macro crate; neither is added to candidate source.
+
+NP-7 was retried once while inspecting the macOS package, with `env -u RUSTC -u RUSTDOC CARGO_TARGET_DIR="$HOME/.cache/rustui-target" rustup run 1.98.0 cargo test --manifest-path crates/rustui-gpui-macos/Cargo.toml nested_grabbing_popups_dismiss_leaf_before_parent --features test-support --locked --offline`. It remains parked: the currently selected 0.3.10 owned source reports E0658 for `Option::map_or_default` at `crates/rustui-gpui-macos/src/window.rs:862`, `:923`, and `:1454` (issue #138099). The new 0.9.1 candidate has a patch-only compatibility delta; it does not change the current owned source or complete the NP-7 native test.
+
 ## 4. Owned manifests, test support, and locks
 
 Read-only TOML comparison against v0.9.1 manifests found intentional A2 differences that need an explicit rebase decision:
