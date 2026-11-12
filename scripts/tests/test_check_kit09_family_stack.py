@@ -72,6 +72,10 @@ class Kit09FamilyStackTests(unittest.TestCase):
         self.assertIn("aria_description", validation)
         self.assertNotIn("src/table/", validation)
 
+    def test_toolbar_rtl_candidate_is_in_the_later_family_stack(self) -> None:
+        self.assertEqual(STACK.A3_4G_ORDER, ("gpui-toolbar-rtl-v1-kit09.patch",))
+        self.assertEqual(STACK.FAMILY_ORDER[-1], "gpui-toolbar-rtl-v1-kit09.patch")
+
     def test_inert_focus_provider_precedes_modal_focus_consumer(self) -> None:
         order = STACK.CORE_ORDER + STACK.FAMILY_ORDER
         self.assertLess(
