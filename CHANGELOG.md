@@ -151,3 +151,4 @@
 - A3-4e: carry calendar and DatePicker accessibility, localization, RTL, and date-limit deltas to the Kit 0.9 candidate.
 - A3-4f: rebase input validation descriptions and placeholder color for GPUI Kit 0.9.1.
 - A3-4g: rebase Toolbar RTL layout and keyboard traversal for GPUI Kit 0.9.1.
+- A3-4h: carry runtime syntax registry support and syntax dependencies to Kit 0.9.1.

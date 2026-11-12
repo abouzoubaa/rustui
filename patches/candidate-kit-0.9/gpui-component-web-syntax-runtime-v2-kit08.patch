@@ -1,0 +1,31 @@
+--- a/vendor/gpui-component-0.8.1/src/highlighter/registry.rs
++++ b/vendor/gpui-component-0.8.1/src/highlighter/registry.rs
+@@ -514,7 +514,6 @@
+ 
+ impl LanguageRegistry {
+     /// Returns the singleton instance of the `LanguageRegistry` with default languages and themes.
+-    #[cfg(not(target_family = "wasm"))]
+     pub fn singleton() -> &'static LazyLock<LanguageRegistry> {
+         static INSTANCE: LazyLock<LanguageRegistry> = LazyLock::new(|| LanguageRegistry {
+             languages: Mutex::new(
+@@ -528,20 +527,6 @@
+         &INSTANCE
+     }
+ 
+-    /// The browser executor uses one thread; each WebAssembly thread owns its registry.
+-    #[cfg(target_family = "wasm")]
+-    pub fn singleton() -> &'static LanguageRegistry {
+-        thread_local! {
+-            static INSTANCE: &'static LanguageRegistry = Box::leak(Box::new(LanguageRegistry {
+-                languages: Mutex::new(languages::Language::all()
+-                    .map(|language| (language.name().into(), language.config())).collect()),
+-                parser_factories: Mutex::new(HashMap::new()),
+-                generation: AtomicU64::new(0),
+-            }));
+-        }
+-        INSTANCE.with(|instance| *instance)
+-    }
+-
+     /// Registers a new language configuration to the registry.
+     pub fn register(&self, lang: &str, config: &GrammarConfig) {
+         self.languages

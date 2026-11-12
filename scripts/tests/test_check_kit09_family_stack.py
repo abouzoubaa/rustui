@@ -74,7 +74,25 @@ class Kit09FamilyStackTests(unittest.TestCase):
 
     def test_toolbar_rtl_candidate_is_in_the_later_family_stack(self) -> None:
         self.assertEqual(STACK.A3_4G_ORDER, ("gpui-toolbar-rtl-v1-kit09.patch",))
-        self.assertEqual(STACK.FAMILY_ORDER[-1], "gpui-toolbar-rtl-v1-kit09.patch")
+        self.assertEqual(
+            STACK.FAMILY_ORDER[-len(STACK.A3_4H_ORDER) - 1],
+            "gpui-toolbar-rtl-v1-kit09.patch",
+        )
+
+    def test_syntax_dependency_provider_precedes_runtime_consumers(self) -> None:
+        order = STACK.CORE_ORDER + STACK.FAMILY_ORDER
+        provider = order.index("gpui-component-web-syntax-v1-kit09.patch")
+        self.assertLess(
+            provider, order.index("gpui-component-web-syntax-runtime-v1-kit08.patch")
+        )
+        self.assertLess(
+            order.index("gpui-component-web-syntax-runtime-v1-kit08.patch"),
+            order.index("gpui-component-web-syntax-runtime-v2-kit08.patch"),
+        )
+        self.assertLess(
+            order.index("gpui-component-web-syntax-runtime-v2-kit08.patch"),
+            order.index("gpui-component-web-syntax-runtime-v3-kit08.patch"),
+        )
 
     def test_inert_focus_provider_precedes_modal_focus_consumer(self) -> None:
         order = STACK.CORE_ORDER + STACK.FAMILY_ORDER
