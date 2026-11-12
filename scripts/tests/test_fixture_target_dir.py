@@ -29,6 +29,7 @@ class FixtureTargetDirTests(unittest.TestCase):
         scripts = (
             ROOT / "scripts/check_kit08_kit_stack.py",
             ROOT / "scripts/check_kit09_core_stack.py",
+            ROOT / "scripts/check_kit09_family_stack.py",
         )
         for script in scripts:
             with self.subTest(script=script.name):
