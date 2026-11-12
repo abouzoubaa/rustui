@@ -47,6 +47,14 @@ CANDIDATE_ORDER = (
     "gpui-tree-aria-disabled-v1-kit08.patch",
 )
 LATER_FAMILY_CANDIDATES = {
+    "gpui-base-calendar-date-limits-v1-kit08.patch",
+    "gpui-calendar-keyboard-v1.patch",
+    "gpui-calendar-multi-month-heading-v1-kit08.patch",
+    "gpui-calendar-rtl-v1-kit08.patch",
+    "gpui-component-calendar-fr-ar-v1-kit09.patch",
+    "gpui-component-date-picker-accessibility-v1.patch",
+    "gpui-component-date-picker-localization-v2-kit08.patch",
+    "gpui-component-date-picker-rtl-alignment-v1-kit08.patch",
     "gpui-base-slider-endpoint-v1-kit09.patch",
     "gpui-base-slider-first-move-v1.patch",
     "gpui-base-slider-set-value-v2-kit09.patch",

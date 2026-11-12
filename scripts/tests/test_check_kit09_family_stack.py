@@ -44,6 +44,22 @@ class Kit09FamilyStackTests(unittest.TestCase):
             ),
         )
 
+    def test_calendar_base_foundations_precede_date_picker_consumers(self) -> None:
+        order = STACK.CORE_ORDER + STACK.FAMILY_ORDER
+        base_limit = order.index("gpui-base-calendar-date-limits-v1-kit08.patch")
+        self.assertLess(
+            base_limit,
+            order.index("gpui-component-date-picker-accessibility-v1.patch"),
+        )
+        self.assertLess(
+            order.index("gpui-calendar-rtl-v1-kit08.patch"),
+            order.index("gpui-calendar-multi-month-heading-v1-kit08.patch"),
+        )
+        self.assertLess(
+            order.index("gpui-calendar-rtl-v1-kit08.patch"),
+            order.index("gpui-component-date-picker-rtl-alignment-v1-kit08.patch"),
+        )
+
     def test_inert_focus_provider_precedes_modal_focus_consumer(self) -> None:
         order = STACK.CORE_ORDER + STACK.FAMILY_ORDER
         self.assertLess(

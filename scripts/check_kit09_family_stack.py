@@ -65,7 +65,17 @@ A3_4D_ORDER = (
     "gpui-base-resize-first-move-v1-kit08.patch",
     "gpui-base-resize-first-move-v3-kit08.patch",
 )
-FAMILY_ORDER = A3_4A_ORDER + A3_4B_ORDER + A3_4C_ORDER + A3_4D_ORDER
+A3_4E_ORDER = (
+    "gpui-base-calendar-date-limits-v1-kit08.patch",
+    "gpui-calendar-keyboard-v1.patch",
+    "gpui-calendar-rtl-v1-kit08.patch",
+    "gpui-calendar-multi-month-heading-v1-kit08.patch",
+    "gpui-component-calendar-fr-ar-v1-kit09.patch",
+    "gpui-component-date-picker-accessibility-v1.patch",
+    "gpui-component-date-picker-localization-v2-kit08.patch",
+    "gpui-component-date-picker-rtl-alignment-v1-kit08.patch",
+)
+FAMILY_ORDER = A3_4A_ORDER + A3_4B_ORDER + A3_4C_ORDER + A3_4D_ORDER + A3_4E_ORDER
 
 
 FAMILY_PROOF_CRATE = ROOT / "scripts/kit08_family_proofs"
@@ -163,6 +173,8 @@ def compile_candidate_workspace(
     proof_a3_4b = "--proof-a3-4b" in sys.argv[1:]
     proof_a3_4c = "--proof-a3-4c" in sys.argv[1:]
     proof_a3_4d = "--proof-a3-4d" in sys.argv[1:]
+    proof_a3_4e = "--proof-a3-4e" in sys.argv[1:]
+    proof_calendar = proof_calendar or proof_a3_4e
     if "--proof-grid-a11y" in sys.argv[1:] or proof_all or proof_a3_4c:
         gpui_pre = sources_root / f'gpui-pre-{source_by_name["gpui-pre"]["version"]}'
         with (gpui_pre / "Cargo.toml").open("a", encoding="utf-8") as cargo_toml:
@@ -223,6 +235,7 @@ def compile_candidate_workspace(
             "--proof-a3-4b",
             "--proof-a3-4c",
             "--proof-a3-4d",
+            "--proof-a3-4e",
         )
     ):
         # GPUI Component's crate archive omits several repository-level
@@ -351,6 +364,41 @@ def compile_candidate_workspace(
                 ),
             ]
         )
+    if proof_a3_4e:
+        proofs.extend(
+            [
+                (
+                    "calendar_month_names_include_french_and_arabic_translations",
+                    "gpui-component",
+                    "A3-4e French/Arabic calendar translations",
+                    None,
+                ),
+                (
+                    "calendar_keyboard_cursor_stays_uncommitted_until_activation",
+                    "a2-4a-modal-proof",
+                    "A3-4e calendar keyboard cursor",
+                    "calendar_date_picker",
+                ),
+                (
+                    "date_picker_arrow_cursor_activates_only_on_confirm",
+                    "a2-4a-modal-proof",
+                    "A3-4e DatePicker confirm behavior",
+                    "calendar_date_picker",
+                ),
+                (
+                    "rtl_multi_month_navigation_and_date_picker_accessibility_are_exposed",
+                    "a2-4a-modal-proof",
+                    "A3-4e RTL calendar and DatePicker accessibility",
+                    "calendar_date_picker",
+                ),
+                (
+                    "calendar_multi_month_count_stays_within_date_limits",
+                    "a2-4a-modal-proof",
+                    "A3-4e date limits and multi-month count",
+                    "calendar_date_picker",
+                ),
+            ]
+        )
     outcomes: list[tuple[str, int, str]] = []
     for test_name, package, label, integration_test in proofs:
         proof_command = ["rustup", "run", "1.98.0", "cargo", "test"]
@@ -422,13 +470,14 @@ def run(write_manifest: bool = False) -> dict:
         raise FixtureError(f"recorded stack manifest is stale: {OUTPUT}; use --write-manifest")
     OUTPUT.write_bytes(data)
     print(
-        "A3-2 core patches={}; A3-4a patches={}; A3-4b patches={}; A3-4c patches={}; A3-4d patches={}; "
+        "A3-2 core patches={}; A3-4a patches={}; A3-4b patches={}; A3-4c patches={}; A3-4d patches={}; A3-4e patches={}; "
         "fixture archives verified={}; target files hashed={}; stack files={}; reverse=exact".format(
             len(CORE_ORDER),
             len(A3_4A_ORDER),
             len(A3_4B_ORDER),
             len(A3_4C_ORDER),
             len(A3_4D_ORDER),
+            len(A3_4E_ORDER),
             archive_count,
             target_count,
             len(result["files"]),

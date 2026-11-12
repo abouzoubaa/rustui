@@ -1,0 +1,842 @@
+--- a/vendor/gpui-component-0.8.1/locales/ui.yml
++++ b/vendor/gpui-component-0.8.1/locales/ui.yml
+@@ -18,4 +18,6 @@
+   week.0:
+     en: Su
++    fr: di
++    ar: ح
+     pt-BR: "Do"
+     ru: "Вс"
+@@ -26,4 +28,6 @@
+   week.1:
+     en: Mo
++    fr: lu
++    ar: ن
+     pt-BR: "Se"
+     ru: "Пн"
+@@ -34,4 +38,6 @@
+   week.2:
+     en: Tu
++    fr: ma
++    ar: ث
+     pt-BR: "Te"
+     ru: "Вт"
+@@ -42,4 +48,6 @@
+   week.3:
+     en: We
++    fr: me
++    ar: ر
+     pt-BR: "Qa"
+     ru: "Ср"
+@@ -50,4 +58,6 @@
+   week.4:
+     en: Th
++    fr: je
++    ar: خ
+     pt-BR: "Qi"
+     ru: "Чт"
+@@ -58,4 +68,6 @@
+   week.5:
+     en: Fr
++    fr: ve
++    ar: ج
+     pt-BR: "Sx"
+     ru: "Пт"
+@@ -66,4 +78,6 @@
+   week.6:
+     en: Sa
++    fr: sa
++    ar: س
+     pt-BR: "Sá"
+     ru: "Сб"
+@@ -74,4 +88,6 @@
+   month.January:
+     en: January
++    fr: janvier
++    ar: يناير
+     pt-BR: "Janeiro"
+     ru: "Январь"
+@@ -82,4 +98,6 @@
+   month.February:
+     en: February
++    fr: février
++    ar: فبراير
+     pt-BR: "Fevereiro"
+     ru: "Февраль"
+@@ -90,4 +108,6 @@
+   month.March:
+     en: March
++    fr: mars
++    ar: مارس
+     pt-BR: "Março"
+     ru: "Март"
+@@ -98,4 +118,6 @@
+   month.April:
+     en: April
++    fr: avril
++    ar: أبريل
+     pt-BR: "Abril"
+     ru: "Апрель"
+@@ -106,4 +128,6 @@
+   month.May:
+     en: May
++    fr: mai
++    ar: مايو
+     pt-BR: "Maio"
+     ru: "Май"
+@@ -114,4 +138,6 @@
+   month.June:
+     en: June
++    fr: juin
++    ar: يونيو
+     pt-BR: "Junho"
+     ru: "Июнь"
+@@ -122,4 +148,6 @@
+   month.July:
+     en: July
++    fr: juillet
++    ar: يوليو
+     pt-BR: "Julho"
+     ru: "Июль"
+@@ -130,4 +158,6 @@
+   month.August:
+     en: August
++    fr: août
++    ar: أغسطس
+     pt-BR: "Agosto"
+     ru: "Август"
+@@ -138,4 +168,6 @@
+   month.September:
+     en: September
++    fr: septembre
++    ar: سبتمبر
+     pt-BR: "Setembro"
+     ru: "Сентябрь"
+@@ -146,4 +178,6 @@
+   month.October:
+     en: October
++    fr: octobre
++    ar: أكتوبر
+     pt-BR: "Outubro"
+     ru: "Октябрь"
+@@ -154,4 +188,6 @@
+   month.November:
+     en: November
++    fr: novembre
++    ar: نوفمبر
+     pt-BR: "Novembro"
+     ru: "Ноябрь"
+@@ -162,4 +198,6 @@
+   month.December:
+     en: December
++    fr: décembre
++    ar: ديسمبر
+     pt-BR: "Dezembro"
+     ru: "Декабрь"
+@@ -171,4 +209,6 @@
+   placeholder:
+     en: "Select date"
++    fr: décembre
++    ar: ديسمبر
+     pt-BR: "Escolha uma data"
+     ru: "Выберите дату"
+@@ -179,4 +219,6 @@
+   time:
+     en: Time
++    fr: décembre
++    ar: ديسمبر
+     pt-BR: "Hora"
+     ru: "Время"
+@@ -186,4 +228,6 @@
+   placeholder:
+     en: "Please select"
++    fr: décembre
++    ar: ديسمبر
+     pt-BR: "Escolha"
+     ru: "Выберите"
+@@ -195,4 +239,6 @@
+   placeholder:
+     en: "Please select"
++    fr: décembre
++    ar: ديسمبر
+     pt-BR: "Escolha"
+     ru: "Выберите"
+@@ -203,4 +249,6 @@
+   search_placeholder:
+     en: "Search..."
++    fr: décembre
++    ar: ديسمبر
+     pt-BR: "Buscar…"
+     ru: "Поиск…"
+@@ -211,4 +259,6 @@
+   empty:
+     en: "No results"
++    fr: décembre
++    ar: ديسمبر
+     pt-BR: "Nada encontrado"
+     ru: "Ничего не найдено"
+@@ -220,4 +270,6 @@
+   more_options:
+     en: More options
++    fr: décembre
++    ar: ديسمبر
+     pt-BR: "Mais opções"
+     ru: "Другие действия"
+@@ -228,4 +280,6 @@
+   Unnamed:
+     en: Unnamed
++    fr: décembre
++    ar: ديسمبر
+     pt-BR: "Sem nome"
+     ru: "Без названия"
+@@ -236,4 +290,6 @@
+   Close:
+     en: Close
++    fr: décembre
++    ar: ديسمبر
+     pt-BR: "Fechar"
+     ru: "Закрыть"
+@@ -244,4 +300,6 @@
+   Zoom In:
+     en: Zoom In
++    fr: décembre
++    ar: ديسمبر
+     pt-BR: "Ampliar"
+     ru: "Увеличить"
+@@ -252,4 +310,6 @@
+   Zoom Out:
+     en: Zoom Out
++    fr: décembre
++    ar: ديسمبر
+     pt-BR: "Reduzir"
+     ru: "Уменьшить"
+@@ -260,4 +320,6 @@
+   Collapse:
+     en: Collapse
++    fr: décembre
++    ar: ديسمبر
+     pt-BR: "Recolher"
+     ru: "Свернуть"
+@@ -268,4 +330,6 @@
+   Expand:
+     en: Expand
++    fr: décembre
++    ar: ديسمبر
+     pt-BR: "Expandir"
+     ru: "Развернуть"
+@@ -276,4 +340,6 @@
+   Unavailable Panel:
+     en: This panel isn’t available in this version.
++    fr: décembre
++    ar: ديسمبر
+     pt-BR: "Este painel não está disponível nesta versão."
+     ru: "Эта панель недоступна в текущей версии."
+@@ -285,4 +351,6 @@
+   Palette:
+     en: Palette
++    fr: décembre
++    ar: ديسمبر
+     pt-BR: "Paleta"
+     ru: "Палитра"
+@@ -293,4 +361,6 @@
+   HSLA:
+     en: HSLA
++    fr: décembre
++    ar: ديسمبر
+     pt-BR: "HSLA"
+     ru: "HSLA"
+@@ -301,4 +371,6 @@
+   Hue:
+     en: Hue
++    fr: décembre
++    ar: ديسمبر
+     pt-BR: "Matiz"
+     ru: "Оттенок"
+@@ -309,4 +381,6 @@
+   Saturation:
+     en: Saturation
++    fr: décembre
++    ar: ديسمبر
+     pt-BR: "Saturação"
+     ru: "Насыщенность"
+@@ -317,4 +391,6 @@
+   Lightness:
+     en: Lightness
++    fr: décembre
++    ar: ديسمبر
+     pt-BR: "Luminosidade"
+     ru: "Светлота"
+@@ -325,4 +401,6 @@
+   Alpha:
+     en: Alpha
++    fr: décembre
++    ar: ديسمبر
+     pt-BR: "Opacidade"
+     ru: "Непрозрачность"
+@@ -334,4 +412,6 @@
+   ok:
+     en: OK
++    fr: décembre
++    ar: ديسمبر
+     pt-BR: "OK"
+     ru: "ОК"
+@@ -342,4 +422,6 @@
+   cancel:
+     en: Cancel
++    fr: décembre
++    ar: ديسمبر
+     pt-BR: "Cancelar"
+     ru: "Отмена"
+@@ -351,4 +433,6 @@
+   placeholder:
+     en: Type a command or search...
++    fr: décembre
++    ar: ديسمبر
+     pt-BR: "Digite um comando ou busque…"
+     ru: "Введите команду или запрос…"
+@@ -359,4 +443,6 @@
+   empty:
+     en: No results found.
++    fr: décembre
++    ar: ديسمبر
+     pt-BR: "Nada encontrado."
+     ru: "Ничего не найдено."
+@@ -368,4 +454,6 @@
+   search_placeholder:
+     en: Search...
++    fr: décembre
++    ar: ديسمبر
+     pt-BR: "Buscar…"
+     ru: "Поиск…"
+@@ -377,4 +465,6 @@
+   Decrement:
+     en: Decrement
++    fr: décembre
++    ar: ديسمبر
+     pt-BR: "Diminuir"
+     ru: "Уменьшить"
+@@ -384,4 +474,6 @@
+   Increment:
+     en: Increment
++    fr: décembre
++    ar: ديسمبر
+     pt-BR: "Aumentar"
+     ru: "Увеличить"
+@@ -391,4 +483,6 @@
+   Replace:
+     en: Replace
++    fr: décembre
++    ar: ديسمبر
+     pt-BR: "Substituir"
+     ru: "Заменить"
+@@ -398,4 +492,6 @@
+   Replace All:
+     en: Replace All
++    fr: décembre
++    ar: ديسمبر
+     pt-BR: "Substituir tudo"
+     ru: "Заменить все"
+@@ -405,4 +501,6 @@
+   Clear:
+     en: Clear
++    fr: décembre
++    ar: ديسمبر
+     pt-BR: "Limpar"
+     ru: "Очистить"
+@@ -412,4 +510,6 @@
+   Cut:
+     en: Cut
++    fr: décembre
++    ar: ديسمبر
+     pt-BR: "Recortar"
+     ru: "Вырезать"
+@@ -419,4 +519,6 @@
+   Copy:
+     en: Copy
++    fr: décembre
++    ar: ديسمبر
+     pt-BR: "Copiar"
+     ru: "Скопировать"
+@@ -426,4 +528,6 @@
+   Paste:
+     en: Paste
++    fr: décembre
++    ar: ديسمبر
+     pt-BR: "Colar"
+     ru: "Вставить"
+@@ -433,4 +537,6 @@
+   Select All:
+     en: Select All
++    fr: décembre
++    ar: ديسمبر
+     pt-BR: "Selecionar tudo"
+     ru: "Выбрать все"
+@@ -440,4 +546,6 @@
+   Go to Definition:
+     en: Go to Definition
++    fr: décembre
++    ar: ديسمبر
+     pt-BR: "Ir para a definição"
+     ru: "Перейти к определению"
+@@ -447,4 +555,6 @@
+   Show Code Actions:
+     en: Show Code Actions
++    fr: décembre
++    ar: ديسمبر
+     pt-BR: "Mostrar ações de código"
+     ru: "Показать действия с кодом"
+@@ -454,4 +564,6 @@
+   Show Password:
+     en: Show password
++    fr: décembre
++    ar: ديسمبر
+     pt-BR: "Mostrar senha"
+     ru: "Показать пароль"
+@@ -461,4 +573,6 @@
+   Hide Password:
+     en: Hide password
++    fr: décembre
++    ar: ديسمبر
+     pt-BR: "Esconder senha"
+     ru: "Скрыть пароль"
+@@ -469,4 +583,6 @@
+   search_placeholder:
+     en: Search...
++    fr: décembre
++    ar: ديسمبر
+     pt-BR: "Buscar…"
+     ru: "Поиск…"
+@@ -477,4 +593,6 @@
+   no_results:
+     en: No matching settings
++    fr: décembre
++    ar: ديسمبر
+     pt-BR: "Nenhuma configuração encontrada"
+     ru: "Подходящих настроек нет"
+@@ -485,4 +603,6 @@
+   no_results_description:
+     en: Try a different keyword.
++    fr: décembre
++    ar: ديسمبر
+     pt-BR: "Tente outra palavra-chave."
+     ru: "Попробуйте другое ключевое слово."
+@@ -493,4 +613,6 @@
+   Reset All:
+     en: Reset All
++    fr: décembre
++    ar: ديسمبر
+     pt-BR: "Restaurar tudo"
+     ru: "Сбросить все"
+@@ -502,4 +624,6 @@
+   previous:
+     en: Previous
++    fr: décembre
++    ar: ديسمبر
+     pt-BR: "Anterior"
+     ru: "Назад"
+@@ -509,4 +633,6 @@
+   next:
+     en: Next
++    fr: décembre
++    ar: ديسمبر
+     pt-BR: "Próxima"
+     ru: "Вперёд"
+@@ -517,4 +643,6 @@
+   label:
+     en: Carousel
++    fr: décembre
++    ar: ديسمبر
+     pt-BR: "Carrossel"
+     ru: "Карусель"
+@@ -524,4 +652,6 @@
+   previous:
+     en: Previous slide
++    fr: décembre
++    ar: ديسمبر
+     pt-BR: "Slide anterior"
+     ru: "Предыдущий слайд"
+@@ -531,4 +661,6 @@
+   next:
+     en: Next slide
++    fr: décembre
++    ar: ديسمبر
+     pt-BR: "Próximo slide"
+     ru: "Следующий слайд"
+@@ -538,4 +670,6 @@
+   slide:
+     en: Slide %{current} of %{total}
++    fr: décembre
++    ar: ديسمبر
+     pt-BR: "Slide %{current} de %{total}"
+     ru: "Слайд %{current} из %{total}"
+@@ -545,4 +679,6 @@
+   pagination:
+     en: Carousel pagination
++    fr: décembre
++    ar: ديسمبر
+     pt-BR: "Páginas do carrossel"
+     ru: "Страницы карусели"
+@@ -552,4 +688,6 @@
+   go_to_slide:
+     en: Go to slide %{current}
++    fr: décembre
++    ar: ديسمبر
+     pt-BR: "Ir para o slide %{current}"
+     ru: "Перейти к слайду %{current}"
+@@ -560,4 +698,6 @@
+   SortBy:
+     en: Sort by %{column}
++    fr: décembre
++    ar: ديسمبر
+     pt-BR: "Ordenar por %{column}"
+     ru: "Сортировать по: %{column}"
+@@ -568,4 +708,6 @@
+   open:
+     en: Open
++    fr: décembre
++    ar: ديسمبر
+     pt-BR: "Abertura"
+     ru: "Открытие"
+@@ -575,4 +717,6 @@
+   high:
+     en: High
++    fr: décembre
++    ar: ديسمبر
+     pt-BR: "Máxima"
+     ru: "Максимум"
+@@ -582,4 +726,6 @@
+   low:
+     en: Low
++    fr: décembre
++    ar: ديسمبر
+     pt-BR: "Mínima"
+     ru: "Минимум"
+@@ -589,4 +735,6 @@
+   close:
+     en: Close
++    fr: décembre
++    ar: ديسمبر
+     pt-BR: "Fechamento"
+     ru: "Закрытие"
+@@ -597,4 +745,6 @@
+   progress:
+     en: Question %{current} of %{total}
++    fr: décembre
++    ar: ديسمبر
+     pt-BR: "Pergunta %{current} de %{total}"
+     ru: "Вопрос %{current} из %{total}"
+@@ -604,4 +754,6 @@
+   previous:
+     en: Previous
++    fr: décembre
++    ar: ديسمبر
+     pt-BR: "Anterior"
+     ru: "Назад"
+@@ -611,4 +763,6 @@
+   next:
+     en: Next
++    fr: décembre
++    ar: ديسمبر
+     pt-BR: "Próxima"
+     ru: "Далее"
+@@ -618,4 +772,6 @@
+   skip:
+     en: Skip
++    fr: décembre
++    ar: ديسمبر
+     pt-BR: "Pular"
+     ru: "Пропустить"
+@@ -625,4 +781,6 @@
+   submit:
+     en: Submit
++    fr: décembre
++    ar: ديسمبر
+     pt-BR: "Enviar"
+     ru: "Отправить"
+@@ -632,4 +790,6 @@
+   error.required:
+     en: Choose an answer to continue.
++    fr: décembre
++    ar: ديسمبر
+     pt-BR: "Escolha uma resposta para continuar."
+     ru: "Выберите ответ, чтобы продолжить."
+@@ -639,4 +799,6 @@
+   error.optional:
+     en: Choose an answer or skip this question.
++    fr: décembre
++    ar: ديسمبر
+     pt-BR: "Escolha uma resposta ou pule esta pergunta."
+     ru: "Выберите ответ или пропустите этот вопрос."
+@@ -647,4 +809,6 @@
+   Start:
+     en: Dictate
++    fr: décembre
++    ar: ديسمبر
+     pt-BR: "Ditar"
+     ru: "Диктовать"
+@@ -654,4 +818,6 @@
+   Stop:
+     en: Stop dictation
++    fr: décembre
++    ar: ديسمبر
+     pt-BR: "Parar o ditado"
+     ru: "Остановить диктовку"
+@@ -661,4 +827,6 @@
+   Unavailable:
+     en: Dictation unavailable
++    fr: décembre
++    ar: ديسمبر
+     pt-BR: "Ditado indisponível"
+     ru: "Диктовка недоступна"
+@@ -669,4 +837,6 @@
+   BinaryChanges:
+     en: Binary file changed
++    fr: décembre
++    ar: ديسمبر
+     pt-BR: "Arquivo binário alterado"
+     ru: "Двоичный файл изменён"
+@@ -675,4 +845,6 @@
+   NoTextChanges:
+     en: No text changes in this patch
++    fr: décembre
++    ar: ديسمبر
+     pt-BR: "Nenhuma mudança de texto neste patch"
+     ru: "В этом патче нет изменений текста"
+@@ -681,4 +853,6 @@
+   NoChanges:
+     en: No changes
++    fr: décembre
++    ar: ديسمبر
+     pt-BR: "Sem alterações"
+     ru: "Изменений нет"
+@@ -687,4 +861,6 @@
+   EmptyFile:
+     en: Empty file
++    fr: décembre
++    ar: ديسمبر
+     pt-BR: "Arquivo vazio"
+     ru: "Пустой файл"
+@@ -693,4 +869,6 @@
+   AddedFile:
+     en: Added file
++    fr: décembre
++    ar: ديسمبر
+     pt-BR: "Arquivo novo"
+     ru: "Файл добавлен"
+@@ -699,4 +877,6 @@
+   DeletedFile:
+     en: Deleted file
++    fr: décembre
++    ar: ديسمبر
+     pt-BR: "Arquivo apagado"
+     ru: "Файл удалён"
+@@ -705,4 +885,6 @@
+   RenamedFile:
+     en: Renamed
++    fr: décembre
++    ar: ديسمبر
+     pt-BR: "Renomeado"
+     ru: "Переименован"
+@@ -711,4 +893,6 @@
+   CopiedFile:
+     en: Copied
++    fr: décembre
++    ar: ديسمبر
+     pt-BR: "Copiado"
+     ru: "Скопирован"
+@@ -717,4 +901,6 @@
+   HiddenLines:
+     en: "%{count} lines not in patch"
++    fr: décembre
++    ar: ديسمبر
+     pt-BR: "%{count} linhas fora do patch"
+     ru: "Строк вне патча: %{count}"
+@@ -723,4 +909,6 @@
+   ExpandAbove:
+     en: Show %{count} lines above
++    fr: décembre
++    ar: ديسمبر
+     pt-BR: "Mostrar %{count} linhas acima"
+     ru: "Показать строки выше: %{count}"
+@@ -729,4 +917,6 @@
+   ExpandBelow:
+     en: Show %{count} lines below
++    fr: décembre
++    ar: ديسمبر
+     pt-BR: "Mostrar %{count} linhas abaixo"
+     ru: "Показать строки ниже: %{count}"
+@@ -735,4 +925,6 @@
+   CollapseFile:
+     en: Collapse %{name}
++    fr: décembre
++    ar: ديسمبر
+     pt-BR: "Recolher %{name}"
+     ru: "Свернуть %{name}"
+@@ -741,4 +933,6 @@
+   ExpandFile:
+     en: Expand %{name}
++    fr: décembre
++    ar: ديسمبر
+     pt-BR: "Expandir %{name}"
+     ru: "Развернуть %{name}"
+@@ -747,4 +941,6 @@
+   AddAnnotation:
+     en: Add annotation to line %{line}
++    fr: décembre
++    ar: ديسمبر
+     pt-BR: "Anotar a linha %{line}"
+     ru: "Добавить примечание к строке %{line}"
+@@ -753,4 +949,6 @@
+   ConflictedFile:
+     en: Conflicts
++    fr: décembre
++    ar: ديسمبر
+     pt-BR: "Conflitos"
+     ru: "Конфликты"
+@@ -759,4 +957,6 @@
+   CurrentChange:
+     en: Current change
++    fr: décembre
++    ar: ديسمبر
+     pt-BR: "Alteração atual"
+     ru: "Текущее изменение"
+@@ -765,4 +965,6 @@
+   IncomingChange:
+     en: Incoming change
++    fr: décembre
++    ar: ديسمبر
+     pt-BR: "Alteração que chega"
+     ru: "Входящее изменение"
+@@ -771,4 +973,6 @@
+   BaseChange:
+     en: Common ancestor
++    fr: décembre
++    ar: ديسمبر
+     pt-BR: "Ancestral comum"
+     ru: "Общий предок"
+@@ -777,4 +981,6 @@
+   AcceptCurrent:
+     en: Accept Current
++    fr: décembre
++    ar: ديسمبر
+     pt-BR: "Aceitar a atual"
+     ru: "Принять текущее"
+@@ -783,4 +989,6 @@
+   AcceptIncoming:
+     en: Accept Incoming
++    fr: décembre
++    ar: ديسمبر
+     pt-BR: "Aceitar a que chega"
+     ru: "Принять входящее"
+@@ -789,4 +997,6 @@
+   AcceptBoth:
+     en: Accept Both
++    fr: décembre
++    ar: ديسمبر
+     pt-BR: "Aceitar as duas"
+     ru: "Принять оба"
+@@ -795,4 +1005,6 @@
+   AcceptedCurrent:
+     en: Accepted current change
++    fr: décembre
++    ar: ديسمبر
+     pt-BR: "Atual aceita"
+     ru: "Принято текущее изменение"
+@@ -801,4 +1013,6 @@
+   AcceptedIncoming:
+     en: Accepted incoming change
++    fr: décembre
++    ar: ديسمبر
+     pt-BR: "A que chega foi aceita"
+     ru: "Принято входящее изменение"
+@@ -807,4 +1021,6 @@
+   AcceptedBoth:
+     en: Accepted both changes
++    fr: décembre
++    ar: ديسمبر
+     pt-BR: "As duas aceitas"
+     ru: "Приняты оба изменения"
+@@ -813,4 +1029,6 @@
+   UndoResolution:
+     en: Undo
++    fr: décembre
++    ar: ديسمبر
+     pt-BR: "Desfazer"
+     ru: "Отменить"
+@@ -819,4 +1037,6 @@
+   Original:
+     en: Original
++    fr: décembre
++    ar: ديسمبر
+     pt-BR: "Original"
+     ru: "Исходная"
+@@ -825,4 +1045,6 @@
+   Modified:
+     en: Modified
++    fr: décembre
++    ar: ديسمبر
+     pt-BR: "Alterado"
+     ru: "Изменённая"
+@@ -831,4 +1053,6 @@
+   ExpandLines:
+     en: Expand %{count} unchanged lines
++    fr: décembre
++    ar: ديسمبر
+     pt-BR: "Expandir %{count} linhas sem mudança"
+     ru: "Развернуть неизменённые строки: %{count}"
+@@ -837,4 +1061,6 @@
+   SourceLine:
+     en: "%{side} line %{line}"
++    fr: décembre
++    ar: ديسمبر
+     pt-BR: "%{side} linha %{line}"
+     ru: "%{side} строка %{line}"
+@@ -843,4 +1069,6 @@
+   AddedLine:
+     en: "%{side} line %{line}, added"
++    fr: décembre
++    ar: ديسمبر
+     pt-BR: "%{side} linha %{line}, adicionada"
+     ru: "%{side} строка %{line}, добавлена"
+@@ -849,4 +1077,6 @@
+   RemovedLine:
+     en: "%{side} line %{line}, removed"
++    fr: décembre
++    ar: ديسمبر
+     pt-BR: "%{side} linha %{line}, removida"
+     ru: "%{side} строка %{line}, удалена"
+@@ -855,4 +1085,6 @@
+   UnchangedLines:
+     en: "%{count} unchanged lines"
++    fr: décembre
++    ar: ديسمبر
+     pt-BR: "%{count} linhas sem mudança"
+     ru: "Неизменённых строк: %{count}"
+@@ -861,4 +1093,6 @@
+   SelectLine:
+     en: Select %{side} line %{line}
++    fr: décembre
++    ar: ديسمبر
+     pt-BR: "Selecionar %{side} linha %{line}"
+     ru: "Выбрать: %{side} строка %{line}"
+@@ -867,4 +1101,6 @@
+   NoNewline:
+     en: No newline at end of file
++    fr: décembre
++    ar: ديسمبر
+     pt-BR: "Sem quebra de linha no fim do arquivo"
+     ru: "Нет перевода строки в конце файла"
+@@ -873,4 +1109,6 @@
+   Viewer:
+     en: Diff for %{name}
++    fr: décembre
++    ar: ديسمبر
+     pt-BR: "Diff de %{name}"
+     ru: "Изменения в %{name}"
+@@ -879,4 +1117,6 @@
+   ViewerFiles:
+     en: Diff for %{count} files
++    fr: décembre
++    ar: ديسمبر
+     pt-BR: "Diff de %{count} arquivos"
+     ru: "Изменения в файлах: %{count}"
