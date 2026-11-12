@@ -3,8 +3,8 @@
 ## Stages and releases
 
 - A — finish Phase 1 (items 10, 11a stash review, 11b native popups assessment) → 0.2.0
-- A2 — DONE: upgraded to GPUI Kit 0.8.1 / gpui-pre 0.3.10; 1,000-row forced-draw median 8.24 ms vs 8.03 ms before. Next on the new base: native popups and crates.io, then A3 (Kit 0.9).
-- A3 — upgrade GPUI Kit 0.8.1 → 0.9.x after A2 (same harness and process).
+- A2 — DONE: upgraded to GPUI Kit 0.8.1 / gpui-pre 0.3.10; 1,000-row forced-draw median 8.24 ms vs 8.03 ms before. NP-7's macOS crate test is parked until A3 touches that crate.
+- A3 — next: upgrade GPUI Kit 0.8.1 → 0.9.x, then release 0.4.0, then Stage B.
 - B — theme engine rework (professional, robust; owner-provided materials) → 0.3.0
 - C — components: chat bubbles + message list, diff viewer, Markdown/rich text, dock/panel layout, command palette, charts/plots, status bar, time picker, accordion, hover card, kbd, form layout, settings panel, rating, pagination, carousel, attachments, description list, async images + SVG → 0.4.0 Mostly wrap components GPUI Kit already ships (Command, NativeMenu, StatusBar, Message/Bubble/MessageScroller, Diff, Markdown TextView, charts, Dock, TimeField, HoverCard, Rating, Pagination, Carousel).
 - D — macOS desktop app features: native menu bar + keyboard shortcut system, clipboard, open/save dialogs, multi-window + window state restore, custom title bar, undo/redo, settings persistence, system notifications, menu-bar extra, drag out to Finder, trackpad gestures → 0.5.0
@@ -42,7 +42,7 @@ Work one item at a time; each item becomes a ticket in docs/TICKETS.md before wo
 
 <!-- Preserve item 18's number when rendered as Markdown. -->
 
-18. Publish to crates.io (moved up: also fixes Git-consumer download size).
+18. Publish to crates.io after Stage B. Rehearse all packages (package + size + license + consumer build from packaged crates) first, then ONE owner approval, then publish in dependency order.
 
 ## Phase 2 Localization
 
