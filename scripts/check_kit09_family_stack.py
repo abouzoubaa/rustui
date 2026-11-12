@@ -75,7 +75,13 @@ A3_4E_ORDER = (
     "gpui-component-date-picker-localization-v2-kit08.patch",
     "gpui-component-date-picker-rtl-alignment-v1-kit08.patch",
 )
-FAMILY_ORDER = A3_4A_ORDER + A3_4B_ORDER + A3_4C_ORDER + A3_4D_ORDER + A3_4E_ORDER
+A3_4F_ORDER = (
+    "gpui-base-input-validation-description-v1-kit09.patch",
+    "gpui-input-placeholder-color-v1-kit09.patch",
+)
+FAMILY_ORDER = (
+    A3_4A_ORDER + A3_4B_ORDER + A3_4C_ORDER + A3_4D_ORDER + A3_4E_ORDER + A3_4F_ORDER
+)
 
 
 FAMILY_PROOF_CRATE = ROOT / "scripts/kit08_family_proofs"
@@ -174,7 +180,9 @@ def compile_candidate_workspace(
     proof_a3_4c = "--proof-a3-4c" in sys.argv[1:]
     proof_a3_4d = "--proof-a3-4d" in sys.argv[1:]
     proof_a3_4e = "--proof-a3-4e" in sys.argv[1:]
+    proof_a3_4f = "--proof-a3-4f" in sys.argv[1:]
     proof_calendar = proof_calendar or proof_a3_4e
+    proof_placeholder = proof_placeholder or proof_a3_4f
     if "--proof-grid-a11y" in sys.argv[1:] or proof_all or proof_a3_4c:
         gpui_pre = sources_root / f'gpui-pre-{source_by_name["gpui-pre"]["version"]}'
         with (gpui_pre / "Cargo.toml").open("a", encoding="utf-8") as cargo_toml:
@@ -236,6 +244,7 @@ def compile_candidate_workspace(
             "--proof-a3-4c",
             "--proof-a3-4d",
             "--proof-a3-4e",
+            "--proof-a3-4f",
         )
     ):
         # GPUI Component's crate archive omits several repository-level
@@ -396,6 +405,23 @@ def compile_candidate_workspace(
                     "a2-4a-modal-proof",
                     "A3-4e date limits and multi-month count",
                     "calendar_date_picker",
+                ),
+            ]
+        )
+    if proof_a3_4f:
+        proofs.extend(
+            [
+                (
+                    "placeholder_override_survives_palette_resolution",
+                    "a2-4a-modal-proof",
+                    "A3-4f placeholder color override",
+                    "input_placeholder",
+                ),
+                (
+                    "validation_description_reaches_the_editor_accessibility_node",
+                    "a2-4a-modal-proof",
+                    "A3-4f input validation description on editor node",
+                    "input_placeholder",
                 ),
             ]
         )

@@ -60,6 +60,18 @@ class Kit09FamilyStackTests(unittest.TestCase):
             order.index("gpui-component-date-picker-rtl-alignment-v1-kit08.patch"),
         )
 
+    def test_input_accessibility_provider_and_placeholder_delta_are_stacked(self) -> None:
+        order = STACK.CORE_ORDER + STACK.FAMILY_ORDER
+        self.assertLess(
+            order.index("gpui-base-input-validation-description-v1-kit09.patch"),
+            order.index("gpui-input-placeholder-color-v1-kit09.patch"),
+        )
+        validation = (
+            STACK.PATCH_DIR / "gpui-base-input-validation-description-v1-kit09.patch"
+        ).read_text(encoding="utf-8")
+        self.assertIn("aria_description", validation)
+        self.assertNotIn("src/table/", validation)
+
     def test_inert_focus_provider_precedes_modal_focus_consumer(self) -> None:
         order = STACK.CORE_ORDER + STACK.FAMILY_ORDER
         self.assertLess(
