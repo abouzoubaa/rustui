@@ -57,6 +57,7 @@ LATER_FAMILY_CANDIDATES = {
     "gpui-component-date-picker-rtl-alignment-v1-kit08.patch",
     "gpui-base-input-validation-description-v1-kit09.patch",
     "gpui-input-placeholder-color-v1-kit09.patch",
+    "gpui-toolbar-rtl-v1-kit09.patch",
     "gpui-base-slider-endpoint-v1-kit09.patch",
     "gpui-base-slider-first-move-v1.patch",
     "gpui-base-slider-set-value-v2-kit09.patch",
