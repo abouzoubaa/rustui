@@ -44,7 +44,11 @@ CANDIDATE_ORDER = (
     "t17-inert-focus-scope-v1-kit08-kit09.patch",
     "gpui-tree-aria-disabled-v1-kit08.patch",
 )
-LATER_FAMILY_CANDIDATES = set()
+LATER_FAMILY_CANDIDATES = {
+    "t13-modal-focus-recovery-v1-kit09.patch",
+    "gpui-component-tracked-dialog-focus-v1-kit09.patch",
+    "gpui-component-sheet-close-accessibility-v1-kit09.patch",
+}
 
 
 def sha256(data: bytes) -> str:

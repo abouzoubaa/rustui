@@ -18,7 +18,7 @@ SPEC.loader.exec_module(STACK)
 
 class Kit09CoreStackTests(unittest.TestCase):
     def test_candidate_order_covers_each_patch_once(self) -> None:
-        patch_files = {path.name for path in STACK.DEFAULT_PATCH_DIR.glob("*.patch")}
+        patch_files = {path.name for path in STACK.DEFAULT_PATCH_DIR.glob("*.patch")} - STACK.LATER_FAMILY_CANDIDATES
         self.assertEqual(set(STACK.CANDIDATE_ORDER), patch_files)
         self.assertEqual(len(STACK.CANDIDATE_ORDER), len(set(STACK.CANDIDATE_ORDER)))
 
