@@ -139,3 +139,4 @@
 - Add a reproducible owner-update performance baseline command.
 - Rebased DataGrid validation and accessibility metadata for GPUI Kit 0.8.
 - Preserve disabled accessibility on GPUI Kit 0.8 editor-owned input nodes.
+- Added the GPUI Kit 0.9.x upgrade plan.
