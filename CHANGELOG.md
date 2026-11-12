@@ -1,6 +1,7 @@
 # Changelog
 
 ## Unreleased
+- Added the crates.io distribution plan, renamed GPUI package map, and bounded publishing ticket sequence.
 - NP-7: removed screen-capture-only manifest dependencies and recorded the remaining Rust 1.98.0 `map_or_default` test blocker.
 - NP-10: added the owner checklist for native macOS popup acceptance.
 
