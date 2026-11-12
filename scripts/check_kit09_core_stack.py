@@ -15,6 +15,7 @@ import tempfile
 from pathlib import Path
 from typing import Any, Callable
 
+from fixture_target_dir import fixture_target_root
 from prepare_gpui_kit_09_fixture import (
     DEFAULT_MANIFEST,
     FixtureError,
@@ -133,11 +134,13 @@ def compile_core_macos_candidate(
     shared_target_dir = Path(
         os.environ.get("CARGO_TARGET_DIR", str(ROOT / "target/headstart"))
     ).resolve()
-    target_dir = shared_target_dir / "debug" / "kit09-core-macos" / sha256(
+    fixture_cache = fixture_target_root(9, shared_target_dir)
+    target_dir = fixture_cache / "kit09-core-macos" / sha256(
         (workspace / "Cargo.toml").read_bytes()
         + b"".join((stage / target).read_bytes() for target in sorted(target_sources))
     )[:16]
     target_dir.mkdir(parents=True, exist_ok=True)
+    print(f"fixture CARGO_TARGET_DIR={target_dir}")
     command = ["rustup", "run", "1.98.0", "cargo", "check", "-p", "gpui-pre", "-p", "gpui-pre-macos"]
     if "--compile-online" not in sys.argv[1:]:
         command.append("--offline")

@@ -81,7 +81,10 @@ jobs:
         id: cargo-cache-paths
         shell: bash
         run: |
+          mkdir -p "$HOME/.cache/rustui-target-fixture-kit8" "$HOME/.cache/rustui-target-fixture-kit9"
           paths="target/headstart/debug"
+          paths+=$'\n'"$HOME/.cache/rustui-target-fixture-kit8"
+          paths+=$'\n'"$HOME/.cache/rustui-target-fixture-kit9"
           for candidate in "$HOME/.cargo/registry/index" "$HOME/.cargo/git"; do
             if [[ -d "$candidate" ]]; then
               paths+=$'\n'"$candidate"
@@ -97,13 +100,15 @@ jobs:
         uses: actions/cache@0057852bfaa89a56745cba8c7296529d2fc39830
         with:
           path: ${{ steps.cargo-cache-paths.outputs.paths }}
-          key: ${{ runner.os }}-headstart-${{ hashFiles('Cargo.lock', 'rust-toolchain.toml', '.cargo/config.toml', 'patches/approved/*.json', 'patches/candidate-kit-0.8/**', 'patches/candidate-kit-0.9/**', 'scripts/check_kit08_kit_stack.py', 'scripts/check_kit08_core_stack.py', 'scripts/check_kit09_core_stack.py', 'scripts/prepare_gpui_kit_08_fixture.py', 'scripts/prepare_gpui_kit_09_fixture.py', 'scripts/data/gpui-kit-0.9.1-sources.json', 'scripts/tests/test_prepare_gpui_kit_09_fixture.py', 'scripts/tests/test_check_kit09_core_stack.py', 'scripts/kit08_family_proofs/**', 'crates/rustui-gpui*/**', 'crates/rustui-block/**', 'crates/rustui-cocoa*/**', 'crates/rustui-metal/**', 'crates/rustui-objc-foundation/**', 'vendor/gpui-*/**') }}-v2
+          key: ${{ runner.os }}-headstart-${{ hashFiles('Cargo.lock', 'rust-toolchain.toml', '.cargo/config.toml', 'patches/approved/*.json', 'patches/candidate-kit-0.8/**', 'patches/candidate-kit-0.9/**', 'scripts/check_kit08_kit_stack.py', 'scripts/check_kit08_core_stack.py', 'scripts/check_kit09_core_stack.py', 'scripts/fixture_target_dir.py', 'scripts/tests/test_fixture_target_dir.py', 'scripts/prepare_gpui_kit_08_fixture.py', 'scripts/prepare_gpui_kit_09_fixture.py', 'scripts/data/gpui-kit-0.9.1-sources.json', 'scripts/tests/test_prepare_gpui_kit_09_fixture.py', 'scripts/tests/test_check_kit09_core_stack.py', 'scripts/kit08_family_proofs/**', 'crates/rustui-gpui*/**', 'crates/rustui-block/**', 'crates/rustui-cocoa*/**', 'crates/rustui-metal/**', 'crates/rustui-objc-foundation/**', 'vendor/gpui-*/**') }}-v2
           restore-keys: |
             ${{ runner.os }}-headstart-
       - name: Install Rust 1.98.0
         run: rustup toolchain install 1.98.0 --profile minimal --component rustfmt
       - name: Verify approved Tree sources, replay lifecycle, and source release gates
         run: ./scripts/verify-release.sh source
+      - name: Test isolated GPUI fixture build targets
+        run: python3 -m unittest scripts.tests.test_fixture_target_dir -v
       - name: Test the GPUI Kit 0.8.1 source fixture harness
         run: python3 -m unittest discover -s scripts/tests -p 'test_prepare_gpui_kit_08_fixture.py' -v
       - name: Test the GPUI Kit 0.9.1 source fixture harness
