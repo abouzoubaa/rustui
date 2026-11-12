@@ -637,7 +637,7 @@
     },
     {
       "patch": "gpui-component-calendar-fr-ar-v1-kit09.patch",
-      "patch_sha256": "558e7a10e342f778ed7982ad58238405d2abee3e45509beb036e93a7334f805d",
+      "patch_sha256": "e8de5e5bbaa957abe5868c5662c20e87d9598a27e4731c2ab8fc783bc55c1049",
       "files": {
         "vendor/gpui-component-0.8.1/locales/ui.yml": {
           "pre_sha256": "09290b9678d77846e8fef1f72ebad7d22af5c80ab2c25a014c614042fb0cd16a",
