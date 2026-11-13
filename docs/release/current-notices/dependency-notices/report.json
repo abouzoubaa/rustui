@@ -1,7 +1,7 @@
 {
   "complete_license_or_compatibility_claim": false,
   "inputs": {
-    "supplement_manifest_sha256": "cb169f1f74690f51937490a58cb306ef6cf505fde5e60a6678d17405bf213872"
+    "supplement_manifest_sha256": "67fb8a1669613fd6e29f9514363a96aaefe547e8b94048c6873bff0b12f4ad92"
   },
   "packages": [
     {
@@ -12,34 +12,34 @@
       "notice_review_notes": [],
       "notices": [
         {
-          "path": "notices/rustui-playground-0.2.0-bd08d24f84ee/01-LICENSE",
+          "path": "notices/rustui-playground-0.3.0-7900c90af5ee/01-LICENSE",
           "sha256": "969321ba9468d373a994d1a0aa55f036e1382181af1565ae0b5e79cc0cd2320e",
           "size_bytes": 1071,
           "source": "repository:LICENSE"
         }
       ],
-      "package_id": "path+repository:apps/rustui-playground#0.2.0",
+      "package_id": "path+repository:apps/rustui-playground#0.3.0",
       "source": null,
-      "version": "0.2.0",
+      "version": "0.3.0",
       "workspace_member": true
     },
     {
       "license_expression": "MIT",
       "manifest_path": "repository:crates/rustui/Cargo.toml",
-      "manifest_sha256": "1ce7c15727f0771d97b41cc24aa6f2c903ae75198d3f7469e5d474d5a30fdf61",
+      "manifest_sha256": "1dd040588ccd741231f0e8243ca83cfa60d1d0eed6b38d0b193baac98c17f93f",
       "name": "rustui",
       "notice_review_notes": [],
       "notices": [
         {
-          "path": "notices/rustui-0.2.0-1951d410955b/01-LICENSE",
+          "path": "notices/rustui-0.3.0-c8bee2c0e594/01-LICENSE",
           "sha256": "969321ba9468d373a994d1a0aa55f036e1382181af1565ae0b5e79cc0cd2320e",
           "size_bytes": 1071,
           "source": "repository:LICENSE"
         }
       ],
-      "package_id": "path+repository:crates/rustui#0.2.0",
+      "package_id": "path+repository:crates/rustui#0.3.0",
       "source": null,
-      "version": "0.2.0",
+      "version": "0.3.0",
       "workspace_member": true
     },
     {
@@ -140,154 +140,154 @@
       "notice_review_notes": [],
       "notices": [
         {
-          "path": "notices/rustui-core-0.2.0-643badbd43a6/01-LICENSE",
+          "path": "notices/rustui-core-0.3.0-96cc57e2c431/01-LICENSE",
           "sha256": "969321ba9468d373a994d1a0aa55f036e1382181af1565ae0b5e79cc0cd2320e",
           "size_bytes": 1071,
           "source": "repository:LICENSE"
         }
       ],
-      "package_id": "path+repository:crates/rustui-core#0.2.0",
+      "package_id": "path+repository:crates/rustui-core#0.3.0",
       "source": null,
-      "version": "0.2.0",
+      "version": "0.3.0",
       "workspace_member": true
     },
     {
       "license_expression": "Apache-2.0",
       "manifest_path": "repository:crates/rustui-gpui/Cargo.toml",
-      "manifest_sha256": "a16eb2170143927c3f4f5f8c26ef734f874823e2c27ab25918ef70eeebccbb3f",
+      "manifest_sha256": "5e9e381f70d055a7a73750a678e158df338d4ced606c4229d93a6716d58e7088",
       "name": "gpui-pre",
       "notice_review_notes": [],
       "notices": [
         {
-          "path": "notices/gpui-pre-0.3.9-afcf93f28784/01-LICENSE-APACHE",
+          "path": "notices/gpui-pre-0.3.12-24a1f30df08f/01-LICENSE-APACHE",
           "sha256": "752daf2fb234ca4a1fa372c073fe127f44b7b90fd2529ae44273a64f9d53da7a",
           "size_bytes": 10768,
           "source": "repository:crates/rustui-gpui/LICENSE-APACHE"
         }
       ],
-      "package_id": "path+repository:crates/rustui-gpui#gpui-pre@0.3.9",
+      "package_id": "path+repository:crates/rustui-gpui#gpui-pre@0.3.12",
       "source": null,
-      "version": "0.3.9",
+      "version": "0.3.12",
       "workspace_member": false
     },
     {
       "license_expression": "Apache-2.0",
       "manifest_path": "repository:crates/rustui-gpui-apple/Cargo.toml",
-      "manifest_sha256": "708f559dc82318ca8c14498e829b38dc5fc8fa31dc7397fc94e2d41db7bdd79e",
+      "manifest_sha256": "5b36ab1f356e3f479cb47f808287b3e0f4e192f11a5389877768bd81c6203f22",
       "name": "rustui-gpui-apple",
       "notice_review_notes": [],
       "notices": [
         {
-          "path": "notices/rustui-gpui-apple-0.3.9-bb5f2c578d5c/01-LICENSE-APACHE",
+          "path": "notices/rustui-gpui-apple-0.3.12-6ed51765d948/01-LICENSE-APACHE",
           "sha256": "752daf2fb234ca4a1fa372c073fe127f44b7b90fd2529ae44273a64f9d53da7a",
           "size_bytes": 10768,
           "source": "repository:crates/rustui-gpui-apple/LICENSE-APACHE"
         }
       ],
-      "package_id": "path+repository:crates/rustui-gpui-apple#0.3.9",
+      "package_id": "path+repository:crates/rustui-gpui-apple#0.3.12",
       "source": null,
-      "version": "0.3.9",
+      "version": "0.3.12",
       "workspace_member": false
     },
     {
       "license_expression": "Apache-2.0",
       "manifest_path": "repository:crates/rustui-gpui-base/Cargo.toml",
-      "manifest_sha256": "4be25a8f6f07ec25efbeec52c1c6366a48c2052a6bff265104e8f80e19e94990",
-      "name": "rustui-gpui-base",
+      "manifest_sha256": "6f96eac5a95da27d5cb059f60597bb4bdc97b379753a6ae0ea65261b7ebde178",
+      "name": "gpui-base",
       "notice_review_notes": [],
       "notices": [
         {
-          "path": "notices/rustui-gpui-base-0.7.3-ba656768699d/01-LICENSE-APACHE",
+          "path": "notices/gpui-base-0.9.1-e7edf235c4f4/01-LICENSE-APACHE",
           "sha256": "d1b0449e5478c574ba4f686c2656df7fe77d66821a61f8b6ed3378a58ed9a811",
           "size_bytes": 10305,
           "source": "repository:crates/rustui-gpui-base/LICENSE-APACHE"
         }
       ],
-      "package_id": "path+repository:crates/rustui-gpui-base#0.7.3",
+      "package_id": "path+repository:crates/rustui-gpui-base#gpui-base@0.9.1",
       "source": null,
-      "version": "0.7.3",
+      "version": "0.9.1",
       "workspace_member": false
     },
     {
       "license_expression": "Apache-2.0",
       "manifest_path": "repository:crates/rustui-gpui-component/Cargo.toml",
-      "manifest_sha256": "539817e5697d1cee83cd6f268649db667642720b5d9e2b39ae9951d2eeca0f72",
+      "manifest_sha256": "d21a8aca9c84430db016004e6c5ea28f07c163abee8599bf09adc6e8d884e928",
       "name": "gpui-component",
       "notice_review_notes": [],
       "notices": [
         {
-          "path": "notices/gpui-component-0.7.3-e4196950e702/01-LICENSE-APACHE",
+          "path": "notices/gpui-component-0.9.1-af4caf2992fe/01-LICENSE-APACHE",
           "sha256": "d1b0449e5478c574ba4f686c2656df7fe77d66821a61f8b6ed3378a58ed9a811",
           "size_bytes": 10305,
           "source": "repository:crates/rustui-gpui-component/LICENSE-APACHE"
         }
       ],
-      "package_id": "path+repository:crates/rustui-gpui-component#gpui-component@0.7.3",
+      "package_id": "path+repository:crates/rustui-gpui-component#gpui-component@0.9.1",
       "source": null,
-      "version": "0.7.3",
+      "version": "0.9.1",
       "workspace_member": false
     },
     {
       "license_expression": "Apache-2.0",
       "manifest_path": "repository:crates/rustui-gpui-kit-assets/Cargo.toml",
-      "manifest_sha256": "14f80ba96cf5a997a73a635f815e43d8bdaf3f5842663fa1d9c0347ea42a0422",
+      "manifest_sha256": "95fb4ee8e92b010bf6eec9245416ffc5e1562747dde4d37bef9412321e9f59f5",
       "name": "gpui-kit-assets",
       "notice_review_notes": [],
       "notices": [
         {
-          "path": "notices/gpui-kit-assets-0.7.3-104621e9f5a1/01-LICENSE-LUCIDE",
+          "path": "notices/gpui-kit-assets-0.9.1-28ce67cf94de/01-LICENSE-LUCIDE",
           "sha256": "b495047bd93a9b06913511076f504daba17d5bbeb3e0650f3bb53a4220329c57",
           "size_bytes": 3208,
           "source": "repository:crates/rustui-gpui-kit-assets/LICENSE-LUCIDE"
         },
         {
-          "path": "notices/gpui-kit-assets-0.7.3-104621e9f5a1/02-copyright.svg",
+          "path": "notices/gpui-kit-assets-0.9.1-28ce67cf94de/02-copyright.svg",
           "sha256": "c48dd4821477080b092fcf209b3c45314c0405f0b5830a3f84b02ef02d0a7823",
           "size_bytes": 289,
           "source": "repository:crates/rustui-gpui-kit-assets/assets/icons/copyright.svg"
         }
       ],
-      "package_id": "path+repository:crates/rustui-gpui-kit-assets#gpui-kit-assets@0.7.3",
+      "package_id": "path+repository:crates/rustui-gpui-kit-assets#gpui-kit-assets@0.9.1",
       "source": null,
-      "version": "0.7.3",
+      "version": "0.9.1",
       "workspace_member": false
     },
     {
       "license_expression": "Apache-2.0",
       "manifest_path": "repository:crates/rustui-gpui-macos/Cargo.toml",
-      "manifest_sha256": "6e5e07624e397c7385e2c8c194443c6569eaa2b6937b279fba971a488221cfc4",
+      "manifest_sha256": "0738c89b21b863175790dbf107c10c13e3c4eed84062dc27404f75e8f87b81ff",
       "name": "rustui-gpui-macos",
       "notice_review_notes": [],
       "notices": [
         {
-          "path": "notices/rustui-gpui-macos-0.3.9-e0c375f04f15/01-LICENSE-APACHE",
+          "path": "notices/rustui-gpui-macos-0.3.12-87888465e5e7/01-LICENSE-APACHE",
           "sha256": "752daf2fb234ca4a1fa372c073fe127f44b7b90fd2529ae44273a64f9d53da7a",
           "size_bytes": 10768,
           "source": "repository:crates/rustui-gpui-macos/LICENSE-APACHE"
         }
       ],
-      "package_id": "path+repository:crates/rustui-gpui-macos#0.3.9",
+      "package_id": "path+repository:crates/rustui-gpui-macos#0.3.12",
       "source": null,
-      "version": "0.3.9",
+      "version": "0.3.12",
       "workspace_member": false
     },
     {
       "license_expression": "Apache-2.0",
       "manifest_path": "repository:crates/rustui-gpui-platform/Cargo.toml",
-      "manifest_sha256": "8a6edea6e07a425ece305d16938074edc27f4530b0278224ec81db42248cb65b",
+      "manifest_sha256": "b964f7dc3bde6908b0af724c84d41b1f6eb84f6a9c3bb8d5e90519e98a7a90bb",
       "name": "gpui-pre-platform",
       "notice_review_notes": [],
       "notices": [
         {
-          "path": "notices/gpui-pre-platform-0.3.9-3485893caa3a/01-LICENSE-APACHE",
+          "path": "notices/gpui-pre-platform-0.3.12-be90c42e3d1f/01-LICENSE-APACHE",
           "sha256": "752daf2fb234ca4a1fa372c073fe127f44b7b90fd2529ae44273a64f9d53da7a",
           "size_bytes": 10768,
           "source": "repository:crates/rustui-gpui-platform/LICENSE-APACHE"
         }
       ],
-      "package_id": "path+repository:crates/rustui-gpui-platform#gpui-pre-platform@0.3.9",
+      "package_id": "path+repository:crates/rustui-gpui-platform#gpui-pre-platform@0.3.12",
       "source": null,
-      "version": "0.3.9",
+      "version": "0.3.12",
       "workspace_member": false
     },
     {
@@ -298,15 +298,15 @@
       "notice_review_notes": [],
       "notices": [
         {
-          "path": "notices/rustui-i18n-0.2.0-843e71082dcf/01-LICENSE",
+          "path": "notices/rustui-i18n-0.3.0-b4bbe3cda972/01-LICENSE",
           "sha256": "969321ba9468d373a994d1a0aa55f036e1382181af1565ae0b5e79cc0cd2320e",
           "size_bytes": 1071,
           "source": "repository:LICENSE"
         }
       ],
-      "package_id": "path+repository:crates/rustui-i18n#0.2.0",
+      "package_id": "path+repository:crates/rustui-i18n#0.3.0",
       "source": null,
-      "version": "0.2.0",
+      "version": "0.3.0",
       "workspace_member": true
     },
     {
@@ -317,15 +317,15 @@
       "notice_review_notes": [],
       "notices": [
         {
-          "path": "notices/rustui-macros-0.2.0-7ca44b0d9db5/01-LICENSE",
+          "path": "notices/rustui-macros-0.3.0-dadbf224ff5b/01-LICENSE",
           "sha256": "969321ba9468d373a994d1a0aa55f036e1382181af1565ae0b5e79cc0cd2320e",
           "size_bytes": 1071,
           "source": "repository:LICENSE"
         }
       ],
-      "package_id": "path+repository:crates/rustui-macros#0.2.0",
+      "package_id": "path+repository:crates/rustui-macros#0.3.0",
       "source": null,
-      "version": "0.2.0",
+      "version": "0.3.0",
       "workspace_member": true
     },
     {
@@ -2135,31 +2135,6 @@
     },
     {
       "license_expression": "MIT OR Apache-2.0",
-      "manifest_path": "repository:vendor/dirs-sys-0.5.0/Cargo.toml",
-      "manifest_sha256": "7085f746e45a405e7861e7ab3335cb92ecdf836863bd1baa350f961a5f06b04c",
-      "name": "dirs-sys",
-      "notice_review_notes": [],
-      "notices": [
-        {
-          "path": "notices/dirs-sys-0.5.0-fda9ed771d3b/01-LICENSE-APACHE",
-          "sha256": "d3174ad63e721d4c9dccb8ad4320848992d314369bc46319720b5802c9153fe9",
-          "size_bytes": 9694,
-          "source": "repository:vendor/dirs-sys-0.5.0/LICENSE-APACHE"
-        },
-        {
-          "path": "notices/dirs-sys-0.5.0-fda9ed771d3b/02-LICENSE-MIT",
-          "sha256": "6a2e0ade09a7d5f816f11566fee2b151b32235a7fad52b41d49cce96f833c1a9",
-          "size_bytes": 1069,
-          "source": "repository:vendor/dirs-sys-0.5.0/LICENSE-MIT"
-        }
-      ],
-      "package_id": "registry+https://github.com/rust-lang/crates.io-index#dirs-sys@0.5.0",
-      "source": "registry+https://github.com/rust-lang/crates.io-index",
-      "version": "0.5.0",
-      "workspace_member": false
-    },
-    {
-      "license_expression": "MIT OR Apache-2.0",
       "manifest_path": "repository:vendor/dirs-5.0.1/Cargo.toml",
       "manifest_sha256": "a8b8da86ec0950d503dac2a09172d6ff84f6f7d46c3c4a08d0f89f214bd68740",
       "name": "dirs",
@@ -2181,31 +2156,6 @@
       "package_id": "registry+https://github.com/rust-lang/crates.io-index#dirs@5.0.1",
       "source": "registry+https://github.com/rust-lang/crates.io-index",
       "version": "5.0.1",
-      "workspace_member": false
-    },
-    {
-      "license_expression": "MIT OR Apache-2.0",
-      "manifest_path": "repository:vendor/dirs-6.0.0/Cargo.toml",
-      "manifest_sha256": "7a2544f19289bd9345492e88309660e231c40271344068f857721803762735e4",
-      "name": "dirs",
-      "notice_review_notes": [],
-      "notices": [
-        {
-          "path": "notices/dirs-6.0.0-1fa967c0b7f8/01-LICENSE-APACHE",
-          "sha256": "d3174ad63e721d4c9dccb8ad4320848992d314369bc46319720b5802c9153fe9",
-          "size_bytes": 9694,
-          "source": "repository:vendor/dirs-6.0.0/LICENSE-APACHE"
-        },
-        {
-          "path": "notices/dirs-6.0.0-1fa967c0b7f8/02-LICENSE-MIT",
-          "sha256": "6a2e0ade09a7d5f816f11566fee2b151b32235a7fad52b41d49cce96f833c1a9",
-          "size_bytes": 1069,
-          "source": "repository:vendor/dirs-6.0.0/LICENSE-MIT"
-        }
-      ],
-      "package_id": "registry+https://github.com/rust-lang/crates.io-index#dirs@6.0.0",
-      "source": "registry+https://github.com/rust-lang/crates.io-index",
-      "version": "6.0.0",
       "workspace_member": false
     },
     {
@@ -3612,230 +3562,230 @@
     },
     {
       "license_expression": "Apache-2.0",
-      "manifest_path": "repository:vendor/gpui-component-macros-0.7.3/Cargo.toml",
-      "manifest_sha256": "de678b3970937f1574655f7f4462b1027705e64d55fa1467c7fb62c66dfb98de",
+      "manifest_path": "repository:vendor/gpui-component-macros-0.9.1/Cargo.toml",
+      "manifest_sha256": "b6628272bb9d0203e7cb89aaee3d5fef1be3580dae70104ebd431ffb736f7f7f",
       "name": "gpui-component-macros",
       "notice_review_notes": [],
       "notices": [
         {
-          "path": "notices/gpui-component-macros-0.7.3-cdcd97ad6a72/01-LICENSE-APACHE",
+          "path": "notices/gpui-component-macros-0.9.1-1014cdc172c9/01-LICENSE-APACHE",
           "sha256": "d1b0449e5478c574ba4f686c2656df7fe77d66821a61f8b6ed3378a58ed9a811",
           "size_bytes": 10305,
-          "source": "repository:vendor/gpui-component-macros-0.7.3/LICENSE-APACHE"
+          "source": "repository:vendor/gpui-component-macros-0.9.1/LICENSE-APACHE"
         }
       ],
-      "package_id": "registry+https://github.com/rust-lang/crates.io-index#gpui-component-macros@0.7.3",
+      "package_id": "registry+https://github.com/rust-lang/crates.io-index#gpui-component-macros@0.9.1",
       "source": "registry+https://github.com/rust-lang/crates.io-index",
-      "version": "0.7.3",
+      "version": "0.9.1",
       "workspace_member": false
     },
     {
       "license_expression": "Apache-2.0",
-      "manifest_path": "repository:vendor/gpui-pre-collections-0.3.9/Cargo.toml",
-      "manifest_sha256": "7a7e39d287a7f2843def7dd8bb70c7eef66b21a870ff1fee5b69fc9dddb1af30",
+      "manifest_path": "repository:vendor/gpui-pre-collections-0.3.12/Cargo.toml",
+      "manifest_sha256": "bf98717065892e0a1d7648d039be74d1d0975c7c84d9d3d4b328f13e2ecd282e",
       "name": "gpui-pre-collections",
       "notice_review_notes": [],
       "notices": [
         {
-          "path": "notices/gpui-pre-collections-0.3.9-32bb1d30c670/01-LICENSE-APACHE",
+          "path": "notices/gpui-pre-collections-0.3.12-7becd52f8acf/01-LICENSE-APACHE",
           "sha256": "752daf2fb234ca4a1fa372c073fe127f44b7b90fd2529ae44273a64f9d53da7a",
           "size_bytes": 10768,
-          "source": "repository:vendor/gpui-pre-collections-0.3.9/LICENSE-APACHE"
+          "source": "repository:vendor/gpui-pre-collections-0.3.12/LICENSE-APACHE"
         }
       ],
-      "package_id": "registry+https://github.com/rust-lang/crates.io-index#gpui-pre-collections@0.3.9",
+      "package_id": "registry+https://github.com/rust-lang/crates.io-index#gpui-pre-collections@0.3.12",
       "source": "registry+https://github.com/rust-lang/crates.io-index",
-      "version": "0.3.9",
+      "version": "0.3.12",
       "workspace_member": false
     },
     {
       "license_expression": "Apache-2.0",
-      "manifest_path": "repository:vendor/gpui-pre-derive-refineable-0.3.9/Cargo.toml",
-      "manifest_sha256": "266d7f080271deee0febf28e59d24a56b5914120651d97d99dc10170e99fb10f",
+      "manifest_path": "repository:vendor/gpui-pre-derive-refineable-0.3.12/Cargo.toml",
+      "manifest_sha256": "cff670e5ca1e364c60057fe92719427db71696c220917d07780477047d2b4680",
       "name": "gpui-pre-derive-refineable",
       "notice_review_notes": [],
       "notices": [
         {
-          "path": "notices/gpui-pre-derive-refineable-0.3.9-f43c0344f269/01-LICENSE-APACHE",
+          "path": "notices/gpui-pre-derive-refineable-0.3.12-c93dfb4ac432/01-LICENSE-APACHE",
           "sha256": "752daf2fb234ca4a1fa372c073fe127f44b7b90fd2529ae44273a64f9d53da7a",
           "size_bytes": 10768,
-          "source": "repository:vendor/gpui-pre-derive-refineable-0.3.9/LICENSE-APACHE"
+          "source": "repository:vendor/gpui-pre-derive-refineable-0.3.12/LICENSE-APACHE"
         }
       ],
-      "package_id": "registry+https://github.com/rust-lang/crates.io-index#gpui-pre-derive-refineable@0.3.9",
+      "package_id": "registry+https://github.com/rust-lang/crates.io-index#gpui-pre-derive-refineable@0.3.12",
       "source": "registry+https://github.com/rust-lang/crates.io-index",
-      "version": "0.3.9",
+      "version": "0.3.12",
       "workspace_member": false
     },
     {
       "license_expression": "Apache-2.0",
-      "manifest_path": "repository:vendor/gpui-pre-http-client-0.3.9/Cargo.toml",
-      "manifest_sha256": "175e9ba63c388f8e76be652049aa2bf85173a97724176dc47f7f19ebe9b09a63",
+      "manifest_path": "repository:vendor/gpui-pre-http-client-0.3.12/Cargo.toml",
+      "manifest_sha256": "08752e33902a0425886fa55acf8e49eb0c0185a16e48d94ca8d5cfde99a17bcd",
       "name": "gpui-pre-http-client",
       "notice_review_notes": [],
       "notices": [
         {
-          "path": "notices/gpui-pre-http-client-0.3.9-668c1a1cd408/01-LICENSE-APACHE",
+          "path": "notices/gpui-pre-http-client-0.3.12-636ec8de9102/01-LICENSE-APACHE",
           "sha256": "752daf2fb234ca4a1fa372c073fe127f44b7b90fd2529ae44273a64f9d53da7a",
           "size_bytes": 10768,
-          "source": "repository:vendor/gpui-pre-http-client-0.3.9/LICENSE-APACHE"
+          "source": "repository:vendor/gpui-pre-http-client-0.3.12/LICENSE-APACHE"
         }
       ],
-      "package_id": "registry+https://github.com/rust-lang/crates.io-index#gpui-pre-http-client@0.3.9",
+      "package_id": "registry+https://github.com/rust-lang/crates.io-index#gpui-pre-http-client@0.3.12",
       "source": "registry+https://github.com/rust-lang/crates.io-index",
-      "version": "0.3.9",
+      "version": "0.3.12",
       "workspace_member": false
     },
     {
       "license_expression": "Apache-2.0",
-      "manifest_path": "repository:vendor/gpui-pre-macros-0.3.9/Cargo.toml",
-      "manifest_sha256": "f1676190b7c80f772d25b1050e9fac6b44329516df37c9e17ed40499a8dffe45",
+      "manifest_path": "repository:vendor/gpui-pre-macros-0.3.12/Cargo.toml",
+      "manifest_sha256": "ba07ac1c86630de3b723cc02c032318fb2c750428f06e84334ea44b42f2624f9",
       "name": "gpui-pre-macros",
       "notice_review_notes": [],
       "notices": [
         {
-          "path": "notices/gpui-pre-macros-0.3.9-9bb225c483ad/01-LICENSE-APACHE",
+          "path": "notices/gpui-pre-macros-0.3.12-95613bf6fd83/01-LICENSE-APACHE",
           "sha256": "752daf2fb234ca4a1fa372c073fe127f44b7b90fd2529ae44273a64f9d53da7a",
           "size_bytes": 10768,
-          "source": "repository:vendor/gpui-pre-macros-0.3.9/LICENSE-APACHE"
+          "source": "repository:vendor/gpui-pre-macros-0.3.12/LICENSE-APACHE"
         }
       ],
-      "package_id": "registry+https://github.com/rust-lang/crates.io-index#gpui-pre-macros@0.3.9",
+      "package_id": "registry+https://github.com/rust-lang/crates.io-index#gpui-pre-macros@0.3.12",
       "source": "registry+https://github.com/rust-lang/crates.io-index",
-      "version": "0.3.9",
+      "version": "0.3.12",
       "workspace_member": false
     },
     {
       "license_expression": "Apache-2.0",
-      "manifest_path": "repository:vendor/gpui-pre-refineable-0.3.9/Cargo.toml",
-      "manifest_sha256": "240f8f4b01e06cc15bfc071c0044d99ab963f637de7e8529c0eb9526debf2059",
+      "manifest_path": "repository:vendor/gpui-pre-refineable-0.3.12/Cargo.toml",
+      "manifest_sha256": "949aa177e558fff27257747d387bd0dcd82f05d24fd83380c4f2659d0b036850",
       "name": "gpui-pre-refineable",
       "notice_review_notes": [],
       "notices": [
         {
-          "path": "notices/gpui-pre-refineable-0.3.9-767ef5ee0c30/01-LICENSE-APACHE",
+          "path": "notices/gpui-pre-refineable-0.3.12-0d8dadff2e6b/01-LICENSE-APACHE",
           "sha256": "752daf2fb234ca4a1fa372c073fe127f44b7b90fd2529ae44273a64f9d53da7a",
           "size_bytes": 10768,
-          "source": "repository:vendor/gpui-pre-refineable-0.3.9/LICENSE-APACHE"
+          "source": "repository:vendor/gpui-pre-refineable-0.3.12/LICENSE-APACHE"
         }
       ],
-      "package_id": "registry+https://github.com/rust-lang/crates.io-index#gpui-pre-refineable@0.3.9",
+      "package_id": "registry+https://github.com/rust-lang/crates.io-index#gpui-pre-refineable@0.3.12",
       "source": "registry+https://github.com/rust-lang/crates.io-index",
-      "version": "0.3.9",
+      "version": "0.3.12",
       "workspace_member": false
     },
     {
       "license_expression": "Apache-2.0",
-      "manifest_path": "repository:vendor/gpui-pre-scheduler-0.3.9/Cargo.toml",
-      "manifest_sha256": "fb7fdc8a0896cbac909d2956ce67c154861e9f3a36a9395878c23734469ed52f",
+      "manifest_path": "repository:vendor/gpui-pre-scheduler-0.3.12/Cargo.toml",
+      "manifest_sha256": "cce8fe2e0520ee39eee0db0163c9ef74164083f65ed714e7549232e3cbe5ed14",
       "name": "gpui-pre-scheduler",
       "notice_review_notes": [],
       "notices": [
         {
-          "path": "notices/gpui-pre-scheduler-0.3.9-48a9eba6ecfc/01-LICENSE-APACHE",
+          "path": "notices/gpui-pre-scheduler-0.3.12-260af77f814a/01-LICENSE-APACHE",
           "sha256": "752daf2fb234ca4a1fa372c073fe127f44b7b90fd2529ae44273a64f9d53da7a",
           "size_bytes": 10768,
-          "source": "repository:vendor/gpui-pre-scheduler-0.3.9/LICENSE-APACHE"
+          "source": "repository:vendor/gpui-pre-scheduler-0.3.12/LICENSE-APACHE"
         }
       ],
-      "package_id": "registry+https://github.com/rust-lang/crates.io-index#gpui-pre-scheduler@0.3.9",
+      "package_id": "registry+https://github.com/rust-lang/crates.io-index#gpui-pre-scheduler@0.3.12",
       "source": "registry+https://github.com/rust-lang/crates.io-index",
-      "version": "0.3.9",
+      "version": "0.3.12",
       "workspace_member": false
     },
     {
       "license_expression": "Apache-2.0",
-      "manifest_path": "repository:vendor/gpui-pre-shared-string-0.3.9/Cargo.toml",
-      "manifest_sha256": "165c888c845a1a8a461b70bd5b08305189949797a430394e922c9e8ba7497c2b",
+      "manifest_path": "repository:vendor/gpui-pre-shared-string-0.3.12/Cargo.toml",
+      "manifest_sha256": "1aa83af36701a05a254c22b29b9a9b645733485c3d618591d646bf9d51544218",
       "name": "gpui-pre-shared-string",
       "notice_review_notes": [],
       "notices": [
         {
-          "path": "notices/gpui-pre-shared-string-0.3.9-19bb3a3d22ae/01-LICENSE-APACHE",
+          "path": "notices/gpui-pre-shared-string-0.3.12-0d75f0b335d3/01-LICENSE-APACHE",
           "sha256": "752daf2fb234ca4a1fa372c073fe127f44b7b90fd2529ae44273a64f9d53da7a",
           "size_bytes": 10768,
-          "source": "repository:vendor/gpui-pre-shared-string-0.3.9/LICENSE-APACHE"
+          "source": "repository:vendor/gpui-pre-shared-string-0.3.12/LICENSE-APACHE"
         }
       ],
-      "package_id": "registry+https://github.com/rust-lang/crates.io-index#gpui-pre-shared-string@0.3.9",
+      "package_id": "registry+https://github.com/rust-lang/crates.io-index#gpui-pre-shared-string@0.3.12",
       "source": "registry+https://github.com/rust-lang/crates.io-index",
-      "version": "0.3.9",
+      "version": "0.3.12",
       "workspace_member": false
     },
     {
       "license_expression": "Apache-2.0",
-      "manifest_path": "repository:vendor/gpui-pre-sum-tree-0.3.9/Cargo.toml",
-      "manifest_sha256": "de61b0f2ae54996bd855f06abc6edc6c4349ea8979ac4f07e66b5590db602417",
+      "manifest_path": "repository:vendor/gpui-pre-sum-tree-0.3.12/Cargo.toml",
+      "manifest_sha256": "6dbc32f4716634a93cb5513f323655e8c95d98de738ef86dcd8307db4f94df2d",
       "name": "gpui-pre-sum-tree",
       "notice_review_notes": [],
       "notices": [
         {
-          "path": "notices/gpui-pre-sum-tree-0.3.9-99cb996d836e/01-LICENSE-APACHE",
+          "path": "notices/gpui-pre-sum-tree-0.3.12-1417b1a3d476/01-LICENSE-APACHE",
           "sha256": "752daf2fb234ca4a1fa372c073fe127f44b7b90fd2529ae44273a64f9d53da7a",
           "size_bytes": 10768,
-          "source": "repository:vendor/gpui-pre-sum-tree-0.3.9/LICENSE-APACHE"
+          "source": "repository:vendor/gpui-pre-sum-tree-0.3.12/LICENSE-APACHE"
         }
       ],
-      "package_id": "registry+https://github.com/rust-lang/crates.io-index#gpui-pre-sum-tree@0.3.9",
+      "package_id": "registry+https://github.com/rust-lang/crates.io-index#gpui-pre-sum-tree@0.3.12",
       "source": "registry+https://github.com/rust-lang/crates.io-index",
-      "version": "0.3.9",
+      "version": "0.3.12",
       "workspace_member": false
     },
     {
       "license_expression": "Apache-2.0",
-      "manifest_path": "repository:vendor/gpui-pre-util-0.3.9/Cargo.toml",
-      "manifest_sha256": "e6dae86a26b948f375db490918e5180a632d7abe6626a4b4cc008dee4998f02f",
+      "manifest_path": "repository:vendor/gpui-pre-util-0.3.12/Cargo.toml",
+      "manifest_sha256": "23f00f7c3b165da0d05e448d4efdef61c49f3bbc127a0c84db70b3f92b4e7fdc",
       "name": "gpui-pre-util",
       "notice_review_notes": [],
       "notices": [
         {
-          "path": "notices/gpui-pre-util-0.3.9-acd6377bd739/01-LICENSE-APACHE",
+          "path": "notices/gpui-pre-util-0.3.12-75a6d857d15a/01-LICENSE-APACHE",
           "sha256": "752daf2fb234ca4a1fa372c073fe127f44b7b90fd2529ae44273a64f9d53da7a",
           "size_bytes": 10768,
-          "source": "repository:vendor/gpui-pre-util-0.3.9/LICENSE-APACHE"
+          "source": "repository:vendor/gpui-pre-util-0.3.12/LICENSE-APACHE"
         }
       ],
-      "package_id": "registry+https://github.com/rust-lang/crates.io-index#gpui-pre-util@0.3.9",
+      "package_id": "registry+https://github.com/rust-lang/crates.io-index#gpui-pre-util@0.3.12",
       "source": "registry+https://github.com/rust-lang/crates.io-index",
-      "version": "0.3.9",
+      "version": "0.3.12",
       "workspace_member": false
     },
     {
       "license_expression": "Apache-2.0",
-      "manifest_path": "repository:vendor/gpui-pre-ztracing-macro-0.3.9/Cargo.toml",
-      "manifest_sha256": "6a9e497f0569587215e4df24f265afdaf55a575535e15d72b23829f998ab8de4",
+      "manifest_path": "repository:vendor/gpui-pre-ztracing-macro-0.3.12/Cargo.toml",
+      "manifest_sha256": "2b719488465119446242b889fa2b2e3064211c4dd419287df097f390158dc324",
       "name": "gpui-pre-ztracing-macro",
       "notice_review_notes": [],
       "notices": [
         {
-          "path": "notices/gpui-pre-ztracing-macro-0.3.9-81c173353d57/01-LICENSE-APACHE",
+          "path": "notices/gpui-pre-ztracing-macro-0.3.12-8149ffb3faef/01-LICENSE-APACHE",
           "sha256": "752daf2fb234ca4a1fa372c073fe127f44b7b90fd2529ae44273a64f9d53da7a",
           "size_bytes": 10768,
-          "source": "repository:vendor/gpui-pre-ztracing-macro-0.3.9/LICENSE-APACHE"
+          "source": "repository:vendor/gpui-pre-ztracing-macro-0.3.12/LICENSE-APACHE"
         }
       ],
-      "package_id": "registry+https://github.com/rust-lang/crates.io-index#gpui-pre-ztracing-macro@0.3.9",
+      "package_id": "registry+https://github.com/rust-lang/crates.io-index#gpui-pre-ztracing-macro@0.3.12",
       "source": "registry+https://github.com/rust-lang/crates.io-index",
-      "version": "0.3.9",
+      "version": "0.3.12",
       "workspace_member": false
     },
     {
       "license_expression": "Apache-2.0",
-      "manifest_path": "repository:vendor/gpui-pre-ztracing-0.3.9/Cargo.toml",
-      "manifest_sha256": "00cdbe4abb526dc3f56b9bd9b11f585b110f6d5c5621226aa557f0843d2bea0a",
+      "manifest_path": "repository:vendor/gpui-pre-ztracing-0.3.12/Cargo.toml",
+      "manifest_sha256": "e66958f30d20c5eccdd8ee1c5ca73efd1d0f4b66acc3555f964e078d1e8797e4",
       "name": "gpui-pre-ztracing",
       "notice_review_notes": [],
       "notices": [
         {
-          "path": "notices/gpui-pre-ztracing-0.3.9-c53181e2fb5e/01-LICENSE-APACHE",
+          "path": "notices/gpui-pre-ztracing-0.3.12-d0489e821ef0/01-LICENSE-APACHE",
           "sha256": "752daf2fb234ca4a1fa372c073fe127f44b7b90fd2529ae44273a64f9d53da7a",
           "size_bytes": 10768,
-          "source": "repository:vendor/gpui-pre-ztracing-0.3.9/LICENSE-APACHE"
+          "source": "repository:vendor/gpui-pre-ztracing-0.3.12/LICENSE-APACHE"
         }
       ],
-      "package_id": "registry+https://github.com/rust-lang/crates.io-index#gpui-pre-ztracing@0.3.9",
+      "package_id": "registry+https://github.com/rust-lang/crates.io-index#gpui-pre-ztracing@0.3.12",
       "source": "registry+https://github.com/rust-lang/crates.io-index",
-      "version": "0.3.9",
+      "version": "0.3.12",
       "workspace_member": false
     },
     {
@@ -4191,21 +4141,21 @@
     },
     {
       "license_expression": "Unicode-3.0",
-      "manifest_path": "repository:vendor/icu_collections-2.3.0/Cargo.toml",
-      "manifest_sha256": "eb60eb645a6c36df23200ec8694c58e030eb2f4ef70a76152e5522080388432f",
+      "manifest_path": "repository:vendor/icu_collections-2.4.0/Cargo.toml",
+      "manifest_sha256": "3c171e438bc7ffb79ba688ccd9ae1d0c9e59a1232c636db9db7794c70bc191ee",
       "name": "icu_collections",
       "notice_review_notes": [],
       "notices": [
         {
-          "path": "notices/icu_collections-2.3.0-523889d3228d/01-LICENSE",
+          "path": "notices/icu_collections-2.4.0-aa55c87dbe14/01-LICENSE",
           "sha256": "f367c1b8e1aa262435251e442901da4607b4650e0e63a026f5044473ecfb90f2",
           "size_bytes": 2195,
-          "source": "repository:vendor/icu_collections-2.3.0/LICENSE"
+          "source": "repository:vendor/icu_collections-2.4.0/LICENSE"
         }
       ],
-      "package_id": "registry+https://github.com/rust-lang/crates.io-index#icu_collections@2.3.0",
+      "package_id": "registry+https://github.com/rust-lang/crates.io-index#icu_collections@2.4.0",
       "source": "registry+https://github.com/rust-lang/crates.io-index",
-      "version": "2.3.0",
+      "version": "2.4.0",
       "workspace_member": false
     },
     {
@@ -4343,40 +4293,40 @@
     },
     {
       "license_expression": "Unicode-3.0",
-      "manifest_path": "repository:vendor/icu_normalizer-2.3.0/Cargo.toml",
-      "manifest_sha256": "11cf0b1e76f8fa54533106c3bcac78e76a657a4f5ea235c475eed7345d09d897",
+      "manifest_path": "repository:vendor/icu_normalizer-2.4.0/Cargo.toml",
+      "manifest_sha256": "082123b2cc80f678b7ae691b662f84e2be0092bc6105d46ed82ad3f96fd0ff2b",
       "name": "icu_normalizer",
       "notice_review_notes": [],
       "notices": [
         {
-          "path": "notices/icu_normalizer-2.3.0-afbe0862e09e/01-LICENSE",
+          "path": "notices/icu_normalizer-2.4.0-a1fd41f15c2b/01-LICENSE",
           "sha256": "f367c1b8e1aa262435251e442901da4607b4650e0e63a026f5044473ecfb90f2",
           "size_bytes": 2195,
-          "source": "repository:vendor/icu_normalizer-2.3.0/LICENSE"
+          "source": "repository:vendor/icu_normalizer-2.4.0/LICENSE"
         }
       ],
-      "package_id": "registry+https://github.com/rust-lang/crates.io-index#icu_normalizer@2.3.0",
+      "package_id": "registry+https://github.com/rust-lang/crates.io-index#icu_normalizer@2.4.0",
       "source": "registry+https://github.com/rust-lang/crates.io-index",
-      "version": "2.3.0",
+      "version": "2.4.0",
       "workspace_member": false
     },
     {
       "license_expression": "Unicode-3.0",
-      "manifest_path": "repository:vendor/icu_normalizer_data-2.3.0/Cargo.toml",
-      "manifest_sha256": "c9bd42cf03d21ec7be29781dbb11387ffc4e1671aebe47bfa792621be794c651",
+      "manifest_path": "repository:vendor/icu_normalizer_data-2.4.0/Cargo.toml",
+      "manifest_sha256": "246973e45a91326b4ad3e8b9efc938872475bec9c7696c017185d6f3d26f3882",
       "name": "icu_normalizer_data",
       "notice_review_notes": [],
       "notices": [
         {
-          "path": "notices/icu_normalizer_data-2.3.0-cfd85bfc3d44/01-LICENSE",
+          "path": "notices/icu_normalizer_data-2.4.0-f1beb2ac92b2/01-LICENSE",
           "sha256": "f367c1b8e1aa262435251e442901da4607b4650e0e63a026f5044473ecfb90f2",
           "size_bytes": 2195,
-          "source": "repository:vendor/icu_normalizer_data-2.3.0/LICENSE"
+          "source": "repository:vendor/icu_normalizer_data-2.4.0/LICENSE"
         }
       ],
-      "package_id": "registry+https://github.com/rust-lang/crates.io-index#icu_normalizer_data@2.3.0",
+      "package_id": "registry+https://github.com/rust-lang/crates.io-index#icu_normalizer_data@2.4.0",
       "source": "registry+https://github.com/rust-lang/crates.io-index",
-      "version": "2.3.0",
+      "version": "2.4.0",
       "workspace_member": false
     },
     {
@@ -4438,40 +4388,40 @@
     },
     {
       "license_expression": "Unicode-3.0",
-      "manifest_path": "repository:vendor/icu_properties-2.3.0/Cargo.toml",
-      "manifest_sha256": "4123f8c99535526157f3e7b58c9aa2fbe8b10d88e28407886c76f3c1169a104e",
+      "manifest_path": "repository:vendor/icu_properties-2.4.0/Cargo.toml",
+      "manifest_sha256": "f0da6d942c70f83ea3e54d6bca262f1ae0493bcca3d063a13d8dcf85666fac1c",
       "name": "icu_properties",
       "notice_review_notes": [],
       "notices": [
         {
-          "path": "notices/icu_properties-2.3.0-baf843c4417a/01-LICENSE",
+          "path": "notices/icu_properties-2.4.0-1894c409f44d/01-LICENSE",
           "sha256": "f367c1b8e1aa262435251e442901da4607b4650e0e63a026f5044473ecfb90f2",
           "size_bytes": 2195,
-          "source": "repository:vendor/icu_properties-2.3.0/LICENSE"
+          "source": "repository:vendor/icu_properties-2.4.0/LICENSE"
         }
       ],
-      "package_id": "registry+https://github.com/rust-lang/crates.io-index#icu_properties@2.3.0",
+      "package_id": "registry+https://github.com/rust-lang/crates.io-index#icu_properties@2.4.0",
       "source": "registry+https://github.com/rust-lang/crates.io-index",
-      "version": "2.3.0",
+      "version": "2.4.0",
       "workspace_member": false
     },
     {
       "license_expression": "Unicode-3.0",
-      "manifest_path": "repository:vendor/icu_properties_data-2.3.0/Cargo.toml",
-      "manifest_sha256": "a1daca899288d4f0b78ba1ae2d78d6d754ff6fd906558761908e7b2421de2895",
+      "manifest_path": "repository:vendor/icu_properties_data-2.4.0/Cargo.toml",
+      "manifest_sha256": "857c51535f8ddc15afbdb82fbab9017c79b027e2d041199069ef790ed016f225",
       "name": "icu_properties_data",
       "notice_review_notes": [],
       "notices": [
         {
-          "path": "notices/icu_properties_data-2.3.0-07dd721bc738/01-LICENSE",
+          "path": "notices/icu_properties_data-2.4.0-4e8cfd931d79/01-LICENSE",
           "sha256": "f367c1b8e1aa262435251e442901da4607b4650e0e63a026f5044473ecfb90f2",
           "size_bytes": 2195,
-          "source": "repository:vendor/icu_properties_data-2.3.0/LICENSE"
+          "source": "repository:vendor/icu_properties_data-2.4.0/LICENSE"
         }
       ],
-      "package_id": "registry+https://github.com/rust-lang/crates.io-index#icu_properties_data@2.3.0",
+      "package_id": "registry+https://github.com/rust-lang/crates.io-index#icu_properties_data@2.4.0",
       "source": "registry+https://github.com/rust-lang/crates.io-index",
-      "version": "2.3.0",
+      "version": "2.4.0",
       "workspace_member": false
     },
     {
@@ -4489,6 +4439,44 @@
         }
       ],
       "package_id": "registry+https://github.com/rust-lang/crates.io-index#icu_provider@2.4.0",
+      "source": "registry+https://github.com/rust-lang/crates.io-index",
+      "version": "2.4.0",
+      "workspace_member": false
+    },
+    {
+      "license_expression": "Unicode-3.0",
+      "manifest_path": "repository:vendor/icu_segmenter-2.4.0/Cargo.toml",
+      "manifest_sha256": "52e8453a54c3c803cf870d9a603501d6ed53aba81d181c333348806ab3212569",
+      "name": "icu_segmenter",
+      "notice_review_notes": [],
+      "notices": [
+        {
+          "path": "notices/icu_segmenter-2.4.0-a524038ecb5b/01-LICENSE",
+          "sha256": "f367c1b8e1aa262435251e442901da4607b4650e0e63a026f5044473ecfb90f2",
+          "size_bytes": 2195,
+          "source": "repository:vendor/icu_segmenter-2.4.0/LICENSE"
+        }
+      ],
+      "package_id": "registry+https://github.com/rust-lang/crates.io-index#icu_segmenter@2.4.0",
+      "source": "registry+https://github.com/rust-lang/crates.io-index",
+      "version": "2.4.0",
+      "workspace_member": false
+    },
+    {
+      "license_expression": "Unicode-3.0",
+      "manifest_path": "repository:vendor/icu_segmenter_data-2.4.0/Cargo.toml",
+      "manifest_sha256": "af39d74a4229a55ad52c625a78a3e7c363dc6768a8b0a28579facdb091504c30",
+      "name": "icu_segmenter_data",
+      "notice_review_notes": [],
+      "notices": [
+        {
+          "path": "notices/icu_segmenter_data-2.4.0-e1e1d2216305/01-LICENSE",
+          "sha256": "f367c1b8e1aa262435251e442901da4607b4650e0e63a026f5044473ecfb90f2",
+          "size_bytes": 2195,
+          "source": "repository:vendor/icu_segmenter_data-2.4.0/LICENSE"
+        }
+      ],
+      "package_id": "registry+https://github.com/rust-lang/crates.io-index#icu_segmenter_data@2.4.0",
       "source": "registry+https://github.com/rust-lang/crates.io-index",
       "version": "2.4.0",
       "workspace_member": false
@@ -6629,6 +6617,39 @@
         }
       ],
       "package_id": "registry+https://github.com/rust-lang/crates.io-index#objc2-security@0.3.2",
+      "source": "registry+https://github.com/rust-lang/crates.io-index",
+      "version": "0.3.2",
+      "workspace_member": false
+    },
+    {
+      "license_expression": "Zlib OR Apache-2.0 OR MIT",
+      "manifest_path": "repository:vendor/objc2-uniform-type-identifiers-0.3.2/Cargo.toml",
+      "manifest_sha256": "e518dc711b168d7bd12d196827531e4276ffdf12c991e2428550e9b01fb761e8",
+      "name": "objc2-uniform-type-identifiers",
+      "notice_review_notes": [],
+      "notices": [
+        {
+          "path": "notices/objc2-uniform-type-identifiers-0.3.2-b98bd31ff26c/01-7f976f7e9cb2d87df7230606feb932c3f21ac0e664045a775b600046ff850c54.txt",
+          "sha256": "7f976f7e9cb2d87df7230606feb932c3f21ac0e664045a775b600046ff850c54",
+          "size_bytes": 1339,
+          "source": "repository:docs/release/notice-supplements/texts/7f976f7e9cb2d87df7230606feb932c3f21ac0e664045a775b600046ff850c54.txt",
+          "supplement": {
+            "file": {
+              "path": "texts/7f976f7e9cb2d87df7230606feb932c3f21ac0e664045a775b600046ff850c54.txt",
+              "sha256": "7f976f7e9cb2d87df7230606feb932c3f21ac0e664045a775b600046ff850c54",
+              "upstream_path": "LICENSE.md",
+              "url": "https://raw.githubusercontent.com/madsmtm/objc2/7b1abfd750a2cacaea71d6a56ecfb83cb7de560b/framework-crates/objc2-uniform-type-identifiers/LICENSE.md"
+            },
+            "review_note": null,
+            "upstream": {
+              "package_path": "framework-crates/objc2-uniform-type-identifiers",
+              "repository": "madsmtm/objc2",
+              "revision": "7b1abfd750a2cacaea71d6a56ecfb83cb7de560b"
+            }
+          }
+        }
+      ],
+      "package_id": "registry+https://github.com/rust-lang/crates.io-index#objc2-uniform-type-identifiers@0.3.2",
       "source": "registry+https://github.com/rust-lang/crates.io-index",
       "version": "0.3.2",
       "workspace_member": false
@@ -9670,13 +9691,13 @@
     },
     {
       "license_expression": "MIT",
-      "manifest_path": "repository:vendor/taffy-0.13.0/Cargo.toml",
-      "manifest_sha256": "b5f726d2bd6269550f37f6c87697958ed7f43d18c104350211a7b3a6cedcf5d7",
+      "manifest_path": "repository:vendor/taffy-0.15.0/Cargo.toml",
+      "manifest_sha256": "e9afa6bc7b121ffda29d8f25e5de28f68f1c2124bd1902a4b29ed43675b9f94d",
       "name": "taffy",
       "notice_review_notes": [],
       "notices": [
         {
-          "path": "notices/taffy-0.13.0-4319c5280d52/01-f97daf1a0124413dccf399a4e6626b4b74acd05282f80b6d64ac82225650b77a.txt",
+          "path": "notices/taffy-0.15.0-96327a3c546f/01-f97daf1a0124413dccf399a4e6626b4b74acd05282f80b6d64ac82225650b77a.txt",
           "sha256": "f97daf1a0124413dccf399a4e6626b4b74acd05282f80b6d64ac82225650b77a",
           "size_bytes": 1100,
           "source": "repository:docs/release/notice-supplements/texts/f97daf1a0124413dccf399a4e6626b4b74acd05282f80b6d64ac82225650b77a.txt",
@@ -9685,20 +9706,20 @@
               "path": "texts/f97daf1a0124413dccf399a4e6626b4b74acd05282f80b6d64ac82225650b77a.txt",
               "sha256": "f97daf1a0124413dccf399a4e6626b4b74acd05282f80b6d64ac82225650b77a",
               "upstream_path": "LICENSE",
-              "url": "https://raw.githubusercontent.com/DioxusLabs/taffy/45a56299d366ddb383e593a1f0372158d00e8530/LICENSE"
+              "url": "https://raw.githubusercontent.com/DioxusLabs/taffy/eb6450694f33e2b7413e40677f230ff63f0fc194/LICENSE"
             },
             "review_note": null,
             "upstream": {
               "package_path": "",
               "repository": "DioxusLabs/taffy",
-              "revision": "45a56299d366ddb383e593a1f0372158d00e8530"
+              "revision": "eb6450694f33e2b7413e40677f230ff63f0fc194"
             }
           }
         }
       ],
-      "package_id": "registry+https://github.com/rust-lang/crates.io-index#taffy@0.13.0",
+      "package_id": "registry+https://github.com/rust-lang/crates.io-index#taffy@0.15.0",
       "source": "registry+https://github.com/rust-lang/crates.io-index",
-      "version": "0.13.0",
+      "version": "0.15.0",
       "workspace_member": false
     },
     {

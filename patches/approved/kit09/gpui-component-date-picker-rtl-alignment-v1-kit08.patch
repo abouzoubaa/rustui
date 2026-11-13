@@ -1,0 +1,46 @@
+diff --git a/vendor/gpui-component-0.9.1/src/time/date_picker.rs b/vendor/gpui-component-0.9.1/src/time/date_picker.rs
+index e0c7c92..1a96937 100644
+--- a/vendor/gpui-component-0.9.1/src/time/date_picker.rs
++++ b/vendor/gpui-component-0.9.1/src/time/date_picker.rs
+@@ -609,6 +609,7 @@ pub struct DatePicker {
+     disabled: bool,
+     accessibility_label: Option<SharedString>,
+     display_value: Option<SharedString>,
++    right_to_left: bool,
+ }
+ 
+ impl Sizable for DatePicker {
+@@ -670,6 +671,7 @@ impl DatePicker {
+             disabled: false,
+             accessibility_label: None,
+             display_value: None,
++            right_to_left: false,
+         }
+     }
+ 
+@@ -679,6 +681,12 @@ impl DatePicker {
+         self
+     }
+ 
++    /// Align the calendar with the logical start of a right-to-left trigger.
++    pub fn right_to_left(mut self, value: bool) -> Self {
++        self.right_to_left = value;
++        self
++    }
++
+     /// Override the displayed value when a date is selected.
+     pub fn display_value(mut self, value: impl Into<SharedString>) -> Self {
+         self.display_value = Some(value.into());
+@@ -926,7 +934,11 @@ impl RenderOnce for DatePicker {
+                                     ),
+                             ),
+                         cx,
+-                    ))
++                    ).align(if self.right_to_left {
++                        gpui_base::Align::End
++                    } else {
++                        gpui_base::Align::Start
++                    }))
+                     .with_priority(gpui_base::POPUP_PRIORITY),
+                 )
+             })

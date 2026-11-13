@@ -1,0 +1,18 @@
+{
+  "schema_version": 1,
+  "upstream": {
+    "repository": "https://github.com/longbridge/gpui-kit",
+    "tag": "v0.9.1",
+    "commit": "39ab849a93b5f15507b969164d49891db8d5b470",
+    "gpui_pre_version": "0.3.12",
+    "gpui_fast_version": "0.1.14"
+  },
+  "candidate": "r15b-dropdown-menu-refresh-v1.patch",
+  "patch_sha256": "08ab39266224e484f5de2e2c300c6e5aa54bc4194b4263d58f014b553ce48c40",
+  "files": {
+    "vendor/gpui-component-0.9.1/src/menu/dropdown_menu.rs": {
+      "pre_sha256": "c98577e23b87b01da2a632eaa6c739aed9a583365ce3d2d2b403af96b366bcab",
+      "post_sha256": "95113d1d1b099c2d53ced723d88e5ee98eda068e8720d62d83ed19bed7709279"
+    }
+  }
+}

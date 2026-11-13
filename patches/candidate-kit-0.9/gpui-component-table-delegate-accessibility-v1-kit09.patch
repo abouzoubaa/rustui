@@ -98,3 +98,22 @@
                  .h_flex()
                  .w_full()
                  .h(row_height)
+--- a/vendor/gpui-component-0.8.1/src/table/data_table.rs
++++ b/vendor/gpui-component-0.8.1/src/table/data_table.rs
+@@ -218,6 +218,7 @@
+             let delegate = state.delegate();
+             (role, delegate.rows_count(cx), delegate.columns_count(cx))
+         });
++        let delegate_accessibility = self.state.read(cx).delegate_accessibility;
+ 
+         // The element that holds the keyboard focus is the table's
+         // accessibility node: GPUI reports focus only on an element with a
+@@ -225,7 +226,7 @@
+         div()
+             .id("table")
+             .test_support()
+-            .role(role)
++            .when(!delegate_accessibility, |this| this.role(role))
+             .when_some(self.accessibility_label, |this, label| {
+                 this.aria_label(label)
+             })

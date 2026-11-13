@@ -1,22 +1,24 @@
 --- a/vendor/gpui-base-0.9.1/src/input/base/state.rs
 +++ b/vendor/gpui-base-0.9.1/src/input/base/state.rs
-@@ -618,6 +618,7 @@
+@@ -618,6 +618,8 @@
  pub struct InputAccessibility {
      role: Option<gpui::Role>,
      label: Option<SharedString>,
 +    description: Option<SharedString>,
++    disabled: bool,
      placeholder: Option<SharedString>,
      accessibility_id: Option<SharedString>,
      value_exposed: bool,
-@@ -628,6 +629,7 @@
+@@ -628,6 +631,8 @@
          Self {
              role,
              label: None,
 +            description: None,
++            disabled: false,
              placeholder: None,
              accessibility_id: None,
              value_exposed: true,
-@@ -636,6 +638,11 @@
+@@ -636,6 +640,16 @@
  
      pub fn with_label(mut self, label: Option<SharedString>) -> Self {
          self.label = label;
@@ -27,8 +29,13 @@
 +        self.description = description;
          self
      }
++
++    pub fn with_disabled(mut self, disabled: bool) -> Self {
++        self.disabled = disabled;
++        self
++    }
  
-@@ -661,6 +668,10 @@
+@@ -661,6 +675,14 @@
  
      pub fn label(&self) -> Option<&SharedString> {
          self.label.as_ref()
@@ -37,9 +44,13 @@
 +    pub fn description(&self) -> Option<&SharedString> {
 +        self.description.as_ref()
      }
++
++    pub fn is_disabled(&self) -> bool {
++        self.disabled
++    }
  
      pub fn placeholder(&self) -> Option<&SharedString> {
-@@ -5158,6 +5169,9 @@
+@@ -5158,6 +5186,10 @@
                  this.when_some(accessibility.role, |this, role| this.role(role))
                      .when_some(accessibility.label.clone(), |this, label| {
                          this.aria_label(label)
@@ -47,6 +58,7 @@
 +                    .when_some(accessibility.description.clone(), |this, description| {
 +                        this.aria_description(description)
                      })
++                    .when(accessibility.disabled, |this| this.aria_disabled(true))
                      .when_some(accessibility.placeholder.clone(), |this, placeholder| {
                          this.aria_placeholder(placeholder)
 --- a/vendor/gpui-component-0.9.1/src/input/input.rs
@@ -80,11 +92,12 @@
      }
  
      pub fn accessibility_id(mut self, id: impl Into<SharedString>) -> Self {
-@@ -746,6 +754,7 @@
+@@ -746,6 +754,8 @@
          state.set_accessibility(
              gpui_base::input::InputAccessibility::new(accessibility_role)
                  .with_label(aria_label)
 +                .with_description(self.aria_description)
++                .with_disabled(self.disabled)
                  .with_placeholder(placeholder)
                  .with_accessibility_id(self.accessibility_id)
                  .with_value_exposed(exposes_accessibility_value(content_type)),

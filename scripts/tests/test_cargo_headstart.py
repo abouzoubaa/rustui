@@ -173,7 +173,11 @@ class CargoHeadstartTests(unittest.TestCase):
                 "if '--reverse' in sys.argv else 'applied')\n",
                 encoding="utf-8",
             )
-            (root / "vendor/gpui-pre-macos-0.3.10/src").mkdir(parents=True)
+            (root / "vendor/gpui-pre-macos-0.3.12/src").mkdir(parents=True)
+            stack_helper = scripts / "apply_gpui_kit_09_stack.py"
+            stack_helper.write_text(
+                "import os\nwith open(os.environ['PATCH_LOG'], 'a') as log:\n    log.write('stack-check\\n')\n"
+            )
             fake_bin = root / "fake-bin"
             fake_bin.mkdir()
             uname = fake_bin / "uname"
@@ -208,7 +212,7 @@ class CargoHeadstartTests(unittest.TestCase):
             self.assertEqual(result.returncode, 0, result.stderr)
             self.assertEqual(
                 log.read_text(encoding="utf-8").splitlines(),
-                ["child-reverse", "base-apply", "child-apply", "child-reverse", "base-reverse"],
+                ["stack-check"],
             )
 
             log.write_text("", encoding="utf-8")
@@ -217,7 +221,7 @@ class CargoHeadstartTests(unittest.TestCase):
             self.assertEqual(result.returncode, 0, result.stderr)
             self.assertEqual(
                 log.read_text(encoding="utf-8").splitlines(),
-                ["child-reverse", "base-apply", "child-apply", "child-reverse"],
+                ["stack-check"],
             )
 
             log.write_text("", encoding="utf-8")
@@ -227,7 +231,7 @@ class CargoHeadstartTests(unittest.TestCase):
             self.assertEqual(result.returncode, 23)
             self.assertEqual(
                 log.read_text(encoding="utf-8").splitlines(),
-                ["child-reverse", "base-apply", "child-apply", "child-reverse", "base-reverse"],
+                ["stack-check"],
             )
 
 

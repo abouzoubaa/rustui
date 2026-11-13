@@ -1,0 +1,18 @@
+{
+  "schema_version": 1,
+  "upstream": {
+    "repository": "https://github.com/longbridge/gpui-kit",
+    "tag": "v0.9.1",
+    "commit": "39ab849a93b5f15507b969164d49891db8d5b470",
+    "gpui_pre_version": "0.3.12",
+    "gpui_fast_version": "0.1.14"
+  },
+  "candidate": "gpui-macos-focused-element-forwarder-v1-kit08.patch",
+  "patch_sha256": "3bbdcd1d154d87b724512a2d98ca46aabb24ad2f87bbdf54c92c7e521a6b5ca1",
+  "files": {
+    "vendor/gpui-pre-macos-0.3.12/src/window.rs": {
+      "pre_sha256": "73fce4ce13ef5f28d1424eabbbccd96e044e7cf81513a3e70993f5c92c32ad70",
+      "post_sha256": "bc9af0f929ca0936c9fc2021fcb5eadb439fba3e65d01daa6447b3047d0ced86"
+    }
+  }
+}

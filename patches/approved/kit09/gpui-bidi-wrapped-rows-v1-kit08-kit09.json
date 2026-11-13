@@ -1,0 +1,34 @@
+{
+  "schema_version": 1,
+  "upstream": {
+    "repository": "https://github.com/longbridge/gpui-kit",
+    "tag": "v0.9.1",
+    "commit": "39ab849a93b5f15507b969164d49891db8d5b470",
+    "gpui_pre_version": "0.3.12",
+    "gpui_fast_version": "0.1.14"
+  },
+  "candidate": "gpui-bidi-wrapped-rows-v1-kit08-kit09.patch",
+  "patch_sha256": "a26c3204a4c83914cbc52e5c977f9428e8699f40bb9e28c2befbf351a7efede9",
+  "files": {
+    "vendor/gpui-pre-0.3.12/src/platform.rs": {
+      "pre_sha256": "1a1002581b0afcc816cfa92473c928791faf49fb8a94ef359fc10b1a372065ba",
+      "post_sha256": "58dbd4cad01de724ff59a24f5bc768091a4fccff11afa5704e0fc5452cb87e02"
+    },
+    "vendor/gpui-pre-0.3.12/src/text_system/line.rs": {
+      "pre_sha256": "38fffbc084c92dac1834a207acdfca73b37ccde81b81f366303f6f10aece1029",
+      "post_sha256": "0c6063c3bdaff5483ef27b4b03400507c6854ff931422a60fe2a98ae06cafa5d"
+    },
+    "vendor/gpui-pre-0.3.12/src/text_system/line_layout.rs": {
+      "pre_sha256": "76589c9dff94185fd52ead6966c1d2cb659a5a0ab943b6f79b5c2326a02b6d8e",
+      "post_sha256": "1d2fc786ea08225a487dca0f84e08d39e191eb7d4dbc166f558d16501f32555a"
+    },
+    "vendor/gpui-pre-web-0.3.12/src/text_system.rs": {
+      "pre_sha256": "50d2d9da4a628d4363264dee69ae7eb271655007ccd5ef1bfbdb88954315808f",
+      "post_sha256": "48d587bfa9aea1f8d1b57b9d9329b3c8ac5f3aaeac28e3f03c36e142d774af6c"
+    },
+    "vendor/gpui-pre-wgpu-0.3.12/src/cosmic_text_system.rs": {
+      "pre_sha256": "d2aa5ba630e17613676715ea8c24ccce1a27bfa10a2c78bb68f91e1e120b9566",
+      "post_sha256": "1a89e1d3d2d2de4568ce7c719db3507cfb6608b810e60cc4431478935f4bd693"
+    }
+  }
+}

@@ -1627,7 +1627,20 @@ mod tests {
         ] {
             window.update(|window, app| {
                 base.update(app, |state, cx| {
-                    state.handle_accessibility_action(action, data.as_ref(), window, cx);
+                    match action {
+                        Action::SetValue => {
+                            state.set_accessibility_value(data.as_ref(), window, cx);
+                        }
+                        Action::Increment => {
+                            let step = state.accessibility_step();
+                            state.step_thumb(false, step, window, cx);
+                        }
+                        Action::Decrement => {
+                            let step = state.accessibility_step();
+                            state.step_thumb(false, -step, window, cx);
+                        }
+                        _ => unreachable!("only slider value actions are tested"),
+                    }
                     assert_eq!(state.value().end(), expected);
                 })
             });

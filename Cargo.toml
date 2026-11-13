@@ -46,11 +46,11 @@ serde_json = { version = "1", features = ["raw_value"] }
 chrono = "=0.4.45"
 
 # Approved Zed snapshot, repackaged by Longbridge; see docs/UPSTREAM_AUDIT.md.
-gpui = { package = "gpui-pre", path = "crates/rustui-gpui", version = "=0.3.10" }
-gpui_platform = { package = "gpui-pre-platform", path = "crates/rustui-gpui-platform", version = "=0.3.10", features = ["font-kit", "runtime_shaders"] }
-gpui-component = { path = "crates/rustui-gpui-component", version = "=0.8.1", default-features = false }
-gpui-base = { package = "gpui-base", path = "crates/rustui-gpui-base", version = "=0.8.1", default-features = false }
-gpui-kit-assets = { path = "crates/rustui-gpui-kit-assets", version = "=0.8.1" }
+gpui = { package = "gpui-pre", path = "crates/rustui-gpui", version = "=0.3.12" }
+gpui_platform = { package = "gpui-pre-platform", path = "crates/rustui-gpui-platform", version = "=0.3.12", features = ["font-kit", "runtime_shaders"] }
+gpui-component = { path = "crates/rustui-gpui-component", version = "=0.9.1", default-features = false }
+gpui-base = { package = "gpui-base", path = "crates/rustui-gpui-base", version = "=0.9.1", default-features = false }
+gpui-kit-assets = { path = "crates/rustui-gpui-kit-assets", version = "=0.9.1" }
 
 [patch.crates-io]
 cosmic-text = { path = "vendor/cosmic-text-0.19.0" }

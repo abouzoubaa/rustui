@@ -2,7 +2,10 @@
 
 use std::collections::HashSet;
 
-use gpui::{AnyElement, IntoElement, SharedString, Styled as _, px};
+use gpui::{
+    AnyElement, InteractiveElement as _, IntoElement, ParentElement as _, SharedString,
+    Styled as _, px,
+};
 use gpui_component::toolbar::Toolbar as GpuiToolbar;
 use rustui_core::Identity;
 use rustui_i18n::LayoutDirection;
@@ -200,7 +203,16 @@ impl View for ToolbarView {
             if !disabled {
                 button = button.on_click(context.bind_control_action(item.action.clone()));
             }
-            toolbar = toolbar.child(button);
+            let focus = crate::components::input::disabled_focus_scope(
+                context,
+                Identity::from(format!(
+                    "toolbar-item-focus:{}:{}",
+                    self.id.as_str(),
+                    item.id
+                )),
+                disabled,
+            );
+            toolbar = toolbar.child(button.track_focus(&focus));
         }
         toolbar.into_any_element()
     }

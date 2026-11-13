@@ -1,0 +1,22 @@
+{
+  "schema_version": 1,
+  "upstream": {
+    "repository": "https://github.com/longbridge/gpui-kit",
+    "tag": "v0.9.1",
+    "commit": "39ab849a93b5f15507b969164d49891db8d5b470",
+    "gpui_pre_version": "0.3.12",
+    "gpui_fast_version": "0.1.14"
+  },
+  "candidate": "t17-inert-focus-scope-v1-kit08-kit09.patch",
+  "patch_sha256": "09479abdc67e39c4ba7e10d537e03ebbec689bb96ed1769470504105db8536da",
+  "files": {
+    "vendor/gpui-pre-0.3.12/src/tab_stop.rs": {
+      "pre_sha256": "0c14aec0196ad632601015e166dfcd3df72228292646120bbc3857c3631cd680",
+      "post_sha256": "24d41e963dd0beea2f1612955399153f9572493b55b3adf39ed284a886c9ddbc"
+    },
+    "vendor/gpui-pre-0.3.12/src/window.rs": {
+      "pre_sha256": "0d15407b32262da2eae4db66d931d6e97fc5c1cdb65384162b104d570d6c66d5",
+      "post_sha256": "fb81a508463b64cd3d4755cd55b169ed853deb175d4a15962de8099b38270881"
+    }
+  }
+}

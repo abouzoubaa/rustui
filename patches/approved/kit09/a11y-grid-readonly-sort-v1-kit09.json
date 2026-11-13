@@ -1,0 +1,22 @@
+{
+  "schema_version": 1,
+  "upstream": {
+    "repository": "https://github.com/longbridge/gpui-kit",
+    "tag": "v0.9.1",
+    "commit": "39ab849a93b5f15507b969164d49891db8d5b470",
+    "gpui_pre_version": "0.3.12",
+    "gpui_fast_version": "0.1.14"
+  },
+  "candidate": "a11y-grid-readonly-sort-v1-kit09.patch",
+  "patch_sha256": "86bc51218922840d9663a6554de98d1c04e75765190cc3a2e22e13a51ef0c7ff",
+  "files": {
+    "vendor/gpui-pre-0.3.12/src/elements/div.rs": {
+      "pre_sha256": "27c02a94d692b7c468db50517ade786811364187e7239c5d69a5c92e0edae03a",
+      "post_sha256": "2947ce8faa3c3ce25b1e65ed6e95fe536adbca4cb8437ff06340bea47797d32b"
+    },
+    "vendor/gpui-pre-0.3.12/src/window/a11y/debug.rs": {
+      "pre_sha256": "a838bad5f53fb4dbeae936cc7c0a29daa464d1d058dbcb20f6f7b721bc6b16b9",
+      "post_sha256": "8c532b0ebfec4ca78fef1378b4c37e61105b6d5778eda25887e0a79a9471ec2c"
+    }
+  }
+}

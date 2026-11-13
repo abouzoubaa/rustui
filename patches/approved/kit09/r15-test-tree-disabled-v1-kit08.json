@@ -1,0 +1,18 @@
+{
+  "schema_version": 1,
+  "upstream": {
+    "repository": "https://github.com/longbridge/gpui-kit",
+    "tag": "v0.9.1",
+    "commit": "39ab849a93b5f15507b969164d49891db8d5b470",
+    "gpui_pre_version": "0.3.12",
+    "gpui_fast_version": "0.1.14"
+  },
+  "candidate": "r15-test-tree-disabled-v1-kit08.patch",
+  "patch_sha256": "b44e327b1e6307cd709836b6549aaf03a543f26dddf7e7b62d3f2c8b89dd40de",
+  "files": {
+    "vendor/gpui-pre-0.3.12/src/window/a11y/debug.rs": {
+      "pre_sha256": "419875df004bf750fb78260e67064e903920b67775ce787081d9bae880c6ae54",
+      "post_sha256": "a838bad5f53fb4dbeae936cc7c0a29daa464d1d058dbcb20f6f7b721bc6b16b9"
+    }
+  }
+}

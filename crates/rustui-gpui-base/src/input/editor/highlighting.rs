@@ -76,6 +76,7 @@ pub trait InputHighlighter {
 pub type InputHighlighterFactory = Rc<dyn Fn(&str) -> Option<Box<dyn InputHighlighter>>>;
 pub type SharedHighlightStyleResolver = Arc<dyn HighlightStyleResolver>;
 pub type FoldIconRenderer = Rc<dyn Fn(usize, bool) -> AnyElement>;
+pub type FoldPlaceholderRenderer = Rc<dyn Fn(usize) -> AnyElement>;
 
 /// Where in the syntax tree an offset sits, for editing decisions.
 ///
@@ -152,7 +153,6 @@ impl InputEditorStyle {
         Self {
             foreground,
             muted_foreground: or(self.muted_foreground, colors.muted_foreground),
-            placeholder_foreground: self.placeholder_foreground,
             background: or(self.background, colors.surface),
             border: or(self.border, colors.border),
             selection,
@@ -197,17 +197,6 @@ mod tests {
         tokens.colors.border = hsla(0., 0., 0.15, 1.0);
         tokens.colors.accent = hsla(0.6, 0.5, 0.5, 1.0);
         tokens
-    }
-
-    #[test]
-    fn placeholder_override_survives_palette_resolution() {
-        let color = hsla(0.2, 0.3, 0.4, 1.0);
-        let style = InputEditorStyle {
-            placeholder_foreground: Some(color),
-            ..Default::default()
-        };
-        assert_eq!(style.resolved(&dark()).placeholder_foreground, Some(color));
-        assert_eq!(InputEditorStyle::default().resolved(&dark()).placeholder_foreground, None);
     }
 
     #[test]

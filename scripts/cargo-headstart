@@ -139,76 +139,11 @@ else
     set -- --config 'build.rustflags=["-Zmetadata-crate-hash=no"]' "$@"
 fi
 
-# The proposed macOS backend patch is required by every native build that may
-# create an AnchoredPopup, including normal Playground development runs. The
-# release verifier may already own an applied patch; in that case this wrapper
-# must leave restoration to its caller.
+# Kit 0.9's approved popup changes are part of the activated source stack.
+# Verify the complete stack rather than toggling overlapping patches.
 rustui_root="$(CDPATH= cd -- "$(dirname -- "$0")/.." && pwd)"
-popup_patch_helper="$rustui_root/scripts/apply_gpui_macos_anchored_popup_patch.py"
-popup_child_patch_helper="$rustui_root/scripts/apply_gpui_macos_popup_child_teardown_patch.py"
-popup_patch_owned=0
-popup_child_patch_owned=0
-popup_child_was_active=0
-if [ "$(uname -s)" = Darwin ] && [ -f "$popup_patch_helper" ] && \
-    [ -d "$rustui_root/vendor/gpui-pre-macos-0.3.10/src" ]; then
-    if [ -f "$popup_child_patch_helper" ]; then
-        popup_child_patch_state="$(python3 "$popup_child_patch_helper" --reverse)"
-        case "$popup_child_patch_state" in
-            reversed) popup_child_was_active=1 ;;
-            already-reversed) ;;
-            *)
-                printf '%s\n' "Unexpected macOS popup child patch state: $popup_child_patch_state" >&2
-                exit 2
-                ;;
-        esac
-    fi
-    popup_patch_state="$(python3 "$popup_patch_helper")"
-    case "$popup_patch_state" in
-        applied) popup_patch_owned=1 ;;
-        already-applied) ;;
-        *)
-            printf '%s\n' "Unexpected macOS popup patch state: $popup_patch_state" >&2
-            exit 2
-            ;;
-    esac
-    if [ -f "$popup_child_patch_helper" ]; then
-        popup_child_patch_state="$(python3 "$popup_child_patch_helper")"
-        case "$popup_child_patch_state" in
-            applied)
-                if [ "$popup_child_was_active" -eq 0 ]; then
-                    popup_child_patch_owned=1
-                fi
-                ;;
-            already-applied) ;;
-            *)
-                printf '%s\n' "Unexpected macOS popup child patch state: $popup_child_patch_state" >&2
-                exit 2
-                ;;
-        esac
-    fi
-fi
-
-restore_popup_patch() {
-    status=$?
-    trap - EXIT HUP INT TERM
-    if [ "$popup_child_patch_owned" -eq 1 ] &&
-        ! python3 "$popup_child_patch_helper" --reverse >/dev/null; then
-        printf '%s\n' 'Failed to restore pinned macOS popup child sources.' >&2
-        status=1
-    fi
-    if [ "$popup_patch_owned" -eq 1 ] &&
-        ! python3 "$popup_patch_helper" --reverse >/dev/null; then
-        printf '%s\n' 'Failed to restore pinned macOS backend sources.' >&2
-        status=1
-    fi
-    exit "$status"
-}
-
-if [ "$popup_patch_owned" -eq 1 ] || [ "$popup_child_patch_owned" -eq 1 ]; then
-    trap restore_popup_patch EXIT
-    trap 'exit 129' HUP
-    trap 'exit 130' INT
-    trap 'exit 143' TERM
+if [ "$(uname -s)" = Darwin ] && [ -d "$rustui_root/vendor/gpui-pre-macos-0.3.12/src" ]; then
+    python3 "$rustui_root/scripts/apply_gpui_kit_09_stack.py" --check >&2
 fi
 
 env RUSTC="$RUSTC" "$cargo_bin" -Zheadstart "$@"

@@ -168,6 +168,11 @@ impl View for TokenFieldView {
 
     fn into_element(&self, context: &mut RenderContext<'_>) -> AnyElement {
         let identity = self.identity(context);
+        let focus = crate::components::input::disabled_focus_scope(
+            context,
+            Identity::from(format!("token-field-focus:{}", identity.as_str())),
+            self.disabled,
+        );
         let tokens = self.tokens.value();
         let draft = self.draft.value();
         let add_token =
@@ -187,6 +192,8 @@ impl View for TokenFieldView {
 
         let mut field = div()
             .id(identity.to_string())
+            .track_focus(&focus)
+            .tab_stop(false)
             .flex()
             .items_center()
             .flex_wrap()
@@ -200,11 +207,20 @@ impl View for TokenFieldView {
             let remove_token = context.binding_updater(self.tokens.clone(), move |tokens| {
                 remove_matching_token(tokens, index, &expected)
             });
+            let remove_focus = crate::components::input::disabled_focus_scope(
+                context,
+                Identity::from(format!(
+                    "token-field-remove-focus:{}:{index}",
+                    identity.as_str()
+                )),
+                self.disabled,
+            );
             let remove = GpuiButton::new(remove_id)
                 .icon(Icon::new(IconName::Close))
                 .xsmall()
                 .text()
                 .disabled(self.disabled)
+                .track_focus(&remove_focus)
                 .accessibility_label(remove_label)
                 .on_click(move |_, _, cx| remove_token(cx));
             let chip = div()
@@ -231,9 +247,15 @@ impl View for TokenFieldView {
         field = field.child(input);
 
         let add_enabled = !self.disabled && !draft.trim().is_empty();
+        let add_focus = crate::components::input::disabled_focus_scope(
+            context,
+            Identity::from(format!("token-field-add-focus:{}", identity.as_str())),
+            !add_enabled,
+        );
         let add = GpuiButton::new(format!("{identity}-add"))
             .child(add_button_label(|id| context.localized_message(id)))
             .disabled(!add_enabled)
+            .track_focus(&add_focus)
             .accessibility_label(add_accessible_label(|id| context.localized_message(id)))
             .on_click(move |_, _, cx| {
                 if let Some(draft) = read_draft(cx).filter(|draft| !draft.trim().is_empty()) {

@@ -1,6 +1,9 @@
 //! Accessible link activation through the pinned GPUI Components Button.
 
-use gpui::{AnyElement, FontWeight, IntoElement, SharedString, Styled as _, px};
+use gpui::{
+    AnyElement, FontWeight, InteractiveElement as _, IntoElement, SharedString,
+    StatefulInteractiveElement as _, Styled as _, px,
+};
 use gpui_component::{
     Disableable as _,
     button::{Button as GpuiButton, ButtonVariant, ButtonVariants as _},
@@ -250,7 +253,13 @@ impl View for LinkView {
             .button_theme()
             .expect("link requires an active RustUI theme")
             .disabled_foreground;
-        GpuiButton::new(self.identity().to_string())
+        let identity = self.identity();
+        let focus = crate::components::input::disabled_focus_scope(
+            context,
+            Identity::from(format!("link-focus:{}", identity.as_str())),
+            self.disabled,
+        );
+        GpuiButton::new(identity.to_string())
             .label(label)
             .accessibility_label(accessibility_label)
             .with_variant(ButtonVariant::Link)
@@ -275,6 +284,7 @@ impl View for LinkView {
                     cx.open_url(&href);
                 }
             })
+            .track_focus(&focus)
             .into_any_element()
     }
 }

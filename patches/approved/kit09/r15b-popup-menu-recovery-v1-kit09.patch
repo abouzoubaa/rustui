@@ -1,0 +1,163 @@
+--- a/vendor/gpui-component-0.9.1/src/menu/popup_menu.rs
++++ b/vendor/gpui-component-0.9.1/src/menu/popup_menu.rs
+@@ -285,6 +285,31 @@
+     }
+ }
+ 
++fn next_enabled_menu_item(
++    menu_items: &[PopupMenuItem],
++    current: Option<usize>,
++    forward: bool,
++) -> Option<usize> {
++    let enabled = menu_items
++        .iter()
++        .enumerate()
++        .filter(|(_, item)| item.is_clickable());
++    if forward {
++        enabled
++            .clone()
++            .find(|(index, _)| current.is_none_or(|current| *index > current))
++            .map(|(index, _)| index)
++            .or_else(|| enabled.map(|(index, _)| index).next())
++    } else {
++        enabled
++            .clone()
++            .filter(|(index, _)| current.is_none_or(|current| *index < current))
++            .last()
++            .map(|(index, _)| index)
++            .or_else(|| enabled.map(|(index, _)| index).last())
++    }
++}
++
+ pub struct PopupMenu {
+     pub(crate) focus_handle: FocusHandle,
+     pub(crate) menu_items: Vec<PopupMenuItem>,
+@@ -781,6 +806,25 @@
+         menu.selected_index = None;
+         *self = f(menu, window, cx);
+         cx.notify();
++    }
++
++    /// Rebuild menu items while preserving enabled selection when possible.
++    /// If the selected item became disabled, move to the next enabled item,
++    /// wrapping at the end; clear selection when no item can be activated.
++    pub fn rebuild_preserving_selection(
++        &mut self,
++        window: &mut Window,
++        cx: &mut Context<Self>,
++        f: impl FnOnce(Self, &mut Window, &mut Context<Self>) -> Self,
++    ) {
++        let selected = self.selected_index;
++        self.rebuild(window, cx, f);
++        if let Some(index) = selected {
++            self.selected_index = Some(index);
++            if !self.menu_items.get(index).is_some_and(PopupMenuItem::is_clickable) {
++                self.select_enabled(true, cx);
++            }
++        }
+     }
+ 
+     fn add_menu_item(
+@@ -998,51 +1042,25 @@
+         }
+     }
+ 
++    fn select_enabled(&mut self, forward: bool, cx: &mut Context<Self>) {
++        let next = next_enabled_menu_item(&self.menu_items, self.selected_index, forward);
++        if self.selected_index != next {
++            self.selected_index = next;
++            if let Some(index) = next {
++                self.scroll_handle.scroll_to_item(index);
++            }
++            cx.notify();
++        }
++    }
++
+     fn select_up(&mut self, _: &SelectUp, _: &mut Window, cx: &mut Context<Self>) {
+         cx.stop_propagation();
+-        let ix = self.selected_index.unwrap_or(0);
+-
+-        if let Some((prev_ix, _)) = self
+-            .menu_items
+-            .iter()
+-            .enumerate()
+-            .rev()
+-            .find(|(i, item)| *i < ix && item.is_clickable())
+-        {
+-            self.set_selected_index(prev_ix, cx);
+-            return;
+-        }
+-
+-        let last_clickable_ix = self.clickable_menu_items().last().map(|(ix, _)| ix);
+-        if let Some(ix) = last_clickable_ix {
+-            self.set_selected_index(ix, cx);
+-        }
++        self.select_enabled(false, cx);
+     }
+ 
+     fn select_down(&mut self, _: &SelectDown, _: &mut Window, cx: &mut Context<Self>) {
+         cx.stop_propagation();
+-        let Some(ix) = self.selected_index else {
+-            let first_clickable_ix = self.clickable_menu_items().next().map(|(ix, _)| ix);
+-            if let Some(ix) = first_clickable_ix {
+-                self.set_selected_index(ix, cx);
+-            }
+-            return;
+-        };
+-
+-        if let Some((next_ix, _)) = self
+-            .menu_items
+-            .iter()
+-            .enumerate()
+-            .find(|(i, item)| *i > ix && item.is_clickable())
+-        {
+-            self.set_selected_index(next_ix, cx);
+-            return;
+-        }
+-
+-        let first_clickable_ix = self.clickable_menu_items().next().map(|(ix, _)| ix);
+-        if let Some(ix) = first_clickable_ix {
+-            self.set_selected_index(ix, cx);
+-        }
++        self.select_enabled(true, cx);
+     }
+ 
+     fn select_left(&mut self, _: &SelectLeft, window: &mut Window, cx: &mut Context<Self>) {
+@@ -1344,6 +1362,9 @@
+             .selected(selected)
+             .on_hover(cx.listener(move |this, hovered, window, cx| {
+                 if *hovered {
++                    if !this.menu_items.get(ix).is_some_and(PopupMenuItem::is_clickable) {
++                        return;
++                    }
+                     // Pointing elsewhere closes the open submenu; take back
+                     // the focus the keyboard may have moved into it.
+                     if this.selected_index != Some(ix)
+@@ -1661,6 +1682,27 @@
+ mod tests {
+     use super::*;
+ 
++    #[test]
++    fn selection_recovery_skips_disabled_items_and_wraps() {
++        let items = vec![
++            PopupMenuItem::new("First"),
++            PopupMenuItem::new("Disabled").disabled(true),
++            PopupMenuItem::new("Last"),
++        ];
++
++        assert_eq!(next_enabled_menu_item(&items, Some(1), true), Some(2));
++        assert_eq!(next_enabled_menu_item(&items, Some(2), true), Some(0));
++        assert_eq!(next_enabled_menu_item(&items, Some(1), false), Some(0));
++        assert_eq!(
++            next_enabled_menu_item(
++                &[PopupMenuItem::new("Only disabled").disabled(true)],
++                Some(0),
++                true,
++            ),
++            None,
++        );
++    }
++
+     #[gpui::test]
+     fn custom_menu_item_preserves_mouse_event(cx: &mut gpui::TestAppContext) {
+         use gpui::{Modifiers, MouseButton, MouseUpEvent};

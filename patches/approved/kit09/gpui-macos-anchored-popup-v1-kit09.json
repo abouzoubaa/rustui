@@ -1,0 +1,38 @@
+{
+  "schema_version": 1,
+  "upstream": {
+    "repository": "https://github.com/longbridge/gpui-kit",
+    "tag": "v0.9.1",
+    "commit": "39ab849a93b5f15507b969164d49891db8d5b470",
+    "gpui_pre_version": "0.3.12",
+    "gpui_fast_version": "0.1.14"
+  },
+  "candidate": "gpui-macos-anchored-popup-v1-kit09.patch",
+  "patch_sha256": "f0d9012a22ed71be385beb9fb45c68aafa3d5078b5114e94e640cd1fdfafc441",
+  "files": {
+    "vendor/gpui-pre-0.3.12/src/app/test_context.rs": {
+      "pre_sha256": "c80518d26716c66724d4f91d2d6b2b7a539d757d07eef1469c27074f8fbcf228",
+      "post_sha256": "7110f8af01f4e0f3890518ae0fec1046e8adf64817749595ec7c6801d7f18de0"
+    },
+    "vendor/gpui-pre-0.3.12/src/platform.rs": {
+      "pre_sha256": "5754e53ede3fc5e82211746d317f6871df187833a695891277a1ee08fb66169d",
+      "post_sha256": "4afc33ffd29f43ec82b47b347f7643b41a218919abe333e4da1f7ccbbef9901f"
+    },
+    "vendor/gpui-pre-0.3.12/src/platform/test/window.rs": {
+      "pre_sha256": "61e16de9c5df3ed124b2f852f784a5ee0406a1c71b72bcf1c0bff67e5766c3ce",
+      "post_sha256": "9f0c2f4eb7a5bbe66b2fd28896b498876bef2512a07afa2df4d7bdbf97c6f1db"
+    },
+    "vendor/gpui-pre-0.3.12/src/window.rs": {
+      "pre_sha256": "8869c8594b70c3f247a287c74efaafc65043703cdcea28b8dba9fa3a20af4fdd",
+      "post_sha256": "8d67bf8a4e2537d1772a2a74ca4e70ca44578ac47a3ad6d73fc913b69e22aaf0"
+    },
+    "vendor/gpui-pre-macos-0.3.12/src/platform.rs": {
+      "pre_sha256": "04630aa1e7ab09b0c7fff5853d4607307dd99c1796bd025180051c4c02558da3",
+      "post_sha256": "2b81cb02ef131bb866857049f0d5b9efb3b9766c49031721bd7f556214199dc5"
+    },
+    "vendor/gpui-pre-macos-0.3.12/src/window.rs": {
+      "pre_sha256": "2119cfe4f6ae0524fcc0ffc14032b1f9a8a3876f971e0541e38a96b0569e993f",
+      "post_sha256": "0501793aa0fd0570f4a665a75ee8987e88806783e4e22106910778100fd393fa"
+    }
+  }
+}

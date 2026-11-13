@@ -8,7 +8,7 @@ use rustui_core::Identity;
 use rustui_i18n::LayoutDirection;
 use std::{
     cell::{Cell, RefCell},
-    rc::Rc,
+    rc::{Rc, Weak},
 };
 
 /// Logical edge from which a child slides.
@@ -57,6 +57,7 @@ struct Entry {
     seen: bool,
     exiting: Rc<Cell<bool>>,
     finished: Rc<Cell<bool>>,
+    exit_progress_seen: Rc<Cell<bool>>,
     focus: FocusHandle,
     _focus_subscription: Subscription,
 }
@@ -132,6 +133,7 @@ fn make_entry(
         seen: true,
         exiting,
         finished: Rc::new(Cell::new(false)),
+        exit_progress_seen: Rc::new(Cell::new(false)),
         focus,
         _focus_subscription: subscription,
     }
@@ -143,6 +145,7 @@ fn render_entry(
     transition: Transition,
     exiting: Rc<Cell<bool>>,
     finished: Rc<Cell<bool>>,
+    exit_progress_seen: Rc<Cell<bool>>,
     focus: FocusHandle,
     context: &mut RenderContext<'_>,
 ) -> AnyElement {
@@ -160,15 +163,19 @@ fn render_entry(
     }
     let animation = gpui::SpringAnimation::new(gpui::SpringConfig::new(170.0, 26.0, 1.0))
         .to(if is_exiting { 0.0 } else { 1.0 })
-        .from(0.0)
+        .from(if is_exiting { 1.0 } else { 0.0 })
         .with_epsilon(0.001);
     wrapper
         .with_spring(
             format!("rustui-transition-spring:{}", key.as_str()),
             animation,
             move |mut element, value: f32| {
-                if exiting.get() && value == 0.0 {
-                    finished.set(true);
+                if exiting.get() {
+                    if value > 0.0 {
+                        exit_progress_seen.set(true);
+                    } else if exit_progress_seen.get() {
+                        finished.set(true);
+                    }
                 }
                 let progress = value.clamp(0.0, 1.0);
                 if transition.fade {
@@ -221,6 +228,7 @@ pub(crate) fn render_keyed(
             entry.transition = transition;
             entry.exiting.set(false);
             entry.finished.set(false);
+            entry.exit_progress_seen.set(false);
             true
         } else {
             false
@@ -248,15 +256,16 @@ pub(crate) fn render_keyed(
             entry.transition,
             entry.exiting.clone(),
             entry.finished.clone(),
+            entry.exit_progress_seen.clone(),
             entry.focus.clone(),
         )
     };
     context
         .transition_window_app()
         .0
-        .set_focus_scope_inert(&entry.5, false);
+        .set_focus_scope_inert(&entry.6, false);
     Some(render_entry(
-        entry.0, entry.1, entry.2, entry.3, entry.4, entry.5, context,
+        entry.0, entry.1, entry.2, entry.3, entry.4, entry.5, entry.6, context,
     ))
 }
 
@@ -311,14 +320,24 @@ pub(crate) fn render_children(
                     entry.transition,
                     entry.exiting.clone(),
                     entry.finished.clone(),
+                    entry.exit_progress_seen.clone(),
                     entry.focus.clone(),
                 ));
             }
         }
     }
     exits.sort_by_key(|entry| entry.0);
-    for (index, key, render, transition, exiting, finished, focus) in exits {
-        let element = render_entry(key, render, transition, exiting, finished, focus, context);
+    for (index, key, render, transition, exiting, finished, exit_progress_seen, focus) in exits {
+        let element = render_entry(
+            key,
+            render,
+            transition,
+            exiting,
+            finished,
+            exit_progress_seen,
+            focus,
+            context,
+        );
         rendered.insert(index.min(rendered.len()), element);
     }
     let has_entries = !inner.borrow().entries.is_empty();
@@ -328,23 +347,33 @@ pub(crate) fn render_children(
         .iter()
         .any(|entry| entry.exiting.get())
     {
-        let weak = Rc::downgrade(&inner);
         let (window, _) = context.transition_window_app();
-        window.on_next_frame(move |window, _| {
-            if let Some(inner) = weak.upgrade() {
-                let mut inner = inner.borrow_mut();
-                let before = inner.entries.len();
-                inner
-                    .entries
-                    .retain(|entry| !entry.exiting.get() || !entry.finished.get());
-                if before != inner.entries.len() {
-                    window.refresh();
-                }
-            }
-        });
+        schedule_exit_cleanup(window, Rc::downgrade(&inner));
     }
     let focus = has_entries.then(|| inner.borrow().focus.clone());
     (rendered, focus)
+}
+
+fn schedule_exit_cleanup(window: &mut Window, weak: Weak<RefCell<Inner>>) {
+    window.on_next_frame(move |window, _| {
+        let Some(inner) = weak.upgrade() else {
+            return;
+        };
+        let mut inner = inner.borrow_mut();
+        let before = inner.entries.len();
+        inner
+            .entries
+            .retain(|entry| !entry.exiting.get() || !entry.finished.get());
+        let changed = before != inner.entries.len();
+        let still_exiting = inner.entries.iter().any(|entry| entry.exiting.get());
+        drop(inner);
+        if changed {
+            window.refresh();
+        }
+        if still_exiting {
+            schedule_exit_cleanup(window, weak);
+        }
+    });
 }
 
 #[cfg(test)]

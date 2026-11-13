@@ -1,0 +1,18 @@
+{
+  "schema_version": 1,
+  "upstream": {
+    "repository": "https://github.com/longbridge/gpui-kit",
+    "tag": "v0.9.1",
+    "commit": "39ab849a93b5f15507b969164d49891db8d5b470",
+    "gpui_pre_version": "0.3.12",
+    "gpui_fast_version": "0.1.14"
+  },
+  "candidate": "gpui-component-sheet-close-accessibility-v1-kit09.patch",
+  "patch_sha256": "10b76539e1d08b9374ec8af546a4b3ee56ea93042284c60cbcbb1ebf451d6ee5",
+  "files": {
+    "vendor/gpui-component-0.9.1/src/sheet.rs": {
+      "pre_sha256": "10aa7d19b63afb4e3cac5bca257b5b0c58f5871aa1b9458008f367db81b8648e",
+      "post_sha256": "1313a2c37acc77fcb7234d1f3c814bbc5e93f1d828085c4c3d34e05bbba9599c"
+    }
+  }
+}

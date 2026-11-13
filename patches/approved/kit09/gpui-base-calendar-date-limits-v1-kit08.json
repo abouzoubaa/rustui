@@ -1,0 +1,18 @@
+{
+  "schema_version": 1,
+  "upstream": {
+    "repository": "https://github.com/longbridge/gpui-kit",
+    "tag": "v0.9.1",
+    "commit": "39ab849a93b5f15507b969164d49891db8d5b470",
+    "gpui_pre_version": "0.3.12",
+    "gpui_fast_version": "0.1.14"
+  },
+  "candidate": "gpui-base-calendar-date-limits-v1-kit08.patch",
+  "patch_sha256": "6901ba2eb944b4bb0ecc5f6c631191690bd9eb5f93c4592ca01adf6b67e218b7",
+  "files": {
+    "vendor/gpui-base-0.9.1/src/calendar.rs": {
+      "pre_sha256": "23f747d81667c1f68a54ca827863d556e167fe500a25eec4049d1c90a7d3cd6e",
+      "post_sha256": "13c8d334e1eeb32b0960e84dad834e54c7d8737a1026356d2f5bc86bac189d6c"
+    }
+  }
+}
