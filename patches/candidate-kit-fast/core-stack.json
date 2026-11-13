@@ -16,6 +16,7 @@
     "a11y-grid-readonly-sort-v1-fast.json",
     "gpui-macos-anchored-popup-v1-fast.json",
     "gpui-macos-popup-child-teardown-v1-fast.json",
-    "gpui-test-support-a11y-activation-v1-fast.json"
+    "gpui-test-support-a11y-activation-v1-fast.json",
+    "gpui-test-window-a11y-default-v1-fast.json"
   ]
 }

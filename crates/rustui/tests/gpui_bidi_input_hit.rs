@@ -43,12 +43,30 @@ fn mixed_direction_single_line_hits_follow_visual_clusters() {
         ..Default::default()
     };
 
-    assert_eq!(layout.closest_index_for_position(point(px(1.), px(1.)), px(10.)), Ok(6));
-    assert_eq!(layout.closest_index_for_position(point(px(11.), px(1.)), px(10.)), Ok(4));
-    assert_eq!(layout.closest_index_for_position(point(px(21.), px(1.)), px(10.)), Ok(2));
-    assert_eq!(layout.closest_index_for_position(point(px(29.), px(1.)), px(10.)), Ok(0));
-    assert_eq!(layout.closest_index_for_position(point(px(31.), px(1.)), px(10.)), Ok(6));
+    assert_eq!(
+        layout.closest_index_for_position(point(px(1.), px(1.)), px(10.)),
+        Ok(6)
+    );
+    assert_eq!(
+        layout.closest_index_for_position(point(px(11.), px(1.)), px(10.)),
+        Ok(4)
+    );
+    assert_eq!(
+        layout.closest_index_for_position(point(px(21.), px(1.)), px(10.)),
+        Ok(2)
+    );
+    assert_eq!(
+        layout.closest_index_for_position(point(px(29.), px(1.)), px(10.)),
+        Ok(0)
+    );
+    assert_eq!(
+        layout.closest_index_for_position(point(px(31.), px(1.)), px(10.)),
+        Ok(6)
+    );
     assert_eq!(layout.position_for_index(0, px(10.)).unwrap().x, px(30.));
     assert_eq!(layout.position_for_index(2, px(10.)).unwrap().x, px(20.));
-    assert_eq!(layout.index_for_position(point(px(25.), px(1.)), px(10.)), Ok(0));
+    assert_eq!(
+        layout.index_for_position(point(px(25.), px(1.)), px(10.)),
+        Ok(0)
+    );
 }

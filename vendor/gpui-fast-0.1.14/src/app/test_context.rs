@@ -370,6 +370,10 @@ impl TestAppContext {
             )
             .unwrap();
         drop(cx);
+        self.update_window(window.into(), |_, window, _| {
+            window.set_a11y_active_for_tests(true);
+        })
+        .unwrap();
         let view = window.root(self).unwrap();
         let cx = VisualTestContext::from_window(*window.deref(), self).into_mut();
         cx.run_until_parked();
