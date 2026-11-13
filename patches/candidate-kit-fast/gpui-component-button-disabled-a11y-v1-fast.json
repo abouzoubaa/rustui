@@ -1,0 +1,16 @@
+{
+  "schema_version": 1,
+  "name": "gpui-component-button-disabled-a11y-v1-fast",
+  "patch": "gpui-component-button-disabled-a11y-v1-fast.patch",
+  "patch_sha256": "4781f57fd7ae44262f29e3c83da618ea0c4aa093cd9e23b0024ad064b7030f33",
+  "files": {
+    "vendor/gpui-component-0.9.1/src/button/button.rs": {
+      "pre_sha256": "43317999642f8aa5f29aa4edf27ce8882c090f7d45420278e4563e37ceea3112",
+      "post_sha256": "08ead95b260bd4c625ea4ad923f214c6db0128b797d4388ea4f98d1c3fce57f9"
+    },
+    "crates/rustui-gpui-component/src/button/button.rs": {
+      "pre_sha256": "43317999642f8aa5f29aa4edf27ce8882c090f7d45420278e4563e37ceea3112",
+      "post_sha256": "08ead95b260bd4c625ea4ad923f214c6db0128b797d4388ea4f98d1c3fce57f9"
+    }
+  }
+}

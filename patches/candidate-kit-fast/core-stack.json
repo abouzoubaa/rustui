@@ -17,6 +17,7 @@
     "gpui-macos-anchored-popup-v1-fast.json",
     "gpui-macos-popup-child-teardown-v1-fast.json",
     "gpui-test-support-a11y-activation-v1-fast.json",
-    "gpui-test-window-a11y-default-v1-fast.json"
+    "gpui-test-window-a11y-default-v1-fast.json",
+    "gpui-component-button-disabled-a11y-v1-fast.json"
   ]
 }

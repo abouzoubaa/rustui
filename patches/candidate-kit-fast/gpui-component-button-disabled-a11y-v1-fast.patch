@@ -1,0 +1,24 @@
+diff --git a/crates/rustui-gpui-component/src/button/button.rs b/crates/rustui-gpui-component/src/button/button.rs
+index 2e67be4..0a2d946 100644
+--- a/crates/rustui-gpui-component/src/button/button.rs
++++ b/crates/rustui-gpui-component/src/button/button.rs
+@@ -852,6 +852,7 @@ impl RenderOnce for Button {
+         .track_focus(&focus_handle)
+         .tab_index(self.tab_index)
+         .tab_stop(self.tab_stop)
++        .aria_disabled(disabled)
+         .child(content)
+         // Fade the whole button while loading, so every variant is dimmed by
+         // the same amount. Fading `bg`, `border` and `fg` one by one instead
+diff --git a/vendor/gpui-component-0.9.1/src/button/button.rs b/vendor/gpui-component-0.9.1/src/button/button.rs
+index 2e67be4..0a2d946 100644
+--- a/vendor/gpui-component-0.9.1/src/button/button.rs
++++ b/vendor/gpui-component-0.9.1/src/button/button.rs
+@@ -852,6 +852,7 @@ impl RenderOnce for Button {
+         .track_focus(&focus_handle)
+         .tab_index(self.tab_index)
+         .tab_stop(self.tab_stop)
++        .aria_disabled(disabled)
+         .child(content)
+         // Fade the whole button while loading, so every variant is dimmed by
+         // the same amount. Fading `bg`, `border` and `fg` one by one instead
