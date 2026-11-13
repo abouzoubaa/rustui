@@ -214,6 +214,9 @@ fn node_to_json(
     if node.is_read_only() {
         aria.insert("read_only".into(), json!(true));
     }
+    if node.is_disabled() {
+        aria.insert("disabled".into(), json!(true));
+    }
     if let Some(direction) = node.sort_direction() {
         aria.insert("sort_direction".into(), json!(format!("{direction:?}")));
     }

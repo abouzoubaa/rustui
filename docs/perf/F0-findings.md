@@ -1,9 +1,9 @@
 # F0 Findings
 
-## Button disabled accessibility
+## Button disabled accessibility — resolved
 
 - Test: `components::disabled_tests::button::accessibility`.
-- Cause observed: the RustUI Button's accessibility node does not receive the disabled state from the Kit Button render path. The test tree contains one Button node for `Target`, and that node has no `aria.disabled` field. Starting disabled before the window's first frame fails too, so the current evidence does not indicate a stale-state-only failure.
-- Evidence: with a fresh `CARGO_TARGET_DIR=$HOME/.cache/rustui-target-f0diag` and Rust 1.98.0, the test fails at `disabled_tests.rs:938`: `Button: disabled AX node: {"role":"Button","on_action":["Click"],"label":"Target"}`. The start-disabled diagnostic printed interactive nodes `a` Before Button, `b` Target Button, `c` R15 region Group, `d` After Button, and `e` Window; none exposed `aria.disabled`.
-- Patch tried: `gpui-component-button-disabled-a11y-v1-fast`, applied and reversed through `scripts/apply_f0_fast_candidate_patch.py`; adding `.aria_disabled(disabled)` to the Kit Button render chain did not change the tree. It was removed from the active candidate stack pending a correct node-level diagnosis.
-- Status: finding for F0-5 RustUI/Kit accessibility follow-up; assertion retained, no ignore added.
+- Cause: GPUI Fast's `window/a11y/debug.rs::node_to_json` omitted `node.is_disabled()`, so the test tree did not serialize disabled state even when the AccessKit node held it.
+- Evidence: before the serializer patch, the fresh-target tree printed the Target Button without a `disabled` field. After the patch, a fresh build printed the direct disabled node as `{"role":"Button","disabled":true}`; both the start-disabled diagnostic and `components::disabled_tests::button::accessibility` passed.
+- Patch: `gpui-fast-test-tree-disabled-v1-fast` adds the `node.is_disabled()` JSON field and updates the vendored checksum entry. It is applied by `scripts/apply_f0_fast_candidate_patch.py`; core stack exact-hash check passes.
+- The initial Kit Button `.aria_disabled` attempt was removed because it did not address the serializer omission. The original assertion remains unchanged; no test is ignored.
