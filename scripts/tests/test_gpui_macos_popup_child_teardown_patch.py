@@ -11,7 +11,7 @@ from scripts.apply_gpui_macos_popup_child_teardown_patch import apply_patch, ver
 
 
 ROOT = Path(__file__).resolve().parents[2]
-MANIFEST = ROOT / "patches/approved/gpui-macos-popup-child-teardown-v1.json"
+MANIFEST = ROOT / "patches/approved/kit09/gpui-macos-popup-child-teardown-v1-kit09.json"
 
 
 class PopupChildTeardownPatchTests(unittest.TestCase):

@@ -2,11 +2,9 @@
 
 use gpui::{
     AnyElement, InteractiveElement as _, IntoElement, ParentElement as _, Role, SharedString,
-    StatefulInteractiveElement as _, div,
+    StatefulInteractiveElement as _, Styled as _, div,
 };
-use gpui_component::breadcrumb::{
-    Breadcrumb as GpuiBreadcrumb, BreadcrumbItem as GpuiBreadcrumbItem,
-};
+use gpui_component::{Disableable as _, button::Button as GpuiButton};
 use rustui_core::Identity;
 
 use crate::view::{ControlAction, EmptyView, RenderContext, View};
@@ -116,16 +114,34 @@ impl View for BreadcrumbView {
             return EmptyView.into_element(context);
         }
 
-        let mut breadcrumb = GpuiBreadcrumb::new();
+        let identity = self.identity(|base| context.next_implicit_retained_identity(base));
+        let mut breadcrumb = div().flex().items_center();
         for (index, item) in self.items.iter().enumerate() {
-            let mut upstream = GpuiBreadcrumbItem::new(item.label.clone()).disabled(item.disabled);
             if let Some(action) = navigable_action(item, index, self.items.len()) {
-                upstream = upstream.on_click(context.bind_control_action(action.clone()));
+                let focus = crate::components::input::disabled_focus_scope(
+                    context,
+                    Identity::from(format!("breadcrumb-focus:{}:{index}", identity.as_str())),
+                    item.disabled,
+                );
+                let button = GpuiButton::new(format!("{}:{index}", identity.as_str()))
+                    .label(item.label.clone())
+                    .accessibility_label(item.label.clone())
+                    .disabled(item.disabled)
+                    .tab_stop(!item.disabled)
+                    .track_focus(&focus)
+                    .on_click(context.bind_control_action(action.clone()));
+                breadcrumb = breadcrumb.child(button);
+            } else {
+                breadcrumb = breadcrumb.child(
+                    div()
+                        .id(format!("{}:current:{index}", identity.as_str()))
+                        .role(Role::ListItem)
+                        .aria_label(item.label.clone())
+                        .child(item.label.clone()),
+                );
             }
-            breadcrumb = breadcrumb.child(upstream);
         }
 
-        let identity = self.identity(|base| context.next_implicit_retained_identity(base));
         let mut navigation = div().id(identity.to_string()).role(Role::Navigation);
         if let Some(label) = &self.accessibility_label {
             navigation = navigation.aria_label(label.clone());

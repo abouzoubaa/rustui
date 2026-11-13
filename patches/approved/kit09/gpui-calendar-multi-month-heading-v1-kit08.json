@@ -1,0 +1,18 @@
+{
+  "schema_version": 1,
+  "upstream": {
+    "repository": "https://github.com/longbridge/gpui-kit",
+    "tag": "v0.9.1",
+    "commit": "39ab849a93b5f15507b969164d49891db8d5b470",
+    "gpui_pre_version": "0.3.12",
+    "gpui_fast_version": "0.1.14"
+  },
+  "candidate": "gpui-calendar-multi-month-heading-v1-kit08.patch",
+  "patch_sha256": "3e980c7114a194b172e8e6e39b6b41ab9d6dfca21fd6f8df77c8b9dc5d9b696d",
+  "files": {
+    "vendor/gpui-base-0.9.1/src/calendar.rs": {
+      "pre_sha256": "17b393d5b86465908ccfc4db78e42905fafd3146f86f1599ba62bc401c1f7318",
+      "post_sha256": "109a9ae748c940fb5985f9a2c3bd74878eb43831a990d06e5f908c3e2b23d29d"
+    }
+  }
+}

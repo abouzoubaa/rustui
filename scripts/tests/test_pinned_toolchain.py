@@ -24,8 +24,7 @@ class PinnedToolchainTests(unittest.TestCase):
             with self.subTest(script=script.name):
                 content = script.read_text(encoding="utf-8")
                 self.assertIn("pinned-toolchain.sh", content)
-                self.assertNotIn("rustup run 1.97.1", content)
-                self.assertNotIn("rustup run 1.98.0", content)
+                self.assertNotRegex(content, r"rustup run [0-9]+\.[0-9]+\.[0-9]+")
                 if script.name == "perf-baseline.sh":
                     self.assertIn("pinned_cargo", content)
                     self.assertIn("pinned_rustc", content)

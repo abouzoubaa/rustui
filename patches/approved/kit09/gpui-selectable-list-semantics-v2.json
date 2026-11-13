@@ -1,0 +1,18 @@
+{
+  "schema_version": 1,
+  "upstream": {
+    "repository": "https://github.com/longbridge/gpui-kit",
+    "tag": "v0.9.1",
+    "commit": "39ab849a93b5f15507b969164d49891db8d5b470",
+    "gpui_pre_version": "0.3.12",
+    "gpui_fast_version": "0.1.14"
+  },
+  "candidate": "gpui-selectable-list-semantics-v2.patch",
+  "patch_sha256": "d5723ae69923d725fef688b27c55ee2bdae34f7edb5227f08c773546e23b7414",
+  "files": {
+    "vendor/gpui-component-0.9.1/src/list/list.rs": {
+      "pre_sha256": "00f2622ae21fa20755925dc9bd25ae051c12101f6947779870bab7c13589e468",
+      "post_sha256": "e1e9aa8f4e6ef164a326f56407d7a66f407906187a4148a0592a85a32f5812c7"
+    }
+  }
+}

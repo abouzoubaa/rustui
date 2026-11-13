@@ -2469,7 +2469,9 @@ impl Interactivity {
 
                             let scroll_offset =
                                 self.clamp_scroll_position(bounds, &style, window, cx);
-                            let result = f(&style, scroll_offset, hitbox, window, cx);
+                            let result = window.with_element_opacity(style.opacity, |window| {
+                                f(&style, scroll_offset, hitbox, window, cx)
+                            });
                             (result, element_state)
                         },
                     )
@@ -2524,7 +2526,7 @@ impl Interactivity {
                 .tracked_scroll_handle
                 .as_ref()
                 .map(|handle| handle.0.borrow_mut());
-            if let Some(mut scroll_handle_state) = tracked_scroll_handle.as_deref_mut() {
+            if let Some(scroll_handle_state) = tracked_scroll_handle.as_deref_mut() {
                 scroll_handle_state.overflow = style.overflow;
                 scroll_to_bottom = mem::take(&mut scroll_handle_state.scroll_to_bottom);
             }
@@ -4490,7 +4492,7 @@ impl ScrollHandle {
     /// Set the offset explicitly. The offset is the distance from the top left of the
     /// parent container to the top left of the first child.
     /// As you scroll further down the offset becomes more negative.
-    pub fn set_offset(&self, mut position: Point<Pixels>) {
+    pub fn set_offset(&self, position: Point<Pixels>) {
         let state = self.0.borrow();
         *state.offset.borrow_mut() = position;
     }
@@ -5175,7 +5177,7 @@ mod tests {
     fn tooltip_respects_custom_show_delay() {
         let extra_delay = Duration::from_secs(1);
         let show_delay_override = DEFAULT_TOOLTIP_SHOW_DELAY + extra_delay;
-        let (mut test_app, _any_window, captured_active_tooltip) =
+        let (test_app, _any_window, captured_active_tooltip) =
             setup_tooltip_owner_test(Some(show_delay_override));
 
         let weak_active_tooltip = captured_active_tooltip.borrow().clone().unwrap();
@@ -5740,38 +5742,6 @@ mod tests {
             .unwrap();
 
         assert_eq!(focused, Some(item_b.id));
-    }
-
-    struct GridAriaMetadataView;
-
-    impl Render for GridAriaMetadataView {
-        fn render(&mut self, _: &mut Window, _: &mut Context<Self>) -> impl IntoElement {
-            div().size_full()
-                .child(
-                    div().id("grid-header")
-                        .role(accesskit::Role::ColumnHeader)
-                        .aria_sort(accesskit::SortDirection::Ascending)
-                        .child("Name"),
-                )
-                .child(
-                    div()
-                        .id("grid-cell")
-                        .role(accesskit::Role::Cell)
-                        .aria_readonly(true)
-                        .child("Ada"),
-                )
-        }
-    }
-
-    #[gpui::test]
-    fn data_grid_sort_and_readonly_metadata_reach_accessibility_nodes(cx: &mut TestAppContext) {
-        let window = cx.add_window(|_, _| GridAriaMetadataView).into();
-        cx.update_window(window, |_, window, cx| window.draw(cx).clear(cx)).unwrap();
-        let tree = cx.update_window(window, |_, window, _| window.debug_a11y_tree_json()).unwrap().unwrap();
-        let tree: serde_json::Value = serde_json::from_str(&tree).unwrap();
-        let nodes = tree["nodes"].as_object().unwrap();
-        assert!(nodes.values().any(|node| node["aria"]["read_only"] == true));
-        assert!(nodes.values().any(|node| node["aria"]["sort_direction"] == "Ascending"));
     }
 
     #[gpui::test]

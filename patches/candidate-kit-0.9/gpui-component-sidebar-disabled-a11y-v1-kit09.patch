@@ -1,0 +1,10 @@
+diff --git a/vendor/gpui-component-0.9.1/src/sidebar/menu.rs b/vendor/gpui-component-0.9.1/src/sidebar/menu.rs
+--- a/vendor/gpui-component-0.9.1/src/sidebar/menu.rs
++++ b/vendor/gpui-component-0.9.1/src/sidebar/menu.rs
+@@ -300,5 +300,6 @@
+                     .aria_label(accessibility_label.unwrap_or_else(|| label_text.clone()))
+                     .aria_selected(is_active)
++                    .aria_disabled(is_disabled)
+                     .overflow_x_hidden()
+                     .flex_shrink_0()
+                     .p_2()

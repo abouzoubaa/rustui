@@ -1,4 +1,7 @@
-use gpui::{AnyElement, FontWeight, IntoElement, ParentElement, SharedString, Styled, div, px};
+use gpui::{
+    AnyElement, FontWeight, InteractiveElement as _, IntoElement, ParentElement, SharedString,
+    StatefulInteractiveElement as _, Styled, div, px,
+};
 use gpui_component::{
     Disableable as _,
     button::{Button as GpuiButton, ButtonVariant, ButtonVariants as _},
@@ -573,6 +576,12 @@ impl View for ButtonView {
         if let Some(help) = &self.help {
             button = button.tooltip(help.clone());
         }
+        let focus = crate::components::input::disabled_focus_scope(
+            context,
+            Identity::from(format!("button-focus:{}", identity.as_str())),
+            self.disabled,
+        );
+        button = button.track_focus(&focus);
         div()
             .self_start()
             .items_start()

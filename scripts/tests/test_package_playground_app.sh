@@ -99,7 +99,7 @@ for resource in assets/link-fixture.html assets/link-disabled-fixture.html \
     assets/playground-sample.png themes/macos27.json; do
     cmp "$repository_root/$resource" "$bundle/Contents/Resources/$resource"
 done
-cmp "$repository_root/vendor/gpui-kit-assets-0.8.1/LICENSE-LUCIDE" \
+cmp "$repository_root/vendor/gpui-kit-assets-0.9.1/LICENSE-LUCIDE" \
     "$bundle/Contents/Resources/licenses/icons/LICENSE-LUCIDE"
 cmp "$notice_source/notices/LICENSE" \
     "$bundle/Contents/Resources/licenses/release/dependency-notices/notices/LICENSE"

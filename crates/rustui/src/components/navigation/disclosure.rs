@@ -151,6 +151,11 @@ impl<V: View> View for DisclosureView<V> {
         let update = context.binding_updater(self.is_open.clone(), move |current| {
             toggle_open_if_enabled(current, disabled)
         });
+        let focus = crate::components::input::disabled_focus_scope(
+            context,
+            Identity::from(format!("disclosure-focus:{}", self.id.as_str())),
+            disabled,
+        );
         let trigger = styled_element(
             themed_button(
                 context,
@@ -169,7 +174,8 @@ impl<V: View> View for DisclosureView<V> {
             if !disabled {
                 update(cx);
             }
-        });
+        })
+        .track_focus(&focus);
         let mut disclosure = GpuiCollapsible::new().open(open).child(
             div()
                 .id(format!("{}:disclosure", self.id))

@@ -14,8 +14,8 @@ from pathlib import Path
 
 
 ROOT = Path(__file__).resolve().parents[1]
-PATCH = ROOT / "patches/approved/gpui-macos-popup-child-teardown-v1.patch"
-MANIFEST = ROOT / "patches/approved/gpui-macos-popup-child-teardown-v1.json"
+PATCH = ROOT / "patches/approved/kit09/gpui-macos-popup-child-teardown-v1-kit09.patch"
+MANIFEST = ROOT / "patches/approved/kit09/gpui-macos-popup-child-teardown-v1-kit09.json"
 
 
 class PatchError(ValueError):

@@ -205,7 +205,7 @@ copy_output "$repository_root/assets/link-disabled-fixture.html" "$resources/ass
 copy_output "$repository_root/assets/playground-sample.png" "$resources/assets/playground-sample.png"
 copy_output "$repository_root/themes/macos27.json" "$resources/themes/macos27.json"
 mkdir -p "$resources/licenses/icons"
-copy_output "$repository_root/vendor/gpui-kit-assets-0.8.1/LICENSE-LUCIDE" \
+copy_output "$repository_root/vendor/gpui-kit-assets-0.9.1/LICENSE-LUCIDE" \
     "$resources/licenses/icons/LICENSE-LUCIDE"
 if [ -n "$release_notices_source" ]; then
     if [ "$release_notices_required" = 1 ]; then

@@ -1,0 +1,18 @@
+{
+  "schema_version": 1,
+  "upstream": {
+    "repository": "https://github.com/longbridge/gpui-kit",
+    "tag": "v0.9.1",
+    "commit": "39ab849a93b5f15507b969164d49891db8d5b470",
+    "gpui_pre_version": "0.3.12",
+    "gpui_fast_version": "0.1.14"
+  },
+  "candidate": "gpui-macos-popup-child-teardown-v1-kit09.patch",
+  "patch_sha256": "6b36c8907bf9ca586fdb788f88727a83df89400918f82cdfc36fa1200b06a156",
+  "files": {
+    "vendor/gpui-pre-macos-0.3.12/src/window.rs": {
+      "pre_sha256": "0501793aa0fd0570f4a665a75ee8987e88806783e4e22106910778100fd393fa",
+      "post_sha256": "dd92343cc5d2424620de8eeee828c0ae9d9a98bd033309b79ad4224bf5a140ea"
+    }
+  }
+}

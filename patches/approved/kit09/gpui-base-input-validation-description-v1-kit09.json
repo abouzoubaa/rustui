@@ -1,0 +1,22 @@
+{
+  "schema_version": 1,
+  "upstream": {
+    "repository": "https://github.com/longbridge/gpui-kit",
+    "tag": "v0.9.1",
+    "commit": "39ab849a93b5f15507b969164d49891db8d5b470",
+    "gpui_pre_version": "0.3.12",
+    "gpui_fast_version": "0.1.14"
+  },
+  "candidate": "gpui-base-input-validation-description-v1-kit09.patch",
+  "patch_sha256": "849147ccde9a85af4f57839a0ca5fc26c7b2752c50808a0cc8fbf92b5258eaf0",
+  "files": {
+    "vendor/gpui-base-0.9.1/src/input/base/state.rs": {
+      "pre_sha256": "51f7e350c1d944b7715be20559d31e768a172c5f256ad6151a9f0173800111a9",
+      "post_sha256": "095e2687798d913fa1688fe2aa36be193cc17cf0dcece06ad2d4f2ad13d25748"
+    },
+    "vendor/gpui-component-0.9.1/src/input/input.rs": {
+      "pre_sha256": "62c4f0bf40b17547868a2b16c265200361a7a78a30fb15562c40a473df844135",
+      "post_sha256": "ae6be58dcebd4adaab19e0115ca2036fa6e80d629e289749b23f1877724079a2"
+    }
+  }
+}

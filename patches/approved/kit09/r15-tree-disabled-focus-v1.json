@@ -1,0 +1,18 @@
+{
+  "schema_version": 1,
+  "upstream": {
+    "repository": "https://github.com/longbridge/gpui-kit",
+    "tag": "v0.9.1",
+    "commit": "39ab849a93b5f15507b969164d49891db8d5b470",
+    "gpui_pre_version": "0.3.12",
+    "gpui_fast_version": "0.1.14"
+  },
+  "candidate": "r15-tree-disabled-focus-v1.patch",
+  "patch_sha256": "448d1a9f7de1a2b75c86641c33be6ecf17c2dc4d5f4c30ecf9947026933d3c1f",
+  "files": {
+    "vendor/gpui-base-0.9.1/src/tree.rs": {
+      "pre_sha256": "a28ca059f0b5b4e0e7c0faa009106d9c07cd90b898a48a9223b4a8af4ea1741f",
+      "post_sha256": "9b9a243ffc83d61106ccdeabb23fa4de52d873ee9f7b64d232afa2f3de81d45d"
+    }
+  }
+}

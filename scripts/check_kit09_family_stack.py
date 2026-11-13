@@ -52,6 +52,7 @@ A3_4B_ORDER = (
 A3_4C_ORDER = (
     "gpui-selectable-list-semantics-v2.patch",
     "gpui-component-tree-accessible-name-v1-kit08.patch",
+    "gpui-component-sidebar-disabled-a11y-v1-kit09.patch",
     "gpui-tree-aria-disabled-row-v1-kit08.patch",
     "gpui-tree-aria-level-v1-kit08.patch",
     "gpui-tree-disabled-keyboard-v2.patch",

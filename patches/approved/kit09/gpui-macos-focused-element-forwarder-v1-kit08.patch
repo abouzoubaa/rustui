@@ -1,0 +1,8 @@
+--- a/vendor/gpui-pre-macos-0.3.12/src/window.rs
++++ b/vendor/gpui-pre-macos-0.3.12/src/window.rs
+@@ -103,3 +103,5 @@
+         WINDOW_CLASS = build_window_class(c"GPUIWindow", class!(NSWindow));
++        accesskit_macos::add_focus_forwarder_to_window_class("GPUIWindow");
+         PANEL_CLASS = build_window_class(c"GPUIPanel", class!(NSPanel));
++        accesskit_macos::add_focus_forwarder_to_window_class("GPUIPanel");
+         VIEW_CLASS = {

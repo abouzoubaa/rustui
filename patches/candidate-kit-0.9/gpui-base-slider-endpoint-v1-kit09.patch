@@ -10,3 +10,14 @@
  
          if is_start {
              self.value.set_start(value);
+--- a/vendor/gpui-base-0.8.1/src/slider.rs
++++ b/vendor/gpui-base-0.8.1/src/slider.rs
+@@ -498,7 +498,7 @@
+     } else {
+         value.end()
+     };
+-    let next = snap_to_step(current + delta, min, max, step)
++    let next = snap_to_step(current + delta, 0., max, step)
+         .min(max)
+         .max(min);
+     if moves_start {
