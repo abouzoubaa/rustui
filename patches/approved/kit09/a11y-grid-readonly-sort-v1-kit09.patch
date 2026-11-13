@@ -1,0 +1,57 @@
+--- a/vendor/gpui-pre-0.3.12/src/elements/div.rs
++++ b/vendor/gpui-pre-0.3.12/src/elements/div.rs
+@@ -1390,6 +1390,18 @@
+         self
+     }
+ 
++    /// Expose whether this element is read-only to accessibility clients.
++    fn aria_readonly(mut self, readonly: bool) -> Self {
++        self.interactivity().aria.readonly = Some(readonly);
++        self
++    }
++
++    /// Expose a column header's sort direction.
++    fn aria_sort(mut self, direction: accesskit::SortDirection) -> Self {
++        self.interactivity().aria.sort = Some(direction);
++        self
++    }
++
+     /// Set the keyboard shortcut(s) that activate this element, announced by
+     /// assistive technology (maps to AccessKit's `keyboard_shortcut`).
+     ///
+@@ -2157,6 +2169,8 @@
+     pub(crate) author_id: Option<SharedString>,
+     pub(crate) label: Option<SharedString>,
+     pub(crate) description: Option<SharedString>,
++    pub(crate) readonly: Option<bool>,
++    pub(crate) sort: Option<accesskit::SortDirection>,
+     pub(crate) keyshortcuts: Option<SharedString>,
+     pub(crate) selected: Option<bool>,
+     pub(crate) expanded: Option<bool>,
+@@ -3598,6 +3612,10 @@
+         if let Some(description) = &self.aria.description {
+             node.set_description(description.to_string());
+         }
++        if let Some(readonly) = self.aria.readonly {
++            if readonly { node.set_read_only(); } else { node.clear_read_only(); }
++        }
++        if let Some(sort) = self.aria.sort { node.set_sort_direction(sort); }
+         if let Some(keyshortcuts) = &self.aria.keyshortcuts {
+             node.set_keyboard_shortcut(keyshortcuts.to_string());
+         }
+
+diff --git a/vendor/gpui-pre-0.3.12/src/window/a11y/debug.rs b/vendor/gpui-pre-0.3.12/src/window/a11y/debug.rs
+--- a/vendor/gpui-pre-0.3.12/src/window/a11y/debug.rs
++++ b/vendor/gpui-pre-0.3.12/src/window/a11y/debug.rs
+@@ -261,7 +261,11 @@ fn node_to_json(
+     }
+ 
+     // Boolean / enum states.
+     if node.is_disabled() { aria.insert("disabled".into(), json!(true)); }
++    if node.is_read_only() { aria.insert("read_only".into(), json!(true)); }
++    if let Some(v) = node.sort_direction() {
++        aria.insert("sort_direction".into(), json!(format!("{v:?}")));
++    }
+     if let Some(v) = node.is_selected() {
+         aria.insert("selected".into(), json!(v));
+     }

@@ -1,0 +1,234 @@
+diff --git a/vendor/gpui-pre-0.3.12/src/tab_stop.rs b/vendor/gpui-pre-0.3.12/src/tab_stop.rs
+index 9e529d8..92e01c0 100644
+--- a/vendor/gpui-pre-0.3.12/src/tab_stop.rs
++++ b/vendor/gpui-pre-0.3.12/src/tab_stop.rs
+@@ -108,6 +108,32 @@ impl TabStopMap {
+         self.order = SumTree::new(());
+     }
+ 
++    /// Find the next tab stop accepted by a predicate, preserving SumTree tab order.
++    /// `next` and `prev` remain the fast path when filtering is not needed.
++    pub(crate) fn matching_preserving_order(
++        &self,
++        focused_id: Option<FocusId>,
++        reverse: bool,
++        mut allowed: impl FnMut(&FocusHandle) -> bool,
++    ) -> Option<FocusHandle> {
++        let mut current = focused_id;
++        for _ in 0..=self.by_id.len() {
++            let candidate = if reverse {
++                self.prev(current.as_ref())
++            } else {
++                self.next(current.as_ref())
++            }?;
++            if allowed(&candidate) {
++                return Some(candidate);
++            }
++            if Some(candidate.id) == focused_id {
++                return None;
++            }
++            current = Some(candidate.id);
++        }
++        None
++    }
++
+     pub fn next(&self, focused_id: Option<&FocusId>) -> Option<FocusHandle> {
+         let Some(focused_id) = focused_id else {
+             let first = self.order.first()?;
+diff --git a/vendor/gpui-pre-0.3.12/src/window.rs b/vendor/gpui-pre-0.3.12/src/window.rs
+index 4e2e1a7..b4c8b64 100644
+--- a/vendor/gpui-pre-0.3.12/src/window.rs
++++ b/vendor/gpui-pre-0.3.12/src/window.rs
+@@ -1291,6 +1291,7 @@ pub struct Window {
+     pub(crate) activation_observers: SingleSubscriberSet<AnyObserver>,
+     pub(crate) focus: Option<FocusId>,
+     focus_enabled: bool,
++    inert_focus_scopes: Vec<WeakFocusHandle>,
+     /// Incremented every time focus moves. Used to invalidate a
+     /// pending keyboard activation state when focus changes.
+     pub(crate) focus_generation: u64,
+@@ -2415,6 +2416,7 @@ impl Window {
+             activation_observers: SingleSubscriberSet::new(),
+             focus: None,
+             focus_enabled: true,
++            inert_focus_scopes: Vec::new(),
+             focus_generation: 0,
+             pending_input: None,
+             pending_modifier: ModifierState::default(),
+@@ -2617,9 +2619,45 @@ impl Window {
+         })
+     }
+ 
++    /// Mark a rendered focus subtree inert for direct focus requests and tab traversal.
++    pub fn set_focus_scope_inert(&mut self, scope: &FocusHandle, inert: bool) {
++        self.inert_focus_scopes.retain(|weak| {
++            weak.upgrade()
++                .is_some_and(|existing| existing.id != scope.id)
++        });
++        if inert {
++            self.inert_focus_scopes.push(scope.downgrade());
++        }
++    }
++
++    fn has_rendered_inert_focus_scope(&self) -> bool {
++        self.inert_focus_scopes.iter().any(|scope| {
++            scope.upgrade().is_some_and(|scope| {
++                self.rendered_frame
++                    .dispatch_tree
++                    .focusable_node_id(scope.id)
++                    .is_some()
++            })
++        })
++    }
++
++    fn inert_request_allowed(&self, target: &FocusHandle) -> bool {
++        self.inert_focus_scopes.iter().all(|scope| {
++            scope.upgrade().is_none_or(|scope| {
++                !self
++                    .rendered_frame
++                    .dispatch_tree
++                    .focus_contains(scope.id, target.id)
++            })
++        })
++    }
++
+     /// Move focus to the element associated with the given [`FocusHandle`].
+     pub fn focus(&mut self, handle: &FocusHandle, cx: &mut App) {
+-        if !self.focus_enabled || self.focus == Some(handle.id) {
++        if !self.inert_request_allowed(handle)
++            || !self.focus_enabled
++            || self.focus == Some(handle.id)
++        {
+             return;
+         }
+ 
+@@ -2657,6 +2695,18 @@ impl Window {
+             return;
+         }
+ 
++        if self.has_rendered_inert_focus_scope() {
++            let handle = self.rendered_frame.tab_stops.matching_preserving_order(
++                self.focus,
++                false,
++                |handle| self.inert_request_allowed(handle),
++            );
++            if let Some(handle) = handle {
++                self.focus(&handle, cx);
++            }
++            return;
++        }
++
+         if let Some(handle) = self.rendered_frame.tab_stops.next(self.focus.as_ref()) {
+             self.focus(&handle, cx)
+         }
+@@ -2668,6 +2718,18 @@ impl Window {
+             return;
+         }
+ 
++        if self.has_rendered_inert_focus_scope() {
++            let handle = self.rendered_frame.tab_stops.matching_preserving_order(
++                self.focus,
++                true,
++                |handle| self.inert_request_allowed(handle),
++            );
++            if let Some(handle) = handle {
++                self.focus(&handle, cx);
++            }
++            return;
++        }
++
+         if let Some(handle) = self.rendered_frame.tab_stops.prev(self.focus.as_ref()) {
+             self.focus(&handle, cx)
+         }
+@@ -8172,6 +8234,91 @@ mod tests {
+         time::Duration,
+     };
+ 
++    #[gpui::test]
++    fn inert_scope_skips_tab_and_rejects_direct_focus(cx: &mut TestAppContext) {
++        struct InertScopeView {
++            before: FocusHandle,
++            scope: FocusHandle,
++            child: FocusHandle,
++            nested: FocusHandle,
++            after: FocusHandle,
++        }
++
++        impl Render for InertScopeView {
++            fn render(&mut self, _: &mut Window, _: &mut Context<Self>) -> impl IntoElement {
++                div()
++                    .child(div().track_focus(&self.before).tab_stop(true))
++                    .child(
++                        div().track_focus(&self.scope).child(
++                            div()
++                                .track_focus(&self.child)
++                                .tab_stop(true)
++                                .child(div().track_focus(&self.nested).tab_stop(true)),
++                        ),
++                    )
++                    .child(div().track_focus(&self.after).tab_stop(true))
++            }
++        }
++
++        let (before, scope, child, nested, after) = cx.update(|cx| {
++            (
++                cx.focus_handle().tab_stop(true),
++                cx.focus_handle(),
++                cx.focus_handle().tab_stop(true),
++                cx.focus_handle().tab_stop(true),
++                cx.focus_handle().tab_stop(true),
++            )
++        });
++        let window: AnyWindowHandle = cx
++            .add_window({
++                let (before, scope, child, nested, after) = (
++                    before.clone(),
++                    scope.clone(),
++                    child.clone(),
++                    nested.clone(),
++                    after.clone(),
++                );
++                move |_, _| InertScopeView {
++                    before,
++                    scope,
++                    child,
++                    nested,
++                    after,
++                }
++            })
++            .into();
++        cx.update_window(window, |_, window, cx| window.draw(cx).clear(cx))
++            .unwrap();
++
++        cx.update_window(window, |_, window, cx| {
++            window.focus(&before, cx);
++            window.focus_next(cx);
++            assert_eq!(window.focused(cx), Some(child.clone()));
++            window.focus(&after, cx);
++            window.focus_prev(cx);
++            assert_eq!(window.focused(cx), Some(nested.clone()));
++
++            window.set_focus_scope_inert(&scope, true);
++            window.focus(&before, cx);
++            window.focus_next(cx);
++            assert_eq!(window.focused(cx), Some(after.clone()));
++            window.focus_prev(cx);
++            assert_eq!(window.focused(cx), Some(before.clone()));
++
++            window.focus(&scope, cx);
++            assert_eq!(window.focused(cx), Some(before.clone()));
++            window.focus(&child, cx);
++            assert_eq!(window.focused(cx), Some(before.clone()));
++            window.focus(&nested, cx);
++            assert_eq!(window.focused(cx), Some(before.clone()));
++
++            window.set_focus_scope_inert(&scope, false);
++            window.focus_next(cx);
++            assert_eq!(window.focused(cx), Some(child.clone()));
++        })
++        .unwrap();
++    }
++
+     use crate::{
+         AnyWindowHandle, AppContext as _, BackGestureEvent, BackGesturePhase, Bounds, ContentMask,
+         Context, CursorStyle, DispatchPhase, DragMoveEvent, Empty, ExternalDragPayload,

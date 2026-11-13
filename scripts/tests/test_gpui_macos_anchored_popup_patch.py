@@ -345,11 +345,10 @@ fn nested_grabbing_popups_dismiss_leaf_before_parent() { panic!(); }
         self.assertEqual(source.read_bytes(), before)
 
     def test_approved_patch_manifest_binds_vendor_and_owned_images(self) -> None:
-        manifest = json.loads((PATCH.parent / "gpui-macos-anchored-popup-kit08-v1.json").read_text())
+        manifest = json.loads((PATCH.parent / "gpui-macos-anchored-popup-v1-kit09.json").read_text())
         self.assertEqual(manifest["candidate"], PATCH.name)
-        self.assertEqual(len(manifest["files"]), 12)
-        self.assertTrue(any(path.startswith("vendor/") for path in manifest["files"]))
-        self.assertTrue(any(path.startswith("crates/rustui-gpui-macos/") for path in manifest["files"]))
+        self.assertEqual(len(manifest["files"]), 6)
+        self.assertTrue(all(path.startswith("vendor/") for path in manifest["files"]))
 
     def test_approved_patch_is_present(self) -> None:
         self.assertTrue(PATCH.is_file())

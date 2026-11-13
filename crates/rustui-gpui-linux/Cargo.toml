@@ -12,7 +12,7 @@
 [package]
 edition = "2024"
 name = "gpui-pre-linux"
-version = "0.3.10"
+version = "0.3.12"
 build = false
 publish = true
 autolib = false
@@ -113,7 +113,7 @@ version = "0.4.1"
 optional = true
 
 [target.'cfg(any(target_os = "linux", target_os = "freebsd"))'.dependencies.collections]
-version = "=0.3.10"
+version = "=0.3.12"
 package = "gpui-pre-collections"
 
 [target.'cfg(any(target_os = "linux", target_os = "freebsd"))'.dependencies.filedescriptor]
@@ -124,24 +124,24 @@ optional = true
 version = "0.3.34"
 
 [target.'cfg(any(target_os = "linux", target_os = "freebsd"))'.dependencies.gpui]
-version = "=0.3.10"
+version = "=0.3.12"
 path = "../rustui-gpui"
 default-features = false
 package = "gpui-pre"
 
 [target.'cfg(any(target_os = "linux", target_os = "freebsd"))'.dependencies.gpui_util]
-version = "=0.3.10"
+version = "=0.3.12"
 package = "gpui-pre-util"
 
 [target.'cfg(any(target_os = "linux", target_os = "freebsd"))'.dependencies.gpui_wgpu]
-version = "=0.3.10"
+version = "=0.3.12"
 path = "../rustui-gpui-wgpu"
 features = ["font-kit"]
 optional = true
 package = "gpui-pre-wgpu"
 
 [target.'cfg(any(target_os = "linux", target_os = "freebsd"))'.dependencies.http_client]
-version = "=0.3.10"
+version = "=0.3.12"
 package = "gpui-pre-http-client"
 
 [target.'cfg(any(target_os = "linux", target_os = "freebsd"))'.dependencies.libc]
@@ -227,12 +227,12 @@ features = [
 optional = true
 
 [target.'cfg(any(target_os = "linux", target_os = "freebsd"))'.dependencies.wayland-protocols-plasma]
-version = "0.3.10"
+version = "0.3.12"
 features = ["client"]
 optional = true
 
 [target.'cfg(any(target_os = "linux", target_os = "freebsd"))'.dependencies.wayland-protocols-wlr]
-version = "0.3.10"
+version = "0.3.12"
 features = ["client"]
 optional = true
 

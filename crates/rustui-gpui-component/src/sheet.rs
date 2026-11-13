@@ -24,6 +24,7 @@ pub(crate) fn init(_: &mut App) {}
 
 /// The settings for sheets.
 #[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
+#[non_exhaustive]
 pub struct SheetSettings {
     /// The margin top for the sheet, default is [`TITLE_BAR_HEIGHT`].
     pub margin_top: Pixels,
@@ -219,6 +220,7 @@ impl RenderOnce for Sheet {
                             .small()
                             .ghost()
                             .icon(IconName::Close)
+                            .accessibility_label("Close")
                             .when_some(self.close_accessibility_label.clone(), |button, label| {
                                 button.accessibility_label(label)
                             })

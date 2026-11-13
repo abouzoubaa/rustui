@@ -1,16 +1,16 @@
 [package]
 name = "gpui-pre-platform"
-version = "0.3.10"
+version = "0.3.12"
 edition = { workspace = true }
 publish = true
 license = "Apache-2.0"
-description = "Zed's `gpui_platform` crate (gpui-pre snapshot of zed@08cbb88)"
+description = "Zed's `gpui_platform` crate (gpui-pre snapshot of zed@d2a4fb6)"
 repository = "https://github.com/zed-industries/zed"
 
 [package.metadata.gpui-pre]
 zed-crate = "gpui_platform"
 zed-version = "0.1.0"
-zed-rev = "08cbb88a152c3751a43e853425a70e9f631a5918"
+zed-rev = "d2a4fb6ded7c470be25d1541281da3882495b65b"
 
 [lib]
 path = "src/gpui_platform.rs"
@@ -53,7 +53,7 @@ gpui_ios = { workspace = true }
 gpui_windows = { workspace = true }
 gpui = { workspace = true, features = ["windows-manifest"] }
 
-[target.'cfg(any(target_os = "linux", target_os = "freebsd"))'.dependencies]
+[target.'cfg(all(any(target_os = "linux", target_os = "freebsd"), not(target_env = "ohos")))'.dependencies]
 gpui_linux = { workspace = true }
 
 [target.'cfg(target_os = "linux")'.dependencies]
@@ -65,6 +65,11 @@ console_error_panic_hook = { workspace = true }
 
 [lints]
 workspace = true
+
+[[bench]]
+name = "atlas_upload"
+harness = false
+required-features = ["bench-support"]
 
 [[bench]]
 name = "focus_cleanup"
@@ -79,5 +84,10 @@ required-features = ["bench-support"]
 
 [[bench]]
 name = "randomized_element_tree"
+harness = false
+required-features = ["bench-support"]
+
+[[bench]]
+name = "primitives"
 harness = false
 required-features = ["bench-support"]

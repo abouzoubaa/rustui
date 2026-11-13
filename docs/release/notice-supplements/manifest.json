@@ -96,6 +96,25 @@
     {
       "files": [
         {
+          "path": "block-0.1.6/LICENSE-MIT",
+          "sha256": "6d83b08ab378692b4ecccbeeb4083f3e713cbd1157571e8883c77f63951d5b5e",
+          "spdx": "MIT",
+          "url": "https://spdx.org/licenses/MIT.txt"
+        }
+      ],
+      "manifest_sha256": "deb73502c4f376f7c61232c4da1c59c0787198b73c9bd20fd1e969cc96bdac3a",
+      "name": "block",
+      "note": "Upstream ships no license file; standard SPDX text for the declared license.",
+      "source": null,
+      "upstream": {
+        "repository": "SSheldon/rust-block",
+        "revision": "47178790cfc9d4a8b092051d8b413b78bd31254a"
+      },
+      "version": "0.1.6"
+    },
+    {
+      "files": [
+        {
           "path": "texts/7f976f7e9cb2d87df7230606feb932c3f21ac0e664045a775b600046ff850c54.txt",
           "sha256": "7f976f7e9cb2d87df7230606feb932c3f21ac0e664045a775b600046ff850c54",
           "upstream_path": "LICENSE.md",
@@ -134,15 +153,6 @@
       "version": "0.3.1"
     },
     {
-      "name": "fluent-langneg",
-      "version": "0.13.1",
-      "source": "registry+https://github.com/rust-lang/crates.io-index",
-      "manifest_sha256": "30592b2881518521cd996a2a6e332ddf9d8d22f2def90df65ead10afa65e9ed8",
-      "upstream": {
-        "repository": "projectfluent/fluent-langneg-rs",
-        "revision": "7fdc590466ea63ca2367ac10fb1b881fe561f1a8",
-        "package_path": ""
-      },
       "files": [
         {
           "path": "texts/b40930bbcf80744c86c46a12bc9da056641d722716c378f5659b9e555ef833e1.txt",
@@ -156,7 +166,16 @@
           "upstream_path": "LICENSE-MIT",
           "url": "https://raw.githubusercontent.com/projectfluent/fluent-langneg-rs/7fdc590466ea63ca2367ac10fb1b881fe561f1a8/LICENSE-MIT"
         }
-      ]
+      ],
+      "manifest_sha256": "30592b2881518521cd996a2a6e332ddf9d8d22f2def90df65ead10afa65e9ed8",
+      "name": "fluent-langneg",
+      "source": "registry+https://github.com/rust-lang/crates.io-index",
+      "upstream": {
+        "package_path": "",
+        "repository": "projectfluent/fluent-langneg-rs",
+        "revision": "7fdc590466ea63ca2367ac10fb1b881fe561f1a8"
+      },
+      "version": "0.13.1"
     },
     {
       "files": [
@@ -178,15 +197,6 @@
       "version": "0.5.2"
     },
     {
-      "name": "intl_pluralrules",
-      "version": "7.0.2",
-      "source": "registry+https://github.com/rust-lang/crates.io-index",
-      "manifest_sha256": "595634ece6249e274c389db766170aa88f78df41e8887d333a7cac8dad6b0bed",
-      "upstream": {
-        "repository": "zbraniecki/pluralrules",
-        "revision": "d0715d5b7cca72e228d6e6c4de154bd30dfdd06a",
-        "package_path": "intl_pluralrules"
-      },
       "files": [
         {
           "path": "texts/62c7a1e35f56406896d7aa7ca52d0cc0d272ac022b5d2796e7d6905db8a3636a.txt",
@@ -200,7 +210,16 @@
           "upstream_path": "intl_pluralrules/LICENSE-MIT",
           "url": "https://raw.githubusercontent.com/zbraniecki/pluralrules/d0715d5b7cca72e228d6e6c4de154bd30dfdd06a/intl_pluralrules/LICENSE-MIT"
         }
-      ]
+      ],
+      "manifest_sha256": "595634ece6249e274c389db766170aa88f78df41e8887d333a7cac8dad6b0bed",
+      "name": "intl_pluralrules",
+      "source": "registry+https://github.com/rust-lang/crates.io-index",
+      "upstream": {
+        "package_path": "intl_pluralrules",
+        "repository": "zbraniecki/pluralrules",
+        "revision": "d0715d5b7cca72e228d6e6c4de154bd30dfdd06a"
+      },
+      "version": "7.0.2"
     },
     {
       "files": [
@@ -326,6 +345,50 @@
         "revision": "b456b143215a1942a617c4672776b68b9a30feee"
       },
       "version": "1.0.22"
+    },
+    {
+      "files": [
+        {
+          "path": "mac-0.1.1/LICENSE-MIT",
+          "sha256": "db90a7488244fd7d296c213b6d94ad99755af69eabc3199af7f26f01bd5bfd13",
+          "spdx": "MIT",
+          "url": "https://spdx.org/licenses/MIT.txt"
+        },
+        {
+          "path": "mac-0.1.1/LICENSE-Apache-2.0",
+          "sha256": "0b9eb1d87654bcd140699d66fb593c48a0fa796c4c1d0e3218e21b07f4bb387e",
+          "spdx": "Apache-2.0",
+          "url": "https://spdx.org/licenses/Apache-2.0.txt"
+        }
+      ],
+      "manifest_sha256": "6d465c5e5a4b3e197049e9fb7393b2f996c1c654e6ded700afce046fac2f7969",
+      "name": "mac",
+      "note": "Upstream ships no license file; standard SPDX text for the declared license.",
+      "source": "registry+https://github.com/rust-lang/crates.io-index",
+      "upstream": {
+        "repository": "reem/rust-mac",
+        "revision": "66afc663b68a65633ea165c742b5a9c6734581c2"
+      },
+      "version": "0.1.1"
+    },
+    {
+      "files": [
+        {
+          "path": "malloc_buf-0.0.6/LICENSE-MIT",
+          "sha256": "6d83b08ab378692b4ecccbeeb4083f3e713cbd1157571e8883c77f63951d5b5e",
+          "spdx": "MIT",
+          "url": "https://spdx.org/licenses/MIT.txt"
+        }
+      ],
+      "manifest_sha256": "d87624d9d117489bd49dbaeb70077a0721e00ac2a76eb371faec818a92da5661",
+      "name": "malloc_buf",
+      "note": "Upstream ships no license file; standard SPDX text for the declared license.",
+      "source": "registry+https://github.com/rust-lang/crates.io-index",
+      "upstream": {
+        "repository": "SSheldon/malloc_buf",
+        "revision": "a7811e5f4c6f9685dd57ad9bfe34e9bf6b0ba4f9"
+      },
+      "version": "0.0.6"
     },
     {
       "files": [
@@ -689,6 +752,25 @@
           "path": "texts/7f976f7e9cb2d87df7230606feb932c3f21ac0e664045a775b600046ff850c54.txt",
           "sha256": "7f976f7e9cb2d87df7230606feb932c3f21ac0e664045a775b600046ff850c54",
           "upstream_path": "LICENSE.md",
+          "url": "https://raw.githubusercontent.com/madsmtm/objc2/7b1abfd750a2cacaea71d6a56ecfb83cb7de560b/framework-crates/objc2-uniform-type-identifiers/LICENSE.md"
+        }
+      ],
+      "manifest_sha256": "e518dc711b168d7bd12d196827531e4276ffdf12c991e2428550e9b01fb761e8",
+      "name": "objc2-uniform-type-identifiers",
+      "source": "registry+https://github.com/rust-lang/crates.io-index",
+      "upstream": {
+        "package_path": "framework-crates/objc2-uniform-type-identifiers",
+        "repository": "madsmtm/objc2",
+        "revision": "7b1abfd750a2cacaea71d6a56ecfb83cb7de560b"
+      },
+      "version": "0.3.2"
+    },
+    {
+      "files": [
+        {
+          "path": "texts/7f976f7e9cb2d87df7230606feb932c3f21ac0e664045a775b600046ff850c54.txt",
+          "sha256": "7f976f7e9cb2d87df7230606feb932c3f21ac0e664045a775b600046ff850c54",
+          "upstream_path": "LICENSE.md",
           "url": "https://raw.githubusercontent.com/madsmtm/objc2/7b1abfd750a2cacaea71d6a56ecfb83cb7de560b/LICENSE.md"
         }
       ],
@@ -702,6 +784,31 @@
         "revision": "7b1abfd750a2cacaea71d6a56ecfb83cb7de560b"
       },
       "version": "0.3.2"
+    },
+    {
+      "files": [
+        {
+          "path": "pathfinder_geometry-0.5.1/LICENSE-MIT",
+          "sha256": "0621878e61f0d0fda054bcbe02df75192c28bde1ecc8289cbd86aeba2dd72720",
+          "upstream_path": "LICENSE-MIT",
+          "url": "https://raw.githubusercontent.com/servo/pathfinder/6c3c0466f451c5bd2007087728cd168798cd64e8/LICENSE-MIT"
+        },
+        {
+          "path": "pathfinder_geometry-0.5.1/LICENSE-APACHE",
+          "sha256": "a60eea817514531668d7e00765731449fe14d059d3249e0bc93b36de45f759f2",
+          "upstream_path": "LICENSE-APACHE",
+          "url": "https://raw.githubusercontent.com/servo/pathfinder/6c3c0466f451c5bd2007087728cd168798cd64e8/LICENSE-APACHE"
+        }
+      ],
+      "manifest_sha256": "141871f41ab4ac7af854e54f1f637fb168ffbc97fdb57c60608f11b8eb95f1d7",
+      "name": "pathfinder_geometry",
+      "note": "Published revision a5e98fac00f433fe2ff4b2135383d82491b8bfc5 is unreachable upstream; license files taken from the repository root at 6c3c0466f451c5bd2007087728cd168798cd64e8; declared license MIT/Apache-2.0.",
+      "source": "registry+https://github.com/rust-lang/crates.io-index",
+      "upstream": {
+        "repository": "servo/pathfinder",
+        "revision": "6c3c0466f451c5bd2007087728cd168798cd64e8"
+      },
+      "version": "0.5.1"
     },
     {
       "files": [
@@ -838,6 +945,25 @@
     {
       "files": [
         {
+          "path": "seahash-4.1.0/LICENSE-MIT",
+          "sha256": "ff63fa568ea4d79e65addfa20cf10726bc5f2e57a228b3564183a27821ce358d",
+          "spdx": "MIT",
+          "url": "https://spdx.org/licenses/MIT.txt"
+        }
+      ],
+      "manifest_sha256": "1d610f6d1bce065add6ec5f2fb764e97eeda505afbe26271acc5f3d73a8c410a",
+      "name": "seahash",
+      "note": "Upstream ships no license file; standard SPDX text for the declared license.",
+      "source": "registry+https://github.com/rust-lang/crates.io-index",
+      "upstream": {
+        "repository": "redox-os/seahash",
+        "revision": "94b632aeac099031c373599313d5b5f0acbbaec0"
+      },
+      "version": "4.1.0"
+    },
+    {
+      "files": [
+        {
           "path": "texts/7e98bed7f100747aaae7d82ab94fbe6b76fd6b84b09a3aaa413bff8196d0fbb1.txt",
           "sha256": "7e98bed7f100747aaae7d82ab94fbe6b76fd6b84b09a3aaa413bff8196d0fbb1",
           "upstream_path": "LICENSE",
@@ -876,22 +1002,21 @@
     {
       "files": [
         {
-          "path": "texts/7fa429541e55b1509909e058f2d21a37467e4958ec713b357f6e0cf9dc4ee352.txt",
-          "sha256": "7fa429541e55b1509909e058f2d21a37467e4958ec713b357f6e0cf9dc4ee352",
-          "upstream_path": "LICENSE-ZLIB",
-          "url": "https://raw.githubusercontent.com/etemesi254/zune-image/69502ce83fdfecdd0beefd677e2abb3781b29d98/LICENSE-ZLIB"
+          "path": "texts/f97daf1a0124413dccf399a4e6626b4b74acd05282f80b6d64ac82225650b77a.txt",
+          "sha256": "f97daf1a0124413dccf399a4e6626b4b74acd05282f80b6d64ac82225650b77a",
+          "upstream_path": "LICENSE",
+          "url": "https://raw.githubusercontent.com/DioxusLabs/taffy/eb6450694f33e2b7413e40677f230ff63f0fc194/LICENSE"
         }
       ],
-      "manifest_sha256": "f3da162dd3818fcdf23c9ce34930d66064106873a692d6994abd49b80e60ea66",
-      "name": "zune-inflate",
-      "note": "The exact source provides full Zlib text. Referenced Apache/MIT alternatives are absent; no alternative text is reconstructed.",
+      "manifest_sha256": "e9afa6bc7b121ffda29d8f25e5de28f68f1c2124bd1902a4b29ed43675b9f94d",
+      "name": "taffy",
       "source": "registry+https://github.com/rust-lang/crates.io-index",
       "upstream": {
-        "package_path": "zune-inflate",
-        "repository": "etemesi254/zune-image",
-        "revision": "69502ce83fdfecdd0beefd677e2abb3781b29d98"
+        "package_path": "",
+        "repository": "DioxusLabs/taffy",
+        "revision": "eb6450694f33e2b7413e40677f230ff63f0fc194"
       },
-      "version": "0.2.54"
+      "version": "0.15.0"
     },
     {
       "files": [
@@ -932,111 +1057,24 @@
       "version": "0.24.0"
     },
     {
-      "name": "block",
-      "version": "0.1.6",
-      "source": null,
-      "manifest_sha256": "deb73502c4f376f7c61232c4da1c59c0787198b73c9bd20fd1e969cc96bdac3a",
-      "upstream": {
-        "repository": "SSheldon/rust-block",
-        "revision": "47178790cfc9d4a8b092051d8b413b78bd31254a"
-      },
-      "note": "Upstream ships no license file; standard SPDX text for the declared license.",
       "files": [
         {
-          "path": "block-0.1.6/LICENSE-MIT",
-          "sha256": "6d83b08ab378692b4ecccbeeb4083f3e713cbd1157571e8883c77f63951d5b5e",
-          "url": "https://spdx.org/licenses/MIT.txt",
-          "spdx": "MIT"
+          "path": "texts/7fa429541e55b1509909e058f2d21a37467e4958ec713b357f6e0cf9dc4ee352.txt",
+          "sha256": "7fa429541e55b1509909e058f2d21a37467e4958ec713b357f6e0cf9dc4ee352",
+          "upstream_path": "LICENSE-ZLIB",
+          "url": "https://raw.githubusercontent.com/etemesi254/zune-image/69502ce83fdfecdd0beefd677e2abb3781b29d98/LICENSE-ZLIB"
         }
-      ]
-    },
-    {
-      "name": "mac",
-      "version": "0.1.1",
+      ],
+      "manifest_sha256": "f3da162dd3818fcdf23c9ce34930d66064106873a692d6994abd49b80e60ea66",
+      "name": "zune-inflate",
+      "note": "The exact source provides full Zlib text. Referenced Apache/MIT alternatives are absent; no alternative text is reconstructed.",
       "source": "registry+https://github.com/rust-lang/crates.io-index",
-      "manifest_sha256": "6d465c5e5a4b3e197049e9fb7393b2f996c1c654e6ded700afce046fac2f7969",
       "upstream": {
-        "repository": "reem/rust-mac",
-        "revision": "66afc663b68a65633ea165c742b5a9c6734581c2"
+        "package_path": "zune-inflate",
+        "repository": "etemesi254/zune-image",
+        "revision": "69502ce83fdfecdd0beefd677e2abb3781b29d98"
       },
-      "note": "Upstream ships no license file; standard SPDX text for the declared license.",
-      "files": [
-        {
-          "path": "mac-0.1.1/LICENSE-MIT",
-          "sha256": "db90a7488244fd7d296c213b6d94ad99755af69eabc3199af7f26f01bd5bfd13",
-          "url": "https://spdx.org/licenses/MIT.txt",
-          "spdx": "MIT"
-        },
-        {
-          "path": "mac-0.1.1/LICENSE-Apache-2.0",
-          "sha256": "0b9eb1d87654bcd140699d66fb593c48a0fa796c4c1d0e3218e21b07f4bb387e",
-          "url": "https://spdx.org/licenses/Apache-2.0.txt",
-          "spdx": "Apache-2.0"
-        }
-      ]
-    },
-    {
-      "name": "malloc_buf",
-      "version": "0.0.6",
-      "source": "registry+https://github.com/rust-lang/crates.io-index",
-      "manifest_sha256": "d87624d9d117489bd49dbaeb70077a0721e00ac2a76eb371faec818a92da5661",
-      "upstream": {
-        "repository": "SSheldon/malloc_buf",
-        "revision": "a7811e5f4c6f9685dd57ad9bfe34e9bf6b0ba4f9"
-      },
-      "note": "Upstream ships no license file; standard SPDX text for the declared license.",
-      "files": [
-        {
-          "path": "malloc_buf-0.0.6/LICENSE-MIT",
-          "sha256": "6d83b08ab378692b4ecccbeeb4083f3e713cbd1157571e8883c77f63951d5b5e",
-          "url": "https://spdx.org/licenses/MIT.txt",
-          "spdx": "MIT"
-        }
-      ]
-    },
-    {
-      "name": "seahash",
-      "version": "4.1.0",
-      "source": "registry+https://github.com/rust-lang/crates.io-index",
-      "manifest_sha256": "1d610f6d1bce065add6ec5f2fb764e97eeda505afbe26271acc5f3d73a8c410a",
-      "upstream": {
-        "repository": "redox-os/seahash",
-        "revision": "94b632aeac099031c373599313d5b5f0acbbaec0"
-      },
-      "note": "Upstream ships no license file; standard SPDX text for the declared license.",
-      "files": [
-        {
-          "path": "seahash-4.1.0/LICENSE-MIT",
-          "sha256": "ff63fa568ea4d79e65addfa20cf10726bc5f2e57a228b3564183a27821ce358d",
-          "url": "https://spdx.org/licenses/MIT.txt",
-          "spdx": "MIT"
-        }
-      ]
-    },
-    {
-      "name": "pathfinder_geometry",
-      "version": "0.5.1",
-      "source": "registry+https://github.com/rust-lang/crates.io-index",
-      "manifest_sha256": "141871f41ab4ac7af854e54f1f637fb168ffbc97fdb57c60608f11b8eb95f1d7",
-      "upstream": {
-        "repository": "servo/pathfinder",
-        "revision": "6c3c0466f451c5bd2007087728cd168798cd64e8"
-      },
-      "note": "Published revision a5e98fac00f433fe2ff4b2135383d82491b8bfc5 is unreachable upstream; license files taken from the repository root at 6c3c0466f451c5bd2007087728cd168798cd64e8; declared license MIT/Apache-2.0.",
-      "files": [
-        {
-          "path": "pathfinder_geometry-0.5.1/LICENSE-MIT",
-          "sha256": "0621878e61f0d0fda054bcbe02df75192c28bde1ecc8289cbd86aeba2dd72720",
-          "url": "https://raw.githubusercontent.com/servo/pathfinder/6c3c0466f451c5bd2007087728cd168798cd64e8/LICENSE-MIT",
-          "upstream_path": "LICENSE-MIT"
-        },
-        {
-          "path": "pathfinder_geometry-0.5.1/LICENSE-APACHE",
-          "sha256": "a60eea817514531668d7e00765731449fe14d059d3249e0bc93b36de45f759f2",
-          "url": "https://raw.githubusercontent.com/servo/pathfinder/6c3c0466f451c5bd2007087728cd168798cd64e8/LICENSE-APACHE",
-          "upstream_path": "LICENSE-APACHE"
-        }
-      ]
+      "version": "0.2.54"
     }
   ],
   "schema_version": 1

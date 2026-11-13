@@ -8,15 +8,21 @@ use crate::{Side, Size, kbd::Kbd};
 use gpui::{
     Action, Anchor, AnyElement, App, AppContext, Bounds, Context, DismissEvent, Edges, Entity,
     EventEmitter, FocusHandle, Focusable, InteractiveElement, IntoElement, KeyBinding,
-    ParentElement, Pixels, Render, Role, ScrollHandle, SharedString, StatefulInteractiveElement,
-    Styled, WeakEntity, Window, anchored, deferred, div, prelude::FluentBuilder, px, rems,
+    ParentElement, Pixels, Rems, Render, Role, ScrollHandle, SharedString,
+    StatefulInteractiveElement, Styled, WeakEntity, Window, anchored, deferred, div,
+    prelude::FluentBuilder, px, rems,
 };
 use gpui::{ClickEvent, Half, MouseDownEvent, OwnedMenuItem, Point, Subscription};
 use gpui_base::TestSupportExt as _;
 
+use std::collections::HashSet;
 use std::rc::Rc;
 
 const CONTEXT: &str = "PopupMenu";
+
+/// How many frames a newly opened scrollable menu waits for its items to be
+/// measured before it gives up scrolling to the checked item.
+const SCROLL_TO_CHECKED_FRAMES: u8 = 4;
 
 pub fn init(cx: &mut App) {
     cx.bind_keys([
@@ -279,6 +285,31 @@ impl PopupMenuItem {
     }
 }
 
+fn next_enabled_menu_item(
+    menu_items: &[PopupMenuItem],
+    current: Option<usize>,
+    forward: bool,
+) -> Option<usize> {
+    let enabled = menu_items
+        .iter()
+        .enumerate()
+        .filter(|(_, item)| item.is_clickable());
+    if forward {
+        enabled
+            .clone()
+            .find(|(index, _)| current.is_none_or(|current| *index > current))
+            .map(|(index, _)| index)
+            .or_else(|| enabled.map(|(index, _)| index).next())
+    } else {
+        enabled
+            .clone()
+            .filter(|(index, _)| current.is_none_or(|current| *index < current))
+            .last()
+            .map(|(index, _)| index)
+            .or_else(|| enabled.map(|(index, _)| index).last())
+    }
+}
+
 pub struct PopupMenu {
     pub(crate) focus_handle: FocusHandle,
     pub(crate) menu_items: Vec<PopupMenuItem>,
@@ -300,10 +331,16 @@ pub struct PopupMenu {
     bounds: Bounds<Pixels>,
     size: Size,
     check_side: Side,
+    /// Indexes of the items added as options that can be checked, so an
+    /// unchecked one reports its state rather than reading as a command.
+    checkable: HashSet<usize>,
 
     /// The parent menu of this menu, if this is a submenu
     parent_menu: Option<WeakEntity<Self>>,
     scrollable: bool,
+    /// Frames left to scroll the checked item into view on open. Zero once
+    /// done, so the user's scrolling is not overridden afterwards.
+    scroll_to_checked_frames: u8,
     external_link_icon: bool,
     scroll_handle: ScrollHandle,
     // This will update on render
@@ -344,8 +381,10 @@ impl PopupMenu {
             max_width: None,
             max_height: None,
             check_side: Side::Left,
+            checkable: HashSet::new(),
             bounds: Bounds::default(),
             scrollable: false,
+            scroll_to_checked_frames: SCROLL_TO_CHECKED_FRAMES,
             scroll_handle: ScrollHandle::default(),
             external_link_icon: true,
             size: Size::default(),
@@ -427,19 +466,21 @@ impl PopupMenu {
         }
     }
 
-    /// Set min width of the popup menu, default is 120px
+    /// Set min width of the popup menu, default is 8rem
     pub fn min_w(mut self, width: impl Into<Pixels>) -> Self {
         self.min_width = Some(width.into());
         self
     }
 
-    /// Set max width of the popup menu, default is 500px
+    /// Set max width of the popup menu, default is 31.25rem (500px at the
+    /// default 16px rem)
     pub fn max_w(mut self, width: impl Into<Pixels>) -> Self {
         self.max_width = Some(width.into());
         self
     }
 
-    /// Set max height of the popup menu, default is half of the window height
+    /// Set max height of the popup menu, default is half of the window height,
+    /// at most 28.125rem (450px at the default 16px rem)
     pub fn max_h(mut self, height: impl Into<Pixels>) -> Self {
         self.max_height = Some(height.into());
         self
@@ -581,6 +622,7 @@ impl PopupMenu {
         action: Box<dyn Action>,
         disabled: bool,
     ) -> Self {
+        self.checkable.insert(self.menu_items.len());
         self.add_menu_item(label, None, action, disabled, checked);
         self
     }
@@ -669,6 +711,7 @@ impl PopupMenu {
         F: Fn(&mut Window, &mut App) -> E + 'static,
         E: IntoElement,
     {
+        self.checkable.insert(self.menu_items.len());
         self.menu_items.push(
             PopupMenuItem::element(builder)
                 .action(action)
@@ -765,9 +808,9 @@ impl PopupMenu {
         cx.notify();
     }
 
-    /// Refresh live menu contents without changing the menu or focus identity.
-    /// Keep the selected enabled row, or advance to the next enabled row (wrapping).
-    /// With no enabled rows the selection becomes empty.
+    /// Rebuild menu items while preserving enabled selection when possible.
+    /// If the selected item became disabled, move to the next enabled item,
+    /// wrapping at the end; clear selection when no item can be activated.
     pub fn rebuild_preserving_selection(
         &mut self,
         window: &mut Window,
@@ -820,11 +863,13 @@ impl PopupMenu {
                     disabled,
                     ..
                 } => {
-                    self = self.menu_with_check_and_disabled(
-                        name,
-                        checked,
-                        action.boxed_clone(),
-                        disabled,
+                    // Every application menu action has a check state, so an
+                    // unchecked one is not known to be an option.
+                    self = self.item(
+                        PopupMenuItem::new(name)
+                            .action(action.boxed_clone())
+                            .disabled(disabled)
+                            .checked(checked),
                     )
                 }
                 OwnedMenuItem::Separator => {
@@ -902,6 +947,9 @@ impl PopupMenu {
         match self.selected_index {
             Some(index) => {
                 let item = self.menu_items.get(index);
+                if !item.is_some_and(PopupMenuItem::is_clickable) {
+                    return;
+                }
                 match item {
                     Some(PopupMenuItem::Item {
                         handler, action, ..
@@ -923,6 +971,11 @@ impl PopupMenu {
                             self.dispatch_confirm_action(action, window, cx);
                         }
                         self.dismiss(&Cancel, window, cx)
+                    }
+                    Some(PopupMenuItem::Submenu {
+                        disabled: false, ..
+                    }) => {
+                        self._select_submenu(window, cx);
                     }
                     _ => {}
                 }
@@ -959,22 +1012,54 @@ impl PopupMenu {
         }
     }
 
-    fn select_enabled(&mut self, forward: bool, cx: &mut Context<Self>) {
-        let current = self.selected_index;
-        let next = if forward {
-            self.clickable_menu_items()
-                .find(|(index, _)| current.is_none_or(|current| *index > current))
-                .map(|(index, _)| index)
-                .or_else(|| self.clickable_menu_items().next().map(|(index, _)| index))
-        } else {
-            self.clickable_menu_items()
-                .filter(|(index, _)| current.is_none_or(|current| *index < current))
-                .last()
-                .map(|(index, _)| index)
-                .or_else(|| self.clickable_menu_items().last().map(|(index, _)| index))
+    /// Scroll a scrollable menu once, as it opens, so its checked item is the
+    /// first one in view, the way a native picker opens on its current value.
+    ///
+    /// `ScrollHandle::scroll_to_top_of_item` is not used: it measures the item
+    /// against the container bounds recorded on the previous frame, which a
+    /// just-opened `anchored` menu does not have at its final position yet, so
+    /// it would land off by the distance the menu moved. The offset here is
+    /// the distance between the first item and the checked one, measured in
+    /// the same frame, so it does not depend on where the container is. Items
+    /// are measured on the first prepaint, so until then this asks for another
+    /// frame, up to `SCROLL_TO_CHECKED_FRAMES` times.
+    fn scroll_to_checked_item(&mut self, cx: &mut Context<Self>) {
+        if !self.scrollable || self.scroll_to_checked_frames == 0 {
+            return;
+        }
+
+        // Only a trailing separator is not rendered, so an item's index is
+        // also its index among the scroll container's children.
+        let checked_ix = self.menu_items.iter().position(|item| item.is_checked());
+        let Some(ix) = checked_ix.filter(|ix| *ix > 0) else {
+            self.scroll_to_checked_frames = 0;
+            return;
         };
+
+        match (
+            self.scroll_handle.bounds_for_item(0),
+            self.scroll_handle.bounds_for_item(ix),
+        ) {
+            (Some(first), Some(checked)) => {
+                self.scroll_to_checked_frames = 0;
+                let mut offset = self.scroll_handle.offset();
+                offset.y = first.top() - checked.top();
+                self.scroll_handle.set_offset(offset);
+            }
+            _ => {
+                self.scroll_to_checked_frames -= 1;
+                cx.notify();
+            }
+        }
+    }
+
+    fn select_enabled(&mut self, forward: bool, cx: &mut Context<Self>) {
+        let next = next_enabled_menu_item(&self.menu_items, self.selected_index, forward);
         if self.selected_index != next {
             self.selected_index = next;
+            if let Some(index) = next {
+                self.scroll_handle.scroll_to_item(index);
+            }
             cx.notify();
         }
     }
@@ -1035,7 +1120,13 @@ impl PopupMenu {
         if let Some(active_submenu) = self.active_submenu() {
             // Focus the submenu, so that can be handle the action.
             active_submenu.update(cx, |view, cx| {
-                view.set_selected_index(0, cx);
+                let first_clickable_ix = view.clickable_menu_items().next().map(|(ix, _)| ix);
+                if let Some(ix) = first_clickable_ix {
+                    view.set_selected_index(ix, cx);
+                } else {
+                    view.selected_index = None;
+                    cx.notify();
+                }
                 view.focus_handle.focus(window, cx);
             });
             cx.notify();
@@ -1213,19 +1304,28 @@ impl PopupMenu {
         Some(icon.xsmall())
     }
 
-    #[inline]
-    fn max_width(&self) -> Pixels {
-        self.max_width.unwrap_or(px(500.))
-    }
-
     /// Calculate the anchor corner and left offset for child submenu
-    fn update_submenu_menu_anchor(&mut self, window: &Window) {
+    fn update_submenu_menu_anchor(&mut self, window: &Window, cx: &App) {
         let bounds = self.bounds;
-        let max_width = self.max_width();
-        let (anchor, left) = if max_width + bounds.origin.x > window.bounds().size.width {
-            (Anchor::TopRight, -px(16.))
+        // Open the submenu on the left only when, placed at this menu's right
+        // edge, it would run past the window's. Its width is the one it was
+        // last drawn at, or this menu's own until it has been drawn.
+        let submenu_width = self
+            .selected_index
+            .and_then(|ix| match self.menu_items.get(ix) {
+                Some(PopupMenuItem::Submenu { menu, .. }) => Some(menu.read(cx).bounds.size.width),
+                _ => None,
+            })
+            .filter(|width| *width > Pixels::ZERO)
+            .unwrap_or(bounds.size.width);
+        let rem_size = window.rem_size();
+        let (anchor, left) = if bounds.right() + submenu_width > window.viewport_size().width {
+            (Anchor::TopRight, -rems(1.).to_pixels(rem_size))
         } else {
-            (Anchor::TopLeft, bounds.size.width - px(8.))
+            (
+                Anchor::TopLeft,
+                bounds.size.width - rems(0.5).to_pixels(rem_size),
+            )
         };
 
         let is_bottom_pos = bounds.origin.y + bounds.size.height > window.bounds().size.height;
@@ -1254,13 +1354,13 @@ impl PopupMenu {
 
         let selected = self.selected_index == Some(ix);
         const EDGE_PADDING: Pixels = px(4.);
-        const INNER_PADDING: Pixels = px(8.);
+        const INNER_PADDING: Rems = rems(0.5);
 
         let is_submenu = matches!(item, PopupMenuItem::Submenu { .. });
 
         let (item_height, radius) = match self.size {
-            Size::Small => (px(20.), options.radius.half()),
-            _ => (px(26.), options.radius),
+            Size::Small => (rems(1.25), options.radius.half()),
+            _ => (rems(1.625), options.radius),
         };
 
         let this = MenuItemElement::new(ix)
@@ -1298,7 +1398,10 @@ impl PopupMenu {
 
                 cx.notify();
             }))
-            .when_some(item.a11y_label(), |this, label| this.aria_label(label));
+            .when_some(item.a11y_label(), |this, label| this.aria_label(label))
+            .checked(
+                (item.is_checked() || self.checkable.contains(&ix)).then(|| item.is_checked()),
+            );
 
         match item {
             PopupMenuItem::Separator => this
@@ -1403,6 +1506,11 @@ impl PopupMenu {
                 menu,
                 disabled,
             } => this
+                .when(!disabled, |this| {
+                    this.on_click(cx.listener(move |this, event, window, cx| {
+                        this.on_click(ix, event, window, cx)
+                    }))
+                })
                 .selected(selected)
                 .disabled(*disabled)
                 .items_start()
@@ -1477,7 +1585,7 @@ struct RenderOptions {
 
 impl Render for PopupMenu {
     fn render(&mut self, window: &mut Window, cx: &mut Context<Self>) -> impl IntoElement {
-        self.update_submenu_menu_anchor(window);
+        self.update_submenu_menu_anchor(window, cx);
 
         // Submenus attached via the public `item()` + `PopupMenuItem::submenu()`
         // path (from contexts that only have the menu value, e.g. a table
@@ -1497,12 +1605,14 @@ impl Render for PopupMenu {
             }
         }
 
+        self.scroll_to_checked_item(cx);
+
         let view = cx.entity().clone();
         let items_count = self.menu_items.len();
 
         let max_height = self.max_height.unwrap_or_else(|| {
             let window_half_height = window.window_bounds().get_bounds().size.height * 0.5;
-            window_half_height.min(px(450.))
+            window_half_height.min(rems(28.125).to_pixels(window.rem_size()))
         });
 
         let has_left_icon = self
@@ -1510,7 +1620,6 @@ impl Render for PopupMenu {
             .iter()
             .any(|item| item.has_left_icon(self.check_side));
 
-        let max_width = self.max_width();
         let options = RenderOptions {
             has_left_icon,
             check_side: self.check_side,
@@ -1541,7 +1650,10 @@ impl Render for PopupMenu {
                     .gap_y_0p5()
                     .min_w(rems(8.))
                     .when_some(self.min_width, |this, min_width| this.min_w(min_width))
-                    .max_w(max_width)
+                    .map(|this| match self.max_width {
+                        Some(max_width) => this.max_w(max_width),
+                        None => this.max_w(rems(31.25)),
+                    })
                     .when(self.scrollable, |this| {
                         this.max_h(max_height)
                             .overflow_y_scroll()
@@ -1555,7 +1667,21 @@ impl Render for PopupMenu {
                             .filter(|(ix, item)| !(*ix + 1 == items_count && item.is_separator()))
                             .map(|(ix, item)| self.render_item(ix, item, options, window, cx)),
                     )
-                    .on_prepaint(move |bounds, _, cx| view.update(cx, |r, _| r.bounds = bounds)),
+                    .on_prepaint(move |bounds, _, cx| {
+                        view.update(cx, |menu, cx| {
+                            let width_changed = menu.bounds.size.width != bounds.size.width;
+                            menu.bounds = bounds;
+                            if width_changed {
+                                if let Some(parent) = menu
+                                    .parent_menu
+                                    .as_ref()
+                                    .and_then(|parent| parent.upgrade())
+                                {
+                                    parent.update(cx, |_, cx| cx.notify());
+                                }
+                            }
+                        });
+                    }),
             )
             .when(self.scrollable, |this| {
                 this.vertical_scrollbar(&self.scroll_handle)
@@ -1566,6 +1692,27 @@ impl Render for PopupMenu {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn selection_recovery_skips_disabled_items_and_wraps() {
+        let items = vec![
+            PopupMenuItem::new("First"),
+            PopupMenuItem::new("Disabled").disabled(true),
+            PopupMenuItem::new("Last"),
+        ];
+
+        assert_eq!(next_enabled_menu_item(&items, Some(1), true), Some(2));
+        assert_eq!(next_enabled_menu_item(&items, Some(2), true), Some(0));
+        assert_eq!(next_enabled_menu_item(&items, Some(1), false), Some(0));
+        assert_eq!(
+            next_enabled_menu_item(
+                &[PopupMenuItem::new("Only disabled").disabled(true)],
+                Some(0),
+                true,
+            ),
+            None,
+        );
+    }
 
     #[gpui::test]
     fn custom_menu_item_preserves_mouse_event(cx: &mut gpui::TestAppContext) {

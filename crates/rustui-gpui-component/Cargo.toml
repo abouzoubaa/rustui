@@ -12,7 +12,7 @@
 [package]
 edition = "2024"
 name = "gpui-component"
-version = "0.8.1"
+version = "0.9.1"
 build = "build.rs"
 publish = true
 autolib = false
@@ -100,24 +100,24 @@ version = "0.4.38"
 version = "2.1.0"
 
 [dependencies.gpui]
-version = "=0.3.10"
+version = "=0.3.12"
 path = "../rustui-gpui"
 package = "gpui-pre"
 
 [dependencies.gpui-base]
-version = "0.8.1"
+version = "0.9.1"
 path = "../rustui-gpui-base"
 package = "gpui-base"
 
 [dependencies.gpui-component-macros]
-version = "0.8.1"
+version = "0.9.1"
 
 [dependencies.gpui-kit-assets]
-version = "0.8.1"
+version = "0.9.1"
 path = "../rustui-gpui-kit-assets"
 
 [dependencies.gpui_macros]
-version = "=0.3.10"
+version = "=0.3.12"
 package = "gpui-pre-macros"
 
 [dependencies.instant]
@@ -185,7 +185,7 @@ features = ["unicode"]
 version = "1"
 
 [dependencies.sum-tree]
-version = "=0.3.10"
+version = "=0.3.12"
 package = "gpui-pre-sum-tree"
 
 [dependencies.tracing]
@@ -201,7 +201,7 @@ version = "0.2"
 version = "1.10"
 
 [dev-dependencies.gpui]
-version = "=0.3.10"
+version = "=0.3.12"
 features = ["test-support"]
 path = "../rustui-gpui"
 package = "gpui-pre"

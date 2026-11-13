@@ -12,7 +12,7 @@
 [package]
 edition = "2024"
 name = "gpui-pre-wgpu"
-version = "0.3.10"
+version = "0.3.12"
 build = false
 publish = true
 autolib = false
@@ -60,7 +60,7 @@ version = "1.0.86"
 version = "1"
 
 [dependencies.collections]
-version = "=0.3.10"
+version = "=0.3.12"
 package = "gpui-pre-collections"
 
 [dependencies.cosmic-text]
@@ -76,13 +76,13 @@ default-features = false
 package = "zed-font-kit"
 
 [dependencies.gpui]
-version = "=0.3.10"
+version = "=0.3.12"
 path = "../rustui-gpui"
 default-features = false
 package = "gpui-pre"
 
 [dependencies.gpui_util]
-version = "=0.3.10"
+version = "=0.3.12"
 package = "gpui-pre-util"
 
 [dependencies.image]

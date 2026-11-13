@@ -1,0 +1,18 @@
+{
+  "schema_version": 1,
+  "upstream": {
+    "repository": "https://github.com/longbridge/gpui-kit",
+    "tag": "v0.9.1",
+    "commit": "39ab849a93b5f15507b969164d49891db8d5b470",
+    "gpui_pre_version": "0.3.12",
+    "gpui_fast_version": "0.1.14"
+  },
+  "candidate": "gpui-component-select-rtl-alignment-v2-kit08.patch",
+  "patch_sha256": "3577af6ee95698d1616d1337eddcdfdce486c97d53c6b1b46e3e7dc527ecdb4f",
+  "files": {
+    "vendor/gpui-component-0.9.1/src/select.rs": {
+      "pre_sha256": "8d854a55b0a088820990bfd3cf75b12c0fa1ad98fbea8146bbce8794e54dd52b",
+      "post_sha256": "e3fb235d92ecae1414717321a87ce13328ad95a4f92fdf0cbe337641a50585bc"
+    }
+  }
+}

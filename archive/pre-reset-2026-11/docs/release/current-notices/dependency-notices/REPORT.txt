@@ -1,0 +1,4 @@
+Dependency notice collection
+This report is not a complete license or compatibility determination.
+Observed packages: 446; unresolved notice gaps: 0.
+See report.json for package IDs, sources, hashes and gaps.

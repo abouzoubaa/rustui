@@ -12,7 +12,7 @@
 [package]
 edition = "2024"
 name = "gpui-pre-windows"
-version = "0.3.10"
+version = "0.3.12"
 build = "build.rs"
 publish = true
 autolib = false
@@ -44,13 +44,13 @@ path = "src/gpui_windows.rs"
 doctest = false
 
 [dependencies.gpui]
-version = "=0.3.10"
+version = "=0.3.12"
 path = "../rustui-gpui"
 default-features = false
 package = "gpui-pre"
 
 [target.'cfg(target_os = "windows")'.dependencies.scheduler]
-version = "=0.3.10"
+version = "=0.3.12"
 package = "gpui-pre-scheduler"
 
 [target.'cfg(target_os = "windows")'.dependencies.smallvec]

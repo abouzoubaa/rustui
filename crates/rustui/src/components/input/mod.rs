@@ -402,3 +402,17 @@ pub(crate) fn leave_disabled_focus(
         }
     }
 }
+
+/// Tracks focus within composed controls whose GPUI button disappears from the
+/// tab order when disabled, so the owner can move focus before that happens.
+pub(crate) fn disabled_focus_scope(
+    context: &mut crate::view::RenderContext<'_>,
+    identity: rustui_core::Identity,
+    disabled: bool,
+) -> gpui::FocusHandle {
+    let (state, _) = context.retained_entity(identity, |_, cx| cx.focus_handle());
+    context.update_entity(&state, |focus, window, cx| {
+        leave_disabled_focus(disabled, focus, window, cx);
+        focus.clone()
+    })
+}
