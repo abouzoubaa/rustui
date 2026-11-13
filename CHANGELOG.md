@@ -1,6 +1,7 @@
 # Changelog
 
 ## Unreleased
+- Added F0 to evaluate GPUI Fast before Stage B; Stage F now depends on that decision.
 
 ## 0.4.0 — 2026-11-13
 - A3-7: completed Kit 0.9.1 acceptance gates and recorded redraw performance; Stage F follow-up tracks the forced-draw regression.
