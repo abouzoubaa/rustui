@@ -1,6 +1,7 @@
 # Changelog
 
 ## Unreleased
+- Added the GPUI Fast evaluation plan and measurable adoption gates.
 - Added F0 to evaluate GPUI Fast before Stage B; Stage F now depends on that decision.
 
 ## 0.4.0 — 2026-11-13
