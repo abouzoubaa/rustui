@@ -1,0 +1,28 @@
+--- a/crates/rustui-gpui-base/Cargo.toml
++++ b/crates/rustui-gpui-base/Cargo.toml
+@@ -35,8 +35,9 @@
+ repository = "https://github.com/longbridge/gpui-kit"
+ resolver = "2"
+ 
+ [features]
++gpui-fast = ["dep:gpui-fast"]
+ inspector = [
+     "gpui_macros/inspector",
+     "gpui/inspector",
+ ]
+@@ -81,8 +82,15 @@
+ [dependencies.gpui]
+ version = "=0.3.12"
+ path = "../rustui-gpui"
+ package = "gpui-pre"
++optional = true
++
++[dependencies.gpui-fast]
++version = "0.1.14"
++features = ["windows-manifest-provided-by-host"]
++optional = true
++package = "gpui-fast"
+ 
+ [dependencies.gpui_macros]
+ version = "=0.3.12"
+ package = "gpui-pre-macros"

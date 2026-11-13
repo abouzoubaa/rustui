@@ -1,0 +1,4 @@
+
+format_macro_matchers = true
+format_macro_bodies = true
+wrap_comments = true

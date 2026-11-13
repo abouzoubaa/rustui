@@ -1,0 +1,10 @@
+--- a/crates/rustui-gpui-base/Cargo.toml
++++ b/crates/rustui-gpui-base/Cargo.toml
+@@ -179,6 +179,7 @@
+ 
+ [dev-dependencies.gpui-fast-platform]
+ version = "0.1.14"
++path = "../../vendor/gpui-fast-platform-0.1.14"
+ features = [
+     "font-kit",
+     "x11",

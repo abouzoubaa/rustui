@@ -1,0 +1,17 @@
+{
+  "schema_version": 1,
+  "backend": "gpui-fast 0.1.14",
+  "patches": [
+    "gpui-bidi-wrapped-rows-v1-fast.json",
+    "gpui-tree-aria-disabled-v1-fast.json",
+    "gpui-fast-accessibility-parent-click-v1-fast.json",
+    "rustui-bidi-tab-layout-fast-v1.json",
+    "gpui-base-fast-platform-test-dep-v1.json",
+    "gpui-base-fast-test-support-v1.json",
+    "gpui-base-fast-test-support-path-v1.json",
+    "rustui-bidi-tab-layout-test-fast-v1.json",
+    "gpui-base-fast-feature-wiring-v1.json",
+    "t17-inert-focus-scope-v1-fast.json",
+    "t13-modal-focus-recovery-v1-fast.json"
+  ]
+}

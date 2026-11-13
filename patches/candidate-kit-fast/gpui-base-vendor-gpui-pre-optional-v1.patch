@@ -1,0 +1,12 @@
+--- a/vendor/gpui-base-0.9.1/Cargo.toml
++++ b/vendor/gpui-base-0.9.1/Cargo.toml
+@@ -96,8 +96,9 @@
+ 
+ [dependencies.gpui]
+ version = "=0.3.12"
+ package = "gpui-pre"
++optional = true
+ 
+ [dependencies.gpui-fast]
+ version = "0.1.14"
+ features = ["windows-manifest-provided-by-host"]

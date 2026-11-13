@@ -36,12 +36,14 @@ repository = "https://github.com/longbridge/gpui-kit"
 resolver = "2"
 
 [features]
+gpui-fast = ["dep:gpui-fast", "dep:gpui-fast-platform"]
 inspector = [
     "gpui_macros/inspector",
-    "gpui/inspector",
+    "gpui-fast?/inspector",
 ]
 test-support = [
-    "gpui/test-support",
+    "gpui-fast?/test-support",
+    "gpui-fast-platform?/test-support",
 ]
 
 [lib]
@@ -82,6 +84,19 @@ version = "0.3"
 version = "=0.3.12"
 path = "../rustui-gpui"
 package = "gpui-pre"
+optional = true
+
+[dependencies.gpui-fast]
+version = "0.1.14"
+features = ["windows-manifest-provided-by-host"]
+optional = true
+package = "gpui-fast"
+
+[dependencies.gpui-fast-platform]
+version = "0.1.14"
+path = "../../vendor/gpui-fast-platform-0.1.14"
+optional = true
+package = "gpui-fast-platform"
 
 [dependencies.gpui_macros]
 version = "=0.3.12"
@@ -151,22 +166,32 @@ version = "1.12.0"
 [dependencies.web-time]
 version = "1"
 
-[dev-dependencies.gpui]
-version = "=0.3.12"
-features = [
-    "test-support",
-]
-path = "../rustui-gpui"
-package = "gpui-pre"
+[dev-dependencies.criterion]
+version = "0.8"
 
-[dev-dependencies.gpui_platform]
-version = "=0.3.12"
-path = "../rustui-gpui-platform"
+[dev-dependencies.gpui-fast]
+version = "0.1.14"
+features = [
+    "windows-manifest-provided-by-host",
+    "test-support",
+    "bench-support",
+]
+package = "gpui-fast"
+
+[dev-dependencies.gpui-fast-platform]
+version = "0.1.14"
+path = "../../vendor/gpui-fast-platform-0.1.14"
 features = [
     "font-kit",
+    "x11",
+    "wayland",
     "runtime_shaders",
+    "bench-support",
 ]
-package = "gpui-pre-platform"
+package = "gpui-fast-platform"
+
+[dev-dependencies.indoc]
+version = "2"
 
 [target.'cfg(not(target_family = "wasm"))'.dependencies.smol]
 version = "2"

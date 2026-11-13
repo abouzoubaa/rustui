@@ -1,0 +1,10 @@
+--- a/vendor/gpui-kit-assets-0.9.1/Cargo.toml
++++ b/vendor/gpui-kit-assets-0.9.1/Cargo.toml
+@@ -65,6 +65,7 @@
+ [dependencies.gpui]
+ version = "=0.3.12"
+ package = "gpui-pre"
++optional = true
+ 
+ [dependencies.gpui-fast]
+ version = "0.1.14"

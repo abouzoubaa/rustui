@@ -1,0 +1,12 @@
+{
+  "schema_version": 1,
+  "upstream": {
+    "repository": "https://github.com/longbridge/gpui-kit",
+    "tag": "v0.9.1"
+  },
+  "patch": "patches/candidate-kit-fast/gpui-base-owned-gpui-pre-optional-v1.patch",
+  "patch_sha256": "5c08f8637fc5aa09a445f1841012ef5ec3462715f9849c7f6f302df96020ea2c",
+  "source": "crates/rustui-gpui-base/Cargo.toml",
+  "pre_sha256": "6f96eac5a95da27d5cb059f60597bb4bdc97b379753a6ae0ea65261b7ebde178",
+  "post_sha256": "7299fca7853540570ce8dcde3deaa76bf4112a2a61c1224dcf69ebccf1955e22"
+}

@@ -1,0 +1,212 @@
+name: CodSpeed Benchmarks
+
+on:
+  push:
+    branches:
+      - "main" # or "master"
+  pull_request:
+    # `ready_for_review` too, as a draft runs no walltime benchmarks until then.
+    types: [opened, synchronize, reopened, ready_for_review]
+  # `workflow_dispatch` allows CodSpeed to trigger backtest
+  # performance analysis in order to generate initial data.
+  workflow_dispatch:
+
+# A push to a pull request makes the report of the run still going for its previous push moot,
+# so that run is cancelled rather than left to use up runner minutes. Every run on main is kept:
+# each is the baseline of the pull requests based on it.
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.sha }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
+permissions:
+  contents: read
+  # Lets the CodSpeed action authenticate the upload with GitHub's OIDC token instead of a secret.
+  id-token: write
+
+jobs:
+  # Every bench target of `Cargo.toml` goes in exactly one of the two jobs that run them: CodSpeed
+  # puts the results of the two together into one report, and takes each benchmark's from one. They
+  # are jobs of their own, rather than the entries of a matrix, as only the walltime ones skip
+  # releases, which a job's `if` can't tell apart by its matrix entry. Both build every feature that
+  # the targets need between them, as their `required-features` in `Cargo.toml` say, though each job
+  # builds its own targets only.
+  #
+  # What runs on one thread, with no runtime: measured by simulating the CPU it runs on, which
+  # counts the same instructions and cache misses on every run, on any runner, so a GitHub-hosted
+  # one does.
+  simulation:
+    name: Run benchmarks (simulation)
+    runs-on: ubuntu-latest
+    steps:
+      - &checkout
+        uses: actions/checkout@v7
+      - &setup-rust
+        name: Setup rust toolchain, cache and cargo-codspeed binary
+        uses: moonrepo/setup-rust@v1
+        env:
+          # cargo-binstall looks the release of each binary up on GitHub's API, which limits
+          # requests without a token: a lookup that hit the limit once stalled a job for 8 minutes.
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          channel: stable
+          cache-target: release
+          # Only main saves the cache, which pull requests restore: the cache of a pull request
+          # could only be restored by the later runs of that pull request, and would count against
+          # the repository's limit, which could push main's out.
+          cache-base: main
+          # setup-rust's cache key leaves the architecture out: without this, the arm64 job would
+          # find the cache the x86_64 one saved under the same key, and never save its own.
+          cache-extra-identifier: ${{ runner.arch }}
+          # The major version of cargo-codspeed goes with that of codspeed-criterion-compat, which
+          # Cargo.lock pins: the two are bumped together.
+          bins: cargo-codspeed@6.0.0
+      - name: Build the benchmark targets
+        run: >-
+          cargo codspeed build -m simulation --features helper,broadcast,lock,mpmc,unblock
+          --bench broadcast --bench event --bench mpmc
+      - name: Run the benchmarks
+        uses: CodSpeedHQ/action@v5
+        with:
+          mode: simulation
+          run: cargo codspeed run -m simulation --bench broadcast --bench event --bench mpmc
+
+  # Whether the walltime benchmarks are worth the macro runner for this run: they are not for a
+  # change that touches nothing that they build or run. A job of its own, on a GitHub-hosted runner,
+  # so that a run that skips them waits for no macro runner first. The simulation runs whatever
+  # changes, as CodSpeed's check, which the branch protection of main requires, needs its upload.
+  changes:
+    name: Look for what the walltime benchmarks measure
+    runs-on: ubuntu-latest
+    outputs:
+      measured: ${{ steps.look.outputs.measured }}
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          # A pull request is checked out as its merge into the base branch, whose first parent is
+          # the base: what the two differ in is what the pull request changes.
+          fetch-depth: 2
+      - id: look
+        name: Look at what changed
+        env:
+          BEFORE: ${{ github.event.before }}
+          # What can't change what the benchmarks measure, nor how they run: documentation and
+          # images, the repository's settings, the other workflows, and the code of the tests and
+          # of the CI crates, which no bench target builds.
+          UNMEASURED: |-
+            \.md$
+            ^LICENSE$
+            ^data/
+            ^\.github/
+            ^\.githooks/
+            ^(tests|ci)/
+            ^release-plz\.toml$
+            ^\.(codespellrc|commitlintrc\.mjs|editorconfig|gitignore)$
+        run: |
+          case "$GITHUB_EVENT_NAME" in
+            pull_request) base=HEAD^1 ;;
+            push)
+              git fetch --quiet --depth=1 origin "$BEFORE"
+              base=$BEFORE
+              ;;
+            *)
+              echo measured=true >> "$GITHUB_OUTPUT"
+              exit 0
+              ;;
+          esac
+          changed=$(git diff --name-only "$base" HEAD)
+          # A file that matches none of the patterns of `UNMEASURED`, one to a line, is measured.
+          if grep -qvE -f <(printf '%s\n' "$UNMEASURED") <<< "$changed" ||
+            grep -qx '\.github/workflows/bench\.yml' <<< "$changed"; then
+            echo measured=true >> "$GITHUB_OUTPUT"
+          else
+            echo "::notice::Nothing that the walltime benchmarks measure changed: they don't run."
+            echo measured=false >> "$GITHUB_OUTPUT"
+          fi
+
+  # What waits on timers, sockets or other threads, or runs on a runtime, which waits on its reactor
+  # at every turn: in the kernel, which the simulation leaves out, so measured by the clock. On a
+  # bare-metal CodSpeed macro runner, given to this job alone, so that the numbers move with the
+  # code rather than with the load of whoever shares a hosted runner's host. Keep the job on this
+  # one label: two runs are only comparable when measured on the same machine.
+  #
+  # The benchmarks are built on a GitHub-hosted runner of the same architecture and the same
+  # release of Ubuntu as the macro runner, which costs nothing, and only run on the macro runner,
+  # so that the minutes of the macro runner go to running them rather than to building them. The
+  # build keeps the id `benchmarks`, which the walltime job had before, as setup-rust's cache key
+  # hashes the id: on the same architecture and release of Ubuntu, it goes on from the cache that
+  # the macro runner saved.
+  #
+  # They aren't worth the macro runner for a draft either, which is pushed to again and again: they
+  # run once it is marked as ready for review, and for each push after that. A release changes
+  # nothing that they measure either: its pull request, which release-plz opens from a branch of its
+  # own, only bumps versions and changelogs, and so does its merge, which `release.yml` tells apart
+  # by the release emoji of its commits, as this does. Wherever they don't run, CodSpeed takes the
+  # results of the walltime ids from the run that it compares this one with, and the job that runs
+  # them, which needs this one, is skipped with it.
+  benchmarks:
+    name: Build benchmarks (walltime)
+    needs: changes
+    runs-on: ubuntu-22.04-arm
+    if: >-
+      ${{ needs.changes.outputs.measured == 'true' && !github.event.pull_request.draft &&
+      !(github.event_name == 'pull_request' && startsWith(github.head_ref, 'release-plz-')) &&
+      !(github.event_name == 'push' && contains(join(github.event.commits.*.message), '🔖')) }}
+    timeout-minutes: 30
+    steps:
+      - *checkout
+      - *setup-rust
+      - name: Build the benchmark targets
+        run: >-
+          cargo codspeed build -m walltime --features helper,broadcast,lock,mpmc,unblock
+          --bench connection --bench contention --bench runtime --bench spawn --bench unblock
+      # cargo-codspeed goes along, as the macro runner would otherwise install it too. A tarball
+      # keeps the executable bits, which an artifact drops.
+      - name: Pack the benchmarks
+        run: tar -czf walltime.tar.gz target/codspeed/walltime -C ~/.cargo/bin cargo-codspeed
+      - uses: actions/upload-artifact@v4
+        with:
+          name: walltime-benchmarks
+          path: walltime.tar.gz
+          retention-days: 1
+  walltime:
+    name: Run benchmarks (walltime)
+    needs: benchmarks
+    runs-on: codspeed-macro-arm64-graviton-ubuntu-22-04
+    # The job takes a few minutes: one that takes longer than 15 is stuck, and would hold the macro
+    # runner until GitHub's own limit of 6 hours.
+    timeout-minutes: 15
+    steps:
+      # cargo-codspeed reads the workspace with `cargo metadata`, and the benchmarks name their
+      # sources by their paths in it.
+      - *checkout
+      # The cargo of the runner's image, 1.81, can't read a manifest of the 2024 edition. Nothing
+      # is built here, so the cache, which holds what the build of the benchmarks needs, is left
+      # out.
+      - name: Setup rust toolchain
+        uses: moonrepo/setup-rust@v1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          channel: stable
+          cache: false
+      - uses: actions/download-artifact@v4
+        with:
+          name: walltime-benchmarks
+      - name: Unpack the benchmarks
+        run: |
+          tar -xzf walltime.tar.gz
+          install -m 755 cargo-codspeed ~/.cargo/bin/
+      - name: Run the benchmarks
+        uses: CodSpeedHQ/action@v5
+        with:
+          mode: walltime
+          # Nothing is ever saved to the cache of CodSpeed's instruments on the macro runner.
+          cache-instruments: false
+          # criterion's warm-up of 3 s and measurement of 5 s for each id give way to 1 s and 2 s:
+          # the numbers spread far more from one run to the next, on the machines of the macro
+          # runner, than within a run, so the longer ones bought little but minutes. No plots are
+          # drawn, as nothing reads them.
+          run: >-
+            cargo codspeed run -m walltime
+            --bench connection --bench contention --bench runtime --bench spawn --bench unblock --
+            --warm-up-time 1 --measurement-time 2 --noplot

@@ -1,0 +1,12 @@
+{
+  "schema_version": 1,
+  "name": "rustui-bidi-tab-layout-test-fast-v1",
+  "patch": "rustui-bidi-tab-layout-test-fast-v1.patch",
+  "patch_sha256": "d86e7a917c8e67eda6bcc4814e6cbf729ccd71374e93b685b321a9a3b7970904",
+  "files": {
+    "crates/rustui-gpui-base/src/input/base/tab_stops.rs": {
+      "pre_sha256": "66faef4821f16415cfc114a569f9d040bb85291020a2e6c96ff6a746421729bd",
+      "post_sha256": "588fcf73e4b4aaf82a830e46ea65647d7d303a4af94555ae454aefc17b251f59"
+    }
+  }
+}
