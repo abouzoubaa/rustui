@@ -2918,6 +2918,11 @@ impl Window {
         self.platform_window.window_bounds()
     }
 
+    /// Repositions this window as a native anchored popup.
+    pub fn set_anchored_popup_anchor_rect(&mut self, anchor_rect: Bounds<Pixels>) -> bool {
+        self.platform_window.set_anchored_popup_anchor_rect(anchor_rect)
+    }
+
     /// Return the `WindowBounds` excluding insets (Wayland and X11)
     pub fn inner_window_bounds(&self) -> WindowBounds {
         self.platform_window.inner_window_bounds()
@@ -3241,6 +3246,17 @@ impl Window {
     /// doesn't report it.
     pub fn refresh_interval(&self, cx: &App) -> Option<Duration> {
         cx.display_refresh_interval(self.display_id?)
+    }
+
+    /// Registers a callback invoked when the window bounds change.
+    pub fn observe_window_bounds(
+        &self,
+        mut callback: impl FnMut(&mut Window, &mut App) + 'static,
+    ) -> Subscription {
+        self.bounds_observers.insert(Box::new(move |window, cx| {
+            callback(window, cx);
+            true
+        }))
     }
 
     /// Registers a callback invoked when the window moves to another display

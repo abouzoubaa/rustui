@@ -211,6 +211,12 @@ fn node_to_json(
     // Accessibility semantics for this node, grouped together.
     let mut aria = serde_json::Map::new();
     aria.insert("role".into(), json!(format!("{:?}", node.role())));
+    if node.is_read_only() {
+        aria.insert("read_only".into(), json!(true));
+    }
+    if let Some(direction) = node.sort_direction() {
+        aria.insert("sort_direction".into(), json!(format!("{direction:?}")));
+    }
 
     // Which action types the node supports. AccessKit keeps these in a private
     // bitset with no getter or iterator, so we probe each variant. `Action::n`

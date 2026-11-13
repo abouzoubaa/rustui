@@ -21,6 +21,8 @@ static NO_ARIA: AriaProperties = AriaProperties {
     author_id: None,
     label: None,
     description: None,
+    readonly: None,
+    sort: None,
     keyshortcuts: None,
     selected: None,
     expanded: None,

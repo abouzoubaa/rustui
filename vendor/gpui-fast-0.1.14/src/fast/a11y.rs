@@ -530,11 +530,11 @@ pub(crate) fn layer_needs_repaint(window: &Window, stretch: Option<&A11yStretch>
     window.a11y.is_active() && stretch.is_none_or(|stretch| stretch.placed_synthetic)
 }
 
-#[cfg(test)]
+#[cfg(any(test, feature = "test-support"))]
 impl Window {
     /// Makes the window build its accessibility tree from the next frame on
     /// as though assistive technology had asked for it, or stop.
-    pub(crate) fn set_a11y_active_for_tests(&mut self, active: bool) {
+    pub fn set_a11y_active_for_tests(&mut self, active: bool) {
         crate::fast::a11y::set_active_flag(&self.a11y, active);
         self.refresh();
     }

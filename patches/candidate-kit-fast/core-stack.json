@@ -12,6 +12,10 @@
     "rustui-bidi-tab-layout-test-fast-v1.json",
     "gpui-base-fast-feature-wiring-v1.json",
     "t17-inert-focus-scope-v1-fast.json",
-    "t13-modal-focus-recovery-v1-fast.json"
+    "t13-modal-focus-recovery-v1-fast.json",
+    "a11y-grid-readonly-sort-v1-fast.json",
+    "gpui-macos-anchored-popup-v1-fast.json",
+    "gpui-macos-popup-child-teardown-v1-fast.json",
+    "gpui-test-support-a11y-activation-v1-fast.json"
   ]
 }

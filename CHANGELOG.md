@@ -1,6 +1,7 @@
 # Changelog
 
 ## Unreleased
+- F0-3: wired the GPUI Fast 0.1.14 candidate as the sole GPUI core and rebased core, grid accessibility, and native popup patches into the candidate stack.
 - F0-2: moved inactive Kit 0.8 patch history out of the active approval directory.
 - F0-1: added current-base long-list, editor-typing, idle-draw, and 1,000-row performance baselines.
 - Added the GPUI Fast evaluation plan and measurable adoption gates.

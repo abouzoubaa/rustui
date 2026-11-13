@@ -1270,6 +1270,9 @@ pub trait PlatformWindow: HasWindowHandle + HasDisplayHandle {
         false
     }
     fn resize(&mut self, size: Size<Pixels>);
+    fn set_anchored_popup_anchor_rect(&mut self, _anchor_rect: Bounds<Pixels>) -> bool {
+        false
+    }
     fn scale_factor(&self) -> f32;
     fn appearance(&self) -> WindowAppearance;
     fn display(&self) -> Option<Rc<dyn PlatformDisplay>>;

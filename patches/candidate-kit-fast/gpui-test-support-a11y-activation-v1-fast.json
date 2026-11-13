@@ -1,0 +1,16 @@
+{
+  "schema_version": 1,
+  "name": "gpui-test-support-a11y-activation-v1-fast",
+  "patch": "gpui-test-support-a11y-activation-v1-fast.patch",
+  "patch_sha256": "1cc1c69bf8f20c8abdd2d9ed11a6659f5423dcff8c41f7ae8c4b9b8bb21fc630",
+  "files": {
+    "vendor/gpui-fast-0.1.14/.cargo-checksum.json": {
+      "pre_sha256": "3b0b99c86da757a78f6af10a22305c7ab1381b39b464c18be3d1eed8f435953f",
+      "post_sha256": "e8643fedc7e0169b1e2f6fe6cb087560c0ba7abb7804e47599a35cea50d18d32"
+    },
+    "vendor/gpui-fast-0.1.14/src/fast/a11y.rs": {
+      "pre_sha256": "5c5f4e8a00d92e653f0980cadc133d92afba4377de8fe905d7e7134965206df0",
+      "post_sha256": "9b412faf0ad10e257c27e3da672ada1e92391249c7f2e79b6159f6843758c489"
+    }
+  }
+}
