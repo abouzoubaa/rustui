@@ -1,5 +1,9 @@
 # Approved upstream patches
 
+## Active patch set
+
+The active GPUI Kit stack is `approved/kit09/`. The active Kit 0.9 stack also applies the shared preexisting patches `approved/block-0.1.6-stack-symbol-v1.patch` and `approved/cosmic-text-initial-bidi-span-v1.patch`, with their manifests and apply scripts. Inactive Kit 0.8 patch history is under `retired/kit08-history/`.
+
 ## Web combo-box Enter routing
 
 `approved/gpui-web-combobox-enter-v1.patch` layers on the Web semantic adapter. The semantic mirror represents combo boxes with HTML buttons; the bridge now forwards Enter on those buttons to GPUI instead of treating it as native button activation. Other button and Space handling is unchanged. `scripts/apply_gpui_web_combobox_enter_patch.py` verifies, applies, or reverses the exact image, and `scripts/verify_gpui_web_patch_stack.py` validates the composed stack. One bounded browser interaction and source checks passed; broader browser acceptance remains open.
