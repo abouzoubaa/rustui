@@ -43,3 +43,7 @@ Each value is the approximate number of 1 ms samples attributed to that leaf fun
 | 10 | `taffy::compute::block::compute_block_layout` | 16 | `taffy::compute::flexbox::compute_preliminary` | 20 |
 
 Regression to win back in Stage F (GPUI Fast).
+
+## Final A3-7 gate run
+
+The final `scripts/perf-baseline.sh` run completed three release-mode runs on the A3 integration tip with a 0.67% forced-draw spread. The 1,000-row update-only median was **4.4850 ms**; update plus forced draw was **8.6402 ms**. Compared with the recorded A2 values (4.5905 ms and 8.24 ms), update-only is 0.1055 ms faster and forced draw is 0.4002 ms slower. This passes the owner-approved 9.0 ms A3/0.4.0 ceiling; it misses the older 8.0 ms target.

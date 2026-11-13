@@ -1,6 +1,7 @@
 # Changelog
 
 ## Unreleased
+- A3-7: completed Kit 0.9.1 acceptance gates and recorded redraw performance; Stage F follow-up tracks the forced-draw regression.
 - A3-6: verified owned mirrors, dependency notices, CI cache inputs, and local plus fresh Git consumers for Kit 0.9.1.
 - A3: profiled Kit 0.9 redraw behavior; accepted the measured result under the 9.0 ms 0.4.0 limit and recorded the regression for Stage F.
 - CI: retired the activated Kit 0.8 fixture gates and free runner disk after Kit 0.9 verification.
