@@ -1,6 +1,7 @@
 # Changelog
 
 ## Unreleased
+- F0-1: added current-base long-list, editor-typing, idle-draw, and 1,000-row performance baselines.
 - Added the GPUI Fast evaluation plan and measurable adoption gates.
 - Added F0 to evaluate GPUI Fast before Stage B; Stage F now depends on that decision.
 

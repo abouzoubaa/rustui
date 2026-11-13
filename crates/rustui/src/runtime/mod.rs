@@ -11,6 +11,9 @@ pub(crate) mod scoped_element;
 pub mod tasks;
 pub mod window;
 
+#[cfg(test)]
+mod f0_benchmarks;
+
 pub use application::{RustUI, component_assets, with_embedded_asset};
 pub use component_host::ComponentHost;
 pub use component_host::ComponentHost as ViewHost;
