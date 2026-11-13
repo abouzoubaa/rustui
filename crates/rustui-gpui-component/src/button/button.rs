@@ -852,7 +852,6 @@ impl RenderOnce for Button {
         .track_focus(&focus_handle)
         .tab_index(self.tab_index)
         .tab_stop(self.tab_stop)
-        .aria_disabled(disabled)
         .child(content)
         // Fade the whole button while loading, so every variant is dimmed by
         // the same amount. Fading `bg`, `border` and `fg` one by one instead
