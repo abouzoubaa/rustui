@@ -179,6 +179,14 @@ fn node_to_json(
 
     let mut map = serde_json::Map::new();
     map.insert("accesskit_id".into(), json!(id.0.to_string()));
+    if !node.labelled_by().is_empty() {
+        map.insert("labelled_by".into(), json!(node.labelled_by().iter()
+            .map(|id| id.0.to_string()).collect::<Vec<_>>()));
+    }
+    if let Some(bounds) = node.bounds() {
+        map.insert("bounds".into(), json!({"x": bounds.x0, "y": bounds.y0,
+            "width": bounds.x1 - bounds.x0, "height": bounds.y1 - bounds.y0}));
+    }
 
     let children: Vec<String> = node
         .children()

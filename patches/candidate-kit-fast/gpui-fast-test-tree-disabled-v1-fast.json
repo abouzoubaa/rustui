@@ -2,15 +2,15 @@
   "schema_version": 1,
   "name": "gpui-fast-test-tree-disabled-v1-fast",
   "patch": "gpui-fast-test-tree-disabled-v1-fast.patch",
-  "patch_sha256": "486e9d9fa91714c137ca47c89bbbc89f0afec27f42fa433bd99aede9daa19148",
+  "patch_sha256": "7740b26d5db9a58ed36ed5267b8083d3d13516cd46e5b39fb1c969d97481cc5e",
   "files": {
     "vendor/gpui-fast-0.1.14/src/window/a11y/debug.rs": {
       "pre_sha256": "06359b21f541e907a92966358a74a5b35a3ec33f0e4f39e5bc06307a6f0a6e30",
-      "post_sha256": "67beb085d83c03e4a30a117b657889d4f36effc35034cd45c221c5108ea684ae"
+      "post_sha256": "cf965bda2134e51a6ddd11197e39695d8b100da984e7bf0577d62fb5dff19ab2"
     },
     "vendor/gpui-fast-0.1.14/.cargo-checksum.json": {
       "pre_sha256": "23688845274cce217785ed6a4752518d943ad3a2f9f4f5983cc2434f7594549b",
-      "post_sha256": "ea2bebc1ae05f0ae6b4e878a825c8ef4b55ca40b8d9cef54cba00b2e3ad65b24"
+      "post_sha256": "37d76f645594443311c7c2f0bcc43672e3a6982e5a07f2310ffeb34138958a0c"
     }
   }
 }
