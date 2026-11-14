@@ -4,6 +4,8 @@
 from __future__ import annotations
 
 import os
+import hashlib
+import json
 import sys
 from pathlib import Path
 
@@ -32,6 +34,15 @@ OWNED_ONLY_IGNORED_PATHS = {
     # macOS crate and is not the published/vendor snapshot's source lock.
     "crates/rustui-gpui-macos": {"Cargo.lock"},
 }
+OWNED_SOURCE_OVERLAYS = {
+    # GPUI Fast's input API has no WrappedLineLayout.bidi_clusters. The
+    # candidate patch therefore has one intentional owned Base source delta;
+    # bind the exception to the final postimage in the candidate stack.
+    "crates/rustui-gpui-base": {
+        "src/input/base/tab_stops.rs":
+            "patches/candidate-kit-fast/rustui-bidi-tab-layout-test-fast-v1.json"
+    }
+}
 
 
 def snapshot(
@@ -58,6 +69,7 @@ def compare_trees(
     owned: Path,
     vendor: Path,
     ignored_relative_paths: set[str] | None = None,
+    expected_owned_overlays: dict[str, str] | None = None,
 ) -> tuple[list[str], int]:
     """Return mismatched relative paths and the number of equal files checked."""
     if not owned.is_dir():
@@ -72,6 +84,18 @@ def compare_trees(
         for path in sorted(owned_snapshot.keys() | vendor_snapshot.keys())
         if owned_snapshot.get(path) != vendor_snapshot.get(path)
     ]
+    for relative, expected_hash in (expected_owned_overlays or {}).items():
+        owned_entry = owned_snapshot.get(relative)
+        vendor_entry = vendor_snapshot.get(relative)
+        if (
+            relative in mismatches
+            and owned_entry is not None
+            and owned_entry[0] == "file"
+            and vendor_entry is not None
+            and vendor_entry[0] == "file"
+            and hashlib.sha256(owned_entry[1]).hexdigest() == expected_hash
+        ):
+            mismatches.remove(relative)
     file_count = sum(kind == "file" for kind, _ in vendor_snapshot.values())
     return mismatches, file_count
 
@@ -85,6 +109,12 @@ def verify_repository(root: Path) -> list[str]:
             owned,
             vendor,
             OWNED_ONLY_IGNORED_PATHS.get(owned_relative),
+            {
+                path: json.loads((root / manifest).read_text())["files"][
+                    f"{owned_relative}/{path}"
+                ]["post_sha256"]
+                for path, manifest in OWNED_SOURCE_OVERLAYS.get(owned_relative, {}).items()
+            },
         )
         if mismatches:
             preview = ", ".join(mismatches[:12])

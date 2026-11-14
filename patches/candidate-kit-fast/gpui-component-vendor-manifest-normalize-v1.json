@@ -1,0 +1,12 @@
+{
+  "schema_version": 1,
+  "name": "gpui-component-vendor-manifest-normalize-v1",
+  "patch": "gpui-component-vendor-manifest-normalize-v1.patch",
+  "patch_sha256": "252bf4e400094acbcb68eeb513a5d0f1b52ede8cadc1533fa9b60cd57efb8e96",
+  "files": {
+    "vendor/gpui-component-0.9.1/Cargo.toml": {
+      "pre_sha256": "ac5a32f8f703cb6c2caa4d69b24a1e968b808aeb5026ef249132a268c852754a",
+      "post_sha256": "306193ce6a455beada1f29862644f08803b229dbc1d50c6365b9a4371271ec2f"
+    }
+  }
+}

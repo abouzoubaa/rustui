@@ -14,11 +14,8 @@ from approved_single_source_patch import run  # noqa: E402
 
 
 PATCHES = (
-    ("patches/candidate-kit-fast/gpui-base-vendor-gpui-pre-optional-v1.json", "vendor/gpui-base-0.9.1/Cargo.toml"),
     ("patches/candidate-kit-fast/gpui-base-owned-gpui-pre-optional-v1.json", "crates/rustui-gpui-base/Cargo.toml"),
-    ("patches/candidate-kit-fast/gpui-component-vendor-gpui-pre-optional-v1.json", "vendor/gpui-component-0.9.1/Cargo.toml"),
     ("patches/candidate-kit-fast/gpui-component-owned-gpui-pre-optional-v1.json", "crates/rustui-gpui-component/Cargo.toml"),
-    ("patches/candidate-kit-fast/gpui-kit-assets-vendor-gpui-pre-optional-v1.json", "vendor/gpui-kit-assets-0.9.1/Cargo.toml"),
     ("patches/candidate-kit-fast/gpui-kit-assets-owned-gpui-pre-optional-v1.json", "crates/rustui-gpui-kit-assets/Cargo.toml"),
 )
 

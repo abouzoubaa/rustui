@@ -137,6 +137,8 @@ def validate_existing(destination, font_source):
         for notice in package.get("notices", []):
             expected.add("dependency-notices/" + notice["path"])
     expected.update("fonts/" + name for name in FONT_LICENSES)
+    if (destination / "lockfile.json").is_file():
+        expected.add("lockfile.json")
     actual, directories = regular_tree(destination)
     if actual != expected or directories != (parent_directories(expected) | {"dependency-notices/notices"}):
         raise ValueError("existing release-notices destination contains unknown or missing files")
@@ -248,6 +250,21 @@ def package(source, font_source, destination, repo_root, require_no_gaps=False):
             shutil.copyfile(font_source / name, fonts / name)
             if digest(fonts / name) != digest(font_source / name):
                 raise ValueError(f"font license copy changed: {name}")
+        lockfile = repo_root / "Cargo.lock"
+        supplement_manifest = repo_root / "docs/release/notice-supplements/manifest.json"
+        if lockfile.is_file() and supplement_manifest.is_file():
+            (stage / "lockfile.json").write_text(
+                json.dumps(
+                    {
+                        "cargo_lock_sha256": digest(lockfile),
+                        "schema_version": 1,
+                        "supplement_manifest_sha256": digest(supplement_manifest),
+                    },
+                    indent=2,
+                    sort_keys=True,
+                ) + "\n",
+                encoding="utf-8",
+            )
         if previous.exists() or previous.is_symlink():
             raise ValueError("refusing to overwrite an existing recovery directory")
         if destination.exists():
