@@ -1,6 +1,7 @@
 # Changelog
 
 ## Unreleased
+- F0-5: added no-forced-refresh stale-rendering tests for owner, binding, environment/theme, list, menu, text input, grid edits, and transitions; all pass on the current base and Fast candidate.
 - F0-4i: verified the existing Fast native-popup candidates with cumulative placement, nested-dismissal, and parent-teardown proofs.
 - F0-4h: copied the syntax/Diff Kit 0.9 patches into the Fast candidate stack; JSON, provider-refresh, and Diff highlighter proofs pass.
 - F0-4g: copied the toolbar RTL Kit 0.9 patch into the Fast candidate stack; cumulative visual-order navigation proof passes.

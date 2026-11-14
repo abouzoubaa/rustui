@@ -13,6 +13,8 @@ pub mod window;
 
 #[cfg(test)]
 mod f0_benchmarks;
+#[cfg(test)]
+mod f0_stale_rendering_tests;
 
 pub use application::{RustUI, component_assets, with_embedded_asset};
 pub use component_host::ComponentHost;
