@@ -20,6 +20,7 @@ CALENDAR_STACK_PATH = REPO_ROOT / "patches/candidate-kit-fast/calendar-date-stac
 INPUT_TEXT_STACK_PATH = REPO_ROOT / "patches/candidate-kit-fast/input-text-stack.json"
 TOOLBAR_STACK_PATH = REPO_ROOT / "patches/candidate-kit-fast/toolbar-rtl-stack.json"
 SYNTAX_DIFF_STACK_PATH = REPO_ROOT / "patches/candidate-kit-fast/syntax-diff-stack.json"
+NATIVE_POPUP_STACK_PATH = REPO_ROOT / "patches/candidate-kit-fast/native-popup-stack.json"
 
 
 class FastCoreStackTests(unittest.TestCase):
@@ -59,6 +60,17 @@ class FastCoreStackTests(unittest.TestCase):
 
     def test_syntax_diff_candidates_are_exact_kit09_copies(self):
         self.assert_family_candidates_are_exact_kit09_copies(SYNTAX_DIFF_STACK_PATH, "syntax-diff")
+
+    def test_native_popup_stack_references_hashed_core_candidates(self):
+        stack = json.loads(NATIVE_POPUP_STACK_PATH.read_text())
+        core = json.loads(STACK_PATH.read_text())
+        self.assertEqual(stack["family"], "native-popup")
+        self.assertEqual(len(stack["patches"]), 2)
+        for manifest_name in stack["patches"]:
+            self.assertIn(manifest_name, core["patches"])
+            manifest = json.loads((REPO_ROOT / "patches/candidate-kit-fast" / manifest_name).read_text())
+            patch = REPO_ROOT / "patches/candidate-kit-fast" / manifest["patch"]
+            self.assertEqual(hashlib.sha256(patch.read_bytes()).hexdigest(), manifest["patch_sha256"])
 
     def test_core_stack_reverses_and_reapplies_exactly(self):
         stack = json.loads(STACK_PATH.read_text())

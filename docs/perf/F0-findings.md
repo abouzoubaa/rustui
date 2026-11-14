@@ -50,3 +50,9 @@
 - Copied four syntax/Diff Kit 0.9 patches unchanged into the Fast candidate stack. The exact-copy/hash suite passes 8/8, and the Fast core candidate stack check passes with 18 patches and exact hashes.
 - The cumulative Kit 0.9.1 fixture applies and reverses all 64 stack files exactly. Its component test fixture now resolves tree-sitter using RustUI's owned manifest requirement (0.27.1; fixture resolution 0.27.2), matching the actual workspace API. Syntax proofs pass: JSON string context; source-change provider refresh; Diff syntax-highlighter refresh (each 1 passed / 0 failed / 0 ignored).
 - Full RustUI Fast check remains **1,388 passed / 48 failed / 7 ignored** (exit 101): 46 disabled-control accessibility cases, 6 disabled-control recovery cases, the Grid header relation, and GraphView's NaN assertion. The syntax/Diff family adds no full-suite failures. No test was weakened, deleted, or ignored.
+
+## F0-4i: Native popup and teardown family
+
+- The anchored-popup and popup-child-teardown candidates were already hash-verified members of the 18-patch Fast core stack; the family manifest points to those two same candidates. The candidate metadata unit suite passes 9/9 and the core stack check passes.
+- Cumulative Kit 0.9.1 fixture applied and reversed all 64 stack files exactly. Native proofs pass: anchored popup placement (8 passed), nested popup dismissal (1 passed), parent teardown closes only managed popups (1 passed; all zero failures/ignores).
+- Full RustUI Fast check remains **1,388 passed / 48 failed / 7 ignored** (exit 101). Failures remain 46 disabled-control accessibility cases, 6 disabled-control recovery cases, the Grid header relation, and GraphView's NaN assertion. No popup/lifecycle assertion failed. No test was weakened, deleted, or ignored.

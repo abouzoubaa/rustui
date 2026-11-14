@@ -1,0 +1,7 @@
+{
+  "family": "native-popup",
+  "patches": [
+    "gpui-macos-anchored-popup-v1-fast.json",
+    "gpui-macos-popup-child-teardown-v1-fast.json"
+  ]
+}

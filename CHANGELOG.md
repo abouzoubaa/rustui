@@ -1,6 +1,7 @@
 # Changelog
 
 ## Unreleased
+- F0-4i: verified the existing Fast native-popup candidates with cumulative placement, nested-dismissal, and parent-teardown proofs.
 - F0-4h: copied the syntax/Diff Kit 0.9 patches into the Fast candidate stack; JSON, provider-refresh, and Diff highlighter proofs pass.
 - F0-4g: copied the toolbar RTL Kit 0.9 patch into the Fast candidate stack; cumulative visual-order navigation proof passes.
 - F0-4f: copied the input/text Kit 0.9 candidates into the Fast stack; placeholder color and editor-node validation proofs pass.
