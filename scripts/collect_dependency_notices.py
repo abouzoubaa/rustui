@@ -203,12 +203,25 @@ def supplement_index(manifest_path: Path, supplement_root: Path, output: Path) -
 
 
 def collect(args) -> dict:
-    input_paths = {"metadata_sha256": args.metadata, "build_json_sha256": args.build_json}
+    repo = args.repo_root.absolute()
+    root = repo.resolve(strict=True)
+    input_paths = {
+        "cargo_lock_sha256": root / "Cargo.lock",
+        "metadata_sha256": args.metadata,
+        "build_json_sha256": args.build_json,
+    }
     if args.supplement_manifest:
         input_paths["supplement_manifest_sha256"] = args.supplement_manifest
     input_hashes = {name: sha256(path) for name, path in input_paths.items()}
-    repo = args.repo_root.absolute()
-    root = repo.resolve(strict=True)
+    supplement_manifest_path = None
+    if args.supplement_manifest:
+        try:
+            supplement_manifest_path = args.supplement_manifest.resolve(strict=True).relative_to(root).as_posix()
+        except ValueError:
+            # Collection is still useful for external manifests, but release
+            # packaging will refuse to bind one it cannot revalidate in-repo.
+            pass
+    input_hashes.setdefault("supplement_manifest_sha256", None)
     approved = [repo, *args.source_root]
     metadata = load_json(args.metadata)
     if not isinstance(metadata, dict):
@@ -238,7 +251,7 @@ def collect(args) -> dict:
     if bool(args.supplement_manifest) != bool(args.supplement_root):
         raise ValueError("supplement manifest and root must be supplied together")
     supplement = supplement_index(args.supplement_manifest, args.supplement_root, out) if args.supplement_manifest else {}
-    inputs = [args.metadata, args.build_json, root / "LICENSE"]
+    inputs = [args.metadata, args.build_json, root / "Cargo.lock", root / "LICENSE"]
     if args.supplement_manifest:
         inputs += [args.supplement_manifest, args.supplement_root]
     for source in inputs:
@@ -333,12 +346,12 @@ def collect(args) -> dict:
                             "notice_review_notes": sorted({provenance["review_note"] for _, provenance in sources
                                                            if provenance and provenance.get("review_note")}),
                             "notices": package_entries})
-        if any(sha256(input_paths[name]) != digest for name, digest in input_hashes.items()):
+        if any(sha256(path) != input_hashes[name] for name, path in input_paths.items()):
             raise ValueError("collection inputs changed while reading")
         report = {"schema_version": 1, "status": "gaps" if gaps else "notice_files_captured",
                   "scope": "packages observed in successful Cargo build JSON, including build dependencies; not an exact linked runtime closure",
                   "complete_license_or_compatibility_claim": False,
-                  "inputs": input_hashes,
+                  "inputs": {**input_hashes, "supplement_manifest_path": supplement_manifest_path},
                   "packages": entries, "unresolved_gaps": gaps}
         (stage / "report.json").write_text(json.dumps(report, indent=2, sort_keys=True) + "\n", encoding="utf-8")
         (stage / "REPORT.txt").write_text(

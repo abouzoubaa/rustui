@@ -1,6 +1,7 @@
 import hashlib
 import json
 from pathlib import Path
+import shutil
 import subprocess
 import sys
 import tempfile
@@ -16,10 +17,20 @@ REPORT_TEXT = (
 )
 
 
+def digest(path):
+    return hashlib.sha256(path.read_bytes()).hexdigest()
+
+
 class PackageReleaseNoticesTests(unittest.TestCase):
     def setUp(self):
         self.temp = tempfile.TemporaryDirectory(prefix="rustui-release-notices-test-")
         self.root = Path(self.temp.name)
+        (self.root / "Cargo.lock").write_text('version = 4\n', encoding="utf-8")
+        self.supplement_manifest = self.root / "docs/release/notice-supplements/manifest.json"
+        self.supplement_manifest.parent.mkdir(parents=True)
+        self.supplement_manifest.write_text(
+            json.dumps({"schema_version": 1, "packages": []}), encoding="utf-8"
+        )
         self.collection = self.root / "collection"
         self.collection.mkdir()
         (self.collection / "notices").mkdir()
@@ -30,7 +41,9 @@ class PackageReleaseNoticesTests(unittest.TestCase):
             "schema_version": 1, "status": "gaps",
             "complete_license_or_compatibility_claim": False,
             "inputs": {"metadata_sha256": "1" * 64, "build_json_sha256": "2" * 64,
-                       "supplement_manifest_sha256": "3" * 64},
+                       "cargo_lock_sha256": digest(self.root / "Cargo.lock"),
+                       "supplement_manifest_sha256": digest(self.supplement_manifest),
+                       "supplement_manifest_path": "docs/release/notice-supplements/manifest.json"},
             "packages": [{
                 "name": "fixture", "version": "1.0.0", "source": None,
                 "package_id": f"path+file://{self.root}/repo/Cargo.toml#fixture@1.0.0",
@@ -181,10 +194,15 @@ class PackageReleaseNoticesTests(unittest.TestCase):
             result = self.run_package()
             self.assertEqual(result.returncode, 0, result.stderr)
             self.assertEqual((self.destination / "dependency-notices/notices/LICENSE").read_bytes(), self.notice_bytes)
+            binding = json.loads((self.destination / "lockfile.json").read_text(encoding="utf-8"))
+            source_inputs = json.loads((self.collection / "report.json").read_text(encoding="utf-8"))["inputs"]
+            self.assertEqual(binding["cargo_lock_sha256"], source_inputs["cargo_lock_sha256"])
+            self.assertEqual(binding["supplement_manifest_sha256"], source_inputs["supplement_manifest_sha256"])
             packaged_report = json.loads((self.destination / "dependency-notices/report.json").read_text())
             self.assertNotIn("metadata_sha256", packaged_report["inputs"])
             self.assertNotIn("build_json_sha256", packaged_report["inputs"])
-            self.assertEqual(packaged_report["inputs"]["supplement_manifest_sha256"], "3" * 64)
+            self.assertEqual(packaged_report["inputs"]["supplement_manifest_sha256"], digest(self.supplement_manifest))
+            self.assertEqual(packaged_report["inputs"]["cargo_lock_sha256"], digest(self.root / "Cargo.lock"))
             source_report = json.loads((self.collection / "report.json").read_text())
             self.assertEqual(source_report["inputs"]["metadata_sha256"], "1" * 64)
             self.assertEqual(source_report["inputs"]["build_json_sha256"], "2" * 64)
@@ -199,6 +217,16 @@ class PackageReleaseNoticesTests(unittest.TestCase):
             for name in FONT_NAMES:
                 self.assertEqual((self.destination / "fonts" / name).read_text(), f"verbatim {name}\n")
 
+    def test_rejects_collection_when_supplement_manifest_changes(self):
+        self.supplement_manifest.write_text(
+            json.dumps({"schema_version": 1, "packages": [{"name": "new"}]}),
+            encoding="utf-8",
+        )
+        result = self.run_package()
+        self.assertNotEqual(result.returncode, 0)
+        self.assertIn("supplement manifest hash does not match current manifest", result.stderr)
+        self.assertFalse(self.destination.exists())
+
     def test_equivalent_collections_are_stable_across_roots_and_raw_input_hashes(self):
         first_result = self.run_package()
         self.assertEqual(first_result.returncode, 0, first_result.stderr)
@@ -207,6 +235,10 @@ class PackageReleaseNoticesTests(unittest.TestCase):
         other_collection = other_root / "collection"
         other_notices = other_collection / "notices"
         other_notices.mkdir(parents=True)
+        shutil.copyfile(self.root / "Cargo.lock", other_root / "Cargo.lock")
+        other_supplement = other_root / "docs/release/notice-supplements/manifest.json"
+        other_supplement.parent.mkdir(parents=True)
+        shutil.copyfile(self.supplement_manifest, other_supplement)
         (other_notices / "LICENSE").write_bytes(self.notice_bytes)
         other_report = json.loads((self.collection / "report.json").read_text())
         other_report["inputs"]["metadata_sha256"] = "a" * 64

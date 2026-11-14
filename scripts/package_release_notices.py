@@ -58,6 +58,21 @@ def validate_collection(source):
         raise ValueError("notice collection report has an invalid package list")
     if report.get("schema_version") != 1 or report.get("complete_license_or_compatibility_claim") is not False:
         raise ValueError("unsupported collection report or completeness claim")
+    inputs = report.get("inputs")
+    if not isinstance(inputs, dict):
+        raise ValueError("notice collection report has invalid inputs")
+    lock_hash = inputs.get("cargo_lock_sha256")
+    if lock_hash is not None and (
+        not isinstance(lock_hash, str) or len(lock_hash) != 64
+        or any(c not in "0123456789abcdef" for c in lock_hash)
+    ):
+        raise ValueError("notice collection has an invalid Cargo.lock hash")
+    supplement_hash = inputs.get("supplement_manifest_sha256")
+    if supplement_hash is not None and (
+        not isinstance(supplement_hash, str) or len(supplement_hash) != 64
+        or any(c not in "0123456789abcdef" for c in supplement_hash)
+    ):
+        raise ValueError("notice collection has an invalid supplement manifest hash")
     gaps = report.get("unresolved_gaps")
     if not isinstance(gaps, list):
         raise ValueError("notice collection report has invalid unresolved gaps")
@@ -114,6 +129,43 @@ def validate_collection(source):
     if actual != expected or directories != (parent_directories(expected) | {"notices"}):
         raise ValueError("notice collection contains missing or unrelated files")
     return report
+
+
+def validate_collection_inputs(report, repo_root):
+    """Verify collection-time dependency inputs against the packaging checkout."""
+    inputs = report["inputs"]
+    lock_hash = inputs.get("cargo_lock_sha256")
+    if not isinstance(lock_hash, str) or len(lock_hash) != 64 or any(c not in "0123456789abcdef" for c in lock_hash):
+        raise ValueError("notice collection needs its Cargo.lock hash")
+    lockfile = repo_root / "Cargo.lock"
+    if lockfile.is_symlink() or not lockfile.is_file():
+        raise ValueError("packaging repository needs a regular Cargo.lock")
+    if lock_hash != digest(lockfile):
+        raise ValueError("notice collection Cargo.lock hash does not match current Cargo.lock")
+
+    supplement_hash = inputs.get("supplement_manifest_sha256")
+    raw_path = inputs.get("supplement_manifest_path")
+    if raw_path is None:
+        canonical = repo_root / "docs/release/notice-supplements/manifest.json"
+        if supplement_hash is not None or canonical.exists():
+            raise ValueError("notice collection has no verifiable supplement manifest binding")
+        return lock_hash, None
+    if not isinstance(raw_path, str) or not raw_path or "\\" in raw_path:
+        raise ValueError("notice collection has an invalid supplement manifest path")
+    relative = PurePosixPath(raw_path)
+    if relative.is_absolute() or ".." in relative.parts or relative.as_posix() != raw_path:
+        raise ValueError("notice collection has an unsafe supplement manifest path")
+    manifest = repo_root / Path(*relative.parts)
+    if manifest.is_symlink() or not manifest.is_file():
+        raise ValueError("notice collection supplement manifest is missing or not a regular file")
+    try:
+        resolved_manifest = manifest.resolve(strict=True)
+        resolved_manifest.relative_to(repo_root.resolve(strict=True))
+    except ValueError as error:
+        raise ValueError("notice collection supplement manifest is outside packaging repository") from error
+    if not isinstance(supplement_hash, str) or digest(resolved_manifest) != supplement_hash:
+        raise ValueError("notice collection supplement manifest hash does not match current manifest")
+    return lock_hash, supplement_hash
 
 
 def validate_destination_path(destination):
@@ -180,6 +232,7 @@ def distributable_report(report, repo_root):
     # external collection, but omit unstable hashes from the distributed notice.
     inputs.pop("metadata_sha256", None)
     inputs.pop("build_json_sha256", None)
+    inputs.pop("supplement_manifest_path", None)
     projected["inputs"] = inputs
     packages = []
     for original in report["packages"]:
@@ -206,6 +259,7 @@ def distributable_report(report, repo_root):
 
 def package(source, font_source, destination, repo_root, require_no_gaps=False):
     report = validate_collection(source)
+    lock_hash, supplement_hash = validate_collection_inputs(report, repo_root)
     if require_no_gaps and report["unresolved_gaps"]:
         raise ValueError("release notice collection contains unresolved package gaps")
     if font_source.is_symlink() or not font_source.is_dir():
@@ -250,15 +304,13 @@ def package(source, font_source, destination, repo_root, require_no_gaps=False):
             shutil.copyfile(font_source / name, fonts / name)
             if digest(fonts / name) != digest(font_source / name):
                 raise ValueError(f"font license copy changed: {name}")
-        lockfile = repo_root / "Cargo.lock"
-        supplement_manifest = repo_root / "docs/release/notice-supplements/manifest.json"
-        if lockfile.is_file() and supplement_manifest.is_file():
+        if supplement_hash is not None:
             (stage / "lockfile.json").write_text(
                 json.dumps(
                     {
-                        "cargo_lock_sha256": digest(lockfile),
+                        "cargo_lock_sha256": lock_hash,
                         "schema_version": 1,
-                        "supplement_manifest_sha256": digest(supplement_manifest),
+                        "supplement_manifest_sha256": supplement_hash,
                     },
                     indent=2,
                     sort_keys=True,
@@ -299,6 +351,7 @@ def main():
     try:
         if args.validate_only:
             report = validate_collection(args.collection)
+            validate_collection_inputs(report, args.repo_root.resolve())
             if args.require_no_gaps and report["unresolved_gaps"]:
                 raise ValueError("release notice collection contains unresolved package gaps")
         else:
