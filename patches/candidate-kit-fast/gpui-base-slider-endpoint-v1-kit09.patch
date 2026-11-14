@@ -1,0 +1,23 @@
+--- a/vendor/gpui-base-0.9.1/src/slider.rs
++++ b/vendor/gpui-base-0.9.1/src/slider.rs
+@@ -392,7 +392,8 @@ impl SliderState {
+         };
+ 
+         let value = self.percentage_to_value(percentage);
+-        let value = snap_to_step(value, self.min, self.max, step);
++        let value = (value / step).round() * step;
++        let value = value.clamp(self.min, self.max);
+ 
+         if is_start {
+             self.value.set_start(value);
+--- a/vendor/gpui-base-0.9.1/src/slider.rs
++++ b/vendor/gpui-base-0.9.1/src/slider.rs
+@@ -498,7 +498,7 @@
+     } else {
+         value.end()
+     };
+-    let next = snap_to_step(current + delta, min, max, step)
++    let next = snap_to_step(current + delta, 0., max, step)
+         .min(max)
+         .max(min);
+     if moves_start {

@@ -20,3 +20,9 @@
 - Copied 8 tree/list/grid patches unchanged from `patches/approved/kit09/`. The candidate copy/hash test passes. The cumulative Kit 0.9 fixture applies and reverses 64 stack files exactly; focused tree-name/level, DataTable delegate-accessibility, and ARIA sort/read-only proofs each pass (1 passed / 0 failed / 0 ignored).
 - Full RustUI Fast check remains **1,388 passed / 48 failed / 7 ignored**. `components::data::editable_data_grid::tests::grid_cells_reference_actual_header_nodes_across_updates` still fails because the emitted Cell node has no `labelled_by` relation to its header. Tree disabled accessibility and recovery cases remain among the disabled-matrix failures; see F0-4a.
 - No assertions were weakened, removed, or ignored.
+
+## F0-4d: Slider and resize family
+
+- Copied six slider/resize patches unchanged from the Kit 0.9 candidate stack. The exact-copy test and core candidate stack checks pass. The cumulative Kit 0.9.1 fixture applied and reversed all 64 stack files exactly.
+- Focused fixture proofs pass: slider SetValue/Increment/Decrement; tested value snapping; endpoint and thumb geometry; resize first pointer position; resize release handling (each 1 passed / 0 failed / 0 ignored).
+- Full RustUI Fast check remains **1,388 passed / 48 failed / 7 ignored** (exit 101). The failure set remains 47 accessibility/recovery cases plus the Grid header relation and GraphView NaN assertion; none is a slider/resize assertion. No test was weakened, deleted, or ignored.

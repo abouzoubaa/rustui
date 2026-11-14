@@ -1,6 +1,7 @@
 # Changelog
 
 ## Unreleased
+- F0-4d: copied the slider/resize Kit 0.9 patch family into the Fast candidate stack; cumulative SetValue, geometry, and resize proofs pass.
 - F0-4c: copied the tree/list/grid Kit 0.9 patch family unchanged into the Fast candidate stack; cumulative tree, list and table proofs pass.
 - F0-4b: copied the menu/select patch family unchanged into the Fast candidate stack; cumulative Kit 0.9 menu proofs pass.
 - F0-4a: added GPUI Fast accessibility serialization for disabled state, bounds and labelled-by IDs; missing disabled/grid state remains recorded in F0 findings.

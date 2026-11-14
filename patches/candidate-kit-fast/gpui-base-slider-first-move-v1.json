@@ -1,0 +1,19 @@
+{
+  "schema_version": 1,
+  "name": "gpui-base-slider-first-move-v1",
+  "upstream": {
+    "repository": "https://github.com/longbridge/gpui-kit",
+    "tag": "v0.9.1",
+    "commit": "39ab849a93b5f15507b969164d49891db8d5b470",
+    "gpui_pre_version": "0.3.12",
+    "gpui_fast_version": "0.1.14"
+  },
+  "patch": "gpui-base-slider-first-move-v1.patch",
+  "patch_sha256": "94aea6dd93f7038300a5e8d6184097324cdcad287fc096c7da6c2bbd49e3c658",
+  "files": {
+    "vendor/gpui-base-0.9.1/src/slider.rs": {
+      "pre_sha256": "445be9f057288e6eeccd83188d9529835f8b1cbe981bd1c7c9efd8bc07d3beac",
+      "post_sha256": "165c4e849fd23fbc46eabfb15c8323534a8c43235da12b2cfc41dd2a2d7cb2e0"
+    }
+  }
+}

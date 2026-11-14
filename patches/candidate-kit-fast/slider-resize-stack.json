@@ -1,0 +1,11 @@
+{
+  "family": "slider-resize",
+  "patches": [
+    "gpui-base-slider-endpoint-v1-kit09.json",
+    "gpui-base-slider-first-move-v1.json",
+    "gpui-base-slider-set-value-v2-kit09.json",
+    "gpui-base-slider-zero-track-v1.json",
+    "gpui-base-resize-first-move-v1-kit08.json",
+    "gpui-base-resize-first-move-v3-kit08.json"
+  ]
+}

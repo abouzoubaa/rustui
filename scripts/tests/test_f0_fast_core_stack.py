@@ -15,6 +15,7 @@ from check_f0_fast_core_stack import run as apply_stack  # noqa: E402
 STACK_PATH = REPO_ROOT / "patches/candidate-kit-fast/core-stack.json"
 MENU_STACK_PATH = REPO_ROOT / "patches/candidate-kit-fast/menu-select-stack.json"
 TREE_STACK_PATH = REPO_ROOT / "patches/candidate-kit-fast/tree-list-grid-stack.json"
+SLIDER_STACK_PATH = REPO_ROOT / "patches/candidate-kit-fast/slider-resize-stack.json"
 
 
 class FastCoreStackTests(unittest.TestCase):
@@ -39,6 +40,9 @@ class FastCoreStackTests(unittest.TestCase):
 
     def test_tree_list_grid_candidates_are_exact_kit09_copies(self):
         self.assert_family_candidates_are_exact_kit09_copies(TREE_STACK_PATH, "tree-list-grid")
+
+    def test_slider_resize_candidates_are_exact_kit09_copies(self):
+        self.assert_family_candidates_are_exact_kit09_copies(SLIDER_STACK_PATH, "slider-resize")
 
     def test_core_stack_reverses_and_reapplies_exactly(self):
         stack = json.loads(STACK_PATH.read_text())
