@@ -8,8 +8,9 @@
 - Patch: `gpui-fast-test-tree-disabled-v1-fast` serializes the node disabled state, bounds, and `labelled_by` IDs, with the vendored checksum entry updated. It is applied by `scripts/apply_f0_fast_candidate_patch.py`; reverse/apply/check and candidate stack checks pass.
 - Fresh-target proof: `components::disabled_tests` passed 201/0/0, and `grid_cells_reference_actual_header_nodes_across_updates` passed 1/0/0. The bounds serialization also fixed popup interaction targeting in the disabled matrix. No assertion was changed or ignored.
 
-## Remaining full-suite failure
+## GraphView regression — resolved
 
 - Test: `components::advanced::graph_view::interaction::current_selection_regressions::rendered_node_editor_connects_moves_and_deletes_nodes`.
-- Evidence: fresh-target `scripts/check.sh` on this branch reports 1,435 passed, 1 failed, 7 ignored. The failure is at `interaction.rs:1450`: actual node position `(0.0, 0.0)`, expected `(40.0, 25.0)` after a graph reset and simulated drag.
-- Cause: still under investigation. An attempted `GPUI_VIEW_RETENTION=0` diagnostic stopped earlier in GPUI Fast glyph bounds with a NaN/Inf debug assertion, so it did not isolate this failure. No GPUI patch has been tried for this case, and the assertion remains unchanged.
+- Cause: the test reset its graph owner without `cx.notify()`, leaving Fast's retained view at the previous layout. When the test reset now notifies and redraws, GPUI Fast's `LineGlyphPainter::may_reach` debug assertion compares identical bounds with a NaN width using ordinary float equality; NaN compares unequal to itself.
+- Fix: the test setup now notifies after restoring the graph, preserving its drag assertions. Candidate patch `gpui-fast-glyph-mask-nan-equality-v1-fast` treats matching NaN coordinates as equal in that debug-only consistency check. The focused test passed on a fresh target with the patch compiled. The test assertion was not changed or ignored.
+- Before the fix, full `scripts/check.sh` was 1,435 passed, 1 failed, 7 ignored. After the fix, full `scripts/check.sh` passed with 1,436 passed, 0 failed, 7 ignored (Rust 1.98.0).

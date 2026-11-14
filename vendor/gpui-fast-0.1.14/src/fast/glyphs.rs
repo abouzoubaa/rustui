@@ -262,6 +262,10 @@ pub(crate) struct LineGlyphPainter {
     run_rendering: Option<(FontId, Hsla, GlyphRunRendering)>,
 }
 
+fn equal_including_nan(left: Pixels, right: Pixels) -> bool {
+    left == right || (f32::from(left).is_nan() && f32::from(right).is_nan())
+}
+
 impl LineGlyphPainter {
     pub(crate) fn new(window: &Window) -> Self {
         Self {
@@ -298,7 +302,12 @@ impl LineGlyphPainter {
         baseline: Pixels,
         mask: &Bounds<Pixels>,
     ) -> bool {
-        debug_assert_eq!(*mask, self.content_mask);
+        debug_assert!(
+            equal_including_nan(mask.origin.x, self.content_mask.origin.x)
+                && equal_including_nan(mask.origin.y, self.content_mask.origin.y)
+                && equal_including_nan(mask.size.width, self.content_mask.size.width)
+                && equal_including_nan(mask.size.height, self.content_mask.size.height)
+        );
         if !self.reach.is_for(line_glyph.size) {
             self.reach = GlyphReach::new(line_glyph.size, &self.content_mask);
         }

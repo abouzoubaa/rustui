@@ -1,7 +1,7 @@
 # Changelog
 
 ## Unreleased
-- F0-4a: GPUI Fast accessibility trees expose disabled state, bounds and labelled-by relations; the disabled matrix and grid relation proof pass.
+- F0-4a: GPUI Fast accessibility trees expose disabled state, bounds and labelled-by relations; the disabled matrix, grid relation, and Fast GraphView drag proofs pass.
 - F0-3: wired the GPUI Fast 0.1.14 candidate as the sole GPUI core and rebased core, grid accessibility, and native popup patches into the candidate stack.
 - F0-2: moved inactive Kit 0.8 patch history out of the active approval directory.
 - F0-1: added current-base long-list, editor-typing, idle-draw, and 1,000-row performance baselines.

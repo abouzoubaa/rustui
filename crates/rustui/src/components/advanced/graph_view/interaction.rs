@@ -1424,7 +1424,10 @@ mod current_selection_regressions {
         });
         window.simulate_mouse_up(second_move, MouseButton::Left, gpui::Modifiers::default());
         window.update(|window, app| {
-            owner.update(app, |host, _| host.component_mut().graph = original);
+            owner.update(app, |host, cx| {
+                host.component_mut().graph = original;
+                cx.notify();
+            });
             let _ = window.draw(app);
         });
         let end = gpui::point(start.x + px(30.0), start.y + px(20.0));
