@@ -23,6 +23,9 @@ No evidence paragraphs, hashes, logs, crash reports or "Record" commits. Never c
 - Tool mechanics fail: retry with plain shell commands.
 - Before stopping for ANY reason (interrupted, blocked, or reporting a failure): commit work in progress as "wip: <ticket>" and push. Never leave uncommitted work.
 
+## Standing rules
+- Before merging any PR, read all review comments (including bot reviews) on it; fix or answer each one. Unanswered review comments block the merge.
+
 ## Git
 - Stage explicit paths only; never `git add -A` or `git add .`. Show `git status --porcelain --untracked-files=all` before committing; it must list only intended files.
 - One commit per ticket unless told otherwise.

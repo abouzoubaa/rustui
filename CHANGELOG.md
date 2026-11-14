@@ -1,6 +1,7 @@
 # Changelog
 
 ## Unreleased
+- F0-11: bind packaged dependency notices to the Cargo.lock and supplement manifest hashes captured by the collector.
 - F0-10: aligned GPUI Fast and gpui-pre benchmark runs to the same warmed release profile and recorded five-run results.
 - F0-9: audited RustUI invalidation paths and culled off-viewport GraphView nodes to remove the Fast NaN mask; removed the relaxed glyph-mask assertion patch.
 - F0-8: recorded the GPUI Fast evaluation gates, benchmark comparison, and owner decision blockers.

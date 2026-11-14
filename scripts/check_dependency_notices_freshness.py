@@ -26,6 +26,8 @@ def check(root):
     report = validate_collection(snapshot / "dependency-notices")
     if report["unresolved_gaps"]:
         raise ValueError("dependency notices contain unresolved gaps")
+    if report["inputs"].get("cargo_lock_sha256") != binding.get("cargo_lock_sha256"):
+        raise ValueError("notice collection used a different Cargo.lock")
     if report["inputs"].get("supplement_manifest_sha256") != supplement:
         raise ValueError("notice collection used different supplements")
     for name in FONT_LICENSES:
