@@ -1,6 +1,7 @@
 # Changelog
 
 ## Unreleased
+- F0-10: aligned GPUI Fast and gpui-pre benchmark runs to the same warmed release profile and recorded five-run results.
 - F0-9: audited RustUI invalidation paths and culled off-viewport GraphView nodes to remove the Fast NaN mask; removed the relaxed glyph-mask assertion patch.
 - F0-8: recorded the GPUI Fast evaluation gates, benchmark comparison, and owner decision blockers.
 - F0-7: completed automated GPUI Fast matrices and benchmarks; added the owner macOS acceptance checklist.
