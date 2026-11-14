@@ -1,0 +1,12 @@
+{
+  "schema_version": 1,
+  "name": "gpui-base-fast-feature-wiring-v1",
+  "patch": "gpui-base-fast-feature-wiring-v1.patch",
+  "patch_sha256": "f8549b215a803bed80c8e74ed58adbe986dc7c5e93ab41842c145e331e961350",
+  "files": {
+    "crates/rustui-gpui-base/Cargo.toml": {
+      "pre_sha256": "179f5069386df30acfe3fe2a62b66a57f938a22c29ca268567e1304bb15658ab",
+      "post_sha256": "99bcb117bc648743d5f5b039093e6e2f0a3d484839203473fd9aef342fdac424"
+    }
+  }
+}

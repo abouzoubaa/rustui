@@ -1,0 +1,19 @@
+{
+  "schema_version": 1,
+  "name": "gpui-component-select-rtl-auto-width-v4-kit08",
+  "upstream": {
+    "repository": "https://github.com/longbridge/gpui-kit",
+    "tag": "v0.9.1",
+    "commit": "39ab849a93b5f15507b969164d49891db8d5b470",
+    "gpui_pre_version": "0.3.12",
+    "gpui_fast_version": "0.1.14"
+  },
+  "patch": "gpui-component-select-rtl-auto-width-v4-kit08.patch",
+  "patch_sha256": "61f615799f6f1c6f61b76020060d258d7aedc46aad5516124ebc4158461b4878",
+  "files": {
+    "vendor/gpui-component-0.9.1/src/select.rs": {
+      "pre_sha256": "1b56139399866dea1f674740e77be3d90b0a388d906c0050a96df31dc328a497",
+      "post_sha256": "11490857a2789a2a2cb18ed06258debecec258dbb02c3c53a96fa57e6ce441ab"
+    }
+  }
+}

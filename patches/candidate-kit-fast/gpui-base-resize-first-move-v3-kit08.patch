@@ -1,0 +1,82 @@
+--- a/vendor/gpui-base-0.9.1/src/resizable/panel.rs
++++ b/vendor/gpui-base-0.9.1/src/resizable/panel.rs
+@@ -33,6 +33,7 @@
+     children: Vec<ResizablePanel>,
+     on_resize: Rc<dyn Fn(&Entity<ResizableState>, &mut Window, &mut App)>,
+     handle_appearance: Option<ResizeHandleRenderer>,
++    finish_without_final_resize: bool,
+ }
+ 
+ impl ResizablePanelGroup {
+@@ -46,6 +47,7 @@
+             size: None,
+             on_resize: Rc::new(|_, _, _| {}),
+             handle_appearance: None,
++            finish_without_final_resize: false,
+         }
+     }
+ 
+@@ -66,6 +68,13 @@
+         self
+     }
+ 
++    /// Finish a drag when the left button is no longer pressed without applying
++    /// that event's pointer position as a final size change.
++    pub fn finish_without_final_resize(mut self, enabled: bool) -> Self {
++        self.finish_without_final_resize = enabled;
++        self
++    }
++
+     /// Set the axis of the resizable panel group, default is horizontal.
+     pub fn axis(mut self, axis: Axis) -> Self {
+         self.axis = axis;
+@@ -205,6 +214,7 @@
+                 state: state.clone(),
+                 axis: self.axis,
+                 on_resize: self.on_resize.clone(),
++                finish_without_final_resize: self.finish_without_final_resize,
+             })
+     }
+ }
+@@ -417,6 +427,7 @@
+     state: Entity<ResizableState>,
+     on_resize: Rc<dyn Fn(&Entity<ResizableState>, &mut Window, &mut App)>,
+     axis: Axis,
++    finish_without_final_resize: bool,
+ }
+ 
+ impl IntoElement for ResizePanelGroupElement {
+@@ -474,6 +485,8 @@
+         window.on_mouse_event({
+             let state = self.state.clone();
+             let axis = self.axis;
++            let on_resize = self.on_resize.clone();
++            let finish_without_final_resize = self.finish_without_final_resize;
+             move |e: &MouseMoveEvent, phase, window, cx| {
+                 if !phase.bubble() {
+                     return;
+@@ -481,6 +494,24 @@
+                 let Some(ix) = state.read(cx).resizing_panel_ix else {
+                     return;
+                 };
++                if e.pressed_button != Some(gpui::MouseButton::Left) {
++                    state.update(cx, |state, cx| {
++                        if !finish_without_final_resize {
++                            let bounds = state.panels[ix].bounds;
++                            match axis {
++                                Axis::Horizontal => state.resize_panel_at_handle(
++                                    ix, e.position.x - bounds.left(), window, cx,
++                                ),
++                                Axis::Vertical => state.resize_panel_at_handle(
++                                    ix, e.position.y - bounds.top(), window, cx,
++                                ),
++                            }
++                        }
++                        state.done_resizing(cx);
++                    });
++                    on_resize(&state, window, cx);
++                    return;
++                }
+ 
+                 state.update(cx, |state, cx| {
+                     let panel = state.panels.get(ix).expect("BUG: invalid panel index");

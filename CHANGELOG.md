@@ -1,6 +1,18 @@
 # Changelog
 
 ## Unreleased
+- F0-6: refreshed Fast dependency notices, tightened owned-source verification, and covered candidate tooling in the CI cache key.
+- F0-5: added no-forced-refresh stale-rendering tests for owner, binding, environment/theme, list, menu, text input, grid edits, and transitions; all pass on the current base and Fast candidate.
+- F0-4i: verified the existing Fast native-popup candidates with cumulative placement, nested-dismissal, and parent-teardown proofs.
+- F0-4h: copied the syntax/Diff Kit 0.9 patches into the Fast candidate stack; JSON, provider-refresh, and Diff highlighter proofs pass.
+- F0-4g: copied the toolbar RTL Kit 0.9 patch into the Fast candidate stack; cumulative visual-order navigation proof passes.
+- F0-4f: copied the input/text Kit 0.9 candidates into the Fast stack; placeholder color and editor-node validation proofs pass.
+- F0-4e: copied the calendar/DatePicker Kit 0.9 patch family into the Fast candidate stack; cumulative localization, keyboard, RTL, accessibility and date-limit proofs pass.
+- F0-4d: copied the slider/resize Kit 0.9 patch family into the Fast candidate stack; cumulative SetValue, geometry, and resize proofs pass.
+- F0-4c: copied the tree/list/grid Kit 0.9 patch family unchanged into the Fast candidate stack; cumulative tree, list and table proofs pass.
+- F0-4b: copied the menu/select patch family unchanged into the Fast candidate stack; cumulative Kit 0.9 menu proofs pass.
+- F0-4a: added GPUI Fast accessibility serialization for disabled state, bounds and labelled-by IDs; missing disabled/grid state remains recorded in F0 findings.
+- F0-3: wired the GPUI Fast 0.1.14 candidate as the sole GPUI core and rebased core, grid accessibility, and native popup patches into the candidate stack.
 - F0-2: moved inactive Kit 0.8 patch history out of the active approval directory.
 - F0-1: added current-base long-list, editor-typing, idle-draw, and 1,000-row performance baselines.
 - Added the GPUI Fast evaluation plan and measurable adoption gates.

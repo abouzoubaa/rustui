@@ -19,6 +19,8 @@ fi
 unset RUSTC RUSTDOC
 _pinned_rustc_path=$(rustup which rustc --toolchain "$_pinned_channel")
 _pinned_rustdoc_path=$(rustup which rustdoc --toolchain "$_pinned_channel")
+export RUSTC="$_pinned_rustc_path"
+export RUSTDOC="$_pinned_rustdoc_path"
 
 pinned_rustup() {
   RUSTC="$_pinned_rustc_path" RUSTDOC="$_pinned_rustdoc_path" \

@@ -1,0 +1,24 @@
+{
+  "schema_version": 1,
+  "backend": "gpui-fast 0.1.14",
+  "patches": [
+    "gpui-bidi-wrapped-rows-v1-fast.json",
+    "gpui-tree-aria-disabled-v1-fast.json",
+    "gpui-fast-accessibility-parent-click-v1-fast.json",
+    "rustui-bidi-tab-layout-fast-v1.json",
+    "gpui-base-fast-platform-test-dep-v1.json",
+    "gpui-base-fast-test-support-v1.json",
+    "gpui-base-fast-test-support-path-v1.json",
+    "rustui-bidi-tab-layout-test-fast-v1.json",
+    "gpui-base-fast-feature-wiring-v1.json",
+    "t17-inert-focus-scope-v1-fast.json",
+    "t13-modal-focus-recovery-v1-fast.json",
+    "a11y-grid-readonly-sort-v1-fast.json",
+    "gpui-macos-anchored-popup-v1-fast.json",
+    "gpui-macos-popup-child-teardown-v1-fast.json",
+    "gpui-test-support-a11y-activation-v1-fast.json",
+    "gpui-test-window-a11y-default-v1-fast.json",
+    "gpui-fast-test-tree-disabled-v1-fast.json",
+    "gpui-fast-glyph-mask-nan-equality-v1-fast.json"
+  ]
+}

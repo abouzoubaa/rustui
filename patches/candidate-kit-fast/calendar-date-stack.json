@@ -1,0 +1,13 @@
+{
+  "family": "calendar-date",
+  "patches": [
+    "gpui-base-calendar-date-limits-v1-kit08.json",
+    "gpui-calendar-keyboard-v1.json",
+    "gpui-calendar-rtl-v1-kit08.json",
+    "gpui-calendar-multi-month-heading-v1-kit08.json",
+    "gpui-component-calendar-fr-ar-v1-kit09.json",
+    "gpui-component-date-picker-accessibility-v1.json",
+    "gpui-component-date-picker-localization-v2-kit08.json",
+    "gpui-component-date-picker-rtl-alignment-v1-kit08.json"
+  ]
+}

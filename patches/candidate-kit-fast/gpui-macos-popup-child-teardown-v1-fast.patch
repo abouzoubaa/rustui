@@ -1,0 +1,48 @@
+--- a/vendor/gpui-fast-macos-0.1.14/.cargo-checksum.json
++++ b/vendor/gpui-fast-macos-0.1.14/.cargo-checksum.json
+@@ -1 +1 @@
+-{"files":{"Cargo.lock":"3e1a4a754858f6f315b7e1c65764e4eb3c186e16b045f630b44f42c91f5fd35b","Cargo.toml":"71f23fc23e96562a438f68abdb5fdf6545e888bc5a0d13e1b572af38af013d42","Cargo.toml.orig":"c8dca34b1c67d5f8c39373111ed7d1b50d9874dacd894c539613b83a95d629a4","LICENSE":"5f78a733701db49b73da93addad8cb74f816f3789ef30c3c0e959e943ecd99b4","README.md":"2b23f4abc373d215b4d890620ed42f39e8a654c21d3ced056bba78f6ddb1e776","src/display.rs":"eb232a1ab75d8199741e2cc800b21acc725eeddcf8883ff05baf2fcc5ce2d260","src/display_link.rs":"b74ca5ae9b60a0a585d1105a24ce2c238efc41ca14310a7509b51e93bcc57a5b","src/events.rs":"dce8446c49d37f61ac2c23ceb0c5b5817a8fd1f3a71f2dba53e6d8efcbbe5c94","src/fast/composition.rs":"da91fbdbcbc512dff84236b9cb422a86e0f78781f942a40d568f778e28d645df","src/fast/composition_tests.rs":"a74054da639574668f50ac48cf864b03ff88576e6821ada6432f05c58cda2651","src/fast/mod.rs":"de36fcd4b81798f3ce2f7e523b12409536dcdeee899b087865262dfc85da2b02","src/gpui_macos.rs":"c1a048ce4016ea5fcff4aafffdcaf4270b2e2647a9856e05e316dbbd250e7877","src/keyboard.rs":"6a017f020ba10396e1ef827a036a6181644f2fe62d3ac4a7721781e2f08feeaa","src/pasteboard.rs":"05d01ac0c7e532a16eb0a962ebd1299b0cacaf64616d3d0d11a1495b5feac994","src/platform.rs":"2b81cb02ef131bb866857049f0d5b9efb3b9766c49031721bd7f556214199dc5","src/screen_capture.rs":"996c4308d93aea1c809e27baa2ac42b18d038a677cfdd599e481abf5ad200d4b","src/system_notifications.rs":"df8374f075932996d58b99c043d97a82e1cefebab79e5b0f4648c8a3776ea5fe","src/window.rs":"9d031707725f0b68a9eb606e9de1299c9174f8092c9a68df2af93f5b50cc187e","src/window_appearance.rs":"c1ea31769bfd6b324339525b8ffec3be0f59a24495a7e491c1df66bd43db5b75"},"package":"192b5731d190f840ad7868d1bb8c1c1fe70007a747cc8d2f60700699ca4318e0"}
++{"files":{"Cargo.lock":"3e1a4a754858f6f315b7e1c65764e4eb3c186e16b045f630b44f42c91f5fd35b","Cargo.toml":"71f23fc23e96562a438f68abdb5fdf6545e888bc5a0d13e1b572af38af013d42","Cargo.toml.orig":"c8dca34b1c67d5f8c39373111ed7d1b50d9874dacd894c539613b83a95d629a4","LICENSE":"5f78a733701db49b73da93addad8cb74f816f3789ef30c3c0e959e943ecd99b4","README.md":"2b23f4abc373d215b4d890620ed42f39e8a654c21d3ced056bba78f6ddb1e776","src/display.rs":"eb232a1ab75d8199741e2cc800b21acc725eeddcf8883ff05baf2fcc5ce2d260","src/display_link.rs":"b74ca5ae9b60a0a585d1105a24ce2c238efc41ca14310a7509b51e93bcc57a5b","src/events.rs":"dce8446c49d37f61ac2c23ceb0c5b5817a8fd1f3a71f2dba53e6d8efcbbe5c94","src/fast/composition.rs":"da91fbdbcbc512dff84236b9cb422a86e0f78781f942a40d568f778e28d645df","src/fast/composition_tests.rs":"a74054da639574668f50ac48cf864b03ff88576e6821ada6432f05c58cda2651","src/fast/mod.rs":"de36fcd4b81798f3ce2f7e523b12409536dcdeee899b087865262dfc85da2b02","src/gpui_macos.rs":"c1a048ce4016ea5fcff4aafffdcaf4270b2e2647a9856e05e316dbbd250e7877","src/keyboard.rs":"6a017f020ba10396e1ef827a036a6181644f2fe62d3ac4a7721781e2f08feeaa","src/pasteboard.rs":"05d01ac0c7e532a16eb0a962ebd1299b0cacaf64616d3d0d11a1495b5feac994","src/platform.rs":"2b81cb02ef131bb866857049f0d5b9efb3b9766c49031721bd7f556214199dc5","src/screen_capture.rs":"996c4308d93aea1c809e27baa2ac42b18d038a677cfdd599e481abf5ad200d4b","src/system_notifications.rs":"df8374f075932996d58b99c043d97a82e1cefebab79e5b0f4648c8a3776ea5fe","src/window.rs":"1fe145ed526675b37170af09ccbfe4726118c2b693e397824b5401cda9751f45","src/window_appearance.rs":"c1ea31769bfd6b324339525b8ffec3be0f59a24495a7e491c1df66bd43db5b75"},"package":"192b5731d190f840ad7868d1bb8c1c1fe70007a747cc8d2f60700699ca4318e0"}
+
+--- a/vendor/gpui-fast-macos-0.1.14/src/window.rs
++++ b/vendor/gpui-fast-macos-0.1.14/src/window.rs
+@@ -3733,6 +3733,10 @@
+     dismiss_on_resign && child_count == 0
+ }
+ 
++fn should_close_child_popup(is_gpui_window: bool, dismiss_popup_on_resign: bool) -> bool {
++    is_gpui_window && dismiss_popup_on_resign
++}
++
+ extern "C" fn window_did_change_key_status(this: &AnyObject, selector: Sel, _: *mut AnyObject) {
+     let signal_at = PlatformFrameSignal::capture(scheduler::Instant::now);
+     let window_state = unsafe { get_window_state(this) };
+@@ -3872,6 +3876,13 @@
+         for index in (0..child_count).rev() {
+             let child: *mut AnyObject = msg_send![children, objectAtIndex: index];
+             if child.is_null() || child as *const AnyObject == this as *const AnyObject {
++                continue;
++            }
++            if !is_gpui_window(child) {
++                continue;
++            }
++            let child_is_popup = get_window_state(&*child).lock().dismiss_popup_on_resign;
++            if !should_close_child_popup(true, child_is_popup) {
+                 continue;
+             }
+             let _: () = msg_send![this, removeChildWindow: child];
+@@ -4655,6 +4666,13 @@
+     }
+ 
+     #[test]
++    fn parent_close_only_dismisses_managed_grabbing_popups() {
++        assert!(should_close_child_popup(true, true));
++        assert!(!should_close_child_popup(true, false));
++        assert!(!should_close_child_popup(false, true));
++    }
++
++    #[test]
+     fn display_id_for_screen_handles_missing_metadata() {
+         assert_eq!(display_id_for_screen(ptr::null_mut::<AnyObject>()), None);
+         autoreleasepool(|_| unsafe {
+

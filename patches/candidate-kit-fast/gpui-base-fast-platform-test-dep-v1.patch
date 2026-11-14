@@ -1,0 +1,24 @@
+--- a/crates/rustui-gpui-base/Cargo.toml
++++ b/crates/rustui-gpui-base/Cargo.toml
+@@ -36,7 +36,7 @@
+ resolver = "2"
+ 
+ [features]
+-gpui-fast = ["dep:gpui-fast"]
++gpui-fast = ["dep:gpui-fast", "dep:gpui-fast-platform"]
+ inspector = [
+     "gpui_macros/inspector",
+     "gpui/inspector",
+@@ -90,6 +90,12 @@
+ features = ["windows-manifest-provided-by-host"]
+ optional = true
+ package = "gpui-fast"
++
++[dependencies.gpui-fast-platform]
++version = "0.1.14"
++path = "../../vendor/gpui-fast-platform-0.1.14"
++optional = true
++package = "gpui-fast-platform"
+ 
+ [dependencies.gpui_macros]
+ version = "=0.3.12"

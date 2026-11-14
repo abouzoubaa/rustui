@@ -1,0 +1,40 @@
+--- a/crates/rustui-gpui-component/Cargo.toml
++++ b/crates/rustui-gpui-component/Cargo.toml
+@@ -38,8 +38,13 @@
+ [package.metadata.cargo-machete]
+ ignored = ["gpui_macros"]
+ 
+ [features]
++gpui-fast = [
++    "dep:gpui-fast",
++    "gpui-base/gpui-fast",
++    "gpui-kit-assets/gpui-fast",
++]
+ inspector = [
+     "gpui_macros/inspector",
+     "gpui/inspector",
+     "gpui-base/inspector",
+@@ -102,16 +107,23 @@
+ [dependencies.gpui]
+ version = "=0.3.12"
+ path = "../rustui-gpui"
+ package = "gpui-pre"
++optional = true
+ 
+ [dependencies.gpui-base]
+ version = "0.9.1"
+ path = "../rustui-gpui-base"
+ package = "gpui-base"
+ 
+ [dependencies.gpui-component-macros]
+ version = "0.9.1"
++
++[dependencies.gpui-fast]
++version = "0.1.14"
++features = ["windows-manifest-provided-by-host"]
++optional = true
++package = "gpui-fast"
+ 
+ [dependencies.gpui-kit-assets]
+ version = "0.9.1"
+ path = "../rustui-gpui-kit-assets"

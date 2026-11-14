@@ -1,0 +1,40 @@
+{
+  "schema_version": 1,
+  "name": "gpui-macos-anchored-popup-v1-fast",
+  "patch": "gpui-macos-anchored-popup-v1-fast.patch",
+  "patch_sha256": "b9ed745ecd9490d4d7eb541a0654338945b7147749c6237b409794dcf05f4b31",
+  "files": {
+    "vendor/gpui-fast-0.1.14/.cargo-checksum.json": {
+      "pre_sha256": "d4100f4a5516cace303e6922bd9435cfb9d92cbb142c21d9d8e6b51d6f372544",
+      "post_sha256": "3b0b99c86da757a78f6af10a22305c7ab1381b39b464c18be3d1eed8f435953f"
+    },
+    "vendor/gpui-fast-0.1.14/src/app/test_context.rs": {
+      "pre_sha256": "e5757a07e02caad59fbe83a9b75556ce9bc5e23227b407c3e9a6c299fc1f1c5e",
+      "post_sha256": "8086e0adfa906d083327f9715c4df09bcd7c60d934f519bed782ac11ca0d3457"
+    },
+    "vendor/gpui-fast-0.1.14/src/platform.rs": {
+      "pre_sha256": "43c32318be7f4280c1b1a059a5dae4a831805252218fe53b3614cce993bb2f9b",
+      "post_sha256": "593fff9c59655e2a66f246c390361f8da8d245fbcc4a15e28d426058b816b077"
+    },
+    "vendor/gpui-fast-0.1.14/src/platform/test/window.rs": {
+      "pre_sha256": "0a9e1c0a0ce8885e64439bfda766a5c39fed5f2fffae3781e56104031ee4012e",
+      "post_sha256": "3b94166d519b600b47004b27f59c67c9e212d31ce7384986a06c56e03bcda068"
+    },
+    "vendor/gpui-fast-0.1.14/src/window.rs": {
+      "pre_sha256": "e2ce941e9c4cdea38fae5a3b383218c20954ec35e798393213450ed5f008b449",
+      "post_sha256": "199d4e7f7a713435ea1cd8f80ac6f143fe23c813233a914785ea4982ba98b5b3"
+    },
+    "vendor/gpui-fast-macos-0.1.14/.cargo-checksum.json": {
+      "pre_sha256": "854aad1fdb759a8da6ff949b3fc9193f88b96d6b24b132bd799169358c25b287",
+      "post_sha256": "6f320c0f5c8276490ce8477f606f1e9765d780d8c877832404e286a1c78453bf"
+    },
+    "vendor/gpui-fast-macos-0.1.14/src/platform.rs": {
+      "pre_sha256": "04630aa1e7ab09b0c7fff5853d4607307dd99c1796bd025180051c4c02558da3",
+      "post_sha256": "2b81cb02ef131bb866857049f0d5b9efb3b9766c49031721bd7f556214199dc5"
+    },
+    "vendor/gpui-fast-macos-0.1.14/src/window.rs": {
+      "pre_sha256": "e951058f8ede01679000f1b59c14cb0a32d7eaa8d11ad975a002f49f2c177acc",
+      "post_sha256": "9d031707725f0b68a9eb606e9de1299c9174f8092c9a68df2af93f5b50cc187e"
+    }
+  }
+}

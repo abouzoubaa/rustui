@@ -1,0 +1,7 @@
+{
+  "family": "input-text",
+  "patches": [
+    "gpui-base-input-validation-description-v1-kit09.json",
+    "gpui-input-placeholder-color-v1-kit09.json"
+  ]
+}

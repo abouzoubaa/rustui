@@ -1,0 +1,19 @@
+{
+  "schema_version": 1,
+  "upstream": {
+    "repository": "https://github.com/longbridge/gpui-kit",
+    "tag": "v0.9.1",
+    "commit": "39ab849a93b5f15507b969164d49891db8d5b470",
+    "gpui_pre_version": "0.3.12",
+    "gpui_fast_version": "0.1.14"
+  },
+  "patch_sha256": "82203bf6a9aa59ba6231b108d61707af42f0d73727f309d1566286b738c7e5ac",
+  "files": {
+    "vendor/gpui-component-0.9.1/src/time/date_picker.rs": {
+      "pre_sha256": "bd8c24bb4b5f112fa5f8af2bb04e161647bae60f0c8444ad17b5390fe743efd0",
+      "post_sha256": "8d8e8a7fd2549ffd0f88f90f6a619dd8f519fc408e657cdae30129a99d179712"
+    }
+  },
+  "name": "gpui-component-date-picker-rtl-alignment-v1-kit08",
+  "patch": "gpui-component-date-picker-rtl-alignment-v1-kit08.patch"
+}

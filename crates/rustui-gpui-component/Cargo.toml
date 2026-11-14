@@ -39,6 +39,11 @@ resolver = "2"
 ignored = ["gpui_macros"]
 
 [features]
+gpui-fast = [
+    "dep:gpui-fast",
+    "gpui-base/gpui-fast",
+    "gpui-kit-assets/gpui-fast",
+]
 inspector = [
     "gpui_macros/inspector",
     "gpui/inspector",
@@ -103,6 +108,7 @@ version = "2.1.0"
 version = "=0.3.12"
 path = "../rustui-gpui"
 package = "gpui-pre"
+optional = true
 
 [dependencies.gpui-base]
 version = "0.9.1"
@@ -111,6 +117,12 @@ package = "gpui-base"
 
 [dependencies.gpui-component-macros]
 version = "0.9.1"
+
+[dependencies.gpui-fast]
+version = "0.1.14"
+features = ["windows-manifest-provided-by-host"]
+optional = true
+package = "gpui-fast"
 
 [dependencies.gpui-kit-assets]
 version = "0.9.1"

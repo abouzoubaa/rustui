@@ -99,7 +99,7 @@ jobs:
         uses: actions/cache@0057852bfaa89a56745cba8c7296529d2fc39830
         with:
           path: ${{ steps.cargo-cache-paths.outputs.paths }}
-          key: ${{ runner.os }}-headstart-${{ hashFiles('Cargo.lock', 'rust-toolchain.toml', '.cargo/config.toml', 'patches/approved/*.json', 'patches/candidate-kit-0.9/**', 'scripts/check_kit09_core_stack.py', 'scripts/check_kit09_family_stack.py', 'scripts/tests/test_check_kit09_family_stack.py', 'scripts/fixture_target_dir.py', 'scripts/tests/test_fixture_target_dir.py', 'scripts/prepare_gpui_kit_09_fixture.py', 'scripts/data/gpui-kit-0.9.1-sources.json', 'scripts/tests/test_prepare_gpui_kit_09_fixture.py', 'scripts/tests/test_check_kit09_core_stack.py', 'crates/rustui-gpui*/**', 'crates/rustui-block/**', 'crates/rustui-cocoa*/**', 'crates/rustui-metal/**', 'crates/rustui-objc-foundation/**', 'vendor/gpui-*/**') }}-v3
+          key: ${{ runner.os }}-headstart-${{ hashFiles('Cargo.lock', 'rust-toolchain.toml', '.cargo/config.toml', 'patches/approved/*.json', 'patches/candidate-kit-0.9/**', 'patches/candidate-kit-fast/**', 'scripts/check_kit09_core_stack.py', 'scripts/check_kit09_family_stack.py', 'scripts/tests/test_check_kit09_family_stack.py', 'scripts/fixture_target_dir.py', 'scripts/tests/test_fixture_target_dir.py', 'scripts/prepare_gpui_kit_09_fixture.py', 'scripts/data/gpui-kit-0.9.1-sources.json', 'scripts/tests/test_prepare_gpui_kit_09_fixture.py', 'scripts/tests/test_check_kit09_core_stack.py', 'scripts/check_f0_fast_core_stack.py', 'scripts/tests/test_f0_fast_core_stack.py', 'scripts/apply_f0_component_manifest_normalize.py', 'scripts/tests/test_f0_component_manifest_normalize.py', 'scripts/verify_owned_gpui_sources.py', 'scripts/tests/test_verify_owned_gpui_sources.py', 'scripts/package_release_notices.py', 'scripts/collect_dependency_notices.py', 'scripts/check_dependency_notices_freshness.py', 'docs/release/current-notices/**', 'docs/release/notice-supplements/**', 'crates/rustui-gpui*/**', 'crates/rustui-block/**', 'crates/rustui-cocoa*/**', 'crates/rustui-metal/**', 'crates/rustui-objc-foundation/**', 'vendor/gpui-*/**') }}-v3
           restore-keys: |
             ${{ runner.os }}-headstart-
       - name: Report disk space after cache restore
@@ -124,6 +124,10 @@ jobs:
         run: python3 -m unittest scripts.tests.test_check_kit09_family_stack -v
       - name: Verify the GPUI Kit 0.9 cumulative family stack
         run: python3 scripts/check_kit09_family_stack.py --compile-online --proof-a3-4a --proof-a3-4b --proof-a3-4c --proof-a3-4d --proof-a3-4e --proof-a3-4f --proof-a3-4g --proof-a3-4i
+      - name: Test the GPUI Fast candidate core and copied menu/select/tree/list/grid/slider/resize/calendar/date/input/text/toolbar/syntax/diff/native-popup patches
+        run: python3 -m unittest scripts.tests.test_f0_fast_core_stack -v
+      - name: Verify the GPUI Fast candidate core patch stack
+        run: python3 scripts/check_f0_fast_core_stack.py --check
       - name: Remove Kit 0.9 fixture build outputs after verification
         run: rm -rf "$HOME/.cache/rustui-target-fixture-kit9" "$RUNNER_TEMP/gpui-kit-0.9.1-fixture"
       - name: Stable Rust formatting, workspace check, and library tests

@@ -1,0 +1,20 @@
+{
+  "schema_version": 1,
+  "name": "t17-inert-focus-scope-v1-fast",
+  "patch": "t17-inert-focus-scope-v1-fast.patch",
+  "patch_sha256": "2cde9e9478327b59c9633272faf53f0810b81bd97d98e7bca4e11921a97caf32",
+  "files": {
+    "vendor/gpui-fast-0.1.14/.cargo-checksum.json": {
+      "pre_sha256": "aa0c01b7d9ef2e608567e0f3e31b9a424a3558626fe1638cc40e506f7257b26c",
+      "post_sha256": "c3d8fd7bce7b2e1e18df1ddf11de4c6853af008c527080af66f7703152a807b8"
+    },
+    "vendor/gpui-fast-0.1.14/src/fast/tab_stop.rs": {
+      "pre_sha256": "7844bf894b60dd6d9f17f14cb205f999e3ef9f2c2ac10acde1e6dfa7a00c0ca4",
+      "post_sha256": "4720ea84fe4baa6d16a983beac408e99eddbd5112a70ebc7aaf1618e8fa7ad2b"
+    },
+    "vendor/gpui-fast-0.1.14/src/window.rs": {
+      "pre_sha256": "cb34d06d7ad329aa59bbc64396f25b0777b9b0b1e26084afe4f2159ff87f862f",
+      "post_sha256": "3737bb504035ef6aa2ea9af28f98fc1b8f82b845b0c551e7d07c649ddf5f1e1f"
+    }
+  }
+}

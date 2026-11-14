@@ -1199,6 +1199,7 @@ fn external_cell_conflict_preserves_draft_and_enter_overwrites_escape_discards(
 #[gpui::test]
 fn grid_accessibility_tree_exposes_readonly_sort_and_header_indices(cx: &mut gpui::TestAppContext) {
     let (_, window, _) = setup(cx);
+    window.update(|window, _| window.set_a11y_active_for_tests(true));
     fn snapshot(window: &mut gpui::VisualTestContext) -> serde_json::Value {
         window.update(|window, app| {
             let _ = window.draw(app);

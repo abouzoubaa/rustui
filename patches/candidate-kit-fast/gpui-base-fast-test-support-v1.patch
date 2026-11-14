@@ -1,0 +1,46 @@
+--- a/crates/rustui-gpui-base/Cargo.toml
++++ b/crates/rustui-gpui-base/Cargo.toml
+@@ -165,22 +165,31 @@
+ [dependencies.web-time]
+ version = "1"
+ 
+-[dev-dependencies.gpui]
+-version = "=0.3.12"
+-features = [
++[dev-dependencies.criterion]
++version = "0.8"
++
++[dev-dependencies.gpui-fast]
++version = "0.1.14"
++features = [
++    "windows-manifest-provided-by-host",
+     "test-support",
+-]
+-path = "../rustui-gpui"
+-package = "gpui-pre"
+-
+-[dev-dependencies.gpui_platform]
+-version = "=0.3.12"
+-path = "../rustui-gpui-platform"
++    "bench-support",
++]
++package = "gpui-fast"
++
++[dev-dependencies.gpui-fast-platform]
++version = "0.1.14"
+ features = [
+     "font-kit",
++    "x11",
++    "wayland",
+     "runtime_shaders",
+-]
+-package = "gpui-pre-platform"
++    "bench-support",
++]
++package = "gpui-fast-platform"
++
++[dev-dependencies.indoc]
++version = "2"
+ 
+ [target.'cfg(not(target_family = "wasm"))'.dependencies.smol]
+ version = "2"

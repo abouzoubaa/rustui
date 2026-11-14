@@ -1,0 +1,13 @@
+diff --git a/vendor/gpui-base-0.9.1/src/tree.rs b/vendor/gpui-base-0.9.1/src/tree.rs
+index 1e97837d..1a0e1398 100644
+--- a/vendor/gpui-base-0.9.1/src/tree.rs
++++ b/vendor/gpui-base-0.9.1/src/tree.rs
+@@ -350,7 +350,7 @@ impl TreeState {
+         let Some(entry) = self.entries.get(ix) else {
+             return;
+         };
+-        if !entry.is_folder() {
++        if !entry.is_folder() || entry.is_disabled() {
+             return;
+         }
+ 
