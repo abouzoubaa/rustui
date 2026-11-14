@@ -1,6 +1,7 @@
 # Changelog
 
 ## Unreleased
+- F0-7: completed automated GPUI Fast matrices and benchmarks; added the owner macOS acceptance checklist.
 - F0-6: refreshed Fast dependency notices, tightened owned-source verification, and covered candidate tooling in the CI cache key.
 - F0-5: added no-forced-refresh stale-rendering tests for owner, binding, environment/theme, list, menu, text input, grid edits, and transitions; all pass on the current base and Fast candidate.
 - F0-4i: verified the existing Fast native-popup candidates with cumulative placement, nested-dismissal, and parent-teardown proofs.
