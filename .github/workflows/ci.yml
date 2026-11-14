@@ -124,7 +124,7 @@ jobs:
         run: python3 -m unittest scripts.tests.test_check_kit09_family_stack -v
       - name: Verify the GPUI Kit 0.9 cumulative family stack
         run: python3 scripts/check_kit09_family_stack.py --compile-online --proof-a3-4a --proof-a3-4b --proof-a3-4c --proof-a3-4d --proof-a3-4e --proof-a3-4f --proof-a3-4g --proof-a3-4i
-      - name: Test the GPUI Fast candidate core and copied menu/select patches
+      - name: Test the GPUI Fast candidate core and copied menu/select/tree/list/grid patches
         run: python3 -m unittest scripts.tests.test_f0_fast_core_stack -v
       - name: Verify the GPUI Fast candidate core patch stack
         run: python3 scripts/check_f0_fast_core_stack.py --check

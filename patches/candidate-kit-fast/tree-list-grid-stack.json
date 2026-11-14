@@ -1,0 +1,13 @@
+{
+  "family": "tree-list-grid",
+  "patches": [
+    "gpui-selectable-list-semantics-v2.json",
+    "gpui-component-tree-accessible-name-v1-kit08.json",
+    "gpui-component-sidebar-disabled-a11y-v1-kit09.json",
+    "gpui-tree-aria-disabled-row-v1-kit08.json",
+    "gpui-tree-aria-level-v1-kit08.json",
+    "gpui-tree-disabled-keyboard-v2.json",
+    "r15-tree-disabled-focus-v1.json",
+    "gpui-component-table-delegate-accessibility-v1-kit09.json"
+  ]
+}

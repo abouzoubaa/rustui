@@ -1,0 +1,23 @@
+{
+  "schema_version": 1,
+  "name": "gpui-component-table-delegate-accessibility-v1-kit09",
+  "upstream": {
+    "repository": "https://github.com/longbridge/gpui-kit",
+    "tag": "v0.9.1",
+    "commit": "39ab849a93b5f15507b969164d49891db8d5b470",
+    "gpui_pre_version": "0.3.12",
+    "gpui_fast_version": "0.1.14"
+  },
+  "patch": "gpui-component-table-delegate-accessibility-v1-kit09.patch",
+  "patch_sha256": "cca4afa6da1d89d78a982de07ac6ca8d9d5833c2bbf91f2185a8a3deb6bd72a7",
+  "files": {
+    "vendor/gpui-component-0.9.1/src/table/data_table.rs": {
+      "pre_sha256": "ba3e6c8da6ede38af98f88ed32fa8fa3a5d5532c892121ad678a590c7279450c",
+      "post_sha256": "c7d1120bb45212cd21715c68032ab412525bcba5d943c79a418f4c654d13d550"
+    },
+    "vendor/gpui-component-0.9.1/src/table/state.rs": {
+      "pre_sha256": "90f91e2499f3df086be8ef5cfe07aabe4c9cc9df93dc24bd1aed50980ee076c0",
+      "post_sha256": "3b338700b7ca3844cccdd796af46154c6c7ed1fa525c43941a0a3c378ae50e71"
+    }
+  }
+}

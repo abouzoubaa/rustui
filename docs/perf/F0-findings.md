@@ -14,3 +14,9 @@
 - Cumulative Kit 0.9 fixture stack applied and reversed exactly (64 stack files). The disabled popup-menu confirmation proof and popup-menu selection-recovery proof each passed: 1 passed / 0 failed / 0 ignored. This fixture uses the Kit 0.9.1 source archives; the workspace Fast compilation also passes, but RustUI's disabled/popup assertions below still fail.
 - Full RustUI check after F0-4b: **1,388 passed / 48 failed / 7 ignored**. Menu/select failures: `components::disabled_tests::menu_item::accessibility` finds no MenuItem AX node; `menu_item::recovery` fails to find the popup row; `combo_box::recovery` and `picker::recovery` unwrap a missing popup node. The ComboBox/Picker accessibility cases also report `disabled: null`, matching the F0-4a disabled-state finding.
 - No assertions were weakened, removed, or ignored. Continue these findings into F0-5/F0-7 analysis.
+
+## F0-4c: Tree/list/grid family
+
+- Copied 8 tree/list/grid patches unchanged from `patches/approved/kit09/`. The candidate copy/hash test passes. The cumulative Kit 0.9 fixture applies and reverses 64 stack files exactly; focused tree-name/level, DataTable delegate-accessibility, and ARIA sort/read-only proofs each pass (1 passed / 0 failed / 0 ignored).
+- Full RustUI Fast check remains **1,388 passed / 48 failed / 7 ignored**. `components::data::editable_data_grid::tests::grid_cells_reference_actual_header_nodes_across_updates` still fails because the emitted Cell node has no `labelled_by` relation to its header. Tree disabled accessibility and recovery cases remain among the disabled-matrix failures; see F0-4a.
+- No assertions were weakened, removed, or ignored.
