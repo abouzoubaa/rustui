@@ -1,6 +1,7 @@
 # Changelog
 
 ## Unreleased
+- F0-9: audited RustUI invalidation paths and culled off-viewport GraphView nodes to remove the Fast NaN mask; removed the relaxed glyph-mask assertion patch.
 - F0-8: recorded the GPUI Fast evaluation gates, benchmark comparison, and owner decision blockers.
 - F0-7: completed automated GPUI Fast matrices and benchmarks; added the owner macOS acceptance checklist.
 - F0-6: refreshed Fast dependency notices, tightened owned-source verification, and covered candidate tooling in the CI cache key.

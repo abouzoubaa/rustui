@@ -66,3 +66,33 @@ All new workloads use the same Apple M1 Max, macOS 27.0, Rust 1.98.0 GPUI test-w
 - The stricter workspace-wide metadata count remains nonzero even though the RustUI macOS target graph uses only GPUI Fast. Decide whether the dormant package records must be removed before adoption.
 - The full automated test count improved relative to the recorded F0-4 run, but the earlier 48 failures' cause was not proven.
 - All automated performance gates pass. The two failures above mean the F0 adoption criteria are not all met. Keep `main` on gpui-pre until the owner reviews the native results and decides how to resolve the metadata gate.
+
+
+## Changes since first decision (F0-9)
+
+- Missing-notify audit: `docs/perf/F0-notify-audit.md` records the production component/view entity updates and notification path for each. It found no RustUI production update that changes visible output without an invalidation; no production notify fix was needed. The existing five no-forced-refresh tests remain the behavioral coverage.
+- NaN content mask: resolved in RustUI GraphView by not creating absolute node elements for projected rectangles outside the viewport. The offending node was `rustui-graph-node ... b` in the GraphView GPUI test: a finite ~`3.06e38px` x coordinate / `3.40e36px` width was outside the 600×400 viewport but still lowered to a Div. The original GPUI Fast `debug_assert_eq!` test passes after the culling change. The NaN-equality patch was removed.
+- Dormant metadata records: fresh unfiltered `cargo metadata --format-version 1 --locked --offline` reports `gpui-pre=2` and `gpui-fast=1`. The path `gpui-pre 0.3.12` record is referenced by optional `gpui` dependencies in owned `gpui-base`, `gpui-component`, and `gpui-kit-assets`, by the `gpui-component` dev dependency, and by `gpui-pre-web` / `gpui-pre-wgpu`. The registry `gpui-pre 0.3.12` record is referenced by upstream `gpui-pre-apple` and `gpui-pre-ios`. Those package-level references preserve gpui-pre comparison/dev and deferred-platform package graphs; neither `gpui-pre` record is in RustUI’s filtered macOS target graph. They were left intact in F0-9.
+
+### Fresh F0-9 verification
+
+| Command | Result |
+|---|---|
+| `scripts/check.sh` | Exit 0; 1,831 passed / 0 failed / 7 ignored (groups: 1,441; 9; 86; 40; 255; 0) |
+| `./scripts/verify-release.sh source` | Exit 0; Fast core candidate stack 17 patches, exact hashes PASS; approved source patch gates PASS |
+| `scripts/smoke-playground.sh` | Exit 0; temporary Playground app stayed running for 10 seconds with no new crash report |
+| Focused graph regression, original GPUI Fast assertion | `rendered_node_editor_connects_moves_and_deletes_nodes`: 1 passed / 0 failed / 0 ignored; also passed in full check |
+| `cargo metadata --format-version 1 --locked --offline` | Exit 0; `gpui-pre=2`, `gpui-fast=1`; reasons listed above |
+
+The first three F0 workload sets were discarded because they overlapped the release-mode 1,000-row benchmark build. These replacement measurements ran with no concurrent cargo build, three runs each. The existing release benchmark also ran three times.
+
+| Workload | gpui-pre baseline median / p95 | First Fast decision median / p95 | F0-9 fresh median / p95 | Notes |
+|---|---:|---:|---:|---|
+| 5,000-row list scroll | 11.277 / 12.629 ms | 0.630 / 0.740 ms | 5.586 / 6.290 ms | Still faster than gpui-pre; 20 rows/frame rebuilt (6,000 / 300 frames) |
+| Typing in 10,000-line Rust editor | 5.775 / 6.972 ms | 0.699 / 0.902 ms | 5.068 / 6.012 ms | Faster than gpui-pre in this run |
+| Idle draw with 60 mounted panels | 3.702 / 4.257 ms | 0.017 / 0.017 ms | 0.183 / 0.207 ms | Faster than gpui-pre; 2 idle body renders, 3 after owner update |
+| 1,000-row update + forced draw | 8.790 ms | 5.658 ms | 5.535 ms | Release harness: 5.478, 5.668, 5.543 ms; 3.42% spread |
+
+The first three fresh workload timings are materially higher than the first Fast measurements, although still below the recorded gpui-pre medians. This run does not establish that the F0-9 GraphView culling change caused the difference; the measured list/editor/idle workloads do not exercise GraphView. Keep this measurement variance visible for the owner review.
+
+The F0-9 notify audit found no RustUI production component/view update with a missing invalidation, so no new notify-specific test was required. The existing five no-forced-refresh tests remain part of the 1,441-test RustUI group; the GraphView regression above exercises the offscreen extreme-node fix.

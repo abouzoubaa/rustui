@@ -18,7 +18,6 @@
     "gpui-macos-popup-child-teardown-v1-fast.json",
     "gpui-test-support-a11y-activation-v1-fast.json",
     "gpui-test-window-a11y-default-v1-fast.json",
-    "gpui-fast-test-tree-disabled-v1-fast.json",
-    "gpui-fast-glyph-mask-nan-equality-v1-fast.json"
+    "gpui-fast-test-tree-disabled-v1-fast.json"
   ]
 }
