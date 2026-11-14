@@ -38,3 +38,9 @@
 - Copied two input/text patches unchanged from the Kit 0.9 candidate stack. The candidate-copy/hash unit suite passes 6/6. The cumulative Kit 0.9.1 fixture applied and reversed all 64 stack files exactly.
 - Focused fixture proofs pass: placeholder color override survives palette resolution; validation description reaches the editor-owned accessibility node (each 1 passed / 0 failed / 0 ignored).
 - Full RustUI Fast check remains **1,388 passed / 48 failed / 7 ignored** (exit 101). The failing tests remain 47 disabled-control accessibility/recovery cases, the Grid header relation, and GraphView's NaN assertion. No input/text behavior assertion failed. No test was weakened, deleted, or ignored.
+
+## F0-4g: Toolbar and RTL family
+
+- Copied the toolbar RTL patch unchanged from the Kit 0.9 candidate stack. The candidate-copy/hash unit suite passes 7/7. The cumulative Kit 0.9.1 fixture applied and reversed all 64 stack files exactly.
+- Focused fixture proof passes: RTL Toolbar arrows follow visual order (1 passed / 0 failed / 0 ignored).
+- Full RustUI Fast check remains **1,388 passed / 48 failed / 7 ignored** (exit 101), with the same accessibility/recovery, Grid relation, and GraphView NaN failures; no Toolbar assertion failed. No test was weakened, deleted, or ignored.

@@ -1,6 +1,7 @@
 # Changelog
 
 ## Unreleased
+- F0-4g: copied the toolbar RTL Kit 0.9 patch into the Fast candidate stack; cumulative visual-order navigation proof passes.
 - F0-4f: copied the input/text Kit 0.9 candidates into the Fast stack; placeholder color and editor-node validation proofs pass.
 - F0-4e: copied the calendar/DatePicker Kit 0.9 patch family into the Fast candidate stack; cumulative localization, keyboard, RTL, accessibility and date-limit proofs pass.
 - F0-4d: copied the slider/resize Kit 0.9 patch family into the Fast candidate stack; cumulative SetValue, geometry, and resize proofs pass.
