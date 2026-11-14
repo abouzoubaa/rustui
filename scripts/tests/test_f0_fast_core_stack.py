@@ -19,6 +19,7 @@ SLIDER_STACK_PATH = REPO_ROOT / "patches/candidate-kit-fast/slider-resize-stack.
 CALENDAR_STACK_PATH = REPO_ROOT / "patches/candidate-kit-fast/calendar-date-stack.json"
 INPUT_TEXT_STACK_PATH = REPO_ROOT / "patches/candidate-kit-fast/input-text-stack.json"
 TOOLBAR_STACK_PATH = REPO_ROOT / "patches/candidate-kit-fast/toolbar-rtl-stack.json"
+SYNTAX_DIFF_STACK_PATH = REPO_ROOT / "patches/candidate-kit-fast/syntax-diff-stack.json"
 
 
 class FastCoreStackTests(unittest.TestCase):
@@ -55,6 +56,9 @@ class FastCoreStackTests(unittest.TestCase):
 
     def test_toolbar_rtl_candidates_are_exact_kit09_copies(self):
         self.assert_family_candidates_are_exact_kit09_copies(TOOLBAR_STACK_PATH, "toolbar-rtl")
+
+    def test_syntax_diff_candidates_are_exact_kit09_copies(self):
+        self.assert_family_candidates_are_exact_kit09_copies(SYNTAX_DIFF_STACK_PATH, "syntax-diff")
 
     def test_core_stack_reverses_and_reapplies_exactly(self):
         stack = json.loads(STACK_PATH.read_text())

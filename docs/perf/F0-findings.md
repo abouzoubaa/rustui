@@ -44,3 +44,9 @@
 - Copied the toolbar RTL patch unchanged from the Kit 0.9 candidate stack. The candidate-copy/hash unit suite passes 7/7. The cumulative Kit 0.9.1 fixture applied and reversed all 64 stack files exactly.
 - Focused fixture proof passes: RTL Toolbar arrows follow visual order (1 passed / 0 failed / 0 ignored).
 - Full RustUI Fast check remains **1,388 passed / 48 failed / 7 ignored** (exit 101), with the same accessibility/recovery, Grid relation, and GraphView NaN failures; no Toolbar assertion failed. No test was weakened, deleted, or ignored.
+
+## F0-4h: Syntax and Diff family
+
+- Copied four syntax/Diff Kit 0.9 patches unchanged into the Fast candidate stack. The exact-copy/hash suite passes 8/8, and the Fast core candidate stack check passes with 18 patches and exact hashes.
+- The cumulative Kit 0.9.1 fixture applies and reverses all 64 stack files exactly. Its component test fixture now resolves tree-sitter using RustUI's owned manifest requirement (0.27.1; fixture resolution 0.27.2), matching the actual workspace API. Syntax proofs pass: JSON string context; source-change provider refresh; Diff syntax-highlighter refresh (each 1 passed / 0 failed / 0 ignored).
+- Full RustUI Fast check remains **1,388 passed / 48 failed / 7 ignored** (exit 101): 46 disabled-control accessibility cases, 6 disabled-control recovery cases, the Grid header relation, and GraphView's NaN assertion. The syntax/Diff family adds no full-suite failures. No test was weakened, deleted, or ignored.
