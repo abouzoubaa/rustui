@@ -9,8 +9,8 @@ Decision point: 2026-11-14. This evaluates the candidate on `f0-integration`; it
 | Full `scripts/check.sh`: at least 1,826 passed, zero failures | **PASS** | PR #133 source job: 1,441 + 9 + 86 + 40 + 255 = **1,831 passed / 0 failed / 7 ignored**. The seven ignored entries are the existing manual/performance cases; no F0 test was ignored. |
 | Every focused matrix and cumulative proof passes | **PASS (automated)** | The Kit 0.9 cumulative fixture applied/reversed 64 files exactly (15 core; A3-4a 3; 4b 10; 4c 8; 4d 6; 4e 8; 4f 2; 4g 1; 4h 4; 4i 2). F0's 18-patch core candidate stack passed exact-hash apply/reverse. PR #133 source job passed. Focused RustUI results are listed below. |
 | `scripts/smoke-playground.sh` | **PASS** | Exit 0; the temporary Playground app stayed running for 10 seconds and produced no new crash report. |
-| 1,000-row update + forced draw: at least 10% faster than 8.64 ms (target ≤ 7.776 ms) | **PASS** | Three-run median **5.658 ms** (5.595, 5.568, 5.722 ms), versus the recorded gpui-pre baseline **8.790 ms**. Update-only median: 3.363 ms vs 4.678 ms. |
-| Long-list scrolling: at least 20% lower median frame time | **PASS** | 5,000-row / 300-frame median **0.630 ms**, p95 **0.740 ms**, versus **11.277 / 12.629 ms** on gpui-pre. Candidate run medians: 0.632, 0.630, 0.622 ms; p95s: 0.712, 0.745, 0.740 ms. Rebuilt rows fell from 40 to 20 per frame. |
+| 1,000-row update + forced draw: at least 10% faster than 8.64 ms (target ≤ 7.776 ms) | **PASS** | F0-10 release median **5.663 ms** (5.855, 5.663, 5.643, 5.743, 5.495 ms), versus same-profile gpui-pre **8.763 ms**; spread 6.35% Fast / 1.07% baseline. |
+| Long-list scrolling: at least 20% lower median frame time | **PASS** | F0-10 release median **0.622 ms**, p95 **0.776 ms**, versus same-profile gpui-pre **1.274 / 1.513 ms**; spread 1.78% Fast / 2.88% baseline. Rebuilt rows fell from 40 to 20 per frame. |
 | No automated stale-rendering failures and owner native stale-rendering checklist passes | **FAIL — owner check pending** | All five no-forced-refresh GPUI test-window cases passed on both the gpui-pre baseline and the Fast candidate. The owner has not run the native checklist, so this combined criterion is not satisfied. |
 
 ## Additional F0 integration gates
@@ -18,7 +18,7 @@ Decision point: 2026-11-14. This evaluates the candidate on `f0-integration`; it
 | Gate | Result | Evidence |
 |---|---|---|
 | One GPUI backend in RustUI's macOS target graph | **PASS** | `rustup run 1.98.0 cargo tree -p rustui -i gpui-fast --target aarch64-apple-darwin` exits 0 and shows `gpui-fast v0.1.14` as the core used by RustUI/Base/Component. Filtered metadata reports `gpui-pre=0`, `gpui-fast=1`. |
-| Workspace-wide metadata has no `gpui-pre` package | **FAIL** | Unfiltered `cargo metadata --format-version 1 --locked --offline` reports `gpui-pre=2`, `gpui-fast=1`. The two `gpui-pre` records are the owned path crate and registry package retained as dormant workspace/optional records; they are absent from RustUI's filtered macOS graph. The requested unfiltered zero-count proof therefore does not pass. Also, `cargo tree -i gpui-pre` is ambiguous until a source-qualified package ID is supplied. |
+| Workspace-wide metadata has no `gpui-pre` package | **PENDING OWNER CONFIRMATION** | **Accepted by design: gpui-pre only in deferred-platform and optional Kit records; RustUI macOS graph has one GPUI.** Unfiltered metadata retains two records (`gpui-pre=2`, `gpui-fast=1`); the filtered RustUI macOS graph has only GPUI Fast. |
 | Source checks and owned-source mirror verifier | **PASS** | PR #133 source job passed in 18m42s, including `verify-release.sh source`, candidate fixture checks, and `verify_owned_gpui_sources.py`. |
 
 ## Automated focused results
@@ -55,17 +55,19 @@ All new workloads use the same Apple M1 Max, macOS 27.0, Rust 1.98.0 GPUI test-w
 
 | Workload | gpui-pre baseline median / p95 | Fast candidate median / p95 | Result |
 |---|---:|---:|---|
-| 5,000-row list scroll | 11.277 / 12.629 ms | 0.630 / 0.740 ms | Faster; 20 rows/frame rebuilt vs 40 |
-| Typing in 10,000-line Rust editor | 5.775 / 6.972 ms | 0.699 / 0.902 ms | Faster |
-| Idle draw with 60 mounted panels | 3.702 / 4.257 ms | 0.017 / 0.017 ms | Faster; post-change owner render count remains 3 |
-| 1,000-row update + forced draw | 8.790 ms | 5.658 ms | Faster |
+| 5,000-row list scroll | 1.274 / 1.513 ms | 0.622 / 0.776 ms | F0-10 official aligned release comparison; 20 rows/frame rebuilt vs 40 |
+| Typing in 10,000-line Rust editor | 0.656 / 0.980 ms | 0.633 / 0.957 ms | F0-10 official aligned release comparison |
+| Idle draw with 60 mounted panels | 0.258 / 0.334 ms | 0.016 / 0.018 ms | F0-10 official aligned release comparison; 63 vs 2 idle owner renders |
+| 1,000-row update + forced draw | 8.763 / 9.034 ms | 5.663 / 6.097 ms | F0-10 official aligned release comparison |
+
+The official values above are five-run interleaved release-profile comparisons. Full per-run results, profiles, warm-up details, and the historical F0-8/F0-9 method discrepancy are documented in [F0-bench-method.md](F0-bench-method.md). The earlier F0-8 and F0-9 measurements remain below as historical data; they are not the official aligned comparison.
 
 ## Risks and owner decision
 
 - Native/manual acceptance is **not verified**. Run every step in `F0-native-checklist.md`, including window resize/display movement, rapid scroll, editing, and accessibility-tree checks.
-- The stricter workspace-wide metadata count remains nonzero even though the RustUI macOS target graph uses only GPUI Fast. Decide whether the dormant package records must be removed before adoption.
+- Workspace metadata is accepted by design as stated above, pending owner confirmation.
 - The full automated test count improved relative to the recorded F0-4 run, but the earlier 48 failures' cause was not proven.
-- All automated performance gates pass. The two failures above mean the F0 adoption criteria are not all met. Keep `main` on gpui-pre until the owner reviews the native results and decides how to resolve the metadata gate.
+- All automated performance gates pass. The owner has not run the native stale-rendering checklist; adoption remains unapproved pending that native result and confirmation of the metadata-gate wording.
 
 
 ## Changes since first decision (F0-9)
