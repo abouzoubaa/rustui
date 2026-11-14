@@ -51,7 +51,7 @@ No test assertion was weakened. The current full check is 1,831/0/7; the histori
 
 ## Additional benchmark comparison
 
-All new workloads use the same Apple M1 Max, macOS 27.0, Rust 1.98.0 GPUI test-window methodology and three runs per backend. Values are medians of per-run medians and p95s.
+F0-10's official values use the same Apple M1 Max, macOS 27.0, Rust 1.98.0 GPUI test-window methodology and five interleaved runs per backend. Values are medians of per-run medians and p95s; earlier run counts are historical only.
 
 | Workload | gpui-pre baseline median / p95 | Fast candidate median / p95 | Result |
 |---|---:|---:|---|
