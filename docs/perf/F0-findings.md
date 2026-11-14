@@ -8,6 +8,14 @@
 - `components::advanced::graph_view::interaction::current_selection_regressions::rendered_node_editor_connects_moves_and_deletes_nodes` still fails in the full isolated-target run inside `LineGlyphPainter::may_reach` with identical displayed bounds containing `NaNpx`. The `equal_including_nan` candidate is present and compiled; its assertion still fires. Root cause remains unresolved.
 - No test assertions were weakened, removed, or ignored.
 
+
+## F0-9: NaN content-mask regression — resolved
+
+- Diagnostic test: `components::advanced::graph_view::interaction::current_selection_regressions::rendered_node_editor_connects_moves_and_deletes_nodes`, rebuilt against GPUI Fast's original `debug_assert_eq!` (no relaxed-assert candidate).
+- First invalid mask was emitted for the NodeEditor graph node element `rustui-graph-node ... b`: bounds origin `(infpx, 1px)`, size `(NaNpx, 80px)`, mask origin `(infpx, 2px)`, size `(NaNpx, 78px)`. The RustUI graph model supplied a finite but extreme projected rectangle around `3.06e38px` x / `3.40e36px` width, outside the 600×400 viewport.
+- Fix: GraphView now skips node Divs whose projected rectangles do not intersect the clipped viewport, using f64 edge comparisons. It retains the model node; it simply does not construct an absolute layout element for geometry that cannot be visible. The focused graph drag/edit regression passed with GPUI Fast's original assertion after a forced rebuild.
+- Candidate `gpui-fast-glyph-mask-nan-equality-v1-fast` was removed from the stack and its vendor changes reversed.
+
 ## F0-4b: Menu/select family
 
 - Copied 10 menu/select patches unchanged from `patches/approved/kit09/` into `patches/candidate-kit-fast/`; `menu-select-stack.json` records provider-first order. `test_menu_select_candidates_are_exact_kit09_copies` passes.
