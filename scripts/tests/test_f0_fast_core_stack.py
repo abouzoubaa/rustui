@@ -13,9 +13,26 @@ from check_f0_fast_core_stack import run as apply_stack  # noqa: E402
 
 
 STACK_PATH = REPO_ROOT / "patches/candidate-kit-fast/core-stack.json"
+MENU_STACK_PATH = REPO_ROOT / "patches/candidate-kit-fast/menu-select-stack.json"
 
 
 class FastCoreStackTests(unittest.TestCase):
+    def test_menu_select_candidates_are_exact_kit09_copies(self):
+        stack = json.loads(MENU_STACK_PATH.read_text())
+        self.assertEqual(stack["family"], "menu-select")
+        approved = REPO_ROOT / "patches/approved/kit09"
+        candidate = REPO_ROOT / "patches/candidate-kit-fast"
+        for manifest_name in stack["patches"]:
+            manifest_path = candidate / manifest_name
+            manifest = json.loads(manifest_path.read_text())
+            source_manifest_path = approved / manifest_name
+            source_manifest = json.loads(source_manifest_path.read_text())
+            source_patch = approved / source_manifest["candidate"]
+            candidate_patch = candidate / manifest["patch"]
+            self.assertEqual(candidate_patch.read_bytes(), source_patch.read_bytes())
+            self.assertEqual(manifest["patch_sha256"], source_manifest["patch_sha256"])
+            self.assertEqual(manifest["files"], source_manifest["files"])
+
     def test_core_stack_reverses_and_reapplies_exactly(self):
         stack = json.loads(STACK_PATH.read_text())
         manifests = [REPO_ROOT / "patches/candidate-kit-fast" / name for name in stack["patches"]]

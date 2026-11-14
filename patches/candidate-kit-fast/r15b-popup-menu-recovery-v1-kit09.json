@@ -1,0 +1,19 @@
+{
+  "schema_version": 1,
+  "name": "r15b-popup-menu-recovery-v1-kit09",
+  "upstream": {
+    "repository": "https://github.com/longbridge/gpui-kit",
+    "tag": "v0.9.1",
+    "commit": "39ab849a93b5f15507b969164d49891db8d5b470",
+    "gpui_pre_version": "0.3.12",
+    "gpui_fast_version": "0.1.14"
+  },
+  "patch": "r15b-popup-menu-recovery-v1-kit09.patch",
+  "patch_sha256": "30b852c8e7c7416e06799054fd779fc1dbd0a1e71be4ade87f8e14e5f17bd4a3",
+  "files": {
+    "vendor/gpui-component-0.9.1/src/menu/popup_menu.rs": {
+      "pre_sha256": "43593b02fbf69a9e1e0069cd800faa2fb986c6c45d11a9d0274184813d28b965",
+      "post_sha256": "8ce409ed4848c3d55069ac57031ea2661200e1b991a257c9865649032c172474"
+    }
+  }
+}
