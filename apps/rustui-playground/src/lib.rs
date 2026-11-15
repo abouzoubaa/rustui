@@ -196,7 +196,7 @@ impl Playground {
             .collect::<Vec<_>>();
         let rows = catalog_indices
             .iter()
-            .map(|&index| CATALOG[index].key)
+            .map(|&index| catalog_sidebar_label(CATALOG[index].key))
             .collect::<Vec<_>>();
         let coverage_messages = catalog_indices
             .into_iter()
@@ -252,7 +252,7 @@ impl Playground {
         let item = selected_story.is_none().then(|| self.item()).flatten();
         let title = selected_story
             .map(|story| story.title)
-            .or_else(|| item.map(|item| item.key))
+            .or_else(|| item.map(|item| catalog_sidebar_label(item.key)))
             .unwrap_or("Choose a component or demo");
         let coverage = item.map_or_else(
             || Text(""),
@@ -449,6 +449,13 @@ fn filtered_story_indices_localized(query: &str) -> Vec<usize> {
 fn search_has_results(query: &str) -> bool {
     !filtered_catalog_indices(query).is_empty()
         || !filtered_story_indices_localized(query).is_empty()
+}
+
+fn catalog_sidebar_label(key: &'static str) -> &'static str {
+    match key {
+        "f0_native_acceptance" => "F0 Native Acceptance",
+        other => other,
+    }
 }
 
 impl View for Playground {
@@ -732,6 +739,14 @@ mod tests {
                 .unwrap();
             assert!(message.contains("invalid theme"), "{tag}: {message}");
         }
+    }
+
+    #[test]
+    fn f0_acceptance_story_has_a_clear_sidebar_label() {
+        assert_eq!(
+            catalog_sidebar_label("f0_native_acceptance"),
+            "F0 Native Acceptance"
+        );
     }
 
     #[test]

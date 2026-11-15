@@ -51,6 +51,7 @@ mod disclosure_gallery;
 mod drawer_gallery;
 mod editable_grid_gallery;
 mod event_inspector;
+mod f0_native_acceptance_gallery;
 mod feedback_gallery;
 mod file_drop_gallery;
 mod focus_gallery;
@@ -146,6 +147,7 @@ pub(crate) fn catalog_demo(key: &str) -> Option<AnyView> {
                 .child(spring_gallery::demo())
                 .child(animation_identity_gallery::demo()),
         )),
+        "f0_native_acceptance" => Some(AnyView::new(f0_native_acceptance_gallery::demo())),
         "list" => Some(AnyView::new(keyed_list_gallery::demo())),
         "sidebar" => Some(AnyView::new(sidebar_gallery::demo())),
         "navigation_split" => Some(AnyView::new(navigation_split_gallery::demo())),
