@@ -46,7 +46,7 @@ macro_rules! item {
 /// The first 41 entries mirror `themes/macos27.json`; app-only gallery entries follow.
 #[cfg(test)]
 const THEME_CATALOG_LEN: usize = 41;
-pub const CATALOG: [CatalogItem; 46] = [
+pub const CATALOG: [CatalogItem; 47] = [
     item!(
         "link",
         "Link",
@@ -369,6 +369,13 @@ pub const CATALOG: [CatalogItem; 46] = [
         "Typed same-process Copy and Transfer gallery; M142 verified keyboard alternatives and M148 verified target removal during a held drag on macOS.",
         "docs/ui/macos-27/Form.svg"
     ),
+    item!(
+        "f0_native_acceptance",
+        "F0 Native Acceptance",
+        Partial,
+        "F0 native acceptance workloads: 5,000-row collection, 10,000-line Rust editor, editable grid, menu and popover, and appearance switching.",
+        "docs/ui/macos-27/List.svg"
+    ),
 ];
 
 pub const MISSING_REFERENCES: [&str; 0] = [];
@@ -398,7 +405,7 @@ mod tests {
     fn catalog_preserves_theme_pack_and_appends_gallery_rows() {
         let document = rustui::theme::parse_theme(PACK).expect("appearance pack parses");
         let components = &document.components;
-        assert_eq!(CATALOG.len(), THEME_CATALOG_LEN + 5);
+        assert_eq!(CATALOG.len(), THEME_CATALOG_LEN + 6);
         assert_eq!(components.len(), THEME_CATALOG_LEN);
         for item in CATALOG.iter().take(THEME_CATALOG_LEN) {
             assert!(components.contains_key(item.key), "missing {}", item.key);
@@ -500,6 +507,17 @@ mod tests {
             }
         }
         assert_eq!(filtered_indices("definitely absent"), Vec::<usize>::new());
+    }
+
+    #[test]
+    fn f0_native_acceptance_catalog_item_has_a_story_route() {
+        let item = CATALOG
+            .iter()
+            .find(|item| item.key == "f0_native_acceptance")
+            .expect("F0 native acceptance catalog item");
+        assert_eq!(item.api, "F0 Native Acceptance");
+        assert_eq!(filtered_indices("F0 Native Acceptance"), vec![46]);
+        assert!(crate::stories::catalog_demo(item.key).is_some());
     }
 
     #[test]

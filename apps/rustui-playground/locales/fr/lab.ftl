@@ -242,6 +242,7 @@ lab-catalog-note-offset = Démonstration de positionnement relatif signé ; les 
 lab-catalog-note-collection = Démonstration de ligne virtualisée à identifiant stable ; les validations natives d’interaction et de cycle de vie restent à effectuer.
 lab-catalog-note-sheet = Panneau latéral GPUI Components ouvert par déclencheur, avec titre et corps facultatifs ; la validation GUI native reste à effectuer.
 lab-catalog-note-drag_drop = Galerie de transfert et de copie typés au sein du même processus ; M142 a validé les alternatives clavier et M148 le retrait de la cible pendant un glissement maintenu sur macOS.
+lab-catalog-note-f0_native_acceptance = Une page pour les vérifications natives : collection de 5 000 lignes, éditeur Rust de 10 000 lignes, grille modifiable, menus et fenêtres contextuelles, et changement d’apparence.
 
 lab-i18n-runtime-examples = Messages Fluent, nombres et dates selon la langue
 
