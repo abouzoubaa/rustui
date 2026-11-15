@@ -371,7 +371,7 @@ pub const CATALOG: [CatalogItem; 47] = [
     ),
     item!(
         "f0_native_acceptance",
-        "Native acceptance",
+        "F0 Native Acceptance",
         Partial,
         "F0 native acceptance workloads: 5,000-row collection, 10,000-line Rust editor, editable grid, menu and popover, and appearance switching.",
         "docs/ui/macos-27/List.svg"
@@ -515,7 +515,8 @@ mod tests {
             .iter()
             .find(|item| item.key == "f0_native_acceptance")
             .expect("F0 native acceptance catalog item");
-        assert_eq!(item.api, "Native acceptance");
+        assert_eq!(item.api, "F0 Native Acceptance");
+        assert_eq!(filtered_indices("F0 Native Acceptance"), vec![46]);
         assert!(crate::stories::catalog_demo(item.key).is_some());
     }
 
