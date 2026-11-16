@@ -700,6 +700,19 @@ fn duplicate_row_ids_are_rejected_before_any_write() {
     let _ = EditableDataGrid("Products", binding, |row: &Row| row.id.into(), Vec::new());
 }
 
+#[test]
+fn grid_viewport_height_is_configurable() {
+    let rows = Binding::new(
+        Vec::<Row>::new(),
+        |owner: &Owner| owner.rows.clone(),
+        |owner, rows| owner.rows = rows,
+    );
+    let grid =
+        EditableDataGrid("Products", rows, |row: &Row| row.id.into(), Vec::new()).height(680.0);
+
+    assert_eq!(grid.height, 680.0);
+}
+
 #[gpui::test]
 fn scrolling_away_and_back_preserves_the_active_draft(cx: &mut gpui::TestAppContext) {
     let (owner, window, _) = setup(cx);

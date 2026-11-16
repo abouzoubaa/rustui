@@ -136,6 +136,7 @@ pub struct EditableDataGridView<R: Clone + 'static> {
     rows: Binding<Vec<R>>,
     row_id: RowIdentity<R>,
     columns: Rc<Vec<DataGridColumn<R>>>,
+    height: f32,
     id: Option<Identity>,
 }
 
@@ -164,11 +165,19 @@ pub fn EditableDataGrid<R: Clone + 'static>(
         rows,
         row_id,
         columns: Rc::new(columns),
+        height: 300.0,
         id: None,
     }
 }
 
 impl<R: Clone + 'static> EditableDataGridView<R> {
+    /// Sets the grid's visible viewport height in logical pixels.
+    pub fn height(mut self, height: f32) -> Self {
+        assert!(height.is_finite(), "EditableDataGrid height must be finite");
+        self.height = height.max(1.0);
+        self
+    }
+
     /// Sets the retained identity of the grid.
     pub fn id(mut self, id: impl Into<Identity>) -> Self {
         let id = id.into();
@@ -1180,7 +1189,10 @@ impl<R: Clone + 'static> View for EditableDataGridView<R> {
         .capture_key_down(move |event, window, cx| {
             let _ = weak.update(cx, |state, cx| state.keyboard(event, window, cx));
         });
-        let body = div().h(px(300.)).w_full().child(DataTable::new(&table));
+        let body = div()
+            .h(px(self.height))
+            .w_full()
+            .child(DataTable::new(&table));
         root.child(body).into_any_element()
     }
 }

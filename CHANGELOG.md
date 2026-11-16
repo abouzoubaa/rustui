@@ -1,6 +1,7 @@
 # Changelog
 
 ## Unreleased
+- Playground: reorganized F0 native acceptance into focused panels, made the 10,000-line editor and full-height editable grid easy to reach, and added a configurable grid viewport height.
 - Playground: added an F0 Native Acceptance page with the 5,000-row collection, large Rust editor, editable grid, menus/popovers, and appearance controls together.
 - F0-11: bind packaged dependency notices to the Cargo.lock and supplement manifest hashes captured by the collector.
 - F0-10: aligned GPUI Fast and gpui-pre benchmark runs to the same warmed release profile and recorded five-run results.
