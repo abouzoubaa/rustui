@@ -5,6 +5,13 @@ pub fn demo() -> impl View {
     Component("editable-grid-gallery", EditableGridGallery::default)
 }
 
+pub(super) fn acceptance_demo(height: f32) -> impl View {
+    Component("f0-acceptance-editable-grid", move || EditableGridGallery {
+        grid_height: height,
+        ..EditableGridGallery::default()
+    })
+}
+
 #[derive(Clone, Debug, PartialEq)]
 struct Product {
     id: String,
@@ -28,6 +35,8 @@ fn initial_rows() -> Vec<Product> {
 struct EditableGridGallery {
     #[state(initial_rows())]
     rows: Vec<Product>,
+    #[state(300.0)]
+    grid_height: f32,
 }
 
 impl View for EditableGridGallery {
@@ -88,6 +97,7 @@ impl View for EditableGridGallery {
                         .read_only(),
                     ],
                 )
+                .height(self.grid_height())
                 .id("playground-editable-grid"),
             )
     }
