@@ -6,9 +6,9 @@ use rustui::prelude::*;
 
 const COLLECTION_ROWS: usize = 5_000;
 const EDITOR_LINES: usize = 10_000;
-const COLLECTION_VIEWPORT_HEIGHT: f32 = 480.0;
+const COLLECTION_VIEWPORT_HEIGHT: f32 = 760.0;
 const EDITOR_VIEWPORT_HEIGHT: f32 = 680.0;
-const GRID_VIEWPORT_HEIGHT: f32 = 680.0;
+const GRID_VIEWPORT_HEIGHT: f32 = 760.0;
 
 const ACCEPTANCE_TABS: [&str; 5] = [
     "Collection",
@@ -45,30 +45,18 @@ impl F0NativeAcceptanceGallery {
 
 impl View for F0NativeAcceptanceGallery {
     fn body(&self) -> impl View {
-        VStack::new()
-            .spacing(16.0)
-            .child(Text("F0 Native Acceptance"))
-            .child(Text(
-                "Choose a panel to give each native check its own workspace. Use the Playground header to switch the global appearance.",
-            ))
-            .child(
-                TabView(
-                    [
-                        TabItem::new(
-                            "collection",
-                            ACCEPTANCE_TABS[0],
-                            collection_panel(),
-                        ),
-                        TabItem::new("editor", ACCEPTANCE_TABS[1], editor_panel()),
-                        TabItem::new("grid", ACCEPTANCE_TABS[2], grid_panel()),
-                        TabItem::new("overlays", ACCEPTANCE_TABS[3], overlays_panel()),
-                        TabItem::new("appearance", ACCEPTANCE_TABS[4], appearance_panel()),
-                    ],
-                    Binding::new(self.selected_panel(), Self::read_panel, Self::write_panel),
-                )
-                .id("f0-native-acceptance-panels")
-                .style(TabViewStyle::Segmented),
-            )
+        TabView(
+            [
+                TabItem::new("collection", ACCEPTANCE_TABS[0], collection_panel()),
+                TabItem::new("editor", ACCEPTANCE_TABS[1], editor_panel()),
+                TabItem::new("grid", ACCEPTANCE_TABS[2], grid_panel()),
+                TabItem::new("overlays", ACCEPTANCE_TABS[3], overlays_panel()),
+                TabItem::new("appearance", ACCEPTANCE_TABS[4], appearance_panel()),
+            ],
+            Binding::new(self.selected_panel(), Self::read_panel, Self::write_panel),
+        )
+        .id("f0-native-acceptance-panels")
+        .style(TabViewStyle::Segmented)
     }
 }
 

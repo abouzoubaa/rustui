@@ -65,7 +65,14 @@ class FastCoreStackTests(unittest.TestCase):
         stack = json.loads(NATIVE_POPUP_STACK_PATH.read_text())
         core = json.loads(STACK_PATH.read_text())
         self.assertEqual(stack["family"], "native-popup")
-        self.assertEqual(len(stack["patches"]), 2)
+        self.assertEqual(
+            stack["patches"],
+            [
+                "gpui-macos-anchored-popup-v1-fast.json",
+                "gpui-macos-popup-child-teardown-v1-fast.json",
+                "gpui-macos-popup-defer-frame-v1-fast.json",
+            ],
+        )
         for manifest_name in stack["patches"]:
             self.assertIn(manifest_name, core["patches"])
             manifest = json.loads((REPO_ROOT / "patches/candidate-kit-fast" / manifest_name).read_text())
