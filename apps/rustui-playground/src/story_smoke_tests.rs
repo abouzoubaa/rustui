@@ -4,10 +4,7 @@ use rustui::gpui_component::Root;
 use rustui::runtime::component_host::ComponentHost;
 use rustui::theme::{AppearanceMode, activate_theme};
 
-#[gpui::test]
-fn f0_acceptance_collection_accepts_a_click_below_the_old_canvas_limit(
-    cx: &mut gpui::TestAppContext,
-) {
+fn f0_acceptance_window(cx: &mut gpui::TestAppContext) -> gpui::VisualTestContext {
     let theme = bundled_theme().expect("bundled theme");
     cx.update(|app| {
         rustui::gpui_component::init(app);
@@ -28,18 +25,24 @@ fn f0_acceptance_collection_accepts_a_click_below_the_old_canvas_limit(
         },
     );
     let mut window = gpui::VisualTestContext::from_window(handle.into(), cx);
-    let position = window.update(|window, app| {
+    window.update(|window, app| {
         window.set_a11y_active_for_tests(true);
         window.draw(app).clear(app);
+    });
+    window
+}
+
+fn click_label(window: &mut gpui::VisualTestContext, label: &str) {
+    let position = window.update(|window, _| {
         let tree: serde_json::Value =
             serde_json::from_str(&window.debug_a11y_tree_json().unwrap()).unwrap();
-        let row = tree["nodes"]
+        let node = tree["nodes"]
             .as_object()
             .unwrap()
             .values()
-            .find(|node| node["aria"]["label"].as_str() == Some("F0 row 0020"))
-            .expect("row 20 should be present in the taller viewport");
-        let bounds = &row["bounds"];
+            .find(|node| node["aria"]["label"].as_str() == Some(label))
+            .unwrap_or_else(|| panic!("missing accessible label {label:?}"));
+        let bounds = &node["bounds"];
         let scale = tree["frame"]["scale_factor"].as_f64().unwrap();
         let center = |origin: &str, extent: &str| {
             gpui::px(
@@ -50,12 +53,54 @@ fn f0_acceptance_collection_accepts_a_click_below_the_old_canvas_limit(
         gpui::point(center("x", "width"), center("y", "height"))
     });
     window.simulate_click(position, gpui::Modifiers::default());
+}
+
+#[gpui::test]
+fn f0_acceptance_collection_accepts_a_click_below_the_old_canvas_limit(
+    cx: &mut gpui::TestAppContext,
+) {
+    let mut window = f0_acceptance_window(cx);
+    click_label(&mut window, "F0 row 0020");
     window.run_until_parked();
     window.update(|window, app| {
         window.draw(app).clear(app);
         let tree = window.debug_a11y_tree_json().unwrap();
         assert!(tree.contains("Selected row: f0-row-0020"));
     });
+}
+
+#[gpui::test]
+fn f0_editor_popover_stays_open_across_idle_frames_and_closes_on_escape(
+    cx: &mut gpui::TestAppContext,
+) {
+    let mut window = f0_acceptance_window(cx);
+    let parent = window.update(|window, _| window.window_handle());
+    click_label(&mut window, "Menus & popovers");
+    window.update(|window, app| window.draw(app).clear(app));
+    click_label(&mut window, "Open editor popover");
+    let popup = window
+        .cx
+        .windows()
+        .into_iter()
+        .find(|handle| *handle != parent)
+        .expect("clicking the editor trigger should open a native window");
+
+    window.update(|window, app| window.draw(app).clear(app));
+    // A native frame request can deliver callbacks without redrawing a clean window.
+    window.update(|window, app| {
+        window.simulate_next_frame(app);
+        assert!(app.windows().contains(&popup), "closed on the next frame");
+        window.simulate_next_frame(app);
+        window.draw(app).clear(app);
+    });
+    assert!(
+        window.cx.windows().contains(&popup),
+        "closed on the extra draw"
+    );
+
+    window.cx.simulate_keystrokes(popup, "escape");
+    window.update(|window, app| window.draw(app).clear(app));
+    assert_eq!(window.cx.windows(), vec![parent]);
 }
 
 #[gpui::test]

@@ -67,8 +67,7 @@ impl std::error::Error for AnchoredPopupError {}
 pub struct AnchoredPopupHandle {
     window: AnyWindowHandle,
     anchor_rect: std::rc::Rc<std::cell::Cell<Bounds<Pixels>>>,
-    anchor_prepaint_generation: std::rc::Rc<std::cell::Cell<u64>>,
-    anchor_detach_watch_started: std::rc::Rc<std::cell::Cell<bool>>,
+    tracked_anchor: std::rc::Rc<std::cell::Cell<Option<gpui::EntityId>>>,
     _parent_observers: std::rc::Rc<PopupParentObservers>,
 }
 
@@ -117,36 +116,43 @@ impl AnchoredPopupHandle {
     }
 
     /// Measures this element during prepaint and follows it as layout or scrolling changes.
-    /// The popup closes if the anchor is fully clipped out of its active clip or visible window.
+    /// The popup closes if its anchor is detached or fully clipped.
     pub fn track_anchor<E>(self, element: E) -> AnyElement
     where
         E: gpui::ParentElement + IntoElement,
     {
-        let popup = self.clone();
-        let anchor_rect = self.anchor_rect.clone();
-        let prepaint_generation = self.anchor_prepaint_generation.clone();
-        let detach_watch_started = self.anchor_detach_watch_started.clone();
         element
             .on_prepaint(move |anchor_bounds, window, cx| {
-                prepaint_generation.set(prepaint_generation.get().wrapping_add(1));
                 let visible = anchor_bounds
                     .intersect(&window.content_mask().bounds)
                     .intersect(&window.fully_visible_bounds());
                 if visible.size.width <= px(0.0) || visible.size.height <= px(0.0) {
-                    detach_watch_started.set(false);
-                    let _ = popup.update(cx, |_, popup_window, _| popup_window.remove_window());
-                } else {
-                    if anchor_rect.get() != anchor_bounds {
-                        let _ = popup.set_anchor_rect(anchor_bounds, cx);
-                    }
-                    if !detach_watch_started.replace(true) {
-                        schedule_anchor_detach_watch(
-                            popup.clone(),
-                            prepaint_generation.clone(),
-                            detach_watch_started.clone(),
-                            window,
-                        );
-                    }
+                    let _ = self.update(cx, |_, popup_window, _| popup_window.remove_window());
+                    return;
+                }
+
+                // GPUI carries keyed element state across cached frames. Release
+                // therefore means the anchor actually left the rendered tree.
+                let anchor = window.use_keyed_state(
+                    ("rustui-popup-anchor", self.window.window_id().as_u64()),
+                    cx,
+                    |_, cx| {
+                        let id = cx.entity_id();
+                        cx.on_release(move |popup: &mut AnchoredPopupHandle, cx| {
+                            // The same popup may now track an anchor at a new path.
+                            if popup.tracked_anchor.get() == Some(id) {
+                                popup.tracked_anchor.set(None);
+                                let _ = popup.update(cx, |_, window, _| window.remove_window());
+                            }
+                        })
+                        .detach();
+                        self.clone()
+                    },
+                );
+                self.tracked_anchor.set(Some(anchor.entity_id()));
+
+                if self.anchor_rect.get() != anchor_bounds {
+                    let _ = self.set_anchor_rect(anchor_bounds, cx);
                 }
             })
             .into_any_element()
@@ -203,33 +209,6 @@ impl<V: View> View for PopupEscapeRoot<V> {
             .child(child)
             .into_any_element()
     }
-}
-
-#[cfg(not(target_family = "wasm"))]
-fn schedule_anchor_detach_watch(
-    popup: AnchoredPopupHandle,
-    prepaint_generation: std::rc::Rc<std::cell::Cell<u64>>,
-    detach_watch_started: std::rc::Rc<std::cell::Cell<bool>>,
-    window: &mut Window,
-) {
-    // One callback runs after the current frame; it arms the check for the following frame.
-    // That lets the trigger's prepaint run in that frame before we decide it was detached.
-    window.on_next_frame(move |window, _| {
-        let expected_generation = prepaint_generation.get();
-        window.on_next_frame(move |window, cx| {
-            if prepaint_generation.get() == expected_generation {
-                let _ = popup.update(cx, |_, popup_window, _| popup_window.remove_window());
-                detach_watch_started.set(false);
-            } else {
-                schedule_anchor_detach_watch(
-                    popup,
-                    prepaint_generation,
-                    detach_watch_started,
-                    window,
-                );
-            }
-        });
-    });
 }
 
 /// Opens a parent-anchored native popup.
@@ -311,8 +290,6 @@ pub fn try_open_anchored_popup<V: View>(
         grab: true,
     };
     let anchor_rect = std::rc::Rc::new(std::cell::Cell::new(popup.anchor_rect));
-    let anchor_prepaint_generation = std::rc::Rc::new(std::cell::Cell::new(0));
-    let anchor_detach_watch_started = std::rc::Rc::new(std::cell::Cell::new(false));
     let window_options = WindowOptions {
         kind: WindowKind::AnchoredPopup(popup),
         window_bounds: Some(WindowBounds::Windowed(Bounds::new(
@@ -340,8 +317,7 @@ pub fn try_open_anchored_popup<V: View>(
     Ok(AnchoredPopupHandle {
         window,
         anchor_rect,
-        anchor_prepaint_generation,
-        anchor_detach_watch_started,
+        tracked_anchor: Default::default(),
         _parent_observers: std::rc::Rc::new(PopupParentObservers {
             _bounds: bounds_subscription,
             _display: display_subscription,
