@@ -1936,23 +1936,38 @@ impl PlatformWindow for MacWindow {
     }
 
     fn set_anchored_popup_anchor_rect(&mut self, anchor_rect: Bounds<Pixels>) -> bool {
-        let mut state = self.0.lock();
-        let Some(parent) = state.popup_parent else {
-            return false;
+        let (frame, native_window, closed, executor) = {
+            let mut state = self.0.lock();
+            let Some(parent) = state.popup_parent else {
+                return false;
+            };
+            let Some(mut options) = state.popup_options.clone() else {
+                return false;
+            };
+            let Some(size) = state.popup_size else {
+                return false;
+            };
+            options.anchor_rect = anchor_rect;
+            let (frame, size, _) = anchored_popup_frame(parent, &options, size, self.1);
+            state.popup_options = Some(options);
+            state.popup_size = Some(size);
+            (
+                frame,
+                state.native_window,
+                state.closed.clone(),
+                state.foreground_executor.clone(),
+            )
         };
-        let Some(mut options) = state.popup_options.clone() else {
-            return false;
-        };
-        let Some(size) = state.popup_size else {
-            return false;
-        };
-        options.anchor_rect = anchor_rect;
-        let (frame, size, _) = anchored_popup_frame(parent, &options, size, self.1);
-        unsafe {
-            let _: () = msg_send![state.native_window, setFrame: frame display: Bool::YES];
-        }
-        state.popup_options = Some(options);
-        state.popup_size = Some(size);
+
+        // AppKit can synchronously re-enter our resize delegate from setFrame.
+        // Run it after releasing the state lock and the current GPUI window update.
+        executor
+            .spawn(async move {
+                if_window_not_closed(closed, || unsafe {
+                    let _: () = msg_send![native_window, setFrame: frame display: Bool::YES];
+                });
+            })
+            .detach();
         true
     }
 

@@ -280,6 +280,19 @@ impl Playground {
             ),
             (None, None) => AnyView::new(LocalizedText("lab-demo-pending")),
         };
+        let canvas = Container(content).padding(12.0).radius(10.0).border();
+        let canvas = if item.is_some_and(|item| item.key == "f0_native_acceptance") {
+            // The collection, editor and grid already own their viewports.
+            AnyView::new(canvas)
+        } else {
+            AnyView::new(
+                ScrollView(canvas)
+                    .axis(ScrollAxis::Vertical)
+                    .scrollbars(true)
+                    .height(360.0)
+                    .id(format!("playground-component-canvas-{title}")),
+            )
+        };
         Container(
             ScrollView(
                 VStack::new()
@@ -307,13 +320,7 @@ impl Playground {
                             .alignment(HorizontalAlignment::Start)
                             .spacing(12.0),
                     )
-                    .child(
-                        ScrollView(Container(content).padding(12.0).radius(10.0).border())
-                            .axis(ScrollAxis::Vertical)
-                            .scrollbars(true)
-                            .height(360.0)
-                            .id(format!("playground-component-canvas-{title}")),
-                    )
+                    .child(canvas)
                     .child(self.references())
                     .spacing(12.0),
             )

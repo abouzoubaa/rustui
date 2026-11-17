@@ -1,8 +1,62 @@
-use super::{Playground, STORIES, StoryHost, bundled_theme, stories};
+use super::{CATALOG, Playground, STORIES, StoryHost, bundled_theme, stories};
 use rustui::gpui::{self, AppContext};
 use rustui::gpui_component::Root;
 use rustui::runtime::component_host::ComponentHost;
 use rustui::theme::{AppearanceMode, activate_theme};
+
+#[gpui::test]
+fn f0_acceptance_collection_accepts_a_click_below_the_old_canvas_limit(
+    cx: &mut gpui::TestAppContext,
+) {
+    let theme = bundled_theme().expect("bundled theme");
+    cx.update(|app| {
+        rustui::gpui_component::init(app);
+        activate_theme(&theme, Some(AppearanceMode::Dark), app).expect("activate theme");
+    });
+    let playground = Playground {
+        catalog_selection: CATALOG
+            .iter()
+            .position(|item| item.key == "f0_native_acceptance"),
+        theme: Some(theme),
+        ..Playground::default()
+    };
+    let handle = cx.open_window(
+        gpui::size(gpui::px(1400.0), gpui::px(1200.0)),
+        |window, cx| {
+            let owner = cx.new(|cx| ComponentHost::new(playground, cx));
+            Root::new(owner, window, cx)
+        },
+    );
+    let mut window = gpui::VisualTestContext::from_window(handle.into(), cx);
+    let position = window.update(|window, app| {
+        window.set_a11y_active_for_tests(true);
+        window.draw(app).clear(app);
+        let tree: serde_json::Value =
+            serde_json::from_str(&window.debug_a11y_tree_json().unwrap()).unwrap();
+        let row = tree["nodes"]
+            .as_object()
+            .unwrap()
+            .values()
+            .find(|node| node["aria"]["label"].as_str() == Some("F0 row 0020"))
+            .expect("row 20 should be present in the taller viewport");
+        let bounds = &row["bounds"];
+        let scale = tree["frame"]["scale_factor"].as_f64().unwrap();
+        let center = |origin: &str, extent: &str| {
+            gpui::px(
+                ((bounds[origin].as_f64().unwrap() + bounds[extent].as_f64().unwrap() / 2.0)
+                    / scale) as f32,
+            )
+        };
+        gpui::point(center("x", "width"), center("y", "height"))
+    });
+    window.simulate_click(position, gpui::Modifiers::default());
+    window.run_until_parked();
+    window.update(|window, app| {
+        window.draw(app).clear(app);
+        let tree = window.debug_a11y_tree_json().unwrap();
+        assert!(tree.contains("Selected row: f0-row-0020"));
+    });
+}
 
 #[gpui::test]
 fn every_registered_story_mounts_draws_and_exposes_its_title(cx: &mut gpui::TestAppContext) {
