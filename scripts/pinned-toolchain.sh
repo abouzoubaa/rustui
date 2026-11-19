@@ -28,6 +28,9 @@ pinned_rustup() {
 }
 
 pinned_cargo() {
+  if [ -f "$_pinned_root/scripts/invalidate_patched_vendor_cache.py" ]; then
+    python3 "$_pinned_root/scripts/invalidate_patched_vendor_cache.py" --root "$_pinned_root" -- "$@" || return $?
+  fi
   pinned_rustup cargo "$@"
 }
 

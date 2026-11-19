@@ -50,7 +50,7 @@ ScreenCaptureKit records the viewport in a separate pass. The analyzer checks fo
 
 Stale candidates compare OCR IDs/positions with source positions. A zero-offset warmup frame supplies the origin independently of the first timed frame; the first moving frames calibrate the fixed capture delay (about 23–36 ms), then all frames are checked with ±16.7 ms tolerance. The classifier test proves that delay calibration still rejects an incorrect row ID. Editor line geometry also uses upstream `range_to_bounds` to handle wrapped lines. Raw frames and one per-frame JSON record are kept outside Git under `$HOME/.cache/rustui-target/f0-13-captures/`.
 
-**Counts below are detector candidates, not confirmed rendering defects.** OCR can misread line numbers; grid bottom/clipping geometry also produces position mismatches. Inspected editor candidates showed painted content. Editor/grid confirmed blank/stale counts remain **NOT VERIFIED**; zero candidates on Collection/List/KeyedList means no detected blank label in the captured frames, not a universal flicker-free guarantee. Pixel passes include capture/observer overhead and are not used as timing results.
+**The table below preserves the original F0-13 detector candidates.** F0-14 resolves their causes and records corrected results below. The original counts are not confirmed rendering defects.
 
 | Panel | Backend | Frames | Row bands inspected | Blank candidates | Position/stale candidates | Capture delay (ms) | Held-image frames |
 |---|---|---:|---:|---:|---:|---:|---:|
@@ -81,3 +81,77 @@ Held-image frames mean unchanged label-strip pixels during sustained non-boundar
 - New focused checks include every-frame normal-input scrolling across 5,000 Collection rows (all visible labels and final viewport asserted), unchanged-snapshot generation, snapshot validation reuse/mutation, zero-copy Binding snapshots, page items (a)–(g), capture thresholds, blank/body classification, wrapped line centers, and capture-delay/incorrect-row matching.
 
 Local gates: `scripts/check.sh` exit 0: RustUI 1,444; core 10; i18n 86; macros 40; Playground 272; rgpe 0 — **1,852 passed, 0 failed, 7 ignored**. `./scripts/verify-release.sh source` exit 0 (645 script tests). Owned-source verification exit 0. Owner native acceptance is still required, especially smoothness and the editor/grid candidate counts above.
+
+## F0-14 final comparison
+
+The source candidate shares immutable localization catalogs and render snapshots. The native sample attributes substantial Collection work to `RenderSeed::clone` → `ActiveLocalization::clone` → catalog `BTreeMap` copies and their destruction. `ActiveLocalization` now shares its private catalog storage with `Arc`, preserving thread-safety; contexts/seeds share their immutable snapshot with `Rc`. The public API is unchanged.
+
+The opt-in phase recorder (`RUSTUI_FRAME_LOG=1 RUSTUI_FRAME_PROFILE=1`) measures the same five-second normal-input workload. Median milliseconds per drawn frame:
+
+| Work | Before | Snapshot-sharing candidate |
+|---|---:|---:|
+| RustUI row lowering (`into_element`) | 0.032 | 0.021 |
+| Total row context/build work | 6.887 | 0.051 |
+| Root build | 1.048 | 0.569 |
+| Layout | 0.205 | 0.205 |
+| Prepaint, including nested row work/layout | 14.538 | 4.878 |
+| Paint | 0.295 | 0.266 |
+| Whole draw | 16.432 | 6.243 |
+| Submit | 0.103 | 0.099 |
+
+These are instrumented wall times; row logging adds overhead. Row samples stop before temporary destruction; its cost remains included in prepaint and the whole draw. Layout and row work are nested measurements, not extra phases to add to the draw total. Uninstrumented threshold captures below are the performance gate. The later `Rc` → `Arc` catalog-storage adjustment preserves the sharing behavior while keeping the public localization type `Send + Sync`.
+
+| Collection run | Submissions | Draw + submit >8.3 ms | Gaps >16.7 ms | Worst gap (ms) |
+|---|---:|---:|---:|---:|
+| F0-13 after | 362 | 362 (100%) | 29 | 17.373 |
+| F0-14 current candidate, 1 | 599 | 0 (0%) | 2 | 20.834 |
+| F0-14 current candidate, 2 | 598 | 2 (0.33%) | 3 | 23.216 |
+| F0-14 current candidate, 3 | 599 | 0 (0%) | 1 | 16.721 |
+
+The final Collection captures and phase profile use the active 21-patch stack, with the early-clamp experiment reversed. **The recorded draw-cost criterion passes; the zero-gap criterion fails and is now an owner-accepted known issue in [F0-findings.md](F0-findings.md#f0-14-collection-occasional-submission-gaps--known-issue).** No further gap investigation was performed in the finishing ticket. An additional experiment avoided entity writes during row cache maintenance; its 15 focused Collection/lifecycle tests passed, but three native timing runs still had 2/5/5 excessive gaps. That experiment was removed because it did not meet the target. No gap was removed from the counts or redefined as a pass.
+
+The frame review and original PNG examples are in [f0-14-frames](f0-14-frames/README.md). Editor blank/position candidates and Collection boundary OCR errors resolve to zero in corrected saved-frame analysis. Grid needs the actual `ScrollBounce` displacement; its later OCR `55`/`56` error has a PNG regression test. The Kit List also uses `ScrollBounce`, explaining its boundary displacement; the separate frame-631 timing attribution remains open. The early-clamp experiment proved that the core wheel offset can be temporarily unbounded, but did not prove a visible rendering defect; it was reversed and moved to the inactive experiments folder.
+
+The source-position observer now includes entity IDs. Analysis selects the unique moving workload entity independently of pixels, preventing static sidebar lists from validating stale rows at offset zero. WindowServer display time is recorded alongside sample/callback time; missing display timestamps fail new capture validation. On the completed new editor recording, display and sample timestamps differ by at most 0.00025 ms, so this change alone does not explain historical capture-delay variation.
+
+### Matched CodeEditor reversion comparison
+
+Screen Recording permission was restored. Both variants were rebuilt from the same F0-14 source and active candidate stack with Rust 1.98.0, `pinned_cargo build -p rustui-playground --release --locked --offline`, target `$HOME/.cache/rustui-target-f0-13-fast`. Only `crates/rustui/src/components/advanced/code_editor.rs` differed: the exact `ac49fceae` file before the F0-13 wrapper optimization, versus current. The tracked source was restored unchanged. Both binaries were built before any capture, then measured in three interleaved reverted/current pairs with the same two-second warm-up and five-second normal-input playback. No compilation or image analysis ran during those captures.
+
+These new runs were on battery, with power mode 1 (Low Power Mode), approximately 30 native submissions/second. They are paired diagnostics, not replacements for the earlier AC-powered adoption benchmarks. ScreenCaptureKit delivered different numbers of samples despite comparable native submission counts; capture throughput is not application frame rate.
+
+| Pair | Reverted captured / held frames | Current captured / held frames | Reverted / current native submissions | Confirmed blanks / position defects, both |
+|---|---:|---:|---:|---:|
+| 1 | 295 / 33 | 152 / 68 | 150 / 124 | 0 / 0 |
+| 2 | 235 / 94 | 289 / 33 | 124 / 150 | 0 / 0 |
+| 3 | 286 / 17 | 195 / 10 | 150 / 150 | 0 / 0 |
+
+Median held-image frames are **33 in both variants**. All six runs have zero blank rows and zero cadence-aware position mismatches. Both variants have a median of 150 native submissions and zero draw+submit samples over 8.3 ms in these pairs. Each has one long-pause run: current pair 1 has a 734.037 ms submission gap and 124 submissions; reverted pair 2 has a 731.477 ms gap and 124 submissions. Neither pause is omitted. The matched comparison does not reproduce the earlier 33 → 173 regression, so the shared-snapshot optimization is retained. The historical recording alone did not establish its cause. This is no claim of high-refresh-rate parity under Low Power Mode.
+
+The source observer samples once per native frame: median interval 33 ms in these pairs. The original fixed ±16.7 ms diagnostic therefore produces false position candidates. Its per-run counts remain **0/55/306 reverted** and **87/46/1,024 current**. The analyzer now also reports a clock-only tolerance of `max(16.7 ms, median source interval + 1 ms timestamp resolution)`: **34 ms** here. All six cadence-aware counts are zero, with aligned sources for every frame. No expected row ID determines this tolerance. A new test retains the original strict count and proves that both a wrong row ID and content older than one source interval still fail. It does not relax any RustUI assertion.
+
+### Final confirmed-defect table
+
+Counts below separate verified blank/wrong-position content from uncalibrated OCR and timing candidates. Position resolution is one observed source interval (minimum 16.7 ms); this cannot certify sub-frame response latency. Capture samples and native timing are separate passes.
+
+| Panel | Old GPUI captured frames | Fast captured frames | Confirmed blank, old / Fast | Confirmed stale position, old / Fast | Slow draw+submit >8.3 ms, old / Fast |
+|---|---:|---:|---:|---:|---:|
+| Collection | 534 | 548 | 0 / 0 | 0 / 0* | 393/393 / 0–2 of 598–599** |
+| List | 554 | 288 | 0 / 0 | 0 / 0 | 75/150 / 0/151 |
+| KeyedList | 555 | 184 | 0 / 0 | 0 / 0 | 75/150 / 0/150 |
+| Code editor | 550 | 636 across three current runs | 0 / 0 | 0 / 0 | 33/151 / 5/151 |
+| Editable grid | not comparable | 556 | — / 0 | — / 0 | — / 35/151 |
+
+*The old Collection froze at its first 18 rows, with **261 held-image frames** under sustained input; its logical position also stayed there. This is a confirmed non-scrolling viewport, not proof of wrong rendering relative to the recorded logical position. Its original timing is not a valid full-dataset speed baseline. Fast traverses the dataset without a held viewport; the every-frame 5,000-row test remains unchanged and passes. The baseline grid remains omitted under the owner-approved API-only compatibility rule.
+
+**Collection uses the earlier AC-powered measurements already listed above, per the owner instruction not to spend more time on its remaining gaps. Other rows use new isolated old/Fast timing passes, both on battery/Low Power Mode, without concurrent builds, recording or image analysis. Their approximately 30 Hz submission cadence necessarily exceeds a 16.7 ms gap threshold. These power modes must not be compared across rows or used as F0 adoption benchmarks. The new >16.7 ms gap counts (old/Fast) are List 149/150, KeyedList 149/149, editor 150/150 and grid 150; these are reported rather than discarded.
+
+The original editor/Collection candidates are OCR/partial-band errors. The original grid and boundary List/KeyedList candidates omit intentional `ScrollBounce` displacement; the probe now observes the wide workload viewport and excludes sidebar lists. The old List frame 426 implies approximately −22 pt of boundary displacement, within the upstream 36 pt limit. The original KeyedList frame 631 remains a historical timing-attribution ambiguity: all labels are present and match a source position 49.50–57.50 ms earlier, but the old recording cannot identify capture/presentation delay versus a delayed paint. It is retained in the frame review, not silently counted as a confirmed renderer defect. The final KeyedList recording has zero blank/cadence-aware position mismatches. No renderer fix is claimed for that historical ambiguity.
+
+### Patch and build checks
+
+Two active candidates use hash manifests and the existing apply/reverse script: frame-phase observation and the owned Base bounce observation hook. The bounded-wheel experiment is inactive and has a standalone exact replay test. The owned-only observation difference is bound to its exact manifest hash by the mirror verifier. The core stack now has 21 candidates. The capture/profiling hooks do not notify or force a redraw. The bounce probe covers grid/List/KeyedList and reads its logical offset lazily, after its opt-in and workload-width guards; the disabled-path test panics if that read is attempted.
+
+Cargo treats registry packages as immutable. The approved pinned-wrapper change keys invalidation to the candidate patch files and clears only unit fingerprint stamps for Fast and its reverse dependencies, including custom/cross-target profiles. Compiled artifacts and unrelated crates are preserved; the gpui-pre baseline is untouched. Tests cover unchanged keys, changed patches, transitive dependencies and baseline isolation.
+
+Final gates on the active stack: `scripts/check.sh` exit 0 — RustUI 1,446, core 10, i18n 86, macros 40, Playground 272, rgpe 0: **1,854 passed, 0 failed, 7 ignored**. `./scripts/verify-release.sh source` exits 0 (656 script tests); owned-source verification and the 21-candidate stack hash check exit 0. The release Playground builds successfully. No new test is ignored. The owner accepted the remaining Collection gaps as a known issue; this ticket does not decide adoption of GPUI Fast.

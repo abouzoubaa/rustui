@@ -1,4 +1,5 @@
 """Native pixel classifier tests; no screen capture or GUI session needed."""
+import json
 from pathlib import Path
 import platform
 import subprocess
@@ -24,4 +25,16 @@ class PixelCaptureTests(unittest.TestCase):
             self.assertIn("check=editor source position expected=true actual=true", result.stderr)
             self.assertIn("check=1x capture dimensions expected=1038x518 actual=1038x518", result.stderr)
             self.assertIn("check=2x capture dimensions expected=2076x1037 actual=2076x1037", result.stderr)
-            self.assertEqual(result.stderr.count("check="), 14)
+            self.assertEqual(result.stderr.count("check="), 17)
+            orientation = subprocess.run([str(binary), "ocr", str(ROOT / "docs/perf/f0-14-frames/editor-blank/frame-270.png"), "editor"], capture_output=True, text=True)
+            self.assertEqual(orientation.returncode, 0, orientation.stderr)
+            labels = json.loads(orientation.stdout)
+            self.assertIn("6295", labels)
+            self.assertIn("6299", labels)
+            self.assertNotIn("5629", labels)
+            self.assertNotIn("6629", labels)
+            grid = subprocess.run([str(binary), "ocr", str(ROOT / "docs/perf/f0-14-frames/grid-position/frame-708.png"), "grid"],capture_output=True,text=True)
+            self.assertEqual(grid.returncode,0,grid.stderr)
+            labels = json.loads(grid.stdout)
+            self.assertIn("Product 55", labels)
+            self.assertEqual(labels.count("Product 56"),1)

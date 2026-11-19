@@ -1359,6 +1359,10 @@ fn f0_frame_start() -> Option<std::time::Instant> {
         .get_or_init(|| std::env::var("RUSTUI_FRAME_LOG").as_deref() == Ok("1"))
         .then(std::time::Instant::now)
 }
+fn f0_phase_start() -> Option<std::time::Instant> {
+    static ENABLED: std::sync::OnceLock<bool> = std::sync::OnceLock::new();
+    if *ENABLED.get_or_init(|| std::env::var("RUSTUI_FRAME_PROFILE").as_deref() == Ok("1")) { f0_frame_start() } else { None }
+}
 fn f0_frame_record(window: WindowId, event: &str, start: Option<std::time::Instant>) {
     let Some(start) = start else { return };
     let end = std::time::Instant::now();
@@ -1378,12 +1382,13 @@ fn f0_frame_record(window: WindowId, event: &str, start: Option<std::time::Insta
         None
     };
     eprintln!(
-        "RUSTUI_FRAME_LOG {{\"event\":\"{}\",\"window\":\"{:?}\",\"time_ms\":{:.6},\"cpu_ms\":{:.6},\"gap_ms\":{}}}",
+        "RUSTUI_FRAME_LOG {{\"event\":\"{}\",\"window\":\"{:?}\",\"time_ms\":{:.6},\"cpu_ms\":{:.6},\"gap_ms\":{},\"epoch_ms\":{:.6}}}",
         event,
         window,
         end.duration_since(origin).as_secs_f64() * 1000.0,
         end.duration_since(start).as_secs_f64() * 1000.0,
-        gap.map_or_else(|| "null".into(), |gap| format!("{gap:.6}"))
+        gap.map_or_else(|| "null".into(), |gap| format!("{gap:.6}")),
+        std::time::SystemTime::now().duration_since(std::time::UNIX_EPOCH).unwrap().as_secs_f64() * 1000.0
     );
 }
 
@@ -3893,6 +3898,7 @@ impl Window {
     #[profiling::function]
     pub fn draw(&mut self, cx: &mut App) -> ArenaClearNeeded {
         let f0_frame = f0_frame_start();
+        let f0_setup = f0_phase_start();
         // Drain every draw in profiler builds so a previous frame's
         // first-invalidation timestamp can't be attributed to this one.
         #[cfg(feature = "profiler")]
@@ -3931,6 +3937,7 @@ impl Window {
                 self.rendered_frame.input_handlers.push(Some(input_handler));
             }
         }
+        f0_frame_record(self.handle.window_id(), "setup", f0_setup);
         if !cx.mode.skip_drawing() {
             self.draw_roots(cx);
             #[cfg(feature = "profiler")]
@@ -4180,9 +4187,12 @@ impl Window {
         let scale_factor = self.scale_factor();
         #[cfg(feature = "profiler")]
         let request_layout_start = Instant::now();
+        let f0_build = f0_phase_start();
         let mut root_element = self.root.as_ref().unwrap().clone().into_any_element();
         let root_layout_id = root_element.request_layout(self, cx);
         crate::fast::stats::FramePhaseTimes::end_build(&mut self.fast_layout.phase_times);
+        f0_frame_record(self.handle.window_id(), "build", f0_build);
+        let f0_prepaint = f0_phase_start();
         #[cfg(feature = "profiler")]
         let prepaint_start = Instant::now();
         self.layout_engine
@@ -4224,6 +4234,8 @@ impl Window {
         crate::fast::stats::FramePhaseTimes::end_prepaint(&mut self.fast_layout.phase_times);
         crate::fast::composition::finish_input(self);
         self.mouse_hit_test = self.next_frame.hit_test(self.mouse_position);
+        f0_frame_record(self.handle.window_id(), "prepaint", f0_prepaint);
+        let f0_paint = f0_phase_start();
 
         // Now actually paint the elements.
         #[cfg(feature = "profiler")]
@@ -4249,6 +4261,7 @@ impl Window {
         #[cfg(any(feature = "inspector", debug_assertions))]
         self.paint_inspector_hitbox(cx);
         crate::fast::stats::FramePhaseTimes::end_paint(&mut self.fast_layout.phase_times);
+        f0_frame_record(self.handle.window_id(), "paint", f0_paint);
 
         #[cfg(feature = "profiler")]
         self.window_profiler
@@ -5772,11 +5785,13 @@ impl Window {
         available_space: Size<AvailableSpace>,
         cx: &mut App,
     ) {
+        let f0_layout = f0_phase_start();
         self.invalidator.debug_assert_prepaint();
 
         let mut layout_engine = self.layout_engine.take().unwrap();
         layout_engine.compute_layout(layout_id, available_space, self, cx);
         self.layout_engine = Some(layout_engine);
+        f0_frame_record(self.handle.window_id(), "layout", f0_layout);
     }
 
     /// Obtain the bounds computed for the given LayoutId relative to the window. This method will usually be invoked by

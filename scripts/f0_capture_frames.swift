@@ -1,11 +1,16 @@
 // Native pixel validation only. Timing measurements run separately without capture/OCR.
 import AppKit
+import Darwin
 import ScreenCaptureKit
 import CoreMedia
 import CoreVideo
 import Vision
 import ImageIO
 import UniformTypeIdentifiers
+
+func machSeconds(_ ticks: UInt64, _ numerator: UInt32, _ denominator: UInt32) -> Double {
+    Double(ticks) * Double(numerator) / Double(denominator) / 1_000_000_000
+}
 
 final class Writer: NSObject, SCStreamOutput, @unchecked Sendable {
     let raw: FileHandle
@@ -28,7 +33,13 @@ final class Writer: NSObject, SCStreamOutput, @unchecked Sendable {
         let stride = CVPixelBufferGetBytesPerRow(image), height = CVPixelBufferGetHeight(image), width = CVPixelBufferGetWidth(image)
         guard let address = CVPixelBufferGetBaseAddress(image) else { return }
         let data = Data(bytes: address, count: stride * height)
-        let record: [String: Any] = ["frame": index, "epoch_ms": (Date().timeIntervalSince1970 - CMClockGetTime(CMClockGetHostTimeClock()).seconds + CMSampleBufferGetPresentationTimeStamp(sample).seconds) * 1000, "callback_ms":Date().timeIntervalSince1970*1000,
+        let origin = Date().timeIntervalSince1970 - CMClockGetTime(CMClockGetHostTimeClock()).seconds
+        var timebase = mach_timebase_info_data_t()
+        mach_timebase_info(&timebase)
+        let displayed = (attachments.first?[.displayTime] as? NSNumber)?.uint64Value
+        let sampleEpoch = (origin + CMSampleBufferGetPresentationTimeStamp(sample).seconds) * 1000
+        let epoch = displayed.map { (origin + machSeconds($0,timebase.numer,timebase.denom))*1000 } ?? sampleEpoch
+        let record: [String: Any] = ["frame": index, "epoch_ms":epoch,"sample_epoch_ms":sampleEpoch,"timestamp_kind":displayed == nil ? "sample-fallback" : "window-server-display", "callback_ms":Date().timeIntervalSince1970*1000,
                                    "width": width, "height": height, "stride": stride, "offset": offset, "size": data.count]
         do {
             try raw.write(contentsOf: data)
@@ -75,6 +86,83 @@ func ink(_ data: Data, _ frame: [String: Any], _ rect: CGRect) -> Int {
     }
 }
 
+// Include source words alongside the gutter. Digits alone allow Vision to
+// choose an upside-down orientation (e.g. 6293 becomes £6Z9).
+func recognizeRowText(_ image: CGImage, _ panel: String) throws -> ([VNRecognizedTextObservation], Int) {
+    let request = VNRecognizeTextRequest()
+    request.recognitionLevel = panel == "editor" || panel == "grid" ? .accurate : .fast
+    request.usesLanguageCorrection = false
+    request.recognitionLanguages = ["en-US"]
+    request.revision = VNRecognizeTextRequestRevision3
+    request.minimumTextHeight = 0.007
+    request.customWords = ["F0", "row", "Product"]
+    let input = image.cropping(to:CGRect(x:0,y:0,width:min(panel == "editor" ? 1024 : 320,image.width),height:image.height))!
+    try VNImageRequestHandler(cgImage:input).perform([request])
+    return (request.results ?? [], input.width)
+}
+
+struct DigitGlyph {
+    let bits: [Bool]
+    func distance(_ other: DigitGlyph) -> Double {
+        var union = 0, difference = 0
+        for (a,b) in zip(bits,other.bits) { if a || b { union += 1 }; if a != b { difference += 1 } }
+        return union == 0 ? 1 : Double(difference)/Double(union)
+    }
+}
+
+// Learn actual gutter glyphs in the zero-offset warmup, validated against
+// native line geometry. During the scroll decode pixels, without expected IDs.
+struct GutterDigits {
+    var templates: [Character:[DigitGlyph]] = [:]
+    var ready: Bool { templates.count == 10 }
+    mutating func learn(_ text: String, _ glyphs: [DigitGlyph]) {
+        guard text.count == glyphs.count, text.allSatisfy({ $0.isASCII && $0.isNumber }) else { return }
+        for (digit,glyph) in zip(text,glyphs) {
+            if templates[digit,default:[]].count < 8 { templates[digit,default:[]].append(glyph) }
+        }
+    }
+    func read(_ glyphs: [DigitGlyph]) -> String? {
+        guard ready, !glyphs.isEmpty else { return nil }
+        var result = ""
+        for glyph in glyphs {
+            let scores = templates.map { (digit,examples) in (digit,examples.map { glyph.distance($0) }.min()!) }.sorted { $0.1 < $1.1 }
+            guard scores[0].1 < 0.30, scores[1].1 - scores[0].1 > 0.04 else { return nil }
+            result.append(scores[0].0)
+        }
+        return result
+    }
+}
+
+func gutterGlyphs(_ pixels: Data, _ frame: [String:Any], _ roi: CGRect, _ center: Double, _ pitch: Double) -> [DigitGlyph] {
+    let stride = frame["stride"] as! Int, width = frame["width"] as! Int, height = frame["height"] as! Int
+    let x0 = max(0,Int(roi.minX)), x1 = min(width,Int(roi.minX+130))
+    let y0 = max(0,Int(roi.minY+center-pitch*0.35)), y1 = min(height,Int(roi.minY+center+pitch*0.35))
+    guard x0 < x1, y0 < y1 else { return [] }
+    return pixels.withUnsafeBytes { bytes in
+        let data = bytes.bindMemory(to:UInt8.self)
+        func bright(_ x: Int,_ y: Int) -> Bool { let i = y*stride+x*4; return Int(data[i])+Int(data[i+1])+Int(data[i+2]) > 360 }
+        var ranges: [Range<Int>] = [], start: Int?
+        for x in x0...x1 {
+            let painted = x < x1 && (y0..<y1).contains { bright(x,$0) }
+            if painted, start == nil { start = x }
+            if !painted, let first = start { ranges.append(first..<x); start = nil }
+        }
+        return ranges.compactMap { range in
+            let rows = (y0..<y1).filter { y in range.contains { bright($0,y) } }
+            guard let first = rows.first, let last = rows.last, range.count >= 3, last-first >= 12 else { return nil }
+            let factor = 32.0/Double(last-first+1), scaledWidth = Int((Double(range.count)*factor).rounded())
+            guard scaledWidth <= 24 else { return nil }
+            var bits = [Bool](repeating:false,count:24*36)
+            for y in 0..<32 { for x in 0..<scaledWidth {
+                let sx = range.lowerBound + min(range.count-1,Int(Double(x)/factor))
+                let sy = first + min(last-first,Int(Double(y)/factor))
+                bits[(y+2)*24+x+(24-scaledWidth)/2] = bright(sx,sy)
+            } }
+            return DigitGlyph(bits:bits)
+        }
+    }
+}
+
 struct Anchor { let id: Int; let center: Double }
 
 func editorCenters(_ anchors: [Anchor], _ pitch: Double, _ total: Int) -> [(Double,Int)] {
@@ -96,7 +184,7 @@ func matchesSource(_ id: Int, _ center: Double, _ source: [String:Any], _ panel:
             return abs(center-((y-viewportY)*scale+shift)) < pitch*0.45
         }
     }
-    return Int(round((center-shift-offset*scale)/pitch)) + (panel == "grid" ? 1 : 0) == id
+    return Int(round((center-shift-(offset+(source["visual_offset_y"] as? Double ?? 0))*scale)/pitch)) + (panel == "grid" ? 1 : 0) == id
 }
 
 func captureDimensions(_ viewport: [String:Double]) -> (Int,Int) {
@@ -111,6 +199,25 @@ func check<T: Equatable>(_ name: String, expected: T, actual: T) {
 @main struct Capture {
     @MainActor static func main() async throws {
         let args = CommandLine.arguments
+        if args[1] == "extract" {
+            let folder = URL(fileURLWithPath:args[2]), destination = URL(fileURLWithPath:args[4])
+            try FileManager.default.createDirectory(at:destination,withIntermediateDirectories:true)
+            let records = try String(contentsOf:folder.appendingPathComponent("frames.jsonl"),encoding:.utf8).split(separator:"\n").map { try JSONSerialization.jsonObject(with:Data($0.utf8)) as! [String:Any] }
+            let input = try FileHandle(forReadingFrom:folder.appendingPathComponent("frames.bgra"))
+            defer { try? input.close() }
+            for number in args[3].split(separator:",").map({Int($0)!}) {
+                let record = records.first { $0["frame"] as! Int == number }!
+                try input.seek(toOffset:UInt64(record["offset"] as! Int))
+                let bytes = try input.read(upToCount:record["size"] as! Int)!
+                let image = makeImage(bytes,record)!
+                let file = destination.appendingPathComponent("frame-\(number).png")
+                let writer = CGImageDestinationCreateWithURL(file as CFURL,UTType.png.identifier as CFString,1,nil)!
+                CGImageDestinationAddImage(writer,image,nil)
+                guard CGImageDestinationFinalize(writer) else { throw NSError(domain:"F0 frame PNG write",code:1) }
+                print(file.path)
+            }
+            return
+        }
         if args[1] == "capture" {
             _ = NSApplication.shared
             _ = CGMainDisplayID()
@@ -149,10 +256,29 @@ func check<T: Equatable>(_ name: String, expected: T, actual: T) {
             print("captured=\(writer.index)")
             return
         }
+        if args[1] == "ocr" {
+            let source = CGImageSourceCreateWithURL(URL(fileURLWithPath:args[2]) as CFURL,nil)!
+            let image = CGImageSourceCreateImageAtIndex(source,0,nil)!
+            let (observations,width) = try recognizeRowText(image,args[3])
+            let labels = observations.filter { args[3] != "editor" || $0.boundingBox.maxX * Double(width) < 140 }
+                .compactMap { $0.topCandidates(1).first?.string }
+            print(String(data:try JSONSerialization.data(withJSONObject:labels),encoding:.utf8)!)
+            return
+        }
         if args[1] == "self-test" {
             let frame: [String: Any] = ["width":100,"height":60,"stride":400]
             let dark = Data(repeating: 32, count: 24000)
             check("blank background", expected: 0, actual: ink(dark, frame, CGRect(x:0,y:0,width:100,height:60)))
+            check("display Mach ticks", expected: 2.0, actual: machSeconds(6_000_000_000,1,3))
+            var bank = GutterDigits()
+            let examples = (0..<10).map { digit -> DigitGlyph in
+                var bits = [Bool](repeating:false,count:24*36)
+                for y in 2..<34 { bits[y*24+digit*2] = true }
+                return DigitGlyph(bits:bits)
+            }
+            for digit in 0..<10 { bank.learn(String(digit),[examples[digit]]) }
+            check("pixel digits independent of expected IDs", expected: "56", actual: bank.read([examples[5],examples[6]]) ?? "rejected")
+            check("unknown gutter glyph rejected", expected: true, actual: bank.read([DigitGlyph(bits:[Bool](repeating:false,count:24*36))]) == nil)
             var glyph = dark
             for y in 10..<25 { for x in 10..<20 { for c in 0..<3 { glyph[y*400+x*4+c] = 230 } } }
             check("painted glyph pixels", expected: 150, actual: ink(glyph, frame, CGRect(x:0,y:0,width:100,height:30)))
@@ -198,6 +324,8 @@ func check<T: Equatable>(_ name: String, expected: T, actual: T) {
         let oracles = setup["oracles"] as? [[String:Any]] ?? []
         var textShift: Double?, missingOracleFrames = 0
         var savedCalibration = false
+        var gutterDigits = GutterDigits()
+        var glyphCorrections = 0, unresolvedGutters = 0
         for frame in frames {
             let epoch = frame["epoch_ms"] as! Double
             let offset = frame["offset"] as! Int, count = frame["size"] as! Int
@@ -211,28 +339,30 @@ func check<T: Equatable>(_ name: String, expected: T, actual: T) {
                 let png = CGImageDestinationCreateWithURL(folder.appendingPathComponent("sample.png") as CFURL, UTType.png.identifier as CFString, 1, nil)!
                 CGImageDestinationAddImage(png, crop, nil); CGImageDestinationFinalize(png)
             }
-            let request = VNRecognizeTextRequest()
-            request.recognitionLevel = panel == "editor" ? .accurate : .fast; request.usesLanguageCorrection = false
-            request.recognitionLanguages = ["en-US"]; request.minimumTextHeight = 0.007
-            request.customWords = ["F0", "row", "Product"]
-            let ocrImage = crop.cropping(to:CGRect(x:0,y:0,width:min(panel == "editor" ? 130 : 320,crop.width),height:crop.height))!
-            try VNImageRequestHandler(cgImage: ocrImage).perform([request])
-            let observations = request.results ?? []
+            let (observations, ocrWidth) = try recognizeRowText(crop, panel)
             var anchors: [Anchor] = []
             var texts: [[String: Any]] = []
             for observation in observations {
                 guard let text = observation.topCandidates(1).first else { continue }
                 let box = observation.boundingBox
                 let center = (1 - box.midY) * Double(crop.height)
-                texts.append(["text":text.string,"confidence":text.confidence,"x":box.minX * Double(ocrImage.width),"center":center])
+                var recognized = text.string
+                if panel == "editor", box.maxX * Double(ocrWidth) < 140, center >= pitch*0.5, center <= Double(crop.height)-pitch*0.5, Int(recognized) != nil, gutterDigits.ready {
+                    let glyphs = gutterGlyphs(pixels,frame,roi,center,pitch)
+                    if let decoded = gutterDigits.read(glyphs) {
+                        if recognized != decoded { glyphCorrections += 1 }
+                        recognized = decoded
+                    } else { unresolvedGutters += 1 }
+                }
+                texts.append(["text":recognized,"confidence":text.confidence,"x":box.minX * Double(ocrWidth),"right":box.maxX * Double(ocrWidth),"center":center])
                 let id: Int?
                 if panel == "editor" {
-                    id = box.maxX * Double(ocrImage.width) < 140 ? number(text.string, "^\\s*([0-9]+)\\s*$") : nil
-                } else if panel == "grid" { id = number(text.string, "^Product\\s+([0-9]+)$") }
-                else { id = number(text.string, "^[Ff][O0]\\s*row\\s*([0-9]+)$") }
+                    id = box.maxX * Double(ocrWidth) < 140 ? number(recognized, "^\\s*([0-9]+)\\s*$") : nil
+                } else if panel == "grid" { id = number(recognized, "^Product\\s+([0-9]+)$") }
+                else { id = number(recognized, "^[Ff][O0]\\s*row\\s*([0-9]+)$") }
                 if let id {
                     anchors.append(Anchor(id:id, center:center))
-                    if panel == "editor" { gutterRight = max(gutterRight, box.maxX*Double(ocrImage.width)) }
+                    if panel == "editor" { gutterRight = max(gutterRight, box.maxX*Double(ocrWidth)) }
                 }
             }
             anchors.sort { $0.center < $1.center }
@@ -255,6 +385,16 @@ func check<T: Equatable>(_ name: String, expected: T, actual: T) {
                 try data.write(to:folder.appendingPathComponent("calibration.json"))
                 savedCalibration = true
                 if args[1] == "calibrate" { print(String(data:data,encoding:.utf8)!); return }
+            }
+            if panel == "editor", epoch < start, let shift = textShift,
+               let source = nearby.first(where: { ($0["offset_y"] as? Double) == 0 }) {
+                for text in texts {
+                    if let label = text["text"] as? String, let center = text["center"] as? Double,
+                       let id = Int(label), id >= 1, id <= 30,
+                       matchesSource(id,center,source,panel,shift,pitch,viewport["y"]!,scale) {
+                        gutterDigits.learn(label,gutterGlyphs(pixels,frame,roi,center,pitch))
+                    }
+                }
             }
             if epoch < start || epoch > end { continue }
             if nearby.isEmpty { missingOracleFrames += 1 }
@@ -326,6 +466,6 @@ func check<T: Equatable>(_ name: String, expected: T, actual: T) {
             try out.write(contentsOf: JSONSerialization.data(withJSONObject: result)+Data([10]))
         }
         try out.close()
-        print(String(data: try JSONSerialization.data(withJSONObject:["frames":measured,"row_observations":rows,"blank_rows":blank,"stale_rows":stale,"frames_without_ocr_anchors":noAnchors,"stalled_frames":stalledFrames,"stalled_row_observations":stalledRows,"minimum_id":minimumID,"maximum_id":maximumID,"frames_without_oracle":missingOracleFrames], options:.sortedKeys),encoding:.utf8)!)
+        print(String(data: try JSONSerialization.data(withJSONObject:["frames":measured,"gutter_glyph_corrections":glyphCorrections,"glyph_template_fallbacks":unresolvedGutters,"row_observations":rows,"blank_rows":blank,"uncalibrated_position_candidates":stale,"frames_without_ocr_anchors":noAnchors,"stalled_frames":stalledFrames,"stalled_row_observations":stalledRows,"minimum_id":minimumID,"maximum_id":maximumID,"frames_without_oracle":missingOracleFrames], options:.sortedKeys),encoding:.utf8)!)
     }
 }

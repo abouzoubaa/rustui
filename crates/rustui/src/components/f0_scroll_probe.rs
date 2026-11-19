@@ -27,7 +27,7 @@ fn next<T: 'static>(
             .as_millis();
         eprintln!(
             "RUSTUI_ORACLE_LOG {}",
-            serde_json::json!({"epoch_ms":epoch,"source":value})
+            serde_json::json!({"epoch_ms":epoch,"entity_id":key.1.as_u64(),"source":value})
         );
         next(target, read, key, window);
     });

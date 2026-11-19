@@ -7,6 +7,7 @@ import json
 import mmap
 import os
 import re
+import statistics
 from pathlib import Path
 import subprocess
 import time
@@ -52,7 +53,72 @@ def summarize(log: str) -> dict:
     }
 
 
-def capture(binary: Path, panel: str, log: Path, pixels: bool = False) -> dict:
+def profile(log: str) -> dict:
+    """Per-drawn-frame medians. Layout and row lowering nest within phases."""
+    active = False
+    frames, current = [], {}
+    for line in log.splitlines():
+        if line.startswith("RUSTUI_SCROLL_LOG start "):
+            active = True
+        elif line.startswith("RUSTUI_SCROLL_LOG end "):
+            active = False
+        elif active and line.startswith("RUSTUI_ROW_PROFILE "):
+            entry = json.loads(line.removeprefix("RUSTUI_ROW_PROFILE "))
+            for field in ("total_ms", "lower_ms"):
+                current["row_" + field] = current.get("row_" + field, 0) + entry[field]
+        elif active and line.startswith("RUSTUI_FRAME_LOG "):
+            entry = json.loads(line.removeprefix("RUSTUI_FRAME_LOG "))
+            name = entry["event"]
+            current[name] = current.get(name, 0) + entry["cpu_ms"]
+            if name == "present":
+                if "draw" in current:
+                    frames.append(current)
+                current = {}
+    if not frames or not all("prepaint" in frame for frame in frames):
+        raise ValueError("missing native phase events; rebuild the instrumented core and relink the app")
+    return {"drawn_frames": len(frames), "median_ms": {
+        name: statistics.median(frame.get(name, 0) for frame in frames)
+        for name in ("setup", "build", "layout", "prepaint", "paint", "draw", "present", "row_total_ms", "row_lower_ms")}}
+
+
+def workload_sources(entries):
+    """Select the moving native entity, independently of captured pixels.
+
+    Sidebar/hidden lists must not validate stale workload rows at offset zero.
+    Legacy captures without entity IDs remain readable for forensic review.
+    """
+    if not entries or not all("entity_id" in entry for entry in entries):
+        return entries
+    groups = {}
+    for entry in entries:
+        groups.setdefault(entry["entity_id"], []).append(entry)
+    spans = {key: max(e["source"]["offset_y"] for e in values) - min(e["source"]["offset_y"] for e in values)
+             for key, values in groups.items()}
+    moving = [key for key, span in spans.items() if span > 0]
+    if len(moving) != 1:
+        raise ValueError(f"expected one moving workload entity, got spans={spans}")
+    return groups[moving[0]]
+
+
+def visual_sources(logical, visual):
+    """Carry the last painted displacement through idle callback-only frames.
+
+    A logical change cannot inherit an old visual sample: that state has not
+    been painted yet. Keep every genuine prepaint sample as well.
+    """
+    if not visual:
+        return logical
+    visual = sorted(visual, key=lambda entry: entry["epoch_ms"])
+    result, cursor = list(visual), -1
+    for entry in logical:
+        while cursor + 1 < len(visual) and visual[cursor + 1]["epoch_ms"] <= entry["epoch_ms"]:
+            cursor += 1
+        if cursor >= 0 and entry["source"]["offset_y"] == visual[cursor]["source"]["offset_y"]:
+            result.append(dict(epoch_ms=entry["epoch_ms"], source=visual[cursor]["source"]))
+    return sorted(result, key=lambda entry: entry["epoch_ms"])
+
+
+def capture(binary: Path, panel: str, log: Path, pixels: bool = False, capture_only: bool = False) -> dict:
     # Cargo treats registry sources as immutable. Reusing a pre-patch artifact
     # can otherwise silently produce a release binary without the recorder.
     with binary.open("rb") as executable, mmap.mmap(executable.fileno(), 0, access=mmap.ACCESS_READ) as contents:
@@ -108,9 +174,17 @@ def capture(binary: Path, panel: str, log: Path, pixels: bool = False) -> dict:
         lines = log.read_text().splitlines()
         viewport = [json.loads(line.removeprefix("RUSTUI_VIEWPORT_LOG ")) for line in lines if line.startswith("RUSTUI_VIEWPORT_LOG ") and json.loads(line.removeprefix("RUSTUI_VIEWPORT_LOG "))["panel"] == panel][-1]
         viewport.pop("panel", None)
+        visual_oracles = [json.loads(line.removeprefix("RUSTUI_VISUAL_ORACLE_LOG ")) for line in lines if line.startswith("RUSTUI_VISUAL_ORACLE_LOG ")]
+        oracles = visual_sources(workload_sources([json.loads(line.removeprefix("RUSTUI_ORACLE_LOG ")) for line in lines if line.startswith("RUSTUI_ORACLE_LOG ")]), visual_oracles)
         start = float(re.search(r"RUSTUI_SCROLL_LOG start .* epoch_ms=([0-9]+)", log.read_text())[1])
         end = float(re.search(r"RUSTUI_SCROLL_LOG end .* epoch_ms=([0-9]+)", log.read_text())[1])
-        (pixel_dir / "setup.json").write_text(json.dumps(dict(cropped=True, oracles=[json.loads(line.removeprefix("RUSTUI_ORACLE_LOG ")) for line in lines if line.startswith("RUSTUI_ORACLE_LOG ")], viewport=viewport, start=start, end=end, inputs=[[float(v) for v in line.split()[1:]] for line in lines if line.startswith("RUSTUI_SCROLL_STEP ")])))
+        (pixel_dir / "setup.json").write_text(json.dumps(dict(cropped=True, oracles=oracles, viewport=viewport, start=start, end=end, inputs=[[float(v) for v in line.split()[1:]] for line in lines if line.startswith("RUSTUI_SCROLL_STEP ")])))
+        metadata = [json.loads(line) for line in (pixel_dir / "frames.jsonl").read_text().splitlines()]
+        if any(frame.get("timestamp_kind") == "sample-fallback" for frame in metadata):
+            raise ValueError("native capture is missing WindowServer display timestamps")
+        if capture_only:
+            result["pixel_directory"] = str(pixel_dir)
+            return result
         analysis = subprocess.run([str(helper), "analyze", str(pixel_dir), panel], check=True, text=True, capture_output=True)
         row_result = json.loads(analysis.stdout)
         if row_result["frames_without_oracle"]:
@@ -128,8 +202,14 @@ def main() -> None:
     parser.add_argument("--panel", choices=["collection", "list", "keyed", "editor", "grid"], required=True)
     parser.add_argument("--log", type=Path, required=True)
     parser.add_argument("--pixels", action="store_true", help="Separate native pixel/OCR validation pass; not timing data")
+    parser.add_argument("--capture-only", action="store_true", help="Record pixels now; analyze separately after all timing passes")
     args = parser.parse_args()
-    print(json.dumps(capture(args.binary.resolve(), args.panel, args.log, args.pixels), indent=2))
+    if args.capture_only and not args.pixels:
+        parser.error("--capture-only requires --pixels")
+    result = capture(args.binary.resolve(), args.panel, args.log, args.pixels, args.capture_only)
+    if os.environ.get("RUSTUI_FRAME_PROFILE") == "1":
+        result["profile"] = profile(args.log.read_text())
+    print(json.dumps(result, indent=2))
 
 
 if __name__ == "__main__":

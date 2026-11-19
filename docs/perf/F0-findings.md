@@ -64,3 +64,15 @@
 - The anchored-popup and popup-child-teardown candidates were already hash-verified members of the 18-patch Fast core stack; the family manifest points to those two same candidates. The candidate metadata unit suite passes 9/9 and the core stack check passes.
 - Cumulative Kit 0.9.1 fixture applied and reversed all 64 stack files exactly. Native proofs pass: anchored popup placement (8 passed), nested popup dismissal (1 passed), parent teardown closes only managed popups (1 passed; all zero failures/ignores).
 - Full RustUI Fast check remains **1,388 passed / 48 failed / 7 ignored** (exit 101). Failures remain 46 disabled-control accessibility cases, 6 disabled-control recovery cases, the Grid header relation, and GraphView's NaN assertion. No popup/lifecycle assertion failed. No test was weakened, deleted, or ignored.
+
+## F0-14: Collection occasional submission gaps — known issue
+
+Immutable localization sharing removes the per-row catalog copies. Three final five-second Collection timing runs on the active 21-patch stack report:
+
+| Run | Submissions | Draw + submit >8.3 ms | Gaps >16.7 ms | Worst gap (ms) |
+|---|---:|---:|---:|---:|
+| 1 | 599 | 0 (0%) | 2 | 20.834 |
+| 2 | 598 | 2 (0.33%) | 3 | 23.216 |
+| 3 | 599 | 0 (0%) | 1 | 16.721 |
+
+The draw-cost criterion passes; the original zero-long-gap target does not. The owner accepted these remaining 1–3 gaps per run as a known issue for F0-14 and directed no further investigation now. Submission gaps are not hardware display-completion times. No gap was excluded or threshold changed. Follow-up: diagnose the remaining scheduling/prepaint variation before a final backend adoption decision.

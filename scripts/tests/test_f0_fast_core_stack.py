@@ -79,6 +79,24 @@ class FastCoreStackTests(unittest.TestCase):
             patch = REPO_ROOT / "patches/candidate-kit-fast" / manifest["patch"]
             self.assertEqual(hashlib.sha256(patch.read_bytes()).hexdigest(), manifest["patch_sha256"])
 
+    def test_bounded_offset_experiment_is_inactive_but_replays_exactly(self):
+        core = json.loads(STACK_PATH.read_text())
+        name = "gpui-fast-bounded-wheel-offset-v1-fast.json"
+        self.assertNotIn(name, core["patches"])
+        manifest = REPO_ROOT / "patches/candidate-kit-fast/experiments" / name
+        data = json.loads(manifest.read_text())
+        with tempfile.TemporaryDirectory() as temporary:
+            fixture = Path(temporary)
+            for relative in data["files"]:
+                target = fixture / relative
+                target.parent.mkdir(parents=True, exist_ok=True)
+                target.write_bytes((REPO_ROOT / relative).read_bytes())
+            apply_patch(manifest,"--apply",fixture)
+            apply_patch(manifest,"--check",fixture)
+            apply_patch(manifest,"--reverse",fixture)
+            for relative in data["files"]:
+                self.assertEqual((fixture/relative).read_bytes(),(REPO_ROOT/relative).read_bytes())
+
     def test_core_stack_reverses_and_reapplies_exactly(self):
         stack = json.loads(STACK_PATH.read_text())
         manifests = [REPO_ROOT / "patches/candidate-kit-fast" / name for name in stack["patches"]]

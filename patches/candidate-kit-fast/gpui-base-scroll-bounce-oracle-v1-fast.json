@@ -1,0 +1,12 @@
+{
+  "schema_version": 1,
+  "name": "gpui-base-scroll-bounce-oracle-v1-fast",
+  "patch": "gpui-base-scroll-bounce-oracle-v1-fast.patch",
+  "patch_sha256": "d1d972791660406a5114b42b526b867cbc22dba790ddf9ad7ab139cc3c81150c",
+  "files": {
+    "crates/rustui-gpui-base/src/scroll_bounce.rs": {
+      "pre_sha256": "502052e29fc2fc7c3f49a6a0cce329eba04fcad5652d582755b7d3594ace784b",
+      "post_sha256": "318218fd10ec87167c05d63ee403460f5080bb3b85dadfde6e511e690ea5b37d"
+    }
+  }
+}

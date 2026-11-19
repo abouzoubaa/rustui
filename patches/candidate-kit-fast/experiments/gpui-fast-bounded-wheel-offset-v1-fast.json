@@ -1,0 +1,16 @@
+{
+  "schema_version": 1,
+  "name": "gpui-fast-bounded-wheel-offset-v1-fast",
+  "patch": "gpui-fast-bounded-wheel-offset-v1-fast.patch",
+  "patch_sha256": "ea2e842edb892df13d6c03edf394f44b7d1a81bd16509a2da96a70950c52540c",
+  "files": {
+    "vendor/gpui-fast-0.1.14/src/elements/div.rs": {
+      "pre_sha256": "61dcf5350509db6fa96b56a0988353bdc02aa24d0453aeb6810efaa145b6cbd5",
+      "post_sha256": "a329141242084a5b0738fe8d035b6fc880cef6ed92ec2965c4911bca53437a26"
+    },
+    "vendor/gpui-fast-0.1.14/.cargo-checksum.json": {
+      "pre_sha256": "7d77a0e29284ac6b998616a46c59a47fb7f84e3efed608a04107f385393887cf",
+      "post_sha256": "d65f9e40860d7a88e8c95739301ecd748bdd00d50cbb21bbcb484fb0a2504d91"
+    }
+  }
+}
