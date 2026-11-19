@@ -10,6 +10,7 @@ pub(super) fn acceptance_demo(height: f32) -> impl View {
         grid_height: height,
         ..EditableGridGallery::default()
     })
+    .props(height, |owner, height| owner.grid_height = *height)
 }
 
 #[derive(Clone, Debug, PartialEq)]

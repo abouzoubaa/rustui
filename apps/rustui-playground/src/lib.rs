@@ -280,58 +280,64 @@ impl Playground {
             ),
             (None, None) => AnyView::new(LocalizedText("lab-demo-pending")),
         };
+        if item.is_some_and(|item| item.key == "f0_native_acceptance") {
+            return AnyView::new(
+                Container(content)
+                    .fill()
+                    .grow()
+                    .padding(16.0)
+                    .background(Surface::Background),
+            );
+        }
         let canvas = Container(content).padding(12.0).radius(10.0).border();
-        let canvas = if item.is_some_and(|item| item.key == "f0_native_acceptance") {
-            // The collection, editor and grid already own their viewports.
-            AnyView::new(canvas)
-        } else {
-            AnyView::new(
-                ScrollView(canvas)
-                    .axis(ScrollAxis::Vertical)
-                    .scrollbars(true)
-                    .height(360.0)
-                    .id(format!("playground-component-canvas-{title}")),
-            )
-        };
-        Container(
-            ScrollView(
-                VStack::new()
-                    .child(
-                        VStack::new()
-                            .child(
-                                selected_story
-                                    .map_or_else(
-                                        || Text(title),
-                                        |story| LocalizedText(story.id.title_message_id()),
-                                    )
-                                    .font_size(20.0)
-                                    .font_weight(TextWeight::Bold),
-                            )
-                            .child(coverage.font_size(12.0))
-                            .child(note.font_size(13.0))
-                            .child(active_story.map(|_| {
-                                VStack! {
-                                    LocalizedText("lab-navigation-locales")
-                                    stories::LocaleSelector::new()
-                                }
+        let canvas = AnyView::new(
+            ScrollView(canvas)
+                .axis(ScrollAxis::Vertical)
+                .scrollbars(true)
+                .height(360.0)
+                .id(format!("playground-component-canvas-{title}")),
+        );
+        AnyView::new(
+            Container(
+                ScrollView(
+                    VStack::new()
+                        .child(
+                            VStack::new()
+                                .child(
+                                    selected_story
+                                        .map_or_else(
+                                            || Text(title),
+                                            |story| LocalizedText(story.id.title_message_id()),
+                                        )
+                                        .font_size(20.0)
+                                        .font_weight(TextWeight::Bold),
+                                )
+                                .child(coverage.font_size(12.0))
+                                .child(note.font_size(13.0))
+                                .child(active_story.map(|_| {
+                                    VStack! {
+                                        LocalizedText("lab-navigation-locales")
+                                        stories::LocaleSelector::new()
+                                    }
+                                    .alignment(HorizontalAlignment::Start)
+                                    .spacing(8.0)
+                                }))
                                 .alignment(HorizontalAlignment::Start)
-                                .spacing(8.0)
-                            }))
-                            .alignment(HorizontalAlignment::Start)
-                            .spacing(12.0),
-                    )
-                    .child(canvas)
-                    .child(self.references())
-                    .spacing(12.0),
+                                .spacing(12.0),
+                        )
+                        .child(canvas)
+                        .child(self.references())
+                        .spacing(12.0),
+                )
+                .axis(ScrollAxis::Vertical)
+                .scrollbars(true)
+                .id("playground-preview-scroll"),
             )
-            .axis(ScrollAxis::Vertical)
-            .scrollbars(true)
-            .id("playground-preview-scroll"),
+            .fill()
+            .grow()
+            .padding(16.0)
+            .background(Surface::Background),
         )
-        .fill()
-        .grow()
-        .padding(16.0)
-        .background(Surface::Background)
     }
 
     fn references(&self) -> impl View {
@@ -687,6 +693,13 @@ pub fn run() {
     let initial_locale = stories::initial_locale();
     let playground = Playground {
         theme: Some(theme),
+        catalog_selection: (std::env::var("RUSTUI_F0_ACCEPTANCE").as_deref() == Ok("1"))
+            .then(|| {
+                CATALOG
+                    .iter()
+                    .position(|item| item.key == "f0_native_acceptance")
+            })
+            .flatten(),
         ..Playground::default()
     };
     let assets = rustui::component_assets();
