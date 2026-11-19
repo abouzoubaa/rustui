@@ -1,6 +1,9 @@
 //! Controlled source editing backed by the official retained EditorState.
 
-use std::{cell::RefCell, rc::Rc};
+use std::{
+    cell::{Cell, RefCell},
+    rc::Rc,
+};
 
 use gpui::{
     AnyElement, AppContext as _, Entity, EntityInputHandler as _, IntoElement, SharedString, px,
@@ -41,7 +44,8 @@ fn write_with_current_writer<Value, Context>(
 struct RetainedCodeEditor {
     editor: Entity<EditorState>,
     line_numbers: bool,
-    owner_value: String,
+    owner_value: Rc<String>,
+    native_changed: Rc<Cell<bool>>,
     had_marked_text: bool,
     writer: Rc<RefCell<Option<EventWriter<String, gpui::App>>>>,
 }
@@ -191,7 +195,7 @@ impl View for CodeEditorView {
     }
 
     fn into_element(&self, context: &mut RenderContext<'_>) -> AnyElement {
-        let current_value = self.value.value();
+        let current_value = self.value.snapshot();
         let resolved_placeholder = match &self.placeholder_message_id {
             Some(id) => resolved_message_label(
                 id.as_ref(),
@@ -217,10 +221,11 @@ impl View for CodeEditorView {
                         .language(self.language.clone())
                         .placeholder(resolved_placeholder.clone())
                         .line_number(self.line_numbers)
-                        .default_value(current_value.clone())
+                        .default_value(current_value.as_str().to_owned())
                 }),
                 line_numbers: self.line_numbers,
                 owner_value: current_value.clone(),
+                native_changed: Rc::new(Cell::new(false)),
                 had_marked_text: false,
                 writer: Rc::new(RefCell::new(None)),
             });
@@ -229,30 +234,25 @@ impl View for CodeEditorView {
         let line_numbers_changed = retained_state.line_numbers != self.line_numbers;
         let previous_owner_value = retained_state.owner_value.clone();
         let had_marked_text = retained_state.had_marked_text;
-        let (retained_value, has_marked_text) =
-            context.update_entity(&editor, |native, window, cx| {
-                (
-                    native.value().to_string(),
-                    native.marked_text_range(window, cx).is_some(),
-                )
-            });
-        let sync_plan = crate::components::input::text_editor::owner_sync_plan(
-            &current_value,
-            &previous_owner_value,
-            &retained_value,
-            had_marked_text,
-            has_marked_text,
-        );
+        let native_changed = retained_state.native_changed.clone();
+        let owner_changed = !Rc::ptr_eq(&current_value, &previous_owner_value)
+            && current_value.as_str() != previous_owner_value.as_str();
+        let has_marked_text = context.update_entity(&editor, |native, window, cx| {
+            native.marked_text_range(window, cx).is_some()
+        });
+        let must_inspect = owner_changed
+            || (had_marked_text && !has_marked_text)
+            || ((self.disabled || self.readonly) && (native_changed.get() || has_marked_text));
+        let value_changed = ((self.disabled || self.readonly) && has_marked_text)
+            || (must_inspect
+                && editor.read(context.app()).value().as_ref() != current_value.as_str());
         let native = editor.read(context.app());
-        let value_changed = sync_plan.update_editor_value
-            || ((self.disabled || self.readonly)
-                && (retained_value != current_value || has_marked_text));
         let language_changed = native.language_name() != self.language;
         let placeholder_changed = native.presentation().placeholder() != &resolved_placeholder;
         if value_changed || language_changed || placeholder_changed || line_numbers_changed {
             context.update_entity(&editor, |native, window, cx| {
                 if value_changed {
-                    native.set_value(current_value.clone(), window, cx);
+                    native.set_value(current_value.as_str().to_owned(), window, cx);
                 }
                 if language_changed {
                     native.set_highlighter(self.language.clone(), cx);
@@ -270,20 +270,20 @@ impl View for CodeEditorView {
                 });
             }
         }
-        if sync_plan.update_owner_snapshot || sync_plan.update_marked_text_snapshot {
+        if !Rc::ptr_eq(&current_value, &previous_owner_value) || had_marked_text != has_marked_text
+        {
             context.update_entity(&retained, |retained, _, _| {
-                if sync_plan.update_owner_snapshot {
-                    retained.owner_value = current_value;
-                }
-                if sync_plan.update_marked_text_snapshot {
-                    retained.had_marked_text = has_marked_text;
-                }
+                retained.owner_value = current_value;
+                retained.had_marked_text = has_marked_text;
             });
         }
+        native_changed.set(false);
         if created {
             let writer = retained.read(context.app()).writer.clone();
+            let native_changed = retained.read(context.app()).native_changed.clone();
             context.subscribe_retained(&self.id, &editor, move |editor, event: &InputEvent, cx| {
                 if matches!(event, InputEvent::Change) {
+                    native_changed.set(true);
                     write_with_current_writer(&writer, editor.read(cx).value().to_string(), cx);
                 }
             });

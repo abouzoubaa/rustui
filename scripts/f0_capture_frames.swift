@@ -142,7 +142,7 @@ func matchesSource(_ id: Int, _ center: Double, _ source: [String:Any], _ panel:
             precondition(matchesSource(7,440,["offset_y":0.0],"collection",20,60,0,2))
             precondition(!matchesSource(9999,440,["offset_y":0.0],"collection",20,60,0,2))
             precondition(matchesSource(17,440,["offset_y": -300.0],"collection",20,60,0,2))
-            precondition(matchesSource(30,110,["offset_y": -30.0,"rows":[["id":30,"y":55.0]]],"editor",20,60,10,2))
+            precondition(matchesSource(30,110,["offset_y": -30.0,"rows":[["id":30 as Any,"y":55.0 as Any]]],"editor",20,60,10,2))
             print("pixel classifier self-test: blank, painted, stale = PASS")
             return
         }
@@ -179,11 +179,11 @@ func matchesSource(_ id: Int, _ center: Double, _ source: [String:Any], _ panel:
                 CGImageDestinationAddImage(png, crop, nil); CGImageDestinationFinalize(png)
             }
             let request = VNRecognizeTextRequest()
-            request.recognitionLevel = .fast; request.usesLanguageCorrection = false
+            request.recognitionLevel = panel == "editor" ? .accurate : .fast; request.usesLanguageCorrection = false
             request.recognitionLanguages = ["en-US"]; request.minimumTextHeight = 0.007
             request.customWords = ["F0", "row", "Product"]
-            request.regionOfInterest = CGRect(x:0,y:0,width:min((panel == "editor" ? 100.0 : 320.0)/Double(crop.width),1),height:1)
-            try VNImageRequestHandler(cgImage: crop).perform([request])
+            let ocrImage = crop.cropping(to:CGRect(x:0,y:0,width:min(panel == "editor" ? 130 : 320,crop.width),height:crop.height))!
+            try VNImageRequestHandler(cgImage: ocrImage).perform([request])
             let observations = request.results ?? []
             var anchors: [Anchor] = []
             var texts: [[String: Any]] = []
@@ -191,10 +191,10 @@ func matchesSource(_ id: Int, _ center: Double, _ source: [String:Any], _ panel:
                 guard let text = observation.topCandidates(1).first else { continue }
                 let box = observation.boundingBox
                 let center = (1 - box.midY) * Double(crop.height)
-                texts.append(["text":text.string,"confidence":text.confidence,"x":box.minX * Double(crop.width),"center":center])
+                texts.append(["text":text.string,"confidence":text.confidence,"x":box.minX * Double(ocrImage.width),"center":center])
                 let id: Int?
                 if panel == "editor" {
-                    id = box.maxX * Double(crop.width) < 140 ? number(text.string, "^\\s*([0-9]+)\\s*$") : nil
+                    id = box.maxX * Double(ocrImage.width) < 140 ? number(text.string, "^\\s*([0-9]+)\\s*$") : nil
                 } else if panel == "grid" { id = number(text.string, "^Product\\s+([0-9]+)$") }
                 else { id = number(text.string, "^[Ff][O0]\\s*row\\s*([0-9]+)$") }
                 if let id {
@@ -205,7 +205,7 @@ func matchesSource(_ id: Int, _ center: Double, _ source: [String:Any], _ panel:
             anchors.sort { $0.center < $1.center }
             do {
                 let gaps = zip(anchors, anchors.dropFirst()).filter { $1.id == $0.id+1 }.map { $1.center - $0.center }.filter { $0 > 5 }
-                if !gaps.isEmpty { pitch = median(gaps) }
+                if !gaps.isEmpty { pitch = median(gaps).rounded() }
             }
             if panel == "grid" && epoch < start, let first = anchors.first { dataTop = max(0, first.center - pitch/2) }
             if let anchor = anchors.first { lastPhase = anchor.center.truncatingRemainder(dividingBy: pitch) }
