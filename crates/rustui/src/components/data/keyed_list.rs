@@ -732,6 +732,12 @@ impl View for KeyedListView {
             });
         }
 
+        crate::components::f0_scroll_probe::watch(
+            context,
+            "keyed",
+            &state,
+            |state, _| serde_json::json!({"panel":"keyed", "offset_y":f32::from(state.scroll_handle().offset().y)}),
+        );
         let mut list = GpuiList::new(&state)
             .h(px(self.height))
             .scrollbar_visible(self.scrollbar_visible);

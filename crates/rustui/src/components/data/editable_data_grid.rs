@@ -228,6 +228,11 @@ struct GridState<R: Clone + 'static> {
     commit: Option<Committer>,
     generation: usize,
     rtl: bool,
+    rendered_columns: Option<(
+        bool,
+        Vec<(SharedString, SharedString, bool)>,
+        Option<(SharedString, ColumnSort)>,
+    )>,
 }
 
 impl<R: Clone + 'static> Drop for GridState<R> {
@@ -1044,6 +1049,7 @@ impl<R: Clone + 'static> View for EditableDataGridView<R> {
                 commit: None,
                 generation: 0,
                 rtl: false,
+                rendered_columns: None,
             }
         });
         let columns = self.columns.clone();
@@ -1163,7 +1169,38 @@ impl<R: Clone + 'static> View for EditableDataGridView<R> {
             .col_resizable(false)
             .delegate_accessibility(true)
         });
-        context.update_entity(&table, |table, _, cx| table.refresh(cx));
+        let columns_changed = context.update_entity(&state, |state, _, _| {
+            let signature = (
+                state.rtl,
+                state
+                    .columns
+                    .iter()
+                    .map(|column| {
+                        (
+                            column.id.clone(),
+                            column.title.clone(),
+                            column.compare.is_some(),
+                        )
+                    })
+                    .collect(),
+                state.sort.clone(),
+            );
+            let changed = state.rendered_columns.as_ref() != Some(&signature);
+            state.rendered_columns = Some(signature);
+            changed
+        });
+        context.update_entity(&table, |table, _, cx| {
+            if columns_changed {
+                table.refresh(cx);
+            }
+            cx.notify();
+        });
+        crate::components::f0_scroll_probe::watch(
+            context,
+            "grid",
+            &table,
+            |state, _| serde_json::json!({"panel":"grid", "offset_y":f32::from(state.vertical_scroll_handle.0.borrow().base_handle.offset().y)}),
+        );
         let table_weak = table.downgrade();
         context.update_entity(&state, move |state, _, _| state.table = Some(table_weak));
         let weak = state.downgrade();

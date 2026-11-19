@@ -10,6 +10,7 @@ pub(super) fn acceptance_demo(height: f32) -> impl View {
         grid_height: height,
         ..EditableGridGallery::default()
     })
+    .props(height, |owner, height| owner.grid_height = *height)
 }
 
 #[derive(Clone, Debug, PartialEq)]
@@ -47,7 +48,8 @@ impl View for EditableGridGallery {
             .child(Text(
                 "Use arrows or Tab to select a cell; Enter or F2 edits, Escape cancels.",
             ))
-            .child(
+            .child(crate::f0_frame_capture::measured(
+                "grid",
                 EditableDataGrid(
                     "Products",
                     self.rows_binding(),
@@ -99,6 +101,6 @@ impl View for EditableGridGallery {
                 )
                 .height(self.grid_height())
                 .id("playground-editable-grid"),
-            )
+            ))
     }
 }

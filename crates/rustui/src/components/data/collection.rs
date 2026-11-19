@@ -1,12 +1,20 @@
 //! Keyed, fixed-height, virtualized rows containing arbitrary RustUI views.
 
-use std::{cell::RefCell, collections::HashSet, marker::PhantomData, rc::Rc};
+use std::{
+    any::Any,
+    cell::RefCell,
+    collections::HashSet,
+    marker::PhantomData,
+    rc::Rc,
+    sync::{Arc, Mutex, Weak},
+};
 
 use gpui::{
     AnyElement, App, Bounds, ClickEvent, Element, ElementId, FocusHandle, GlobalElementId,
-    InspectorElementId, InteractiveElement as _, IntoElement, KeyDownEvent, LayoutId,
-    ListAlignment, ListOffset, ListState, Modifiers, MouseButton, ParentElement as _, Pixels, Role,
-    SharedString, StatefulInteractiveElement as _, Styled as _, WeakEntity, Window, div, list, px,
+    InspectorElementId, InteractiveElement as _, IntoElement, KeyDownEvent, LayoutId, Modifiers,
+    MouseButton, ParentElement as _, Pixels, Role, ScrollStrategy, SharedString,
+    StatefulInteractiveElement as _, Styled as _, UniformListScrollHandle, WeakEntity, Window, div,
+    px, uniform_list,
 };
 use gpui_component::ActiveTheme as _;
 use rustui_core::{Binding, Identity};
@@ -52,6 +60,39 @@ pub struct CollectionItem<T> {
     id: Identity,
     value: T,
     label: SharedString,
+    validation: Mutex<Weak<ValidatedIds>>,
+}
+
+struct ValidatedIds {
+    pointer: usize,
+    len: usize,
+    ids: Vec<Identity>,
+}
+impl std::ops::Deref for ValidatedIds {
+    type Target = [Identity];
+    fn deref(&self) -> &Self::Target {
+        &self.ids
+    }
+}
+
+fn validated_ids<T>(items: &Rc<[CollectionItem<T>]>) -> Arc<ValidatedIds> {
+    let pointer = items.as_ptr() as usize;
+    if let Some(first) = items.first() {
+        if let Some(cached) = first.validation.lock().unwrap().upgrade() {
+            if cached.pointer == pointer && cached.len == items.len() {
+                return cached;
+            }
+        }
+    }
+    let result = Arc::new(ValidatedIds {
+        pointer,
+        len: items.len(),
+        ids: item_ids(items),
+    });
+    if let Some(first) = items.first() {
+        *first.validation.lock().unwrap() = Arc::downgrade(&result);
+    }
+    result
 }
 
 impl<T> CollectionItem<T> {
@@ -66,6 +107,7 @@ impl<T> CollectionItem<T> {
             label: id.as_str().to_owned().into(),
             id,
             value,
+            validation: Mutex::new(Weak::new()),
         }
     }
     pub fn label(mut self, label: impl Into<SharedString>) -> Self {
@@ -97,6 +139,7 @@ pub struct Collection<T: 'static, V: View, F: Fn(usize, &T) -> V + 'static> {
     height: f32,
     row_height: f32,
     factory: Rc<F>,
+    validated: Arc<ValidatedIds>,
     selection: Option<Binding<Option<Identity>>>,
     label: SharedString,
     confirm: Option<ControlAction>,
@@ -119,13 +162,14 @@ impl<T: 'static, V: View, F: Fn(usize, &T) -> V + 'static> Collection<T, V, F> {
         );
         validate_height(viewport_height);
         validate_height(row_height);
-        item_ids(&items);
+        let validated = validated_ids(&items);
         Self {
             id,
             items,
             height: viewport_height,
             row_height,
             factory: Rc::new(factory),
+            validated,
             selection: None,
             label: "Collection".into(),
             confirm: None,
@@ -258,31 +302,30 @@ fn keyboard_intent(
     }
 }
 
-/// Native List discards uniform height hints when its width first resolves or
-/// changes. Height-based reveal cannot locate an unmeasured offscreen row then;
-/// use GPUI's logical index scroll when the path to the target has unknown heights.
-fn reveal_selected_row(scroll: &ListState, index: usize) {
-    let first = scroll.logical_scroll_top().item_ix;
-    let measured_path = (first..=index).all(|row| scroll.bounds_for_item(row).is_some());
-    if measured_path {
-        scroll.scroll_to_reveal_item(index);
-    } else {
-        scroll.scroll_to(ListOffset {
-            item_ix: index,
-            offset_in_item: px(0.0),
-        });
-    }
+fn reveal_selected_row(scroll: &UniformListScrollHandle, index: usize) {
+    scroll.scroll_to_item(index, ScrollStrategy::Nearest);
 }
+type RowRenderer = Rc<
+    dyn Fn(
+        usize,
+        &mut CollectionState,
+        &mut Window,
+        &mut gpui::Context<CollectionState>,
+    ) -> AnyElement,
+>;
 
 struct CollectionState {
     seed: RenderSeed,
     retained: RetainedEntities,
-    ids: Vec<Identity>,
+    ids: Arc<ValidatedIds>,
+    snapshot: Option<Box<dyn Any>>,
+    renderer: Option<RowRenderer>,
+    visits: Rc<PrepaintVisits>,
     selected: Option<Identity>,
     writer: Option<SelectionWriter>,
     confirm: Option<KeyboardActionHandler>,
     focus: FocusHandle,
-    scroll: ListState,
+    scroll: UniformListScrollHandle,
     row_height: f32,
     generation: u64,
 }
@@ -438,7 +481,7 @@ impl<T: 'static, V: View, F: Fn(usize, &T) -> V + 'static> View for Collection<T
 
     fn into_element(&self, context: &mut RenderContext<'_>) -> AnyElement {
         context.with_element_scope(RetentionScope::Collection(self.id.clone()), |context| {
-            let ids = item_ids(&self.items);
+            let ids = self.validated.clone();
             let requested = self.selection.as_ref().and_then(Binding::value);
             let selected = normalize(&ids, requested.as_ref());
             let seed = context.seed();
@@ -447,13 +490,15 @@ impl<T: 'static, V: View, F: Fn(usize, &T) -> V + 'static> View for Collection<T
                     CollectionState {
                         seed: seed.clone(),
                         retained: RetainedEntities::default(),
-                        ids: Vec::new(),
+                        ids: ids.clone(),
+                        snapshot: None,
+                        renderer: None,
+                        visits: Rc::new(PrepaintVisits::default()),
                         selected: None,
                         writer: None,
                         confirm: None,
                         focus: cx.focus_handle(),
-                        scroll: ListState::new(self.items.len(), ListAlignment::Top, px(0.0))
-                            .with_uniform_item_height(px(self.row_height)),
+                        scroll: UniformListScrollHandle::new(),
                         row_height: self.row_height,
                         generation: 0,
                     }
@@ -484,26 +529,24 @@ impl<T: 'static, V: View, F: Fn(usize, &T) -> V + 'static> View for Collection<T
                 let next_index = selected
                     .as_ref()
                     .and_then(|id| ids.iter().position(|i| i == id));
-                let resized =
-                    state.scroll.item_count() != ids.len() || state.row_height != self.row_height;
-                if resized {
-                    state
-                        .scroll
-                        .reset_with_uniform_height(ids.len(), px(self.row_height));
-                    state.row_height = self.row_height;
-                }
+                let snapshot_same = state.snapshot.as_ref().and_then(|old| old.downcast_ref::<Rc<[CollectionItem<T>]>>()).is_some_and(|old| Rc::ptr_eq(old, &self.items));
+                let resized = !snapshot_same || state.row_height != self.row_height;
+                state.row_height = self.row_height;
                 if resized || state.selected != selected || previous_index != next_index {
                     if let Some(index) = next_index {
                         reveal_selected_row(&state.scroll, index);
                     }
                 }
-                state.retained.prune_cells(&ids.iter().cloned().collect());
+                if resized {
+                    state.retained.prune_cells(&ids.iter().cloned().collect());
+                    state.generation = state.generation.wrapping_add(1);
+                    state.snapshot = Some(Box::new(self.items.clone()));
+                }
                 state.seed = seed;
                 state.ids = ids;
                 state.selected = selected.clone();
                 state.writer = writer.clone();
                 state.confirm = confirm;
-                state.generation = state.generation.wrapping_add(1);
                 (
                     state.generation,
                     state
@@ -525,22 +568,21 @@ impl<T: 'static, V: View, F: Fn(usize, &T) -> V + 'static> View for Collection<T
                     })
                 });
             }
+            crate::components::f0_scroll_probe::watch(context, "collection", &state, |state, _| {
+                let offset = state.scroll.0.borrow().base_handle.offset().y;
+                serde_json::json!({"panel":"collection", "offset_y": f32::from(offset), "row_height":state.row_height, "total":state.ids.len()})
+            });
             let weak = state.downgrade();
             let keyboard_owner = weak.clone();
             let items = self.items.clone();
             let factory = self.factory.clone();
             let row_height = self.row_height;
             let select_on_click = self.select_on_click;
-            let visits = Rc::new(PrepaintVisits::default());
+            let visits = state.read(context.app()).visits.clone();
             let row_visits = visits.clone();
-            let native_list = list(scroll, move |index, window, cx| {
-                weak.update(cx, |state, cx| {
-                    let Some(item) = items.get(index) else {
-                        return div().into_any_element();
-                    };
-                    if state.generation != generation {
-                        return div().into_any_element();
-                    }
+            let renderer: RowRenderer = Rc::new(move |index, state, window, cx| {
+                    let item = &items[index];
+                    let generation = state.generation;
                     let instance = cx.entity_id();
                     state.retained.begin_cell(&item.id);
                     let seed = state.seed.clone();
@@ -600,9 +642,15 @@ impl<T: 'static, V: View, F: Fn(usize, &T) -> V + 'static> View for Collection<T
                         kind: VisitKind::Row(item.id.clone()),
                     }
                     .into_any_element()
-                })
-                .unwrap_or_else(|_| div().into_any_element())
+            });
+            context.update_entity(&state, |state, _, _| state.renderer = Some(renderer));
+            let native_list = uniform_list(format!("collection-rows:{}:{}",self.id.as_str(),generation), self.items.len(), move |range, window, cx| {
+                weak.update(cx, |state, cx| {
+                    let renderer = state.renderer.clone().expect("current collection renderer");
+                    range.map(|index| renderer(index, state, window, cx)).collect::<Vec<_>>()
+                }).unwrap_or_default()
             })
+            .track_scroll(&scroll)
             .h(px(self.height))
             .w_full()
             .min_w_0();
@@ -766,18 +814,135 @@ mod tests {
 
     #[test]
     fn selection_scroll_addresses_unmeasured_native_rows_by_index() {
-        // This matches native List's state after a width change invalidates all
-        // height hints, including the first prepaint of a newly created list.
-        let scroll = ListState::new(1_000, ListAlignment::Top, px(0.0));
-        scroll.scroll_to_reveal_item(999);
-        assert_eq!(scroll.logical_scroll_top().item_ix, 0);
-        reveal_selected_row(&scroll, 999);
-        assert_eq!(scroll.logical_scroll_top().item_ix, 999);
-        assert_eq!(scroll.logical_scroll_top().offset_in_item, px(0.0));
-        reveal_selected_row(&scroll, 500);
-        assert_eq!(scroll.logical_scroll_top().item_ix, 500);
-        reveal_selected_row(&scroll, 0);
-        assert_eq!(scroll.logical_scroll_top().item_ix, 0);
+        let scroll = UniformListScrollHandle::new();
+        for index in [999, 500, 0] {
+            reveal_selected_row(&scroll, index);
+            assert_eq!(
+                scroll
+                    .0
+                    .borrow()
+                    .deferred_scroll_to_item
+                    .as_ref()
+                    .unwrap()
+                    .item_index,
+                index
+            );
+        }
+    }
+
+    #[gpui::test]
+    fn fast_scroll_keeps_every_visible_row_label_for_5000_items(cx: &mut gpui::TestAppContext) {
+        struct Owner {
+            items: Rc<[CollectionItem<usize>]>,
+        }
+        impl View for Owner {
+            fn body(&self) -> impl View {
+                Collection::new("scroll-proof", self.items.clone(), 300., 30., |_, index| {
+                    crate::prelude::Text(format!("F0 row {index}"))
+                })
+            }
+        }
+        let theme = crate::theme::parse_theme(include_str!(concat!(
+            env!("CARGO_MANIFEST_DIR"),
+            "/../../themes/macos27.json"
+        )))
+        .unwrap();
+        cx.update(|app| {
+            gpui_component::init(app);
+            crate::theme::activate_theme(&theme, Some(crate::theme::AppearanceMode::Dark), app)
+                .unwrap();
+        });
+        let (owner, window) = cx.add_window_view(|_, cx| {
+            crate::runtime::ComponentHost::new(
+                Owner {
+                    items: (0..5000)
+                        .map(|i| {
+                            CollectionItem::new(format!("row-{i}"), i).label(format!("F0 row {i}"))
+                        })
+                        .collect::<Vec<_>>()
+                        .into(),
+                },
+                cx,
+            )
+        });
+        window.update(|window, app| {
+            let _ = window.draw(app);
+        });
+        let state = window.update(|_, app| {
+            owner
+                .read(app)
+                .retained_entity_for_test::<CollectionState>(
+                    vec![RetentionScope::Collection(Identity::from("scroll-proof"))],
+                    Identity::from("collection-state"),
+                )
+                .expect("collection retained state")
+        });
+        let generation = window.update(|_, app| state.read(app).generation);
+        let mut maximum = 0;
+        for delta in std::iter::repeat_n(-6000., 25).chain(std::iter::repeat_n(6000., 25)) {
+            window.update(|window, app| {
+                #[allow(deprecated)]
+                window.dispatch_event(
+                    gpui::PlatformInput::Scroll(gpui::ScrollWheelEvent {
+                        position: gpui::point(px(100.), px(150.)),
+                        delta: gpui::ScrollDelta::Pixels(gpui::point(px(0.), px(delta))),
+                        ..Default::default()
+                    }),
+                    app,
+                );
+                let _ = window.draw(app);
+                let offset = -f32::from(state.read(app).scroll.0.borrow().base_handle.offset().y);
+                let first = (offset / 30.).floor() as usize;
+                let end = ((offset + 300.) / 30.).ceil() as usize;
+                maximum = maximum.max(first);
+                let tree: serde_json::Value =
+                    serde_json::from_str(&window.debug_a11y_tree_json().unwrap()).unwrap();
+                let labels: HashSet<_> = tree["nodes"]
+                    .as_object()
+                    .unwrap()
+                    .values()
+                    .filter_map(|node| node["aria"]["label"].as_str())
+                    .collect();
+                for index in first..end.min(5000) {
+                    assert!(
+                        labels.contains(format!("F0 row {index}").as_str()),
+                        "visible row {index} missing at offset {offset}: {tree}"
+                    );
+                }
+                assert_eq!(
+                    state.read(app).generation,
+                    generation,
+                    "scrolling must not rebuild the snapshot"
+                );
+            });
+        }
+        assert!(
+            maximum >= 4990,
+            "scripted scroll must reach the final viewport, reached {maximum}"
+        );
+        window.update(|window, app| {
+            owner.update(app, |_, cx| cx.notify());
+            let _ = window.draw(app);
+            assert_eq!(
+                state.read(app).generation,
+                generation,
+                "unchanged Rc snapshot must not rebuild IDs or generation"
+            );
+        });
+    }
+
+    #[test]
+    fn snapshot_validation_reuses_ids_until_the_snapshot_is_released() {
+        let mut items: Rc<[_]> =
+            vec![CollectionItem::new("a", 0), CollectionItem::new("b", 1)].into();
+        let first = validated_ids(&items);
+        assert!(Arc::ptr_eq(&first, &validated_ids(&items)));
+        drop(first);
+        Rc::get_mut(&mut items).unwrap()[1] = CollectionItem::new("c", 2);
+        assert_eq!(
+            validated_ids(&items).ids,
+            vec![Identity::from("a"), Identity::from("c")]
+        );
     }
 
     #[test]

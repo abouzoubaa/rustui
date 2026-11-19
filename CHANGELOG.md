@@ -1,6 +1,7 @@
 # Changelog
 
 ## Unreleased
+- F0-13: completed native acceptance workloads, compared old/Fast scrolling, fixed Collection virtualization, and reduced unchanged editor/grid work.
 - F0: keep a native editor popover open while its anchor is mounted, including on idle frames.
 - F0: fixed the macOS native popup freeze and gave the acceptance collection and editable grid taller viewports.
 - Playground: reorganized F0 native acceptance into focused panels, made the 10,000-line editor and full-height editable grid easy to reach, and added a configurable grid viewport height.

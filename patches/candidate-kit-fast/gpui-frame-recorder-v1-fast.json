@@ -1,0 +1,16 @@
+{
+  "schema_version": 1,
+  "name": "gpui-frame-recorder-v1-fast",
+  "patch": "gpui-frame-recorder-v1-fast.patch",
+  "patch_sha256": "16c8cc141f7d7cc03312a55a0530fd7471589b4e65d4a98db40aa46a258ea0bd",
+  "files": {
+    "vendor/gpui-fast-0.1.14/src/window.rs": {
+      "pre_sha256": "199d4e7f7a713435ea1cd8f80ac6f143fe23c813233a914785ea4982ba98b5b3",
+      "post_sha256": "24b1f7650f3b096304ba052f183a46e130f3a9b82c58cb0242631c638ddaad5a"
+    },
+    "vendor/gpui-fast-0.1.14/.cargo-checksum.json": {
+      "pre_sha256": "37d76f645594443311c7c2f0bcc43672e3a6982e5a07f2310ffeb34138958a0c",
+      "post_sha256": "a3d1ef0a79058ca26e959dce7087ec34e6158de5321f1cf8bc821972ee65ddc7"
+    }
+  }
+}
