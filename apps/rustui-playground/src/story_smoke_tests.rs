@@ -463,3 +463,50 @@ fn f0_collection_scroll_position_survives_tab_switch(cx: &mut gpui::TestAppConte
     acceptance_select_tab(&mut window, "Collection");
     assert_eq!(visible_labels(acceptance_tree(&mut window)), before);
 }
+
+#[gpui::test]
+fn f0_list_keyed_grid_and_editor_resize_with_the_window(cx: &mut gpui::TestAppContext) {
+    let mut window = f0_acceptance_window(cx);
+    for (tab, subtab, role, label) in [
+        ("List", Some("RustUI List"), "ListBox", None),
+        ("List", Some("KeyedList"), "ListBox", None),
+        ("Editable grid", None, "Grid", Some("Products")),
+        (
+            "Code editor",
+            None,
+            "MultilineTextInput",
+            Some("F0 large Rust source editor"),
+        ),
+    ] {
+        window.simulate_resize(gpui::size(gpui::px(1400.0), gpui::px(1200.0)));
+        acceptance_tree(&mut window);
+        acceptance_select_tab(&mut window, tab);
+        if let Some(subtab) = subtab {
+            acceptance_select_tab(&mut window, subtab);
+        }
+        let viewport_height = |window: &mut gpui::VisualTestContext| {
+            let tree = acceptance_tree(window);
+            let scale = tree["frame"]["scale_factor"].as_f64().unwrap();
+            let width = tree["frame"]["viewport_size"]["width"].as_f64().unwrap();
+            tree["nodes"]
+                .as_object()
+                .unwrap()
+                .values()
+                .filter(|node| {
+                    node["aria"]["role"] == role
+                        && label.is_none_or(|label| node["aria"]["label"] == label)
+                        && node["bounds"]["x"].as_f64().unwrap() / scale > width * 0.18
+                })
+                .map(|node| node["bounds"]["height"].as_f64().unwrap() / scale)
+                .max_by(f64::total_cmp)
+                .unwrap_or_else(|| panic!("missing {tab}/{subtab:?} viewport"))
+        };
+        let large = viewport_height(&mut window);
+        window.simulate_resize(gpui::size(gpui::px(1400.0), gpui::px(850.0)));
+        let small = viewport_height(&mut window);
+        assert!(
+            small >= 400.0 && small < large,
+            "{tab}/{subtab:?}: {large} → {small}"
+        );
+    }
+}
