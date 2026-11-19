@@ -100,6 +100,7 @@ struct Content {
     owner: Entity<ComponentHost<Owner>>,
     outside: FocusHandle,
     outside_first: bool,
+    parent_cancels: Option<Rc<std::cell::Cell<usize>>>,
 }
 
 impl Render for Content {
@@ -110,7 +111,12 @@ impl Render for Content {
             .tab_stop(true)
             .h(px(25.0))
             .child("Outside");
-        let root = div().flex().flex_col();
+        let mut root = div().flex().flex_col();
+        if let Some(cancels) = self.parent_cancels.clone() {
+            root = root.key_context("R1EscapeParent").on_action(
+                move |_: &gpui_base::actions::Cancel, _, _| cancels.set(cancels.get() + 1),
+            );
+        }
         if self.outside_first {
             root.child(outside).child(self.owner.clone())
         } else {
@@ -137,6 +143,18 @@ fn setup_order(
     &mut gpui::VisualTestContext,
     FocusHandle,
 ) {
+    setup_with_escape_parent(cx, outside_first, None)
+}
+
+fn setup_with_escape_parent(
+    cx: &mut gpui::TestAppContext,
+    outside_first: bool,
+    parent_cancels: Option<Rc<std::cell::Cell<usize>>>,
+) -> (
+    Entity<ComponentHost<Owner>>,
+    &mut gpui::VisualTestContext,
+    FocusHandle,
+) {
     let theme = crate::theme::parse_theme(include_str!(concat!(
         env!("CARGO_MANIFEST_DIR"),
         "/../../themes/macos27.json"
@@ -144,6 +162,13 @@ fn setup_order(
     .unwrap();
     cx.update(|app| {
         gpui_component::init(app);
+        if parent_cancels.is_some() {
+            app.bind_keys([gpui::KeyBinding::new(
+                "escape",
+                gpui_base::actions::Cancel,
+                Some("R1EscapeParent"),
+            )]);
+        }
         crate::theme::activate_theme(&theme, Some(crate::theme::AppearanceMode::Dark), app)
             .unwrap();
     });
@@ -181,6 +206,7 @@ fn setup_order(
                 owner,
                 outside,
                 outside_first,
+                parent_cancels,
             });
             gpui_component::Root::new(content, window, cx)
         }
@@ -1385,4 +1411,168 @@ fn grid_cells_reference_actual_header_nodes_across_updates(cx: &mut gpui::TestAp
     });
     draw(window);
     assert_eq!(assert_links(window), 9);
+}
+
+#[gpui::test]
+fn r1_cell_selection_and_editing_preserve_row_and_text_bounds(cx: &mut gpui::TestAppContext) {
+    let (owner, window, _) = setup(cx);
+    let bounds = |window: &mut gpui::VisualTestContext| {
+        (
+            window.debug_bounds("editable-grid-cell:b:name").unwrap(),
+            window.debug_bounds("editable-grid-content:b:name").unwrap(),
+        )
+    };
+    let normal = bounds(window);
+    let text_origin = window
+        .debug_bounds("editable-grid-label:b:name")
+        .unwrap()
+        .origin;
+    window.simulate_click(normal.0.center(), gpui::Modifiers::default());
+    frame(window);
+    let selected = bounds(window);
+    assert_eq!(
+        normal, selected,
+        "selection must not move row or text bounds"
+    );
+    window.simulate_keystrokes("enter");
+    frame(window);
+    let editing = bounds(window);
+    window.update(|_, app| {
+        let state = grid(&owner, app);
+        let state = state.read(app);
+        assert!(
+            state.edit.is_some(),
+            "Enter must really open the cell editor"
+        );
+        let editor = state.editor.borrow().clone().unwrap();
+        assert_eq!(
+            crate::components::input::text_field::input_text_bounds_for_test(
+                editor.read(app),
+                Identity::from("editable-data-grid-editor"),
+                app
+            )
+            .unwrap()
+            .origin,
+            text_origin,
+            "the editor's real text origin must match normal cell text"
+        );
+    });
+    assert_eq!(normal, editing, "editing must not move row or text bounds");
+    assert_eq!(
+        f32::from(normal.0.size.height),
+        30.0,
+        "row height comes from table metric"
+    );
+}
+
+#[gpui::test]
+fn r1_click_and_keyboard_keep_the_active_row_selected(cx: &mut gpui::TestAppContext) {
+    let (owner, window, _) = setup(cx);
+    let point = window
+        .debug_bounds("editable-grid-cell:b:name")
+        .unwrap()
+        .center();
+    window.simulate_click(point, gpui::Modifiers::default());
+    frame(window);
+    let assert_row = |window: &mut gpui::VisualTestContext| {
+        window.update(|window, app| {
+            let state = grid(&owner, app);
+            let state = state.read(app);
+            assert!(
+                state.focus.is_focused(window),
+                "cell click and navigation focus the grid"
+            );
+            let row = state.view_index(&state.active.as_ref().unwrap().0).unwrap();
+            let table = state.table.as_ref().unwrap().upgrade().unwrap();
+            assert_eq!(
+                table.read(app).selected_row(),
+                Some(row),
+                "whole-row selection follows active cell"
+            );
+        })
+    };
+    assert_row(window);
+    for key in [
+        "up", "down", "right", "left", "tab", "home", "end", "pageup", "pagedown",
+    ] {
+        window.simulate_keystrokes(key);
+        frame(window);
+        assert_row(window);
+        let active_row = window.update(|_, app| {
+            let state = grid(&owner, app);
+            let state = state.read(app);
+            state.view_index(&state.active.as_ref().unwrap().0).unwrap()
+        });
+        let selector = Box::leak(format!("editable-grid-selection:{active_row}").into_boxed_str());
+        let selection = window
+            .debug_bounds(selector)
+            .expect("active row has a painted selection overlay");
+        assert!(
+            f32::from(selection.size.width) >= 3.0 * 160.0,
+            "selection covers the whole row"
+        );
+    }
+}
+
+#[gpui::test]
+fn r1_grid_reads_table_metrics_and_font_after_theme_change(cx: &mut gpui::TestAppContext) {
+    let (owner, window, _) = setup(cx);
+    let mut theme = crate::theme::parse_theme(include_str!(concat!(
+        env!("CARGO_MANIFEST_DIR"),
+        "/../../themes/macos27.json"
+    )))
+    .unwrap();
+    theme.platform_snapshot.dimensions.navigation_row_height = 42.0;
+    theme.platform_snapshot.spacing.space_1 = 9.0;
+    theme.platform_snapshot.spacing.space_3 = 11.0;
+    theme.token_sources["spacing"]["compact"] = serde_json::json!("space_3");
+    for style in theme.components.get_mut("table").unwrap()["styles"]
+        .as_array_mut()
+        .unwrap()
+    {
+        if style["part"] == "table_rows" {
+            style["style"]["properties"]["typography"]["value"]["size"] = serde_json::json!(17.0);
+        }
+    }
+    window.update(|_, app| {
+        crate::theme::activate_theme(&theme, Some(crate::theme::AppearanceMode::Dark), app).unwrap()
+    });
+    frame(window);
+    let cell = window.debug_bounds("editable-grid-cell:b:name").unwrap();
+    let label = window.debug_bounds("editable-grid-label:b:name").unwrap();
+    window
+        .update(|_, app| assert_eq!(grid(&owner, app).read(app).appearance.typography.size, 17.0));
+    assert_eq!(f32::from(cell.size.height), 42.0);
+    assert_eq!(f32::from(label.origin.x - cell.origin.x), 11.0);
+}
+
+#[gpui::test]
+fn r1_escape_cancels_edit_before_reaching_the_enclosing_surface(cx: &mut gpui::TestAppContext) {
+    let cancels = Rc::new(std::cell::Cell::new(0));
+    let (owner, window, _) = setup_with_escape_parent(cx, false, Some(cancels.clone()));
+    window.simulate_keystrokes("escape");
+    frame(window);
+    assert_eq!(
+        cancels.get(),
+        1,
+        "an idle grid must let its containing surface handle Escape"
+    );
+    window.simulate_keystrokes("enter");
+    frame(window);
+    window.update(|_, app| assert!(grid(&owner, app).read(app).edit.is_some()));
+    window.simulate_keystrokes("escape");
+    frame(window);
+    window.update(|_, app| assert!(grid(&owner, app).read(app).edit.is_none()));
+    assert_eq!(
+        cancels.get(),
+        1,
+        "the first Escape cancels editing without dismissing the surface"
+    );
+    window.simulate_keystrokes("escape");
+    frame(window);
+    assert_eq!(
+        cancels.get(),
+        2,
+        "a subsequent Escape reaches the containing surface"
+    );
 }

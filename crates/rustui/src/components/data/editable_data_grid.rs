@@ -13,16 +13,22 @@ use gpui::{
     IntoElement as _, KeyDownEvent, MouseButton, ParentElement as _, Role, SharedString, Stateful,
     StatefulInteractiveElement as _, Styled as _, Subscription, WeakEntity, Window, div, px,
 };
-use gpui_component::table::{Column, ColumnSort, DataTable, TableDelegate, TableState};
+use gpui_component::{
+    Sizable as _, Size,
+    table::{Column, ColumnSort, DataTable, TableDelegate, TableState},
+};
 use rustui_core::{Binding, Identity};
 
 use crate::{
-    components::input::text_field::TextField,
+    components::{
+        input::text_field::TextField,
+        theme::{required_style, selector},
+    },
     runtime::ComponentHost,
     view::{EmptyView, RenderContext, View},
 };
 
-gpui::actions!(editable_data_grid, [NextCell, PreviousCell]);
+gpui::actions!(editable_data_grid, [NextCell, PreviousCell, CancelEdit]);
 
 struct GridKeyBindings;
 impl gpui::Global for GridKeyBindings {}
@@ -209,7 +215,45 @@ struct Editing {
     generation: usize,
 }
 
+#[derive(Clone)]
+struct GridAppearance {
+    row_height: f32,
+    padding: f32,
+    typography: crate::theme::ButtonTypographyValue,
+    selection: gpui::Hsla,
+    focus: gpui::Hsla,
+}
+
+impl GridAppearance {
+    fn resolve(context: &RenderContext<'_>) -> Self {
+        let style = required_style(context, "table", "table_rows", &selector(context));
+        let theme = crate::theme::registry::active_theme(context.app()).expect("grid theme");
+        Self {
+            row_height: theme
+                .component_metric("table", "row_height")
+                .expect("table row height"),
+            padding: theme
+                .component_metric("table", "spacing")
+                .expect("table cell padding"),
+            typography: style.typography.expect("table row typography"),
+            selection: gpui_component::theme::try_parse_color(
+                &theme
+                    .profile
+                    .colors(Some(theme.mode))
+                    .selected_row_background,
+            )
+            .expect("grid selection color"),
+            focus: crate::theme::registry::hsla(
+                theme
+                    .token(crate::theme::ThemeToken::Accent)
+                    .expect("grid focus color"),
+            ),
+        }
+    }
+}
+
 struct GridState<R: Clone + 'static> {
+    appearance: GridAppearance,
     rows: Vec<R>,
     view_order: Vec<SharedString>,
     sort: Option<(SharedString, ColumnSort)>,
@@ -357,6 +401,7 @@ impl<R: Clone + 'static> GridState<R> {
             focus: edit.focus.clone(),
             error,
             validate,
+            appearance: self.appearance.clone(),
         };
         *self.editor.borrow_mut() = Some(cx.new(|cx| ComponentHost::new(editor, cx)));
         window.refresh();
@@ -438,7 +483,7 @@ impl<R: Clone + 'static> GridState<R> {
 
     fn scroll_to_row(&self, row: usize, cx: &mut App) {
         if let Some(table) = self.table.as_ref().and_then(WeakEntity::upgrade) {
-            table.update(cx, |table, cx| table.scroll_to_row(row, cx));
+            table.update(cx, |table, cx| table.set_selected_row(row, cx));
         }
     }
 
@@ -666,6 +711,7 @@ struct CellEditor {
     focus: Rc<RefCell<Option<FocusHandle>>>,
     error: Rc<RefCell<Option<String>>>,
     validate: CellValidator,
+    appearance: GridAppearance,
 }
 
 impl View for CellEditor {
@@ -686,6 +732,10 @@ impl View for CellEditor {
             .id("editable-data-grid-editor")
             .validate(move |value| validate(value))
             .editor_focus(self.focus.clone())
+            .cell_editor(
+                self.appearance.row_height,
+                self.appearance.typography.clone(),
+            )
     }
 }
 
@@ -763,6 +813,7 @@ impl<R: Clone + 'static> TableDelegate for EditableGridDelegate<R> {
         let column = &grid.columns[ix];
         let mut result = Column::new(column.id.clone(), column.title.clone())
             .width(px(160.))
+            .p_0()
             .resizable(false)
             .movable(false);
         if column.compare.is_some() {
@@ -810,9 +861,33 @@ impl<R: Clone + 'static> TableDelegate for EditableGridDelegate<R> {
         &mut self,
         row_ix: usize,
         _window: &mut Window,
-        _cx: &mut Context<TableState<Self>>,
+        cx: &mut Context<TableState<Self>>,
     ) -> Stateful<gpui::Div> {
-        grid_row_accessibility(row_ix)
+        let selected = self.owner.upgrade().is_some_and(|owner| {
+            let grid = owner.read(cx);
+            grid.active
+                .as_ref()
+                .is_some_and(|(id, _)| grid.view_index(id) == Some(row_ix))
+        });
+        let row = grid_row_accessibility(row_ix)
+            .relative()
+            .aria_selected(selected);
+        if let Some(owner) = self.owner.upgrade() {
+            let color = owner.read(cx).appearance.selection;
+            row.when(selected, |row| {
+                row.bg(color).child(
+                    // Keep the requested row-selection color even when Kit's
+                    // global active_highlight option uses accent for its base fill.
+                    div()
+                        .absolute()
+                        .inset_0()
+                        .bg(color)
+                        .debug_selector(move || format!("editable-grid-selection:{row_ix}")),
+                )
+            })
+        } else {
+            row
+        }
     }
 
     fn render_th(
@@ -843,13 +918,13 @@ impl<R: Clone + 'static> TableDelegate for EditableGridDelegate<R> {
             _ => title.to_string(),
         };
         let header_nodes = grid.header_nodes.clone();
-        let header = grid_header_accessibility(col_ix, accessible_title).a11y_synthetic_children(
-            move |tree| {
+        let header = grid_header_accessibility(col_ix, accessible_title)
+            .px(px(grid.appearance.padding))
+            .a11y_synthetic_children(move |tree| {
                 header_nodes
                     .borrow_mut()
                     .insert(col_ix, tree.parent_node_id());
-            },
-        );
+            });
         if column.compare.is_none() {
             let selector = format!("editable-grid-header:{}", column.id);
             return header
@@ -928,6 +1003,9 @@ impl<R: Clone + 'static> TableDelegate for EditableGridDelegate<R> {
             .edit
             .as_ref()
             .filter(|edit| edit.row == key && edit.column == column_key);
+        let appearance = grid.appearance.clone();
+        let content_selector = format!("editable-grid-content:{key}:{column_key}");
+        let label_selector = format!("editable-grid-label:{key}:{column_key}");
         let content = if let Some(edit) = editing {
             let focus = edit.focus.clone();
             if let Some(handle) = focus.borrow().clone() {
@@ -945,8 +1023,20 @@ impl<R: Clone + 'static> TableDelegate for EditableGridDelegate<R> {
                 .map(|editor| editor.clone().into_any_element())
                 .unwrap_or_else(|| div().into_any_element())
         } else {
-            div().child((column.read)(row)).into_any_element()
+            div()
+                .w_full()
+                .h_full()
+                .debug_selector(move || label_selector.clone())
+                .child((column.read)(row))
+                .into_any_element()
         };
+        let content = div()
+            .w_full()
+            .h_full()
+            .flex()
+            .items_center()
+            .debug_selector(move || content_selector.clone())
+            .child(content);
         let accessible_value = editing
             .map(|edit| edit.draft.borrow().clone())
             .unwrap_or_else(|| (column.read)(row));
@@ -969,11 +1059,24 @@ impl<R: Clone + 'static> TableDelegate for EditableGridDelegate<R> {
                 }
             })
             .aria_readonly(!column.editable)
+            .relative()
             .w_full()
-            .min_h(px(28.))
-            .p(px(4.))
+            .h(px(appearance.row_height))
+            .line_height(px(appearance.row_height))
+            .px(px(appearance.padding))
+            .font_family(appearance.typography.family.clone())
+            .text_size(px(appearance.typography.size))
+            .font_weight(gpui::FontWeight(appearance.typography.weight))
             .debug_selector(move || selector.clone())
-            .when(selected, |cell| cell.border_1())
+            .when(selected, |cell| {
+                cell.child(
+                    div()
+                        .absolute()
+                        .inset_0()
+                        .border_1()
+                        .border_color(appearance.focus),
+                )
+            })
             .on_mouse_down(MouseButton::Left, move |event, window, cx| {
                 let _ = weak.update(cx, |state, cx| {
                     if state.edit.is_some() && !state.commit_edit(window, cx, true) {
@@ -981,7 +1084,12 @@ impl<R: Clone + 'static> TableDelegate for EditableGridDelegate<R> {
                         return;
                     }
                     state.active = Some((key.clone(), column_key.clone()));
+                    state.scroll_to_row(row_ix, cx);
                     cell_focus.focus(window, cx);
+                    // The grid owns cell focus; do not let the enclosing Kit
+                    // table replace it with its own mouse-focus target.
+                    window.prevent_default();
+                    cx.stop_propagation();
                     if event.click_count >= 2 {
                         state.begin_edit(None, window, cx);
                     }
@@ -1002,6 +1110,8 @@ impl<R: Clone + 'static> View for EditableDataGridView<R> {
         let identity = self.id.clone().unwrap_or_else(|| {
             context.next_implicit_retained_identity(Identity::from("editable-data-grid"))
         });
+        let appearance = GridAppearance::resolve(context);
+        let initial_appearance = appearance.clone();
         let rows = self.rows.value();
         assert_unique_row_ids(&rows, &self.row_id);
         let row_count = rows.len();
@@ -1011,6 +1121,8 @@ impl<R: Clone + 'static> View for EditableDataGridView<R> {
         let (state, created) = context.retained_entity(identity.clone(), move |_, cx| {
             if !cx.has_global::<GridKeyBindings>() {
                 cx.bind_keys([
+                    gpui::KeyBinding::new("escape", CancelEdit, Some("EditableDataGrid")),
+                    gpui::KeyBinding::new("escape", CancelEdit, Some("EditableDataGrid > Input")),
                     gpui::KeyBinding::new("tab", NextCell, Some("EditableDataGrid")),
                     gpui::KeyBinding::new("shift-tab", PreviousCell, Some("EditableDataGrid")),
                     gpui::KeyBinding::new("tab", NextCell, Some("EditableDataGrid > Input")),
@@ -1028,6 +1140,7 @@ impl<R: Clone + 'static> View for EditableDataGridView<R> {
                 .zip(initial_columns.first())
                 .map(|(row, column)| ((row_id)(row), column.id.clone()));
             GridState {
+                appearance: initial_appearance,
                 view_order: initial_rows.iter().map(|row| row_id(row)).collect(),
                 sort: None,
                 header_focus: initial_columns
@@ -1084,6 +1197,13 @@ impl<R: Clone + 'static> View for EditableDataGridView<R> {
         let columns = self.columns.clone();
         let row_id = self.row_id.clone();
         context.update_entity(&state, move |state, _, cx| {
+            state.appearance = appearance;
+            if let Some(editor) = state.editor.borrow().as_ref() {
+                editor.update(cx, |editor, cx| {
+                    editor.component_mut().appearance = state.appearance.clone();
+                    cx.notify();
+                });
+            }
             state.rows = rows;
             state.columns = columns;
             state.row_id = row_id;
@@ -1189,9 +1309,19 @@ impl<R: Clone + 'static> View for EditableDataGridView<R> {
             state.rendered_columns = Some(signature);
             changed
         });
+        let active_row = state
+            .read(context.app())
+            .active
+            .as_ref()
+            .and_then(|(id, _)| state.read(context.app()).view_index(id));
         context.update_entity(&table, |table, _, cx| {
             if columns_changed {
                 table.refresh(cx);
+            }
+            if let Some(row) = active_row {
+                if table.selected_row() != Some(row) {
+                    table.set_selected_row(row, cx);
+                }
             }
             cx.notify();
         });
@@ -1206,6 +1336,7 @@ impl<R: Clone + 'static> View for EditableDataGridView<R> {
         let weak = state.downgrade();
         let next = weak.clone();
         let previous = weak.clone();
+        let cancel = weak.clone();
         let root = grid_accessibility(
             identity.to_string(),
             self.label.clone(),
@@ -1214,6 +1345,16 @@ impl<R: Clone + 'static> View for EditableDataGridView<R> {
         )
         .track_focus(&focus)
         .key_context("EditableDataGrid")
+        .on_action(move |_: &CancelEdit, window, cx| {
+            let _ = cancel.update(cx, |state, cx| {
+                if state.edit.is_some() {
+                    state.cancel(window, cx);
+                    cx.stop_propagation();
+                } else {
+                    cx.propagate();
+                }
+            });
+        })
         .on_action(move |_: &NextCell, window, cx| {
             let _ = next.update(cx, |state, cx| state.navigate_tab(false, window, cx));
         })
@@ -1229,7 +1370,9 @@ impl<R: Clone + 'static> View for EditableDataGridView<R> {
         let body = div()
             .h(px(self.height))
             .w_full()
-            .child(DataTable::new(&table));
+            .child(DataTable::new(&table).with_size(Size::Size(px(
+                state.read(context.app()).appearance.row_height,
+            ))));
         root.child(body).into_any_element()
     }
 }
