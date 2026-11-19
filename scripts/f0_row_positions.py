@@ -20,13 +20,14 @@ def analyze(folder, panel):
     scale = setup["viewport"]["scale"]
     viewport_y = setup["viewport"]["y"]
     base = int(panel in ("editor", "grid"))
-    first = next(frame for frame in frames if anchors(frame, panel))
-    first_id, center = anchors(first, panel)[0]
-    pitch = first["pitch"]
-    shift = center - (first_id - base) * pitch
-    if panel == "editor":
-        row = next(row for oracle in oracles if oracle["source"]["offset_y"] == 0 for row in oracle["source"].get("rows", []) if row["id"] == first_id)
-        shift = center - (row["y"] - viewport_y) * scale
+    calibration_path = folder / "calibration.json"
+    if not calibration_path.is_file():
+        raise ValueError("missing zero-offset warmup calibration; rerun pixel calibration")
+    calibration = json.loads(calibration_path.read_text())
+    if calibration["scale"] != scale:
+        raise ValueError("warmup calibration scale differs from capture scale")
+    pitch = calibration["pitch"]
+    shift = calibration["text_shift_px"]
 
     def error(source, ident, center):
         if panel == "editor":

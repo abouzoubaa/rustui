@@ -99,6 +99,10 @@ func matchesSource(_ id: Int, _ center: Double, _ source: [String:Any], _ panel:
     return Int(round((center-shift-offset*scale)/pitch)) + (panel == "grid" ? 1 : 0) == id
 }
 
+func captureDimensions(_ viewport: [String:Double]) -> (Int,Int) {
+    (Int(viewport["width"]! * viewport["scale"]!), Int(viewport["height"]! * viewport["scale"]!))
+}
+
 func check<T: Equatable>(_ name: String, expected: T, actual: T) {
     FileHandle.standardError.write(Data("check=\(name) expected=\(expected) actual=\(actual)\n".utf8))
     precondition(actual == expected, "\(name): expected \(expected), got \(actual)")
@@ -124,8 +128,9 @@ func check<T: Equatable>(_ name: String, expected: T, actual: T) {
             let viewport = try JSONSerialization.jsonObject(with: Data(contentsOf: folder.appendingPathComponent("viewport.json"))) as! [String:Any]
             let v = viewport.mapValues { ($0 as? NSNumber)?.doubleValue ?? 0 }
             configuration.sourceRect = CGRect(x:v["x"]!,y:v["y"]!,width:v["width"]!,height:v["height"]!)
-            configuration.width = Int(v["width"]! * 2)
-            configuration.height = Int(v["height"]! * 2)
+            let dimensions = captureDimensions(v)
+            configuration.width = dimensions.0
+            configuration.height = dimensions.1
             configuration.pixelFormat = kCVPixelFormatType_32BGRA
             configuration.minimumFrameInterval = CMTime(value: 1, timescale: 120)
             configuration.queueDepth = 8
@@ -166,6 +171,10 @@ func check<T: Equatable>(_ name: String, expected: T, actual: T) {
             check("missing gutter line interpolation", expected: true, actual: missing.contains { $0.0 == 70 && $0.1 == 274 })
             let wrapped = editorCenters([Anchor(id:275,center:30),Anchor(id:276,center:150)],40,12402)
             check("wrapped lines stay distinct", expected: 2, actual: wrapped.count)
+            let single = captureDimensions(["width":1038,"height":518.5,"scale":1])
+            check("1x capture dimensions", expected: "1038x518", actual: "\(single.0)x\(single.1)")
+            let retina = captureDimensions(["width":1038,"height":518.5,"scale":2])
+            check("2x capture dimensions", expected: "2076x1037", actual: "\(retina.0)x\(retina.1)")
             print("pixel classifier self-test: blank, painted, stale = PASS")
             return
         }
@@ -177,7 +186,7 @@ func check<T: Equatable>(_ name: String, expected: T, actual: T) {
         let frames = try String(contentsOf: folder.appendingPathComponent("frames.jsonl"), encoding: .utf8).split(separator: "\n").map { try JSONSerialization.jsonObject(with: Data($0.utf8)) as! [String: Any] }
         let raw = try Data(contentsOf: folder.appendingPathComponent("frames.bgra"), options: .mappedIfSafe)
         let source = (try? String(contentsOf: folder.appendingPathComponent("source.rs"), encoding: .utf8).components(separatedBy: "\n")) ?? []
-        let output = folder.appendingPathComponent("rows.jsonl")
+        let output = folder.appendingPathComponent(args[1] == "calibrate" ? "calibration-probe.jsonl" : "rows.jsonl")
         FileManager.default.createFile(atPath: output.path, contents: nil)
         let out = try FileHandle(forWritingTo: output)
         var blank = 0, stale = 0, rows = 0, measured = 0, noAnchors = 0
@@ -188,6 +197,7 @@ func check<T: Equatable>(_ name: String, expected: T, actual: T) {
         let inputs = setup["inputs"] as? [[Double]] ?? []
         let oracles = setup["oracles"] as? [[String:Any]] ?? []
         var textShift: Double?, missingOracleFrames = 0
+        var savedCalibration = false
         for frame in frames {
             let epoch = frame["epoch_ms"] as! Double
             let offset = frame["offset"] as! Int, count = frame["size"] as! Int
@@ -233,11 +243,18 @@ func check<T: Equatable>(_ name: String, expected: T, actual: T) {
             if panel == "grid" && epoch < start, let first = anchors.first { dataTop = max(0, first.center - pitch/2) }
             if let anchor = anchors.first { lastPhase = anchor.center.truncatingRemainder(dividingBy: pitch) }
             let nearby = oracles.filter { abs(($0["epoch_ms"] as! Double) - epoch) <= 25 }.compactMap { $0["source"] as? [String:Any] }
-            if textShift == nil, epoch < start, let source = nearby.first, let offset = source["offset_y"] as? Double, let first = anchors.first {
+            if textShift == nil, epoch < start, let source = nearby.first, let offset = source["offset_y"] as? Double, offset == 0, let first = anchors.first {
                 let oneBased = panel == "editor" || panel == "grid" ? 1 : 0
                 if panel == "editor", let expectedRows = source["rows"] as? [[String:Any]], let row = expectedRows.first(where: { $0["id"] as? Int == first.id }), let y = row["y"] as? Double {
                     textShift = first.center - (y-viewport["y"]!)*scale
                 } else if panel != "editor" { textShift = first.center - Double(first.id-oneBased)*pitch - offset*scale }
+            }
+            if !savedCalibration, epoch < start, let shift = textShift {
+                let calibration: [String:Any] = ["text_shift_px":shift,"pitch":pitch,"scale":scale]
+                let data = try JSONSerialization.data(withJSONObject:calibration,options:.sortedKeys)
+                try data.write(to:folder.appendingPathComponent("calibration.json"))
+                savedCalibration = true
+                if args[1] == "calibrate" { print(String(data:data,encoding:.utf8)!); return }
             }
             if epoch < start || epoch > end { continue }
             if nearby.isEmpty { missingOracleFrames += 1 }
