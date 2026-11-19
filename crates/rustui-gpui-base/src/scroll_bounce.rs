@@ -13,6 +13,18 @@ use std::{cell::RefCell, rc::Rc, time::Duration};
 #[cfg(target_family = "wasm")]
 use web_time::Instant;
 
+// Opt-in observation of boundary displacement; no notification or redraw.
+fn f0_grid_visual_oracle(is_workload: bool, logical: impl FnOnce() -> f32, displacement: f32) {
+    static ENABLED: std::sync::OnceLock<bool> = std::sync::OnceLock::new();
+    if !is_workload || !*ENABLED.get_or_init(||
+        std::env::var("RUSTUI_F0_PIXELS").as_deref() == Ok("1")
+        && matches!(std::env::var("RUSTUI_F0_PANEL").as_deref(), Ok("grid" | "list" | "keyed"))) { return; }
+    let panel = std::env::var("RUSTUI_F0_PANEL").unwrap();
+    let logical = logical();
+    let epoch = std::time::SystemTime::now().duration_since(std::time::UNIX_EPOCH).unwrap().as_secs_f64() * 1000.0;
+    eprintln!("RUSTUI_VISUAL_ORACLE_LOG {{\"epoch_ms\":{epoch:.6},\"source\":{{\"panel\":\"{panel}\",\"offset_y\":{logical},\"visual_offset_y\":{displacement}}}}}");
+}
+
 /// Motion tokens for [`ScrollBounce`]: how far a drag stretches the viewport
 /// past an edge, and how quickly a released edge returns.
 ///
@@ -353,6 +365,12 @@ impl Element for ScrollBounce {
                 state.physics.offset()
             }
         };
+        f0_grid_visual_oracle(
+            (self.id == ElementId::from("table-scroll-bounce")
+                || self.id == ElementId::from("list-scroll-bounce"))
+                && bounds.size.width > window.viewport_size().width * 0.5,
+            || self.handle.offset().y.as_f32(), offset,
+        );
         let hitbox = window.insert_hitbox(bounds, HitboxBehavior::Normal);
         window.with_content_mask(Some(ContentMask { bounds }), |window| {
             window.with_element_offset(point(px(0.), px(offset)), |window| {

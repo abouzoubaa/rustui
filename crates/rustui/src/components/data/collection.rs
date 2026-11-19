@@ -27,6 +27,13 @@ use crate::{
     },
 };
 
+fn row_profile_start() -> Option<std::time::Instant> {
+    static ENABLED: std::sync::OnceLock<bool> = std::sync::OnceLock::new();
+    ENABLED
+        .get_or_init(|| std::env::var("RUSTUI_FRAME_PROFILE").as_deref() == Ok("1"))
+        .then(std::time::Instant::now)
+}
+
 type SelectionWriter = Rc<dyn Fn(Option<Identity>, &mut App)>;
 
 /// A snapshot value identified independently of its position.
@@ -581,17 +588,20 @@ impl<T: 'static, V: View, F: Fn(usize, &T) -> V + 'static> View for Collection<T
             let visits = state.read(context.app()).visits.clone();
             let row_visits = visits.clone();
             let renderer: RowRenderer = Rc::new(move |index, state, window, cx| {
+                    let profile_start = row_profile_start();
                     let item = &items[index];
                     let generation = state.generation;
                     let instance = cx.entity_id();
                     state.retained.begin_cell(&item.id);
-                    let seed = state.seed.clone();
+                    let seed = &state.seed;
                     let mut context =
                         seed.cell_context(instance, &item.id, window, cx, &mut state.retained);
+                    let lower_start = row_profile_start();
                     let child = context
                         .with_element_scope(RetentionScope::Key(item.id.clone()), |context| {
                             factory(index, &item.value).into_element(context)
                         });
+                    let lower_ms = lower_start.map(|start| start.elapsed().as_secs_f64() * 1000.0);
                     drop(context);
                     state.retained.finish_cell(&item.id);
                     let selected = state.selected.as_ref() == Some(&item.id);
@@ -636,12 +646,16 @@ impl<T: 'static, V: View, F: Fn(usize, &T) -> V + 'static> View for Collection<T
                                 .ok();
                         });
                     }
-                    CollectionElement {
+                    let result = CollectionElement {
                         child: row.into_any_element(),
                         visits: row_visits.clone(),
                         kind: VisitKind::Row(item.id.clone()),
                     }
-                    .into_any_element()
+                    .into_any_element();
+                    if let Some(start) = profile_start {
+                        eprintln!("RUSTUI_ROW_PROFILE {}", serde_json::json!({"row":index,"total_ms":start.elapsed().as_secs_f64()*1000.0,"lower_ms":lower_ms,"epoch_ms":std::time::SystemTime::now().duration_since(std::time::UNIX_EPOCH).unwrap().as_secs_f64()*1000.0}));
+                    }
+                    result
             });
             context.update_entity(&state, |state, _, _| state.renderer = Some(renderer));
             let native_list = uniform_list(format!("collection-rows:{}:{}",self.id.as_str(),generation), self.items.len(), move |range, window, cx| {

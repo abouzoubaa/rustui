@@ -35,10 +35,12 @@ OWNED_ONLY_IGNORED_PATHS = {
     "crates/rustui-gpui-macos": {"Cargo.lock"},
 }
 OWNED_SOURCE_OVERLAYS = {
-    # GPUI Fast's input API has no WrappedLineLayout.bidi_clusters. The
-    # candidate patch therefore has one intentional owned Base source delta;
-    # bind the exception to the final postimage in the candidate stack.
+    # Fast's wrapped-line test adaptation and the opt-in bounce observation
+    # are intentional owned Base deltas. Bind each exception to the exact
+    # postimage in its candidate manifest.
     "crates/rustui-gpui-base": {
+        "src/scroll_bounce.rs":
+            "patches/candidate-kit-fast/gpui-base-scroll-bounce-oracle-v1-fast.json",
         "src/input/base/tab_stops.rs":
             "patches/candidate-kit-fast/rustui-bidi-tab-layout-test-fast-v1.json"
     }
