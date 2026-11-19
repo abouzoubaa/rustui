@@ -99,6 +99,11 @@ func matchesSource(_ id: Int, _ center: Double, _ source: [String:Any], _ panel:
     return Int(round((center-shift-offset*scale)/pitch)) + (panel == "grid" ? 1 : 0) == id
 }
 
+func check<T: Equatable>(_ name: String, expected: T, actual: T) {
+    FileHandle.standardError.write(Data("check=\(name) expected=\(expected) actual=\(actual)\n".utf8))
+    precondition(actual == expected, "\(name): expected \(expected), got \(actual)")
+}
+
 @main struct Capture {
     @MainActor static func main() async throws {
         let args = CommandLine.arguments
@@ -142,22 +147,25 @@ func matchesSource(_ id: Int, _ center: Double, _ source: [String:Any], _ panel:
         if args[1] == "self-test" {
             let frame: [String: Any] = ["width":100,"height":60,"stride":400]
             let dark = Data(repeating: 32, count: 24000)
-            precondition(ink(dark, frame, CGRect(x:0,y:0,width:100,height:60)) == 0)
+            check("blank background", expected: 0, actual: ink(dark, frame, CGRect(x:0,y:0,width:100,height:60)))
             var glyph = dark
             for y in 10..<25 { for x in 10..<20 { for c in 0..<3 { glyph[y*400+x*4+c] = 230 } } }
-            precondition(ink(glyph, frame, CGRect(x:0,y:0,width:100,height:30)) == 150)
-            precondition(ink(glyph, frame, CGRect(x:0,y:30,width:100,height:30)) == 0)
+            check("painted glyph pixels", expected: 150, actual: ink(glyph, frame, CGRect(x:0,y:0,width:100,height:30)))
+            check("empty row pixels", expected: 0, actual: ink(glyph, frame, CGRect(x:0,y:30,width:100,height:30)))
             let ids = [10,11,999,13], bases = ids.enumerated().map { $0.element - $0.offset }
             let base = Dictionary(grouping:bases,by:{$0}).max{$0.value.count < $1.value.count}!.key
-            precondition(ids.enumerated().filter{$0.element != base + $0.offset}.count == 1)
-            precondition(matchesSource(7,440,["offset_y":0.0],"collection",20,60,0,2))
-            precondition(!matchesSource(9999,440,["offset_y":0.0],"collection",20,60,0,2))
-            precondition(matchesSource(17,440,["offset_y": -300.0],"collection",20,60,0,2))
-            precondition(matchesSource(30,110,["offset_y": -30.0,"rows":[["id":30 as Any,"y":55.0 as Any]]],"editor",20,60,10,2))
+            check("stale ID outliers", expected: 1, actual: ids.enumerated().filter{$0.element != base + $0.offset}.count)
+            check("initial source position", expected: true, actual: matchesSource(7,440,["offset_y":0.0],"collection",20,60,0,2))
+            check("wrong source ID rejected", expected: false, actual: matchesSource(9999,440,["offset_y":0.0],"collection",20,60,0,2))
+            check("scrolled source position", expected: true, actual: matchesSource(17,440,["offset_y": -300.0],"collection",20,60,0,2))
+            let editorRow: [String:Any] = ["id":30,"y":55.0]
+            check("editor fixture ID type", expected: "Int", actual: String(describing:type(of:editorRow["id"]!)))
+            check("editor fixture Y type", expected: "Double", actual: String(describing:type(of:editorRow["y"]!)))
+            check("editor source position", expected: true, actual: matchesSource(30,110,["offset_y": -30.0,"rows":[editorRow]],"editor",20,60,10,2))
             let missing = editorCenters([Anchor(id:273,center:30),Anchor(id:275,center:110)],40,12402)
-            precondition(missing.contains { $0.0 == 70 && $0.1 == 274 })
+            check("missing gutter line interpolation", expected: true, actual: missing.contains { $0.0 == 70 && $0.1 == 274 })
             let wrapped = editorCenters([Anchor(id:275,center:30),Anchor(id:276,center:150)],40,12402)
-            precondition(wrapped.count == 2)
+            check("wrapped lines stay distinct", expected: 2, actual: wrapped.count)
             print("pixel classifier self-test: blank, painted, stale = PASS")
             return
         }
