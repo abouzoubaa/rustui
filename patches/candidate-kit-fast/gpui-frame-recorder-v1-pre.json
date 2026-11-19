@@ -1,0 +1,24 @@
+{
+  "schema_version": 1,
+  "name": "gpui-frame-recorder-v1-pre",
+  "patch": "gpui-frame-recorder-v1-pre.patch",
+  "patch_sha256": "3e84857f2ec8087028c57f5ae7a64199668668b010d51f246357a13e6402451b",
+  "files": {
+    "vendor/gpui-pre-0.3.12/src/window.rs": {
+      "pre_sha256": "8d67bf8a4e2537d1772a2a74ca4e70ca44578ac47a3ad6d73fc913b69e22aaf0",
+      "post_sha256": "d0a4bad1074c3708a13f55a5efec184888a7b18851d65983468cb6c84feca87a"
+    },
+    "crates/rustui-gpui/src/window.rs": {
+      "pre_sha256": "8d67bf8a4e2537d1772a2a74ca4e70ca44578ac47a3ad6d73fc913b69e22aaf0",
+      "post_sha256": "d0a4bad1074c3708a13f55a5efec184888a7b18851d65983468cb6c84feca87a"
+    },
+    "vendor/gpui-pre-0.3.12/.cargo-checksum.json": {
+      "pre_sha256": "c2e3f48163789aa65dc87b2741537b3042c804c1dee886ba7d7d4023a2f69eae",
+      "post_sha256": "f07d619883a9c9b358a83acfd828c77c1a1026652e0b26e8d191b00fd1843a0f"
+    },
+    "crates/rustui-gpui/.cargo-checksum.json": {
+      "pre_sha256": "c2e3f48163789aa65dc87b2741537b3042c804c1dee886ba7d7d4023a2f69eae",
+      "post_sha256": "f07d619883a9c9b358a83acfd828c77c1a1026652e0b26e8d191b00fd1843a0f"
+    }
+  }
+}
