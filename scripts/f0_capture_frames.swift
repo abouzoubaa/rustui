@@ -203,7 +203,7 @@ func matchesSource(_ id: Int, _ center: Double, _ source: [String:Any], _ panel:
                 }
             }
             anchors.sort { $0.center < $1.center }
-            if true {
+            do {
                 let gaps = zip(anchors, anchors.dropFirst()).filter { $1.id == $0.id+1 }.map { $1.center - $0.center }.filter { $0 > 5 }
                 if !gaps.isEmpty { pitch = median(gaps) }
             }
@@ -225,7 +225,7 @@ func matchesSource(_ id: Int, _ center: Double, _ source: [String:Any], _ panel:
             if let majority { lastBase = majority }
             let expectedBase = majority ?? lastBase
             let centers: [(Double,Int)]
-            if panel == "editor", let shift = textShift, let sample = nearby.min(by: { abs(($0["offset_y"] as? Double ?? 0)) < abs(($1["offset_y"] as? Double ?? 0)) }), let expectedRows = sample["rows"] as? [[String:Any]] {
+            if panel == "editor", let shift = textShift, let sample = nearby.max(by: { a,b in anchors.filter { matchesSource($0.id,$0.center,a,panel,shift,pitch,viewport["y"]!,scale) }.count < anchors.filter { matchesSource($0.id,$0.center,b,panel,shift,pitch,viewport["y"]!,scale) }.count }), let expectedRows = sample["rows"] as? [[String:Any]] {
                 centers = expectedRows.compactMap { row in guard let id = row["id"] as? Int, let y = row["y"] as? Double else { return nil }; return ((y-viewport["y"]!)*scale+shift,id) }
             } else if panel == "editor", !anchors.isEmpty { centers = anchors.map { ($0.center,$0.id) } }
             else {
@@ -242,7 +242,6 @@ func matchesSource(_ id: Int, _ center: Double, _ source: [String:Any], _ panel:
                         let region = CGRect(x: roi.minX+left, y: roi.minY+center-pitch*0.3, width:span, height:pitch*0.6)
                         if ink(pixels, frame, region) < 4 { frameBlank += 1 }
                         if let anchor = anchors.first(where: { abs($0.center-center) < pitch*0.3 }), let shift = textShift, !nearby.isEmpty {
-                            let oneBased = panel == "editor" || panel == "grid" ? 1 : 0
                             let matches = nearby.contains { source in
                                 matchesSource(anchor.id, anchor.center, source, panel, shift, pitch, viewport["y"]!, scale)
                             }

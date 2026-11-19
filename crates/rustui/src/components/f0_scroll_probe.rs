@@ -1,10 +1,10 @@
 //! Opt-in, read-only source-position oracle for the F0 native pixel recorder.
 use crate::view::RenderContext;
 use gpui::{App, Entity, EntityId, Global, WeakEntity, Window, WindowId};
-use std::{collections::HashSet, rc::Rc};
+use std::{cell::RefCell, collections::HashSet, rc::Rc};
 
 #[derive(Default)]
-struct Probes(HashSet<(WindowId, EntityId)>);
+struct Probes(RefCell<HashSet<(WindowId, EntityId)>>);
 impl Global for Probes {}
 type Read<T> = Rc<dyn Fn(&T, &App) -> serde_json::Value>;
 
@@ -16,7 +16,7 @@ fn next<T: 'static>(
 ) {
     window.on_next_frame(move |window, app| {
         let Some(entity) = target.upgrade() else {
-            app.global_mut::<Probes>().0.remove(&key);
+            app.global::<Probes>().0.borrow_mut().remove(&key);
             return;
         };
         let value = read(entity.read(app), app);
@@ -55,7 +55,7 @@ pub(crate) fn watch<T: 'static>(
             cx.set_global(Probes::default());
         }
         let key = (window.window_handle().window_id(), id);
-        if cx.global_mut::<Probes>().0.insert(key) {
+        if cx.global::<Probes>().0.borrow_mut().insert(key) {
             next(target, Rc::new(read), key, window);
         }
     });
