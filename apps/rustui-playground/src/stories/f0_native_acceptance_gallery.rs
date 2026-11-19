@@ -497,6 +497,12 @@ fn overlays_panel() -> impl View {
 mod tests {
     use super::*;
     #[test]
+    fn viewport_has_a_minimum_and_grows_with_available_space() {
+        assert_eq!(viewport_height(200.0), 400.0);
+        assert_eq!(viewport_height(800.0), 650.0);
+        assert_eq!(viewport_height(1200.0), 1050.0);
+    }
+    #[test]
     fn realistic_source_contains_nested_unicode_and_long_lines() {
         let source = large_rust_source();
         assert!(source.lines().count() >= EDITOR_LINES);
