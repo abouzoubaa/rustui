@@ -320,7 +320,7 @@ impl View for AcceptanceRows {
                     .map(|id| id.to_string())
                     .unwrap_or_else(|| "none".into())
             )))
-            .child(list)
+            .child(crate::f0_frame_capture::measured(self.kind(), list))
     }
 }
 
@@ -401,6 +401,9 @@ mod batch_{module} {{
 }}
 "#));
     }
+    if let Ok(path) = std::env::var("RUSTUI_F0_SOURCE_DUMP") {
+        std::fs::write(path, &source).expect("write source fixture");
+    }
     source
 }
 
@@ -413,11 +416,14 @@ struct LargeRustEditor {
 }
 impl View for LargeRustEditor {
     fn body(&self) -> impl View {
-        CodeEditor("f0-large-rust-source", self.source_binding())
-            .language("rust")
-            .line_numbers(true)
-            .height(self.height())
-            .accessibility_label("F0 large Rust source editor")
+        crate::f0_frame_capture::measured(
+            "editor",
+            CodeEditor("f0-large-rust-source", self.source_binding())
+                .language("rust")
+                .line_numbers(true)
+                .height(self.height())
+                .accessibility_label("F0 large Rust source editor"),
+        )
     }
 }
 fn editor_panel(height: f32) -> impl View {
