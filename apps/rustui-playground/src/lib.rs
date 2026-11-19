@@ -1,6 +1,7 @@
 //! RustUI's component playground, implemented through the public framework API.
 
 mod catalog;
+mod f0_frame_capture;
 mod preview_transport;
 #[cfg(target_family = "wasm")]
 mod preview_transport_web;
@@ -715,6 +716,7 @@ pub fn run() {
         .blurred_window()
         .title("RustUI Component Playground")
         .on_launch(move |cx| {
+            f0_frame_capture::start(cx);
             activate_theme(&startup_theme, Some(AppearanceMode::Dark), cx)
                 .expect("macOS 27 theme must resolve and apply");
             rustui::localization::activate_localization(catalogs, initial_locale, cx);
