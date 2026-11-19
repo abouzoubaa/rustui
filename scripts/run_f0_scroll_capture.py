@@ -10,6 +10,10 @@ import re
 from pathlib import Path
 import subprocess
 import time
+import sys
+
+sys.path.insert(0, str(Path(__file__).resolve().parent))
+from f0_row_positions import analyze as analyze_row_positions
 
 
 def summarize(log: str) -> dict:
@@ -112,6 +116,7 @@ def capture(binary: Path, panel: str, log: Path, pixels: bool = False) -> dict:
         if row_result["frames_without_oracle"]:
             raise ValueError(f"pixel capture has {row_result['frames_without_oracle']} frames without source positions")
         (pixel_dir / "summary.json").write_text(json.dumps(row_result, indent=2))
+        row_result["position_match"] = analyze_row_positions(pixel_dir, panel)
         result["pixels"] = row_result
         result["visible_rows_painted_empty"] = row_result["blank_rows"]
     return result

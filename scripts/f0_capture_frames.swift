@@ -77,6 +77,17 @@ func ink(_ data: Data, _ frame: [String: Any], _ rect: CGRect) -> Int {
 
 struct Anchor { let id: Int; let center: Double }
 
+func editorCenters(_ anchors: [Anchor], _ pitch: Double, _ total: Int) -> [(Double,Int)] {
+    var observed = anchors.filter { $0.id >= 1 && $0.id <= total }.map { ($0.center,$0.id) }
+    for (left,right) in zip(anchors,anchors.dropFirst()) {
+        let count = right.id-left.id
+        if count > 1 && count < 8 && abs((right.center-left.center)/pitch-Double(count)) < 0.2 {
+            for step in 1..<count { observed.append((left.center+Double(step)*pitch,left.id+step)) }
+        }
+    }
+    return observed
+}
+
 func matchesSource(_ id: Int, _ center: Double, _ source: [String:Any], _ panel: String, _ shift: Double, _ pitch: Double, _ viewportY: Double, _ scale: Double) -> Bool {
     guard let offset = source["offset_y"] as? Double else { return false }
     if panel == "editor", let rows = source["rows"] as? [[String:Any]] {
@@ -143,6 +154,10 @@ func matchesSource(_ id: Int, _ center: Double, _ source: [String:Any], _ panel:
             precondition(!matchesSource(9999,440,["offset_y":0.0],"collection",20,60,0,2))
             precondition(matchesSource(17,440,["offset_y": -300.0],"collection",20,60,0,2))
             precondition(matchesSource(30,110,["offset_y": -30.0,"rows":[["id":30 as Any,"y":55.0 as Any]]],"editor",20,60,10,2))
+            let missing = editorCenters([Anchor(id:273,center:30),Anchor(id:275,center:110)],40,12402)
+            precondition(missing.contains { $0.0 == 70 && $0.1 == 274 })
+            let wrapped = editorCenters([Anchor(id:275,center:30),Anchor(id:276,center:150)],40,12402)
+            precondition(wrapped.count == 2)
             print("pixel classifier self-test: blank, painted, stale = PASS")
             return
         }
@@ -199,7 +214,7 @@ func matchesSource(_ id: Int, _ center: Double, _ source: [String:Any], _ panel:
                 else { id = number(text.string, "^[Ff][O0]\\s*row\\s*([0-9]+)$") }
                 if let id {
                     anchors.append(Anchor(id:id, center:center))
-                    if panel == "editor" { gutterRight = max(gutterRight, box.maxX*Double(crop.width)) }
+                    if panel == "editor" { gutterRight = max(gutterRight, box.maxX*Double(ocrImage.width)) }
                 }
             }
             anchors.sort { $0.center < $1.center }
@@ -225,9 +240,13 @@ func matchesSource(_ id: Int, _ center: Double, _ source: [String:Any], _ panel:
             if let majority { lastBase = majority }
             let expectedBase = majority ?? lastBase
             let centers: [(Double,Int)]
-            if panel == "editor", let shift = textShift, let sample = nearby.max(by: { a,b in anchors.filter { matchesSource($0.id,$0.center,a,panel,shift,pitch,viewport["y"]!,scale) }.count < anchors.filter { matchesSource($0.id,$0.center,b,panel,shift,pitch,viewport["y"]!,scale) }.count }), let expectedRows = sample["rows"] as? [[String:Any]] {
+            let editorSources = oracles.filter { abs(($0["epoch_ms"] as! Double)-epoch) <= 150 }.compactMap { $0["source"] as? [String:Any] }
+            let bestEditorSource = textShift.flatMap { shift in editorSources.max { a,b in
+                anchors.filter { matchesSource($0.id,$0.center,a,panel,shift,pitch,viewport["y"]!,scale) }.count < anchors.filter { matchesSource($0.id,$0.center,b,panel,shift,pitch,viewport["y"]!,scale) }.count
+            } }
+            if panel == "editor", let shift = textShift, let sample = bestEditorSource, let expectedRows = sample["rows"] as? [[String:Any]], anchors.filter({ matchesSource($0.id,$0.center,sample,panel,shift,pitch,viewport["y"]!,scale) }).count >= 5 {
                 centers = expectedRows.compactMap { row in guard let id = row["id"] as? Int, let y = row["y"] as? Double else { return nil }; return ((y-viewport["y"]!)*scale+shift,id) }
-            } else if panel == "editor", !anchors.isEmpty { centers = anchors.map { ($0.center,$0.id) } }
+            } else if panel == "editor", !anchors.isEmpty { centers = editorCenters(anchors,pitch,source.count) }
             else {
                 centers = stride(from:lastPhase,to:Double(crop.height),by:pitch).map { ($0,expectedBase+Int(round(($0-lastPhase)/pitch))) }
             }
@@ -249,6 +268,10 @@ func matchesSource(_ id: Int, _ center: Double, _ source: [String:Any], _ panel:
                         } else if let anchor = anchors.first(where: { abs($0.center-center) < pitch*0.3 }), oracles.isEmpty, majority != nil, anchor.id != expected { frameStale += 1 }
                     }
                 }
+            }
+            if frameBlank > 0 && !FileManager.default.fileExists(atPath:folder.appendingPathComponent("first-blank-v3.png").path) {
+                let png = CGImageDestinationCreateWithURL(folder.appendingPathComponent("first-blank-v3.png") as CFURL,UTType.png.identifier as CFString,1,nil)!
+                CGImageDestinationAddImage(png,crop,nil);CGImageDestinationFinalize(png)
             }
             // A held image during sustained input is reported separately from wrong row IDs.
             let fingerprint: UInt64 = pixels.withUnsafeBytes { bytes in
