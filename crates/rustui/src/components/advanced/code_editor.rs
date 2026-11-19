@@ -300,6 +300,29 @@ impl View for CodeEditorView {
             crate::components::input::leave_disabled_focus(self.disabled, &focus, window, cx);
             focus.tab_stop(!self.disabled);
         });
+        if std::env::var("RUSTUI_F0_PIXELS").as_deref() == Ok("1") {
+            let text = self.value.value();
+            let mut offsets = vec![0];
+            offsets.extend(text.match_indices('\n').map(|(offset, _)| offset + 1));
+            crate::components::f0_scroll_probe::watch(
+                context,
+                "editor",
+                &editor,
+                move |state, _| {
+                    let rows: Vec<_> = state
+                        .visible_row_range()
+                        .into_iter()
+                        .flatten()
+                        .filter_map(|index| {
+                            let offset = *offsets.get(index)?;
+                            let bounds = state.range_to_bounds(&(offset..offset))?;
+                            Some(serde_json::json!({"id":index+1, "y":f32::from(bounds.origin.y)}))
+                        })
+                        .collect();
+                    serde_json::json!({"panel":"editor", "offset_y":f32::from(state.scroll_offset().y), "row_height":state.line_height().map(f32::from), "rows":rows})
+                },
+            );
+        }
         let mut editor_view = Editor::new(&editor)
             .h(px(self.height))
             .disabled(self.disabled)

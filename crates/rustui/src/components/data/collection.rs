@@ -525,6 +525,10 @@ impl<T: 'static, V: View, F: Fn(usize, &T) -> V + 'static> View for Collection<T
                     })
                 });
             }
+            crate::components::f0_scroll_probe::watch(context, "collection", &state, |state, _| {
+                let offset = state.scroll.logical_scroll_top();
+                serde_json::json!({"panel":"collection", "offset_y": -(offset.item_ix as f32 * state.row_height + f32::from(offset.offset_in_item)), "row_height":state.row_height, "total":state.ids.len()})
+            });
             let weak = state.downgrade();
             let keyboard_owner = weak.clone();
             let items = self.items.clone();

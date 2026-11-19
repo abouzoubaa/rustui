@@ -2,11 +2,17 @@
 
 Work in progress. The acceptance page and Fast timing recorder are implemented; the A/B comparison and scrolling optimizations are not complete.
 
-## Comparison blocker
+## Baseline compatibility shims
 
-The baseline is 925436b5 plus only the Playground portions of the acceptance-page commits. Its release build exits 101 at apps/rustui-playground/src/stories/editable_grid_gallery.rs:101: `no method named height found for struct EditableDataGridView<R>` (E0599). The viewport-height adapter was introduced after that baseline in RustUI, outside the Playground. The owner was asked whether to add that small adapter to the comparison branch; no adapter has been applied. This is required to reconcile the identical-page requirement with the Playground-only cherry-pick restriction.
+Baseline: 925436b5 plus the Playground-only acceptance commits and measurement instrumentation.
 
-No Collection, CodeEditor, or EditableDataGrid scrolling optimization has been applied: the owner requires the before measurements first.
+| Source commit | Copied code | Baseline location | Excluded changes |
+|---|---|---|---|
+| 23c4545136dcfb9c1ee254990c3572fa0440babf | height field, default 300, and height builder only | crates/rustui/src/components/data/editable_data_grid.rs:139,168,175 | The rendering hunk replacing `.h(px(300.))` with `.h(px(self.height))` was not copied. |
+
+The baseline release build passes with this API-only shim. Its Editable grid panel is omitted and **not comparable**: implementing the requested dynamic height would require the excluded layout change. No scrolling, theme, or rendering fixes were copied into the baseline.
+
+Collection/CodeEditor/grid optimizations remain unapplied until the before captures are complete.
 
 ## Preliminary Fast capture
 
