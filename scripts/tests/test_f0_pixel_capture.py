@@ -2,6 +2,7 @@
 from pathlib import Path
 import platform
 import subprocess
+import sys
 import tempfile
 import unittest
 
@@ -16,5 +17,9 @@ class PixelCaptureTests(unittest.TestCase):
             build = subprocess.run(["swiftc", "-O", "-parse-as-library", str(ROOT / "scripts/f0_capture_frames.swift"), "-o", str(binary)], capture_output=True, text=True)
             self.assertEqual(build.returncode, 0, build.stdout + build.stderr)
             result = subprocess.run([str(binary), "self-test"], capture_output=True, text=True)
+            sys.stderr.write(result.stdout + result.stderr)
             self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
             self.assertIn("blank, painted, stale = PASS", result.stdout)
+            self.assertIn("check=editor fixture ID type expected=Int actual=Int", result.stderr)
+            self.assertIn("check=editor source position expected=true actual=true", result.stderr)
+            self.assertEqual(result.stderr.count("check="), 12)
