@@ -119,13 +119,6 @@ impl View for F0NativeAcceptanceGallery {
                         ),
                         TabItem::new("lists", ACCEPTANCE_TABS[1], lists_panel(height)),
                         TabItem::new("editor", ACCEPTANCE_TABS[2], editor_panel(height)),
-                        TabItem::new(
-                            "grid",
-                            ACCEPTANCE_TABS[3],
-                            super::editable_grid_gallery::acceptance_demo(
-                                (height - 60.0).max(400.0),
-                            ),
-                        ),
                         TabItem::new("overlays", ACCEPTANCE_TABS[4], overlays_panel()),
                         TabItem::new(
                             "appearance",
