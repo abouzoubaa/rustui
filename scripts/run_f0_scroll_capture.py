@@ -10,6 +10,10 @@ import re
 from pathlib import Path
 import subprocess
 import time
+import sys
+
+sys.path.insert(0, str(Path(__file__).resolve().parent))
+from f0_row_positions import analyze as analyze_row_positions
 
 
 def summarize(log: str) -> dict:
@@ -66,13 +70,15 @@ def capture(binary: Path, panel: str, log: Path, pixels: bool = False) -> dict:
         process = subprocess.Popen([str(binary)], env=env, stdout=output, stderr=subprocess.STDOUT)
         try:
             if pixels:
-                for _ in range(50):
+                for _ in range(500):
                     viewport_lines = [line for line in log.read_text().splitlines() if line.startswith("RUSTUI_VIEWPORT_LOG ")]
                     if viewport_lines: break
+                    if process.poll() is not None: raise RuntimeError(f"Playground exited before geometry: {process.returncode}; {log}")
                     time.sleep(0.02)
                 (pixel_dir / "viewport.json").write_text(viewport_lines[-1].removeprefix("RUSTUI_VIEWPORT_LOG "))
                 helper = Path.home() / ".cache/rustui-target/f0-capture-frames"
-                recorder = subprocess.Popen([str(helper), "capture", str(process.pid), str(pixel_dir), str(pixel_dir / "stop")], stdout=output, stderr=subprocess.STDOUT)
+                with (pixel_dir / "capture.txt").open("w") as recorder_output:
+                    recorder = subprocess.Popen([str(helper), "capture", str(process.pid), str(pixel_dir), str(pixel_dir / "stop")], stdout=recorder_output, stderr=subprocess.STDOUT)
             deadline = time.monotonic() + 30
             while time.monotonic() < deadline:
                 if "RUSTUI_SCROLL_LOG end " in log.read_text():
@@ -107,7 +113,10 @@ def capture(binary: Path, panel: str, log: Path, pixels: bool = False) -> dict:
         (pixel_dir / "setup.json").write_text(json.dumps(dict(cropped=True, oracles=[json.loads(line.removeprefix("RUSTUI_ORACLE_LOG ")) for line in lines if line.startswith("RUSTUI_ORACLE_LOG ")], viewport=viewport, start=start, end=end, inputs=[[float(v) for v in line.split()[1:]] for line in lines if line.startswith("RUSTUI_SCROLL_STEP ")])))
         analysis = subprocess.run([str(helper), "analyze", str(pixel_dir), panel], check=True, text=True, capture_output=True)
         row_result = json.loads(analysis.stdout)
+        if row_result["frames_without_oracle"]:
+            raise ValueError(f"pixel capture has {row_result['frames_without_oracle']} frames without source positions")
         (pixel_dir / "summary.json").write_text(json.dumps(row_result, indent=2))
+        row_result["position_match"] = analyze_row_positions(pixel_dir, panel)
         result["pixels"] = row_result
         result["visible_rows_painted_empty"] = row_result["blank_rows"]
     return result
