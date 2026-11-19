@@ -6,6 +6,7 @@ import argparse
 import json
 import mmap
 import os
+import re
 from pathlib import Path
 import subprocess
 import time
@@ -47,7 +48,7 @@ def summarize(log: str) -> dict:
     }
 
 
-def capture(binary: Path, panel: str, log: Path) -> dict:
+def capture(binary: Path, panel: str, log: Path, pixels: bool = False) -> dict:
     # Cargo treats registry sources as immutable. Reusing a pre-patch artifact
     # can otherwise silently produce a release binary without the recorder.
     with binary.open("rb") as executable, mmap.mmap(executable.fileno(), 0, access=mmap.ACCESS_READ) as contents:
@@ -56,9 +57,22 @@ def capture(binary: Path, panel: str, log: Path) -> dict:
     env = dict(os.environ, RUSTUI_F0_ACCEPTANCE="1", RUSTUI_F0_PANEL=panel,
                RUSTUI_F0_SCROLL="1", RUSTUI_FRAME_LOG="1")
     log.parent.mkdir(parents=True, exist_ok=True)
+    pixel_dir = log.with_suffix(".pixels")
+    recorder = None
+    if pixels:
+        pixel_dir.mkdir(parents=True, exist_ok=False)
+        env.update(RUSTUI_F0_PIXELS="1", RUSTUI_F0_SOURCE_DUMP=str(pixel_dir / "source.rs"))
     with log.open("w") as output:
         process = subprocess.Popen([str(binary)], env=env, stdout=output, stderr=subprocess.STDOUT)
         try:
+            if pixels:
+                for _ in range(50):
+                    viewport_lines = [line for line in log.read_text().splitlines() if line.startswith("RUSTUI_VIEWPORT_LOG ")]
+                    if viewport_lines: break
+                    time.sleep(0.02)
+                (pixel_dir / "viewport.json").write_text(viewport_lines[-1].removeprefix("RUSTUI_VIEWPORT_LOG "))
+                helper = Path.home() / ".cache/rustui-target/f0-capture-frames"
+                recorder = subprocess.Popen([str(helper), "capture", str(process.pid), str(pixel_dir), str(pixel_dir / "stop")], stdout=output, stderr=subprocess.STDOUT)
             deadline = time.monotonic() + 30
             while time.monotonic() < deadline:
                 if "RUSTUI_SCROLL_LOG end " in log.read_text():
@@ -69,13 +83,34 @@ def capture(binary: Path, panel: str, log: Path) -> dict:
             else:
                 raise RuntimeError(f"native capture timed out; {log}")
         finally:
+            capture_error = None
+            if recorder is not None:
+                (pixel_dir / "stop").touch()
+                recorder.wait(timeout=20)
+                if recorder.returncode != 0:
+                    capture_error = RuntimeError(f"native pixel capture failed: {recorder.returncode}; {log}")
             process.terminate()
             try:
                 process.wait(timeout=5)
             except subprocess.TimeoutExpired:
                 process.kill()
                 process.wait()
-    return summarize(log.read_text())
+            if capture_error is not None:
+                raise capture_error
+    result = summarize(log.read_text())
+    if pixels:
+        lines = log.read_text().splitlines()
+        viewport = [json.loads(line.removeprefix("RUSTUI_VIEWPORT_LOG ")) for line in lines if line.startswith("RUSTUI_VIEWPORT_LOG ") and json.loads(line.removeprefix("RUSTUI_VIEWPORT_LOG "))["panel"] == panel][-1]
+        viewport.pop("panel", None)
+        start = float(re.search(r"RUSTUI_SCROLL_LOG start .* epoch_ms=([0-9]+)", log.read_text())[1])
+        end = float(re.search(r"RUSTUI_SCROLL_LOG end .* epoch_ms=([0-9]+)", log.read_text())[1])
+        (pixel_dir / "setup.json").write_text(json.dumps(dict(cropped=True, oracles=[json.loads(line.removeprefix("RUSTUI_ORACLE_LOG ")) for line in lines if line.startswith("RUSTUI_ORACLE_LOG ")], viewport=viewport, start=start, end=end, inputs=[[float(v) for v in line.split()[1:]] for line in lines if line.startswith("RUSTUI_SCROLL_STEP ")])))
+        analysis = subprocess.run([str(helper), "analyze", str(pixel_dir), panel], check=True, text=True, capture_output=True)
+        row_result = json.loads(analysis.stdout)
+        (pixel_dir / "summary.json").write_text(json.dumps(row_result, indent=2))
+        result["pixels"] = row_result
+        result["visible_rows_painted_empty"] = row_result["blank_rows"]
+    return result
 
 
 def main() -> None:
@@ -83,8 +118,9 @@ def main() -> None:
     parser.add_argument("--binary", type=Path, required=True)
     parser.add_argument("--panel", choices=["collection", "list", "keyed", "editor", "grid"], required=True)
     parser.add_argument("--log", type=Path, required=True)
+    parser.add_argument("--pixels", action="store_true", help="Separate native pixel/OCR validation pass; not timing data")
     args = parser.parse_args()
-    print(json.dumps(capture(args.binary.resolve(), args.panel, args.log), indent=2))
+    print(json.dumps(capture(args.binary.resolve(), args.panel, args.log, args.pixels), indent=2))
 
 
 if __name__ == "__main__":
