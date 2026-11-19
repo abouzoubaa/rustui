@@ -22,4 +22,6 @@ class PixelCaptureTests(unittest.TestCase):
             self.assertIn("blank, painted, stale = PASS", result.stdout)
             self.assertIn("check=editor fixture ID type expected=Int actual=Int", result.stderr)
             self.assertIn("check=editor source position expected=true actual=true", result.stderr)
-            self.assertEqual(result.stderr.count("check="), 12)
+            self.assertIn("check=1x capture dimensions expected=1038x518 actual=1038x518", result.stderr)
+            self.assertIn("check=2x capture dimensions expected=2076x1037 actual=2076x1037", result.stderr)
+            self.assertEqual(result.stderr.count("check="), 14)
