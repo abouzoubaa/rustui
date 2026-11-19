@@ -1164,12 +1164,6 @@ impl<R: Clone + 'static> View for EditableDataGridView<R> {
             .delegate_accessibility(true)
         });
         context.update_entity(&table, |table, _, cx| table.refresh(cx));
-        crate::components::f0_scroll_probe::watch(
-            context,
-            "grid",
-            &table,
-            |state, _| serde_json::json!({"panel":"grid", "offset_y":f32::from(state.vertical_scroll_handle.0.borrow().base_handle.offset().y)}),
-        );
         let table_weak = table.downgrade();
         context.update_entity(&state, move |state, _, _| state.table = Some(table_weak));
         let weak = state.downgrade();
