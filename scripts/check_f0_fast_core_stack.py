@@ -24,6 +24,13 @@ def run(action: str, root: Path = ROOT) -> None:
                 raise ValueError(f"patch hash mismatch: {patch}")
             for relative, hashes in entry["files"].items():
                 final[relative] = hashes["post_sha256"]
+        # Ownership wiring follows the historical core stack. Validate the
+        # terminal images while retaining the core's exact replay order.
+        wiring_path = ROOT / "patches/approved/fast/owned-fast-path-wiring-v1.json"
+        if wiring_path.exists():
+            from check_fast_patch_stack import load_manifests
+            _, terminal = load_manifests()
+            final = {relative: terminal[relative] for relative in final}
         for relative, expected in final.items():
             actual = hashlib.sha256((root / relative).read_bytes()).hexdigest()
             if actual != expected:

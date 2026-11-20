@@ -119,6 +119,7 @@ package = "gpui-base"
 version = "0.9.1"
 
 [dependencies.gpui-fast]
+path = "../rustui-gpui-fast"
 version = "0.1.14"
 features = ["windows-manifest-provided-by-host"]
 optional = true

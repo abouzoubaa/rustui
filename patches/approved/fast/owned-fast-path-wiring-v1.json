@@ -1,0 +1,36 @@
+{
+  "schema_version": 1,
+  "name": "owned-fast-path-wiring-v1",
+  "patch": "owned-fast-path-wiring-v1.patch",
+  "patch_sha256": "9767da73cc79c4b088e8d724bf12737bf13274498068e878a742c692c89ac929",
+  "files": {
+    "crates/rustui-gpui-fast/Cargo.toml": {
+      "pre_sha256": "26bca40a7e3bb2c68a06bc6cc00fecc88505af7a408ef322ede48f31a550b365",
+      "post_sha256": "cca73034c1a461951afd0be43db634d7fe06d86b44b5211620aa627ff2694f9b"
+    },
+    "crates/rustui-gpui-fast-platform/Cargo.toml": {
+      "pre_sha256": "d49ccef3ad4a5c9a2d7c1a62c82f6eaacd611d7edeb3ad7ed448b236173541ae",
+      "post_sha256": "4580cb2fb1a2ceccbcf74b7ec30b7ca0feb5ffa20b744b135355078e86e9a80a"
+    },
+    "crates/rustui-gpui-fast-macos/Cargo.toml": {
+      "pre_sha256": "71f23fc23e96562a438f68abdb5fdf6545e888bc5a0d13e1b572af38af013d42",
+      "post_sha256": "5c2e52e1766d71386abd7201d797f343e38a34c973826826e0c331c8db0a669e"
+    },
+    "crates/rustui-gpui-fast-apple/Cargo.toml": {
+      "pre_sha256": "e5d4442c4a5dfd6c52edae85af5c7b69fc70e294bf133f79ccdcf65053344faa",
+      "post_sha256": "14c8261c6278c021f1c14904bcdac6e3dd3a933e89e526284158c03a721b795c"
+    },
+    "crates/rustui-gpui-base/Cargo.toml": {
+      "pre_sha256": "99bcb117bc648743d5f5b039093e6e2f0a3d484839203473fd9aef342fdac424",
+      "post_sha256": "60b4c05fad5014be1d25e042178db54f06627fc584eb97eea52ca38570f2d6ca"
+    },
+    "crates/rustui-gpui-component/Cargo.toml": {
+      "pre_sha256": "9b60d75c3d020d8d53c8a68e19b9cc8e6d55d8a2fc1147015b3edb0f8430316b",
+      "post_sha256": "73b94614f4f34f53ce0096d696b48409a4680f0f8a29005db07e1ce7dc4ff6e7"
+    },
+    "crates/rustui-gpui-kit-assets/Cargo.toml": {
+      "pre_sha256": "c6ce1ce788b59cef5c317f34e79e23a3aa4b4c04f82152604d7eb020a035e480",
+      "post_sha256": "d2141a6dd3d742dd9541f5bda8033860f284c6bc9a338d302334a9f6badf2fef"
+    }
+  }
+}

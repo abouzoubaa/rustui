@@ -69,6 +69,7 @@ package = "gpui-pre"
 optional = true
 
 [dependencies.gpui-fast]
+path = "../rustui-gpui-fast"
 version = "0.1.14"
 optional = true
 package = "gpui-fast"

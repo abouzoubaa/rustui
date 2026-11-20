@@ -64,7 +64,8 @@
     "gpui-fast-test-tree-disabled-v1-fast.json",
     "gpui-frame-recorder-v1-fast.json",
     "gpui-frame-phases-v1-fast.json",
-    "gpui-base-scroll-bounce-oracle-v1-fast.json"
+    "gpui-base-scroll-bounce-oracle-v1-fast.json",
+    "owned-fast-path-wiring-v1.json"
   ],
   "alternative_postimage_proofs": [
     "gpui-component-vendor-manifest-normalize-v1.json"
