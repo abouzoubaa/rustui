@@ -1,7 +1,7 @@
 {
   "complete_license_or_compatibility_claim": false,
   "inputs": {
-    "cargo_lock_sha256": "8f71744d1513de45f3885114d94a93812bc653dea0be8e39f8a01f707dca8279",
+    "cargo_lock_sha256": "eb72176188f7bd445766accac25411bf025e57033b92710704c9eab4b9dfb418",
     "supplement_manifest_sha256": "67fb8a1669613fd6e29f9514363a96aaefe547e8b94048c6873bff0b12f4ad92"
   },
   "packages": [
