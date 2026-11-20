@@ -9,12 +9,12 @@ import subprocess
 import sys
 
 ROOT = Path(__file__).resolve().parents[1]
-STACK = ROOT / "patches/candidate-kit-fast/core-stack.json"
+STACK = ROOT / "patches/approved/fast/core-stack.json"
 APPLIER = ROOT / "scripts/apply_f0_fast_candidate_patch.py"
 
 def run(action: str, root: Path = ROOT) -> None:
     stack = json.loads(STACK.read_text())
-    manifests = [ROOT / "patches/candidate-kit-fast" / name for name in stack["patches"]]
+    manifests = [ROOT / "patches/approved/fast" / name for name in stack["patches"]]
     if action == "--check":
         final = {}
         for path in manifests:

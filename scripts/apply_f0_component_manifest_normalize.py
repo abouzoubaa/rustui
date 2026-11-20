@@ -8,7 +8,7 @@ import subprocess
 import sys
 
 ROOT = Path(__file__).resolve().parents[1]
-MANIFEST = ROOT / "patches/candidate-kit-fast/gpui-component-vendor-manifest-normalize-v1.json"
+MANIFEST = ROOT / "patches/approved/fast/gpui-component-vendor-manifest-normalize-v1.json"
 
 
 def digest(path):
@@ -28,7 +28,7 @@ def main():
     root = args.root.resolve()
     action = "--check" if args.check else "--apply" if args.apply else "--reverse"
     meta = json.loads(MANIFEST.read_text())
-    patch = ROOT / "patches/candidate-kit-fast" / meta["patch"]
+    patch = ROOT / "patches/approved/fast" / meta["patch"]
     if digest(patch) != meta["patch_sha256"]:
         raise RuntimeError("candidate patch hash mismatch")
     reverse = action == "--reverse"

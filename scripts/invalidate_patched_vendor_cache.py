@@ -18,7 +18,7 @@ def invalidate(root: Path, target: Path) -> int:
     dependency = manifest.get("workspace", {}).get("dependencies", {}).get("gpui", {})
     if not isinstance(dependency, dict) or dependency.get("package") != "gpui-fast":
         return 0
-    candidates = root / "patches/candidate-kit-fast"
+    candidates = root / "patches/approved/fast"
     digest = hashlib.sha256()
     for path in sorted(candidates.iterdir()):
         if path.suffix in (".json", ".patch"):
