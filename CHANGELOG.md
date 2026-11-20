@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+- G1-1: publish a scoped presentation-required hint for system requests and sustained fast input, with a conservative default outside frame requests.
+
 - G0-2: add five native Metal benchmark scenes, 60-second GPU/CPU measurements, and an owner-run power capture script.
 
 - G0-1: add opt-in Metal GPU milliseconds per present to RUSTUI_FRAME_LOG, with full-frame mode labels.

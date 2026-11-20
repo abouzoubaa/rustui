@@ -3,6 +3,7 @@
   "backend": "gpui-fast 0.1.14",
   "base_stack": "../approved/fast/fast-stack.json",
   "patches": [
-    "gpui-fast-damage-metrics-v1-fast.json"
+    "gpui-fast-damage-metrics-v1-fast.json",
+    "gpui-fast-present-required-v1-fast.json"
   ]
 }
