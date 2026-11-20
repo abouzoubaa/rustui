@@ -25,6 +25,7 @@ No evidence paragraphs, hashes, logs, crash reports or "Record" commits. Never c
 
 ## Standing rules
 - A UI ticket is done only with a side-by-side screenshot (RustUI vs macOS 27 reference, light and dark) in the PR. The owner approves visuals; tests alone never close a UI ticket.
+- Codex never writes that visuals are approved. A UI PR may merge into an integration branch with the label 'owner visual review pending'; only the owner's message marks it approved.
 - Before merging any PR, read all review comments (including bot reviews) on it; fix or answer each one. Unanswered review comments block the merge.
 
 ## Git
