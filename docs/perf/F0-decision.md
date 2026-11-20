@@ -1,5 +1,7 @@
 # F0 decision — GPUI Fast 0.1.14
 
+Owner decision 2026-11-20: adopt GPUI Fast. Owner native/visual review still pending (scrolling comparison, R-1 grid).
+
 Decision point: 2026-11-14. This evaluates the candidate on `f0-integration`; it does not switch `main` or authorize adoption. The native checklist in [F0-native-checklist.md](F0-native-checklist.md) has not been run by the owner.
 
 ## Decision criteria
