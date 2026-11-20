@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+- G0-1: add opt-in Metal GPU milliseconds per present to RUSTUI_FRAME_LOG, with full-frame mode labels.
+
 - G-T0: support reversible new-file Fast patches, layered damage-stack checks, and regenerated owned sources containing added files.
 - G-P: preserve Stage G plans and licensed upstream source pins; macOS damage tracking precedes Stage B’s theme engine.
 

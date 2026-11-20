@@ -645,6 +645,8 @@ impl MetalRenderer {
             }
         };
 
+        crate::fast::damage::metrics::on_commit(&command_buffer, "full");
+
         if self.presents_with_transaction {
             command_buffer.commit();
             command_buffer.waitUntilScheduled();
