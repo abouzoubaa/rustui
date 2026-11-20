@@ -1,6 +1,9 @@
 # Changelog
 
 ## Unreleased
+
+## 0.5.0 — 2026-11-20
+- Adopt GPUI Fast 0.1.14 as the macOS backend; Stage B is next. Owner native/visual review remains pending.
 - FA-4: validate the owned Fast candidate, native popup lifecycle, smoke, Git-tag consumer, and five-run release benchmarks.
 - FA-3: archive the unused owned macOS GPUI chain, keep deferred-platform dependencies intact, and reproduce the old baseline from its tag.
 - FA-2: own the five macOS GPUI Fast packages, preserve their source/licenses, and unify backend dependency identities.

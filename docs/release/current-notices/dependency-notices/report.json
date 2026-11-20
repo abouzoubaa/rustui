@@ -1,7 +1,7 @@
 {
   "complete_license_or_compatibility_claim": false,
   "inputs": {
-    "cargo_lock_sha256": "792a9ffc8b065b26d98f5ac43ea0fa9e63f75b6a50fbe95a6517ee2c43ba124e",
+    "cargo_lock_sha256": "8f71744d1513de45f3885114d94a93812bc653dea0be8e39f8a01f707dca8279",
     "supplement_manifest_sha256": "67fb8a1669613fd6e29f9514363a96aaefe547e8b94048c6873bff0b12f4ad92"
   },
   "packages": [
@@ -13,15 +13,15 @@
       "notice_review_notes": [],
       "notices": [
         {
-          "path": "notices/rustui-playground-0.4.0-b8ca1661be2c/01-LICENSE",
+          "path": "notices/rustui-playground-0.5.0-92b503ce8039/01-LICENSE",
           "sha256": "969321ba9468d373a994d1a0aa55f036e1382181af1565ae0b5e79cc0cd2320e",
           "size_bytes": 1071,
           "source": "repository:LICENSE"
         }
       ],
-      "package_id": "path+repository:apps/rustui-playground#0.4.0",
+      "package_id": "path+repository:apps/rustui-playground#0.5.0",
       "source": null,
-      "version": "0.4.0",
+      "version": "0.5.0",
       "workspace_member": true
     },
     {
@@ -32,15 +32,15 @@
       "notice_review_notes": [],
       "notices": [
         {
-          "path": "notices/rustui-0.4.0-7ede61a79175/01-LICENSE",
+          "path": "notices/rustui-0.5.0-f802138220c9/01-LICENSE",
           "sha256": "969321ba9468d373a994d1a0aa55f036e1382181af1565ae0b5e79cc0cd2320e",
           "size_bytes": 1071,
           "source": "repository:LICENSE"
         }
       ],
-      "package_id": "path+repository:crates/rustui#0.4.0",
+      "package_id": "path+repository:crates/rustui#0.5.0",
       "source": null,
-      "version": "0.4.0",
+      "version": "0.5.0",
       "workspace_member": true
     },
     {
@@ -51,15 +51,15 @@
       "notice_review_notes": [],
       "notices": [
         {
-          "path": "notices/rustui-core-0.4.0-d456ef7a8218/01-LICENSE",
+          "path": "notices/rustui-core-0.5.0-93bc721e7d31/01-LICENSE",
           "sha256": "969321ba9468d373a994d1a0aa55f036e1382181af1565ae0b5e79cc0cd2320e",
           "size_bytes": 1071,
           "source": "repository:LICENSE"
         }
       ],
-      "package_id": "path+repository:crates/rustui-core#0.4.0",
+      "package_id": "path+repository:crates/rustui-core#0.5.0",
       "source": null,
-      "version": "0.4.0",
+      "version": "0.5.0",
       "workspace_member": true
     },
     {
@@ -228,15 +228,15 @@
       "notice_review_notes": [],
       "notices": [
         {
-          "path": "notices/rustui-i18n-0.4.0-7d093b3d2389/01-LICENSE",
+          "path": "notices/rustui-i18n-0.5.0-3a5223a14710/01-LICENSE",
           "sha256": "969321ba9468d373a994d1a0aa55f036e1382181af1565ae0b5e79cc0cd2320e",
           "size_bytes": 1071,
           "source": "repository:LICENSE"
         }
       ],
-      "package_id": "path+repository:crates/rustui-i18n#0.4.0",
+      "package_id": "path+repository:crates/rustui-i18n#0.5.0",
       "source": null,
-      "version": "0.4.0",
+      "version": "0.5.0",
       "workspace_member": true
     },
     {
@@ -247,15 +247,15 @@
       "notice_review_notes": [],
       "notices": [
         {
-          "path": "notices/rustui-macros-0.4.0-7571d0d1a804/01-LICENSE",
+          "path": "notices/rustui-macros-0.5.0-4c122c041ea7/01-LICENSE",
           "sha256": "969321ba9468d373a994d1a0aa55f036e1382181af1565ae0b5e79cc0cd2320e",
           "size_bytes": 1071,
           "source": "repository:LICENSE"
         }
       ],
-      "package_id": "path+repository:crates/rustui-macros#0.4.0",
+      "package_id": "path+repository:crates/rustui-macros#0.5.0",
       "source": null,
-      "version": "0.4.0",
+      "version": "0.5.0",
       "workspace_member": true
     },
     {
