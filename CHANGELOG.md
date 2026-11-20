@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+- G-P: preserve Stage G plans and licensed upstream source pins; macOS damage tracking precedes Stage B’s theme engine.
+
 ## 0.5.0 — 2026-11-20
 - Preserve Collection cell entities and subscriptions during cached-row replay, with bounded overdraw retention.
 - Adopt GPUI Fast 0.1.14 as the macOS backend; Stage B is next. Owner native/visual review remains pending.
