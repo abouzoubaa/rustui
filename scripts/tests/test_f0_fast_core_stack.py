@@ -12,15 +12,15 @@ from apply_f0_fast_candidate_patch import run as apply_patch  # noqa: E402
 from check_f0_fast_core_stack import run as apply_stack  # noqa: E402
 
 
-STACK_PATH = REPO_ROOT / "patches/candidate-kit-fast/core-stack.json"
-MENU_STACK_PATH = REPO_ROOT / "patches/candidate-kit-fast/menu-select-stack.json"
-TREE_STACK_PATH = REPO_ROOT / "patches/candidate-kit-fast/tree-list-grid-stack.json"
-SLIDER_STACK_PATH = REPO_ROOT / "patches/candidate-kit-fast/slider-resize-stack.json"
-CALENDAR_STACK_PATH = REPO_ROOT / "patches/candidate-kit-fast/calendar-date-stack.json"
-INPUT_TEXT_STACK_PATH = REPO_ROOT / "patches/candidate-kit-fast/input-text-stack.json"
-TOOLBAR_STACK_PATH = REPO_ROOT / "patches/candidate-kit-fast/toolbar-rtl-stack.json"
-SYNTAX_DIFF_STACK_PATH = REPO_ROOT / "patches/candidate-kit-fast/syntax-diff-stack.json"
-NATIVE_POPUP_STACK_PATH = REPO_ROOT / "patches/candidate-kit-fast/native-popup-stack.json"
+STACK_PATH = REPO_ROOT / "patches/approved/fast/core-stack.json"
+MENU_STACK_PATH = REPO_ROOT / "patches/approved/fast/menu-select-stack.json"
+TREE_STACK_PATH = REPO_ROOT / "patches/approved/fast/tree-list-grid-stack.json"
+SLIDER_STACK_PATH = REPO_ROOT / "patches/approved/fast/slider-resize-stack.json"
+CALENDAR_STACK_PATH = REPO_ROOT / "patches/approved/fast/calendar-date-stack.json"
+INPUT_TEXT_STACK_PATH = REPO_ROOT / "patches/approved/fast/input-text-stack.json"
+TOOLBAR_STACK_PATH = REPO_ROOT / "patches/approved/fast/toolbar-rtl-stack.json"
+SYNTAX_DIFF_STACK_PATH = REPO_ROOT / "patches/approved/fast/syntax-diff-stack.json"
+NATIVE_POPUP_STACK_PATH = REPO_ROOT / "patches/approved/fast/native-popup-stack.json"
 
 
 class FastCoreStackTests(unittest.TestCase):
@@ -28,7 +28,7 @@ class FastCoreStackTests(unittest.TestCase):
         stack = json.loads(stack_path.read_text())
         self.assertEqual(stack["family"], family)
         approved = REPO_ROOT / "patches/approved/kit09"
-        candidate = REPO_ROOT / "patches/candidate-kit-fast"
+        candidate = REPO_ROOT / "patches/approved/fast"
         for manifest_name in stack["patches"]:
             manifest_path = candidate / manifest_name
             manifest = json.loads(manifest_path.read_text())
@@ -75,15 +75,15 @@ class FastCoreStackTests(unittest.TestCase):
         )
         for manifest_name in stack["patches"]:
             self.assertIn(manifest_name, core["patches"])
-            manifest = json.loads((REPO_ROOT / "patches/candidate-kit-fast" / manifest_name).read_text())
-            patch = REPO_ROOT / "patches/candidate-kit-fast" / manifest["patch"]
+            manifest = json.loads((REPO_ROOT / "patches/approved/fast" / manifest_name).read_text())
+            patch = REPO_ROOT / "patches/approved/fast" / manifest["patch"]
             self.assertEqual(hashlib.sha256(patch.read_bytes()).hexdigest(), manifest["patch_sha256"])
 
     def test_bounded_offset_experiment_is_inactive_but_replays_exactly(self):
         core = json.loads(STACK_PATH.read_text())
         name = "gpui-fast-bounded-wheel-offset-v1-fast.json"
         self.assertNotIn(name, core["patches"])
-        manifest = REPO_ROOT / "patches/candidate-kit-fast/experiments" / name
+        manifest = REPO_ROOT / "patches/retired/fast-experiments" / name
         data = json.loads(manifest.read_text())
         with tempfile.TemporaryDirectory() as temporary:
             fixture = Path(temporary)
@@ -97,9 +97,28 @@ class FastCoreStackTests(unittest.TestCase):
             for relative in data["files"]:
                 self.assertEqual((fixture/relative).read_bytes(),(REPO_ROOT/relative).read_bytes())
 
+    def test_promoted_inventory_contains_only_the_active_stack(self):
+        from check_fast_patch_stack import PATCH_DIR, load_manifests
+        stack = json.loads((PATCH_DIR / "fast-stack.json").read_text())
+        names = stack["patches"] + stack["alternative_postimage_proofs"]
+        self.assertEqual(len(names), 64)
+        self.assertEqual(len(set(names)), 64)
+        self.assertEqual(
+            {Path(json.loads((PATCH_DIR / name).read_text())["patch"]).name for name in names},
+            {path.name for path in PATCH_DIR.glob("*.patch")},
+        )
+        self.assertNotIn("gpui-fast-bounded-wheel-offset-v1-fast.json", names)
+        entries, final = load_manifests()
+        self.assertEqual(len(entries), 63)
+        self.assertEqual(len(final), 55)
+
+    def test_full_approved_stack_reverses_and_reapplies_exactly(self):
+        from check_fast_patch_stack import verify
+        verify()
+
     def test_core_stack_reverses_and_reapplies_exactly(self):
         stack = json.loads(STACK_PATH.read_text())
-        manifests = [REPO_ROOT / "patches/candidate-kit-fast" / name for name in stack["patches"]]
+        manifests = [REPO_ROOT / "patches/approved/fast" / name for name in stack["patches"]]
         union = {}
         for manifest_path in manifests:
             manifest = json.loads(manifest_path.read_text())

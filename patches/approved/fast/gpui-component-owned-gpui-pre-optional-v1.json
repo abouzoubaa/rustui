@@ -4,7 +4,7 @@
     "repository": "https://github.com/longbridge/gpui-kit",
     "tag": "v0.9.1"
   },
-  "patch": "patches/candidate-kit-fast/gpui-component-owned-gpui-pre-optional-v1.patch",
+  "patch": "patches/approved/fast/gpui-component-owned-gpui-pre-optional-v1.patch",
   "patch_sha256": "a2ff9f2e26588410bbd737b2633e1d5528794d2c3a5673df2e87a8834cf955a7",
   "source": "crates/rustui-gpui-component/Cargo.toml",
   "pre_sha256": "d21a8aca9c84430db016004e6c5ea28f07c163abee8599bf09adc6e8d884e928",

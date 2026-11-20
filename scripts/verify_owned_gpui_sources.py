@@ -40,9 +40,9 @@ OWNED_SOURCE_OVERLAYS = {
     # postimage in its candidate manifest.
     "crates/rustui-gpui-base": {
         "src/scroll_bounce.rs":
-            "patches/candidate-kit-fast/gpui-base-scroll-bounce-oracle-v1-fast.json",
+            "patches/approved/fast/gpui-base-scroll-bounce-oracle-v1-fast.json",
         "src/input/base/tab_stops.rs":
-            "patches/candidate-kit-fast/rustui-bidi-tab-layout-test-fast-v1.json"
+            "patches/approved/fast/rustui-bidi-tab-layout-test-fast-v1.json"
     }
 }
 

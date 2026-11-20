@@ -27,6 +27,7 @@ case "${1:-}" in
     python3 scripts/check_dependency_notices_freshness.py
     # The Kit 0.9 stack check covers native popup patches in their final stacked state.
     python3 scripts/apply_gpui_kit_09_stack.py --check
+    python3 scripts/check_fast_patch_stack.py --check
     python3 scripts/verify_owned_gpui_sources.py
     python3 - <<'PY'
 import unittest

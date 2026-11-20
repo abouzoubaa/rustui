@@ -258,3 +258,5 @@ checks; the source fixture suite replays PRE/check/apply/POST/verify/reverse for
 all three sources and rejects unknown/partial images and altered patches.
 Fixture evidence is not native/browser/AX/VoiceOver acceptance. See
 `docs/archive/tasks/TREE_ROOT_AND_LEVEL_PROMOTION_DECISION.md`.
+
+GPUI Fast adoption: the active Fast stack is in [approved/fast/README.md](approved/fast/README.md). Inactive Fast experiments live in `retired/fast-experiments/`.

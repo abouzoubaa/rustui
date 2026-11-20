@@ -27,7 +27,7 @@ name = "rustui"
 version = "0.4.0"
 dependencies = ["gpui-base"]
 ''')
-            patches = root/"patches/candidate-kit-fast"
+            patches = root/"patches/approved/fast"
             patches.mkdir(parents=True)
             patch = patches/"core.patch"
             patch.write_text("first")

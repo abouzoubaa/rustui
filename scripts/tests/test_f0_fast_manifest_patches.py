@@ -14,9 +14,9 @@ from approved_single_source_patch import run  # noqa: E402
 
 
 PATCHES = (
-    ("patches/candidate-kit-fast/gpui-base-owned-gpui-pre-optional-v1.json", "crates/rustui-gpui-base/Cargo.toml"),
-    ("patches/candidate-kit-fast/gpui-component-owned-gpui-pre-optional-v1.json", "crates/rustui-gpui-component/Cargo.toml"),
-    ("patches/candidate-kit-fast/gpui-kit-assets-owned-gpui-pre-optional-v1.json", "crates/rustui-gpui-kit-assets/Cargo.toml"),
+    ("patches/approved/fast/gpui-base-owned-gpui-pre-optional-v1.json", "crates/rustui-gpui-base/Cargo.toml"),
+    ("patches/approved/fast/gpui-component-owned-gpui-pre-optional-v1.json", "crates/rustui-gpui-component/Cargo.toml"),
+    ("patches/approved/fast/gpui-kit-assets-owned-gpui-pre-optional-v1.json", "crates/rustui-gpui-kit-assets/Cargo.toml"),
 )
 
 
@@ -39,7 +39,7 @@ class FastManifestPatchTests(unittest.TestCase):
                         "gpui-base-fast-test-support-v1.json",
                         "gpui-base-fast-platform-test-dep-v1.json",
                     ):
-                        later_path = REPO_ROOT / "patches/candidate-kit-fast" / later
+                        later_path = REPO_ROOT / "patches/approved/fast" / later
                         if later_path.exists():
                             subprocess.run(
                                 [
