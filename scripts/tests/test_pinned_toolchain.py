@@ -83,7 +83,7 @@ class PinnedToolchainTests(unittest.TestCase):
             )
             self.assertEqual(
                 result.stdout.splitlines(),
-                ["overrides=,", f"rustc {channel} (fake)", f"cargo for {channel}"],
+                ["overrides=x,x", f"rustc {channel} (fake)", f"cargo for {channel}"],
             )
             calls = [json.loads(line) for line in log.read_text().splitlines()]
             self.assertEqual(calls, [["run", channel, "rustc", "--version"],

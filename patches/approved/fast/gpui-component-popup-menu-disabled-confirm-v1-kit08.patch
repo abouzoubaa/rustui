@@ -1,0 +1,51 @@
+diff --git a/vendor/gpui-component-0.9.1/src/menu/popup_menu.rs b/vendor/gpui-component-0.9.1/src/menu/popup_menu.rs
+--- a/vendor/gpui-component-0.9.1/src/menu/popup_menu.rs
++++ b/vendor/gpui-component-0.9.1/src/menu/popup_menu.rs
+@@ -846,3 +846,14 @@ impl PopupMenu {
+     fn confirm(&mut self, _: &Confirm, window: &mut Window, cx: &mut Context<Self>) {
++        if matches!(
++            self.selected_index.and_then(|index| self.menu_items.get(index)),
++            Some(
++                PopupMenuItem::Item { disabled: true, .. }
++                    | PopupMenuItem::ElementItem { disabled: true, .. }
++                    | PopupMenuItem::Submenu { disabled: true, .. }
++            )
++        ) {
++            return;
++        }
++
+         self.activate(&ClickEvent::default(), window, cx);
+     }
+@@ -1610,3 +1621,32 @@ mod tests {
+         assert_eq!(PopupMenuItem::element(|_, _| div()).a11y_label(), None);
+     }
++
++    #[gpui::test]
++    fn disabled_selected_popup_menu_item_ignores_confirm(cx: &mut gpui::TestAppContext) {
++        use std::{cell::Cell, rc::Rc};
++
++        cx.update(crate::init);
++        let clicks = Rc::new(Cell::new(0));
++        let (menu, cx) = cx.add_window_view({
++            let clicks = clicks.clone();
++            move |_, cx| {
++                let clicks = clicks.clone();
++                let mut menu = PopupMenu::new(cx).item(
++                    PopupMenuItem::new("Disabled")
++                        .disabled(true)
++                        .on_click(move |_, _, _| clicks.set(clicks.get() + 1)),
++                );
++                menu.selected_index = Some(0);
++                menu
++            }
++        });
++        cx.update(|window, cx| window.draw(cx).clear(cx));
++        cx.update(|window, cx| {
++            menu.update(cx, |menu, cx| {
++                menu.confirm(&Confirm { secondary: false }, window, cx);
++            });
++        });
++        assert_eq!(clicks.get(), 0, "disabled item must not activate");
++        cx.read(|cx| assert_eq!(menu.read(cx).selected_index, Some(0), "confirmation must not dismiss or change selection"));
++    }
+ }

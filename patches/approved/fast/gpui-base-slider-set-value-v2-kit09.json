@@ -1,0 +1,19 @@
+{
+  "schema_version": 1,
+  "name": "gpui-base-slider-set-value-v2-kit09",
+  "upstream": {
+    "repository": "https://github.com/longbridge/gpui-kit",
+    "tag": "v0.9.1",
+    "commit": "39ab849a93b5f15507b969164d49891db8d5b470",
+    "gpui_pre_version": "0.3.12",
+    "gpui_fast_version": "0.1.14"
+  },
+  "patch": "gpui-base-slider-set-value-v2-kit09.patch",
+  "patch_sha256": "c6c202142fb51ca20e961f2121c6b6703d243fa68b6bb104cd9580de932cfb3d",
+  "files": {
+    "vendor/gpui-base-0.9.1/src/slider.rs": {
+      "pre_sha256": "165c4e849fd23fbc46eabfb15c8323534a8c43235da12b2cfc41dd2a2d7cb2e0",
+      "post_sha256": "a68bd1d28633a3ce42ab40c771b5739b266dfb4af57f58605d62cb0cd963a3cb"
+    }
+  }
+}

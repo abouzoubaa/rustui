@@ -28,6 +28,7 @@ class CollectorTests(unittest.TestCase):
         self.dep.mkdir(parents=True)
         (self.repo / "Cargo.toml").write_text("[workspace]\n")
         (self.repo / "LICENSE").write_text("RustUI root license\n")
+        (self.repo / "Cargo.lock").write_text('version = 4\n')
         (self.dep / "Cargo.toml").write_text("[package]\n")
         (self.dep / "COPYING").write_text("verbatim copying text\n")
         (self.dep / "licenses").mkdir()
@@ -98,6 +99,8 @@ class CollectorTests(unittest.TestCase):
         report = collector.collect(self.args)
         self.assertEqual(report["status"], "notice_files_captured")
         self.assertFalse(report["complete_license_or_compatibility_claim"])
+        self.assertEqual(report["inputs"]["cargo_lock_sha256"], collector.sha256(self.repo / "Cargo.lock"))
+        self.assertIsNone(report["inputs"]["supplement_manifest_sha256"])
         self.assertEqual({p["name"] for p in report["packages"]}, {"rustui", "dep"})
         texts = set()
         for package in report["packages"]:

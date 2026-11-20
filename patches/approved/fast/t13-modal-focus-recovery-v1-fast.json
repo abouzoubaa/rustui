@@ -1,0 +1,20 @@
+{
+  "schema_version": 1,
+  "name": "t13-modal-focus-recovery-v1-fast",
+  "patch": "t13-modal-focus-recovery-v1-fast.patch",
+  "patch_sha256": "d78a0bd8d356aacdab12e0dfa914a0dbe44fe29c056cfd297f348fed51469118",
+  "files": {
+    "vendor/gpui-fast-0.1.14/.cargo-checksum.json": {
+      "pre_sha256": "c3d8fd7bce7b2e1e18df1ddf11de4c6853af008c527080af66f7703152a807b8",
+      "post_sha256": "99c0f7ebf8317857d532c5dcc487a56ef3faa360a19f7d9193f3957b92f353ff"
+    },
+    "vendor/gpui-fast-0.1.14/src/key_dispatch.rs": {
+      "pre_sha256": "d6cdbaf57ba99e88cf67943cfeaa1066bda0cc8e2008728179d9bbfa70c4983c",
+      "post_sha256": "778b082cdf7afd47149c9a5001cca2a4df21d9b07065654cdef15cf533f6dcec"
+    },
+    "vendor/gpui-fast-0.1.14/src/window.rs": {
+      "pre_sha256": "3737bb504035ef6aa2ea9af28f98fc1b8f82b845b0c551e7d07c649ddf5f1e1f",
+      "post_sha256": "e2ce941e9c4cdea38fae5a3b383218c20954ec35e798393213450ed5f008b449"
+    }
+  }
+}

@@ -377,6 +377,71 @@ pub struct ActiveTheme {
 }
 
 impl ActiveTheme {
+    /// Resolve a component metric through this active document's token aliases.
+    pub(crate) fn component_metric(
+        &self,
+        component: &str,
+        name: &str,
+    ) -> Result<f32, ThemeResolveError> {
+        if !self.component_records.borrow().contains_key(component) {
+            let record = self
+                .document
+                .component_theme(component)
+                .map_err(ThemeResolveError::Invalid)?;
+            self.component_records
+                .borrow_mut()
+                .insert(component.to_owned(), record);
+        }
+        let records = self.component_records.borrow();
+        let value = records[component]
+            .metadata
+            .get("metrics")
+            .and_then(|metrics| metrics.get(name))
+            .ok_or_else(|| {
+                ThemeResolveError::Invalid(format!("missing {component} metric {name}"))
+            })?;
+        let resolved = if let Some(number) = value.as_f64() {
+            number
+        } else {
+            let reference = value.as_str().ok_or_else(|| {
+                ThemeResolveError::Invalid(format!("invalid {component} metric {name}"))
+            })?;
+            let (category, key) = reference.split_once('.').ok_or_else(|| {
+                ThemeResolveError::Invalid(format!("invalid metric reference {reference}"))
+            })?;
+            let key = self
+                .document
+                .token_sources
+                .get(category)
+                .and_then(|aliases| aliases.get(key))
+                .and_then(serde_json::Value::as_str)
+                .unwrap_or(key);
+            let values = match category {
+                "dimensions" => serde_json::to_value(self.profile.dimensions),
+                "spacing" => serde_json::to_value(self.profile.spacing),
+                _ => {
+                    return Err(ThemeResolveError::Invalid(format!(
+                        "unsupported metric reference {reference}"
+                    )));
+                }
+            }
+            .map_err(|error| ThemeResolveError::Invalid(error.to_string()))?;
+            values
+                .get(key)
+                .and_then(serde_json::Value::as_f64)
+                .ok_or_else(|| {
+                    ThemeResolveError::Invalid(format!("unresolved metric reference {reference}"))
+                })?
+        } as f32;
+        if resolved.is_finite() && resolved >= 0.0 {
+            Ok(resolved)
+        } else {
+            Err(ThemeResolveError::Invalid(format!(
+                "invalid {component} metric {name}"
+            )))
+        }
+    }
+
     /// Resolve a surface's optional component overrides over its existing role colors.
     pub(crate) fn surface_colors(
         &self,

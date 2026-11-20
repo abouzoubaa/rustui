@@ -1,0 +1,16 @@
+{
+  "schema_version": 1,
+  "name": "gpui-test-window-a11y-default-v1-fast",
+  "patch": "gpui-test-window-a11y-default-v1-fast.patch",
+  "patch_sha256": "75b17a5ba4bc09f3084b24603388ac1e2064881790607d874d466457067a96e4",
+  "files": {
+    "vendor/gpui-fast-0.1.14/.cargo-checksum.json": {
+      "pre_sha256": "e8643fedc7e0169b1e2f6fe6cb087560c0ba7abb7804e47599a35cea50d18d32",
+      "post_sha256": "23688845274cce217785ed6a4752518d943ad3a2f9f4f5983cc2434f7594549b"
+    },
+    "vendor/gpui-fast-0.1.14/src/app/test_context.rs": {
+      "pre_sha256": "8086e0adfa906d083327f9715c4df09bcd7c60d934f519bed782ac11ca0d3457",
+      "post_sha256": "49c27ce949e792de543e45213407e23a72cd5936a76e0096d04ca68ba773dee5"
+    }
+  }
+}

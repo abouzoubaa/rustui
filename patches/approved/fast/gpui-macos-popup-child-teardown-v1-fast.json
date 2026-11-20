@@ -1,0 +1,16 @@
+{
+  "schema_version": 1,
+  "name": "gpui-macos-popup-child-teardown-v1-fast",
+  "patch": "gpui-macos-popup-child-teardown-v1-fast.patch",
+  "patch_sha256": "b8ff4194649e00a8a9307787208626cc43b8a69abdc773f63f77c93821bda363",
+  "files": {
+    "vendor/gpui-fast-macos-0.1.14/.cargo-checksum.json": {
+      "pre_sha256": "6f320c0f5c8276490ce8477f606f1e9765d780d8c877832404e286a1c78453bf",
+      "post_sha256": "499c421b8abaec46d0dabae5a85110819838bf28903090167f1e5eeff72674a8"
+    },
+    "vendor/gpui-fast-macos-0.1.14/src/window.rs": {
+      "pre_sha256": "9d031707725f0b68a9eb606e9de1299c9174f8092c9a68df2af93f5b50cc187e",
+      "post_sha256": "1fe145ed526675b37170af09ccbfe4726118c2b693e397824b5401cda9751f45"
+    }
+  }
+}

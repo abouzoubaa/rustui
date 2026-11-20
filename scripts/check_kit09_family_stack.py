@@ -12,6 +12,7 @@ import subprocess
 import sys
 import tarfile
 import tempfile
+import tomllib
 from pathlib import Path
 from typing import Any
 
@@ -155,6 +156,25 @@ def normalize_fixture_mtimes(workspace: Path) -> None:
             os.utime(path, (FIXTURE_MTIME_EPOCH, FIXTURE_MTIME_EPOCH))
 
 
+def align_fixture_tree_sitter(workspace: Path) -> None:
+    """Match the isolated Kit fixture's grammar API to RustUI's owned graph."""
+    owned_manifest = tomllib.loads(
+        (ROOT / "crates/rustui-gpui-component/Cargo.toml").read_text(encoding="utf-8")
+    )
+    version = owned_manifest["dependencies"]["tree-sitter"]["version"]
+    fixture_manifest = next(
+        (workspace / "sources").glob("gpui-component-*/Cargo.toml")
+    )
+    source = fixture_manifest.read_text(encoding="utf-8")
+    pattern = r'(?ms)(\[(?:target\.[^\]]+\.)?dependencies\.tree-sitter\]\s*version\s*=\s*)"[^"]+"'
+    updated, count = re.subn(pattern, rf'\1"{version}"', source)
+    if count != 1:
+        raise FixtureError(
+            f"expected one tree-sitter dependency in {fixture_manifest}, found {count}"
+        )
+    fixture_manifest.write_text(updated, encoding="utf-8")
+
+
 def fixture_workspace_path(shared_target_dir: Path) -> Path:
     """Use a stable path outside the repository's vendored Cargo config."""
     parent = Path(os.environ.get("RUNNER_TEMP", str(shared_target_dir.parent))).resolve()
@@ -201,6 +221,9 @@ def compile_candidate_workspace(
         source_path.parent.mkdir(parents=True, exist_ok=True)
         shutil.copyfile(stage / patch_target, source_path)
 
+    if "--proof-a3-4h" in sys.argv[1:]:
+        align_fixture_tree_sitter(workspace)
+
     members = [
         f'"sources/{name}-{source_by_name[name]["version"]}"'
         for name in ("gpui-base", "gpui-component")
@@ -215,6 +238,7 @@ def compile_candidate_workspace(
     proof_a3_4e = "--proof-a3-4e" in sys.argv[1:]
     proof_a3_4f = "--proof-a3-4f" in sys.argv[1:]
     proof_a3_4g = "--proof-a3-4g" in sys.argv[1:]
+    proof_a3_4h = "--proof-a3-4h" in sys.argv[1:]
     proof_a3_4i = "--proof-a3-4i" in sys.argv[1:]
     proof_calendar = proof_calendar or proof_a3_4e
     proof_placeholder = proof_placeholder or proof_a3_4f
@@ -284,6 +308,7 @@ def compile_candidate_workspace(
             "--proof-a3-4e",
             "--proof-a3-4f",
             "--proof-a3-4g",
+            "--proof-a3-4h",
             "--proof-a3-4i",
         )
     ):
@@ -476,6 +501,29 @@ def compile_candidate_workspace(
                 "toolbar_rtl",
             )
         )
+    if proof_a3_4h:
+        proofs.extend(
+            [
+                (
+                    "json_string_content_is_string_context",
+                    "gpui-component",
+                    "A3-4h JSON syntax context",
+                    None,
+                ),
+                (
+                    "test_changed_source_matches_fresh_provider",
+                    "gpui-component",
+                    "A3-4h syntax provider updates after source edits",
+                    None,
+                ),
+                (
+                    "setting_or_clearing_a_syntax_highlighter_prepares_the_files_again",
+                    "gpui-component",
+                    "A3-4h Diff syntax highlighter refresh",
+                    None,
+                ),
+            ]
+        )
     if proof_a3_4i:
         proofs.extend(
             [
@@ -511,7 +559,8 @@ def compile_candidate_workspace(
         if package == "gpui-pre":
             proof_command.extend(["--features", "test-support"])
         elif package == "gpui-component":
-            proof_command.extend(["--features", "test-support"])
+            features = "test-support,tree-sitter" if proof_a3_4h else "test-support"
+            proof_command.extend(["--features", features])
         elif package == "gpui-pre-macos":
             proof_command.extend(["--features", "test-support"])
         proof = subprocess.run(

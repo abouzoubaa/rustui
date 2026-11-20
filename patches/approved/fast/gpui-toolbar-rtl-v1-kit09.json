@@ -1,0 +1,23 @@
+{
+  "schema_version": 1,
+  "upstream": {
+    "repository": "https://github.com/longbridge/gpui-kit",
+    "tag": "v0.9.1",
+    "commit": "39ab849a93b5f15507b969164d49891db8d5b470",
+    "gpui_pre_version": "0.3.12",
+    "gpui_fast_version": "0.1.14"
+  },
+  "patch_sha256": "0e7f35d40a3b5aca23b642b25a4ac433d72949666e07b8860e444ec73e8e26e1",
+  "files": {
+    "vendor/gpui-base-0.9.1/src/toolbar.rs": {
+      "pre_sha256": "6a7abcdda373a2f328c311e8232d9ebd215944a1a02bd2bd36a874455633c9af",
+      "post_sha256": "c027014168749a580d5d492cafd55da401585b47081e58ffd210a077e65d7709"
+    },
+    "vendor/gpui-component-0.9.1/src/toolbar.rs": {
+      "pre_sha256": "156adbfe3e1e185b856e5f0e28f4cbc65e273b4c499a9595f821a301c42b0ae4",
+      "post_sha256": "8fad3487c64ae459b164bb41b523d70a01ca02f5ddae9e723b72e814a9849491"
+    }
+  },
+  "name": "gpui-toolbar-rtl-v1-kit09",
+  "patch": "gpui-toolbar-rtl-v1-kit09.patch"
+}

@@ -1,0 +1,16 @@
+--- a/vendor/gpui-base-0.9.1/src/slider.rs
++++ b/vendor/gpui-base-0.9.1/src/slider.rs
+@@ -362,3 +362,2 @@
+     ) {
+-        self.dragging = true;
+         let bounds = self.bounds;
+@@ -372,2 +371,9 @@
+         let total_size = bounds.size.along(axis);
++        if !f32::from(total_size).is_finite()
++            || total_size <= px(0.)
++            || !f32::from(inner_pos).is_finite()
++        {
++            return;
++        }
++        self.dragging = true;
+         let percentage = inner_pos.clamp(px(0.), total_size) / total_size;

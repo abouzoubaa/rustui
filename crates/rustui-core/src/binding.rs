@@ -65,6 +65,12 @@ impl<T: 'static> Binding<T> {
         }
     }
 
+    /// Shares the immutable captured value without cloning its contents.
+    #[doc(hidden)]
+    pub fn snapshot(&self) -> Rc<T> {
+        self.current.clone()
+    }
+
     /// Returns the snapshot captured when this binding was created.
     pub fn value(&self) -> T
     where
@@ -113,6 +119,29 @@ mod captured_context_tests {
     struct Owner {
         revision: u64,
         text: String,
+    }
+
+    #[test]
+    fn immutable_snapshot_shares_large_values_without_cloning_contents() {
+        use std::{cell::Cell, rc::Rc};
+        struct Counted(Rc<Cell<usize>>);
+        impl Clone for Counted {
+            fn clone(&self) -> Self {
+                self.0.set(self.0.get() + 1);
+                Self(self.0.clone())
+            }
+        }
+        let clones = Rc::new(Cell::new(0));
+        let binding = Binding::new(
+            Counted(clones.clone()),
+            |owner: &Counted| owner.clone(),
+            |owner, value| *owner = value,
+        );
+        let first = binding.snapshot();
+        for _ in 0..100 {
+            assert!(Rc::ptr_eq(&first, &binding.clone().snapshot()));
+        }
+        assert_eq!(clones.get(), 0);
     }
 
     #[test]

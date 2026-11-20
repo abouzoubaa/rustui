@@ -1,0 +1,24 @@
+{
+  "schema_version": 1,
+  "name": "gpui-fast-accessibility-parent-click-v1-fast",
+  "patch": "gpui-fast-accessibility-parent-click-v1-fast.patch",
+  "patch_sha256": "041117f19c1b89a5bb75633f315fc7e4b2e0262612e8ba67e90de4be5481cd8c",
+  "files": {
+    "vendor/gpui-fast-0.1.14/src/window/a11y.rs": {
+      "pre_sha256": "2a049d83c2c71bab12c51e147c9552707b39360eec08cb24fc7a1daa7eb954e6",
+      "post_sha256": "3b90e820035fc7e013e752de27ef187974f22d3d845be41a8cae45b0bb1142e5"
+    },
+    "vendor/gpui-fast-0.1.14/src/elements/div.rs": {
+      "pre_sha256": "e8b6e97a88d28762605972d44f6e303ca5ad1f2f42988612e8ae6ce414412bf7",
+      "post_sha256": "e070919a32eaeb1247fe28a48429b096f5fd921c1a7d6c6257a0433871640c2d"
+    },
+    "vendor/gpui-fast-0.1.14/src/fast/interactivity.rs": {
+      "pre_sha256": "0c2fd5791c68799bfd8ae3d8121869a65285a2bcc61806472e9cb433630023f1",
+      "post_sha256": "0c2fd5791c68799bfd8ae3d8121869a65285a2bcc61806472e9cb433630023f1"
+    },
+    "vendor/gpui-fast-0.1.14/.cargo-checksum.json": {
+      "pre_sha256": "b1d5821f28e0f22661f98858fb7caf737dea8e8e34264639eb970983e2fbb504",
+      "post_sha256": "aa0c01b7d9ef2e608567e0f3e31b9a424a3558626fe1638cc40e506f7257b26c"
+    }
+  }
+}

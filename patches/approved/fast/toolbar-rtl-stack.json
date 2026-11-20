@@ -1,0 +1,6 @@
+{
+  "family": "toolbar-rtl",
+  "patches": [
+    "gpui-toolbar-rtl-v1-kit09.json"
+  ]
+}

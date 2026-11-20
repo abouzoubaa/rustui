@@ -114,15 +114,6 @@ fn expanded_layout(layout: &LineLayout, text: &str, stop: Pixels) -> Option<Line
         descent: layout.descent,
         runs,
         len: layout.len,
-        bidi_clusters: layout.bidi_clusters.as_ref().map(|clusters| {
-            clusters
-                .iter()
-                .map(|cluster| gpui::WrappedGlyphCluster {
-                    x: cluster.x + shift_after(cluster.bytes.start),
-                    ..cluster.clone()
-                })
-                .collect()
-        }),
     })
 }
 
@@ -158,7 +149,6 @@ mod tests {
                 glyphs,
             }],
             len: text.len(),
-            bidi_clusters: None,
         }
     }
 
@@ -235,19 +225,17 @@ mod tests {
     }
 
     #[test]
-    fn bidi_clusters_move_with_expanded_tab_stops() {
-        let text = "\ta";
+    fn rtl_glyphs_move_with_expanded_tab_stops() {
+        let text = "\tאב";
         let mut shaped = layout(text, 1., 1.);
-        shaped.bidi_clusters = Some(vec![gpui::WrappedGlyphCluster {
-            bytes: 1..2,
-            x: px(1.),
-            width: px(1.),
-            rtl: true,
-        }]);
+        // Keep the logical byte order while laying the two RTL glyphs out
+        // in visual order from right to left.
+        shaped.runs[0].glyphs[1].position.x = px(2.);
+        shaped.runs[0].glyphs[2].position.x = px(1.);
 
         let expanded = expanded_layout(&shaped, text, px(4.)).unwrap();
 
-        assert_eq!(expanded.bidi_clusters.unwrap()[0].x, px(4.));
+        assert_eq!(xs(&expanded), vec![0., 4., 3.]);
     }
 
     fn tab_stops_cross_shaped_runs_and_multibyte_characters() {

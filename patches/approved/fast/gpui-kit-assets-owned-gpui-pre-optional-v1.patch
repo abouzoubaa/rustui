@@ -1,0 +1,25 @@
+--- a/crates/rustui-gpui-kit-assets/Cargo.toml
++++ b/crates/rustui-gpui-kit-assets/Cargo.toml
+@@ -36,6 +36,9 @@
+ repository = "https://github.com/longbridge/gpui-kit"
+ resolver = "2"
+ 
++[features]
++gpui-fast = ["dep:gpui-fast"]
++
+ [lib]
+ name = "gpui_kit_assets"
+ path = "src/lib.rs"
+@@ -63,6 +66,12 @@
+ version = "=0.3.12"
+ path = "../rustui-gpui"
+ package = "gpui-pre"
++optional = true
++
++[dependencies.gpui-fast]
++version = "0.1.14"
++optional = true
++package = "gpui-fast"
+ 
+ [dependencies.log]
+ version = "0.4"

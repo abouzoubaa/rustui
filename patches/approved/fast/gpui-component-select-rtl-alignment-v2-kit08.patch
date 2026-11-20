@@ -1,0 +1,18 @@
+--- a/vendor/gpui-component-0.9.1/src/select.rs
++++ b/vendor/gpui-component-0.9.1/src/select.rs
+@@ -602,6 +602,7 @@
+                                 .items_center()
+                                 .justify_between()
+                                 .gap_1()
++                                .when(self.right_to_left, |this| this.flex_row_reverse())
+                                 .child(
+                                     div()
+                                         .id("title")
+@@ -610,6 +611,7 @@
+                                         .overflow_hidden()
+                                         .whitespace_nowrap()
+                                         .truncate()
++                                        .when(self.right_to_left, |this| this.text_right())
+                                         .child(self.display_title(window, cx)),
+                                 )
+                                 .when(show_clean, |this| {

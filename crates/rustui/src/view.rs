@@ -39,6 +39,77 @@ mod overlay_owner_tests {
     struct Owner(String);
 
     #[gpui::test]
+    fn deferred_cells_share_localization_snapshot_and_new_renders_pick_up_locale(
+        cx: &mut gpui::TestAppContext,
+    ) {
+        use crate::localization::{
+            Catalog, Catalogs, Locale, activate_localization, active_localization, set_locale,
+        };
+        cx.update(gpui_component::init);
+        let (host, window) = cx.add_window_view(|_, cx| ComponentHost::new(EmptyView, cx));
+        window.update(|window, app| {
+            let en = Locale::parse("en").unwrap();
+            let fr = Locale::parse("fr").unwrap();
+            let mut catalogs = Catalogs::new(en.clone());
+            catalogs
+                .insert(Catalog::parse(en.clone(), "label = Hello").unwrap())
+                .unwrap();
+            catalogs
+                .insert(Catalog::parse(fr.clone(), "label = Bonjour").unwrap())
+                .unwrap();
+            activate_localization(catalogs, en, app);
+            let environment = EnvironmentValues::default();
+            let mut retained = RetainedEntities::default();
+            let current = active_localization(app).cloned();
+            let context = RenderContext::new(
+                Rc::new(|_, _| {}),
+                host.entity_id(),
+                TypeId::of::<()>(),
+                Rc::new(()),
+                px(14.0),
+                &environment,
+                None,
+                current,
+                window,
+                app,
+                &mut retained,
+            );
+            let snapshot = context.localization.as_ref().unwrap().clone();
+            let seed = context.seed();
+            assert!(Rc::ptr_eq(&snapshot, seed.localization.as_ref().unwrap()));
+            drop(context);
+            let cell = seed.cell_context(
+                host.entity_id(),
+                &Identity::from("row"),
+                window,
+                app,
+                &mut retained,
+            );
+            assert!(Rc::ptr_eq(&snapshot, cell.localization.as_ref().unwrap()));
+            assert_eq!(cell.localized_message("label"), "Hello");
+            drop(cell);
+            set_locale(fr, app);
+            let current = active_localization(app).cloned();
+            let next = RenderContext::new(
+                Rc::new(|_, _| {}),
+                host.entity_id(),
+                TypeId::of::<()>(),
+                Rc::new(()),
+                px(14.0),
+                &environment,
+                None,
+                current,
+                window,
+                app,
+                &mut retained,
+            );
+            assert_eq!(next.localized_message("label"), "Bonjour");
+            assert!(!Rc::ptr_eq(&snapshot, next.localization.as_ref().unwrap()));
+            assert_eq!(snapshot.formatted_message("label").unwrap(), "Hello");
+        });
+    }
+
+    #[gpui::test]
     fn overlay_binding_writes_to_original_owner(cx: &mut gpui::TestAppContext) {
         cx.update(gpui_component::init);
         let (host, window) = cx.add_window_view(|_, cx| ComponentHost::new(EmptyView, cx));
@@ -327,7 +398,7 @@ pub struct RenderContext<'a> {
     control_font_size: Pixels,
     environment: &'a EnvironmentValues,
     button_theme: Option<ResolvedButtonTheme>,
-    localization: Option<ActiveLocalization>,
+    localization: Option<Rc<ActiveLocalization>>,
     window: &'a mut Window,
     app: &'a mut App,
     retained: &'a mut RetainedEntities,
@@ -359,7 +430,7 @@ pub(crate) struct RenderSeed {
     control_font_size: Pixels,
     environment: EnvironmentValues,
     button_theme: Option<ResolvedButtonTheme>,
-    localization: Option<ActiveLocalization>,
+    localization: Option<Rc<ActiveLocalization>>,
 }
 
 impl RenderSeed {
@@ -562,7 +633,7 @@ impl<'a> RenderContext<'a> {
             control_font_size,
             environment,
             button_theme,
-            localization,
+            localization: localization.map(Rc::new),
             transition_collector: None,
             window,
             app,
@@ -720,17 +791,17 @@ impl<'a> RenderContext<'a> {
     }
 
     pub fn locale(&self) -> Option<&rustui_i18n::Locale> {
-        self.localization.as_ref().map(ActiveLocalization::locale)
+        self.localization.as_deref().map(ActiveLocalization::locale)
     }
 
     pub fn layout_direction(&self) -> LayoutDirection {
         self.localization
-            .as_ref()
+            .as_deref()
             .map_or(LayoutDirection::LeftToRight, ActiveLocalization::direction)
     }
 
     pub fn localized_message(&self, identifier: &str) -> String {
-        self.localization.as_ref().map_or_else(
+        self.localization.as_deref().map_or_else(
             || identifier.to_owned(),
             |active| {
                 active
@@ -748,7 +819,7 @@ impl<'a> RenderContext<'a> {
         arguments: &MessageArguments,
     ) -> Result<String, InterpolationError> {
         crate::localization::resolve_message_with_arguments(
-            self.localization.as_ref(),
+            self.localization.as_deref(),
             identifier,
             arguments,
         )

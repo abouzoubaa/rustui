@@ -1,0 +1,19 @@
+{
+  "schema_version": 1,
+  "upstream": {
+    "repository": "https://github.com/longbridge/gpui-kit",
+    "tag": "v0.9.1",
+    "commit": "39ab849a93b5f15507b969164d49891db8d5b470",
+    "gpui_pre_version": "0.3.12",
+    "gpui_fast_version": "0.1.14"
+  },
+  "patch_sha256": "06cade148a70f7bdf76bd44f782ffc8f154289f5ed0f6be22c389cfb9f5be38d",
+  "files": {
+    "vendor/gpui-component-0.9.1/src/time/date_picker.rs": {
+      "pre_sha256": "7a4de80dd9c3ac82c4604a3dd261c84a35117ec8e329df633f133cae3b43b2c3",
+      "post_sha256": "24253c0ee4aa6dcca0f385ecc4bcaea5fce0f07257c3e960c14d69a23c32406c"
+    }
+  },
+  "name": "gpui-component-date-picker-accessibility-v1",
+  "patch": "gpui-component-date-picker-accessibility-v1.patch"
+}

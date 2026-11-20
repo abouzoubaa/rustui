@@ -1,6 +1,7 @@
 //! Single-line text input backed by a retained GPUI Components InputState.
 
 use gpui::Focusable as _;
+use gpui::prelude::FluentBuilder as _;
 use gpui::{
     AnyElement, AppContext, Entity, EntityInputHandler, InteractiveElement as _, IntoElement,
     ParentElement as _, SharedString, Styled, div, px,
@@ -116,6 +117,7 @@ pub struct TextFieldView {
     clear_button_accessibility_label: Option<TextFieldAccessibilityLabel>,
     password_visibility_accessibility_label: Option<TextFieldAccessibilityLabel>,
     tab_index: isize,
+    cell_style: Option<(f32, crate::theme::ButtonTypographyValue)>,
 }
 
 impl TextFieldView {
@@ -138,7 +140,18 @@ impl TextFieldView {
             clear_button_accessibility_label: None,
             password_visibility_accessibility_label: None,
             tab_index: 0,
+            cell_style: None,
         }
+    }
+
+    /// Let a containing grid own the frame while retaining normal input behavior.
+    pub(crate) fn cell_editor(
+        mut self,
+        height: f32,
+        typography: crate::theme::ButtonTypographyValue,
+    ) -> Self {
+        self.cell_style = Some((height, typography));
+        self
     }
 
     /// Validates the current value on mount and whenever it changes.
@@ -755,26 +768,83 @@ impl View for TextFieldView {
             let color = search_text_color(&theme.profile, theme.mode);
             input = input.text_color(color).placeholder_color(color);
         }
+        if let Some((height, typography)) = &self.cell_style {
+            input = input
+                .appearance(false)
+                .bordered(false)
+                .focus_bordered(false)
+                .p_0()
+                .border_0()
+                .rounded_none()
+                .bg(gpui::transparent_black())
+                .w_full()
+                .line_height(px(*height))
+                .font_family(typography.family.clone())
+                .text_size(px(typography.size))
+                .font_weight(gpui::FontWeight(typography.weight));
+            // Input::h only affects multiline inputs; a cell editor is single-line.
+            input = gpui::Styled::h(input, px(*height));
+        }
         let field = if let Some(Err(message)) = validation_result {
             let danger = gpui_component::Theme::global(context.app()).colors.danger;
             let error_selector = format!("validation-error:{message}");
-            div()
-                .flex()
-                .flex_col()
-                .child(input)
-                .child(
-                    div()
-                        .debug_selector(move || error_selector.clone())
-                        .text_xs()
-                        .text_color(danger)
-                        .child(message),
-                )
-                .into_any_element()
+            if let Some((height, _)) = &self.cell_style {
+                // Validation stays visible above the table's clipped cells and
+                // takes no row space, so an error cannot move neighboring text.
+                div()
+                    .relative()
+                    .w_full()
+                    .h(px(*height))
+                    .child(input)
+                    .child(gpui::deferred(
+                        gpui::anchored()
+                            .offset(gpui::point(px(0.), px(*height)))
+                            .snap_to_window()
+                            .child(
+                                div()
+                                    .debug_selector(move || error_selector.clone())
+                                    .bg(gpui_component::Theme::global(context.app()).colors.popover)
+                                    .text_xs()
+                                    .text_color(danger)
+                                    .child(message),
+                            ),
+                    ))
+                    .into_any_element()
+            } else {
+                div()
+                    .flex()
+                    .flex_col()
+                    .child(input)
+                    .child(
+                        div()
+                            .debug_selector(move || error_selector.clone())
+                            .text_xs()
+                            .text_color(danger)
+                            .child(message),
+                    )
+                    .into_any_element()
+            }
         } else {
             input.into_any_element()
         };
-        div().track_focus(&scope).child(field).into_any_element()
+        div()
+            .track_focus(&scope)
+            .when_some(self.cell_style.as_ref(), |field, (height, _)| {
+                field.w_full().h(px(*height))
+            })
+            .child(field)
+            .into_any_element()
     }
+}
+
+#[cfg(test)]
+pub(crate) fn input_text_bounds_for_test<V: View>(
+    host: &crate::runtime::ComponentHost<V>,
+    identity: Identity,
+    app: &gpui::App,
+) -> Option<gpui::Bounds<gpui::Pixels>> {
+    let retained = host.retained_entity_for_test::<RetainedTextField>(vec![], identity)?;
+    retained.read(app).state.read(app).text_bounds()
 }
 
 #[cfg(test)]

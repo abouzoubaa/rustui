@@ -1,0 +1,15 @@
+{
+  "family": "menu-select",
+  "patches": [
+    "gpui-component-popup-menu-disabled-confirm-v1-kit08.json",
+    "r15b-menu-item-disabled-v1-kit09.json",
+    "r15b-popup-menu-recovery-v1-kit09.json",
+    "r15b-dropdown-menu-refresh-v1.json",
+    "gpui-component-select-popup-rtl-v1-kit08.json",
+    "gpui-component-select-rtl-alignment-v1.json",
+    "gpui-component-select-rtl-alignment-v2-kit08.json",
+    "gpui-component-select-rtl-alignment-v3-kit08.json",
+    "gpui-component-select-rtl-auto-width-v4-kit08.json",
+    "gpui-component-select-rtl-auto-width-v6-kit08.json"
+  ]
+}

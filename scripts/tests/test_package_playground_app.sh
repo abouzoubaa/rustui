@@ -31,14 +31,19 @@ fi
 
 printf '%s\n' '<svg />' > "$references_source/Nested Folder/Example.svg"
 printf '%s\n' 'verbatim dependency notice' > "$notice_source/notices/LICENSE"
-python3 - "$notice_source" <<'PY'
+python3 - "$notice_source" "$repository_root" <<'PY'
 import hashlib, json, sys
 from pathlib import Path
 root = Path(sys.argv[1])
+repo = Path(sys.argv[2])
 notice = root / "notices/LICENSE"
+supplement_manifest = repo / "docs/release/notice-supplements/manifest.json"
 report = {"schema_version": 1, "status": "gaps",
           "complete_license_or_compatibility_claim": False,
-          "inputs": {"metadata_sha256": "1" * 64, "build_json_sha256": "2" * 64},
+          "inputs": {"metadata_sha256": "1" * 64, "build_json_sha256": "2" * 64,
+                     "cargo_lock_sha256": hashlib.sha256((repo / "Cargo.lock").read_bytes()).hexdigest(),
+                     "supplement_manifest_sha256": hashlib.sha256(supplement_manifest.read_bytes()).hexdigest(),
+                     "supplement_manifest_path": "docs/release/notice-supplements/manifest.json"},
           "packages": [{"name": "fixture", "version": "1.0.0", "source": None,
                         "package_id": "fixture-id", "manifest_path": "fixture/Cargo.toml",
                         "manifest_sha256": "3" * 64,

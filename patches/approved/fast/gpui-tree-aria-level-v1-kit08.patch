@@ -1,0 +1,10 @@
+--- a/vendor/gpui-base-0.9.1/src/tree.rs
++++ b/vendor/gpui-base-0.9.1/src/tree.rs
+@@ -461,6 +461,7 @@
+                             .id(ix)
+                             .test_support()
+                             .role(gpui::Role::TreeItem)
++                            .aria_level(entry.depth() + 1)
+                             .aria_label(entry.item().label.clone())
+                             .aria_selected(entry_state.selected)
+                             .aria_disabled(entry.is_disabled())

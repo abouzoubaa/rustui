@@ -23,6 +23,11 @@ No evidence paragraphs, hashes, logs, crash reports or "Record" commits. Never c
 - Tool mechanics fail: retry with plain shell commands.
 - Before stopping for ANY reason (interrupted, blocked, or reporting a failure): commit work in progress as "wip: <ticket>" and push. Never leave uncommitted work.
 
+## Standing rules
+- A UI ticket is done only with a side-by-side screenshot (RustUI vs macOS 27 reference, light and dark) in the PR. The owner approves visuals; tests alone never close a UI ticket.
+- Codex never writes that visuals are approved. A UI PR may merge into an integration branch with the label 'owner visual review pending'; only the owner's message marks it approved.
+- Before merging any PR, read all review comments (including bot reviews) on it; fix or answer each one. Unanswered review comments block the merge.
+
 ## Git
 - Stage explicit paths only; never `git add -A` or `git add .`. Show `git status --porcelain --untracked-files=all` before committing; it must list only intended files.
 - One commit per ticket unless told otherwise.

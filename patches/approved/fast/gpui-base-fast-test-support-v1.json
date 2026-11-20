@@ -1,0 +1,12 @@
+{
+  "schema_version": 1,
+  "name": "gpui-base-fast-test-support-v1",
+  "patch": "gpui-base-fast-test-support-v1.patch",
+  "patch_sha256": "06b2d3206dfb4d97ea2c85b75b11420508cab55d176e021fcda3a92df9d792a0",
+  "files": {
+    "crates/rustui-gpui-base/Cargo.toml": {
+      "pre_sha256": "a29107d5bdeaad39ffd682d931575f422f704b791acf8b124ca3907cc2aacfad",
+      "post_sha256": "2b7460b2d099808141376b505dbc57ba2fae20d5e52bbc4651356df1514df1c1"
+    }
+  }
+}

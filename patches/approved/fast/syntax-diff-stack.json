@@ -1,0 +1,9 @@
+{
+  "family": "syntax-diff",
+  "patches": [
+    "gpui-component-web-syntax-v1-kit09.json",
+    "gpui-component-web-syntax-runtime-v1-kit08.json",
+    "gpui-component-web-syntax-runtime-v2-kit08.json",
+    "gpui-component-web-syntax-runtime-v3-kit08.json"
+  ]
+}

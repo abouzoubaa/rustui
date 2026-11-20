@@ -1,0 +1,10 @@
+--- a/vendor/gpui-component-0.9.1/src/menu/menu_item.rs
++++ b/vendor/gpui-component-0.9.1/src/menu/menu_item.rs
+@@ -103,6 +103,7 @@ impl RenderOnce for MenuItemElement {
+             .id(self.id)
+             .test_support()
+             .role(Role::MenuItem)
++            .aria_disabled(self.disabled)
+             .when_some(self.aria_label, |this, label| this.aria_label(label))
+             .aria_selected(self.selected)
+             .when_some(self.checked, |this, checked| {

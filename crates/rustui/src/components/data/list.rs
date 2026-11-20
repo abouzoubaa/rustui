@@ -509,6 +509,12 @@ impl View for ListView {
             });
         }
 
+        crate::components::f0_scroll_probe::watch(
+            context,
+            "list",
+            &state,
+            |state, _| serde_json::json!({"panel":"list", "offset_y":f32::from(state.scroll_handle().offset().y)}),
+        );
         let mut list = GpuiList::new(&state)
             .h(px(self.height))
             .scrollbar_visible(self.scrollbar_visible);

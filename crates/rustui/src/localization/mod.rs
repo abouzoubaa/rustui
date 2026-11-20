@@ -7,6 +7,7 @@ pub mod gpui_adapter;
 pub mod invalidation;
 
 use gpui::{App, Global};
+use std::sync::Arc;
 
 use crate::runtime::AppAction;
 pub use rustui_i18n::{
@@ -21,7 +22,7 @@ pub use rustui_i18n::{
 pub struct ActiveLocalization {
     locale: Locale,
     direction: LayoutDirection,
-    catalogs: Catalogs,
+    catalogs: Arc<Catalogs>,
     generation: u64,
 }
 
@@ -78,13 +79,28 @@ mod tests {
         ActiveLocalization {
             direction: LayoutDirection::for_locale(&locale),
             locale,
-            catalogs,
+            catalogs: Arc::new(catalogs),
             generation: 0,
         }
     }
 
     fn catalog(locale_id: &str, source: &str) -> Catalog {
         Catalog::parse(Locale::parse(locale_id).unwrap(), source).unwrap()
+    }
+
+    #[test]
+    fn localization_clones_share_catalogs_but_keep_independent_locale_snapshots() {
+        fn assert_send_sync<T: Send + Sync>() {}
+        assert_send_sync::<ActiveLocalization>();
+        let mut catalogs = Catalogs::new(Locale::parse("en").unwrap());
+        catalogs.insert(catalog("en", "label = Hello")).unwrap();
+        catalogs.insert(catalog("fr", "label = Bonjour")).unwrap();
+        let old = active_localization("en", catalogs);
+        let mut new = old.clone();
+        assert!(Arc::ptr_eq(&old.catalogs, &new.catalogs));
+        new.locale = Locale::parse("fr").unwrap();
+        assert_eq!(old.formatted_message("label").unwrap(), "Hello");
+        assert_eq!(new.formatted_message("label").unwrap(), "Bonjour");
     }
 
     #[test]
@@ -247,7 +263,7 @@ pub fn activate_localization(catalogs: Catalogs, locale: Locale, cx: &mut App) {
     cx.set_global(ActiveLocalization {
         direction: LayoutDirection::for_locale(&locale),
         locale,
-        catalogs,
+        catalogs: Arc::new(catalogs),
         generation,
     });
 }
@@ -255,7 +271,7 @@ pub fn activate_localization(catalogs: Catalogs, locale: Locale, cx: &mut App) {
 pub fn set_locale(locale: Locale, cx: &mut App) {
     let catalogs = cx
         .try_global::<ActiveLocalization>()
-        .map(|active| active.catalogs.clone())
+        .map(|active| (*active.catalogs).clone())
         .unwrap_or_else(|| Catalogs::new(locale.clone()));
     activate_localization(catalogs, locale, cx);
 }
@@ -275,7 +291,7 @@ mod fluent_integration_tests {
         let active = ActiveLocalization {
             direction: LayoutDirection::for_locale(&locale),
             locale,
-            catalogs,
+            catalogs: Arc::new(catalogs),
             generation: 0,
         };
         assert_eq!(active.message("heading"), "heading");

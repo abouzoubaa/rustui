@@ -1,0 +1,16 @@
+--- a/crates/rustui-gpui-base/Cargo.toml
++++ b/crates/rustui-gpui-base/Cargo.toml
+@@ -39,10 +39,11 @@
+ gpui-fast = ["dep:gpui-fast", "dep:gpui-fast-platform"]
+ inspector = [
+     "gpui_macros/inspector",
+-    "gpui/inspector",
++    "gpui-fast?/inspector",
+ ]
+ test-support = [
+-    "gpui/test-support",
++    "gpui-fast?/test-support",
++    "gpui-fast-platform?/test-support",
+ ]
+ 
+ [lib]

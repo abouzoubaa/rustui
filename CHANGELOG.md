@@ -1,6 +1,39 @@
 # Changelog
 
 ## Unreleased
+
+## 0.5.0 — 2026-11-20
+- Preserve Collection cell entities and subscriptions during cached-row replay, with bounded overdraw retention.
+- Adopt GPUI Fast 0.1.14 as the macOS backend; Stage B is next. Owner native/visual review remains pending.
+- FA-4: validate the owned Fast candidate, native popup lifecycle, smoke, Git-tag consumer, and five-run release benchmarks.
+- FA-3: archive the unused owned macOS GPUI chain, keep deferred-platform dependencies intact, and reproduce the old baseline from its tag.
+- FA-2: own the five macOS GPUI Fast packages, preserve their source/licenses, and unify backend dependency identities.
+- FA-1: promote the active GPUI Fast patch stack and retire the inactive wheel-offset experiment.
+- FA-0: preserve the pre-Fast rollback tag and record the owner adoption decision with native/visual review pending.
+- R-1: inventory public components and theme gaps; theme editable-grid rows and keep selection/editing geometry stable.
+- F0-14: reduce Collection draw cost with shared localization snapshots, verify editor parity and native frames, and invalidate cached patched GPUI artifacts.
+- F0-13: completed native acceptance workloads, compared old/Fast scrolling, fixed Collection virtualization, and reduced unchanged editor/grid work.
+- F0: keep a native editor popover open while its anchor is mounted, including on idle frames.
+- F0: fixed the macOS native popup freeze and gave the acceptance collection and editable grid taller viewports.
+- Playground: reorganized F0 native acceptance into focused panels, made the 10,000-line editor and full-height editable grid easy to reach, and added a configurable grid viewport height.
+- Playground: added an F0 Native Acceptance page with the 5,000-row collection, large Rust editor, editable grid, menus/popovers, and appearance controls together.
+- F0-11: bind packaged dependency notices to the Cargo.lock and supplement manifest hashes captured by the collector.
+- F0-10: aligned GPUI Fast and gpui-pre benchmark runs to the same warmed release profile and recorded five-run results.
+- F0-9: audited RustUI invalidation paths and culled off-viewport GraphView nodes to remove the Fast NaN mask; removed the relaxed glyph-mask assertion patch.
+- F0-8: recorded the GPUI Fast evaluation gates, benchmark comparison, and owner decision blockers.
+- F0-7: completed automated GPUI Fast matrices and benchmarks; added the owner macOS acceptance checklist.
+- F0-6: refreshed Fast dependency notices, tightened owned-source verification, and covered candidate tooling in the CI cache key.
+- F0-5: added no-forced-refresh stale-rendering tests for owner, binding, environment/theme, list, menu, text input, grid edits, and transitions; all pass on the current base and Fast candidate.
+- F0-4i: verified the existing Fast native-popup candidates with cumulative placement, nested-dismissal, and parent-teardown proofs.
+- F0-4h: copied the syntax/Diff Kit 0.9 patches into the Fast candidate stack; JSON, provider-refresh, and Diff highlighter proofs pass.
+- F0-4g: copied the toolbar RTL Kit 0.9 patch into the Fast candidate stack; cumulative visual-order navigation proof passes.
+- F0-4f: copied the input/text Kit 0.9 candidates into the Fast stack; placeholder color and editor-node validation proofs pass.
+- F0-4e: copied the calendar/DatePicker Kit 0.9 patch family into the Fast candidate stack; cumulative localization, keyboard, RTL, accessibility and date-limit proofs pass.
+- F0-4d: copied the slider/resize Kit 0.9 patch family into the Fast candidate stack; cumulative SetValue, geometry, and resize proofs pass.
+- F0-4c: copied the tree/list/grid Kit 0.9 patch family unchanged into the Fast candidate stack; cumulative tree, list and table proofs pass.
+- F0-4b: copied the menu/select patch family unchanged into the Fast candidate stack; cumulative Kit 0.9 menu proofs pass.
+- F0-4a: added GPUI Fast accessibility serialization for disabled state, bounds and labelled-by IDs; missing disabled/grid state remains recorded in F0 findings.
+- F0-3: wired the GPUI Fast 0.1.14 candidate as the sole GPUI core and rebased core, grid accessibility, and native popup patches into the candidate stack.
 - F0-2: moved inactive Kit 0.8 patch history out of the active approval directory.
 - F0-1: added current-base long-list, editor-typing, idle-draw, and 1,000-row performance baselines.
 - Added the GPUI Fast evaluation plan and measurable adoption gates.

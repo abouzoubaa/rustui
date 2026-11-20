@@ -1,0 +1,56 @@
+--- a/vendor/gpui-base-0.9.1/src/slider.rs
++++ b/vendor/gpui-base-0.9.1/src/slider.rs
+@@ -432,6 +432,37 @@ impl SliderState {
+         }
+     }
+ 
++    /// Applies a numeric SetValue request from this slider's accessibility node.
++    #[doc(hidden)]
++    pub fn set_accessibility_value(
++        &mut self,
++        data: Option<&gpui::accesskit::ActionData>,
++        window: &mut Window,
++        cx: &mut Context<Self>,
++    ) {
++        let Some(gpui::accesskit::ActionData::NumericValue(value)) = data else {
++            return;
++        };
++        let value = *value as f32;
++        if !value.is_finite() || !self.min.is_finite() || !self.max.is_finite() || self.min > self.max {
++            return;
++        }
++        let value = if value <= self.min {
++            self.min
++        } else if value >= self.max {
++            self.max
++        } else if is_step(self.step) {
++            (value / self.step).round() * self.step
++        } else {
++            value
++        };
++        let value = value.clamp(self.min, self.max);
++        let mut slider_value = self.value.clamp(self.min, self.max);
++        slider_value.set_end(value);
++        self.set_value(slider_value, window, cx);
++        cx.emit(SliderEvent::Change(slider_value));
++    }
++
+     /// Whether `position` is closer to the range start thumb than to the end thumb.
+     fn is_nearer_start(&self, axis: Axis, position: Point<Pixels>) -> bool {
+         let size = self.bounds.size.along(axis);
+@@ -626,6 +657,14 @@ impl RenderOnce for Slider {
+             // A disabled slider takes no value, from the pointer or from
+             // assistive technology.
+             .when(!self.disabled, |this| {
++                this.on_a11y_action(AccessibleAction::SetValue, {
++                    let state = slider_state.clone();
++                    move |data, window, cx| {
++                        state.update(cx, |state, cx| {
++                            state.set_accessibility_value(data, window, cx);
++                        });
++                    }
++                })
+-                this.on_a11y_action(AccessibleAction::Increment, {
++                .on_a11y_action(AccessibleAction::Increment, {
+                     let state = slider_state.clone();
+                     move |_, window, cx| {

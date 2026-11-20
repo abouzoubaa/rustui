@@ -19,6 +19,8 @@ fi
 unset RUSTC RUSTDOC
 _pinned_rustc_path=$(rustup which rustc --toolchain "$_pinned_channel")
 _pinned_rustdoc_path=$(rustup which rustdoc --toolchain "$_pinned_channel")
+export RUSTC="$_pinned_rustc_path"
+export RUSTDOC="$_pinned_rustdoc_path"
 
 pinned_rustup() {
   RUSTC="$_pinned_rustc_path" RUSTDOC="$_pinned_rustdoc_path" \
@@ -26,6 +28,9 @@ pinned_rustup() {
 }
 
 pinned_cargo() {
+  if [ -f "$_pinned_root/scripts/invalidate_patched_vendor_cache.py" ]; then
+    python3 "$_pinned_root/scripts/invalidate_patched_vendor_cache.py" --root "$_pinned_root" -- "$@" || return $?
+  fi
   pinned_rustup cargo "$@"
 }
 

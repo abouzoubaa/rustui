@@ -1,0 +1,20 @@
+{
+  "schema_version": 1,
+  "name": "gpui-tree-aria-disabled-v1-fast",
+  "patch": "gpui-tree-aria-disabled-v1-fast.patch",
+  "patch_sha256": "42d1f57da572e1af8a14e214adf18e13959c56717d45e45a0aa11f578052219b",
+  "files": {
+    "vendor/gpui-fast-0.1.14/src/elements/div.rs": {
+      "pre_sha256": "727f26f84edc1c724b31931264ee7d967bede63a40df54271c613cedec0a65b5",
+      "post_sha256": "e8b6e97a88d28762605972d44f6e303ca5ad1f2f42988612e8ae6ce414412bf7"
+    },
+    "vendor/gpui-fast-0.1.14/src/fast/interactivity.rs": {
+      "pre_sha256": "2ba2d4151333bd1c37d350244207625e7e0b475ce4208a223b5ddb0bbf3671dc",
+      "post_sha256": "0c2fd5791c68799bfd8ae3d8121869a65285a2bcc61806472e9cb433630023f1"
+    },
+    "vendor/gpui-fast-0.1.14/.cargo-checksum.json": {
+      "pre_sha256": "7a86e186144068da33843a58ad82fa5fa9610854b09935d4e208973a5262f906",
+      "post_sha256": "b1d5821f28e0f22661f98858fb7caf737dea8e8e34264639eb970983e2fbb504"
+    }
+  }
+}

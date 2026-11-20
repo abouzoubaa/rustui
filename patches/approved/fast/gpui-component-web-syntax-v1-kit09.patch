@@ -1,0 +1,39 @@
+--- a/vendor/gpui-component-0.9.1/Cargo.toml
++++ b/vendor/gpui-component-0.9.1/Cargo.toml
+@@ -394,6 +394,9 @@
+ [dependencies.uuid]
+ version = "1.10"
+ 
++[dependencies.web-time]
++version = "1.1.0"
++
+ [dev-dependencies.gpui]
+ version = "=0.3.12"
+ features = ["test-support"]
+@@ -417,7 +420,7 @@
+ [target.'cfg(not(target_family = "wasm"))'.dependencies.smol]
+ version = "2"
+ 
+-[target.'cfg(not(target_family = "wasm"))'.dependencies.tree-sitter]
++[dependencies.tree-sitter]
+ version = "0.26.13"
+ optional = true
+ 
+@@ -485,7 +488,7 @@
+ version = "0.23.2"
+ optional = true
+ 
+-[target.'cfg(not(target_family = "wasm"))'.dependencies.tree-sitter-json]
++[dependencies.tree-sitter-json]
+ version = "0.24.8"
+ optional = true
+ 
+@@ -521,7 +524,7 @@
+ version = "0.23.1"
+ optional = true
+ 
+-[target.'cfg(not(target_family = "wasm"))'.dependencies.tree-sitter-rust]
++[dependencies.tree-sitter-rust]
+ version = "0.24.0"
+ optional = true
+ 

@@ -1,6 +1,7 @@
 import sys
 import tempfile
 import unittest
+import hashlib
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[2]
@@ -74,6 +75,28 @@ class VerifyOwnedGpuSourcesTests(unittest.TestCase):
             mismatches, _ = compare_trees(owned, vendor)
 
             self.assertEqual(mismatches, ["lib.rs"])
+
+    def test_accepts_only_candidate_manifest_bound_owned_overlay(self):
+        with tempfile.TemporaryDirectory() as temporary:
+            root = Path(temporary)
+            owned = root / "owned"
+            vendor = root / "vendor"
+            owned.mkdir()
+            vendor.mkdir()
+            (owned / "tab_stops.rs").write_bytes(b"fast backend source\n")
+            (vendor / "tab_stops.rs").write_bytes(b"upstream source\n")
+            expected = hashlib.sha256(b"fast backend source\n").hexdigest()
+
+            mismatches, _ = compare_trees(
+                owned, vendor, expected_owned_overlays={"tab_stops.rs": expected}
+            )
+            self.assertEqual(mismatches, [])
+
+            (owned / "tab_stops.rs").write_bytes(b"untracked source change\n")
+            mismatches, _ = compare_trees(
+                owned, vendor, expected_owned_overlays={"tab_stops.rs": expected}
+            )
+            self.assertEqual(mismatches, ["tab_stops.rs"])
 
 
 if __name__ == "__main__":

@@ -1,0 +1,11 @@
+--- a/vendor/gpui-component-0.9.1/src/select.rs
++++ b/vendor/gpui-component-0.9.1/src/select.rs
+@@ -552,6 +552,8 @@
+ 
+         self.state.list.update(cx, |list, cx| {
+             list.set_searchable(searchable, cx);
++            list.set_right_to_left(self.right_to_left, cx);
++            list.delegate_mut().right_to_left = self.right_to_left;
+             list.delegate_mut().size = self.state.size;
+         });
+ 

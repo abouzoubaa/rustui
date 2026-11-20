@@ -1,0 +1,23 @@
+{
+  "schema_version": 1,
+  "upstream": {
+    "repository": "https://github.com/longbridge/gpui-kit",
+    "tag": "v0.9.1",
+    "commit": "39ab849a93b5f15507b969164d49891db8d5b470",
+    "gpui_pre_version": "0.3.12",
+    "gpui_fast_version": "0.1.14"
+  },
+  "patch_sha256": "b7d7ab888d1536d4bcf3259cd825369b66d4c52b695619ebce74c4c5c9d9afd0",
+  "files": {
+    "vendor/gpui-base-0.9.1/src/calendar.rs": {
+      "pre_sha256": "13c8d334e1eeb32b0960e84dad834e54c7d8737a1026356d2f5bc86bac189d6c",
+      "post_sha256": "da5784e86d2062170e1dcc893b018f2ffa0a7a723f1356d314d82d77cc9f4869"
+    },
+    "vendor/gpui-component-0.9.1/src/time/date_picker.rs": {
+      "pre_sha256": "e7c8c87c76b253703a955c578f28278212d54545d9c9a62a76892a3140095248",
+      "post_sha256": "147635e97bffa36a1bdb8782f884d51cd7b8bbb6fc86e6a093a2a264584a8146"
+    }
+  },
+  "name": "gpui-calendar-keyboard-v1",
+  "patch": "gpui-calendar-keyboard-v1.patch"
+}

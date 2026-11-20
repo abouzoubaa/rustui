@@ -1,0 +1,40 @@
+"""Native pixel classifier tests; no screen capture or GUI session needed."""
+import json
+from pathlib import Path
+import platform
+import subprocess
+import sys
+import tempfile
+import unittest
+
+ROOT = Path(__file__).resolve().parents[2]
+
+
+@unittest.skipUnless(platform.system() == "Darwin", "native macOS capture harness")
+class PixelCaptureTests(unittest.TestCase):
+    def test_blank_painted_and_stale_row_classification(self):
+        with tempfile.TemporaryDirectory() as temporary:
+            binary = Path(temporary) / "pixel-capture"
+            build = subprocess.run(["swiftc", "-O", "-parse-as-library", str(ROOT / "scripts/f0_capture_frames.swift"), "-o", str(binary)], capture_output=True, text=True)
+            self.assertEqual(build.returncode, 0, build.stdout + build.stderr)
+            result = subprocess.run([str(binary), "self-test"], capture_output=True, text=True)
+            sys.stderr.write(result.stdout + result.stderr)
+            self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
+            self.assertIn("blank, painted, stale = PASS", result.stdout)
+            self.assertIn("check=editor fixture ID type expected=Int actual=Int", result.stderr)
+            self.assertIn("check=editor source position expected=true actual=true", result.stderr)
+            self.assertIn("check=1x capture dimensions expected=1038x518 actual=1038x518", result.stderr)
+            self.assertIn("check=2x capture dimensions expected=2076x1037 actual=2076x1037", result.stderr)
+            self.assertEqual(result.stderr.count("check="), 17)
+            orientation = subprocess.run([str(binary), "ocr", str(ROOT / "docs/perf/f0-14-frames/editor-blank/frame-270.png"), "editor"], capture_output=True, text=True)
+            self.assertEqual(orientation.returncode, 0, orientation.stderr)
+            labels = json.loads(orientation.stdout)
+            self.assertIn("6295", labels)
+            self.assertIn("6299", labels)
+            self.assertNotIn("5629", labels)
+            self.assertNotIn("6629", labels)
+            grid = subprocess.run([str(binary), "ocr", str(ROOT / "docs/perf/f0-14-frames/grid-position/frame-708.png"), "grid"],capture_output=True,text=True)
+            self.assertEqual(grid.returncode,0,grid.stderr)
+            labels = json.loads(grid.stdout)
+            self.assertIn("Product 55", labels)
+            self.assertEqual(labels.count("Product 56"),1)

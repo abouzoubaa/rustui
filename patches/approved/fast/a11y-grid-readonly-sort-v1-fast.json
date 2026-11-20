@@ -1,0 +1,24 @@
+{
+  "schema_version": 1,
+  "name": "a11y-grid-readonly-sort-v1-fast",
+  "patch": "a11y-grid-readonly-sort-v1-fast.patch",
+  "patch_sha256": "b02fd77c65c039c3e1c751929b2d7e0b8c3c22e05f865ff64c0a7db09628f4e6",
+  "files": {
+    "vendor/gpui-fast-0.1.14/.cargo-checksum.json": {
+      "pre_sha256": "99c0f7ebf8317857d532c5dcc487a56ef3faa360a19f7d9193f3957b92f353ff",
+      "post_sha256": "d4100f4a5516cace303e6922bd9435cfb9d92cbb142c21d9d8e6b51d6f372544"
+    },
+    "vendor/gpui-fast-0.1.14/src/elements/div.rs": {
+      "pre_sha256": "e070919a32eaeb1247fe28a48429b096f5fd921c1a7d6c6257a0433871640c2d",
+      "post_sha256": "61dcf5350509db6fa96b56a0988353bdc02aa24d0453aeb6810efaa145b6cbd5"
+    },
+    "vendor/gpui-fast-0.1.14/src/window/a11y/debug.rs": {
+      "pre_sha256": "9de446535b8d49f5f674690cfb0f80da751036e51231f351426ba53460598916",
+      "post_sha256": "06359b21f541e907a92966358a74a5b35a3ec33f0e4f39e5bc06307a6f0a6e30"
+    },
+    "vendor/gpui-fast-0.1.14/src/fast/interactivity.rs": {
+      "pre_sha256": "0c2fd5791c68799bfd8ae3d8121869a65285a2bcc61806472e9cb433630023f1",
+      "post_sha256": "1e8daad36877117ed1385cedf199e21e6a0e6256f1bba5445a51fab31a1ba906"
+    }
+  }
+}

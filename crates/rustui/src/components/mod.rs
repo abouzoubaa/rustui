@@ -13,3 +13,5 @@ pub(crate) mod theme;
 
 #[cfg(test)]
 mod disabled_tests;
+
+pub(crate) mod f0_scroll_probe;

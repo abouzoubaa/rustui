@@ -2,6 +2,20 @@ use super::interaction::*;
 use super::model::localized_graph_message;
 use super::*;
 
+/// Avoid asking the layout engine to place absolute node elements that cannot
+/// intersect the graph's clipped viewport. Compute edges in f64 so very large
+/// but finite graph coordinates do not overflow while deciding visibility.
+fn rect_intersects_canvas(rect: CanvasRect, canvas: CanvasSize) -> bool {
+    let left = f64::from(rect.x);
+    let top = f64::from(rect.y);
+    let right = left + f64::from(rect.width);
+    let bottom = top + f64::from(rect.height);
+    left < f64::from(canvas.width())
+        && right > 0.0
+        && top < f64::from(canvas.height())
+        && bottom > 0.0
+}
+
 fn graph_display_label(context: &RenderContext<'_>, key: Option<&str>, fallback: &str) -> String {
     match key {
         Some(key) => localized_graph_message(context, key, &MessageArguments::new(), fallback),
@@ -260,6 +274,9 @@ pub(crate) fn render_graph(
     }
     let incident = incident_edges(graph);
     for (node, rect) in graph.nodes.iter().zip(rects) {
+        if !rect_intersects_canvas(rect, viewport.size) {
+            continue;
+        }
         let writer = context.binding_writer(view.selection.clone());
         let id = node.id.clone();
         let click_focus = focus.clone();

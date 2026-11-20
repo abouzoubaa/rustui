@@ -581,6 +581,7 @@ fn popup_confirmation_without_selection_keeps_menu_open_and_arrows_skip_disabled
             gpui_component::Root::new(owner, window, cx)
         }
     });
+    window.update(|window, _| window.set_a11y_active_for_tests(true));
     draw(window);
     window.simulate_mouse_down(
         gpui::point(px(10.), px(10.)),
