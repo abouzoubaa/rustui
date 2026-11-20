@@ -124,3 +124,28 @@ pinned_cargo test --release -p rustui --lib f0_large_editor_typing_benchmark --l
 pinned_cargo test --release -p rustui --lib f0_idle_redraw_invalidation_benchmark --locked --offline -- --ignored --nocapture
 pinned_cargo test --release -p rustui --lib owner_update_and_draw_workload --locked --offline -- --ignored --nocapture
 ```
+
+
+## Adoption benchmarks (FA-4, 2026-11-20)
+
+The following are five-run warmed GPUI test-window measurements on AC power with Low Power Mode off. The benchmark binary was built with pinned Rust 1.98.0 using `cargo test --release -p rustui --lib --no-run --locked --offline --message-format=json`, in `$HOME/.cache/rustui-target-r1`. Cargo reports opt-level 3, no debug assertions; the repository release profile sets thin LTO and one codegen unit. No profile overrides were set, and no Cargo/rustc build ran during timing. Each filter ran directly in the emitted test executable with `--ignored --nocapture --test-threads=1`; its existing warm-up is unchanged. These CPU/test-window timings are not native display-frame timings.
+
+| Workload | Historical gpui-pre reference median (ms) | Adoption median / p95 (ms) | Five-run spread |
+|---|---:|---:|---:|
+| 5,000-row scroll | 1.274208 | 0.119584 / 0.143917 | 3.76% |
+| 10,000-line editor typing | 0.655584 | 0.556083 / 0.865334 | 3.93% |
+| Idle draw, 60 panels | 0.257917 | 0.016667 / 0.017041 | 5.25% |
+| 1,000-row update + forced draw | 8.762925 | 5.546938 / 5.924442 | 5.61% |
+
+The reference values are the matched release-profile F0-10 gpui-pre measurements at `archive/pre-fast`; they were not re-run in FA-4. The adoption candidate also includes the later F0 RustUI hardening, so the difference is not attributed solely to the backend swap.
+
+| Workload | Run medians 1–5 (ms) |
+|---|---|
+| 5,000-row scroll | 0.119584; 0.121500; 0.119333; 0.119583; 0.123833 |
+| 10,000-line editor typing | 0.557042; 0.548542; 0.570417; 0.556083; 0.553583 |
+| Idle draw, 60 panels | 0.016750; 0.016875; 0.016667; 0.016667; 0.016000 |
+| 1,000-row update + forced draw | 5.369846; 5.681237; 5.399500; 5.546938; 5.674646 |
+
+The initial forced-draw set had medians 6.299821, 5.331583, 5.252696, 5.252500, 5.492938 ms (19.64% spread). Per the F0 reliability method, it was repeated once; the repeat set above is used.
+
+Known native issue retained from F0-14: Collection has 1–3 presentation gaps above 16.7 ms per capture run. Scrolling comparison and R-1 grid visual review remain pending; these automated results do not complete that review.
