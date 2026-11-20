@@ -2,3 +2,4 @@
 //! GPU damage instrumentation and, in later patches, retained frame planning.
 
 pub(crate) mod metrics;
+pub(crate) mod shaders;

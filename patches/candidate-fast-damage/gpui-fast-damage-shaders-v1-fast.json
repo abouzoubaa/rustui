@@ -1,0 +1,32 @@
+{
+  "schema_version": 1,
+  "name": "gpui-fast-damage-shaders-v1-fast",
+  "patch": "gpui-fast-damage-shaders-v1-fast.patch",
+  "patch_sha256": "5fc9741acd3b6f6193f6dafc00271033e20a3b6b20670a3bd1e1184527d417b6",
+  "files": {
+    "vendor/gpui-fast-apple-0.1.14/NOTICE": {
+      "pre_sha256": null,
+      "post_sha256": "38bc52285cd2208040e1dc92332912d2f3bdb4bb4eba75e18eda7c3621ed9345"
+    },
+    "vendor/gpui-fast-apple-0.1.14/src/shaders.metal": {
+      "pre_sha256": "5ceaf9120161fa6f1a1addb171945459b24214d87dfecf6ed70f939b6e869576",
+      "post_sha256": "69cc463a3c2289b7cb503926e3905a728d791924aa6f0e304a52200a484ed25b"
+    },
+    "vendor/gpui-fast-apple-0.1.14/src/metal_renderer.rs": {
+      "pre_sha256": "72c50cc34d081470e1e1cb68557316b8bce9ea27364a92f5c76c7417e89e8afc",
+      "post_sha256": "29eb3dc670585bafa0585d6102a69a6bb4586a57fe6189b169c4e5b7846f0d65"
+    },
+    "vendor/gpui-fast-apple-0.1.14/src/fast/damage/mod.rs": {
+      "pre_sha256": "5e01364e982c1c129cae87eb84dd03a886d7b172386156f960e43dc65f916473",
+      "post_sha256": "ed5927a4996bd9ceec817d3b2ba49b2549d73b96eb26c5cc560fb6587cc47898"
+    },
+    "vendor/gpui-fast-apple-0.1.14/src/fast/damage/shaders.rs": {
+      "pre_sha256": null,
+      "post_sha256": "ac8ec6c2870b2b631fef903e5eac40eb2b694ac461efa5e8c3fd7a1fa3982c8b"
+    },
+    "vendor/gpui-fast-apple-0.1.14/.cargo-checksum.json": {
+      "pre_sha256": "ad06b92a17180360cf0e813303e2facf8a8aaa8881949a25852758cf7fed4abf",
+      "post_sha256": "93469f62f660be53267b7f6580a134f0448c2c37f887411d3b6a39442549d161"
+    }
+  }
+}
