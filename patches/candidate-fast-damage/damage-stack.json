@@ -2,5 +2,7 @@
   "schema_version": 1,
   "backend": "gpui-fast 0.1.14",
   "base_stack": "../approved/fast/fast-stack.json",
-  "patches": []
+  "patches": [
+    "gpui-fast-damage-metrics-v1-fast.json"
+  ]
 }
