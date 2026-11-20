@@ -83,7 +83,7 @@ class AnchoredPopupPatchTests(unittest.TestCase):
         self.assertIn("msg_send![anchor_window, convertRectToScreen: anchor_in_window]", patch)
 
     def test_native_screen_placement_uses_visible_frame_helpers(self) -> None:
-        source = (ROOT / "crates/rustui-gpui-macos/src/window.rs").read_text(encoding="utf-8")
+        source = (ROOT / "crates/rustui-gpui-fast-macos/src/window.rs").read_text(encoding="utf-8")
         frame_start = source.index("fn anchored_popup_frame(")
         frame_end = source.index("\nfn popup_screen_index(", frame_start)
         frame = source[frame_start:frame_end]
@@ -92,7 +92,7 @@ class AnchoredPopupPatchTests(unittest.TestCase):
         self.assertIn("popup_frame_for_visible_screen(anchor, visible, popup_size, options)", frame)
 
     def test_logical_anchor_points_reach_appkit_without_backing_scale(self) -> None:
-        source = (ROOT / "crates/rustui-gpui-macos/src/window.rs").read_text(encoding="utf-8")
+        source = (ROOT / "crates/rustui-gpui-fast-macos/src/window.rs").read_text(encoding="utf-8")
         helper_start = source.index("fn logical_anchor_rect_to_appkit_points(")
         helper_end = source.index("\nfn popup_anchor_rect_in_view(", helper_start)
         helper = source[helper_start:helper_end]
@@ -114,7 +114,7 @@ class AnchoredPopupPatchTests(unittest.TestCase):
         self.assertIn("assert_eq!(unflipped.origin.y, 182.25);", patch)
 
     def test_rust_logical_anchor_geometry_functions(self) -> None:
-        source = (ROOT / "crates/rustui-gpui-macos/src/window.rs").read_text(encoding="utf-8")
+        source = (ROOT / "crates/rustui-gpui-fast-macos/src/window.rs").read_text(encoding="utf-8")
 
         geometry = """#[derive(Clone, Copy)]
 struct Pixels(f32);
@@ -169,7 +169,7 @@ impl NSRect { fn new(origin: NSPoint, size: NSSize) -> Self { Self { origin, siz
             self.assertIn("1 passed", executed.stdout)
 
     def test_rust_screen_selection_and_visible_frame_geometry(self) -> None:
-        source = (ROOT / "crates/rustui-gpui-macos/src/window.rs").read_text(encoding="utf-8")
+        source = (ROOT / "crates/rustui-gpui-fast-macos/src/window.rs").read_text(encoding="utf-8")
 
         geometry = """#[derive(Clone, Copy)]
 struct Pixels(f32);

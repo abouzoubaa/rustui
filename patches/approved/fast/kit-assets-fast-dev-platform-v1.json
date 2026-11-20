@@ -1,0 +1,12 @@
+{
+  "schema_version": 1,
+  "name": "kit-assets-fast-dev-platform-v1",
+  "patch": "kit-assets-fast-dev-platform-v1.patch",
+  "patch_sha256": "5a6fd6c6878be2a9005af8212b039cb2a311715697a6d13028ac3750fe05f3fc",
+  "files": {
+    "crates/rustui-gpui-kit-assets/Cargo.toml": {
+      "pre_sha256": "d2141a6dd3d742dd9541f5bda8033860f284c6bc9a338d302334a9f6badf2fef",
+      "post_sha256": "bd6ed84f79e5c12ef8468249c20b7df92fd51e1b23c8d013b9a03500fa8471f7"
+    }
+  }
+}

@@ -101,15 +101,15 @@ class FastCoreStackTests(unittest.TestCase):
         from check_fast_patch_stack import PATCH_DIR, load_manifests
         stack = json.loads((PATCH_DIR / "fast-stack.json").read_text())
         names = stack["patches"] + stack["alternative_postimage_proofs"]
-        self.assertEqual(len(names), 65)
-        self.assertEqual(len(set(names)), 65)
+        self.assertEqual(len(names), 66)
+        self.assertEqual(len(set(names)), 66)
         self.assertEqual(
             {Path(json.loads((PATCH_DIR / name).read_text())["patch"]).name for name in names},
             {path.name for path in PATCH_DIR.glob("*.patch")},
         )
         self.assertNotIn("gpui-fast-bounded-wheel-offset-v1-fast.json", names)
         entries, final = load_manifests()
-        self.assertEqual(len(entries), 64)
+        self.assertEqual(len(entries), 65)
         self.assertEqual(len(final), 59)
 
     def test_full_approved_stack_reverses_and_reapplies_exactly(self):
@@ -140,7 +140,9 @@ class FastCoreStackTests(unittest.TestCase):
                 target = fixture / relative
                 target.parent.mkdir(parents=True, exist_ok=True)
                 target.write_bytes((REPO_ROOT / relative).read_bytes())
-            apply_patch(wiring, "--reverse", fixture)
+            from refresh_owned_fast_sources import manifest_wiring
+            for path in reversed(manifest_wiring()):
+                apply_patch(path, "--reverse", fixture)
             for manifest_path in reversed(manifests):
                 manifest = json.loads(manifest_path.read_text())
                 apply_patch(manifest_path, "--reverse", fixture)
@@ -151,7 +153,8 @@ class FastCoreStackTests(unittest.TestCase):
                 apply_patch(manifest_path, "--apply", fixture)
                 for relative, hashes in manifest["files"].items():
                     self.assertEqual(hashlib.sha256((fixture / relative).read_bytes()).hexdigest(), hashes["post_sha256"])
-            apply_patch(wiring, "--apply", fixture)
+            for path in manifest_wiring():
+                apply_patch(path, "--apply", fixture)
             apply_stack("--check", fixture)
             for relative in union:
                 self.assertEqual((fixture / relative).read_bytes(), (REPO_ROOT / relative).read_bytes())

@@ -1,0 +1,736 @@
+diff --git a/crates/rustui-gpui-platform/.cargo-checksum.json b/archive/pre-fast/crates/rustui-gpui-platform/.cargo-checksum.json
+similarity index 100%
+rename from crates/rustui-gpui-platform/.cargo-checksum.json
+rename to archive/pre-fast/crates/rustui-gpui-platform/.cargo-checksum.json
+diff --git a/crates/rustui-gpui-platform/Cargo.lock b/archive/pre-fast/crates/rustui-gpui-platform/Cargo.lock
+similarity index 100%
+rename from crates/rustui-gpui-platform/Cargo.lock
+rename to archive/pre-fast/crates/rustui-gpui-platform/Cargo.lock
+diff --git a/crates/rustui-gpui-platform/Cargo.toml b/archive/pre-fast/crates/rustui-gpui-platform/Cargo.toml
+similarity index 100%
+rename from crates/rustui-gpui-platform/Cargo.toml
+rename to archive/pre-fast/crates/rustui-gpui-platform/Cargo.toml
+diff --git a/crates/rustui-gpui-platform/Cargo.toml.orig b/archive/pre-fast/crates/rustui-gpui-platform/Cargo.toml.orig
+similarity index 100%
+rename from crates/rustui-gpui-platform/Cargo.toml.orig
+rename to archive/pre-fast/crates/rustui-gpui-platform/Cargo.toml.orig
+diff --git a/crates/rustui-gpui-platform/LICENSE-APACHE b/archive/pre-fast/crates/rustui-gpui-platform/LICENSE-APACHE
+similarity index 100%
+rename from crates/rustui-gpui-platform/LICENSE-APACHE
+rename to archive/pre-fast/crates/rustui-gpui-platform/LICENSE-APACHE
+diff --git a/crates/rustui-gpui-platform/benches/atlas_upload.rs b/archive/pre-fast/crates/rustui-gpui-platform/benches/atlas_upload.rs
+similarity index 100%
+rename from crates/rustui-gpui-platform/benches/atlas_upload.rs
+rename to archive/pre-fast/crates/rustui-gpui-platform/benches/atlas_upload.rs
+diff --git a/crates/rustui-gpui-platform/benches/inspector_render.rs b/archive/pre-fast/crates/rustui-gpui-platform/benches/inspector_render.rs
+similarity index 100%
+rename from crates/rustui-gpui-platform/benches/inspector_render.rs
+rename to archive/pre-fast/crates/rustui-gpui-platform/benches/inspector_render.rs
+diff --git a/crates/rustui-gpui-platform/benches/primitives.rs b/archive/pre-fast/crates/rustui-gpui-platform/benches/primitives.rs
+similarity index 100%
+rename from crates/rustui-gpui-platform/benches/primitives.rs
+rename to archive/pre-fast/crates/rustui-gpui-platform/benches/primitives.rs
+diff --git a/crates/rustui-gpui-platform/benches/randomized_element_tree.rs b/archive/pre-fast/crates/rustui-gpui-platform/benches/randomized_element_tree.rs
+similarity index 100%
+rename from crates/rustui-gpui-platform/benches/randomized_element_tree.rs
+rename to archive/pre-fast/crates/rustui-gpui-platform/benches/randomized_element_tree.rs
+diff --git a/crates/rustui-gpui-platform/src/gpui_platform.rs b/archive/pre-fast/crates/rustui-gpui-platform/src/gpui_platform.rs
+similarity index 100%
+rename from crates/rustui-gpui-platform/src/gpui_platform.rs
+rename to archive/pre-fast/crates/rustui-gpui-platform/src/gpui_platform.rs
+diff --git a/crates/rustui-gpui-macos/.cargo-checksum.json b/archive/pre-fast/crates/rustui-gpui-macos/.cargo-checksum.json
+similarity index 100%
+rename from crates/rustui-gpui-macos/.cargo-checksum.json
+rename to archive/pre-fast/crates/rustui-gpui-macos/.cargo-checksum.json
+diff --git a/crates/rustui-gpui-macos/Cargo.lock b/archive/pre-fast/crates/rustui-gpui-macos/Cargo.lock
+similarity index 100%
+rename from crates/rustui-gpui-macos/Cargo.lock
+rename to archive/pre-fast/crates/rustui-gpui-macos/Cargo.lock
+diff --git a/crates/rustui-gpui-macos/Cargo.toml b/archive/pre-fast/crates/rustui-gpui-macos/Cargo.toml
+similarity index 100%
+rename from crates/rustui-gpui-macos/Cargo.toml
+rename to archive/pre-fast/crates/rustui-gpui-macos/Cargo.toml
+diff --git a/crates/rustui-gpui-macos/Cargo.toml.orig b/archive/pre-fast/crates/rustui-gpui-macos/Cargo.toml.orig
+similarity index 100%
+rename from crates/rustui-gpui-macos/Cargo.toml.orig
+rename to archive/pre-fast/crates/rustui-gpui-macos/Cargo.toml.orig
+diff --git a/crates/rustui-gpui-macos/LICENSE-APACHE b/archive/pre-fast/crates/rustui-gpui-macos/LICENSE-APACHE
+similarity index 100%
+rename from crates/rustui-gpui-macos/LICENSE-APACHE
+rename to archive/pre-fast/crates/rustui-gpui-macos/LICENSE-APACHE
+diff --git a/crates/rustui-gpui-macos/src/display.rs b/archive/pre-fast/crates/rustui-gpui-macos/src/display.rs
+similarity index 100%
+rename from crates/rustui-gpui-macos/src/display.rs
+rename to archive/pre-fast/crates/rustui-gpui-macos/src/display.rs
+diff --git a/crates/rustui-gpui-macos/src/display_link.rs b/archive/pre-fast/crates/rustui-gpui-macos/src/display_link.rs
+similarity index 100%
+rename from crates/rustui-gpui-macos/src/display_link.rs
+rename to archive/pre-fast/crates/rustui-gpui-macos/src/display_link.rs
+diff --git a/crates/rustui-gpui-macos/src/events.rs b/archive/pre-fast/crates/rustui-gpui-macos/src/events.rs
+similarity index 100%
+rename from crates/rustui-gpui-macos/src/events.rs
+rename to archive/pre-fast/crates/rustui-gpui-macos/src/events.rs
+diff --git a/crates/rustui-gpui-macos/src/gpui_macos.rs b/archive/pre-fast/crates/rustui-gpui-macos/src/gpui_macos.rs
+similarity index 100%
+rename from crates/rustui-gpui-macos/src/gpui_macos.rs
+rename to archive/pre-fast/crates/rustui-gpui-macos/src/gpui_macos.rs
+diff --git a/crates/rustui-gpui-macos/src/keyboard.rs b/archive/pre-fast/crates/rustui-gpui-macos/src/keyboard.rs
+similarity index 100%
+rename from crates/rustui-gpui-macos/src/keyboard.rs
+rename to archive/pre-fast/crates/rustui-gpui-macos/src/keyboard.rs
+diff --git a/crates/rustui-gpui-macos/src/pasteboard.rs b/archive/pre-fast/crates/rustui-gpui-macos/src/pasteboard.rs
+similarity index 100%
+rename from crates/rustui-gpui-macos/src/pasteboard.rs
+rename to archive/pre-fast/crates/rustui-gpui-macos/src/pasteboard.rs
+diff --git a/crates/rustui-gpui-macos/src/platform.rs b/archive/pre-fast/crates/rustui-gpui-macos/src/platform.rs
+similarity index 100%
+rename from crates/rustui-gpui-macos/src/platform.rs
+rename to archive/pre-fast/crates/rustui-gpui-macos/src/platform.rs
+diff --git a/crates/rustui-gpui-macos/src/screen_capture.rs b/archive/pre-fast/crates/rustui-gpui-macos/src/screen_capture.rs
+similarity index 100%
+rename from crates/rustui-gpui-macos/src/screen_capture.rs
+rename to archive/pre-fast/crates/rustui-gpui-macos/src/screen_capture.rs
+diff --git a/crates/rustui-gpui-macos/src/system_notifications.rs b/archive/pre-fast/crates/rustui-gpui-macos/src/system_notifications.rs
+similarity index 100%
+rename from crates/rustui-gpui-macos/src/system_notifications.rs
+rename to archive/pre-fast/crates/rustui-gpui-macos/src/system_notifications.rs
+diff --git a/crates/rustui-gpui-macos/src/window.rs b/archive/pre-fast/crates/rustui-gpui-macos/src/window.rs
+similarity index 100%
+rename from crates/rustui-gpui-macos/src/window.rs
+rename to archive/pre-fast/crates/rustui-gpui-macos/src/window.rs
+diff --git a/crates/rustui-gpui-macos/src/window_appearance.rs b/archive/pre-fast/crates/rustui-gpui-macos/src/window_appearance.rs
+similarity index 100%
+rename from crates/rustui-gpui-macos/src/window_appearance.rs
+rename to archive/pre-fast/crates/rustui-gpui-macos/src/window_appearance.rs
+diff --git a/crates/rustui-gpui-apple/.cargo-checksum.json b/archive/pre-fast/crates/rustui-gpui-apple/.cargo-checksum.json
+similarity index 100%
+rename from crates/rustui-gpui-apple/.cargo-checksum.json
+rename to archive/pre-fast/crates/rustui-gpui-apple/.cargo-checksum.json
+diff --git a/crates/rustui-gpui-apple/Cargo.lock b/archive/pre-fast/crates/rustui-gpui-apple/Cargo.lock
+similarity index 100%
+rename from crates/rustui-gpui-apple/Cargo.lock
+rename to archive/pre-fast/crates/rustui-gpui-apple/Cargo.lock
+diff --git a/crates/rustui-gpui-apple/Cargo.toml b/archive/pre-fast/crates/rustui-gpui-apple/Cargo.toml
+similarity index 100%
+rename from crates/rustui-gpui-apple/Cargo.toml
+rename to archive/pre-fast/crates/rustui-gpui-apple/Cargo.toml
+diff --git a/crates/rustui-gpui-apple/Cargo.toml.orig b/archive/pre-fast/crates/rustui-gpui-apple/Cargo.toml.orig
+similarity index 100%
+rename from crates/rustui-gpui-apple/Cargo.toml.orig
+rename to archive/pre-fast/crates/rustui-gpui-apple/Cargo.toml.orig
+diff --git a/crates/rustui-gpui-apple/LICENSE-APACHE b/archive/pre-fast/crates/rustui-gpui-apple/LICENSE-APACHE
+similarity index 100%
+rename from crates/rustui-gpui-apple/LICENSE-APACHE
+rename to archive/pre-fast/crates/rustui-gpui-apple/LICENSE-APACHE
+diff --git a/crates/rustui-gpui-apple/build.rs b/archive/pre-fast/crates/rustui-gpui-apple/build.rs
+similarity index 100%
+rename from crates/rustui-gpui-apple/build.rs
+rename to archive/pre-fast/crates/rustui-gpui-apple/build.rs
+diff --git a/crates/rustui-gpui-apple/src/dispatcher.rs b/archive/pre-fast/crates/rustui-gpui-apple/src/dispatcher.rs
+similarity index 100%
+rename from crates/rustui-gpui-apple/src/dispatcher.rs
+rename to archive/pre-fast/crates/rustui-gpui-apple/src/dispatcher.rs
+diff --git a/crates/rustui-gpui-apple/src/display_link.rs b/archive/pre-fast/crates/rustui-gpui-apple/src/display_link.rs
+similarity index 100%
+rename from crates/rustui-gpui-apple/src/display_link.rs
+rename to archive/pre-fast/crates/rustui-gpui-apple/src/display_link.rs
+diff --git a/crates/rustui-gpui-apple/src/gpui_apple.rs b/archive/pre-fast/crates/rustui-gpui-apple/src/gpui_apple.rs
+similarity index 100%
+rename from crates/rustui-gpui-apple/src/gpui_apple.rs
+rename to archive/pre-fast/crates/rustui-gpui-apple/src/gpui_apple.rs
+diff --git a/crates/rustui-gpui-apple/src/keychain.rs b/archive/pre-fast/crates/rustui-gpui-apple/src/keychain.rs
+similarity index 100%
+rename from crates/rustui-gpui-apple/src/keychain.rs
+rename to archive/pre-fast/crates/rustui-gpui-apple/src/keychain.rs
+diff --git a/crates/rustui-gpui-apple/src/metal_atlas.rs b/archive/pre-fast/crates/rustui-gpui-apple/src/metal_atlas.rs
+similarity index 100%
+rename from crates/rustui-gpui-apple/src/metal_atlas.rs
+rename to archive/pre-fast/crates/rustui-gpui-apple/src/metal_atlas.rs
+diff --git a/crates/rustui-gpui-apple/src/metal_renderer.rs b/archive/pre-fast/crates/rustui-gpui-apple/src/metal_renderer.rs
+similarity index 100%
+rename from crates/rustui-gpui-apple/src/metal_renderer.rs
+rename to archive/pre-fast/crates/rustui-gpui-apple/src/metal_renderer.rs
+diff --git a/crates/rustui-gpui-apple/src/open_type.rs b/archive/pre-fast/crates/rustui-gpui-apple/src/open_type.rs
+similarity index 100%
+rename from crates/rustui-gpui-apple/src/open_type.rs
+rename to archive/pre-fast/crates/rustui-gpui-apple/src/open_type.rs
+diff --git a/crates/rustui-gpui-apple/src/process_info.rs b/archive/pre-fast/crates/rustui-gpui-apple/src/process_info.rs
+similarity index 100%
+rename from crates/rustui-gpui-apple/src/process_info.rs
+rename to archive/pre-fast/crates/rustui-gpui-apple/src/process_info.rs
+diff --git a/crates/rustui-gpui-apple/src/shaders.metal b/archive/pre-fast/crates/rustui-gpui-apple/src/shaders.metal
+similarity index 100%
+rename from crates/rustui-gpui-apple/src/shaders.metal
+rename to archive/pre-fast/crates/rustui-gpui-apple/src/shaders.metal
+diff --git a/crates/rustui-gpui-apple/src/text_system.rs b/archive/pre-fast/crates/rustui-gpui-apple/src/text_system.rs
+similarity index 100%
+rename from crates/rustui-gpui-apple/src/text_system.rs
+rename to archive/pre-fast/crates/rustui-gpui-apple/src/text_system.rs
+diff --git a/crates/rustui-gpui-apple/vendor/gpui/src/color.rs b/archive/pre-fast/crates/rustui-gpui-apple/vendor/gpui/src/color.rs
+similarity index 100%
+rename from crates/rustui-gpui-apple/vendor/gpui/src/color.rs
+rename to archive/pre-fast/crates/rustui-gpui-apple/vendor/gpui/src/color.rs
+diff --git a/crates/rustui-gpui-apple/vendor/gpui/src/geometry.rs b/archive/pre-fast/crates/rustui-gpui-apple/vendor/gpui/src/geometry.rs
+similarity index 100%
+rename from crates/rustui-gpui-apple/vendor/gpui/src/geometry.rs
+rename to archive/pre-fast/crates/rustui-gpui-apple/vendor/gpui/src/geometry.rs
+diff --git a/crates/rustui-gpui-apple/vendor/gpui/src/platform.rs b/archive/pre-fast/crates/rustui-gpui-apple/vendor/gpui/src/platform.rs
+similarity index 100%
+rename from crates/rustui-gpui-apple/vendor/gpui/src/platform.rs
+rename to archive/pre-fast/crates/rustui-gpui-apple/vendor/gpui/src/platform.rs
+diff --git a/crates/rustui-gpui-apple/vendor/gpui/src/scene.rs b/archive/pre-fast/crates/rustui-gpui-apple/vendor/gpui/src/scene.rs
+similarity index 100%
+rename from crates/rustui-gpui-apple/vendor/gpui/src/scene.rs
+rename to archive/pre-fast/crates/rustui-gpui-apple/vendor/gpui/src/scene.rs
+diff --git a/crates/rustui-gpui-apple/vendor/gpui/src/window.rs b/archive/pre-fast/crates/rustui-gpui-apple/vendor/gpui/src/window.rs
+similarity index 100%
+rename from crates/rustui-gpui-apple/vendor/gpui/src/window.rs
+rename to archive/pre-fast/crates/rustui-gpui-apple/vendor/gpui/src/window.rs
+diff --git a/crates/rustui-block/.cargo-checksum.json b/archive/pre-fast/crates/rustui-block/.cargo-checksum.json
+similarity index 100%
+rename from crates/rustui-block/.cargo-checksum.json
+rename to archive/pre-fast/crates/rustui-block/.cargo-checksum.json
+diff --git a/crates/rustui-block/Cargo.toml b/archive/pre-fast/crates/rustui-block/Cargo.toml
+similarity index 100%
+rename from crates/rustui-block/Cargo.toml
+rename to archive/pre-fast/crates/rustui-block/Cargo.toml
+diff --git a/crates/rustui-block/README.md b/archive/pre-fast/crates/rustui-block/README.md
+similarity index 100%
+rename from crates/rustui-block/README.md
+rename to archive/pre-fast/crates/rustui-block/README.md
+diff --git a/crates/rustui-block/src/lib.rs b/archive/pre-fast/crates/rustui-block/src/lib.rs
+similarity index 100%
+rename from crates/rustui-block/src/lib.rs
+rename to archive/pre-fast/crates/rustui-block/src/lib.rs
+diff --git a/crates/rustui-block/src/test_utils.rs b/archive/pre-fast/crates/rustui-block/src/test_utils.rs
+similarity index 100%
+rename from crates/rustui-block/src/test_utils.rs
+rename to archive/pre-fast/crates/rustui-block/src/test_utils.rs
+diff --git a/crates/rustui-cocoa/.cargo-checksum.json b/archive/pre-fast/crates/rustui-cocoa/.cargo-checksum.json
+similarity index 100%
+rename from crates/rustui-cocoa/.cargo-checksum.json
+rename to archive/pre-fast/crates/rustui-cocoa/.cargo-checksum.json
+diff --git a/crates/rustui-cocoa/.cargo_vcs_info.json b/archive/pre-fast/crates/rustui-cocoa/.cargo_vcs_info.json
+similarity index 100%
+rename from crates/rustui-cocoa/.cargo_vcs_info.json
+rename to archive/pre-fast/crates/rustui-cocoa/.cargo_vcs_info.json
+diff --git a/crates/rustui-cocoa/.travis.yml b/archive/pre-fast/crates/rustui-cocoa/.travis.yml
+similarity index 100%
+rename from crates/rustui-cocoa/.travis.yml
+rename to archive/pre-fast/crates/rustui-cocoa/.travis.yml
+diff --git a/crates/rustui-cocoa/COPYRIGHT b/archive/pre-fast/crates/rustui-cocoa/COPYRIGHT
+similarity index 100%
+rename from crates/rustui-cocoa/COPYRIGHT
+rename to archive/pre-fast/crates/rustui-cocoa/COPYRIGHT
+diff --git a/crates/rustui-cocoa/Cargo.lock b/archive/pre-fast/crates/rustui-cocoa/Cargo.lock
+similarity index 100%
+rename from crates/rustui-cocoa/Cargo.lock
+rename to archive/pre-fast/crates/rustui-cocoa/Cargo.lock
+diff --git a/crates/rustui-cocoa/Cargo.toml b/archive/pre-fast/crates/rustui-cocoa/Cargo.toml
+similarity index 100%
+rename from crates/rustui-cocoa/Cargo.toml
+rename to archive/pre-fast/crates/rustui-cocoa/Cargo.toml
+diff --git a/crates/rustui-cocoa/Cargo.toml.orig b/archive/pre-fast/crates/rustui-cocoa/Cargo.toml.orig
+similarity index 100%
+rename from crates/rustui-cocoa/Cargo.toml.orig
+rename to archive/pre-fast/crates/rustui-cocoa/Cargo.toml.orig
+diff --git a/crates/rustui-cocoa/LICENSE-APACHE b/archive/pre-fast/crates/rustui-cocoa/LICENSE-APACHE
+similarity index 100%
+rename from crates/rustui-cocoa/LICENSE-APACHE
+rename to archive/pre-fast/crates/rustui-cocoa/LICENSE-APACHE
+diff --git a/crates/rustui-cocoa/LICENSE-MIT b/archive/pre-fast/crates/rustui-cocoa/LICENSE-MIT
+similarity index 100%
+rename from crates/rustui-cocoa/LICENSE-MIT
+rename to archive/pre-fast/crates/rustui-cocoa/LICENSE-MIT
+diff --git a/crates/rustui-cocoa/README.md b/archive/pre-fast/crates/rustui-cocoa/README.md
+similarity index 100%
+rename from crates/rustui-cocoa/README.md
+rename to archive/pre-fast/crates/rustui-cocoa/README.md
+diff --git a/crates/rustui-cocoa/examples/color.rs b/archive/pre-fast/crates/rustui-cocoa/examples/color.rs
+similarity index 100%
+rename from crates/rustui-cocoa/examples/color.rs
+rename to archive/pre-fast/crates/rustui-cocoa/examples/color.rs
+diff --git a/crates/rustui-cocoa/examples/fullscreen.rs b/archive/pre-fast/crates/rustui-cocoa/examples/fullscreen.rs
+similarity index 100%
+rename from crates/rustui-cocoa/examples/fullscreen.rs
+rename to archive/pre-fast/crates/rustui-cocoa/examples/fullscreen.rs
+diff --git a/crates/rustui-cocoa/examples/hello_world.rs b/archive/pre-fast/crates/rustui-cocoa/examples/hello_world.rs
+similarity index 100%
+rename from crates/rustui-cocoa/examples/hello_world.rs
+rename to archive/pre-fast/crates/rustui-cocoa/examples/hello_world.rs
+diff --git a/crates/rustui-cocoa/examples/nsvisualeffectview_blur.rs b/archive/pre-fast/crates/rustui-cocoa/examples/nsvisualeffectview_blur.rs
+similarity index 100%
+rename from crates/rustui-cocoa/examples/nsvisualeffectview_blur.rs
+rename to archive/pre-fast/crates/rustui-cocoa/examples/nsvisualeffectview_blur.rs
+diff --git a/crates/rustui-cocoa/examples/tab_view.rs b/archive/pre-fast/crates/rustui-cocoa/examples/tab_view.rs
+similarity index 100%
+rename from crates/rustui-cocoa/examples/tab_view.rs
+rename to archive/pre-fast/crates/rustui-cocoa/examples/tab_view.rs
+diff --git a/crates/rustui-cocoa/src/appkit.rs b/archive/pre-fast/crates/rustui-cocoa/src/appkit.rs
+similarity index 100%
+rename from crates/rustui-cocoa/src/appkit.rs
+rename to archive/pre-fast/crates/rustui-cocoa/src/appkit.rs
+diff --git a/crates/rustui-cocoa/src/lib.rs b/archive/pre-fast/crates/rustui-cocoa/src/lib.rs
+similarity index 100%
+rename from crates/rustui-cocoa/src/lib.rs
+rename to archive/pre-fast/crates/rustui-cocoa/src/lib.rs
+diff --git a/crates/rustui-cocoa/src/macros.rs b/archive/pre-fast/crates/rustui-cocoa/src/macros.rs
+similarity index 100%
+rename from crates/rustui-cocoa/src/macros.rs
+rename to archive/pre-fast/crates/rustui-cocoa/src/macros.rs
+diff --git a/crates/rustui-cocoa/src/quartzcore.rs b/archive/pre-fast/crates/rustui-cocoa/src/quartzcore.rs
+similarity index 100%
+rename from crates/rustui-cocoa/src/quartzcore.rs
+rename to archive/pre-fast/crates/rustui-cocoa/src/quartzcore.rs
+diff --git a/crates/rustui-cocoa-foundation/.cargo-checksum.json b/archive/pre-fast/crates/rustui-cocoa-foundation/.cargo-checksum.json
+similarity index 100%
+rename from crates/rustui-cocoa-foundation/.cargo-checksum.json
+rename to archive/pre-fast/crates/rustui-cocoa-foundation/.cargo-checksum.json
+diff --git a/crates/rustui-cocoa-foundation/.cargo_vcs_info.json b/archive/pre-fast/crates/rustui-cocoa-foundation/.cargo_vcs_info.json
+similarity index 100%
+rename from crates/rustui-cocoa-foundation/.cargo_vcs_info.json
+rename to archive/pre-fast/crates/rustui-cocoa-foundation/.cargo_vcs_info.json
+diff --git a/crates/rustui-cocoa-foundation/.travis.yml b/archive/pre-fast/crates/rustui-cocoa-foundation/.travis.yml
+similarity index 100%
+rename from crates/rustui-cocoa-foundation/.travis.yml
+rename to archive/pre-fast/crates/rustui-cocoa-foundation/.travis.yml
+diff --git a/crates/rustui-cocoa-foundation/Cargo.toml b/archive/pre-fast/crates/rustui-cocoa-foundation/Cargo.toml
+similarity index 100%
+rename from crates/rustui-cocoa-foundation/Cargo.toml
+rename to archive/pre-fast/crates/rustui-cocoa-foundation/Cargo.toml
+diff --git a/crates/rustui-cocoa-foundation/Cargo.toml.orig b/archive/pre-fast/crates/rustui-cocoa-foundation/Cargo.toml.orig
+similarity index 100%
+rename from crates/rustui-cocoa-foundation/Cargo.toml.orig
+rename to archive/pre-fast/crates/rustui-cocoa-foundation/Cargo.toml.orig
+diff --git a/crates/rustui-cocoa-foundation/LICENSE-APACHE b/archive/pre-fast/crates/rustui-cocoa-foundation/LICENSE-APACHE
+similarity index 100%
+rename from crates/rustui-cocoa-foundation/LICENSE-APACHE
+rename to archive/pre-fast/crates/rustui-cocoa-foundation/LICENSE-APACHE
+diff --git a/crates/rustui-cocoa-foundation/LICENSE-MIT b/archive/pre-fast/crates/rustui-cocoa-foundation/LICENSE-MIT
+similarity index 100%
+rename from crates/rustui-cocoa-foundation/LICENSE-MIT
+rename to archive/pre-fast/crates/rustui-cocoa-foundation/LICENSE-MIT
+diff --git a/crates/rustui-cocoa-foundation/src/base.rs b/archive/pre-fast/crates/rustui-cocoa-foundation/src/base.rs
+similarity index 100%
+rename from crates/rustui-cocoa-foundation/src/base.rs
+rename to archive/pre-fast/crates/rustui-cocoa-foundation/src/base.rs
+diff --git a/crates/rustui-cocoa-foundation/src/foundation.rs b/archive/pre-fast/crates/rustui-cocoa-foundation/src/foundation.rs
+similarity index 100%
+rename from crates/rustui-cocoa-foundation/src/foundation.rs
+rename to archive/pre-fast/crates/rustui-cocoa-foundation/src/foundation.rs
+diff --git a/crates/rustui-cocoa-foundation/src/lib.rs b/archive/pre-fast/crates/rustui-cocoa-foundation/src/lib.rs
+similarity index 100%
+rename from crates/rustui-cocoa-foundation/src/lib.rs
+rename to archive/pre-fast/crates/rustui-cocoa-foundation/src/lib.rs
+diff --git a/crates/rustui-cocoa-foundation/tests/foundation.rs b/archive/pre-fast/crates/rustui-cocoa-foundation/tests/foundation.rs
+similarity index 100%
+rename from crates/rustui-cocoa-foundation/tests/foundation.rs
+rename to archive/pre-fast/crates/rustui-cocoa-foundation/tests/foundation.rs
+diff --git a/crates/rustui-metal/.cargo-checksum.json b/archive/pre-fast/crates/rustui-metal/.cargo-checksum.json
+similarity index 100%
+rename from crates/rustui-metal/.cargo-checksum.json
+rename to archive/pre-fast/crates/rustui-metal/.cargo-checksum.json
+diff --git a/crates/rustui-metal/.cargo_vcs_info.json b/archive/pre-fast/crates/rustui-metal/.cargo_vcs_info.json
+similarity index 100%
+rename from crates/rustui-metal/.cargo_vcs_info.json
+rename to archive/pre-fast/crates/rustui-metal/.cargo_vcs_info.json
+diff --git a/crates/rustui-metal/.github/workflows/ci.yml b/archive/pre-fast/crates/rustui-metal/.github/workflows/ci.yml
+similarity index 100%
+rename from crates/rustui-metal/.github/workflows/ci.yml
+rename to archive/pre-fast/crates/rustui-metal/.github/workflows/ci.yml
+diff --git a/crates/rustui-metal/Cargo.lock b/archive/pre-fast/crates/rustui-metal/Cargo.lock
+similarity index 100%
+rename from crates/rustui-metal/Cargo.lock
+rename to archive/pre-fast/crates/rustui-metal/Cargo.lock
+diff --git a/crates/rustui-metal/Cargo.toml b/archive/pre-fast/crates/rustui-metal/Cargo.toml
+similarity index 100%
+rename from crates/rustui-metal/Cargo.toml
+rename to archive/pre-fast/crates/rustui-metal/Cargo.toml
+diff --git a/crates/rustui-metal/Cargo.toml.orig b/archive/pre-fast/crates/rustui-metal/Cargo.toml.orig
+similarity index 100%
+rename from crates/rustui-metal/Cargo.toml.orig
+rename to archive/pre-fast/crates/rustui-metal/Cargo.toml.orig
+diff --git a/crates/rustui-metal/LICENSE-APACHE b/archive/pre-fast/crates/rustui-metal/LICENSE-APACHE
+similarity index 100%
+rename from crates/rustui-metal/LICENSE-APACHE
+rename to archive/pre-fast/crates/rustui-metal/LICENSE-APACHE
+diff --git a/crates/rustui-metal/LICENSE-MIT b/archive/pre-fast/crates/rustui-metal/LICENSE-MIT
+similarity index 100%
+rename from crates/rustui-metal/LICENSE-MIT
+rename to archive/pre-fast/crates/rustui-metal/LICENSE-MIT
+diff --git a/crates/rustui-metal/Makefile b/archive/pre-fast/crates/rustui-metal/Makefile
+similarity index 100%
+rename from crates/rustui-metal/Makefile
+rename to archive/pre-fast/crates/rustui-metal/Makefile
+diff --git a/crates/rustui-metal/README.md b/archive/pre-fast/crates/rustui-metal/README.md
+similarity index 100%
+rename from crates/rustui-metal/README.md
+rename to archive/pre-fast/crates/rustui-metal/README.md
+diff --git a/crates/rustui-metal/assets/metal.svg b/archive/pre-fast/crates/rustui-metal/assets/metal.svg
+similarity index 100%
+rename from crates/rustui-metal/assets/metal.svg
+rename to archive/pre-fast/crates/rustui-metal/assets/metal.svg
+diff --git a/crates/rustui-metal/bors.toml b/archive/pre-fast/crates/rustui-metal/bors.toml
+similarity index 100%
+rename from crates/rustui-metal/bors.toml
+rename to archive/pre-fast/crates/rustui-metal/bors.toml
+diff --git a/crates/rustui-metal/examples/argument-buffer/main.rs b/archive/pre-fast/crates/rustui-metal/examples/argument-buffer/main.rs
+similarity index 100%
+rename from crates/rustui-metal/examples/argument-buffer/main.rs
+rename to archive/pre-fast/crates/rustui-metal/examples/argument-buffer/main.rs
+diff --git a/crates/rustui-metal/examples/bind/main.rs b/archive/pre-fast/crates/rustui-metal/examples/bind/main.rs
+similarity index 100%
+rename from crates/rustui-metal/examples/bind/main.rs
+rename to archive/pre-fast/crates/rustui-metal/examples/bind/main.rs
+diff --git a/crates/rustui-metal/examples/bindless/main.rs b/archive/pre-fast/crates/rustui-metal/examples/bindless/main.rs
+similarity index 100%
+rename from crates/rustui-metal/examples/bindless/main.rs
+rename to archive/pre-fast/crates/rustui-metal/examples/bindless/main.rs
+diff --git a/crates/rustui-metal/examples/caps/main.rs b/archive/pre-fast/crates/rustui-metal/examples/caps/main.rs
+similarity index 100%
+rename from crates/rustui-metal/examples/caps/main.rs
+rename to archive/pre-fast/crates/rustui-metal/examples/caps/main.rs
+diff --git a/crates/rustui-metal/examples/circle/README.md b/archive/pre-fast/crates/rustui-metal/examples/circle/README.md
+similarity index 100%
+rename from crates/rustui-metal/examples/circle/README.md
+rename to archive/pre-fast/crates/rustui-metal/examples/circle/README.md
+diff --git a/crates/rustui-metal/examples/circle/main.rs b/archive/pre-fast/crates/rustui-metal/examples/circle/main.rs
+similarity index 100%
+rename from crates/rustui-metal/examples/circle/main.rs
+rename to archive/pre-fast/crates/rustui-metal/examples/circle/main.rs
+diff --git a/crates/rustui-metal/examples/circle/screenshot.png b/archive/pre-fast/crates/rustui-metal/examples/circle/screenshot.png
+similarity index 100%
+rename from crates/rustui-metal/examples/circle/screenshot.png
+rename to archive/pre-fast/crates/rustui-metal/examples/circle/screenshot.png
+diff --git a/crates/rustui-metal/examples/circle/shaders.metal b/archive/pre-fast/crates/rustui-metal/examples/circle/shaders.metal
+similarity index 100%
+rename from crates/rustui-metal/examples/circle/shaders.metal
+rename to archive/pre-fast/crates/rustui-metal/examples/circle/shaders.metal
+diff --git a/crates/rustui-metal/examples/circle/shaders.metallib b/archive/pre-fast/crates/rustui-metal/examples/circle/shaders.metallib
+similarity index 100%
+rename from crates/rustui-metal/examples/circle/shaders.metallib
+rename to archive/pre-fast/crates/rustui-metal/examples/circle/shaders.metallib
+diff --git a/crates/rustui-metal/examples/compute/compute-argument-buffer.metal b/archive/pre-fast/crates/rustui-metal/examples/compute/compute-argument-buffer.metal
+similarity index 100%
+rename from crates/rustui-metal/examples/compute/compute-argument-buffer.metal
+rename to archive/pre-fast/crates/rustui-metal/examples/compute/compute-argument-buffer.metal
+diff --git a/crates/rustui-metal/examples/compute/compute-argument-buffer.rs b/archive/pre-fast/crates/rustui-metal/examples/compute/compute-argument-buffer.rs
+similarity index 100%
+rename from crates/rustui-metal/examples/compute/compute-argument-buffer.rs
+rename to archive/pre-fast/crates/rustui-metal/examples/compute/compute-argument-buffer.rs
+diff --git a/crates/rustui-metal/examples/compute/embedded-lib.rs b/archive/pre-fast/crates/rustui-metal/examples/compute/embedded-lib.rs
+similarity index 100%
+rename from crates/rustui-metal/examples/compute/embedded-lib.rs
+rename to archive/pre-fast/crates/rustui-metal/examples/compute/embedded-lib.rs
+diff --git a/crates/rustui-metal/examples/compute/main.rs b/archive/pre-fast/crates/rustui-metal/examples/compute/main.rs
+similarity index 100%
+rename from crates/rustui-metal/examples/compute/main.rs
+rename to archive/pre-fast/crates/rustui-metal/examples/compute/main.rs
+diff --git a/crates/rustui-metal/examples/compute/shaders.metal b/archive/pre-fast/crates/rustui-metal/examples/compute/shaders.metal
+similarity index 100%
+rename from crates/rustui-metal/examples/compute/shaders.metal
+rename to archive/pre-fast/crates/rustui-metal/examples/compute/shaders.metal
+diff --git a/crates/rustui-metal/examples/compute/shaders.metallib b/archive/pre-fast/crates/rustui-metal/examples/compute/shaders.metallib
+similarity index 100%
+rename from crates/rustui-metal/examples/compute/shaders.metallib
+rename to archive/pre-fast/crates/rustui-metal/examples/compute/shaders.metallib
+diff --git a/crates/rustui-metal/examples/events/main.rs b/archive/pre-fast/crates/rustui-metal/examples/events/main.rs
+similarity index 100%
+rename from crates/rustui-metal/examples/events/main.rs
+rename to archive/pre-fast/crates/rustui-metal/examples/events/main.rs
+diff --git a/crates/rustui-metal/examples/fence/main.rs b/archive/pre-fast/crates/rustui-metal/examples/fence/main.rs
+similarity index 100%
+rename from crates/rustui-metal/examples/fence/main.rs
+rename to archive/pre-fast/crates/rustui-metal/examples/fence/main.rs
+diff --git a/crates/rustui-metal/examples/headless-render/README.md b/archive/pre-fast/crates/rustui-metal/examples/headless-render/README.md
+similarity index 100%
+rename from crates/rustui-metal/examples/headless-render/README.md
+rename to archive/pre-fast/crates/rustui-metal/examples/headless-render/README.md
+diff --git a/crates/rustui-metal/examples/headless-render/main.rs b/archive/pre-fast/crates/rustui-metal/examples/headless-render/main.rs
+similarity index 100%
+rename from crates/rustui-metal/examples/headless-render/main.rs
+rename to archive/pre-fast/crates/rustui-metal/examples/headless-render/main.rs
+diff --git a/crates/rustui-metal/examples/headless-render/screenshot.png b/archive/pre-fast/crates/rustui-metal/examples/headless-render/screenshot.png
+similarity index 100%
+rename from crates/rustui-metal/examples/headless-render/screenshot.png
+rename to archive/pre-fast/crates/rustui-metal/examples/headless-render/screenshot.png
+diff --git a/crates/rustui-metal/examples/library/main.rs b/archive/pre-fast/crates/rustui-metal/examples/library/main.rs
+similarity index 100%
+rename from crates/rustui-metal/examples/library/main.rs
+rename to archive/pre-fast/crates/rustui-metal/examples/library/main.rs
+diff --git a/crates/rustui-metal/examples/mesh-shader/main.rs b/archive/pre-fast/crates/rustui-metal/examples/mesh-shader/main.rs
+similarity index 100%
+rename from crates/rustui-metal/examples/mesh-shader/main.rs
+rename to archive/pre-fast/crates/rustui-metal/examples/mesh-shader/main.rs
+diff --git a/crates/rustui-metal/examples/mesh-shader/shaders.metal b/archive/pre-fast/crates/rustui-metal/examples/mesh-shader/shaders.metal
+similarity index 100%
+rename from crates/rustui-metal/examples/mesh-shader/shaders.metal
+rename to archive/pre-fast/crates/rustui-metal/examples/mesh-shader/shaders.metal
+diff --git a/crates/rustui-metal/examples/mesh-shader/shaders.metallib b/archive/pre-fast/crates/rustui-metal/examples/mesh-shader/shaders.metallib
+similarity index 100%
+rename from crates/rustui-metal/examples/mesh-shader/shaders.metallib
+rename to archive/pre-fast/crates/rustui-metal/examples/mesh-shader/shaders.metallib
+diff --git a/crates/rustui-metal/examples/mps/main.rs b/archive/pre-fast/crates/rustui-metal/examples/mps/main.rs
+similarity index 100%
+rename from crates/rustui-metal/examples/mps/main.rs
+rename to archive/pre-fast/crates/rustui-metal/examples/mps/main.rs
+diff --git a/crates/rustui-metal/examples/mps/shaders.metal b/archive/pre-fast/crates/rustui-metal/examples/mps/shaders.metal
+similarity index 100%
+rename from crates/rustui-metal/examples/mps/shaders.metal
+rename to archive/pre-fast/crates/rustui-metal/examples/mps/shaders.metal
+diff --git a/crates/rustui-metal/examples/mps/shaders.metallib b/archive/pre-fast/crates/rustui-metal/examples/mps/shaders.metallib
+similarity index 100%
+rename from crates/rustui-metal/examples/mps/shaders.metallib
+rename to archive/pre-fast/crates/rustui-metal/examples/mps/shaders.metallib
+diff --git a/crates/rustui-metal/examples/raytracing/README.md b/archive/pre-fast/crates/rustui-metal/examples/raytracing/README.md
+similarity index 100%
+rename from crates/rustui-metal/examples/raytracing/README.md
+rename to archive/pre-fast/crates/rustui-metal/examples/raytracing/README.md
+diff --git a/crates/rustui-metal/examples/raytracing/camera.rs b/archive/pre-fast/crates/rustui-metal/examples/raytracing/camera.rs
+similarity index 100%
+rename from crates/rustui-metal/examples/raytracing/camera.rs
+rename to archive/pre-fast/crates/rustui-metal/examples/raytracing/camera.rs
+diff --git a/crates/rustui-metal/examples/raytracing/geometry.rs b/archive/pre-fast/crates/rustui-metal/examples/raytracing/geometry.rs
+similarity index 100%
+rename from crates/rustui-metal/examples/raytracing/geometry.rs
+rename to archive/pre-fast/crates/rustui-metal/examples/raytracing/geometry.rs
+diff --git a/crates/rustui-metal/examples/raytracing/main.rs b/archive/pre-fast/crates/rustui-metal/examples/raytracing/main.rs
+similarity index 100%
+rename from crates/rustui-metal/examples/raytracing/main.rs
+rename to archive/pre-fast/crates/rustui-metal/examples/raytracing/main.rs
+diff --git a/crates/rustui-metal/examples/raytracing/renderer.rs b/archive/pre-fast/crates/rustui-metal/examples/raytracing/renderer.rs
+similarity index 100%
+rename from crates/rustui-metal/examples/raytracing/renderer.rs
+rename to archive/pre-fast/crates/rustui-metal/examples/raytracing/renderer.rs
+diff --git a/crates/rustui-metal/examples/raytracing/scene.rs b/archive/pre-fast/crates/rustui-metal/examples/raytracing/scene.rs
+similarity index 100%
+rename from crates/rustui-metal/examples/raytracing/scene.rs
+rename to archive/pre-fast/crates/rustui-metal/examples/raytracing/scene.rs
+diff --git a/crates/rustui-metal/examples/raytracing/screenshot.png b/archive/pre-fast/crates/rustui-metal/examples/raytracing/screenshot.png
+similarity index 100%
+rename from crates/rustui-metal/examples/raytracing/screenshot.png
+rename to archive/pre-fast/crates/rustui-metal/examples/raytracing/screenshot.png
+diff --git a/crates/rustui-metal/examples/raytracing/shaders.metal b/archive/pre-fast/crates/rustui-metal/examples/raytracing/shaders.metal
+similarity index 100%
+rename from crates/rustui-metal/examples/raytracing/shaders.metal
+rename to archive/pre-fast/crates/rustui-metal/examples/raytracing/shaders.metal
+diff --git a/crates/rustui-metal/examples/raytracing/shaders.metallib b/archive/pre-fast/crates/rustui-metal/examples/raytracing/shaders.metallib
+similarity index 100%
+rename from crates/rustui-metal/examples/raytracing/shaders.metallib
+rename to archive/pre-fast/crates/rustui-metal/examples/raytracing/shaders.metallib
+diff --git a/crates/rustui-metal/examples/reflection/main.rs b/archive/pre-fast/crates/rustui-metal/examples/reflection/main.rs
+similarity index 100%
+rename from crates/rustui-metal/examples/reflection/main.rs
+rename to archive/pre-fast/crates/rustui-metal/examples/reflection/main.rs
+diff --git a/crates/rustui-metal/examples/shader-dylib/main.rs b/archive/pre-fast/crates/rustui-metal/examples/shader-dylib/main.rs
+similarity index 100%
+rename from crates/rustui-metal/examples/shader-dylib/main.rs
+rename to archive/pre-fast/crates/rustui-metal/examples/shader-dylib/main.rs
+diff --git a/crates/rustui-metal/examples/shader-dylib/test_dylib.metal b/archive/pre-fast/crates/rustui-metal/examples/shader-dylib/test_dylib.metal
+similarity index 100%
+rename from crates/rustui-metal/examples/shader-dylib/test_dylib.metal
+rename to archive/pre-fast/crates/rustui-metal/examples/shader-dylib/test_dylib.metal
+diff --git a/crates/rustui-metal/examples/shader-dylib/test_shader.metal b/archive/pre-fast/crates/rustui-metal/examples/shader-dylib/test_shader.metal
+similarity index 100%
+rename from crates/rustui-metal/examples/shader-dylib/test_shader.metal
+rename to archive/pre-fast/crates/rustui-metal/examples/shader-dylib/test_shader.metal
+diff --git a/crates/rustui-metal/examples/window/README.md b/archive/pre-fast/crates/rustui-metal/examples/window/README.md
+similarity index 100%
+rename from crates/rustui-metal/examples/window/README.md
+rename to archive/pre-fast/crates/rustui-metal/examples/window/README.md
+diff --git a/crates/rustui-metal/examples/window/main.rs b/archive/pre-fast/crates/rustui-metal/examples/window/main.rs
+similarity index 100%
+rename from crates/rustui-metal/examples/window/main.rs
+rename to archive/pre-fast/crates/rustui-metal/examples/window/main.rs
+diff --git a/crates/rustui-metal/examples/window/screenshot.png b/archive/pre-fast/crates/rustui-metal/examples/window/screenshot.png
+similarity index 100%
+rename from crates/rustui-metal/examples/window/screenshot.png
+rename to archive/pre-fast/crates/rustui-metal/examples/window/screenshot.png
+diff --git a/crates/rustui-metal/examples/window/shaders.metal b/archive/pre-fast/crates/rustui-metal/examples/window/shaders.metal
+similarity index 100%
+rename from crates/rustui-metal/examples/window/shaders.metal
+rename to archive/pre-fast/crates/rustui-metal/examples/window/shaders.metal
+diff --git a/crates/rustui-metal/examples/window/shaders.metallib b/archive/pre-fast/crates/rustui-metal/examples/window/shaders.metallib
+similarity index 100%
+rename from crates/rustui-metal/examples/window/shaders.metallib
+rename to archive/pre-fast/crates/rustui-metal/examples/window/shaders.metallib
+diff --git a/crates/rustui-metal/renovate.json b/archive/pre-fast/crates/rustui-metal/renovate.json
+similarity index 100%
+rename from crates/rustui-metal/renovate.json
+rename to archive/pre-fast/crates/rustui-metal/renovate.json
+diff --git a/crates/rustui-metal/src/acceleration_structure.rs b/archive/pre-fast/crates/rustui-metal/src/acceleration_structure.rs
+similarity index 100%
+rename from crates/rustui-metal/src/acceleration_structure.rs
+rename to archive/pre-fast/crates/rustui-metal/src/acceleration_structure.rs
+diff --git a/crates/rustui-metal/src/acceleration_structure_pass.rs b/archive/pre-fast/crates/rustui-metal/src/acceleration_structure_pass.rs
+similarity index 100%
+rename from crates/rustui-metal/src/acceleration_structure_pass.rs
+rename to archive/pre-fast/crates/rustui-metal/src/acceleration_structure_pass.rs
+diff --git a/crates/rustui-metal/src/argument.rs b/archive/pre-fast/crates/rustui-metal/src/argument.rs
+similarity index 100%
+rename from crates/rustui-metal/src/argument.rs
+rename to archive/pre-fast/crates/rustui-metal/src/argument.rs
+diff --git a/crates/rustui-metal/src/blitpass.rs b/archive/pre-fast/crates/rustui-metal/src/blitpass.rs
+similarity index 100%
+rename from crates/rustui-metal/src/blitpass.rs
+rename to archive/pre-fast/crates/rustui-metal/src/blitpass.rs
+diff --git a/crates/rustui-metal/src/buffer.rs b/archive/pre-fast/crates/rustui-metal/src/buffer.rs
+similarity index 100%
+rename from crates/rustui-metal/src/buffer.rs
+rename to archive/pre-fast/crates/rustui-metal/src/buffer.rs
+diff --git a/crates/rustui-metal/src/capturedescriptor.rs b/archive/pre-fast/crates/rustui-metal/src/capturedescriptor.rs
+similarity index 100%
+rename from crates/rustui-metal/src/capturedescriptor.rs
+rename to archive/pre-fast/crates/rustui-metal/src/capturedescriptor.rs
+diff --git a/crates/rustui-metal/src/capturemanager.rs b/archive/pre-fast/crates/rustui-metal/src/capturemanager.rs
+similarity index 100%
+rename from crates/rustui-metal/src/capturemanager.rs
+rename to archive/pre-fast/crates/rustui-metal/src/capturemanager.rs
+diff --git a/crates/rustui-metal/src/commandbuffer.rs b/archive/pre-fast/crates/rustui-metal/src/commandbuffer.rs
+similarity index 100%
+rename from crates/rustui-metal/src/commandbuffer.rs
+rename to archive/pre-fast/crates/rustui-metal/src/commandbuffer.rs
+diff --git a/crates/rustui-metal/src/commandqueue.rs b/archive/pre-fast/crates/rustui-metal/src/commandqueue.rs
+similarity index 100%
+rename from crates/rustui-metal/src/commandqueue.rs
+rename to archive/pre-fast/crates/rustui-metal/src/commandqueue.rs
+diff --git a/crates/rustui-metal/src/computepass.rs b/archive/pre-fast/crates/rustui-metal/src/computepass.rs
+similarity index 100%
+rename from crates/rustui-metal/src/computepass.rs
+rename to archive/pre-fast/crates/rustui-metal/src/computepass.rs
+diff --git a/crates/rustui-metal/src/constants.rs b/archive/pre-fast/crates/rustui-metal/src/constants.rs
+similarity index 100%
+rename from crates/rustui-metal/src/constants.rs
+rename to archive/pre-fast/crates/rustui-metal/src/constants.rs
+diff --git a/crates/rustui-metal/src/counters.rs b/archive/pre-fast/crates/rustui-metal/src/counters.rs
+similarity index 100%
+rename from crates/rustui-metal/src/counters.rs
+rename to archive/pre-fast/crates/rustui-metal/src/counters.rs
+diff --git a/crates/rustui-metal/src/depthstencil.rs b/archive/pre-fast/crates/rustui-metal/src/depthstencil.rs
+similarity index 100%
+rename from crates/rustui-metal/src/depthstencil.rs
+rename to archive/pre-fast/crates/rustui-metal/src/depthstencil.rs
+diff --git a/crates/rustui-metal/src/device.rs b/archive/pre-fast/crates/rustui-metal/src/device.rs
+similarity index 100%
+rename from crates/rustui-metal/src/device.rs
+rename to archive/pre-fast/crates/rustui-metal/src/device.rs
+diff --git a/crates/rustui-metal/src/drawable.rs b/archive/pre-fast/crates/rustui-metal/src/drawable.rs
+similarity index 100%
+rename from crates/rustui-metal/src/drawable.rs
+rename to archive/pre-fast/crates/rustui-metal/src/drawable.rs
+diff --git a/crates/rustui-metal/src/encoder.rs b/archive/pre-fast/crates/rustui-metal/src/encoder.rs
+similarity index 100%
+rename from crates/rustui-metal/src/encoder.rs
+rename to archive/pre-fast/crates/rustui-metal/src/encoder.rs
+diff --git a/crates/rustui-metal/src/heap.rs b/archive/pre-fast/crates/rustui-metal/src/heap.rs
+similarity index 100%
+rename from crates/rustui-metal/src/heap.rs
+rename to archive/pre-fast/crates/rustui-metal/src/heap.rs
+diff --git a/crates/rustui-metal/src/indirect_encoder.rs b/archive/pre-fast/crates/rustui-metal/src/indirect_encoder.rs
+similarity index 100%
+rename from crates/rustui-metal/src/indirect_encoder.rs
+rename to archive/pre-fast/crates/rustui-metal/src/indirect_encoder.rs
+diff --git a/crates/rustui-metal/src/lib.rs b/archive/pre-fast/crates/rustui-metal/src/lib.rs
+similarity index 100%
+rename from crates/rustui-metal/src/lib.rs
+rename to archive/pre-fast/crates/rustui-metal/src/lib.rs
+diff --git a/crates/rustui-metal/src/library.rs b/archive/pre-fast/crates/rustui-metal/src/library.rs
+similarity index 100%
+rename from crates/rustui-metal/src/library.rs
+rename to archive/pre-fast/crates/rustui-metal/src/library.rs
+diff --git a/crates/rustui-metal/src/mps.rs b/archive/pre-fast/crates/rustui-metal/src/mps.rs
+similarity index 100%
+rename from crates/rustui-metal/src/mps.rs
+rename to archive/pre-fast/crates/rustui-metal/src/mps.rs
+diff --git a/crates/rustui-metal/src/pipeline/compute.rs b/archive/pre-fast/crates/rustui-metal/src/pipeline/compute.rs
+similarity index 100%
+rename from crates/rustui-metal/src/pipeline/compute.rs
+rename to archive/pre-fast/crates/rustui-metal/src/pipeline/compute.rs
+diff --git a/crates/rustui-metal/src/pipeline/mod.rs b/archive/pre-fast/crates/rustui-metal/src/pipeline/mod.rs
+similarity index 100%
+rename from crates/rustui-metal/src/pipeline/mod.rs
+rename to archive/pre-fast/crates/rustui-metal/src/pipeline/mod.rs
+diff --git a/crates/rustui-metal/src/pipeline/render.rs b/archive/pre-fast/crates/rustui-metal/src/pipeline/render.rs
+similarity index 100%
+rename from crates/rustui-metal/src/pipeline/render.rs
+rename to archive/pre-fast/crates/rustui-metal/src/pipeline/render.rs
+diff --git a/crates/rustui-metal/src/renderpass.rs b/archive/pre-fast/crates/rustui-metal/src/renderpass.rs
+similarity index 100%
+rename from crates/rustui-metal/src/renderpass.rs
+rename to archive/pre-fast/crates/rustui-metal/src/renderpass.rs
+diff --git a/crates/rustui-metal/src/resource.rs b/archive/pre-fast/crates/rustui-metal/src/resource.rs
+similarity index 100%
+rename from crates/rustui-metal/src/resource.rs
+rename to archive/pre-fast/crates/rustui-metal/src/resource.rs
+diff --git a/crates/rustui-metal/src/sampler.rs b/archive/pre-fast/crates/rustui-metal/src/sampler.rs
+similarity index 100%
+rename from crates/rustui-metal/src/sampler.rs
+rename to archive/pre-fast/crates/rustui-metal/src/sampler.rs
+diff --git a/crates/rustui-metal/src/sync.rs b/archive/pre-fast/crates/rustui-metal/src/sync.rs
+similarity index 100%
+rename from crates/rustui-metal/src/sync.rs
+rename to archive/pre-fast/crates/rustui-metal/src/sync.rs
+diff --git a/crates/rustui-metal/src/texture.rs b/archive/pre-fast/crates/rustui-metal/src/texture.rs
+similarity index 100%
+rename from crates/rustui-metal/src/texture.rs
+rename to archive/pre-fast/crates/rustui-metal/src/texture.rs
+diff --git a/crates/rustui-metal/src/types.rs b/archive/pre-fast/crates/rustui-metal/src/types.rs
+similarity index 100%
+rename from crates/rustui-metal/src/types.rs
+rename to archive/pre-fast/crates/rustui-metal/src/types.rs
+diff --git a/crates/rustui-metal/src/vertexdescriptor.rs b/archive/pre-fast/crates/rustui-metal/src/vertexdescriptor.rs
+similarity index 100%
+rename from crates/rustui-metal/src/vertexdescriptor.rs
+rename to archive/pre-fast/crates/rustui-metal/src/vertexdescriptor.rs
+diff --git a/crates/rustui-objc-foundation/.cargo-checksum.json b/archive/pre-fast/crates/rustui-objc-foundation/.cargo-checksum.json
+similarity index 100%
+rename from crates/rustui-objc-foundation/.cargo-checksum.json
+rename to archive/pre-fast/crates/rustui-objc-foundation/.cargo-checksum.json
+diff --git a/crates/rustui-objc-foundation/Cargo.toml b/archive/pre-fast/crates/rustui-objc-foundation/Cargo.toml
+similarity index 100%
+rename from crates/rustui-objc-foundation/Cargo.toml
+rename to archive/pre-fast/crates/rustui-objc-foundation/Cargo.toml
+diff --git a/crates/rustui-objc-foundation/examples/custom_class.rs b/archive/pre-fast/crates/rustui-objc-foundation/examples/custom_class.rs
+similarity index 100%
+rename from crates/rustui-objc-foundation/examples/custom_class.rs
+rename to archive/pre-fast/crates/rustui-objc-foundation/examples/custom_class.rs
+diff --git a/crates/rustui-objc-foundation/examples/example.rs b/archive/pre-fast/crates/rustui-objc-foundation/examples/example.rs
+similarity index 100%
+rename from crates/rustui-objc-foundation/examples/example.rs
+rename to archive/pre-fast/crates/rustui-objc-foundation/examples/example.rs
+diff --git a/crates/rustui-objc-foundation/src/array.rs b/archive/pre-fast/crates/rustui-objc-foundation/src/array.rs
+similarity index 100%
+rename from crates/rustui-objc-foundation/src/array.rs
+rename to archive/pre-fast/crates/rustui-objc-foundation/src/array.rs
+diff --git a/crates/rustui-objc-foundation/src/data.rs b/archive/pre-fast/crates/rustui-objc-foundation/src/data.rs
+similarity index 100%
+rename from crates/rustui-objc-foundation/src/data.rs
+rename to archive/pre-fast/crates/rustui-objc-foundation/src/data.rs
+diff --git a/crates/rustui-objc-foundation/src/dictionary.rs b/archive/pre-fast/crates/rustui-objc-foundation/src/dictionary.rs
+similarity index 100%
+rename from crates/rustui-objc-foundation/src/dictionary.rs
+rename to archive/pre-fast/crates/rustui-objc-foundation/src/dictionary.rs
+diff --git a/crates/rustui-objc-foundation/src/enumerator.rs b/archive/pre-fast/crates/rustui-objc-foundation/src/enumerator.rs
+similarity index 100%
+rename from crates/rustui-objc-foundation/src/enumerator.rs
+rename to archive/pre-fast/crates/rustui-objc-foundation/src/enumerator.rs
+diff --git a/crates/rustui-objc-foundation/src/lib.rs b/archive/pre-fast/crates/rustui-objc-foundation/src/lib.rs
+similarity index 100%
+rename from crates/rustui-objc-foundation/src/lib.rs
+rename to archive/pre-fast/crates/rustui-objc-foundation/src/lib.rs
+diff --git a/crates/rustui-objc-foundation/src/macros.rs b/archive/pre-fast/crates/rustui-objc-foundation/src/macros.rs
+similarity index 100%
+rename from crates/rustui-objc-foundation/src/macros.rs
+rename to archive/pre-fast/crates/rustui-objc-foundation/src/macros.rs
+diff --git a/crates/rustui-objc-foundation/src/object.rs b/archive/pre-fast/crates/rustui-objc-foundation/src/object.rs
+similarity index 100%
+rename from crates/rustui-objc-foundation/src/object.rs
+rename to archive/pre-fast/crates/rustui-objc-foundation/src/object.rs
+diff --git a/crates/rustui-objc-foundation/src/string.rs b/archive/pre-fast/crates/rustui-objc-foundation/src/string.rs
+similarity index 100%
+rename from crates/rustui-objc-foundation/src/string.rs
+rename to archive/pre-fast/crates/rustui-objc-foundation/src/string.rs
+diff --git a/crates/rustui-objc-foundation/src/value.rs b/archive/pre-fast/crates/rustui-objc-foundation/src/value.rs
+similarity index 100%
+rename from crates/rustui-objc-foundation/src/value.rs
+rename to archive/pre-fast/crates/rustui-objc-foundation/src/value.rs

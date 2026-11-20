@@ -1,6 +1,7 @@
 # Changelog
 
 ## Unreleased
+- FA-3: archive the unused owned macOS GPUI chain, keep deferred-platform dependencies intact, and reproduce the old baseline from its tag.
 - FA-2: own the five macOS GPUI Fast packages, preserve their source/licenses, and unify backend dependency identities.
 - FA-1: promote the active GPUI Fast patch stack and retire the inactive wheel-offset experiment.
 - FA-0: preserve the pre-Fast rollback tag and record the owner adoption decision with native/visual review pending.

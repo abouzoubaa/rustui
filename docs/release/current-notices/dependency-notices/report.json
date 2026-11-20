@@ -198,7 +198,7 @@
     {
       "license_expression": "Apache-2.0",
       "manifest_path": "repository:crates/rustui-gpui-kit-assets/Cargo.toml",
-      "manifest_sha256": "d2141a6dd3d742dd9541f5bda8033860f284c6bc9a338d302334a9f6badf2fef",
+      "manifest_sha256": "bd6ed84f79e5c12ef8468249c20b7df92fd51e1b23c8d013b9a03500fa8471f7",
       "name": "gpui-kit-assets",
       "notice_review_notes": [],
       "notices": [

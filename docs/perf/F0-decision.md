@@ -2,7 +2,7 @@
 
 Owner decision 2026-11-20: adopt GPUI Fast. Owner native/visual review still pending (scrolling comparison, R-1 grid).
 
-Decision point: 2026-11-14. This evaluates the candidate on `f0-integration`; it does not switch `main` or authorize adoption. The native checklist in [F0-native-checklist.md](F0-native-checklist.md) has not been run by the owner.
+Historical evaluation point: 2026-11-14. The evaluation below did not authorize adoption; the dated owner decision above supersedes that recommendation. The native checklist in [F0-native-checklist.md](F0-native-checklist.md) has not been run by the owner.
 
 ## Decision criteria
 
@@ -69,7 +69,7 @@ The official values above are five-run interleaved release-profile comparisons. 
 - Native/manual acceptance is **not verified**. Run every step in `F0-native-checklist.md`, including window resize/display movement, rapid scroll, editing, and accessibility-tree checks.
 - Workspace metadata is accepted by design as stated above, pending owner confirmation.
 - The full automated test count improved relative to the recorded F0-4 run, but the earlier 48 failures' cause was not proven.
-- All automated performance gates pass. The owner has not run the native stale-rendering checklist; adoption remains unapproved pending that native result and confirmation of the metadata-gate wording.
+- All automated performance gates passed at evaluation time. The owner decision above authorizes adoption with the native/visual review still pending; it does not mark that review complete.
 
 
 ## Changes since first decision (F0-9)
@@ -100,3 +100,27 @@ The first three F0 workload sets were discarded because they overlapped the rele
 The first three fresh workload timings are materially higher than the first Fast measurements, although still below the recorded gpui-pre medians. This run does not establish that the F0-9 GraphView culling change caused the difference; the measured list/editor/idle workloads do not exercise GraphView. Keep this measurement variance visible for the owner review.
 
 The F0-9 notify audit found no RustUI production component/view update with a missing invalidation, so no new notify-specific test was required. The existing five no-forced-refresh tests remain part of the 1,441-test RustUI group; the GraphView regression above exercises the offscreen extreme-node fix.
+
+
+## Fast adoption source ownership (FA-3)
+
+The macOS build uses the owned Fast core, platform, macOS, Apple and macro packages. The old owned core `crates/rustui-gpui` remains only because the deferred-platform mirrors (`rustui-gpui-linux`, `rustui-gpui-wgpu`, `rustui-gpui-windows`, `rustui-gpui-web`) and optional Kit backend declarations still reference it. Those four manifests and their source files are unchanged. Shared upstream utility packages with `gpui-pre-` names remain dependencies of GPUI Fast itself; they are not the legacy GPUI backend.
+
+| Old owned folders | Disposition | Why |
+|---|---|---|
+| `rustui-gpui` | Kept outside workspace members | Required by the deferred-platform mirrors and optional Kit declarations; absent from the RustUI macOS dependency closure. |
+| `rustui-gpui-platform`, `rustui-gpui-macos`, `rustui-gpui-apple` | Archived under `archive/pre-fast/crates/` | The final live path reference was the assets crate's dev platform, now wired to Fast by patch. |
+| `rustui-block`, `rustui-cocoa`, `rustui-cocoa-foundation`, `rustui-metal`, `rustui-objc-foundation` | Archived under `archive/pre-fast/crates/` | Used only by the retired owned macOS chain; no remaining live path dependency selects them. |
+
+The archive patch moves 184 files unchanged. Popup geometry checks now read the active owned Fast macOS source with their assertions unchanged; separate archive tests preserve the historical file images. No deferred-platform dependency declaration was changed. The gpui-pre benchmark baseline is reproduced from the rollback tag, not from live macOS crate selection:
+
+```sh
+git worktree add --detach ../rustui-pre-fast archive/pre-fast
+cd ../rustui-pre-fast
+export CARGO_TARGET_DIR="$HOME/.cache/rustui-target"
+. scripts/pinned-toolchain.sh
+pinned_cargo test --release -p rustui --lib f0_long_list_scroll_benchmark --locked --offline -- --ignored --nocapture
+pinned_cargo test --release -p rustui --lib f0_large_editor_typing_benchmark --locked --offline -- --ignored --nocapture
+pinned_cargo test --release -p rustui --lib f0_idle_redraw_invalidation_benchmark --locked --offline -- --ignored --nocapture
+pinned_cargo test --release -p rustui --lib owner_update_and_draw_workload --locked --offline -- --ignored --nocapture
+```

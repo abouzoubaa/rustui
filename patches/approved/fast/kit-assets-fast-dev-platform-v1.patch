@@ -1,0 +1,19 @@
+--- a/crates/rustui-gpui-kit-assets/Cargo.toml
++++ b/crates/rustui-gpui-kit-assets/Cargo.toml
+@@ -78,13 +78,13 @@
+ version = "0.4"
+ 
+ [dev-dependencies.gpui_platform]
+-version = "=0.3.12"
+-path = "../rustui-gpui-platform"
++version = "=0.1.14"
++path = "../rustui-gpui-fast-platform"
+ features = [
+     "font-kit",
+     "runtime_shaders",
+ ]
+-package = "gpui-pre-platform"
++package = "gpui-fast-platform"
+ 
+ [target.'cfg(not(target_family = "wasm"))'.dependencies.rust-embed]
+ version = "8.7.2"

@@ -1,6 +1,6 @@
 # Approved GPUI Fast stack
 
-Promoted in FA-1 from the active F0 stack. Patch bytes and source images are unchanged. FA-2 adds owned dependency wiring: there are now 64 ordered patches plus one alternative Component-manifest postimage proof (65 approved patch files). The 64 promoted F0 patch files remain unchanged.
+Promoted in FA-1 from the active F0 stack. Patch bytes and source images are unchanged. FA-2 adds owned dependency wiring: there are now 65 ordered patches plus one alternative Component-manifest postimage proof (66 approved patch files). The 64 promoted F0 patch files remain unchanged.
 
 `fast-stack.json` defines cumulative order. `python3 scripts/check_fast_patch_stack.py --verify` checks the final hashes, reverses and reapplies the ordered stack in a disposable fixture, and separately replays the alternative postimage. Existing family/runtime proofs remain in the source gate.
 
@@ -70,7 +70,7 @@ Promoted in FA-1 from the active F0 stack. Patch bytes and source images are unc
 | `gpui-frame-phases-v1-fast` | `gpui-fast-0.1.14` | Split opt-in frame timing into layout, prepaint, paint and submit. |
 | `gpui-base-scroll-bounce-oracle-v1-fast` | `rustui-gpui-base` | Expose opt-in bounce observation for the scroll capture oracle. |
 | `gpui-component-vendor-manifest-normalize-v1` | `gpui-component-0.9.1` | Reproduce the final normalized Component manifest as an alternative postimage proof. |
-
 | `owned-fast-path-wiring-v1` | owned Fast core/platform/macOS/Apple and Kit Base/Component/assets | Use the owned Fast packages consistently, including Cargo’s canonical-source requirement for the platform’s target-specific core alias. |
+| `kit-assets-fast-dev-platform-v1` | owned Kit assets | Use the Fast dev platform so the unused legacy macOS chain can leave the build. |
 
 Owned source copies are reproduced by `python3 scripts/refresh_owned_fast_sources.py --apply`, checked with `--check`, and removed/restored with `--reverse`. `owned-fast-sources.json` pins every copied source/license file; manifests are changed only by the wiring patch.

@@ -1,0 +1,1121 @@
+{
+  "schema_version": 1,
+  "patch": "archive-unused-mirrors-v1.patch",
+  "patch_sha256": "e936fa308aafb53547c5b2e6a8dc7944c73b5d17a6f70c91438a30ac22509a39",
+  "directories": [
+    "crates/rustui-gpui-platform",
+    "crates/rustui-gpui-macos",
+    "crates/rustui-gpui-apple",
+    "crates/rustui-block",
+    "crates/rustui-cocoa",
+    "crates/rustui-cocoa-foundation",
+    "crates/rustui-metal",
+    "crates/rustui-objc-foundation"
+  ],
+  "moves": [
+    {
+      "source": "crates/rustui-gpui-platform/.cargo-checksum.json",
+      "destination": "archive/pre-fast/crates/rustui-gpui-platform/.cargo-checksum.json",
+      "pre_sha256": "2def0b54665b0c7940624b495900b7ec47a6f10b4529c9fd7d5da307b05c6cb6",
+      "post_sha256": "2def0b54665b0c7940624b495900b7ec47a6f10b4529c9fd7d5da307b05c6cb6"
+    },
+    {
+      "source": "crates/rustui-gpui-platform/Cargo.lock",
+      "destination": "archive/pre-fast/crates/rustui-gpui-platform/Cargo.lock",
+      "pre_sha256": "ef870247a1a8cc3b1c21b44bc9b82b77c32fa1da568a1fdf150d6eb15c080be5",
+      "post_sha256": "ef870247a1a8cc3b1c21b44bc9b82b77c32fa1da568a1fdf150d6eb15c080be5"
+    },
+    {
+      "source": "crates/rustui-gpui-platform/Cargo.toml",
+      "destination": "archive/pre-fast/crates/rustui-gpui-platform/Cargo.toml",
+      "pre_sha256": "b964f7dc3bde6908b0af724c84d41b1f6eb84f6a9c3bb8d5e90519e98a7a90bb",
+      "post_sha256": "b964f7dc3bde6908b0af724c84d41b1f6eb84f6a9c3bb8d5e90519e98a7a90bb"
+    },
+    {
+      "source": "crates/rustui-gpui-platform/Cargo.toml.orig",
+      "destination": "archive/pre-fast/crates/rustui-gpui-platform/Cargo.toml.orig",
+      "pre_sha256": "4e0fd566d16f88d871444d2bf1c8a015a7de1c8be6144bebf0392aec2f7a1cda",
+      "post_sha256": "4e0fd566d16f88d871444d2bf1c8a015a7de1c8be6144bebf0392aec2f7a1cda"
+    },
+    {
+      "source": "crates/rustui-gpui-platform/LICENSE-APACHE",
+      "destination": "archive/pre-fast/crates/rustui-gpui-platform/LICENSE-APACHE",
+      "pre_sha256": "752daf2fb234ca4a1fa372c073fe127f44b7b90fd2529ae44273a64f9d53da7a",
+      "post_sha256": "752daf2fb234ca4a1fa372c073fe127f44b7b90fd2529ae44273a64f9d53da7a"
+    },
+    {
+      "source": "crates/rustui-gpui-platform/benches/atlas_upload.rs",
+      "destination": "archive/pre-fast/crates/rustui-gpui-platform/benches/atlas_upload.rs",
+      "pre_sha256": "1863bce6031605561447a73a145148a27b37556fe03c870e503f20da0968a3fc",
+      "post_sha256": "1863bce6031605561447a73a145148a27b37556fe03c870e503f20da0968a3fc"
+    },
+    {
+      "source": "crates/rustui-gpui-platform/benches/inspector_render.rs",
+      "destination": "archive/pre-fast/crates/rustui-gpui-platform/benches/inspector_render.rs",
+      "pre_sha256": "fe2978276f855beec657e9eb5c39796d41387dac64a816049789d4d29c07f414",
+      "post_sha256": "fe2978276f855beec657e9eb5c39796d41387dac64a816049789d4d29c07f414"
+    },
+    {
+      "source": "crates/rustui-gpui-platform/benches/primitives.rs",
+      "destination": "archive/pre-fast/crates/rustui-gpui-platform/benches/primitives.rs",
+      "pre_sha256": "85c434697e35c6c5b61b9f9f327c581a1a0d92962709254e069e778031cc1802",
+      "post_sha256": "85c434697e35c6c5b61b9f9f327c581a1a0d92962709254e069e778031cc1802"
+    },
+    {
+      "source": "crates/rustui-gpui-platform/benches/randomized_element_tree.rs",
+      "destination": "archive/pre-fast/crates/rustui-gpui-platform/benches/randomized_element_tree.rs",
+      "pre_sha256": "77e7d3fc42e29a149bd2270c7488b57a2fb53f7104f53bd9684544fe52ec76f6",
+      "post_sha256": "77e7d3fc42e29a149bd2270c7488b57a2fb53f7104f53bd9684544fe52ec76f6"
+    },
+    {
+      "source": "crates/rustui-gpui-platform/src/gpui_platform.rs",
+      "destination": "archive/pre-fast/crates/rustui-gpui-platform/src/gpui_platform.rs",
+      "pre_sha256": "d9f9f29a11ed22efdd8cd260ff9582f53f9466064994340ff919be9ef706f075",
+      "post_sha256": "d9f9f29a11ed22efdd8cd260ff9582f53f9466064994340ff919be9ef706f075"
+    },
+    {
+      "source": "crates/rustui-gpui-macos/.cargo-checksum.json",
+      "destination": "archive/pre-fast/crates/rustui-gpui-macos/.cargo-checksum.json",
+      "pre_sha256": "7f2f281704896a45d515fd442d153b8cd7e80ebd32038d290810d88def780321",
+      "post_sha256": "7f2f281704896a45d515fd442d153b8cd7e80ebd32038d290810d88def780321"
+    },
+    {
+      "source": "crates/rustui-gpui-macos/Cargo.lock",
+      "destination": "archive/pre-fast/crates/rustui-gpui-macos/Cargo.lock",
+      "pre_sha256": "6e16744d3b401aba488028719653bbed00358f3ee5570e91f34249c011397dfa",
+      "post_sha256": "6e16744d3b401aba488028719653bbed00358f3ee5570e91f34249c011397dfa"
+    },
+    {
+      "source": "crates/rustui-gpui-macos/Cargo.toml",
+      "destination": "archive/pre-fast/crates/rustui-gpui-macos/Cargo.toml",
+      "pre_sha256": "0738c89b21b863175790dbf107c10c13e3c4eed84062dc27404f75e8f87b81ff",
+      "post_sha256": "0738c89b21b863175790dbf107c10c13e3c4eed84062dc27404f75e8f87b81ff"
+    },
+    {
+      "source": "crates/rustui-gpui-macos/Cargo.toml.orig",
+      "destination": "archive/pre-fast/crates/rustui-gpui-macos/Cargo.toml.orig",
+      "pre_sha256": "7aae10ce395ebd3875bd35c61434cb56bf212fa060820a1c687ef5a1856c249d",
+      "post_sha256": "7aae10ce395ebd3875bd35c61434cb56bf212fa060820a1c687ef5a1856c249d"
+    },
+    {
+      "source": "crates/rustui-gpui-macos/LICENSE-APACHE",
+      "destination": "archive/pre-fast/crates/rustui-gpui-macos/LICENSE-APACHE",
+      "pre_sha256": "752daf2fb234ca4a1fa372c073fe127f44b7b90fd2529ae44273a64f9d53da7a",
+      "post_sha256": "752daf2fb234ca4a1fa372c073fe127f44b7b90fd2529ae44273a64f9d53da7a"
+    },
+    {
+      "source": "crates/rustui-gpui-macos/src/display.rs",
+      "destination": "archive/pre-fast/crates/rustui-gpui-macos/src/display.rs",
+      "pre_sha256": "eb232a1ab75d8199741e2cc800b21acc725eeddcf8883ff05baf2fcc5ce2d260",
+      "post_sha256": "eb232a1ab75d8199741e2cc800b21acc725eeddcf8883ff05baf2fcc5ce2d260"
+    },
+    {
+      "source": "crates/rustui-gpui-macos/src/display_link.rs",
+      "destination": "archive/pre-fast/crates/rustui-gpui-macos/src/display_link.rs",
+      "pre_sha256": "b74ca5ae9b60a0a585d1105a24ce2c238efc41ca14310a7509b51e93bcc57a5b",
+      "post_sha256": "b74ca5ae9b60a0a585d1105a24ce2c238efc41ca14310a7509b51e93bcc57a5b"
+    },
+    {
+      "source": "crates/rustui-gpui-macos/src/events.rs",
+      "destination": "archive/pre-fast/crates/rustui-gpui-macos/src/events.rs",
+      "pre_sha256": "dce8446c49d37f61ac2c23ceb0c5b5817a8fd1f3a71f2dba53e6d8efcbbe5c94",
+      "post_sha256": "dce8446c49d37f61ac2c23ceb0c5b5817a8fd1f3a71f2dba53e6d8efcbbe5c94"
+    },
+    {
+      "source": "crates/rustui-gpui-macos/src/gpui_macos.rs",
+      "destination": "archive/pre-fast/crates/rustui-gpui-macos/src/gpui_macos.rs",
+      "pre_sha256": "a0f917b3e28b087b8ce80ccc78a2eb316b2f571c191ab03dc4ca12e305dfb8db",
+      "post_sha256": "a0f917b3e28b087b8ce80ccc78a2eb316b2f571c191ab03dc4ca12e305dfb8db"
+    },
+    {
+      "source": "crates/rustui-gpui-macos/src/keyboard.rs",
+      "destination": "archive/pre-fast/crates/rustui-gpui-macos/src/keyboard.rs",
+      "pre_sha256": "6a017f020ba10396e1ef827a036a6181644f2fe62d3ac4a7721781e2f08feeaa",
+      "post_sha256": "6a017f020ba10396e1ef827a036a6181644f2fe62d3ac4a7721781e2f08feeaa"
+    },
+    {
+      "source": "crates/rustui-gpui-macos/src/pasteboard.rs",
+      "destination": "archive/pre-fast/crates/rustui-gpui-macos/src/pasteboard.rs",
+      "pre_sha256": "05d01ac0c7e532a16eb0a962ebd1299b0cacaf64616d3d0d11a1495b5feac994",
+      "post_sha256": "05d01ac0c7e532a16eb0a962ebd1299b0cacaf64616d3d0d11a1495b5feac994"
+    },
+    {
+      "source": "crates/rustui-gpui-macos/src/platform.rs",
+      "destination": "archive/pre-fast/crates/rustui-gpui-macos/src/platform.rs",
+      "pre_sha256": "2b81cb02ef131bb866857049f0d5b9efb3b9766c49031721bd7f556214199dc5",
+      "post_sha256": "2b81cb02ef131bb866857049f0d5b9efb3b9766c49031721bd7f556214199dc5"
+    },
+    {
+      "source": "crates/rustui-gpui-macos/src/screen_capture.rs",
+      "destination": "archive/pre-fast/crates/rustui-gpui-macos/src/screen_capture.rs",
+      "pre_sha256": "996c4308d93aea1c809e27baa2ac42b18d038a677cfdd599e481abf5ad200d4b",
+      "post_sha256": "996c4308d93aea1c809e27baa2ac42b18d038a677cfdd599e481abf5ad200d4b"
+    },
+    {
+      "source": "crates/rustui-gpui-macos/src/system_notifications.rs",
+      "destination": "archive/pre-fast/crates/rustui-gpui-macos/src/system_notifications.rs",
+      "pre_sha256": "df8374f075932996d58b99c043d97a82e1cefebab79e5b0f4648c8a3776ea5fe",
+      "post_sha256": "df8374f075932996d58b99c043d97a82e1cefebab79e5b0f4648c8a3776ea5fe"
+    },
+    {
+      "source": "crates/rustui-gpui-macos/src/window.rs",
+      "destination": "archive/pre-fast/crates/rustui-gpui-macos/src/window.rs",
+      "pre_sha256": "dd92343cc5d2424620de8eeee828c0ae9d9a98bd033309b79ad4224bf5a140ea",
+      "post_sha256": "dd92343cc5d2424620de8eeee828c0ae9d9a98bd033309b79ad4224bf5a140ea"
+    },
+    {
+      "source": "crates/rustui-gpui-macos/src/window_appearance.rs",
+      "destination": "archive/pre-fast/crates/rustui-gpui-macos/src/window_appearance.rs",
+      "pre_sha256": "c1ea31769bfd6b324339525b8ffec3be0f59a24495a7e491c1df66bd43db5b75",
+      "post_sha256": "c1ea31769bfd6b324339525b8ffec3be0f59a24495a7e491c1df66bd43db5b75"
+    },
+    {
+      "source": "crates/rustui-gpui-apple/.cargo-checksum.json",
+      "destination": "archive/pre-fast/crates/rustui-gpui-apple/.cargo-checksum.json",
+      "pre_sha256": "27862a36aa51de35945ea0e871f7e3d5a3ed72ae5b3364e54a5019d05a69c956",
+      "post_sha256": "27862a36aa51de35945ea0e871f7e3d5a3ed72ae5b3364e54a5019d05a69c956"
+    },
+    {
+      "source": "crates/rustui-gpui-apple/Cargo.lock",
+      "destination": "archive/pre-fast/crates/rustui-gpui-apple/Cargo.lock",
+      "pre_sha256": "59a3de6f66956beb9f7a6d36de485ba2212836ba927c995b0971f59768ed228f",
+      "post_sha256": "59a3de6f66956beb9f7a6d36de485ba2212836ba927c995b0971f59768ed228f"
+    },
+    {
+      "source": "crates/rustui-gpui-apple/Cargo.toml",
+      "destination": "archive/pre-fast/crates/rustui-gpui-apple/Cargo.toml",
+      "pre_sha256": "5b36ab1f356e3f479cb47f808287b3e0f4e192f11a5389877768bd81c6203f22",
+      "post_sha256": "5b36ab1f356e3f479cb47f808287b3e0f4e192f11a5389877768bd81c6203f22"
+    },
+    {
+      "source": "crates/rustui-gpui-apple/Cargo.toml.orig",
+      "destination": "archive/pre-fast/crates/rustui-gpui-apple/Cargo.toml.orig",
+      "pre_sha256": "2f2448865e91fd8006ea557ea101de01f5da5d8d52deff88fd5ce6abe61f3489",
+      "post_sha256": "2f2448865e91fd8006ea557ea101de01f5da5d8d52deff88fd5ce6abe61f3489"
+    },
+    {
+      "source": "crates/rustui-gpui-apple/LICENSE-APACHE",
+      "destination": "archive/pre-fast/crates/rustui-gpui-apple/LICENSE-APACHE",
+      "pre_sha256": "752daf2fb234ca4a1fa372c073fe127f44b7b90fd2529ae44273a64f9d53da7a",
+      "post_sha256": "752daf2fb234ca4a1fa372c073fe127f44b7b90fd2529ae44273a64f9d53da7a"
+    },
+    {
+      "source": "crates/rustui-gpui-apple/build.rs",
+      "destination": "archive/pre-fast/crates/rustui-gpui-apple/build.rs",
+      "pre_sha256": "64e593cc20e82ce21f644ec674ea3d37840d71a0ccbbce46f26829e971e60509",
+      "post_sha256": "64e593cc20e82ce21f644ec674ea3d37840d71a0ccbbce46f26829e971e60509"
+    },
+    {
+      "source": "crates/rustui-gpui-apple/src/dispatcher.rs",
+      "destination": "archive/pre-fast/crates/rustui-gpui-apple/src/dispatcher.rs",
+      "pre_sha256": "21ec54613d48cd3c419f2f694f75460d1019491c2406a7ed4dfa3374c84824cf",
+      "post_sha256": "21ec54613d48cd3c419f2f694f75460d1019491c2406a7ed4dfa3374c84824cf"
+    },
+    {
+      "source": "crates/rustui-gpui-apple/src/display_link.rs",
+      "destination": "archive/pre-fast/crates/rustui-gpui-apple/src/display_link.rs",
+      "pre_sha256": "1a1776d9a8d5a0083ec07faced6ba16a9a0fa833c256ae2888d4cc784f7e356f",
+      "post_sha256": "1a1776d9a8d5a0083ec07faced6ba16a9a0fa833c256ae2888d4cc784f7e356f"
+    },
+    {
+      "source": "crates/rustui-gpui-apple/src/gpui_apple.rs",
+      "destination": "archive/pre-fast/crates/rustui-gpui-apple/src/gpui_apple.rs",
+      "pre_sha256": "699d1bb1676ad55b8edca5020896b00c31c3de901a677227a102cdfcb5960563",
+      "post_sha256": "699d1bb1676ad55b8edca5020896b00c31c3de901a677227a102cdfcb5960563"
+    },
+    {
+      "source": "crates/rustui-gpui-apple/src/keychain.rs",
+      "destination": "archive/pre-fast/crates/rustui-gpui-apple/src/keychain.rs",
+      "pre_sha256": "636ce5b08fe6e939dfef73fafc3be719b21b35da356a7d7053afe4dbf4d6f71c",
+      "post_sha256": "636ce5b08fe6e939dfef73fafc3be719b21b35da356a7d7053afe4dbf4d6f71c"
+    },
+    {
+      "source": "crates/rustui-gpui-apple/src/metal_atlas.rs",
+      "destination": "archive/pre-fast/crates/rustui-gpui-apple/src/metal_atlas.rs",
+      "pre_sha256": "0889f2ff0ec3091bc0749ea629b4c87eab2c6253f84cb459693895a48dcb1e73",
+      "post_sha256": "0889f2ff0ec3091bc0749ea629b4c87eab2c6253f84cb459693895a48dcb1e73"
+    },
+    {
+      "source": "crates/rustui-gpui-apple/src/metal_renderer.rs",
+      "destination": "archive/pre-fast/crates/rustui-gpui-apple/src/metal_renderer.rs",
+      "pre_sha256": "a1b4fa7dcdfe636b0cd311bf7e0d20b3e05399756be8021fb0a2872dda042c99",
+      "post_sha256": "a1b4fa7dcdfe636b0cd311bf7e0d20b3e05399756be8021fb0a2872dda042c99"
+    },
+    {
+      "source": "crates/rustui-gpui-apple/src/open_type.rs",
+      "destination": "archive/pre-fast/crates/rustui-gpui-apple/src/open_type.rs",
+      "pre_sha256": "bc827c157fdce50125b158adb595b665d82f38b62fc6b3a9693c65abae640453",
+      "post_sha256": "bc827c157fdce50125b158adb595b665d82f38b62fc6b3a9693c65abae640453"
+    },
+    {
+      "source": "crates/rustui-gpui-apple/src/process_info.rs",
+      "destination": "archive/pre-fast/crates/rustui-gpui-apple/src/process_info.rs",
+      "pre_sha256": "533288f7707bfeaeea53f753d25c7af676235ebff57910bb79331f68492be139",
+      "post_sha256": "533288f7707bfeaeea53f753d25c7af676235ebff57910bb79331f68492be139"
+    },
+    {
+      "source": "crates/rustui-gpui-apple/src/shaders.metal",
+      "destination": "archive/pre-fast/crates/rustui-gpui-apple/src/shaders.metal",
+      "pre_sha256": "436647169d914d26092fcf3bfd4020a6638a97d1ea3b39466fd2d4641d1c219e",
+      "post_sha256": "436647169d914d26092fcf3bfd4020a6638a97d1ea3b39466fd2d4641d1c219e"
+    },
+    {
+      "source": "crates/rustui-gpui-apple/src/text_system.rs",
+      "destination": "archive/pre-fast/crates/rustui-gpui-apple/src/text_system.rs",
+      "pre_sha256": "14125b7521b3245408cbac42d650ee2f54690660defe11567e7281a04e5d0a38",
+      "post_sha256": "14125b7521b3245408cbac42d650ee2f54690660defe11567e7281a04e5d0a38"
+    },
+    {
+      "source": "crates/rustui-gpui-apple/vendor/gpui/src/color.rs",
+      "destination": "archive/pre-fast/crates/rustui-gpui-apple/vendor/gpui/src/color.rs",
+      "pre_sha256": "4292aa1a2bbc56b653aaef0702726325f8efb93f16226320519e257c3ba8a839",
+      "post_sha256": "4292aa1a2bbc56b653aaef0702726325f8efb93f16226320519e257c3ba8a839"
+    },
+    {
+      "source": "crates/rustui-gpui-apple/vendor/gpui/src/geometry.rs",
+      "destination": "archive/pre-fast/crates/rustui-gpui-apple/vendor/gpui/src/geometry.rs",
+      "pre_sha256": "965ae8f6c1d4bd2e7dcb43e253a99dd4363252b1ef6dc19c3031ea50c5192408",
+      "post_sha256": "965ae8f6c1d4bd2e7dcb43e253a99dd4363252b1ef6dc19c3031ea50c5192408"
+    },
+    {
+      "source": "crates/rustui-gpui-apple/vendor/gpui/src/platform.rs",
+      "destination": "archive/pre-fast/crates/rustui-gpui-apple/vendor/gpui/src/platform.rs",
+      "pre_sha256": "1a1002581b0afcc816cfa92473c928791faf49fb8a94ef359fc10b1a372065ba",
+      "post_sha256": "1a1002581b0afcc816cfa92473c928791faf49fb8a94ef359fc10b1a372065ba"
+    },
+    {
+      "source": "crates/rustui-gpui-apple/vendor/gpui/src/scene.rs",
+      "destination": "archive/pre-fast/crates/rustui-gpui-apple/vendor/gpui/src/scene.rs",
+      "pre_sha256": "b615c926356b9180c81706d84e1033501ff9f4cd70895374b0ce63fcf4bc153e",
+      "post_sha256": "b615c926356b9180c81706d84e1033501ff9f4cd70895374b0ce63fcf4bc153e"
+    },
+    {
+      "source": "crates/rustui-gpui-apple/vendor/gpui/src/window.rs",
+      "destination": "archive/pre-fast/crates/rustui-gpui-apple/vendor/gpui/src/window.rs",
+      "pre_sha256": "9f4891f1e9c323d8d14a0624ce86c436cb9e623a52e8300a9b67ec0119f4aaa5",
+      "post_sha256": "9f4891f1e9c323d8d14a0624ce86c436cb9e623a52e8300a9b67ec0119f4aaa5"
+    },
+    {
+      "source": "crates/rustui-block/.cargo-checksum.json",
+      "destination": "archive/pre-fast/crates/rustui-block/.cargo-checksum.json",
+      "pre_sha256": "05528f0f29a40c796c497ec97388f0a5ede42f37d5ae81239eefe44a2409dcc8",
+      "post_sha256": "05528f0f29a40c796c497ec97388f0a5ede42f37d5ae81239eefe44a2409dcc8"
+    },
+    {
+      "source": "crates/rustui-block/Cargo.toml",
+      "destination": "archive/pre-fast/crates/rustui-block/Cargo.toml",
+      "pre_sha256": "deb73502c4f376f7c61232c4da1c59c0787198b73c9bd20fd1e969cc96bdac3a",
+      "post_sha256": "deb73502c4f376f7c61232c4da1c59c0787198b73c9bd20fd1e969cc96bdac3a"
+    },
+    {
+      "source": "crates/rustui-block/README.md",
+      "destination": "archive/pre-fast/crates/rustui-block/README.md",
+      "pre_sha256": "01c56329fa14f48ea1c9c7986c3660c41beeff2477f61c2d36bd8e666b9fc562",
+      "post_sha256": "01c56329fa14f48ea1c9c7986c3660c41beeff2477f61c2d36bd8e666b9fc562"
+    },
+    {
+      "source": "crates/rustui-block/src/lib.rs",
+      "destination": "archive/pre-fast/crates/rustui-block/src/lib.rs",
+      "pre_sha256": "798f4b286defc8fa722247a4b6c031d2a9b5144fc916e2e5c4cbb0ed85c8b4dd",
+      "post_sha256": "798f4b286defc8fa722247a4b6c031d2a9b5144fc916e2e5c4cbb0ed85c8b4dd"
+    },
+    {
+      "source": "crates/rustui-block/src/test_utils.rs",
+      "destination": "archive/pre-fast/crates/rustui-block/src/test_utils.rs",
+      "pre_sha256": "271bd579b67e2440134227cf8ee52c1b8c22854eb0c7923b46306b51810c2cf1",
+      "post_sha256": "271bd579b67e2440134227cf8ee52c1b8c22854eb0c7923b46306b51810c2cf1"
+    },
+    {
+      "source": "crates/rustui-cocoa/.cargo-checksum.json",
+      "destination": "archive/pre-fast/crates/rustui-cocoa/.cargo-checksum.json",
+      "pre_sha256": "7dd2730d5ad5705e9fd18795e0db3b73a287c61824739d193c8c562ce315ded1",
+      "post_sha256": "7dd2730d5ad5705e9fd18795e0db3b73a287c61824739d193c8c562ce315ded1"
+    },
+    {
+      "source": "crates/rustui-cocoa/.cargo_vcs_info.json",
+      "destination": "archive/pre-fast/crates/rustui-cocoa/.cargo_vcs_info.json",
+      "pre_sha256": "410addcd48b8e2848c63a887a75d59c46228372637cef8e5ea9aeba4cb55b0b9",
+      "post_sha256": "410addcd48b8e2848c63a887a75d59c46228372637cef8e5ea9aeba4cb55b0b9"
+    },
+    {
+      "source": "crates/rustui-cocoa/.travis.yml",
+      "destination": "archive/pre-fast/crates/rustui-cocoa/.travis.yml",
+      "pre_sha256": "26f0232c2ec80849cebed1ff2b685d3aaaabff514eacc89f582110cb248bbc4b",
+      "post_sha256": "26f0232c2ec80849cebed1ff2b685d3aaaabff514eacc89f582110cb248bbc4b"
+    },
+    {
+      "source": "crates/rustui-cocoa/COPYRIGHT",
+      "destination": "archive/pre-fast/crates/rustui-cocoa/COPYRIGHT",
+      "pre_sha256": "ec82b96487e9e778ee610c7ab245162464782cfa1f555c2299333f8dbe5c036a",
+      "post_sha256": "ec82b96487e9e778ee610c7ab245162464782cfa1f555c2299333f8dbe5c036a"
+    },
+    {
+      "source": "crates/rustui-cocoa/Cargo.lock",
+      "destination": "archive/pre-fast/crates/rustui-cocoa/Cargo.lock",
+      "pre_sha256": "e90a5a122280c0ddeaa7147d9d2be097d4a54073e87d2de4b1e16af2ca761c8d",
+      "post_sha256": "e90a5a122280c0ddeaa7147d9d2be097d4a54073e87d2de4b1e16af2ca761c8d"
+    },
+    {
+      "source": "crates/rustui-cocoa/Cargo.toml",
+      "destination": "archive/pre-fast/crates/rustui-cocoa/Cargo.toml",
+      "pre_sha256": "19b7b6c87b2d64ca6e2eaf810c677563892818bdc830513b75e79e9aa08901a6",
+      "post_sha256": "19b7b6c87b2d64ca6e2eaf810c677563892818bdc830513b75e79e9aa08901a6"
+    },
+    {
+      "source": "crates/rustui-cocoa/Cargo.toml.orig",
+      "destination": "archive/pre-fast/crates/rustui-cocoa/Cargo.toml.orig",
+      "pre_sha256": "739b955616e777697ddede21be2550d54b9077f9c847e53a5ae0e2791772f7e8",
+      "post_sha256": "739b955616e777697ddede21be2550d54b9077f9c847e53a5ae0e2791772f7e8"
+    },
+    {
+      "source": "crates/rustui-cocoa/LICENSE-APACHE",
+      "destination": "archive/pre-fast/crates/rustui-cocoa/LICENSE-APACHE",
+      "pre_sha256": "a60eea817514531668d7e00765731449fe14d059d3249e0bc93b36de45f759f2",
+      "post_sha256": "a60eea817514531668d7e00765731449fe14d059d3249e0bc93b36de45f759f2"
+    },
+    {
+      "source": "crates/rustui-cocoa/LICENSE-MIT",
+      "destination": "archive/pre-fast/crates/rustui-cocoa/LICENSE-MIT",
+      "pre_sha256": "62065228e42caebca7e7d7db1204cbb867033de5982ca4009928915e4095f3a3",
+      "post_sha256": "62065228e42caebca7e7d7db1204cbb867033de5982ca4009928915e4095f3a3"
+    },
+    {
+      "source": "crates/rustui-cocoa/README.md",
+      "destination": "archive/pre-fast/crates/rustui-cocoa/README.md",
+      "pre_sha256": "0fb65e2bdc562e80722d3cc72691f21a40127c2052080706d2e40cec6000d3cb",
+      "post_sha256": "0fb65e2bdc562e80722d3cc72691f21a40127c2052080706d2e40cec6000d3cb"
+    },
+    {
+      "source": "crates/rustui-cocoa/examples/color.rs",
+      "destination": "archive/pre-fast/crates/rustui-cocoa/examples/color.rs",
+      "pre_sha256": "5a0c41147dc9668648de0c83355efeb28dc2bfb839b21b69096d926079d35da5",
+      "post_sha256": "5a0c41147dc9668648de0c83355efeb28dc2bfb839b21b69096d926079d35da5"
+    },
+    {
+      "source": "crates/rustui-cocoa/examples/fullscreen.rs",
+      "destination": "archive/pre-fast/crates/rustui-cocoa/examples/fullscreen.rs",
+      "pre_sha256": "ee9408be9bb55b60ba7369345b035431de07c50b3e20b5e180beaf81856b8e25",
+      "post_sha256": "ee9408be9bb55b60ba7369345b035431de07c50b3e20b5e180beaf81856b8e25"
+    },
+    {
+      "source": "crates/rustui-cocoa/examples/hello_world.rs",
+      "destination": "archive/pre-fast/crates/rustui-cocoa/examples/hello_world.rs",
+      "pre_sha256": "11f2c2ed0e26dcec27bd8a414e2cd67ed988adfe64cd54f26e73cbbd079efae3",
+      "post_sha256": "11f2c2ed0e26dcec27bd8a414e2cd67ed988adfe64cd54f26e73cbbd079efae3"
+    },
+    {
+      "source": "crates/rustui-cocoa/examples/nsvisualeffectview_blur.rs",
+      "destination": "archive/pre-fast/crates/rustui-cocoa/examples/nsvisualeffectview_blur.rs",
+      "pre_sha256": "ada6490e75e2a5e1f92d850cd88762e73aa3dabb161be291b22b7278fe3caf58",
+      "post_sha256": "ada6490e75e2a5e1f92d850cd88762e73aa3dabb161be291b22b7278fe3caf58"
+    },
+    {
+      "source": "crates/rustui-cocoa/examples/tab_view.rs",
+      "destination": "archive/pre-fast/crates/rustui-cocoa/examples/tab_view.rs",
+      "pre_sha256": "ecc94c2fb41e9559d4ec4778379ca93327a0e28ffb974f7879745ab364438275",
+      "post_sha256": "ecc94c2fb41e9559d4ec4778379ca93327a0e28ffb974f7879745ab364438275"
+    },
+    {
+      "source": "crates/rustui-cocoa/src/appkit.rs",
+      "destination": "archive/pre-fast/crates/rustui-cocoa/src/appkit.rs",
+      "pre_sha256": "118f0a9fb1b4580de7f86cfca1d0962e43a9a13985bd57a6065575bbdd58abbc",
+      "post_sha256": "118f0a9fb1b4580de7f86cfca1d0962e43a9a13985bd57a6065575bbdd58abbc"
+    },
+    {
+      "source": "crates/rustui-cocoa/src/lib.rs",
+      "destination": "archive/pre-fast/crates/rustui-cocoa/src/lib.rs",
+      "pre_sha256": "eac54f514e9181b72e695aec7e323a1184045cc256879fdd9042ae4fb2d51f27",
+      "post_sha256": "eac54f514e9181b72e695aec7e323a1184045cc256879fdd9042ae4fb2d51f27"
+    },
+    {
+      "source": "crates/rustui-cocoa/src/macros.rs",
+      "destination": "archive/pre-fast/crates/rustui-cocoa/src/macros.rs",
+      "pre_sha256": "d5386e301b4e3c24f76ba46fbadcbc9516a1e2ef28a9238071ca61c9a5222c3b",
+      "post_sha256": "d5386e301b4e3c24f76ba46fbadcbc9516a1e2ef28a9238071ca61c9a5222c3b"
+    },
+    {
+      "source": "crates/rustui-cocoa/src/quartzcore.rs",
+      "destination": "archive/pre-fast/crates/rustui-cocoa/src/quartzcore.rs",
+      "pre_sha256": "4081506b77131db0da4e1f166b21f3537257bb1bfd940e6bc2f307494f29743a",
+      "post_sha256": "4081506b77131db0da4e1f166b21f3537257bb1bfd940e6bc2f307494f29743a"
+    },
+    {
+      "source": "crates/rustui-cocoa-foundation/.cargo-checksum.json",
+      "destination": "archive/pre-fast/crates/rustui-cocoa-foundation/.cargo-checksum.json",
+      "pre_sha256": "6916aaae87484d0b0ca72b66fa31a18ac651a77fa1f4e25a1a536c104629b04b",
+      "post_sha256": "6916aaae87484d0b0ca72b66fa31a18ac651a77fa1f4e25a1a536c104629b04b"
+    },
+    {
+      "source": "crates/rustui-cocoa-foundation/.cargo_vcs_info.json",
+      "destination": "archive/pre-fast/crates/rustui-cocoa-foundation/.cargo_vcs_info.json",
+      "pre_sha256": "98804f33a919ebd505fdd2bacc7c93df0a8c1dabe2852f8b6e9e9b54fea64402",
+      "post_sha256": "98804f33a919ebd505fdd2bacc7c93df0a8c1dabe2852f8b6e9e9b54fea64402"
+    },
+    {
+      "source": "crates/rustui-cocoa-foundation/.travis.yml",
+      "destination": "archive/pre-fast/crates/rustui-cocoa-foundation/.travis.yml",
+      "pre_sha256": "26f0232c2ec80849cebed1ff2b685d3aaaabff514eacc89f582110cb248bbc4b",
+      "post_sha256": "26f0232c2ec80849cebed1ff2b685d3aaaabff514eacc89f582110cb248bbc4b"
+    },
+    {
+      "source": "crates/rustui-cocoa-foundation/Cargo.toml",
+      "destination": "archive/pre-fast/crates/rustui-cocoa-foundation/Cargo.toml",
+      "pre_sha256": "2c01db2d9178feb2eb8ecee9bec1a2682f543c7792758da56677459e2fe79c7b",
+      "post_sha256": "2c01db2d9178feb2eb8ecee9bec1a2682f543c7792758da56677459e2fe79c7b"
+    },
+    {
+      "source": "crates/rustui-cocoa-foundation/Cargo.toml.orig",
+      "destination": "archive/pre-fast/crates/rustui-cocoa-foundation/Cargo.toml.orig",
+      "pre_sha256": "c445f62a3017f7f4f2934076f3003d3557aca2974c3fa5bbc7e80e69f3ab50f6",
+      "post_sha256": "c445f62a3017f7f4f2934076f3003d3557aca2974c3fa5bbc7e80e69f3ab50f6"
+    },
+    {
+      "source": "crates/rustui-cocoa-foundation/LICENSE-APACHE",
+      "destination": "archive/pre-fast/crates/rustui-cocoa-foundation/LICENSE-APACHE",
+      "pre_sha256": "a60eea817514531668d7e00765731449fe14d059d3249e0bc93b36de45f759f2",
+      "post_sha256": "a60eea817514531668d7e00765731449fe14d059d3249e0bc93b36de45f759f2"
+    },
+    {
+      "source": "crates/rustui-cocoa-foundation/LICENSE-MIT",
+      "destination": "archive/pre-fast/crates/rustui-cocoa-foundation/LICENSE-MIT",
+      "pre_sha256": "62065228e42caebca7e7d7db1204cbb867033de5982ca4009928915e4095f3a3",
+      "post_sha256": "62065228e42caebca7e7d7db1204cbb867033de5982ca4009928915e4095f3a3"
+    },
+    {
+      "source": "crates/rustui-cocoa-foundation/src/base.rs",
+      "destination": "archive/pre-fast/crates/rustui-cocoa-foundation/src/base.rs",
+      "pre_sha256": "f383fbac7815114b6654a52f7fa1942819e55d3a80a218dda771393d8b14f35f",
+      "post_sha256": "f383fbac7815114b6654a52f7fa1942819e55d3a80a218dda771393d8b14f35f"
+    },
+    {
+      "source": "crates/rustui-cocoa-foundation/src/foundation.rs",
+      "destination": "archive/pre-fast/crates/rustui-cocoa-foundation/src/foundation.rs",
+      "pre_sha256": "786dcf278aa1f0493dd8ecf6e83ded56cda99d7725418fb1227078e708a61a7f",
+      "post_sha256": "786dcf278aa1f0493dd8ecf6e83ded56cda99d7725418fb1227078e708a61a7f"
+    },
+    {
+      "source": "crates/rustui-cocoa-foundation/src/lib.rs",
+      "destination": "archive/pre-fast/crates/rustui-cocoa-foundation/src/lib.rs",
+      "pre_sha256": "5af440369ef9d1ef5375439b8bff3a096c23ab1dc0f7954feac9141666dbcb34",
+      "post_sha256": "5af440369ef9d1ef5375439b8bff3a096c23ab1dc0f7954feac9141666dbcb34"
+    },
+    {
+      "source": "crates/rustui-cocoa-foundation/tests/foundation.rs",
+      "destination": "archive/pre-fast/crates/rustui-cocoa-foundation/tests/foundation.rs",
+      "pre_sha256": "4f9a7e502554656e5756310486ded7098c4578c0e657a5c18e080e9a389faeed",
+      "post_sha256": "4f9a7e502554656e5756310486ded7098c4578c0e657a5c18e080e9a389faeed"
+    },
+    {
+      "source": "crates/rustui-metal/.cargo-checksum.json",
+      "destination": "archive/pre-fast/crates/rustui-metal/.cargo-checksum.json",
+      "pre_sha256": "388672a1c2f5906068339141db6271465ccd6fc8293036491b64410bf8c615c1",
+      "post_sha256": "388672a1c2f5906068339141db6271465ccd6fc8293036491b64410bf8c615c1"
+    },
+    {
+      "source": "crates/rustui-metal/.cargo_vcs_info.json",
+      "destination": "archive/pre-fast/crates/rustui-metal/.cargo_vcs_info.json",
+      "pre_sha256": "201c9ad8c230c0e1c927ae0295f1aef3e7895bd68e3ecf08fc9cedb065fccfe9",
+      "post_sha256": "201c9ad8c230c0e1c927ae0295f1aef3e7895bd68e3ecf08fc9cedb065fccfe9"
+    },
+    {
+      "source": "crates/rustui-metal/.github/workflows/ci.yml",
+      "destination": "archive/pre-fast/crates/rustui-metal/.github/workflows/ci.yml",
+      "pre_sha256": "6fc575c967f7d3e78bc37b8bf132f6b7d99e7cba6048664ea2faf6f9997e537c",
+      "post_sha256": "6fc575c967f7d3e78bc37b8bf132f6b7d99e7cba6048664ea2faf6f9997e537c"
+    },
+    {
+      "source": "crates/rustui-metal/Cargo.lock",
+      "destination": "archive/pre-fast/crates/rustui-metal/Cargo.lock",
+      "pre_sha256": "341fa20998f08b817968a85540ce7d81bd142384432c3e2bc1b0c3a699d71e95",
+      "post_sha256": "341fa20998f08b817968a85540ce7d81bd142384432c3e2bc1b0c3a699d71e95"
+    },
+    {
+      "source": "crates/rustui-metal/Cargo.toml",
+      "destination": "archive/pre-fast/crates/rustui-metal/Cargo.toml",
+      "pre_sha256": "fbe141d4eb5b96df548d0bff053333fcc359b4a3fb77f5a733780a543c805cc6",
+      "post_sha256": "fbe141d4eb5b96df548d0bff053333fcc359b4a3fb77f5a733780a543c805cc6"
+    },
+    {
+      "source": "crates/rustui-metal/Cargo.toml.orig",
+      "destination": "archive/pre-fast/crates/rustui-metal/Cargo.toml.orig",
+      "pre_sha256": "8d2421bd1bf3eb688774cae4c9b5c488bb785774763bff99cf0a2b1f1a333c58",
+      "post_sha256": "8d2421bd1bf3eb688774cae4c9b5c488bb785774763bff99cf0a2b1f1a333c58"
+    },
+    {
+      "source": "crates/rustui-metal/LICENSE-APACHE",
+      "destination": "archive/pre-fast/crates/rustui-metal/LICENSE-APACHE",
+      "pre_sha256": "a60eea817514531668d7e00765731449fe14d059d3249e0bc93b36de45f759f2",
+      "post_sha256": "a60eea817514531668d7e00765731449fe14d059d3249e0bc93b36de45f759f2"
+    },
+    {
+      "source": "crates/rustui-metal/LICENSE-MIT",
+      "destination": "archive/pre-fast/crates/rustui-metal/LICENSE-MIT",
+      "pre_sha256": "0621878e61f0d0fda054bcbe02df75192c28bde1ecc8289cbd86aeba2dd72720",
+      "post_sha256": "0621878e61f0d0fda054bcbe02df75192c28bde1ecc8289cbd86aeba2dd72720"
+    },
+    {
+      "source": "crates/rustui-metal/Makefile",
+      "destination": "archive/pre-fast/crates/rustui-metal/Makefile",
+      "pre_sha256": "99c4c592467981921d1257a4e9e841dce53624448738d0ed52a75431a406f7bc",
+      "post_sha256": "99c4c592467981921d1257a4e9e841dce53624448738d0ed52a75431a406f7bc"
+    },
+    {
+      "source": "crates/rustui-metal/README.md",
+      "destination": "archive/pre-fast/crates/rustui-metal/README.md",
+      "pre_sha256": "0abbe98a0b7460179c0cfe507e99aed7e0be070473b3d3140d886a519519f73f",
+      "post_sha256": "0abbe98a0b7460179c0cfe507e99aed7e0be070473b3d3140d886a519519f73f"
+    },
+    {
+      "source": "crates/rustui-metal/assets/metal.svg",
+      "destination": "archive/pre-fast/crates/rustui-metal/assets/metal.svg",
+      "pre_sha256": "3a295bd130785bc2fea2f3a91a4f6c7b4b3c40682c3fcb7a75f9887b66b06264",
+      "post_sha256": "3a295bd130785bc2fea2f3a91a4f6c7b4b3c40682c3fcb7a75f9887b66b06264"
+    },
+    {
+      "source": "crates/rustui-metal/bors.toml",
+      "destination": "archive/pre-fast/crates/rustui-metal/bors.toml",
+      "pre_sha256": "c2733ec512a08bf76b6a1ed77270810a0edeb888ba24c2a75679e1eb1bd563a5",
+      "post_sha256": "c2733ec512a08bf76b6a1ed77270810a0edeb888ba24c2a75679e1eb1bd563a5"
+    },
+    {
+      "source": "crates/rustui-metal/examples/argument-buffer/main.rs",
+      "destination": "archive/pre-fast/crates/rustui-metal/examples/argument-buffer/main.rs",
+      "pre_sha256": "a087db6648a4b092520de29616521c704d892e0d3ace935d16f3f339415c4361",
+      "post_sha256": "a087db6648a4b092520de29616521c704d892e0d3ace935d16f3f339415c4361"
+    },
+    {
+      "source": "crates/rustui-metal/examples/bind/main.rs",
+      "destination": "archive/pre-fast/crates/rustui-metal/examples/bind/main.rs",
+      "pre_sha256": "a0c85aad05f08666f9b380a7146a8473a6a6fe0db5d523760373093a0af20e5f",
+      "post_sha256": "a0c85aad05f08666f9b380a7146a8473a6a6fe0db5d523760373093a0af20e5f"
+    },
+    {
+      "source": "crates/rustui-metal/examples/bindless/main.rs",
+      "destination": "archive/pre-fast/crates/rustui-metal/examples/bindless/main.rs",
+      "pre_sha256": "020fdc78a4cf9196dd80c333d0ddb2569202b573b90ad5df2081d4ff88318372",
+      "post_sha256": "020fdc78a4cf9196dd80c333d0ddb2569202b573b90ad5df2081d4ff88318372"
+    },
+    {
+      "source": "crates/rustui-metal/examples/caps/main.rs",
+      "destination": "archive/pre-fast/crates/rustui-metal/examples/caps/main.rs",
+      "pre_sha256": "b7be00c1cc9042140d34ea05051152a7035f316f0bdcd31ac5a660a97e0c4f70",
+      "post_sha256": "b7be00c1cc9042140d34ea05051152a7035f316f0bdcd31ac5a660a97e0c4f70"
+    },
+    {
+      "source": "crates/rustui-metal/examples/circle/README.md",
+      "destination": "archive/pre-fast/crates/rustui-metal/examples/circle/README.md",
+      "pre_sha256": "e1c97cf5252f0d1f2934ace78b5d839c5f45911f3007dbd2925eeceefb8f0af6",
+      "post_sha256": "e1c97cf5252f0d1f2934ace78b5d839c5f45911f3007dbd2925eeceefb8f0af6"
+    },
+    {
+      "source": "crates/rustui-metal/examples/circle/main.rs",
+      "destination": "archive/pre-fast/crates/rustui-metal/examples/circle/main.rs",
+      "pre_sha256": "8690a17b2c59293bd774f7945f386246b4154a67283d2052d4fbb6d3cb74bf76",
+      "post_sha256": "8690a17b2c59293bd774f7945f386246b4154a67283d2052d4fbb6d3cb74bf76"
+    },
+    {
+      "source": "crates/rustui-metal/examples/circle/screenshot.png",
+      "destination": "archive/pre-fast/crates/rustui-metal/examples/circle/screenshot.png",
+      "pre_sha256": "97bf07c85bf02367447b9c8a81707c124e4a3b420fa386b95ba08b21938f4f2a",
+      "post_sha256": "97bf07c85bf02367447b9c8a81707c124e4a3b420fa386b95ba08b21938f4f2a"
+    },
+    {
+      "source": "crates/rustui-metal/examples/circle/shaders.metal",
+      "destination": "archive/pre-fast/crates/rustui-metal/examples/circle/shaders.metal",
+      "pre_sha256": "5e4f40efca5bb386204a09e1b983cc6c634fdf1ca9dd4974227313adbf50e8b5",
+      "post_sha256": "5e4f40efca5bb386204a09e1b983cc6c634fdf1ca9dd4974227313adbf50e8b5"
+    },
+    {
+      "source": "crates/rustui-metal/examples/circle/shaders.metallib",
+      "destination": "archive/pre-fast/crates/rustui-metal/examples/circle/shaders.metallib",
+      "pre_sha256": "666a9491d795ef9c0b9c122c7ada571cc2c0e8774d2d89e5b4b996f3dc47962b",
+      "post_sha256": "666a9491d795ef9c0b9c122c7ada571cc2c0e8774d2d89e5b4b996f3dc47962b"
+    },
+    {
+      "source": "crates/rustui-metal/examples/compute/compute-argument-buffer.metal",
+      "destination": "archive/pre-fast/crates/rustui-metal/examples/compute/compute-argument-buffer.metal",
+      "pre_sha256": "6530bbd6a0101d9db2893805436f5dc877959e81ea97a27014c0fc52fc9fa77b",
+      "post_sha256": "6530bbd6a0101d9db2893805436f5dc877959e81ea97a27014c0fc52fc9fa77b"
+    },
+    {
+      "source": "crates/rustui-metal/examples/compute/compute-argument-buffer.rs",
+      "destination": "archive/pre-fast/crates/rustui-metal/examples/compute/compute-argument-buffer.rs",
+      "pre_sha256": "8c02647426cda46d2687890eb64a833bf5bcf4740109fb871f56d4aea6984bcf",
+      "post_sha256": "8c02647426cda46d2687890eb64a833bf5bcf4740109fb871f56d4aea6984bcf"
+    },
+    {
+      "source": "crates/rustui-metal/examples/compute/embedded-lib.rs",
+      "destination": "archive/pre-fast/crates/rustui-metal/examples/compute/embedded-lib.rs",
+      "pre_sha256": "55f701810fa5270c27ca771e713f9f8cf09e124a997b0b03790b38435593a7ea",
+      "post_sha256": "55f701810fa5270c27ca771e713f9f8cf09e124a997b0b03790b38435593a7ea"
+    },
+    {
+      "source": "crates/rustui-metal/examples/compute/main.rs",
+      "destination": "archive/pre-fast/crates/rustui-metal/examples/compute/main.rs",
+      "pre_sha256": "a9eee4e600887f2dafdd953a899cf1d11ea5fc252297cf5f9747f209454ba173",
+      "post_sha256": "a9eee4e600887f2dafdd953a899cf1d11ea5fc252297cf5f9747f209454ba173"
+    },
+    {
+      "source": "crates/rustui-metal/examples/compute/shaders.metal",
+      "destination": "archive/pre-fast/crates/rustui-metal/examples/compute/shaders.metal",
+      "pre_sha256": "f2b15551bb5247b88a3029c3d8ef37c6fa04a4a6cca9f90f069894ed6822b4bf",
+      "post_sha256": "f2b15551bb5247b88a3029c3d8ef37c6fa04a4a6cca9f90f069894ed6822b4bf"
+    },
+    {
+      "source": "crates/rustui-metal/examples/compute/shaders.metallib",
+      "destination": "archive/pre-fast/crates/rustui-metal/examples/compute/shaders.metallib",
+      "pre_sha256": "fef91643e60c0ec99ad2bd2f3916299bcc3e6a80038ea27bed59681badfea7d1",
+      "post_sha256": "fef91643e60c0ec99ad2bd2f3916299bcc3e6a80038ea27bed59681badfea7d1"
+    },
+    {
+      "source": "crates/rustui-metal/examples/events/main.rs",
+      "destination": "archive/pre-fast/crates/rustui-metal/examples/events/main.rs",
+      "pre_sha256": "9cb35381b0a3918bd7d530171de8f7cceafe3d4851c0f430b4aff1f5c2aae749",
+      "post_sha256": "9cb35381b0a3918bd7d530171de8f7cceafe3d4851c0f430b4aff1f5c2aae749"
+    },
+    {
+      "source": "crates/rustui-metal/examples/fence/main.rs",
+      "destination": "archive/pre-fast/crates/rustui-metal/examples/fence/main.rs",
+      "pre_sha256": "47741327e62db1d8bd344b6a9ec26ef13ffb0b56b0dd7077c5d926d43faaeff7",
+      "post_sha256": "47741327e62db1d8bd344b6a9ec26ef13ffb0b56b0dd7077c5d926d43faaeff7"
+    },
+    {
+      "source": "crates/rustui-metal/examples/headless-render/README.md",
+      "destination": "archive/pre-fast/crates/rustui-metal/examples/headless-render/README.md",
+      "pre_sha256": "b1c97b52701cfb41fc0b9e269ba7a7a454d9161746198e2f5789f2636f60842d",
+      "post_sha256": "b1c97b52701cfb41fc0b9e269ba7a7a454d9161746198e2f5789f2636f60842d"
+    },
+    {
+      "source": "crates/rustui-metal/examples/headless-render/main.rs",
+      "destination": "archive/pre-fast/crates/rustui-metal/examples/headless-render/main.rs",
+      "pre_sha256": "814f639b0a919f3bec8e6f9f9928d881824fd0b4a6d36d32006cecbb36ae6599",
+      "post_sha256": "814f639b0a919f3bec8e6f9f9928d881824fd0b4a6d36d32006cecbb36ae6599"
+    },
+    {
+      "source": "crates/rustui-metal/examples/headless-render/screenshot.png",
+      "destination": "archive/pre-fast/crates/rustui-metal/examples/headless-render/screenshot.png",
+      "pre_sha256": "01d6ea5791b63b0f01190198756446cf313fc25dc64d0138c1b4f62c9f862dd1",
+      "post_sha256": "01d6ea5791b63b0f01190198756446cf313fc25dc64d0138c1b4f62c9f862dd1"
+    },
+    {
+      "source": "crates/rustui-metal/examples/library/main.rs",
+      "destination": "archive/pre-fast/crates/rustui-metal/examples/library/main.rs",
+      "pre_sha256": "42368ae9b630ca87ee8d8e0ced12163fdc86e6c9f2260a4b74689dbd41a60d3b",
+      "post_sha256": "42368ae9b630ca87ee8d8e0ced12163fdc86e6c9f2260a4b74689dbd41a60d3b"
+    },
+    {
+      "source": "crates/rustui-metal/examples/mesh-shader/main.rs",
+      "destination": "archive/pre-fast/crates/rustui-metal/examples/mesh-shader/main.rs",
+      "pre_sha256": "bc7ca72445565015a51a94d3943a622617d13c8982a47224529fe4eed021e37d",
+      "post_sha256": "bc7ca72445565015a51a94d3943a622617d13c8982a47224529fe4eed021e37d"
+    },
+    {
+      "source": "crates/rustui-metal/examples/mesh-shader/shaders.metal",
+      "destination": "archive/pre-fast/crates/rustui-metal/examples/mesh-shader/shaders.metal",
+      "pre_sha256": "6ba934c3edd3ba0b8f6c4ac37be0fd0fe35eeef004e371521b7bf5a2fae9a223",
+      "post_sha256": "6ba934c3edd3ba0b8f6c4ac37be0fd0fe35eeef004e371521b7bf5a2fae9a223"
+    },
+    {
+      "source": "crates/rustui-metal/examples/mesh-shader/shaders.metallib",
+      "destination": "archive/pre-fast/crates/rustui-metal/examples/mesh-shader/shaders.metallib",
+      "pre_sha256": "0af3b7ab0cd6186a90163550b76fab5bd2ef6ba97e791354d4281ca92d4887ff",
+      "post_sha256": "0af3b7ab0cd6186a90163550b76fab5bd2ef6ba97e791354d4281ca92d4887ff"
+    },
+    {
+      "source": "crates/rustui-metal/examples/mps/main.rs",
+      "destination": "archive/pre-fast/crates/rustui-metal/examples/mps/main.rs",
+      "pre_sha256": "e626ce5a4ab7e447e0e4f7b85fb27fb157afc5a0d1620cd53c248b025f7e7fb4",
+      "post_sha256": "e626ce5a4ab7e447e0e4f7b85fb27fb157afc5a0d1620cd53c248b025f7e7fb4"
+    },
+    {
+      "source": "crates/rustui-metal/examples/mps/shaders.metal",
+      "destination": "archive/pre-fast/crates/rustui-metal/examples/mps/shaders.metal",
+      "pre_sha256": "155922d6a4184078ae7ee29504a268e1218f07d908f921eef60e5bfa8a793bda",
+      "post_sha256": "155922d6a4184078ae7ee29504a268e1218f07d908f921eef60e5bfa8a793bda"
+    },
+    {
+      "source": "crates/rustui-metal/examples/mps/shaders.metallib",
+      "destination": "archive/pre-fast/crates/rustui-metal/examples/mps/shaders.metallib",
+      "pre_sha256": "b62451223549b1e7eb90ec3d3534c0ed4cdfdc581c7df3ffcdc4786a5fcacde4",
+      "post_sha256": "b62451223549b1e7eb90ec3d3534c0ed4cdfdc581c7df3ffcdc4786a5fcacde4"
+    },
+    {
+      "source": "crates/rustui-metal/examples/raytracing/README.md",
+      "destination": "archive/pre-fast/crates/rustui-metal/examples/raytracing/README.md",
+      "pre_sha256": "6f0d683efac74572099c317ce9f65c3e6ff3c5252c6870c0c38c67f08b37bb01",
+      "post_sha256": "6f0d683efac74572099c317ce9f65c3e6ff3c5252c6870c0c38c67f08b37bb01"
+    },
+    {
+      "source": "crates/rustui-metal/examples/raytracing/camera.rs",
+      "destination": "archive/pre-fast/crates/rustui-metal/examples/raytracing/camera.rs",
+      "pre_sha256": "11d631b13b2ba6e14e785d339919e7e13f9f381c39a78d0ab95500d551c58505",
+      "post_sha256": "11d631b13b2ba6e14e785d339919e7e13f9f381c39a78d0ab95500d551c58505"
+    },
+    {
+      "source": "crates/rustui-metal/examples/raytracing/geometry.rs",
+      "destination": "archive/pre-fast/crates/rustui-metal/examples/raytracing/geometry.rs",
+      "pre_sha256": "afffd828f071b4adad8d5732c23eb99ebbc4711993e3b682861e571cec2234a2",
+      "post_sha256": "afffd828f071b4adad8d5732c23eb99ebbc4711993e3b682861e571cec2234a2"
+    },
+    {
+      "source": "crates/rustui-metal/examples/raytracing/main.rs",
+      "destination": "archive/pre-fast/crates/rustui-metal/examples/raytracing/main.rs",
+      "pre_sha256": "51bde3c7e81b18a1914322cc71ed5701289873fac44a88e29c2ae7939dc2d0b4",
+      "post_sha256": "51bde3c7e81b18a1914322cc71ed5701289873fac44a88e29c2ae7939dc2d0b4"
+    },
+    {
+      "source": "crates/rustui-metal/examples/raytracing/renderer.rs",
+      "destination": "archive/pre-fast/crates/rustui-metal/examples/raytracing/renderer.rs",
+      "pre_sha256": "590fa078d377cdf5eedec30447f117b5c6c717478fd36b3afe5991cd7d142e25",
+      "post_sha256": "590fa078d377cdf5eedec30447f117b5c6c717478fd36b3afe5991cd7d142e25"
+    },
+    {
+      "source": "crates/rustui-metal/examples/raytracing/scene.rs",
+      "destination": "archive/pre-fast/crates/rustui-metal/examples/raytracing/scene.rs",
+      "pre_sha256": "40fb7b0a9cb68a00cf7d6c9a7f0f75f2175808ac6cb7ead1128ae822a35629ce",
+      "post_sha256": "40fb7b0a9cb68a00cf7d6c9a7f0f75f2175808ac6cb7ead1128ae822a35629ce"
+    },
+    {
+      "source": "crates/rustui-metal/examples/raytracing/screenshot.png",
+      "destination": "archive/pre-fast/crates/rustui-metal/examples/raytracing/screenshot.png",
+      "pre_sha256": "400bb138f5adb69e4db8626681fb17667e5e112c94864879d9282d5348d970db",
+      "post_sha256": "400bb138f5adb69e4db8626681fb17667e5e112c94864879d9282d5348d970db"
+    },
+    {
+      "source": "crates/rustui-metal/examples/raytracing/shaders.metal",
+      "destination": "archive/pre-fast/crates/rustui-metal/examples/raytracing/shaders.metal",
+      "pre_sha256": "696f6a0ba79d82e2fa0e03eadbff2f6cdeac87acc805c2b7df657b85c1173174",
+      "post_sha256": "696f6a0ba79d82e2fa0e03eadbff2f6cdeac87acc805c2b7df657b85c1173174"
+    },
+    {
+      "source": "crates/rustui-metal/examples/raytracing/shaders.metallib",
+      "destination": "archive/pre-fast/crates/rustui-metal/examples/raytracing/shaders.metallib",
+      "pre_sha256": "249b71998f58ddf8b3de37d79e9cc1f4a3494fba4bd7ba3f5411fb603de9dd5a",
+      "post_sha256": "249b71998f58ddf8b3de37d79e9cc1f4a3494fba4bd7ba3f5411fb603de9dd5a"
+    },
+    {
+      "source": "crates/rustui-metal/examples/reflection/main.rs",
+      "destination": "archive/pre-fast/crates/rustui-metal/examples/reflection/main.rs",
+      "pre_sha256": "26060dd97ee2175958b89e85635d788cd5d1b496b4e1de799f9d225fab3682f2",
+      "post_sha256": "26060dd97ee2175958b89e85635d788cd5d1b496b4e1de799f9d225fab3682f2"
+    },
+    {
+      "source": "crates/rustui-metal/examples/shader-dylib/main.rs",
+      "destination": "archive/pre-fast/crates/rustui-metal/examples/shader-dylib/main.rs",
+      "pre_sha256": "bf91ea8c14114a832ab5d45cd4658def678b1c296aefa7841b1d217ee4211212",
+      "post_sha256": "bf91ea8c14114a832ab5d45cd4658def678b1c296aefa7841b1d217ee4211212"
+    },
+    {
+      "source": "crates/rustui-metal/examples/shader-dylib/test_dylib.metal",
+      "destination": "archive/pre-fast/crates/rustui-metal/examples/shader-dylib/test_dylib.metal",
+      "pre_sha256": "3469de785c2c0da784e84758fc0da5a81e474ca15588485d9e04398690641cc8",
+      "post_sha256": "3469de785c2c0da784e84758fc0da5a81e474ca15588485d9e04398690641cc8"
+    },
+    {
+      "source": "crates/rustui-metal/examples/shader-dylib/test_shader.metal",
+      "destination": "archive/pre-fast/crates/rustui-metal/examples/shader-dylib/test_shader.metal",
+      "pre_sha256": "1a04ff8ab3288b09d14cd35440b2557e92ddedbff9d07c4144a22e9062e6e1e4",
+      "post_sha256": "1a04ff8ab3288b09d14cd35440b2557e92ddedbff9d07c4144a22e9062e6e1e4"
+    },
+    {
+      "source": "crates/rustui-metal/examples/window/README.md",
+      "destination": "archive/pre-fast/crates/rustui-metal/examples/window/README.md",
+      "pre_sha256": "69655cff298e07887fe70e8a13e27d8a87efcd0cc0da4e15485134e064e1aceb",
+      "post_sha256": "69655cff298e07887fe70e8a13e27d8a87efcd0cc0da4e15485134e064e1aceb"
+    },
+    {
+      "source": "crates/rustui-metal/examples/window/main.rs",
+      "destination": "archive/pre-fast/crates/rustui-metal/examples/window/main.rs",
+      "pre_sha256": "f562ad4d0c239552f61b8b1cc3d3b8c14d8ff40684e2fa5b1a6004691949a55c",
+      "post_sha256": "f562ad4d0c239552f61b8b1cc3d3b8c14d8ff40684e2fa5b1a6004691949a55c"
+    },
+    {
+      "source": "crates/rustui-metal/examples/window/screenshot.png",
+      "destination": "archive/pre-fast/crates/rustui-metal/examples/window/screenshot.png",
+      "pre_sha256": "da7369d7cc297c7f7f6bd773c93e7d708d72442c9c5ff5a20c2f2ee6852552dc",
+      "post_sha256": "da7369d7cc297c7f7f6bd773c93e7d708d72442c9c5ff5a20c2f2ee6852552dc"
+    },
+    {
+      "source": "crates/rustui-metal/examples/window/shaders.metal",
+      "destination": "archive/pre-fast/crates/rustui-metal/examples/window/shaders.metal",
+      "pre_sha256": "90dee6c752add5c617dfdca93064b2824b44ff8c01ef63986826f6a1531e95d6",
+      "post_sha256": "90dee6c752add5c617dfdca93064b2824b44ff8c01ef63986826f6a1531e95d6"
+    },
+    {
+      "source": "crates/rustui-metal/examples/window/shaders.metallib",
+      "destination": "archive/pre-fast/crates/rustui-metal/examples/window/shaders.metallib",
+      "pre_sha256": "16fa82beb70bf16c3501970cae0d5028a747a08164337161dc9c2e8965d4c366",
+      "post_sha256": "16fa82beb70bf16c3501970cae0d5028a747a08164337161dc9c2e8965d4c366"
+    },
+    {
+      "source": "crates/rustui-metal/renovate.json",
+      "destination": "archive/pre-fast/crates/rustui-metal/renovate.json",
+      "pre_sha256": "c9bcf4274fc54533cf2143b1076ad7089b973b9d28433499da682daec1f0d7b0",
+      "post_sha256": "c9bcf4274fc54533cf2143b1076ad7089b973b9d28433499da682daec1f0d7b0"
+    },
+    {
+      "source": "crates/rustui-metal/src/acceleration_structure.rs",
+      "destination": "archive/pre-fast/crates/rustui-metal/src/acceleration_structure.rs",
+      "pre_sha256": "25533892466369deab8d9024a037c0dd05e7393ac9b3b1815a1b9f6853ace42f",
+      "post_sha256": "25533892466369deab8d9024a037c0dd05e7393ac9b3b1815a1b9f6853ace42f"
+    },
+    {
+      "source": "crates/rustui-metal/src/acceleration_structure_pass.rs",
+      "destination": "archive/pre-fast/crates/rustui-metal/src/acceleration_structure_pass.rs",
+      "pre_sha256": "892b1fc8360f91d09bbde08251de125bea72b134c529cd3a9e6b9cdc854e403f",
+      "post_sha256": "892b1fc8360f91d09bbde08251de125bea72b134c529cd3a9e6b9cdc854e403f"
+    },
+    {
+      "source": "crates/rustui-metal/src/argument.rs",
+      "destination": "archive/pre-fast/crates/rustui-metal/src/argument.rs",
+      "pre_sha256": "6d78fcb7398a893687294bcfb3326df73a1c7292ded166a167bc677f546cc32a",
+      "post_sha256": "6d78fcb7398a893687294bcfb3326df73a1c7292ded166a167bc677f546cc32a"
+    },
+    {
+      "source": "crates/rustui-metal/src/blitpass.rs",
+      "destination": "archive/pre-fast/crates/rustui-metal/src/blitpass.rs",
+      "pre_sha256": "e558d69c1b571637007650bf4c9875a020fd6175247c6a4b203f50585d7315a9",
+      "post_sha256": "e558d69c1b571637007650bf4c9875a020fd6175247c6a4b203f50585d7315a9"
+    },
+    {
+      "source": "crates/rustui-metal/src/buffer.rs",
+      "destination": "archive/pre-fast/crates/rustui-metal/src/buffer.rs",
+      "pre_sha256": "71be298ae404bc872086f834405c79f01669f4ca405ac5dd461039257c023f25",
+      "post_sha256": "71be298ae404bc872086f834405c79f01669f4ca405ac5dd461039257c023f25"
+    },
+    {
+      "source": "crates/rustui-metal/src/capturedescriptor.rs",
+      "destination": "archive/pre-fast/crates/rustui-metal/src/capturedescriptor.rs",
+      "pre_sha256": "c687c4db298fb83ef640eb34929758c2d7955174a68725e986838e367291e302",
+      "post_sha256": "c687c4db298fb83ef640eb34929758c2d7955174a68725e986838e367291e302"
+    },
+    {
+      "source": "crates/rustui-metal/src/capturemanager.rs",
+      "destination": "archive/pre-fast/crates/rustui-metal/src/capturemanager.rs",
+      "pre_sha256": "3862b2d66e91f7f803b459c1e0302ddf87e98cb5948cfad082533f0f45c33061",
+      "post_sha256": "3862b2d66e91f7f803b459c1e0302ddf87e98cb5948cfad082533f0f45c33061"
+    },
+    {
+      "source": "crates/rustui-metal/src/commandbuffer.rs",
+      "destination": "archive/pre-fast/crates/rustui-metal/src/commandbuffer.rs",
+      "pre_sha256": "1e36a3878ecd8c48180e4a0887e1d5067bb8f4cb8b65140a2a38ea01f36f38ba",
+      "post_sha256": "1e36a3878ecd8c48180e4a0887e1d5067bb8f4cb8b65140a2a38ea01f36f38ba"
+    },
+    {
+      "source": "crates/rustui-metal/src/commandqueue.rs",
+      "destination": "archive/pre-fast/crates/rustui-metal/src/commandqueue.rs",
+      "pre_sha256": "a7d6dee5d064093521465e1da30bded851aa9d59f078942d88926d0f38de82fd",
+      "post_sha256": "a7d6dee5d064093521465e1da30bded851aa9d59f078942d88926d0f38de82fd"
+    },
+    {
+      "source": "crates/rustui-metal/src/computepass.rs",
+      "destination": "archive/pre-fast/crates/rustui-metal/src/computepass.rs",
+      "pre_sha256": "a6ac68f0052efc1b651c9684ed6e90fdaff89748e3d8b67707b6c23018fd8a85",
+      "post_sha256": "a6ac68f0052efc1b651c9684ed6e90fdaff89748e3d8b67707b6c23018fd8a85"
+    },
+    {
+      "source": "crates/rustui-metal/src/constants.rs",
+      "destination": "archive/pre-fast/crates/rustui-metal/src/constants.rs",
+      "pre_sha256": "bbfeecf910d4f9ed149a7988d8a79df6e9ad479de81f7fc1294d3434a721b7fd",
+      "post_sha256": "bbfeecf910d4f9ed149a7988d8a79df6e9ad479de81f7fc1294d3434a721b7fd"
+    },
+    {
+      "source": "crates/rustui-metal/src/counters.rs",
+      "destination": "archive/pre-fast/crates/rustui-metal/src/counters.rs",
+      "pre_sha256": "d23188bde20656d2e7ecdb80c474f4ae645a88d3f1ab688c11d4918609aee26d",
+      "post_sha256": "d23188bde20656d2e7ecdb80c474f4ae645a88d3f1ab688c11d4918609aee26d"
+    },
+    {
+      "source": "crates/rustui-metal/src/depthstencil.rs",
+      "destination": "archive/pre-fast/crates/rustui-metal/src/depthstencil.rs",
+      "pre_sha256": "71f221640a2031ef40449697297f09cd42d23833854c51759b3006ba55c84de9",
+      "post_sha256": "71f221640a2031ef40449697297f09cd42d23833854c51759b3006ba55c84de9"
+    },
+    {
+      "source": "crates/rustui-metal/src/device.rs",
+      "destination": "archive/pre-fast/crates/rustui-metal/src/device.rs",
+      "pre_sha256": "da9b60f6f5d162dd1b1c1595cdc3fffc9b8be5b82e8a3fd9fe51dc41455909d6",
+      "post_sha256": "da9b60f6f5d162dd1b1c1595cdc3fffc9b8be5b82e8a3fd9fe51dc41455909d6"
+    },
+    {
+      "source": "crates/rustui-metal/src/drawable.rs",
+      "destination": "archive/pre-fast/crates/rustui-metal/src/drawable.rs",
+      "pre_sha256": "568c6199113724130a1eb3fc108d73735797d86542bde94500be6b5d11573b2c",
+      "post_sha256": "568c6199113724130a1eb3fc108d73735797d86542bde94500be6b5d11573b2c"
+    },
+    {
+      "source": "crates/rustui-metal/src/encoder.rs",
+      "destination": "archive/pre-fast/crates/rustui-metal/src/encoder.rs",
+      "pre_sha256": "8eb26752a2851816097b9615e5f71b37bcfea74f7397c11c9483d9576cbf904f",
+      "post_sha256": "8eb26752a2851816097b9615e5f71b37bcfea74f7397c11c9483d9576cbf904f"
+    },
+    {
+      "source": "crates/rustui-metal/src/heap.rs",
+      "destination": "archive/pre-fast/crates/rustui-metal/src/heap.rs",
+      "pre_sha256": "f12d519c4417af4365c2d8a12f29124362785ad1b3a17ee80a7bb7f74a24a8be",
+      "post_sha256": "f12d519c4417af4365c2d8a12f29124362785ad1b3a17ee80a7bb7f74a24a8be"
+    },
+    {
+      "source": "crates/rustui-metal/src/indirect_encoder.rs",
+      "destination": "archive/pre-fast/crates/rustui-metal/src/indirect_encoder.rs",
+      "pre_sha256": "ede986d0f4f2555413605257b58ea54b044ddbf5612f0c922b9f8b0313382d0e",
+      "post_sha256": "ede986d0f4f2555413605257b58ea54b044ddbf5612f0c922b9f8b0313382d0e"
+    },
+    {
+      "source": "crates/rustui-metal/src/lib.rs",
+      "destination": "archive/pre-fast/crates/rustui-metal/src/lib.rs",
+      "pre_sha256": "7d183d08f53e5dd2970f5afee3195b4c75cefb7f000dce5ed74032373f2df503",
+      "post_sha256": "7d183d08f53e5dd2970f5afee3195b4c75cefb7f000dce5ed74032373f2df503"
+    },
+    {
+      "source": "crates/rustui-metal/src/library.rs",
+      "destination": "archive/pre-fast/crates/rustui-metal/src/library.rs",
+      "pre_sha256": "934eb6c737dc1f40e13458ce205878322e416c0a56d033c6308ca7a33f892351",
+      "post_sha256": "934eb6c737dc1f40e13458ce205878322e416c0a56d033c6308ca7a33f892351"
+    },
+    {
+      "source": "crates/rustui-metal/src/mps.rs",
+      "destination": "archive/pre-fast/crates/rustui-metal/src/mps.rs",
+      "pre_sha256": "607b51a163577364771d8afbb95888ef3603d71be40eddab1e2cdc2ad75cbd5e",
+      "post_sha256": "607b51a163577364771d8afbb95888ef3603d71be40eddab1e2cdc2ad75cbd5e"
+    },
+    {
+      "source": "crates/rustui-metal/src/pipeline/compute.rs",
+      "destination": "archive/pre-fast/crates/rustui-metal/src/pipeline/compute.rs",
+      "pre_sha256": "1d655df7ab78efe5cd8d100acfd90caf4265fc9ddaf859c6a3e9eee8190446e0",
+      "post_sha256": "1d655df7ab78efe5cd8d100acfd90caf4265fc9ddaf859c6a3e9eee8190446e0"
+    },
+    {
+      "source": "crates/rustui-metal/src/pipeline/mod.rs",
+      "destination": "archive/pre-fast/crates/rustui-metal/src/pipeline/mod.rs",
+      "pre_sha256": "280916e71b6f3c5fffda6ffee31c616bf4aba6e5a186401ea2febe71c3264145",
+      "post_sha256": "280916e71b6f3c5fffda6ffee31c616bf4aba6e5a186401ea2febe71c3264145"
+    },
+    {
+      "source": "crates/rustui-metal/src/pipeline/render.rs",
+      "destination": "archive/pre-fast/crates/rustui-metal/src/pipeline/render.rs",
+      "pre_sha256": "8bbe04b5ace6adeb2a2df06d00b3003d32cb5085706e33be31108821acdd67f4",
+      "post_sha256": "8bbe04b5ace6adeb2a2df06d00b3003d32cb5085706e33be31108821acdd67f4"
+    },
+    {
+      "source": "crates/rustui-metal/src/renderpass.rs",
+      "destination": "archive/pre-fast/crates/rustui-metal/src/renderpass.rs",
+      "pre_sha256": "03b358a21d1b2399c1a682187a67193e1a25b69999a33e1b128db0c09fa7860b",
+      "post_sha256": "03b358a21d1b2399c1a682187a67193e1a25b69999a33e1b128db0c09fa7860b"
+    },
+    {
+      "source": "crates/rustui-metal/src/resource.rs",
+      "destination": "archive/pre-fast/crates/rustui-metal/src/resource.rs",
+      "pre_sha256": "f239254592d3e14ab9a418105cd51fe923be385cd6983c7fb9cd81b5f5eb90ef",
+      "post_sha256": "f239254592d3e14ab9a418105cd51fe923be385cd6983c7fb9cd81b5f5eb90ef"
+    },
+    {
+      "source": "crates/rustui-metal/src/sampler.rs",
+      "destination": "archive/pre-fast/crates/rustui-metal/src/sampler.rs",
+      "pre_sha256": "b82205283e3ba4ff229f6b4fb2e73ac5da9cdc75312a76e5d7e40d9ebf0d051c",
+      "post_sha256": "b82205283e3ba4ff229f6b4fb2e73ac5da9cdc75312a76e5d7e40d9ebf0d051c"
+    },
+    {
+      "source": "crates/rustui-metal/src/sync.rs",
+      "destination": "archive/pre-fast/crates/rustui-metal/src/sync.rs",
+      "pre_sha256": "8fbff195456c6410d1e787b9b93379dacbdc9ae3e331bc07a9dc3522f1f65c45",
+      "post_sha256": "8fbff195456c6410d1e787b9b93379dacbdc9ae3e331bc07a9dc3522f1f65c45"
+    },
+    {
+      "source": "crates/rustui-metal/src/texture.rs",
+      "destination": "archive/pre-fast/crates/rustui-metal/src/texture.rs",
+      "pre_sha256": "8fe3245d1b9b53c09de2eff0d015afcafd6b1bc9e8fec2ddab78f060d418eff1",
+      "post_sha256": "8fe3245d1b9b53c09de2eff0d015afcafd6b1bc9e8fec2ddab78f060d418eff1"
+    },
+    {
+      "source": "crates/rustui-metal/src/types.rs",
+      "destination": "archive/pre-fast/crates/rustui-metal/src/types.rs",
+      "pre_sha256": "d255f9c1b449acdb971616255e1c98d35b3b1ac54d9c388f7cdff6cfc3a8b944",
+      "post_sha256": "d255f9c1b449acdb971616255e1c98d35b3b1ac54d9c388f7cdff6cfc3a8b944"
+    },
+    {
+      "source": "crates/rustui-metal/src/vertexdescriptor.rs",
+      "destination": "archive/pre-fast/crates/rustui-metal/src/vertexdescriptor.rs",
+      "pre_sha256": "6a1378f270f7adf631319bcc8c8d6831c9f9be55e7b39a7ccfe151af9a9363c4",
+      "post_sha256": "6a1378f270f7adf631319bcc8c8d6831c9f9be55e7b39a7ccfe151af9a9363c4"
+    },
+    {
+      "source": "crates/rustui-objc-foundation/.cargo-checksum.json",
+      "destination": "archive/pre-fast/crates/rustui-objc-foundation/.cargo-checksum.json",
+      "pre_sha256": "5a1981a70d8fc1f8842efe12ec30d7c78d90d1fdbab11106a9f26eb7696733b5",
+      "post_sha256": "5a1981a70d8fc1f8842efe12ec30d7c78d90d1fdbab11106a9f26eb7696733b5"
+    },
+    {
+      "source": "crates/rustui-objc-foundation/Cargo.toml",
+      "destination": "archive/pre-fast/crates/rustui-objc-foundation/Cargo.toml",
+      "pre_sha256": "c165c3683d73245fa5e903d4540a250384c3e9b5e6ac6ddfe100c648a582087d",
+      "post_sha256": "c165c3683d73245fa5e903d4540a250384c3e9b5e6ac6ddfe100c648a582087d"
+    },
+    {
+      "source": "crates/rustui-objc-foundation/examples/custom_class.rs",
+      "destination": "archive/pre-fast/crates/rustui-objc-foundation/examples/custom_class.rs",
+      "pre_sha256": "44fab02b2eb974cbfd35e649872044457fa50c61148a13b02a71395fe6e44f3f",
+      "post_sha256": "44fab02b2eb974cbfd35e649872044457fa50c61148a13b02a71395fe6e44f3f"
+    },
+    {
+      "source": "crates/rustui-objc-foundation/examples/example.rs",
+      "destination": "archive/pre-fast/crates/rustui-objc-foundation/examples/example.rs",
+      "pre_sha256": "1f05e488809d0356b3658ac2bce12def26ac9518f4774dc599a216ddc719cd65",
+      "post_sha256": "1f05e488809d0356b3658ac2bce12def26ac9518f4774dc599a216ddc719cd65"
+    },
+    {
+      "source": "crates/rustui-objc-foundation/src/array.rs",
+      "destination": "archive/pre-fast/crates/rustui-objc-foundation/src/array.rs",
+      "pre_sha256": "c3b7038821a5ecb10b043152cfc1ab0520ef5f923ea77b1e6a1c54ddf4586d96",
+      "post_sha256": "c3b7038821a5ecb10b043152cfc1ab0520ef5f923ea77b1e6a1c54ddf4586d96"
+    },
+    {
+      "source": "crates/rustui-objc-foundation/src/data.rs",
+      "destination": "archive/pre-fast/crates/rustui-objc-foundation/src/data.rs",
+      "pre_sha256": "9ae4e7fe1bd92a40edd700f364ce60a18467387d360459e04e6933e6b6d20cfc",
+      "post_sha256": "9ae4e7fe1bd92a40edd700f364ce60a18467387d360459e04e6933e6b6d20cfc"
+    },
+    {
+      "source": "crates/rustui-objc-foundation/src/dictionary.rs",
+      "destination": "archive/pre-fast/crates/rustui-objc-foundation/src/dictionary.rs",
+      "pre_sha256": "b42dcb6f280211ef674f9018559eb768138f4a6a382410706278f2bcff3164b9",
+      "post_sha256": "b42dcb6f280211ef674f9018559eb768138f4a6a382410706278f2bcff3164b9"
+    },
+    {
+      "source": "crates/rustui-objc-foundation/src/enumerator.rs",
+      "destination": "archive/pre-fast/crates/rustui-objc-foundation/src/enumerator.rs",
+      "pre_sha256": "62f77fb4ccc7b9306c0d6564589d25234368d88b63d319e813622846fe0e5f47",
+      "post_sha256": "62f77fb4ccc7b9306c0d6564589d25234368d88b63d319e813622846fe0e5f47"
+    },
+    {
+      "source": "crates/rustui-objc-foundation/src/lib.rs",
+      "destination": "archive/pre-fast/crates/rustui-objc-foundation/src/lib.rs",
+      "pre_sha256": "f6dd421ba10b1a0e57fa10609ce2819ae491f63c08ee4b78a6884dcc5e742389",
+      "post_sha256": "f6dd421ba10b1a0e57fa10609ce2819ae491f63c08ee4b78a6884dcc5e742389"
+    },
+    {
+      "source": "crates/rustui-objc-foundation/src/macros.rs",
+      "destination": "archive/pre-fast/crates/rustui-objc-foundation/src/macros.rs",
+      "pre_sha256": "7c03375b7efa17b2a58f9c9821a61581b4b6eaa1e0185f2468e6d5ded57aef59",
+      "post_sha256": "7c03375b7efa17b2a58f9c9821a61581b4b6eaa1e0185f2468e6d5ded57aef59"
+    },
+    {
+      "source": "crates/rustui-objc-foundation/src/object.rs",
+      "destination": "archive/pre-fast/crates/rustui-objc-foundation/src/object.rs",
+      "pre_sha256": "c6deba06b351936ed2264cdb56755685cdf0b92e37fcf4f6ba56e6021cd00384",
+      "post_sha256": "c6deba06b351936ed2264cdb56755685cdf0b92e37fcf4f6ba56e6021cd00384"
+    },
+    {
+      "source": "crates/rustui-objc-foundation/src/string.rs",
+      "destination": "archive/pre-fast/crates/rustui-objc-foundation/src/string.rs",
+      "pre_sha256": "aeffa50feb90c50e11979780a67ced5c7458f8d164d668d271c0aaafe64d8025",
+      "post_sha256": "aeffa50feb90c50e11979780a67ced5c7458f8d164d668d271c0aaafe64d8025"
+    },
+    {
+      "source": "crates/rustui-objc-foundation/src/value.rs",
+      "destination": "archive/pre-fast/crates/rustui-objc-foundation/src/value.rs",
+      "pre_sha256": "ee8168e2b45a3094b08a604e84e2d80c38454bb8ffbb859a24baf04725894be1",
+      "post_sha256": "ee8168e2b45a3094b08a604e84e2d80c38454bb8ffbb859a24baf04725894be1"
+    }
+  ]
+}
