@@ -15,6 +15,29 @@ SOURCES = ROOT / "patches/approved/fast/owned-fast-sources.json"
 WIRING = ROOT / "patches/approved/fast/owned-fast-path-wiring-v1.json"
 
 
+def manifest_wiring():
+    names = json.loads((WIRING.parent / "fast-stack.json").read_text())["patches"]
+    names = names[names.index(WIRING.name):]
+    paths = [WIRING.parent / name for name in names]
+    for path in paths:
+        data = json.loads(path.read_text())
+        if any(not name.endswith("/Cargo.toml") for name in data["files"]):
+            raise ValueError(f"ownership tail must contain manifest-only patches: {path.name}")
+        if hashlib.sha256((path.parent / data["patch"]).read_bytes()).hexdigest() != data["patch_sha256"]:
+            raise ValueError(f"ownership patch hash mismatch: {path.name}")
+    return paths
+
+
+def check_manifest_images(root):
+    final = {}
+    for path in manifest_wiring():
+        final.update({name: hashes["post_sha256"]
+                      for name, hashes in json.loads(path.read_text())["files"].items()})
+    for name, expected in final.items():
+        if hashlib.sha256((root / name).read_bytes()).hexdigest() != expected:
+            raise ValueError(f"owned manifest postimage differs: {name}")
+
+
 def hashes(directory: Path):
     result = {}
     for path in sorted(directory.rglob("*")):
@@ -27,7 +50,9 @@ def hashes(directory: Path):
 
 def check_copies(root: Path, wired: bool):
     copies = json.loads(SOURCES.read_text())["copies"]
-    wiring = json.loads(WIRING.read_text())["files"]
+    wiring = {}
+    for path in manifest_wiring():
+        wiring.update(json.loads(path.read_text())["files"])
     for copy in copies:
         expected = copy["files"]
         if hashes(root / copy["vendor"]) != expected:
@@ -50,28 +75,35 @@ def operate(action: str, root: Path = ROOT):
             if (root / copy["owned"]).exists():
                 raise ValueError(f"refusing to overwrite owned Fast copy: {copy['owned']}")
         created = []
+        applied = []
         try:
             for copy in copies:
                 destination = root / copy["owned"]
                 destination.parent.mkdir(parents=True, exist_ok=True)
                 shutil.copytree(root / copy["vendor"], destination)
                 created.append(destination)
-            apply_patch(WIRING, "--apply", root)
+            for path in manifest_wiring():
+                apply_patch(path, "--apply", root)
+                applied.append(path)
         except Exception:
+            for path in reversed(applied):
+                apply_patch(path, "--reverse", root)
             for destination in created:
                 shutil.rmtree(destination)
             raise
         check_copies(root, wired=True)
     elif action == "--reverse":
         check_copies(root, wired=True)
-        apply_patch(WIRING, "--reverse", root)
+        check_manifest_images(root)
+        for path in reversed(manifest_wiring()):
+            apply_patch(path, "--reverse", root)
         check_copies(root, wired=False)
         for copy in copies:
             shutil.rmtree(root / copy["owned"])
         print("Owned Fast source copies removed; Kit manifests restored exactly")
     else:
         check_copies(root, wired=True)
-        apply_patch(WIRING, "--check", root)
+        check_manifest_images(root)
 
 
 if __name__ == "__main__":

@@ -15,9 +15,6 @@ ROOT = Path(__file__).resolve().parents[1]
 STACK = ROOT / "patches/approved/kit09/kit09-stack.json"
 MIRRORS = {
     "gpui-pre": "crates/rustui-gpui",
-    "gpui-pre-platform": "crates/rustui-gpui-platform",
-    "gpui-pre-macos": "crates/rustui-gpui-macos",
-    "gpui-pre-apple": "crates/rustui-gpui-apple",
     "gpui-pre-linux": "crates/rustui-gpui-linux",
     "gpui-pre-windows": "crates/rustui-gpui-windows",
     "gpui-pre-web": "crates/rustui-gpui-web",

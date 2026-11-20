@@ -18,16 +18,8 @@ OWNED_VENDOR_COPIES = {
     "crates/rustui-gpui-fast-macros": "vendor/gpui-fast-macros-0.1.14",
 
     "crates/rustui-gpui": "vendor/gpui-pre-0.3.12",
-    "crates/rustui-gpui-platform": "vendor/gpui-pre-platform-0.3.12",
-    "crates/rustui-gpui-macos": "vendor/gpui-pre-macos-0.3.12",
-    "crates/rustui-gpui-apple": "vendor/gpui-pre-apple-0.3.12",
     "crates/rustui-gpui-base": "vendor/gpui-base-0.9.1",
     "crates/rustui-gpui-component": "vendor/gpui-component-0.9.1",
-    "crates/rustui-block": "vendor/block-0.1.6",
-    "crates/rustui-cocoa": "vendor/cocoa-0.26.1",
-    "crates/rustui-cocoa-foundation": "vendor/cocoa-foundation-0.2.1",
-    "crates/rustui-metal": "vendor/metal-0.33.0",
-    "crates/rustui-objc-foundation": "vendor/objc-foundation-0.1.1",
     "crates/rustui-gpui-kit-assets": "vendor/gpui-kit-assets-0.9.1",
     "crates/rustui-gpui-linux": "vendor/gpui-pre-linux-0.3.12",
     "crates/rustui-gpui-web": "vendor/gpui-pre-web-0.3.12",
@@ -36,9 +28,6 @@ OWNED_VENDOR_COPIES = {
 }
 IGNORED_RELATIVE_PATHS = {"Cargo.toml"}
 OWNED_ONLY_IGNORED_PATHS = {
-    # This test-only standalone lock is intentionally resolved offline for the
-    # macOS crate and is not the published/vendor snapshot's source lock.
-    "crates/rustui-gpui-macos": {"Cargo.lock"},
 }
 OWNED_SOURCE_OVERLAYS = {
     # Fast's wrapped-line test adaptation and the opt-in bounce observation
