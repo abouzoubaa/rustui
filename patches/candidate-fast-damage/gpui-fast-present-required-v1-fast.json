@@ -1,0 +1,28 @@
+{
+  "schema_version": 1,
+  "name": "gpui-fast-present-required-v1-fast",
+  "patch": "gpui-fast-present-required-v1-fast.patch",
+  "patch_sha256": "c41d0f361d82f40904660ea465f7ad4938e428cb989deddd329e083f299a4aed",
+  "files": {
+    "vendor/gpui-fast-0.1.14/src/fast/mod.rs": {
+      "pre_sha256": "3309d02b904b47ca98945fe11f75ba1ceaa3964142186132d90eefcdf47c60f9",
+      "post_sha256": "b56ca2c1d9b1757684925c1b290045e2444838de4c21ec00fe59b4d9873f7711"
+    },
+    "vendor/gpui-fast-0.1.14/src/gpui.rs": {
+      "pre_sha256": "ba01b88bced0cdaa5b8986235f4f14fd1b922c614839be8bf61a62e5d989361b",
+      "post_sha256": "ef14b6f0f7cea548644bcbcd04d24dd549411f782b8f566d64a11ecc45d23330"
+    },
+    "vendor/gpui-fast-0.1.14/src/window.rs": {
+      "pre_sha256": "e1e2a84286693e4d9d8f035d9eadf0e67772fb764d5f9d4c73c76f51abc63bac",
+      "post_sha256": "1b19ac8f8c24bcd307031b73295f5663039bb00cc5efd28d24a6e868ee7be12e"
+    },
+    "vendor/gpui-fast-0.1.14/.cargo-checksum.json": {
+      "pre_sha256": "7d77a0e29284ac6b998616a46c59a47fb7f84e3efed608a04107f385393887cf",
+      "post_sha256": "0018cde62345b6c7350ea44182e7a960424b674685a315a544bd45762871e3eb"
+    },
+    "vendor/gpui-fast-0.1.14/src/fast/present_hint.rs": {
+      "pre_sha256": null,
+      "post_sha256": "42baaa34bf462c198b592c521ab7fe68169f65371bf3ce9e78f1555f01d20679"
+    }
+  }
+}

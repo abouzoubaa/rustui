@@ -34,6 +34,7 @@ mod line_break;
 pub(crate) mod misc;
 pub(crate) mod number_shaping;
 pub(crate) mod path_cache;
+pub(crate) mod present_hint;
 pub(crate) mod retained;
 pub(crate) mod rounded_clip;
 pub(crate) mod rounded_clip_scene;
