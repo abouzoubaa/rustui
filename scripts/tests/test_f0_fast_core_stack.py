@@ -23,6 +23,40 @@ SYNTAX_DIFF_STACK_PATH = REPO_ROOT / "patches/approved/fast/syntax-diff-stack.js
 NATIVE_POPUP_STACK_PATH = REPO_ROOT / "patches/approved/fast/native-popup-stack.json"
 
 
+def approved_fixture(fixture):
+    """Peel active damage candidates before replaying historical base patches."""
+    from check_fast_patch_stack import STACK, active_stack, load_manifests
+    entries, final = load_manifests(active_stack())
+    approved_count = len(load_manifests(STACK)[0])
+    for relative in final:
+        target = fixture / relative
+        target.parent.mkdir(parents=True, exist_ok=True)
+        target.write_bytes((REPO_ROOT / relative).read_bytes())
+    from refresh_owned_fast_sources import SOURCES, manifest_wiring, source_images, wired_manifests
+    copies = json.loads(SOURCES.read_text())["copies"]
+    changed_manifests = any(source_images(copy, active_stack())["Cargo.toml"] != copy["files"]["Cargo.toml"]
+                            for copy in copies)
+    if changed_manifests:
+        with wired_manifests(REPO_ROOT, active_stack()) as paths:
+            for path in reversed(paths):
+                apply_patch(path, "--reverse", fixture)
+    for path, _, _ in reversed(entries[approved_count:]):
+        apply_patch(path, "--reverse", fixture)
+    if changed_manifests:
+        for copy in copies:
+            owned = fixture / copy["owned"] / "Cargo.toml"
+            if not owned.exists():
+                continue
+            vendor = fixture / copy["vendor"] / "Cargo.toml"
+            source = vendor if vendor.exists() else REPO_ROOT / copy["vendor"] / "Cargo.toml"
+            data = source.read_bytes()
+            if hashlib.sha256(data).hexdigest() != copy["files"]["Cargo.toml"]:
+                raise ValueError("historical fixture did not restore the approved vendor manifest")
+            owned.write_bytes(data)
+        for path in manifest_wiring():
+            apply_patch(path, "--apply", fixture)
+
+
 class FastCoreStackTests(unittest.TestCase):
     def assert_family_candidates_are_exact_kit09_copies(self, stack_path: Path, family: str):
         stack = json.loads(stack_path.read_text())
@@ -87,15 +121,13 @@ class FastCoreStackTests(unittest.TestCase):
         data = json.loads(manifest.read_text())
         with tempfile.TemporaryDirectory() as temporary:
             fixture = Path(temporary)
-            for relative in data["files"]:
-                target = fixture / relative
-                target.parent.mkdir(parents=True, exist_ok=True)
-                target.write_bytes((REPO_ROOT / relative).read_bytes())
+            approved_fixture(fixture)
+            originals = {relative: (fixture / relative).read_bytes() for relative in data["files"]}
             apply_patch(manifest,"--apply",fixture)
             apply_patch(manifest,"--check",fixture)
             apply_patch(manifest,"--reverse",fixture)
             for relative in data["files"]:
-                self.assertEqual((fixture/relative).read_bytes(),(REPO_ROOT/relative).read_bytes())
+                self.assertEqual((fixture/relative).read_bytes(), originals[relative])
 
     def test_promoted_inventory_contains_only_the_active_stack(self):
         from check_fast_patch_stack import PATCH_DIR, load_manifests
@@ -131,15 +163,8 @@ class FastCoreStackTests(unittest.TestCase):
                 union[relative] = hashes
         with tempfile.TemporaryDirectory() as temporary:
             fixture = Path(temporary)
-            for relative in union:
-                target = fixture / relative
-                target.parent.mkdir(parents=True, exist_ok=True)
-                target.write_bytes((REPO_ROOT / relative).read_bytes())
-            wiring = REPO_ROOT / "patches/approved/fast/owned-fast-path-wiring-v1.json"
-            for relative in json.loads(wiring.read_text())["files"]:
-                target = fixture / relative
-                target.parent.mkdir(parents=True, exist_ok=True)
-                target.write_bytes((REPO_ROOT / relative).read_bytes())
+            approved_fixture(fixture)
+            originals = {relative: (fixture / relative).read_bytes() for relative in union}
             from refresh_owned_fast_sources import manifest_wiring
             for path in reversed(manifest_wiring()):
                 apply_patch(path, "--reverse", fixture)
@@ -155,9 +180,10 @@ class FastCoreStackTests(unittest.TestCase):
                     self.assertEqual(hashlib.sha256((fixture / relative).read_bytes()).hexdigest(), hashes["post_sha256"])
             for path in manifest_wiring():
                 apply_patch(path, "--apply", fixture)
-            apply_stack("--check", fixture)
+            from check_fast_patch_stack import STACK, check
+            check(fixture, STACK)
             for relative in union:
-                self.assertEqual((fixture / relative).read_bytes(), (REPO_ROOT / relative).read_bytes())
+                self.assertEqual((fixture / relative).read_bytes(), originals[relative])
 
 
 if __name__ == "__main__":

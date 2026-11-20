@@ -2,6 +2,7 @@
 
 ## Unreleased
 
+- G-T0: support reversible new-file Fast patches, layered damage-stack checks, and regenerated owned sources containing added files.
 - G-P: preserve Stage G plans and licensed upstream source pins; macOS damage tracking precedes Stage B’s theme engine.
 
 ## 0.5.0 — 2026-11-20

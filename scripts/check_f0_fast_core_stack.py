@@ -12,9 +12,16 @@ ROOT = Path(__file__).resolve().parents[1]
 STACK = ROOT / "patches/approved/fast/core-stack.json"
 APPLIER = ROOT / "scripts/apply_f0_fast_candidate_patch.py"
 
-def run(action: str, root: Path = ROOT) -> None:
-    stack = json.loads(STACK.read_text())
-    manifests = [ROOT / "patches/approved/fast" / name for name in stack["patches"]]
+def run(action: str, root: Path = ROOT, stack_path: Path = STACK) -> None:
+    stack_path = stack_path.resolve()
+    stack = json.loads(stack_path.read_text())
+    manifests = [stack_path.parent / name for name in stack["patches"]]
+    if "base_stack" in stack:
+        if action != "--check":
+            raise ValueError("a layered stack uses check_fast_patch_stack.py for cumulative replay")
+        from check_fast_patch_stack import check
+        check(root, stack_path)
+        return
     if action == "--check":
         final = {}
         for path in manifests:
@@ -27,9 +34,9 @@ def run(action: str, root: Path = ROOT) -> None:
         # Ownership wiring follows the historical core stack. Validate the
         # terminal images while retaining the core's exact replay order.
         wiring_path = ROOT / "patches/approved/fast/owned-fast-path-wiring-v1.json"
-        if wiring_path.exists():
-            from check_fast_patch_stack import load_manifests
-            _, terminal = load_manifests()
+        if stack_path == STACK and wiring_path.exists():
+            from check_fast_patch_stack import active_stack, load_manifests
+            _, terminal = load_manifests(active_stack())
             final = {relative: terminal[relative] for relative in final}
         for relative, expected in final.items():
             actual = hashlib.sha256((root / relative).read_bytes()).hexdigest()
@@ -44,13 +51,14 @@ def run(action: str, root: Path = ROOT) -> None:
 def main() -> int:
     parser = argparse.ArgumentParser()
     parser.add_argument("--root", type=Path, default=ROOT)
+    parser.add_argument("--stack", type=Path, default=STACK)
     group = parser.add_mutually_exclusive_group(required=True)
     for action in ("--apply", "--check", "--reverse"):
         group.add_argument(action, action="store_true")
     args = parser.parse_args()
     action = next(x for x in ("--apply", "--check", "--reverse") if getattr(args, x[2:].replace('-', '_')))
     try:
-        run(action, args.root)
+        run(action, args.root, args.stack)
     except (OSError, ValueError, KeyError, subprocess.CalledProcessError) as error:
         parser.exit(1, f"error: {error}\n")
     return 0
