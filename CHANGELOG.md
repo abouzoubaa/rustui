@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+- G0-2: add five native Metal benchmark scenes, 60-second GPU/CPU measurements, and an owner-run power capture script.
+
 - G0-1: add opt-in Metal GPU milliseconds per present to RUSTUI_FRAME_LOG, with full-frame mode labels.
 
 - G-T0: support reversible new-file Fast patches, layered damage-stack checks, and regenerated owned sources containing added files.
