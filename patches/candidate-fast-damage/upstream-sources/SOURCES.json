@@ -1,0 +1,77 @@
+{
+  "schema_version": 1,
+  "purpose": "Unmodified source pins for Stage G ports; Finityno and Zed are ideas only.",
+  "havunen_pr": "https://github.com/Havunen/gpui-ce/pull/29",
+  "files": [
+    {
+      "repo": "longbridge/gpui-fast",
+      "commit": "2002081b4a61249a1cef2b8a552f6ba0998d9f52",
+      "path": "crates/gpui_windows/src/fast/partial.rs",
+      "local_path": "longbridge/gpui-fast/crates/gpui_windows/src/fast/partial.rs",
+      "sha256": "1a4d246b112adb58f611860124b9c627c8b70f525f6e9370ee83a2a35295a8f2",
+      "license": "Apache-2.0",
+      "url": "https://raw.githubusercontent.com/longbridge/gpui-fast/2002081b4a61249a1cef2b8a552f6ba0998d9f52/crates/gpui_windows/src/fast/partial.rs",
+      "license_path": "longbridge/gpui-fast/LICENSE"
+    },
+    {
+      "repo": "longbridge/gpui-fast",
+      "commit": "2002081b4a61249a1cef2b8a552f6ba0998d9f52",
+      "path": "LICENSE",
+      "local_path": "longbridge/gpui-fast/LICENSE",
+      "sha256": "5f78a733701db49b73da93addad8cb74f816f3789ef30c3c0e959e943ecd99b4",
+      "license": "Apache-2.0",
+      "url": "https://raw.githubusercontent.com/longbridge/gpui-fast/2002081b4a61249a1cef2b8a552f6ba0998d9f52/LICENSE",
+      "license_path": "longbridge/gpui-fast/LICENSE"
+    },
+    {
+      "repo": "Havunen/gpui-ce",
+      "commit": "28045891bfe87768a2c8e0aefd43403939844318",
+      "path": "crates/gpui_render/src/damage.rs",
+      "local_path": "Havunen/gpui-ce/crates/gpui_render/src/damage.rs",
+      "sha256": "518316067743d0c16d604a2362a1b1d753f1e55eb477b92998d488a3452adf4c",
+      "license": "Apache-2.0",
+      "url": "https://raw.githubusercontent.com/Havunen/gpui-ce/28045891bfe87768a2c8e0aefd43403939844318/crates/gpui_render/src/damage.rs",
+      "license_path": "Havunen/gpui-ce/LICENSE.md"
+    },
+    {
+      "repo": "Havunen/gpui-ce",
+      "commit": "28045891bfe87768a2c8e0aefd43403939844318",
+      "path": "crates/gpui_render/src/retained.rs",
+      "local_path": "Havunen/gpui-ce/crates/gpui_render/src/retained.rs",
+      "sha256": "d52b3502e2dc871cf700054a000fdfdc321179f468c409e27b1f98979d9a795c",
+      "license": "Apache-2.0",
+      "url": "https://raw.githubusercontent.com/Havunen/gpui-ce/28045891bfe87768a2c8e0aefd43403939844318/crates/gpui_render/src/retained.rs",
+      "license_path": "Havunen/gpui-ce/LICENSE.md"
+    },
+    {
+      "repo": "Havunen/gpui-ce",
+      "commit": "28045891bfe87768a2c8e0aefd43403939844318",
+      "path": "crates/gpui_apple/src/metal_renderer.rs",
+      "local_path": "Havunen/gpui-ce/crates/gpui_apple/src/metal_renderer.rs",
+      "sha256": "543150dd283c8c0fe7af572ffeaa232d488255af057aad1cd240a6a7b1064370",
+      "license": "Apache-2.0",
+      "url": "https://raw.githubusercontent.com/Havunen/gpui-ce/28045891bfe87768a2c8e0aefd43403939844318/crates/gpui_apple/src/metal_renderer.rs",
+      "license_path": "Havunen/gpui-ce/LICENSE.md"
+    },
+    {
+      "repo": "Havunen/gpui-ce",
+      "commit": "28045891bfe87768a2c8e0aefd43403939844318",
+      "path": "LICENSE.md",
+      "local_path": "Havunen/gpui-ce/LICENSE.md",
+      "sha256": "8515b253f740ad80926e77b7dec06938258fd70994564d3846b82a676e15c8ba",
+      "license": "Apache-2.0",
+      "url": "https://raw.githubusercontent.com/Havunen/gpui-ce/28045891bfe87768a2c8e0aefd43403939844318/LICENSE.md",
+      "license_path": "Havunen/gpui-ce/LICENSE.md"
+    },
+    {
+      "repo": "Havunen/gpui-ce",
+      "commit": "28045891bfe87768a2c8e0aefd43403939844318",
+      "path": "crates/gpui_apple/LICENSE-APACHE",
+      "local_path": "Havunen/gpui-ce/crates/gpui_apple/LICENSE-APACHE",
+      "sha256": "752daf2fb234ca4a1fa372c073fe127f44b7b90fd2529ae44273a64f9d53da7a",
+      "license": "Apache-2.0",
+      "url": "https://raw.githubusercontent.com/Havunen/gpui-ce/28045891bfe87768a2c8e0aefd43403939844318/crates/gpui_apple/LICENSE-APACHE",
+      "license_path": "Havunen/gpui-ce/LICENSE.md"
+    }
+  ]
+}
