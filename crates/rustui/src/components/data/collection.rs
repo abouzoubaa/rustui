@@ -845,6 +845,101 @@ mod tests {
     }
 
     #[gpui::test]
+    fn visible_collection_rows_keep_retained_entities_during_fast_scroll(
+        cx: &mut gpui::TestAppContext,
+    ) {
+        type Probes = Rc<RefCell<std::collections::HashMap<usize, gpui::WeakEntity<()>>>>;
+        struct Probe {
+            index: usize,
+            probes: Probes,
+        }
+        impl View for Probe {
+            fn body(&self) -> impl View {
+                EmptyView
+            }
+            fn into_element(&self, context: &mut RenderContext<'_>) -> AnyElement {
+                let (entity, _) = context.retained_entity(Identity::from("row-probe"), |_, _| ());
+                self.probes
+                    .borrow_mut()
+                    .insert(self.index, entity.downgrade());
+                div()
+                    .child(format!("Row {}", self.index))
+                    .into_any_element()
+            }
+        }
+        struct Owner {
+            items: Rc<[CollectionItem<usize>]>,
+            probes: Probes,
+        }
+        impl View for Owner {
+            fn body(&self) -> impl View {
+                let probes = self.probes.clone();
+                Collection::new(
+                    "cached-retention",
+                    self.items.clone(),
+                    300.,
+                    30.,
+                    move |_, index| Probe {
+                        index: *index,
+                        probes: probes.clone(),
+                    },
+                )
+            }
+        }
+        cx.update(gpui_component::init);
+        let probes: Probes = Default::default();
+        let (owner, window) = cx.add_window_view(|_, app| {
+            crate::runtime::ComponentHost::new(
+                Owner {
+                    items: (0..5000)
+                        .map(|i| CollectionItem::new(format!("row-{i}"), i))
+                        .collect::<Vec<_>>()
+                        .into(),
+                    probes: probes.clone(),
+                },
+                app,
+            )
+        });
+        window.update(|window, app| {
+            window.set_a11y_active_for_tests(false);
+            window.set_scroll_layers(true);
+            window.set_view_retention(true);
+            let _ = window.draw(app);
+        });
+        let state = window.update(|_, app| {
+            owner
+                .read(app)
+                .retained_entity_for_test::<CollectionState>(
+                    vec![RetentionScope::Collection(Identity::from(
+                        "cached-retention",
+                    ))],
+                    Identity::from("collection-state"),
+                )
+                .unwrap()
+        });
+        let original = probes.borrow().get(&5).expect("row 5 was rendered").clone();
+        for frame in 0..12 {
+            #[allow(deprecated)]
+            window.simulate_event(gpui::ScrollWheelEvent {
+                position: gpui::point(px(10.), px(150.)),
+                delta: gpui::ScrollDelta::Pixels(gpui::point(px(0.), px(-3.))),
+                ..Default::default()
+            });
+            window.update(|window, app| {
+                let _ = window.draw(app);
+                assert!(
+                    f32::from(state.read(app).scroll.0.borrow().base_handle.offset().y) < 0.,
+                    "scroll must reach the list"
+                );
+                assert!(
+                    original.upgrade().is_some(),
+                    "visible row 5 lost its retained entity after scroll frame {frame}"
+                );
+            });
+        }
+    }
+
+    #[gpui::test]
     fn fast_scroll_keeps_every_visible_row_label_for_5000_items(cx: &mut gpui::TestAppContext) {
         struct Owner {
             items: Rc<[CollectionItem<usize>]>,

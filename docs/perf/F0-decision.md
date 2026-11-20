@@ -149,3 +149,8 @@ The reference values are the matched release-profile F0-10 gpui-pre measurements
 The initial forced-draw set had medians 6.299821, 5.331583, 5.252696, 5.252500, 5.492938 ms (19.64% spread). Per the F0 reliability method, it was repeated once; the repeat set above is used.
 
 Known native issue retained from F0-14: Collection has 1–3 presentation gaps above 16.7 ms per capture run. Scrolling comparison and R-1 grid visual review remain pending; these automated results do not complete that review.
+
+
+## FA-5 review blocker
+
+Before main adoption, reconcile Collection’s per-frame prepaint-visit pruning with Fast’s retained-row cache. A cached row can be kept without repeating its RustUI prepaint hook; retained cell entities and subscriptions must live as long as GPUI keeps that row. Ordinary wheel traversal does not establish cached-replay safety. The focused cached-replay proof and any required Collection rendering change remain outside the adoption preparation; PR #152 must stay unmerged until this review item is resolved.
