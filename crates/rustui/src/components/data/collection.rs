@@ -2,7 +2,7 @@
 
 use std::{
     any::Any,
-    cell::RefCell,
+    cell::{Cell, RefCell},
     collections::HashSet,
     marker::PhantomData,
     rc::Rc,
@@ -388,10 +388,16 @@ impl CollectionState {
     }
 }
 
-/// Lifecycle forwarding only: GPUI owns every measurement, layout, and scroll.
-/// Row visits are recorded in prepaint, even if GPUI reuses a rendered element.
+/// GPUI supplies the visible rows even when its cached rows skip prepaint.
 #[derive(Default)]
-struct PrepaintVisits(RefCell<HashSet<Identity>>);
+struct PrepaintVisits(RefCell<HashSet<Identity>>, RetentionFrame);
+
+#[derive(Default)]
+struct RetentionFrame {
+    pruned: RefCell<Option<HashSet<Identity>>>,
+    overdraw_height: Cell<f32>,
+    laid_out_row: Cell<bool>,
+}
 
 impl PrepaintVisits {
     fn begin_list(&self) {
@@ -399,6 +405,51 @@ impl PrepaintVisits {
     }
     fn visit_row(&self, id: &Identity) {
         self.0.borrow_mut().insert(id.clone());
+    }
+}
+
+fn retained_row_range(
+    visible: std::ops::Range<usize>,
+    overdraw_height: f32,
+    item_height: f32,
+    count: usize,
+) -> std::ops::Range<usize> {
+    // gpui-fast 0.1.14: layers/paint.rs OVERSCAN_VIEWPORTS=2 and
+    // layers/lists.rs retained_rows batches eviction at a quarter of the
+    // needed rows. Keep that bounded margin too; fractional edges get one row.
+    let overdraw = (overdraw_height.max(0.) * 2. / item_height).ceil() as usize;
+    let batch = visible.len().saturating_add(overdraw.saturating_mul(2)) / 4;
+    let margin = overdraw.saturating_add(batch.max(1)).saturating_add(1);
+    visible.start.saturating_sub(margin).min(count)..visible.end.saturating_add(margin).min(count)
+}
+
+struct CollectionRetention {
+    ids: Arc<ValidatedIds>,
+    visits: Rc<PrepaintVisits>,
+}
+
+impl gpui::UniformListDecoration for CollectionRetention {
+    fn compute(
+        &self,
+        visible: std::ops::Range<usize>,
+        _: Bounds<Pixels>,
+        _: gpui::Point<Pixels>,
+        item_height: Pixels,
+        count: usize,
+        _: &mut Window,
+        _: &mut App,
+    ) -> AnyElement {
+        let range = retained_row_range(
+            visible,
+            self.visits.1.overdraw_height.get(),
+            f32::from(item_height),
+            count,
+        );
+        self.visits
+            .0
+            .borrow_mut()
+            .extend(self.ids[range].iter().cloned());
+        div().into_any_element()
     }
 }
 
@@ -439,6 +490,9 @@ impl Element for CollectionElement {
         window: &mut Window,
         cx: &mut App,
     ) -> (LayoutId, ()) {
+        if matches!(&self.kind, VisitKind::Row(_)) {
+            self.visits.1.laid_out_row.set(true);
+        }
         (self.child.request_layout(window, cx), ())
     }
     fn prepaint(
@@ -454,19 +508,17 @@ impl Element for CollectionElement {
             VisitKind::Row(id) => {
                 self.visits.visit_row(id);
             }
-            VisitKind::List { .. } => self.visits.begin_list(),
+            VisitKind::List { .. } => {
+                self.visits
+                    .1
+                    .overdraw_height
+                    .set(f32::from(window.content_mask().bounds.size.height));
+                self.visits.begin_list();
+            }
         }
         self.child.prepaint(window, cx);
-        if let VisitKind::List { owner, generation } = &self.kind {
-            owner
-                .update(cx, |state, _| {
-                    if state.generation == *generation {
-                        state.retained.prune_cells(&self.visits.0.borrow());
-                    }
-                })
-                .ok();
-        }
     }
+
     fn paint(
         &mut self,
         _: Option<&GlobalElementId>,
@@ -478,6 +530,29 @@ impl Element for CollectionElement {
         cx: &mut App,
     ) {
         self.child.paint(window, cx);
+        if let VisitKind::List { owner, generation } = &self.kind {
+            let kept = self.visits.0.borrow();
+            if !self.visits.1.laid_out_row.get()
+                && self.visits.1.pruned.borrow().as_ref() == Some(&*kept)
+            {
+                return;
+            }
+            // Native row-cache dependency recording is closed after child.paint.
+            // Reconcile only on a changed range, never on a skipped row callback.
+            let pruned = owner
+                .update(cx, |state, _| {
+                    if state.generation != *generation {
+                        return false;
+                    }
+                    state.retained.prune_cells(&kept);
+                    true
+                })
+                .unwrap_or(false);
+            if pruned {
+                self.visits.1.pruned.replace(Some(kept.clone()));
+                self.visits.1.laid_out_row.set(false);
+            }
+        }
     }
 }
 
@@ -665,6 +740,7 @@ impl<T: 'static, V: View, F: Fn(usize, &T) -> V + 'static> View for Collection<T
                 }).unwrap_or_default()
             })
             .track_scroll(&scroll)
+            .with_decoration(CollectionRetention { ids: self.validated.clone(), visits: visits.clone() })
             .h(px(self.height))
             .w_full()
             .min_w_0();
@@ -699,6 +775,327 @@ mod tests {
     use gpui::{Element, Modifiers, Role, accesskit::Node};
 
     use super::*;
+
+    #[derive(Clone, Copy)]
+    enum CachedReplayCase {
+        Idle,
+        Scroll,
+        Toggle,
+        Evict,
+        Remove,
+    }
+
+    fn cached_replay_retains_cell(cx: &mut gpui::TestAppContext, case: CachedReplayCase) {
+        use gpui::{AppContext as _, Render};
+        use std::cell::Cell;
+
+        struct Bootstrap {
+            include_row5: bool,
+        }
+        impl View for Bootstrap {
+            fn body(&self) -> impl View {
+                Collection::new(
+                    "replay-fixture",
+                    (0..1000)
+                        .filter(|index| self.include_row5 || *index != 5)
+                        .map(|i| CollectionItem::new(format!("row-{i}"), i))
+                        .collect::<Vec<_>>()
+                        .into(),
+                    300.,
+                    30.,
+                    |_, _| EmptyView,
+                )
+            }
+        }
+        struct CachedList {
+            owner: WeakEntity<CollectionState>,
+            model: gpui::WeakEntity<bool>,
+            visits: Rc<PrepaintVisits>,
+            prepaints: Rc<Cell<usize>>,
+            scroll: UniformListScrollHandle,
+            ids: Arc<ValidatedIds>,
+        }
+        impl Render for CachedList {
+            fn render(&mut self, _: &mut Window, _: &mut gpui::Context<Self>) -> impl IntoElement {
+                let visits = self.visits.clone();
+                let model = self.model.clone();
+                let prepaints = self.prepaints.clone();
+                let rows = uniform_list("stable-cache-fixture", 1000, move |range, _, cx| {
+                    range
+                        .map(|index| {
+                            let mut row = div()
+                                .flex()
+                                .items_center()
+                                .gap(px(8.))
+                                .w_full()
+                                .h(px(30.))
+                                .child(format!("Row {index}"));
+                            if index == 5 {
+                                let checked = model.upgrade().is_some_and(|model| *model.read(cx));
+                                let target = model.clone();
+                                let counter = prepaints.clone();
+                                row = row
+                                    .child(
+                                        gpui_base::Switch::new("replayed-toggle")
+                                            .checked(checked)
+                                            .accessibility_label("Retained toggle")
+                                            .w(px(36.))
+                                            .h(px(20.))
+                                            .child(div().size_full().bg(gpui::rgb(0x4488cc)))
+                                            .on_change(move |value, _, _, cx| {
+                                                target
+                                                    .update(cx, |model, cx| {
+                                                        *model = value;
+                                                        cx.notify();
+                                                    })
+                                                    .ok();
+                                            }),
+                                    )
+                                    .child(
+                                        gpui::canvas(
+                                            move |_, _, _| counter.set(counter.get() + 1),
+                                            |_, (), _, _| {},
+                                        )
+                                        .size(px(1.)),
+                                    );
+                            }
+                            CollectionElement {
+                                child: row.into_any_element(),
+                                visits: visits.clone(),
+                                kind: VisitKind::Row(Identity::from(format!("row-{index}"))),
+                            }
+                            .into_any_element()
+                        })
+                        .collect::<Vec<_>>()
+                })
+                .track_scroll(&self.scroll)
+                .with_decoration(CollectionRetention {
+                    ids: self.ids.clone(),
+                    visits: self.visits.clone(),
+                })
+                .w(px(600.))
+                .h(px(300.));
+                CollectionElement {
+                    child: rows.into_any_element(),
+                    visits: self.visits.clone(),
+                    kind: VisitKind::List {
+                        owner: self.owner.clone(),
+                        generation: 0,
+                    },
+                }
+            }
+        }
+        struct RestoreBootstrap(gpui::Entity<crate::runtime::ComponentHost<Bootstrap>>);
+        impl Render for RestoreBootstrap {
+            fn render(&mut self, _: &mut Window, _: &mut gpui::Context<Self>) -> impl IntoElement {
+                self.0.clone()
+            }
+        }
+        cx.update(gpui_component::init);
+        let (bootstrap, window) = cx.add_window_view(|_, app| {
+            crate::runtime::ComponentHost::new(Bootstrap { include_row5: true }, app)
+        });
+        window.update(|window, app| {
+            window.draw(app).clear(app);
+        });
+        let state = window.update(|_, app| {
+            bootstrap
+                .read(app)
+                .retained_entity_for_test::<CollectionState>(
+                    vec![RetentionScope::Collection(Identity::from("replay-fixture"))],
+                    Identity::from("collection-state"),
+                )
+                .unwrap()
+        });
+        let observed = Rc::new(Cell::new(0));
+        let bound = Rc::new(Cell::new(false));
+        let model = window.update(|window, app| {
+            let model = app.new(|_| false);
+            let observed = observed.clone();
+            let bound = bound.clone();
+            let subscription = app.observe(&model, move |model, cx| {
+                observed.set(observed.get() + 1);
+                bound.set(*model.read(cx));
+            });
+            state.update(app, |state, _| {
+                state.retained.begin_cell(&Identity::from("row-5"));
+                state
+                    .retained
+                    .push_scope(RetentionScope::Key(Identity::from("row-5")));
+                state
+                    .retained
+                    .insert(Identity::from("row-model"), model.clone());
+                state
+                    .retained
+                    .retain_subscription(&Identity::from("row-model"), subscription);
+                state.retained.pop_scope();
+                state.generation = 0;
+            });
+            window.set_a11y_active_for_tests(false);
+            window.set_view_retention(true);
+            window.set_scroll_layers(true);
+            let prepaints = Rc::new(Cell::new(0));
+            let (visits, scroll, ids) = {
+                let state = state.read(app);
+                (
+                    state.visits.clone(),
+                    state.scroll.clone(),
+                    state.ids.clone(),
+                )
+            };
+            window.replace_root(app, |_, _| CachedList {
+                owner: state.downgrade(),
+                model: model.downgrade(),
+                visits,
+                ids,
+                scroll,
+                prepaints: prepaints.clone(),
+            });
+            window.draw(app).clear(app);
+            (model.downgrade(), prepaints)
+        });
+        let (model, prepaints) = model;
+        let mut replayed = false;
+        for frame in 0..12 {
+            let before = prepaints.get();
+            window.update(|window, app| {
+                assert!(
+                    !window.is_a11y_active(),
+                    "native row-cache eligibility requires inactive accessibility"
+                );
+                assert!(window.view_retention());
+                window.dispatch_event(
+                    gpui::PlatformInput::Scroll(gpui::ScrollEvent {
+                        position: gpui::point(px(550.), px(150.)),
+                        delta: gpui::ScrollDelta::Pixels(gpui::point(px(0.), px(-3.))),
+                        touch_phase: gpui::TouchPhase::Moved,
+                        ..Default::default()
+                    }),
+                    app,
+                );
+                window.draw(app).clear(app);
+                let offset = f32::from(state.read(app).scroll.0.borrow().base_handle.offset().y);
+                assert!(offset < 0., "fixture wheel must move the native list");
+            });
+            if prepaints.get() == before {
+                replayed = true;
+                break;
+            }
+        }
+        assert!(
+            replayed,
+            "fixture must exercise native cached-row replay without row prepaint"
+        );
+        assert!(
+            model.upgrade().is_some(),
+            "warm cache must hold the original row model"
+        );
+        window.update(|_, app| state.update(app, |state, _| state.generation = 0));
+        let before = prepaints.get();
+        if !matches!(case, CachedReplayCase::Idle) {
+            #[allow(deprecated)]
+            window.simulate_event(gpui::ScrollWheelEvent {
+                position: gpui::point(px(550.), px(150.)),
+                delta: gpui::ScrollDelta::Pixels(gpui::point(px(0.), px(-3.))),
+                ..Default::default()
+            });
+        }
+        window.update(|window, app| {
+            window.draw(app).clear(app);
+        });
+        assert_eq!(
+            prepaints.get(),
+            before,
+            "assertion frame must replay row 5 without its prepaint hook"
+        );
+        if matches!(case, CachedReplayCase::Toggle) {
+            let y = window.update(|_, app| {
+                5. * 30. + f32::from(state.read(app).scroll.0.borrow().base_handle.offset().y) + 12.
+            });
+            window.simulate_click(gpui::point(px(65.), px(y)), gpui::Modifiers::default());
+            window.run_until_parked();
+            assert!(
+                bound.get(),
+                "replayed toggle must still update its bound value through the retained subscription"
+            );
+            assert_eq!(
+                observed.get(),
+                1,
+                "retained subscription must fire exactly once"
+            );
+            window.update(|window, app| {
+                window.draw(app).clear(app);
+            });
+            window.update(|_, app| {
+                assert!(
+                    model.upgrade().is_some_and(|model| *model.read(app)),
+                    "replayed toggle keeps its value"
+                )
+            });
+        } else {
+            assert!(
+                model.upgrade().is_some(),
+                "cached replay must preserve the visible row's retained entity and subscription"
+            );
+        }
+        if matches!(case, CachedReplayCase::Evict) {
+            window.update(|window, app| {
+                window.dispatch_event(
+                    gpui::PlatformInput::Scroll(gpui::ScrollEvent {
+                        position: gpui::point(px(550.), px(150.)),
+                        delta: gpui::ScrollDelta::Pixels(gpui::point(px(0.), px(-30_000.))),
+                        touch_phase: gpui::TouchPhase::Moved,
+                        ..Default::default()
+                    }),
+                    app,
+                );
+                window.draw(app).clear(app);
+                assert!(
+                    f32::from(state.read(app).scroll.0.borrow().base_handle.offset().y) < -20_000.
+                );
+            });
+            assert!(
+                model.upgrade().is_none(),
+                "a row beyond the visible/overdraw range must be released"
+            );
+        }
+        if matches!(case, CachedReplayCase::Remove) {
+            window.update(|window, app| {
+                bootstrap.update(app, |host, cx| {
+                    host.component_mut().include_row5 = false;
+                    cx.notify();
+                });
+                window.replace_root(app, |_, _| RestoreBootstrap(bootstrap.clone()));
+                window.draw(app).clear(app);
+            });
+            assert!(
+                model.upgrade().is_none(),
+                "a removed item must release its retained cell state"
+            );
+        }
+    }
+
+    #[gpui::test]
+    fn cached_collection_idle_replay_keeps_cell_state(cx: &mut gpui::TestAppContext) {
+        cached_replay_retains_cell(cx, CachedReplayCase::Idle);
+    }
+    #[gpui::test]
+    fn cached_collection_small_scroll_keeps_cell_state(cx: &mut gpui::TestAppContext) {
+        cached_replay_retains_cell(cx, CachedReplayCase::Scroll);
+    }
+    #[gpui::test]
+    fn cached_collection_toggle_keeps_subscription_and_value(cx: &mut gpui::TestAppContext) {
+        cached_replay_retains_cell(cx, CachedReplayCase::Toggle);
+    }
+
+    #[gpui::test]
+    fn cached_collection_releases_cells_beyond_overdraw(cx: &mut gpui::TestAppContext) {
+        cached_replay_retains_cell(cx, CachedReplayCase::Evict);
+    }
+    #[gpui::test]
+    fn cached_collection_releases_removed_items(cx: &mut gpui::TestAppContext) {
+        cached_replay_retains_cell(cx, CachedReplayCase::Remove);
+    }
 
     struct RestoredCollectionOwner {
         selection: Option<Identity>,

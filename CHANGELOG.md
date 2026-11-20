@@ -3,6 +3,7 @@
 ## Unreleased
 
 ## 0.5.0 — 2026-11-20
+- Preserve Collection cell entities and subscriptions during cached-row replay, with bounded overdraw retention.
 - Adopt GPUI Fast 0.1.14 as the macOS backend; Stage B is next. Owner native/visual review remains pending.
 - FA-4: validate the owned Fast candidate, native popup lifecycle, smoke, Git-tag consumer, and five-run release benchmarks.
 - FA-3: archive the unused owned macOS GPUI chain, keep deferred-platform dependencies intact, and reproduce the old baseline from its tag.

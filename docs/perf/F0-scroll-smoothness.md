@@ -155,3 +155,15 @@ Two active candidates use hash manifests and the existing apply/reverse script: 
 Cargo treats registry packages as immutable. The approved pinned-wrapper change keys invalidation to the candidate patch files and clears only unit fingerprint stamps for Fast and its reverse dependencies, including custom/cross-target profiles. Compiled artifacts and unrelated crates are preserved; the gpui-pre baseline is untouched. Tests cover unchanged keys, changed patches, transitive dependencies and baseline isolation.
 
 Final gates on the active stack: `scripts/check.sh` exit 0 — RustUI 1,446, core 10, i18n 86, macros 40, Playground 272, rgpe 0: **1,854 passed, 0 failed, 7 ignored**. `./scripts/verify-release.sh source` exits 0 (656 script tests); owned-source verification and the 21-candidate stack hash check exit 0. The release Playground builds successfully. No new test is ignored. The owner accepted the remaining Collection gaps as a known issue; this ticket does not decide adoption of GPUI Fast.
+
+
+## FA-5 cached-cell retention
+
+The Collection retention fix uses the same release-profile five-second normal-input capture, after compilation finished, on AC power with Low Power Mode off. Pixel recording was disabled for this timing pass. The owner’s visual review remains pending.
+
+| Collection build | Submissions | Draw + submit >8.3 ms | Gaps >16.7 ms | Worst gap (ms) |
+|---|---:|---:|---:|---:|
+| Historical F0-14, run 2 | 598 | 2 (0.33%) | 3 | 23.216 |
+| FA-5 retention fix | 600 | 0 (0%) | 1 | 16.717 |
+
+The FA-5 pass drew 471 frames during 509 normal scroll events. The ≤2% draw-cost criterion is preserved. The occasional presentation-gap issue remains; no zero-gap claim or new pixel-validation claim is made.

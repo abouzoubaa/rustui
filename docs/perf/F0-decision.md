@@ -151,6 +151,41 @@ The initial forced-draw set had medians 6.299821, 5.331583, 5.252696, 5.252500, 
 Known native issue retained from F0-14: Collection has 1–3 presentation gaps above 16.7 ms per capture run. Scrolling comparison and R-1 grid visual review remain pending; these automated results do not complete that review.
 
 
-## FA-5 review blocker
+## Collection cell retention
 
-Before main adoption, reconcile Collection’s per-frame prepaint-visit pruning with Fast’s retained-row cache. A cached row can be kept without repeating its RustUI prepaint hook; retained cell entities and subscriptions must live as long as GPUI keeps that row. Ordinary wheel traversal does not establish cached-replay safety. The focused cached-replay proof and any required Collection rendering change remain outside the adoption preparation; PR #152 must stay unmerged until this review item is resolved.
+Collection retains cell entities and subscriptions for GPUI’s actual uniform-list visible range plus the pinned Fast overdraw and batched-eviction margin. Freshly prepainted rows are included too. Reconciliation runs after native painting and skips unchanged ranges when no row was laid out; a cached row skipping RustUI’s prepaint hook is never treated as removal. Snapshot reconciliation still removes IDs absent from the items. No GPUI source or public API changes are needed.
+
+The replay fixture uses the production Collection element and retained-cell store with a stable native list, so per-render owner updates cannot hide cache replay. It checks the row-prepaint counter, retained model/subscription, control interaction, and release outside overdraw or after item removal.
+
+Other row-based components do not use Collection’s prepaint-visit eviction:
+
+| Component | Source | Retention strategy |
+|---|---|---|
+| List | `crates/rustui/src/components/data/list.rs:382,453` | Component-level ListState and retained event subscription; no per-row prepaint pruning. |
+| KeyedList | `crates/rustui/src/components/data/keyed_list.rs:552,612` | Component-level ListState/delegate and retained subscription; no per-row prepaint pruning. |
+| Table | `crates/rustui/src/components/data/table.rs:505,608,647` | Component-level TableState/subscription. Its prepaint callback aligns the horizontal RTL anchor; it does not evict cells. |
+| DataGrid | `crates/rustui/src/components/data/data_grid.rs:96` | Delegates rendering and state to Table. |
+| EditableDataGrid | `crates/rustui/src/components/data/editable_data_grid.rs:1121,1274` | Retains GridState, the editor and TableState at component scope; no per-row visit eviction. |
+| Tree | `crates/rustui/src/components/data/tree.rs:576,663` | Component-level RetainedTree/TreeState and observer; no per-row prepaint pruning. |
+| Outline | `crates/rustui/src/components/data/outline.rs:98` | Delegates to Tree. |
+| LazyGrid | `crates/rustui/src/layout/lazy_grid.rs:232` | Prunes against authoritative item IDs, not prepaint visits. |
+
+## Final adoption benchmarks (FA-5)
+
+These measurements include the Collection retention fix. The pinned Rust 1.98.0 release test executable was built in `$HOME/.cache/rustui-target` with `pinned_cargo test --release -p rustui --lib --no-run --locked --offline --message-format=json` (opt-level 3, no debug assertions, thin LTO, one codegen unit). All compilation finished before timing, on AC power with Low Power Mode off. Each workload ran directly in the emitted executable with `--ignored --nocapture --test-threads=1`, using its existing warm-up. Each final aggregate is the median of five run medians; p95 is the median of the five run p95s. These are CPU/test-window timings, not native presentation timings. Historical gpui-pre values are the F0-10 reference, not a new baseline run.
+
+| Workload | Historical gpui-pre median (ms) | Final median / p95 (ms) | Spread |
+|---|---:|---:|---:|
+| 5,000-row scroll | 1.274208 | 0.128041 / 0.162500 | 2.83% |
+| 10,000-line editor typing | 0.655584 | 0.559000 / 0.837625 | 2.80% |
+| Idle draw, 60 panels | 0.257917 | 0.016500 / 0.017166 | 4.04% |
+| 1,000-row update + forced draw | 8.762925 | 5.493033 / 5.670300 | 6.50% |
+
+| Workload | Run medians 1–5 (ms) |
+|---|---|
+| 5,000-row scroll | 0.130000; 0.127000; 0.128167; 0.128041; 0.126375 |
+| 10,000-line editor typing | 0.555250; 0.563500; 0.565292; 0.549667; 0.559000 |
+| Idle draw, 60 panels | 0.016500; 0.016542; 0.016291; 0.016791; 0.016125 |
+| 1,000-row update + forced draw | 5.670604; 5.493033; 5.392867; 5.524438; 5.313317 |
+
+The initial forced-draw set had medians 5.685050, 5.429021, 6.222846, 5.468975, 5.520313 ms (14.38% spread). It was repeated once; the final set above is used.
