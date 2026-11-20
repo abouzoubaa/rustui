@@ -1,0 +1,118 @@
+--- a/crates/rustui-gpui-fast/Cargo.toml
++++ b/crates/rustui-gpui-fast/Cargo.toml
+@@ -158,6 +158,7 @@
+ optional = true
+ 
+ [dependencies.gpui_macros]
++path = "../rustui-gpui-fast-macros"
+ version = "^0.1.14"
+ package = "gpui-fast-macros"
+ 
+--- a/crates/rustui-gpui-fast-platform/Cargo.toml
++++ b/crates/rustui-gpui-fast-platform/Cargo.toml
+@@ -76,6 +76,7 @@
+ version = "1.0.86"
+ 
+ [dependencies.gpui]
++path = "../rustui-gpui-fast"
+ version = "^0.1.14"
+ default-features = false
+ package = "gpui-fast"
+@@ -103,11 +104,13 @@
+ package = "gpui-fast-wgpu"
+ 
+ [target.'cfg(target_os = "macos")'.dependencies.gpui_macos]
++path = "../rustui-gpui-fast-macos"
+ version = "^0.1.14"
+ default-features = false
+ package = "gpui-fast-macos"
+ 
+ [target.'cfg(target_os = "windows")'.dependencies.gpui]
++path = "../rustui-gpui-fast"
+ version = "^0.1.14"
+ features = ["windows-manifest"]
+ default-features = false
+--- a/crates/rustui-gpui-fast-macos/Cargo.toml
++++ b/crates/rustui-gpui-fast-macos/Cargo.toml
+@@ -62,6 +62,7 @@
+ doctest = false
+ 
+ [dependencies.gpui]
++path = "../rustui-gpui-fast"
+ version = "^0.1.14"
+ default-features = false
+ package = "gpui-fast"
+@@ -111,6 +112,7 @@
+ version = "0.3.34"
+ 
+ [target.'cfg(target_os = "macos")'.dependencies.gpui_apple]
++path = "../rustui-gpui-fast-apple"
+ version = "^0.1.14"
+ package = "gpui-fast-apple"
+ 
+--- a/crates/rustui-gpui-fast-apple/Cargo.toml
++++ b/crates/rustui-gpui-fast-apple/Cargo.toml
+@@ -56,6 +56,7 @@
+ doctest = false
+ 
+ [dependencies.gpui]
++path = "../rustui-gpui-fast"
+ version = "^0.1.14"
+ default-features = false
+ package = "gpui-fast"
+--- a/crates/rustui-gpui-base/Cargo.toml
++++ b/crates/rustui-gpui-base/Cargo.toml
+@@ -87,6 +87,7 @@
+ optional = true
+ 
+ [dependencies.gpui-fast]
++path = "../rustui-gpui-fast"
+ version = "0.1.14"
+ features = ["windows-manifest-provided-by-host"]
+ optional = true
+@@ -94,7 +95,7 @@
+ 
+ [dependencies.gpui-fast-platform]
+ version = "0.1.14"
+-path = "../../vendor/gpui-fast-platform-0.1.14"
++path = "../rustui-gpui-fast-platform"
+ optional = true
+ package = "gpui-fast-platform"
+ 
+@@ -170,6 +171,7 @@
+ version = "0.8"
+ 
+ [dev-dependencies.gpui-fast]
++path = "../rustui-gpui-fast"
+ version = "0.1.14"
+ features = [
+     "windows-manifest-provided-by-host",
+@@ -180,7 +182,7 @@
+ 
+ [dev-dependencies.gpui-fast-platform]
+ version = "0.1.14"
+-path = "../../vendor/gpui-fast-platform-0.1.14"
++path = "../rustui-gpui-fast-platform"
+ features = [
+     "font-kit",
+     "x11",
+--- a/crates/rustui-gpui-component/Cargo.toml
++++ b/crates/rustui-gpui-component/Cargo.toml
+@@ -119,6 +119,7 @@
+ version = "0.9.1"
+ 
+ [dependencies.gpui-fast]
++path = "../rustui-gpui-fast"
+ version = "0.1.14"
+ features = ["windows-manifest-provided-by-host"]
+ optional = true
+--- a/crates/rustui-gpui-kit-assets/Cargo.toml
++++ b/crates/rustui-gpui-kit-assets/Cargo.toml
+@@ -69,6 +69,7 @@
+ optional = true
+ 
+ [dependencies.gpui-fast]
++path = "../rustui-gpui-fast"
+ version = "0.1.14"
+ optional = true
+ package = "gpui-fast"

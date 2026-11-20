@@ -87,6 +87,7 @@ package = "gpui-pre"
 optional = true
 
 [dependencies.gpui-fast]
+path = "../rustui-gpui-fast"
 version = "0.1.14"
 features = ["windows-manifest-provided-by-host"]
 optional = true
@@ -94,7 +95,7 @@ package = "gpui-fast"
 
 [dependencies.gpui-fast-platform]
 version = "0.1.14"
-path = "../../vendor/gpui-fast-platform-0.1.14"
+path = "../rustui-gpui-fast-platform"
 optional = true
 package = "gpui-fast-platform"
 
@@ -170,6 +171,7 @@ version = "1"
 version = "0.8"
 
 [dev-dependencies.gpui-fast]
+path = "../rustui-gpui-fast"
 version = "0.1.14"
 features = [
     "windows-manifest-provided-by-host",
@@ -180,7 +182,7 @@ package = "gpui-fast"
 
 [dev-dependencies.gpui-fast-platform]
 version = "0.1.14"
-path = "../../vendor/gpui-fast-platform-0.1.14"
+path = "../rustui-gpui-fast-platform"
 features = [
     "font-kit",
     "x11",

@@ -1,7 +1,7 @@
 {
   "complete_license_or_compatibility_claim": false,
   "inputs": {
-    "cargo_lock_sha256": "2041a4c91edf1b2dd6917ba757ff9a694c6c698b748fa6694e7d1a239496b5bb",
+    "cargo_lock_sha256": "792a9ffc8b065b26d98f5ac43ea0fa9e63f75b6a50fbe95a6517ee2c43ba124e",
     "supplement_manifest_sha256": "67fb8a1669613fd6e29f9514363a96aaefe547e8b94048c6873bff0b12f4ad92"
   },
   "packages": [
@@ -65,7 +65,7 @@
     {
       "license_expression": "Apache-2.0",
       "manifest_path": "repository:crates/rustui-gpui-base/Cargo.toml",
-      "manifest_sha256": "99bcb117bc648743d5f5b039093e6e2f0a3d484839203473fd9aef342fdac424",
+      "manifest_sha256": "60b4c05fad5014be1d25e042178db54f06627fc584eb97eea52ca38570f2d6ca",
       "name": "gpui-base",
       "notice_review_notes": [],
       "notices": [
@@ -84,7 +84,7 @@
     {
       "license_expression": "Apache-2.0",
       "manifest_path": "repository:crates/rustui-gpui-component/Cargo.toml",
-      "manifest_sha256": "9b60d75c3d020d8d53c8a68e19b9cc8e6d55d8a2fc1147015b3edb0f8430316b",
+      "manifest_sha256": "73b94614f4f34f53ce0096d696b48409a4680f0f8a29005db07e1ce7dc4ff6e7",
       "name": "gpui-component",
       "notice_review_notes": [],
       "notices": [
@@ -102,8 +102,103 @@
     },
     {
       "license_expression": "Apache-2.0",
+      "manifest_path": "repository:crates/rustui-gpui-fast/Cargo.toml",
+      "manifest_sha256": "cca73034c1a461951afd0be43db634d7fe06d86b44b5211620aa627ff2694f9b",
+      "name": "gpui-fast",
+      "notice_review_notes": [],
+      "notices": [
+        {
+          "path": "notices/gpui-fast-0.1.14-622be076d078/01-LICENSE",
+          "sha256": "5f78a733701db49b73da93addad8cb74f816f3789ef30c3c0e959e943ecd99b4",
+          "size_bytes": 10238,
+          "source": "repository:crates/rustui-gpui-fast/LICENSE"
+        }
+      ],
+      "package_id": "path+repository:crates/rustui-gpui-fast#gpui-fast@0.1.14",
+      "source": null,
+      "version": "0.1.14",
+      "workspace_member": false
+    },
+    {
+      "license_expression": "Apache-2.0",
+      "manifest_path": "repository:crates/rustui-gpui-fast-apple/Cargo.toml",
+      "manifest_sha256": "14c8261c6278c021f1c14904bcdac6e3dd3a933e89e526284158c03a721b795c",
+      "name": "gpui-fast-apple",
+      "notice_review_notes": [],
+      "notices": [
+        {
+          "path": "notices/gpui-fast-apple-0.1.14-5affb5474f07/01-LICENSE",
+          "sha256": "5f78a733701db49b73da93addad8cb74f816f3789ef30c3c0e959e943ecd99b4",
+          "size_bytes": 10238,
+          "source": "repository:crates/rustui-gpui-fast-apple/LICENSE"
+        }
+      ],
+      "package_id": "path+repository:crates/rustui-gpui-fast-apple#gpui-fast-apple@0.1.14",
+      "source": null,
+      "version": "0.1.14",
+      "workspace_member": false
+    },
+    {
+      "license_expression": "Apache-2.0",
+      "manifest_path": "repository:crates/rustui-gpui-fast-macos/Cargo.toml",
+      "manifest_sha256": "5c2e52e1766d71386abd7201d797f343e38a34c973826826e0c331c8db0a669e",
+      "name": "gpui-fast-macos",
+      "notice_review_notes": [],
+      "notices": [
+        {
+          "path": "notices/gpui-fast-macos-0.1.14-f6646393a69d/01-LICENSE",
+          "sha256": "5f78a733701db49b73da93addad8cb74f816f3789ef30c3c0e959e943ecd99b4",
+          "size_bytes": 10238,
+          "source": "repository:crates/rustui-gpui-fast-macos/LICENSE"
+        }
+      ],
+      "package_id": "path+repository:crates/rustui-gpui-fast-macos#gpui-fast-macos@0.1.14",
+      "source": null,
+      "version": "0.1.14",
+      "workspace_member": false
+    },
+    {
+      "license_expression": "Apache-2.0",
+      "manifest_path": "repository:crates/rustui-gpui-fast-macros/Cargo.toml",
+      "manifest_sha256": "f1f0e0d1f9d479b20580681d020cd6476931b9e66223b73cb6ba86a9d1039e92",
+      "name": "gpui-fast-macros",
+      "notice_review_notes": [],
+      "notices": [
+        {
+          "path": "notices/gpui-fast-macros-0.1.14-e825f0e43423/01-LICENSE",
+          "sha256": "5f78a733701db49b73da93addad8cb74f816f3789ef30c3c0e959e943ecd99b4",
+          "size_bytes": 10238,
+          "source": "repository:crates/rustui-gpui-fast-macros/LICENSE"
+        }
+      ],
+      "package_id": "path+repository:crates/rustui-gpui-fast-macros#gpui-fast-macros@0.1.14",
+      "source": null,
+      "version": "0.1.14",
+      "workspace_member": false
+    },
+    {
+      "license_expression": "Apache-2.0",
+      "manifest_path": "repository:crates/rustui-gpui-fast-platform/Cargo.toml",
+      "manifest_sha256": "4580cb2fb1a2ceccbcf74b7ec30b7ca0feb5ffa20b744b135355078e86e9a80a",
+      "name": "gpui-fast-platform",
+      "notice_review_notes": [],
+      "notices": [
+        {
+          "path": "notices/gpui-fast-platform-0.1.14-525021ce9d15/01-LICENSE",
+          "sha256": "5f78a733701db49b73da93addad8cb74f816f3789ef30c3c0e959e943ecd99b4",
+          "size_bytes": 10238,
+          "source": "repository:crates/rustui-gpui-fast-platform/LICENSE"
+        }
+      ],
+      "package_id": "path+repository:crates/rustui-gpui-fast-platform#gpui-fast-platform@0.1.14",
+      "source": null,
+      "version": "0.1.14",
+      "workspace_member": false
+    },
+    {
+      "license_expression": "Apache-2.0",
       "manifest_path": "repository:crates/rustui-gpui-kit-assets/Cargo.toml",
-      "manifest_sha256": "c6ce1ce788b59cef5c317f34e79e23a3aa4b4c04f82152604d7eb020a035e480",
+      "manifest_sha256": "d2141a6dd3d742dd9541f5bda8033860f284c6bc9a338d302334a9f6badf2fef",
       "name": "gpui-kit-assets",
       "notice_review_notes": [],
       "notices": [
@@ -162,25 +257,6 @@
       "source": null,
       "version": "0.4.0",
       "workspace_member": true
-    },
-    {
-      "license_expression": "Apache-2.0",
-      "manifest_path": "repository:vendor/gpui-fast-platform-0.1.14/Cargo.toml",
-      "manifest_sha256": "d49ccef3ad4a5c9a2d7c1a62c82f6eaacd611d7edeb3ad7ed448b236173541ae",
-      "name": "gpui-fast-platform",
-      "notice_review_notes": [],
-      "notices": [
-        {
-          "path": "notices/gpui-fast-platform-0.1.14-f40fd8125a49/01-LICENSE",
-          "sha256": "5f78a733701db49b73da93addad8cb74f816f3789ef30c3c0e959e943ecd99b4",
-          "size_bytes": 10238,
-          "source": "repository:vendor/gpui-fast-platform-0.1.14/LICENSE"
-        }
-      ],
-      "package_id": "path+repository:vendor/gpui-fast-platform-0.1.14#gpui-fast-platform@0.1.14",
-      "source": null,
-      "version": "0.1.14",
-      "workspace_member": false
     },
     {
       "license_expression": "MIT OR Apache-2.0",
@@ -3406,101 +3482,6 @@
       "package_id": "registry+https://github.com/rust-lang/crates.io-index#gpui-component-macros@0.9.1",
       "source": "registry+https://github.com/rust-lang/crates.io-index",
       "version": "0.9.1",
-      "workspace_member": false
-    },
-    {
-      "license_expression": "Apache-2.0",
-      "manifest_path": "repository:vendor/gpui-fast-apple-0.1.14/Cargo.toml",
-      "manifest_sha256": "e5d4442c4a5dfd6c52edae85af5c7b69fc70e294bf133f79ccdcf65053344faa",
-      "name": "gpui-fast-apple",
-      "notice_review_notes": [],
-      "notices": [
-        {
-          "path": "notices/gpui-fast-apple-0.1.14-3f1f4fb5c8fb/01-LICENSE",
-          "sha256": "5f78a733701db49b73da93addad8cb74f816f3789ef30c3c0e959e943ecd99b4",
-          "size_bytes": 10238,
-          "source": "repository:vendor/gpui-fast-apple-0.1.14/LICENSE"
-        }
-      ],
-      "package_id": "registry+https://github.com/rust-lang/crates.io-index#gpui-fast-apple@0.1.14",
-      "source": "registry+https://github.com/rust-lang/crates.io-index",
-      "version": "0.1.14",
-      "workspace_member": false
-    },
-    {
-      "license_expression": "Apache-2.0",
-      "manifest_path": "repository:vendor/gpui-fast-macos-0.1.14/Cargo.toml",
-      "manifest_sha256": "71f23fc23e96562a438f68abdb5fdf6545e888bc5a0d13e1b572af38af013d42",
-      "name": "gpui-fast-macos",
-      "notice_review_notes": [],
-      "notices": [
-        {
-          "path": "notices/gpui-fast-macos-0.1.14-dd106983bbe9/01-LICENSE",
-          "sha256": "5f78a733701db49b73da93addad8cb74f816f3789ef30c3c0e959e943ecd99b4",
-          "size_bytes": 10238,
-          "source": "repository:vendor/gpui-fast-macos-0.1.14/LICENSE"
-        }
-      ],
-      "package_id": "registry+https://github.com/rust-lang/crates.io-index#gpui-fast-macos@0.1.14",
-      "source": "registry+https://github.com/rust-lang/crates.io-index",
-      "version": "0.1.14",
-      "workspace_member": false
-    },
-    {
-      "license_expression": "Apache-2.0",
-      "manifest_path": "repository:vendor/gpui-fast-macros-0.1.14/Cargo.toml",
-      "manifest_sha256": "f1f0e0d1f9d479b20580681d020cd6476931b9e66223b73cb6ba86a9d1039e92",
-      "name": "gpui-fast-macros",
-      "notice_review_notes": [],
-      "notices": [
-        {
-          "path": "notices/gpui-fast-macros-0.1.14-814851bd97e4/01-LICENSE",
-          "sha256": "5f78a733701db49b73da93addad8cb74f816f3789ef30c3c0e959e943ecd99b4",
-          "size_bytes": 10238,
-          "source": "repository:vendor/gpui-fast-macros-0.1.14/LICENSE"
-        }
-      ],
-      "package_id": "registry+https://github.com/rust-lang/crates.io-index#gpui-fast-macros@0.1.14",
-      "source": "registry+https://github.com/rust-lang/crates.io-index",
-      "version": "0.1.14",
-      "workspace_member": false
-    },
-    {
-      "license_expression": "Apache-2.0",
-      "manifest_path": "repository:vendor/gpui-fast-platform-0.1.14/Cargo.toml",
-      "manifest_sha256": "d49ccef3ad4a5c9a2d7c1a62c82f6eaacd611d7edeb3ad7ed448b236173541ae",
-      "name": "gpui-fast-platform",
-      "notice_review_notes": [],
-      "notices": [
-        {
-          "path": "notices/gpui-fast-platform-0.1.14-9add1281ec37/01-LICENSE",
-          "sha256": "5f78a733701db49b73da93addad8cb74f816f3789ef30c3c0e959e943ecd99b4",
-          "size_bytes": 10238,
-          "source": "repository:vendor/gpui-fast-platform-0.1.14/LICENSE"
-        }
-      ],
-      "package_id": "registry+https://github.com/rust-lang/crates.io-index#gpui-fast-platform@0.1.14",
-      "source": "registry+https://github.com/rust-lang/crates.io-index",
-      "version": "0.1.14",
-      "workspace_member": false
-    },
-    {
-      "license_expression": "Apache-2.0",
-      "manifest_path": "repository:vendor/gpui-fast-0.1.14/Cargo.toml",
-      "manifest_sha256": "26bca40a7e3bb2c68a06bc6cc00fecc88505af7a408ef322ede48f31a550b365",
-      "name": "gpui-fast",
-      "notice_review_notes": [],
-      "notices": [
-        {
-          "path": "notices/gpui-fast-0.1.14-29743c39b732/01-LICENSE",
-          "sha256": "5f78a733701db49b73da93addad8cb74f816f3789ef30c3c0e959e943ecd99b4",
-          "size_bytes": 10238,
-          "source": "repository:vendor/gpui-fast-0.1.14/LICENSE"
-        }
-      ],
-      "package_id": "registry+https://github.com/rust-lang/crates.io-index#gpui-fast@0.1.14",
-      "source": "registry+https://github.com/rust-lang/crates.io-index",
-      "version": "0.1.14",
       "workspace_member": false
     },
     {

@@ -30,6 +30,17 @@ class FastManifestPatchTests(unittest.TestCase):
                 manifest_path = REPO_ROOT / manifest_relative
                 manifest_hash = hashlib.sha256(manifest_path.read_bytes()).hexdigest()
                 source.write_bytes((REPO_ROOT / source_relative).read_bytes())
+                wiring = REPO_ROOT / "patches/approved/fast/owned-fast-path-wiring-v1.json"
+                for relative in json.loads(wiring.read_text())["files"]:
+                    target = fixture / relative
+                    target.parent.mkdir(parents=True, exist_ok=True)
+                    target.write_bytes((REPO_ROOT / relative).read_bytes())
+                subprocess.run(
+                    [python_executable.executable,
+                     str(REPO_ROOT / "scripts/apply_f0_fast_candidate_patch.py"),
+                     str(wiring), "--root", str(fixture), "--reverse"],
+                    check=True, capture_output=True, text=True,
+                )
                 if source_relative == "crates/rustui-gpui-base/Cargo.toml":
                     # These follow-up manifest patches share this file; unwind
                     # them first so this isolated check sees its exact postimage.

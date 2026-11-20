@@ -11,6 +11,12 @@ from pathlib import Path
 
 
 OWNED_VENDOR_COPIES = {
+    "crates/rustui-gpui-fast": "vendor/gpui-fast-0.1.14",
+    "crates/rustui-gpui-fast-platform": "vendor/gpui-fast-platform-0.1.14",
+    "crates/rustui-gpui-fast-macos": "vendor/gpui-fast-macos-0.1.14",
+    "crates/rustui-gpui-fast-apple": "vendor/gpui-fast-apple-0.1.14",
+    "crates/rustui-gpui-fast-macros": "vendor/gpui-fast-macros-0.1.14",
+
     "crates/rustui-gpui": "vendor/gpui-pre-0.3.12",
     "crates/rustui-gpui-platform": "vendor/gpui-pre-platform-0.3.12",
     "crates/rustui-gpui-macos": "vendor/gpui-pre-macos-0.3.12",
@@ -104,6 +110,12 @@ def compare_trees(
 
 def verify_repository(root: Path) -> list[str]:
     errors: list[str] = []
+    if (root / "patches/approved/fast/owned-fast-sources.json").exists():
+        from refresh_owned_fast_sources import check_copies
+        try:
+            check_copies(root, wired=True)
+        except (OSError, ValueError, KeyError) as error:
+            errors.append(str(error))
     for owned_relative, vendor_relative in OWNED_VENDOR_COPIES.items():
         owned = root / owned_relative
         vendor = root / vendor_relative
