@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+- G2-4: add opt-in scissored Partial Metal frames with byte-exact magenta-prefill proofs for hover, caret, moving cards, transparency and encoder restarts.
+
 - G2-3: add opt-in retained Metal frames, byte-exact copies, pre-drawable skips, and a GPU-lifetime-aware 64 MB device budget.
 
 - G2-2: port GPUI Fast's damage planner and tests, with bounded Metal atlas upload observations and conservative surface/scroll-tile fallbacks.

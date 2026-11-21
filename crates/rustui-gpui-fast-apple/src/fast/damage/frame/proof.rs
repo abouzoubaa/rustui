@@ -284,3 +284,192 @@ mod tests {
         crate::metal_renderer::MetalRenderer::test_damage_frames()
     }
 }
+
+fn box_at(x: f32, y: f32, w: f32, h: f32) -> gpui::Bounds<gpui::ScaledPixels> {
+    gpui::Bounds {
+        origin: gpui::point(gpui::ScaledPixels(x), gpui::ScaledPixels(y)),
+        size: gpui::size(gpui::ScaledPixels(w), gpui::ScaledPixels(h)),
+    }
+}
+fn quad(scene: &mut Scene, x: f32, y: f32, w: f32, h: f32, color: gpui::Hsla, radius: f32) {
+    scene.insert_primitive(gpui::Quad {
+        bounds: box_at(x, y, w, h),
+        content_mask: gpui::ContentMask {
+            bounds: box_at(0., 0., 256., 256.),
+            ..Default::default()
+        },
+        corner_radii: gpui::Corners::all(gpui::ScaledPixels(radius)),
+        background: color.into(),
+        ..Default::default()
+    });
+}
+fn partial_scene(case: &str, changed: bool) -> Result<Scene> {
+    let mut scene = Scene::default();
+    let color = |h, a| gpui::Hsla {
+        h,
+        s: 0.6,
+        l: 0.45,
+        a,
+    };
+    quad(
+        &mut scene,
+        0.,
+        0.,
+        256.,
+        256.,
+        color(0.6, if case == "translucent" { 0.2 } else { 1. }),
+        0.,
+    );
+    match case {
+        "row hover" => {
+            for row in 0..3 {
+                quad(
+                    &mut scene,
+                    12.,
+                    32. + row as f32 * 24.,
+                    220.,
+                    18.,
+                    color(if row == 1 && changed { 0.1 } else { 0.7 }, 1.),
+                    0.,
+                );
+                // Text-shaped unchanged foreground strokes cross the highlight.
+                quad(
+                    &mut scene,
+                    24.,
+                    38. + row as f32 * 24.,
+                    72.,
+                    3.,
+                    color(0.9, 1.),
+                    0.,
+                );
+            }
+        }
+        "caret blink" => {
+            quad(&mut scene, 20., 40., 100., 3., color(0.8, 1.), 0.);
+            if !changed {
+                quad(&mut scene, 124., 36., 2., 14., color(0.2, 1.), 0.);
+            }
+        }
+        "card move" | "translucent" => {
+            quad(
+                &mut scene,
+                if changed { 54. } else { 40. },
+                100.,
+                48.,
+                36.,
+                color(0.15, 0.55),
+                6.,
+            );
+            quad(&mut scene, 60., 112., 60., 40., color(0.8, 0.65), 8.);
+        }
+        "path restart" => {
+            let path = |x: f32, color: gpui::Hsla| -> Result<gpui::Path<gpui::ScaledPixels>> {
+                let mut builder = gpui::PathBuilder::fill();
+                builder.move_to(gpui::point(gpui::px(x), gpui::px(x)));
+                builder.line_to(gpui::point(gpui::px(x + 30.), gpui::px(x)));
+                builder.line_to(gpui::point(gpui::px(x), gpui::px(x + 30.)));
+                builder.close();
+                let mut path = builder.build()?.scale(1.);
+                path.content_mask.bounds = box_at(0., 0., 256., 256.);
+                path.color = color.into();
+                Ok(path)
+            };
+            scene.insert_primitive(path(12., color(0.1, 0.7))?);
+            quad(&mut scene, 8., 8., 40., 40., color(0.9, 0.3), 0.);
+            scene.insert_primitive(path(16., color(if changed { 0.6 } else { 0.3 }, 0.7))?);
+        }
+        _ => anyhow::bail!("unknown partial proof"),
+    }
+    scene.finish();
+    Ok(scene)
+}
+fn partial_pixels(case: &str) -> Result<()> {
+    let mut renderer = MetalRenderer::new_headless(Default::default())?;
+    renderer.update_transparency(case == "translucent");
+    renderer.damage.enabled_override = Some(true);
+    renderer.damage.magenta_prefill = true;
+    let size = gpui::size(DevicePixels(256), DevicePixels(256));
+    let target = retained::texture(&renderer.device, 256, 256)?;
+    let old = partial_scene(case, false)?;
+    let first = renderer.damage.choose(
+        &renderer.sprite_atlas,
+        &old,
+        size,
+        1.,
+        renderer.opaque,
+        false,
+        true,
+    );
+    assert_eq!(first.mode, Mode::Retained);
+    let command = render(&mut renderer, &old, &target, size, first)?;
+    let old_pixels = finish(&renderer, &command, &target)?;
+    let new = partial_scene(case, true)?;
+    let reference = retained::texture(&renderer.device, 256, 256)?;
+    let whole = renderer.render_frame(&new, &reference, size)?;
+    let expected = finish(&renderer, &whole, &reference)?;
+    assert_ne!(old_pixels, expected, "{case} must visibly change");
+    let prepared = renderer.damage.choose(
+        &renderer.sprite_atlas,
+        &new,
+        size,
+        1.,
+        renderer.opaque,
+        false,
+        true,
+    );
+    assert!(
+        matches!(prepared.mode, Mode::Partial(_)),
+        "{case} planned {:?}",
+        prepared.mode
+    );
+    let command = render(&mut renderer, &new, &target, size, prepared)?;
+    let actual = finish(&renderer, &command, &target)?;
+    assert!(
+        matches!(renderer.damage.last_mode, Mode::Partial(_)),
+        "{case} must execute Partial"
+    );
+    assert!(
+        renderer.damage.last_partial_passes >= if case == "path restart" { 2 } else { 1 },
+        "{case} must reach every main encoder hook"
+    );
+    assert_eq!(
+        renderer.damage.last_magenta_prefills, 1,
+        "{case}: prefill and clear happen exactly once"
+    );
+    if let Some(index) = actual.iter().zip(&expected).position(|(a, b)| a != b) {
+        anyhow::bail!(
+            "{case}: Partial differs from whole at ({},{}), channel {}, actual {}, expected {}",
+            index / 4 % 256,
+            index / 4 / 256,
+            index % 4,
+            actual[index],
+            expected[index]
+        );
+    }
+    Ok(())
+}
+impl MetalRenderer {
+    /// Magenta-prefilled Partial proofs; each case asserts the actual frame mode.
+    pub fn test_damage_partials() -> Result<()> {
+        let _serial = PROOF_LOCK.lock().unwrap();
+        objc2::rc::autoreleasepool(|_| {
+            for case in [
+                "row hover",
+                "caret blink",
+                "card move",
+                "translucent",
+                "path restart",
+            ] {
+                partial_pixels(case)?;
+            }
+            Ok(())
+        })
+    }
+}
+#[cfg(test)]
+mod partial_tests {
+    #[test]
+    fn magenta_partial_frames_equal_whole_and_restart_with_scissor() -> anyhow::Result<()> {
+        crate::metal_renderer::MetalRenderer::test_damage_partials()
+    }
+}
