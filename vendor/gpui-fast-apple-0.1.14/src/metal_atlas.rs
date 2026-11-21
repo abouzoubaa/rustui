@@ -15,6 +15,10 @@ use std::{borrow::Cow, ptr::NonNull};
 pub struct MetalAtlas(Mutex<AtlasState<MetalAtlasTextures>>);
 
 impl MetalAtlas {
+    pub(crate) fn damage_uploads(&self, after: u64) -> crate::fast::damage::inputs::Snapshot {
+        self.0.lock().backend.damage_uploads.since(after)
+    }
+
     pub(crate) fn new(
         device: Retained<ProtocolObject<dyn MTLDevice>>,
         supports_shared_storage: bool,
@@ -24,6 +28,7 @@ impl MetalAtlas {
             supports_shared_storage,
             monochrome_textures: AtlasTextureList::default(),
             polychrome_textures: AtlasTextureList::default(),
+            damage_uploads: Default::default(),
         })))
     }
 
@@ -44,6 +49,7 @@ struct MetalAtlasTextures {
     supports_shared_storage: bool,
     monochrome_textures: AtlasTextureList<MetalAtlasTexture>,
     polychrome_textures: AtlasTextureList<MetalAtlasTexture>,
+    damage_uploads: crate::fast::damage::inputs::Tracker,
 }
 
 impl PlatformAtlas for MetalAtlas {
@@ -73,10 +79,12 @@ impl AtlasBackend for MetalAtlasTextures {
             .texture(tile.texture_id)
             .context("looking up allocated atlas texture")?;
         texture.upload(tile.bounds.origin, &upload)?;
+        self.damage_uploads.record(&tile);
         Ok(tile)
     }
 
     fn remove(&mut self, tile: AtlasTile) {
+        self.damage_uploads.clear();
         let id = tile.texture_id;
 
         let textures = match id.kind {
