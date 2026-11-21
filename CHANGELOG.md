@@ -2,6 +2,7 @@
 
 ## Unreleased
 
+- G2-8a: add opt-in planner back-off after repeated whole frames, with recovery proofs and paired benchmarks.
 - G2-8: measure process CPU and uploaded scene instances; avoid retained-copy cycles during sustained large or unsupported frames (off by default).
 
 - G2-7: preflight whole-frame fallbacks, preserve GPUI replay provenance for cached damage signatures, measure signature and planner CPU cost with alternating matched-pair benchmarks, and buffer damage log records into single writes.

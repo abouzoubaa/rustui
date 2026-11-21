@@ -35,10 +35,12 @@ PY
 
 g0_summarize() {
   python3 - "$1" "${RUSTUI_DAMAGE:-0}" "${@:2}" <<'PY'
-import collections, json, math, statistics, sys
+import collections, json, math, os, statistics, sys
 from pathlib import Path
 root = Path(sys.argv[1])
 damage = sys.argv[2]
+backoff = os.environ.get("RUSTUI_DAMAGE_BACKOFF", "0")
+assert backoff in ("0", "1")
 assert damage in ("0", "1", "verify"), "RUSTUI_DAMAGE must be 0, 1 or verify"
 results = []
 for scene in sys.argv[3:] or ('idle', 'typing', 'hover', 'log', 'drag'):
@@ -103,9 +105,18 @@ for scene in sys.argv[3:] or ('idle', 'typing', 'hover', 'log', 'drag'):
             mode_runs[-1]['frames'] += 1
         else:
             mode_runs.append(dict(mode=r['mode'], frames=1))
+    planning_runs = []
+    for r in sorted(encoding, key=lambda r: r['sequence']):
+        label = r.get('reason', r['mode'])
+        assert label == r['mode'] or (label == 'backoff' and r['mode'] == 'direct'), (scene, r)
+        if planning_runs and planning_runs[-1]['mode'] == label:
+            planning_runs[-1]['frames'] += 1
+        else:
+            planning_runs.append(dict(mode=label, frames=1))
     instances = dict(samples=len(encoding), encoded=sum(r['instances_encoded'] for r in encoding),
-                     total=sum(r['instances_total'] for r in encoding), mode_runs=mode_runs)
-    results.append(dict(scene=scene, seconds=seconds, damage=damage, window=start, workload=end,
+                     total=sum(r['instances_total'] for r in encoding), mode_runs=mode_runs,
+                     planning_runs=planning_runs, backoff_frames=sum(r.get('reason') == 'backoff' for r in encoding))
+    results.append(dict(scene=scene, seconds=seconds, damage=damage, backoff=backoff, window=start, workload=end,
                         damage_cpu=damage_cpu, instances=instances,
                         process_cpu_user_s=user_s, process_cpu_sys_s=sys_s,
                         process_cpu_s=process_cpu_s, process_cpu_s_per_attempt=process_cpu_s/len(frames),
@@ -158,17 +169,19 @@ PY
 }
 
 g0_interleaved_summary() {
-  python3 - "$1" <<'PY'
+  python3 - "$1" "${2:-damage}" <<'PY'
 import json, math, statistics, sys
 from pathlib import Path
 root = Path(sys.argv[1])
+comparison = sys.argv[2]
+assert comparison in ('damage', 'backoff')
 rows = []
-for scene in ('idle', 'typing', 'hover', 'log', 'drag'):
+for scene in (('log', 'hover') if comparison == 'backoff' else ('idle', 'typing', 'hover', 'log', 'drag')):
     groups = {}
     for mode in ('0', '1'):
         records = [json.loads((root / scene / f'{run}-{mode}' / 'summary.json').read_text())
                    for run in range(1, 6)]
-        assert all(len(r) == 1 and r[0]['scene'] == scene and r[0]['damage'] == mode for r in records)
+        assert all(len(r) == 1 and r[0]['scene'] == scene and r[0][comparison] == mode and (comparison != 'backoff' or r[0]['damage'] == '1') for r in records)
         values = [r[0]['cpu_mean_ms'] for r in records]
         assert all(math.isfinite(value) and value > 0 for value in values)
         median = statistics.median(values)
@@ -197,7 +210,7 @@ for scene in ('idle', 'typing', 'hover', 'log', 'drag'):
           f"max={max(changes):+.3f}% {verdict} "
           f"process paired={[round(c, 3) for c in process_changes]} "
           f"median={statistics.median(process_changes):+.3f}% min={min(process_changes):+.3f}% max={max(process_changes):+.3f}%", flush=True)
-(root / 'interleaved-summary.json').write_text(json.dumps(rows, indent=2) + '\n')
+(root / ('backoff-summary.json' if comparison == 'backoff' else 'interleaved-summary.json')).write_text(json.dumps(rows, indent=2) + '\n')
 PY
 }
 
@@ -223,13 +236,42 @@ g0_interleaved() {
   g0_interleaved_summary "$g0_dir"
 }
 
+g0_backoff_pairs() {
+  local scene run mode capture
+  local -a modes
+  shasum -a 256 "$CARGO_TARGET_DIR/release/rustui-lab" > "$g0_dir/binary.sha256"
+  for scene in log hover; do
+    for run in 1 2 3 4 5; do
+      if (( run % 2 )); then modes=(0 1); else modes=(1 0); fi
+      for mode in "${modes[@]}"; do
+        capture="$g0_dir/$scene/$run-$mode"
+        mkdir -p "$capture"
+        echo "Matched F $scene pair $run/5 backoff=$mode damage=1 (60 seconds)"
+        echo "$scene $run $mode" >> "$g0_dir/run-order.txt"
+        RUSTUI_DAMAGE_BACKOFF="$mode" RUSTUI_DAMAGE=1 g0_launch "$scene" "$capture/$scene-frames.log"
+        g0_wait "$capture/$scene-frames.log"
+        RUSTUI_DAMAGE_BACKOFF="$mode" RUSTUI_DAMAGE=1 g0_summarize "$capture" "$scene"
+      done
+    done
+  done
+  shasum -a 256 --check "$g0_dir/binary.sha256"
+  g0_interleaved_summary "$g0_dir" backoff
+}
+
 if [[ "${BASH_SOURCE[0]}" == "$0" ]]; then
   g0_interleave=0
+  g0_backoff=0
+  if [[ "${1:-}" == "--backoff-pairs" ]]; then g0_backoff=1; shift; fi
   if [[ "${1:-}" == "--interleaved" ]]; then g0_interleave=1; shift; fi
   g0_build
   mkdir -p target/headstart/performance
   g0_output "${1:-}"
   trap 'if [[ -n "${g0_app_pid:-}" ]]; then kill "$g0_app_pid" 2>/dev/null || true; fi' EXIT INT TERM
+  if [[ "$g0_backoff" == 1 ]]; then
+    g0_backoff_pairs
+    echo "Results: $g0_dir"
+    exit 0
+  fi
   if [[ "$g0_interleave" == 1 ]]; then
     g0_interleaved
     echo "Results: $g0_dir"

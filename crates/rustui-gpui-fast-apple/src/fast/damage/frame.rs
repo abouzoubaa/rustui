@@ -22,6 +22,8 @@ use std::{
     sync::{Arc, OnceLock, atomic::Ordering},
 };
 
+mod backoff;
+
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 enum Config {
     Off,
@@ -96,6 +98,9 @@ pub(crate) struct State {
     target: Option<Target>,
     snapshot: Option<Snapshot>,
     previous_large: bool,
+    backoff: backoff::State,
+    #[cfg(any(test, feature = "test-support"))]
+    planner_calls: usize,
     cache: plan::Cache,
     pub(crate) failed: Option<Arc<super::verify::Status>>,
     pub(crate) last_mode: Mode,
@@ -120,6 +125,10 @@ pub(crate) struct Prepared {
     pub(crate) mode: Mode,
     snapshot: Option<Snapshot>,
     large: bool,
+    plannable: bool,
+    backoff: bool,
+    probe: bool,
+    preserve_snapshot: bool,
 }
 impl Prepared {
     pub(crate) fn direct() -> Self {
@@ -127,6 +136,10 @@ impl Prepared {
             mode: Mode::Direct,
             snapshot: None,
             large: false,
+            plannable: false,
+            backoff: false,
+            probe: false,
+            preserve_snapshot: false,
         }
     }
 }
@@ -159,6 +172,7 @@ impl State {
         self.target = None;
         self.snapshot = None;
         self.previous_large = false;
+        self.backoff.reset();
         self.cache.clear();
     }
     pub(crate) fn resized(&mut self, size: Size<DevicePixels>) {
@@ -218,6 +232,29 @@ impl State {
             self.invalidate();
             return Prepared::direct();
         }
+        self.backoff.observe(geometry, uploads.tiles.is_none());
+        if self.backoff.skipping() {
+            cpu.reason = "backoff";
+            let tail = self.backoff.remaining == 1;
+            // Retain metadata without hashing or planning. On the last skipped
+            // frame, snapshot that scene for an adjacent-frame recovery probe;
+            // comparing with a 30-frame-old scene could falsely restart back-off.
+            let snapshot = tail.then(|| Snapshot {
+                geometry,
+                signatures: Vec::new(),
+                generation: uploads.generation,
+                deferred: Some(Box::new(scene.fast_damage_snapshot())),
+            });
+            return Prepared {
+                snapshot,
+                large: true,
+                plannable: true,
+                backoff: true,
+                preserve_snapshot: !tail,
+                ..Prepared::direct()
+            };
+        }
+        let probe = self.backoff.probing();
         let comparable = self
             .snapshot
             .as_ref()
@@ -260,6 +297,9 @@ impl State {
                 }),
                 // This is a whole draw, preserving the large-change hysteresis.
                 large: true,
+                plannable: true,
+                probe,
+                ..Prepared::direct()
             };
         }
         let signature_start = std::time::Instant::now();
@@ -292,6 +332,10 @@ impl State {
         self.cache.finish();
         cpu.signatures_ms = signature_start.elapsed().as_secs_f64() * 1000.;
         let plan_start = std::time::Instant::now();
+        #[cfg(any(test, feature = "test-support"))]
+        {
+            self.planner_calls += 1;
+        }
         let change = plan::plan(
             &self.snapshot.as_ref().unwrap().signatures,
             &signatures,
@@ -314,7 +358,7 @@ impl State {
             // Large changes never pay for a full draw plus a full copy. After
             // one, require two consecutive cheap plans before priming again:
             // this Direct records large=false; the next cheap frame may prime.
-            _ if large || self.previous_large => Mode::Direct,
+            _ if large || (self.previous_large && !probe) => Mode::Direct,
             _ => Mode::Retained,
         };
         cpu.reason = mode.label();
@@ -327,6 +371,9 @@ impl State {
                 deferred: None,
             }),
             large,
+            plannable: true,
+            probe,
+            ..Prepared::direct()
         }
     }
     fn allocate(
@@ -346,7 +393,15 @@ impl State {
         )
     }
     fn complete(&mut self, prepared: Prepared, mode: Mode) {
-        self.snapshot = prepared.snapshot;
+        self.backoff.complete(
+            prepared.plannable,
+            prepared.large || mode == Mode::Direct,
+            prepared.backoff,
+            prepared.probe,
+        );
+        if !prepared.preserve_snapshot {
+            self.snapshot = prepared.snapshot;
+        }
         self.previous_large = prepared.large;
         self.last_mode = mode;
     }
@@ -526,8 +581,13 @@ pub(crate) fn render(
                 }
             }
         }
+        let reason = if prepared.backoff {
+            "backoff"
+        } else {
+            mode.label()
+        };
         state.complete(prepared, mode);
-        encoding.finish(mode.label());
+        encoding.finish(mode.label(), reason);
         Ok(command)
     })();
     if result.is_err() {

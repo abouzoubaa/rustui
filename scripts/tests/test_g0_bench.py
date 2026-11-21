@@ -138,6 +138,41 @@ class G0BenchTests(unittest.TestCase):
                 {"mode":"direct", "frames":98}])
             self.assertNotIn("encode", row["cpu_phases_mean_ms"])
 
+    def test_backoff_reason_is_direct_rendering_with_separate_planning_sequence(self):
+        path = self.output / "log-frames.log"
+        lines = path.read_text().splitlines()
+        for i, line in enumerate(lines):
+            if line.startswith("RUSTUI_FRAME_LOG "):
+                r = json.loads(line.removeprefix("RUSTUI_FRAME_LOG "))
+                if r["event"] == "encode" and r["sequence"] == 2:
+                    r["reason"] = "backoff"
+                    lines[i] = "RUSTUI_FRAME_LOG " + json.dumps(r)
+        path.write_text("\n".join(lines) + "\n")
+        result = self.summarize()
+        self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
+        row = next(r for r in json.loads((self.output / "summary.json").read_text()) if r["scene"] == "log")
+        self.assertEqual(row["instances"]["backoff_frames"], 1)
+        self.assertEqual(row["instances"]["planning_runs"][2], {"mode": "backoff", "frames": 1})
+        self.assertEqual(row["frame_mode_counts"]["direct"], 98)
+
+    def test_backoff_pairs_compare_only_the_switch_and_keep_process_cpu_diagnostic(self):
+        for scene in ("log", "hover"):
+            for run in range(1, 6):
+                for mode in ("0", "1"):
+                    folder = self.output / scene / f"{run}-{mode}"
+                    folder.mkdir(parents=True)
+                    value = 1.0 if mode == "0" else 1.02 if scene == "log" or run != 3 else 1.04
+                    (folder / "summary.json").write_text(json.dumps([{
+                        "scene": scene, "damage": "1", "backoff": mode, "cpu_mean_ms": value,
+                        "process_cpu_s": 0.4, "process_cpu_s_per_attempt": 0.004 if mode == "0" else 0.008}]))
+        result = subprocess.run(["bash", "-c", 'source "$1"; g0_interleaved_summary "$2" backoff',
+            "g0-backoff-test", str(REPO / "scripts/run_g0_bench.sh"), str(self.output)],
+            cwd=REPO, text=True, capture_output=True, check=False)
+        self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
+        rows = json.loads((self.output / "backoff-summary.json").read_text())
+        self.assertEqual([r["verdict"] for r in rows], ["PASS", "INCONCLUSIVE"])
+        self.assertEqual(rows[0]["process_cpu"]["paired_changes_pct"], [100.0]*5)
+
     def test_missing_process_cpu_cannot_pass_a_new_capture(self):
         p = self.output / "idle-frames.log"
         lines = p.read_text().splitlines()

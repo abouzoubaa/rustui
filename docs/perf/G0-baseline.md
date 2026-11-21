@@ -436,33 +436,33 @@ The before-E gate is not met: log is PASS and the other four scenes are INCONCLU
 
 A new candidate patch compares scene metadata even when Direct has invalidated retained pixels. Unsupported frames preserve the large-frame history; large planned changes choose Direct immediately. Re-priming after large changes requires two consecutive cheap comparable frames, avoiding a full redraw plus copy between large frames while allowing recovery to Copy/Skip/Partial. Kept-texture lifetime, prime scene snapshots, cache writes and Partial culling remain separate fixes.
 
-Post-E timing stopped at 10:28 UTC to leave time for the required WIP push before the two-hour G2-8 ticket limit (10:32 UTC). **34 captures completed**: five pairs each for log, hover and idle, and two pairs for typing. The third typing pair's off capture was interrupted and is excluded; drag was not started. The measured scene order was log, hover, idle, typing, drag; each scene retained the specified alternating pair order. Every completed capture validated its window, workload and geometry. The executable passed its hash check after the interrupted pass. No compilation, profiling or runtime source changes ran during timing. Local captures: `target/headstart/performance/g2-8-after-E/`; completed-capture summary: `partial-summary.json`.
+Post-E retesting is now **complete: 50 captures**. G2-8 collected the first 34; G2-8a resumed the missing 16 (typing pairs 3–5 and drag pairs 1–5), without rebuilding. The executable passed its hash checks before and after the resumed segment. Each scene preserved off→on, on→off, off→on, on→off, off→on. All 50 timed windows, workloads, geometry and getrusage measurements validated. The interrupted third typing pair from G2-8 is preserved separately and excluded. No compilation, profiling or runtime source changes ran during timing. Captures: `target/headstart/performance/g2-8-after-E/`.
 
 ### E before/after (damage on)
 
-GPU and CPU values are medians of five capture means. Modes and instances are sums across the five captures. Each arrow is before E → after E. The paired table below supplies the contemporaneous off controls; absolute medians across passes alone do not establish a CPU gain. Mode order is skip/copy/partial/retained/direct.
+Values are medians of five capture means; mode and instance counts are sums. Arrows show before E → after E. The paired table supplies contemporaneous off controls; absolute medians across passes alone do not establish a CPU gain. Mode order is skip/copy/partial/retained/direct.
 
 | Scene | GPU ms/s | GPU ms/frame | CPU ms/attempt | Mode counts | Instances encoded / total |
 |---|---:|---:|---:|---|---|
 | idle | 0.400894 → 0.399529 | 0.211481 → 0.210792 | 2.579003 → 2.587903 | 0/0/570/0/0 → 0/0/570/0/0 | 13965 / 13965 → 13965 / 13965 |
-| typing | NOT COMPLETE (2/5 on captures) | — | — | — | — |
+| typing | 2.380944 → 2.462415 | 0.323397 → 0.337043 | 1.665588 → 1.538319 | 400/0/2194/0/0 → 397/0/2201/0/0 | 1951565 / 2307364 → 1957792 / 2310929 |
 | hover | 45.538508 → 43.784724 | 0.379954 → 0.365535 | 2.409639 → 2.564250 | 0/5223/0/17892/12830 → 0/52/0/142/35757 | 12136375 / 14199460 → 14180895 / 14201435 |
 | log | 4.963734 → 4.550980 | 0.517919 → 0.474949 | 7.427937 → 7.437110 | 0/0/0/1440/1438 → 0/0/0/0/2876 | 2661668 / 2661668 → 2659786 / 2659786 |
-| drag | NOT COMPLETE (0/5 on captures) | — | — | — | — |
+| drag | 35.809381 → 36.105785 | 0.298712 → 0.304392 | 1.487519 → 1.473315 | 5/6466/29492/0/0 → 5/6576/29228/0/0 | 943776 / 1150944 → 935296 / 1145984 |
 
 ### Post-E paired CPU gate and process-CPU diagnostic
 
-| Scene | Pairs complete | Median off / on ms/attempt | Five paired CPU changes % | CPU median / min / max % | Verdict | Process CPU paired changes % | Process median / min / max % |
-|---|---:|---:|---|---|---|---|---|
-| idle | 5/5 | 2.505412 / 2.587903 | +3.200, +16.145, +0.042, +3.293, +29.595 | +3.293 / +0.042 / +29.595 | **INCONCLUSIVE** | +0.642, +10.313, -1.510, +0.976, +19.284 | +0.976 / -1.510 / +19.284 |
-| typing | 2/5 | — | -2.189, +5.017, —, —, — | — | **NOT COMPLETE** | -4.806, +0.024, —, —, — | — |
-| hover | 5/5 | 2.593630 / 2.564250 | -4.416, -6.999, -1.123, -3.233, +0.447 | -3.233 / -6.999 / +0.447 | **PASS** | -3.749, -5.793, -1.499, -2.978, +0.418 | -2.978 / -5.793 / +0.418 |
-| log | 5/5 | 7.029334 / 7.437110 | +20.061, +1.127, +5.801, +17.862, +3.656 | +5.801 / +1.127 / +20.061 | **INCONCLUSIVE** | +16.955, +0.449, +5.576, +15.194, +3.028 | +5.576 / +0.449 / +16.955 |
-| drag | 0/5 | — | —, —, —, —, — | — | **NOT COMPLETE** | —, —, —, —, — | — |
+| Scene | Median off / on ms/attempt | Five paired CPU changes % | CPU median / min / max % | Verdict | Process CPU five paired changes % | Process median / min / max % |
+|---|---:|---|---|---|---|---|
+| idle | 2.505412 / 2.587903 | +3.200, +16.145, +0.042, +3.293, +29.595 | +3.293 / +0.042 / +29.595 | **INCONCLUSIVE** | +0.642, +10.313, -1.510, +0.976, +19.284 | +0.976 / -1.510 / +19.284 |
+| typing | 1.503467 / 1.538319 | -2.189, +5.017, +11.377, -0.939, +0.244 | +0.244 / -2.189 / +11.377 | **INCONCLUSIVE** | -4.806, +0.024, +1.126, +3.855, -1.264 | +0.024 / -4.806 / +3.855 |
+| hover | 2.593630 / 2.564250 | -4.416, -6.999, -1.123, -3.233, +0.447 | -3.233 / -6.999 / +0.447 | **PASS** | -3.749, -5.793, -1.499, -2.978, +0.418 | -2.978 / -5.793 / +0.418 |
+| log | 7.029334 / 7.437110 | +20.061, +1.127, +5.801, +17.862, +3.656 | +5.801 / +1.127 / +20.061 | **INCONCLUSIVE** | +16.955, +0.449, +5.576, +15.194, +3.028 | +5.576 / +0.449 / +16.955 |
+| drag | 1.409434 / 1.473315 | +7.460, +7.923, +4.334, +3.537, +3.949 | +4.334 / +3.537 / +7.923 | **FAIL** | +5.539, +7.275, +4.399, +3.835, +3.711 | +4.399 / +3.711 / +7.275 |
 
-Per completed post-E capture, including the partial typing set. No five-pair verdict or five-run median is assigned to typing.
+Every post-E capture, including the 16 completed in G2-8a. Switch is RUSTUI_DAMAGE. Process CPU is user + system measured after warmup; its paired changes are diagnostic only.
 
-| Scene | Pair | Damage | Process CPU user+sys s | Process CPU s/attempt | GPU ms/s | GPU ms/frame | CPU ms/attempt | Modes | Instances encoded / total |
+| Scene | Pair | Switch | Process CPU user+sys s | Process CPU s/attempt | GPU ms/s | GPU ms/frame | CPU ms/attempt | Modes skip/copy/partial/retained/direct | Instances encoded / total |
 |---|---:|---:|---:|---:|---:|---:|---:|---|---|
 | idle | 1 | 0 | 0.534439 | 0.004688061 | 0.595843 | 0.313943 | 2.647204 | 0/0/0/0/114 | 2793 / 2793 |
 | idle | 1 | 1 | 0.537868 | 0.004718140 | 0.388967 | 0.205213 | 2.731921 | 0/0/114/0/0 | 2793 / 2793 |
@@ -478,6 +478,12 @@ Per completed post-E capture, including the partial typing set. No five-pair ver
 | typing | 1 | 1 | 7.065955 | 0.013536312 | 2.498045 | 0.337043 | 1.470555 | 77/0/445/0/0 | 395828 / 464322 |
 | typing | 2 | 0 | 7.511091 | 0.014500176 | 5.240802 | 0.608108 | 1.435976 | 0/0/0/0/518 | 460761 / 460761 |
 | typing | 2 | 1 | 7.512925 | 0.014503716 | 2.462415 | 0.338660 | 1.508025 | 81/0/437/0/0 | 388712 / 460768 |
+| typing | 3 | 0 | 7.507878 | 0.014466046 | 5.330071 | 0.617068 | 1.456250 | 0/0/0/0/519 | 461648 / 461648 |
+| typing | 3 | 1 | 7.592424 | 0.014628948 | 2.356791 | 0.322630 | 1.621928 | 80/0/439/0/0 | 390491 / 461651 |
+| typing | 4 | 0 | 7.405406 | 0.014186602 | 5.246136 | 0.604184 | 1.587492 | 0/0/0/0/522 | 464310 / 464310 |
+| typing | 4 | 1 | 7.631949 | 0.014733492 | 2.364606 | 0.325145 | 1.572583 | 81/0/437/0/0 | 388712 / 460755 |
+| typing | 5 | 0 | 7.554371 | 0.014527637 | 5.354299 | 0.618575 | 1.534573 | 0/0/0/0/520 | 462538 / 462538 |
+| typing | 5 | 1 | 7.473226 | 0.014344004 | 2.502475 | 0.339634 | 1.538319 | 78/0/443/0/0 | 394049 / 463433 |
 | hover | 1 | 0 | 23.051472 | 0.003205155 | 43.474456 | 0.362789 | 2.569748 | 0/0/0/0/7191 | 2840840 / 2840840 |
 | hover | 1 | 1 | 22.196439 | 0.003084981 | 43.847840 | 0.365705 | 2.456262 | 0/25/0/67/7103 | 2832150 / 2842025 |
 | hover | 2 | 0 | 23.201567 | 0.003227820 | 43.443800 | 0.362739 | 2.593630 | 0/0/0/0/7187 | 2839260 / 2839260 |
@@ -498,16 +504,93 @@ Per completed post-E capture, including the partial typing set. No five-pair ver
 | log | 4 | 1 | 4.955143 | 0.008617640 | 4.549972 | 0.474806 | 7.495742 | 0/0/0/0/575 | 531769 / 531769 |
 | log | 5 | 0 | 4.839858 | 0.008417144 | 4.669627 | 0.487562 | 7.239049 | 0/0/0/0/575 | 531769 / 531769 |
 | log | 5 | 1 | 4.986419 | 0.008672033 | 4.583790 | 0.478372 | 7.503735 | 0/0/0/0/575 | 531769 / 531769 |
+| drag | 1 | 0 | 16.825502 | 0.002359156 | 68.598181 | 0.577202 | 1.295136 | 0/0/0/0/7132 | 228224 / 228224 |
+| drag | 1 | 1 | 17.896869 | 0.002489826 | 36.785975 | 0.307177 | 1.391755 | 1/1357/5829/0/0 | 186528 / 230016 |
+| drag | 2 | 0 | 17.629451 | 0.002449556 | 69.767458 | 0.581747 | 1.365149 | 0/0/0/0/7196 | 230304 / 230304 |
+| drag | 2 | 1 | 18.709622 | 0.002627756 | 36.105785 | 0.304392 | 1.473315 | 1/1253/5865/0/0 | 187680 / 227840 |
+| drag | 3 | 0 | 18.108904 | 0.002518624 | 69.214030 | 0.577618 | 1.409434 | 0/0/0/0/7190 | 230080 / 230080 |
+| drag | 3 | 1 | 18.710878 | 0.002629409 | 35.004394 | 0.295232 | 1.470520 | 1/1413/5702/0/0 | 182464 / 227712 |
+| drag | 4 | 0 | 18.539559 | 0.002581752 | 68.483772 | 0.572328 | 1.440651 | 0/0/0/0/7180 | 229792 / 229792 |
+| drag | 4 | 1 | 19.282706 | 0.002680760 | 36.074602 | 0.301014 | 1.491603 | 1/1270/5921/0/0 | 189472 / 230176 |
+| drag | 5 | 0 | 18.378104 | 0.002556065 | 69.193320 | 0.577473 | 1.418709 | 0/0/0/0/7190 | 230080 / 230080 |
+| drag | 5 | 1 | 19.073448 | 0.002650931 | 36.979704 | 0.308465 | 1.474734 | 1/1283/5911/0/0 | 189152 / 230240 |
 
 Post-E synchronous mode sequences (pair 1, damage on):
 
-| Scene | First 12 mode runs (mode × frames) | Total runs | Retained↔Direct transitions |
+| Scene | First 12 runs (mode × frames) | Total runs | Retained↔Direct transitions |
 |---|---|---:|---:|
 | log | direct×575 | 1 | 0 |
 | hover | direct×20, retained×1, copy×1, direct×124, retained×1, direct×83, retained×1, copy×1, direct×82, retained×1, copy×1, direct×82 | 160 | 109 |
 
-All five post-E damage-on log sequences contain only Direct: **2876 Direct, zero Retained**, with zero Retained↔Direct transitions. Hover Retained frames fell from 17,892 to 142. This does not establish the CPU gate: log and idle are INCONCLUSIVE; hover is PASS; typing and drag are NOT COMPLETE.
+All five post-E damage-on log sequences contain only Direct: **2,876 Direct, zero Retained**. Hover Retained frames fell from 17,892 to 142. E's all-scene CPU gate is not met: hover PASS; idle, typing and log INCONCLUSIVE; drag FAIL. All five drag paired changes exceed 3%. No gate exception is proposed.
 
-E also exposes a CPU tradeoff: log signature time is 0.025072 → 0.025051 ms/attempt, while planner time is 0.095155 → 0.189336 ms/attempt. Comparing metadata after Direct runs the planner on every plannable log frame instead of alternate frames. Copy-cycle removal is verified; the remaining CPU cost is unresolved. It has not been established to be unavoidable.
+The unresolved E tradeoff is log planner time: 0.095155 → 0.189336 ms/attempt. Metadata comparison after Direct runs the planner every plannable frame, rather than alternating with whole-frame priming. Log signature time is 0.025072 → 0.025051 ms/attempt. F below addresses the repeated planning; allocation reuse, clone removal and cache-write changes remain for G2-8c.
 
-**G2-8 remains unfinished.** E's policy and headless proof are implemented, but its five-scene retest is incomplete. B (allocation reuse), C (remove prime scene clone), D (avoid unchanged cache writes), A (Partial culling and edge tests), and `docs/damage/G2_EARLY_DAMAGE.md` remain unstarted, preserving the requested order. No before/after results are claimed for those fixes. Power remains owner run pending. PR #163 stays draft; G2-5 and G3-1 remain unstarted, switches stay off by default, and Stage P stays on hold. No gate exception is proposed.
+## G2-8a — F planner back-off
+
+`RUSTUI_DAMAGE_BACKOFF=1` opts in; it defaults off. After eight consecutive completed plannable frames ending Direct or large, the next 30 completed frames draw Direct without signatures or planning. The following frame probes once; a large/Direct probe starts another 30-frame run. Unsupported→plannable changes, resize, scale and atlas loss reset the counters. Off paths and failed drawable acquisition do not advance the completed-frame counter.
+
+`damage_cpu.reason` and synchronous encode records report `backoff`; actual frame mode remains Direct. Summaries preserve both rendering-mode runs and planning runs, plus back-off frame counts.
+
+Recovery is bounded in frame intervals, preserving the requested 30 skipped frames: indices 0–29 draw Direct, index 30 primes retained pixels if the adjacent scene change is small, and index 31 can be Partial. That is 31 intervals from the first small-change frame, or 32 rendered frames counting it. On the last skipped frame, an unhashed scene snapshot supplies an adjacent-frame comparison for the probe; an older snapshot could incorrectly restart back-off. Its cost is included in measured CPU and remains visible for the later clone-removal work. Headless tests assert no planner calls in every 30-frame run, exactly one probe, counter resets, true Partial recovery with magenta pre-fill, and byte equality with whole draws throughout.
+
+Reproduce F's comparison (one release build, damage enabled in both arms):
+
+```sh
+CARGO_PROFILE_RELEASE_DEBUG=1 CARGO_PROFILE_RELEASE_STRIP=none ./scripts/run_g0_bench.sh --backoff-pairs target/headstart/performance/g2-8a-backoff-repeat
+```
+
+
+### F paired results
+
+Each scene used five matched pairs with the same alternating order; damage stays 1, and switch 0/1 means RUSTUI_DAMAGE_BACKOFF. All 20 windows validated, and the single executable passed its before/after hash check. No compilation or profiling ran during timing. Process CPU remains diagnostic; verdicts use the unchanged phase-CPU rule.
+
+| Scene | Median off / on ms/attempt | Five paired CPU changes % | CPU median / min / max % | Verdict | Process CPU five paired changes % | Process median / min / max % |
+|---|---:|---|---|---|---|---|
+| log | 7.426991 / 7.019087 | -4.941, -4.186, -5.492, -5.039, -5.335 | -5.039 / -5.492 / -4.186 | **PASS** | -2.750, -4.015, -4.416, -4.205, -3.635 | -4.015 / -4.416 / -2.750 |
+| hover | 2.524198 / 2.546558 | +1.404, -1.493, +1.853, +2.311, -0.924 | +1.404 / -1.493 / +2.311 | **PASS** | +1.477, -1.135, +1.402, +1.852, -0.716 | +1.402 / -1.135 / +1.852 |
+
+Medians of five capture means; counts are sums:
+
+| Scene | Back-off | Planner ms/attempt | Damage total ms/attempt | GPU ms/s | GPU ms/frame | Back-off frames | Modes | Instances encoded / total |
+|---|---:|---:|---:|---:|---:|---:|---|---|
+| log | 0 | 0.191672 | 0.218540 | 4.481354 | 0.467621 | 0 | 0/0/0/0/2878 | 2661650 / 2661650 |
+| log | 1 | 0.007466 | 0.010594 | 4.548670 | 0.474751 | 2755 | 0/0/0/0/2875 | 2658854 / 2658854 |
+| hover | 0 | 0.016720 | 0.027352 | 43.832370 | 0.365832 | 0 | 0/71/0/166/35716 | 14173785 / 14201830 |
+| hover | 1 | 0.001692 | 0.003884 | 43.828993 | 0.365608 | 32501 | 0/11/0/295/35645 | 14197485 / 14201830 |
+
+F reduces log planning and process CPU, while measured GPU time is 4.481354 → 4.548670 ms/s. Hover GPU time is nearly unchanged (43.832370 → 43.828993 ms/s), and its median paired phase/process CPU changes are both about +1.4%, within the 3% rule. Hover Retained frames increase from 166 to 295 and Copy frames fall from 71 to 11; F does not reduce instance uploads. These measurements do not establish a power saving or authorize default-on. Power remains owner run pending.
+
+Every F capture; switch is RUSTUI_DAMAGE_BACKOFF, with damage=1 throughout.
+
+| Scene | Pair | Switch | Process CPU user+sys s | Process CPU s/attempt | GPU ms/s | GPU ms/frame | CPU ms/attempt | Modes skip/copy/partial/retained/direct | Instances encoded / total |
+|---|---:|---:|---:|---:|---:|---:|---:|---|---|
+| log | 1 | 0 | 4.907031 | 0.008533967 | 4.478685 | 0.467493 | 7.451605 | 0/0/0/0/575 | 531769 / 531769 |
+| log | 1 | 1 | 4.772096 | 0.008299297 | 4.642811 | 0.484521 | 7.083440 | 0/0/0/0/575 | 531769 / 531769 |
+| log | 2 | 0 | 4.975880 | 0.008638681 | 4.481354 | 0.467621 | 7.432730 | 0/0/0/0/576 | 532701 / 532701 |
+| log | 2 | 1 | 4.767790 | 0.008291809 | 4.548670 | 0.474751 | 7.121609 | 0/0/0/0/575 | 531769 / 531769 |
+| log | 3 | 0 | 4.943392 | 0.008597203 | 4.484196 | 0.467985 | 7.426991 | 0/0/0/0/575 | 531769 / 531769 |
+| log | 3 | 1 | 4.725107 | 0.008217577 | 4.544355 | 0.474309 | 7.019087 | 0/0/0/0/575 | 531778 / 531778 |
+| log | 4 | 0 | 4.782792 | 0.008303458 | 4.160189 | 0.434106 | 7.093676 | 0/0/0/0/576 | 532701 / 532701 |
+| log | 4 | 1 | 4.573742 | 0.007954334 | 4.589391 | 0.478924 | 6.736208 | 0/0/0/0/575 | 531769 / 531769 |
+| log | 5 | 0 | 4.846387 | 0.008413866 | 4.523893 | 0.472057 | 7.396973 | 0/0/0/0/576 | 532710 / 532710 |
+| log | 5 | 1 | 4.662092 | 0.008107986 | 4.534298 | 0.473211 | 7.002312 | 0/0/0/0/575 | 531769 / 531769 |
+| hover | 1 | 0 | 22.720690 | 0.003158722 | 43.824935 | 0.365574 | 2.533797 | 0/4/0/15/7174 | 2839655 / 2841235 |
+| hover | 1 | 1 | 23.059581 | 0.003205391 | 43.828993 | 0.365608 | 2.569380 | 0/2/0/47/7145 | 2840840 / 2841630 |
+| hover | 2 | 0 | 22.680326 | 0.003151796 | 44.102241 | 0.367733 | 2.524198 | 0/5/0/9/7182 | 2840445 / 2842420 |
+| hover | 2 | 1 | 22.422912 | 0.003116024 | 44.181098 | 0.368439 | 2.486502 | 0/0/0/51/7145 | 2842420 / 2842420 |
+| hover | 3 | 0 | 22.694885 | 0.003156451 | 43.790123 | 0.365479 | 2.521890 | 0/16/0/57/7117 | 2833730 / 2840050 |
+| hover | 3 | 1 | 22.974722 | 0.003200714 | 43.389108 | 0.362766 | 2.568626 | 0/3/0/65/7109 | 2834125 / 2835310 |
+| hover | 4 | 0 | 22.124475 | 0.003076690 | 43.832370 | 0.365832 | 2.444700 | 0/23/0/37/7130 | 2831360 / 2840445 |
+| hover | 4 | 1 | 22.534137 | 0.003133658 | 43.801312 | 0.365546 | 2.501191 | 0/4/0/67/7119 | 2838865 / 2840445 |
+| hover | 5 | 0 | 23.066341 | 0.003210794 | 44.327602 | 0.370259 | 2.570303 | 0/23/0/48/7113 | 2828595 / 2837680 |
+| hover | 5 | 1 | 22.936172 | 0.003187793 | 44.023700 | 0.367183 | 2.546558 | 0/2/0/65/7127 | 2841235 / 2842025 |
+
+Synchronous planning sequence, F on, pair 1:
+
+| Scene | First 12 planning runs | Back-off frames |
+|---|---|---:|
+| log | direct×6, backoff×30, direct×1, backoff×30, direct×1, backoff×30, direct×1, backoff×30, direct×1, backoff×30, direct×1, backoff×30 | 551 |
+| hover | direct×7, backoff×30, direct×1, backoff×30, direct×1, backoff×30, direct×1, backoff×30, direct×1, backoff×30, retained×1, direct×8 | 6590 |
+
+G2-8a stops here. G2-8b/c/d remain unstarted pending the owner; G2-5/G3-1 remain unstarted, PR #163 remains draft, and Stage P stays on hold. Power is owner run pending. These two F scenes do not replace G2-8d’s final all-scene gate.

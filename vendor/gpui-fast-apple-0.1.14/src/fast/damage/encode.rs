@@ -40,7 +40,7 @@ fn total(scene: &Scene) -> usize {
             .map(total)
             .sum::<usize>()
 }
-fn emit(counts: Counts, mode: &str) {
+fn emit(counts: Counts, mode: &str, reason: &str) {
     if !enabled() {
         return;
     }
@@ -55,7 +55,7 @@ fn emit(counts: Counts, mode: &str) {
         .as_secs_f64()
         * 1000.;
     super::log::line(format_args!(
-        "RUSTUI_FRAME_LOG {{\"event\":\"encode\",\"cpu_ms\":0.0,\"sequence\":{sequence},\"mode\":\"{mode}\",\"instances_encoded\":{},\"instances_total\":{},\"epoch_ms\":{epoch_ms:.6}}}",
+        "RUSTUI_FRAME_LOG {{\"event\":\"encode\",\"cpu_ms\":0.0,\"sequence\":{sequence},\"mode\":\"{mode}\",\"reason\":\"{reason}\",\"instances_encoded\":{},\"instances_total\":{},\"epoch_ms\":{epoch_ms:.6}}}",
         counts.encoded, counts.total
     ));
 }
@@ -82,9 +82,9 @@ impl Scope {
         self.active = false;
         COUNTS.with(|c| c.replace(self.previous.take()).unwrap())
     }
-    pub(crate) fn finish(mut self, mode: &str) {
+    pub(crate) fn finish(mut self, mode: &str, reason: &str) {
         let counts = self.take();
-        emit(counts, mode);
+        emit(counts, mode, reason);
     }
 }
 impl Drop for Scope {
@@ -109,6 +109,7 @@ pub(crate) fn skipped(scene: &Scene) {
                 encoded: 0,
                 total: total(scene),
             },
+            "skip",
             "skip",
         );
     }
