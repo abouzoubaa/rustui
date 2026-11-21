@@ -5,3 +5,5 @@ pub(crate) mod metrics;
 pub(crate) mod shaders;
 pub(crate) mod plan;
 pub(crate) mod inputs;
+pub(crate) mod frame;
+pub(crate) mod retained;

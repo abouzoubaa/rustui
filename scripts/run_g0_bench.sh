@@ -56,7 +56,7 @@ for scene in ('idle', 'typing', 'hover', 'log', 'drag'):
     records = [r for r in records if start['epoch_ms'] <= r['epoch_ms'] <= end['epoch_ms']]
     gpu = [r['gpu_ms'] for r in records if r['event'] == 'gpu']
     assert len(gpu) >= (20 if scene == 'idle' else 100), (scene, 'too few GPU samples')
-    assert all(r['mode'] == 'full' for r in records if r['event'] == 'gpu'), (scene, 'expected full mode')
+    assert all(r['mode'] in ('full', 'direct') for r in records if r['event'] == 'gpu'), (scene, 'expected whole-frame mode')
     assert all(math.isfinite(n) and n >= 0 for n in gpu)
     phases = {}
     for r in records:
@@ -79,7 +79,7 @@ for scene in ('idle', 'typing', 'hover', 'log', 'drag'):
 (root / 'summary.json').write_text(json.dumps(results, indent=2) + '\n')
 for row in results:
     print(f"{row['scene']:7} GPU {row['gpu_mean_ms']:.4f} ms/present "
-          f"CPU {row['cpu_mean_ms']:.4f} ms/present ({row['gpu_samples']} full GPU frames)")
+          f"CPU {row['cpu_mean_ms']:.4f} ms/present ({row['gpu_samples']} whole GPU frames)")
 PY
 }
 

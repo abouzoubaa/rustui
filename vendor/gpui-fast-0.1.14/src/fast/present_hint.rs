@@ -33,6 +33,13 @@ pub fn fast_present_required() -> bool {
     REQUIRED.with(Cell::get)
 }
 
+/// Run a test callback with the same scoped hint used by frame requests.
+#[cfg(any(test, feature = "test-support"))]
+pub fn with_fast_present_required<R>(required: bool, run: impl FnOnce() -> R) -> R {
+    let _request = for_request(required, false);
+    run()
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;

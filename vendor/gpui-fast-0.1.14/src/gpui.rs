@@ -139,6 +139,8 @@ pub use fast::layers::scene::{
 };
 pub use fast::present_hint::fast_present_required;
 #[cfg(any(test, feature = "test-support"))]
+pub use fast::present_hint::with_fast_present_required;
+#[cfg(any(test, feature = "test-support"))]
 pub use fast::stats::LayoutStats;
 pub use geometry::*;
 pub use gestures::*;

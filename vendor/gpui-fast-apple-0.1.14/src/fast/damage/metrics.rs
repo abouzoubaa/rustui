@@ -53,6 +53,20 @@ pub(crate) fn on_commit(buffer: &ProtocolObject<dyn MTLCommandBuffer>, mode: &'s
     unsafe { buffer.addCompletedHandler(RcBlock::as_ptr(&block)) };
 }
 
+pub(crate) fn skipped() {
+    if !enabled() {
+        return;
+    }
+    let epoch_ms = SystemTime::now()
+        .duration_since(SystemTime::UNIX_EPOCH)
+        .unwrap_or_default()
+        .as_secs_f64()
+        * 1000.;
+    eprintln!(
+        "RUSTUI_FRAME_LOG {{\"event\":\"gpu\",\"mode\":\"skip\",\"cpu_ms\":0.0,\"gpu_ms\":null,\"epoch_ms\":{epoch_ms:.6}}}"
+    );
+}
+
 #[cfg(test)]
 mod tests {
     use super::gpu_ms;

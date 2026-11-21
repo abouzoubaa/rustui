@@ -135,7 +135,7 @@ pub struct MetalRenderer {
     pub(crate) layer: Option<Retained<CAMetalLayer>>,
     is_apple_gpu: bool,
     pub(crate) is_unified_memory: bool,
-    presents_with_transaction: bool,
+    pub(crate) presents_with_transaction: bool,
     display_link_mode: DisplayLinkMode,
     /// For headless rendering, tracks whether output should be opaque
     pub(crate) opaque: bool,
@@ -160,6 +160,7 @@ pub struct MetalRenderer {
     #[cfg(any(test, feature = "bench-support", feature = "test-support"))]
     headless_render_target: Option<Retained<ProtocolObject<dyn MTLTexture>>>,
     pub(crate) fast_layers: crate::fast::layers::TileCache,
+    pub(crate) damage: crate::fast::damage::frame::State,
     pub(crate) damage_pipelines: crate::fast::damage::shaders::Pipelines,
 }
 
@@ -452,6 +453,7 @@ impl MetalRenderer {
             headless_render_target: None,
             fast_layers: crate::fast::layers::TileCache::default(),
             damage_pipelines,
+            damage: Default::default(),
         })
     }
 
@@ -511,6 +513,9 @@ impl MetalRenderer {
     }
 
     pub fn set_presents_with_transaction(&mut self, presents_with_transaction: bool) {
+        if presents_with_transaction {
+            self.damage.invalidate();
+        }
         self.presents_with_transaction = presents_with_transaction;
         if let Some(layer) = &self.layer {
             layer.setPresentsWithTransaction(presents_with_transaction);
@@ -518,6 +523,7 @@ impl MetalRenderer {
     }
 
     pub fn update_drawable_size(&mut self, size: Size<DevicePixels>) {
+        self.damage.resized(size);
         if let Some(layer) = &self.layer {
             layer.setDrawableSize(CGSize::new(size.width.0 as f64, size.height.0 as f64));
         }
@@ -594,6 +600,9 @@ impl MetalRenderer {
     }
 
     pub fn update_transparency(&mut self, transparent: bool) {
+        if self.opaque == transparent {
+            self.damage.invalidate();
+        }
         self.opaque = !transparent;
         if let Some(layer) = &self.layer {
             layer.setOpaque(!transparent);
@@ -614,6 +623,11 @@ impl MetalRenderer {
                 return;
             }
         };
+        let prepared = crate::fast::damage::frame::choose(self, scene);
+        if prepared.mode == crate::fast::damage::frame::Mode::Same {
+            crate::fast::damage::frame::skip(self, prepared);
+            return;
+        }
         let drawable = match &mut self.display_link_mode {
             DisplayLinkMode::Attached { drawable } => {
                 let Some(drawable) = drawable.take() else {
@@ -641,7 +655,13 @@ impl MetalRenderer {
             (texture.height() as i32).into(),
         );
 
-        let command_buffer = match self.render_frame(scene, &drawable.texture(), viewport_size) {
+        let command_buffer = match crate::fast::damage::frame::render(
+            self,
+            scene,
+            &texture,
+            viewport_size,
+            prepared,
+        ) {
             Ok(command_buffer) => command_buffer,
             Err(error) => {
                 log::error!("failed to render: {error:#}");
@@ -649,7 +669,7 @@ impl MetalRenderer {
             }
         };
 
-        crate::fast::damage::metrics::on_commit(&command_buffer, "full");
+        crate::fast::damage::metrics::on_commit(&command_buffer, self.damage.last_mode.label());
 
         if self.presents_with_transaction {
             command_buffer.commit();
@@ -2038,6 +2058,7 @@ mod tests {
 
     #[test]
     fn display_link_mode_consumes_and_clears_drawables() -> Result<()> {
+        crate::fast::damage::frame::test_skip_leaves_drawable_unused()?;
         let mut renderer = MetalRenderer::new(Default::default(), false, false)?;
         renderer.update_drawable_size(size(DevicePixels(64), DevicePixels(64)));
         let drawable = renderer

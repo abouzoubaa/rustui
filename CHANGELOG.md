@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+- G2-3: add opt-in retained Metal frames, byte-exact copies, pre-drawable skips, and a GPU-lifetime-aware 64 MB device budget.
+
 - G2-2: port GPUI Fast's damage planner and tests, with bounded Metal atlas upload observations and conservative surface/scroll-tile fallbacks.
 
 - G2-1: add unblended Metal damage copy/clear pipelines and headless byte-exact copy and scissor-boundary proofs.
