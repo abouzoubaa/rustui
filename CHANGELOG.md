@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+- Buffer native frame-recorder output outside measured phases (PX-1 candidate).
+
 - G2-8a: add opt-in planner back-off after repeated whole frames, with recovery proofs and paired benchmarks.
 - G2-8: measure process CPU and uploaded scene instances; avoid retained-copy cycles during sustained large or unsupported frames (off by default).
 

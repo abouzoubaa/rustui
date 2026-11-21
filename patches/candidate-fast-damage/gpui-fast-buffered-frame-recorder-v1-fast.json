@@ -1,0 +1,32 @@
+{
+  "schema_version": 1,
+  "name": "gpui-fast-buffered-frame-recorder-v1-fast",
+  "patch": "gpui-fast-buffered-frame-recorder-v1-fast.patch",
+  "patch_sha256": "e38a7836dd11f50edf559938af4f12a7355b66e6c36847415bce9d3f282b57e6",
+  "files": {
+    "vendor/gpui-fast-0.1.14/src/fast/frame_recorder.rs": {
+      "pre_sha256": null,
+      "post_sha256": "a924b269e0fdf9a965575a5bdf3707a2c64000355e8c10f2e974fba2dc7fda4f"
+    },
+    "vendor/gpui-fast-0.1.14/src/fast/mod.rs": {
+      "pre_sha256": "d533926d1c33a489e46f31c08a7acb000ea2b7075287980e90a4fa9f53d512da",
+      "post_sha256": "6351badc335cc182a16fbf79b0ae5d002a79b0412e51ae8569cc4088d06986b8"
+    },
+    "vendor/gpui-fast-0.1.14/src/window.rs": {
+      "pre_sha256": "1b19ac8f8c24bcd307031b73295f5663039bb00cc5efd28d24a6e868ee7be12e",
+      "post_sha256": "1313fdebd56670f101dc6088ca7f7e1c9134ad7fc922cadc5f3ee29218cc63ab"
+    },
+    "vendor/gpui-fast-apple-0.1.14/src/fast/damage/metrics.rs": {
+      "pre_sha256": "7343a613ac12db0f855b2e29ed90dfbefb749496a80f068e956e2c9bec7ab125",
+      "post_sha256": "0a7b9f137394aff07a18d1982911ac76ea54569c2425f0eca77f54b11eda42e3"
+    },
+    "vendor/gpui-fast-0.1.14/.cargo-checksum.json": {
+      "pre_sha256": "f5499425fd50c7981786d44b22090f72e18d2dfdced17689b4208633a27e0526",
+      "post_sha256": "9d6ff52a488ba21a3f2b4e0799d5561d6db450c187438a3fec14e26082444e6a"
+    },
+    "vendor/gpui-fast-apple-0.1.14/.cargo-checksum.json": {
+      "pre_sha256": "1a20925a976a56d007d723d19a0d04c0697a080b57feaa159961a2382a90180b",
+      "post_sha256": "913c1c0d9b491c2f2fd47c075e2a92f7c514a7275942fd209985e41fad5a7ef3"
+    }
+  }
+}

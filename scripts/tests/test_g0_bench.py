@@ -77,6 +77,7 @@ class G0BenchTests(unittest.TestCase):
             self.assertEqual(row["frame_mode_samples"], 101)
             self.assertEqual(row["gpu_samples"], 100)
             self.assertEqual(row["gpu_mean_ms"], 0.25)
+            self.assertEqual(row["frames_over_8_3_ms"], 0)
 
     def test_damage_cpu_is_separate_from_cpu_phase_totals(self):
         for scene in SCENES:

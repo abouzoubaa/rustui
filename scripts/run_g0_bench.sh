@@ -12,7 +12,7 @@ g0_build() {
 }
 
 g0_launch() {
-  RUSTUI_DAMAGE="${RUSTUI_DAMAGE:-0}" RUSTUI_FRAME_LOG=1 RUSTUI_FRAME_PROFILE=1 \
+  RUSTUI_DAMAGE="${RUSTUI_DAMAGE:-0}" RUSTUI_FRAME_LOG=buffered RUSTUI_FRAME_PROFILE=1 \
     "$CARGO_TARGET_DIR/release/rustui-lab" --g0-scene "$1" --duration 60 > "$2" 2>&1 &
   g0_app_pid=$!
 }
@@ -126,12 +126,14 @@ for scene in sys.argv[3:] or ('idle', 'typing', 'hover', 'log', 'drag'):
                         gpu_p95_ms=sorted(gpu)[math.ceil(len(gpu)*.95)-1] if gpu else None,
                         gpu_ms_per_second=sum(gpu)/seconds,
                         cpu_present_samples=len(frames), cpu_mean_ms=statistics.mean(frames),
+                        frames_over_8_3_ms=sum(value > 8.3 for value in frames),
                         cpu_phases_mean_ms={k: statistics.mean(v) for k,v in phases.items()}))
 (root / 'summary.json').write_text(json.dumps(results, indent=2) + '\n')
 for row in results:
     print(f"{row['scene']:7} GPU {row['gpu_mean_ms']:.4f} ms/present "
           f"CPU {row['cpu_mean_ms']:.4f} ms/attempt "
           f"process CPU {row['process_cpu_s']:.6f} s ({row['process_cpu_s_per_attempt']:.9f} s/attempt) "
+          f">8.3 ms={row['frames_over_8_3_ms']} "
           f"instances {row['instances']['encoded']}/{row['instances']['total']} "
           f"signatures {row['damage_cpu']['signatures_mean_ms']:.4f} ms plan {row['damage_cpu']['plan_mean_ms']:.4f} ms "
           f"modes={row['frame_mode_counts']}")

@@ -1353,43 +1353,10 @@ pub(crate) struct InputRateTracker {
 }
 
 // Opt-in frame recording for native acceptance; no clock reads when disabled.
-fn f0_frame_start() -> Option<std::time::Instant> {
-    static ENABLED: std::sync::OnceLock<bool> = std::sync::OnceLock::new();
-    ENABLED
-        .get_or_init(|| std::env::var("RUSTUI_FRAME_LOG").as_deref() == Ok("1"))
-        .then(std::time::Instant::now)
-}
-fn f0_phase_start() -> Option<std::time::Instant> {
-    static ENABLED: std::sync::OnceLock<bool> = std::sync::OnceLock::new();
-    if *ENABLED.get_or_init(|| std::env::var("RUSTUI_FRAME_PROFILE").as_deref() == Ok("1")) { f0_frame_start() } else { None }
-}
-fn f0_frame_record(window: WindowId, event: &str, start: Option<std::time::Instant>) {
-    let Some(start) = start else { return };
-    let end = std::time::Instant::now();
-    static ORIGIN: std::sync::OnceLock<std::time::Instant> = std::sync::OnceLock::new();
-    let origin = *ORIGIN.get_or_init(|| start);
-    thread_local! {
-        static LAST: std::cell::RefCell<std::collections::HashMap<WindowId, std::time::Instant>> =
-            std::cell::RefCell::new(std::collections::HashMap::new());
-    }
-    let gap = if event == "present" {
-        LAST.with(|last| {
-            last.borrow_mut()
-                .insert(window, end)
-                .map(|previous| end.duration_since(previous).as_secs_f64() * 1000.0)
-        })
-    } else {
-        None
-    };
-    eprintln!(
-        "RUSTUI_FRAME_LOG {{\"event\":\"{}\",\"window\":\"{:?}\",\"time_ms\":{:.6},\"cpu_ms\":{:.6},\"gap_ms\":{},\"epoch_ms\":{:.6}}}",
-        event,
-        window,
-        end.duration_since(origin).as_secs_f64() * 1000.0,
-        end.duration_since(start).as_secs_f64() * 1000.0,
-        gap.map_or_else(|| "null".into(), |gap| format!("{gap:.6}")),
-        std::time::SystemTime::now().duration_since(std::time::UNIX_EPOCH).unwrap().as_secs_f64() * 1000.0
-    );
+fn f0_frame_start() -> Option<std::time::Instant> { crate::fast::frame_recorder::start() }
+fn f0_phase_start() -> Option<std::time::Instant> { crate::fast::frame_recorder::phase_start() }
+fn f0_frame_record(window: WindowId, event: &'static str, start: Option<std::time::Instant>) {
+    crate::fast::frame_recorder::record(window, event, start);
 }
 
 const FRAME_INTERVAL_TOLERANCE: Duration = Duration::from_millis(1);
@@ -4105,6 +4072,7 @@ impl Window {
             !self.next_frame_callbacks.borrow().is_empty(),
         );
         f0_frame_record(self.handle.window_id(), "present", f0_frame);
+        crate::fast::frame_recorder::after_present();
         self.needs_present.set(false);
         profiling::finish_frame!();
     }
