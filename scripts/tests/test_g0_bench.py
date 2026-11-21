@@ -75,6 +75,49 @@ class G0BenchTests(unittest.TestCase):
             self.assertEqual(row["gpu_samples"], 100)
             self.assertEqual(row["gpu_mean_ms"], 0.25)
 
+    def test_damage_cpu_is_separate_from_cpu_phase_totals(self):
+        for scene in SCENES:
+            with (self.output / f"{scene}-frames.log").open("a") as stream:
+                stream.write("RUSTUI_FRAME_LOG " + json.dumps(
+                    {"event": "damage_cpu", "cpu_ms": 0.0, "epoch_ms": 3000,
+                     "signatures_ms": 0.1, "plan_ms": 0.2, "total_ms": 0.35,
+                     "hashed": 2, "reused": 10, "reason": "partial"}) + "\n")
+        result = self.summarize()
+        self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
+        for row in json.loads((self.output / "summary.json").read_text()):
+            self.assertEqual(row["damage_cpu"],
+                             {"samples": 1, "signatures_mean_ms": 0.1,
+                              "plan_mean_ms": 0.2, "total_mean_ms": 0.35,
+                              "hashed": 2, "reused": 10, "reasons": {"partial": 1}})
+            self.assertNotIn("damage_cpu", row["cpu_phases_mean_ms"])
+            self.assertAlmostEqual(row["cpu_mean_ms"], 0.7)
+
+    def test_matched_pair_verdicts_use_every_pair_without_spread(self):
+        off = [1.0, 1.01, 1.02, 1.03, 1.04]
+        ratios = [(1.05,) * 5, (1.02, 1.04, 1.01, 1.05, 1.02),
+                  (1.03,) * 5, (0.98,) * 5, (1.001,) * 5]
+        for scene, multipliers in zip(SCENES, ratios):
+            for mode, values in (("0", off), ("1", [a*b for a,b in zip(off, multipliers)])):
+                for run, value in enumerate(values, 1):
+                    folder = self.output / scene / f"{run}-{mode}"
+                    folder.mkdir(parents=True)
+                    (folder / "summary.json").write_text(json.dumps([
+                        {"scene": scene, "damage": mode, "cpu_mean_ms": value}]))
+        result = subprocess.run(
+            ["bash", "-c", 'source "$1"; g0_interleaved_summary "$2"', "g0-matched-test",
+             str(REPO / "scripts/run_g0_bench.sh"), str(self.output)],
+            cwd=REPO, text=True, capture_output=True, check=False)
+        self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
+        rows = json.loads((self.output / "interleaved-summary.json").read_text())
+        self.assertEqual([r["verdict"] for r in rows],
+                         ["FAIL", "INCONCLUSIVE", "PASS", "PASS", "PASS"])
+        self.assertAlmostEqual(rows[0]["off"]["median_ms"], 1.02)
+        for actual, expected in zip(rows[1]["paired_changes_pct"], (2,4,1,5,2)):
+            self.assertAlmostEqual(actual, expected)
+        self.assertAlmostEqual(rows[1]["median_change_pct"], 2)
+        self.assertAlmostEqual(rows[1]["min_change_pct"], 1)
+        self.assertAlmostEqual(rows[1]["max_change_pct"], 5)
+
     def test_damage_off_rejects_non_direct_modes(self):
         result = self.summarize("0")
         self.assertNotEqual(result.returncode, 0, result.stdout + result.stderr)

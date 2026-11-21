@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+- G2-7: preflight whole-frame fallbacks, preserve GPUI replay provenance for cached damage signatures, measure signature and planner CPU cost with alternating matched-pair benchmarks, and buffer damage log records into single writes.
+
 - G0-3: add opt-in full-reference damage verification with window-local disable, and compare native GPU/CPU baselines and frame modes with damage off and on.
 
 - G2-4: add opt-in scissored Partial Metal frames with byte-exact magenta-prefill proofs for hover, caret, moving cards, transparency and encoder restarts.

@@ -625,3 +625,125 @@ mod verify_tests {
         crate::metal_renderer::MetalRenderer::test_damage_verify()
     }
 }
+
+fn replay_budget_proof() -> Result<()> {
+    let mut renderer = MetalRenderer::new_headless(Default::default())?;
+    renderer.damage.enabled_override = Some(true);
+    let size = gpui::size(DevicePixels(64), DevicePixels(64));
+    let target = retained::texture(&renderer.device, 64, 64)?;
+    let mut old = Scene::default();
+    old.with_fast_damage_clip_for_test(box_at(0., 0., 64., 64.), |s| {
+        s.insert_primitive(gpui::Quad {
+            bounds: box_at(0., 0., 64., 64.),
+            content_mask: gpui::ContentMask {
+                bounds: box_at(0., 0., 64., 64.),
+            },
+            background: gpui::red().into(),
+            ..Default::default()
+        });
+    });
+    old.finish();
+    let first = prepare(&mut renderer, &old, false);
+    assert_eq!(first.mode, Mode::Retained);
+    assert!(first.snapshot.as_ref().unwrap().signatures.is_empty());
+    assert_eq!(
+        renderer.damage.cache.hashed, 0,
+        "known whole frame must not hash"
+    );
+    let command = render(&mut renderer, &old, &target, size, first)?;
+    let expected = finish(&renderer, &command, &target)?;
+    let mut next = Scene::default();
+    next.replay(0..old.len(), &old);
+    next.finish();
+    let prepared = prepare(&mut renderer, &next, false);
+    assert_eq!(prepared.mode, Mode::Copy);
+    assert_eq!(
+        renderer.damage.cache.reused, 1,
+        "rounded compilation must preserve replay identity"
+    );
+    assert_eq!(
+        renderer.damage.cache.hashed, 1,
+        "only the new aggregate clip signature is hashed"
+    );
+    let command = render(&mut renderer, &next, &target, size, prepared)?;
+    assert_eq!(finish(&renderer, &command, &target)?, expected);
+    let resized = renderer.damage.choose(
+        &renderer.sprite_atlas,
+        &next,
+        gpui::size(DevicePixels(65), DevicePixels(64)),
+        1.,
+        renderer.opaque,
+        false,
+        true,
+    );
+    assert_eq!(resized.mode, Mode::Retained);
+    assert!(resized.snapshot.unwrap().signatures.is_empty());
+    assert_eq!(renderer.damage.cache.hashed, 0);
+    let scaled = renderer.damage.choose(
+        &renderer.sprite_atlas,
+        &next,
+        size,
+        2.,
+        renderer.opaque,
+        false,
+        true,
+    );
+    assert_eq!(scaled.mode, Mode::Retained);
+    assert_eq!(renderer.damage.cache.hashed, 0);
+    let sync = prepare(&mut renderer, &next, true);
+    assert_eq!(sync.mode, Mode::Direct);
+    assert_eq!(renderer.damage.cache.hashed, 0);
+    let mut tiles = Scene::default();
+    tiles.layers.frames.push(gpui::LayerFrame {
+        key: gpui::LayerKey(3),
+        generation: 0,
+        background: Default::default(),
+        tile_size: 64,
+        content: Scene::default().into(),
+        dirty_tiles: vec![],
+    });
+    assert_eq!(prepare(&mut renderer, &tiles, false).mode, Mode::Direct);
+    assert_eq!(
+        renderer.damage.cache.hashed, 0,
+        "unsupported tiles must not hash"
+    );
+    let prime = prepare(&mut renderer, &old, false);
+    let command = render(&mut renderer, &old, &target, size, prime)?;
+    finish(&renderer, &command, &target)?;
+    {
+        use gpui::PlatformAtlas as _;
+        let key = gpui::AtlasKey::Svg(gpui::RenderSvgParams {
+            path: "g2-7-loss".into(),
+            size: gpui::size(DevicePixels(4), DevicePixels(4)),
+        });
+        renderer
+            .sprite_atlas
+            .get_or_insert_with(key.clone(), &mut || {
+                Ok(Some((
+                    gpui::size(DevicePixels(4), DevicePixels(4)),
+                    std::borrow::Cow::Owned(vec![128; 16]),
+                )))
+            })?;
+        renderer.sprite_atlas.remove(&key);
+    }
+    assert_eq!(prepare(&mut renderer, &old, false).mode, Mode::Retained);
+    assert_eq!(
+        renderer.damage.cache.hashed, 0,
+        "atlas loss must precede hashing"
+    );
+    Ok(())
+}
+impl MetalRenderer {
+    pub fn test_damage_cpu_budget() -> Result<()> {
+        super::super::log::test_records();
+        let _serial = PROOF_LOCK.lock().unwrap();
+        objc2::rc::autoreleasepool(|_| Scene::with_fast_damage_provenance(replay_budget_proof))
+    }
+}
+#[cfg(test)]
+mod cpu_budget_tests {
+    #[test]
+    fn known_whole_frames_do_not_hash_and_clip_replay_reuses_signatures() -> anyhow::Result<()> {
+        crate::metal_renderer::MetalRenderer::test_damage_cpu_budget()
+    }
+}

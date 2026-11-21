@@ -34,14 +34,14 @@ PY
 }
 
 g0_summarize() {
-  python3 - "$1" "${RUSTUI_DAMAGE:-0}" <<'PY'
+  python3 - "$1" "${RUSTUI_DAMAGE:-0}" "${@:2}" <<'PY'
 import collections, json, math, statistics, sys
 from pathlib import Path
 root = Path(sys.argv[1])
 damage = sys.argv[2]
 assert damage in ("0", "1", "verify"), "RUSTUI_DAMAGE must be 0, 1 or verify"
 results = []
-for scene in ('idle', 'typing', 'hover', 'log', 'drag'):
+for scene in sys.argv[3:] or ('idle', 'typing', 'hover', 'log', 'drag'):
     markers, records = [], []
     for line in (root / f'{scene}-frames.log').read_text().splitlines():
         if line.startswith('RUSTUI_G0_LOG '):
@@ -71,9 +71,16 @@ for scene in ('idle', 'typing', 'hover', 'log', 'drag'):
             assert record['gpu_ms'] is not None, (scene, 'submitted frame needs GPU time')
     gpu = [r['gpu_ms'] for r in presents if r['mode'] != 'skip']
     assert all(math.isfinite(n) and n >= 0 for n in gpu)
+    damage_records = [r for r in records if r['event'] == 'damage_cpu']
+    damage_cpu = dict(samples=len(damage_records),
+                      signatures_mean_ms=statistics.mean(r['signatures_ms'] for r in damage_records) if damage_records else 0.0,
+                      plan_mean_ms=statistics.mean(r['plan_ms'] for r in damage_records) if damage_records else 0.0,
+                      total_mean_ms=statistics.mean(r['total_ms'] for r in damage_records) if damage_records else 0.0,
+                      hashed=sum(r['hashed'] for r in damage_records), reused=sum(r['reused'] for r in damage_records),
+                      reasons=dict(collections.Counter(r['reason'] for r in damage_records)))
     phases = {}
     for r in records:
-        if r['event'] != 'gpu':
+        if r['event'] not in ('gpu', 'damage_cpu'):
             phases.setdefault(r['event'], []).append(r['cpu_ms'])
     frames, draw = [], 0.0
     for r in records:
@@ -84,6 +91,7 @@ for scene in ('idle', 'typing', 'hover', 'log', 'drag'):
             draw = 0.0
     assert frames, (scene, 'missing CPU presents')
     results.append(dict(scene=scene, seconds=seconds, damage=damage, window=start, workload=end,
+                        damage_cpu=damage_cpu,
                         frame_mode_counts={mode: modes[mode] for mode in allowed},
                         frame_mode_samples=len(presents),
                         gpu_samples=len(gpu), gpu_mean_ms=statistics.mean(gpu) if gpu else 0.0,
@@ -94,7 +102,9 @@ for scene in ('idle', 'typing', 'hover', 'log', 'drag'):
 (root / 'summary.json').write_text(json.dumps(results, indent=2) + '\n')
 for row in results:
     print(f"{row['scene']:7} GPU {row['gpu_mean_ms']:.4f} ms/present "
-          f"CPU {row['cpu_mean_ms']:.4f} ms/attempt modes={row['frame_mode_counts']}")
+          f"CPU {row['cpu_mean_ms']:.4f} ms/attempt "
+          f"signatures {row['damage_cpu']['signatures_mean_ms']:.4f} ms plan {row['damage_cpu']['plan_mean_ms']:.4f} ms "
+          f"modes={row['frame_mode_counts']}")
 PY
 }
 
@@ -128,11 +138,72 @@ for row in rows:
 PY
 }
 
+g0_interleaved_summary() {
+  python3 - "$1" <<'PY'
+import json, math, statistics, sys
+from pathlib import Path
+root = Path(sys.argv[1])
+rows = []
+for scene in ('idle', 'typing', 'hover', 'log', 'drag'):
+    groups = {}
+    for mode in ('0', '1'):
+        records = [json.loads((root / scene / f'{run}-{mode}' / 'summary.json').read_text())
+                   for run in range(1, 6)]
+        assert all(len(r) == 1 and r[0]['scene'] == scene and r[0]['damage'] == mode for r in records)
+        values = [r[0]['cpu_mean_ms'] for r in records]
+        assert all(math.isfinite(value) and value > 0 for value in values)
+        median = statistics.median(values)
+        groups[mode] = dict(runs=values, median_ms=median)
+    off, on = groups['0'], groups['1']
+    changes = [(b / a - 1) * 100 for a, b in zip(off['runs'], on['runs'])]
+    passes = [b <= a * 1.03 for a, b in zip(off['runs'], on['runs'])]
+    verdict = 'PASS' if all(passes) else 'FAIL' if not any(passes) else 'INCONCLUSIVE'
+    row = dict(scene=scene, off=off, on=on, paired_changes_pct=changes,
+               median_change_pct=statistics.median(changes),
+               min_change_pct=min(changes), max_change_pct=max(changes), verdict=verdict)
+    rows.append(row)
+    print(f"{scene:7} median off={off['median_ms']:.6f} on={on['median_ms']:.6f} ms/attempt "
+          f"paired changes={[round(c, 3) for c in changes]} "
+          f"median={row['median_change_pct']:+.3f}% min={min(changes):+.3f}% "
+          f"max={max(changes):+.3f}% {verdict}", flush=True)
+(root / 'interleaved-summary.json').write_text(json.dumps(rows, indent=2) + '\n')
+PY
+}
+
+g0_interleaved() {
+  local scene run mode capture
+  local -a modes
+  shasum -a 256 "$CARGO_TARGET_DIR/release/rustui-lab" > "$g0_dir/binary.sha256"
+  for scene in "${g0_scenes[@]}"; do
+    for run in 1 2 3 4 5; do
+      if (( run % 2 )); then modes=(0 1); else modes=(1 0); fi
+      for mode in "${modes[@]}"; do
+        capture="$g0_dir/$scene/$run-$mode"
+        mkdir -p "$capture"
+        echo "Matched $scene pair $run/5 damage=$mode (60 seconds)"
+        echo "$scene $run $mode" >> "$g0_dir/run-order.txt"
+        RUSTUI_DAMAGE="$mode" g0_launch "$scene" "$capture/$scene-frames.log"
+        g0_wait "$capture/$scene-frames.log"
+        RUSTUI_DAMAGE="$mode" g0_summarize "$capture" "$scene"
+      done
+    done
+  done
+  shasum -a 256 --check "$g0_dir/binary.sha256"
+  g0_interleaved_summary "$g0_dir"
+}
+
 if [[ "${BASH_SOURCE[0]}" == "$0" ]]; then
+  g0_interleave=0
+  if [[ "${1:-}" == "--interleaved" ]]; then g0_interleave=1; shift; fi
   g0_build
   mkdir -p target/headstart/performance
   g0_output "${1:-}"
   trap 'if [[ -n "${g0_app_pid:-}" ]]; then kill "$g0_app_pid" 2>/dev/null || true; fi' EXIT INT TERM
+  if [[ "$g0_interleave" == 1 ]]; then
+    g0_interleaved
+    echo "Results: $g0_dir"
+    exit 0
+  fi
   for scene in "${g0_scenes[@]}"; do
     echo "Measuring $scene for 60 seconds"
     g0_launch "$scene" "$g0_dir/$scene-frames.log"

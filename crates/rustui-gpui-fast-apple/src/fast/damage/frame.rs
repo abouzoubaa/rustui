@@ -89,12 +89,14 @@ struct Snapshot {
     geometry: Geometry,
     signatures: Vec<Sig>,
     generation: u64,
+    deferred: Option<Box<Scene>>,
 }
 #[derive(Default)]
 pub(crate) struct State {
     target: Option<Target>,
     snapshot: Option<Snapshot>,
     previous_large: bool,
+    cache: plan::Cache,
     pub(crate) failed: Option<Arc<super::verify::Status>>,
     pub(crate) last_mode: Mode,
     #[cfg(any(test, feature = "test-support"))]
@@ -157,6 +159,7 @@ impl State {
         self.target = None;
         self.snapshot = None;
         self.previous_large = false;
+        self.cache.clear();
     }
     pub(crate) fn resized(&mut self, size: Size<DevicePixels>) {
         if self
@@ -186,43 +189,103 @@ impl State {
             || size.width.0 <= 0
             || size.height.0 <= 0
         {
+            let _cpu = super::cpu::Measure::new("off_path");
+            self.invalidate();
+            return Prepared::direct();
+        }
+        let mut cpu = super::cpu::Measure::new("off_path");
+        if !plan::can_plan(scene) {
+            cpu.reason = "unsupported";
             self.invalidate();
             return Prepared::direct();
         }
         let geometry = Geometry::new(size, scale, opaque);
-        let old = self.snapshot.as_ref().filter(|s| s.geometry == geometry);
-        let uploads = renderer_atlas.damage_uploads(old.map_or(0, |s| s.generation));
+        let previous_generation = self
+            .snapshot
+            .as_ref()
+            .filter(|s| s.geometry == geometry)
+            .map_or(0, |s| s.generation);
+        let uploads = renderer_atlas.damage_uploads(previous_generation);
         self.failed = Some(uploads.status.clone());
         if uploads.status.disabled.load(Ordering::Acquire) {
+            cpu.reason = "disabled";
             self.invalidate();
             return Prepared::direct();
         }
-        // An expired atlas journal requires a whole draw; signatures use an empty
-        // upload set only to establish a fresh baseline for the following frame.
-        let empty = Default::default();
-        let Some(signatures) = plan::signatures(
+        let comparable = self
+            .snapshot
+            .as_ref()
+            .is_some_and(|s| s.geometry == geometry)
+            && uploads.tiles.is_some()
+            && self.target.as_ref().is_some_and(|t| t.valid);
+        if !comparable {
+            cpu.reason = if uploads.tiles.is_none() {
+                "atlas_lost"
+            } else {
+                "prime"
+            };
+            if self
+                .snapshot
+                .as_ref()
+                .is_none_or(|s| s.geometry != geometry)
+            {
+                self.target = None;
+            }
+            self.cache.clear();
+            return Prepared {
+                mode: Mode::Retained,
+                snapshot: Some(Snapshot {
+                    geometry,
+                    signatures: Vec::new(),
+                    generation: uploads.generation,
+                    deferred: Some(Box::new(scene.fast_damage_snapshot())),
+                }),
+                // This is a whole draw, preserving the large-change hysteresis.
+                large: true,
+            };
+        }
+        let signature_start = std::time::Instant::now();
+        if let Some(deferred) = self.snapshot.as_mut().unwrap().deferred.take() {
+            self.cache.begin();
+            let empty = Default::default();
+            let Some(old) =
+                plan::signatures_cached(&deferred, &empty, &inputs::dynamic, &mut self.cache)
+            else {
+                self.invalidate();
+                return Prepared::direct();
+            };
+            self.snapshot.as_mut().unwrap().signatures = old;
+            cpu.hashed += self.cache.hashed;
+            cpu.reused += self.cache.reused;
+            self.cache.finish();
+        }
+        self.cache.begin();
+        let Some(signatures) = plan::signatures_cached(
             scene,
-            uploads.tiles.as_ref().unwrap_or(&empty),
+            uploads.tiles.as_ref().unwrap(),
             &inputs::dynamic,
+            &mut self.cache,
         ) else {
             self.invalidate();
             return Prepared::direct();
         };
-        let change = old.and_then(|old| {
-            uploads
-                .tiles
-                .as_ref()
-                .and_then(|_| plan::plan(&old.signatures, &signatures, geometry.view()))
-        });
+        cpu.hashed += self.cache.hashed;
+        cpu.reused += self.cache.reused;
+        self.cache.finish();
+        cpu.signatures_ms = signature_start.elapsed().as_secs_f64() * 1000.;
+        let plan_start = std::time::Instant::now();
+        let change = plan::plan(
+            &self.snapshot.as_ref().unwrap().signatures,
+            &signatures,
+            geometry.view(),
+        );
+        cpu.plan_ms = plan_start.elapsed().as_secs_f64() * 1000.;
         let damage_box = change
             .as_ref()
             .and_then(|p| p.damage.iter().copied().reduce(|a, b| a.union(&b)))
             .map(|r| r.pixels().and(&geometry.view()));
         let large = change.as_ref().is_none_or(|p| p.shift.is_some())
             || damage_box.is_some_and(|r| r.area() > plan::MAX_DAMAGE * geometry.view().area());
-        if old.is_none() {
-            self.target = None;
-        }
         let valid = self.target.as_ref().is_some_and(|t| t.valid);
         let mode = match change {
             Some(p) if p.shift.is_none() && p.damage.is_empty() && !required && valid => Mode::Same,
@@ -230,15 +293,17 @@ impl State {
             Some(p) if !large && p.shift.is_none() && valid && damage_box.is_some() => {
                 Mode::Partial(damage_box.unwrap())
             }
-            _ if large && self.previous_large && old.is_some() => Mode::Direct,
+            _ if large && self.previous_large => Mode::Direct,
             _ => Mode::Retained,
         };
+        cpu.reason = mode.label();
         Prepared {
             mode,
             snapshot: Some(Snapshot {
                 geometry,
                 signatures,
                 generation: uploads.generation,
+                deferred: None,
             }),
             large,
         }
@@ -267,6 +332,7 @@ impl State {
 }
 pub(crate) fn choose(renderer: &mut MetalRenderer, scene: &Scene) -> Prepared {
     if !renderer.damage.enabled() {
+        let _cpu = super::cpu::Measure::new("off");
         renderer.damage.invalidate();
         return Prepared::direct();
     }

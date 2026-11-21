@@ -11,3 +11,7 @@ pub(crate) mod retained;
 pub(crate) mod partial;
 
 pub(crate) mod verify;
+
+pub(crate) mod cpu;
+
+pub(crate) mod log;

@@ -18,6 +18,7 @@
 pub(crate) mod a11y;
 pub(crate) mod composition;
 pub(crate) mod dependencies;
+pub(crate) mod damage;
 pub(crate) mod dispatch;
 pub(crate) mod dynamic_textures;
 pub(crate) mod em_metrics;
