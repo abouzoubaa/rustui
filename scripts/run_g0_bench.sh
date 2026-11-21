@@ -12,7 +12,7 @@ g0_build() {
 }
 
 g0_launch() {
-  RUSTUI_DAMAGE="${RUSTUI_DAMAGE:-0}" RUSTUI_FRAME_LOG=1 RUSTUI_FRAME_PROFILE=1 \
+  RUSTUI_DAMAGE="${RUSTUI_DAMAGE:-0}" RUSTUI_FRAME_LOG=buffered RUSTUI_FRAME_PROFILE=1 \
     "$CARGO_TARGET_DIR/release/rustui-lab" --g0-scene "$1" --duration 60 > "$2" 2>&1 &
   g0_app_pid=$!
 }
@@ -83,6 +83,8 @@ for scene in ('idle', 'typing', 'hover', 'log', 'drag'):
             frames.append(draw + r['cpu_ms'])
             draw = 0.0
     assert frames, (scene, 'missing CPU presents')
+    process_cpu_s = end['cpu_user_s'] + end['cpu_sys_s']
+    assert math.isfinite(process_cpu_s) and process_cpu_s > 0, (scene, 'missing process CPU')
     results.append(dict(scene=scene, seconds=seconds, damage=damage, window=start, workload=end,
                         frame_mode_counts={mode: modes[mode] for mode in allowed},
                         frame_mode_samples=len(presents),
@@ -90,11 +92,16 @@ for scene in ('idle', 'typing', 'hover', 'log', 'drag'):
                         gpu_p95_ms=sorted(gpu)[math.ceil(len(gpu)*.95)-1] if gpu else None,
                         gpu_ms_per_second=sum(gpu)/seconds,
                         cpu_present_samples=len(frames), cpu_mean_ms=statistics.mean(frames),
+                        process_cpu_user_s=end['cpu_user_s'], process_cpu_sys_s=end['cpu_sys_s'],
+                        process_cpu_s=process_cpu_s, process_cpu_s_per_attempt=process_cpu_s/len(frames),
+                        frames_over_8_3_ms=sum(value > 8.3 for value in frames),
                         cpu_phases_mean_ms={k: statistics.mean(v) for k,v in phases.items()}))
 (root / 'summary.json').write_text(json.dumps(results, indent=2) + '\n')
 for row in results:
     print(f"{row['scene']:7} GPU {row['gpu_mean_ms']:.4f} ms/present "
-          f"CPU {row['cpu_mean_ms']:.4f} ms/attempt modes={row['frame_mode_counts']}")
+          f"CPU {row['cpu_mean_ms']:.4f} ms/attempt "
+          f"process CPU {1000*row['process_cpu_s_per_attempt']:.4f} ms/attempt "
+          f">8.3 ms={row['frames_over_8_3_ms']} modes={row['frame_mode_counts']}")
 PY
 }
 

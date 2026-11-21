@@ -8,6 +8,7 @@ publish.workspace = true
 description = "Compatibility launcher for RustUI Playground"
 
 [dependencies]
+libc = "=0.2.190"
 rustui.workspace = true
 rustui-playground = { path = "../rustui-playground" }
 
