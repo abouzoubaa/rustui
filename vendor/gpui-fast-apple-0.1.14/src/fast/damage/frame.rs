@@ -25,13 +25,14 @@ use std::{
     },
 };
 
-#[derive(Clone, Copy, Debug, Default, PartialEq, Eq)]
+#[derive(Clone, Copy, Debug, Default, PartialEq)]
 pub(crate) enum Mode {
     #[default]
     Direct,
     Retained,
     Copy,
     Same,
+    Partial(Area),
 }
 impl Mode {
     pub(crate) fn label(self) -> &'static str {
@@ -40,6 +41,7 @@ impl Mode {
             Self::Retained => "retained",
             Self::Copy => "copy",
             Self::Same => "skip",
+            Self::Partial(_) => "partial",
         }
     }
 }
@@ -84,6 +86,12 @@ pub(crate) struct State {
     enabled_override: Option<bool>,
     #[cfg(any(test, feature = "test-support"))]
     fail_allocation: bool,
+    #[cfg(any(test, feature = "test-support"))]
+    magenta_prefill: bool,
+    #[cfg(any(test, feature = "test-support"))]
+    last_partial_passes: usize,
+    #[cfg(any(test, feature = "test-support"))]
+    last_magenta_prefills: usize,
 }
 pub(crate) struct Prepared {
     pub(crate) mode: Mode,
@@ -164,7 +172,12 @@ impl State {
                 .as_ref()
                 .and_then(|_| plan::plan(&old.signatures, &signatures, geometry.view()))
         });
-        let large = change.as_ref().is_none_or(|p| p.shift.is_some());
+        let damage_box = change
+            .as_ref()
+            .and_then(|p| p.damage.iter().copied().reduce(|a, b| a.union(&b)))
+            .map(|r| r.pixels().and(&geometry.view()));
+        let large = change.as_ref().is_none_or(|p| p.shift.is_some())
+            || damage_box.is_some_and(|r| r.area() > plan::MAX_DAMAGE * geometry.view().area());
         if old.is_none() {
             self.target = None;
         }
@@ -172,6 +185,9 @@ impl State {
         let mode = match change {
             Some(p) if p.shift.is_none() && p.damage.is_empty() && !required && valid => Mode::Same,
             Some(p) if p.shift.is_none() && p.damage.is_empty() && valid => Mode::Copy,
+            Some(p) if !large && p.shift.is_none() && valid && damage_box.is_some() => {
+                Mode::Partial(damage_box.unwrap())
+            }
             _ if large && self.previous_large && old.is_some() => Mode::Direct,
             _ => Mode::Retained,
         };
@@ -270,7 +286,7 @@ pub(crate) fn render(
                 }
                 renderer.render_frame(scene, target, size)?
             }
-            Mode::Retained | Mode::Copy => {
+            Mode::Retained | Mode::Copy | Mode::Partial(_) => {
                 let kept = state.target.as_mut().context("missing retained texture")?;
                 let command = if mode == Mode::Copy {
                     anyhow::ensure!(kept.valid, "copy of invalid retained pixels");
@@ -278,6 +294,36 @@ pub(crate) fn render(
                         .command_queue
                         .commandBuffer()
                         .context("creating copy command buffer")?
+                } else if let Mode::Partial(area) = mode {
+                    anyhow::ensure!(kept.valid, "partial over invalid retained pixels");
+                    let magenta = {
+                        #[cfg(any(test, feature = "test-support"))]
+                        {
+                            state.magenta_prefill
+                        }
+                        #[cfg(not(any(test, feature = "test-support")))]
+                        {
+                            false
+                        }
+                    };
+                    let scope = super::partial::Scope::new(
+                        kept.texture.clone(),
+                        area,
+                        renderer.damage_pipelines.clone(),
+                        magenta,
+                    )?;
+                    let command = renderer.render_frame(scene, &kept.texture, size)?;
+                    let stats = scope.finish();
+                    anyhow::ensure!(
+                        stats.encoders > 0,
+                        "partial target never reached its encoder hook"
+                    );
+                    #[cfg(any(test, feature = "test-support"))]
+                    {
+                        state.last_partial_passes = stats.encoders;
+                        state.last_magenta_prefills = stats.prefills;
+                    }
+                    command
                 } else {
                     renderer.render_frame(scene, &kept.texture, size)?
                 };
@@ -325,3 +371,5 @@ pub(crate) fn render(
 mod proof;
 #[cfg(test)]
 pub(crate) use proof::test_skip_leaves_drawable_unused;
+
+pub(crate) use super::partial::{pass_clear, pass_scissor};

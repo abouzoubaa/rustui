@@ -1550,6 +1550,7 @@ pub(crate) fn new_command_encoder_for_texture(
     viewport_size: Size<DevicePixels>,
     clear_color: Option<MTLClearColor>,
 ) -> Result<Retained<ProtocolObject<dyn MTLRenderCommandEncoder>>> {
+    let clear_color = crate::fast::damage::frame::pass_clear(texture, clear_color);
     let render_pass_descriptor = MTLRenderPassDescriptor::new();
     // SAFETY: Index zero is within the render pass's color attachment array.
     let color_attachment = unsafe {
@@ -1578,6 +1579,7 @@ pub(crate) fn new_command_encoder_for_texture(
         zfar: 1.0,
     });
     crate::fast::rounded_clip::default_mask(&command_encoder);
+    crate::fast::damage::frame::pass_scissor(texture, &command_encoder);
     Ok(command_encoder)
 }
 

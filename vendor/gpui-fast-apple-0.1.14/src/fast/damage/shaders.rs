@@ -13,6 +13,7 @@ use objc2_metal::{
     MTLTexture,
 };
 
+#[derive(Clone)]
 pub(crate) struct Pipelines {
     copy: Retained<ProtocolObject<dyn MTLRenderPipelineState>>,
     clear: Retained<ProtocolObject<dyn MTLRenderPipelineState>>,
@@ -90,8 +91,17 @@ impl Pipelines {
         );
         let encoder =
             crate::metal_renderer::new_command_encoder_for_texture(buffer, target, size, None)?;
-        encoder.setRenderPipelineState(&self.clear);
         encoder.setScissorRect(rect);
+        self.clear_in_encoder(&encoder, color);
+        encoder.endEncoding();
+        Ok(())
+    }
+    pub(crate) fn clear_in_encoder(
+        &self,
+        encoder: &ProtocolObject<dyn MTLRenderCommandEncoder>,
+        color: [f32; 4],
+    ) {
+        encoder.setRenderPipelineState(&self.clear);
         // SAFETY: Metal copies all sixteen bytes of this live float4; three vertices cover the viewport.
         unsafe {
             encoder.setFragmentBytes_length_atIndex(
@@ -101,8 +111,6 @@ impl Pipelines {
             );
             encoder.drawPrimitives_vertexStart_vertexCount(MTLPrimitiveType::Triangle, 0, 3);
         }
-        encoder.endEncoding();
-        Ok(())
     }
 }
 
