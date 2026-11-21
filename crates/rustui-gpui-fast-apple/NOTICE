@@ -8,3 +8,10 @@ Havunen and the gpui-ce contributors.
 RustUI modifications adapt the copy/clear passes and pipeline construction to
 objc2-metal. See the attribution headers in src/fast/damage/shaders.rs and
 src/shaders.metal. The Apache-2.0 license is included in LICENSE.
+
+Source: longbridge/gpui-fast
+Commit: 2002081b4a61249a1cef2b8a552f6ba0998d9f52
+Path: crates/gpui_windows/src/fast/partial.rs
+Copyright 2022 - 2025 Zed Industries, Inc.; Copyright 2026 Longbridge.
+The platform-independent planner is adapted in src/fast/damage/plan.rs;
+Metal upload observation is adapted in inputs.rs. Licensed under Apache-2.0.

@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+- G2-2: port GPUI Fast's damage planner and tests, with bounded Metal atlas upload observations and conservative surface/scroll-tile fallbacks.
+
 - G2-1: add unblended Metal damage copy/clear pipelines and headless byte-exact copy and scissor-boundary proofs.
 
 - G1-1: publish a scoped presentation-required hint for system requests and sustained fast input, with a conservative default outside frame requests.

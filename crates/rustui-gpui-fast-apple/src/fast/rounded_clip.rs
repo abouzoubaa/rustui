@@ -33,7 +33,7 @@ struct Clip {
     vertical: [f32; 4],
 }
 
-fn group(scene: &Scene, texture: AtlasTextureId) -> Option<&LayerFrame> {
+pub(crate) fn group(scene: &Scene, texture: AtlasTextureId) -> Option<&LayerFrame> {
     let key = texture.index.checked_sub(0xF000_0000)?;
     if texture.index < CLIP_TEXTURE_BASE {
         return None;
