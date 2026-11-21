@@ -534,14 +534,14 @@ impl View for TextFieldView {
                 .validation
                 .update(&value_for_state, result_for_state.as_ref(), bound_valid)
         });
-        if needs_valid_write {
-            if let (Some(binding), Some(result)) = (&self.valid_binding, &validation_result) {
-                let writer = context.binding_writer(binding.clone());
-                let valid = result.is_ok();
-                context.update_entity(&retained, move |_, _, cx| {
-                    cx.defer(move |cx| writer(valid, cx));
-                });
-            }
+        if needs_valid_write
+            && let (Some(binding), Some(result)) = (&self.valid_binding, &validation_result)
+        {
+            let writer = context.binding_writer(binding.clone());
+            let valid = result.is_ok();
+            context.update_entity(&retained, move |_, _, cx| {
+                cx.defer(move |cx| writer(valid, cx));
+            });
         }
 
         let show_clear_button =
@@ -1008,7 +1008,7 @@ mod tests {
 
     #[test]
     fn clear_button_participates_in_keyboard_tab_traversal() {
-        assert!(CLEAR_BUTTON_TAB_STOP);
+        const { assert!(CLEAR_BUTTON_TAB_STOP) };
     }
 
     #[test]

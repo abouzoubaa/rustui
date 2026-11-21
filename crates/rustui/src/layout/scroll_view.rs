@@ -321,7 +321,7 @@ impl<V: View> View for ScrollViewView<V> {
                 let id = id.clone();
                 let axis = self.axis;
                 let observed = handle.clone();
-                viewport = viewport.on_scroll_wheel(move |event, _, _| {
+                viewport = viewport.on_scroll(move |event, _, _| {
                     eprintln!("RUSTUI_SCROLL_DIAGNOSTICS phase=wheel id={} axis={axis:?} position={:?} delta={:?}",
                         id.as_str(), event.position, event.delta);
                     log_scroll_snapshot("wheel-handler", &id, axis, &observed);

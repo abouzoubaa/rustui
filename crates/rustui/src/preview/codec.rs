@@ -239,10 +239,10 @@ fn normalize_property_defaults(
     properties: &mut std::collections::BTreeMap<PropertyId, PropertySchema>,
 ) -> Result<(), PreviewError> {
     for (id, schema) in properties {
-        if schema.kind == PropertyKind::Number {
-            if let Some(PropertyValue::Integer(value)) = &schema.default {
-                schema.default = Some(PropertyValue::Number(exact_integer_as_number(*value, id)?));
-            }
+        if schema.kind == PropertyKind::Number
+            && let Some(PropertyValue::Integer(value)) = &schema.default
+        {
+            schema.default = Some(PropertyValue::Number(exact_integer_as_number(*value, id)?));
         }
     }
     Ok(())
@@ -260,10 +260,9 @@ pub(super) fn normalize_numeric_properties(
             .properties
             .get(id)
             .is_some_and(|property| property.kind == PropertyKind::Number)
+            && let PropertyValue::Integer(integer) = value
         {
-            if let PropertyValue::Integer(integer) = value {
-                *value = PropertyValue::Number(exact_integer_as_number(*integer, id)?);
-            }
+            *value = PropertyValue::Number(exact_integer_as_number(*integer, id)?);
         }
     }
     Ok(())

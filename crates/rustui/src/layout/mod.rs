@@ -21,6 +21,21 @@ pub(super) fn validate_gap_span(gap: f32, child_count: usize, stack: &str) {
     );
 }
 
+pub use card::{Card, CardView};
+pub use container::{Container, ContainerView, Surface};
+pub use geometry::{GeometryReader, GeometrySize};
+pub use hstack::{HStack, VerticalAlignment};
+pub use lazy_grid::{LazyGrid, LazyGridItem};
+pub use scroll_view::{ScrollAxis, ScrollView, ScrollViewView};
+pub use spacer::{Spacer, SpacerAxis, SpacerView};
+pub use split_view::{SplitPanel, SplitView};
+pub use vstack::{HorizontalAlignment, VStack};
+
+pub use grid::Grid;
+pub use zstack::{ZStack, ZStackAlignment};
+
+pub use group::Group;
+
 #[cfg(test)]
 mod tests {
     use super::validate_gap_span;
@@ -38,18 +53,3 @@ mod tests {
         );
     }
 }
-
-pub use card::{Card, CardView};
-pub use container::{Container, ContainerView, Surface};
-pub use geometry::{GeometryReader, GeometrySize};
-pub use hstack::{HStack, VerticalAlignment};
-pub use lazy_grid::{LazyGrid, LazyGridItem};
-pub use scroll_view::{ScrollAxis, ScrollView, ScrollViewView};
-pub use spacer::{Spacer, SpacerAxis, SpacerView};
-pub use split_view::{SplitPanel, SplitView};
-pub use vstack::{HorizontalAlignment, VStack};
-
-pub use grid::Grid;
-pub use zstack::{ZStack, ZStackAlignment};
-
-pub use group::Group;

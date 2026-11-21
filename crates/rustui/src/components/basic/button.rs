@@ -1,7 +1,4 @@
-use gpui::{
-    AnyElement, FontWeight, InteractiveElement as _, IntoElement, ParentElement, SharedString,
-    StatefulInteractiveElement as _, Styled, div, px,
-};
+use gpui::{AnyElement, FontWeight, IntoElement, ParentElement, SharedString, Styled, div, px};
 use gpui_component::{
     Disableable as _,
     button::{Button as GpuiButton, ButtonVariant, ButtonVariants as _},
@@ -32,6 +29,10 @@ impl ButtonStyle {
     }
 }
 
+#[expect(
+    clippy::too_many_arguments,
+    reason = "The shared button adapter keeps explicit accessibility and focus options"
+)]
 pub(crate) fn themed_button(
     context: &RenderContext<'_>,
     id: SharedString,

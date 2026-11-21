@@ -865,7 +865,7 @@ mod tests {
         };
         assert!(h.edit(&s, &[bad, remove_cycle]).is_err());
         assert_eq!(h.document().unwrap().nodes.len(), 2);
-        assert_eq!(
+        assert!(
             h.edit(
                 &CompositionStamp {
                     revision: 1,
@@ -873,8 +873,7 @@ mod tests {
                 },
                 &[]
             )
-            .is_err(),
-            true
+            .is_err()
         );
     }
 

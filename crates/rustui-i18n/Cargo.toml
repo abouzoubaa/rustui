@@ -20,3 +20,6 @@ icu_datetime = { version = "=2.4.0", default-features = false, features = ["comp
 # Fluent's concurrent memoizer requires ICU data payloads to use Arc.
 icu_provider = { version = "=2.4.0", default-features = false, features = ["sync"] }
 writeable = { version = "=0.6.4", default-features = false, features = ["alloc"] }
+
+[lints]
+workspace = true

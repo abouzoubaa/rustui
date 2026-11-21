@@ -329,7 +329,7 @@ pub fn resolve_component_style_with(
 }
 
 pub(super) fn resolve_component_style_from_record(
-    document: &ThemeDocument,
+    _document: &ThemeDocument,
     component: &str,
     part: &str,
     selector: &ButtonStyleSelector,

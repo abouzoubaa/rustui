@@ -139,6 +139,10 @@ fn make_entry(
     }
 }
 
+#[expect(
+    clippy::too_many_arguments,
+    reason = "A transition entry carries its existing independent lifecycle handles"
+)]
 fn render_entry(
     key: Identity,
     render: Renderer,
@@ -689,7 +693,7 @@ mod focus_tests {
         runtime::ComponentHost,
         view::{EmptyView, Keyed, View},
     };
-    use gpui::{AppContext as _, Entity, StatefulInteractiveElement as _};
+    use gpui::{AppContext as _, Entity};
     use gpui_base::Root;
     struct FocusNode {
         id: &'static str,

@@ -17,6 +17,9 @@ use crate::{
     view::{EmptyView, RenderContext, View},
 };
 
+type SelectionWriter = Rc<dyn Fn(String, &mut App)>;
+type SelectionWriterSlot = Rc<RefCell<Option<SelectionWriter>>>;
+
 type RetainedComboBoxState = SelectState<SearchableVec<super::SelectOption>>;
 
 #[derive(Clone, Debug, PartialEq, Eq)]
@@ -45,7 +48,7 @@ struct RetainedComboBox {
     options: Vec<super::SelectOption>,
     owner_value: String,
     disabled: bool,
-    binding_writer: Rc<RefCell<Option<Rc<dyn Fn(String, &mut App)>>>>,
+    binding_writer: SelectionWriterSlot,
 }
 
 fn with_current_writer<T: Clone, E, R>(
@@ -473,8 +476,8 @@ fn record_confirmed_selection(owner_value: &mut String, confirmed_value: &str) {
 }
 
 fn refresh_binding_writer(
-    binding_writer: &RefCell<Option<Rc<dyn Fn(String, &mut App)>>>,
-    writer: Rc<dyn Fn(String, &mut App)>,
+    binding_writer: &RefCell<Option<SelectionWriter>>,
+    writer: SelectionWriter,
 ) {
     *binding_writer.borrow_mut() = Some(writer);
 }
@@ -758,8 +761,8 @@ mod tests {
 #[test]
 fn same_identity_rerender_replaces_the_confirm_binding_writer() {
     let binding_writer = RefCell::new(None);
-    let initial: Rc<dyn Fn(String, &mut App)> = Rc::new(|_, _| {});
-    let latest: Rc<dyn Fn(String, &mut App)> = Rc::new(|_, _| {});
+    let initial: SelectionWriter = Rc::new(|_, _| {});
+    let latest: SelectionWriter = Rc::new(|_, _| {});
     refresh_binding_writer(&binding_writer, initial.clone());
     refresh_binding_writer(&binding_writer, latest.clone());
     assert!(Rc::ptr_eq(

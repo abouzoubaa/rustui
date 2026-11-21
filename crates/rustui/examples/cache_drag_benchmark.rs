@@ -27,6 +27,8 @@ use serde_json::{Value, json};
 const TIMEOUT: Duration = Duration::from_secs(120);
 const IDS: [char; 3] = ['A', 'B', 'C'];
 
+type DragChildren = Rc<RefCell<Vec<(char, gpui::WeakEntity<ViewHost<DragLeaf>>)>>>;
+
 #[derive(Clone, Copy)]
 struct DragId(char);
 
@@ -47,7 +49,7 @@ struct Root {
     order: Vec<char>,
     local: Rc<RefCell<Vec<(char, u32)>>>,
     owner: Rc<RefCell<Option<gpui::WeakEntity<ViewHost<Root>>>>>,
-    children: Rc<RefCell<Vec<(char, gpui::WeakEntity<ViewHost<DragLeaf>>)>>>,
+    children: DragChildren,
     moves: u32,
     result: Rc<RefCell<Option<Value>>>,
     active_moves: Rc<RefCell<Vec<Value>>>,
@@ -104,7 +106,7 @@ struct DragLeaf {
     id: char,
     local: u32,
     owner: Rc<RefCell<Option<gpui::WeakEntity<ViewHost<Root>>>>>,
-    children: Rc<RefCell<Vec<(char, gpui::WeakEntity<ViewHost<DragLeaf>>)>>>,
+    children: DragChildren,
     local_values: Rc<RefCell<Vec<(char, u32)>>>,
     result: Rc<RefCell<Option<Value>>>,
     active_moves: Rc<RefCell<Vec<Value>>>,

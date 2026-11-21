@@ -1,5 +1,5 @@
 //! Opt-in normal-input playback for the native scrolling comparison.
-use rustui::gpui::{self, AppContext as _};
+use rustui::gpui;
 use rustui::view::{EmptyView, RenderContext, View};
 use std::time::{Duration, Instant};
 
@@ -90,20 +90,6 @@ pub(crate) fn start(app: &mut gpui::App) {
     .detach();
 }
 
-#[cfg(test)]
-mod tests {
-    use super::*;
-
-    #[test]
-    fn playback_uses_workload_coordinates_and_symmetric_distances() {
-        let position = scroll_position(gpui::size(gpui::px(1400.0), gpui::px(1000.0)));
-        assert_eq!(position, gpui::point(gpui::px(1050.0), gpui::px(650.0)));
-        for panel in ["collection", "list", "keyed", "editor", "grid"] {
-            assert!(scroll_distance(panel) > 30_000.0);
-        }
-    }
-}
-
 /// Transparent geometry probe used only by the separate pixel-validation pass.
 pub(crate) fn measured<V: View>(panel: impl Into<String>, child: V) -> impl View {
     Measured {
@@ -188,5 +174,19 @@ impl gpui::Element for Probe {
         cx: &mut gpui::App,
     ) {
         self.child.paint(window, cx);
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn playback_uses_workload_coordinates_and_symmetric_distances() {
+        let position = scroll_position(gpui::size(gpui::px(1400.0), gpui::px(1000.0)));
+        assert_eq!(position, gpui::point(gpui::px(1050.0), gpui::px(650.0)));
+        for panel in ["collection", "list", "keyed", "editor", "grid"] {
+            assert!(scroll_distance(panel) > 30_000.0);
+        }
     }
 }

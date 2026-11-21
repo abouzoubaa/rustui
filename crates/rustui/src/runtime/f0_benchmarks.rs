@@ -15,8 +15,7 @@ use crate::{
     runtime::ComponentHost,
     view::View,
 };
-use gpui::AppContext as _;
-use rustui_core::{Binding, Identity};
+use rustui_core::Binding;
 
 fn activate_test_theme(cx: &mut gpui::TestAppContext) {
     let theme = crate::theme::parse_theme(include_str!(concat!(
@@ -91,7 +90,7 @@ fn f0_long_list_scroll_benchmark(cx: &mut gpui::TestAppContext) {
     let rows_before = built_rows.load(Ordering::Relaxed);
     for sample in 0..300 {
         let start = Instant::now();
-        window.simulate_event(gpui::ScrollWheelEvent {
+        window.simulate_event(gpui::ScrollEvent {
             position: gpui::point(gpui::px(200.), gpui::px(200.)),
             delta: gpui::ScrollDelta::Pixels(gpui::point(
                 gpui::px(0.),

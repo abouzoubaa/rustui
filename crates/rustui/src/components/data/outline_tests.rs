@@ -24,9 +24,9 @@ fn controlled_expansion_overrides_declarations_and_keeps_hidden_branch_ids() {
     let expanded = valid_expanded_branches(&nodes, &ids(&["nested", "leaf", "gone"]));
     assert_eq!(expanded, ids(&["nested"]));
     let expansion = controlled_expansion(&nodes, &expanded);
-    assert_eq!(expansion["root"], false);
-    assert_eq!(expansion["nested"], true);
-    assert_eq!(expansion["leaf"], false);
+    assert!(!expansion["root"]);
+    assert!(expansion["nested"]);
+    assert!(!expansion["leaf"]);
     assert_eq!(
         visible_controlled_selection(&nodes, Some("leaf"), &expanded),
         None

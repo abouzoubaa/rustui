@@ -221,10 +221,9 @@ impl<S: gpui::AssetSource> gpui::AssetSource for EmbeddedAssetSource<S> {
         if let Some(name) = remaining
             .and_then(|suffix| suffix.split('/').next())
             .filter(|name| !name.is_empty())
+            && !assets.iter().any(|asset| asset.as_ref() == name)
         {
-            if !assets.iter().any(|asset| asset.as_ref() == name) {
-                assets.push(name.into());
-            }
+            assets.push(name.into());
         }
         Ok(assets)
     }
@@ -300,6 +299,7 @@ fn tree_confirm_key_binding() -> KeyBinding {
 
 /// Configures and runs one root RustUI window.
 #[must_use]
+#[derive(Default)]
 pub struct RustUI {
     window_options: WindowOptions,
     window_size: Option<(f32, f32)>,
@@ -447,19 +447,6 @@ impl RustUI {
                 Err(error) => handle_window_error(error, on_window_error, cx),
             }
         });
-    }
-}
-
-impl Default for RustUI {
-    fn default() -> Self {
-        Self {
-            window_options: WindowOptions::default(),
-            window_size: None,
-            on_launch: None,
-            on_window_error: None,
-            asset_setup: None,
-            environment: EnvironmentValues::default(),
-        }
     }
 }
 

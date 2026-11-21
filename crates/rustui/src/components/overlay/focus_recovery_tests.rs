@@ -695,7 +695,7 @@ fn sheet_close_button_uses_french_catalog_label(cx: &mut gpui::TestAppContext) {
 fn tracked_dialog_closes_specific_opening_and_preserves_focus_chain(cx: &mut gpui::TestAppContext) {
     use gpui_component::TrackedDialogExt as _;
     let (_, window, _, _, behind) = setup(cx, ModalKind::Dialog);
-    window.update(|window, app| window.activate_window());
+    window.update(|window, _app| window.activate_window());
     draw(window);
     window.update(|window, app| window.focus(&behind, app));
     let lower = window.update(|window, app| {

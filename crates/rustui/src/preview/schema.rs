@@ -189,7 +189,7 @@ pub(super) fn validate_preview_with_validated_catalog(
         });
     }
 
-    for (property_id, _) in &document.properties {
+    for property_id in document.properties.keys() {
         if !schema.properties.contains_key(property_id) {
             return Err(PreviewError::UnknownProperty {
                 component: schema.id.clone(),

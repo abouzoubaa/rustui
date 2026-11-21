@@ -298,57 +298,57 @@ impl View for NavigationSplitComposition {
             )));
             let sidebar_scope = RetentionScope::Key(Identity::from("sidebar"));
 
-            if self.show_detail {
-                if let Some((route_id, label, content)) = route {
-                    let state = self.narrow_state.clone();
-                    let selection_refresh =
-                        context.binding_updater(self.view.selection.clone(), |_| true);
-                    return context.with_retention_scope(split_scope, |context| {
-                        context.preserve_retention_scope(sidebar_scope.clone());
-                        let sidebar_focus = context
-                            .with_retention_scope(sidebar_scope.clone(), |context| {
-                                sidebar.focus_handle(context)
+            if self.show_detail
+                && let Some((route_id, label, content)) = route
+            {
+                let state = self.narrow_state.clone();
+                let selection_refresh =
+                    context.binding_updater(self.view.selection.clone(), |_| true);
+                return context.with_retention_scope(split_scope, |context| {
+                    context.preserve_retention_scope(sidebar_scope.clone());
+                    let sidebar_focus = context
+                        .with_retention_scope(sidebar_scope.clone(), |context| {
+                            sidebar.focus_handle(context)
+                        });
+                    let back_label = resolved_message_label(
+                        context.localized_message("rustui-navigation-back"),
+                        "rustui-navigation-back",
+                        &"Back".into(),
+                    );
+                    let back = Button(
+                        back_label,
+                        AppAction::with_window_action(move |_, window, cx| {
+                            let restore_focus = state.update(cx, |state, cx| {
+                                let restore_focus = return_to_narrow_list(state);
+                                cx.notify();
+                                restore_focus
                             });
-                        let back_label = resolved_message_label(
-                            context.localized_message("rustui-navigation-back"),
-                            "rustui-navigation-back",
-                            &"Back".into(),
-                        );
-                        let back = Button(
-                            back_label,
-                            AppAction::with_window_action(move |_, window, cx| {
-                                let restore_focus = state.update(cx, |state, cx| {
-                                    let restore_focus = return_to_narrow_list(state);
-                                    cx.notify();
-                                    restore_focus
-                                });
-                                if restore_focus {
-                                    sidebar_focus.focus(window, cx);
-                                }
-                                selection_refresh(cx);
-                            }),
-                        )
-                        .id(format!("{}:back", self.view.id.as_str()))
-                        .button_style(ButtonStyle::Plain);
-                        let detail = context.with_element_scope(
-                            RetentionScope::Key(Identity::from("detail")),
-                            |context| {
-                                NavigationSplitDetail {
-                                    view_id: self.view.id.clone(),
-                                    route: Some((route_id, label, content)),
-                                }
-                                .into_element(context)
-                            },
-                        );
-                        div()
-                            .flex()
-                            .flex_col()
-                            .size_full()
-                            .child(back.into_element(context))
-                            .child(detail)
-                            .into_any_element()
-                    });
-                }
+                            if restore_focus {
+                                sidebar_focus.focus(window, cx);
+                            }
+                            selection_refresh(cx);
+                        }),
+                    )
+                    .id(format!("{}:back", self.view.id.as_str()))
+                    .button_style(ButtonStyle::Plain);
+                    let detail = context.with_element_scope(
+                        RetentionScope::Key(Identity::from("detail")),
+                        |context| {
+                            NavigationSplitDetail {
+                                view_id: self.view.id.clone(),
+                                route: Some((route_id, label, content)),
+                            }
+                            .into_element(context)
+                        },
+                    );
+                    div()
+                        .flex()
+                        .flex_col()
+                        .size_full()
+                        .child(back.into_element(context))
+                        .child(detail)
+                        .into_any_element()
+                });
             }
 
             return context.with_retention_scope(split_scope, |context| {
@@ -763,7 +763,11 @@ mod tests {
             Some("settings".into()),
             true
         ));
-        assert!(update_narrow_state(&mut state, Some("missing".into()), false) == false);
+        assert!(!update_narrow_state(
+            &mut state,
+            Some("missing".into()),
+            false
+        ));
         assert_eq!(state.last_selection.as_deref(), Some("missing"));
         assert!(!update_narrow_state(&mut state, None, false));
         assert_eq!(state.last_selection, None);

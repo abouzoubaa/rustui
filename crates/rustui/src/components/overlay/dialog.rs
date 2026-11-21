@@ -102,7 +102,7 @@ fn dialog_semantic_element(
     accessibility_id: SharedString,
     accessibility_label: SharedString,
     content: AnyElement,
-) -> impl gpui::Element + gpui::IntoElement {
+) -> impl gpui::Element {
     div()
         .id(accessibility_id)
         .role(Role::Dialog)

@@ -21,6 +21,11 @@ fn turbofish_optional_children_typecheck_through_public_hstack_macro() {
 }
 
 #[test]
+#[allow(
+    clippy::bind_instead_of_map,
+    clippy::redundant_closure,
+    reason = "The macro parser must accept this parenthesized and_then expression"
+)]
 fn parenthesized_option_and_then_child_typechecks_through_public_hstack_macro() {
     let optional = Some(Text("optional"));
 

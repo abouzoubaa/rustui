@@ -230,19 +230,19 @@ impl CollectionRow {
 
     fn write_note(owner: &mut Self, value: String) {
         owner.note.clone_from(&value);
-        if let (Some(id), Some(store)) = (&owner.id, &owner.store) {
-            if let Some(record) = store.borrow_mut().records.get_mut(id) {
-                record.note = value;
-            }
+        if let (Some(id), Some(store)) = (&owner.id, &owner.store)
+            && let Some(record) = store.borrow_mut().records.get_mut(id)
+        {
+            record.note = value;
         }
     }
 
     fn increment(&mut self) {
         self.count += 1;
-        if let (Some(id), Some(store)) = (&self.id, &self.store) {
-            if let Some(record) = store.borrow_mut().records.get_mut(id) {
-                record.count = self.count;
-            }
+        if let (Some(id), Some(store)) = (&self.id, &self.store)
+            && let Some(record) = store.borrow_mut().records.get_mut(id)
+        {
+            record.count = self.count;
         }
     }
 }

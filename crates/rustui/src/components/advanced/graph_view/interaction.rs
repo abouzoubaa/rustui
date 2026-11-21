@@ -186,14 +186,14 @@ pub(super) fn connection(
 pub(super) fn next_connection_id(edges: &[GraphEdge]) -> String {
     let used_ids: HashSet<&str> = edges.iter().map(|edge| edge.id.as_str()).collect();
     let mut ordinal = 0_u64;
-    let id = loop {
+
+    loop {
         let id = format!("connection-{ordinal}");
         if !used_ids.contains(id.as_str()) {
             break id;
         }
         ordinal += 1;
-    };
-    id
+    }
 }
 
 pub(super) fn eligible(event: &gpui::KeyDownEvent) -> bool {
@@ -561,7 +561,7 @@ mod tests {
                 .collect::<Vec<_>>(),
             ["ab"]
         );
-        assert!(incident.get("missing").is_none());
+        assert!(!incident.contains_key("missing"));
     }
 
     fn test_binding<T: Clone + 'static>(value: T) -> Binding<T> {

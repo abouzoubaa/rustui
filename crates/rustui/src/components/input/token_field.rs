@@ -258,10 +258,10 @@ impl View for TokenFieldView {
             .track_focus(&add_focus)
             .accessibility_label(add_accessible_label(|id| context.localized_message(id)))
             .on_click(move |_, _, cx| {
-                if let Some(draft) = read_draft(cx).filter(|draft| !draft.trim().is_empty()) {
-                    if add_token(draft.clone(), cx) {
-                        clear_draft(draft, cx);
-                    }
+                if let Some(draft) = read_draft(cx).filter(|draft| !draft.trim().is_empty())
+                    && add_token(draft.clone(), cx)
+                {
+                    clear_draft(draft, cx);
                 }
             });
         field.child(add).into_any_element()

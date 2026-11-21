@@ -119,10 +119,10 @@ impl DrawerHost {
             return;
         }
         let active = self.active.take().unwrap();
-        if active.focus.contains_focused(window, cx) {
-            if let Some(previous) = active.previous.and_then(|handle| handle.upgrade()) {
-                window.focus(&previous, cx);
-            }
+        if active.focus.contains_focused(window, cx)
+            && let Some(previous) = active.previous.and_then(|handle| handle.upgrade())
+        {
+            window.focus(&previous, cx);
         }
         TextSelection::clear(window, cx);
         if notify_owner {

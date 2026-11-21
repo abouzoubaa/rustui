@@ -26,7 +26,7 @@ fn initial_rows() -> Vec<Product> {
         .map(|index| Product {
             id: format!("product-{index}"),
             name: format!("Product {}", index + 1),
-            quantity: (index % 100) as i32,
+            quantity: (index % 100),
             category: if index % 2 == 0 { "Food" } else { "Other" }.into(),
         })
         .collect()

@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+- Enforce pinned workspace Clippy checks and resolve native workspace lint diagnostics (P1).
+
 - Add a conservative, off-by-default Rust injection highlighter fast path (PX-3 candidate).
 
 - Add opt-in mach-clock latency stage diagnostics and local AppKit/bare Fast references (PX-4).

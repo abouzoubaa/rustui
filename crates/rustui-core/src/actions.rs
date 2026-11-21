@@ -2,10 +2,12 @@ use std::{any::Any, rc::Rc};
 
 use crate::Invalidation;
 
+type ActionInvoker = dyn Fn(&mut dyn Any) -> Invalidation;
+
 /// A typed component method that can be invoked by a rendered control.
 #[derive(Clone)]
 pub struct Action {
-    invoke: Rc<dyn Fn(&mut dyn Any) -> Invalidation>,
+    invoke: Rc<ActionInvoker>,
 }
 
 impl Action {

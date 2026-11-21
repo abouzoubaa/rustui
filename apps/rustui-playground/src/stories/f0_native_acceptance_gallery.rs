@@ -519,8 +519,10 @@ mod tests {
     }
     #[test]
     fn mutations_preserve_surviving_selection_and_unique_ids() {
-        let mut owner = AcceptanceRows::default();
-        owner.selected = Some(row_id(4000).into());
+        let mut owner = AcceptanceRows {
+            selected: Some(row_id(4000).into()),
+            ..Default::default()
+        };
         owner.add_row();
         owner.insert_top();
         owner.delete_top();

@@ -315,23 +315,7 @@ impl CompiledPreviewGallery {
                 PropertyId::new("message").unwrap(),
                 PropertyValue::String(self.text.clone()),
             );
-        } else if component == "sheet-specimen" {
-            self.text = "Open details".into();
-            document.properties.extend([
-                (
-                    PropertyId::new("trigger_label").unwrap(),
-                    PropertyValue::String(self.text.clone()),
-                ),
-                (
-                    PropertyId::new("title").unwrap(),
-                    PropertyValue::String("Details".into()),
-                ),
-                (
-                    PropertyId::new("body_text").unwrap(),
-                    PropertyValue::String("Preview sheet content".into()),
-                ),
-            ]);
-        } else if component == "drawer-specimen" {
+        } else if matches!(component, "sheet-specimen" | "drawer-specimen") {
             self.text = "Open details".into();
             document.properties.extend([
                 (
@@ -388,12 +372,7 @@ impl CompiledPreviewGallery {
                     PropertyValue::String("none".into()),
                 ),
             ]);
-        } else if component == "list-specimen" {
-            document.properties.insert(
-                PropertyId::new("selected_id").unwrap(),
-                PropertyValue::String("none".into()),
-            );
-        } else if component == "table-specimen" {
+        } else if matches!(component, "list-specimen" | "table-specimen") {
             document.properties.insert(
                 PropertyId::new("selected_id").unwrap(),
                 PropertyValue::String("none".into()),
@@ -421,17 +400,10 @@ impl CompiledPreviewGallery {
                     PropertyValue::String("none".into()),
                 ),
             ]);
-        } else if component == "navigation-split-specimen" {
-            document.properties.insert(
-                PropertyId::new("selected_id").unwrap(),
-                PropertyValue::String("none".into()),
-            );
-        } else if component == "navigation-stack-specimen" {
-            document.properties.insert(
-                PropertyId::new("selected_id").unwrap(),
-                PropertyValue::String("none".into()),
-            );
-        } else if component == "collection-specimen" {
+        } else if matches!(
+            component,
+            "navigation-split-specimen" | "navigation-stack-specimen" | "collection-specimen"
+        ) {
             document.properties.insert(
                 PropertyId::new("selected_id").unwrap(),
                 PropertyValue::String("none".into()),
@@ -1274,12 +1246,11 @@ impl CompiledPreviewGallery {
                     )
                     .unwrap_or(0.375);
                     self.amount_draft = self.amount.to_string();
-                    if uses_stepper {
-                        if let Some(count) = property_integer(snapshot, "value")
+                    if uses_stepper
+                        && let Some(count) = property_integer(snapshot, "value")
                             .and_then(|value| i32::try_from(value).ok())
-                        {
-                            self.stepper_count = count;
-                        }
+                    {
+                        self.stepper_count = count;
                     }
                 }
                 self.stamp_lease = Rc::new(RefCell::new(Some(stamp.clone())));

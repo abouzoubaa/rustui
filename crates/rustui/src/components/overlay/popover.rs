@@ -237,7 +237,7 @@ fn native_popover_element<V: View>(
     let state_snapshot = state.read(context.app());
     let popup = state_snapshot.popup.clone();
     let fallback = state_snapshot.fallback;
-    drop(state_snapshot);
+    let _ = state_snapshot;
 
     if open && popup.is_none() && !fallback {
         // A caller may open the binding directly. Preserve that public controlled

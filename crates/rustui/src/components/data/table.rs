@@ -675,7 +675,6 @@ impl View for TableView {
 
 #[cfg(test)]
 mod tests {
-    use super::View;
     use gpui::{Element, Role, accesskit::Node};
 
     struct RestoredRowOwner {
@@ -826,7 +825,7 @@ mod tests {
                         .unwrap()
                 });
                 window.run_until_parked();
-                window.simulate_event(gpui::ScrollWheelEvent {
+                window.simulate_event(gpui::ScrollEvent {
                     position: gpui::point(gpui::px(100.), gpui::px(45.)),
                     delta: gpui::ScrollDelta::Pixels(gpui::point(gpui::px(-80.), gpui::px(0.))),
                     ..Default::default()
@@ -839,7 +838,7 @@ mod tests {
                     );
                 });
                 for y in [10., 30., 50., 100.] {
-                    window.simulate_event(gpui::ScrollWheelEvent {
+                    window.simulate_event(gpui::ScrollEvent {
                         position: gpui::point(gpui::px(100.), gpui::px(y)),
                         delta: gpui::ScrollDelta::Pixels(gpui::point(gpui::px(-80.), gpui::px(0.))),
                         ..Default::default()
@@ -920,7 +919,7 @@ mod tests {
                 gpui::px(0.)
             );
         });
-        window.simulate_event(gpui::ScrollWheelEvent {
+        window.simulate_event(gpui::ScrollEvent {
             position: gpui::point(gpui::px(100.), gpui::px(45.)),
             delta: gpui::ScrollDelta::Pixels(gpui::point(gpui::px(-80.), gpui::px(0.))),
             ..Default::default()
@@ -929,7 +928,7 @@ mod tests {
             let _ = window.draw(app);
             assert!(state.read(app).horizontal_scroll_handle.offset().x < gpui::px(0.));
         });
-        window.simulate_event(gpui::ScrollWheelEvent {
+        window.simulate_event(gpui::ScrollEvent {
             position: gpui::point(gpui::px(100.), gpui::px(45.)),
             delta: gpui::ScrollDelta::Pixels(gpui::point(gpui::px(80.), gpui::px(0.))),
             ..Default::default()

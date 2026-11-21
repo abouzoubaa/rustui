@@ -531,7 +531,7 @@ pub(in super::super) fn register_basic_specimens(registry: &mut PreviewRegistry<
                 },
             )
             .unwrap();
-        let tab_view_values = vec!["overview", "activity", "settings"];
+        let tab_view_values = ["overview", "activity", "settings"];
         let tab_view_schema = ComponentSchema {
             id: ComponentId::new("tab-view-specimen").unwrap(),
             version: 1,

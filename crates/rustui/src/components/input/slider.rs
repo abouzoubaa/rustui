@@ -1207,8 +1207,8 @@ mod tests {
 
     #[test]
     fn slider_accessibility_set_value_matches_pointer_rounding_in_range() {
-        let value = -15_199.308_593_75_f32;
-        let step = 188.811_294_555_664_06_f32;
+        let value = -15_199.309_f32;
+        let step = 188.811_3_f32;
         let pointer_value = (value / step).round() * step;
 
         assert_eq!(

@@ -356,10 +356,12 @@ fn every_registered_story_mounts_draws_and_exposes_its_title(cx: &mut gpui::Test
         );
     });
     for (index, story) in STORIES.iter().enumerate() {
-        let mut playground = Playground::default();
-        playground.story_selection = Some(index);
-        playground.catalog_selection = None;
-        playground.theme = Some(theme.clone());
+        let playground = Playground {
+            story_selection: Some(index),
+            catalog_selection: None,
+            theme: Some(theme.clone()),
+            ..Default::default()
+        };
         let (_, window) = cx.add_window_view(|window, app| {
             let owner = app.new(|cx| ComponentHost::new(playground, cx));
             Root::new(owner, window, app)

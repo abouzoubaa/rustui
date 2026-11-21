@@ -56,65 +56,6 @@ impl HoverGallery {
     }
 }
 
-#[cfg(test)]
-mod tests {
-    use super::*;
-    use rustui::localization::Locale;
-
-    #[test]
-    fn hover_story_messages_resolve_in_supported_locales() {
-        let catalogs = crate::stories::locale_selector::catalogs();
-        let arguments = MessageArguments::new()
-            .with("enters", 2_i32)
-            .with("exits", 3_i32)
-            .with("clicks", 4_i32);
-        for tag in ["en", "fr", "ar"] {
-            let locale = Locale::parse(tag).unwrap();
-            for key in [
-                "lab-hover-region",
-                "lab-hover-instructions",
-                "lab-hover-input",
-                "lab-hover-count-click",
-                "lab-hover-hide",
-                "lab-hover-restore",
-                "lab-hover-note",
-            ] {
-                assert_ne!(catalogs.resolve(&locale, key), key, "{tag}: {key}");
-            }
-            for key in ["lab-hover-status-hovered", "lab-hover-status-idle"] {
-                let status = catalogs.format(&locale, key, &arguments).unwrap();
-                assert_ne!(status, key);
-                assert!(!status.contains('{'), "{tag}: {key}: {status}");
-            }
-        }
-    }
-
-    #[test]
-    fn hiding_a_hovered_region_records_its_exit_once() {
-        let mut gallery = HoverGallery::default();
-        gallery.enter();
-        gallery.hide();
-
-        assert!(!gallery.hovered());
-        assert_eq!(gallery.enters(), 1);
-        assert_eq!(gallery.exits(), 1);
-
-        gallery.exit(); // Delayed exit callback from the unmounted region.
-        assert_eq!(gallery.exits(), 1);
-
-        gallery.show();
-        assert!(gallery.shown());
-        assert!(!gallery.hovered());
-
-        gallery.hide();
-        assert!(!gallery.shown());
-        assert_eq!(gallery.exits(), 1);
-
-        gallery.hide();
-        assert_eq!(gallery.exits(), 1);
-    }
-}
-
 impl View for HoverGallery {
     fn body(&self) -> impl View {
         let status_key = if self.hovered() {
@@ -177,5 +118,64 @@ impl View for HoverGallery {
                     .disabled(self.shown()),
             )
             .child(LocalizedText("lab-hover-note"))
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use rustui::localization::Locale;
+
+    #[test]
+    fn hover_story_messages_resolve_in_supported_locales() {
+        let catalogs = crate::stories::locale_selector::catalogs();
+        let arguments = MessageArguments::new()
+            .with("enters", 2_i32)
+            .with("exits", 3_i32)
+            .with("clicks", 4_i32);
+        for tag in ["en", "fr", "ar"] {
+            let locale = Locale::parse(tag).unwrap();
+            for key in [
+                "lab-hover-region",
+                "lab-hover-instructions",
+                "lab-hover-input",
+                "lab-hover-count-click",
+                "lab-hover-hide",
+                "lab-hover-restore",
+                "lab-hover-note",
+            ] {
+                assert_ne!(catalogs.resolve(&locale, key), key, "{tag}: {key}");
+            }
+            for key in ["lab-hover-status-hovered", "lab-hover-status-idle"] {
+                let status = catalogs.format(&locale, key, &arguments).unwrap();
+                assert_ne!(status, key);
+                assert!(!status.contains('{'), "{tag}: {key}: {status}");
+            }
+        }
+    }
+
+    #[test]
+    fn hiding_a_hovered_region_records_its_exit_once() {
+        let mut gallery = HoverGallery::default();
+        gallery.enter();
+        gallery.hide();
+
+        assert!(!gallery.hovered());
+        assert_eq!(gallery.enters(), 1);
+        assert_eq!(gallery.exits(), 1);
+
+        gallery.exit(); // Delayed exit callback from the unmounted region.
+        assert_eq!(gallery.exits(), 1);
+
+        gallery.show();
+        assert!(gallery.shown());
+        assert!(!gallery.hovered());
+
+        gallery.hide();
+        assert!(!gallery.shown());
+        assert_eq!(gallery.exits(), 1);
+
+        gallery.hide();
+        assert_eq!(gallery.exits(), 1);
     }
 }

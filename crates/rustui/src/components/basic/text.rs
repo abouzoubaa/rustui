@@ -3,8 +3,6 @@ use gpui::{
     SharedString, StatefulInteractiveElement, Styled, div, px,
 };
 
-#[cfg(test)]
-use crate::components::theme::selector;
 use crate::text::font_policy::FontFallbackPolicy;
 use crate::view::{EmptyView, RenderContext, View};
 use crate::{

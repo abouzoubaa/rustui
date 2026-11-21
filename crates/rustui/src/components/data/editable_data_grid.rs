@@ -212,7 +212,6 @@ struct Editing {
     original: String,
     focus: Rc<RefCell<Option<FocusHandle>>>,
     error: Rc<RefCell<Option<String>>>,
-    generation: usize,
 }
 
 #[derive(Clone)]
@@ -252,6 +251,12 @@ impl GridAppearance {
     }
 }
 
+type RenderedColumns = (
+    bool,
+    Vec<(SharedString, SharedString, bool)>,
+    Option<(SharedString, ColumnSort)>,
+);
+
 struct GridState<R: Clone + 'static> {
     appearance: GridAppearance,
     rows: Vec<R>,
@@ -270,13 +275,8 @@ struct GridState<R: Clone + 'static> {
     rendered_rows: Rc<RefCell<HashSet<usize>>>,
     focus_out: Option<Subscription>,
     commit: Option<Committer>,
-    generation: usize,
     rtl: bool,
-    rendered_columns: Option<(
-        bool,
-        Vec<(SharedString, SharedString, bool)>,
-        Option<(SharedString, ColumnSort)>,
-    )>,
+    rendered_columns: Option<RenderedColumns>,
 }
 
 impl<R: Clone + 'static> Drop for GridState<R> {
@@ -317,22 +317,21 @@ impl<R: Clone + 'static> GridState<R> {
             return;
         }
         let mut indices: Vec<usize> = (0..self.rows.len()).collect();
-        if let Some((column_id, direction)) = &self.sort {
-            if let Some(compare) = self
+        if let Some((column_id, direction)) = &self.sort
+            && let Some(compare) = self
                 .columns
                 .iter()
                 .find(|c| &c.id == column_id)
                 .and_then(|c| c.compare.as_ref())
-            {
-                indices.sort_by(|&a, &b| {
-                    let result = compare(&self.rows[a], &self.rows[b]);
-                    if *direction == ColumnSort::Descending {
-                        result.reverse()
-                    } else {
-                        result
-                    }
-                });
-            }
+        {
+            indices.sort_by(|&a, &b| {
+                let result = compare(&self.rows[a], &self.rows[b]);
+                if *direction == ColumnSort::Descending {
+                    result.reverse()
+                } else {
+                    result
+                }
+            });
         }
         self.view_order = indices
             .into_iter()
@@ -372,7 +371,6 @@ impl<R: Clone + 'static> GridState<R> {
         if !column.editable {
             return;
         }
-        self.generation = self.generation.wrapping_add(1);
         self.edit = Some(Editing {
             row: row_id.clone(),
             column: column_id.clone(),
@@ -382,7 +380,6 @@ impl<R: Clone + 'static> GridState<R> {
             original: (column.read)(&self.rows[row]),
             focus: Rc::new(RefCell::new(None)),
             error: Rc::new(RefCell::new(None)),
-            generation: self.generation,
         });
         let edit = self.edit.as_ref().unwrap();
         let shared = edit.draft.clone();
@@ -1008,14 +1005,14 @@ impl<R: Clone + 'static> TableDelegate for EditableGridDelegate<R> {
         let label_selector = format!("editable-grid-label:{key}:{column_key}");
         let content = if let Some(edit) = editing {
             let focus = edit.focus.clone();
-            if let Some(handle) = focus.borrow().clone() {
-                if window.focused(cx).is_none() {
-                    window.on_next_frame(move |window, cx| {
-                        if window.focused(cx).is_none() {
-                            handle.focus(window, cx);
-                        }
-                    });
-                }
+            if let Some(handle) = focus.borrow().clone()
+                && window.focused(cx).is_none()
+            {
+                window.on_next_frame(move |window, cx| {
+                    if window.focused(cx).is_none() {
+                        handle.focus(window, cx);
+                    }
+                });
             }
             self.editor
                 .borrow()
@@ -1160,7 +1157,6 @@ impl<R: Clone + 'static> View for EditableDataGridView<R> {
                 rendered_rows: Rc::new(RefCell::new(HashSet::new())),
                 focus_out: None,
                 commit: None,
-                generation: 0,
                 rtl: false,
                 rendered_columns: None,
             }
@@ -1207,21 +1203,20 @@ impl<R: Clone + 'static> View for EditableDataGridView<R> {
             state.rows = rows;
             state.columns = columns;
             state.row_id = row_id;
-            if let Some(edit) = &state.edit {
-                if let (Some(row), Some(column)) =
+            if let Some(edit) = &state.edit
+                && let (Some(row), Some(column)) =
                     (state.row_index(&edit.row), state.column_index(&edit.column))
-                {
-                    let changed = (state.columns[column].read)(&state.rows[row]) != edit.original;
-                    let mut error = edit.error.borrow_mut();
-                    if changed {
-                        *error = Some("Value changed elsewhere".into());
-                    } else if error.as_deref() == Some("Value changed elsewhere") {
-                        *error = None;
-                    }
-                    drop(error);
-                    if let Some(editor) = state.editor.borrow().as_ref() {
-                        editor.update(cx, |_, cx| cx.notify());
-                    }
+            {
+                let changed = (state.columns[column].read)(&state.rows[row]) != edit.original;
+                let mut error = edit.error.borrow_mut();
+                if changed {
+                    *error = Some("Value changed elsewhere".into());
+                } else if error.as_deref() == Some("Value changed elsewhere") {
+                    *error = None;
+                }
+                drop(error);
+                if let Some(editor) = state.editor.borrow().as_ref() {
+                    editor.update(cx, |_, cx| cx.notify());
                 }
             }
             state.rtl = rtl;
@@ -1318,10 +1313,10 @@ impl<R: Clone + 'static> View for EditableDataGridView<R> {
             if columns_changed {
                 table.refresh(cx);
             }
-            if let Some(row) = active_row {
-                if table.selected_row() != Some(row) {
-                    table.set_selected_row(row, cx);
-                }
+            if let Some(row) = active_row
+                && table.selected_row() != Some(row)
+            {
+                table.set_selected_row(row, cx);
             }
             cx.notify();
         });

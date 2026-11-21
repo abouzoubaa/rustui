@@ -2,6 +2,8 @@ use super::interaction::*;
 use super::model::localized_graph_message;
 use super::*;
 
+type NodeCallback = Rc<dyn Fn(&mut gpui::Window, &mut gpui::App)>;
+
 /// Avoid asking the layout engine to place absolute node elements that cannot
 /// intersect the graph's clipped viewport. Compute edges in f64 so very large
 /// but finite graph coordinates do not overflow while deciding visibility.
@@ -354,10 +356,10 @@ pub(crate) fn render_graph(
                 if !disabled && guard.current() {
                     click_focus.focus(window, cx);
                     writer(Some(id.clone()), cx);
-                    if event.click_count() == 2 {
-                        if let Some(activate) = &pointer_activate {
-                            activate(window, cx);
-                        }
+                    if event.click_count() == 2
+                        && let Some(activate) = &pointer_activate
+                    {
+                        activate(window, cx);
                     }
                 }
             })
@@ -369,10 +371,10 @@ pub(crate) fn render_graph(
                 {
                     key_focus.focus(window, cx);
                     key_writer(Some(key_id.clone()), cx);
-                    if event.keystroke.key == "enter" {
-                        if let Some(activate) = &key_activate {
-                            activate(window, cx);
-                        }
+                    if event.keystroke.key == "enter"
+                        && let Some(activate) = &key_activate
+                    {
+                        activate(window, cx);
                     }
                     cx.stop_propagation();
                 }
@@ -402,13 +404,15 @@ pub(crate) fn render_graph(
                 .focusable()
                 .focus_visible(move |style_ref| style_ref.border_color(style.selection));
         }
-        if editor.is_some() && !view.disabled {
+        if !view.disabled
+            && let Some(editor) = &editor
+        {
             let drag_state = state.clone();
             let id = node.id.clone();
             let guard = lease.clone();
             let drag_focus = focus.clone();
             let writer = context.binding_writer(view.selection.clone());
-            let read_graph = context.binding_reader(editor.as_ref().unwrap().clone());
+            let read_graph = context.binding_reader(editor.clone());
             card = card.on_mouse_down(MouseButton::Left, move |event, window, cx| {
                 if !guard.current() {
                     return;
@@ -427,41 +431,40 @@ pub(crate) fn render_graph(
                 let endpoint = GraphEndpoint::new(node.id.clone(), port.id.clone());
                 let port_state = state.clone();
                 let guard = lease.clone();
-                let binding = editor.as_ref().unwrap().clone();
+                let binding = editor.clone();
                 let read_graph = context.binding_reader(binding.clone());
                 let update = context.binding_event_updater(binding, apply_edit);
                 let refresh =
                     context.binding_event_updater(view.selection.clone(), |_, (): ()| true);
-                let handler: Rc<dyn Fn(&mut gpui::Window, &mut gpui::App)> =
-                    Rc::new(move |_, cx| {
-                        if !guard.current() {
-                            return;
-                        }
-                        let Some(graph) = read_graph(cx) else {
-                            return;
-                        };
-                        let mut edit = None;
-                        port_state.update(cx, |s, cx| {
-                            if let Some(first) = s.pending.take() {
-                                match connection(&graph, first, endpoint.clone()) {
-                                    Ok(edge) => {
-                                        edit = Some(GraphEdit::Connect(edge));
-                                        s.error = None;
-                                    }
-                                    Err(error) => s.error = Some(error),
+                let handler: NodeCallback = Rc::new(move |_, cx| {
+                    if !guard.current() {
+                        return;
+                    }
+                    let Some(graph) = read_graph(cx) else {
+                        return;
+                    };
+                    let mut edit = None;
+                    port_state.update(cx, |s, cx| {
+                        if let Some(first) = s.pending.take() {
+                            match connection(&graph, first, endpoint.clone()) {
+                                Ok(edge) => {
+                                    edit = Some(GraphEdit::Connect(edge));
+                                    s.error = None;
                                 }
-                            } else {
-                                s.pending = Some(endpoint.clone());
-                                s.error = None;
+                                Err(error) => s.error = Some(error),
                             }
-                            cx.notify();
-                        });
-                        if let Some(edit) = edit {
-                            update(edit, cx);
                         } else {
-                            refresh((), cx);
+                            s.pending = Some(endpoint.clone());
+                            s.error = None;
                         }
+                        cx.notify();
                     });
+                    if let Some(edit) = edit {
+                        update(edit, cx);
+                    } else {
+                        refresh((), cx);
+                    }
+                });
                 let pointer = handler.clone();
                 let keyboard = handler.clone();
                 let accessible = handler;
@@ -581,13 +584,12 @@ pub(crate) fn render_graph(
             let id = edge.id.clone();
             let guard = lease.clone();
             let disconnect_focus = focus.clone();
-            let handler: Rc<dyn Fn(&mut gpui::Window, &mut gpui::App)> =
-                Rc::new(move |window, cx| {
-                    if guard.current() {
-                        disconnect_focus.focus(window, cx);
-                        update(GraphEdit::Disconnect(id.clone()), cx);
-                    }
-                });
+            let handler: NodeCallback = Rc::new(move |window, cx| {
+                if guard.current() {
+                    disconnect_focus.focus(window, cx);
+                    update(GraphEdit::Disconnect(id.clone()), cx);
+                }
+            });
             let pointer = handler.clone();
             let keyboard = handler.clone();
             let accessible = handler;

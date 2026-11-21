@@ -87,6 +87,47 @@ impl HStack {
     }
 }
 
+impl Default for HStack {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
+impl View for HStack {
+    fn body(&self) -> impl View {
+        EmptyView
+    }
+
+    fn into_element(&self, context: &mut RenderContext<'_>) -> AnyElement {
+        let direction = context.layout_direction();
+        let (children, transition_focus) =
+            crate::animation::transition::render_children(context, &self.children);
+        let mut stack = div().flex().gap(px(self.spacing));
+        if self.fill {
+            stack = stack.size_full().min_w_0().min_h_0();
+        }
+        if self.grow {
+            stack = stack.flex_1().min_w_0().min_h_0();
+        }
+        if let Some(focus) = transition_focus {
+            stack = stack.track_focus(&focus);
+        }
+        let stack = match direction {
+            LayoutDirection::LeftToRight => stack.flex_row(),
+            LayoutDirection::RightToLeft => stack.flex_row_reverse(),
+        }
+        .children(children);
+        match self.alignment {
+            VerticalAlignment::Start => stack.items_start(),
+            VerticalAlignment::Center => stack.items_center(),
+            VerticalAlignment::End => stack.items_end(),
+            VerticalAlignment::Baseline => stack.items_baseline(),
+            VerticalAlignment::Stretch => stack.items_stretch(),
+        }
+        .into_any_element()
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::HStack;
@@ -128,46 +169,5 @@ mod tests {
         for spacing in [-1.0, f32::NAN, f32::INFINITY, f32::NEG_INFINITY] {
             assert!(catch_unwind(AssertUnwindSafe(|| HStack::new().spacing(spacing))).is_err());
         }
-    }
-}
-
-impl Default for HStack {
-    fn default() -> Self {
-        Self::new()
-    }
-}
-
-impl View for HStack {
-    fn body(&self) -> impl View {
-        EmptyView
-    }
-
-    fn into_element(&self, context: &mut RenderContext<'_>) -> AnyElement {
-        let direction = context.layout_direction();
-        let (children, transition_focus) =
-            crate::animation::transition::render_children(context, &self.children);
-        let mut stack = div().flex().gap(px(self.spacing));
-        if self.fill {
-            stack = stack.size_full().min_w_0().min_h_0();
-        }
-        if self.grow {
-            stack = stack.flex_1().min_w_0().min_h_0();
-        }
-        if let Some(focus) = transition_focus {
-            stack = stack.track_focus(&focus);
-        }
-        let stack = match direction {
-            LayoutDirection::LeftToRight => stack.flex_row(),
-            LayoutDirection::RightToLeft => stack.flex_row_reverse(),
-        }
-        .children(children);
-        match self.alignment {
-            VerticalAlignment::Start => stack.items_start(),
-            VerticalAlignment::Center => stack.items_center(),
-            VerticalAlignment::End => stack.items_end(),
-            VerticalAlignment::Baseline => stack.items_baseline(),
-            VerticalAlignment::Stretch => stack.items_stretch(),
-        }
-        .into_any_element()
     }
 }

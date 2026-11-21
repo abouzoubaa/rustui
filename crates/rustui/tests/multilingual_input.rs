@@ -5,5 +5,5 @@ fn multilingual_text_fixture_round_trips_as_utf8() {
 
     assert_eq!(round_trip, text);
     assert!(round_trip.chars().any(|character| character.is_ascii()));
-    assert!(round_trip.chars().any(|character| !character.is_ascii()));
+    assert!(!round_trip.is_ascii());
 }

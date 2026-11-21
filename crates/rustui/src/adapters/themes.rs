@@ -316,6 +316,118 @@ fn gpui_font_family(profile_family: &str, is_wasm: bool) -> String {
     }
 }
 
+impl ButtonPalette {
+    fn parse(profile: &ThemeProfile, mode: AppearanceMode) -> Result<Self, ThemeApplyError> {
+        let colors = profile.colors(Some(mode));
+        let window_background = parse(&colors.window_background)?;
+        let sidebar_background = parse(&colors.sidebar_background)?;
+        let toolbar_background = parse(&colors.toolbar_background)?;
+        let content_background = parse(&colors.content_background)?;
+        let selected_row = parse(&colors.selected_row_background)?;
+        let chart_1 = parse(match mode {
+            AppearanceMode::Light => &profile.accents.blue.light,
+            AppearanceMode::Dark => &profile.accents.blue.dark,
+        })?;
+        let chart_2 = parse(match mode {
+            AppearanceMode::Light => &profile.accents.purple.light,
+            AppearanceMode::Dark => &profile.accents.purple.dark,
+        })?;
+        let chart_3 = parse(match mode {
+            AppearanceMode::Light => &profile.accents.green.light,
+            AppearanceMode::Dark => &profile.accents.green.dark,
+        })?;
+        let chart_4 = parse(match mode {
+            AppearanceMode::Light => &profile.accents.orange.light,
+            AppearanceMode::Dark => &profile.accents.orange.dark,
+        })?;
+        let chart_5 = parse(match mode {
+            AppearanceMode::Light => &profile.accents.pink.light,
+            AppearanceMode::Dark => &profile.accents.pink.dark,
+        })?;
+        let surface = parse(&colors.elevated_panel_background)?;
+        let primary_text = parse(&colors.primary_text)?;
+        let accent = parse(&colors.accent)?;
+        let error = parse(&colors.error)?;
+        let warning = parse(&colors.warning)?;
+        let success = parse(&colors.success)?;
+        let is_dark = matches!(mode, AppearanceMode::Dark);
+
+        Ok(Self {
+            window_background,
+            sidebar_background,
+            toolbar_background,
+            content_background,
+            selected_row,
+            chart_1,
+            chart_2,
+            chart_3,
+            chart_4,
+            chart_5,
+            surface,
+            surface_hover: parse(&colors.hover_row_background)?,
+            surface_active: parse(&colors.pressed_row_background)?,
+            primary_text,
+            secondary_text: parse(&colors.secondary_text)?,
+            border: parse(&colors.border)?,
+            focus_ring: parse(&colors.focus_ring)?,
+            accent,
+            accent_hover: shade(accent, is_dark, 0.08),
+            accent_active: shade(accent, is_dark, 0.16),
+            accent_foreground: contrasting_foreground(accent),
+            error,
+            error_hover: shade(error, is_dark, 0.08),
+            error_active: shade(error, is_dark, 0.16),
+            error_foreground: contrasting_foreground(error),
+            warning,
+            warning_hover: shade(warning, is_dark, 0.08),
+            warning_active: shade(warning, is_dark, 0.16),
+            warning_foreground: contrasting_foreground(warning),
+            success,
+            success_hover: shade(success, is_dark, 0.08),
+            success_active: shade(success, is_dark, 0.16),
+            success_foreground: contrasting_foreground(success),
+        })
+    }
+}
+
+fn parse(value: &str) -> Result<Hsla, ThemeApplyError> {
+    try_parse_color(value).map_err(|_| ThemeApplyError {
+        message: format!("could not parse RustUI theme color `{value}`"),
+    })
+}
+
+fn shade(color: Hsla, dark_mode: bool, amount: f32) -> Hsla {
+    let target = if dark_mode {
+        rgb(0xffffff).into()
+    } else {
+        rgb(0x000000).into()
+    };
+    color.mix_oklab(target, 1.0 - amount)
+}
+
+fn contrasting_foreground(color: Hsla) -> Hsla {
+    let components = color.to_rgb();
+    let luminance = 0.2126 * linearize(components.r)
+        + 0.7152 * linearize(components.g)
+        + 0.0722 * linearize(components.b);
+    let white_contrast = 1.05 / (luminance + 0.05);
+    let black_contrast = (luminance + 0.05) / 0.05;
+
+    if white_contrast > black_contrast {
+        rgb(0xffffff).into()
+    } else {
+        rgb(0x000000).into()
+    }
+}
+
+fn linearize(channel: f32) -> f32 {
+    if channel <= 0.04045 {
+        channel / 12.92
+    } else {
+        ((channel + 0.055) / 1.055).powf(2.4)
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -450,117 +562,5 @@ mod tests {
                 "{mode:?} accent foreground contrasts with the accent surface"
             );
         }
-    }
-}
-
-impl ButtonPalette {
-    fn parse(profile: &ThemeProfile, mode: AppearanceMode) -> Result<Self, ThemeApplyError> {
-        let colors = profile.colors(Some(mode));
-        let window_background = parse(&colors.window_background)?;
-        let sidebar_background = parse(&colors.sidebar_background)?;
-        let toolbar_background = parse(&colors.toolbar_background)?;
-        let content_background = parse(&colors.content_background)?;
-        let selected_row = parse(&colors.selected_row_background)?;
-        let chart_1 = parse(match mode {
-            AppearanceMode::Light => &profile.accents.blue.light,
-            AppearanceMode::Dark => &profile.accents.blue.dark,
-        })?;
-        let chart_2 = parse(match mode {
-            AppearanceMode::Light => &profile.accents.purple.light,
-            AppearanceMode::Dark => &profile.accents.purple.dark,
-        })?;
-        let chart_3 = parse(match mode {
-            AppearanceMode::Light => &profile.accents.green.light,
-            AppearanceMode::Dark => &profile.accents.green.dark,
-        })?;
-        let chart_4 = parse(match mode {
-            AppearanceMode::Light => &profile.accents.orange.light,
-            AppearanceMode::Dark => &profile.accents.orange.dark,
-        })?;
-        let chart_5 = parse(match mode {
-            AppearanceMode::Light => &profile.accents.pink.light,
-            AppearanceMode::Dark => &profile.accents.pink.dark,
-        })?;
-        let surface = parse(&colors.elevated_panel_background)?;
-        let primary_text = parse(&colors.primary_text)?;
-        let accent = parse(&colors.accent)?;
-        let error = parse(&colors.error)?;
-        let warning = parse(&colors.warning)?;
-        let success = parse(&colors.success)?;
-        let is_dark = matches!(mode, AppearanceMode::Dark);
-
-        Ok(Self {
-            window_background,
-            sidebar_background,
-            toolbar_background,
-            content_background,
-            selected_row,
-            chart_1,
-            chart_2,
-            chart_3,
-            chart_4,
-            chart_5,
-            surface,
-            surface_hover: parse(&colors.hover_row_background)?,
-            surface_active: parse(&colors.pressed_row_background)?,
-            primary_text,
-            secondary_text: parse(&colors.secondary_text)?,
-            border: parse(&colors.border)?,
-            focus_ring: parse(&colors.focus_ring)?,
-            accent,
-            accent_hover: shade(accent, is_dark, 0.08),
-            accent_active: shade(accent, is_dark, 0.16),
-            accent_foreground: contrasting_foreground(accent),
-            error,
-            error_hover: shade(error, is_dark, 0.08),
-            error_active: shade(error, is_dark, 0.16),
-            error_foreground: contrasting_foreground(error),
-            warning,
-            warning_hover: shade(warning, is_dark, 0.08),
-            warning_active: shade(warning, is_dark, 0.16),
-            warning_foreground: contrasting_foreground(warning),
-            success,
-            success_hover: shade(success, is_dark, 0.08),
-            success_active: shade(success, is_dark, 0.16),
-            success_foreground: contrasting_foreground(success),
-        })
-    }
-}
-
-fn parse(value: &str) -> Result<Hsla, ThemeApplyError> {
-    try_parse_color(value).map_err(|_| ThemeApplyError {
-        message: format!("could not parse RustUI theme color `{value}`"),
-    })
-}
-
-fn shade(color: Hsla, dark_mode: bool, amount: f32) -> Hsla {
-    let target = if dark_mode {
-        rgb(0xffffff).into()
-    } else {
-        rgb(0x000000).into()
-    };
-    color.mix_oklab(target, 1.0 - amount)
-}
-
-fn contrasting_foreground(color: Hsla) -> Hsla {
-    let components = color.to_rgb();
-    let luminance = 0.2126 * linearize(components.r)
-        + 0.7152 * linearize(components.g)
-        + 0.0722 * linearize(components.b);
-    let white_contrast = 1.05 / (luminance + 0.05);
-    let black_contrast = (luminance + 0.05) / 0.05;
-
-    if white_contrast > black_contrast {
-        rgb(0xffffff).into()
-    } else {
-        rgb(0x000000).into()
-    }
-}
-
-fn linearize(channel: f32) -> f32 {
-    if channel <= 0.04045 {
-        channel / 12.92
-    } else {
-        ((channel + 0.055) / 1.055).powf(2.4)
     }
 }

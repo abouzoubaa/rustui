@@ -828,8 +828,10 @@ fn toast_specimen_round_trips_bounded_message_and_optional_title() {
 
 #[test]
 fn optional_toast_title_inspector_initial_value_does_not_use_shared_text() {
-    let mut gallery = CompiledPreviewGallery::default();
-    gallery.text = "unrelated shared text".into();
+    let mut gallery = CompiledPreviewGallery {
+        text: "unrelated shared text".into(),
+        ..Default::default()
+    };
     gallery.mount_toast_specimen();
     let snapshot = gallery.host.snapshot().unwrap();
     let title = PropertyId::new("title").unwrap();
@@ -1015,8 +1017,10 @@ fn popover_specimen_accepts_controlled_open_feedback_and_preserves_invalid_impor
 
 #[test]
 fn missing_current_text_property_does_not_reuse_previous_component_text() {
-    let mut gallery = CompiledPreviewGallery::default();
-    gallery.text = "Previous component text".into();
+    let mut gallery = CompiledPreviewGallery {
+        text: "Previous component text".into(),
+        ..Default::default()
+    };
     gallery.mount_icon_specimen();
 
     let binding = gallery.text_binding();

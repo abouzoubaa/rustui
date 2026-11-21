@@ -1,4 +1,8 @@
 #![deny(unused_doc_comments)]
+#![allow(
+    clippy::non_minimal_cfg,
+    reason = "Always-true cfg expressions exercise the component macro's attribute handling"
+)]
 
 extern crate self as rustui;
 

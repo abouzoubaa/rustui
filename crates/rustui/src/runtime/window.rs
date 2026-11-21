@@ -1,8 +1,8 @@
 //! Root-window creation using GPUI and GPUI Components ownership.
 
 use gpui::{
-    AnyElement, AnyWindowHandle, App, AppContext as _, Bounds, IntoElement, ParentElement as _,
-    Pixels, Subscription, Window, WindowBounds, WindowKind, WindowOptions, point, px, size,
+    AnyElement, AnyWindowHandle, App, AppContext as _, Bounds, IntoElement, Pixels, Subscription,
+    Window, WindowBounds, WindowKind, WindowOptions, point, px, size,
 };
 use gpui_component::ElementExt as _;
 use rustui_core::EnvironmentValues;
@@ -273,7 +273,7 @@ pub fn try_open_anchored_popup<V: View>(
     }
 
     let popup = gpui::popup::PopupOptions {
-        parent: parent.window_handle().into(),
+        parent: parent.window_handle(),
         anchor_rect: Bounds::new(
             point(px(anchor_x), px(anchor_y)),
             size(px(anchor_width), px(anchor_height)),
@@ -525,14 +525,13 @@ mod tests {
             measured.get(),
             "tracker measurement must equal the trigger's laid-out bounds"
         );
-        drop(test_window);
+        let _ = test_window;
         (owner, parent, popup)
     }
 
     #[cfg(not(target_family = "wasm"))]
     #[gpui::test]
     fn moving_an_anchor_repositions_its_popup(cx: &mut gpui::TestAppContext) {
-        use gpui::AppContext as _;
         use std::{cell::Cell, rc::Rc};
 
         cx.update(gpui_component::init);
@@ -572,7 +571,6 @@ mod tests {
     #[cfg(not(target_family = "wasm"))]
     #[gpui::test]
     fn resizing_the_parent_repositions_its_popup(cx: &mut gpui::TestAppContext) {
-        use gpui::AppContext as _;
         use std::{cell::Cell, rc::Rc};
 
         cx.update(gpui_component::init);
@@ -608,7 +606,6 @@ mod tests {
     #[cfg(not(target_family = "wasm"))]
     #[gpui::test]
     fn scrolling_an_anchor_out_of_view_closes_its_popup(cx: &mut gpui::TestAppContext) {
-        use gpui::AppContext as _;
         use std::{cell::Cell, rc::Rc};
 
         cx.update(gpui_component::init);
@@ -643,7 +640,6 @@ mod tests {
     #[cfg(not(target_family = "wasm"))]
     #[gpui::test]
     fn removing_a_visible_anchor_closes_its_popup(cx: &mut gpui::TestAppContext) {
-        use gpui::AppContext as _;
         use std::{cell::Cell, rc::Rc};
 
         cx.update(gpui_component::init);
@@ -742,10 +738,7 @@ mod tests {
     #[cfg(not(target_family = "wasm"))]
     #[gpui::test]
     fn escape_closes_anchored_popup_and_restores_owner_focus(cx: &mut gpui::TestAppContext) {
-        use gpui::{
-            InteractiveElement as _, ParentElement as _, StatefulInteractiveElement as _,
-            Styled as _,
-        };
+        use gpui::{InteractiveElement as _, ParentElement as _};
 
         struct FocusOwner {
             focus: gpui::FocusHandle,
