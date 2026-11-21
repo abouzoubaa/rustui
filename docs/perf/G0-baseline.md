@@ -116,3 +116,39 @@ Median process CPU off / on: **3.385579 / 3.450727 ms/attempt**. Paired median /
 | 4 | 1 | 1.483372000 | 0.584375000 | 2.067747000 | 575 | 0.485069 | 4.647570 | 0.578548 |
 | 5 | 0 | 1.563271000 | 0.626617000 | 2.189888000 | 576 | 0.488481 | 4.681360 | not recorded |
 | 5 | 1 | 1.536773000 | 0.610827000 | 2.147600000 | 575 | 0.514283 | 4.925055 | 0.588517 |
+
+## Post-PX-1 baseline
+
+Recorded after PR #165 merged and PX-1 propagated to both requested branches, from `g-integration` at `8ade25a526f105cd5d6f1f185d85ce83fbfd5454`. Same Apple M1 Max / 64 GB / macOS 27.0 (26A5425a), pinned Rust 1.98.0 release build, 1200 × 800 point dark window at scale 2. One 60-second capture per scene followed the normal warmup, with `RUSTUI_DAMAGE=0`, `RUSTUI_FRAME_LOG=buffered` and `RUSTUI_FRAME_PROFILE=1`. The build and all local checks finished before timing; no compiler, profiler or other benchmark ran during capture. The background repository indexer was paused for capture and resumed afterward; normal macOS background services remained active.
+
+These are fresh single-run baselines, not paired comparisons or Stage P verdicts. They replace the observer-heavy baseline for subsequent comparisons; they do not retrospectively change any earlier G2 verdict. `getrusage(RUSAGE_SELF)` brackets each measured window. Process CPU includes user + system time across all process threads; draw + present is elapsed phase time. GPU times use completed Metal command buffers. Powers remain **owner run pending**. Input-to-screen latency is **not measured; PX-2 pending**.
+
+Raw captures and `summary.json` are local ignored artifacts under `target/headstart/px1/post-px1-baseline/`. Reproduce with `RUSTUI_DAMAGE=0 ./scripts/run_g0_bench.sh`.
+
+| Scene | GPU mean / p95 ms/frame | GPU ms/s | Draw+present ms/attempt | Process CPU ms/attempt | Frames >8.3 ms |
+|---|---:|---:|---:|---:|---:|
+| idle | 0.333809 / 0.623000 | 0.632712 | 0.815695 | 2.669070 | 0 |
+| typing | 0.657617 / 1.106834 | 5.706824 | 0.848342 | 13.576631 | 0 |
+| hover | 0.370759 / 0.636750 | 44.475327 | 1.765818 | 2.666216 | 0 |
+| log | 0.509569 / 0.822500 | 4.882806 | 2.311944 | 3.954327 | 0 |
+| drag | 0.720489 / 0.923000 | 86.410682 | 0.418664 | 1.490406 | 0 |
+
+Frames >8.3 ms count draw + present elapsed phase time; they are not presentation-gap or screen-delay counts. CPU and GPU boundary counts can differ because GPU completion arrives asynchronously.
+
+| Scene | Measured s | CPU attempts | User CPU s | System CPU s | Total CPU s | Modes skip/copy/partial/retained/direct |
+|---|---:|---:|---:|---:|---:|---|
+| idle | 60.144625 | 114 | 0.169211000 | 0.135063000 | 0.304274000 | 0/0/0/0/114 |
+| typing | 60.036586 | 521 | 6.535040000 | 0.538385000 | 7.073425000 | 0/0/0/0/521 |
+| hover | 60.004645 | 7199 | 14.493547000 | 4.700544000 | 19.194091000 | 0/0/0/0/7198 |
+| log | 60.006891 | 575 | 1.633940000 | 0.639798000 | 2.273738000 | 0/0/0/0/575 |
+| drag | 60.008279 | 7198 | 5.380833000 | 5.347112000 | 10.727945000 | 0/0/0/0/7197 |
+
+CPU phase means below are elapsed milliseconds per phase invocation. Phases nest and must not be added together.
+
+| Scene | Setup | Build | Layout | Prepaint | Paint | Draw | Present |
+|---|---:|---:|---:|---:|---:|---:|---:|
+| idle | 0.003824 | 0.327727 | 0.006935 | 0.149224 | 0.081261 | 0.627228 | 0.188467 |
+| typing | 0.001859 | 0.155823 | 0.001233 | 0.433094 | 0.106789 | 0.748865 | 0.099819 |
+| hover | 0.002671 | 1.117590 | 0.000793 | 0.602588 | 0.255045 | 2.070477 | 0.145732 |
+| log | 0.003659 | 0.168628 | 0.006836 | 0.609075 | 1.183095 | 2.114717 | 0.197227 |
+| drag | 0.003058 | 0.107733 | 0.043664 | 0.096671 | 0.059061 | 0.302958 | 0.170675 |
