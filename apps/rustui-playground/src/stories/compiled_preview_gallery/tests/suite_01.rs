@@ -427,7 +427,7 @@ fn date_picker_specimen_round_trips_optional_dates_and_rejects_stale_feedback() 
         Some(PropertyValue::String("Start date".into()))
     );
     assert_eq!(
-        property_string(&gallery.host.snapshot().unwrap(), "accessibility_label").as_deref(),
+        property_string(gallery.host.snapshot().unwrap(), "accessibility_label").as_deref(),
         Some("Start date")
     );
     assert_eq!(gallery.host.snapshot().and_then(property_date), None);

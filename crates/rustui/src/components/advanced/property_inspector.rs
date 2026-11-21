@@ -16,6 +16,8 @@ use crate::{
     view::{EmptyView, RenderContext, RetentionScope, View},
 };
 
+type IntegerValueWriter = Rc<dyn Fn(i64, &mut App)>;
+
 /// A controlled editor whose value stays in its enclosing component owner.
 pub enum PropertyEditor {
     Text(Binding<String>),
@@ -138,7 +140,7 @@ pub struct PropertyInspectorView {
 struct RetainedIntegerValueField {
     state: Entity<InputState>,
     owner_value: i64,
-    writer: Rc<RefCell<Rc<dyn Fn(i64, &mut App)>>>,
+    writer: Rc<RefCell<IntegerValueWriter>>,
 }
 
 fn parse_integer_value_draft(draft: &str) -> Option<i64> {
@@ -255,7 +257,7 @@ impl View for PropertyInspectorView {
                                     let field_id = Identity::from(format!(
                                         "property-inspector-integer:{control_id}"
                                     ));
-                                    let writer: Rc<dyn Fn(i64, &mut App)> = if disabled {
+                                    let writer: IntegerValueWriter = if disabled {
                                         Rc::new(|_, _| {})
                                     } else {
                                         context.binding_writer(value.clone())

@@ -32,6 +32,7 @@ const UTILITY_WINDOW_TABS: [(&str, &str, UtilityWindowPanel); 5] = [
     ("images", "Images", UtilityWindowPanel::Images),
     ("crayons", "Crayons", UtilityWindowPanel::Crayons),
 ];
+#[cfg(test)]
 const UTILITY_WINDOW_TITLE: &str = "Utility Panel";
 const UTILITY_WINDOW_CHANNEL_LABELS: [&str; 3] = ["Red", "Green", "Blue"];
 const UTILITY_WINDOW_SAMPLE_IMAGE_LABEL: &str = "Purple and cyan sample image";

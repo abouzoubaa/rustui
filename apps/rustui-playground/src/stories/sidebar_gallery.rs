@@ -70,7 +70,7 @@ impl View for SidebarGallery {
         let selected_status = match selected.as_deref() {
             None => String::from("No selection"),
             Some("projects") if !self.projects_present() => {
-                format!("Selected ID: projects (no matching row; owner binding retained)")
+                "Selected ID: projects (no matching row; owner binding retained)".to_string()
             }
             Some(
                 id @ ("inbox"

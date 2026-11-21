@@ -484,7 +484,7 @@ mod tests {
 mod file_drop_event_probe {
     use gpui::{
         App, Context, ExternalPaths, FileDropEvent, InteractiveElement as _, IntoElement,
-        ParentElement as _, Render, StatefulInteractiveElement as _, Styled as _, Window, div, px,
+        ParentElement as _, Render, Styled as _, Window, div, px,
     };
     use std::{cell::Cell, path::PathBuf, rc::Rc};
     struct Probe(Rc<Cell<bool>>);

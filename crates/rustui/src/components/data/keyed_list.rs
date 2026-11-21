@@ -243,10 +243,10 @@ impl KeyedListDelegate {
                     animation.finished.set(false);
                     if animation.focus.contains_focused(window, cx) {
                         window.focus_next(cx);
-                        if animation.focus.contains_focused(window, cx) {
-                            if let Some(container) = &self.container_focus {
-                                container.focus(window, cx);
-                            }
+                        if animation.focus.contains_focused(window, cx)
+                            && let Some(container) = &self.container_focus
+                        {
+                            container.focus(window, cx);
                         }
                     }
                     window.set_focus_scope_inert(&animation.focus, true);
@@ -634,7 +634,7 @@ impl View for KeyedListView {
                         let mut cancelled_selection = event_selection_id.borrow().clone();
                         if clear_selection_on_cancel(
                             selectable,
-                            &mut *event_selection_id.borrow_mut(),
+                            &mut event_selection_id.borrow_mut(),
                             &mut cancelled_selection,
                         ) {
                             *requested.borrow_mut() = Some(SelectionRequest {

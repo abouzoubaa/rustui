@@ -32,6 +32,139 @@ impl<C> Default for PreviewRegistry<C> {
     }
 }
 
+impl<C> PreviewRegistry<C> {
+    pub fn new() -> Self {
+        Self::default()
+    }
+
+    /// Adds a signal-only component and its compiled factory atomically.
+    pub fn register(
+        &mut self,
+        schema: ComponentSchema,
+        factory: impl Fn(&PreviewSnapshot, &C) -> AnyView + 'static,
+    ) -> Result<(), PreviewError> {
+        if schema
+            .events
+            .values()
+            .any(|event| !event.payload.is_empty())
+        {
+            return Err(PreviewError::Invalid(
+                "compiled preview events must be signal-only".into(),
+            ));
+        }
+        let id = schema.id.clone();
+        self.catalog.register_component(schema)?;
+        self.factories.insert(id, Rc::new(factory));
+        Ok(())
+    }
+
+    /// Registers a descriptor-first component with named child slots. This is
+    /// additive: existing `register` leaf factories and `PreviewHost` are intact.
+    pub fn register_composable(
+        &mut self,
+        schema: ComponentSchema,
+        slots: BTreeMap<SlotId, SlotSchema>,
+        factory: impl Fn(&CompositionNodeSnapshot, &C, CompositionSlots) -> AnyView + 'static,
+    ) -> Result<(), PreviewError> {
+        let id = schema.id.clone();
+        if slots.len() > super::composition::MAX_SLOTS_PER_COMPONENT {
+            return Err(PreviewError::Invalid(
+                "component exceeds composition slot limit".into(),
+            ));
+        }
+        for (slot, contract) in &slots {
+            SlotId::new(slot.as_str())?;
+            if contract.min_children > contract.max_children
+                || contract.max_children > super::composition::MAX_COMPOSITION_NODES
+            {
+                return Err(PreviewError::Invalid(
+                    "invalid slot cardinality bounds".into(),
+                ));
+            }
+            for child in &contract.allowed_children {
+                ComponentId::new(child.as_str()).map_err(PreviewError::Invalid)?;
+            }
+        }
+        // Reserve the ordinary registration path too, so duplicate component
+        // IDs remain rejected by the existing atomic catalog insertion.
+        let factory_for_leaf = Rc::new(factory);
+        let leaf_factory = factory_for_leaf.clone();
+        let leaf_node_id = NodeId::new(id.as_str())?;
+        self.register(schema, move |snapshot, context| {
+            leaf_factory(
+                &CompositionNodeSnapshot {
+                    id: leaf_node_id.clone(),
+                    snapshot: snapshot.clone(),
+                },
+                context,
+                CompositionSlots::new(),
+            )
+        })?;
+        self.composable_factories
+            .insert(id.clone(), factory_for_leaf);
+        self.slot_contracts.insert(id, slots);
+        Ok(())
+    }
+
+    /// Explicitly allowlists a local action target. Handlers stay with the owner.
+    pub fn register_action(&mut self, action: ActionRef) -> Result<(), PreviewError> {
+        self.catalog.register_action(action)
+    }
+
+    /// Read-only slot contracts for this registry's compiled composition factories.
+    pub fn composition_slots(&self) -> &BTreeMap<ComponentId, BTreeMap<SlotId, SlotSchema>> {
+        &self.slot_contracts
+    }
+
+    pub fn catalog(&self) -> &ComponentCatalog {
+        &self.catalog
+    }
+
+    pub(super) fn slot_contract(&self, id: &ComponentId) -> Option<&BTreeMap<SlotId, SlotSchema>> {
+        self.slot_contracts.get(id)
+    }
+
+    pub(super) fn render_composition(
+        &self,
+        snapshot: &CompositionNodeSnapshot,
+        context: &C,
+        slots: CompositionSlots,
+    ) -> Result<AnyView, PreviewError> {
+        let id = &snapshot.snapshot.preview.document.component_id;
+        if let Some(factory) = self.composable_factories.get(id) {
+            return Ok(factory(snapshot, context, slots));
+        }
+        if slots.is_empty() {
+            return self.render(&snapshot.snapshot, context);
+        }
+        Err(PreviewError::Invalid(format!(
+            "component `{id}` has child slots but no composable factory"
+        )))
+    }
+
+    pub(super) fn render(
+        &self,
+        snapshot: &PreviewSnapshot,
+        context: &C,
+    ) -> Result<AnyView, PreviewError> {
+        let id = &snapshot.preview.document.component_id;
+        if self
+            .slot_contracts
+            .get(id)
+            .is_some_and(|slots| slots.values().any(|slot| slot.min_children > 0))
+        {
+            return Err(PreviewError::Invalid(
+                "component requires a composition document with child slots".into(),
+            ));
+        }
+        let factory = self
+            .factories
+            .get(id)
+            .ok_or_else(|| PreviewError::UnknownComponent(id.clone()))?;
+        Ok(factory(snapshot, context))
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::PreviewRegistry;
@@ -539,138 +672,5 @@ mod tests {
         .unwrap();
         assert!(host.render(&()).unwrap().is_some());
         assert_eq!(&*calls.borrow(), &["original"]);
-    }
-}
-
-impl<C> PreviewRegistry<C> {
-    pub fn new() -> Self {
-        Self::default()
-    }
-
-    /// Adds a signal-only component and its compiled factory atomically.
-    pub fn register(
-        &mut self,
-        schema: ComponentSchema,
-        factory: impl Fn(&PreviewSnapshot, &C) -> AnyView + 'static,
-    ) -> Result<(), PreviewError> {
-        if schema
-            .events
-            .values()
-            .any(|event| !event.payload.is_empty())
-        {
-            return Err(PreviewError::Invalid(
-                "compiled preview events must be signal-only".into(),
-            ));
-        }
-        let id = schema.id.clone();
-        self.catalog.register_component(schema)?;
-        self.factories.insert(id, Rc::new(factory));
-        Ok(())
-    }
-
-    /// Registers a descriptor-first component with named child slots. This is
-    /// additive: existing `register` leaf factories and `PreviewHost` are intact.
-    pub fn register_composable(
-        &mut self,
-        schema: ComponentSchema,
-        slots: BTreeMap<SlotId, SlotSchema>,
-        factory: impl Fn(&CompositionNodeSnapshot, &C, CompositionSlots) -> AnyView + 'static,
-    ) -> Result<(), PreviewError> {
-        let id = schema.id.clone();
-        if slots.len() > super::composition::MAX_SLOTS_PER_COMPONENT {
-            return Err(PreviewError::Invalid(
-                "component exceeds composition slot limit".into(),
-            ));
-        }
-        for (slot, contract) in &slots {
-            SlotId::new(slot.as_str())?;
-            if contract.min_children > contract.max_children
-                || contract.max_children > super::composition::MAX_COMPOSITION_NODES
-            {
-                return Err(PreviewError::Invalid(
-                    "invalid slot cardinality bounds".into(),
-                ));
-            }
-            for child in &contract.allowed_children {
-                ComponentId::new(child.as_str()).map_err(PreviewError::Invalid)?;
-            }
-        }
-        // Reserve the ordinary registration path too, so duplicate component
-        // IDs remain rejected by the existing atomic catalog insertion.
-        let factory_for_leaf = Rc::new(factory);
-        let leaf_factory = factory_for_leaf.clone();
-        let leaf_node_id = NodeId::new(id.as_str())?;
-        self.register(schema, move |snapshot, context| {
-            leaf_factory(
-                &CompositionNodeSnapshot {
-                    id: leaf_node_id.clone(),
-                    snapshot: snapshot.clone(),
-                },
-                context,
-                CompositionSlots::new(),
-            )
-        })?;
-        self.composable_factories
-            .insert(id.clone(), factory_for_leaf);
-        self.slot_contracts.insert(id, slots);
-        Ok(())
-    }
-
-    /// Explicitly allowlists a local action target. Handlers stay with the owner.
-    pub fn register_action(&mut self, action: ActionRef) -> Result<(), PreviewError> {
-        self.catalog.register_action(action)
-    }
-
-    /// Read-only slot contracts for this registry's compiled composition factories.
-    pub fn composition_slots(&self) -> &BTreeMap<ComponentId, BTreeMap<SlotId, SlotSchema>> {
-        &self.slot_contracts
-    }
-
-    pub fn catalog(&self) -> &ComponentCatalog {
-        &self.catalog
-    }
-
-    pub(super) fn slot_contract(&self, id: &ComponentId) -> Option<&BTreeMap<SlotId, SlotSchema>> {
-        self.slot_contracts.get(id)
-    }
-
-    pub(super) fn render_composition(
-        &self,
-        snapshot: &CompositionNodeSnapshot,
-        context: &C,
-        slots: CompositionSlots,
-    ) -> Result<AnyView, PreviewError> {
-        let id = &snapshot.snapshot.preview.document.component_id;
-        if let Some(factory) = self.composable_factories.get(id) {
-            return Ok(factory(snapshot, context, slots));
-        }
-        if slots.is_empty() {
-            return self.render(&snapshot.snapshot, context);
-        }
-        Err(PreviewError::Invalid(format!(
-            "component `{id}` has child slots but no composable factory"
-        )))
-    }
-
-    pub(super) fn render(
-        &self,
-        snapshot: &PreviewSnapshot,
-        context: &C,
-    ) -> Result<AnyView, PreviewError> {
-        let id = &snapshot.preview.document.component_id;
-        if self
-            .slot_contracts
-            .get(id)
-            .is_some_and(|slots| slots.values().any(|slot| slot.min_children > 0))
-        {
-            return Err(PreviewError::Invalid(
-                "component requires a composition document with child slots".into(),
-            ));
-        }
-        let factory = self
-            .factories
-            .get(id)
-            .ok_or_else(|| PreviewError::UnknownComponent(id.clone()))?;
-        Ok(factory(snapshot, context))
     }
 }

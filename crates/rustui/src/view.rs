@@ -30,6 +30,9 @@ pub(crate) type ActionHandler = Box<dyn Fn(&ClickEvent, &mut Window, &mut App)>;
 pub(crate) type KeyboardActionHandler = Box<dyn Fn(&mut Window, &mut App)>;
 pub(crate) type ComponentMutation = Box<dyn FnOnce(&mut dyn Any) -> bool>;
 pub(crate) type ComponentUpdater = Rc<dyn Fn(ComponentMutation, &mut App)>;
+pub(crate) type EventWriter<T> = Rc<dyn Fn(T, &mut App)>;
+type BindingReader<T> = Rc<dyn Fn(&mut App) -> Option<T>>;
+type TryEventWriter<T> = Rc<dyn Fn(T, &mut App) -> bool>;
 
 #[cfg(test)]
 mod overlay_owner_tests {
@@ -252,8 +255,8 @@ impl<C: 'static> OwnerAction<C> {
             }),
             cx,
         );
-        let reply = result.borrow_mut().take();
-        reply
+
+        result.borrow_mut().take()
     }
 
     /// Notify the owner only when its mutation reports a change.
@@ -608,6 +611,10 @@ impl<'a> RenderContext<'a> {
         self.implicit_retained_identity_slots = scoped.implicit_retained_identity_slots;
         result
     }
+    #[expect(
+        clippy::too_many_arguments,
+        reason = "The existing render-context constructor explicitly wires GPUI ownership, caches and locale state"
+    )]
     pub(crate) fn new(
         update_component: ComponentUpdater,
         owner_id: EntityId,
@@ -692,7 +699,7 @@ impl<'a> RenderContext<'a> {
             crate::theme::AppearanceMode::Light => 0,
             crate::theme::AppearanceMode::Dark => 2,
         } + usize::from(vibrant);
-        *self.text_style_queries[index].get_or_insert_with(|| {
+        self.text_style_queries[index].get_or_insert_with(|| {
             crate::components::basic::text::cached_text_style_query(mode, vibrant)
         })
     }
@@ -825,10 +832,7 @@ impl<'a> RenderContext<'a> {
         )
     }
 
-    pub(crate) fn binding_writer<T: 'static>(
-        &self,
-        binding: Binding<T>,
-    ) -> Rc<dyn Fn(T, &mut App)> {
+    pub(crate) fn binding_writer<T: 'static>(&self, binding: Binding<T>) -> EventWriter<T> {
         let update_component = self.update_component.clone();
         Rc::new(move |value, cx| {
             let binding = binding.clone();
@@ -841,10 +845,7 @@ impl<'a> RenderContext<'a> {
 
     /// Reads the current owner through the existing synchronous component dispatcher.
     /// A detached/wrong owner returns None; this never schedules a second runtime.
-    pub(crate) fn binding_reader<T: 'static>(
-        &self,
-        binding: Binding<T>,
-    ) -> Rc<dyn Fn(&mut App) -> Option<T>> {
+    pub(crate) fn binding_reader<T: 'static>(&self, binding: Binding<T>) -> BindingReader<T> {
         let update_component = self.update_component.clone();
         Rc::new(move |cx| {
             let output = Rc::new(std::cell::RefCell::new(None));
@@ -857,8 +858,8 @@ impl<'a> RenderContext<'a> {
                 }),
                 cx,
             );
-            let value = output.borrow_mut().take();
-            value
+
+            output.borrow_mut().take()
         })
     }
 
@@ -867,7 +868,7 @@ impl<'a> RenderContext<'a> {
         &self,
         binding: Binding<T>,
         update: impl Fn(&mut T, Event) -> bool + 'static,
-    ) -> Rc<dyn Fn(Event, &mut App)> {
+    ) -> EventWriter<Event> {
         let update_component = self.update_component.clone();
         let update = Rc::new(update);
         Rc::new(move |event, cx| {
@@ -889,7 +890,7 @@ impl<'a> RenderContext<'a> {
         &self,
         binding: Binding<T>,
         update: impl Fn(&mut T, Event) -> bool + 'static,
-    ) -> Rc<dyn Fn(Event, &mut App) -> bool> {
+    ) -> TryEventWriter<Event> {
         let update_component = self.update_component.clone();
         let update = Rc::new(update);
         Rc::new(move |event, cx| {
@@ -1118,6 +1119,10 @@ pub trait View: 'static {
 
     /// Lowers this view into GPUI's element tree.
     #[doc(hidden)]
+    #[expect(
+        clippy::wrong_self_convention,
+        reason = "The public View contract borrows retained views while lowering them into GPUI elements"
+    )]
     fn into_element(&self, context: &mut RenderContext<'_>) -> AnyElement
     where
         Self: Sized,

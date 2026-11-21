@@ -1128,7 +1128,7 @@ pub fn format_decimal(value: &str, locale: &Locale) -> String {
         _ => (group_separator, decimal_separator),
     };
 
-    let exponent_index = raw.find(|character| matches!(character, 'e' | 'E'));
+    let exponent_index = raw.find(['e', 'E']);
     let (mantissa, exponent) = match exponent_index {
         Some(index) => (&raw[..index], &raw[index..]),
         None => (raw, ""),
@@ -1171,10 +1171,11 @@ pub fn format_decimal(value: &str, locale: &Locale) -> String {
         );
     }
     for (index, digit) in exponent.chars().enumerate() {
-        if index == 1 && matches!(digit, '+' | '-') {
-            if let Some(mark) = sign_directional_mark(locale, arabic_digits) {
-                output.push(mark);
-            }
+        if index == 1
+            && matches!(digit, '+' | '-')
+            && let Some(mark) = sign_directional_mark(locale, arabic_digits)
+        {
+            output.push(mark);
         }
         output.push(localize_decimal_digit(digit, arabic_digits));
     }
@@ -1222,9 +1223,9 @@ fn grouping_separator_before(index: usize, digit_count: usize, indian: bool) -> 
     let remaining = digit_count - index;
     index != 0
         && if indian {
-            remaining >= 3 && (remaining - 3) % 2 == 0
+            remaining >= 3 && (remaining - 3).is_multiple_of(2)
         } else {
-            remaining % 3 == 0
+            remaining.is_multiple_of(3)
         }
 }
 

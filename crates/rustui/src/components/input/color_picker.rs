@@ -9,6 +9,7 @@ use gpui::{
 };
 
 type EventWriter<Value, Context> = Rc<dyn Fn(Value, &mut Context)>;
+type ColorWriterSlot = Rc<RefCell<Option<EventWriter<Option<Hsla>, gpui::App>>>>;
 
 fn replace_event_writer<Value, Context>(
     slot: &RefCell<Option<EventWriter<Value, Context>>>,
@@ -72,7 +73,7 @@ fn set_picker_open(
 
 struct RetainedColorPicker {
     state: gpui::Entity<ColorPickerState>,
-    writer: Rc<RefCell<Option<EventWriter<Option<Hsla>, gpui::App>>>>,
+    writer: ColorWriterSlot,
     disabled: bool,
 }
 use gpui_base::{ColorPicker as BaseColorPicker, ColorSwatch};
@@ -501,7 +502,7 @@ mod tests {
     fn binding() -> Binding<Option<Hsla>> {
         Binding::new(
             None,
-            |value: &Option<Hsla>| value.clone(),
+            |value: &Option<Hsla>| *value,
             |value, next| *value = next,
         )
     }

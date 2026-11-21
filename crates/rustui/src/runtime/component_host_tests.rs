@@ -363,6 +363,10 @@ fn increment_owner_action(owner: &mut OwnerActionProbe) {
     owner.state.lock().unwrap().actions += 1;
 }
 
+#[expect(
+    clippy::ptr_arg,
+    reason = "OwnerAction::action_with requires this callback's exact borrowed String type"
+)]
 fn capture_owner_action_value(owner: &mut OwnerActionProbe, value: &String) {
     owner.state.lock().unwrap().captured = Some(value.clone());
 }

@@ -404,12 +404,11 @@ fn visible_controlled_selection(
         if selection == Some(node.id.as_str()) {
             return Some(node.id.clone());
         }
-        if expanded.contains(&node.id) {
-            if let Some(selected) =
+        if expanded.contains(&node.id)
+            && let Some(selected) =
                 visible_controlled_selection(&node.children, selection, expanded)
-            {
-                return Some(selected);
-            }
+        {
+            return Some(selected);
         }
     }
     None
@@ -690,52 +689,50 @@ impl View for TreeView {
 
         let requested = self.selection.value();
         let desired = valid_selection(&self.nodes, requested.as_deref());
-        if desired.is_none() {
-            if let Some(missing) = requested.clone() {
-                let check_id = missing.clone();
-                let current_tree = retained.clone();
-                let normalize = context.binding_updater(self.selection.clone(), move |current| {
-                    clear_missing_selection(current, &missing)
+        if desired.is_none()
+            && let Some(missing) = requested.clone()
+        {
+            let check_id = missing.clone();
+            let current_tree = retained.clone();
+            let normalize = context.binding_updater(self.selection.clone(), move |current| {
+                clear_missing_selection(current, &missing)
+            });
+            context.update_entity(&tree, move |_state, _window, cx| {
+                cx.defer(move |cx| {
+                    if valid_selection(&current_tree.read(cx).nodes, Some(&check_id)).is_none() {
+                        normalize(cx);
+                    }
                 });
-                context.update_entity(&tree, move |_state, _window, cx| {
-                    cx.defer(move |cx| {
-                        if valid_selection(&current_tree.read(cx).nodes, Some(&check_id)).is_none()
-                        {
-                            normalize(cx);
-                        }
-                    });
-                });
-            }
+            });
         }
         if let (Some(binding), Some(requested), Some(desired)) = (
             self.expansion.as_ref(),
             requested_expansion.as_ref(),
             desired_expansion.as_ref(),
-        ) {
-            if requested != desired {
-                let request = ExpansionRequest {
-                    expected_owner: requested.clone(),
-                    expanded: desired.clone(),
-                };
-                let check_expected = request.expected_owner.clone();
-                let check_expanded = request.expanded.clone();
-                let current_tree = retained.clone();
-                let owner_expansion = owner_expansion.clone();
-                let normalize = context.binding_updater(binding.clone(), move |current| {
-                    let changed = apply_expansion_request(current, &request);
-                    *owner_expansion.borrow_mut() = Some(current.clone());
-                    changed
+        ) && requested != desired
+        {
+            let request = ExpansionRequest {
+                expected_owner: requested.clone(),
+                expanded: desired.clone(),
+            };
+            let check_expected = request.expected_owner.clone();
+            let check_expanded = request.expanded.clone();
+            let current_tree = retained.clone();
+            let owner_expansion = owner_expansion.clone();
+            let normalize = context.binding_updater(binding.clone(), move |current| {
+                let changed = apply_expansion_request(current, &request);
+                *owner_expansion.borrow_mut() = Some(current.clone());
+                changed
+            });
+            context.update_entity(&tree, move |_, _, cx| {
+                cx.defer(move |cx| {
+                    if valid_expanded_branches(&current_tree.read(cx).nodes, &check_expected)
+                        == check_expanded
+                    {
+                        normalize(cx);
+                    }
                 });
-                context.update_entity(&tree, move |_, _, cx| {
-                    cx.defer(move |cx| {
-                        if valid_expanded_branches(&current_tree.read(cx).nodes, &check_expected)
-                            == check_expanded
-                        {
-                            normalize(cx);
-                        }
-                    });
-                });
-            }
+            });
         }
         let native_desired = desired_expansion.as_ref().map_or_else(
             || desired.clone(),
@@ -779,7 +776,7 @@ impl View for TreeView {
                         reconcile_expansion(
                             &retained.read(context.app()).nodes,
                             &resolved_nodes,
-                            &current_expansion(&tree.read(context.app())),
+                            &current_expansion(tree.read(context.app())),
                         )
                     },
                     |expanded| controlled_expansion(&resolved_nodes, expanded),
@@ -864,11 +861,9 @@ impl View for TreeView {
             };
             if disabled_folder {
                 cx.stop_propagation();
-            } else if selected_leaf {
-                if let Some(activation) = keyboard_activation.as_ref() {
-                    activation(window, cx);
-                    cx.stop_propagation();
-                }
+            } else if selected_leaf && let Some(activation) = keyboard_activation.as_ref() {
+                activation(window, cx);
+                cx.stop_propagation();
             }
         });
         let swapping_direction = Rc::new(Cell::new(false));

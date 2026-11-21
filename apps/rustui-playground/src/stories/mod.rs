@@ -4,6 +4,7 @@ use rustui::localization::MessageArguments;
 use rustui::prelude::*;
 use std::time::Duration;
 
+#[cfg(test)]
 const MENU_BAR_REFERENCE_LABELS: [&str; 9] = [
     "Finder",
     "File",

@@ -41,7 +41,7 @@ impl View for CompiledPreviewGallery {
                     .properties
                     .iter()
                     .filter(|(_, property)| preview_inspector_property_is_visible(property))
-                    .filter_map(|(id, property)| {
+                    .map(|(id, property)| {
                         // A remount is a new binding lease. Scope each editor
                         // to that generation so retained input state cannot
                         // keep the previous generation's captured lease.
@@ -60,18 +60,14 @@ impl View for CompiledPreviewGallery {
                                     Self::write_text,
                                 );
                                 if property.allowed_values.is_empty() {
-                                    Some(PropertyInspectorRow::text(
-                                        row_id.clone(),
-                                        id.as_str(),
-                                        value,
-                                    ))
+                                    PropertyInspectorRow::text(row_id.clone(), id.as_str(), value)
                                 } else {
-                                    Some(PropertyInspectorRow::choice(
+                                    PropertyInspectorRow::choice(
                                         row_id.clone(),
                                         id.as_str(),
                                         value,
                                         property.allowed_values.clone(),
-                                    ))
+                                    )
                                 }
                             }
                             PropertyKind::Boolean => {
@@ -87,28 +83,24 @@ impl View for CompiledPreviewGallery {
                                 } else {
                                     self.preview_inspector_boolean_binding(context)
                                 };
-                                Some(PropertyInspectorRow::toggle(
-                                    row_id.clone(),
-                                    id.as_str(),
-                                    value,
-                                ))
+                                PropertyInspectorRow::toggle(row_id.clone(), id.as_str(), value)
                             }
-                            PropertyKind::Integer => Some(PropertyInspectorRow::integer_value(
+                            PropertyKind::Integer => PropertyInspectorRow::integer_value(
                                 row_id,
                                 format!("{} (integer)", id.as_str()),
                                 Binding::new_with(
                                     self.host
                                         .snapshot()
                                         .and_then(|snapshot| {
-                                            property_integer(&snapshot, id.as_str())
+                                            property_integer(snapshot, id.as_str())
                                         })
                                         .unwrap_or_default(),
                                     context,
                                     Self::read_integer_property,
                                     Self::write_integer_property,
                                 ),
-                            )),
-                            PropertyKind::Number => Some(PropertyInspectorRow::text(
+                            ),
+                            PropertyKind::Number => PropertyInspectorRow::text(
                                 row_id,
                                 format!("{} (f64)", id.as_str()),
                                 Binding::new_with(
@@ -117,7 +109,7 @@ impl View for CompiledPreviewGallery {
                                     Self::read_number_draft,
                                     Self::write_number_draft,
                                 ),
-                            )),
+                            ),
                         }
                     })
                     .collect::<Vec<_>>()

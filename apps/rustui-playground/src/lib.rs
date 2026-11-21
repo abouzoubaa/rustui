@@ -2,6 +2,13 @@
 
 mod catalog;
 mod f0_frame_capture;
+#[cfg_attr(
+    not(target_family = "wasm"),
+    expect(
+        dead_code,
+        reason = "Native builds retain shared host protocol shapes while their optional adapter is inactive"
+    )
+)]
 mod preview_transport;
 #[cfg(target_family = "wasm")]
 mod preview_transport_web;
@@ -1081,9 +1088,11 @@ mod tests {
 
     #[test]
     fn filtered_catalog_selection_uses_original_row_and_clears_demo_selection() {
-        let mut app = Playground::default();
-        app.query = "combo".into();
-        app.story_selection = Some(9);
+        let mut app = Playground {
+            query: "combo".into(),
+            story_selection: Some(9),
+            ..Default::default()
+        };
         assert!(app.catalog_binding().write_to(&mut app, Some(0)));
         assert_eq!(app.item().map(|item| item.key), Some("combo_box"));
         assert_eq!(app.active_story(), Some(StoryId::Input));

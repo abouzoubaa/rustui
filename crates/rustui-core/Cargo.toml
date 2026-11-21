@@ -10,3 +10,6 @@ description = "GPUI-aligned state, identity, binding, and environment contracts"
 [[bench]]
 name = "binding_update"
 harness = false
+
+[lints]
+workspace = true

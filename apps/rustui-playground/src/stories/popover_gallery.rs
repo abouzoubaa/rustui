@@ -112,13 +112,12 @@ impl View for PopoverHarness {
                     let probe = native_probe.clone();
                     move |_, _, cx| {
                         let handle = probe.native_popup.lock().unwrap().take();
-                        if let Some(handle) = handle {
-                            if let Err(error) = handle.update(cx, |_, window, _| {
+                        if let Some(handle) = handle
+                            && let Err(error) = handle.update(cx, |_, window, _| {
                                 window.remove_window();
                             }) {
                                 eprintln!("RustUI could not close native popup: {error}");
                             }
-                        }
                     }
                 }),
             ))

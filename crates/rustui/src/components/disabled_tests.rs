@@ -1,10 +1,10 @@
 //! R15: one case table and one GPUI-window runner for disabled controls.
 use crate::{prelude::*, runtime::ComponentHost, view::EmptyView};
 use gpui::{
-    App, AppContext as _, Context, Entity, FocusHandle, InteractiveElement as _, IntoElement as _,
-    ParentElement as _, Render, StatefulInteractiveElement as _, Styled as _, Window, div, px,
+    AppContext as _, Context, Entity, FocusHandle, InteractiveElement as _, ParentElement as _,
+    Render, StatefulInteractiveElement as _, Styled as _, Window, div, px,
 };
-use std::{cell::Cell, rc::Rc};
+use std::rc::Rc;
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 enum Check {

@@ -6,3 +6,6 @@ rust-version.workspace = true
 license.workspace = true
 publish.workspace = true
 description = "RustUI GPUI performance infrastructure scaffold"
+
+[lints]
+workspace = true

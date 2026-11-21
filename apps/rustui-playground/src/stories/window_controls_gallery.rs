@@ -168,7 +168,8 @@ mod tests {
 
     #[test]
     fn window_control_generated_actions_update_selection_feedback() {
-        let actions: [(fn(&mut WindowControlsGallery), &str); 3] = [
+        type WindowControlAction = fn(&mut WindowControlsGallery);
+        let actions: [(WindowControlAction, &str); 3] = [
             (WindowControlsGallery::select_close, "Close"),
             (WindowControlsGallery::select_minimize, "Minimize"),
             (WindowControlsGallery::select_zoom, "Zoom"),

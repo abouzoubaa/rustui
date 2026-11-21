@@ -1,9 +1,6 @@
 //! Accessible link activation through the pinned GPUI Components Button.
 
-use gpui::{
-    AnyElement, FontWeight, InteractiveElement as _, IntoElement, SharedString,
-    StatefulInteractiveElement as _, Styled as _, px,
-};
+use gpui::{AnyElement, FontWeight, IntoElement, SharedString, Styled as _, px};
 use gpui_component::{
     Disableable as _,
     button::{Button as GpuiButton, ButtonVariant, ButtonVariants as _},

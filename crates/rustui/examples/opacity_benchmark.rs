@@ -253,8 +253,7 @@ fn main() {
             let startup_started = Instant::now();
             let mut stable_count = None;
             let mut stable_since = None;
-            let mut startup_stable_lowerings = 0;
-            loop {
+            let startup_stable_lowerings = loop {
                 cx.background_executor().timer(BASELINE_POLL_INTERVAL).await;
                 let snapshot = cx.update(|cx| render_diagnostics_snapshot(cx));
                 let count = lowering_count(&snapshot);
@@ -262,8 +261,7 @@ fn main() {
                     if stable_since
                         .is_some_and(|started: Instant| started.elapsed() >= STARTUP_STABILITY)
                     {
-                        startup_stable_lowerings = count;
-                        break;
+                        break count;
                     }
                 } else {
                     stable_count = (count > 0).then_some(count);
@@ -281,7 +279,7 @@ fn main() {
                     });
                     return;
                 }
-            }
+            };
             let startup_wait_ms = startup_started.elapsed().as_millis();
             let mount_ms = cx.update(|cx| {
                 clear_render_diagnostics(cx);

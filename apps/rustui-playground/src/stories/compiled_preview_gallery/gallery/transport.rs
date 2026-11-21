@@ -18,6 +18,7 @@ impl CompiledPreviewGallery {
         AnyView::new(EmptyView)
     }
 
+    #[cfg(target_family = "wasm")]
     pub(super) fn reference_close(&mut self) -> bool {
         if let Some(mut session) = self.reference_session.take() {
             session.close(crate::preview_transport::Host::Preview(&mut self.host));
@@ -28,11 +29,13 @@ impl CompiledPreviewGallery {
         true
     }
 
+    #[cfg(any(test, target_family = "wasm"))]
     pub(super) fn reference_increment(owner: &mut Self) -> bool {
         owner.activations += 1;
         true
     }
 
+    #[cfg(any(test, target_family = "wasm"))]
     pub(super) fn reference_request(
         &mut self,
         delivery: crate::preview_transport::Delivery,

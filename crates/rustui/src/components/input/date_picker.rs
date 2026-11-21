@@ -17,6 +17,7 @@ use rustui_i18n::{
 use crate::view::{EmptyView, RenderContext, View};
 
 type EventWriter<Value, Context> = Rc<dyn Fn(Value, &mut Context)>;
+type DateWriterSlot = Rc<RefCell<Option<EventWriter<Option<NaiveDate>, gpui::App>>>>;
 
 fn localized_calendar(
     locale: Option<&Locale>,
@@ -97,7 +98,7 @@ fn year_range_around(date: NaiveDate) -> (i32, i32) {
 
 struct RetainedDatePicker {
     state: gpui::Entity<DatePickerState>,
-    writer: Rc<RefCell<Option<EventWriter<Option<NaiveDate>, gpui::App>>>>,
+    writer: DateWriterSlot,
 }
 
 /// A controlled optional date picker whose calendar state survives body rebuilds.

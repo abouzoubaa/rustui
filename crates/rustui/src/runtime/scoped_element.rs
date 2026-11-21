@@ -89,6 +89,81 @@ fn segment_id(kind: &str, value: &str) -> String {
     format!("rustui:{kind}:{}:{value}", value.len())
 }
 
+impl IntoElement for ScopedElement {
+    type Element = Self;
+
+    fn into_element(self) -> Self::Element {
+        self
+    }
+}
+
+impl Element for ScopedElement {
+    type RequestLayoutState = ();
+    type PrepaintState = ();
+
+    fn id(&self) -> Option<ElementId> {
+        Some(self.id.clone())
+    }
+
+    fn a11y_role(&self) -> Option<Role> {
+        self.semantics.as_ref().map(|info| info.role)
+    }
+
+    fn write_a11y_info(&self, node: &mut accesskit::Node) {
+        if let Some(info) = &self.semantics {
+            if let Some(label) = &info.label {
+                node.set_label(label.clone());
+            }
+            if let Some(description) = &info.description {
+                node.set_description(description.clone());
+            }
+            if let Some((value, politeness)) = &info.live_value {
+                node.set_value(value.clone());
+                node.set_live(*politeness);
+            }
+        }
+    }
+
+    fn source_location(&self) -> Option<&'static Location<'static>> {
+        None
+    }
+
+    fn request_layout(
+        &mut self,
+        _: Option<&GlobalElementId>,
+        _: Option<&InspectorElementId>,
+        window: &mut Window,
+        cx: &mut App,
+    ) -> (LayoutId, Self::RequestLayoutState) {
+        (self.child.request_layout(window, cx), ())
+    }
+
+    fn prepaint(
+        &mut self,
+        _: Option<&GlobalElementId>,
+        _: Option<&InspectorElementId>,
+        _: Bounds<Pixels>,
+        _: &mut Self::RequestLayoutState,
+        window: &mut Window,
+        cx: &mut App,
+    ) {
+        self.child.prepaint(window, cx);
+    }
+
+    fn paint(
+        &mut self,
+        _: Option<&GlobalElementId>,
+        _: Option<&InspectorElementId>,
+        _: Bounds<Pixels>,
+        _: &mut Self::RequestLayoutState,
+        _: &mut Self::PrepaintState,
+        window: &mut Window,
+        cx: &mut App,
+    ) {
+        self.child.paint(window, cx);
+    }
+}
+
 #[cfg(test)]
 mod scope_tests {
     use super::{ScopedElement, SemanticInfo, scope_id, semantic_scoped_element};
@@ -263,80 +338,5 @@ mod scope_tests {
         let mut node = Node::new(role);
         scoped.write_a11y_info(&mut node);
         assert_eq!(node.label(), Some("Primary navigation"));
-    }
-}
-
-impl IntoElement for ScopedElement {
-    type Element = Self;
-
-    fn into_element(self) -> Self::Element {
-        self
-    }
-}
-
-impl Element for ScopedElement {
-    type RequestLayoutState = ();
-    type PrepaintState = ();
-
-    fn id(&self) -> Option<ElementId> {
-        Some(self.id.clone())
-    }
-
-    fn a11y_role(&self) -> Option<Role> {
-        self.semantics.as_ref().map(|info| info.role)
-    }
-
-    fn write_a11y_info(&self, node: &mut accesskit::Node) {
-        if let Some(info) = &self.semantics {
-            if let Some(label) = &info.label {
-                node.set_label(label.clone());
-            }
-            if let Some(description) = &info.description {
-                node.set_description(description.clone());
-            }
-            if let Some((value, politeness)) = &info.live_value {
-                node.set_value(value.clone());
-                node.set_live(*politeness);
-            }
-        }
-    }
-
-    fn source_location(&self) -> Option<&'static Location<'static>> {
-        None
-    }
-
-    fn request_layout(
-        &mut self,
-        _: Option<&GlobalElementId>,
-        _: Option<&InspectorElementId>,
-        window: &mut Window,
-        cx: &mut App,
-    ) -> (LayoutId, Self::RequestLayoutState) {
-        (self.child.request_layout(window, cx), ())
-    }
-
-    fn prepaint(
-        &mut self,
-        _: Option<&GlobalElementId>,
-        _: Option<&InspectorElementId>,
-        _: Bounds<Pixels>,
-        _: &mut Self::RequestLayoutState,
-        window: &mut Window,
-        cx: &mut App,
-    ) {
-        self.child.prepaint(window, cx);
-    }
-
-    fn paint(
-        &mut self,
-        _: Option<&GlobalElementId>,
-        _: Option<&InspectorElementId>,
-        _: Bounds<Pixels>,
-        _: &mut Self::RequestLayoutState,
-        _: &mut Self::PrepaintState,
-        window: &mut Window,
-        cx: &mut App,
-    ) {
-        self.child.paint(window, cx);
     }
 }

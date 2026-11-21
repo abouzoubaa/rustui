@@ -253,15 +253,17 @@ impl CompositionGallery {
         }
         AnyView::new(EmptyView)
     }
+    #[cfg(target_family = "wasm")]
     fn reference_close(&mut self) -> bool {
-        if let Some(mut session) = self.reference_session.take() {
-            if let Some(Ok(model)) = &mut self.model {
-                session.close(crate::preview_transport::Host::Composition(&mut model.host));
-            }
+        if let Some(mut session) = self.reference_session.take()
+            && let Some(Ok(model)) = &mut self.model
+        {
+            session.close(crate::preview_transport::Host::Composition(&mut model.host));
         }
         true
     }
 
+    #[cfg(target_family = "wasm")]
     fn reference_request(
         &mut self,
         delivery: crate::preview_transport::Delivery,
@@ -334,10 +336,10 @@ impl View for CompositionGallery {
         let _ = cx;
     }
     fn on_unmount(&mut self, _cx: &mut rustui::App) {
-        if let Some(mut session) = self.reference_session.take() {
-            if let Some(Ok(model)) = &mut self.model {
-                session.close(crate::preview_transport::Host::Composition(&mut model.host));
-            }
+        if let Some(mut session) = self.reference_session.take()
+            && let Some(Ok(model)) = &mut self.model
+        {
+            session.close(crate::preview_transport::Host::Composition(&mut model.host));
         }
         #[cfg(target_family = "wasm")]
         if let Some(bridge) = self.reference_bridge.take() {

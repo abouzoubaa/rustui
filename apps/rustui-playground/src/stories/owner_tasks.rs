@@ -124,14 +124,12 @@ impl View for TaskDemo {
     }
 }
 
-fn result_after(
+async fn result_after(
     delay: impl Future<Output = ()> + Send + 'static,
     result: Result<&'static str, &'static str>,
-) -> impl Future<Output = Result<String, String>> + Send {
-    async move {
-        delay.await;
-        result.map(str::to_owned).map_err(str::to_owned)
-    }
+) -> Result<String, String> {
+    delay.await;
+    result.map(str::to_owned).map_err(str::to_owned)
 }
 
 #[cfg(test)]

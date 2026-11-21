@@ -139,6 +139,10 @@ impl FormAccessoriesGallery {
         owner.radio_selection() == *choice
     }
 
+    #[expect(
+        clippy::ptr_arg,
+        reason = "Binding::new_with requires this callback's exact String context type"
+    )]
     fn write_radio_selection(owner: &mut Self, choice: &String, selected: bool) -> bool {
         selected && owner.set_radio_selection(choice.clone())
     }

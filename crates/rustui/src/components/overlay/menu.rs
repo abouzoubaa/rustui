@@ -210,7 +210,7 @@ pub(crate) enum BoundMenuItem {
         label: SharedString,
         disabled: bool,
         handler: Rc<ActionHandler>,
-        style: crate::theme::ResolvedComponentStyle,
+        style: Rc<crate::theme::ResolvedComponentStyle>,
         direction: rustui_i18n::LayoutDirection,
     },
     Separator,
@@ -234,7 +234,12 @@ pub(crate) fn bind_items(
     items: &[MenuItem],
     context: &mut RenderContext<'_>,
 ) -> Vec<BoundMenuItem> {
-    let style = required_style(context, "menu_item", "body", &selector(context));
+    let style = Rc::new(required_style(
+        context,
+        "menu_item",
+        "body",
+        &selector(context),
+    ));
     let direction = context.layout_direction();
 
     // Bind before the native popup opens so callbacks keep only the existing
@@ -287,7 +292,7 @@ pub(crate) fn append_menu_items(mut menu: PopupMenu, items: &[BoundMenuItem]) ->
                     label.clone(),
                     *disabled,
                     handler.clone(),
-                    style.clone(),
+                    style.as_ref().clone(),
                     *direction,
                 ));
             }

@@ -1,6 +1,6 @@
 use super::*;
 use crate::runtime::ComponentHost;
-use gpui::{ExternalPaths, FileDropEvent, point};
+use gpui::{ExternalPaths, FileDropEvent};
 use std::sync::atomic::{AtomicUsize, Ordering};
 
 static NEXT: AtomicUsize = AtomicUsize::new(0);

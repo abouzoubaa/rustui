@@ -185,31 +185,24 @@ impl View for PendingTaskChild {
     }
 }
 
-fn delayed_result(
+async fn delayed_result(
     probe: Arc<TaskReleaseProbe>,
     delay: impl Future<Output = ()> + Send + 'static,
-) -> impl Future<Output = Result<String, String>> + Send {
-    async move {
-        probe.background_started.fetch_add(1, Ordering::SeqCst);
-        delay.await;
-        probe.background_finished.fetch_add(1, Ordering::SeqCst);
-        Ok(String::from("finished after child removal"))
-    }
+) -> Result<String, String> {
+    probe.background_started.fetch_add(1, Ordering::SeqCst);
+    delay.await;
+    probe.background_finished.fetch_add(1, Ordering::SeqCst);
+    Ok(String::from("finished after child removal"))
 }
 
 #[cfg(not(target_arch = "wasm32"))]
-fn native_result(
-    probe: Arc<TaskReleaseProbe>,
-    delay: Duration,
-) -> impl Future<Output = Result<String, String>> + Send {
-    async move {
-        probe.background_started.fetch_add(1, Ordering::SeqCst);
-        // A bounded acceptance probe on GPUI's background executor. Unlike the
-        // timer case, dropping the task cannot interrupt this in-flight poll.
-        std::thread::sleep(delay);
-        probe.background_finished.fetch_add(1, Ordering::SeqCst);
-        Ok(String::from("native work finished after child removal"))
-    }
+async fn native_result(probe: Arc<TaskReleaseProbe>, delay: Duration) -> Result<String, String> {
+    probe.background_started.fetch_add(1, Ordering::SeqCst);
+    // A bounded acceptance probe on GPUI's background executor. Unlike the
+    // timer case, dropping the task cannot interrupt this in-flight poll.
+    std::thread::sleep(delay);
+    probe.background_finished.fetch_add(1, Ordering::SeqCst);
+    Ok(String::from("native work finished after child removal"))
 }
 
 #[cfg(test)]

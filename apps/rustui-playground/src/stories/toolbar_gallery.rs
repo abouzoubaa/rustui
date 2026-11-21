@@ -278,7 +278,8 @@ mod button_group_tests {
     fn button_group_generated_actions_update_last_action_feedback() {
         let mut gallery = ButtonGroupGallery::default();
 
-        let actions: [(fn(&mut ButtonGroupGallery), &str); 3] = [
+        type ButtonGroupAction = fn(&mut ButtonGroupGallery);
+        let actions: [(ButtonGroupAction, &str); 3] = [
             (ButtonGroupGallery::choose_previous, "Previous"),
             (ButtonGroupGallery::choose_next, "Next"),
             (ButtonGroupGallery::choose_more, "More"),

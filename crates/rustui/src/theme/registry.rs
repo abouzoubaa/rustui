@@ -345,6 +345,20 @@ pub(crate) struct CachedTextStyle {
     pub foreground: gpui::Hsla,
 }
 
+type ResolvedStyleCacheEntry = (
+    String,
+    String,
+    ButtonStyleSelector,
+    Vec<String>,
+    Rc<ResolvedComponentStyle>,
+);
+type ResolvedTextStyleCacheEntry = (
+    &'static ButtonStyleSelector,
+    String,
+    Vec<String>,
+    CachedTextStyle,
+);
+
 #[derive(Clone)]
 pub struct ActiveTheme {
     revision: u64,
@@ -357,23 +371,8 @@ pub struct ActiveTheme {
     document: ThemeDocument,
     component_records: RefCell<BTreeMap<String, ComponentThemeRecord>>,
     cached_appearance: Cell<AppearanceMode>,
-    resolved_styles: RefCell<
-        Vec<(
-            String,
-            String,
-            ButtonStyleSelector,
-            Vec<String>,
-            Rc<ResolvedComponentStyle>,
-        )>,
-    >,
-    resolved_text_styles: RefCell<
-        Vec<(
-            &'static ButtonStyleSelector,
-            String,
-            Vec<String>,
-            CachedTextStyle,
-        )>,
-    >,
+    resolved_styles: RefCell<Vec<ResolvedStyleCacheEntry>>,
+    resolved_text_styles: RefCell<Vec<ResolvedTextStyleCacheEntry>>,
 }
 
 impl ActiveTheme {

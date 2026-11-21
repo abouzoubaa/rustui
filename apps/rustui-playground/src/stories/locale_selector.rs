@@ -2,15 +2,15 @@
 
 use rustui::{
     localization::{
-        Catalog, Catalogs, LayoutDirection, Locale, set_locale_action as rustui_set_locale_action,
-        validate_catalogs,
+        Catalog, Catalogs, Locale, set_locale_action as rustui_set_locale_action, validate_catalogs,
     },
     prelude::{Button, ButtonStyle, HStack, VerticalAlignment, View},
     runtime::AppAction,
 };
 
+#[cfg(any(test, target_arch = "wasm32"))]
 fn document_direction(locale: &Locale) -> &'static str {
-    if LayoutDirection::for_locale(locale).is_right_to_left() {
+    if rustui::localization::LayoutDirection::for_locale(locale).is_right_to_left() {
         "rtl"
     } else {
         "ltr"

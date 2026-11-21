@@ -95,7 +95,6 @@ mod tests {
     use crate::theme::{
         activate_theme, assess_theme_coverage, load_theme, parse_theme, serialize_theme,
     };
-    use gpui::Styled as _;
     use gpui_component::{
         sidebar::{Sidebar, SidebarMenuItem},
         tab::TabBar,
@@ -280,7 +279,6 @@ mod fallback_tests {
         activate_theme, parse_theme,
         registry::{active_theme, hsla},
     };
-    use gpui::Styled as _;
     use gpui_component::{
         sidebar::{Sidebar, SidebarMenuItem},
         tab::TabBar,

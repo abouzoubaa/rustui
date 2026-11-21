@@ -84,12 +84,12 @@ impl std::ops::Deref for ValidatedIds {
 
 fn validated_ids<T>(items: &Rc<[CollectionItem<T>]>) -> Arc<ValidatedIds> {
     let pointer = items.as_ptr() as usize;
-    if let Some(first) = items.first() {
-        if let Some(cached) = first.validation.lock().unwrap().upgrade() {
-            if cached.pointer == pointer && cached.len == items.len() {
-                return cached;
-            }
-        }
+    if let Some(first) = items.first()
+        && let Some(cached) = first.validation.lock().unwrap().upgrade()
+        && cached.pointer == pointer
+        && cached.len == items.len()
+    {
+        return cached;
     }
     let result = Arc::new(ValidatedIds {
         pointer,
@@ -614,11 +614,10 @@ impl<T: 'static, V: View, F: Fn(usize, &T) -> V + 'static> View for Collection<T
                 let snapshot_same = state.snapshot.as_ref().and_then(|old| old.downcast_ref::<Rc<[CollectionItem<T>]>>()).is_some_and(|old| Rc::ptr_eq(old, &self.items));
                 let resized = !snapshot_same || state.row_height != self.row_height;
                 state.row_height = self.row_height;
-                if resized || state.selected != selected || previous_index != next_index {
-                    if let Some(index) = next_index {
+                if (resized || state.selected != selected || previous_index != next_index)
+                    && let Some(index) = next_index {
                         reveal_selected_row(&state.scroll, index);
                     }
-                }
                 if resized {
                     state.retained.prune_cells(&ids.iter().cloned().collect());
                     state.generation = state.generation.wrapping_add(1);
@@ -956,7 +955,7 @@ mod tests {
         });
         let (model, prepaints) = model;
         let mut replayed = false;
-        for frame in 0..12 {
+        for _frame in 0..12 {
             let before = prepaints.get();
             window.update(|window, app| {
                 assert!(

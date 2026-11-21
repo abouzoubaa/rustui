@@ -14,3 +14,6 @@ rustui-playground = { path = "../rustui-playground" }
 
 [dev-dependencies]
 rustui = { workspace = true, features = ["test-support"] }
+
+[lints]
+workspace = true

@@ -4,7 +4,7 @@ use crate::{
     runtime::component_host::ComponentHost,
     view::View,
 };
-use gpui::{AppContext as _, EntityInputHandler as _, Focusable as _};
+use gpui::{EntityInputHandler as _, Focusable as _};
 use rustui_core::{Binding, Identity};
 
 #[derive(Clone, Copy)]

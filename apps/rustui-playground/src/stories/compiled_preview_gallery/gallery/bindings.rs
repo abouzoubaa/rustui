@@ -30,7 +30,7 @@ impl CompiledPreviewGallery {
         if context.stamp.borrow().as_ref() != Some(&snapshot.stamp) {
             return None;
         }
-        property_string(&snapshot, context.property.as_str())
+        property_string(snapshot, context.property.as_str())
     }
 
     pub(super) fn write_string_selection(
@@ -473,7 +473,7 @@ impl CompiledPreviewGallery {
         };
         if context.property.as_str() == "title"
             && snapshot.preview.document.component_id.as_str() == "toast-specimen"
-            && property_string(&snapshot, "title").is_none()
+            && property_string(snapshot, "title").is_none()
         {
             return String::new();
         }
@@ -487,7 +487,7 @@ impl CompiledPreviewGallery {
                 _ => String::new(),
             }
         } else {
-            property_string(&snapshot, context.property.as_str()).unwrap_or_default()
+            property_string(snapshot, context.property.as_str()).unwrap_or_default()
         }
     }
     pub(super) fn read_token_values(&self, context: &PropertyBindingContext) -> Vec<String> {
@@ -499,7 +499,7 @@ impl CompiledPreviewGallery {
         {
             return Vec::new();
         }
-        property_string(&snapshot, context.property.as_str())
+        property_string(snapshot, context.property.as_str())
             .and_then(|value| parse_preview_token_values(&value).ok())
             .unwrap_or_default()
     }
@@ -757,7 +757,7 @@ impl CompiledPreviewGallery {
                     a: property_number(&snapshot, "alpha")? as f32,
                 })
             })
-            .unwrap_or_else(|| Hsla {
+            .unwrap_or(Hsla {
                 h: PREVIEW_COLOR_HUE as f32,
                 s: PREVIEW_COLOR_SATURATION as f32,
                 l: PREVIEW_COLOR_LIGHTNESS as f32,
@@ -786,7 +786,7 @@ impl CompiledPreviewGallery {
         }
 
         let has_color = value.is_some();
-        let color = value.or(color).unwrap_or_else(|| Hsla {
+        let color = value.or(color).unwrap_or(Hsla {
             h: PREVIEW_COLOR_HUE as f32,
             s: PREVIEW_COLOR_SATURATION as f32,
             l: PREVIEW_COLOR_LIGHTNESS as f32,
@@ -899,7 +899,7 @@ impl CompiledPreviewGallery {
             .get(&context.property)
             .cloned()
             .or_else(|| {
-                property_number(&snapshot, context.property.as_str()).map(|value| value.to_string())
+                property_number(snapshot, context.property.as_str()).map(|value| value.to_string())
             })
             .unwrap_or_default()
     }
@@ -1044,7 +1044,7 @@ impl CompiledPreviewGallery {
         self.host
             .snapshot()
             .filter(|snapshot| snapshot.stamp == stamp)
-            .and_then(|snapshot| property_integer(&snapshot, context.property.as_str()))
+            .and_then(|snapshot| property_integer(snapshot, context.property.as_str()))
             .unwrap_or_default()
     }
 

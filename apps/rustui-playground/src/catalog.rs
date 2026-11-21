@@ -1,6 +1,13 @@
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub enum Coverage {
     Partial,
+    #[cfg_attr(
+        not(test),
+        expect(
+            dead_code,
+            reason = "The catalog coverage model retains an explicit unavailable-entry state"
+        )
+    )]
     Missing,
 }
 
@@ -25,6 +32,13 @@ pub struct CatalogItem {
     pub key: &'static str,
     pub api: &'static str,
     pub coverage: Coverage,
+    #[cfg_attr(
+        not(test),
+        expect(
+            dead_code,
+            reason = "Native labels use localized note IDs; tests retain the authored fallback notes"
+        )
+    )]
     pub note: &'static str,
     pub note_message_id: &'static str,
     pub sources: &'static str,

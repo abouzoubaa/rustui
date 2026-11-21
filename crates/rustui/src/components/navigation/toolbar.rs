@@ -2,10 +2,7 @@
 
 use std::collections::HashSet;
 
-use gpui::{
-    AnyElement, InteractiveElement as _, IntoElement, ParentElement as _, SharedString,
-    Styled as _, px,
-};
+use gpui::{AnyElement, IntoElement, SharedString, Styled as _, px};
 use gpui_component::toolbar::Toolbar as GpuiToolbar;
 use rustui_core::Identity;
 use rustui_i18n::LayoutDirection;
