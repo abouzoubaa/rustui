@@ -625,6 +625,7 @@ impl MetalRenderer {
         };
         let prepared = crate::fast::damage::frame::choose(self, scene);
         if prepared.mode == crate::fast::damage::frame::Mode::Same {
+            gpui::fast_frame_reason(prepared.mode.label(), prepared.reason);
             crate::fast::damage::frame::skip(self, prepared);
             return;
         }
@@ -655,6 +656,7 @@ impl MetalRenderer {
             (texture.height() as i32).into(),
         );
 
+        let (planned_mode, planned_reason) = (prepared.mode, prepared.reason);
         let command_buffer = match crate::fast::damage::frame::render(
             self,
             scene,
@@ -669,6 +671,8 @@ impl MetalRenderer {
             }
         };
 
+        gpui::fast_frame_reason(self.damage.last_mode.label(), if self.damage.last_mode == planned_mode { planned_reason } else { "allocation_or_verify" });
+        crate::fast::presented::observe(&drawable);
         crate::fast::damage::metrics::on_commit(&command_buffer, self.damage.last_mode.label());
 
         if self.presents_with_transaction {

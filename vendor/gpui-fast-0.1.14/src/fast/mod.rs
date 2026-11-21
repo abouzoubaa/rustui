@@ -24,6 +24,7 @@ pub(crate) mod em_metrics;
 pub(crate) mod frame_recorder;
 pub(crate) mod global_id;
 pub(crate) mod glyphs;
+pub(crate) mod input_latency;
 pub(crate) mod interactive_text;
 pub(crate) mod interactivity;
 pub(crate) mod layers;

@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+- Add opt-in G0 state-to-display diagnostics using Metal drawable display times (PX-2 candidate).
+
 - Buffer native frame-recorder output outside measured phases (PX-1 candidate).
 - P0: document damage-off native CPU profiles, logging overhead and measured optimization candidates without runtime changes.
 
