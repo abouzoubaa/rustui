@@ -17,12 +17,16 @@ class FrameRecorderTests(unittest.TestCase):
         source = source_path.read_text()
         start = source.index("// Opt-in frame recording for native acceptance;")
         end = source.index("const FRAME_INTERVAL_TOLERANCE:", start)
-        harness = "type WindowId = u64;\n" + source[start:end] + '''
+        recorder = (ROOT / "vendor/gpui-fast-0.1.14/src/fast/frame_recorder.rs").read_text()
+        # Keep the real implementation, with only GPUI's WindowId replaced.
+        recorder = "\n".join(line for line in recorder.splitlines() if not line.startswith("//!"))
+        harness = "type WindowId = u64;\nmod fast { pub mod frame_recorder {\n" + recorder + "\n} }\n" + source[start:end] + '''
 fn main() {
     f0_frame_record(1, "layout", f0_phase_start());
     f0_frame_record(1, "draw", f0_frame_start());
     f0_frame_record(1, "present", f0_frame_start());
     f0_frame_record(1, "present", f0_frame_start());
+    fast::frame_recorder::after_present();
 }
 '''
         channel = next(line.split('"')[1] for line in (ROOT / "rust-toolchain.toml").read_text().splitlines() if line.strip().startswith("channel"))
@@ -46,6 +50,41 @@ fn main() {
             env["RUSTUI_FRAME_PROFILE"] = "1"
             profiled = subprocess.run([str(binary)], env=env, check=True, capture_output=True, text=True)
             self.assertEqual(json.loads(profiled.stderr.splitlines()[0].removeprefix("RUSTUI_FRAME_LOG "))["event"], "layout")
+
+    def test_buffered_record_bytes_match_original_and_flush_on_process_exit(self):
+        recorder = (ROOT / "vendor/gpui-fast-0.1.14/src/fast/frame_recorder.rs").read_text()
+        recorder = "\n".join(line for line in recorder.splitlines() if not line.startswith("//!"))
+        harness = "type WindowId = u64;\n" + recorder.replace("use crate::WindowId;", "") + r'''
+fn main() {
+    for gap in [None, Some(0.0), Some(8.333333333)] {
+        let record = Record { window: 42, event: "layout", time_ms: 12.3456789,
+            cpu_ms: 0.000123456, gap_ms: gap, epoch_ms: 1795267351234.5678 };
+        let mut buffered = String::new();
+        record.append(&mut buffered);
+        let original = format!(
+            "RUSTUI_FRAME_LOG {{\"event\":\"{}\",\"window\":\"{:?}\",\"time_ms\":{:.6},\"cpu_ms\":{:.6},\"gap_ms\":{},\"epoch_ms\":{:.6}}}\n",
+            record.event, record.window, record.time_ms, record.cpu_ms,
+            gap.map_or_else(|| "null".into(), |gap| format!("{gap:.6}")), record.epoch_ms);
+        assert_eq!(buffered.as_bytes(), original.as_bytes());
+    }
+    record(1, "layout", phase_start());
+    record(1, "draw", start());
+    record(1, "present", start());
+    assert!(!RECORDS.lock().unwrap().is_empty());
+    // process::exit skips Rust destructors; the C exit handler must still drain.
+    std::process::exit(0);
+}
+'''
+        channel = next(line.split('"')[1] for line in (ROOT / "rust-toolchain.toml").read_text().splitlines() if line.strip().startswith("channel"))
+        with tempfile.TemporaryDirectory() as temporary:
+            rust, binary = Path(temporary)/"bytes.rs", Path(temporary)/"bytes"
+            rust.write_text(harness)
+            result = subprocess.run(["rustup", "run", channel, "rustc", "--edition", "2024", str(rust), "-o", str(binary)], capture_output=True, text=True)
+            self.assertEqual(result.returncode, 0, result.stderr)
+            result = subprocess.run([str(binary)], env=dict(os.environ, RUSTUI_FRAME_LOG="buffered", RUSTUI_FRAME_PROFILE="1"), capture_output=True, text=True)
+            self.assertEqual(result.returncode, 0, result.stderr)
+            frames = [json.loads(line.removeprefix("RUSTUI_FRAME_LOG ")) for line in result.stderr.splitlines()]
+            self.assertEqual([frame["event"] for frame in frames], ["layout", "draw", "present"])
 
     def test_bounce_oracle_is_opt_in_and_keeps_visual_and_logical_offsets_separate(self):
         source = (ROOT / "crates/rustui-gpui-base/src/scroll_bounce.rs").read_text()

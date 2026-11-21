@@ -17,7 +17,8 @@ class G0BenchTests(unittest.TestCase):
         self.output = Path(self.temporary.name)
         for scene in SCENES:
             start = {"event": "start", "scene": scene, "epoch_ms": 1000}
-            end = {"event": "end", "scene": scene, "epoch_ms": 61000, "valid": True}
+            end = {"event": "end", "scene": scene, "epoch_ms": 61000, "valid": True,
+                   "cpu_user_s": 1.0, "cpu_sys_s": 0.25}
             lines = ["RUSTUI_G0_LOG " + json.dumps(start)]
             for index in range(100):
                 mode = "copy" if index == 0 else "partial" if index == 1 else "direct"
@@ -74,6 +75,9 @@ class G0BenchTests(unittest.TestCase):
             self.assertEqual(row["frame_mode_samples"], 101)
             self.assertEqual(row["gpu_samples"], 100)
             self.assertEqual(row["gpu_mean_ms"], 0.25)
+            self.assertEqual(row["process_cpu_s"], 1.25)
+            self.assertEqual(row["process_cpu_s_per_attempt"], 0.0125)
+            self.assertEqual(row["frames_over_8_3_ms"], 0)
 
     def test_damage_off_rejects_non_direct_modes(self):
         result = self.summarize("0")
