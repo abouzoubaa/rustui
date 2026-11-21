@@ -2,7 +2,7 @@ RustUI Stage G adaptations (Apache-2.0)
 
 Source: Havunen/gpui-ce
 Commit: 28045891bfe87768a2c8e0aefd43403939844318
-Path: crates/gpui_apple/src/metal_renderer.rs
+Paths: crates/gpui_apple/src/metal_renderer.rs; crates/gpui_render/src/retained.rs
 Copyright 2022 - 2025 Zed Industries, Inc.
 Havunen and the gpui-ce contributors.
 RustUI modifications adapt the copy/clear passes and pipeline construction to

@@ -134,8 +134,8 @@
         },
         {
           "path": "notices/gpui-fast-apple-0.1.14-5affb5474f07/02-NOTICE",
-          "sha256": "0bc72ad7a8314334f78d91dc980f5897836c43f05c04e3bf4beaf28933178386",
-          "size_bytes": 805,
+          "sha256": "c594f7da65e13f57a429bb105cf87c9a5294fc703d92b138d2faea9980013e7c",
+          "size_bytes": 842,
           "source": "repository:crates/rustui-gpui-fast-apple/NOTICE"
         }
       ],
