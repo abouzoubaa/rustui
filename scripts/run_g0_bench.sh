@@ -12,7 +12,7 @@ g0_build() {
 }
 
 g0_launch() {
-  RUSTUI_DAMAGE="${RUSTUI_DAMAGE:-0}" RUSTUI_FRAME_LOG=buffered RUSTUI_FRAME_PROFILE=1 \
+  RUSTUI_DAMAGE="${RUSTUI_DAMAGE:-0}" RUSTUI_FRAME_LOG=buffered RUSTUI_FRAME_PROFILE=1 RUSTUI_G0_LATENCY="${RUSTUI_G0_LATENCY:-0}" \
     "$CARGO_TARGET_DIR/release/rustui-lab" --g0-scene "$1" --duration 60 > "$2" 2>&1 &
   g0_app_pid=$!
 }
@@ -34,18 +34,22 @@ PY
 }
 
 g0_summarize() {
-  python3 - "$1" "${RUSTUI_DAMAGE:-0}" <<'PY'
-import collections, json, math, statistics, sys
+  python3 - "$1" "${RUSTUI_DAMAGE:-0}" "${@:2}" <<'PY'
+import collections, json, math, os, statistics, sys
+sys.path.insert(0, "scripts")
+from g0_latency import summarize_latency
 from pathlib import Path
 root = Path(sys.argv[1])
 damage = sys.argv[2]
 assert damage in ("0", "1", "verify"), "RUSTUI_DAMAGE must be 0, 1 or verify"
 results = []
-for scene in ('idle', 'typing', 'hover', 'log', 'drag'):
-    markers, records = [], []
+for scene in sys.argv[3:] or ('idle', 'typing', 'hover', 'log', 'drag'):
+    markers, records, input_records = [], [], []
     for line in (root / f'{scene}-frames.log').read_text().splitlines():
         if line.startswith('RUSTUI_G0_LOG '):
             markers.append(json.loads(line.removeprefix('RUSTUI_G0_LOG ')))
+        elif line.startswith('RUSTUI_INPUT_LOG '):
+            input_records.append(json.loads(line.removeprefix('RUSTUI_INPUT_LOG ')))
         elif line.startswith('RUSTUI_FRAME_LOG '):
             records.append(json.loads(line.removeprefix('RUSTUI_FRAME_LOG ')))
     starts = [m for m in markers if m['event'] == 'start']
@@ -56,11 +60,17 @@ for scene in ('idle', 'typing', 'hover', 'log', 'drag'):
     seconds = (end['epoch_ms'] - start['epoch_ms']) / 1000
     assert 59.9 <= seconds <= 62, (scene, seconds)
     assert not any(r['event'] == 'damage_mismatch' for r in records), (scene, 'damage mismatch anywhere in scene log')
+    latency = summarize_latency(input_records, scene, start['epoch_ms'], end['epoch_ms'], os.environ.get('RUSTUI_G0_LATENCY') == '1')
     records = [r for r in records if start['epoch_ms'] <= r['epoch_ms'] <= end['epoch_ms']]
+    reason_records = [r for r in records if r['event'] == 'frame_reason']
+    reasons = collections.Counter(r['reason'] for r in reason_records)
+    assert all(r['reason'] and r['mode'] != 'partial' for r in reason_records), (scene, 'invalid non-Partial reason')
     presents = [r for r in records if r['event'] == 'gpu']
     modes = collections.Counter('direct' if r['mode'] == 'full' else r['mode'] for r in presents)
     allowed = ('skip', 'copy', 'partial', 'retained', 'direct')
     assert set(modes) <= set(allowed), (scene, modes)
+    if any(mode != 'partial' and count for mode, count in modes.items()):
+        assert reason_records, (scene, 'non-Partial frames missing reasons')
     assert len(presents) >= (20 if scene == 'idle' else 100), (scene, 'too few frame-mode samples')
     if damage == '0':
         assert modes['direct'] == len(presents), (scene, 'damage off must draw Direct', modes)
@@ -73,7 +83,7 @@ for scene in ('idle', 'typing', 'hover', 'log', 'drag'):
     assert all(math.isfinite(n) and n >= 0 for n in gpu)
     phases = {}
     for r in records:
-        if r['event'] != 'gpu':
+        if r['event'] not in ('gpu', 'frame_reason'):
             phases.setdefault(r['event'], []).append(r['cpu_ms'])
     frames, draw = [], 0.0
     for r in records:
@@ -86,6 +96,7 @@ for scene in ('idle', 'typing', 'hover', 'log', 'drag'):
     process_cpu_s = end['cpu_user_s'] + end['cpu_sys_s']
     assert math.isfinite(process_cpu_s) and process_cpu_s > 0, (scene, 'missing process CPU')
     results.append(dict(scene=scene, seconds=seconds, damage=damage, window=start, workload=end,
+                        input_to_screen=latency, non_partial_reasons=dict(reasons),
                         frame_mode_counts={mode: modes[mode] for mode in allowed},
                         frame_mode_samples=len(presents),
                         gpu_samples=len(gpu), gpu_mean_ms=statistics.mean(gpu) if gpu else 0.0,
@@ -102,6 +113,14 @@ for row in results:
           f"CPU {row['cpu_mean_ms']:.4f} ms/attempt "
           f"process CPU {1000*row['process_cpu_s_per_attempt']:.4f} ms/attempt "
           f">8.3 ms={row['frames_over_8_3_ms']} modes={row['frame_mode_counts']}")
+    latency = row['input_to_screen']
+    if latency['samples']:
+        print(f"        input→screen median/p95/max {latency['median_ms']:.3f}/{latency['p95_ms']:.3f}/{latency['max_ms']:.3f} ms "
+              f"shown={latency['samples']}/{latency['inputs']} coalesced={latency['coalesced_unpainted']} "
+              f"painted-not-presented={latency['painted_not_presented']} delays>8.3ms={latency['delays_over_8_3_ms']}")
+    else:
+        print('        input→screen not measured (off or idle)')
+    print(f"        non-Partial reasons={row['non_partial_reasons']}")
 PY
 }
 
