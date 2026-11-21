@@ -3,61 +3,12 @@
 // crates/gpui_apple/src/metal_renderer.rs and crates/gpui_render/src/retained.rs.
 // Copyright 2022 - 2025 Zed Industries, Inc.; Havunen and gpui-ce contributors.
 // RustUI modifications: headless byte comparisons and real display-link skip assertions.
+use super::super::verify::Readback;
 use super::*;
-use objc2_metal::{
-    MTLBlitCommandEncoder, MTLBuffer, MTLCommandEncoder, MTLDevice, MTLOrigin, MTLResource,
-    MTLResourceOptions, MTLSize, MTLStorageMode,
-};
+use objc2_metal::{MTLDevice, MTLResource, MTLStorageMode};
 use std::sync::Mutex;
 static PROOF_LOCK: Mutex<()> = Mutex::new(());
 
-pub(crate) struct Readback {
-    buffer: Retained<ProtocolObject<dyn MTLBuffer>>,
-    width: usize,
-    height: usize,
-    row: usize,
-}
-impl Readback {
-    pub(crate) fn encode(
-        renderer: &MetalRenderer,
-        command: &ProtocolObject<dyn MTLCommandBuffer>,
-        texture: &ProtocolObject<dyn MTLTexture>,
-    ) -> Result<Self> {
-        let (width, height) = (texture.width(), texture.height());
-        let row = (width * 4).div_ceil(256) * 256;
-        let buffer = renderer
-            .device
-            .newBufferWithLength_options(row * height, MTLResourceOptions::StorageModeShared)
-            .context("damage pixel readback")?;
-        let encoder = command.blitCommandEncoder().context("damage pixel blit")?;
-        // SAFETY: Both the exact source rectangle and aligned destination span
-        // are in bounds; Metal retains both resources through completion.
-        unsafe {
-            encoder.copyFromTexture_sourceSlice_sourceLevel_sourceOrigin_sourceSize_toBuffer_destinationOffset_destinationBytesPerRow_destinationBytesPerImage(texture,0,0,MTLOrigin{x:0,y:0,z:0},MTLSize{width,height,depth:1},&buffer,0,row,row*height);
-        }
-        encoder.endEncoding();
-        Ok(Self {
-            buffer,
-            width,
-            height,
-            row,
-        })
-    }
-    pub(crate) fn pixels(&self) -> Vec<u8> {
-        // SAFETY: The caller has waited for the command that wrote this shared
-        // buffer. Only initialized pixel bytes (not row padding) are returned.
-        let bytes = unsafe {
-            std::slice::from_raw_parts(
-                self.buffer.contents().as_ptr().cast::<u8>(),
-                self.row * self.height,
-            )
-        };
-        bytes
-            .chunks_exact(self.row)
-            .flat_map(|row| row[..self.width * 4].iter().copied())
-            .collect()
-    }
-}
 fn finish(
     renderer: &MetalRenderer,
     command: &ProtocolObject<dyn MTLCommandBuffer>,
@@ -471,5 +422,206 @@ mod partial_tests {
     #[test]
     fn magenta_partial_frames_equal_whole_and_restart_with_scissor() -> anyhow::Result<()> {
         crate::metal_renderer::MetalRenderer::test_damage_partials()
+    }
+}
+
+fn wait_verification(renderer: &mut MetalRenderer) {
+    renderer
+        .damage
+        .verification
+        .take()
+        .expect("verify mode must schedule a reference")
+        .waitUntilCompleted();
+}
+fn verify_pair(wrong_box: bool) -> Result<()> {
+    let mut renderer = MetalRenderer::new_headless(Default::default())?;
+    renderer.damage.enabled_override = Some(true);
+    renderer.damage.verify_override = true;
+    let size = gpui::size(DevicePixels(256), DevicePixels(256));
+    let target = retained::texture(&renderer.device, 256, 256)?;
+    let old = partial_scene("card move", false)?;
+    let first = renderer.damage.choose(
+        &renderer.sprite_atlas,
+        &old,
+        size,
+        1.,
+        renderer.opaque,
+        false,
+        true,
+    );
+    assert_eq!(first.mode, Mode::Retained);
+    let command = render(&mut renderer, &old, &target, size, first)?;
+    finish(&renderer, &command, &target)?;
+    wait_verification(&mut renderer);
+    let status = renderer.damage.failed.as_ref().unwrap().clone();
+    assert!(!status.disabled.load(Ordering::Acquire));
+    assert_eq!(status.record(), None);
+    let new = partial_scene("card move", true)?;
+    let reference = retained::texture(&renderer.device, 256, 256)?;
+    let whole = renderer.render_frame(&new, &reference, size)?;
+    let expected = finish(&renderer, &whole, &reference)?;
+    let mut prepared = renderer.damage.choose(
+        &renderer.sprite_atlas,
+        &new,
+        size,
+        1.,
+        renderer.opaque,
+        false,
+        true,
+    );
+    assert!(matches!(prepared.mode, Mode::Partial(_)));
+    if wrong_box {
+        // The old card is cleared, but the new card's right edge is omitted.
+        prepared.mode = Mode::Partial(Area {
+            x0: 39.,
+            y0: 99.,
+            x1: 90.,
+            y1: 137.,
+        });
+    }
+    let command = render(&mut renderer, &new, &target, size, prepared)?;
+    assert!(matches!(renderer.damage.last_mode, Mode::Partial(_)));
+    let actual = finish(&renderer, &command, &target)?;
+    wait_verification(&mut renderer);
+    let mismatch = super::super::verify::first_mismatch(&actual, &expected, 256);
+    if wrong_box {
+        let (x, y) = mismatch.expect("deliberately wrong box must leave different pixels");
+        assert_eq!(
+            status.record(),
+            Some(super::super::verify::Mismatch {
+                mode: "partial",
+                x,
+                y
+            })
+        );
+        assert!(
+            status.disabled.load(Ordering::Acquire),
+            "first mismatch disables damage"
+        );
+        let next = renderer.damage.choose(
+            &renderer.sprite_atlas,
+            &new,
+            size,
+            1.,
+            renderer.opaque,
+            false,
+            true,
+        );
+        assert_eq!(next.mode, Mode::Direct);
+        let command = render(&mut renderer, &new, &target, size, next)?;
+        assert_eq!(finish(&renderer, &command, &target)?, expected);
+        assert_eq!(renderer.damage.last_mode, Mode::Direct);
+        // Composition renderers share their window's atlas. A newly created
+        // sibling must observe the sticky disable, while another window does not.
+        let mut sibling = MetalRenderer::new_headless(Default::default())?;
+        sibling.sprite_atlas = renderer.sprite_atlas.clone();
+        sibling.damage.enabled_override = Some(true);
+        sibling.damage.verify_override = true;
+        let prepared = sibling.damage.choose(
+            &sibling.sprite_atlas,
+            &new,
+            size,
+            1.,
+            sibling.opaque,
+            false,
+            true,
+        );
+        assert_eq!(
+            prepared.mode,
+            Mode::Direct,
+            "all surfaces of the failing window disable damage"
+        );
+        let mut separate = MetalRenderer::new_headless(Default::default())?;
+        separate.damage.enabled_override = Some(true);
+        separate.damage.verify_override = true;
+        let prepared = separate.damage.choose(
+            &separate.sprite_atlas,
+            &new,
+            size,
+            1.,
+            separate.opaque,
+            false,
+            true,
+        );
+        assert_eq!(
+            prepared.mode,
+            Mode::Retained,
+            "another window stays enabled"
+        );
+        assert_eq!(
+            status.record(),
+            Some(super::super::verify::Mismatch {
+                mode: "partial",
+                x,
+                y
+            })
+        );
+    } else {
+        assert_eq!(mismatch, None);
+        assert_eq!(status.record(), None);
+        let copy = renderer.damage.choose(
+            &renderer.sprite_atlas,
+            &new,
+            size,
+            1.,
+            renderer.opaque,
+            false,
+            true,
+        );
+        assert_eq!(copy.mode, Mode::Copy);
+        let command = render(&mut renderer, &new, &target, size, copy)?;
+        assert_eq!(finish(&renderer, &command, &target)?, expected);
+        wait_verification(&mut renderer);
+        assert!(!status.disabled.load(Ordering::Acquire));
+        assert_eq!(status.record(), None);
+    }
+    Ok(())
+}
+fn verify_failure_falls_back() -> Result<()> {
+    let mut renderer = MetalRenderer::new_headless(Default::default())?;
+    renderer.damage.enabled_override = Some(true);
+    renderer.damage.verify_override = true;
+    renderer.damage.fail_verification = true;
+    let size = gpui::size(DevicePixels(64), DevicePixels(64));
+    let scene = scene();
+    let target = retained::texture(&renderer.device, 64, 64)?;
+    let whole = renderer.render_frame(&scene, &target, size)?;
+    let expected = finish(&renderer, &whole, &target)?;
+    let prepared = prepare(&mut renderer, &scene, false);
+    assert_eq!(prepared.mode, Mode::Retained);
+    let command = render(&mut renderer, &scene, &target, size, prepared)?;
+    assert_eq!(renderer.damage.last_mode, Mode::Direct);
+    assert_eq!(finish(&renderer, &command, &target)?, expected);
+    assert!(
+        renderer
+            .damage
+            .failed
+            .as_ref()
+            .unwrap()
+            .disabled
+            .load(Ordering::Acquire)
+    );
+    Ok(())
+}
+impl MetalRenderer {
+    /// Full-reference oracle, deliberate bad-box detection and window isolation.
+    pub fn test_damage_verify() -> Result<()> {
+        let _serial = PROOF_LOCK.lock().unwrap();
+        objc2::rc::autoreleasepool(|_| {
+            assert_eq!(config(None), Config::Off);
+            assert_eq!(config(Some("0")), Config::Off);
+            assert_eq!(config(Some("1")), Config::On);
+            assert_eq!(config(Some("verify")), Config::Verify);
+            verify_pair(false)?;
+            verify_pair(true)?;
+            verify_failure_falls_back()
+        })
+    }
+}
+#[cfg(test)]
+mod verify_tests {
+    #[test]
+    fn reference_catches_wrong_box_and_disables_only_its_window() -> anyhow::Result<()> {
+        crate::metal_renderer::MetalRenderer::test_damage_verify()
     }
 }

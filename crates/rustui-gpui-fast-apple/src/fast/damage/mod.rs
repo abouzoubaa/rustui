@@ -9,3 +9,5 @@ pub(crate) mod frame;
 pub(crate) mod retained;
 
 pub(crate) mod partial;
+
+pub(crate) mod verify;

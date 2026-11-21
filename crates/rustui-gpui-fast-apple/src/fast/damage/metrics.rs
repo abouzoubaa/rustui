@@ -85,3 +85,15 @@ mod tests {
         }
     }
 }
+
+/// Verify is explicitly requested, so a mismatch is logged even without frame timing.
+pub(crate) fn mismatch(mode: &'static str, x: usize, y: usize) {
+    let epoch_ms = SystemTime::now()
+        .duration_since(SystemTime::UNIX_EPOCH)
+        .unwrap_or_default()
+        .as_secs_f64()
+        * 1000.;
+    eprintln!(
+        "RUSTUI_FRAME_LOG {{\"event\":\"damage_mismatch\",\"mode\":\"{mode}\",\"x\":{x},\"y\":{y},\"cpu_ms\":0.0,\"epoch_ms\":{epoch_ms:.6}}}"
+    );
+}

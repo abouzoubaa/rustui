@@ -5,9 +5,13 @@
 // RustUI modifications: bounded, non-draining observations for shared Metal atlases.
 use super::plan::Uploads;
 use gpui::{AtlasTextureId, AtlasTile};
-use std::collections::{HashSet, VecDeque};
+use std::{
+    collections::{HashSet, VecDeque},
+    sync::Arc,
+};
 
 pub(crate) struct Snapshot {
+    pub(crate) status: Arc<super::verify::Status>,
     pub(crate) generation: u64,
     /// None means that removals, clearing, or an expired journal require a whole draw.
     pub(crate) tiles: Option<HashSet<(AtlasTextureId, u32)>>,
@@ -15,6 +19,7 @@ pub(crate) struct Snapshot {
 
 #[derive(Default)]
 pub(crate) struct Tracker {
+    status: Arc<super::verify::Status>,
     generation: u64,
     lost_through: u64,
     events: VecDeque<(u64, AtlasTile)>,
@@ -36,6 +41,7 @@ impl Tracker {
     pub(crate) fn since(&self, after: u64) -> Snapshot {
         if after == self.generation {
             return Snapshot {
+                status: self.status.clone(),
                 generation: self.generation,
                 tiles: Some(HashSet::new()),
             };
@@ -51,6 +57,7 @@ impl Tracker {
             }
         }
         Snapshot {
+            status: self.status.clone(),
             generation: self.generation,
             tiles: uploads.take(),
         }

@@ -12,7 +12,7 @@ g0_build() {
 }
 
 g0_launch() {
-  RUSTUI_DAMAGE=0 RUSTUI_FRAME_LOG=1 RUSTUI_FRAME_PROFILE=1 \
+  RUSTUI_DAMAGE="${RUSTUI_DAMAGE:-0}" RUSTUI_FRAME_LOG=1 RUSTUI_FRAME_PROFILE=1 \
     "$CARGO_TARGET_DIR/release/rustui-lab" --g0-scene "$1" --duration 60 > "$2" 2>&1 &
   g0_app_pid=$!
 }
@@ -34,10 +34,12 @@ PY
 }
 
 g0_summarize() {
-  python3 - "$1" <<'PY'
-import json, math, statistics, sys
+  python3 - "$1" "${RUSTUI_DAMAGE:-0}" <<'PY'
+import collections, json, math, statistics, sys
 from pathlib import Path
 root = Path(sys.argv[1])
+damage = sys.argv[2]
+assert damage in ("0", "1", "verify"), "RUSTUI_DAMAGE must be 0, 1 or verify"
 results = []
 for scene in ('idle', 'typing', 'hover', 'log', 'drag'):
     markers, records = [], []
@@ -53,10 +55,21 @@ for scene in ('idle', 'typing', 'hover', 'log', 'drag'):
     assert end['valid'] and start['scene'] == end['scene'] == scene, (scene, end)
     seconds = (end['epoch_ms'] - start['epoch_ms']) / 1000
     assert 59.9 <= seconds <= 62, (scene, seconds)
+    assert not any(r['event'] == 'damage_mismatch' for r in records), (scene, 'damage mismatch anywhere in scene log')
     records = [r for r in records if start['epoch_ms'] <= r['epoch_ms'] <= end['epoch_ms']]
-    gpu = [r['gpu_ms'] for r in records if r['event'] == 'gpu']
-    assert len(gpu) >= (20 if scene == 'idle' else 100), (scene, 'too few GPU samples')
-    assert all(r['mode'] in ('full', 'direct') for r in records if r['event'] == 'gpu'), (scene, 'expected whole-frame mode')
+    presents = [r for r in records if r['event'] == 'gpu']
+    modes = collections.Counter('direct' if r['mode'] == 'full' else r['mode'] for r in presents)
+    allowed = ('skip', 'copy', 'partial', 'retained', 'direct')
+    assert set(modes) <= set(allowed), (scene, modes)
+    assert len(presents) >= (20 if scene == 'idle' else 100), (scene, 'too few frame-mode samples')
+    if damage == '0':
+        assert modes['direct'] == len(presents), (scene, 'damage off must draw Direct', modes)
+    for record in presents:
+        if record['mode'] == 'skip':
+            assert record['gpu_ms'] is None, (scene, 'Skip must have no GPU time')
+        else:
+            assert record['gpu_ms'] is not None, (scene, 'submitted frame needs GPU time')
+    gpu = [r['gpu_ms'] for r in presents if r['mode'] != 'skip']
     assert all(math.isfinite(n) and n >= 0 for n in gpu)
     phases = {}
     for r in records:
@@ -70,16 +83,18 @@ for scene in ('idle', 'typing', 'hover', 'log', 'drag'):
             frames.append(draw + r['cpu_ms'])
             draw = 0.0
     assert frames, (scene, 'missing CPU presents')
-    results.append(dict(scene=scene, seconds=seconds, window=start, workload=end,
-                        gpu_samples=len(gpu), gpu_mean_ms=statistics.mean(gpu),
-                        gpu_p95_ms=sorted(gpu)[math.ceil(len(gpu)*.95)-1],
+    results.append(dict(scene=scene, seconds=seconds, damage=damage, window=start, workload=end,
+                        frame_mode_counts={mode: modes[mode] for mode in allowed},
+                        frame_mode_samples=len(presents),
+                        gpu_samples=len(gpu), gpu_mean_ms=statistics.mean(gpu) if gpu else 0.0,
+                        gpu_p95_ms=sorted(gpu)[math.ceil(len(gpu)*.95)-1] if gpu else None,
                         gpu_ms_per_second=sum(gpu)/seconds,
                         cpu_present_samples=len(frames), cpu_mean_ms=statistics.mean(frames),
                         cpu_phases_mean_ms={k: statistics.mean(v) for k,v in phases.items()}))
 (root / 'summary.json').write_text(json.dumps(results, indent=2) + '\n')
 for row in results:
     print(f"{row['scene']:7} GPU {row['gpu_mean_ms']:.4f} ms/present "
-          f"CPU {row['cpu_mean_ms']:.4f} ms/present ({row['gpu_samples']} whole GPU frames)")
+          f"CPU {row['cpu_mean_ms']:.4f} ms/attempt modes={row['frame_mode_counts']}")
 PY
 }
 
