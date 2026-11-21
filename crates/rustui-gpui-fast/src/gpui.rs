@@ -133,12 +133,14 @@ pub use fast::composition::{
 pub use fast::dynamic_textures::{
     DynamicTexture, DynamicTextureId, DynamicTexturePlatform, set_dynamic_texture_platform,
 };
+#[doc(hidden)]
+pub use fast::input_latency::{
+    FastInputStamp, FastPresentTag, fast_frame_presented, fast_frame_reason, fast_present_tag,
+};
 pub use fast::layers::scene::{
     LAYER_TILE_TEXTURE_BASE, LayerContent, LayerFrame, LayerKey, SceneLayers, TileCoord,
     decode_layer_tile, layer_tile_id, layer_tile_texture_id,
 };
-#[doc(hidden)]
-pub use fast::input_latency::{FastInputStamp, FastPresentTag, fast_present_tag, fast_frame_presented, fast_frame_reason};
 pub use fast::present_hint::fast_present_required;
 #[cfg(any(test, feature = "test-support"))]
 pub use fast::present_hint::with_fast_present_required;
@@ -374,3 +376,11 @@ pub struct GpuSpecs {
     /// Further information about the driver, as reported by Vulkan.
     pub driver_info: String,
 }
+
+#[doc(hidden)]
+pub use fast::latency_breakdown::{
+    FastLatencyCallback, FastLatencyCommit, FastLatencyDrawable, FastLatencyFrame,
+    fast_latency_acquired, fast_latency_callback, fast_latency_command, fast_latency_committed,
+    fast_latency_completed, fast_latency_config, fast_latency_displayed, fast_latency_enabled,
+    fast_latency_frame, fast_latency_released, fast_latency_tick,
+};

@@ -87,6 +87,10 @@ impl MetalFrameSource {
         })
     }
 
+    pub fn record_latency_properties(&self, window: gpui::WindowId) {
+        crate::fast::latency::link(window, &self.link);
+    }
+
     /// A paused link delivers no updates and acquires no drawables.
     pub fn set_paused(&self, paused: bool) {
         self.link.setPaused(paused);

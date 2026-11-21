@@ -47,3 +47,6 @@ mod tests {
         .expect("background thread panicked");
     }
 }
+
+#[doc(hidden)]
+pub use fast::latency::latency_acquired;

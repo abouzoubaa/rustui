@@ -49,3 +49,5 @@ pub(crate) mod tracked_entities;
 
 #[cfg(test)]
 mod tests;
+
+pub(crate) mod latency_breakdown;

@@ -380,7 +380,7 @@ fn playback(
         let input_ready = owner.read_with(cx, |host, _| if scene == Scene::Idle { host.component().caret != "G0 idle caret" } else { true });
         if !input_ready { eprintln!("G0 caret did not receive warm-up input"); cx.update(|app| app.quit()); return; }
         let (scale, width, height) = handle.update(cx, |_, window, _| (window.scale_factor(), f32::from(window.viewport_size().width), f32::from(window.viewport_size().height))).unwrap();
-        eprintln!("RUSTUI_G0_LOG {{\"event\":\"start\",\"scene\":\"{}\",\"duration_s\":{},\"epoch_ms\":{:.6},\"input_hz\":{},\"scale\":{},\"width\":{},\"height\":{}}}", scene.name(), duration.as_secs(), epoch_ms(), scene.hz(), scale, width, height);
+        eprintln!("RUSTUI_G0_LOG {{\"event\":\"start\",\"scene\":\"{}\",\"duration_s\":{},\"epoch_ms\":{:.6},\"mach\":{},\"input_hz\":{},\"scale\":{},\"width\":{},\"height\":{}}}", scene.name(), duration.as_secs(), epoch_ms(), gpui::fast_latency_tick(), scene.hz(), scale, width, height);
         let cpu_start = match cpu::Snapshot::take() {
             Ok(snapshot) => snapshot,
             Err(error) => { eprintln!("G0 getrusage start failed: {error}"); cx.update(|app| app.quit()); return; }
@@ -407,12 +407,13 @@ fn playback(
             Err(error) => { eprintln!("G0 getrusage end failed: {error}"); cx.update(|app| app.quit()); return; }
         };
         let end_epoch = epoch_ms();
+        let end_mach = gpui::fast_latency_tick();
         let (cpu_user_s, cpu_sys_s) = cpu_start.elapsed(cpu_end);
         if scene == Scene::Drag { let _ = handle.update(cx, |_, window, app| { window.dispatch_event(gpui::PlatformInput::MouseUp(gpui::MouseUpEvent { button: gpui::MouseButton::Left, position: drag_position(ticks), click_count: 1, ..Default::default() }), app); }); }
         cx.background_executor().timer(Duration::from_millis(250)).await;
         let (added, moves, dropped) = native.read_with(cx, |state, _| (state.lines.len().saturating_sub(INITIAL_LOG_LINES), state.moves, !state.dragging));
         let valid = handled && match scene { Scene::Typing => max_len > min_len, Scene::Log => added == ticks, Scene::Drag => moves == ticks && dropped, _ => true };
-        eprintln!("RUSTUI_G0_LOG {{\"event\":\"end\",\"scene\":\"{}\",\"epoch_ms\":{:.6},\"ticks\":{},\"log_lines_added\":{},\"drag_moves\":{},\"valid\":{},\"cpu_user_s\":{:.9},\"cpu_sys_s\":{:.9}}}", scene.name(), end_epoch, ticks, added, moves, valid, cpu_user_s, cpu_sys_s);
+        eprintln!("RUSTUI_G0_LOG {{\"event\":\"end\",\"scene\":\"{}\",\"epoch_ms\":{:.6},\"mach\":{},\"ticks\":{},\"log_lines_added\":{},\"drag_moves\":{},\"valid\":{},\"cpu_user_s\":{:.9},\"cpu_sys_s\":{:.9}}}", scene.name(), end_epoch, end_mach, ticks, added, moves, valid, cpu_user_s, cpu_sys_s);
         complete.set(valid);
         cx.update(|app| app.quit());
     }).detach();

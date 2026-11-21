@@ -845,6 +845,11 @@ impl MacWindowState {
         {
             return;
         }
+        crate::fast::latency::settings(
+            self.handle.window_id(),
+            self.native_window,
+            matches!(&self.frame_source, FrameSource::Metal(_)),
+        );
         match &mut self.frame_source {
             FrameSource::Metal(metal_frames) => {
                 let Some(layer) = self.renderer.layer() else {
@@ -859,6 +864,7 @@ impl MacWindowState {
                     }
                 });
                 if let Some(source) = source {
+                    source.record_latency_properties(self.handle.window_id());
                     metal_frames.replace(Some(source));
                     self.renderer.set_display_link_attached(true);
                 }
@@ -1044,10 +1050,7 @@ fn anchored_popup_frame(
             .position(|screen| Retained::as_ptr(&screen) == Retained::as_ptr(&main_screen))
             .unwrap_or(0);
         let screen_index = popup_screen_index(anchor_center, &visible_frames, main_screen_index);
-        let selected_screen = screens
-            .iter()
-            .nth(screen_index)
-            .unwrap_or(main_screen);
+        let selected_screen = screens.iter().nth(screen_index).unwrap_or(main_screen);
         let visible = selected_screen.visibleFrame();
         let (frame, popup_size) =
             popup_frame_for_visible_screen(anchor, visible, popup_size, options);
@@ -1251,7 +1254,10 @@ mod anchored_popup_placement_tests {
     #[test]
     fn anchor_and_gravity_flip_together_at_screen_edges() {
         let right = popup_anchor_x(PopupAnchor::BottomRight, 10.0, 20.0);
-        assert_eq!(flip_popup_anchor_x(PopupAnchor::BottomLeft), PopupAnchor::BottomRight);
+        assert_eq!(
+            flip_popup_anchor_x(PopupAnchor::BottomLeft),
+            PopupAnchor::BottomRight
+        );
         assert_eq!(
             popup_origin(
                 flip_popup_gravity_x(PopupGravity::BottomRight),
@@ -1266,7 +1272,10 @@ mod anchored_popup_placement_tests {
 
         let top = popup_anchor_y(PopupAnchor::TopLeft, 5.0, 8.0);
         let bottom = popup_anchor_y(PopupAnchor::BottomLeft, 5.0, 8.0);
-        assert_eq!(flip_popup_anchor_y(PopupAnchor::BottomLeft), PopupAnchor::TopLeft);
+        assert_eq!(
+            flip_popup_anchor_y(PopupAnchor::BottomLeft),
+            PopupAnchor::TopLeft
+        );
         assert_eq!(
             popup_origin(
                 flip_popup_gravity_y(PopupGravity::BottomRight),
@@ -1402,7 +1411,6 @@ pub(crate) struct MacWindow(
     /// waits on it. `None` when a `CVDisplayLink` paces frames.
     Option<Rc<MetalFrames>>,
 );
-
 
 impl MacWindow {
     pub fn open(
@@ -4007,8 +4015,15 @@ fn metal_frame(
     window_state: &Rc<Mutex<MacWindowState>>,
     update: &objc2_quartz_core::CAMetalDisplayLinkUpdate,
 ) {
+    let arrival = if gpui::fast_latency_enabled() {
+        gpui::fast_latency_tick()
+    } else {
+        0
+    };
     let signal_at = PlatformFrameSignal::capture(scheduler::Instant::now);
     let mut lock = window_state.lock();
+    let latency_window = lock.handle.window_id();
+    let _latency_callback = gpui::fast_latency_callback(latency_window, arrival);
     let FrameSource::Metal(metal_frames) = &lock.frame_source else {
         return;
     };
@@ -4016,7 +4031,10 @@ fn metal_frame(
     let Some(mut callback) = lock.request_frame_callback.take() else {
         return;
     };
-    lock.renderer.set_frame_drawable(Some(update.drawable()));
+    let drawable = update.drawable();
+    let latency_key = (&*drawable) as *const _ as *const () as usize as u64;
+    gpui_apple::latency_acquired(latency_window, &drawable);
+    lock.renderer.set_frame_drawable(Some(drawable));
     drop(lock);
     metal_frames.begin_frame();
     callback(RequestFrameOptions {
@@ -4029,6 +4047,9 @@ fn metal_frame(
     // A frame with nothing to draw leaves its drawable unused; releasing it
     // lets the link hand it out again.
     let used_drawable = lock.renderer.set_frame_drawable(None).is_none();
+    if !used_drawable {
+        gpui::fast_latency_released(latency_window, latency_key);
+    }
     metal_frames.end_frame(used_drawable);
 }
 

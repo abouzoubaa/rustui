@@ -94,6 +94,7 @@ impl Window {
         if !enabled() {
             return None;
         }
+        super::latency_breakdown::handled(self.window_handle().window_id(), scene, first, version);
         Some(FastInputStamp {
             tag: FastPresentTag {
                 window: self.window_handle().window_id(),
@@ -128,6 +129,7 @@ pub(crate) fn painted(window: WindowId) {
         };
         versions.painted = versions.latest;
         if let Some(tag) = versions.painted {
+            super::latency_breakdown::painted(window, tag.scene, tag.first, tag.version);
             r.records.push(Record::Paint(tag, mono_ms(), epoch_ms()));
         }
     });
