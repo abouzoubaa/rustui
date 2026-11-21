@@ -17,11 +17,14 @@ class G0BenchTests(unittest.TestCase):
         self.output = Path(self.temporary.name)
         for scene in SCENES:
             start = {"event": "start", "scene": scene, "epoch_ms": 1000}
-            end = {"event": "end", "scene": scene, "epoch_ms": 61000, "valid": True}
+            end = {"event": "end", "scene": scene, "epoch_ms": 61000, "valid": True, "cpu_user_s": 0.04, "cpu_sys_s": 0.06}
             lines = ["RUSTUI_G0_LOG " + json.dumps(start)]
             for index in range(100):
                 mode = "copy" if index == 0 else "partial" if index == 1 else "direct"
                 records = [
+                    {"event": "encode", "cpu_ms": 0.0, "sequence": index,
+                     "mode": mode, "instances_encoded": 0 if mode == "copy" else 10,
+                     "instances_total": 10, "epoch_ms": 2000 + index},
                     {"event": "draw", "cpu_ms": 0.5, "epoch_ms": 2000 + index},
                     {"event": "present", "cpu_ms": 0.2, "epoch_ms": 2000 + index},
                     {"event": "gpu", "mode": mode, "gpu_ms": 0.25,
@@ -102,7 +105,7 @@ class G0BenchTests(unittest.TestCase):
                     folder = self.output / scene / f"{run}-{mode}"
                     folder.mkdir(parents=True)
                     (folder / "summary.json").write_text(json.dumps([
-                        {"scene": scene, "damage": mode, "cpu_mean_ms": value}]))
+                        {"scene": scene, "damage": mode, "cpu_mean_ms": value, "process_cpu_s": 0.4, "process_cpu_s_per_attempt": 0.004 if mode == "0" else 0.008}]))
         result = subprocess.run(
             ["bash", "-c", 'source "$1"; g0_interleaved_summary "$2"', "g0-matched-test",
              str(REPO / "scripts/run_g0_bench.sh"), str(self.output)],
@@ -117,6 +120,34 @@ class G0BenchTests(unittest.TestCase):
         self.assertAlmostEqual(rows[1]["median_change_pct"], 2)
         self.assertAlmostEqual(rows[1]["min_change_pct"], 1)
         self.assertAlmostEqual(rows[1]["max_change_pct"], 5)
+        # Process CPU diagnostics never affect the wall-phase gate, even at +100%.
+        for row in rows:
+            self.assertEqual(row["process_cpu"]["paired_changes_pct"], [100.0]*5)
+            self.assertEqual(row["process_cpu"]["median_change_pct"], 100.0)
+
+    def test_process_cpu_and_encoded_instances_are_reported_per_capture(self):
+        result = self.summarize()
+        self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
+        for row in json.loads((self.output / "summary.json").read_text()):
+            self.assertAlmostEqual(row["process_cpu_s"], 0.1)
+            self.assertAlmostEqual(row["process_cpu_s_per_attempt"], 0.001)
+            self.assertEqual(row["instances"]["encoded"], 990)
+            self.assertEqual(row["instances"]["total"], 1000)
+            self.assertEqual(row["instances"]["mode_runs"], [
+                {"mode":"copy", "frames":1}, {"mode":"partial", "frames":1},
+                {"mode":"direct", "frames":98}])
+            self.assertNotIn("encode", row["cpu_phases_mean_ms"])
+
+    def test_missing_process_cpu_cannot_pass_a_new_capture(self):
+        p = self.output / "idle-frames.log"
+        lines = p.read_text().splitlines()
+        marker = json.loads(lines[-1].removeprefix("RUSTUI_G0_LOG "))
+        del marker["cpu_user_s"]
+        lines[-1] = "RUSTUI_G0_LOG " + json.dumps(marker)
+        p.write_text("\n".join(lines) + "\n")
+        result = self.summarize()
+        self.assertNotEqual(result.returncode, 0)
+        self.assertIn("getrusage", result.stderr)
 
     def test_damage_off_rejects_non_direct_modes(self):
         result = self.summarize("0")

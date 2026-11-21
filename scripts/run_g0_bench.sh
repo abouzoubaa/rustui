@@ -80,7 +80,7 @@ for scene in sys.argv[3:] or ('idle', 'typing', 'hover', 'log', 'drag'):
                       reasons=dict(collections.Counter(r['reason'] for r in damage_records)))
     phases = {}
     for r in records:
-        if r['event'] not in ('gpu', 'damage_cpu'):
+        if r['event'] not in ('gpu', 'damage_cpu', 'encode'):
             phases.setdefault(r['event'], []).append(r['cpu_ms'])
     frames, draw = [], 0.0
     for r in records:
@@ -90,8 +90,25 @@ for scene in sys.argv[3:] or ('idle', 'typing', 'hover', 'log', 'drag'):
             frames.append(draw + r['cpu_ms'])
             draw = 0.0
     assert frames, (scene, 'missing CPU presents')
+    user_s, sys_s = end.get('cpu_user_s'), end.get('cpu_sys_s')
+    assert all(isinstance(v, (float, int)) and math.isfinite(v) and v >= 0 for v in (user_s, sys_s)), (scene, 'missing or invalid getrusage window')
+    process_cpu_s = user_s + sys_s
+    assert process_cpu_s > 0, (scene, 'empty process CPU measurement')
+    encoding = [r for r in records if r['event'] == 'encode']
+    assert len(encoding) >= (20 if scene == 'idle' else 100), (scene, 'missing instance encoding samples')
+    assert all(r['mode'] in allowed and r['instances_encoded'] >= 0 and r['instances_total'] >= 0 for r in encoding), (scene, 'invalid encoding sample')
+    mode_runs = []
+    for r in sorted(encoding, key=lambda r: r['sequence']):
+        if mode_runs and mode_runs[-1]['mode'] == r['mode']:
+            mode_runs[-1]['frames'] += 1
+        else:
+            mode_runs.append(dict(mode=r['mode'], frames=1))
+    instances = dict(samples=len(encoding), encoded=sum(r['instances_encoded'] for r in encoding),
+                     total=sum(r['instances_total'] for r in encoding), mode_runs=mode_runs)
     results.append(dict(scene=scene, seconds=seconds, damage=damage, window=start, workload=end,
-                        damage_cpu=damage_cpu,
+                        damage_cpu=damage_cpu, instances=instances,
+                        process_cpu_user_s=user_s, process_cpu_sys_s=sys_s,
+                        process_cpu_s=process_cpu_s, process_cpu_s_per_attempt=process_cpu_s/len(frames),
                         frame_mode_counts={mode: modes[mode] for mode in allowed},
                         frame_mode_samples=len(presents),
                         gpu_samples=len(gpu), gpu_mean_ms=statistics.mean(gpu) if gpu else 0.0,
@@ -103,6 +120,8 @@ for scene in sys.argv[3:] or ('idle', 'typing', 'hover', 'log', 'drag'):
 for row in results:
     print(f"{row['scene']:7} GPU {row['gpu_mean_ms']:.4f} ms/present "
           f"CPU {row['cpu_mean_ms']:.4f} ms/attempt "
+          f"process CPU {row['process_cpu_s']:.6f} s ({row['process_cpu_s_per_attempt']:.9f} s/attempt) "
+          f"instances {row['instances']['encoded']}/{row['instances']['total']} "
           f"signatures {row['damage_cpu']['signatures_mean_ms']:.4f} ms plan {row['damage_cpu']['plan_mean_ms']:.4f} ms "
           f"modes={row['frame_mode_counts']}")
 PY
@@ -155,17 +174,29 @@ for scene in ('idle', 'typing', 'hover', 'log', 'drag'):
         median = statistics.median(values)
         groups[mode] = dict(runs=values, median_ms=median)
     off, on = groups['0'], groups['1']
+    process = {}
+    for mode in ('0', '1'):
+        captures = [json.loads((root / scene / f'{run}-{mode}' / 'summary.json').read_text())[0] for run in range(1, 6)]
+        values = [r['process_cpu_s_per_attempt'] for r in captures]
+        assert all(math.isfinite(v) and v > 0 for v in values)
+        process[mode] = dict(total_s=[r['process_cpu_s'] for r in captures],
+                             s_per_attempt=values, median_s_per_attempt=statistics.median(values))
+    process_changes = [(b/a-1)*100 for a,b in zip(process['0']['s_per_attempt'], process['1']['s_per_attempt'])]
+    process.update(paired_changes_pct=process_changes, median_change_pct=statistics.median(process_changes),
+                   min_change_pct=min(process_changes), max_change_pct=max(process_changes))
     changes = [(b / a - 1) * 100 for a, b in zip(off['runs'], on['runs'])]
     passes = [b <= a * 1.03 for a, b in zip(off['runs'], on['runs'])]
     verdict = 'PASS' if all(passes) else 'FAIL' if not any(passes) else 'INCONCLUSIVE'
     row = dict(scene=scene, off=off, on=on, paired_changes_pct=changes,
-               median_change_pct=statistics.median(changes),
+               process_cpu=process, median_change_pct=statistics.median(changes),
                min_change_pct=min(changes), max_change_pct=max(changes), verdict=verdict)
     rows.append(row)
     print(f"{scene:7} median off={off['median_ms']:.6f} on={on['median_ms']:.6f} ms/attempt "
           f"paired changes={[round(c, 3) for c in changes]} "
           f"median={row['median_change_pct']:+.3f}% min={min(changes):+.3f}% "
-          f"max={max(changes):+.3f}% {verdict}", flush=True)
+          f"max={max(changes):+.3f}% {verdict} "
+          f"process paired={[round(c, 3) for c in process_changes]} "
+          f"median={statistics.median(process_changes):+.3f}% min={min(process_changes):+.3f}% max={max(process_changes):+.3f}%", flush=True)
 (root / 'interleaved-summary.json').write_text(json.dumps(rows, indent=2) + '\n')
 PY
 }

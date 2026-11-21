@@ -359,3 +359,155 @@ Frame-mode counts summed over the five captures per setting:
 | Card drag | 1 | 5 | 6730 | 28946 | 0 | 0 |
 
 The historical ~5.3 ms log prepaint finding remains recorded without changing the Lab workload. No power sampler, owner verification session, further profiling or new optimization ran in this extension. The source and Metal checks documented before timing were not rerun during this retest-only extension.
+
+## G2-8 — implementation fixes, measured in order (WIP)
+
+The instrumented before-E baseline completed all 50 release captures on 2026-11-21. Each scene used five matched pairs, alternating off→on, on→off, off→on, on→off, off→on. Every capture validated its 60-second window, workload and 1200 × 800 point / scale 2 geometry. The executable passed its before/after hash check. No compilation, profiling or source changes ran during timing. Local captures: `target/headstart/performance/g2-8-before-E/`.
+
+`getrusage(RUSAGE_SELF)` snapshots bracket the measured interval after warmup. Process CPU is the user + system delta for the entire process, including worker threads, reported both as seconds per capture and seconds per attempted present. It is diagnostic only. The gate continues to use elapsed draw + present time per attempted present: PASS requires all five paired changes ≤3%; FAIL requires all five >3%; otherwise INCONCLUSIVE. Full precision determines each verdict.
+
+Instance counts measure uploaded scene instances (including path composites), excluding tessellation vertices and fullscreen copy/clear triangles. Totals count the scene before culling. Mode sequences use synchronous encoding records in frame sequence order, rather than asynchronous GPU completion order.
+
+### Before E: paired CPU gate and process-CPU diagnostic
+
+| Scene | Median off ms/attempt | Median on ms/attempt | Five paired changes % | Median / min / max % | Verdict | Process CPU five paired changes % | Process median / min / max % |
+|---|---:|---:|---|---|---|---|---|
+| idle | 2.484372 | 2.579003 | -8.892, +4.937, +6.736, +8.489, +3.626 | +4.937 / -8.892 / +8.489 | **INCONCLUSIVE** | -8.095, +6.099, +4.615, +5.158, +0.547 | +4.615 / -8.095 / +6.099 |
+| typing | 1.530635 | 1.665588 | +4.317, +10.760, +12.593, +9.524, +1.230 | +9.524 / +1.230 / +12.593 | **INCONCLUSIVE** | +2.158, -0.952, +0.283, +1.692, +1.380 | +1.380 / -0.952 / +2.158 |
+| hover | 2.470493 | 2.409639 | +1.943, -2.566, -2.696, +3.104, -4.425 | -2.566 / -4.425 / +3.104 | **INCONCLUSIVE** | +1.510, -2.562, -2.305, +2.020, -4.399 | -2.305 / -4.399 / +2.020 |
+| log | 7.296455 | 7.427937 | +2.411, +0.649, +1.183, -8.925, +2.218 | +1.183 / -8.925 / +2.411 | **PASS** | +2.152, +2.002, +1.788, -6.862, +2.929 | +2.002 / -6.862 / +2.929 |
+| drag | 1.411393 | 1.487519 | +6.439, -0.741, +7.123, +26.382, +18.131 | +7.123 / -0.741 / +26.382 | **INCONCLUSIVE** | +5.575, -0.692, +5.005, +22.259, +13.130 | +5.575 / -0.692 / +22.259 |
+
+Per-capture process CPU (off/on entries are matched within the numbered pair):
+
+| Scene | Pair | Off CPU s | On CPU s | Off CPU s/attempt | On CPU s/attempt |
+|---|---:|---:|---:|---:|---:|
+| idle | 1 | 0.541434 | 0.497603 | 0.004749421 | 0.004364939 |
+| idle | 2 | 0.498121 | 0.528501 | 0.004369482 | 0.004635974 |
+| idle | 3 | 0.491513 | 0.514197 | 0.004311518 | 0.004510500 |
+| idle | 4 | 0.492037 | 0.517417 | 0.004316114 | 0.004538746 |
+| idle | 5 | 0.536000 | 0.538930 | 0.004701754 | 0.004727456 |
+| typing | 1 | 7.524536 | 7.686913 | 0.014498143 | 0.014811008 |
+| typing | 2 | 7.656276 | 7.598009 | 0.014751977 | 0.014611556 |
+| typing | 3 | 7.544722 | 7.580685 | 0.014537037 | 0.014578240 |
+| typing | 4 | 7.622171 | 7.736175 | 0.014686264 | 0.014934701 |
+| typing | 5 | 7.534630 | 7.594507 | 0.014489673 | 0.014689569 |
+| hover | 1 | 22.768778 | 23.109386 | 0.003165408 | 0.003213207 |
+| hover | 2 | 22.483966 | 21.901755 | 0.003127551 | 0.003047413 |
+| hover | 3 | 22.181387 | 21.661110 | 0.003083746 | 0.003012672 |
+| hover | 4 | 22.378141 | 22.858894 | 0.003115431 | 0.003178378 |
+| hover | 5 | 22.922618 | 21.892977 | 0.003186352 | 0.003046191 |
+| log | 1 | 4.772755 | 4.867020 | 0.008286033 | 0.008464383 |
+| log | 2 | 4.893894 | 4.991867 | 0.008496344 | 0.008666436 |
+| log | 3 | 4.877950 | 4.973804 | 0.008483391 | 0.008635076 |
+| log | 4 | 4.784206 | 4.463640 | 0.008320358 | 0.007749375 |
+| log | 5 | 4.844615 | 4.986516 | 0.008425417 | 0.008672202 |
+| drag | 1 | 18.478547 | 19.505961 | 0.002568248 | 0.002711421 |
+| drag | 2 | 18.747893 | 18.662302 | 0.002611855 | 0.002593788 |
+| drag | 3 | 18.614827 | 19.546424 | 0.002587549 | 0.002717045 |
+| drag | 4 | 15.757711 | 19.262501 | 0.002189483 | 0.002676834 |
+| drag | 5 | 16.239513 | 18.351270 | 0.002256742 | 0.002553043 |
+
+Before-E medians of five capture means; modes and instances are sums across those captures:
+
+| Scene | Damage | GPU ms/s | GPU ms/frame | CPU ms/attempt | Modes skip/copy/partial/retained/direct | Instances encoded / total |
+|---|---:|---:|---:|---:|---|---:|
+| idle | 0 | 0.611772 | 0.322648 | 2.484372 | 0/0/0/0/570 | 13965 / 13965 |
+| idle | 1 | 0.400894 | 0.211481 | 2.579003 | 0/0/570/0/0 | 13965 / 13965 |
+| typing | 0 | 5.239152 | 0.605571 | 1.530635 | 0/0/0/0/2596 | 2309146 / 2309146 |
+| typing | 1 | 2.380944 | 0.323397 | 1.665588 | 400/0/2194/0/0 | 1951565 / 2307364 |
+| hover | 0 | 42.984180 | 0.358799 | 2.470493 | 0/0/0/0/35949 | 14201040 / 14201040 |
+| hover | 1 | 45.538508 | 0.379954 | 2.409639 | 0/5223/0/17892/12830 | 12136375 / 14199460 |
+| log | 0 | 4.692695 | 0.489638 | 7.296455 | 0/0/0/0/2877 | 2660745 / 2660745 |
+| log | 1 | 4.963734 | 0.517919 | 7.427937 | 0/0/0/1440/1438 | 2661668 / 2661668 |
+| drag | 0 | 69.747827 | 0.583135 | 1.411393 | 0/0/0/0/35958 | 1150720 / 1150720 |
+| drag | 1 | 35.809381 | 0.298712 | 1.487519 | 5/6466/29492/0/0 | 943776 / 1150944 |
+
+Before-E synchronous mode sequences, damage on (pair 1):
+
+| Scene | First 12 mode runs (mode × frames) | Total runs | Retained↔Direct transitions |
+|---|---|---:|---:|
+| log | retained×1, direct×1, retained×1, direct×1, retained×1, direct×1, retained×1, direct×1, retained×1, direct×1, retained×1, direct×1 | 575 | 574 |
+| hover | direct×1, retained×1, direct×1, retained×1, direct×1, retained×1, copy×1, retained×1, direct×1, retained×1, copy×1, retained×1 | 7192 | 6405 |
+
+The before-E gate is not met: log is PASS and the other four scenes are INCONCLUSIVE. These are baseline verdicts, not acceptance of the subsequent fixes. Power remains **owner run pending**. The previously recorded ~5.3 ms log CPU prepaint finding is unchanged; the workload has not been altered.
+
+### E: Direct policy
+
+A new candidate patch compares scene metadata even when Direct has invalidated retained pixels. Unsupported frames preserve the large-frame history; large planned changes choose Direct immediately. Re-priming after large changes requires two consecutive cheap comparable frames, avoiding a full redraw plus copy between large frames while allowing recovery to Copy/Skip/Partial. Kept-texture lifetime, prime scene snapshots, cache writes and Partial culling remain separate fixes.
+
+Post-E timing stopped at 10:28 UTC to leave time for the required WIP push before the two-hour G2-8 ticket limit (10:32 UTC). **34 captures completed**: five pairs each for log, hover and idle, and two pairs for typing. The third typing pair's off capture was interrupted and is excluded; drag was not started. The measured scene order was log, hover, idle, typing, drag; each scene retained the specified alternating pair order. Every completed capture validated its window, workload and geometry. The executable passed its hash check after the interrupted pass. No compilation, profiling or runtime source changes ran during timing. Local captures: `target/headstart/performance/g2-8-after-E/`; completed-capture summary: `partial-summary.json`.
+
+### E before/after (damage on)
+
+GPU and CPU values are medians of five capture means. Modes and instances are sums across the five captures. Each arrow is before E → after E. The paired table below supplies the contemporaneous off controls; absolute medians across passes alone do not establish a CPU gain. Mode order is skip/copy/partial/retained/direct.
+
+| Scene | GPU ms/s | GPU ms/frame | CPU ms/attempt | Mode counts | Instances encoded / total |
+|---|---:|---:|---:|---|---|
+| idle | 0.400894 → 0.399529 | 0.211481 → 0.210792 | 2.579003 → 2.587903 | 0/0/570/0/0 → 0/0/570/0/0 | 13965 / 13965 → 13965 / 13965 |
+| typing | NOT COMPLETE (2/5 on captures) | — | — | — | — |
+| hover | 45.538508 → 43.784724 | 0.379954 → 0.365535 | 2.409639 → 2.564250 | 0/5223/0/17892/12830 → 0/52/0/142/35757 | 12136375 / 14199460 → 14180895 / 14201435 |
+| log | 4.963734 → 4.550980 | 0.517919 → 0.474949 | 7.427937 → 7.437110 | 0/0/0/1440/1438 → 0/0/0/0/2876 | 2661668 / 2661668 → 2659786 / 2659786 |
+| drag | NOT COMPLETE (0/5 on captures) | — | — | — | — |
+
+### Post-E paired CPU gate and process-CPU diagnostic
+
+| Scene | Pairs complete | Median off / on ms/attempt | Five paired CPU changes % | CPU median / min / max % | Verdict | Process CPU paired changes % | Process median / min / max % |
+|---|---:|---:|---|---|---|---|---|
+| idle | 5/5 | 2.505412 / 2.587903 | +3.200, +16.145, +0.042, +3.293, +29.595 | +3.293 / +0.042 / +29.595 | **INCONCLUSIVE** | +0.642, +10.313, -1.510, +0.976, +19.284 | +0.976 / -1.510 / +19.284 |
+| typing | 2/5 | — | -2.189, +5.017, —, —, — | — | **NOT COMPLETE** | -4.806, +0.024, —, —, — | — |
+| hover | 5/5 | 2.593630 / 2.564250 | -4.416, -6.999, -1.123, -3.233, +0.447 | -3.233 / -6.999 / +0.447 | **PASS** | -3.749, -5.793, -1.499, -2.978, +0.418 | -2.978 / -5.793 / +0.418 |
+| log | 5/5 | 7.029334 / 7.437110 | +20.061, +1.127, +5.801, +17.862, +3.656 | +5.801 / +1.127 / +20.061 | **INCONCLUSIVE** | +16.955, +0.449, +5.576, +15.194, +3.028 | +5.576 / +0.449 / +16.955 |
+| drag | 0/5 | — | —, —, —, —, — | — | **NOT COMPLETE** | —, —, —, —, — | — |
+
+Per completed post-E capture, including the partial typing set. No five-pair verdict or five-run median is assigned to typing.
+
+| Scene | Pair | Damage | Process CPU user+sys s | Process CPU s/attempt | GPU ms/s | GPU ms/frame | CPU ms/attempt | Modes | Instances encoded / total |
+|---|---:|---:|---:|---:|---:|---:|---:|---|---|
+| idle | 1 | 0 | 0.534439 | 0.004688061 | 0.595843 | 0.313943 | 2.647204 | 0/0/0/0/114 | 2793 / 2793 |
+| idle | 1 | 1 | 0.537868 | 0.004718140 | 0.388967 | 0.205213 | 2.731921 | 0/0/114/0/0 | 2793 / 2793 |
+| idle | 2 | 0 | 0.491913 | 0.004315026 | 0.625207 | 0.329954 | 2.374830 | 0/0/0/0/114 | 2793 / 2793 |
+| idle | 2 | 1 | 0.542642 | 0.004760018 | 0.399529 | 0.210792 | 2.758254 | 0/0/114/0/0 | 2793 / 2793 |
+| idle | 3 | 0 | 0.514895 | 0.004516623 | 0.605059 | 0.319293 | 2.570572 | 0/0/0/0/114 | 2793 / 2793 |
+| idle | 3 | 1 | 0.507121 | 0.004448430 | 0.368314 | 0.194163 | 2.571648 | 0/0/114/0/0 | 2793 / 2793 |
+| idle | 4 | 0 | 0.504353 | 0.004424149 | 0.594662 | 0.313347 | 2.505412 | 0/0/0/0/114 | 2793 / 2793 |
+| idle | 4 | 1 | 0.509274 | 0.004467316 | 0.486952 | 0.256792 | 2.587903 | 0/0/114/0/0 | 2793 / 2793 |
+| idle | 5 | 0 | 0.426027 | 0.003737079 | 0.639523 | 0.337243 | 1.987402 | 0/0/0/0/114 | 2793 / 2793 |
+| idle | 5 | 1 | 0.508183 | 0.004457746 | 0.430156 | 0.226808 | 2.575579 | 0/0/114/0/0 | 2793 / 2793 |
+| typing | 1 | 0 | 7.408480 | 0.014219731 | 5.373511 | 0.619262 | 1.503467 | 0/0/0/0/521 | 463430 / 463430 |
+| typing | 1 | 1 | 7.065955 | 0.013536312 | 2.498045 | 0.337043 | 1.470555 | 77/0/445/0/0 | 395828 / 464322 |
+| typing | 2 | 0 | 7.511091 | 0.014500176 | 5.240802 | 0.608108 | 1.435976 | 0/0/0/0/518 | 460761 / 460761 |
+| typing | 2 | 1 | 7.512925 | 0.014503716 | 2.462415 | 0.338660 | 1.508025 | 81/0/437/0/0 | 388712 / 460768 |
+| hover | 1 | 0 | 23.051472 | 0.003205155 | 43.474456 | 0.362789 | 2.569748 | 0/0/0/0/7191 | 2840840 / 2840840 |
+| hover | 1 | 1 | 22.196439 | 0.003084981 | 43.847840 | 0.365705 | 2.456262 | 0/25/0/67/7103 | 2832150 / 2842025 |
+| hover | 2 | 0 | 23.201567 | 0.003227820 | 43.443800 | 0.362739 | 2.593630 | 0/0/0/0/7187 | 2839260 / 2839260 |
+| hover | 2 | 1 | 21.881731 | 0.003040819 | 43.555806 | 0.363192 | 2.412108 | 0/24/0/45/7127 | 2832940 / 2842420 |
+| hover | 3 | 0 | 23.119775 | 0.003216888 | 44.041844 | 0.367751 | 2.593368 | 0/0/0/0/7186 | 2838865 / 2838865 |
+| hover | 3 | 1 | 22.744612 | 0.003168656 | 43.784724 | 0.366008 | 2.564250 | 0/2/0/6/7170 | 2834520 / 2835310 |
+| hover | 4 | 0 | 23.607379 | 0.003282906 | 42.699204 | 0.356278 | 2.650040 | 0/0/0/0/7191 | 2840445 / 2840445 |
+| hover | 4 | 1 | 22.904321 | 0.003185137 | 43.802187 | 0.365535 | 2.564355 | 0/1/0/23/7166 | 2840050 / 2840445 |
+| hover | 5 | 0 | 23.425518 | 0.003257163 | 43.097741 | 0.359564 | 2.636814 | 0/0/0/0/7192 | 2840840 / 2840840 |
+| hover | 5 | 1 | 23.526591 | 0.003270762 | 43.503561 | 0.362996 | 2.648588 | 0/0/0/1/7191 | 2841235 / 2841235 |
+| log | 1 | 0 | 4.106828 | 0.007129910 | 4.831776 | 0.504149 | 5.947316 | 0/0/0/0/576 | 532701 / 532701 |
+| log | 1 | 1 | 4.794797 | 0.008338777 | 4.659057 | 0.486213 | 7.140409 | 0/0/0/0/575 | 531778 / 531778 |
+| log | 2 | 0 | 4.831020 | 0.008387187 | 4.577213 | 0.477589 | 7.201485 | 0/0/0/0/576 | 532701 / 532701 |
+| log | 2 | 1 | 4.852692 | 0.008424813 | 4.269667 | 0.445496 | 7.282641 | 0/0/0/0/576 | 532701 / 532701 |
+| log | 3 | 0 | 4.700177 | 0.008174221 | 4.542806 | 0.474237 | 7.029334 | 0/0/0/0/575 | 531805 / 531805 |
+| log | 3 | 1 | 4.962259 | 0.008630016 | 4.550980 | 0.474949 | 7.437110 | 0/0/0/0/575 | 531769 / 531769 |
+| log | 4 | 0 | 4.301576 | 0.007481002 | 4.819466 | 0.503040 | 6.359753 | 0/0/0/0/575 | 531769 / 531769 |
+| log | 4 | 1 | 4.955143 | 0.008617640 | 4.549972 | 0.474806 | 7.495742 | 0/0/0/0/575 | 531769 / 531769 |
+| log | 5 | 0 | 4.839858 | 0.008417144 | 4.669627 | 0.487562 | 7.239049 | 0/0/0/0/575 | 531769 / 531769 |
+| log | 5 | 1 | 4.986419 | 0.008672033 | 4.583790 | 0.478372 | 7.503735 | 0/0/0/0/575 | 531769 / 531769 |
+
+Post-E synchronous mode sequences (pair 1, damage on):
+
+| Scene | First 12 mode runs (mode × frames) | Total runs | Retained↔Direct transitions |
+|---|---|---:|---:|
+| log | direct×575 | 1 | 0 |
+| hover | direct×20, retained×1, copy×1, direct×124, retained×1, direct×83, retained×1, copy×1, direct×82, retained×1, copy×1, direct×82 | 160 | 109 |
+
+All five post-E damage-on log sequences contain only Direct: **2876 Direct, zero Retained**, with zero Retained↔Direct transitions. Hover Retained frames fell from 17,892 to 142. This does not establish the CPU gate: log and idle are INCONCLUSIVE; hover is PASS; typing and drag are NOT COMPLETE.
+
+E also exposes a CPU tradeoff: log signature time is 0.025072 → 0.025051 ms/attempt, while planner time is 0.095155 → 0.189336 ms/attempt. Comparing metadata after Direct runs the planner on every plannable log frame instead of alternate frames. Copy-cycle removal is verified; the remaining CPU cost is unresolved. It has not been established to be unavoidable.
+
+**G2-8 remains unfinished.** E's policy and headless proof are implemented, but its five-scene retest is incomplete. B (allocation reuse), C (remove prime scene clone), D (avoid unchanged cache writes), A (Partial culling and edge tests), and `docs/damage/G2_EARLY_DAMAGE.md` remain unstarted, preserving the requested order. No before/after results are claimed for those fixes. Power remains owner run pending. PR #163 stays draft; G2-5 and G3-1 remain unstarted, switches stay off by default, and Stage P stays on hold. No gate exception is proposed.

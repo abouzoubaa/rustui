@@ -197,7 +197,13 @@ impl State {
         if !plan::can_plan(scene) {
             cpu.reason = "unsupported";
             self.invalidate();
-            return Prepared::direct();
+            // Unsupported frames predict another whole draw. Keep this history
+            // until a comparable frame can demonstrate a cheap follow-up.
+            self.previous_large = true;
+            return Prepared {
+                large: true,
+                ..Prepared::direct()
+            };
         }
         let geometry = Geometry::new(size, scale, opaque);
         let previous_generation = self
@@ -216,8 +222,9 @@ impl State {
             .snapshot
             .as_ref()
             .is_some_and(|s| s.geometry == geometry)
-            && uploads.tiles.is_some()
-            && self.target.as_ref().is_some_and(|t| t.valid);
+            && uploads.tiles.is_some();
+        // Scene metadata remains comparable after Direct invalidates kept pixels.
+        // Pixel validity is checked only when selecting Copy, Skip or Partial.
         if !comparable {
             cpu.reason = if uploads.tiles.is_none() {
                 "atlas_lost"
@@ -230,10 +237,21 @@ impl State {
                 .is_none_or(|s| s.geometry != geometry)
             {
                 self.target = None;
+                if self
+                    .snapshot
+                    .as_ref()
+                    .is_some_and(|s| s.geometry != geometry)
+                {
+                    self.previous_large = false;
+                }
             }
             self.cache.clear();
             return Prepared {
-                mode: Mode::Retained,
+                mode: if self.previous_large {
+                    Mode::Direct
+                } else {
+                    Mode::Retained
+                },
                 snapshot: Some(Snapshot {
                     geometry,
                     signatures: Vec::new(),
@@ -293,7 +311,10 @@ impl State {
             Some(p) if !large && p.shift.is_none() && valid && damage_box.is_some() => {
                 Mode::Partial(damage_box.unwrap())
             }
-            _ if large && self.previous_large => Mode::Direct,
+            // Large changes never pay for a full draw plus a full copy. After
+            // one, require two consecutive cheap plans before priming again:
+            // this Direct records large=false; the next cheap frame may prime.
+            _ if large || self.previous_large => Mode::Direct,
             _ => Mode::Retained,
         };
         cpu.reason = mode.label();
@@ -365,6 +386,7 @@ pub(crate) fn render(
     size: Size<DevicePixels>,
     mut prepared: Prepared,
 ) -> Result<Retained<ProtocolObject<dyn MTLCommandBuffer>>> {
+    let encoding = super::encode::Scope::new(scene);
     let mut state = std::mem::take(&mut renderer.damage);
     let result = (|| {
         if prepared
@@ -505,6 +527,7 @@ pub(crate) fn render(
             }
         }
         state.complete(prepared, mode);
+        encoding.finish(mode.label());
         Ok(command)
     })();
     if result.is_err() {

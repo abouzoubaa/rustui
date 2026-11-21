@@ -10,6 +10,8 @@
     "gpui-fast-damage-frame-v1-fast.json",
     "gpui-fast-damage-partial-v1-fast.json",
     "gpui-fast-damage-verify-v1-fast.json",
-    "gpui-fast-damage-cpu-budget-v1-fast.json"
+    "gpui-fast-damage-cpu-budget-v1-fast.json",
+    "gpui-fast-damage-encoding-metrics-v1-fast.json",
+    "gpui-fast-damage-direct-policy-v1-fast.json"
   ]
 }

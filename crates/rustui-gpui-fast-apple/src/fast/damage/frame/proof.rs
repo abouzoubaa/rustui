@@ -726,7 +726,7 @@ fn replay_budget_proof() -> Result<()> {
             })?;
         renderer.sprite_atlas.remove(&key);
     }
-    assert_eq!(prepare(&mut renderer, &old, false).mode, Mode::Retained);
+    assert_eq!(prepare(&mut renderer, &old, false).mode, Mode::Direct);
     assert_eq!(
         renderer.damage.cache.hashed, 0,
         "atlas loss must precede hashing"
@@ -747,3 +747,5 @@ mod cpu_budget_tests {
         crate::metal_renderer::MetalRenderer::test_damage_cpu_budget()
     }
 }
+
+mod policy;

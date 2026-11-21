@@ -15,3 +15,5 @@ pub(crate) mod verify;
 pub(crate) mod cpu;
 
 pub(crate) mod log;
+
+pub(crate) mod encode;
