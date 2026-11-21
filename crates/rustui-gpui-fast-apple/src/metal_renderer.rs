@@ -140,13 +140,15 @@ pub struct MetalRenderer {
     /// For headless rendering, tracks whether output should be opaque
     pub(crate) opaque: bool,
     pub(crate) command_queue: Retained<ProtocolObject<dyn MTLCommandQueue>>,
-    pub(crate) paths_rasterization_pipeline_state: Retained<ProtocolObject<dyn MTLRenderPipelineState>>,
+    pub(crate) paths_rasterization_pipeline_state:
+        Retained<ProtocolObject<dyn MTLRenderPipelineState>>,
     path_sprites_pipeline_state: Retained<ProtocolObject<dyn MTLRenderPipelineState>>,
     shadows_pipeline_state: Retained<ProtocolObject<dyn MTLRenderPipelineState>>,
     quads_pipeline_state: Retained<ProtocolObject<dyn MTLRenderPipelineState>>,
     underlines_pipeline_state: Retained<ProtocolObject<dyn MTLRenderPipelineState>>,
     monochrome_sprites_pipeline_state: Retained<ProtocolObject<dyn MTLRenderPipelineState>>,
-    pub(crate) polychrome_sprites_pipeline_state: Retained<ProtocolObject<dyn MTLRenderPipelineState>>,
+    pub(crate) polychrome_sprites_pipeline_state:
+        Retained<ProtocolObject<dyn MTLRenderPipelineState>>,
     surfaces_pipeline_state: Retained<ProtocolObject<dyn MTLRenderPipelineState>>,
     pub(crate) unit_vertices: Retained<ProtocolObject<dyn MTLBuffer>>,
     pub(crate) instance_buffer_pool: Arc<Mutex<InstanceBufferPool>>,
@@ -533,7 +535,10 @@ impl MetalRenderer {
         crate::fast::layers::TileCache::clear(&mut self.fast_layers);
     }
 
-    pub(crate) fn update_path_intermediate_textures(&mut self, size: Size<DevicePixels>) -> Result<()> {
+    pub(crate) fn update_path_intermediate_textures(
+        &mut self,
+        size: Size<DevicePixels>,
+    ) -> Result<()> {
         // We are uncertain when this happens, but sometimes size can be 0 here. Most likely before
         // the layout pass on window creation. Zero-sized texture creation causes SIGABRT.
         // https://github.com/zed-industries/zed/issues/36229
@@ -648,6 +653,7 @@ impl MetalRenderer {
                 drawable
             }
         };
+        let mut latency_hold = crate::fast::latency::hold(&drawable);
         // A display link's drawable was sized when the link handed it out,
         // which can be before a resize the layer has since taken.
         let texture = drawable.texture();
@@ -656,6 +662,7 @@ impl MetalRenderer {
             (texture.height() as i32).into(),
         );
 
+        crate::fast::latency::layer(&layer, self.presents_with_transaction);
         let (planned_mode, planned_reason) = (prepared.mode, prepared.reason);
         let command_buffer = match crate::fast::damage::frame::render(
             self,
@@ -671,17 +678,28 @@ impl MetalRenderer {
             }
         };
 
-        gpui::fast_frame_reason(self.damage.last_mode.label(), if self.damage.last_mode == planned_mode { planned_reason } else { "allocation_or_verify" });
+        gpui::fast_frame_reason(
+            self.damage.last_mode.label(),
+            if self.damage.last_mode == planned_mode {
+                planned_reason
+            } else {
+                "allocation_or_verify"
+            },
+        );
         crate::fast::presented::observe(&drawable);
         crate::fast::damage::metrics::on_commit(&command_buffer, self.damage.last_mode.label());
 
+        let latency = crate::fast::latency::observe(&command_buffer, &drawable);
+        latency_hold.submitted();
         if self.presents_with_transaction {
             command_buffer.commit();
+            gpui::fast_latency_committed(latency);
             command_buffer.waitUntilScheduled();
             drawable.present();
         } else {
             command_buffer.presentDrawable(ProtocolObject::from_ref(&*drawable));
             command_buffer.commit();
+            gpui::fast_latency_committed(latency);
         }
     }
 
@@ -1744,7 +1762,10 @@ pub(crate) struct InstanceBindings {
     pub(crate) surfaces: InstanceBinding,
 }
 
-pub(crate) fn write_instances(scene: &Scene, writer: &mut InstanceBufferWriter) -> Result<InstanceBindings> {
+pub(crate) fn write_instances(
+    scene: &Scene,
+    writer: &mut InstanceBufferWriter,
+) -> Result<InstanceBindings> {
     Ok(InstanceBindings {
         quads: writer.write(&scene.quads)?,
         shadows: writer.write(&scene.shadows)?,

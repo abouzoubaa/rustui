@@ -123,7 +123,6 @@ impl DispatchPhase {
 }
 
 pub(crate) struct WindowInvalidatorInner {
-    #[cfg(feature = "profiler")]
     pub window_id: WindowId,
     pub dirty: bool,
     pub draw_phase: DrawPhase,
@@ -155,7 +154,6 @@ impl WindowInvalidator {
     pub fn new(#[allow(unused_variables)] window_id: WindowId) -> Self {
         WindowInvalidator {
             inner: Rc::new(RefCell::new(WindowInvalidatorInner {
-                #[cfg(feature = "profiler")]
                 window_id,
                 dirty: true,
                 draw_phase: DrawPhase::None,
@@ -176,6 +174,7 @@ impl WindowInvalidator {
             #[cfg(feature = "profiler")]
             let dirty_at = Self::record_frame_dirty(&mut inner);
             let became_dirty = !inner.dirty;
+            crate::fast::latency_breakdown::requested(inner.window_id);
             inner.dirty = true;
             let waker = became_dirty.then(|| inner.platform_waker.clone()).flatten();
             #[cfg(feature = "profiler")]
@@ -204,6 +203,7 @@ impl WindowInvalidator {
         let became_dirty = dirty && !inner.dirty;
         inner.dirty = dirty;
         if dirty {
+            crate::fast::latency_breakdown::requested(inner.window_id);
             inner.update_count += 1;
         }
         #[cfg(feature = "profiler")]
@@ -1353,8 +1353,12 @@ pub(crate) struct InputRateTracker {
 }
 
 // Opt-in frame recording for native acceptance; no clock reads when disabled.
-fn f0_frame_start() -> Option<std::time::Instant> { crate::fast::frame_recorder::start() }
-fn f0_phase_start() -> Option<std::time::Instant> { crate::fast::frame_recorder::phase_start() }
+fn f0_frame_start() -> Option<std::time::Instant> {
+    crate::fast::frame_recorder::start()
+}
+fn f0_phase_start() -> Option<std::time::Instant> {
+    crate::fast::frame_recorder::phase_start()
+}
 fn f0_frame_record(window: WindowId, event: &'static str, start: Option<std::time::Instant>) {
     crate::fast::frame_recorder::record(window, event, start);
 }
@@ -3868,6 +3872,7 @@ impl Window {
     /// the contents of the new [`Scene`], use [`Self::present`].
     #[profiling::function]
     pub fn draw(&mut self, cx: &mut App) -> ArenaClearNeeded {
+        crate::fast::latency_breakdown::draw(self.handle.window_id());
         let f0_frame = f0_frame_start();
         let f0_setup = f0_phase_start();
         // Drain every draw in profiler builds so a previous frame's
@@ -4063,7 +4068,9 @@ impl Window {
         let _foreground_turn = profiler::journal::foreground_turn();
         #[cfg(feature = "profiler")]
         let present_start = Instant::now();
-        let _input_presentation = crate::fast::input_latency::present_scope(self.handle.window_id());
+        let _breakdown = crate::fast::latency_breakdown::present_scope(self.handle.window_id());
+        let _input_presentation =
+            crate::fast::input_latency::present_scope(self.handle.window_id());
         crate::fast::composition::present(self);
         #[cfg(feature = "profiler")]
         self.window_profiler.record_present(

@@ -11,6 +11,7 @@
     "gpui-fast-damage-partial-v1-fast.json",
     "gpui-fast-damage-verify-v1-fast.json",
     "gpui-fast-buffered-frame-recorder-v1-fast.json",
-    "gpui-fast-presented-latency-v1-fast.json"
+    "gpui-fast-presented-latency-v1-fast.json",
+    "gpui-fast-latency-breakdown-v1-fast.json"
   ]
 }

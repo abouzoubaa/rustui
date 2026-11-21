@@ -76,6 +76,11 @@ class LatencyTests(unittest.TestCase):
 struct Window; struct Handle;
 impl Window { fn window_handle(&self) -> Handle { Handle } }
 impl Handle { fn window_id(&self) -> u64 { 7 } }
+// The PX-2 unit isolates its disabled PX-4 companion; PX-4 tests exercise it separately.
+mod latency_breakdown {
+    pub(crate) fn handled(_:u64,_:&'static str,_:u64,_:u64) {}
+    pub(crate) fn painted(_:u64,_:&'static str,_:u64,_:u64) {}
+}
 mod tracing {
 '''
         harness = stub+source+'''

@@ -1,0 +1,8 @@
+# PX-4 latency references (local diagnostics only)
+
+These files are not Cargo workspace targets and are not shipped. Build explicitly with `./scripts/build_latency_refs.sh`, which uses the pinned release dependencies and produces binaries in ignored `target/headstart/px4/`.
+
+- `latency-appkit 60`: native AppKit `NSTextView`, 1200 × 800 content points, ordinary keyDown handling, alternating x/backspace at 10 Hz after two seconds warmup. Each input also changes a marker layer's contents. The measurement ends at the first CADisplayLink callback after NSTextView has drawn that version. This is a **refresh-opportunity proxy**, not an observed Metal presentation or proof of scanout; it cannot establish the exact AppKit key-to-screen floor. The raw callback timestamp and targetTimestamp are retained for analysis. Never compare its proxy to Metal presentedTime as if their endpoints were identical.
+- `latency-gpui 60`: a minimal focused ASCII text input using GPUI Fast's div/key handler only; no RustUI runtime or GPUI Kit. It supports x/backspace for this controlled reference, not a full editor/IME. The binary links the same pinned Fast libraries as the Lab release. Run with `RUSTUI_DAMAGE=0 RUSTUI_FRAME_LOG=buffered RUSTUI_FRAME_PROFILE=1 RUSTUI_G0_LATENCY=1 RUSTUI_LATENCY_BREAKDOWN=1` to use exactly the Lab's raw mach-clock stages and actual Metal drawable presentedTime endpoint.
+
+The AppKit proxy and bare Fast reference have intentionally different capabilities from the 10,000-line RustUI typing scene. They isolate framework scheduling from editor work; they are not replacements for matched scene measurements.
