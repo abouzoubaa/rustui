@@ -140,13 +140,15 @@ pub struct MetalRenderer {
     /// For headless rendering, tracks whether output should be opaque
     pub(crate) opaque: bool,
     pub(crate) command_queue: Retained<ProtocolObject<dyn MTLCommandQueue>>,
-    pub(crate) paths_rasterization_pipeline_state: Retained<ProtocolObject<dyn MTLRenderPipelineState>>,
+    pub(crate) paths_rasterization_pipeline_state:
+        Retained<ProtocolObject<dyn MTLRenderPipelineState>>,
     path_sprites_pipeline_state: Retained<ProtocolObject<dyn MTLRenderPipelineState>>,
     shadows_pipeline_state: Retained<ProtocolObject<dyn MTLRenderPipelineState>>,
     quads_pipeline_state: Retained<ProtocolObject<dyn MTLRenderPipelineState>>,
     underlines_pipeline_state: Retained<ProtocolObject<dyn MTLRenderPipelineState>>,
     monochrome_sprites_pipeline_state: Retained<ProtocolObject<dyn MTLRenderPipelineState>>,
-    pub(crate) polychrome_sprites_pipeline_state: Retained<ProtocolObject<dyn MTLRenderPipelineState>>,
+    pub(crate) polychrome_sprites_pipeline_state:
+        Retained<ProtocolObject<dyn MTLRenderPipelineState>>,
     surfaces_pipeline_state: Retained<ProtocolObject<dyn MTLRenderPipelineState>>,
     pub(crate) unit_vertices: Retained<ProtocolObject<dyn MTLBuffer>>,
     pub(crate) instance_buffer_pool: Arc<Mutex<InstanceBufferPool>>,
@@ -533,7 +535,10 @@ impl MetalRenderer {
         crate::fast::layers::TileCache::clear(&mut self.fast_layers);
     }
 
-    pub(crate) fn update_path_intermediate_textures(&mut self, size: Size<DevicePixels>) -> Result<()> {
+    pub(crate) fn update_path_intermediate_textures(
+        &mut self,
+        size: Size<DevicePixels>,
+    ) -> Result<()> {
         // We are uncertain when this happens, but sometimes size can be 0 here. Most likely before
         // the layout pass on window creation. Zero-sized texture creation causes SIGABRT.
         // https://github.com/zed-industries/zed/issues/36229
@@ -625,6 +630,7 @@ impl MetalRenderer {
         };
         let prepared = crate::fast::damage::frame::choose(self, scene);
         if prepared.mode == crate::fast::damage::frame::Mode::Same {
+            gpui::fast_frame_reason(prepared.mode.label(), prepared.reason);
             crate::fast::damage::encode::skipped(scene);
             crate::fast::damage::frame::skip(self, prepared);
             return;
@@ -656,6 +662,7 @@ impl MetalRenderer {
             (texture.height() as i32).into(),
         );
 
+        let (planned_mode, planned_reason) = (prepared.mode, prepared.reason);
         let command_buffer = match crate::fast::damage::frame::render(
             self,
             scene,
@@ -670,6 +677,15 @@ impl MetalRenderer {
             }
         };
 
+        gpui::fast_frame_reason(
+            self.damage.last_mode.label(),
+            if self.damage.last_mode == planned_mode {
+                planned_reason
+            } else {
+                "allocation_or_verify"
+            },
+        );
+        crate::fast::presented::observe(&drawable);
         crate::fast::damage::metrics::on_commit(&command_buffer, self.damage.last_mode.label());
 
         if self.presents_with_transaction {
@@ -1742,7 +1758,10 @@ pub(crate) struct InstanceBindings {
     pub(crate) surfaces: InstanceBinding,
 }
 
-pub(crate) fn write_instances(scene: &Scene, writer: &mut InstanceBufferWriter) -> Result<InstanceBindings> {
+pub(crate) fn write_instances(
+    scene: &Scene,
+    writer: &mut InstanceBufferWriter,
+) -> Result<InstanceBindings> {
     crate::fast::damage::encode::uploaded_regular(scene);
     Ok(InstanceBindings {
         quads: writer.write(&scene.quads)?,

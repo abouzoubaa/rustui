@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+- PX-2: import opt-in actual-present state timing and non-Partial reason diagnostics onto the draft G2 branch; no F threshold changes.
+
 - Buffer native frame-recorder output outside measured phases (PX-1 candidate).
 
 - G2-8a: add opt-in planner back-off after repeated whole frames, with recovery proofs and paired benchmarks.

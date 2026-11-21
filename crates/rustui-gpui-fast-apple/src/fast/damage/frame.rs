@@ -123,6 +123,7 @@ pub(crate) struct State {
 }
 pub(crate) struct Prepared {
     pub(crate) mode: Mode,
+    pub(crate) reason: &'static str,
     snapshot: Option<Snapshot>,
     large: bool,
     plannable: bool,
@@ -134,6 +135,7 @@ impl Prepared {
     pub(crate) fn direct() -> Self {
         Self {
             mode: Mode::Direct,
+            reason: "disabled",
             snapshot: None,
             large: false,
             plannable: false,
@@ -204,8 +206,20 @@ impl State {
             || size.height.0 <= 0
         {
             let _cpu = super::cpu::Measure::new("off_path");
+            let reason = if !self.enabled() {
+                "disabled"
+            } else if synchronous {
+                "live_resize"
+            } else if size.width.0 <= 0 || size.height.0 <= 0 {
+                "geometry"
+            } else {
+                "verify_off_path"
+            };
             self.invalidate();
-            return Prepared::direct();
+            return Prepared {
+                reason,
+                ..Prepared::direct()
+            };
         }
         let mut cpu = super::cpu::Measure::new("off_path");
         if !plan::can_plan(scene) {
@@ -215,6 +229,13 @@ impl State {
             // until a comparable frame can demonstrate a cheap follow-up.
             self.previous_large = true;
             return Prepared {
+                reason: if !scene.layers.frames.is_empty() {
+                    "unsupported_scroll_layer"
+                } else if !scene.surfaces.is_empty() {
+                    "surface"
+                } else {
+                    "unsupported_scene"
+                },
                 large: true,
                 ..Prepared::direct()
             };
@@ -230,7 +251,10 @@ impl State {
         if uploads.status.disabled.load(Ordering::Acquire) {
             cpu.reason = "disabled";
             self.invalidate();
-            return Prepared::direct();
+            return Prepared {
+                reason: "verify_off_path",
+                ..Prepared::direct()
+            };
         }
         self.backoff.observe(geometry, uploads.tiles.is_none());
         if self.backoff.skipping() {
@@ -246,6 +270,7 @@ impl State {
                 deferred: Some(Box::new(scene.fast_damage_snapshot())),
             });
             return Prepared {
+                reason: "backoff",
                 snapshot,
                 large: true,
                 plannable: true,
@@ -284,6 +309,7 @@ impl State {
             }
             self.cache.clear();
             return Prepared {
+                reason: cpu.reason,
                 mode: if self.previous_large {
                     Mode::Direct
                 } else {
@@ -364,6 +390,13 @@ impl State {
         cpu.reason = mode.label();
         Prepared {
             mode,
+            reason: match mode {
+                Mode::Same => "identical",
+                Mode::Copy => "required",
+                Mode::Partial(_) => "changed",
+                Mode::Retained => "prime",
+                _ => "large",
+            },
             snapshot: Some(Snapshot {
                 geometry,
                 signatures,

@@ -269,6 +269,10 @@ fn drag_position(tick: usize) -> gpui::Point<gpui::Pixels> {
         gpui::px(PAD + 100.0 + step * 1.5),
     )
 }
+fn hover_pixels() -> bool {
+    static ENABLED: std::sync::OnceLock<bool> = std::sync::OnceLock::new();
+    *ENABLED.get_or_init(|| std::env::var("RUSTUI_G0_HOVER_PIXELS").as_deref() == Ok("1"))
+}
 fn step(
     scene: Scene,
     tick: usize,
@@ -276,7 +280,19 @@ fn step(
     window: &mut Window,
     app: &mut App,
 ) -> bool {
-    match scene {
+    let stamp = if scene != Scene::Idle {
+        // Log appends retain at least the newest 20 rows in this fixed viewport;
+        // discrete edits/moves only claim the exact state version actually painted.
+        let first = if scene == Scene::Log {
+            tick.saturating_sub(19)
+        } else {
+            tick
+        };
+        window.fast_measure_input(scene.name(), tick as u64, first as u64)
+    } else {
+        None
+    };
+    let handled = match scene {
         Scene::Idle => true,
         Scene::Typing => window.dispatch_keystroke(
             gpui::Keystroke::parse(if tick % 2 == 1 { "x" } else { "backspace" }).unwrap(),
@@ -288,7 +304,13 @@ fn step(
         }
         Scene::Hover => {
             let phase = tick % 42;
-            let row = if phase < 22 { phase } else { 42 - phase };
+            let row = if hover_pixels() {
+                if tick <= 240 { 2 } else { 8 }
+            } else if phase < 22 {
+                phase
+            } else {
+                42 - phase
+            };
             window.dispatch_event(
                 gpui::PlatformInput::MouseMove(gpui::MouseMoveEvent {
                     position: gpui::point(
@@ -312,7 +334,11 @@ fn step(
             );
             true
         }
+    };
+    if handled {
+        window.fast_input_handled(stamp);
     }
+    handled
 }
 
 fn playback(

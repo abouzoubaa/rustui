@@ -14,6 +14,7 @@
     "gpui-fast-damage-encoding-metrics-v1-fast.json",
     "gpui-fast-damage-direct-policy-v1-fast.json",
     "gpui-fast-damage-backoff-v1-fast.json",
-    "gpui-fast-buffered-frame-recorder-v1-fast.json"
+    "gpui-fast-buffered-frame-recorder-v1-fast.json",
+    "gpui-fast-presented-latency-v1-fast.json"
   ]
 }

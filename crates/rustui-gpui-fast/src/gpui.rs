@@ -137,6 +137,8 @@ pub use fast::layers::scene::{
     LAYER_TILE_TEXTURE_BASE, LayerContent, LayerFrame, LayerKey, SceneLayers, TileCoord,
     decode_layer_tile, layer_tile_id, layer_tile_texture_id,
 };
+#[doc(hidden)]
+pub use fast::input_latency::{FastInputStamp, FastPresentTag, fast_present_tag, fast_frame_presented, fast_frame_reason};
 pub use fast::present_hint::fast_present_required;
 #[cfg(any(test, feature = "test-support"))]
 pub use fast::present_hint::with_fast_present_required;
