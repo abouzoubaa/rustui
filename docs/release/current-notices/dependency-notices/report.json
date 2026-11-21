@@ -131,6 +131,12 @@
           "sha256": "5f78a733701db49b73da93addad8cb74f816f3789ef30c3c0e959e943ecd99b4",
           "size_bytes": 10238,
           "source": "repository:crates/rustui-gpui-fast-apple/LICENSE"
+        },
+        {
+          "path": "notices/gpui-fast-apple-0.1.14-5affb5474f07/02-NOTICE",
+          "sha256": "38bc52285cd2208040e1dc92332912d2f3bdb4bb4eba75e18eda7c3621ed9345",
+          "size_bytes": 460,
+          "source": "repository:crates/rustui-gpui-fast-apple/NOTICE"
         }
       ],
       "package_id": "path+repository:crates/rustui-gpui-fast-apple#gpui-fast-apple@0.1.14",

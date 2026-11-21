@@ -160,6 +160,7 @@ pub struct MetalRenderer {
     #[cfg(any(test, feature = "bench-support", feature = "test-support"))]
     headless_render_target: Option<Retained<ProtocolObject<dyn MTLTexture>>>,
     pub(crate) fast_layers: crate::fast::layers::TileCache,
+    pub(crate) damage_pipelines: crate::fast::damage::shaders::Pipelines,
 }
 
 #[repr(C)]
@@ -421,6 +422,8 @@ impl MetalRenderer {
         // SAFETY: The successful create call transfers ownership of this non-null cache.
         let core_video_texture_cache = unsafe { CFRetained::from_raw(cache) };
 
+        let damage_pipelines = crate::fast::damage::shaders::Pipelines::new(&device, &library)?;
+
         Ok(Self {
             device,
             layer,
@@ -448,6 +451,7 @@ impl MetalRenderer {
             #[cfg(any(test, feature = "bench-support", feature = "test-support"))]
             headless_render_target: None,
             fast_layers: crate::fast::layers::TileCache::default(),
+            damage_pipelines,
         })
     }
 

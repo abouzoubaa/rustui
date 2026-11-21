@@ -1,0 +1,350 @@
+diff --git a/vendor/gpui-fast-apple-0.1.14/.cargo-checksum.json b/vendor/gpui-fast-apple-0.1.14/.cargo-checksum.json
+index 1e36edd..1330817 100644
+--- a/vendor/gpui-fast-apple-0.1.14/.cargo-checksum.json
++++ b/vendor/gpui-fast-apple-0.1.14/.cargo-checksum.json
+@@ -1 +1 @@
+-{"files":{"Cargo.lock":"603d518bb73d00d2ff0fc288047f9442a54ab3418d99c1a8222f8900f2c5d414","Cargo.toml":"e5d4442c4a5dfd6c52edae85af5c7b69fc70e294bf133f79ccdcf65053344faa","Cargo.toml.orig":"a2dfd35c8202cab2acfcfd1c42433cbbe1ef6caa0499f5f6dce13924d91895d6","LICENSE":"5f78a733701db49b73da93addad8cb74f816f3789ef30c3c0e959e943ecd99b4","README.md":"118a9817d5a41aebb675e83da70d87d28930cdef6c6ec0cc8b19fd87a201cbe2","build.rs":"cc05fa1dd22c2115da3385c7ec9a0d06cdae73cf4eaad630b193ac06731c292a","src/dispatcher.rs":"21ec54613d48cd3c419f2f694f75460d1019491c2406a7ed4dfa3374c84824cf","src/display_link.rs":"1a1776d9a8d5a0083ec07faced6ba16a9a0fa833c256ae2888d4cc784f7e356f","src/fast/color_bitmap_fonts.rs":"1e670f525ba3a0ccd23940e01e1a0b88b37acdbc6404f75dcccf765a5f63c06a","src/fast/composition.rs":"87976f984efe12f04788c459ba1081cb1020c5124dbdc83e69ea27a4040bfeb7","src/fast/dynamic_textures.rs":"c45088caf11ab5c1d16f3f0ed2afbb83719d55122a536caf3841383ff7293541","src/fast/font_fallbacks.rs":"0857cdd0c25fa1ed7cff52f423692cc905f31a288ed7905a1fdefb29e611f711","src/fast/layers/composite.rs":"589cf9e53f3ed02c115555f2248dfd672152002a3e344396315e2de5814820fa","src/fast/layers/mod.rs":"ea50d20f8f51a8e7e4c39ef4d5859faa74d5f66ef56d73f92113261c543c9509","src/fast/layers/raster.rs":"73624582017003289a7f20b0dc8d0f11ac3a1c748db3fb4fddc02c85a9a8ab48","src/fast/layers/tests.rs":"19253d11c3ed809e96919d6af4e2bf6e1710ffae67ce641a9f8cccdf18f13249","src/fast/layers/tile_cache.rs":"66f539be39587a9b7f61fe976945dde5d2b0958535c0e9b15ad90c5ae9b20c1c","src/fast/mod.rs":"4268b5cc568f8708db4f6f3b89f0a7d424ea79e7ba1e4a79fb06dc223c14c4ff","src/fast/paths.rs":"f9971cf7eb296c443e4e7e959719f276d2b0e9c688a8c7af607f69dfbbee9ac2","src/fast/release_gpui/src/color.rs":"4292aa1a2bbc56b653aaef0702726325f8efb93f16226320519e257c3ba8a839","src/fast/release_gpui/src/geometry.rs":"965ae8f6c1d4bd2e7dcb43e253a99dd4363252b1ef6dc19c3031ea50c5192408","src/fast/release_gpui/src/platform.rs":"870554ea44a3933ccc257691740252b3cfcbef0452f5690c7e398da0e2b8173d","src/fast/release_gpui/src/platform/app_menu.rs":"c751e70bf50cf2366dad9d6b2a66fc3a8e9cd1547128173dbfc59520feb454cc","src/fast/release_gpui/src/platform/keyboard.rs":"8de8d585f4238204fd14113abded703afa6bb0a532dacabdf400df8249390376","src/fast/release_gpui/src/platform/keystroke.rs":"a322d71bb2b3ae6c388b7c53a34ff490b146780030361e9cdc9d5cf482148cac","src/fast/release_gpui/src/platform/layer_shell.rs":"cdb4822c6589461045f09829640da3961e957d782c8e4763050b65701c90d305","src/fast/release_gpui/src/platform/platform_info.rs":"a01680ee1653b499c36ce5a49ce2a1d4377a380aa15d571ff8b36ec2181a96f0","src/fast/release_gpui/src/platform/popup.rs":"18a8aa2aaf3739c71d34233e7b2dabb4e902e5e27f9e1dcb362acd110478bb1a","src/fast/release_gpui/src/platform/scap_screen_capture.rs":"b6492678395e5a9a3335fd6babaa60192dc5b971efd32f896e33fb8fbbd7e484","src/fast/release_gpui/src/platform/test.rs":"52861874bfdd1433728d61bd7be3a40b1f8c27aae4e4cc9d31b311ef13bda994","src/fast/release_gpui/src/platform/test/dispatcher.rs":"dea03a78a0c64d486f2c5b7bc669ba281638a0f8ee53316a52993a0e5b5cabd0","src/fast/release_gpui/src/platform/test/display.rs":"f026713ec76569ea1402b6d1d4996636530d4f592245a0c97ac795d112f8debf","src/fast/release_gpui/src/platform/test/platform.rs":"d41c52191f15d6a573daa1a1086084028d397cf3269a437e09509c1ee39b7911","src/fast/release_gpui/src/platform/test/window.rs":"0a9e1c0a0ce8885e64439bfda766a5c39fed5f2fffae3781e56104031ee4012e","src/fast/release_gpui/src/platform/threaded_dispatcher.rs":"aff57da6e74ddb0dbdb57f2c58b08236c1b78a4971e0c6d2f095f0746096f09c","src/fast/release_gpui/src/platform/visual_test.rs":"93d2a650c42546b469916ac8f5c6727da04522de58f5da1c44e6c3dd1506227f","src/fast/release_gpui/src/scene.rs":"a0c39f4a306c103c559b444ced54df6039362c8d0af2af0f8b380661e7971fbd","src/fast/release_gpui/src/window.rs":"cb34d06d7ad329aa59bbc64396f25b0777b9b0b1e26084afe4f2159ff87f862f","src/fast/release_gpui/src/window/a11y.rs":"2a049d83c2c71bab12c51e147c9552707b39360eec08cb24fc7a1daa7eb954e6","src/fast/release_gpui/src/window/a11y/debug.rs":"9de446535b8d49f5f674690cfb0f80da751036e51231f351426ba53460598916","src/fast/release_gpui/src/window/prompts.rs":"0d58ec14e8139af53b50f4ad67690f01959ed59ffafc4adb2cf522f3f6197164","src/fast/rounded_clip.rs":"cd4550aa62fc91cd73794e074b6daf2931868215b2cf757a9f0f62809484c184","src/fast/rounded_clip_shader.rs":"e48e86dee268738339c89589279be7fcf9a44d8ad62c43a56c6cf5d722e216b1","src/fast/text_system.rs":"98fd94a56c558e95d777501066cc61fd8f8ab80e1bc1de752d43c0a3b7f2c493","src/gpui_apple.rs":"f0929fc38bde7f580fe03e8e641834a9079e0e56dc9fc96eab4f33aed17e8c7f","src/keychain.rs":"636ce5b08fe6e939dfef73fafc3be719b21b35da356a7d7053afe4dbf4d6f71c","src/metal_atlas.rs":"0889f2ff0ec3091bc0749ea629b4c87eab2c6253f84cb459693895a48dcb1e73","src/metal_renderer.rs":"72c50cc34d081470e1e1cb68557316b8bce9ea27364a92f5c76c7417e89e8afc","src/open_type.rs":"7eb18da02690f18b0f6e0001f9f5ee9a6cac0b26912912bb3f9724dc1963aa8e","src/process_info.rs":"533288f7707bfeaeea53f753d25c7af676235ebff57910bb79331f68492be139","src/shaders.metal":"5ceaf9120161fa6f1a1addb171945459b24214d87dfecf6ed70f939b6e869576","src/text_system.rs":"2145eac56f6f72dcb7a0716fcbdcac8a3520a7e10793528e733cb12043d0d04c","src/fast/damage/mod.rs":"5e01364e982c1c129cae87eb84dd03a886d7b172386156f960e43dc65f916473","src/fast/damage/metrics.rs":"748808fc413a64ed85bb91f6de6946ca3c35a78387e65272707e4d7f6b8dcad8"},"package":"7d1934376409ef93257473cfd1cba16bbc825a3a3afc437410de73208cfd8364"}
+\ No newline at end of file
++{"files":{"Cargo.lock":"603d518bb73d00d2ff0fc288047f9442a54ab3418d99c1a8222f8900f2c5d414","Cargo.toml":"e5d4442c4a5dfd6c52edae85af5c7b69fc70e294bf133f79ccdcf65053344faa","Cargo.toml.orig":"a2dfd35c8202cab2acfcfd1c42433cbbe1ef6caa0499f5f6dce13924d91895d6","LICENSE":"5f78a733701db49b73da93addad8cb74f816f3789ef30c3c0e959e943ecd99b4","NOTICE":"38bc52285cd2208040e1dc92332912d2f3bdb4bb4eba75e18eda7c3621ed9345","README.md":"118a9817d5a41aebb675e83da70d87d28930cdef6c6ec0cc8b19fd87a201cbe2","build.rs":"cc05fa1dd22c2115da3385c7ec9a0d06cdae73cf4eaad630b193ac06731c292a","src/dispatcher.rs":"21ec54613d48cd3c419f2f694f75460d1019491c2406a7ed4dfa3374c84824cf","src/display_link.rs":"1a1776d9a8d5a0083ec07faced6ba16a9a0fa833c256ae2888d4cc784f7e356f","src/fast/color_bitmap_fonts.rs":"1e670f525ba3a0ccd23940e01e1a0b88b37acdbc6404f75dcccf765a5f63c06a","src/fast/composition.rs":"87976f984efe12f04788c459ba1081cb1020c5124dbdc83e69ea27a4040bfeb7","src/fast/damage/metrics.rs":"748808fc413a64ed85bb91f6de6946ca3c35a78387e65272707e4d7f6b8dcad8","src/fast/damage/mod.rs":"ed5927a4996bd9ceec817d3b2ba49b2549d73b96eb26c5cc560fb6587cc47898","src/fast/damage/shaders.rs":"ac8ec6c2870b2b631fef903e5eac40eb2b694ac461efa5e8c3fd7a1fa3982c8b","src/fast/dynamic_textures.rs":"c45088caf11ab5c1d16f3f0ed2afbb83719d55122a536caf3841383ff7293541","src/fast/font_fallbacks.rs":"0857cdd0c25fa1ed7cff52f423692cc905f31a288ed7905a1fdefb29e611f711","src/fast/layers/composite.rs":"589cf9e53f3ed02c115555f2248dfd672152002a3e344396315e2de5814820fa","src/fast/layers/mod.rs":"ea50d20f8f51a8e7e4c39ef4d5859faa74d5f66ef56d73f92113261c543c9509","src/fast/layers/raster.rs":"73624582017003289a7f20b0dc8d0f11ac3a1c748db3fb4fddc02c85a9a8ab48","src/fast/layers/tests.rs":"19253d11c3ed809e96919d6af4e2bf6e1710ffae67ce641a9f8cccdf18f13249","src/fast/layers/tile_cache.rs":"66f539be39587a9b7f61fe976945dde5d2b0958535c0e9b15ad90c5ae9b20c1c","src/fast/mod.rs":"4268b5cc568f8708db4f6f3b89f0a7d424ea79e7ba1e4a79fb06dc223c14c4ff","src/fast/paths.rs":"f9971cf7eb296c443e4e7e959719f276d2b0e9c688a8c7af607f69dfbbee9ac2","src/fast/release_gpui/src/color.rs":"4292aa1a2bbc56b653aaef0702726325f8efb93f16226320519e257c3ba8a839","src/fast/release_gpui/src/geometry.rs":"965ae8f6c1d4bd2e7dcb43e253a99dd4363252b1ef6dc19c3031ea50c5192408","src/fast/release_gpui/src/platform.rs":"870554ea44a3933ccc257691740252b3cfcbef0452f5690c7e398da0e2b8173d","src/fast/release_gpui/src/platform/app_menu.rs":"c751e70bf50cf2366dad9d6b2a66fc3a8e9cd1547128173dbfc59520feb454cc","src/fast/release_gpui/src/platform/keyboard.rs":"8de8d585f4238204fd14113abded703afa6bb0a532dacabdf400df8249390376","src/fast/release_gpui/src/platform/keystroke.rs":"a322d71bb2b3ae6c388b7c53a34ff490b146780030361e9cdc9d5cf482148cac","src/fast/release_gpui/src/platform/layer_shell.rs":"cdb4822c6589461045f09829640da3961e957d782c8e4763050b65701c90d305","src/fast/release_gpui/src/platform/platform_info.rs":"a01680ee1653b499c36ce5a49ce2a1d4377a380aa15d571ff8b36ec2181a96f0","src/fast/release_gpui/src/platform/popup.rs":"18a8aa2aaf3739c71d34233e7b2dabb4e902e5e27f9e1dcb362acd110478bb1a","src/fast/release_gpui/src/platform/scap_screen_capture.rs":"b6492678395e5a9a3335fd6babaa60192dc5b971efd32f896e33fb8fbbd7e484","src/fast/release_gpui/src/platform/test.rs":"52861874bfdd1433728d61bd7be3a40b1f8c27aae4e4cc9d31b311ef13bda994","src/fast/release_gpui/src/platform/test/dispatcher.rs":"dea03a78a0c64d486f2c5b7bc669ba281638a0f8ee53316a52993a0e5b5cabd0","src/fast/release_gpui/src/platform/test/display.rs":"f026713ec76569ea1402b6d1d4996636530d4f592245a0c97ac795d112f8debf","src/fast/release_gpui/src/platform/test/platform.rs":"d41c52191f15d6a573daa1a1086084028d397cf3269a437e09509c1ee39b7911","src/fast/release_gpui/src/platform/test/window.rs":"0a9e1c0a0ce8885e64439bfda766a5c39fed5f2fffae3781e56104031ee4012e","src/fast/release_gpui/src/platform/threaded_dispatcher.rs":"aff57da6e74ddb0dbdb57f2c58b08236c1b78a4971e0c6d2f095f0746096f09c","src/fast/release_gpui/src/platform/visual_test.rs":"93d2a650c42546b469916ac8f5c6727da04522de58f5da1c44e6c3dd1506227f","src/fast/release_gpui/src/scene.rs":"a0c39f4a306c103c559b444ced54df6039362c8d0af2af0f8b380661e7971fbd","src/fast/release_gpui/src/window.rs":"cb34d06d7ad329aa59bbc64396f25b0777b9b0b1e26084afe4f2159ff87f862f","src/fast/release_gpui/src/window/a11y.rs":"2a049d83c2c71bab12c51e147c9552707b39360eec08cb24fc7a1daa7eb954e6","src/fast/release_gpui/src/window/a11y/debug.rs":"9de446535b8d49f5f674690cfb0f80da751036e51231f351426ba53460598916","src/fast/release_gpui/src/window/prompts.rs":"0d58ec14e8139af53b50f4ad67690f01959ed59ffafc4adb2cf522f3f6197164","src/fast/rounded_clip.rs":"cd4550aa62fc91cd73794e074b6daf2931868215b2cf757a9f0f62809484c184","src/fast/rounded_clip_shader.rs":"e48e86dee268738339c89589279be7fcf9a44d8ad62c43a56c6cf5d722e216b1","src/fast/text_system.rs":"98fd94a56c558e95d777501066cc61fd8f8ab80e1bc1de752d43c0a3b7f2c493","src/gpui_apple.rs":"f0929fc38bde7f580fe03e8e641834a9079e0e56dc9fc96eab4f33aed17e8c7f","src/keychain.rs":"636ce5b08fe6e939dfef73fafc3be719b21b35da356a7d7053afe4dbf4d6f71c","src/metal_atlas.rs":"0889f2ff0ec3091bc0749ea629b4c87eab2c6253f84cb459693895a48dcb1e73","src/metal_renderer.rs":"29eb3dc670585bafa0585d6102a69a6bb4586a57fe6189b169c4e5b7846f0d65","src/open_type.rs":"7eb18da02690f18b0f6e0001f9f5ee9a6cac0b26912912bb3f9724dc1963aa8e","src/process_info.rs":"533288f7707bfeaeea53f753d25c7af676235ebff57910bb79331f68492be139","src/shaders.metal":"69cc463a3c2289b7cb503926e3905a728d791924aa6f0e304a52200a484ed25b","src/text_system.rs":"2145eac56f6f72dcb7a0716fcbdcac8a3520a7e10793528e733cb12043d0d04c"},"package":"7d1934376409ef93257473cfd1cba16bbc825a3a3afc437410de73208cfd8364"}
+diff --git a/vendor/gpui-fast-apple-0.1.14/NOTICE b/vendor/gpui-fast-apple-0.1.14/NOTICE
+new file mode 100644
+index 0000000..1d66d30
+--- /dev/null
++++ b/vendor/gpui-fast-apple-0.1.14/NOTICE
+@@ -0,0 +1,10 @@
++RustUI Stage G adaptations (Apache-2.0)
++
++Source: Havunen/gpui-ce
++Commit: 28045891bfe87768a2c8e0aefd43403939844318
++Path: crates/gpui_apple/src/metal_renderer.rs
++Copyright 2022 - 2025 Zed Industries, Inc.
++Havunen and the gpui-ce contributors.
++RustUI modifications adapt the copy/clear passes and pipeline construction to
++objc2-metal. See the attribution headers in src/fast/damage/shaders.rs and
++src/shaders.metal. The Apache-2.0 license is included in LICENSE.
+diff --git a/vendor/gpui-fast-apple-0.1.14/src/fast/damage/mod.rs b/vendor/gpui-fast-apple-0.1.14/src/fast/damage/mod.rs
+index feb9d93..881f3f0 100644
+--- a/vendor/gpui-fast-apple-0.1.14/src/fast/damage/mod.rs
++++ b/vendor/gpui-fast-apple-0.1.14/src/fast/damage/mod.rs
+@@ -2,3 +2,4 @@
+ //! GPU damage instrumentation and, in later patches, retained frame planning.
+ 
+ pub(crate) mod metrics;
++pub(crate) mod shaders;
+diff --git a/vendor/gpui-fast-apple-0.1.14/src/fast/damage/shaders.rs b/vendor/gpui-fast-apple-0.1.14/src/fast/damage/shaders.rs
+new file mode 100644
+index 0000000..6c10645
+--- /dev/null
++++ b/vendor/gpui-fast-apple-0.1.14/src/fast/damage/shaders.rs
+@@ -0,0 +1,251 @@
++// SPDX-License-Identifier: Apache-2.0
++// Adapted from Havunen/gpui-ce, commit 28045891bfe87768a2c8e0aefd43403939844318,
++// crates/gpui_apple/src/metal_renderer.rs (copy_texture, draw_clear_quad, pipelines).
++// Copyright 2022 - 2025 Zed Industries, Inc.; Havunen and gpui-ce contributors.
++// RustUI modifications: objc2-metal pipelines and pixel-exact, unblended passes.
++use anyhow::{Context as _, Result};
++use gpui::{DevicePixels, Size};
++use objc2::{rc::Retained, runtime::ProtocolObject};
++use objc2_foundation::NSString;
++use objc2_metal::{
++    MTLCommandBuffer, MTLCommandEncoder, MTLDevice, MTLLibrary, MTLPixelFormat, MTLPrimitiveType,
++    MTLRenderCommandEncoder, MTLRenderPipelineDescriptor, MTLRenderPipelineState, MTLScissorRect,
++    MTLTexture,
++};
++
++pub(crate) struct Pipelines {
++    copy: Retained<ProtocolObject<dyn MTLRenderPipelineState>>,
++    clear: Retained<ProtocolObject<dyn MTLRenderPipelineState>>,
++}
++impl Pipelines {
++    pub(crate) fn new(
++        device: &ProtocolObject<dyn MTLDevice>,
++        library: &ProtocolObject<dyn MTLLibrary>,
++    ) -> Result<Self> {
++        let build = |fragment: &str| -> Result<_> {
++            let vertex = library
++                .newFunctionWithName(&NSString::from_str("damage_fullscreen_vertex"))
++                .context("locating damage fullscreen vertex")?;
++            let fragment_fn = library
++                .newFunctionWithName(&NSString::from_str(fragment))
++                .context("locating damage fragment")?;
++            let descriptor = MTLRenderPipelineDescriptor::new();
++            descriptor.setLabel(Some(&NSString::from_str(fragment)));
++            descriptor.setVertexFunction(Some(&vertex));
++            descriptor.setFragmentFunction(Some(&fragment_fn));
++            // SAFETY: Every pipeline descriptor has color attachment zero.
++            let attachment = unsafe { descriptor.colorAttachments().objectAtIndexedSubscript(0) };
++            attachment.setPixelFormat(MTLPixelFormat::BGRA8Unorm);
++            attachment.setBlendingEnabled(false);
++            device
++                .newRenderPipelineStateWithDescriptor_error(&descriptor)
++                .context("creating damage pipeline")
++        };
++        Ok(Self {
++            copy: build("damage_copy_fragment")?,
++            clear: build("damage_clear_fragment")?,
++        })
++    }
++    pub(crate) fn copy(
++        &self,
++        buffer: &ProtocolObject<dyn MTLCommandBuffer>,
++        source: &ProtocolObject<dyn MTLTexture>,
++        target: &ProtocolObject<dyn MTLTexture>,
++        size: Size<DevicePixels>,
++    ) -> Result<()> {
++        anyhow::ensure!(
++            source.width() == target.width() && source.height() == target.height(),
++            "damage copy dimensions differ"
++        );
++        let encoder =
++            crate::metal_renderer::new_command_encoder_for_texture(buffer, target, size, None)?;
++        encoder.setRenderPipelineState(&self.copy);
++        unsafe {
++            encoder.setFragmentTexture_atIndex(Some(source), 0);
++            encoder.drawPrimitives_vertexStart_vertexCount(MTLPrimitiveType::Triangle, 0, 3);
++        }
++        encoder.endEncoding();
++        Ok(())
++    }
++    pub(crate) fn clear(
++        &self,
++        buffer: &ProtocolObject<dyn MTLCommandBuffer>,
++        target: &ProtocolObject<dyn MTLTexture>,
++        size: Size<DevicePixels>,
++        rect: MTLScissorRect,
++        color: [f32; 4],
++    ) -> Result<()> {
++        anyhow::ensure!(
++            rect.width > 0
++                && rect.height > 0
++                && rect
++                    .x
++                    .checked_add(rect.width)
++                    .is_some_and(|x| x <= target.width())
++                && rect
++                    .y
++                    .checked_add(rect.height)
++                    .is_some_and(|y| y <= target.height()),
++            "invalid damage clear scissor"
++        );
++        let encoder =
++            crate::metal_renderer::new_command_encoder_for_texture(buffer, target, size, None)?;
++        encoder.setRenderPipelineState(&self.clear);
++        encoder.setScissorRect(rect);
++        // SAFETY: Metal copies all sixteen bytes of this live float4; three vertices cover the viewport.
++        unsafe {
++            encoder.setFragmentBytes_length_atIndex(
++                std::ptr::NonNull::from(&color).cast(),
++                std::mem::size_of_val(&color),
++                0,
++            );
++            encoder.drawPrimitives_vertexStart_vertexCount(MTLPrimitiveType::Triangle, 0, 3);
++        }
++        encoder.endEncoding();
++        Ok(())
++    }
++}
++
++#[cfg(any(test, feature = "test-support"))]
++mod proof {
++    use super::*;
++    use crate::metal_renderer::MetalRenderer;
++    use objc2_metal::{
++        MTLBlitCommandEncoder, MTLBuffer, MTLCommandBufferStatus, MTLCommandQueue, MTLGPUFamily,
++        MTLOrigin, MTLRegion, MTLResourceOptions, MTLSize, MTLStorageMode, MTLTextureDescriptor,
++        MTLTextureUsage,
++    };
++
++    impl MetalRenderer {
++        /// Headless Stage G copy/clear proof using the real damage pipelines.
++        pub fn test_damage_shader_pixels() -> Result<()> {
++            objc2::rc::autoreleasepool(|_| {
++                let renderer = Self::new_headless(Default::default())?;
++                let (width, height) = (64usize, 24usize);
++                let size = gpui::size(DevicePixels(width as i32), DevicePixels(height as i32));
++                let descriptor = MTLTextureDescriptor::new();
++                unsafe {
++                    descriptor.setWidth(width);
++                    descriptor.setHeight(height);
++                }
++                descriptor.setPixelFormat(MTLPixelFormat::BGRA8Unorm);
++                descriptor.setStorageMode(
++                    if cfg!(target_os = "ios")
++                        || renderer.device.supportsFamily(MTLGPUFamily::Apple1)
++                    {
++                        MTLStorageMode::Shared
++                    } else {
++                        MTLStorageMode::Managed
++                    },
++                );
++                descriptor.setUsage(MTLTextureUsage::ShaderRead | MTLTextureUsage::RenderTarget);
++                let source = renderer
++                    .device
++                    .newTextureWithDescriptor(&descriptor)
++                    .context("source texture")?;
++                let target = renderer
++                    .device
++                    .newTextureWithDescriptor(&descriptor)
++                    .context("target texture")?;
++                let pixels = (0..width * height * 4)
++                    .map(|i| ((i * 37 + i / 11) % 256) as u8)
++                    .collect::<Vec<_>>();
++                let region = MTLRegion {
++                    origin: MTLOrigin { x: 0, y: 0, z: 0 },
++                    size: MTLSize {
++                        width,
++                        height,
++                        depth: 1,
++                    },
++                };
++                unsafe {
++                    source.replaceRegion_mipmapLevel_withBytes_bytesPerRow(
++                        region,
++                        0,
++                        std::ptr::NonNull::from(pixels.as_slice()).cast(),
++                        width * 4,
++                    );
++                }
++                let command = renderer
++                    .command_queue
++                    .commandBuffer()
++                    .context("copy command")?;
++                renderer
++                    .damage_pipelines
++                    .copy(&command, &source, &target, size)?;
++                let actual = read(&renderer, &command, &target)?;
++                assert_eq!(
++                    actual, pixels,
++                    "copy pipeline must preserve every BGRA byte, including alpha"
++                );
++                let command = renderer
++                    .command_queue
++                    .commandBuffer()
++                    .context("clear command")?;
++                let rect = MTLScissorRect {
++                    x: 3,
++                    y: 5,
++                    width: 11,
++                    height: 7,
++                };
++                renderer
++                    .damage_pipelines
++                    .clear(&command, &target, size, rect, [1., 0., 1., 0.])?;
++                let actual = read(&renderer, &command, &target)?;
++                for y in 0..height {
++                    for x in 0..width {
++                        let i = (y * width + x) * 4;
++                        let expected = if (3..14).contains(&x) && (5..12).contains(&y) {
++                            &[255, 0, 255, 0][..]
++                        } else {
++                            &pixels[i..i + 4]
++                        };
++                        assert_eq!(&actual[i..i + 4], expected, "scissored clear at ({x},{y})");
++                    }
++                }
++                Ok(())
++            })
++        }
++    }
++    fn read(
++        renderer: &MetalRenderer,
++        command: &ProtocolObject<dyn MTLCommandBuffer>,
++        texture: &ProtocolObject<dyn MTLTexture>,
++    ) -> Result<Vec<u8>> {
++        let row = texture.width() * 4;
++        let output = renderer
++            .device
++            .newBufferWithLength_options(
++                row * texture.height(),
++                MTLResourceOptions::StorageModeShared,
++            )
++            .context("readback buffer")?;
++        let blit = command.blitCommandEncoder().context("readback encoder")?;
++        unsafe {
++            blit.copyFromTexture_sourceSlice_sourceLevel_sourceOrigin_sourceSize_toBuffer_destinationOffset_destinationBytesPerRow_destinationBytesPerImage(texture,0,0,MTLOrigin{x:0,y:0,z:0},MTLSize{width:texture.width(),height:texture.height(),depth:1},&output,0,row,row*texture.height());
++        }
++        blit.endEncoding();
++        command.commit();
++        command.waitUntilCompleted();
++        anyhow::ensure!(
++            command.status() == MTLCommandBufferStatus::Completed,
++            "damage shader command failed: {:?}",
++            command.error()
++        );
++        Ok(unsafe {
++            std::slice::from_raw_parts(
++                output.contents().as_ptr().cast::<u8>(),
++                row * texture.height(),
++            )
++            .to_vec()
++        })
++    }
++}
++
++#[cfg(test)]
++mod tests {
++    #[test]
++    fn copy_and_scissored_clear_preserve_exact_pixels() -> anyhow::Result<()> {
++        crate::metal_renderer::MetalRenderer::test_damage_shader_pixels()
++    }
++}
+diff --git a/vendor/gpui-fast-apple-0.1.14/src/metal_renderer.rs b/vendor/gpui-fast-apple-0.1.14/src/metal_renderer.rs
+index 51a3431..8c0b358 100644
+--- a/vendor/gpui-fast-apple-0.1.14/src/metal_renderer.rs
++++ b/vendor/gpui-fast-apple-0.1.14/src/metal_renderer.rs
+@@ -160,6 +160,7 @@ pub struct MetalRenderer {
+     #[cfg(any(test, feature = "bench-support", feature = "test-support"))]
+     headless_render_target: Option<Retained<ProtocolObject<dyn MTLTexture>>>,
+     pub(crate) fast_layers: crate::fast::layers::TileCache,
++    pub(crate) damage_pipelines: crate::fast::damage::shaders::Pipelines,
+ }
+ 
+ #[repr(C)]
+@@ -421,6 +422,8 @@ impl MetalRenderer {
+         // SAFETY: The successful create call transfers ownership of this non-null cache.
+         let core_video_texture_cache = unsafe { CFRetained::from_raw(cache) };
+ 
++        let damage_pipelines = crate::fast::damage::shaders::Pipelines::new(&device, &library)?;
++
+         Ok(Self {
+             device,
+             layer,
+@@ -448,6 +451,7 @@ impl MetalRenderer {
+             #[cfg(any(test, feature = "bench-support", feature = "test-support"))]
+             headless_render_target: None,
+             fast_layers: crate::fast::layers::TileCache::default(),
++            damage_pipelines,
+         })
+     }
+ 
+diff --git a/vendor/gpui-fast-apple-0.1.14/src/shaders.metal b/vendor/gpui-fast-apple-0.1.14/src/shaders.metal
+index ea405e6..0f33132 100644
+--- a/vendor/gpui-fast-apple-0.1.14/src/shaders.metal
++++ b/vendor/gpui-fast-apple-0.1.14/src/shaders.metal
+@@ -1,3 +1,9 @@
++// SPDX-License-Identifier: Apache-2.0
++// Attribution below applies to the Stage G additions.
++// Adapted from Havunen/gpui-ce, commit 28045891bfe87768a2c8e0aefd43403939844318,
++// crates/gpui_apple/src/metal_renderer.rs: copy_texture and draw_clear_quad.
++// Copyright 2022 - 2025 Zed Industries, Inc.; Havunen and gpui-ce contributors.
++// RustUI modifications: dedicated, exact-pixel copy and scissored clear shaders.
+ // Modified by Longbridge for gpui-fast.
+ #include <metal_stdlib>
+ #include <simd/simd.h>
+@@ -1278,3 +1284,16 @@ float4 fill_color(Background background,
+ 
+   return color;
+ }
++
++struct DamageCopyOut { float4 position [[position]]; };
++vertex DamageCopyOut damage_fullscreen_vertex(uint id [[vertex_id]]) {
++    float2 p = float2((id << 1) & 2, id & 2);
++    return { float4(p * float2(2, -2) + float2(-1, 1), 0, 1) };
++}
++fragment float4 damage_copy_fragment(DamageCopyOut in [[stage_in]],
++                                     texture2d<float> kept [[texture(0)]]) {
++    return kept.read(uint2(in.position.xy));
++}
++fragment float4 damage_clear_fragment(constant float4 &color [[buffer(0)]]) {
++    return color;
++}

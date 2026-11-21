@@ -1,3 +1,9 @@
+// SPDX-License-Identifier: Apache-2.0
+// Attribution below applies to the Stage G additions.
+// Adapted from Havunen/gpui-ce, commit 28045891bfe87768a2c8e0aefd43403939844318,
+// crates/gpui_apple/src/metal_renderer.rs: copy_texture and draw_clear_quad.
+// Copyright 2022 - 2025 Zed Industries, Inc.; Havunen and gpui-ce contributors.
+// RustUI modifications: dedicated, exact-pixel copy and scissored clear shaders.
 // Modified by Longbridge for gpui-fast.
 #include <metal_stdlib>
 #include <simd/simd.h>
@@ -1277,4 +1283,17 @@ float4 fill_color(Background background,
   }
 
   return color;
+}
+
+struct DamageCopyOut { float4 position [[position]]; };
+vertex DamageCopyOut damage_fullscreen_vertex(uint id [[vertex_id]]) {
+    float2 p = float2((id << 1) & 2, id & 2);
+    return { float4(p * float2(2, -2) + float2(-1, 1), 0, 1) };
+}
+fragment float4 damage_copy_fragment(DamageCopyOut in [[stage_in]],
+                                     texture2d<float> kept [[texture(0)]]) {
+    return kept.read(uint2(in.position.xy));
+}
+fragment float4 damage_clear_fragment(constant float4 &color [[buffer(0)]]) {
+    return color;
 }
