@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+- Explain PX-3 typing draw/present timing with off/on diagnostic CPU profiles (PX-3b).
+
 - Enforce pinned workspace Clippy checks and resolve native workspace lint diagnostics (P1).
 
 - Add a conservative, off-by-default Rust injection highlighter fast path (PX-3 candidate).
