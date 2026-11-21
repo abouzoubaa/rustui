@@ -19,11 +19,26 @@ use objc2_metal::{MTLCommandBuffer, MTLCommandBufferStatus, MTLCommandQueue, MTL
 use std::{
     cell::Cell,
     ptr::NonNull,
-    sync::{
-        Arc, OnceLock,
-        atomic::{AtomicBool, Ordering},
-    },
+    sync::{Arc, OnceLock, atomic::Ordering},
 };
+
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+enum Config {
+    Off,
+    On,
+    Verify,
+}
+fn config(value: Option<&str>) -> Config {
+    match value {
+        Some("1") => Config::On,
+        Some("verify") => Config::Verify,
+        _ => Config::Off,
+    }
+}
+fn configured() -> Config {
+    static CONFIG: OnceLock<Config> = OnceLock::new();
+    *CONFIG.get_or_init(|| config(std::env::var("RUSTUI_DAMAGE").ok().as_deref()))
+}
 
 #[derive(Clone, Copy, Debug, Default, PartialEq)]
 pub(crate) enum Mode {
@@ -80,10 +95,16 @@ pub(crate) struct State {
     target: Option<Target>,
     snapshot: Option<Snapshot>,
     previous_large: bool,
-    pub(crate) failed: Option<Arc<AtomicBool>>,
+    pub(crate) failed: Option<Arc<super::verify::Status>>,
     pub(crate) last_mode: Mode,
     #[cfg(any(test, feature = "test-support"))]
     enabled_override: Option<bool>,
+    #[cfg(any(test, feature = "test-support"))]
+    verify_override: bool,
+    #[cfg(any(test, feature = "test-support"))]
+    fail_verification: bool,
+    #[cfg(any(test, feature = "test-support"))]
+    verification: Option<Retained<ProtocolObject<dyn MTLCommandBuffer>>>,
     #[cfg(any(test, feature = "test-support"))]
     fail_allocation: bool,
     #[cfg(any(test, feature = "test-support"))]
@@ -113,8 +134,24 @@ impl State {
         if let Some(enabled) = self.enabled_override {
             return enabled;
         }
-        static ENABLED: OnceLock<bool> = OnceLock::new();
-        *ENABLED.get_or_init(|| std::env::var("RUSTUI_DAMAGE").as_deref() == Ok("1"))
+        configured() != Config::Off
+    }
+    fn verifying(&self) -> bool {
+        #[cfg(any(test, feature = "test-support"))]
+        if let Some(enabled) = self.enabled_override {
+            return enabled && self.verify_override;
+        }
+        configured() == Config::Verify
+    }
+    fn verification_failure(&self) -> bool {
+        #[cfg(any(test, feature = "test-support"))]
+        {
+            self.fail_verification
+        }
+        #[cfg(not(any(test, feature = "test-support")))]
+        {
+            false
+        }
     }
     pub(crate) fn invalidate(&mut self) {
         self.target = None;
@@ -145,7 +182,7 @@ impl State {
             || self
                 .failed
                 .as_ref()
-                .is_some_and(|failed| failed.load(Ordering::Acquire))
+                .is_some_and(|failed| failed.disabled.load(Ordering::Acquire))
             || size.width.0 <= 0
             || size.height.0 <= 0
         {
@@ -155,6 +192,11 @@ impl State {
         let geometry = Geometry::new(size, scale, opaque);
         let old = self.snapshot.as_ref().filter(|s| s.geometry == geometry);
         let uploads = renderer_atlas.damage_uploads(old.map_or(0, |s| s.generation));
+        self.failed = Some(uploads.status.clone());
+        if uploads.status.disabled.load(Ordering::Acquire) {
+            self.invalidate();
+            return Prepared::direct();
+        }
         // An expired atlas journal requires a whole draw; signatures use an empty
         // upload set only to establish a fresh baseline for the following frame.
         let empty = Default::default();
@@ -279,7 +321,7 @@ pub(crate) fn render(
                 mode = Mode::Direct;
             }
         }
-        let command = match mode {
+        let mut command = match mode {
             Mode::Direct => {
                 if let Some(kept) = &mut state.target {
                     kept.valid = false;
@@ -347,7 +389,7 @@ pub(crate) fn render(
                 move |buffer: NonNull<ProtocolObject<dyn MTLCommandBuffer>>| {
                     // SAFETY: Metal supplies the live completed command buffer.
                     if unsafe { buffer.as_ref() }.status() != MTLCommandBufferStatus::Completed {
-                        failed.store(true, Ordering::Release);
+                        failed.disabled.store(true, Ordering::Release);
                     }
                     let _ = resources.take();
                 },
@@ -355,6 +397,45 @@ pub(crate) fn render(
             // SAFETY: Metal copies this block and owns it until completion.
             unsafe {
                 command.addCompletedHandler(RcBlock::as_ptr(&block));
+            }
+        }
+        if state.verifying() && mode != Mode::Direct {
+            let kept = state.target.as_ref().context("verify retained target")?;
+            let status = state
+                .failed
+                .as_ref()
+                .context("verify window status")?
+                .clone();
+            match super::verify::schedule(
+                renderer,
+                scene,
+                &command,
+                &kept.texture,
+                size,
+                mode,
+                status.clone(),
+                state.verification_failure(),
+            ) {
+                Ok(reference) => {
+                    #[cfg(any(test, feature = "test-support"))]
+                    {
+                        state.verification = Some(reference);
+                    }
+                    #[cfg(not(any(test, feature = "test-support")))]
+                    {
+                        drop(reference);
+                    }
+                }
+                Err(error) => {
+                    log::error!("damage verification unavailable; drawing whole: {error:#}");
+                    status.disabled.store(true, Ordering::Release);
+                    // Preserve uploads and GPU lifetimes already encoded in the
+                    // first buffer. It never presents; a full draw follows it.
+                    command.commit();
+                    state.invalidate();
+                    command = renderer.render_frame(scene, target, size)?;
+                    mode = Mode::Direct;
+                }
             }
         }
         state.complete(prepared, mode);

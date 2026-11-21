@@ -8,6 +8,7 @@
     "gpui-fast-damage-shaders-v1-fast.json",
     "gpui-fast-damage-plan-v1-fast.json",
     "gpui-fast-damage-frame-v1-fast.json",
-    "gpui-fast-damage-partial-v1-fast.json"
+    "gpui-fast-damage-partial-v1-fast.json",
+    "gpui-fast-damage-verify-v1-fast.json"
   ]
 }
