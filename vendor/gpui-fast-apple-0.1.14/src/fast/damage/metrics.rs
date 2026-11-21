@@ -43,9 +43,9 @@ pub(crate) fn on_commit(buffer: &ProtocolObject<dyn MTLCommandBuffer>, mode: &'s
                 .as_secs_f64()
                 * 1000.0;
             // GPU records contribute no CPU phase time to legacy phase readers.
-            eprintln!(
+            super::log::line(format_args!(
                 "RUSTUI_FRAME_LOG {{\"event\":\"gpu\",\"mode\":\"{mode}\",\"cpu_ms\":0.0,\"gpu_ms\":{gpu_ms:.6},\"epoch_ms\":{epoch_ms:.6}}}"
-            );
+            ));
         },
     );
     // SAFETY: the block is live here; Metal copies it until completion. Its
@@ -62,9 +62,9 @@ pub(crate) fn skipped() {
         .unwrap_or_default()
         .as_secs_f64()
         * 1000.;
-    eprintln!(
+    super::log::line(format_args!(
         "RUSTUI_FRAME_LOG {{\"event\":\"gpu\",\"mode\":\"skip\",\"cpu_ms\":0.0,\"gpu_ms\":null,\"epoch_ms\":{epoch_ms:.6}}}"
-    );
+    ));
 }
 
 #[cfg(test)]
@@ -93,7 +93,7 @@ pub(crate) fn mismatch(mode: &'static str, x: usize, y: usize) {
         .unwrap_or_default()
         .as_secs_f64()
         * 1000.;
-    eprintln!(
+    super::log::line(format_args!(
         "RUSTUI_FRAME_LOG {{\"event\":\"damage_mismatch\",\"mode\":\"{mode}\",\"x\":{x},\"y\":{y},\"cpu_ms\":0.0,\"epoch_ms\":{epoch_ms:.6}}}"
-    );
+    ));
 }

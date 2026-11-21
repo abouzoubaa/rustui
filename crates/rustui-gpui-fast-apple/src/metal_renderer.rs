@@ -625,6 +625,7 @@ impl MetalRenderer {
         };
         let prepared = crate::fast::damage::frame::choose(self, scene);
         if prepared.mode == crate::fast::damage::frame::Mode::Same {
+            crate::fast::damage::encode::skipped(scene);
             crate::fast::damage::frame::skip(self, prepared);
             return;
         }
@@ -1227,6 +1228,7 @@ impl MetalRenderer {
             sprites = vec![PathSprite { bounds }];
         }
 
+        crate::fast::damage::encode::uploaded(sprites.len());
         let sprite_instance_bindings = writer.write(&sprites)?;
         // SAFETY: The draw uses six unit vertices and exactly the sprites written at this aligned binding.
         // Metal retains the buffer, and writer.finish publishes CPU writes before submission.
@@ -1741,6 +1743,7 @@ pub(crate) struct InstanceBindings {
 }
 
 pub(crate) fn write_instances(scene: &Scene, writer: &mut InstanceBufferWriter) -> Result<InstanceBindings> {
+    crate::fast::damage::encode::uploaded_regular(scene);
     Ok(InstanceBindings {
         quads: writer.write(&scene.quads)?,
         shadows: writer.write(&scene.shadows)?,

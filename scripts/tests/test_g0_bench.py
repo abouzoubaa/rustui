@@ -17,12 +17,14 @@ class G0BenchTests(unittest.TestCase):
         self.output = Path(self.temporary.name)
         for scene in SCENES:
             start = {"event": "start", "scene": scene, "epoch_ms": 1000}
-            end = {"event": "end", "scene": scene, "epoch_ms": 61000, "valid": True,
-                   "cpu_user_s": 1.0, "cpu_sys_s": 0.25}
+            end = {"event": "end", "scene": scene, "epoch_ms": 61000, "valid": True, "cpu_user_s": 0.04, "cpu_sys_s": 0.06}
             lines = ["RUSTUI_G0_LOG " + json.dumps(start)]
             for index in range(100):
                 mode = "copy" if index == 0 else "partial" if index == 1 else "direct"
                 records = [
+                    {"event": "encode", "cpu_ms": 0.0, "sequence": index,
+                     "mode": mode, "instances_encoded": 0 if mode == "copy" else 10,
+                     "instances_total": 10, "epoch_ms": 2000 + index},
                     {"event": "draw", "cpu_ms": 0.5, "epoch_ms": 2000 + index},
                     {"event": "present", "cpu_ms": 0.2, "epoch_ms": 2000 + index},
                     {"event": "gpu", "mode": mode, "gpu_ms": 0.25,
@@ -75,9 +77,113 @@ class G0BenchTests(unittest.TestCase):
             self.assertEqual(row["frame_mode_samples"], 101)
             self.assertEqual(row["gpu_samples"], 100)
             self.assertEqual(row["gpu_mean_ms"], 0.25)
-            self.assertEqual(row["process_cpu_s"], 1.25)
-            self.assertEqual(row["process_cpu_s_per_attempt"], 0.0125)
             self.assertEqual(row["frames_over_8_3_ms"], 0)
+
+    def test_damage_cpu_is_separate_from_cpu_phase_totals(self):
+        for scene in SCENES:
+            with (self.output / f"{scene}-frames.log").open("a") as stream:
+                stream.write("RUSTUI_FRAME_LOG " + json.dumps(
+                    {"event": "damage_cpu", "cpu_ms": 0.0, "epoch_ms": 3000,
+                     "signatures_ms": 0.1, "plan_ms": 0.2, "total_ms": 0.35,
+                     "hashed": 2, "reused": 10, "reason": "partial"}) + "\n")
+        result = self.summarize()
+        self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
+        for row in json.loads((self.output / "summary.json").read_text()):
+            self.assertEqual(row["damage_cpu"],
+                             {"samples": 1, "signatures_mean_ms": 0.1,
+                              "plan_mean_ms": 0.2, "total_mean_ms": 0.35,
+                              "hashed": 2, "reused": 10, "reasons": {"partial": 1}})
+            self.assertNotIn("damage_cpu", row["cpu_phases_mean_ms"])
+            self.assertAlmostEqual(row["cpu_mean_ms"], 0.7)
+
+    def test_matched_pair_verdicts_use_every_pair_without_spread(self):
+        off = [1.0, 1.01, 1.02, 1.03, 1.04]
+        ratios = [(1.05,) * 5, (1.02, 1.04, 1.01, 1.05, 1.02),
+                  (1.03,) * 5, (0.98,) * 5, (1.001,) * 5]
+        for scene, multipliers in zip(SCENES, ratios):
+            for mode, values in (("0", off), ("1", [a*b for a,b in zip(off, multipliers)])):
+                for run, value in enumerate(values, 1):
+                    folder = self.output / scene / f"{run}-{mode}"
+                    folder.mkdir(parents=True)
+                    (folder / "summary.json").write_text(json.dumps([
+                        {"scene": scene, "damage": mode, "cpu_mean_ms": value, "process_cpu_s": 0.4, "process_cpu_s_per_attempt": 0.004 if mode == "0" else 0.008}]))
+        result = subprocess.run(
+            ["bash", "-c", 'source "$1"; g0_interleaved_summary "$2"', "g0-matched-test",
+             str(REPO / "scripts/run_g0_bench.sh"), str(self.output)],
+            cwd=REPO, text=True, capture_output=True, check=False)
+        self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
+        rows = json.loads((self.output / "interleaved-summary.json").read_text())
+        self.assertEqual([r["verdict"] for r in rows],
+                         ["FAIL", "INCONCLUSIVE", "PASS", "PASS", "PASS"])
+        self.assertAlmostEqual(rows[0]["off"]["median_ms"], 1.02)
+        for actual, expected in zip(rows[1]["paired_changes_pct"], (2,4,1,5,2)):
+            self.assertAlmostEqual(actual, expected)
+        self.assertAlmostEqual(rows[1]["median_change_pct"], 2)
+        self.assertAlmostEqual(rows[1]["min_change_pct"], 1)
+        self.assertAlmostEqual(rows[1]["max_change_pct"], 5)
+        # Process CPU diagnostics never affect the wall-phase gate, even at +100%.
+        for row in rows:
+            self.assertEqual(row["process_cpu"]["paired_changes_pct"], [100.0]*5)
+            self.assertEqual(row["process_cpu"]["median_change_pct"], 100.0)
+
+    def test_process_cpu_and_encoded_instances_are_reported_per_capture(self):
+        result = self.summarize()
+        self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
+        for row in json.loads((self.output / "summary.json").read_text()):
+            self.assertAlmostEqual(row["process_cpu_s"], 0.1)
+            self.assertAlmostEqual(row["process_cpu_s_per_attempt"], 0.001)
+            self.assertEqual(row["instances"]["encoded"], 990)
+            self.assertEqual(row["instances"]["total"], 1000)
+            self.assertEqual(row["instances"]["mode_runs"], [
+                {"mode":"copy", "frames":1}, {"mode":"partial", "frames":1},
+                {"mode":"direct", "frames":98}])
+            self.assertNotIn("encode", row["cpu_phases_mean_ms"])
+
+    def test_backoff_reason_is_direct_rendering_with_separate_planning_sequence(self):
+        path = self.output / "log-frames.log"
+        lines = path.read_text().splitlines()
+        for i, line in enumerate(lines):
+            if line.startswith("RUSTUI_FRAME_LOG "):
+                r = json.loads(line.removeprefix("RUSTUI_FRAME_LOG "))
+                if r["event"] == "encode" and r["sequence"] == 2:
+                    r["reason"] = "backoff"
+                    lines[i] = "RUSTUI_FRAME_LOG " + json.dumps(r)
+        path.write_text("\n".join(lines) + "\n")
+        result = self.summarize()
+        self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
+        row = next(r for r in json.loads((self.output / "summary.json").read_text()) if r["scene"] == "log")
+        self.assertEqual(row["instances"]["backoff_frames"], 1)
+        self.assertEqual(row["instances"]["planning_runs"][2], {"mode": "backoff", "frames": 1})
+        self.assertEqual(row["frame_mode_counts"]["direct"], 98)
+
+    def test_backoff_pairs_compare_only_the_switch_and_keep_process_cpu_diagnostic(self):
+        for scene in ("log", "hover"):
+            for run in range(1, 6):
+                for mode in ("0", "1"):
+                    folder = self.output / scene / f"{run}-{mode}"
+                    folder.mkdir(parents=True)
+                    value = 1.0 if mode == "0" else 1.02 if scene == "log" or run != 3 else 1.04
+                    (folder / "summary.json").write_text(json.dumps([{
+                        "scene": scene, "damage": "1", "backoff": mode, "cpu_mean_ms": value,
+                        "process_cpu_s": 0.4, "process_cpu_s_per_attempt": 0.004 if mode == "0" else 0.008}]))
+        result = subprocess.run(["bash", "-c", 'source "$1"; g0_interleaved_summary "$2" backoff',
+            "g0-backoff-test", str(REPO / "scripts/run_g0_bench.sh"), str(self.output)],
+            cwd=REPO, text=True, capture_output=True, check=False)
+        self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
+        rows = json.loads((self.output / "backoff-summary.json").read_text())
+        self.assertEqual([r["verdict"] for r in rows], ["PASS", "INCONCLUSIVE"])
+        self.assertEqual(rows[0]["process_cpu"]["paired_changes_pct"], [100.0]*5)
+
+    def test_missing_process_cpu_cannot_pass_a_new_capture(self):
+        p = self.output / "idle-frames.log"
+        lines = p.read_text().splitlines()
+        marker = json.loads(lines[-1].removeprefix("RUSTUI_G0_LOG "))
+        del marker["cpu_user_s"]
+        lines[-1] = "RUSTUI_G0_LOG " + json.dumps(marker)
+        p.write_text("\n".join(lines) + "\n")
+        result = self.summarize()
+        self.assertNotEqual(result.returncode, 0)
+        self.assertIn("getrusage", result.stderr)
 
     def test_damage_off_rejects_non_direct_modes(self):
         result = self.summarize("0")

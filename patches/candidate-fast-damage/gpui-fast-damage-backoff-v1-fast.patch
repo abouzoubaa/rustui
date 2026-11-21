@@ -1,0 +1,501 @@
+diff --git a/vendor/gpui-fast-apple-0.1.14/.cargo-checksum.json b/vendor/gpui-fast-apple-0.1.14/.cargo-checksum.json
+index 29ca26c..96ee714 100644
+--- a/vendor/gpui-fast-apple-0.1.14/.cargo-checksum.json
++++ b/vendor/gpui-fast-apple-0.1.14/.cargo-checksum.json
+@@ -1 +1 @@
+-{"files":{"Cargo.lock":"603d518bb73d00d2ff0fc288047f9442a54ab3418d99c1a8222f8900f2c5d414","Cargo.toml":"e5d4442c4a5dfd6c52edae85af5c7b69fc70e294bf133f79ccdcf65053344faa","Cargo.toml.orig":"a2dfd35c8202cab2acfcfd1c42433cbbe1ef6caa0499f5f6dce13924d91895d6","LICENSE":"5f78a733701db49b73da93addad8cb74f816f3789ef30c3c0e959e943ecd99b4","NOTICE":"c594f7da65e13f57a429bb105cf87c9a5294fc703d92b138d2faea9980013e7c","README.md":"118a9817d5a41aebb675e83da70d87d28930cdef6c6ec0cc8b19fd87a201cbe2","build.rs":"cc05fa1dd22c2115da3385c7ec9a0d06cdae73cf4eaad630b193ac06731c292a","src/dispatcher.rs":"21ec54613d48cd3c419f2f694f75460d1019491c2406a7ed4dfa3374c84824cf","src/display_link.rs":"1a1776d9a8d5a0083ec07faced6ba16a9a0fa833c256ae2888d4cc784f7e356f","src/fast/color_bitmap_fonts.rs":"1e670f525ba3a0ccd23940e01e1a0b88b37acdbc6404f75dcccf765a5f63c06a","src/fast/composition.rs":"87976f984efe12f04788c459ba1081cb1020c5124dbdc83e69ea27a4040bfeb7","src/fast/damage/cpu.rs":"915f349f7cdd8d7f794f50694692dcfd7158c2fa25e47f9729d12f3be393bcf5","src/fast/damage/encode.rs":"38fc319fb05b242f6c979cf81c68ab1505301ef0e8d42ee8d0e79d62790400e6","src/fast/damage/frame.rs":"0ab926f065c2d5389ca49f9b291ebbb42f4201b6717c8dbf17aa4ded8f54723c","src/fast/damage/frame/proof.rs":"38a7ad63b52c6354f78da416eb98983ce48e9d2434eeedb85ce22ad39cd447b0","src/fast/damage/frame/proof/policy.rs":"ebc2184580583c64bac0b62cf6f149d94e5ddb36ecbd1eca2d2796ffafacde41","src/fast/damage/inputs.rs":"d668c0b7ec62ffcee2da53a6a8dc32089caf9c88de76ab38eb3249ec54591cc8","src/fast/damage/log.rs":"e82c62f2f760a11001495d69801df22f7bd7b54501203be4819949b6f61e0b1f","src/fast/damage/metrics.rs":"7343a613ac12db0f855b2e29ed90dfbefb749496a80f068e956e2c9bec7ab125","src/fast/damage/mod.rs":"177fb1750a6b8d104b2974213c16eb36ef916eb766524721c5612ff93767368a","src/fast/damage/partial.rs":"129c3cfe0314931f927a1956bde1bfbc0352ef4d6a8459bdcc67ad251270e1e7","src/fast/damage/plan.rs":"089f2df5b5c450726dbdcaa252bdd7f59d1a6c980f39d75bc05205c2173ebb8b","src/fast/damage/plan/cache.rs":"361039e3814e09ae7bb24e39446c64182d407b8070e1e04505c978b86eb378e5","src/fast/damage/plan/fixed.rs":"2f7c9e2f059a03f6d5c81f95f062ccda750b19d61eb8dd62d69ef6da2ff98f32","src/fast/damage/retained.rs":"d4b10353cdd2ef2ac75c4659b95c726782956b186d8c69fc4479b578cbc64186","src/fast/damage/shaders.rs":"9e0d3332dd5069ce0b229274a667870d77da30ec9c36fdadf9c1e54462c323b0","src/fast/damage/verify.rs":"eaa41b8e51f64bc6247693a27d4417cff86741bf79c30b23c68ba45436581658","src/fast/dynamic_textures.rs":"c45088caf11ab5c1d16f3f0ed2afbb83719d55122a536caf3841383ff7293541","src/fast/font_fallbacks.rs":"0857cdd0c25fa1ed7cff52f423692cc905f31a288ed7905a1fdefb29e611f711","src/fast/layers/composite.rs":"589cf9e53f3ed02c115555f2248dfd672152002a3e344396315e2de5814820fa","src/fast/layers/mod.rs":"ea50d20f8f51a8e7e4c39ef4d5859faa74d5f66ef56d73f92113261c543c9509","src/fast/layers/raster.rs":"73624582017003289a7f20b0dc8d0f11ac3a1c748db3fb4fddc02c85a9a8ab48","src/fast/layers/tests.rs":"19253d11c3ed809e96919d6af4e2bf6e1710ffae67ce641a9f8cccdf18f13249","src/fast/layers/tile_cache.rs":"66f539be39587a9b7f61fe976945dde5d2b0958535c0e9b15ad90c5ae9b20c1c","src/fast/mod.rs":"4268b5cc568f8708db4f6f3b89f0a7d424ea79e7ba1e4a79fb06dc223c14c4ff","src/fast/paths.rs":"f9971cf7eb296c443e4e7e959719f276d2b0e9c688a8c7af607f69dfbbee9ac2","src/fast/release_gpui/src/color.rs":"4292aa1a2bbc56b653aaef0702726325f8efb93f16226320519e257c3ba8a839","src/fast/release_gpui/src/geometry.rs":"965ae8f6c1d4bd2e7dcb43e253a99dd4363252b1ef6dc19c3031ea50c5192408","src/fast/release_gpui/src/platform.rs":"870554ea44a3933ccc257691740252b3cfcbef0452f5690c7e398da0e2b8173d","src/fast/release_gpui/src/platform/app_menu.rs":"c751e70bf50cf2366dad9d6b2a66fc3a8e9cd1547128173dbfc59520feb454cc","src/fast/release_gpui/src/platform/keyboard.rs":"8de8d585f4238204fd14113abded703afa6bb0a532dacabdf400df8249390376","src/fast/release_gpui/src/platform/keystroke.rs":"a322d71bb2b3ae6c388b7c53a34ff490b146780030361e9cdc9d5cf482148cac","src/fast/release_gpui/src/platform/layer_shell.rs":"cdb4822c6589461045f09829640da3961e957d782c8e4763050b65701c90d305","src/fast/release_gpui/src/platform/platform_info.rs":"a01680ee1653b499c36ce5a49ce2a1d4377a380aa15d571ff8b36ec2181a96f0","src/fast/release_gpui/src/platform/popup.rs":"18a8aa2aaf3739c71d34233e7b2dabb4e902e5e27f9e1dcb362acd110478bb1a","src/fast/release_gpui/src/platform/scap_screen_capture.rs":"b6492678395e5a9a3335fd6babaa60192dc5b971efd32f896e33fb8fbbd7e484","src/fast/release_gpui/src/platform/test.rs":"52861874bfdd1433728d61bd7be3a40b1f8c27aae4e4cc9d31b311ef13bda994","src/fast/release_gpui/src/platform/test/dispatcher.rs":"dea03a78a0c64d486f2c5b7bc669ba281638a0f8ee53316a52993a0e5b5cabd0","src/fast/release_gpui/src/platform/test/display.rs":"f026713ec76569ea1402b6d1d4996636530d4f592245a0c97ac795d112f8debf","src/fast/release_gpui/src/platform/test/platform.rs":"d41c52191f15d6a573daa1a1086084028d397cf3269a437e09509c1ee39b7911","src/fast/release_gpui/src/platform/test/window.rs":"0a9e1c0a0ce8885e64439bfda766a5c39fed5f2fffae3781e56104031ee4012e","src/fast/release_gpui/src/platform/threaded_dispatcher.rs":"aff57da6e74ddb0dbdb57f2c58b08236c1b78a4971e0c6d2f095f0746096f09c","src/fast/release_gpui/src/platform/visual_test.rs":"93d2a650c42546b469916ac8f5c6727da04522de58f5da1c44e6c3dd1506227f","src/fast/release_gpui/src/scene.rs":"a0c39f4a306c103c559b444ced54df6039362c8d0af2af0f8b380661e7971fbd","src/fast/release_gpui/src/window.rs":"cb34d06d7ad329aa59bbc64396f25b0777b9b0b1e26084afe4f2159ff87f862f","src/fast/release_gpui/src/window/a11y.rs":"2a049d83c2c71bab12c51e147c9552707b39360eec08cb24fc7a1daa7eb954e6","src/fast/release_gpui/src/window/a11y/debug.rs":"9de446535b8d49f5f674690cfb0f80da751036e51231f351426ba53460598916","src/fast/release_gpui/src/window/prompts.rs":"0d58ec14e8139af53b50f4ad67690f01959ed59ffafc4adb2cf522f3f6197164","src/fast/rounded_clip.rs":"e4799b7694599a55908e4855e966d9423ffce95df6189274c2ea89b65b5b70be","src/fast/rounded_clip_shader.rs":"e48e86dee268738339c89589279be7fcf9a44d8ad62c43a56c6cf5d722e216b1","src/fast/text_system.rs":"98fd94a56c558e95d777501066cc61fd8f8ab80e1bc1de752d43c0a3b7f2c493","src/gpui_apple.rs":"f0929fc38bde7f580fe03e8e641834a9079e0e56dc9fc96eab4f33aed17e8c7f","src/keychain.rs":"636ce5b08fe6e939dfef73fafc3be719b21b35da356a7d7053afe4dbf4d6f71c","src/metal_atlas.rs":"cff0ce93f0cb0069abfda1037cbd9e674b30ea7365e9a3eb297e76d316c5f782","src/metal_renderer.rs":"2e313f93de08c159e0556976cfae6b817438e2f399a82c218ea9360af96ecf7c","src/open_type.rs":"7eb18da02690f18b0f6e0001f9f5ee9a6cac0b26912912bb3f9724dc1963aa8e","src/process_info.rs":"533288f7707bfeaeea53f753d25c7af676235ebff57910bb79331f68492be139","src/shaders.metal":"69cc463a3c2289b7cb503926e3905a728d791924aa6f0e304a52200a484ed25b","src/text_system.rs":"2145eac56f6f72dcb7a0716fcbdcac8a3520a7e10793528e733cb12043d0d04c"},"package":"7d1934376409ef93257473cfd1cba16bbc825a3a3afc437410de73208cfd8364"}
++{"files":{"Cargo.lock":"603d518bb73d00d2ff0fc288047f9442a54ab3418d99c1a8222f8900f2c5d414","Cargo.toml":"e5d4442c4a5dfd6c52edae85af5c7b69fc70e294bf133f79ccdcf65053344faa","Cargo.toml.orig":"a2dfd35c8202cab2acfcfd1c42433cbbe1ef6caa0499f5f6dce13924d91895d6","LICENSE":"5f78a733701db49b73da93addad8cb74f816f3789ef30c3c0e959e943ecd99b4","NOTICE":"c594f7da65e13f57a429bb105cf87c9a5294fc703d92b138d2faea9980013e7c","README.md":"118a9817d5a41aebb675e83da70d87d28930cdef6c6ec0cc8b19fd87a201cbe2","build.rs":"cc05fa1dd22c2115da3385c7ec9a0d06cdae73cf4eaad630b193ac06731c292a","src/dispatcher.rs":"21ec54613d48cd3c419f2f694f75460d1019491c2406a7ed4dfa3374c84824cf","src/display_link.rs":"1a1776d9a8d5a0083ec07faced6ba16a9a0fa833c256ae2888d4cc784f7e356f","src/fast/color_bitmap_fonts.rs":"1e670f525ba3a0ccd23940e01e1a0b88b37acdbc6404f75dcccf765a5f63c06a","src/fast/composition.rs":"87976f984efe12f04788c459ba1081cb1020c5124dbdc83e69ea27a4040bfeb7","src/fast/damage/cpu.rs":"915f349f7cdd8d7f794f50694692dcfd7158c2fa25e47f9729d12f3be393bcf5","src/fast/damage/encode.rs":"176a4658d50e8735bfd2bcfc55e099ace6dce981a38629166b741d58ce763e67","src/fast/damage/frame.rs":"defaa5772b8d5a6eec8ea42a74bd64b89298f38fc9696fc6b51e5e37693f1fd2","src/fast/damage/frame/backoff.rs":"85000ade1c349a30792fb51a6ae18d336da187d94f3d004fb056d5f6d2d2b9f8","src/fast/damage/frame/proof.rs":"30986ad11de1fb0aa2bbc705089365b2b51f59501015eba12fac30f561c2d19f","src/fast/damage/frame/proof/backoff.rs":"a22dab368be28d7b70882b4e9d861bce3b00f7565742d26d2f3e52796fde3415","src/fast/damage/frame/proof/policy.rs":"ebc2184580583c64bac0b62cf6f149d94e5ddb36ecbd1eca2d2796ffafacde41","src/fast/damage/inputs.rs":"d668c0b7ec62ffcee2da53a6a8dc32089caf9c88de76ab38eb3249ec54591cc8","src/fast/damage/log.rs":"e82c62f2f760a11001495d69801df22f7bd7b54501203be4819949b6f61e0b1f","src/fast/damage/metrics.rs":"7343a613ac12db0f855b2e29ed90dfbefb749496a80f068e956e2c9bec7ab125","src/fast/damage/mod.rs":"177fb1750a6b8d104b2974213c16eb36ef916eb766524721c5612ff93767368a","src/fast/damage/partial.rs":"129c3cfe0314931f927a1956bde1bfbc0352ef4d6a8459bdcc67ad251270e1e7","src/fast/damage/plan.rs":"089f2df5b5c450726dbdcaa252bdd7f59d1a6c980f39d75bc05205c2173ebb8b","src/fast/damage/plan/cache.rs":"361039e3814e09ae7bb24e39446c64182d407b8070e1e04505c978b86eb378e5","src/fast/damage/plan/fixed.rs":"2f7c9e2f059a03f6d5c81f95f062ccda750b19d61eb8dd62d69ef6da2ff98f32","src/fast/damage/retained.rs":"d4b10353cdd2ef2ac75c4659b95c726782956b186d8c69fc4479b578cbc64186","src/fast/damage/shaders.rs":"9e0d3332dd5069ce0b229274a667870d77da30ec9c36fdadf9c1e54462c323b0","src/fast/damage/verify.rs":"eaa41b8e51f64bc6247693a27d4417cff86741bf79c30b23c68ba45436581658","src/fast/dynamic_textures.rs":"c45088caf11ab5c1d16f3f0ed2afbb83719d55122a536caf3841383ff7293541","src/fast/font_fallbacks.rs":"0857cdd0c25fa1ed7cff52f423692cc905f31a288ed7905a1fdefb29e611f711","src/fast/layers/composite.rs":"589cf9e53f3ed02c115555f2248dfd672152002a3e344396315e2de5814820fa","src/fast/layers/mod.rs":"ea50d20f8f51a8e7e4c39ef4d5859faa74d5f66ef56d73f92113261c543c9509","src/fast/layers/raster.rs":"73624582017003289a7f20b0dc8d0f11ac3a1c748db3fb4fddc02c85a9a8ab48","src/fast/layers/tests.rs":"19253d11c3ed809e96919d6af4e2bf6e1710ffae67ce641a9f8cccdf18f13249","src/fast/layers/tile_cache.rs":"66f539be39587a9b7f61fe976945dde5d2b0958535c0e9b15ad90c5ae9b20c1c","src/fast/mod.rs":"4268b5cc568f8708db4f6f3b89f0a7d424ea79e7ba1e4a79fb06dc223c14c4ff","src/fast/paths.rs":"f9971cf7eb296c443e4e7e959719f276d2b0e9c688a8c7af607f69dfbbee9ac2","src/fast/release_gpui/src/color.rs":"4292aa1a2bbc56b653aaef0702726325f8efb93f16226320519e257c3ba8a839","src/fast/release_gpui/src/geometry.rs":"965ae8f6c1d4bd2e7dcb43e253a99dd4363252b1ef6dc19c3031ea50c5192408","src/fast/release_gpui/src/platform.rs":"870554ea44a3933ccc257691740252b3cfcbef0452f5690c7e398da0e2b8173d","src/fast/release_gpui/src/platform/app_menu.rs":"c751e70bf50cf2366dad9d6b2a66fc3a8e9cd1547128173dbfc59520feb454cc","src/fast/release_gpui/src/platform/keyboard.rs":"8de8d585f4238204fd14113abded703afa6bb0a532dacabdf400df8249390376","src/fast/release_gpui/src/platform/keystroke.rs":"a322d71bb2b3ae6c388b7c53a34ff490b146780030361e9cdc9d5cf482148cac","src/fast/release_gpui/src/platform/layer_shell.rs":"cdb4822c6589461045f09829640da3961e957d782c8e4763050b65701c90d305","src/fast/release_gpui/src/platform/platform_info.rs":"a01680ee1653b499c36ce5a49ce2a1d4377a380aa15d571ff8b36ec2181a96f0","src/fast/release_gpui/src/platform/popup.rs":"18a8aa2aaf3739c71d34233e7b2dabb4e902e5e27f9e1dcb362acd110478bb1a","src/fast/release_gpui/src/platform/scap_screen_capture.rs":"b6492678395e5a9a3335fd6babaa60192dc5b971efd32f896e33fb8fbbd7e484","src/fast/release_gpui/src/platform/test.rs":"52861874bfdd1433728d61bd7be3a40b1f8c27aae4e4cc9d31b311ef13bda994","src/fast/release_gpui/src/platform/test/dispatcher.rs":"dea03a78a0c64d486f2c5b7bc669ba281638a0f8ee53316a52993a0e5b5cabd0","src/fast/release_gpui/src/platform/test/display.rs":"f026713ec76569ea1402b6d1d4996636530d4f592245a0c97ac795d112f8debf","src/fast/release_gpui/src/platform/test/platform.rs":"d41c52191f15d6a573daa1a1086084028d397cf3269a437e09509c1ee39b7911","src/fast/release_gpui/src/platform/test/window.rs":"0a9e1c0a0ce8885e64439bfda766a5c39fed5f2fffae3781e56104031ee4012e","src/fast/release_gpui/src/platform/threaded_dispatcher.rs":"aff57da6e74ddb0dbdb57f2c58b08236c1b78a4971e0c6d2f095f0746096f09c","src/fast/release_gpui/src/platform/visual_test.rs":"93d2a650c42546b469916ac8f5c6727da04522de58f5da1c44e6c3dd1506227f","src/fast/release_gpui/src/scene.rs":"a0c39f4a306c103c559b444ced54df6039362c8d0af2af0f8b380661e7971fbd","src/fast/release_gpui/src/window.rs":"cb34d06d7ad329aa59bbc64396f25b0777b9b0b1e26084afe4f2159ff87f862f","src/fast/release_gpui/src/window/a11y.rs":"2a049d83c2c71bab12c51e147c9552707b39360eec08cb24fc7a1daa7eb954e6","src/fast/release_gpui/src/window/a11y/debug.rs":"9de446535b8d49f5f674690cfb0f80da751036e51231f351426ba53460598916","src/fast/release_gpui/src/window/prompts.rs":"0d58ec14e8139af53b50f4ad67690f01959ed59ffafc4adb2cf522f3f6197164","src/fast/rounded_clip.rs":"e4799b7694599a55908e4855e966d9423ffce95df6189274c2ea89b65b5b70be","src/fast/rounded_clip_shader.rs":"e48e86dee268738339c89589279be7fcf9a44d8ad62c43a56c6cf5d722e216b1","src/fast/text_system.rs":"98fd94a56c558e95d777501066cc61fd8f8ab80e1bc1de752d43c0a3b7f2c493","src/gpui_apple.rs":"f0929fc38bde7f580fe03e8e641834a9079e0e56dc9fc96eab4f33aed17e8c7f","src/keychain.rs":"636ce5b08fe6e939dfef73fafc3be719b21b35da356a7d7053afe4dbf4d6f71c","src/metal_atlas.rs":"cff0ce93f0cb0069abfda1037cbd9e674b30ea7365e9a3eb297e76d316c5f782","src/metal_renderer.rs":"2e313f93de08c159e0556976cfae6b817438e2f399a82c218ea9360af96ecf7c","src/open_type.rs":"7eb18da02690f18b0f6e0001f9f5ee9a6cac0b26912912bb3f9724dc1963aa8e","src/process_info.rs":"533288f7707bfeaeea53f753d25c7af676235ebff57910bb79331f68492be139","src/shaders.metal":"69cc463a3c2289b7cb503926e3905a728d791924aa6f0e304a52200a484ed25b","src/text_system.rs":"2145eac56f6f72dcb7a0716fcbdcac8a3520a7e10793528e733cb12043d0d04c"},"package":"7d1934376409ef93257473cfd1cba16bbc825a3a3afc437410de73208cfd8364"}
+diff --git a/vendor/gpui-fast-apple-0.1.14/src/fast/damage/encode.rs b/vendor/gpui-fast-apple-0.1.14/src/fast/damage/encode.rs
+index 2939352..cdc4155 100644
+--- a/vendor/gpui-fast-apple-0.1.14/src/fast/damage/encode.rs
++++ b/vendor/gpui-fast-apple-0.1.14/src/fast/damage/encode.rs
+@@ -40,7 +40,7 @@ fn total(scene: &Scene) -> usize {
+             .map(total)
+             .sum::<usize>()
+ }
+-fn emit(counts: Counts, mode: &str) {
++fn emit(counts: Counts, mode: &str, reason: &str) {
+     if !enabled() {
+         return;
+     }
+@@ -55,7 +55,7 @@ fn emit(counts: Counts, mode: &str) {
+         .as_secs_f64()
+         * 1000.;
+     super::log::line(format_args!(
+-        "RUSTUI_FRAME_LOG {{\"event\":\"encode\",\"cpu_ms\":0.0,\"sequence\":{sequence},\"mode\":\"{mode}\",\"instances_encoded\":{},\"instances_total\":{},\"epoch_ms\":{epoch_ms:.6}}}",
++        "RUSTUI_FRAME_LOG {{\"event\":\"encode\",\"cpu_ms\":0.0,\"sequence\":{sequence},\"mode\":\"{mode}\",\"reason\":\"{reason}\",\"instances_encoded\":{},\"instances_total\":{},\"epoch_ms\":{epoch_ms:.6}}}",
+         counts.encoded, counts.total
+     ));
+ }
+@@ -82,9 +82,9 @@ impl Scope {
+         self.active = false;
+         COUNTS.with(|c| c.replace(self.previous.take()).unwrap())
+     }
+-    pub(crate) fn finish(mut self, mode: &str) {
++    pub(crate) fn finish(mut self, mode: &str, reason: &str) {
+         let counts = self.take();
+-        emit(counts, mode);
++        emit(counts, mode, reason);
+     }
+ }
+ impl Drop for Scope {
+@@ -110,6 +110,7 @@ pub(crate) fn skipped(scene: &Scene) {
+                 total: total(scene),
+             },
+             "skip",
++            "skip",
+         );
+     }
+ }
+diff --git a/vendor/gpui-fast-apple-0.1.14/src/fast/damage/frame.rs b/vendor/gpui-fast-apple-0.1.14/src/fast/damage/frame.rs
+index f24fc86..0728fbe 100644
+--- a/vendor/gpui-fast-apple-0.1.14/src/fast/damage/frame.rs
++++ b/vendor/gpui-fast-apple-0.1.14/src/fast/damage/frame.rs
+@@ -22,6 +22,8 @@ use std::{
+     sync::{Arc, OnceLock, atomic::Ordering},
+ };
+ 
++mod backoff;
++
+ #[derive(Clone, Copy, Debug, PartialEq, Eq)]
+ enum Config {
+     Off,
+@@ -96,6 +98,9 @@ pub(crate) struct State {
+     target: Option<Target>,
+     snapshot: Option<Snapshot>,
+     previous_large: bool,
++    backoff: backoff::State,
++    #[cfg(any(test, feature = "test-support"))]
++    planner_calls: usize,
+     cache: plan::Cache,
+     pub(crate) failed: Option<Arc<super::verify::Status>>,
+     pub(crate) last_mode: Mode,
+@@ -120,6 +125,10 @@ pub(crate) struct Prepared {
+     pub(crate) mode: Mode,
+     snapshot: Option<Snapshot>,
+     large: bool,
++    plannable: bool,
++    backoff: bool,
++    probe: bool,
++    preserve_snapshot: bool,
+ }
+ impl Prepared {
+     pub(crate) fn direct() -> Self {
+@@ -127,6 +136,10 @@ impl Prepared {
+             mode: Mode::Direct,
+             snapshot: None,
+             large: false,
++            plannable: false,
++            backoff: false,
++            probe: false,
++            preserve_snapshot: false,
+         }
+     }
+ }
+@@ -159,6 +172,7 @@ impl State {
+         self.target = None;
+         self.snapshot = None;
+         self.previous_large = false;
++        self.backoff.reset();
+         self.cache.clear();
+     }
+     pub(crate) fn resized(&mut self, size: Size<DevicePixels>) {
+@@ -218,6 +232,29 @@ impl State {
+             self.invalidate();
+             return Prepared::direct();
+         }
++        self.backoff.observe(geometry, uploads.tiles.is_none());
++        if self.backoff.skipping() {
++            cpu.reason = "backoff";
++            let tail = self.backoff.remaining == 1;
++            // Retain metadata without hashing or planning. On the last skipped
++            // frame, snapshot that scene for an adjacent-frame recovery probe;
++            // comparing with a 30-frame-old scene could falsely restart back-off.
++            let snapshot = tail.then(|| Snapshot {
++                geometry,
++                signatures: Vec::new(),
++                generation: uploads.generation,
++                deferred: Some(Box::new(scene.fast_damage_snapshot())),
++            });
++            return Prepared {
++                snapshot,
++                large: true,
++                plannable: true,
++                backoff: true,
++                preserve_snapshot: !tail,
++                ..Prepared::direct()
++            };
++        }
++        let probe = self.backoff.probing();
+         let comparable = self
+             .snapshot
+             .as_ref()
+@@ -260,6 +297,9 @@ impl State {
+                 }),
+                 // This is a whole draw, preserving the large-change hysteresis.
+                 large: true,
++                plannable: true,
++                probe,
++                ..Prepared::direct()
+             };
+         }
+         let signature_start = std::time::Instant::now();
+@@ -292,6 +332,10 @@ impl State {
+         self.cache.finish();
+         cpu.signatures_ms = signature_start.elapsed().as_secs_f64() * 1000.;
+         let plan_start = std::time::Instant::now();
++        #[cfg(any(test, feature = "test-support"))]
++        {
++            self.planner_calls += 1;
++        }
+         let change = plan::plan(
+             &self.snapshot.as_ref().unwrap().signatures,
+             &signatures,
+@@ -314,7 +358,7 @@ impl State {
+             // Large changes never pay for a full draw plus a full copy. After
+             // one, require two consecutive cheap plans before priming again:
+             // this Direct records large=false; the next cheap frame may prime.
+-            _ if large || self.previous_large => Mode::Direct,
++            _ if large || (self.previous_large && !probe) => Mode::Direct,
+             _ => Mode::Retained,
+         };
+         cpu.reason = mode.label();
+@@ -327,6 +371,9 @@ impl State {
+                 deferred: None,
+             }),
+             large,
++            plannable: true,
++            probe,
++            ..Prepared::direct()
+         }
+     }
+     fn allocate(
+@@ -346,7 +393,15 @@ impl State {
+         )
+     }
+     fn complete(&mut self, prepared: Prepared, mode: Mode) {
+-        self.snapshot = prepared.snapshot;
++        self.backoff.complete(
++            prepared.plannable,
++            prepared.large || mode == Mode::Direct,
++            prepared.backoff,
++            prepared.probe,
++        );
++        if !prepared.preserve_snapshot {
++            self.snapshot = prepared.snapshot;
++        }
+         self.previous_large = prepared.large;
+         self.last_mode = mode;
+     }
+@@ -526,8 +581,13 @@ pub(crate) fn render(
+                 }
+             }
+         }
++        let reason = if prepared.backoff {
++            "backoff"
++        } else {
++            mode.label()
++        };
+         state.complete(prepared, mode);
+-        encoding.finish(mode.label());
++        encoding.finish(mode.label(), reason);
+         Ok(command)
+     })();
+     if result.is_err() {
+diff --git a/vendor/gpui-fast-apple-0.1.14/src/fast/damage/frame/backoff.rs b/vendor/gpui-fast-apple-0.1.14/src/fast/damage/frame/backoff.rs
+new file mode 100644
+index 0000000..746aa96
+--- /dev/null
++++ b/vendor/gpui-fast-apple-0.1.14/src/fast/damage/frame/backoff.rs
+@@ -0,0 +1,144 @@
++// SPDX-License-Identifier: Apache-2.0
++//! RustUI original: bounded, opt-in planner back-off per Metal renderer.
++use super::Geometry;
++use std::sync::OnceLock;
++const LARGE_RUN: u8 = 8;
++const SKIP_FRAMES: u8 = 30;
++#[derive(Default)]
++pub(super) struct State {
++    geometry: Option<Geometry>,
++    streak: u8,
++    pub(super) remaining: u8,
++    probe: bool,
++    #[cfg(any(test, feature = "test-support"))]
++    pub(super) enabled_override: Option<bool>,
++}
++impl State {
++    fn enabled(&self) -> bool {
++        #[cfg(any(test, feature = "test-support"))]
++        if let Some(value) = self.enabled_override {
++            return value;
++        }
++        static ENABLED: OnceLock<bool> = OnceLock::new();
++        *ENABLED.get_or_init(|| std::env::var("RUSTUI_DAMAGE_BACKOFF").as_deref() == Ok("1"))
++    }
++    pub(super) fn reset(&mut self) {
++        self.geometry = None;
++        self.streak = 0;
++        self.remaining = 0;
++        self.probe = false;
++    }
++    pub(super) fn observe(&mut self, geometry: Geometry, atlas_lost: bool) {
++        if !self.enabled() {
++            return;
++        }
++        if self.geometry != Some(geometry) || atlas_lost {
++            self.reset();
++        }
++        self.geometry = Some(geometry);
++    }
++    pub(super) fn skipping(&self) -> bool {
++        self.enabled() && self.remaining > 0
++    }
++    pub(super) fn probing(&self) -> bool {
++        self.enabled() && self.probe && self.remaining == 0
++    }
++    pub(super) fn complete(
++        &mut self,
++        eligible: bool,
++        large_or_direct: bool,
++        skipped: bool,
++        probe: bool,
++    ) {
++        if !self.enabled() {
++            return;
++        }
++        if !eligible {
++            self.reset();
++            return;
++        }
++        if skipped {
++            self.remaining = self.remaining.saturating_sub(1);
++            return;
++        }
++        if !large_or_direct {
++            self.streak = 0;
++            self.probe = false;
++            return;
++        }
++        self.streak = self.streak.saturating_add(1);
++        if probe || self.streak >= LARGE_RUN {
++            self.remaining = SKIP_FRAMES;
++            self.probe = true;
++            self.streak = 0;
++        }
++    }
++}
++#[cfg(any(test, feature = "test-support"))]
++pub(super) fn test_policy() {
++    let geometry = Geometry {
++        width: 64,
++        height: 64,
++        scale: 1f64.to_bits(),
++        opaque: true,
++    };
++    let mut state = State {
++        enabled_override: Some(true),
++        ..Default::default()
++    };
++    state.observe(geometry, false);
++    for i in 0..8 {
++        assert!(!state.skipping());
++        state.complete(true, true, false, false);
++        assert_eq!(state.remaining, if i == 7 { 30 } else { 0 });
++    }
++    for remaining in (1..=30).rev() {
++        assert_eq!(state.remaining, remaining);
++        assert!(state.skipping());
++        state.complete(true, true, true, false);
++    }
++    assert!(state.probing());
++    state.complete(true, true, false, true);
++    assert_eq!(state.remaining, 30);
++    state.observe(geometry, true);
++    assert_eq!(state.remaining, 0);
++    for _ in 0..8 {
++        state.complete(true, true, false, false);
++    }
++    state.observe(
++        Geometry {
++            width: 65,
++            ..geometry
++        },
++        false,
++    );
++    assert_eq!(state.remaining, 0);
++    for _ in 0..8 {
++        state.complete(true, true, false, false);
++    }
++    state.observe(
++        Geometry {
++            scale: 2f64.to_bits(),
++            ..geometry
++        },
++        false,
++    );
++    assert_eq!(state.remaining, 0);
++    for _ in 0..8 {
++        state.complete(true, true, false, false);
++    }
++    state.reset();
++    state.observe(geometry, false);
++    assert_eq!(state.remaining, 0);
++    for _ in 0..7 {
++        state.complete(true, true, false, false);
++    }
++    state.complete(true, false, false, false);
++    state.complete(true, true, false, false);
++    assert!(!state.skipping());
++    state.enabled_override = Some(false);
++    for _ in 0..100 {
++        state.complete(true, true, false, false);
++    }
++    assert!(!state.skipping());
++}
+diff --git a/vendor/gpui-fast-apple-0.1.14/src/fast/damage/frame/proof.rs b/vendor/gpui-fast-apple-0.1.14/src/fast/damage/frame/proof.rs
+index e6dd9dd..90ecfb8 100644
+--- a/vendor/gpui-fast-apple-0.1.14/src/fast/damage/frame/proof.rs
++++ b/vendor/gpui-fast-apple-0.1.14/src/fast/damage/frame/proof.rs
+@@ -749,3 +749,5 @@ mod cpu_budget_tests {
+ }
+ 
+ mod policy;
++
++mod backoff;
+diff --git a/vendor/gpui-fast-apple-0.1.14/src/fast/damage/frame/proof/backoff.rs b/vendor/gpui-fast-apple-0.1.14/src/fast/damage/frame/proof/backoff.rs
+new file mode 100644
+index 0000000..a385ec9
+--- /dev/null
++++ b/vendor/gpui-fast-apple-0.1.14/src/fast/damage/frame/proof/backoff.rs
+@@ -0,0 +1,131 @@
++// SPDX-License-Identifier: Apache-2.0
++//! RustUI original: planner call counts, recovery latency and whole-frame pixels.
++use super::*;
++fn scene_at(lightness: f32, caret: Option<f32>) -> Scene {
++    let mut s = Scene::default();
++    for (bounds, color) in [
++        (
++            box_at(0., 0., 64., 64.),
++            gpui::Hsla {
++                h: 0.3,
++                s: 0.8,
++                l: lightness,
++                a: 1.,
++            },
++        ),
++        (
++            box_at(caret.unwrap_or(0.), 20., 2., 12.),
++            gpui::Hsla {
++                h: 0.,
++                s: 1.,
++                l: 0.5,
++                a: 1.,
++            },
++        ),
++    ]
++    .into_iter()
++    .take(if caret.is_some() { 2 } else { 1 })
++    {
++        s.insert_primitive(gpui::Quad {
++            bounds,
++            content_mask: gpui::ContentMask {
++                bounds: box_at(0., 0., 64., 64.),
++            },
++            background: color.into(),
++            ..Default::default()
++        });
++    }
++    s.finish();
++    s
++}
++fn draw(renderer: &mut MetalRenderer, scene: &Scene, expected: Mode, backoff: bool) -> Result<()> {
++    let size = gpui::size(DevicePixels(64), DevicePixels(64));
++    let reference = retained::texture(&renderer.device, 64, 64)?;
++    let whole = renderer.render_frame(scene, &reference, size)?;
++    let expected_pixels = finish(renderer, &whole, &reference)?;
++    let target = retained::texture(&renderer.device, 64, 64)?;
++    let prepared = prepare(renderer, scene, false);
++    assert_eq!(
++        prepared.mode, expected,
++        "expected frame mode must actually run"
++    );
++    assert_eq!(prepared.backoff, backoff);
++    let command = render(renderer, scene, &target, size, prepared)?;
++    assert_eq!(renderer.damage.last_mode, expected);
++    assert_eq!(finish(renderer, &command, &target)?, expected_pixels);
++    Ok(())
++}
++fn proof() -> Result<()> {
++    super::super::backoff::test_policy();
++    let mut r = MetalRenderer::new_headless(Default::default())?;
++    r.damage.enabled_override = Some(true);
++    r.damage.backoff.enabled_override = Some(true);
++    draw(&mut r, &scene_at(0.2, None), Mode::Retained, false)?;
++    let mut lightness = 0.2;
++    for _ in 0..7 {
++        lightness = 1. - lightness;
++        draw(&mut r, &scene_at(lightness, None), Mode::Direct, false)?;
++    }
++    assert_eq!(r.damage.backoff.remaining, 30);
++    for _ in 0..2 {
++        let calls = r.damage.planner_calls;
++        for _ in 0..30 {
++            lightness = 1. - lightness;
++            draw(&mut r, &scene_at(lightness, None), Mode::Direct, true)?;
++            assert_eq!(
++                r.damage.planner_calls, calls,
++                "no planner calls during back-off"
++            );
++        }
++        lightness = 1. - lightness;
++        draw(&mut r, &scene_at(lightness, None), Mode::Direct, false)?;
++        assert_eq!(
++            r.damage.planner_calls,
++            calls + 1,
++            "one probe between runs of 30"
++        );
++        assert_eq!(r.damage.backoff.remaining, 30);
++    }
++    // Count latency in frame intervals from the first small-change frame (0).
++    // 0..29 are Direct; 30 is the Retained probe; 31 can be truly Partial.
++    let calls = r.damage.planner_calls;
++    for frame in 0..30 {
++        draw(
++            &mut r,
++            &scene_at(lightness, Some(12. + (frame % 2) as f32)),
++            Mode::Direct,
++            true,
++        )?;
++        assert_eq!(r.damage.planner_calls, calls);
++    }
++    draw(
++        &mut r,
++        &scene_at(lightness, Some(12.)),
++        Mode::Retained,
++        false,
++    )?;
++    r.damage.magenta_prefill = true;
++    let changed = scene_at(lightness, Some(13.));
++    let prepared = prepare(&mut r, &changed, false);
++    assert!(
++        matches!(prepared.mode, Mode::Partial(_)),
++        "must recover to actual Partial at frame interval 31"
++    );
++    // This second prepare is harmless: no completion/counter advance occurred.
++    draw(&mut r, &changed, prepared.mode, false)?;
++    assert!(r.damage.last_magenta_prefills > 0);
++    assert_eq!(r.damage.backoff.remaining, 0);
++    Ok(())
++}
++impl MetalRenderer {
++    /// Proves 30 unplanned frames, one probe, resets and byte-exact recovery.
++    pub fn test_damage_backoff() -> Result<()> {
++        let _serial = PROOF_LOCK.lock().unwrap();
++        objc2::rc::autoreleasepool(|_| proof())
++    }
++}
++#[cfg(test)]
++#[test]
++fn backoff_stops_planning_and_recovers_byte_exactly() -> Result<()> {
++    MetalRenderer::test_damage_backoff()
++}
