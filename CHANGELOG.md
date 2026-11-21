@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+- Add an off-by-default input-tick presentation candidate, burst-only input hold, drawable-capacity guard and shared pixel/display-time controls with machine-folder exclusions and owner-authorized CPU-gate bypass labeling (G5-1).
+
 - Explain PX-3 typing draw/present timing with off/on diagnostic CPU profiles (PX-3b).
 
 - Enforce pinned workspace Clippy checks and resolve native workspace lint diagnostics (P1).

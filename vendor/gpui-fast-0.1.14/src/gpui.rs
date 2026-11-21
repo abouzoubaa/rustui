@@ -384,3 +384,9 @@ pub use fast::latency_breakdown::{
     fast_latency_completed, fast_latency_config, fast_latency_displayed, fast_latency_enabled,
     fast_latency_frame, fast_latency_released, fast_latency_tick,
 };
+
+#[doc(hidden)]
+pub use fast::immediate_present::{
+    fast_immediate_active, fast_immediate_demand, fast_immediate_enabled,
+    fast_immediate_hold_active, fast_immediate_suspend,
+};

@@ -38,13 +38,13 @@ pub(crate) type PlatformScreenCaptureFrame =
     objc2_core_foundation::CFRetained<objc2_core_video::CVImageBuffer>;
 
 use crate::{
-    Action, AnyWindowHandle, App, AsyncWindowContext, BackendWrappedRow, BackgroundExecutor, Bounds, Corners,
-    DEFAULT_WINDOW_SIZE, DevicePixels, DispatchEventResult, Edges, ExternalDragPayload, Font,
-    FontId, FontMetrics, FontRun, ForegroundExecutor, GlyphId, GpuSpecs, Hsla, ImageSource, Keymap,
-    LineLayout, MissingGlyphSink, Pixels, PlatformGestures, PlatformInput, Point, Priority,
-    RenderGlyphParams, RenderImage, RenderImageParams, RenderSvgParams, Scene, ShapedGlyph,
-    ShapedRun, SharedString, Size, SvgRenderer, SystemWindowTab, Task, Window, WindowControlArea,
-    hash, point, px, size,
+    Action, AnyWindowHandle, App, AsyncWindowContext, BackendWrappedRow, BackgroundExecutor,
+    Bounds, Corners, DEFAULT_WINDOW_SIZE, DevicePixels, DispatchEventResult, Edges,
+    ExternalDragPayload, Font, FontId, FontMetrics, FontRun, ForegroundExecutor, GlyphId, GpuSpecs,
+    Hsla, ImageSource, Keymap, LineLayout, MissingGlyphSink, Pixels, PlatformGestures,
+    PlatformInput, Point, Priority, RenderGlyphParams, RenderImage, RenderImageParams,
+    RenderSvgParams, Scene, ShapedGlyph, ShapedRun, SharedString, Size, SvgRenderer,
+    SystemWindowTab, Task, Window, WindowControlArea, hash, point, px, size,
 };
 #[cfg(any(target_os = "linux", target_os = "freebsd"))]
 use anyhow::bail;
@@ -1330,6 +1330,19 @@ pub trait PlatformWindow: HasWindowHandle + HasDisplayHandle {
     fn on_close(&self, callback: Box<dyn FnOnce()>);
     fn on_appearance_changed(&self, callback: Box<dyn FnMut()>);
     fn on_button_layout_changed(&self, _callback: Box<dyn FnMut()>) {}
+    fn immediate_supported(&self) -> bool {
+        false
+    }
+    fn immediate_input_state(&self) -> [f64; 4] {
+        [-1.; 4]
+    }
+    fn can_present_immediately(&self) -> bool {
+        false
+    }
+    fn immediate_submitted(&self) -> bool {
+        true
+    }
+    fn on_drawable_available(&self, _wake: Box<dyn Fn() + Send + Sync>) {}
     fn draw(&self, scene: &Scene);
     fn draw_composed(&self, scene: crate::fast::composition::ComposedScene<'_>) {
         crate::fast::composition::draw_uncomposed(self, scene)

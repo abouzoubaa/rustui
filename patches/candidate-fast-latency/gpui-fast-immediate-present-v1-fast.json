@@ -1,0 +1,120 @@
+{
+  "schema_version": 1,
+  "name": "gpui-fast-immediate-present-v1-fast",
+  "patch": "gpui-fast-immediate-present-v1-fast.patch",
+  "patch_sha256": "2305556c817020e8f71785a479b19d1c4d9cfa96da7e4eccfe619f5864a8110d",
+  "files": {
+    "vendor/gpui-fast-0.1.14/src/fast/mod.rs": {
+      "pre_sha256": "06bfc11f3476379c032e2a87ffa7dd96a76de769db08bb5cda304bc3f02d7711",
+      "post_sha256": "4f5b3a47555ec32a6f506c49fc23580bfb84305490739b6eed27c5aea36db980"
+    },
+    "vendor/gpui-fast-0.1.14/src/fast/immediate_present.rs": {
+      "pre_sha256": null,
+      "post_sha256": "a7d72139b0f2559126b51da0a5df9b2f14a4d267c09ac6c06a9983778ad7cca0"
+    },
+    "vendor/gpui-fast-0.1.14/src/gpui.rs": {
+      "pre_sha256": "c69d3cb996101895c745b20ebe42b5326204d17b2c66af6f0c9967dd9ee62f08",
+      "post_sha256": "0f287ecb3f570b9782d74c41f611fe04cbcd6df18478d28859728576e086ca0e"
+    },
+    "vendor/gpui-fast-0.1.14/src/window.rs": {
+      "pre_sha256": "d399fb9aab44597f933fc53bfbaf349ef52eda2a58e5b1700ff68c26ce1c0924",
+      "post_sha256": "5d18dd0c622ed79de5bab0e081cb0f61454e3946ba2502443805e2f245bff281"
+    },
+    "vendor/gpui-fast-0.1.14/src/platform.rs": {
+      "pre_sha256": "593fff9c59655e2a66f246c390361f8da8d245fbcc4a15e28d426058b816b077",
+      "post_sha256": "19a7826abcabd794b0982da1ffea1be0e7ad61dc92e7dfbb88bb86f0616e73d6"
+    },
+    "vendor/gpui-fast-apple-0.1.14/src/fast/mod.rs": {
+      "pre_sha256": "6e697cf2ebba1eeff238fc59c56bfbc4df3b2a012c78f1c7314688681be7e8e8",
+      "post_sha256": "d352441bb4af0c41b0c580ec6b3767abaa777a77b66534aa53134bd2ff44c0e8"
+    },
+    "vendor/gpui-fast-apple-0.1.14/src/fast/immediate_present.rs": {
+      "pre_sha256": null,
+      "post_sha256": "8a40e7ea7bcb371b9a9ccb95cf0bdfb057d5ac222ee72a10b496005b0e751649"
+    },
+    "vendor/gpui-fast-apple-0.1.14/src/metal_renderer.rs": {
+      "pre_sha256": "29e610e18e351a009da2f7b2722a9b9392504ae9ecebefe6285cd52335360380",
+      "post_sha256": "aeea04ee4ddf003df9c2465fdd981710cb74983706cf2d0366a0c1bd23fa5118"
+    },
+    "vendor/gpui-fast-macos-0.1.14/src/window.rs": {
+      "pre_sha256": "01f1c7d8cb68cec7711eeb83c2f530575006f839855c99afbe46990b8586052e",
+      "post_sha256": "179cd0694d3fa087e6bde4ae6b0a511a761876f8978b50cc7690a4b5a7e134fe"
+    },
+    "vendor/gpui-fast-macos-0.1.14/src/fast/mod.rs": {
+      "pre_sha256": "c230da33fa34f468244af47978bd34718a745c8b800532e5ebf0041d15390ba0",
+      "post_sha256": "1e9b5f6a17466abbcbb84968f9c1019e23cca73667363bc879c0a0d386761a01"
+    },
+    "vendor/gpui-fast-macos-0.1.14/src/fast/immediate_present.rs": {
+      "pre_sha256": null,
+      "post_sha256": "e95353e789ac9f14d77784e5deeaadfd43f9ad5ed1523457aed4de567bd3eb70"
+    },
+    "crates/rustui-gpui-fast/src/fast/mod.rs": {
+      "pre_sha256": "06bfc11f3476379c032e2a87ffa7dd96a76de769db08bb5cda304bc3f02d7711",
+      "post_sha256": "4f5b3a47555ec32a6f506c49fc23580bfb84305490739b6eed27c5aea36db980"
+    },
+    "crates/rustui-gpui-fast/src/fast/immediate_present.rs": {
+      "pre_sha256": null,
+      "post_sha256": "a7d72139b0f2559126b51da0a5df9b2f14a4d267c09ac6c06a9983778ad7cca0"
+    },
+    "crates/rustui-gpui-fast/src/gpui.rs": {
+      "pre_sha256": "c69d3cb996101895c745b20ebe42b5326204d17b2c66af6f0c9967dd9ee62f08",
+      "post_sha256": "0f287ecb3f570b9782d74c41f611fe04cbcd6df18478d28859728576e086ca0e"
+    },
+    "crates/rustui-gpui-fast/src/window.rs": {
+      "pre_sha256": "d399fb9aab44597f933fc53bfbaf349ef52eda2a58e5b1700ff68c26ce1c0924",
+      "post_sha256": "5d18dd0c622ed79de5bab0e081cb0f61454e3946ba2502443805e2f245bff281"
+    },
+    "crates/rustui-gpui-fast/src/platform.rs": {
+      "pre_sha256": "593fff9c59655e2a66f246c390361f8da8d245fbcc4a15e28d426058b816b077",
+      "post_sha256": "19a7826abcabd794b0982da1ffea1be0e7ad61dc92e7dfbb88bb86f0616e73d6"
+    },
+    "vendor/gpui-fast-0.1.14/.cargo-checksum.json": {
+      "pre_sha256": "0214c1f0b73d2eabdf6ebc0db0d8e63c33edaedb0318cdb0adaedc6ef8c3127c",
+      "post_sha256": "61519de88bf80d1ef1a0c9d826c6c5bd9071d368044fe9d907f22df15c4836fd"
+    },
+    "crates/rustui-gpui-fast/.cargo-checksum.json": {
+      "pre_sha256": "0214c1f0b73d2eabdf6ebc0db0d8e63c33edaedb0318cdb0adaedc6ef8c3127c",
+      "post_sha256": "61519de88bf80d1ef1a0c9d826c6c5bd9071d368044fe9d907f22df15c4836fd"
+    },
+    "crates/rustui-gpui-fast-apple/src/fast/mod.rs": {
+      "pre_sha256": "6e697cf2ebba1eeff238fc59c56bfbc4df3b2a012c78f1c7314688681be7e8e8",
+      "post_sha256": "d352441bb4af0c41b0c580ec6b3767abaa777a77b66534aa53134bd2ff44c0e8"
+    },
+    "crates/rustui-gpui-fast-apple/src/fast/immediate_present.rs": {
+      "pre_sha256": null,
+      "post_sha256": "8a40e7ea7bcb371b9a9ccb95cf0bdfb057d5ac222ee72a10b496005b0e751649"
+    },
+    "crates/rustui-gpui-fast-apple/src/metal_renderer.rs": {
+      "pre_sha256": "29e610e18e351a009da2f7b2722a9b9392504ae9ecebefe6285cd52335360380",
+      "post_sha256": "aeea04ee4ddf003df9c2465fdd981710cb74983706cf2d0366a0c1bd23fa5118"
+    },
+    "vendor/gpui-fast-apple-0.1.14/.cargo-checksum.json": {
+      "pre_sha256": "6bce16f507aa301772b88a4913c8c1f04ab4ea1e6caf1688028b760a74cfe9f9",
+      "post_sha256": "40d2f6f83854bd0305cb66d7527ba5e1066f3ff16f61d490a17b8ad6e5e2031c"
+    },
+    "crates/rustui-gpui-fast-apple/.cargo-checksum.json": {
+      "pre_sha256": "6bce16f507aa301772b88a4913c8c1f04ab4ea1e6caf1688028b760a74cfe9f9",
+      "post_sha256": "40d2f6f83854bd0305cb66d7527ba5e1066f3ff16f61d490a17b8ad6e5e2031c"
+    },
+    "crates/rustui-gpui-fast-macos/src/window.rs": {
+      "pre_sha256": "01f1c7d8cb68cec7711eeb83c2f530575006f839855c99afbe46990b8586052e",
+      "post_sha256": "179cd0694d3fa087e6bde4ae6b0a511a761876f8978b50cc7690a4b5a7e134fe"
+    },
+    "crates/rustui-gpui-fast-macos/src/fast/mod.rs": {
+      "pre_sha256": "c230da33fa34f468244af47978bd34718a745c8b800532e5ebf0041d15390ba0",
+      "post_sha256": "1e9b5f6a17466abbcbb84968f9c1019e23cca73667363bc879c0a0d386761a01"
+    },
+    "crates/rustui-gpui-fast-macos/src/fast/immediate_present.rs": {
+      "pre_sha256": null,
+      "post_sha256": "e95353e789ac9f14d77784e5deeaadfd43f9ad5ed1523457aed4de567bd3eb70"
+    },
+    "vendor/gpui-fast-macos-0.1.14/.cargo-checksum.json": {
+      "pre_sha256": "b4b9f1e2bc9411f18702f6167d360d33efed1b9d180bfef0d3362a3295f6493e",
+      "post_sha256": "098aaf90b80a61a539df60e08e27984a862b971a13a7cdaa7f2234c6138b23c0"
+    },
+    "crates/rustui-gpui-fast-macos/.cargo-checksum.json": {
+      "pre_sha256": "b4b9f1e2bc9411f18702f6167d360d33efed1b9d180bfef0d3362a3295f6493e",
+      "post_sha256": "098aaf90b80a61a539df60e08e27984a862b971a13a7cdaa7f2234c6138b23c0"
+    }
+  }
+}

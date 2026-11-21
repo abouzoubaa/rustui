@@ -137,6 +137,7 @@ pub struct MetalRenderer {
     pub(crate) is_unified_memory: bool,
     pub(crate) presents_with_transaction: bool,
     display_link_mode: DisplayLinkMode,
+    immediate: crate::fast::immediate_present::State,
     /// For headless rendering, tracks whether output should be opaque
     pub(crate) opaque: bool,
     pub(crate) command_queue: Retained<ProtocolObject<dyn MTLCommandQueue>>,
@@ -432,6 +433,7 @@ impl MetalRenderer {
             layer,
             presents_with_transaction: false,
             display_link_mode: DisplayLinkMode::Detached,
+            immediate: Default::default(),
             is_apple_gpu,
             is_unified_memory,
             opaque,
@@ -490,8 +492,11 @@ impl MetalRenderer {
         &mut self,
         drawable: Option<Retained<ProtocolObject<dyn CAMetalDrawable>>>,
     ) -> Option<Retained<ProtocolObject<dyn CAMetalDrawable>>> {
-        match &mut self.display_link_mode {
-            DisplayLinkMode::Attached { drawable: current } => mem::replace(current, drawable),
+        let replaced = match &mut self.display_link_mode {
+            DisplayLinkMode::Attached { drawable: current } => {
+                self.immediate.replacing(current, &drawable);
+                mem::replace(current, drawable)
+            }
             DisplayLinkMode::Detached => {
                 // Only a live link hands out drawables, and a link is detached
                 // only after it has been invalidated.
@@ -501,7 +506,25 @@ impl MetalRenderer {
                 );
                 None
             }
-        }
+        };
+        replaced
+    }
+
+    pub fn immediate_in_flight(&self) -> usize {
+        self.immediate.count()
+    }
+    pub fn immediate_allowed(&self) -> bool {
+        !self.presents_with_transaction && self.layer.is_some()
+    }
+    pub fn immediate_ready(&self) -> bool {
+        !self.presents_with_transaction
+            && self.layer.as_ref().is_some_and(|l| self.immediate.ready(l))
+    }
+    pub fn immediate_submitted(&self) -> bool {
+        self.immediate.submitted()
+    }
+    pub fn on_drawable_available(&self, wake: Box<dyn Fn() + Send + Sync>) {
+        self.immediate.set_waker(wake);
     }
 
     /// Record whether a `CAMetalDisplayLink` drives the layer. While one
@@ -634,26 +657,43 @@ impl MetalRenderer {
             crate::fast::damage::frame::skip(self, prepared);
             return;
         }
-        let drawable = match &mut self.display_link_mode {
-            DisplayLinkMode::Attached { drawable } => {
-                let Some(drawable) = drawable.take() else {
-                    log::error!("skipped a frame drawn outside its display link's update");
-                    return;
-                };
-                drawable
-            }
-            DisplayLinkMode::Detached => {
-                let Some(drawable) = layer.nextDrawable() else {
-                    log::error!(
-                        "failed to retrieve next drawable, drawable size: {:?}",
-                        layer.drawableSize()
-                    );
-                    return;
-                };
-                drawable
+        let drawable = if gpui::fast_immediate_active() {
+            let Some(drawable) = crate::fast::immediate_present::next_drawable(
+                &layer,
+                &self.immediate,
+                matches!(&self.display_link_mode, DisplayLinkMode::Attached { .. }),
+            ) else {
+                return;
+            };
+            drawable
+        } else {
+            match &mut self.display_link_mode {
+                DisplayLinkMode::Attached { drawable } => {
+                    let Some(drawable) = drawable.take() else {
+                        log::error!("skipped a frame drawn outside its display link's update");
+                        return;
+                    };
+                    drawable
+                }
+                DisplayLinkMode::Detached => {
+                    let Some(drawable) = crate::fast::immediate_present::next_drawable(
+                        &layer,
+                        &self.immediate,
+                        matches!(&self.display_link_mode, DisplayLinkMode::Attached { .. }),
+                    ) else {
+                        log::error!(
+                            "failed to retrieve next drawable, drawable size: {:?}",
+                            layer.drawableSize()
+                        );
+                        return;
+                    };
+                    drawable
+                }
             }
         };
         let mut latency_hold = crate::fast::latency::hold(&drawable);
+        let mut immediate_hold = self.immediate.hold(&drawable);
+        self.immediate.report(&layer);
         // A display link's drawable was sized when the link handed it out,
         // which can be before a resize the layer has since taken.
         let texture = drawable.texture();
@@ -662,6 +702,10 @@ impl MetalRenderer {
             (texture.height() as i32).into(),
         );
 
+        let transaction_override = crate::fast::immediate_present::transaction();
+        if transaction_override {
+            layer.setPresentsWithTransaction(true);
+        }
         crate::fast::latency::layer(&layer, self.presents_with_transaction);
         let (planned_mode, planned_reason) = (prepared.mode, prepared.reason);
         let command_buffer = match crate::fast::damage::frame::render(
@@ -691,7 +735,8 @@ impl MetalRenderer {
 
         let latency = crate::fast::latency::observe(&command_buffer, &drawable);
         latency_hold.submitted();
-        if self.presents_with_transaction {
+        crate::fast::immediate_present::begin(transaction_override);
+        if self.presents_with_transaction || transaction_override {
             command_buffer.commit();
             gpui::fast_latency_committed(latency);
             command_buffer.waitUntilScheduled();
@@ -701,6 +746,9 @@ impl MetalRenderer {
             command_buffer.commit();
             gpui::fast_latency_committed(latency);
         }
+        self.immediate.did_submit();
+        immediate_hold.submitted();
+        crate::fast::immediate_present::end(transaction_override);
     }
 
     pub(crate) fn render_frame(
