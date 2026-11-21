@@ -8,7 +8,6 @@ use gpui_base::input::RopeExt as _;
 use ropey::{ChunkCursor, Rope};
 use std::sync::Arc;
 use std::time::Duration;
-use web_time::Instant;
 use std::{
     collections::{BTreeSet, HashMap},
     ops::{ControlFlow, Range},
@@ -17,6 +16,13 @@ use sum_tree::Bias;
 use tree_sitter::{
     InputEdit, ParseOptions, Parser, Point, Query, QueryCursor, StreamingIterator, Tree,
 };
+use web_time::Instant;
+
+#[path = "rust_empty.rs"]
+mod rust_empty;
+#[cfg(all(test, feature = "tree-sitter-rust"))]
+#[path = "rust_empty_tests.rs"]
+mod rust_empty_tests;
 
 const MAX_INJECTION_RANGES: usize = 4096;
 const MAX_INJECTION_BYTES: usize = 512 * 1024;
@@ -55,6 +61,7 @@ pub struct SyntaxHighlighter {
     /// Parsed injection trees.
     /// These are built once in update() and queried multiple times in match_styles().
     injection_layers: Vec<InjectionLayer>,
+    rust_empty: rust_empty::State,
 }
 
 /// A parsed injection layer.
@@ -411,6 +418,7 @@ impl SyntaxHighlighter {
             parser: Parser::new(),
             tree: None,
             injection_layers: Vec::new(),
+            rust_empty: rust_empty::State::inert(),
         }
     }
 
@@ -418,6 +426,7 @@ impl SyntaxHighlighter {
     ///
     /// https://github.com/tree-sitter/tree-sitter/blob/v0.26.8/crates/highlight/src/highlight.rs#L339
     fn build_for_language(lang: &str) -> Result<Self> {
+        let registry_generation = LanguageRegistry::singleton().generation();
         let Some(config) = LanguageRegistry::singleton().language(&lang) else {
             return Err(anyhow!(
                 "language {:?} is not registered in `LanguageRegistry`",
@@ -516,6 +525,12 @@ impl SyntaxHighlighter {
 
         // let highlight_indices = vec![None; query.capture_names().len()];
 
+        let rust_empty = rust_empty::State::new(
+            &config,
+            &grammar,
+            injections_query.as_ref(),
+            registry_generation,
+        );
         Ok(Self {
             language: config.name.clone(),
             query: Some(query),
@@ -534,6 +549,7 @@ impl SyntaxHighlighter {
             parser,
             tree: None,
             injection_layers: Vec::new(),
+            rust_empty,
         })
     }
 
@@ -549,6 +565,7 @@ impl SyntaxHighlighter {
     /// Apply only the structural `edit` to the existing tree and update the stored text,
     /// without re-parsing.
     pub fn edit_tree(&mut self, edit: Option<InputEdit>, text: &Rope) {
+        self.rust_empty.invalidate();
         if let (Some(edit), Some(tree)) = (edit, self.tree.as_mut()) {
             tree.edit(&edit);
         }
@@ -623,6 +640,14 @@ impl SyntaxHighlighter {
             return true;
         }
 
+        // Only one known incremental edit can reuse the prior negative result.
+        let may_reuse = edits.len() == 1
+            && self.tree.is_some()
+            && self.injection_layers.is_empty()
+            && self.rust_empty.can_reuse(
+                self.injections_query.as_ref(),
+                self.parser.language().as_deref(),
+            );
         let full_edit;
         let edits = if edits.is_empty() {
             self.edit_injection_layers(None);
@@ -673,6 +698,7 @@ impl SyntaxHighlighter {
         );
 
         if timed_out || new_tree.is_none() {
+            self.rust_empty.invalidate();
             // Restore the old tree so highlighting continues with stale data.
             self.tree = Some(old_tree);
             self.text = text.clone();
@@ -682,7 +708,15 @@ impl SyntaxHighlighter {
         let new_tree = new_tree.unwrap();
         self.tree = Some(new_tree.clone());
         self.text = text.clone();
-        self.parse_injection_layers(&new_tree);
+        if may_reuse
+            && !old_tree.root_node().has_error()
+            && !new_tree.root_node().has_error()
+            && old_tree.changed_ranges(&new_tree).next().is_none()
+        {
+            self.rust_empty.reused();
+        } else {
+            self.parse_injection_layers(&new_tree);
+        }
         true
     }
 
@@ -716,6 +750,14 @@ impl SyntaxHighlighter {
         tree: &Tree,
         text: &Rope,
     ) -> Vec<InjectionLayer> {
+        Self::compute_injection_layers_observed(data, tree, text).0
+    }
+
+    fn compute_injection_layers_observed(
+        data: InjectionParseData,
+        tree: &Tree,
+        text: &Rope,
+    ) -> (Vec<InjectionLayer>, bool) {
         struct CombinedRanges {
             ranges: Vec<tree_sitter::Range>,
             byte_count: usize,
@@ -819,7 +861,10 @@ impl SyntaxHighlighter {
             HashMap::new();
         let mut new_layers = Vec::new();
         let mut non_combined_parses = 0usize;
+        let mut saw_match = false;
         while let Some(query_match) = matches.next() {
+            // Count before language resolution, filtering, caps or failed parsing.
+            saw_match = true;
             let mut language_name: Option<SharedString> = None;
             let mut combined = false;
             for prop in data.query.property_settings(query_match.pattern_index) {
@@ -936,8 +981,10 @@ impl SyntaxHighlighter {
                 new_layers.push(layer);
             }
         }
+        drop(matches);
+        let zero_matches = !saw_match && !cursor.did_exceed_match_limit();
         new_layers.sort_by_key(|layer| layer.byte_range.start);
-        new_layers
+        (new_layers, zero_matches)
     }
 
     /// Parse one injection layer over the given included ranges.
@@ -1000,6 +1047,7 @@ impl SyntaxHighlighter {
             return;
         }
 
+        self.rust_empty.invalidate();
         self.tree = Some(tree);
         self.injection_layers = injection_layers;
     }
@@ -1007,6 +1055,7 @@ impl SyntaxHighlighter {
     /// Parse injection layers after the main tree is updated.
     /// pattern: parse once in update, query many times in render.
     fn parse_injection_layers(&mut self, tree: &Tree) {
+        self.rust_empty.invalidate();
         let Some(query) = self.injections_query.clone() else {
             self.injection_layers.clear();
             return;
@@ -1021,7 +1070,10 @@ impl SyntaxHighlighter {
                 .map(ReusableInjectionLayer::from)
                 .collect(),
         };
-        self.injection_layers = Self::compute_injection_layers(data, tree, &self.text);
+        let (layers, zero_matches) =
+            Self::compute_injection_layers_observed(data, tree, &self.text);
+        self.injection_layers = layers;
+        self.rust_empty.observed(zero_matches);
     }
 
     /// Match the visible ranges of nodes in the Tree for highlighting.

@@ -1,0 +1,40 @@
+{
+  "schema_version": 1,
+  "name": "gpui-component-rust-empty-injections-v1-kit09",
+  "patch": "gpui-component-rust-empty-injections-v1-kit09.patch",
+  "patch_sha256": "8079793c25bc9bc455d14f21519a3be0149736de78e41a33d401208dabac4ac9",
+  "files": {
+    "vendor/gpui-component-0.9.1/src/highlighter/highlighter.rs": {
+      "pre_sha256": "62b126fb587498bdcf5ae17b0a054d6811a3f14ada2068aabf25d6a52648bb38",
+      "post_sha256": "e139574bf3ab055e5bb491677a354dac5fd7b90f47cdbfb990aa1be54f0915c9"
+    },
+    "crates/rustui-gpui-component/src/highlighter/highlighter.rs": {
+      "pre_sha256": "62b126fb587498bdcf5ae17b0a054d6811a3f14ada2068aabf25d6a52648bb38",
+      "post_sha256": "e139574bf3ab055e5bb491677a354dac5fd7b90f47cdbfb990aa1be54f0915c9"
+    },
+    "vendor/gpui-component-0.9.1/src/highlighter/rust_empty.rs": {
+      "pre_sha256": null,
+      "post_sha256": "4955a3ba8e551d2381957659e07e04fa9f48a88b1140df9f2622005096f8a397"
+    },
+    "crates/rustui-gpui-component/src/highlighter/rust_empty.rs": {
+      "pre_sha256": null,
+      "post_sha256": "4955a3ba8e551d2381957659e07e04fa9f48a88b1140df9f2622005096f8a397"
+    },
+    "vendor/gpui-component-0.9.1/src/highlighter/rust_empty_tests.rs": {
+      "pre_sha256": null,
+      "post_sha256": "e71dad3d71cf625f3d292e9d4a6ba64f38fa540d208fbfda3a62a0f30e863a7e"
+    },
+    "crates/rustui-gpui-component/src/highlighter/rust_empty_tests.rs": {
+      "pre_sha256": null,
+      "post_sha256": "e71dad3d71cf625f3d292e9d4a6ba64f38fa540d208fbfda3a62a0f30e863a7e"
+    },
+    "vendor/gpui-component-0.9.1/.cargo-checksum.json": {
+      "pre_sha256": "1cf576f3fe73c20ac1589041eebf972798fcc730f9b76197fe106107a36d1927",
+      "post_sha256": "4c5f42de5b958b4c2264a06c26a875f89615c3dc8cbd1526c586029951380876"
+    },
+    "crates/rustui-gpui-component/.cargo-checksum.json": {
+      "pre_sha256": "1cf576f3fe73c20ac1589041eebf972798fcc730f9b76197fe106107a36d1927",
+      "post_sha256": "4c5f42de5b958b4c2264a06c26a875f89615c3dc8cbd1526c586029951380876"
+    }
+  }
+}

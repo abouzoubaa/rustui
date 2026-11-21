@@ -12,6 +12,7 @@
     "gpui-fast-damage-verify-v1-fast.json",
     "gpui-fast-buffered-frame-recorder-v1-fast.json",
     "gpui-fast-presented-latency-v1-fast.json",
-    "gpui-fast-latency-breakdown-v1-fast.json"
+    "gpui-fast-latency-breakdown-v1-fast.json",
+    "../proposed/gpui-component-rust-empty-injections-v1-kit09.json"
   ]
 }

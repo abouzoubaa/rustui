@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+- Add a conservative, off-by-default Rust injection highlighter fast path (PX-3 candidate).
+
 - Add opt-in mach-clock latency stage diagnostics and local AppKit/bare Fast references (PX-4).
 
 - Add opt-in G0 state-to-display diagnostics using Metal drawable display times (PX-2 candidate).
