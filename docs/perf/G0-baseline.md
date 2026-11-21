@@ -85,3 +85,34 @@ Reproduce both captures from the repository root:
 RUSTUI_DAMAGE=0 ./scripts/run_g0_bench.sh
 RUSTUI_DAMAGE=1 ./scripts/run_g0_bench.sh
 ```
+
+## PX-1 — buffered recorder observer proof
+
+Measured on the same M1 Max/macOS 27 host with one pinned Rust 1.98.0 release build. Five matched log-scene pairs alternate phase profiling off→on, on→off, off→on, on→off, off→on. Both arms use `RUSTUI_DAMAGE=0` and `RUSTUI_FRAME_LOG=buffered`; only `RUSTUI_FRAME_PROFILE` changes. Every capture measures 60 seconds after the normal warmup. `getrusage(RUSAGE_SELF)` user + system snapshots bracket the measured window; startup, cleanup and exit serialization are excluded. No compiler, profiler or other benchmark was running; the background repository indexer was paused during timing. macOS background services remained active. This is an observer comparison, not an application optimization claim.
+
+An earlier set using external process counters was stopped after the owner specified `getrusage` as the deciding metric. None of that set contributes to these numbers or verdicts. Raw logs and summaries remain local and ignored under `target/headstart/px1/paired-rusage/`.
+
+The candidate stores raw frame records and preserves the original field order, precision, null spelling and newline. `RUSTUI_FRAME_LOG=1` drains after present, outside phase timers; `buffered` formats and drains at normal process exit. Focused tests compare exact bytes against the original formatter and prove the exit hook drains even through `process::exit`. GPU timing stays enabled in buffered mode. All damage switches remain off by default; no Fix F threshold changes.
+
+| Pair | Order | Process CPU off ms/attempt | On ms/attempt | Paired change | Draw+present off / on ms/attempt | Frames >8.3 ms off / on |
+|---|---|---:|---:|---:|---:|---:|
+| 1 | off→on | 3.380840 | 3.417625 | +1.088% | 1.777696 / 1.777321 | 0 / 0 |
+| 2 | on→off | 3.378007 | 3.450727 | +2.153% | 1.826418 / 1.874562 | 0 / 0 |
+| 3 | off→on | 3.385579 | 3.355270 | -0.895% | 1.852305 / 1.835725 | 0 / 0 |
+| 4 | on→off | 3.686132 | 3.596082 | -2.443% | 2.129474 / 2.072211 | 0 / 0 |
+| 5 | off→on | 3.801889 | 3.734957 | -1.761% | 2.209206 / 2.138347 | 0 / 0 |
+
+Median process CPU off / on: **3.385579 / 3.450727 ms/attempt**. Paired median / min / max: **-0.895% / -2.443% / +2.153%**. Stage P verdict: **NEUTRAL**, using [the owner rule](MEASUREMENT_RULES.md). PX-1's separate ≤5% observer-overhead requirement: **PASS**. Key/append-to-screen delay: **not measured; PX-2 pending**.
+
+| Pair | Profile | User CPU s | System CPU s | Total CPU s | Attempts | GPU ms/frame | GPU ms/s | Prepaint ms/call |
+|---|---:|---:|---:|---:|---:|---:|---:|---:|
+| 1 | 0 | 1.370732000 | 0.573251000 | 1.943983000 | 575 | 0.504685 | 4.836310 | not recorded |
+| 1 | 1 | 1.378890000 | 0.589662000 | 1.968552000 | 576 | 0.542030 | 5.194452 | 0.490265 |
+| 2 | 0 | 1.379380000 | 0.562974000 | 1.942354000 | 575 | 0.502533 | 4.815827 | not recorded |
+| 2 | 1 | 1.411164000 | 0.573004000 | 1.984168000 | 575 | 0.514463 | 4.930020 | 0.513523 |
+| 3 | 0 | 1.383690000 | 0.563018000 | 1.946708000 | 575 | 0.506298 | 4.851338 | not recorded |
+| 3 | 1 | 1.372936000 | 0.556344000 | 1.929280000 | 575 | 0.527306 | 5.052199 | 0.506210 |
+| 4 | 0 | 1.513512000 | 0.606014000 | 2.119526000 | 575 | 0.473568 | 4.537727 | not recorded |
+| 4 | 1 | 1.483372000 | 0.584375000 | 2.067747000 | 575 | 0.485069 | 4.647570 | 0.578548 |
+| 5 | 0 | 1.563271000 | 0.626617000 | 2.189888000 | 576 | 0.488481 | 4.681360 | not recorded |
+| 5 | 1 | 1.536773000 | 0.610827000 | 2.147600000 | 575 | 0.514283 | 4.925055 | 0.588517 |

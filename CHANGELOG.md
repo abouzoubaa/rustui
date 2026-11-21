@@ -2,6 +2,7 @@
 
 ## Unreleased
 
+- Buffer native frame-recorder output outside measured phases (PX-1 candidate).
 - P0: document damage-off native CPU profiles, logging overhead and measured optimization candidates without runtime changes.
 
 - G0-3: add opt-in full-reference damage verification with window-local disable, and compare native GPU/CPU baselines and frame modes with damage off and on.

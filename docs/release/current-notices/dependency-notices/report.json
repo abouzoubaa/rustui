@@ -1,10 +1,29 @@
 {
   "complete_license_or_compatibility_claim": false,
   "inputs": {
-    "cargo_lock_sha256": "eb72176188f7bd445766accac25411bf025e57033b92710704c9eab4b9dfb418",
+    "cargo_lock_sha256": "24ff1edad8d8d55bfaa92f9c1dbbff783d3e054434b0866de7c72d365ae4056e",
     "supplement_manifest_sha256": "67fb8a1669613fd6e29f9514363a96aaefe547e8b94048c6873bff0b12f4ad92"
   },
   "packages": [
+    {
+      "license_expression": "MIT",
+      "manifest_path": "repository:apps/rustui-lab/Cargo.toml",
+      "manifest_sha256": "b5a0c92b06e21aaf5d55628e0b59f3746314ea1d4396c6fdf26e37bd1824f11e",
+      "name": "rustui-lab",
+      "notice_review_notes": [],
+      "notices": [
+        {
+          "path": "notices/rustui-lab-0.5.0-71b1424b2b3d/01-LICENSE",
+          "sha256": "969321ba9468d373a994d1a0aa55f036e1382181af1565ae0b5e79cc0cd2320e",
+          "size_bytes": 1071,
+          "source": "repository:LICENSE"
+        }
+      ],
+      "package_id": "path+repository:apps/rustui-lab#0.5.0",
+      "source": null,
+      "version": "0.5.0",
+      "workspace_member": true
+    },
     {
       "license_expression": "MIT",
       "manifest_path": "repository:apps/rustui-playground/Cargo.toml",

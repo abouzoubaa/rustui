@@ -8,7 +8,7 @@ use std::{ptr::NonNull, sync::OnceLock, time::SystemTime};
 
 fn enabled() -> bool {
     static ENABLED: OnceLock<bool> = OnceLock::new();
-    *ENABLED.get_or_init(|| std::env::var("RUSTUI_FRAME_LOG").as_deref() == Ok("1"))
+    *ENABLED.get_or_init(|| matches!(std::env::var("RUSTUI_FRAME_LOG").as_deref(), Ok("1" | "buffered")))
 }
 
 fn gpu_ms(start: f64, end: f64) -> Option<f64> {

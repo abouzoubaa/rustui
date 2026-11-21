@@ -16,6 +16,8 @@ use std::{
     time::{Duration, Instant, SystemTime},
 };
 
+mod cpu;
+
 const WIDTH: f32 = 1200.0;
 const HEIGHT: f32 = 800.0;
 const PAD: f32 = 32.0;
@@ -353,6 +355,10 @@ fn playback(
         if !input_ready { eprintln!("G0 caret did not receive warm-up input"); cx.update(|app| app.quit()); return; }
         let (scale, width, height) = handle.update(cx, |_, window, _| (window.scale_factor(), f32::from(window.viewport_size().width), f32::from(window.viewport_size().height))).unwrap();
         eprintln!("RUSTUI_G0_LOG {{\"event\":\"start\",\"scene\":\"{}\",\"duration_s\":{},\"epoch_ms\":{:.6},\"input_hz\":{},\"scale\":{},\"width\":{},\"height\":{}}}", scene.name(), duration.as_secs(), epoch_ms(), scene.hz(), scale, width, height);
+        let cpu_start = match cpu::Snapshot::take() {
+            Ok(snapshot) => snapshot,
+            Err(error) => { eprintln!("G0 getrusage start failed: {error}"); cx.update(|app| app.quit()); return; }
+        };
         let start = Instant::now();
         let mut ticks = 0;
         let mut handled = true;
@@ -370,12 +376,17 @@ fn playback(
             if elapsed >= duration { break; }
             cx.background_executor().timer(if scene == Scene::Idle { duration } else { Duration::from_nanos(1_000_000_000 / u64::from(scene.hz())) }).await;
         }
+        let cpu_end = match cpu::Snapshot::take() {
+            Ok(snapshot) => snapshot,
+            Err(error) => { eprintln!("G0 getrusage end failed: {error}"); cx.update(|app| app.quit()); return; }
+        };
         let end_epoch = epoch_ms();
+        let (cpu_user_s, cpu_sys_s) = cpu_start.elapsed(cpu_end);
         if scene == Scene::Drag { let _ = handle.update(cx, |_, window, app| { window.dispatch_event(gpui::PlatformInput::MouseUp(gpui::MouseUpEvent { button: gpui::MouseButton::Left, position: drag_position(ticks), click_count: 1, ..Default::default() }), app); }); }
         cx.background_executor().timer(Duration::from_millis(250)).await;
         let (added, moves, dropped) = native.read_with(cx, |state, _| (state.lines.len().saturating_sub(INITIAL_LOG_LINES), state.moves, !state.dragging));
         let valid = handled && match scene { Scene::Typing => max_len > min_len, Scene::Log => added == ticks, Scene::Drag => moves == ticks && dropped, _ => true };
-        eprintln!("RUSTUI_G0_LOG {{\"event\":\"end\",\"scene\":\"{}\",\"epoch_ms\":{:.6},\"ticks\":{},\"log_lines_added\":{},\"drag_moves\":{},\"valid\":{}}}", scene.name(), end_epoch, ticks, added, moves, valid);
+        eprintln!("RUSTUI_G0_LOG {{\"event\":\"end\",\"scene\":\"{}\",\"epoch_ms\":{:.6},\"ticks\":{},\"log_lines_added\":{},\"drag_moves\":{},\"valid\":{},\"cpu_user_s\":{:.9},\"cpu_sys_s\":{:.9}}}", scene.name(), end_epoch, ticks, added, moves, valid, cpu_user_s, cpu_sys_s);
         complete.set(valid);
         cx.update(|app| app.quit());
     }).detach();
