@@ -28,9 +28,16 @@ class G0BenchTests(unittest.TestCase):
                     {"event": "gpu", "mode": mode, "gpu_ms": 0.25,
                      "cpu_ms": 0.0, "epoch_ms": 2000 + index},
                 ]
+                if mode != "partial":
+                    records.append({"event": "frame_reason", "mode": mode,
+                                    "reason": "required" if mode == "copy" else "large",
+                                    "cpu_ms": 0.0, "epoch_ms": 2000 + index})
                 lines.extend("RUSTUI_FRAME_LOG " + json.dumps(record) for record in records)
             lines.append("RUSTUI_FRAME_LOG " + json.dumps(
                 {"event": "gpu", "mode": "skip", "gpu_ms": None,
+                 "cpu_ms": 0.0, "epoch_ms": 3000}))
+            lines.append("RUSTUI_FRAME_LOG " + json.dumps(
+                {"event": "frame_reason", "mode": "skip", "reason": "identical",
                  "cpu_ms": 0.0, "epoch_ms": 3000}))
             lines.append("RUSTUI_G0_LOG " + json.dumps(end))
             (self.output / f"{scene}-frames.log").write_text("\n".join(lines) + "\n")
@@ -78,6 +85,8 @@ class G0BenchTests(unittest.TestCase):
             self.assertEqual(row["process_cpu_s"], 1.25)
             self.assertEqual(row["process_cpu_s_per_attempt"], 0.0125)
             self.assertEqual(row["frames_over_8_3_ms"], 0)
+            self.assertEqual(row["non_partial_reasons"], {"required": 1, "large": 98, "identical": 1})
+            self.assertNotIn("frame_reason", row["cpu_phases_mean_ms"])
 
     def test_damage_off_rejects_non_direct_modes(self):
         result = self.summarize("0")

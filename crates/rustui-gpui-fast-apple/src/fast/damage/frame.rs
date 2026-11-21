@@ -116,6 +116,7 @@ pub(crate) struct State {
 }
 pub(crate) struct Prepared {
     pub(crate) mode: Mode,
+    pub(crate) reason: &'static str,
     snapshot: Option<Snapshot>,
     large: bool,
 }
@@ -123,6 +124,7 @@ impl Prepared {
     pub(crate) fn direct() -> Self {
         Self {
             mode: Mode::Direct,
+            reason: "disabled",
             snapshot: None,
             large: false,
         }
@@ -187,7 +189,21 @@ impl State {
             || size.height.0 <= 0
         {
             self.invalidate();
-            return Prepared::direct();
+            let mut direct = Prepared::direct();
+            direct.reason = if !self.enabled() {
+                "disabled"
+            } else if synchronous {
+                "live_resize"
+            } else if self
+                .failed
+                .as_ref()
+                .is_some_and(|s| s.disabled.load(Ordering::Acquire))
+            {
+                "verify_off_path"
+            } else {
+                "geometry"
+            };
+            return direct;
         }
         let geometry = Geometry::new(size, scale, opaque);
         let old = self.snapshot.as_ref().filter(|s| s.geometry == geometry);
@@ -195,7 +211,9 @@ impl State {
         self.failed = Some(uploads.status.clone());
         if uploads.status.disabled.load(Ordering::Acquire) {
             self.invalidate();
-            return Prepared::direct();
+            let mut direct = Prepared::direct();
+            direct.reason = "atlas_lost";
+            return direct;
         }
         // An expired atlas journal requires a whole draw; signatures use an empty
         // upload set only to establish a fresh baseline for the following frame.
@@ -206,7 +224,15 @@ impl State {
             &inputs::dynamic,
         ) else {
             self.invalidate();
-            return Prepared::direct();
+            let mut direct = Prepared::direct();
+            direct.reason = if scene.layers.frames.iter().any(|f| f.tile_size != 0) {
+                "unsupported_scroll_layer"
+            } else if !scene.surfaces.is_empty() {
+                "surface"
+            } else {
+                "unsupported_scene"
+            };
+            return direct;
         };
         let change = old.and_then(|old| {
             uploads
@@ -233,8 +259,21 @@ impl State {
             _ if large && self.previous_large && old.is_some() => Mode::Direct,
             _ => Mode::Retained,
         };
+        let reason = if old.is_none() {
+            "prime"
+        } else if uploads.tiles.is_none() {
+            "atlas_lost"
+        } else {
+            match mode {
+                Mode::Same => "identical",
+                Mode::Copy => "required",
+                Mode::Partial(_) => "changed",
+                _ => "large",
+            }
+        };
         Prepared {
             mode,
+            reason,
             snapshot: Some(Snapshot {
                 geometry,
                 signatures,

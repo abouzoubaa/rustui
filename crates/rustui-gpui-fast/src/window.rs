@@ -4063,6 +4063,7 @@ impl Window {
         let _foreground_turn = profiler::journal::foreground_turn();
         #[cfg(feature = "profiler")]
         let present_start = Instant::now();
+        let _input_presentation = crate::fast::input_latency::present_scope(self.handle.window_id());
         crate::fast::composition::present(self);
         #[cfg(feature = "profiler")]
         self.window_profiler.record_present(
@@ -4234,6 +4235,7 @@ impl Window {
         self.paint_inspector_hitbox(cx);
         crate::fast::stats::FramePhaseTimes::end_paint(&mut self.fast_layout.phase_times);
         f0_frame_record(self.handle.window_id(), "paint", f0_paint);
+        crate::fast::input_latency::painted(self.handle.window_id());
 
         #[cfg(feature = "profiler")]
         self.window_profiler
