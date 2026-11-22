@@ -237,16 +237,30 @@ impl View for CodeEditorView {
         let native_changed = retained_state.native_changed.clone();
         let owner_changed = !Rc::ptr_eq(&current_value, &previous_owner_value)
             && current_value.as_str() != previous_owner_value.as_str();
-        let has_marked_text = context.update_entity(&editor, |native, window, cx| {
-            native.marked_text_range(window, cx).is_some()
-        });
+        let (has_marked_text, trace_window) =
+            context.update_entity(&editor, |native, window, cx| {
+                (
+                    native.marked_text_range(window, cx).is_some(),
+                    window.window_handle().window_id(),
+                )
+            });
         let must_inspect = owner_changed
-            || (had_marked_text && !has_marked_text)
+            || (!gpui::fast_draw_first_enabled() && had_marked_text && !has_marked_text)
             || ((self.disabled || self.readonly) && (native_changed.get() || has_marked_text));
         let value_changed = ((self.disabled || self.readonly) && has_marked_text)
             || (must_inspect
                 && editor.read(context.app()).value().as_ref() != current_value.as_str());
         let native = editor.read(context.app());
+        gpui::fast_latency_config(
+            trace_window,
+            "g53_rustui_render_text",
+            [
+                native.text().len() as f64,
+                current_value.len() as f64,
+                owner_changed as u8 as f64,
+                0.,
+            ],
+        );
         let language_changed = native.language_name() != self.language;
         let placeholder_changed = native.presentation().placeholder() != &resolved_placeholder;
         if value_changed || language_changed || placeholder_changed || line_numbers_changed {
@@ -284,7 +298,17 @@ impl View for CodeEditorView {
             context.subscribe_retained(&self.id, &editor, move |editor, event: &InputEvent, cx| {
                 if matches!(event, InputEvent::Change) {
                     native_changed.set(true);
+                    gpui::fast_latency_config(
+                        trace_window,
+                        "g53_rustui_binding_start",
+                        [editor.read(cx).text().len() as f64, 0., 0., 0.],
+                    );
                     write_with_current_writer(&writer, editor.read(cx).value().to_string(), cx);
+                    gpui::fast_latency_config(
+                        trace_window,
+                        "g53_rustui_binding_end",
+                        [editor.read(cx).text().len() as f64, 0., 0., 0.],
+                    );
                 }
             });
         }
@@ -804,3 +828,7 @@ mod tests {
         }
     }
 }
+
+#[cfg(test)]
+#[path = "code_editor_draw_first_tests.rs"]
+mod draw_first_tests;

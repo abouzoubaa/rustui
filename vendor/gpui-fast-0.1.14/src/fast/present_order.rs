@@ -57,6 +57,9 @@ fn order(window: WindowId, surface: u64) -> SharedOrder {
         .clone()
 }
 thread_local! {static ORDER_FRAME: std::cell::Cell<Option<(WindowId,u64)>>=const{std::cell::Cell::new(None)};}
+pub(crate) fn scene_version(window: WindowId) -> u64 {
+    order(window, 0).lock().unwrap().painted
+}
 pub(crate) fn painted(window: WindowId) {
     if crate::fast_immediate_enabled() {
         let s = order(window, 0);

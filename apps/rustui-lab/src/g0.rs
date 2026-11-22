@@ -59,7 +59,12 @@ impl Scene {
     fn hz(self) -> u32 {
         match self {
             Self::Idle => 0,
-            Self::Typing | Self::Log => 10,
+            Self::Typing => std::env::var("RUSTUI_G0_TYPING_HZ")
+                .ok()
+                .and_then(|s| s.parse().ok())
+                .filter(|hz| [10, 30].contains(hz))
+                .unwrap_or(10),
+            Self::Log => 10,
             Self::Hover | Self::Drag | Self::Acceptance => 120,
         }
     }

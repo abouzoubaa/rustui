@@ -1994,9 +1994,10 @@ impl Window {
                 if crate::fast::immediate_present::scheduled(
                     handle,
                     force_render
-                        || request_frame_options.require_presentation
-                        || needs_present.get()
-                        || high_rate_input,
+                        || (!crate::fast_coalesce_enabled()
+                            && (request_frame_options.require_presentation
+                                || needs_present.get()
+                                || high_rate_input)),
                     &mut cx,
                 ) {
                     return;
@@ -2090,6 +2091,7 @@ impl Window {
                                     // atlas tile references after a GPU device recovery.
                                     window.refresh();
                                 }
+                                crate::fast::change_present::configure(window, cx);
                                 let arena_clear_needed = window.draw(cx);
                                 window.present();
                                 arena_clear_needed.clear(cx);

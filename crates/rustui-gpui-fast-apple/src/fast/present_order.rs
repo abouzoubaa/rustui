@@ -8,7 +8,7 @@ pub(crate) fn acquisition_allowed(
     count: usize,
     limit: usize,
 ) -> bool {
-    !enabled || (!attached && crate::fast::drawable_capacity::allowed(count, limit))
+    !enabled || (!attached && count < limit)
 }
 // Track complete drawable lifetimes separately from command-buffer scheduling.
 // 0 = nextDrawable (NSView/CV/immediate); 1 = supplied Metal-link drawable.
@@ -42,22 +42,6 @@ impl Default for OrderState {
 impl OrderState {
     pub(crate) fn drained(&self, window: gpui::WindowId) -> bool {
         gpui::fast_order_drained(window, self.surface)
-    }
-    pub(crate) fn capacity_blocked(&self, count: usize, pool: usize) {
-        if gpui::fast_immediate_enabled() && !crate::fast::drawable_capacity::allowed(count, pool) {
-            if let Some(window) = self.window.get() {
-                gpui::fast_latency_config(
-                    window,
-                    "g5_capacity_blocked",
-                    [
-                        self.surface as f64,
-                        count as f64,
-                        pool as f64,
-                        crate::fast::drawable_capacity::reserve_two() as u8 as f64,
-                    ],
-                );
-            }
-        }
     }
     pub(crate) fn surface(&self) -> u64 {
         self.surface

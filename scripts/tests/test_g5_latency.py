@@ -2,13 +2,21 @@ import sys
 import unittest
 from pathlib import Path
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
-from g5_latency import distribution, p_verdict, refresh_metrics, classify_inputs, pixel_metrics, background_cpu_percent, acquisition_checks, background_load, annotate_load, reference, callback_presentation_metrics, rendered_frame_counts, presentation_order_violations, surface_commits
+from g5_latency import distribution, p_verdict, refresh_metrics, classify_inputs, pixel_metrics, background_cpu_percent, acquisition_checks, background_load, annotate_load, reference, callback_presentation_metrics, rendered_frame_counts, presentation_order_violations, surface_commits, visible_change_slots
 
 
 class LatencyTests(unittest.TestCase):
     def test_order_violations_count_stale_frames_against_each_windows_high_water(self):
         self.assertEqual(presentation_order_violations([('w',8),('w',6),('z',1),('w',7)]),2)
         self.assertEqual(presentation_order_violations([('w',6),('z',1),('w',7),('z',1),('w',8)]),0)
+
+    def test_equal_presented_time_does_not_invent_order_from_clock_conversion_jitter(self):
+        self.assertEqual(presentation_order_violations([('w',49,1.0),('w',48,1.0),('w',50,2.0)]),0)
+        self.assertEqual(presentation_order_violations([('w',8,1.0),('w',6,2.0),('w',7,3.0)]),2)
+
+    def test_same_time_versions_occupy_one_visible_slot_and_overlap_is_unknown(self):
+        result=visible_change_slots([('w',1,1.),('w',2,1.),('w',2,2.),('w',3,3.)],0.,4.)
+        self.assertEqual(result,{'visible_change_slots':2,'ambiguous_presented_slots':1,'presentation_slots':3})
 
     def test_composition_order_is_checked_per_surface(self):
         events=[{"event":"config","kind":"g5_surface_submit","window":"w","values":[1,8,1,1],"mach":1},

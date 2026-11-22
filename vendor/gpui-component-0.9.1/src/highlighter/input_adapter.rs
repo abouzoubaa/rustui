@@ -27,6 +27,9 @@ pub(crate) fn input_highlighter_factory() -> InputHighlighterFactory {
     })
 }
 
+#[path = "draw_first_background.rs"]
+mod draw_first_background;
+
 const SYNC_PARSE_TIMEOUT: Duration = Duration::from_millis(2);
 const SYNC_PARSE_MAX_BYTES: usize = 256 * 1024;
 const PARSE_DEBOUNCE: Duration = Duration::from_millis(150);
@@ -38,8 +41,10 @@ struct TreeSitterInputHighlighter {
 
 impl TreeSitterInputHighlighter {
     fn new(language: &str) -> Self {
+        let mut inner = SyntaxHighlighter::new(language);
+        inner.draw_first_cached = gpui::fast_draw_first_enabled();
         Self {
-            inner: Rc::new(RefCell::new(SyntaxHighlighter::new(language))),
+            inner: Rc::new(RefCell::new(inner)),
             parse_task: Rc::new(RefCell::new(None)),
         }
     }
@@ -64,6 +69,7 @@ impl TreeSitterInputHighlighter {
         let language = highlighter.borrow().language().clone();
         let old_tree = highlighter.borrow().tree().cloned();
         let injection_data = highlighter.borrow().injection_parse_data();
+        let highlight_query = highlighter.borrow().draw_first_query();
         let text = text.clone();
         let text_for_apply = text.clone();
         let cancel = Arc::new(AtomicBool::new(false));
@@ -76,48 +82,49 @@ impl TreeSitterInputHighlighter {
                 }
             }
             let _cancel_guard = CancelOnDrop(cancel.clone());
-            cx.background_executor().timer(PARSE_DEBOUNCE).await;
+            if !gpui::fast_draw_first_enabled() {
+                cx.background_executor().timer(PARSE_DEBOUNCE).await;
+            }
 
             let parse_cancel = cancel.clone();
             let result = cx
                 .background_executor()
                 .spawn(async move {
-                    let (mut parser, grammar) =
-                        LanguageRegistry::singleton().parser(&language).ok()?;
-                    parser.set_language(&grammar).ok()?;
-                    let mut progress = |_: &tree_sitter::ParseState| {
-                        if parse_cancel.load(Ordering::Relaxed) {
-                            std::ops::ControlFlow::Break(())
-                        } else {
-                            std::ops::ControlFlow::Continue(())
-                        }
-                    };
-                    let options = ParseOptions::new().progress_callback(&mut progress);
-                    let tree = parser.parse_with_options(
-                        &mut |offset, _| parse_input_bytes(&text, offset),
-                        old_tree.as_ref(),
-                        Some(options),
-                    )?;
-                    if parse_cancel.load(Ordering::Relaxed) {
-                        return None;
-                    }
-                    let injections = injection_data.map_or_else(Default::default, |data| {
-                        SyntaxHighlighter::compute_injection_layers(data, &tree, &text)
-                    });
-                    let folds = if folding {
-                        extract_fold_ranges(&tree)
-                    } else {
-                        Vec::new()
-                    };
-                    Some((tree, injections, folds))
+                    draw_first_background::parse_snapshot(
+                        language,
+                        old_tree,
+                        injection_data,
+                        text,
+                        folding,
+                        parse_cancel,
+                        highlight_query,
+                    )
                 })
                 .await;
 
-            if let Some((tree, injections, folds)) = result {
+            if let Some((tree, injections, folds, cache)) = result {
+                if gpui::fast_draw_first_enabled()
+                    && !highlighter.borrow().text().eq(&text_for_apply)
+                {
+                    return;
+                }
+
                 highlighter
                     .borrow_mut()
                     .apply_background_tree(tree, &text_for_apply, injections);
-                let _ = entity.update(cx, |state, cx| {
+                highlighter.borrow_mut().replace_draw_first_cache(cache);
+                if !gpui::fast_draw_first_enabled() {
+                    let _ = entity.update(cx, |state, cx| {
+                        state.apply_highlighter_fold_candidates(folds, cx)
+                    });
+                    return;
+                }
+                let _ = entity.update_in(cx, |state, window, cx| {
+                    gpui::fast_latency_config(
+                        window.window_handle().window_id(),
+                        "g53_highlight_applied",
+                        [text_for_apply.len() as f64, 0., 0., 0.],
+                    );
                     state.apply_highlighter_fold_candidates(folds, cx);
                 });
             }
@@ -153,7 +160,7 @@ impl InputHighlighter for TreeSitterInputHighlighter {
         let edit = edit.map(to_tree_sitter_edit);
         let completed = {
             let mut highlighter = self.inner.borrow_mut();
-            if text.len() > SYNC_PARSE_MAX_BYTES {
+            if gpui::fast_draw_first_enabled() || text.len() > SYNC_PARSE_MAX_BYTES {
                 highlighter.edit_tree(edit, text);
                 false
             } else {
@@ -179,7 +186,7 @@ impl InputHighlighter for TreeSitterInputHighlighter {
             .collect();
         let completed = {
             let mut highlighter = self.inner.borrow_mut();
-            if text.len() > SYNC_PARSE_MAX_BYTES {
+            if gpui::fast_draw_first_enabled() || text.len() > SYNC_PARSE_MAX_BYTES {
                 for edit in edits {
                     highlighter.edit_tree(Some(edit), text);
                 }

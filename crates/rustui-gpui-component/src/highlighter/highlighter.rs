@@ -24,6 +24,9 @@ mod rust_empty;
 #[path = "rust_empty_tests.rs"]
 mod rust_empty_tests;
 
+#[path = "draw_first_cache.rs"]
+pub(crate) mod draw_first_cache;
+
 const MAX_INJECTION_RANGES: usize = 4096;
 const MAX_INJECTION_BYTES: usize = 512 * 1024;
 const MAX_INJECTION_LANGUAGE_BYTES: usize = 64;
@@ -37,7 +40,10 @@ const INJECTION_PARSE_TIMEOUT: Duration = Duration::from_millis(20);
 #[allow(unused)]
 pub struct SyntaxHighlighter {
     language: SharedString,
-    query: Option<Query>,
+    query: Option<Arc<Query>>,
+    pub(crate) draw_first_cached: bool,
+    draw_first_edits: Vec<InputEdit>,
+    pub(crate) draw_first_cache: Option<Arc<draw_first_cache::Cache>>,
     /// The full injections query. This is used to build injection layers during parsing.
     injections_query: Option<Arc<Query>>,
 
@@ -404,6 +410,9 @@ impl SyntaxHighlighter {
         Self {
             language,
             query: None,
+            draw_first_cached: false,
+            draw_first_edits: Vec::new(),
+            draw_first_cache: None,
             injections_query: None,
             locals_pattern_index: 0,
             highlights_pattern_index: 0,
@@ -533,7 +542,10 @@ impl SyntaxHighlighter {
         );
         Ok(Self {
             language: config.name.clone(),
-            query: Some(query),
+            query: Some(Arc::new(query)),
+            draw_first_cached: false,
+            draw_first_edits: Vec::new(),
+            draw_first_cache: None,
             injections_query,
 
             locals_pattern_index,
@@ -565,6 +577,14 @@ impl SyntaxHighlighter {
     /// Apply only the structural `edit` to the existing tree and update the stored text,
     /// without re-parsing.
     pub fn edit_tree(&mut self, edit: Option<InputEdit>, text: &Rope) {
+        if self.draw_first_cached {
+            if let Some(edit) = edit {
+                self.draw_first_edits.push(edit);
+            } else {
+                self.draw_first_cache = None;
+                self.draw_first_edits.clear();
+            }
+        }
         self.rust_empty.invalidate();
         if let (Some(edit), Some(tree)) = (edit, self.tree.as_mut()) {
             tree.edit(&edit);
@@ -1036,6 +1056,9 @@ impl SyntaxHighlighter {
     ///
     /// `injection_layers` must also be pre-computed in the background via
     /// [`compute_injection_layers`] to avoid blocking the main thread.
+    pub(crate) fn draw_first_query(&self) -> Option<Arc<Query>> {
+        self.draw_first_cached.then(|| self.query.clone()).flatten()
+    }
     pub(crate) fn apply_background_tree(
         &mut self,
         tree: Tree,
@@ -1078,115 +1101,21 @@ impl SyntaxHighlighter {
 
     /// Match the visible ranges of nodes in the Tree for highlighting.
     fn match_styles(&self, range: Range<usize>) -> Vec<HighlightItem> {
-        let mut highlights = vec![];
-        let mut injection_highlights = vec![];
-        let Some(tree) = &self.tree else {
-            return highlights;
-        };
-
-        let Some(query) = &self.query else {
-            return highlights;
-        };
-
-        let root_node = tree.root_node();
-        let source = &self.text;
-
-        // Query pre-parsed injection layers.
-        let mut last_layer_start = 0;
-        for layer in &self.injection_layers {
-            debug_assert!(layer.byte_range.start >= last_layer_start);
-            last_layer_start = layer.byte_range.start;
-
-            if layer.byte_range.end <= range.start {
-                continue;
-            }
-
-            // Layers are sorted by start byte in compute_injection_layers.
-            if layer.byte_range.start >= range.end {
-                break;
-            }
-
-            let query = &layer.highlight_query;
-
-            let mut query_cursor = QueryCursor::new();
-            query_cursor.set_byte_range(range.clone());
-
-            let mut matches =
-                query_cursor.matches(query, layer.tree.root_node(), TextProvider(&self.text));
-
-            let mut last_end = 0usize;
-            while let Some(m) = matches.next() {
-                let allow_overlapping_captures = query
-                    .property_settings(m.pattern_index)
-                    .iter()
-                    .any(|prop| prop.key.as_ref() == "highlight.allow-overlap");
-
-                for cap in m.captures() {
-                    let node_range = cap.node.start_byte()..cap.node.end_byte();
-
-                    if !allow_overlapping_captures && node_range.start < last_end {
-                        continue;
-                    }
-
-                    if let Some(highlight_name) = query.capture_names().get(cap.index as usize) {
-                        if !allow_overlapping_captures {
-                            last_end = node_range.end;
-                        }
-                        injection_highlights.push(HighlightItem::new(
-                            node_range,
-                            SharedString::from(highlight_name.to_string()),
-                        ));
-                    }
-                }
-            }
+        if self.draw_first_cached {
+            return self
+                .draw_first_cache
+                .as_ref()
+                .map_or_else(Vec::new, |cache| {
+                    cache.matches(range, &self.draw_first_edits)
+                });
         }
-
-        let mut query_cursor = QueryCursor::new();
-        query_cursor.set_byte_range(range.clone());
-
-        let mut matches = query_cursor.matches(query, root_node, TextProvider(source));
-
-        while let Some(query_match) = matches.next() {
-            for cap in query_match.captures() {
-                let node = cap.node;
-
-                let Some(highlight_name) = query.capture_names().get(cap.index as usize) else {
-                    continue;
-                };
-
-                let node_range: Range<usize> = node.start_byte()..node.end_byte();
-                let highlight_name = SharedString::from(highlight_name.to_string());
-
-                // Merge near range and same highlight name
-                let last_item = highlights.last();
-                let last_range = last_item.map(|item| &item.range).unwrap_or(&(0..0));
-                let last_highlight_name = last_item.map(|item| item.name.clone());
-
-                if last_range == &node_range {
-                    // case:
-                    // last_range: 213..220, last_highlight_name: Some("property")
-                    // last_range: 213..220, last_highlight_name: Some("string")
-                    highlights.push(HighlightItem::new(
-                        node_range,
-                        last_highlight_name.unwrap_or(highlight_name),
-                    ));
-                } else {
-                    highlights.push(HighlightItem::new(node_range, highlight_name.clone()));
-                }
-            }
+        draw_first_cache::Snapshot {
+            tree: self.tree.as_ref(),
+            query: self.query.as_deref(),
+            text: &self.text,
+            layers: &self.injection_layers,
         }
-
-        // Injected languages are more specific than the host language. Keep
-        // them last so their colors win over broad Markdown captures such as
-        // `fenced_code_block @text.literal`.
-        highlights.extend(injection_highlights);
-
-        // DO NOT REMOVE THIS PRINT, it's useful for debugging
-        // for item in highlights {
-        //     println!("item: {:?}", item);
-        // }
-
-        highlights
+        .matches(range)
     }
 
     /// Parses `text` without reusing a tree from unrelated text and returns

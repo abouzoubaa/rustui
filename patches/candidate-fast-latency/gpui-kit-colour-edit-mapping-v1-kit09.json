@@ -1,0 +1,48 @@
+{
+  "schema_version": 1,
+  "name": "gpui-kit-colour-edit-mapping-v1-kit09",
+  "patch": "gpui-kit-colour-edit-mapping-v1-kit09.patch",
+  "patch_sha256": "6870a1fb03cf1d2ea1d417cd486b22d9cec2315f38661abd20cf03344df3409f",
+  "files": {
+    "vendor/gpui-component-0.9.1/src/highlighter/highlighter.rs": {
+      "pre_sha256": "b86553ff01cb6d71e21013d0ce9fe28a348a906f9848c34f307f14120050be20",
+      "post_sha256": "1a7572eaf9e4207fc79e503c738aad40a5813cad7a9b8a2a0062f31ab5149964"
+    },
+    "vendor/gpui-component-0.9.1/src/highlighter/draw_first_cache.rs": {
+      "pre_sha256": "9800227f15afa770971585d414d4043ee83af64917a725b9ee35e7fcfa3a56eb",
+      "post_sha256": "e7a60b9a458f8b074d3c9519ce5faf6d0c4b85f15baf7b3735d236a96b298b92"
+    },
+    "vendor/gpui-component-0.9.1/src/highlighter/input_adapter.rs": {
+      "pre_sha256": "6368e7e3aa5d5fa23ea083fe9462a69eb6d7b752aba552fec642f80fd5c928a8",
+      "post_sha256": "521ab2e52db95435901c0c547606bbc9bbaf8b89589ecd9164cb542e64330836"
+    },
+    "vendor/gpui-component-0.9.1/src/highlighter/draw_first_background.rs": {
+      "pre_sha256": "a941d2df36fc8181043e149b59e24080332c717024e8d4f3d01e1d111d937246",
+      "post_sha256": "9482e38fe7a21005bf9ee2429a540c7abf1226f3e0cb57e6d4bca042016b0a38"
+    },
+    "crates/rustui-gpui-component/src/highlighter/highlighter.rs": {
+      "pre_sha256": "b86553ff01cb6d71e21013d0ce9fe28a348a906f9848c34f307f14120050be20",
+      "post_sha256": "1a7572eaf9e4207fc79e503c738aad40a5813cad7a9b8a2a0062f31ab5149964"
+    },
+    "crates/rustui-gpui-component/src/highlighter/draw_first_cache.rs": {
+      "pre_sha256": "9800227f15afa770971585d414d4043ee83af64917a725b9ee35e7fcfa3a56eb",
+      "post_sha256": "e7a60b9a458f8b074d3c9519ce5faf6d0c4b85f15baf7b3735d236a96b298b92"
+    },
+    "crates/rustui-gpui-component/src/highlighter/input_adapter.rs": {
+      "pre_sha256": "6368e7e3aa5d5fa23ea083fe9462a69eb6d7b752aba552fec642f80fd5c928a8",
+      "post_sha256": "521ab2e52db95435901c0c547606bbc9bbaf8b89589ecd9164cb542e64330836"
+    },
+    "crates/rustui-gpui-component/src/highlighter/draw_first_background.rs": {
+      "pre_sha256": "a941d2df36fc8181043e149b59e24080332c717024e8d4f3d01e1d111d937246",
+      "post_sha256": "9482e38fe7a21005bf9ee2429a540c7abf1226f3e0cb57e6d4bca042016b0a38"
+    },
+    "vendor/gpui-component-0.9.1/.cargo-checksum.json": {
+      "pre_sha256": "b295f1a1cd37552c4eafb1267c6a02b46c64bc5299d5a8708fd2416f2a6fe861",
+      "post_sha256": "02242daa60993264cf48ccf2a44cac7f40817e7c37f78226838774f55f7f22fe"
+    },
+    "crates/rustui-gpui-component/.cargo-checksum.json": {
+      "pre_sha256": "b295f1a1cd37552c4eafb1267c6a02b46c64bc5299d5a8708fd2416f2a6fe861",
+      "post_sha256": "02242daa60993264cf48ccf2a44cac7f40817e7c37f78226838774f55f7f22fe"
+    }
+  }
+}

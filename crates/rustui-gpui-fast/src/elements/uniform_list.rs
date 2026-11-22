@@ -590,6 +590,14 @@ impl Element for UniformList {
         window: &mut Window,
         cx: &mut App,
     ) {
+        if let Some(handle) = &self.scroll_handle {
+            let p = handle.0.borrow().base_handle.offset();
+            crate::fast_latency_config(
+                window.window_handle().window_id(),
+                "g53_list_paint_offset",
+                [f32::from(p.x) as f64, f32::from(p.y) as f64, 0., 0.],
+            );
+        }
         self.interactivity.paint(
             global_id,
             inspector_id,

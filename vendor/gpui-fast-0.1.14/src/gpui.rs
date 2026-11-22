@@ -386,6 +386,8 @@ pub use fast::latency_breakdown::{
 };
 
 #[doc(hidden)]
+#[doc(hidden)]
+pub use fast::edit_present::fast_draw_first_enabled;
 pub use fast::immediate_present::{
     fast_immediate_active, fast_immediate_demand, fast_immediate_enabled,
     fast_immediate_hold_active, fast_immediate_suspend,
@@ -401,4 +403,9 @@ pub use fast::present_order::{
 pub use fast::frame_pacing::{
     fast_force_legacy_link, fast_frame_ahead_enabled, fast_frame_continuous,
     fast_frame_input_active, fast_frame_uses_view, fast_view_link_requested,
+};
+
+#[doc(hidden)]
+pub use fast::change_present::{
+    fast_any_change_enabled, fast_coalesce_enabled, fast_surface_admit, fast_surface_submitted,
 };

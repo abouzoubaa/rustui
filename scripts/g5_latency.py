@@ -162,13 +162,39 @@ def callback_presentation_metrics(events, displays, start, end, scale):
 
 
 def presentation_order_violations(observations):
-    highest = {}
+    highest, groups = {}, {}
     count = 0
-    for window, version in observations:
-        previous = highest.get(window, -1)
-        count += version < previous
-        highest[window] = max(previous, version)
+    for item in observations:
+        window, version = item[:2]
+        if len(item)==2:
+            previous=highest.get(window,-1);count+=version<previous;highest[window]=max(previous,version)
+            continue
+        host=item[2]
+        group=groups.get(window)
+        if group is None or host!=group[0]:
+            previous=max(highest.get(window,-1),group[2] if group else -1)
+            groups[window]=(host,previous,version);highest[window]=previous
+        else:
+            previous=group[1];groups[window]=(host,previous,max(group[2],version))
+        count+=version<previous
     return count
+
+
+def visible_change_slots(observations, start, end):
+    """A conservative count: disjoint version sets prove a visible change.
+
+    Multiple callbacks at one presentedTime occupy one refresh slot. Overlapping
+    possible-version sets cannot prove a second visible change and are excluded.
+    """
+    grouped={}
+    for key,version,host in observations:grouped.setdefault((key,host),set()).add(version)
+    previous={};changed=ambiguous=slots=0
+    for (key,host),versions in sorted(grouped.items(),key=lambda item:item[0][1]):
+        old=previous.get(key,set())
+        if start<=host<=end:
+            slots+=1;ambiguous+=len(versions)>1;changed+=not bool(old&versions)
+        previous[key]=versions
+    return {'visible_change_slots':changed,'ambiguous_presented_slots':ambiguous,'presentation_slots':slots}
 
 
 def surface_commits(events):
@@ -233,10 +259,10 @@ def bare(data, floor_frames):
     version_observations = []
     first_frames = []
     first_input = min((r["mach"] for r in inputs.values()), default=end["mach"])
-    for shown_mach, r, attempt, paint in sorted(displays, key=lambda item: item[0]):
+    for shown_mach, r, attempt, paint in sorted(displays, key=lambda item: (item[1]["presented_host"],item[2]["draw"])):
         if shown_mach >= first_input:
             versions.append(paint["version"])
-            version_observations.append(((r["window"],surfaces.get((r["window"],r["drawable"]),(0,None))[0]),paint["version"]))
+            version_observations.append(((r["window"],surfaces.get((r["window"],r["drawable"]),(0,None))[0]),paint["version"],r["presented_host"]))
         key = (r["window"], paint["version"])
         inp = inputs.get(key)
         draw_key = (r["window"], attempt["draw"])
@@ -279,6 +305,11 @@ def bare(data, floor_frames):
               "cpu_s_per_attempt": cpu / count, "draw_present_ms_per_attempt": statistics.mean(frames),
               "frames_over_8_3_ms": sum(v > 8.3 for v in frames),
               "queue_count_max": max((r["values"][0] for r in configs if r["kind"] == "g5_queue"), default=None)}
+    slot_observations=[((r['window'],surfaces.get((r['window'],r['drawable']),(0,None))[0]),p['version'],r['presented_host']) for _,r,a,p in displays]
+    slots=visible_change_slots(slot_observations,start['mach']*scale,end['mach']*scale)
+    result.update(slots)
+    result['visible_versions_per_second']=slots['visible_change_slots']/seconds
+    result['distinct_presentation_slots_per_second']=slots['presentation_slots']/seconds
     result.update(rendered_frame_counts(events, displays, start["mach"], end["mach"]))
     result.update(acquisition_checks(events, start["mach"], end["mach"]))
     result.update(refresh_metrics([r["timestamp"] for r in data["G5_REFRESH "]], pairs, floor_frames))

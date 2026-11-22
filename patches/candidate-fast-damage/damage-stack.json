@@ -17,6 +17,10 @@
     "../candidate-fast-latency/gpui-fast-immediate-present-v1-fast.json",
     "../candidate-fast-latency/gpui-fast-present-order-safety-v1-fast.json",
     "../candidate-fast-latency/gpui-fast-frame-ahead-view-link-v1-fast.json",
-    "../candidate-fast-latency/gpui-fast-drawable-reserve-v1-fast.json"
+    "../candidate-fast-latency/gpui-fast-draw-first-v1-fast.json",
+    "../candidate-fast-latency/gpui-fast-change-coalescing-v1-fast.json",
+    "../candidate-fast-latency/gpui-kit-draw-first-oracles-v1-kit09.json",
+    "../candidate-fast-latency/gpui-kit-async-colours-v1-kit09.json",
+    "../candidate-fast-latency/gpui-kit-colour-edit-mapping-v1-kit09.json"
   ]
 }

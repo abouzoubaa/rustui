@@ -17,6 +17,10 @@
     "gpui-fast-immediate-present-v1-fast.json",
     "gpui-fast-present-order-safety-v1-fast.json",
     "gpui-fast-frame-ahead-view-link-v1-fast.json",
-    "gpui-fast-drawable-reserve-v1-fast.json"
+    "gpui-fast-draw-first-v1-fast.json",
+    "gpui-fast-change-coalescing-v1-fast.json",
+    "gpui-kit-draw-first-oracles-v1-kit09.json",
+    "gpui-kit-async-colours-v1-kit09.json",
+    "gpui-kit-colour-edit-mapping-v1-kit09.json"
   ]
 }

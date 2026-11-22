@@ -534,19 +534,6 @@ impl MetalRenderer {
         !gpui::fast_immediate_enabled() || self.presents_with_transaction || self.immediate_ready()
     }
     pub fn frame_handoff_ready(&self) -> bool {
-        if gpui::fast_immediate_enabled() && crate::fast::drawable_capacity::reserve_two() {
-            if let Some(layer) = &self.layer {
-                if !crate::fast::drawable_capacity::allowed(
-                    self.immediate.count(),
-                    layer.maximumDrawableCount(),
-                ) {
-                    self.order
-                        .capacity_blocked(self.immediate.count(), layer.maximumDrawableCount());
-                    return false;
-                }
-            }
-        }
-
         !gpui::fast_frame_ahead_enabled()
             || self.presents_with_transaction
             || self.frame_ahead.ready()
@@ -563,16 +550,9 @@ impl MetalRenderer {
         !self.presents_with_transaction && self.layer.is_some()
     }
     pub fn immediate_ready(&self) -> bool {
-        let ready = !self.presents_with_transaction
+        !self.presents_with_transaction
             && self.frame_ahead.ready()
-            && self.layer.as_ref().is_some_and(|l| self.immediate.ready(l));
-        if !ready {
-            if let Some(layer) = &self.layer {
-                self.order
-                    .capacity_blocked(self.immediate.count(), layer.maximumDrawableCount());
-            }
-        }
-        ready
+            && self.layer.as_ref().is_some_and(|l| self.immediate.ready(l))
     }
     pub fn immediate_submitted(&self) -> bool {
         self.immediate.submitted()
@@ -710,6 +690,18 @@ impl MetalRenderer {
                 return;
             }
         };
+        match if self.presents_with_transaction {
+            0
+        } else {
+            gpui::fast_surface_admit(self.order.surface())
+        } {
+            1 => return,
+            2 => {
+                gpui::fast_order_defer();
+                return;
+            }
+            _ => {}
+        }
         let prepared = crate::fast::damage::frame::choose(self, scene);
         if prepared.mode == crate::fast::damage::frame::Mode::Same {
             gpui::fast_frame_reason(prepared.mode.label(), prepared.reason);
@@ -823,6 +815,7 @@ impl MetalRenderer {
             gpui::fast_order_defer();
             return;
         }
+        gpui::fast_surface_submitted(self.order.surface());
         crate::fast::presented::observe(&drawable);
         crate::fast::damage::metrics::on_commit(&command_buffer, self.damage.last_mode.label());
 

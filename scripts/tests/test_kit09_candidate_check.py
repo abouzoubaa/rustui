@@ -56,6 +56,11 @@ class KitCandidateCheckTests(unittest.TestCase):
         with self.assertRaisesRegex(RuntimeError, "postimage mismatch"):
             check_postimages(self.stack, self.root)
 
+    def test_candidate_without_explicit_option_is_rejected(self):
+        self.candidate()
+        with self.assertRaisesRegex(RuntimeError,"postimage mismatch"):
+            check_postimages(self.stack,self.root)
+
     def test_candidate_proves_absence_on_reverse_and_exact_reapplication(self):
         self.candidate()
         actions = []
@@ -66,8 +71,8 @@ class KitCandidateCheckTests(unittest.TestCase):
                 self.assertFalse((fixture / self.created).exists())
                 self.assertEqual((fixture / self.source).read_bytes(), b"old\n")
         with patch("apply_f0_fast_candidate_patch.run", side_effect=observe):
-            check_postimages(self.stack, self.root)
-        self.assertEqual(actions, ["--reverse", "--apply"])
+            check_postimages(self.stack, self.root, self.root / "patches/candidate-fast-damage/damage-stack.json")
+        self.assertEqual(actions, ["--reverse", "--apply", "--reverse"])
         self.assertEqual((self.root / self.created).read_bytes(), b"created\n")
         self.assertEqual((self.root / self.source).read_bytes(), b"new\n")
 
@@ -77,19 +82,19 @@ class KitCandidateCheckTests(unittest.TestCase):
         data["files"][self.source]["pre_sha256"] = digest(b"unapproved\n")
         self.manifest.write_text(json.dumps(data))
         with self.assertRaisesRegex(RuntimeError, "does not chain from approved"):
-            check_postimages(self.stack, self.root)
+            check_postimages(self.stack, self.root, self.root / "patches/candidate-fast-damage/damage-stack.json")
 
     def test_tampered_patch_is_rejected(self):
         self.candidate()
         self.write("patches/proposed/example.patch", b"tampered\n")
         with self.assertRaisesRegex(ValueError, "patch hash mismatch"):
-            check_postimages(self.stack, self.root)
+            check_postimages(self.stack, self.root, self.root / "patches/candidate-fast-damage/damage-stack.json")
 
     def test_tampered_new_file_is_rejected(self):
         self.candidate()
         self.write(self.created, b"tampered\n")
         with self.assertRaisesRegex(RuntimeError, "postimage mismatch"):
-            check_postimages(self.stack, self.root)
+            check_postimages(self.stack, self.root, self.root / "patches/candidate-fast-damage/damage-stack.json")
 
     def checksum_candidate(self):
         # Historical approved Kit tables omitted Cargo checksum metadata and
@@ -106,18 +111,40 @@ class KitCandidateCheckTests(unittest.TestCase):
         data["files"][name] = {"pre_sha256": digest(old), "post_sha256": digest(new)}
         self.manifest.write_text(json.dumps(data))
         self.write(name, new)
+        self.catalog({self.source:digest(b"old\n"),name:digest(old)}, {name:digest(old),self.source:digest(b"old\n")})
         return name
+
+    def catalog(self,files,anchors):
+        self.write("scripts/fixtures/kit09-approved-cargo-state.json",json.dumps({"files":files,"cargo_anchors":anchors,"crate_prefixes":["vendor/gpui-component-0.9.1"]}).encode())
+
+    def test_existing_source_is_anchored_to_approved_cargo_map(self):
+        self.candidate()
+        other="vendor/gpui-component-0.9.1/src/unchanged.rs"
+        meta="vendor/gpui-component-0.9.1/.cargo-checksum.json"
+        old=json.dumps({"files":{"src/a.rs":digest(b"old\n"),"src/unchanged.rs":digest(b"base\n")}}).encode()+b"\n"
+        new=json.dumps({"files":{"src/a.rs":digest(b"new\n"),"src/unchanged.rs":digest(b"changed\n"),"src/new.rs":digest(b"created\n")}}).encode()+b"\n"
+        patch_path=self.manifest.with_suffix(".patch")
+        text=patch_path.read_text()+(f"diff --git a/{other} b/{other}\n--- a/{other}\n+++ b/{other}\n@@ -1 +1 @@\n-base\n+changed\n"+f"diff --git a/{meta} b/{meta}\n--- a/{meta}\n+++ b/{meta}\n@@ -1 +1 @@\n-{old.decode()}+{new.decode()}")
+        patch_path.write_text(text);data=json.loads(self.manifest.read_text());data["patch_sha256"]=digest(text.encode());data["files"].update({other:{"pre_sha256":digest(b"base\n"),"post_sha256":digest(b"changed\n")},meta:{"pre_sha256":digest(old),"post_sha256":digest(new)}});self.manifest.write_text(json.dumps(data))
+        self.write(other,b"changed\n");self.write(meta,new)
+        self.catalog({self.source:digest(b"old\n"),other:digest(b"base\n"),meta:digest(old)}, {self.source:digest(b"old\n"),other:digest(b"base\n"),meta:digest(old)})
+        check_postimages(self.stack,self.root,self.root/"patches/candidate-fast-damage/damage-stack.json")
+        with self.assertRaisesRegex(RuntimeError,"postimage mismatch"):
+            check_postimages(self.stack,self.root)
+        self.write(other,b"tampered\n")
+        with self.assertRaisesRegex(RuntimeError,"postimage mismatch"):
+            check_postimages(self.stack,self.root,self.root/"patches/candidate-fast-damage/damage-stack.json")
 
     def test_explicit_checksum_preimage_reverses_without_changing_approved_sources(self):
         name = self.checksum_candidate()
-        check_postimages(self.stack, self.root)
+        check_postimages(self.stack, self.root, self.root / "patches/candidate-fast-damage/damage-stack.json")
         self.assertIn(b'candidate', (self.root / name).read_bytes())
 
     def test_tampered_checksum_postimage_is_rejected(self):
         name = self.checksum_candidate()
         self.write(name, b"unknown\n")
         with self.assertRaisesRegex(RuntimeError, "postimage mismatch"):
-            check_postimages(self.stack, self.root)
+            check_postimages(self.stack, self.root, self.root / "patches/candidate-fast-damage/damage-stack.json")
 
     def test_existing_source_without_approved_anchor_is_rejected(self):
         self.candidate()
@@ -126,7 +153,7 @@ class KitCandidateCheckTests(unittest.TestCase):
             "pre_sha256": digest(b"old\n"), "post_sha256": digest(b"new\n")}
         self.manifest.write_text(json.dumps(data))
         with self.assertRaisesRegex(RuntimeError, "lacks an approved base image"):
-            check_postimages(self.stack, self.root)
+            check_postimages(self.stack, self.root, self.root / "patches/candidate-fast-damage/damage-stack.json")
 
     def test_unsafe_target_is_rejected_before_fixture_copy(self):
         self.candidate()
@@ -137,7 +164,7 @@ class KitCandidateCheckTests(unittest.TestCase):
                 data["files"][target] = {"pre_sha256": None, "post_sha256": digest(b"new\n")}
                 self.manifest.write_text(json.dumps(data))
                 with self.assertRaisesRegex(ValueError, "unsafe candidate target"):
-                    check_postimages(self.stack, self.root)
+                    check_postimages(self.stack, self.root, self.root / "patches/candidate-fast-damage/damage-stack.json")
 
     def test_symlink_target_is_rejected_before_fixture_copy(self):
         self.candidate()
@@ -145,7 +172,7 @@ class KitCandidateCheckTests(unittest.TestCase):
         (self.root / self.created).unlink()
         (self.root / self.created).symlink_to(self.root / "elsewhere")
         with self.assertRaisesRegex(RuntimeError, "non-regular candidate target"):
-            check_postimages(self.stack, self.root)
+            check_postimages(self.stack, self.root, self.root / "patches/candidate-fast-damage/damage-stack.json")
 
 
 if __name__ == "__main__":

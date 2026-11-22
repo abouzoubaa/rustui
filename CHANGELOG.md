@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+- G5-3b: add opt-in draw-first editor effects, background syntax colours and per-surface immediate change coalescing; retire the drawable reserve experiment.
+
 - Add an off-by-default two-free-drawable comparison and RustUI/F0 display-time and missed-slot diagnostics (G5-3).
 
 - Add per-surface G5-1 presentation-order, source-drain and legacy capacity safety; retain the unadopted NSView experiment off and retire Ahead (G5-2).
