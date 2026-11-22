@@ -534,6 +534,7 @@ extern "C" fn dealloc_overlay_view(this: &AnyObject, _: Sel) {
 pub(crate) fn draw_composed(window_state: &Rc<Mutex<MacWindowState>>, scene: ComposedScene<'_>) {
     let mut lock = window_state.lock();
     let state = &mut *lock;
+    begin_surface_frame(state);
     let Some(base_surface) = state.fast_composition.base_surface else {
         state.renderer.draw(scene.scene());
         return;
@@ -820,6 +821,7 @@ unsafe fn create_gpui_surface(
         state.fast_composition.renderer_context.clone(),
         &state.renderer,
     )?;
+    renderer.on_drawable_available(state.renderer.drawable_waker());
     let input_regions = Rc::new(RefCell::new(Vec::<gpui::Hitbox>::new()));
     let native_view = state.native_view.as_ptr();
     let class = OVERLAY_VIEW_CLASS.load(Ordering::Acquire).cast_const();
@@ -973,5 +975,33 @@ impl Drop for MacNativeSurface {
             let _: () = msg_send![self.view.as_ptr(), removeFromSuperview];
             let _: () = msg_send![self.view.as_ptr(), release];
         }
+    }
+}
+
+pub(crate) fn overlay_ready(state: &MacWindowState, window: gpui::WindowId) -> bool {
+    gpui::fast_immediate_enabled()
+        && state
+            .fast_composition
+            .gpui_surfaces
+            .values()
+            .any(|s| s.renderer.order_source_ready(window, 0) && s.renderer.immediate_ready())
+}
+pub(crate) fn any_immediate_ready(state: &MacWindowState, window: gpui::WindowId) -> bool {
+    (state.renderer.order_source_ready(window, 0) && state.renderer.immediate_ready())
+        || overlay_ready(state, window)
+}
+pub(crate) fn any_submitted(state: &MacWindowState) -> bool {
+    state.renderer.immediate_submitted()
+        || (gpui::fast_immediate_enabled()
+            && state
+                .fast_composition
+                .gpui_surfaces
+                .values()
+                .any(|s| s.renderer.immediate_submitted()))
+}
+pub(crate) fn begin_surface_frame(state: &MacWindowState) {
+    state.renderer.begin_surface_frame();
+    for s in state.fast_composition.gpui_surfaces.values() {
+        s.renderer.begin_surface_frame();
     }
 }

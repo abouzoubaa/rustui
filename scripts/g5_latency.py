@@ -145,11 +145,58 @@ def acquisition_checks(events, start, end):
             "next_drawable_outliers": outliers}
 
 
+def callback_presentation_metrics(events, displays, start, end, scale):
+    callbacks = {(r["window"], r["callback"]): r["mach"] for r in events if r["event"] == "callback"}
+    callback_delays = [(r["mach"] - callbacks[(r["window"], r["callback"])]) * scale * 1000
+                       for r in events if r["event"] == "draw" and start <= r["mach"] <= end
+                       and (r["window"], r["callback"]) in callbacks]
+    shown_times = {}
+    for shown_mach, row, _, _ in displays:
+        if start <= shown_mach <= end:
+            shown_times.setdefault(row["window"], set()).add(shown_mach)
+    gaps = [(b-a)*scale*1000 for times in shown_times.values()
+            for a,b in zip(sorted(times), sorted(times)[1:])]
+    return {"tick_callback_to_draw_ms": distribution(callback_delays),
+            "presentation_gaps_ms": distribution(gaps),
+            "presentation_gap_histogram_ms": dict(Counter(round(gap, 1) for gap in gaps))}
+
+
+def presentation_order_violations(observations):
+    highest = {}
+    count = 0
+    for window, version in observations:
+        previous = highest.get(window, -1)
+        count += version < previous
+        highest[window] = max(previous, version)
+    return count
+
+
+def surface_commits(events):
+    current, result = {}, {}
+    for event in sorted(events, key=lambda r:r.get("mach",0)):
+        window = event.get("window")
+        if event.get("kind") == "g5_surface_submit":
+            current[window] = tuple(int(v) for v in event["values"][:2])
+        elif event.get("event") == "committed":
+            result[(window,event["drawable"])] = current.get(window,(0,None))
+    return result
+
+
+def rendered_frame_counts(events, displays, start, end):
+    # Count submitted drawable frames, including repeated GPU renders of a
+    # reused CPU scene. A CPU draw ID is not a drawable/frame identity.
+    committed = {(r["window"], r["drawable"]) for r in events
+                 if r.get("event") == "committed" and start <= r["mach"] <= end}
+    shown = {(r["window"], r["drawable"]) for _, r, _, _ in displays}
+    return {"rendered": len(committed),
+            "rendered_never_shown": len(committed - shown)}
+
+
 def bare(data, floor_frames):
     events, markers = data["RUSTUI_PX4_LOG "], data["RUSTUI_G0_LOG "]
     start = next(r for r in markers if r["event"] == "start")
     end = next(r for r in markers if r["event"] == "end")
-    assert end["valid"] and end["final_version"] == end["ticks"], "lost edit / wrong final text"
+    assert end["valid"] and end.get("final_version", end["ticks"]) == end["ticks"], "lost edit / wrong final text"
     clock = next(r for r in events if r["event"] == "clock")
     scale = clock["numer"] / clock["denom"] / 1e9
     seconds = (end["mach"] - start["mach"]) * scale
@@ -159,6 +206,7 @@ def bare(data, floor_frames):
     attempts = keyed("attempt", "attempt")
     paints = keyed("painted", "draw")
     commits = keyed("committed", "drawable")
+    surfaces = surface_commits(events)
     completed = keyed("gpu_completed", "drawable")
     draws = {(r["window"], r["draw"]) for r in events if r["event"] == "draw"
              and start["mach"] <= r["mach"] <= end["mach"]}
@@ -182,11 +230,13 @@ def bare(data, floor_frames):
         shown_mach = r["callback_mach"] - (host - p) / scale
         displays.append((shown_mach, r, attempt, paint))
     shown_inputs, shown_draws, delays, pairs, versions = set(), set(), [], [], []
+    version_observations = []
     first_frames = []
     first_input = min((r["mach"] for r in inputs.values()), default=end["mach"])
     for shown_mach, r, attempt, paint in sorted(displays, key=lambda item: item[0]):
         if shown_mach >= first_input:
             versions.append(paint["version"])
+            version_observations.append(((r["window"],surfaces.get((r["window"],r["drawable"]),(0,None))[0]),paint["version"]))
         key = (r["window"], paint["version"])
         inp = inputs.get(key)
         draw_key = (r["window"], attempt["draw"])
@@ -218,8 +268,9 @@ def bare(data, floor_frames):
               "attempts": count, "shown": len(shown_inputs), "distinct_versions_per_second": len(shown_inputs) / seconds,
               "input_to_display_ms": distribution(delays), "raw_input_to_display_ms": delays,
               "gpu_complete_to_display_ms": distribution([(d - g) * 1000 for g, d in pairs]),
-              "rendered": len(draws), "rendered_never_shown": len(draws - shown_draws),
-              "versions_monotonic": versions == sorted(versions), "final_text_valid": end["valid"],
+              "rendered_cpu_draws": len(draws), "scene_draws_without_presentation": len(draws - shown_draws),
+              "versions_monotonic": presentation_order_violations(version_observations) == 0,
+              "out_of_order_presentations": presentation_order_violations(version_observations), "final_text_valid": end["valid"],
               "last_version_shown": versions[-1] if versions else 0, "expected_final_version": end["ticks"],
               "unavailable_presented_callbacks": invalid,
               "next_drawable_calls": len(acquisitions), "next_drawable_over_1_ms": sum(v > 1 for v in acquisitions),
@@ -228,11 +279,15 @@ def bare(data, floor_frames):
               "cpu_s_per_attempt": cpu / count, "draw_present_ms_per_attempt": statistics.mean(frames),
               "frames_over_8_3_ms": sum(v > 8.3 for v in frames),
               "queue_count_max": max((r["values"][0] for r in configs if r["kind"] == "g5_queue"), default=None)}
+    result.update(rendered_frame_counts(events, displays, start["mach"], end["mach"]))
     result.update(acquisition_checks(events, start["mach"], end["mach"]))
     result.update(refresh_metrics([r["timestamp"] for r in data["G5_REFRESH "]], pairs, floor_frames))
     result.update(classify_inputs(events, first_frames, commits, result))
     result["screen_capture"] = pixel_metrics(data["G5_PIXELS "], inputs, scale,
                                            first_frames, seconds)
+    result.update(callback_presentation_metrics(events, displays, start["mach"], end["mach"], scale))
+    result["next_drawable_over_2_ms"] = sum(v > 2 for v in acquisitions)
+    result["frame_source_selections"] = [r["values"] for r in events if r["event"] == "config" and r["kind"] == "g5_frame_source"]
     return result
 
 

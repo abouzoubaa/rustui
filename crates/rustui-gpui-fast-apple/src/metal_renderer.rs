@@ -138,6 +138,8 @@ pub struct MetalRenderer {
     pub(crate) presents_with_transaction: bool,
     display_link_mode: DisplayLinkMode,
     immediate: crate::fast::immediate_present::State,
+    frame_ahead: crate::fast::frame_pacing::State,
+    order: crate::fast::present_order::OrderState,
     /// For headless rendering, tracks whether output should be opaque
     pub(crate) opaque: bool,
     pub(crate) command_queue: Retained<ProtocolObject<dyn MTLCommandQueue>>,
@@ -434,6 +436,8 @@ impl MetalRenderer {
             presents_with_transaction: false,
             display_link_mode: DisplayLinkMode::Detached,
             immediate: Default::default(),
+            frame_ahead: Default::default(),
+            order: Default::default(),
             is_apple_gpu,
             is_unified_memory,
             opaque,
@@ -494,6 +498,10 @@ impl MetalRenderer {
     ) -> Option<Retained<ProtocolObject<dyn CAMetalDrawable>>> {
         let replaced = match &mut self.display_link_mode {
             DisplayLinkMode::Attached { drawable: current } => {
+                if let Some(old) = current.as_ref() {
+                    self.order.unused(old);
+                }
+                let drawable = drawable.filter(|d| self.order.track(d, 1));
                 self.immediate.replacing(current, &drawable);
                 mem::replace(current, drawable)
             }
@@ -510,6 +518,31 @@ impl MetalRenderer {
         replaced
     }
 
+    pub fn order_source_drained(&self, window: gpui::WindowId) -> bool {
+        self.order.drained(window)
+    }
+    pub fn begin_surface_frame(&self) {
+        self.immediate.reset_submitted();
+    }
+    pub fn drawable_waker(&self) -> Box<dyn Fn() + Send + Sync> {
+        self.immediate.wake_callback()
+    }
+    pub fn order_source_ready(&self, window: gpui::WindowId, source: u8) -> bool {
+        self.order.ready(window, source)
+    }
+    pub fn frame_callback_ready(&self) -> bool {
+        !gpui::fast_immediate_enabled() || self.presents_with_transaction || self.immediate_ready()
+    }
+    pub fn frame_handoff_ready(&self) -> bool {
+        !gpui::fast_frame_ahead_enabled()
+            || self.presents_with_transaction
+            || self.frame_ahead.ready()
+    }
+    pub fn frame_ahead_ready(&self) -> bool {
+        !gpui::fast_immediate_enabled()
+            || self.presents_with_transaction
+            || (self.frame_ahead.ready() && self.immediate_ready())
+    }
     pub fn immediate_in_flight(&self) -> usize {
         self.immediate.count()
     }
@@ -518,6 +551,7 @@ impl MetalRenderer {
     }
     pub fn immediate_ready(&self) -> bool {
         !self.presents_with_transaction
+            && self.frame_ahead.ready()
             && self.layer.as_ref().is_some_and(|l| self.immediate.ready(l))
     }
     pub fn immediate_submitted(&self) -> bool {
@@ -525,11 +559,16 @@ impl MetalRenderer {
     }
     pub fn on_drawable_available(&self, wake: Box<dyn Fn() + Send + Sync>) {
         self.immediate.set_waker(wake);
+        self.order.set_waker(self.immediate.wake_callback());
     }
 
     /// Record whether a `CAMetalDisplayLink` drives the layer. While one
     /// does, frames are drawn only into the drawables it hands out.
     pub fn set_display_link_attached(&mut self, attached: bool) {
+        if let DisplayLinkMode::Attached { drawable: Some(d) } = &self.display_link_mode {
+            self.order.unused(d);
+            self.immediate.unused(d);
+        }
         self.display_link_mode = if attached {
             DisplayLinkMode::Attached { drawable: None }
         } else {
@@ -657,12 +696,24 @@ impl MetalRenderer {
             crate::fast::damage::frame::skip(self, prepared);
             return;
         }
+        let source = if !gpui::fast_immediate_active()
+            && matches!(&self.display_link_mode, DisplayLinkMode::Attached { .. })
+        {
+            1
+        } else {
+            0
+        };
+        if !self.order.current_ready(source) {
+            gpui::fast_order_defer();
+            return;
+        }
         let drawable = if gpui::fast_immediate_active() {
             let Some(drawable) = crate::fast::immediate_present::next_drawable(
                 &layer,
                 &self.immediate,
                 matches!(&self.display_link_mode, DisplayLinkMode::Attached { .. }),
             ) else {
+                gpui::fast_order_defer();
                 return;
             };
             drawable
@@ -670,6 +721,7 @@ impl MetalRenderer {
             match &mut self.display_link_mode {
                 DisplayLinkMode::Attached { drawable } => {
                     let Some(drawable) = drawable.take() else {
+                        gpui::fast_order_defer();
                         log::error!("skipped a frame drawn outside its display link's update");
                         return;
                     };
@@ -681,6 +733,7 @@ impl MetalRenderer {
                         &self.immediate,
                         matches!(&self.display_link_mode, DisplayLinkMode::Attached { .. }),
                     ) else {
+                        gpui::fast_order_defer();
                         log::error!(
                             "failed to retrieve next drawable, drawable size: {:?}",
                             layer.drawableSize()
@@ -690,6 +743,10 @@ impl MetalRenderer {
                     drawable
                 }
             }
+        };
+        let Some(mut order_hold) = self.order.hold(&drawable, source) else {
+            gpui::fast_order_defer();
+            return;
         };
         let mut latency_hold = crate::fast::latency::hold(&drawable);
         let mut immediate_hold = self.immediate.hold(&drawable);
@@ -730,10 +787,30 @@ impl MetalRenderer {
                 "allocation_or_verify"
             },
         );
+        if let Some((window, version)) = gpui::fast_order_frame() {
+            gpui::fast_latency_config(
+                window,
+                "g5_surface_submit",
+                [
+                    self.order.surface() as f64,
+                    version as f64,
+                    source as f64,
+                    self.immediate.count() as f64,
+                ],
+            );
+        }
+        if !order_hold.submit() {
+            gpui::fast_order_defer();
+            return;
+        }
         crate::fast::presented::observe(&drawable);
         crate::fast::damage::metrics::on_commit(&command_buffer, self.damage.last_mode.label());
 
         let latency = crate::fast::latency::observe(&command_buffer, &drawable);
+        if gpui::fast_frame_ahead_enabled() && !self.presents_with_transaction {
+            self.frame_ahead
+                .observe(&command_buffer, self.immediate.wake_callback());
+        }
         latency_hold.submitted();
         crate::fast::immediate_present::begin(transaction_override);
         if self.presents_with_transaction || transaction_override {
@@ -746,6 +823,7 @@ impl MetalRenderer {
             command_buffer.commit();
             gpui::fast_latency_committed(latency);
         }
+        order_hold.submitted();
         self.immediate.did_submit();
         immediate_hold.submitted();
         crate::fast::immediate_present::end(transaction_override);

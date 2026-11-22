@@ -390,3 +390,15 @@ pub use fast::immediate_present::{
     fast_immediate_active, fast_immediate_demand, fast_immediate_enabled,
     fast_immediate_hold_active, fast_immediate_suspend,
 };
+
+#[doc(hidden)]
+pub use fast::present_order::{
+    FastOrderTicket, fast_order_acquire, fast_order_defer, fast_order_drained, fast_order_frame,
+    fast_order_ready,
+};
+
+#[doc(hidden)]
+pub use fast::frame_pacing::{
+    fast_force_legacy_link, fast_frame_ahead_enabled, fast_frame_continuous,
+    fast_frame_input_active, fast_frame_uses_view, fast_view_link_requested,
+};

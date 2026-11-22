@@ -1330,6 +1330,10 @@ pub trait PlatformWindow: HasWindowHandle + HasDisplayHandle {
     fn on_close(&self, callback: Box<dyn FnOnce()>);
     fn on_appearance_changed(&self, callback: Box<dyn FnMut()>);
     fn on_button_layout_changed(&self, _callback: Box<dyn FnMut()>) {}
+    fn resume_frame_source_after_drain(&self) {}
+    fn immediate_uses_view_link(&self) -> bool {
+        false
+    }
     fn immediate_supported(&self) -> bool {
         false
     }

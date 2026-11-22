@@ -95,6 +95,7 @@ struct DisplayEntry {
 }
 
 struct DisplayLinkSubscriber {
+    native_tick: Arc<crate::fast::frame_pacing::NativeTick>,
     id: SubscriberId,
     frame_requests: DispatchRetained<DispatchSource>,
     signal: Arc<PlatformFrameSignal>,
@@ -152,6 +153,7 @@ unsafe extern "C" fn display_link_output_callback(
     let registry = lock_registry();
     if let Some(entry) = registry.displays.get(&display_id) {
         for subscriber in &entry.subscribers {
+            subscriber.native_tick.record();
             if let Some(signal_at) = signal_at {
                 subscriber
                     .signal
@@ -191,6 +193,7 @@ fn frame_request_instant(
 
 fn subscribe(
     display_id: CGDirectDisplayID,
+    native_tick: Arc<crate::fast::frame_pacing::NativeTick>,
     frame_requests: DispatchRetained<DispatchSource>,
     signal: Arc<PlatformFrameSignal>,
 ) -> Result<SubscriberId> {
@@ -232,6 +235,7 @@ fn subscribe(
             }
         };
         entry.subscribers.push(DisplayLinkSubscriber {
+            native_tick,
             id: subscriber_id,
             frame_requests,
             signal,
@@ -313,6 +317,11 @@ impl MetalFrames {
         *self.source.borrow_mut() = source;
     }
 
+    pub fn configure_fast(&self, window: gpui::WindowId) {
+        if let Some(source) = self.source.borrow().as_ref() {
+            source.configure_fast(window);
+        }
+    }
     pub fn is_attached(&self) -> bool {
         self.source.borrow().is_some()
     }
@@ -346,6 +355,7 @@ impl MetalFrames {
 /// on. The wrapped dispatch source coalesces vsync ticks from the display's
 /// io thread and invokes `callback(data)` on the main queue.
 pub struct WindowFrameSource {
+    native_tick: Arc<crate::fast::frame_pacing::NativeTick>,
     frame_requests: DispatchRetained<DispatchSource>,
     registration: Option<(CGDirectDisplayID, SubscriberId)>,
     signal: Arc<PlatformFrameSignal>,
@@ -370,18 +380,26 @@ impl WindowFrameSource {
         Self {
             frame_requests,
             registration: None,
+            native_tick: Arc::new(Default::default()),
             signal: Arc::new(PlatformFrameSignal::new()),
         }
     }
 
     pub fn start(&mut self, display_id: CGDirectDisplayID) -> Result<()> {
         self.stop();
-        let subscriber_id =
-            subscribe(display_id, self.frame_requests.clone(), self.signal.clone())?;
+        let subscriber_id = subscribe(
+            display_id,
+            self.native_tick.clone(),
+            self.frame_requests.clone(),
+            self.signal.clone(),
+        )?;
         self.registration = Some((display_id, subscriber_id));
         Ok(())
     }
 
+    pub fn take_native_tick(&self) -> u64 {
+        self.native_tick.take()
+    }
     pub fn take_signal(&self) -> Option<(Instant, FrameRequestSource)> {
         self.signal.take()
     }
@@ -390,6 +408,7 @@ impl WindowFrameSource {
         if let Some((display_id, subscriber_id)) = self.registration.take() {
             unsubscribe(display_id, subscriber_id);
         }
+        self.native_tick.take();
         self.signal.take();
     }
 }

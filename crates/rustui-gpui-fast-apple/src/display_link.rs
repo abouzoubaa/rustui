@@ -51,6 +51,7 @@ impl MetalDisplayLinkDelegate {
 /// This wrapper uses the main run loop because GPUI renders on the foreground thread.
 pub struct MetalFrameSource {
     link: Retained<CAMetalDisplayLink>,
+    fast_active: std::cell::Cell<Option<bool>>,
     // The link holds its delegate weakly.
     _delegate: Retained<MetalDisplayLinkDelegate>,
     _main_thread: MainThreadMarker,
@@ -82,11 +83,15 @@ impl MetalFrameSource {
         unsafe { link.addToRunLoop_forMode(&NSRunLoop::mainRunLoop(), NSRunLoopCommonModes) };
         Some(Self {
             link,
+            fast_active: Default::default(),
             _delegate: delegate,
             _main_thread: main_thread,
         })
     }
 
+    pub fn configure_fast(&self, window: gpui::WindowId) {
+        crate::fast::frame_pacing::configure(&self.link, &self.fast_active, window);
+    }
     pub fn record_latency_properties(&self, window: gpui::WindowId) {
         crate::fast::latency::link(window, &self.link);
     }

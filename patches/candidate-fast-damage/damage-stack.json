@@ -14,6 +14,8 @@
     "gpui-fast-presented-latency-v1-fast.json",
     "gpui-fast-latency-breakdown-v1-fast.json",
     "../proposed/gpui-component-rust-empty-injections-v1-kit09.json",
-    "../candidate-fast-latency/gpui-fast-immediate-present-v1-fast.json"
+    "../candidate-fast-latency/gpui-fast-immediate-present-v1-fast.json",
+    "../candidate-fast-latency/gpui-fast-present-order-safety-v1-fast.json",
+    "../candidate-fast-latency/gpui-fast-frame-ahead-view-link-v1-fast.json"
   ]
 }

@@ -17,6 +17,12 @@ pub struct FastPresentTag {
     first: u64,
     version: u64,
 }
+impl FastPresentTag {
+    #[doc(hidden)]
+    pub fn fast_version(self) -> u64 {
+        self.version
+    }
+}
 #[derive(Default)]
 struct Versions {
     latest: Option<FastPresentTag>,
@@ -46,7 +52,7 @@ fn mono_ms() -> f64 {
     static ORIGIN: OnceLock<Instant> = OnceLock::new();
     ORIGIN.get_or_init(Instant::now).elapsed().as_secs_f64() * 1000.
 }
-fn enabled() -> bool {
+pub(crate) fn enabled() -> bool {
     static ON: OnceLock<bool> = OnceLock::new();
     *ON.get_or_init(|| std::env::var("RUSTUI_G0_LATENCY").as_deref() == Ok("1"))
 }
