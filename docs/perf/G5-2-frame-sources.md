@@ -12,6 +12,8 @@ The completed drag comparison had median **30.47 → 29.94 ms**, p95 **35.88 →
 
 `gpui-fast-present-order-safety-v1-fast` is a separate hashed, reversible candidate immediately after G5-1. It contains the per-surface submitted-version/source-cohort guard, capacity checks for ordinary legacy callbacks, and pending dirty retry. Its new logic is in `fast/present_order.rs` in core, Apple and macOS. The existing G5-1 switch enables these safety fixes. The NSView experiment follows as a separate candidate, remains off and is not used by the G5-1 path. The Ahead switch remains retired.
 
+The owner accepted the safety merge with three known loaded-machine `nextDrawable` outliers: 2.399 ms in Legacy hover, and 4.045 / 2.378 ms in overlay drag, each at 2/3 tracked slots. They do not block correctness; the 2 ms timing gate is not reported as passing. G5-3 compares a stricter two-free-slot acquisition arm.
+
 Forced Legacy is checked for correctness only: typing 30/s and hover, with no latency or CPU verdict. It uses existing CVDisplayLink plus G5-1 immediate presentation and safety, without experimental frame-ahead pacing.
 
 ## Runtime selection and supported systems

@@ -534,6 +534,19 @@ impl MetalRenderer {
         !gpui::fast_immediate_enabled() || self.presents_with_transaction || self.immediate_ready()
     }
     pub fn frame_handoff_ready(&self) -> bool {
+        if gpui::fast_immediate_enabled() && crate::fast::drawable_capacity::reserve_two() {
+            if let Some(layer) = &self.layer {
+                if !crate::fast::drawable_capacity::allowed(
+                    self.immediate.count(),
+                    layer.maximumDrawableCount(),
+                ) {
+                    self.order
+                        .capacity_blocked(self.immediate.count(), layer.maximumDrawableCount());
+                    return false;
+                }
+            }
+        }
+
         !gpui::fast_frame_ahead_enabled()
             || self.presents_with_transaction
             || self.frame_ahead.ready()
@@ -550,9 +563,16 @@ impl MetalRenderer {
         !self.presents_with_transaction && self.layer.is_some()
     }
     pub fn immediate_ready(&self) -> bool {
-        !self.presents_with_transaction
+        let ready = !self.presents_with_transaction
             && self.frame_ahead.ready()
-            && self.layer.as_ref().is_some_and(|l| self.immediate.ready(l))
+            && self.layer.as_ref().is_some_and(|l| self.immediate.ready(l));
+        if !ready {
+            if let Some(layer) = &self.layer {
+                self.order
+                    .capacity_blocked(self.immediate.count(), layer.maximumDrawableCount());
+            }
+        }
+        ready
     }
     pub fn immediate_submitted(&self) -> bool {
         self.immediate.submitted()

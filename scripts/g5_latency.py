@@ -1,5 +1,5 @@
 """G5 local capture analysis. Never substitute submit/callback time for display."""
-from bisect import bisect_left
+from bisect import bisect_left, bisect_right
 from collections import Counter
 import re
 import os
@@ -300,8 +300,20 @@ def classify_inputs(events, first_frames, commits, result):
     lifecycle = [r for r in events if r["event"] == "config" and r["kind"] in ("g5_link_stop", "g5_link_recreate")]
     # The handled marker is stamped by fast_measure_input before dispatch.
     # The matching dispatch-entry state is the first following snapshot.
+    indices = {}
+    for rows in (queues, states):
+        grouped = {}
+        for row in rows:grouped.setdefault(row["window"], []).append(row)
+        indices[id(rows)] = {window: ([r["mach"] for r in group], group) for window,group in grouped.items()}
     def previous(rows, window, tick):
-        return next((r for r in reversed(rows) if r["window"] == window and r["mach"] <= tick), None)
+        times, group = indices[id(rows)].get(window, ([], []))
+        i=bisect_right(times,tick)-1
+        return group[i] if i>=0 else None
+    def following(rows, window, tick):
+        times, group = indices[id(rows)].get(window, ([], []))
+        i=bisect_left(times,tick)
+        return group[i] if i<len(group) else None
+    clock = next(r for r in events if r["event"] == "clock")
     slow, classification = [], Counter()
     ordered = sorted(first_frames, key=lambda item: item[0]["mach"])
     previous_tick = 0
@@ -309,9 +321,8 @@ def classify_inputs(events, first_frames, commits, result):
         commit = commits[(display["window"], display["drawable"])]
         queue = previous(queues, display["window"], commit["mach"])
         path = ("immediate" if queue["values"][2] else "display-link") if queue and queue["mach"] >= attempt["mach"] else "unknown"
-        state = next((r for r in states if r["window"] == inp["window"] and r["mach"] >= inp["mach"]), None)
+        state = following(states, inp["window"], inp["mach"])
         # Mach conversion uses the same calibration as bare().
-        clock = next(r for r in events if r["event"] == "clock")
         delay = (shown_mach - inp["mach"]) * clock["numer"] / clock["denom"] / 1e6
         classification[path] += 1
         if threshold is not None and delay > threshold:

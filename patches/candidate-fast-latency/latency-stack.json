@@ -16,6 +16,7 @@
     "../proposed/gpui-component-rust-empty-injections-v1-kit09.json",
     "gpui-fast-immediate-present-v1-fast.json",
     "gpui-fast-present-order-safety-v1-fast.json",
-    "gpui-fast-frame-ahead-view-link-v1-fast.json"
+    "gpui-fast-frame-ahead-view-link-v1-fast.json",
+    "gpui-fast-drawable-reserve-v1-fast.json"
   ]
 }

@@ -12,7 +12,8 @@ class CandidateStateTests(unittest.TestCase):
     def test_exact_pool_and_scope_tests_and_default_off(self):
         apple = (ROOT / 'crates/rustui-gpui-fast-apple/src/fast/immediate_present.rs').read_text()
         core = (ROOT / 'crates/rustui-gpui-fast/src/fast/immediate_present.rs').read_text()
-        pool = apple[apple.index('#[derive(Default)]'):apple.index('pub(crate) struct State')]
+        capacity=(ROOT/'crates/rustui-gpui-fast-apple/src/fast/drawable_capacity.rs').read_text()
+        pool = 'mod fast {pub mod drawable_capacity {'+capacity+'}}\n'+apple[apple.index('#[derive(Default)]'):apple.index('pub(crate) struct State')]
         tests = apple[apple.index('#[cfg(test)]'):]
         scope = core[core.index('thread_local! { static ACTIVE'):core.index('// Hold clock')]
         scope += core[core.index('// Hold clock'):core.index('// Per-window')]

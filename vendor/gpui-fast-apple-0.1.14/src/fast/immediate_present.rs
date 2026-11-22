@@ -32,7 +32,7 @@ impl Pool {
         }
     }
     fn ready(&self, limit: usize) -> bool {
-        self.live.len() < limit
+        crate::fast::drawable_capacity::allowed(self.live.len(), limit)
     }
 }
 pub(crate) struct State(Option<Arc<Mutex<Pool>>>);
