@@ -1,0 +1,19 @@
+{
+  "schema_version": 1,
+  "backend": "gpui-fast 0.1.14",
+  "base_stack": "../approved/fast/fast-stack.json",
+  "patches": [
+    "../candidate-fast-damage/gpui-fast-damage-metrics-v1-fast.json",
+    "../candidate-fast-damage/gpui-fast-present-required-v1-fast.json",
+    "../candidate-fast-damage/gpui-fast-damage-shaders-v1-fast.json",
+    "../candidate-fast-damage/gpui-fast-damage-plan-v1-fast.json",
+    "../candidate-fast-damage/gpui-fast-damage-frame-v1-fast.json",
+    "../candidate-fast-damage/gpui-fast-damage-partial-v1-fast.json",
+    "../candidate-fast-damage/gpui-fast-damage-verify-v1-fast.json",
+    "../candidate-fast-damage/gpui-fast-buffered-frame-recorder-v1-fast.json",
+    "../candidate-fast-damage/gpui-fast-presented-latency-v1-fast.json",
+    "../candidate-fast-damage/gpui-fast-latency-breakdown-v1-fast.json",
+    "../proposed/gpui-component-rust-empty-injections-v1-kit09.json",
+    "gpui-fast-immediate-present-v1-fast.json"
+  ]
+}

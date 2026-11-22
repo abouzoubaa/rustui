@@ -837,6 +837,11 @@ impl MacWindowState {
     /// `window_state` is the handle this state lives in; a Metal link holds it
     /// weakly to deliver frames.
     fn start_display_link(&mut self, window_state: &Rc<Mutex<MacWindowState>>) {
+        if self.renderer.immediate_allowed() && gpui::fast_immediate_demand(self.handle.window_id())
+        {
+            self.stop_display_link();
+            return;
+        }
         self.stop_display_link();
         if !self
             .native_window()
@@ -865,6 +870,7 @@ impl MacWindowState {
                 });
                 if let Some(source) = source {
                     source.record_latency_properties(self.handle.window_id());
+                    gpui::fast_latency_config(self.handle.window_id(), "g5_link_recreate", [0.; 4]);
                     metal_frames.replace(Some(source));
                     self.renderer.set_display_link_attached(true);
                 }
@@ -890,6 +896,7 @@ impl MacWindowState {
                 if metal_frames.is_attached() {
                     // Detach the link rather than pause it, so that a synchronous
                     // draw can use the layer's `nextDrawable`.
+                    gpui::fast_latency_config(self.handle.window_id(), "g5_link_stop", [0.; 4]);
                     metal_frames.replace(None);
                     self.renderer.set_display_link_attached(false);
                 }
@@ -2657,6 +2664,36 @@ impl PlatformWindow for MacWindow {
         self.0.as_ref().lock().toggle_tab_bar_callback = Some(callback);
     }
 
+    fn immediate_supported(&self) -> bool {
+        self.0.lock().renderer.immediate_allowed()
+    }
+    fn immediate_input_state(&self) -> [f64; 4] {
+        let state = self.0.lock();
+        [
+            matches!(&state.frame_source,FrameSource::Metal(f) if f.is_attached()) as u8 as f64,
+            state.renderer.immediate_in_flight() as f64,
+            state
+                .renderer
+                .layer()
+                .map_or(0., |l| l.maximumDrawableCount() as f64),
+            gpui::fast_immediate_hold_active(state.handle.window_id()) as u8 as f64,
+        ]
+    }
+    fn can_present_immediately(&self) -> bool {
+        let mut state = self.0.lock();
+        if !state.renderer.immediate_allowed() {
+            return false;
+        }
+        state.stop_display_link();
+        gpui::fast_latency_config(state.handle.window_id(), "display_link_detached", [0.; 4]);
+        state.renderer.immediate_ready()
+    }
+    fn immediate_submitted(&self) -> bool {
+        self.0.lock().renderer.immediate_submitted()
+    }
+    fn on_drawable_available(&self, wake: Box<dyn Fn() + Send + Sync>) {
+        self.0.lock().renderer.on_drawable_available(wake);
+    }
     fn draw(&self, scene: &gpui::Scene) {
         let mut this = self.0.lock();
         this.renderer.draw(scene);
@@ -2684,18 +2721,34 @@ impl PlatformWindow for MacWindow {
     // GPUI calls this without waking the frame waker when a window only needs
     // a present, so a paused Metal link must resume here too.
     fn schedule_frame(&self) {
+        if gpui::fast_immediate_demand(self.0.lock().handle.window_id()) {
+            return;
+        }
         if let Some(metal_frames) = &self.2 {
+            if gpui::fast_immediate_enabled() && !metal_frames.is_attached() {
+                self.0.lock().start_display_link(&self.0);
+            }
             metal_frames.wake();
         }
     }
 
     fn frame_waker(&self) -> Option<Rc<dyn Fn()>> {
-        let metal_frames = Rc::downgrade(self.2.as_ref()?);
-        Some(Rc::new(move || {
-            if let Some(metal_frames) = metal_frames.upgrade() {
-                metal_frames.wake();
-            }
-        }))
+        let frames = Rc::downgrade(self.2.as_ref()?);
+        let state = Rc::downgrade(&self.0);
+        let (window, executor) = {
+            let state = self.0.lock();
+            (state.handle.window_id(), state.foreground_executor.clone())
+        };
+        Some(crate::fast::immediate_present::frame_waker(
+            window,
+            frames,
+            executor,
+            move || {
+                if let Some(state) = state.upgrade() {
+                    state.lock().start_display_link(&state);
+                }
+            },
+        ))
     }
 
     fn sprite_atlas(&self) -> Arc<dyn PlatformAtlas> {
@@ -3826,6 +3879,7 @@ extern "C" fn window_did_change_key_status(this: &AnyObject, selector: Sel, _: *
 
         if lock.activated_least_once {
             if let Some(mut callback) = lock.request_frame_callback.take() {
+                gpui::fast_immediate_suspend(lock.handle.window_id());
                 crate::fast::composition::set_presents_with_transaction(&mut lock, true);
                 lock.stop_display_link();
                 drop(lock);
@@ -3971,6 +4025,7 @@ extern "C" fn display_layer(this: &AnyObject, _: Sel, _: *mut AnyObject) {
     let window_state = unsafe { get_window_state(this) };
     let mut lock = window_state.lock();
     if let Some(mut callback) = lock.request_frame_callback.take() {
+        gpui::fast_immediate_suspend(lock.handle.window_id());
         crate::fast::composition::set_presents_with_transaction(&mut lock, true);
         lock.stop_display_link();
         drop(lock);

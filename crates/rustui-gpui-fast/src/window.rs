@@ -353,7 +353,7 @@ thread_local! {
 /// arrive re-entrantly while a draw is already on the stack (e.g. via nested
 /// message pumping in the Windows window procedure), instead of running a
 /// nested draw or panicking on the already-borrowed App.
-fn draw_in_progress() -> bool {
+pub(crate) fn draw_in_progress() -> bool {
     CURRENT_ELEMENT_ARENA.with(|current| current.get().is_some())
 }
 
@@ -1991,6 +1991,16 @@ impl Window {
                     || needs_present.get()
                     || high_rate_input;
 
+                if crate::fast::immediate_present::scheduled(
+                    handle,
+                    force_render
+                        || request_frame_options.require_presentation
+                        || needs_present.get()
+                        || high_rate_input,
+                    &mut cx,
+                ) {
+                    return;
+                }
                 let should_throttle = !request_frame_options.require_presentation;
                 let inactive_without_high_rate_input =
                     should_throttle && !active.get() && !high_rate_input;
@@ -2136,6 +2146,7 @@ impl Window {
             }
         }));
         invalidator.set_platform_waker(platform_window.frame_waker());
+        crate::fast::immediate_present::install(handle, platform_window.as_ref(), cx);
         platform_window.on_visual_viewport_changed(Box::new({
             let mut cx = cx.to_async();
             move || {
@@ -2646,6 +2657,7 @@ impl Window {
 
     /// Close this window.
     pub fn remove_window(&mut self) {
+        crate::fast::immediate_present::close(self.handle.window_id());
         self.removed = true;
     }
 
@@ -4062,7 +4074,7 @@ impl Window {
     }
 
     #[profiling::function]
-    fn present(&mut self) {
+    pub(crate) fn present(&mut self) {
         let f0_frame = f0_frame_start();
         #[cfg(feature = "profiler")]
         let _foreground_turn = profiler::journal::foreground_turn();
@@ -6122,6 +6134,7 @@ impl Window {
     /// Dispatch a mouse, keyboard, or touch event on the window.
     #[profiling::function]
     pub fn dispatch_event(&mut self, event: PlatformInput, cx: &mut App) -> DispatchEventResult {
+        crate::fast::immediate_present::before_input(self, cx);
         #[cfg(feature = "profiler")]
         self.window_profiler.begin_input(event.kind_name());
         let update_count_before = self.invalidator.update_count();
@@ -6293,6 +6306,7 @@ impl Window {
         // is the last chance for drag listeners to see the pointer leave and reset their state.
         self.promote_external_drag_to_platform(&event, cx);
 
+        crate::fast::immediate_present::after_input(self, cx);
         let caused_invalidation = self.invalidator.update_count() > update_count_before;
         if caused_invalidation {
             self.input_rate_tracker.borrow_mut().record_input();
