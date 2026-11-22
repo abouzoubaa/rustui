@@ -4083,6 +4083,7 @@ impl Window {
         let _breakdown = crate::fast::latency_breakdown::present_scope(self.handle.window_id());
         let _input_presentation =
             crate::fast::input_latency::present_scope(self.handle.window_id());
+        let _order = crate::fast::present_order::present_scope(self.handle.window_id());
         crate::fast::composition::present(self);
         #[cfg(feature = "profiler")]
         self.window_profiler.record_present(
@@ -4094,6 +4095,7 @@ impl Window {
         f0_frame_record(self.handle.window_id(), "present", f0_frame);
         crate::fast::frame_recorder::after_present();
         self.needs_present.set(false);
+        crate::fast::present_order::retry(self);
         profiling::finish_frame!();
     }
 
@@ -4254,6 +4256,7 @@ impl Window {
         self.paint_inspector_hitbox(cx);
         crate::fast::stats::FramePhaseTimes::end_paint(&mut self.fast_layout.phase_times);
         f0_frame_record(self.handle.window_id(), "paint", f0_paint);
+        crate::fast::present_order::painted(self.handle.window_id());
         crate::fast::input_latency::painted(self.handle.window_id());
 
         #[cfg(feature = "profiler")]
@@ -6134,6 +6137,7 @@ impl Window {
     /// Dispatch a mouse, keyboard, or touch event on the window.
     #[profiling::function]
     pub fn dispatch_event(&mut self, event: PlatformInput, cx: &mut App) -> DispatchEventResult {
+        crate::fast::frame_pacing::input(self.handle.window_id(), &event);
         crate::fast::immediate_present::before_input(self, cx);
         #[cfg(feature = "profiler")]
         self.window_profiler.begin_input(event.kind_name());

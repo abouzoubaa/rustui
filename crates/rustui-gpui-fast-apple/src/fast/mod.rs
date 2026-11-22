@@ -27,3 +27,7 @@ pub(crate) mod presented;
 pub(crate) mod latency;
 
 pub(crate) mod immediate_present;
+
+pub(crate) mod present_order;
+
+pub(crate) mod frame_pacing;

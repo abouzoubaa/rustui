@@ -53,3 +53,7 @@ mod tests;
 pub(crate) mod latency_breakdown;
 
 pub(crate) mod immediate_present;
+
+pub(crate) mod present_order;
+
+pub(crate) mod frame_pacing;

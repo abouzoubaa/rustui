@@ -60,6 +60,16 @@ impl State {
             self.track(d);
         }
     }
+    pub(crate) fn wake_callback(&self) -> Box<dyn Fn() + Send + Sync> {
+        let state = self.0.clone();
+        Box::new(move || {
+            if let Some(s) = &state {
+                if let Some(w) = &s.lock().unwrap().wake {
+                    w();
+                }
+            }
+        })
+    }
     pub(crate) fn set_waker(&self, wake: Box<dyn Fn() + Send + Sync>) {
         if let Some(s) = &self.0 {
             s.lock().unwrap().wake = Some(wake);
@@ -74,6 +84,11 @@ impl State {
             }
             ready
         })
+    }
+    pub(crate) fn reset_submitted(&self) {
+        if let Some(s) = &self.0 {
+            s.lock().unwrap().submitted = false;
+        }
     }
     pub(crate) fn submitted(&self) -> bool {
         self.0.as_ref().is_some_and(|s| s.lock().unwrap().submitted)
@@ -183,7 +198,12 @@ pub(crate) fn next_drawable(
     }
     // Acquisitions run on the renderer's foreground thread; background handlers
     // can only release slots. Check again here, immediately before the API call.
-    if active && (display_link_attached || count >= limit) {
+    if !crate::fast::present_order::acquisition_allowed(
+        gpui::fast_immediate_enabled(),
+        display_link_attached,
+        count,
+        limit,
+    ) {
         return None;
     }
     let start = (gpui::fast_latency_enabled() || gpui::fast_immediate_enabled()).then(Instant::now);

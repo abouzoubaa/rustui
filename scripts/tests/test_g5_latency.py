@@ -2,10 +2,46 @@ import sys
 import unittest
 from pathlib import Path
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
-from g5_latency import distribution, p_verdict, refresh_metrics, classify_inputs, pixel_metrics, background_cpu_percent, acquisition_checks, background_load, annotate_load, reference
+from g5_latency import distribution, p_verdict, refresh_metrics, classify_inputs, pixel_metrics, background_cpu_percent, acquisition_checks, background_load, annotate_load, reference, callback_presentation_metrics, rendered_frame_counts, presentation_order_violations, surface_commits
 
 
 class LatencyTests(unittest.TestCase):
+    def test_order_violations_count_stale_frames_against_each_windows_high_water(self):
+        self.assertEqual(presentation_order_violations([('w',8),('w',6),('z',1),('w',7)]),2)
+        self.assertEqual(presentation_order_violations([('w',6),('z',1),('w',7),('z',1),('w',8)]),0)
+
+    def test_composition_order_is_checked_per_surface(self):
+        events=[{"event":"config","kind":"g5_surface_submit","window":"w","values":[1,8,1,1],"mach":1},
+                {"event":"committed","window":"w","drawable":10,"mach":2},
+                {"event":"config","kind":"g5_surface_submit","window":"w","values":[2,6,0,1],"mach":3},
+                {"event":"committed","window":"w","drawable":11,"mach":4}]
+        self.assertEqual(surface_commits(events),{("w",10):(1,8),("w",11):(2,6)})
+        self.assertEqual(presentation_order_violations([(("w",1),8),(("w",2),6),(("w",2),7)]),0)
+        self.assertEqual(presentation_order_violations([(("w",1),8),(("w",1),6),(("w",1),7)]),2)
+
+    def test_rendered_frames_include_repeated_presents_of_one_cpu_draw(self):
+        events = [
+            {"event":"committed","window":"w","drawable":1,"draw":9,"mach":10},
+            {"event":"committed","window":"w","drawable":2,"draw":9,"mach":20},
+            {"event":"committed","window":"w","drawable":3,"draw":10,"mach":30},
+            {"event":"committed","window":"w","drawable":4,"draw":10,"mach":40}]
+        displays = [(50,{"window":"w","drawable":1},None,None),
+                    (60,{"window":"w","drawable":4},None,None)]
+        self.assertEqual(rendered_frame_counts(events,displays,10,30),
+                         {"rendered":3,"rendered_never_shown":2})
+
+    def test_callback_delay_excludes_immediate_frames_and_gaps_are_per_window(self):
+        events = [{"event":"callback","window":"w","callback":1,"mach":100},
+                  {"event":"draw","window":"w","callback":1,"mach":300},
+                  {"event":"draw","window":"w","callback":0,"mach":400}]
+        displays = [(tick,{"window":window},None,None) for window,tick in
+                    [('w',1000),('z',1500),('w',2000),('z',2500),('w',20000)]]
+        result=callback_presentation_metrics(events,displays,0,10000,1e-6)
+        self.assertEqual(result['tick_callback_to_draw_ms']['samples'],1)
+        self.assertAlmostEqual(result['tick_callback_to_draw_ms']['median'],.2)
+        self.assertEqual(result['presentation_gaps_ms']['samples'],2)
+        self.assertAlmostEqual(result['presentation_gaps_ms']['median'],1)
+
     def test_reference_preserves_redisplayed_versions_in_both_endpoints(self):
         for metal in [False, True]:
             start = {"event": "start", "mach": 0, "numer": 1, "denom": 1}

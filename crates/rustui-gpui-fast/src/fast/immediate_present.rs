@@ -15,7 +15,15 @@ use std::{
 thread_local! { static ACTIVE: Cell<bool> = const {Cell::new(false)}; }
 pub fn fast_immediate_enabled() -> bool {
     static ON: OnceLock<bool> = OnceLock::new();
-    *ON.get_or_init(|| std::env::var("GPUI_FAST_IMMEDIATE_PRESENT").as_deref() == Ok("1"))
+    *ON.get_or_init(|| {
+        [
+            "GPUI_FAST_IMMEDIATE_PRESENT",
+            "GPUI_FAST_FORCE_LEGACY_LINK",
+            "GPUI_FAST_VIEW_DISPLAY_LINK",
+        ]
+        .iter()
+        .any(|key| std::env::var(key).as_deref() == Ok("1"))
+    })
 }
 pub fn fast_immediate_active() -> bool {
     ACTIVE.with(Cell::get)
@@ -119,6 +127,8 @@ struct Entry {
 thread_local! {static WINDOWS:RefCell<HashMap<WindowId,Entry>>=RefCell::new(HashMap::new());}
 pub fn fast_immediate_hold_active(id: WindowId) -> bool {
     fast_immediate_enabled()
+        && !crate::fast_frame_continuous(id)
+        && !crate::fast_frame_uses_view(id)
         && WINDOWS.with(|w| {
             w.borrow()
                 .get(&id)
@@ -148,6 +158,8 @@ pub fn fast_immediate_suspend(id: WindowId) {
     }
 }
 pub(crate) fn close(id: WindowId) {
+    crate::fast::present_order::close(id);
+    crate::fast::frame_pacing::close(id);
     if fast_immediate_enabled() {
         WINDOWS.with(|w| {
             if let Some(e) = w.borrow_mut().remove(&id) {
@@ -166,6 +178,9 @@ pub(crate) fn before_input(window: &Window, cx: &mut App) {
         );
     }
     if !fast_immediate_enabled() || !window.platform_window.immediate_supported() {
+        return;
+    }
+    if crate::fast_frame_continuous(id) || crate::fast_frame_uses_view(id) {
         return;
     }
     let start = WINDOWS.with(|w| {
@@ -224,6 +239,11 @@ pub(crate) fn scheduled(handle: AnyWindowHandle, force: bool, cx: &mut crate::As
     true
 }
 fn try_draw(window: &mut Window, cx: &mut App) {
+    window.platform_window.resume_frame_source_after_drain();
+    if crate::fast_frame_continuous(window.handle.window_id()) {
+        window.platform_window.schedule_frame();
+        return;
+    }
     if crate::window::draw_in_progress() {
         return;
     }
@@ -279,6 +299,10 @@ pub(crate) fn after_input(window: &Window, cx: &mut App) {
     if !fast_immediate_enabled() {
         return;
     }
+    if crate::fast_frame_continuous(window.handle.window_id()) {
+        window.platform_window.schedule_frame();
+        return;
+    }
     let handle = window.handle;
     cx.defer(move |cx| {
         let _ = handle.update(cx, |_, window, cx| try_draw(window, cx));
@@ -289,6 +313,7 @@ pub(crate) fn install(handle: AnyWindowHandle, platform: &dyn PlatformWindow, cx
         return;
     }
     let id = handle.window_id();
+    crate::fast::frame_pacing::install(id, platform.immediate_uses_view_link());
     let (send, mut receive) = mpsc::unbounded();
     let admission = Arc::new(Admission::default());
     let ready = admission.clone();

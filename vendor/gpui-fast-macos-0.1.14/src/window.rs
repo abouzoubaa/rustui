@@ -646,6 +646,8 @@ unsafe fn apply_simple_fullscreen_plan(
 /// What paces a window's frames. The choice depends only on the OS version,
 /// so it is made once per window.
 enum FrameSource {
+    View(Rc<crate::fast::frame_pacing::ViewFrames>),
+    Legacy(Rc<crate::fast::frame_pacing::LegacyFrames>),
     /// macOS 14+: a `CAMetalDisplayLink` that hands out each frame's drawable.
     Metal(Rc<MetalFrames>),
     /// Earlier systems: the shared `CVDisplayLink` registry, joined on first start.
@@ -850,12 +852,25 @@ impl MacWindowState {
         {
             return;
         }
+        if matches!(&self.frame_source, FrameSource::Metal(_))
+            && !self.renderer.order_source_drained(self.handle.window_id())
+        {
+            crate::fast::present_order::defer_source(self.handle.window_id());
+            return;
+        }
         crate::fast::latency::settings(
             self.handle.window_id(),
             self.native_window,
             matches!(&self.frame_source, FrameSource::Metal(_)),
         );
         match &mut self.frame_source {
+            FrameSource::View(source) => source.wake(),
+            FrameSource::Legacy(source) => {
+                let screen: *mut AnyObject = unsafe { msg_send![self.native_window, screen] };
+                if let Some(id) = display_id_for_screen(screen) {
+                    source.start(id);
+                }
+            }
             FrameSource::Metal(metal_frames) => {
                 let Some(layer) = self.renderer.layer() else {
                     return;
@@ -869,6 +884,7 @@ impl MacWindowState {
                     }
                 });
                 if let Some(source) = source {
+                    source.configure_fast(self.handle.window_id());
                     source.record_latency_properties(self.handle.window_id());
                     gpui::fast_latency_config(self.handle.window_id(), "g5_link_recreate", [0.; 4]);
                     metal_frames.replace(Some(source));
@@ -892,6 +908,8 @@ impl MacWindowState {
 
     fn stop_display_link(&mut self) {
         match &mut self.frame_source {
+            FrameSource::View(source) => source.pause(),
+            FrameSource::Legacy(source) => source.stop(),
             FrameSource::Metal(metal_frames) => {
                 if metal_frames.is_attached() {
                     // Detach the link rather than pause it, so that a synchronous
@@ -1567,7 +1585,13 @@ impl MacWindow {
             let native_view: *mut AnyObject = msg_send![native_view, initWithFrame: content_bounds];
             assert!(!native_view.is_null());
 
-            let metal_frames = MetalFrameSource::is_available().then(Rc::<MetalFrames>::default);
+            let choice = crate::fast::frame_pacing::choose(
+                &*(native_view as *mut NSView),
+                MetalFrameSource::is_available(),
+                handle.window_id(),
+            );
+            let metal_frames = (choice == crate::fast::frame_pacing::Choice::Metal)
+                .then(Rc::<MetalFrames>::default);
             let state = Rc::new(Mutex::new(MacWindowState {
                 handle,
                 foreground_executor,
@@ -1581,9 +1605,26 @@ impl MacWindow {
                 background_appearance: WindowBackgroundAppearance::Opaque,
                 cursor_style: CursorStyle::Arrow,
                 cursor_visible,
-                frame_source: match &metal_frames {
-                    Some(metal_frames) => FrameSource::Metal(metal_frames.clone()),
-                    None => FrameSource::DisplayLink(None),
+                frame_source: if choice == crate::fast::frame_pacing::Choice::View {
+                    FrameSource::View(Rc::new(crate::fast::frame_pacing::ViewFrames::new(
+                        &*(native_view as *mut NSView),
+                        handle.window_id(),
+                        native_view.cast(),
+                        step,
+                        marker,
+                    )))
+                } else if choice == crate::fast::frame_pacing::Choice::Legacy
+                    && (gpui::fast_force_legacy_link() || gpui::fast_immediate_enabled())
+                {
+                    FrameSource::Legacy(Rc::new(crate::fast::frame_pacing::LegacyFrames::new(
+                        native_view.cast(),
+                        step,
+                    )))
+                } else {
+                    match &metal_frames {
+                        Some(metal_frames) => FrameSource::Metal(metal_frames.clone()),
+                        None => FrameSource::DisplayLink(None),
+                    }
                 },
                 renderer,
                 request_frame_callback: None,
@@ -1897,7 +1938,10 @@ impl Drop for MacWindow {
         this.renderer.destroy();
         let window = this.native_window;
         let sheet_parent = this.sheet_parent.take();
+        crate::fast::present_order::forget_source(this.handle.window_id());
         match &mut this.frame_source {
+            FrameSource::View(source) => source.close(),
+            FrameSource::Legacy(source) => source.stop(),
             FrameSource::Metal(metal_frames) => metal_frames.replace(None),
             FrameSource::DisplayLink(frame_source) => drop(frame_source.take()),
         }
@@ -2664,6 +2708,20 @@ impl PlatformWindow for MacWindow {
         self.0.as_ref().lock().toggle_tab_bar_callback = Some(callback);
     }
 
+    fn resume_frame_source_after_drain(&self) {
+        let mut state = self.0.lock();
+        if crate::fast::present_order::resume_source(
+            state.handle.window_id(),
+            state
+                .renderer
+                .order_source_drained(state.handle.window_id()),
+        ) {
+            state.start_display_link(&self.0);
+        }
+    }
+    fn immediate_uses_view_link(&self) -> bool {
+        matches!(&self.0.lock().frame_source, FrameSource::View(_))
+    }
     fn immediate_supported(&self) -> bool {
         self.0.lock().renderer.immediate_allowed()
     }
@@ -2684,22 +2742,34 @@ impl PlatformWindow for MacWindow {
         if !state.renderer.immediate_allowed() {
             return false;
         }
-        state.stop_display_link();
-        gpui::fast_latency_config(state.handle.window_id(), "display_link_detached", [0.; 4]);
-        state.renderer.immediate_ready()
+        if !matches!(&state.frame_source, FrameSource::View(_)) {
+            state.stop_display_link();
+            gpui::fast_latency_config(state.handle.window_id(), "display_link_detached", [0.; 4]);
+        }
+        crate::fast::composition::any_immediate_ready(&state, state.handle.window_id())
     }
     fn immediate_submitted(&self) -> bool {
-        self.0.lock().renderer.immediate_submitted()
+        crate::fast::composition::any_submitted(&self.0.lock())
     }
     fn on_drawable_available(&self, wake: Box<dyn Fn() + Send + Sync>) {
         self.0.lock().renderer.on_drawable_available(wake);
     }
     fn draw(&self, scene: &gpui::Scene) {
         let mut this = self.0.lock();
+        if let FrameSource::View(source) = &this.frame_source {
+            source.used();
+        }
+        crate::fast::composition::begin_surface_frame(&this);
         this.renderer.draw(scene);
     }
 
     fn draw_composed(&self, scene: gpui::ComposedScene<'_>) {
+        {
+            let state = self.0.lock();
+            if let FrameSource::View(source) = &state.frame_source {
+                source.used();
+            }
+        }
         crate::fast::composition::draw_composed(&self.0, scene)
     }
 
@@ -2724,6 +2794,26 @@ impl PlatformWindow for MacWindow {
         if gpui::fast_immediate_demand(self.0.lock().handle.window_id()) {
             return;
         }
+        {
+            let state = self.0.lock();
+            match &state.frame_source {
+                FrameSource::View(source) => {
+                    source.wake();
+                    return;
+                }
+                FrameSource::Legacy(source) => {
+                    if !source.running() {
+                        drop(state);
+                        self.0.lock().start_display_link(&self.0);
+                    }
+                    return;
+                }
+                _ => {}
+            }
+        }
+        if gpui::fast_immediate_demand(self.0.lock().handle.window_id()) {
+            return;
+        }
         if let Some(metal_frames) = &self.2 {
             if gpui::fast_immediate_enabled() && !metal_frames.is_attached() {
                 self.0.lock().start_display_link(&self.0);
@@ -2733,6 +2823,33 @@ impl PlatformWindow for MacWindow {
     }
 
     fn frame_waker(&self) -> Option<Rc<dyn Fn()>> {
+        {
+            let state = self.0.lock();
+            match &state.frame_source {
+                FrameSource::View(source) => {
+                    let source = Rc::downgrade(source);
+                    return Some(Rc::new(move || {
+                        if let Some(source) = source.upgrade() {
+                            source.wake();
+                        }
+                    }));
+                }
+                FrameSource::Legacy(source) => {
+                    let weak = Rc::downgrade(&self.0);
+                    return Some(crate::fast::frame_pacing::LegacyFrames::waker(
+                        source,
+                        state.handle.window_id(),
+                        state.foreground_executor.clone(),
+                        move || {
+                            if let Some(state) = weak.upgrade() {
+                                state.lock().start_display_link(&state);
+                            }
+                        },
+                    ));
+                }
+                _ => {}
+            }
+        }
         let frames = Rc::downgrade(self.2.as_ref()?);
         let state = Rc::downgrade(&self.0);
         let (window, executor) = {
@@ -4043,12 +4160,41 @@ extern "C" fn display_layer(this: &AnyObject, _: Sel, _: *mut AnyObject) {
 }
 
 extern "C" fn step(view: *mut c_void) {
+    let arrival = if gpui::fast_latency_enabled() {
+        gpui::fast_latency_tick()
+    } else {
+        0
+    };
     let view = view as *mut AnyObject;
     let window_state = unsafe { get_window_state(&*view) };
     let mut lock = window_state.lock();
 
+    let native_tick = match &lock.frame_source {
+        FrameSource::View(source) => source.take_native_tick(),
+        FrameSource::Legacy(source) => source.take_native_tick(),
+        FrameSource::DisplayLink(Some(source)) => source.take_native_tick(),
+        _ => 0,
+    };
+    let _latency_callback = gpui::fast_latency_callback(
+        lock.handle.window_id(),
+        if native_tick > 0 {
+            native_tick
+        } else {
+            arrival
+        },
+    );
+    if !lock.renderer.frame_ahead_ready()
+        && !crate::fast::composition::overlay_ready(&lock, lock.handle.window_id())
+    {
+        if let FrameSource::View(source) = &lock.frame_source {
+            source.wake();
+        }
+        return;
+    }
     if let Some(mut callback) = lock.request_frame_callback.take() {
         let signal = match &lock.frame_source {
+            FrameSource::View(source) => source.take_signal(),
+            FrameSource::Legacy(source) => source.take_signal(),
             FrameSource::DisplayLink(Some(frame_source)) => frame_source.take_signal(),
             _ => None,
         };
@@ -4083,13 +4229,22 @@ fn metal_frame(
         return;
     };
     let metal_frames = metal_frames.clone();
+    let base_ready =
+        lock.renderer.order_source_ready(latency_window, 1) && lock.renderer.frame_handoff_ready();
+    if !base_ready && !crate::fast::composition::overlay_ready(&lock, lock.handle.window_id()) {
+        metal_frames.wake();
+        return;
+    }
+    metal_frames.configure_fast(latency_window);
     let Some(mut callback) = lock.request_frame_callback.take() else {
         return;
     };
     let drawable = update.drawable();
     let latency_key = (&*drawable) as *const _ as *const () as usize as u64;
-    gpui_apple::latency_acquired(latency_window, &drawable);
-    lock.renderer.set_frame_drawable(Some(drawable));
+    if base_ready {
+        gpui_apple::latency_acquired(latency_window, &drawable);
+        lock.renderer.set_frame_drawable(Some(drawable));
+    }
     drop(lock);
     metal_frames.begin_frame();
     callback(RequestFrameOptions {
@@ -4101,8 +4256,8 @@ fn metal_frame(
     lock.request_frame_callback = Some(callback);
     // A frame with nothing to draw leaves its drawable unused; releasing it
     // lets the link hand it out again.
-    let used_drawable = lock.renderer.set_frame_drawable(None).is_none();
-    if !used_drawable {
+    let used_drawable = base_ready && lock.renderer.set_frame_drawable(None).is_none();
+    if base_ready && !used_drawable {
         gpui::fast_latency_released(latency_window, latency_key);
     }
     metal_frames.end_frame(used_drawable);

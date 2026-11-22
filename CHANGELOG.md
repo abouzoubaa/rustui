@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+- Add per-surface G5-1 presentation-order, source-drain and legacy capacity safety; retain the unadopted NSView experiment off and retire Ahead (G5-2).
+
 - Add an off-by-default input-tick presentation candidate, burst-only input hold, drawable-capacity guard and shared pixel/display-time controls with machine-folder exclusions and owner-authorized CPU-gate bypass labeling (G5-1).
 
 - Explain PX-3 typing draw/present timing with off/on diagnostic CPU profiles (PX-3b).
