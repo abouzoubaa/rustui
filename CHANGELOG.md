@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+- Opt-in native typing caches structural folds and avoids redundant owner redraws; G5 integration CI verifies the reversible candidate chain.
+
 - G5-3c: admit opt-in immediate frames before scene construction, deduplicate binding events and visible colour updates, and scope background highlighting to edited and visible ranges.
 
 - G5-3b: add opt-in draw-first editor effects, background syntax colours and per-surface immediate change coalescing; retire the drawable reserve experiment.

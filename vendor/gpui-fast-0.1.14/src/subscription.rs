@@ -43,6 +43,17 @@ where
     EmitterKey: 'static + Ord + Clone + Debug,
     Callback: 'static,
 {
+    pub(crate) fn has_subscribers(&self, emitter: &EmitterKey) -> bool {
+        self.0
+            .borrow()
+            .subscribers
+            .get(emitter)
+            .is_some_and(|entries| {
+                entries
+                    .values()
+                    .any(|s| s.state.get() != SubscriberState::Dropped)
+            })
+    }
     pub fn new() -> Self {
         Self(Rc::new(RefCell::new(SubscriberSetState {
             subscribers: Default::default(),

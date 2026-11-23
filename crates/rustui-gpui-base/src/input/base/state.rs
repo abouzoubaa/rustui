@@ -447,6 +447,7 @@ pub struct InputBaseState<M: InputModeKind> {
     pub(super) replaying_history: bool,
     pub(super) validated_token_edit: bool,
     pub(super) document_revision: u64,
+    pub(super) last_painted_revision: Cell<Option<u64>>,
     pub(super) token_presentation: super::InlineTokenPresentation,
     pub(super) token_layout_cache: Option<Box<super::token_presentation::TokenLayoutCache>>,
     /// Real per-frame bounds of the placed token elements, keyed by token
@@ -1013,6 +1014,7 @@ impl<M: InputModeKind> InputBaseState<M> {
             replaying_history: false,
             validated_token_edit: false,
             document_revision: 0,
+            last_painted_revision: Cell::new(None),
             token_presentation: Default::default(),
             token_bounds: Default::default(),
             hovered_token: None,
@@ -1229,6 +1231,9 @@ impl<M: InputModeKind> InputBaseState<M> {
         self.scrollbar_renderer = renderer;
     }
 
+    pub fn fast_current_text_was_painted(&self) -> bool {
+        self.last_painted_revision.get() == Some(self.document_revision)
+    }
     pub fn highlighter_visible_range(&self) -> Option<std::ops::Range<usize>> {
         self.last_layout
             .as_ref()

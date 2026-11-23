@@ -72,6 +72,9 @@ def capture(out,group,scene,hl,pair,arm,seconds):
                 if mask&bit:causes[name]+=1
             if not mask:causes['other']+=1
     x['frame_causes']=dict(causes)
+    x['owner_notifications_suppressed']=sum(e.get('kind')=='g53_owner_dedup' and start<=e['mach']<=end for e in events)
+    folds=[e['values'] for e in events if e.get('kind')=='g53_fold_cache' and start<=e['mach']<=end]
+    x['fold_cache']={'applied_results':len(folds),'nodes_visited':sum(e[0] for e in folds),'zero_node_results':sum(e[0]==0 for e in folds),'max_nodes_per_result':max((e[0] for e in folds),default=0)}
     x['cpu_build_deferrals']=sum(e.get('kind')=='g53_cpu_build_deferred' and start<=e['mach']<=end for e in events)
     if scene=='acceptance':
         current={};offsets={};attempts={};commits={};displayed=[]
@@ -110,6 +113,8 @@ def main():
     parser.add_argument('--deadline',required=True)
     parser.add_argument('--functional',action='store_true')
     parser.add_argument('--resume',action='store_true')
+    parser.add_argument('--typing-only',action='store_true',help='Retest both typing rates without starting other scenes.')
+    parser.add_argument('--typing-pairs-and-sanity',action='store_true',help='Five typing pairs at each rate, then one 60-second on capture of each other scene.')
     args=parser.parse_args();args.output.mkdir(parents=True,exist_ok=True)
     paths=[Path.home()/'.cache/rustui-target/release/rustui-lab',ROOT/'target/headstart/g5-1/libG5Refresh.dylib']
     frozen={str(p):hashlib.sha256(p.read_bytes()).hexdigest() for p in paths}
@@ -120,8 +125,10 @@ def main():
     done={(r['group'],r['pair'],r['arm']) for r in rows}
     try:
         for group,scene,hl in GROUPS:
-            for pair in range(1,2 if args.functional else 6):
-                arms=['on'] if args.functional else (['off','on'] if pair%2 else ['on','off'])
+            if args.typing_only and scene != 'typing':continue
+            sanity = args.typing_pairs_and_sanity and scene != 'typing'
+            for pair in range(1,2 if args.functional or sanity else 6):
+                arms=['on'] if args.functional or sanity else (['off','on'] if pair%2 else ['on','off'])
                 arms=[arm for arm in arms if (group,pair,arm) not in done]
                 if not arms:continue
                 needed=sum(0 if (args.output/f'{group}-{pair}-{arm}.log').exists() else (17 if args.functional else 70) for arm in arms)

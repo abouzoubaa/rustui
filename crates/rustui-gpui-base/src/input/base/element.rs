@@ -3793,6 +3793,11 @@ impl<M: InputModeKind> Element for TextElement<M> {
     ) {
         let (focus_handle, show_cursor, disabled, editor_style, editor_paddings) = {
             let state = self.state.read(cx);
+            if gpui::fast_draw_first_enabled() {
+                state
+                    .last_painted_revision
+                    .set(Some(state.document_revision));
+            }
             gpui::fast_latency_config(
                 window.window_handle().window_id(),
                 "g53_kit_paint_text",

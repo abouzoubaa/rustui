@@ -190,6 +190,68 @@ impl CodeEditorView {
 }
 
 impl View for CodeEditorView {
+    fn fast_owner_projection(&self) -> Option<crate::runtime::OwnerProjection> {
+        let check_id = self.id.clone();
+        let expected = self.value.snapshot();
+        let commit_id = self.id.clone();
+        let binding = self.value.clone();
+        Some(
+            crate::runtime::OwnerProjection::leaf((
+                self.id.clone(),
+                self.language.clone(),
+                self.placeholder.clone(),
+                self.placeholder_message_id.clone(),
+                self.line_numbers,
+                self.height,
+                self.disabled,
+                self.readonly,
+                self.accessibility_label.clone(),
+                self.accessibility_label_message_id.clone(),
+                self.tab_index,
+            ))
+            .with_native(
+                Rc::new(move |retained, cx| {
+                    retained
+                        .projection_entity::<RetainedCodeEditor>(&check_id)
+                        .is_some_and(|state| {
+                            let editor = &state.read(cx).editor;
+                            let native = editor.read(cx);
+                            native.fast_current_text_was_painted()
+                                && native.value().as_ref() == expected.as_str()
+                        })
+                }),
+                Rc::new(move |retained, cx, updater, window| {
+                    if let Some(state) =
+                        retained.projection_entity::<RetainedCodeEditor>(&commit_id)
+                    {
+                        let value = binding.snapshot();
+                        let latest = binding.clone();
+                        state.update(cx, |state, _| {
+                            // The next input must not mistake this synchronized owner
+                            // value for a new authoritative replacement of local text.
+                            state.owner_value = value;
+                            let writer = updater.clone();
+                            *state.writer.borrow_mut() = Some(Rc::new(move |value, cx| {
+                                let binding = latest.clone();
+                                crate::runtime::owner_projection::binding_effect(false, || {
+                                    writer(
+                                        Box::new(move |owner| binding.write_to(owner, value)),
+                                        cx,
+                                    )
+                                });
+                            }));
+                        });
+                        gpui::fast_latency_config(
+                            window,
+                            "g53_binding_slot_synced",
+                            [1., 0., 0., 0.],
+                        );
+                    }
+                }),
+            ),
+        )
+    }
+
     fn body(&self) -> impl View {
         EmptyView
     }
@@ -303,7 +365,10 @@ impl View for CodeEditorView {
                         "g53_rustui_binding_start",
                         [editor.read(cx).text().len() as f64, 0., 0., 0.],
                     );
-                    write_with_current_writer(&writer, editor.read(cx).value().to_string(), cx);
+                    let value = editor.read(cx).value().to_string();
+                    crate::runtime::owner_projection::binding_effect(true, || {
+                        write_with_current_writer(&writer, value, cx)
+                    });
                     gpui::fast_latency_config(
                         trace_window,
                         "g53_rustui_binding_end",
@@ -316,11 +381,7 @@ impl View for CodeEditorView {
         if self.disabled || self.readonly {
             *writer.borrow_mut() = None;
         } else {
-            let current_writer = if gpui::fast_draw_first_enabled() {
-                context.binding_writer_if_changed(self.value.clone())
-            } else {
-                context.binding_writer(self.value.clone())
-            };
+            let current_writer = context.binding_writer(self.value.clone());
             replace_event_writer(&writer, current_writer);
         }
         context.update_entity(&editor, |state, window, cx| {

@@ -126,6 +126,7 @@ pub(crate) struct Cache {
     covered: Range<usize>,
     edited: Vec<(Range<usize>, Vec<HighlightItem>)>,
     fallback: Option<OwnedSnapshot>,
+    pub(crate) folds: Option<Arc<super::super::input_adapter::draw_first_folds::Cache>>,
     pub(crate) proof: Option<super::rust_empty::State>,
 }
 struct OwnedSnapshot {
@@ -215,6 +216,7 @@ impl Cache {
             covered,
             edited: Vec::new(),
             fallback,
+            folds: None,
             proof: None,
         }
     }
@@ -237,6 +239,7 @@ impl Cache {
             covered: 0..len,
             edited: Vec::new(),
             fallback: None,
+            folds: None,
             proof: None,
         }
     }
@@ -355,6 +358,7 @@ mod edit_tests {
             covered: 0..6,
             edited: Vec::new(),
             fallback: None,
+            folds: None,
             proof: None,
         }
     }

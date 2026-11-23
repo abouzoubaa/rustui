@@ -28,6 +28,7 @@ pub(super) fn parse_snapshot(
         None,
         Vec::new(),
         super::super::highlighter::rust_empty::State::inert(),
+        0,
     )
 }
 #[allow(clippy::too_many_arguments)]
@@ -43,6 +44,7 @@ pub(super) fn parse_scoped(
     previous: Option<Arc<super::super::highlighter::draw_first_cache::Cache>>,
     edits: Vec<InputEdit>,
     mut proof: super::super::highlighter::rust_empty::State,
+    revision: u64,
 ) -> Option<(
     tree_sitter::Tree,
     Vec<InjectionLayer>,
@@ -84,11 +86,28 @@ pub(super) fn parse_scoped(
             layers
         }
     });
-    let folds = if folding {
-        extract_fold_ranges(&tree)
+    let fold_cache = if folding && highlight_query.is_some() {
+        Some(Arc::new(super::draw_first_folds::Cache::update(
+            previous.as_ref().and_then(|c| c.folds.as_deref()),
+            old_tree.as_ref(),
+            &tree,
+            &text,
+            &edits,
+            revision,
+        )))
     } else {
-        Vec::new()
+        None
     };
+    let folds = fold_cache
+        .as_ref()
+        .map(|c| c.ranges.as_ref().clone())
+        .unwrap_or_else(|| {
+            if folding {
+                extract_fold_ranges(&tree)
+            } else {
+                Vec::new()
+            }
+        });
     let cache = highlight_query.as_ref().map(|query| {
         let snapshot = super::super::highlighter::draw_first_cache::Snapshot {
             tree: Some(&tree),
@@ -118,6 +137,7 @@ pub(super) fn parse_scoped(
             super::super::highlighter::draw_first_cache::Cache::build(snapshot)
         };
         built.proof = Some(proof.clone());
+        built.folds = fold_cache.clone();
         Arc::new(built)
     });
     if parse_cancel.load(Ordering::Relaxed) {
@@ -160,6 +180,7 @@ mod tests {
             h.draw_first_pending().0,
             vec![edit],
             h.draw_first_proof(),
+            h.draw_first_revision,
         )
         .unwrap();
         h.apply_background_tree(tree, &text, layers);
@@ -222,6 +243,7 @@ mod tests {
             None,
             Vec::new(),
             h.draw_first_proof(),
+            h.draw_first_revision,
         )
         .unwrap();
         h.apply_background_tree(tree, &text, layers);
@@ -250,6 +272,7 @@ mod tests {
             None,
             Vec::new(),
             h.draw_first_proof(),
+            h.draw_first_revision,
         )
         .unwrap();
         h.apply_background_tree(tree, &text, layers);

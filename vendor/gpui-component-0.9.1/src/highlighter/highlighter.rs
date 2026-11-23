@@ -42,6 +42,7 @@ pub struct SyntaxHighlighter {
     language: SharedString,
     query: Option<Arc<Query>>,
     pub(crate) draw_first_cached: bool,
+    pub(crate) draw_first_revision: u64,
     draw_first_edits: Vec<InputEdit>,
     pub(crate) draw_first_cache: Option<Arc<draw_first_cache::Cache>>,
     /// The full injections query. This is used to build injection layers during parsing.
@@ -412,6 +413,7 @@ impl SyntaxHighlighter {
             language,
             query: None,
             draw_first_cached: false,
+            draw_first_revision: 0,
             draw_first_edits: Vec::new(),
             draw_first_cache: None,
             injections_query: None,
@@ -545,6 +547,7 @@ impl SyntaxHighlighter {
             language: config.name.clone(),
             query: Some(Arc::new(query)),
             draw_first_cached: false,
+            draw_first_revision: 0,
             draw_first_edits: Vec::new(),
             draw_first_cache: None,
             injections_query,
@@ -579,6 +582,7 @@ impl SyntaxHighlighter {
     /// without re-parsing.
     pub fn edit_tree(&mut self, edit: Option<InputEdit>, text: &Rope) {
         if self.draw_first_cached {
+            self.draw_first_revision = self.draw_first_revision.wrapping_add(1);
             if let Some(edit) = edit {
                 self.draw_first_edits.push(edit);
             } else {

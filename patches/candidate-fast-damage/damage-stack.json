@@ -22,6 +22,12 @@
     "../candidate-fast-latency/gpui-kit-draw-first-oracles-v1-kit09.json",
     "../candidate-fast-latency/gpui-kit-async-colours-v1-kit09.json",
     "../candidate-fast-latency/gpui-kit-colour-edit-mapping-v1-kit09.json",
-    "../candidate-fast-latency/gpui-fast-prebuild-visible-colours-v1-fast.json"
+    "../candidate-fast-latency/gpui-fast-prebuild-visible-colours-v1-fast.json",
+    "../candidate-fast-latency/gpui-kit-fold-revision-cache-v1-kit09.json",
+    "../candidate-fast-latency/gpui-kit-fold-revision-counter-v1-kit09.json",
+    "../candidate-fast-latency/gpui-fast-native-owner-proof-v1-fast.json",
+    "../candidate-fast-latency/gpui-kit-fold-cache-boundaries-v1-kit09.json",
+    "../candidate-fast-latency/gpui-fast-native-owner-readers-v1-fast.json",
+    "../candidate-fast-latency/gpui-kit-fold-unchanged-row-reuse-v1-kit09.json"
   ]
 }

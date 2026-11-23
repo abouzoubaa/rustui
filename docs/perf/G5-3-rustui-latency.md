@@ -1,8 +1,80 @@
 # G5-3 — RustUI input-to-screen latency
 
-PR #173 remains a draft until every requested correctness, CPU and latency target is established. This ticket uses the existing `codex/g5-3-rustui-latency` branch from g5-integration. The previous G5-3 results remain in the PR history and the local G5-3 report; they are not relabelled as new measurements.
+Readiness and merge follow the measured gates, current candidate-mode source CI and review checks in PR #173. This ticket uses the existing `codex/g5-3-rustui-latency` branch from g5-integration. The previous G5-3 results remain in the PR history and the local G5-3 report; they are not relabelled as new measurements.
 
-## G5-3c outcome
+## G5-3d finish — final measurements
+
+Completed on 2026-11-24 without runtime, patch, dependency or switch changes. The four missing typing-30 captures are complete: pair 4 on→off, pair 5 off→on. One new 60-second sanity capture per remaining scene ran on the same frozen post-guard release executable and refresh observer. Both hashes match the original freeze and the completed capture set. Typing-10 and typing-30 pairs 1–3 date from November 23; typing-30 pairs 4–5 and the four sanity scenes date from November 24. Each window follows normal warmup, damage off, PX-3 on for both typing arms, identical buffered logging and getrusage user+system CPU over measured wall time. No compilation or profiling overlapped recording.
+
+Typing comparisons below use five same-build matched off/on pairs; other rows compare the G5-3c candidate median with one final sanity capture. Single sanity captures receive no P verdict. Input starts at the in-process GPUI dispatch marker in `apps/rustui-lab/src/g0.rs`, before `dispatch_keystroke`/`dispatch_event`; it does not include an NSEvent hardware timestamp or OS event delivery. The endpoint is `MTLDrawable.presentedTime`. Hardware-to-handler delivery, ScreenCaptureKit displayTime and observer-free ProMotion behavior are separate G5-L1 measurements.
+
+| workload | baseline | latency before → after ms | process CPU before → after s/s | CPU result |
+| --- | --- | --- | --- | --- |
+| Typing 10/s | same-build off → on | 49.342 → 24.795 | 0.101494 → 0.106130 | INCONCLUSIVE |
+| Typing 30/s | same-build off → on | 46.044 → 24.881 | 0.206444 → 0.226282 | INCONCLUSIVE |
+| Hover | G5-3c → final sanity | 29.720 → 29.999 | 0.295655 → 0.294806 | Sanity: no >5% rise (-0.287%) |
+| Drag | G5-3c → final sanity | 31.121 → 31.339 | 0.186415 → 0.189249 | Sanity: no >5% rise (+1.520%) |
+| Collection | G5-3c → final sanity | 31.120 → 31.496 | 0.392447 → 0.390259 | Sanity: no >5% rise (-0.557%) |
+| Log | G5-3c → final sanity | 24.716 → 24.681 | 0.064836 → 0.063441 | Sanity: no >5% rise (-2.152%) |
+
+| typing workload | five paired process CPU/s changes % | median / min / max % | P verdict |
+| --- | --- | --- | --- |
+| Typing 10/s | +2.304, +1.198, +10.170, +5.422, -3.263 | +2.304 / -3.263 / +10.170 | INCONCLUSIVE |
+| Typing 30/s | +9.609, -1.174, +13.286, +12.032, +5.990 | +9.609 / -1.174 / +13.286 | INCONCLUSIVE |
+
+**Measured gates:** PASS. Neither typing rate is REGRESSION, and both medians are below 26 ms. Both CPU verdicts remain INCONCLUSIVE, not gains; typing-30 still has predominantly positive paired CPU changes. No sanity CPU rise exceeds 5%; the largest sanity latency increase is 0.375 ms. Candidate captures have zero lost edits, presentation-order violations and capacity violations.
+
+**Machine/load:** 17/24 captures are labelled **measured on a loaded machine (X% background)**; snapshot background spans 3.920%–22.770%. Top-five process snapshots accompany each local capture. All 40,570 GPU records across warmup, measurement and drain use whole-frame modes with damage off ({'direct': 40570}). There are 3 measured acquisitions over 2 ms. All >1 ms calls, paths, in-flight counts and detach ages remain listed in the completed capture details. The capacity guard is not claimed to eliminate these known waits.
+
+**Validation:** `scripts/check.sh` exits 0: **1,880 total across seven groups — 1,873 passed, 7 ignored** (1,461+7 ignored; 11; 86; 3; 40; 272; 0). Explicit candidate-mode source verification exits 0, including 730 script tests. Both stacks pass 91 ordered patches plus one alternative and 156 exact postimages. No runtime code changed during this finish. Readiness/merge requires green candidate-mode source CI for the report commit and no unanswered reviews; those live results are tracked in PR #173. All behavior switches remain off by default and candidate patches remain unpromoted.
+
+The remaining CPU work is not described as solved: the fold worker still copies the cached list, and the editor sorts/reinstalls it and rebuilds projection. The installed-state-safe fold-list experiment and the separate native/owner string-comparison experiment below remain unimplemented and unmeasured. Cache-applied-result counts are not actual reinstall counts. The passive refresh observer remained enabled in these measurements; whether it changes ProMotion behavior remains a separate measurement question.
+
+## G5-3d owner decisions
+
+Owner accepts G5-3c Collection's +3.69 ms versus G5-3b (31.12 ms median, approximately 15 ms below the pre-G5 control) with CPU GAIN. That latency change no longer blocks adoption. Source CI on g5-integration and PRs targeting it uses explicit candidate verification: approved state, hashed candidate chain, exact reverse. Main and release verification stay approved-only. Candidate promotion waits for the owner's approval when G5 merges to main.
+
+## G5-3d frozen-build outcome (historical pre-guard)
+
+All **24 requested captures** completed on the same frozen release build: five alternating matched pairs per typing rate, plus one 60-second candidate sanity capture each for hover, drag, Collection and log. The timing build is commit 1705496a6. Both typing CPU verdicts are **INCONCLUSIVE**, never GAIN. Both median latency targets pass on that measured build. The follow-on custom-lowering correctness guard was added only after all captures finished; these timings are not silently relabelled as a measurement of that later code. The completed post-guard results are reported below.
+
+| workload | median off / on total CPU s/s | five paired changes % | median / min / max % | P verdict | off → on median display delay ms | on p95 / max ms |
+| --- | --- | --- | --- | --- | --- | --- |
+| typing-10 | 0.112557 / 0.112428 | -0.115, -10.684, +0.783, -3.544, +7.705 | -0.115 / -10.684 / +7.705 | INCONCLUSIVE | 49.341 → 24.810 | 31.106 / 35.904 |
+| typing-30 | 0.208859 / 0.230827 | +21.609, -7.997, +13.859, +3.612, +17.713 | +13.859 / -7.997 / +21.609 | INCONCLUSIVE | 45.982 → 25.109 | 31.224 / 35.986 |
+
+The sanity captures have no paired verdict. Their comparison with G5-3c's five candidate captures is diagnostic, not a same-build CPU claim:
+
+| scene | G5-3c median → current single median ms | G5-3c median CPU s/s → current single CPU s/s | order / lost native edits / capacity violations | measured acquisitions >2 ms |
+| --- | --- | --- | --- | --- |
+| hover | 29.720 → 30.218 | 0.295655 → 0.297252 | 0 / 0 / 0 | 0 |
+| drag | 31.121 → 31.408 | 0.186415 → 0.194826 | 0 / 0 / 0 | 2 |
+| acceptance | 31.120 → 30.073 | 0.392447 → 0.394643 | 0 / 0 / 0 | 0 |
+| log | 24.716 → 24.685 | 0.064836 → 0.061085 | 0 / 0 / 0 | 0 |
+
+**Machine:** 22/24 captures are labelled **measured on a loaded machine (X% background)**; snapshot background ranged from 2.980% to 24.740%. Exact start/end loads, top-five process lists and raw captures remain local. There was no compilation or profiling during recording. Executable and refresh-observer hashes match before/after. All candidate captures have zero lost edits, order violations and capacity violations. There are 3 measured acquisitions over 2 ms, retained as known outliers; all >1 ms calls are listed below.
+
+**Correctness follow-up after timing:** `body()` alone cannot prove a custom `into_element()` implementation's visible output. The guard now records whether the actual component entered the default body-lowering path, using a scoped, nesting-safe, type-and-instance witness without dereferencing stored addresses. Custom render overrides keep their owner notification; explicit supported native primitives retain their exact descriptor proof. A focused custom-render test covers a native editor plus an additional owner-derived label. Default-body, changed geometry, external observer, dynamic binding-target, normalization, IME and undo tests remain enabled. This is a correctness guard, not the owner's next CPU experiment.
+
+**Next experiment 1 — NOT IMPLEMENTED / NOT MEASURED:** the copied fold vector in `crates/rustui-gpui-component/src/highlighter/draw_first_background.rs` still reaches `apply_highlighter_fold_candidates_quiet` in `crates/rustui-gpui-base/src/input/base/state.rs`. That path snapshots folded ranges and visible gutter markers, reinstalls candidates, and rebuilds the fold projection. Cache-vector identity alone is insufficient: incremental editing can clear candidates or shift installed arrows. Add an opt-in reuse path only when the list currently installed in the editor is proven correct for the current document/fold-map state; keep normal updates for arrow removal, blank-line shifts, wrapping, folding and changed visible colours. Compare blank-line insert/delete, paste, undo and edits within existing folds against a full scan, including the installed arrows/fold projection. Count actual fold-list reinstalls; the current `g53_fold_cache` applied-result count is not a reinstall count. Measure this change alone with G5 draw-first and PX-3 enabled in both arms, damage off, buffered logging, five alternating matched pairs at 10 and 30 keys/s, total CPU/s by the P rule and median presentedTime delay ≤26 ms. No gain is claimed here.
+
+**Next experiment 2 — separate, NOT IMPLEMENTED / NOT MEASURED:** if CPU work remains, remove the whole-document string materialization used only by the native/owner equality check in `crates/rustui/src/components/advanced/code_editor.rs`. Test an exact comparison against the existing text storage; retain the real binding payload, setters/validation, observer guards and authoritative-owner behavior. Run its own pairs rather than combining it with fold-install reuse. There is insufficient time in this unchanged two-hour timebox to implement, oracle-test, build and independently time these experiments.
+
+## G5-3d implementation and method
+
+The new timebox runs from 01:36:28 to 03:36:28 UTC on 2026-11-23. Every runtime behavior remains opt-in, with damage off and PX-3 enabled in both typing arms. Candidate and control use one release build, Rust 1.98.0, buffered logging, identical diagnostic flags, normal warmup and 60-second measured windows. Typing at 10 and 30 keys/s each gets five matched pairs in alternating order; hover, drag, Collection and log each get one candidate sanity capture. A single sanity capture receives no P verdict.
+
+The Kit candidate stores fold candidates against an explicit syntax-tree revision, separate from paint and colour application. When nonstructural edits leave line coordinates unchanged, the cache shares the previous fold-range vector and shifts only byte anchors; it does not repeat row lookups or sorting. Known edits shift previous byte endpoints. With no structural changed ranges, newline/covered-endpoint hazards absent, it reuses those candidates without traversing the tree. Structural or newline edits rebuild the intersecting top-level named subtrees and retain the rest. Unknown edits, missing cache or revision discontinuities prime a full result. Async results must match both the current text and revision, including undo back to identical text. Fold oracles compare with full recomputation after inserts, deletes, paste, undo, delimiter/block creation and removal, newline thresholds, malformed/empty input and edits beside unrelated functions. An unchanged revision visits zero nodes; a local structural change in a 500-function document visits less than one tenth of a full traversal.
+
+Owner-notification dedup is conservative. It compares exact supported view descriptions before and after a native binding effect, confirms that the current native text revision was actually painted and equals the owner value, and consults GPUI's owner observers and cross-window read tracking. Only a native editor or supported Container around it qualifies; for nested hosts, GPUI retained records must also prove that no other view read the owner. Unsupported descriptions, different geometry/properties, normalized/rejected values, unpainted edits, external observers and other-window readers retain normal notifications. Binding/validation callbacks still run. A suppressed notification silently updates the retained owner marker and latest binding writer, so subsequent edits cannot restore stale owner text or write to a previous binding target. Colours retain their visible-span change check. Frame-cause masks and suppressed-owner/fold-visit counts are captured separately.
+
+The source CI selector is tested for G5-targeted PRs, integration pushes, main, manual runs and misleading branch names. It invokes the explicit candidate source verifier only for the G5 integration context. That verifier reuses the live source gate, anchors Kit candidate inputs to approved checksums, validates manifest post-hashes and proves exact reverse restoration, including absence for new files. The release verifier itself is unchanged.
+
+## G5-3d interim fold-row remapping result
+
+The first complete five-pair 10 keys/s set, before exact fold-vector reuse, was **REGRESSION** in total process CPU/s: **+8.003%, +10.690%, +16.472%, +7.938%, +27.593%** (median +10.690%, min +7.938%, max +27.593%). Candidate median display delay was **24.793 ms**, versus **49.343 ms** control. Zero syntax nodes were visited by applied fold results, but the cache still rebuilt/sorted fold rows. The refinement removes that work for structurally unchanged edits with unchanged line positions; the oracle also asserts shared fold-vector identity. This interim set is preserved separately and is not combined with the final retest. The following 30 keys/s control was interrupted before a complete capture; it is excluded and has no verdict. The earlier interrupted capture before the nested-owner fix also has no verdict.
+
+## G5-3c outcome (historical)
 
 **NOT COMPLETE — PR #173 stays draft, with every switch off by default.** All 60 measured captures finished: five matched off/on pairs for each of the six workloads, alternating off→on / on→off / off→on / on→off / off→on. Both typing CPU verdicts are REGRESSION. Collection also misses the maximum 2 ms latency increase relative to G5-3b. No exception or adoption decision is made here.
 
@@ -610,3 +682,337 @@ Cause bits are accumulated before each CPU draw: input=1, binding=2, changed vis
 | acceptance | on | 27984 | 0 | 0 | 0 | 1:27984 | 87584 |
 | log | off | 0 | 0 | 0 | 2878 | 0:2878 | 0 |
 | log | on | 0 | 0 | 0 | 2878 | 0:2878 | 0 |
+
+## G5-3d matched captures
+
+Typing quantiles are medians of five capture quantiles; each other scene is one sanity capture. Maxima are maxima across available captures. Input delays use MTLDrawable.presentedTime. Each capture has its own measured background load below. No unavailable callback is counted as physical proof that pixels were absent.
+
+| workload | arm | captures | input→display median / p95 / max ms | visible versions/s (lower bound) | unmatched / rendered | order violations | lost native edits | >2 ms measured acquisitions | CPU s/s | CPU ms/attempt | draw+present ms/attempt | CPU draw+present >8.3 ms |
+| --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |
+| typing-10 | off | 5 | 49.341/62.356/68.325 | 9.099 | 5/2730 | 0 | 0 | 0 | 0.113 | 12.348 | 2.114 | 0 |
+| typing-10 | on | 5 | 24.810/31.106/35.904 | 9.971 | 0/2999 | 0 | 0 | 1 | 0.112 | 11.257 | 2.616 | 0 |
+| typing-30 | off | 5 | 45.982/50.302/68.674 | 26.044 | 5/7823 | 0 | 0 | 0 | 0.209 | 8.009 | 1.941 | 0 |
+| typing-30 | on | 5 | 25.109/31.224/35.986 | 29.973 | 0/9001 | 0 | 0 | 0 | 0.231 | 7.697 | 1.804 | 0 |
+| hover | on | 1 | 30.218/38.633/44.619 | 98.612 | 2/5922 | 0 | 0 | 0 | 0.297 | 3.012 | 1.856 | 1 |
+| drag | on | 1 | 31.408/40.916/49.049 | 98.397 | 2/5909 | 0 | 0 | 2 | 0.195 | 1.978 | 0.548 | 0 |
+| acceptance | on | 1 | 30.073/37.973/50.879 | 93.917 | 1/5640 | 0 | 0 | 0 | 0.395 | 4.199 | 3.604 | 449 |
+| log | on | 1 | 24.685/29.008/32.636 | 9.567 | 1/576 | 0 | 0 | 0 | 0.061 | 6.374 | 3.081 | 1 |
+
+## Paired CPU gate
+
+Deciding metric: getrusage user+sys seconds divided by measured wall seconds. The five pairs alternate off→on, on→off, off→on, on→off, off→on. Negative is less CPU. GAIN: all five ≤−3%; REGRESSION: all five >+3%; NEUTRAL: all five within inclusive ±3%; otherwise INCONCLUSIVE. Incomplete sets have no verdict. CPU per attempt is diagnostic only for this ticket.
+
+| workload | five total-process CPU/s paired changes % | median / min / max % | verdict | five CPU/attempt changes %, diagnostic |
+| --- | --- | --- | --- | --- |
+| typing-10 | -0.115, -10.684, 0.783, -3.544, 7.705 | -0.115/-10.684/7.705 | INCONCLUSIVE | -8.837, -20.000, -7.908, -12.209, -0.866 |
+| typing-30 | 21.609, -7.997, 13.859, 3.612, 17.713 | 13.859/-7.997/21.609 | INCONCLUSIVE | 6.866, -21.119, 0.063, -10.846, 2.373 |
+| hover | none | NOT MEASURED/NOT MEASURED/NOT MEASURED | SANITY ONLY — no P verdict |  |
+| drag | none | NOT MEASURED/NOT MEASURED/NOT MEASURED | SANITY ONLY — no P verdict |  |
+| acceptance | none | NOT MEASURED/NOT MEASURED/NOT MEASURED | SANITY ONLY — no P verdict |  |
+| log | none | NOT MEASURED/NOT MEASURED/NOT MEASURED | SANITY ONLY — no P verdict |  |
+
+## Frame and refresh diagnostics
+
+Throughput is a conservative count of distinct presentedTime slots with provably changed version sets. Multiple callbacks with different versions at exactly the same display time are ambiguous, not an inferred ordering.
+
+The same input version can legitimately acquire later colours. Scene generations distinguish those updates from presenting an already-submitted unchanged scene. The single-refresh rule is per renderer/surface, using the platform refresh interval; it does not claim to read WindowServer private queue state.
+
+| workload | arm | CPU draws / GPU frames / inputs | GPU→display median ms | missed refreshes median / p95 | gaps median / p95 / max ms | same-scene submissions skipped | next-interval deferrals | equal-time ambiguous slots |
+| --- | --- | --- | --- | --- | --- | --- | --- | --- |
+| typing-10 | off | 2995/2730/3000 | 38.310 | 2.000/2.000 | 108.333/124.999/133.333 | 0 | 0 | 0 |
+| typing-10 | on | 2999/2999/3000 | 19.847 | 0.000/0.000 | 108.332/116.666/116.670 | 0 | 0 | 0 |
+| typing-30 | off | 8995/7823/9000 | 38.328 | 2.000/2.000 | 41.666/41.669/66.666 | 0 | 0 | 2 |
+| typing-30 | on | 9001/9001/9000 | 20.726 | 0.000/0.000 | 33.333/41.667/50.000 | 0 | 0 | 0 |
+| hover | on | 5922/5922/7200 | 21.548 | 0.000/1.000 | 8.333/16.667/25.000 | 0 | 0 | 0 |
+| drag | on | 5909/5909/7200 | 22.257 | 0.000/1.000 | 8.333/16.667/25.000 | 0 | 0 | 0 |
+| acceptance | on | 5640/5640/7200 | 21.256 | 0.000/1.000 | 8.333/16.667/41.666 | 0 | 0 | 0 |
+| log | on | 576/576/600 | 20.136 | 0.000/0.000 | 100.003/108.333/108.336 | 0 | 0 | 0 |
+
+## Observed-refresh missed slots
+
+These labels classify observable trace states, with the inherited two-refresh control floor. “WindowServer late” means GPU-ready and handed off but not observed in the eligible slot; it does not establish compositor causality. Observer gaps are disclosed rather than filled in.
+
+| workload | arm | slots | no new input | frame not ready | no drawable free | presented but replaced | WindowServer late | observer gaps |
+| --- | --- | --- | --- | --- | --- | --- | --- | --- |
+| hover | on | 7199 | 1 | 723 | 0 | 3 | 555 | 1 |
+| drag | on | 7200 | 1 | 691 | 0 | 3 | 601 | 0 |
+
+## Per-capture process CPU and load
+
+Each loaded row means **measured on a loaded machine (X% background)**; X is the start→end background percentage shown. Corrected background excludes Codex, its agents/shells and the measured app. Raw top-five process lists remain with each local capture.
+
+| workload | pair | arm | attempts | wall s | user / sys / total CPU s | CPU s/s | CPU ms/attempt | actual refresh Hz | background start→end % | label |
+| --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |
+| typing-10 | 1 | off | 547 | 60.007 | 5.703/1.052/6.754 | 0.113 | 12.348 | 120.000 | 14.630→3.860 | measured on a loaded machine (14.630%→3.860% background) |
+| typing-10 | 1 | on | 600 | 60.074 | 5.642/1.112/6.754 | 0.112 | 11.257 | 120.000 | 8.900→10.220 | measured on a loaded machine (8.900%→10.220% background) |
+| typing-10 | 2 | on | 600 | 60.063 | 5.699/1.095/6.794 | 0.113 | 11.324 | 120.000 | 3.920→4.600 | quiet |
+| typing-10 | 2 | off | 537 | 60.016 | 6.564/1.037/7.601 | 0.127 | 14.155 | 120.000 | 4.560→5.560 | quiet |
+| typing-10 | 3 | off | 548 | 60.020 | 5.557/1.047/6.605 | 0.110 | 12.052 | 120.000 | 2.980→14.100 | measured on a loaded machine (2.980%→14.100% background) |
+| typing-10 | 3 | on | 600 | 60.048 | 5.542/1.117/6.659 | 0.111 | 11.099 | 120.000 | 12.530→20.530 | measured on a loaded machine (12.530%→20.530% background) |
+| typing-10 | 4 | on | 600 | 60.081 | 5.490/1.079/6.569 | 0.109 | 10.949 | 120.000 | 14.400→15.750 | measured on a loaded machine (14.400%→15.750% background) |
+| typing-10 | 4 | off | 546 | 60.070 | 5.781/1.029/6.810 | 0.113 | 12.472 | 120.000 | 11.420→14.420 | measured on a loaded machine (11.420%→14.420% background) |
+| typing-10 | 5 | off | 552 | 60.078 | 5.267/1.044/6.311 | 0.105 | 11.433 | 120.000 | 6.590→13.610 | measured on a loaded machine (6.590%→13.610% background) |
+| typing-10 | 5 | on | 599 | 60.006 | 5.671/1.118/6.789 | 0.113 | 11.334 | 120.000 | 10.260→14.510 | measured on a loaded machine (10.260%→14.510% background) |
+| typing-30 | 1 | off | 1582 | 60.023 | 9.620/1.996/11.616 | 0.194 | 7.343 | 120.000 | 8.830→14.620 | measured on a loaded machine (8.830%→14.620% background) |
+| typing-30 | 1 | on | 1800 | 60.015 | 12.060/2.064/14.124 | 0.235 | 7.847 | 120.000 | 13.200→14.380 | measured on a loaded machine (13.200%→14.380% background) |
+| typing-30 | 2 | on | 1800 | 60.011 | 10.422/1.823/12.245 | 0.204 | 6.803 | 120.000 | 10.490→16.390 | measured on a loaded machine (10.490%→16.390% background) |
+| typing-30 | 2 | off | 1544 | 60.039 | 11.229/2.086/13.316 | 0.222 | 8.624 | 120.000 | 14.280→19.830 | measured on a loaded machine (14.280%→19.830% background) |
+| typing-30 | 3 | off | 1582 | 60.024 | 10.079/2.090/12.169 | 0.203 | 7.692 | 120.000 | 11.360→15.820 | measured on a loaded machine (11.360%→15.820% background) |
+| typing-30 | 3 | on | 1800 | 60.020 | 11.793/2.061/13.854 | 0.231 | 7.697 | 120.000 | 13.220→14.430 | measured on a loaded machine (13.220%→14.430% background) |
+| typing-30 | 4 | on | 1801 | 60.021 | 11.308/1.970/13.278 | 0.221 | 7.373 | 120.000 | 10.580→17.640 | measured on a loaded machine (10.580%→17.640% background) |
+| typing-30 | 4 | off | 1550 | 60.033 | 10.796/2.022/12.818 | 0.214 | 8.269 | 120.000 | 24.740→20.480 | measured on a loaded machine (24.740%→20.480% background) |
+| typing-30 | 5 | off | 1565 | 60.013 | 10.443/2.091/12.534 | 0.209 | 8.009 | 120.000 | 21.310→15.140 | measured on a loaded machine (21.310%→15.140% background) |
+| typing-30 | 5 | on | 1800 | 60.030 | 12.608/2.151/14.759 | 0.246 | 8.199 | 120.000 | 20.530→15.400 | measured on a loaded machine (20.530%→15.400% background) |
+| hover | 1 | on | 5922 | 60.003 | 12.982/4.854/17.836 | 0.297 | 3.012 | 120.000 | 11.060→14.440 | measured on a loaded machine (11.060%→14.440% background) |
+| drag | 1 | on | 5909 | 60.002 | 5.648/6.042/11.690 | 0.195 | 1.978 | 120.000 | 6.930→15.020 | measured on a loaded machine (6.930%→15.020% background) |
+| acceptance | 1 | on | 5640 | 60.010 | 9.477/14.206/23.683 | 0.395 | 4.199 | 120.000 | 7.610→14.750 | measured on a loaded machine (7.610%→14.750% background) |
+| log | 1 | on | 576 | 60.104 | 2.734/0.937/3.671 | 0.061 | 6.374 | 120.000 | 8.520→15.270 | measured on a loaded machine (8.520%→15.270% background) |
+
+## Acquisitions over 1 ms (all phases)
+
+All calls over 1 ms in all phases are listed; the measured-window >2 ms count remains in the summary table. No acquisition workaround is adopted from these numbers. Each entry gives phase, path, duration, pre-call live/pool, attached state and milliseconds since display-link detach.
+
+- typing-10 pair 1 off: warmup, non-immediate, 4.180375 ms, 0/3, attached=False, detach age=N/A ms.
+
+- typing-10 pair 2 on: warmup, non-immediate, 1.047500 ms, 0/3, attached=False, detach age=N/A ms.
+
+- typing-10 pair 2 on: measured, immediate, 2.160458 ms, 1/3, attached=False, detach age=N/A ms.
+
+- typing-10 pair 2 off: warmup, non-immediate, 1.203708 ms, 0/3, attached=False, detach age=N/A ms.
+
+- typing-10 pair 4 on: warmup, non-immediate, 2.910042 ms, 0/3, attached=False, detach age=N/A ms.
+
+- typing-10 pair 4 on: measured, immediate, 1.042834 ms, 1/3, attached=False, detach age=N/A ms.
+
+- typing-10 pair 4 off: warmup, non-immediate, 1.177125 ms, 0/3, attached=False, detach age=N/A ms.
+
+- typing-10 pair 5 on: warmup, non-immediate, 1.068042 ms, 0/3, attached=False, detach age=N/A ms.
+
+- typing-10 pair 5 on: measured, immediate, 1.340917 ms, 1/3, attached=False, detach age=N/A ms.
+
+- typing-30 pair 1 on: warmup, non-immediate, 1.025417 ms, 0/3, attached=False, detach age=N/A ms.
+
+- typing-30 pair 2 on: warmup, non-immediate, 1.102542 ms, 0/3, attached=False, detach age=N/A ms.
+
+- typing-30 pair 2 on: measured, immediate, 1.195583 ms, 1/3, attached=False, detach age=N/A ms.
+
+- typing-30 pair 2 off: warmup, non-immediate, 1.245000 ms, 0/3, attached=False, detach age=N/A ms.
+
+- typing-30 pair 3 off: warmup, non-immediate, 1.007792 ms, 0/3, attached=False, detach age=N/A ms.
+
+- typing-30 pair 3 on: warmup, non-immediate, 1.561209 ms, 0/3, attached=False, detach age=N/A ms.
+
+- typing-30 pair 3 on: measured, immediate, 1.931000 ms, 1/3, attached=False, detach age=N/A ms.
+
+- typing-30 pair 4 on: warmup, non-immediate, 1.131083 ms, 0/3, attached=False, detach age=N/A ms.
+
+- typing-30 pair 4 on: measured, immediate, 1.274875 ms, 1/3, attached=False, detach age=N/A ms.
+
+- typing-30 pair 4 off: warmup, non-immediate, 1.006625 ms, 0/3, attached=False, detach age=N/A ms.
+
+- typing-30 pair 5 off: warmup, non-immediate, 1.231333 ms, 0/3, attached=False, detach age=N/A ms.
+
+- hover pair 1 on: warmup, non-immediate, 1.271208 ms, 0/3, attached=False, detach age=N/A ms.
+
+- hover pair 1 on: measured, immediate, 1.159583 ms, 1/3, attached=False, detach age=N/A ms.
+
+- hover pair 1 on: measured, immediate, 1.278292 ms, 2/3, attached=False, detach age=N/A ms.
+
+- drag pair 1 on: warmup, non-immediate, 1.267250 ms, 0/3, attached=False, detach age=N/A ms.
+
+- drag pair 1 on: measured, immediate, 2.322083 ms, 1/3, attached=False, detach age=N/A ms.
+
+- drag pair 1 on: measured, immediate, 6.508042 ms, 2/3, attached=False, detach age=N/A ms.
+
+- drag pair 1 on: measured, immediate, 1.496416 ms, 2/3, attached=False, detach age=N/A ms.
+
+- drag pair 1 on: measured, immediate, 1.376584 ms, 2/3, attached=False, detach age=N/A ms.
+
+- drag pair 1 on: measured, immediate, 1.071208 ms, 2/3, attached=False, detach age=N/A ms.
+
+- acceptance pair 1 on: warmup, non-immediate, 1.267917 ms, 0/3, attached=False, detach age=N/A ms.
+
+- acceptance pair 1 on: measured, immediate, 1.340250 ms, 2/3, attached=False, detach age=N/A ms.
+
+- log pair 1 on: warmup, non-immediate, 1.110667 ms, 0/3, attached=False, detach age=N/A ms.
+
+## Scene construction causes
+
+Cause bits are accumulated before each CPU draw: input=1, binding=2, changed visible colour=4; zero means other. A draw can consume multiple causes, so cause totals overlap. Exact mask counts are retained to avoid attributing a mixed draw to only one cause.
+
+| workload | arm | input | binding | colour | other | masks | CPU builds deferred before draw |
+| --- | --- | --- | --- | --- | --- | --- | --- |
+| typing-10 | off | 2732 | 2995 | 0 | 0 | 2:263, 3:2732 | 0 |
+| typing-10 | on | 2999 | 224 | 0 | 0 | 1:2775, 3:224 | 15202 |
+| typing-30 | off | 7823 | 8995 | 0 | 0 | 2:1172, 3:7823 | 0 |
+| typing-30 | on | 9000 | 1070 | 0 | 1 | 0:1, 1:7930, 3:1070 | 46256 |
+| hover | on | 5922 | 0 | 0 | 0 | 1:5922 | 19987 |
+| drag | on | 5909 | 0 | 0 | 0 | 1:5909 | 20878 |
+| acceptance | on | 5640 | 0 | 0 | 0 | 1:5640 | 17500 |
+| log | on | 0 | 0 | 0 | 576 | 0:576 | 0 |
+
+## G5-3d post-guard retest — complete
+
+This is the completed post-guard frozen-build set, superseding the partial table from November 23. The missing pairs and all four new sanity scenes finished November 24. Exact per-capture dates are retained in the driver logs; raw logs are not committed. Observed clock endpoints are unchanged. No incomplete set is assigned a verdict and no INCONCLUSIVE result is called a gain.
+
+### Completed capture details
+
+Typing quantiles are medians of five capture quantiles; each other scene is one sanity capture. Maxima are maxima across available captures. Input delays use MTLDrawable.presentedTime. Each capture has its own measured background load below. No unavailable callback is counted as physical proof that pixels were absent.
+
+| workload | arm | captures | input→display median / p95 / max ms | visible versions/s (lower bound) | unmatched / rendered | order violations | lost native edits | >2 ms measured acquisitions | CPU s/s | CPU ms/attempt | draw+present ms/attempt | CPU draw+present >8.3 ms |
+| --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |
+| typing-10 | off | 5 | 49.342/62.042/66.519 | 9.193 | 5/2770 | 0 | 0 | 0 | 0.101 | 11.020 | 2.086 | 0 |
+| typing-10 | on | 5 | 24.795/30.706/35.901 | 9.975 | 0/3000 | 0 | 0 | 0 | 0.106 | 10.633 | 2.513 | 0 |
+| typing-30 | off | 5 | 46.044/49.860/68.787 | 26.107 | 7/7870 | 0 | 0 | 0 | 0.206 | 7.941 | 1.999 | 0 |
+| typing-30 | on | 5 | 24.881/31.411/39.357 | 29.970 | 0/9000 | 0 | 0 | 1 | 0.226 | 7.548 | 1.716 | 0 |
+| hover | on | 1 | 29.999/38.971/45.605 | 95.546 | 2/5737 | 0 | 0 | 1 | 0.295 | 3.083 | 1.962 | 0 |
+| drag | on | 1 | 31.339/40.370/50.164 | 97.474 | 2/5854 | 0 | 0 | 0 | 0.189 | 1.940 | 0.548 | 0 |
+| acceptance | on | 1 | 31.496/37.778/54.172 | 92.291 | 1/5541 | 0 | 0 | 1 | 0.390 | 4.226 | 3.635 | 472 |
+| log | on | 1 | 24.681/28.993/29.062 | 9.565 | 1/575 | 0 | 0 | 0 | 0.063 | 6.621 | 3.105 | 1 |
+
+## Paired CPU gate
+
+Deciding metric: getrusage user+sys seconds divided by measured wall seconds. The five pairs alternate off→on, on→off, off→on, on→off, off→on. Negative is less CPU. GAIN: all five ≤−3%; REGRESSION: all five >+3%; NEUTRAL: all five within inclusive ±3%; otherwise INCONCLUSIVE. Incomplete sets have no verdict. CPU per attempt is diagnostic only for this ticket.
+
+| workload | five total-process CPU/s paired changes % | median / min / max % | verdict | five CPU/attempt changes %, diagnostic |
+| --- | --- | --- | --- | --- |
+| typing-10 | 2.304, 1.198, 10.170, 5.422, -3.263 | 2.304/-3.263/10.170 | INCONCLUSIVE | -5.649, -6.809, 2.043, -2.875, -10.635 |
+| typing-30 | 9.609, -1.174, 13.286, 12.032, 5.990 | 9.609/-1.174/13.286 | INCONCLUSIVE | -4.955, -14.082, 0.017, -1.304, -7.526 |
+| hover | none | NOT MEASURED/NOT MEASURED/NOT MEASURED | SANITY ONLY — no P verdict |  |
+| drag | none | NOT MEASURED/NOT MEASURED/NOT MEASURED | SANITY ONLY — no P verdict |  |
+| acceptance | none | NOT MEASURED/NOT MEASURED/NOT MEASURED | SANITY ONLY — no P verdict |  |
+| log | none | NOT MEASURED/NOT MEASURED/NOT MEASURED | SANITY ONLY — no P verdict |  |
+
+## Frame and refresh diagnostics
+
+Throughput is a conservative count of distinct presentedTime slots with provably changed version sets. Multiple callbacks with different versions at exactly the same display time are ambiguous, not an inferred ordering.
+
+The same input version can legitimately acquire later colours. Scene generations distinguish those updates from presenting an already-submitted unchanged scene. The single-refresh rule is per renderer/surface, using the platform refresh interval; it does not claim to read WindowServer private queue state.
+
+| workload | arm | CPU draws / GPU frames / inputs | GPU→display median ms | missed refreshes median / p95 | gaps median / p95 / max ms | same-scene submissions skipped | next-interval deferrals | equal-time ambiguous slots |
+| --- | --- | --- | --- | --- | --- | --- | --- | --- |
+| typing-10 | off | 2995/2770/3000 | 38.302 | 2.000/2.000 | 108.333/124.998/133.332 | 0 | 0 | 0 |
+| typing-10 | on | 3000/3000/3000 | 19.641 | 0.000/0.000 | 108.332/116.666/116.670 | 0 | 0 | 0 |
+| typing-30 | off | 8995/7870/9000 | 38.242 | 2.000/2.000 | 41.666/41.667/66.666 | 0 | 0 | 0 |
+| typing-30 | on | 9000/9000/9000 | 20.777 | 0.000/0.000 | 33.333/41.667/50.000 | 0 | 0 | 0 |
+| hover | on | 5737/5737/7200 | 22.211 | 0.000/1.000 | 8.333/16.667/25.004 | 0 | 0 | 0 |
+| drag | on | 5854/5854/7200 | 22.496 | 0.000/1.000 | 8.333/16.667/25.001 | 0 | 0 | 0 |
+| acceptance | on | 5541/5541/7200 | 22.182 | 0.000/1.000 | 8.333/16.667/33.333 | 0 | 0 | 0 |
+| log | on | 575/575/600 | 20.210 | 0.000/0.000 | 104.166/108.333/112.500 | 0 | 0 | 0 |
+
+## Observed-refresh missed slots
+
+These labels classify observable trace states, with the inherited two-refresh control floor. “WindowServer late” means GPU-ready and handed off but not observed in the eligible slot; it does not establish compositor causality. Observer gaps are disclosed rather than filled in.
+
+| workload | arm | slots | no new input | frame not ready | no drawable free | presented but replaced | WindowServer late | observer gaps |
+| --- | --- | --- | --- | --- | --- | --- | --- | --- |
+| hover | on | 7197 | 1 | 796 | 0 | 3 | 665 | 3 |
+| drag | on | 7201 | 1 | 722 | 0 | 3 | 626 | 0 |
+
+## Per-capture process CPU and load
+
+Each loaded row means **measured on a loaded machine (X% background)**; X is the start→end background percentage shown. Corrected background excludes Codex, its agents/shells and the measured app. Raw top-five process lists remain with each local capture.
+
+| workload | pair | arm | attempts | wall s | user / sys / total CPU s | CPU s/s | CPU ms/attempt | actual refresh Hz | background start→end % | label |
+| --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |
+| typing-10 | 1 | off | 553 | 60.074 | 5.166/1.066/6.232 | 0.104 | 11.269 | 120.000 | 5.910→14.780 | measured on a loaded machine (5.910%→14.780% background) |
+| typing-10 | 1 | on | 600 | 60.113 | 5.333/1.047/6.380 | 0.106 | 10.633 | 120.000 | 6.360→5.490 | quiet |
+| typing-10 | 2 | on | 600 | 60.049 | 5.290/1.051/6.341 | 0.106 | 10.568 | 120.000 | 4.280→6.380 | quiet |
+| typing-10 | 2 | off | 553 | 60.100 | 5.203/1.068/6.271 | 0.104 | 11.340 | 120.000 | 3.920→7.330 | quiet |
+| typing-10 | 3 | off | 556 | 60.076 | 4.832/1.031/5.863 | 0.098 | 10.546 | 120.000 | 6.010→21.490 | measured on a loaded machine (6.010%→21.490% background) |
+| typing-10 | 3 | on | 600 | 60.048 | 5.387/1.069/6.457 | 0.108 | 10.761 | 120.000 | 13.900→7.320 | measured on a loaded machine (13.900%→7.320% background) |
+| typing-10 | 4 | on | 600 | 60.021 | 5.378/1.044/6.422 | 0.107 | 10.704 | 120.000 | 18.640→7.650 | measured on a loaded machine (18.640%→7.650% background) |
+| typing-10 | 4 | off | 553 | 60.045 | 5.068/1.026/6.094 | 0.101 | 11.020 | 120.000 | 12.710→8.300 | measured on a loaded machine (12.710%→8.300% background) |
+| typing-10 | 5 | off | 555 | 60.084 | 5.025/1.063/6.088 | 0.101 | 10.969 | 120.000 | 8.150→9.040 | quiet |
+| typing-10 | 5 | on | 600 | 60.005 | 4.907/0.974/5.882 | 0.098 | 9.803 | 120.000 | 6.620→9.810 | quiet |
+| typing-30 | 1 | off | 1560 | 60.007 | 10.357/2.032/12.388 | 0.206 | 7.941 | 120.000 | 6.690→8.600 | quiet |
+| typing-30 | 1 | on | 1800 | 60.039 | 11.637/1.949/13.586 | 0.226 | 7.548 | 120.000 | 7.660→10.060 | measured on a loaded machine (7.660%→10.060% background) |
+| typing-30 | 2 | on | 1800 | 60.014 | 10.984/1.860/12.844 | 0.214 | 7.135 | 120.000 | 8.030→5.810 | quiet |
+| typing-30 | 2 | off | 1565 | 60.018 | 10.770/2.227/12.997 | 0.217 | 8.305 | 120.000 | 3.980→17.750 | measured on a loaded machine (3.980%→17.750% background) |
+| typing-30 | 3 | off | 1589 | 60.012 | 9.585/2.041/11.626 | 0.194 | 7.317 | 120.000 | 4.070→22.550 | measured on a loaded machine (4.070%→22.550% background) |
+| typing-30 | 3 | on | 1800 | 60.018 | 11.254/1.919/13.172 | 0.219 | 7.318 | 120.000 | 12.670→15.290 | measured on a loaded machine (12.670%→15.290% background) |
+| typing-30 | 4 | on | 1800 | 60.026 | 11.724/1.879/13.603 | 0.227 | 7.557 | 120.000 | 22.770→11.910 | measured on a loaded machine (22.770%→11.910% background) |
+| typing-30 | 4 | off | 1586 | 60.036 | 10.052/2.092/12.144 | 0.202 | 7.657 | 120.000 | 18.220→14.940 | measured on a loaded machine (18.220%→14.940% background) |
+| typing-30 | 5 | off | 1570 | 60.023 | 10.877/2.246/13.124 | 0.219 | 8.359 | 120.000 | 17.090→8.360 | measured on a loaded machine (17.090%→8.360% background) |
+| typing-30 | 5 | on | 1800 | 60.040 | 11.962/1.952/13.914 | 0.232 | 7.730 | 120.000 | 14.950→17.210 | measured on a loaded machine (14.950%→17.210% background) |
+| hover | 1 | on | 5737 | 60.002 | 13.071/4.619/17.689 | 0.295 | 3.083 | 120.000 | 13.020→17.670 | measured on a loaded machine (13.020%→17.670% background) |
+| drag | 1 | on | 5854 | 60.006 | 5.677/5.679/11.356 | 0.189 | 1.940 | 120.000 | 9.360→12.430 | measured on a loaded machine (9.360%→12.430% background) |
+| acceptance | 1 | on | 5541 | 60.006 | 9.423/13.995/23.418 | 0.390 | 4.226 | 120.000 | 17.870→12.490 | measured on a loaded machine (17.870%→12.490% background) |
+| log | 1 | on | 575 | 60.008 | 2.822/0.985/3.807 | 0.063 | 6.621 | 120.000 | 15.180→11.200 | measured on a loaded machine (15.180%→11.200% background) |
+
+## Acquisitions over 1 ms (all phases)
+
+All calls over 1 ms in all phases are listed; the measured-window >2 ms count remains in the summary table. No acquisition workaround is adopted from these numbers. Each entry gives phase, path, duration, pre-call live/pool, attached state and milliseconds since display-link detach.
+
+- typing-10 pair 1 off: warmup, non-immediate, 1.065500 ms, 0/3, attached=False, detach age=N/A ms.
+
+- typing-10 pair 1 on: warmup, non-immediate, 1.069250 ms, 0/3, attached=False, detach age=N/A ms.
+
+- typing-10 pair 2 on: warmup, non-immediate, 1.014000 ms, 0/3, attached=False, detach age=N/A ms.
+
+- typing-10 pair 2 on: measured, immediate, 1.086750 ms, 1/3, attached=False, detach age=N/A ms.
+
+- typing-10 pair 2 off: warmup, non-immediate, 1.148292 ms, 0/3, attached=False, detach age=N/A ms.
+
+- typing-10 pair 3 off: warmup, non-immediate, 1.078166 ms, 0/3, attached=False, detach age=N/A ms.
+
+- typing-10 pair 3 on: warmup, non-immediate, 1.202583 ms, 0/3, attached=False, detach age=N/A ms.
+
+- typing-10 pair 3 on: measured, immediate, 1.222458 ms, 1/3, attached=False, detach age=N/A ms.
+
+- typing-10 pair 4 on: warmup, non-immediate, 1.061208 ms, 0/3, attached=False, detach age=N/A ms.
+
+- typing-10 pair 4 on: measured, immediate, 1.253166 ms, 1/3, attached=False, detach age=N/A ms.
+
+- typing-10 pair 4 off: warmup, non-immediate, 3.070542 ms, 0/3, attached=False, detach age=N/A ms.
+
+- typing-10 pair 5 off: warmup, non-immediate, 1.062708 ms, 0/3, attached=False, detach age=N/A ms.
+
+- typing-10 pair 5 on: warmup, non-immediate, 1.072958 ms, 0/3, attached=False, detach age=N/A ms.
+
+- typing-10 pair 5 on: measured, immediate, 1.244083 ms, 1/3, attached=False, detach age=N/A ms.
+
+- typing-30 pair 1 off: warmup, non-immediate, 1.286583 ms, 0/3, attached=False, detach age=N/A ms.
+
+- typing-30 pair 1 on: warmup, non-immediate, 1.054625 ms, 0/3, attached=False, detach age=N/A ms.
+
+- typing-30 pair 2 on: warmup, non-immediate, 1.049458 ms, 0/3, attached=False, detach age=N/A ms.
+
+- typing-30 pair 2 off: warmup, non-immediate, 1.042083 ms, 0/3, attached=False, detach age=N/A ms.
+
+- typing-30 pair 3 off: warmup, non-immediate, 1.044959 ms, 0/3, attached=False, detach age=N/A ms.
+
+- typing-30 pair 3 on: measured, immediate, 2.048000 ms, 1/3, attached=False, detach age=N/A ms.
+
+- typing-30 pair 4 on: warmup, non-immediate, 1.106084 ms, 0/3, attached=False, detach age=N/A ms.
+
+- typing-30 pair 5 off: warmup, non-immediate, 1.128208 ms, 0/3, attached=False, detach age=N/A ms.
+
+- typing-30 pair 5 on: warmup, non-immediate, 1.189125 ms, 0/3, attached=False, detach age=N/A ms.
+
+- typing-30 pair 5 on: measured, immediate, 1.451000 ms, 1/3, attached=False, detach age=N/A ms.
+
+- hover pair 1 on: measured, immediate, 2.760541 ms, 1/3, attached=False, detach age=N/A ms.
+
+- drag pair 1 on: measured, immediate, 1.454292 ms, 2/3, attached=False, detach age=N/A ms.
+
+- acceptance pair 1 on: warmup, non-immediate, 1.137500 ms, 0/3, attached=False, detach age=N/A ms.
+
+- acceptance pair 1 on: measured, immediate, 1.216708 ms, 1/3, attached=False, detach age=N/A ms.
+
+- acceptance pair 1 on: measured, immediate, 2.652958 ms, 2/3, attached=False, detach age=N/A ms.
+
+## Scene construction causes
+
+Cause bits are accumulated before each CPU draw: input=1, binding=2, changed visible colour=4; zero means other. A draw can consume multiple causes, so cause totals overlap. Exact mask counts are retained to avoid attributing a mixed draw to only one cause.
+
+| workload | arm | input | binding | colour | other | masks | CPU builds deferred before draw |
+| --- | --- | --- | --- | --- | --- | --- | --- |
+| typing-10 | off | 2770 | 2995 | 0 | 0 | 2:225, 3:2770 | 0 |
+| typing-10 | on | 3000 | 217 | 0 | 0 | 1:2783, 3:217 | 15197 |
+| typing-30 | off | 7872 | 8995 | 0 | 0 | 2:1123, 3:7872 | 0 |
+| typing-30 | on | 9000 | 1034 | 0 | 0 | 1:7966, 3:1034 | 46134 |
+| hover | on | 5737 | 0 | 0 | 0 | 1:5737 | 18720 |
+| drag | on | 5854 | 0 | 0 | 0 | 1:5854 | 20053 |
+| acceptance | on | 5541 | 0 | 0 | 0 | 1:5541 | 16788 |
+| log | on | 0 | 0 | 0 | 575 | 0:575 | 0 |

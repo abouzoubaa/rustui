@@ -29,6 +29,8 @@ pub(crate) fn input_highlighter_factory() -> InputHighlighterFactory {
 
 #[path = "draw_first_background.rs"]
 mod draw_first_background;
+#[path = "draw_first_folds.rs"]
+pub(crate) mod draw_first_folds;
 
 const SYNC_PARSE_TIMEOUT: Duration = Duration::from_millis(2);
 const SYNC_PARSE_MAX_BYTES: usize = 256 * 1024;
@@ -74,6 +76,7 @@ impl TreeSitterInputHighlighter {
         let highlight_query = highlighter.borrow().draw_first_query();
         let (previous, edits) = highlighter.borrow().draw_first_pending();
         let proof = highlighter.borrow().draw_first_proof();
+        let revision = highlighter.borrow().draw_first_revision;
         let visible = self.visible.borrow().clone();
         let visible = visible.start.min(text.len())..visible.end.min(text.len());
         let visible_for_apply = visible.clone();
@@ -111,17 +114,23 @@ impl TreeSitterInputHighlighter {
                         previous,
                         edits,
                         proof,
+                        revision,
                     )
                 })
                 .await;
 
             if let Some((tree, injections, folds, cache)) = result {
                 if gpui::fast_draw_first_enabled()
-                    && !highlighter.borrow().text().eq(&text_for_apply)
+                    && (!highlighter.borrow().text().eq(&text_for_apply)
+                        || highlighter.borrow().draw_first_revision != revision)
                 {
                     return;
                 }
 
+                let fold_stats = cache
+                    .as_ref()
+                    .and_then(|cache| cache.folds.as_ref())
+                    .map(|f| (f.visited, f.ranges.len()));
                 highlighter
                     .borrow_mut()
                     .apply_background_tree(tree, &text_for_apply, injections);
@@ -135,6 +144,13 @@ impl TreeSitterInputHighlighter {
                     return;
                 }
                 let _ = entity.update_in(cx, |state, window, cx| {
+                    if let Some((visited, ranges)) = fold_stats {
+                        gpui::fast_latency_config(
+                            window.window_handle().window_id(),
+                            "g53_fold_cache",
+                            [visited as f64, ranges as f64, 0., 0.],
+                        );
+                    }
                     let actual_visible = state
                         .highlighter_visible_range()
                         .unwrap_or_else(|| visible_for_apply.clone());
