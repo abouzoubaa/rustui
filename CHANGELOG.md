@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+- G5-3c: admit opt-in immediate frames before scene construction, deduplicate binding events and visible colour updates, and scope background highlighting to edited and visible ranges.
+
 - G5-3b: add opt-in draw-first editor effects, background syntax colours and per-surface immediate change coalescing; retire the drawable reserve experiment.
 
 - Add an off-by-default two-free-drawable comparison and RustUI/F0 display-time and missed-slot diagnostics (G5-3).

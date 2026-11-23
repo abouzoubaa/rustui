@@ -42,6 +42,49 @@ mod overlay_owner_tests {
     struct Owner(String);
 
     #[gpui::test]
+    fn native_binding_dedup_keeps_real_owner_changes(cx: &mut gpui::TestAppContext) {
+        cx.update(gpui_component::init);
+        let (host, window) = cx.add_window_view(|_, cx| ComponentHost::new(EmptyView, cx));
+        window.update(|window, app| {
+            let owner = Rc::new(RefCell::new(Owner("before".into())));
+            let notifications = Rc::new(std::cell::Cell::new(0));
+            let state = owner.clone();
+            let count = notifications.clone();
+            let updater: ComponentUpdater = Rc::new(move |mutation, _| {
+                if mutation(&mut *state.borrow_mut()) {
+                    count.set(count.get() + 1);
+                }
+            });
+            let environment = EnvironmentValues::default();
+            let mut retained = RetainedEntities::default();
+            let context = RenderContext::new(
+                updater,
+                host.entity_id(),
+                TypeId::of::<Owner>(),
+                Rc::new(()),
+                px(14.),
+                &environment,
+                None,
+                None,
+                window,
+                app,
+                &mut retained,
+            );
+            let binding =
+                Binding::new("before".to_owned(), |o: &Owner| o.0.clone(), |o, v| o.0 = v);
+            let writer = context.binding_writer_if_changed(binding);
+            writer("after".into(), context.app);
+            writer("after".into(), context.app);
+            assert_eq!(owner.borrow().0, "after");
+            assert_eq!(
+                notifications.get(),
+                1,
+                "real owner changes notify, duplicate events do not"
+            );
+        });
+    }
+
+    #[gpui::test]
     fn deferred_cells_share_localization_snapshot_and_new_renders_pick_up_locale(
         cx: &mut gpui::TestAppContext,
     ) {
@@ -834,10 +877,42 @@ impl<'a> RenderContext<'a> {
 
     pub(crate) fn binding_writer<T: 'static>(&self, binding: Binding<T>) -> EventWriter<T> {
         let update_component = self.update_component.clone();
+        let window = self.window.window_handle().window_id();
         Rc::new(move |value, cx| {
             let binding = binding.clone();
             update_component(
-                Box::new(move |component| binding.write_to(component, value)),
+                Box::new(move |component| {
+                    let changed = binding.write_to(component, value);
+                    if changed {
+                        gpui::fast_note_frame_cause(window, 2);
+                    }
+                    changed
+                }),
+                cx,
+            );
+        })
+    }
+
+    /// Suppress a duplicate native edit event without hiding a real owner change.
+    pub(crate) fn binding_writer_if_changed<T: PartialEq + 'static>(
+        &self,
+        binding: Binding<T>,
+    ) -> EventWriter<T> {
+        let update_component = self.update_component.clone();
+        let window = self.window.window_handle().window_id();
+        Rc::new(move |value, cx| {
+            let binding = binding.clone();
+            update_component(
+                Box::new(move |owner| {
+                    if binding.read_from(owner).as_ref() == Some(&value) {
+                        return false;
+                    }
+                    let changed = binding.write_to(owner, value);
+                    if changed {
+                        gpui::fast_note_frame_cause(window, 2);
+                    }
+                    changed
+                }),
                 cx,
             );
         })

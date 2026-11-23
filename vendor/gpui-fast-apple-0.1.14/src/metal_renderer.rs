@@ -554,6 +554,10 @@ impl MetalRenderer {
             && self.frame_ahead.ready()
             && self.layer.as_ref().is_some_and(|l| self.immediate.ready(l))
     }
+    pub fn immediate_build_ready(&self, window: gpui::WindowId) -> bool {
+        self.presents_with_transaction
+            || gpui::fast_surface_build_admit(window, self.order.surface())
+    }
     pub fn immediate_submitted(&self) -> bool {
         self.immediate.submitted()
     }

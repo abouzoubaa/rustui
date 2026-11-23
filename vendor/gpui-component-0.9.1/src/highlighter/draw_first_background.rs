@@ -1,6 +1,7 @@
 // RustUI G5-3b: snapshot parsing runs on GPUI's background executor.
 use super::super::highlighter::{InjectionLayer, InjectionParseData};
 use super::*;
+#[cfg(test)]
 pub(super) fn parse_snapshot(
     language: SharedString,
     old_tree: Option<tree_sitter::Tree>,
@@ -9,6 +10,39 @@ pub(super) fn parse_snapshot(
     folding: bool,
     parse_cancel: Arc<AtomicBool>,
     highlight_query: Option<Arc<tree_sitter::Query>>,
+) -> Option<(
+    tree_sitter::Tree,
+    Vec<InjectionLayer>,
+    Vec<FoldRange>,
+    Option<Arc<super::super::highlighter::draw_first_cache::Cache>>,
+)> {
+    parse_scoped(
+        language,
+        old_tree,
+        injection_data,
+        text,
+        folding,
+        parse_cancel,
+        highlight_query,
+        None,
+        None,
+        Vec::new(),
+        super::super::highlighter::rust_empty::State::inert(),
+    )
+}
+#[allow(clippy::too_many_arguments)]
+pub(super) fn parse_scoped(
+    language: SharedString,
+    old_tree: Option<tree_sitter::Tree>,
+    injection_data: Option<InjectionParseData>,
+    text: Rope,
+    folding: bool,
+    parse_cancel: Arc<AtomicBool>,
+    highlight_query: Option<Arc<tree_sitter::Query>>,
+    visible: Option<Range<usize>>,
+    previous: Option<Arc<super::super::highlighter::draw_first_cache::Cache>>,
+    edits: Vec<InputEdit>,
+    mut proof: super::super::highlighter::rust_empty::State,
 ) -> Option<(
     tree_sitter::Tree,
     Vec<InjectionLayer>,
@@ -34,7 +68,21 @@ pub(super) fn parse_snapshot(
         return None;
     }
     let injections = injection_data.map_or_else(Default::default, |data| {
-        SyntaxHighlighter::compute_injection_layers(data, &tree, &text)
+        let reuse = edits.len() == 1
+            && proof.can_reuse(Some(&data.query), Some(&grammar))
+            && !tree.root_node().has_error()
+            && old_tree.as_ref().is_some_and(|old| {
+                !old.root_node().has_error() && old.changed_ranges(&tree).next().is_none()
+            });
+        if reuse {
+            proof.reused();
+            Vec::new()
+        } else {
+            let (layers, zero) =
+                SyntaxHighlighter::compute_injection_layers_observed(data, &tree, &text);
+            proof.observed(zero);
+            layers
+        }
     });
     let folds = if folding {
         extract_fold_ranges(&tree)
@@ -42,14 +90,35 @@ pub(super) fn parse_snapshot(
         Vec::new()
     };
     let cache = highlight_query.as_ref().map(|query| {
-        Arc::new(super::super::highlighter::draw_first_cache::Cache::build(
-            super::super::highlighter::draw_first_cache::Snapshot {
-                tree: Some(&tree),
-                query: Some(query),
-                text: &text,
-                layers: &injections,
-            },
-        ))
+        let snapshot = super::super::highlighter::draw_first_cache::Snapshot {
+            tree: Some(&tree),
+            query: Some(query),
+            text: &text,
+            layers: &injections,
+        };
+        let mut built = if let Some(range) = visible.clone() {
+            let unchanged = previous.is_some()
+                && edits.iter().all(|e| {
+                    e.start_byte >= range.end || e.new_end_byte.max(e.start_byte + 1) <= range.start
+                })
+                && old_tree.as_ref().is_some_and(|old| {
+                    old.changed_ranges(&tree)
+                        .all(|r| r.start_byte >= range.end || r.end_byte <= range.start)
+                })
+                && injections.is_empty();
+            super::super::highlighter::draw_first_cache::Cache::build_scoped(
+                snapshot,
+                query.clone(),
+                range,
+                previous.as_deref(),
+                &edits,
+                unchanged,
+            )
+        } else {
+            super::super::highlighter::draw_first_cache::Cache::build(snapshot)
+        };
+        built.proof = Some(proof.clone());
+        Arc::new(built)
     });
     if parse_cancel.load(Ordering::Relaxed) {
         return None;
@@ -79,7 +148,7 @@ mod tests {
             new_end_position: point(next),
         };
         h.edit_tree(Some(edit), &text);
-        let (tree, layers, _, cache) = parse_snapshot(
+        let (tree, layers, _, cache) = parse_scoped(
             h.language().clone(),
             h.tree().cloned(),
             h.injection_parse_data(),
@@ -87,6 +156,10 @@ mod tests {
             true,
             Arc::new(AtomicBool::new(false)),
             h.draw_first_query(),
+            Some(0..next.len()),
+            h.draw_first_pending().0,
+            vec![edit],
+            h.draw_first_proof(),
         )
         .unwrap();
         h.apply_background_tree(tree, &text, layers);
@@ -126,6 +199,67 @@ mod tests {
             "fn main() { let 漢字 = 1; }",
         ] {
             settle(&mut h, next);
+        }
+    }
+    #[test]
+    fn scoped_worker_keeps_full_document_oracle_after_offscreen_multiline_edit() {
+        let source = (0..10_000)
+            .map(|i| format!("fn line_{i}() {{ let x = 1; }}\n"))
+            .collect::<String>();
+        let mut h = SyntaxHighlighter::new("rust");
+        h.draw_first_cached = true;
+        let text = Rope::from(source.as_str());
+        h.edit_tree(None, &text);
+        let (tree, layers, _, cache) = parse_scoped(
+            "rust".into(),
+            h.tree().cloned(),
+            h.injection_parse_data(),
+            text.clone(),
+            false,
+            Arc::new(AtomicBool::new(false)),
+            h.draw_first_query(),
+            Some(0..2048),
+            None,
+            Vec::new(),
+            h.draw_first_proof(),
+        )
+        .unwrap();
+        h.apply_background_tree(tree, &text, layers);
+        h.replace_draw_first_cache(cache);
+        let mut oracle = SyntaxHighlighter::new("rust");
+        assert!(oracle.update(None, &text, None));
+        let theme = HighlightTheme::default_dark();
+        for range in [0..1024, 100_000..101_000, source.len() - 1024..source.len()] {
+            assert_eq!(
+                h.styles(&range, theme.as_ref()),
+                oracle.styles(&range, theme.as_ref())
+            );
+        }
+        let next = format!("/*{}", source);
+        let text = Rope::from(next.as_str());
+        h.edit_tree(None, &text);
+        let (tree, layers, _, cache) = parse_scoped(
+            "rust".into(),
+            h.tree().cloned(),
+            h.injection_parse_data(),
+            text.clone(),
+            false,
+            Arc::new(AtomicBool::new(false)),
+            h.draw_first_query(),
+            Some(0..2048),
+            None,
+            Vec::new(),
+            h.draw_first_proof(),
+        )
+        .unwrap();
+        h.apply_background_tree(tree, &text, layers);
+        h.replace_draw_first_cache(cache);
+        assert!(oracle.update(None, &text, None));
+        for range in [0..1024, 100_000..101_000, next.len() - 1024..next.len()] {
+            assert_eq!(
+                h.styles(&range, theme.as_ref()),
+                oracle.styles(&range, theme.as_ref())
+            );
         }
     }
     #[test]

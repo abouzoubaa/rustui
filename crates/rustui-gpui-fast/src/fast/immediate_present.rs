@@ -173,6 +173,7 @@ pub(crate) fn close(id: WindowId) {
     }
 }
 pub(crate) fn before_input(window: &Window, cx: &mut App) {
+    crate::fast::change_present::fast_note_frame_cause(window.handle.window_id(), 1);
     let id = window.handle.window_id();
     if crate::fast_latency_enabled() {
         crate::fast_latency_config(
@@ -258,6 +259,9 @@ pub(crate) fn try_draw(window: &mut Window, cx: &mut App) {
     if !window.invalidator.is_dirty() && !callbacks {
         return;
     }
+    if !crate::fast::change_present::before_build(window, cx) {
+        return;
+    }
     let admission = WINDOWS.with(|w| {
         w.borrow()
             .get(&window.handle.window_id())
@@ -273,10 +277,15 @@ pub(crate) fn try_draw(window: &mut Window, cx: &mut App) {
         g.available();
     }
     if callbacks {
-        window.refresh();
+        if !crate::fast_coalesce_enabled() {
+            window.refresh();
+        }
         for callback in window.next_frame_callbacks.take() {
             callback(window, cx);
         }
+    }
+    if crate::fast_coalesce_enabled() && !window.invalidator.is_dirty() {
+        return;
     }
     let _scope = Scope::new();
     let arena = window.draw(cx);

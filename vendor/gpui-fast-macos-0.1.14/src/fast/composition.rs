@@ -990,6 +990,14 @@ pub(crate) fn any_immediate_ready(state: &MacWindowState, window: gpui::WindowId
     (state.renderer.order_source_ready(window, 0) && state.renderer.immediate_ready())
         || overlay_ready(state, window)
 }
+pub(crate) fn any_build_ready(state: &MacWindowState, window: gpui::WindowId) -> bool {
+    // Evaluate every surface to leave each blocked surface's pending deadline intact.
+    let mut ready = state.renderer.immediate_build_ready(window);
+    for surface in state.fast_composition.gpui_surfaces.values() {
+        ready |= surface.renderer.immediate_build_ready(window);
+    }
+    ready
+}
 pub(crate) fn any_submitted(state: &MacWindowState) -> bool {
     state.renderer.immediate_submitted()
         || (gpui::fast_immediate_enabled()

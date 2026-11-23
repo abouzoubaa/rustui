@@ -316,7 +316,12 @@ impl View for CodeEditorView {
         if self.disabled || self.readonly {
             *writer.borrow_mut() = None;
         } else {
-            replace_event_writer(&writer, context.binding_writer(self.value.clone()));
+            let current_writer = if gpui::fast_draw_first_enabled() {
+                context.binding_writer_if_changed(self.value.clone())
+            } else {
+                context.binding_writer(self.value.clone())
+            };
+            replace_event_writer(&writer, current_writer);
         }
         context.update_entity(&editor, |state, window, cx| {
             use gpui::Focusable as _;

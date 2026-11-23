@@ -2091,6 +2091,11 @@ impl Window {
                                     // atlas tile references after a GPU device recovery.
                                     window.refresh();
                                 }
+                                if !force_render
+                                    && !crate::fast::change_present::before_build(window, cx)
+                                {
+                                    return;
+                                }
                                 crate::fast::change_present::configure(window, cx);
                                 let arena_clear_needed = window.draw(cx);
                                 window.present();
@@ -3886,6 +3891,7 @@ impl Window {
     /// the contents of the new [`Scene`], use [`Self::present`].
     #[profiling::function]
     pub fn draw(&mut self, cx: &mut App) -> ArenaClearNeeded {
+        crate::fast::change_present::drawn(self.handle.window_id());
         crate::fast::latency_breakdown::draw(self.handle.window_id());
         let f0_frame = f0_frame_start();
         let f0_setup = f0_phase_start();

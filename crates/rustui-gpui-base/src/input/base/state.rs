@@ -1229,6 +1229,45 @@ impl<M: InputModeKind> InputBaseState<M> {
         self.scrollbar_renderer = renderer;
     }
 
+    pub fn highlighter_visible_range(&self) -> Option<std::ops::Range<usize>> {
+        self.last_layout
+            .as_ref()
+            .map(|layout| layout.visible_range_offset.clone())
+    }
+    pub fn apply_highlighter_fold_candidates_quiet(
+        &mut self,
+        candidates: Vec<crate::input::FoldRange>,
+        visible_changed: bool,
+        cx: &mut Context<Self>,
+    ) {
+        let mut fold_changed = false;
+        if self.mode.is_folding() {
+            let before = self.display_map.folded_ranges().to_vec();
+            let rows = self.display_map.display_row_count();
+            let markers = self
+                .last_layout
+                .as_ref()
+                .map(|layout| {
+                    layout
+                        .visible_buffer_lines
+                        .iter()
+                        .map(|row| (*row, self.display_map.is_fold_candidate(*row)))
+                        .collect::<Vec<_>>()
+                })
+                .unwrap_or_default();
+            self.display_map.set_fold_candidates(candidates);
+            fold_changed = before != self.display_map.folded_ranges()
+                || rows != self.display_map.display_row_count()
+                || markers
+                    .iter()
+                    .any(|(row, old)| *old != self.display_map.is_fold_candidate(*row));
+        }
+        // Fold projection/gutter changes are visible changes of their own;
+        // unchanged colours must not hide a newly available fold control.
+        if visible_changed || fold_changed {
+            cx.notify();
+        }
+    }
     pub fn apply_highlighter_fold_candidates(
         &mut self,
         candidates: Vec<crate::input::FoldRange>,

@@ -123,8 +123,101 @@ impl Snapshot<'_> {
 pub(crate) struct Cache {
     tokens: Vec<HighlightItem>,
     buckets: Vec<Vec<usize>>,
+    covered: Range<usize>,
+    edited: Vec<(Range<usize>, Vec<HighlightItem>)>,
+    fallback: Option<OwnedSnapshot>,
+    pub(crate) proof: Option<super::rust_empty::State>,
+}
+struct OwnedSnapshot {
+    tree: Option<Tree>,
+    query: Option<Arc<Query>>,
+    text: Rope,
+    layers: Vec<InjectionLayer>,
+}
+impl OwnedSnapshot {
+    fn matches(&self, range: Range<usize>) -> Vec<HighlightItem> {
+        Snapshot {
+            tree: self.tree.as_ref(),
+            query: self.query.as_deref(),
+            text: &self.text,
+            layers: &self.layers,
+        }
+        .matches(range)
+    }
 }
 impl Cache {
+    pub(crate) fn build_scoped(
+        snapshot: Snapshot<'_>,
+        query: Arc<Query>,
+        range: Range<usize>,
+        previous: Option<&Cache>,
+        edits: &[InputEdit],
+        unchanged: bool,
+    ) -> Self {
+        let len = snapshot.text.len();
+        let range = range.start.min(len)..range.end.min(len);
+        let tokens = if unchanged {
+            previous
+                .map(|c| c.matches(range.clone(), edits))
+                .unwrap_or_else(|| snapshot.matches(range.clone()))
+        } else {
+            snapshot.matches(range.clone())
+        };
+        let fallback = OwnedSnapshot {
+            tree: snapshot.tree.cloned(),
+            query: Some(query),
+            text: snapshot.text.clone(),
+            layers: snapshot.layers.to_vec(),
+        };
+        let mut edited = Vec::new();
+        for edit in edits {
+            let start = snapshot.text.offset_to_point(edit.start_byte.min(len)).row;
+            let end = snapshot
+                .text
+                .offset_to_point(edit.new_end_byte.min(len))
+                .row;
+            let touched =
+                snapshot.text.line_start_offset(start)..snapshot.text.line_end_offset(end);
+            if touched.start >= range.start && touched.end <= range.end {
+                continue;
+            }
+            if edited
+                .iter()
+                .any(|(r, _): &(Range<usize>, Vec<HighlightItem>)| r == &touched)
+            {
+                continue;
+            }
+            edited.push((touched.clone(), snapshot.matches(touched)));
+        }
+        let mut result = Self::indexed(tokens, len, range, Some(fallback));
+        result.edited = edited;
+        result
+    }
+    fn indexed(
+        tokens: Vec<HighlightItem>,
+        len: usize,
+        covered: Range<usize>,
+        fallback: Option<OwnedSnapshot>,
+    ) -> Self {
+        let mut buckets = vec![Vec::new(); len / 1024 + 1];
+        for (id, t) in tokens.iter().enumerate() {
+            if t.range.is_empty() {
+                continue;
+            }
+            let end = (t.range.end.saturating_sub(1) / 1024).min(buckets.len() - 1);
+            for bucket in &mut buckets[t.range.start.min(len) / 1024..=end] {
+                bucket.push(id);
+            }
+        }
+        Self {
+            tokens,
+            buckets,
+            covered,
+            edited: Vec::new(),
+            fallback,
+            proof: None,
+        }
+    }
     pub(crate) fn build(snapshot: Snapshot<'_>) -> Self {
         let len = snapshot.text.len();
         let tokens = snapshot.matches(0..len);
@@ -138,11 +231,36 @@ impl Cache {
                 bucket.push(id);
             }
         }
-        Self { tokens, buckets }
+        Self {
+            tokens,
+            buckets,
+            covered: 0..len,
+            edited: Vec::new(),
+            fallback: None,
+            proof: None,
+        }
     }
     fn base_matches(&self, range: Range<usize>) -> Vec<HighlightItem> {
         if range.is_empty() || range.start / 1024 >= self.buckets.len() {
             return Vec::new();
+        }
+        if (range.start < self.covered.start || range.end > self.covered.end)
+            && let Some(snapshot) = &self.fallback
+        {
+            // Newly exposed text is queried against the current immutable tree;
+            // stale offscreen spans are never used as an oracle shortcut.
+            if let Some((_, tokens)) = self
+                .edited
+                .iter()
+                .find(|(r, _)| range.start >= r.start && range.end <= r.end)
+            {
+                return tokens
+                    .iter()
+                    .filter(|t| t.range.start < range.end && t.range.end > range.start)
+                    .cloned()
+                    .collect();
+            }
+            return snapshot.matches(range);
         }
         let mut ids = Vec::new();
         let end = (range.end.saturating_sub(1) / 1024).min(self.buckets.len() - 1);
@@ -161,7 +279,7 @@ impl Cache {
 }
 
 impl Cache {
-    pub(super) fn matches(&self, range: Range<usize>, edits: &[InputEdit]) -> Vec<HighlightItem> {
+    pub(crate) fn matches(&self, range: Range<usize>, edits: &[InputEdit]) -> Vec<HighlightItem> {
         let mut original = range.clone();
         for e in edits.iter().rev() {
             let back = |p: usize, upper: bool| {
@@ -210,6 +328,9 @@ impl Cache {
 }
 impl SyntaxHighlighter {
     pub(crate) fn replace_draw_first_cache(&mut self, cache: Option<Arc<Cache>>) {
+        if let Some(proof) = cache.as_ref().and_then(|cache| cache.proof.clone()) {
+            self.rust_empty = proof;
+        }
         self.draw_first_cache = cache;
         self.draw_first_edits.clear();
     }
@@ -231,6 +352,10 @@ mod edit_tests {
         Cache {
             tokens: vec![HighlightItem::new(0..2, "a"), HighlightItem::new(4..6, "b")],
             buckets: vec![vec![0, 1]],
+            covered: 0..6,
+            edited: Vec::new(),
+            fallback: None,
+            proof: None,
         }
     }
     #[test]

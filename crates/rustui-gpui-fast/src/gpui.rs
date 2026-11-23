@@ -407,5 +407,6 @@ pub use fast::frame_pacing::{
 
 #[doc(hidden)]
 pub use fast::change_present::{
-    fast_any_change_enabled, fast_coalesce_enabled, fast_surface_admit, fast_surface_submitted,
+    fast_any_change_enabled, fast_coalesce_enabled, fast_note_frame_cause, fast_surface_admit,
+    fast_surface_build_admit, fast_surface_submitted,
 };

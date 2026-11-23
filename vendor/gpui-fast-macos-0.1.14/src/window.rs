@@ -2737,6 +2737,10 @@ impl PlatformWindow for MacWindow {
             gpui::fast_immediate_hold_active(state.handle.window_id()) as u8 as f64,
         ]
     }
+    fn immediate_build_ready(&self) -> bool {
+        let state = self.0.lock();
+        crate::fast::composition::any_build_ready(&state, state.handle.window_id())
+    }
     fn can_present_immediately(&self) -> bool {
         let mut state = self.0.lock();
         if !state.renderer.immediate_allowed() {

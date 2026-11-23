@@ -18,10 +18,37 @@ pub fn fast_any_change_enabled() -> bool {
 #[derive(Default)]
 struct Surface {
     last: Option<Instant>,
+    built: Option<Instant>,
+    build_lease: bool,
     version: Option<u64>,
     pending: Option<Instant>,
 }
 impl Surface {
+    fn before_build(&mut self, now: Instant, period: Duration) -> bool {
+        self.pending = self
+            .built
+            .or(self.last)
+            .and_then(|last| last.checked_add(period))
+            .filter(|due| *due > now);
+        if self.pending.is_none() {
+            self.built = Some(now);
+            self.build_lease = true;
+            true
+        } else {
+            false
+        }
+    }
+    fn consume_build(&mut self, now: Instant, period: Duration, version: u64) -> u8 {
+        if std::mem::take(&mut self.build_lease) {
+            if self.version.is_some_and(|v| version <= v) {
+                1
+            } else {
+                0
+            }
+        } else {
+            self.admit(now, period, version)
+        }
+    }
     fn admit(&mut self, now: Instant, period: Duration, version: u64) -> u8 {
         if self.version.is_some_and(|v| version <= v) {
             self.pending = None;
@@ -49,10 +76,23 @@ struct State {
     surfaces: HashMap<(WindowId, u64), Surface>,
     periods: HashMap<WindowId, Duration>,
     timers: HashSet<WindowId>,
+    causes: HashMap<WindowId, u8>,
 }
 fn state() -> &'static Mutex<State> {
     static S: OnceLock<Mutex<State>> = OnceLock::new();
     S.get_or_init(Default::default)
+}
+/// Diagnostic bit mask: input=1, binding=2, visible colours=4; zero=other.
+pub fn fast_note_frame_cause(w: WindowId, cause: u8) {
+    if crate::fast_latency_enabled() {
+        *state().lock().unwrap().causes.entry(w).or_default() |= cause;
+    }
+}
+pub(crate) fn drawn(w: WindowId) {
+    if crate::fast_latency_enabled() {
+        let mask = state().lock().unwrap().causes.remove(&w).unwrap_or(0);
+        crate::fast_latency_config(w, "g53_frame_cause", [mask as f64, 0., 0., 0.]);
+    }
 }
 pub(crate) fn configure(window: &Window, cx: &App) {
     if fast_coalesce_enabled() {
@@ -63,6 +103,36 @@ pub(crate) fn configure(window: &Window, cx: &App) {
                 .unwrap_or(Duration::from_secs_f64(1. / 60.)),
         );
     }
+}
+/// Admission before CPU scene construction. Each renderer owns its own budget;
+/// an available overlay never waits for a base surface's interval.
+pub fn fast_surface_build_admit(w: WindowId, surface: u64) -> bool {
+    if !fast_coalesce_enabled() {
+        return true;
+    }
+    let mut s = state().lock().unwrap();
+    let period = s
+        .periods
+        .get(&w)
+        .copied()
+        .unwrap_or(Duration::from_secs_f64(1. / 60.));
+    s.surfaces
+        .entry((w, surface))
+        .or_default()
+        .before_build(Instant::now(), period)
+}
+pub(crate) fn before_build(window: &Window, cx: &mut App) -> bool {
+    configure(window, cx);
+    if !fast_coalesce_enabled() || window.platform_window.immediate_build_ready() {
+        return true;
+    }
+    crate::fast_latency_config(
+        window.window_handle().window_id(),
+        "g53_cpu_build_deferred",
+        [0.; 4],
+    );
+    arm(window, cx);
+    false
 }
 /// 0 = submit, 1 = same scene already submitted, 2 = next refresh interval.
 pub fn fast_surface_admit(surface: u64) -> u8 {
@@ -79,11 +149,11 @@ pub fn fast_surface_admit(surface: u64) -> u8 {
         .get(&w)
         .copied()
         .unwrap_or(Duration::from_secs_f64(1. / 60.));
-    let reason = s
-        .surfaces
-        .entry((w, surface))
-        .or_default()
-        .admit(Instant::now(), period, version);
+    let reason =
+        s.surfaces
+            .entry((w, surface))
+            .or_default()
+            .consume_build(Instant::now(), period, version);
     if reason != 0 {
         crate::fast_latency_config(
             w,
@@ -151,12 +221,46 @@ pub(crate) fn close(w: WindowId) {
         let mut s = state().lock().unwrap();
         s.surfaces.retain(|(id, _), _| *id != w);
         s.periods.remove(&w);
+        s.causes.remove(&w);
         s.timers.remove(&w);
     }
 }
 #[cfg(test)]
 mod tests {
     use super::*;
+    #[test]
+    fn prebuild_admission_preserves_independent_overlay_and_pending_dirty() {
+        let now = Instant::now();
+        let period = Duration::from_millis(8);
+        let mut base = Surface::default();
+        let mut overlay = Surface::default();
+        base.submitted(now, 8);
+        assert!(!base.before_build(now, period));
+        assert_eq!(base.pending, Some(now + period));
+        assert!(overlay.before_build(now, period));
+        overlay.submitted(now, 9);
+        assert!(base.before_build(now + period, period));
+        assert!(base.pending.is_none());
+    }
+    #[test]
+    fn early_lease_does_not_add_cpu_scene_time_to_refresh_budget() {
+        let now = Instant::now();
+        let period = Duration::from_millis(8);
+        let mut s = Surface::default();
+        assert!(s.before_build(now, period));
+        assert_eq!(
+            s.consume_build(now + Duration::from_millis(3), period, 1),
+            0
+        );
+        s.submitted(now + Duration::from_millis(3), 1);
+        assert!(!s.before_build(now + Duration::from_millis(7), period));
+        assert!(s.before_build(now + period, period));
+        assert_eq!(
+            s.consume_build(now + period + Duration::from_millis(2), period, 2),
+            0
+        );
+        assert!(!s.before_build(now + period + Duration::from_millis(3), period));
+    }
     #[test]
     fn same_scene_is_not_submitted_twice() {
         let mut s = Surface::default();

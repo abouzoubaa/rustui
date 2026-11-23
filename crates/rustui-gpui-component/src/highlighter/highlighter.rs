@@ -19,7 +19,7 @@ use tree_sitter::{
 use web_time::Instant;
 
 #[path = "rust_empty.rs"]
-mod rust_empty;
+pub(crate) mod rust_empty;
 #[cfg(all(test, feature = "tree-sitter-rust"))]
 #[path = "rust_empty_tests.rs"]
 mod rust_empty_tests;
@@ -72,6 +72,7 @@ pub struct SyntaxHighlighter {
 
 /// A parsed injection layer.
 /// Stores the parsed tree and the ranges it covers.
+#[derive(Clone)]
 pub(crate) struct InjectionLayer {
     pub(crate) language_name: SharedString,
     highlight_query: Arc<Query>,
@@ -310,7 +311,7 @@ fn markdown_inline_range_has_trigger(text: &Rope, range: Range<usize>) -> bool {
 }
 
 #[derive(Debug, Default, Clone)]
-struct HighlightSummary {
+pub(crate) struct HighlightSummary {
     count: usize,
     start: usize,
     end: usize,
@@ -319,8 +320,8 @@ struct HighlightSummary {
 }
 
 /// The highlight item, the range is offset of the token in the tree.
-#[derive(Debug, Default, Clone)]
-struct HighlightItem {
+#[derive(Debug, Default, Clone, PartialEq)]
+pub(crate) struct HighlightItem {
     /// The byte range of the highlight in the text.
     range: Range<usize>,
     /// The highlight name, like `function`, `string`, `comment`, etc.
@@ -583,9 +584,13 @@ impl SyntaxHighlighter {
             } else {
                 self.draw_first_cache = None;
                 self.draw_first_edits.clear();
+                // No InputEdit means the old tree has no valid coordinate map.
+                self.tree = None;
             }
         }
-        self.rust_empty.invalidate();
+        if !self.draw_first_cached || edit.is_none() {
+            self.rust_empty.invalidate();
+        }
         if let (Some(edit), Some(tree)) = (edit, self.tree.as_mut()) {
             tree.edit(&edit);
         }
@@ -773,7 +778,7 @@ impl SyntaxHighlighter {
         Self::compute_injection_layers_observed(data, tree, text).0
     }
 
-    fn compute_injection_layers_observed(
+    pub(crate) fn compute_injection_layers_observed(
         data: InjectionParseData,
         tree: &Tree,
         text: &Rope,
@@ -1056,6 +1061,14 @@ impl SyntaxHighlighter {
     ///
     /// `injection_layers` must also be pre-computed in the background via
     /// [`compute_injection_layers`] to avoid blocking the main thread.
+    pub(crate) fn draw_first_proof(&self) -> rust_empty::State {
+        self.rust_empty.clone()
+    }
+    pub(crate) fn draw_first_pending(
+        &self,
+    ) -> (Option<Arc<draw_first_cache::Cache>>, Vec<InputEdit>) {
+        (self.draw_first_cache.clone(), self.draw_first_edits.clone())
+    }
     pub(crate) fn draw_first_query(&self) -> Option<Arc<Query>> {
         self.draw_first_cached.then(|| self.query.clone()).flatten()
     }

@@ -37,6 +37,7 @@ const PARSE_DEBOUNCE: Duration = Duration::from_millis(150);
 struct TreeSitterInputHighlighter {
     inner: Rc<RefCell<SyntaxHighlighter>>,
     parse_task: Rc<RefCell<Option<Task<()>>>>,
+    visible: Rc<RefCell<Range<usize>>>,
 }
 
 impl TreeSitterInputHighlighter {
@@ -46,6 +47,7 @@ impl TreeSitterInputHighlighter {
         Self {
             inner: Rc::new(RefCell::new(inner)),
             parse_task: Rc::new(RefCell::new(None)),
+            visible: Rc::new(RefCell::new(0..4096)),
         }
     }
 
@@ -70,6 +72,13 @@ impl TreeSitterInputHighlighter {
         let old_tree = highlighter.borrow().tree().cloned();
         let injection_data = highlighter.borrow().injection_parse_data();
         let highlight_query = highlighter.borrow().draw_first_query();
+        let (previous, edits) = highlighter.borrow().draw_first_pending();
+        let proof = highlighter.borrow().draw_first_proof();
+        let visible = self.visible.borrow().clone();
+        let visible = visible.start.min(text.len())..visible.end.min(text.len());
+        let visible_for_apply = visible.clone();
+        let previous_for_apply = previous.clone();
+        let edits_for_apply = edits.clone();
         let text = text.clone();
         let text_for_apply = text.clone();
         let cancel = Arc::new(AtomicBool::new(false));
@@ -90,7 +99,7 @@ impl TreeSitterInputHighlighter {
             let result = cx
                 .background_executor()
                 .spawn(async move {
-                    draw_first_background::parse_snapshot(
+                    draw_first_background::parse_scoped(
                         language,
                         old_tree,
                         injection_data,
@@ -98,6 +107,10 @@ impl TreeSitterInputHighlighter {
                         folding,
                         parse_cancel,
                         highlight_query,
+                        gpui::fast_draw_first_enabled().then_some(visible),
+                        previous,
+                        edits,
+                        proof,
                     )
                 })
                 .await;
@@ -112,7 +125,9 @@ impl TreeSitterInputHighlighter {
                 highlighter
                     .borrow_mut()
                     .apply_background_tree(tree, &text_for_apply, injections);
-                highlighter.borrow_mut().replace_draw_first_cache(cache);
+                highlighter
+                    .borrow_mut()
+                    .replace_draw_first_cache(cache.clone());
                 if !gpui::fast_draw_first_enabled() {
                     let _ = entity.update(cx, |state, cx| {
                         state.apply_highlighter_fold_candidates(folds, cx)
@@ -120,12 +135,34 @@ impl TreeSitterInputHighlighter {
                     return;
                 }
                 let _ = entity.update_in(cx, |state, window, cx| {
+                    let actual_visible = state
+                        .highlighter_visible_range()
+                        .unwrap_or_else(|| visible_for_apply.clone());
+                    let before = previous_for_apply
+                        .as_ref()
+                        .map(|cache| cache.matches(actual_visible.clone(), &edits_for_apply));
+                    let visible_changed = cache.as_ref().is_some_and(|cache| {
+                        Some(cache.matches(actual_visible.clone(), &[])) != before
+                    });
                     gpui::fast_latency_config(
                         window.window_handle().window_id(),
                         "g53_highlight_applied",
                         [text_for_apply.len() as f64, 0., 0., 0.],
                     );
-                    state.apply_highlighter_fold_candidates(folds, cx);
+                    gpui::fast_latency_config(
+                        window.window_handle().window_id(),
+                        "g53_colour_effect",
+                        [
+                            visible_changed as u8 as f64,
+                            actual_visible.start as f64,
+                            actual_visible.end as f64,
+                            0.,
+                        ],
+                    );
+                    if visible_changed {
+                        gpui::fast_note_frame_cause(window.window_handle().window_id(), 4);
+                    }
+                    state.apply_highlighter_fold_candidates_quiet(folds, visible_changed, cx);
                 });
             }
         });
@@ -203,6 +240,12 @@ impl InputHighlighter for TreeSitterInputHighlighter {
         range: &Range<usize>,
         resolver: &dyn HighlightStyleResolver,
     ) -> Vec<(Range<usize>, HighlightStyle)> {
+        let mut visible = self.visible.borrow_mut();
+        // styles() is called per visible line; retain a bounded viewport around
+        // the requested range rather than accumulating scrolled-away ranges.
+        if range.start < visible.start || range.end > visible.end {
+            *visible = range.start.saturating_sub(4096)..range.end.saturating_add(4096);
+        }
         self.inner.borrow().styles(range, resolver)
     }
     fn fold_ranges(&self, _: &Rope) -> Vec<FoldRange> {

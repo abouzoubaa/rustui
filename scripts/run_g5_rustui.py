@@ -60,6 +60,19 @@ def capture(out,group,scene,hl,pair,arm,seconds):
         assert x['lost_native_edits']==0 and all(b==a+1 for a,b in zip(revisions,revisions[1:])),(stem,'native edit revisions',len(revisions),x['inputs'])
     x['same_scene_skips']=sum(r.get('kind')=='g53_surface_coalesced' and r['values'][2]==1 and start<=r['mach']<=end for r in events)
     x['refresh_deferrals']=sum(r.get('kind')=='g53_surface_coalesced' and r['values'][2]==2 and start<=r['mach']<=end for r in events)
+    from collections import Counter
+    causes=Counter()
+    for e in events:
+        if e.get('kind')=='g53_frame_cause' and start<=e['mach']<=end:
+            mask=int(e['values'][0])
+            # A draw can consume several causes. Keep both the exact masks and
+            # overlapping cause totals; never pretend these are exclusive.
+            causes['mask_'+str(mask)]+=1
+            for bit,name in [(1,'input'),(2,'binding'),(4,'colour')]:
+                if mask&bit:causes[name]+=1
+            if not mask:causes['other']+=1
+    x['frame_causes']=dict(causes)
+    x['cpu_build_deferrals']=sum(e.get('kind')=='g53_cpu_build_deferred' and start<=e['mach']<=end for e in events)
     if scene=='acceptance':
         current={};offsets={};attempts={};commits={};displayed=[]
         clock=next(e for e in events if e['event']=='clock');scale=clock['numer']/clock['denom']/1e9

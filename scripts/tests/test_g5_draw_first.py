@@ -15,6 +15,17 @@ class DrawFirstTests(unittest.TestCase):
             rust.write_text('use std::{time::{Instant,Duration},sync::OnceLock};fn fast_immediate_enabled()->bool{true}\n'+switches+state+tests+'\n#[test]fn new_switches_default_off(){assert!(!fast_coalesce_enabled());assert!(!fast_any_change_enabled());}\n')
             subprocess.run(['rustup','run','1.98.0','rustc','--edition=2024','--test',str(rust),'-o',str(binary)],cwd=ROOT,check=True)
             subprocess.run([str(binary)],cwd=ROOT,env=env,check=True)
+    def test_cpu_admission_precedes_all_runtime_scene_builds(self):
+        core=(ROOT/'crates/rustui-gpui-fast/src/fast/immediate_present.rs').read_text()
+        body=core[core.index('pub(crate) fn try_draw('):core.index('pub(crate) fn after_input(')]
+        self.assertLess(body.index('change_present::before_build'),body.index('window.draw(cx)'))
+        window=(ROOT/'crates/rustui-gpui-fast/src/window.rs').read_text()
+        frame=window[window.index('let should_draw = invalidator.is_dirty()'):window.index('pub fn capslock')]
+        self.assertLess(frame.index('change_present::before_build'),frame.index('window.draw(cx)'))
+        mac=(ROOT/'crates/rustui-gpui-fast-macos/src/fast/composition.rs').read_text()
+        body=mac[mac.index('pub(crate) fn any_build_ready'):mac.index('pub(crate) fn any_submitted')]
+        self.assertIn('ready |= surface.renderer.immediate_build_ready(window)',body)
+
     def test_draw_first_is_queued_after_local_edit_before_legacy_effects(self):
         source=(ROOT/'crates/rustui-gpui-base/src/input/base/state.rs').read_text()
         body=source[source.index('    fn emit_change('):source.index('    fn full_input_edit(')]

@@ -10,7 +10,7 @@ from run_g5_rustui import GROUPS
 def fmt(v):return 'NOT MEASURED' if v is None else f'{v:.3f}'
 def med(v):return statistics.median(v) if v else None
 
-def render(rows):
+def render(rows, section='G5-3b'):
     text='## G5-3b matched captures\n\nQuantiles below are medians of the five capture quantiles; maxima are maxima across captures. Input delays use MTLDrawable.presentedTime. Each capture has its own measured background load below. No unavailable callback is counted as physical proof that pixels were absent.\n\n'
     text+='| workload | arm | captures / 5 | input→display median / p95 / max ms | visible versions/s (lower bound) | unmatched / rendered | order violations | lost native edits | >2 ms measured acquisitions | CPU s/s | CPU ms/attempt | draw+present ms/attempt | CPU draw+present >8.3 ms |\n| --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |\n'
     for group,_,_ in GROUPS:
@@ -45,20 +45,29 @@ def render(rows):
             text+=f"| {group} | {arm} | {sum(r['observed_slots'] for r in part)} | "+' | '.join(str(counts[k]) for k in ['no new input','frame not ready','no drawable free','presented but replaced','WindowServer late'])+f" | {sum(r['observer_gaps_over_1_5_refreshes'] for r in part)} |\n"
     text+='\n## Per-capture process CPU and load\n\nEach loaded row means **measured on a loaded machine (X% background)**; X is the start→end background percentage shown. Corrected background excludes Codex, its agents/shells and the measured app. Raw top-five process lists remain with each local capture.\n\n| workload | pair | arm | attempts | wall s | user / sys / total CPU s | CPU s/s | CPU ms/attempt | actual refresh Hz | background start→end % | label |\n| --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |\n'
     for r in rows:
-        load=r['machine_load'];before=load['start_background_cpu_percent'];after=load['end_background_cpu_percent'];label='loaded' if max(before,after)>10 else 'quiet'
+        load=r['machine_load'];before=load['start_background_cpu_percent'];after=load['end_background_cpu_percent'];label=f'measured on a loaded machine ({before:.3f}%→{after:.3f}% background)' if max(before,after)>10 else 'quiet'
         text+=f"| {r['group']} | {r['pair']} | {r['arm']} | {r['attempts']} | {fmt(r['seconds'])} | {fmt(r['cpu_user_s'])}/{fmt(r['cpu_sys_s'])}/{fmt(r['cpu_user_s']+r['cpu_sys_s'])} | {fmt(r['cpu_s_per_s'])} | {fmt(1000*r['cpu_s_per_attempt'])} | {fmt(r['observed_refresh_hz'])} | {fmt(before)}→{fmt(after)} | {label} |\n"
-    text+='\n## Known acquisitions over 2 ms\n\nAll phases are listed. No acquisition workaround is adopted from these numbers. Each entry gives phase, path, duration, pre-call live/pool, attached state and milliseconds since display-link detach.\n'
+    text+='\n## Acquisitions over 1 ms (all phases)\n\nAll calls over 1 ms in all phases are listed; the measured-window >2 ms count remains in the summary table. No acquisition workaround is adopted from these numbers. Each entry gives phase, path, duration, pre-call live/pool, attached state and milliseconds since display-link detach.\n'
     count=0
     for r in rows:
         for v in r['next_drawable_outliers']:
-            if v['ms']<=2:continue
+            if v['ms']<=1:continue
             count+=1;pre=v['pre_acquire_state'];age='N/A' if v['time_since_detach_ms'] is None else fmt(v['time_since_detach_ms'])
             text+=f"\n- {r['group']} pair {r['pair']} {r['arm']}: {v['phase']}, {v['path']}, {v['ms']:.6f} ms, {int(pre[0])}/{int(pre[1])}, attached={bool(pre[3])}, detach age={age} ms.\n"
     if not count:text+='\nNone observed in these captures.\n'
-    return text
+    text+='\n## Scene construction causes\n\nCause bits are accumulated before each CPU draw: input=1, binding=2, changed visible colour=4; zero means other. A draw can consume multiple causes, so cause totals overlap. Exact mask counts are retained to avoid attributing a mixed draw to only one cause.\n\n| workload | arm | input | binding | colour | other | masks | CPU builds deferred before draw |\n| --- | --- | --- | --- | --- | --- | --- | --- |\n'
+    for group,_,_ in GROUPS:
+        for arm in ('off','on'):
+            part=[r for r in rows if r['group']==group and r['arm']==arm]
+            if not part:continue
+            c=Counter()
+            for r in part:c.update(r.get('frame_causes',{}))
+            masks=', '.join(f"{k[5:]}:{v}" for k,v in sorted(c.items()) if k.startswith('mask_'))
+            text+=f"| {group} | {arm} | {c['input']} | {c['binding']} | {c['colour']} | {c['other']} | {masks} | {sum(r.get('cpu_build_deferrals',0) for r in part)} |\n"
+    return text.replace('## G5-3b matched captures',f'## {section} matched captures',1)
 
 def main():
-    p=argparse.ArgumentParser();p.add_argument('captures',type=Path);p.add_argument('--document',type=Path,required=True);a=p.parse_args()
-    rows=json.loads(a.captures.read_text());original=a.document.read_text().split('## G5-3b matched captures')[0]
-    a.document.write_text(original.rstrip()+'\n\n'+render(rows))
+    p=argparse.ArgumentParser();p.add_argument('captures',type=Path);p.add_argument('--document',type=Path,required=True);p.add_argument('--section',default='G5-3b');a=p.parse_args()
+    rows=json.loads(a.captures.read_text());original=a.document.read_text().split(f'## {a.section} matched captures')[0]
+    a.document.write_text(original.rstrip()+'\n\n'+render(rows,a.section))
 if __name__=='__main__':main()
