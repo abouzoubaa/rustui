@@ -8,6 +8,10 @@
 #import <sys/socket.h>
 #import <sys/un.h>
 #import <unistd.h>
+#ifdef G5_KEEP_WARM_EXPERIMENT
+void g5_keep_warm_configure(void);
+void g5_keep_warm_input(NSEvent *, uint64_t);
+#endif
 typedef struct { uint64_t version; double hardware; uint64_t handler; uint64_t kind; int64_t window; uint64_t cg_timestamp; } NativeInfo;
 static NativeInfo current;
 static BOOL consumed;
@@ -54,6 +58,16 @@ static void native_send(id self,SEL selector,NSEvent *event){
  BOOL measured=(data&0xffff000000000000ULL)==magic && (event.type==NSEventTypeKeyDown || pointer);
  NativeInfo previous=current;BOOL previous_consumed=consumed;
  if(measured){current=(NativeInfo){data&0xffffffffULL,event.timestamp,mach_absolute_time(),event.type==NSEventTypeKeyDown?0:1,event.windowNumber,cg?CGEventGetTimestamp(cg):0};consumed=NO;}
+#ifdef G5_KEEP_WARM_EXPERIMENT
+ switch(event.type) {
+  case NSEventTypeKeyDown: case NSEventTypeFlagsChanged:
+  case NSEventTypeLeftMouseDown: case NSEventTypeRightMouseDown: case NSEventTypeOtherMouseDown:
+  case NSEventTypeMouseMoved: case NSEventTypeLeftMouseDragged: case NSEventTypeRightMouseDragged:
+  case NSEventTypeOtherMouseDragged: case NSEventTypeScrollWheel:
+   g5_keep_warm_input(event, measured ? current.version : 0); break;
+  default: break;
+ }
+#endif
  ((void(*)(id,SEL,NSEvent *))original)(self,selector,event);
  if(measured){[records addObject:@{@"event":@"native",@"version":@(current.version),@"hardware_s":@(current.hardware),@"handler_mach":@(current.handler),@"handler_end_mach":@(mach_absolute_time()),@"cg_timestamp_ns":@(current.cg_timestamp),@"window":@(current.window),@"kind":@(current.kind),@"consumed":@(consumed)}];current=previous;consumed=previous_consumed;}
 }
@@ -104,7 +118,11 @@ static void flush(void){
  for(NSDictionary *r in records){NSData *d=[NSJSONSerialization dataWithJSONObject:r options:NSJSONWritingSortedKeys error:nil];fprintf(stderr,"L1_NATIVE %s\n",[[[NSString alloc]initWithData:d encoding:NSUTF8StringEncoding]UTF8String]);}
 }
 __attribute__((constructor)) static void install(void){
- if(!enabled())return;records=[NSMutableArray new];pointerVersions=[NSMutableDictionary new];atexit(flush);
+ if(!enabled())return;
+#ifdef G5_KEEP_WARM_EXPERIMENT
+ g5_keep_warm_configure();
+#endif
+ records=[NSMutableArray new];pointerVersions=[NSMutableDictionary new];atexit(flush);
  const char *keyPath=getenv("RUSTUI_L1_KEY_SOCKET");
  if(keyPath) {
   struct sockaddr_un address={.sun_family=AF_UNIX};

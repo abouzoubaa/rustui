@@ -17,7 +17,15 @@ import Foundation
         let width = Int(fields[1]), let height = Int(fields[2]) else {
    throw CocoaError(.fileReadCorruptFile)
   }
-  let capture = VersionCapture { row in
+  let cadence: ((UInt64, Int) -> Void)?
+  if ProcessInfo.processInfo.environment["RUSTUI_G5_SCK_CADENCE"] == "1" {
+   cadence = { display, status in
+    print("G5_SCK_CADENCE {\"display_mach\":\(display),\"status\":\(status)}")
+   }
+  } else {
+   cadence = nil
+  }
+  let capture = VersionCapture(cadence: cadence) { row in
    guard let data = try? JSONSerialization.data(withJSONObject: row, options: [.sortedKeys]) else { return }
    print("G5_PIXELS " + String(decoding: data, as: UTF8.self))
   }

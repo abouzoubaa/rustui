@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+- Add opt-in benchmark controls for display keep-warm, refresh sampling and main-thread lag.
+
 - Add an opt-in Metal path that prepares tile and instance data before drawable acquisition.
 
 - Add local native-input latency controls for launch mode and passive display-link measurements.

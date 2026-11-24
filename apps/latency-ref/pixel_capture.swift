@@ -15,7 +15,11 @@ struct VersionTransitions {
 final class VersionCapture:NSObject,SCStreamOutput {
  let queue=DispatchQueue(label:"g5.shared.pixels")
  var stream:SCStream!;var transitions=VersionTransitions();let emit:([String:Any])->Void
- init(emit:@escaping ([String:Any])->Void){self.emit=emit}
+ let cadence: ((UInt64, Int) -> Void)?
+ init(cadence: ((UInt64, Int) -> Void)? = nil, emit:@escaping ([String:Any])->Void) {
+  self.cadence = cadence
+  self.emit = emit
+ }
  @MainActor func start(window:NSWindow) async throws {
   let scale=window.backingScaleFactor
   let width=Int(window.frame.width*scale), height=Int(window.frame.height*scale)
@@ -53,7 +57,9 @@ final class VersionCapture:NSObject,SCStreamOutput {
  @MainActor func stop() async {if let stream {try? await stream.stopCapture()};queue.sync{}}
  func stream(_ stream:SCStream,didOutputSampleBuffer buffer:CMSampleBuffer,of type:SCStreamOutputType) {
   guard type == .screen,let attachments=CMSampleBufferGetSampleAttachmentsArray(buffer,createIfNecessary:false) as? [[SCStreamFrameInfo:Any]],let info=attachments.first,
-   let status=info[.status] as? Int,status==SCFrameStatus.complete.rawValue,let display=info[.displayTime] as? UInt64,display>0,let image=buffer.imageBuffer else{return}
+   let status=info[.status] as? Int,let display=info[.displayTime] as? UInt64,display>0 else{return}
+  cadence?(display, status)
+  guard status == SCFrameStatus.complete.rawValue, let image = buffer.imageBuffer else { return }
   CVPixelBufferLockBaseAddress(image,.readOnly);defer{CVPixelBufferUnlockBaseAddress(image,.readOnly)}
   guard let ptr=CVPixelBufferGetBaseAddress(image)?.assumingMemoryBound(to:UInt8.self) else{return}
   let width=CVPixelBufferGetWidth(image),height=CVPixelBufferGetHeight(image),stride=CVPixelBufferGetBytesPerRow(image)
