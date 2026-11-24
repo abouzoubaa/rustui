@@ -13,7 +13,7 @@ cp apps/latency-ref/appkit_display.swift target/headstart/g5-1/appkit-build/main
 xcrun swiftc -target "$swift_target" -O apps/latency-ref/pixel_capture.swift target/headstart/g5-1/appkit-build/main.swift -framework AppKit -framework ScreenCaptureKit -framework CoreMedia -framework CoreVideo -framework QuartzCore -o target/headstart/g5-1/latency-appkit-display
 xcrun swiftc -target "$swift_target" -O -emit-library -module-name G5Pixels apps/latency-ref/pixel_capture.swift -framework AppKit -framework ScreenCaptureKit -framework CoreMedia -framework CoreVideo -framework QuartzCore -Xlinker -install_name -Xlinker @rpath/libG5Pixels.dylib -o target/headstart/g5-1/libG5Pixels.dylib
 xcrun swiftc -target "$swift_target" -O apps/latency-ref/pixel_capture.swift apps/latency-ref/l1_observer.swift -framework AppKit -framework ScreenCaptureKit -framework CoreMedia -framework CoreVideo -framework QuartzCore -o target/headstart/g5-1/l1-observer
-xcrun clang -O2 -fobjc-arc -dynamiclib apps/latency-ref/native_input.m -framework AppKit -framework QuartzCore -framework CoreGraphics -o target/headstart/g5-1/libG5Native.dylib
+xcrun clang -target "$(uname -m)-apple-macos13.0" -O2 -fobjc-arc -dynamiclib -DG5_KEEP_WARM_EXPERIMENT apps/latency-ref/native_input.m apps/latency-ref/keep_warm.m -framework AppKit -framework QuartzCore -framework CoreGraphics -o target/headstart/g5-1/libG5Native.dylib
 xcrun clang -O2 -fobjc-arc -DG5_REFRESH_AUTOSTART -dynamiclib apps/latency-ref/refresh.m -framework AppKit -framework QuartzCore -o target/headstart/g5-1/libG5Refresh.dylib
 python3 - <<'PY'
 import json,os,subprocess
