@@ -17,9 +17,11 @@ import Foundation
         let width = Int(fields[1]), let height = Int(fields[2]) else {
    throw CocoaError(.fileReadCorruptFile)
   }
-  let capture = VersionCapture { row in
+  let verifyBar = ProcessInfo.processInfo.environment["RUSTUI_G5_TEAR_BAR"] == "1"
+  let capture = VersionCapture(verifyBar: verifyBar) { row in
    guard let data = try? JSONSerialization.data(withJSONObject: row, options: [.sortedKeys]) else { return }
-   print("G5_PIXELS " + String(decoding: data, as: UTF8.self))
+   let prefix = row["event"] as? String == "bar_sample" ? "G5_TEAR " : "G5_PIXELS "
+   print(prefix + String(decoding: data, as: UTF8.self))
   }
   try await capture.start(id: id, width: width, height: height)
   try Data().write(to: root.appendingPathComponent("ready"))

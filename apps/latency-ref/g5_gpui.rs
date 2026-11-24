@@ -22,6 +22,7 @@ struct Input {
     measuring: bool,
     position: gpui::Point<gpui::Pixels>,
     dragging: bool,
+    tear_bar: bool,
     overlay: bool,
     _surface: Option<gpui::WindowCompositionSurface>,
 }
@@ -102,6 +103,7 @@ impl Render for Input {
                 if !this.measuring
                     || this.scene == "typing"
                     || (this.scene == "drag" && !this.dragging)
+                    || (this.tear_bar && this.position == event.position)
                 {
                     return;
                 }
@@ -111,7 +113,16 @@ impl Render for Input {
                 cx.stop_propagation();
             }))
             .child(SharedString::from(format!("{}▏", self.text)))
-            .children((self.scene == "hover").then(|| {
+            .children(self.tear_bar.then(|| {
+                gpui::div()
+                    .absolute()
+                    .left(gpui::px(100. + ((self.version * 17) % 900) as f32))
+                    .top_0()
+                    .h_full()
+                    .w(gpui::px(12.))
+                    .bg(gpui::rgb(0x00ffff))
+            }))
+            .children((self.scene == "hover" && !self.tear_bar).then(|| {
                 gpui::div()
                     .absolute()
                     .left(gpui::px(100.))
@@ -178,6 +189,7 @@ fn main() {
     let sparse = std::env::var("RUSTUI_L1_SPARSE").as_deref() == Ok("1");
     let reported_hz = if sparse { 0.5 } else { hz as f64 };
     assert!([10, 30, 120].contains(&hz));
+    let tear_bar = std::env::var("RUSTUI_G5_TEAR_BAR").as_deref() == Ok("1");
     let pixels = std::env::var("RUSTUI_G5_PIXEL_CAPTURE").as_deref() == Ok("1");
     let async_wake = std::env::var("RUSTUI_G5_ASYNC_WAKE").as_deref() == Ok("1");
     let fullscreen = std::env::var("RUSTUI_G5_FULLSCREEN").as_deref() == Ok("1");
@@ -187,7 +199,7 @@ fn main() {
     gpui_platform::application().run(move|cx|{
   let renders=Rc::new(RefCell::new(Vec::new()));let saved=renders.clone();
   let options=gpui::WindowOptions{window_bounds:Some(gpui::WindowBounds::centered(gpui::size(gpui::px(1200.),gpui::px(800.)),cx)),..Default::default()};
-  let typed=cx.open_window(options,|window,cx|{let overlay=std::env::var("RUSTUI_G5_OVERLAY").as_deref()==Ok("1");let surface=overlay.then(||window.enable_window_composition().unwrap().create_gpui_surface(None).unwrap());let view=cx.new(|cx|Input{overlay,_surface:surface,focus:cx.focus_handle(),text:String::new(),version:0,renders,pixels,scene,measuring:false,position:gpui::point(gpui::px(100.),gpui::px(150.)),dragging:false});let focus=view.read(cx).focus.clone();window.focus(&focus,cx);if fullscreen{window.toggle_fullscreen();}view}).unwrap();
+  let typed=cx.open_window(options,|window,cx|{let overlay=std::env::var("RUSTUI_G5_OVERLAY").as_deref()==Ok("1");let surface=overlay.then(||window.enable_window_composition().unwrap().create_gpui_surface(None).unwrap());let view=cx.new(|cx|Input{overlay,_surface:surface,focus:cx.focus_handle(),text:String::new(),version:0,renders,pixels,scene,measuring:false,position:gpui::point(gpui::px(100.),gpui::px(150.)),dragging:false,tear_bar});let focus=view.read(cx).focus.clone();window.focus(&focus,cx);if fullscreen{window.toggle_fullscreen();}view}).unwrap();
   let handle=cx.windows().first().copied().unwrap();cx.activate(true);
   cx.spawn(async move|cx|{
    if pixels {

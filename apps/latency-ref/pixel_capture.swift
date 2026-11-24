@@ -15,7 +15,34 @@ struct VersionTransitions {
 final class VersionCapture:NSObject,SCStreamOutput {
  let queue=DispatchQueue(label:"g5.shared.pixels")
  var stream:SCStream!;var transitions=VersionTransitions();let emit:([String:Any])->Void
- init(emit:@escaping ([String:Any])->Void){self.emit=emit}
+ let verifyBar: Bool
+ init(verifyBar: Bool = false, emit:@escaping ([String:Any])->Void){
+  self.verifyBar=verifyBar;self.emit=emit
+ }
+ private func checkBar(_ ptr: UnsafePointer<UInt8>, width: Int, height: Int, stride: Int, display: UInt64) {
+  func cyan(_ x: Int, _ y: Int) -> Bool {
+   let i = y * stride + x * 4
+   return ptr[i] > 220 && ptr[i + 1] > 220 && ptr[i + 2] < 35
+  }
+  let first = height * 2 / 10
+  let last = height * 8 / 10
+  guard let left = (1..<(width - 1)).first(where: { cyan($0, first) }) else {
+   emit(["event":"bar_sample","display_mach":display,"found":false])
+   return
+  }
+  var right = left
+  while right < width - 1 && cyan(right + 1, first) { right += 1 }
+  guard right < width - 1 else {
+   emit(["event":"bar_sample","display_mach":display,"found":false])
+   return
+  }
+  // A movement between rows changes an edge even if both rows contain the bar.
+  let split = (first...last).contains { y in
+   !cyan(left, y) || !cyan(right, y) || cyan(left - 1, y) || cyan(right + 1, y)
+  }
+  emit(["event":"bar_sample","display_mach":display,"found":true,
+        "bar_x":left,"bar_width":right-left+1,"rows_checked":last-first+1,"split":split])
+ }
  @MainActor func start(window:NSWindow) async throws {
   let scale=window.backingScaleFactor
   let width=Int(window.frame.width*scale), height=Int(window.frame.height*scale)
@@ -57,6 +84,7 @@ final class VersionCapture:NSObject,SCStreamOutput {
   CVPixelBufferLockBaseAddress(image,.readOnly);defer{CVPixelBufferUnlockBaseAddress(image,.readOnly)}
   guard let ptr=CVPixelBufferGetBaseAddress(image)?.assumingMemoryBound(to:UInt8.self) else{return}
   let width=CVPixelBufferGetWidth(image),height=CVPixelBufferGetHeight(image),stride=CVPixelBufferGetBytesPerRow(image)
+  if verifyBar {checkBar(ptr,width:width,height:height,stride:stride,display:display)}
   func red(_ x:Int,_ y:Int)->Bool {let i=y*stride+x*4;return ptr[i+2]>220 && ptr[i+1]<35 && ptr[i]<35}
   for y in Swift.stride(from:8,to:height-8,by:16) {for x in Swift.stride(from:4,to:width-4,by:4) {
    guard red(x,y) else{continue};var left=x;var right=x
