@@ -56,6 +56,13 @@ use std::{
     },
 };
 
+extern "C-unwind" fn native_send_event(this: &AnyObject, _: Sel, event: *mut AnyObject) {
+    let _callback = gpui::fast_native_callback(1);
+    unsafe {
+        let _: () = msg_send![super(this, class!(NSApplication)), sendEvent: event];
+    }
+}
+
 const MAC_PLATFORM_IVAR: &CStr = c"platform";
 static mut APP_CLASS: *const AnyClass = ptr::null();
 static mut APP_DELEGATE_CLASS: *const AnyClass = ptr::null();
@@ -67,6 +74,10 @@ unsafe fn build_classes() {
             let mut decl = ClassBuilder::new(c"GPUIApplication", class!(NSApplication))
                 .expect("failed to register GPUIApplication");
             decl.add_ivar::<*mut c_void>(MAC_PLATFORM_IVAR);
+            decl.add_method(
+                sel!(sendEvent:),
+                native_send_event as extern "C-unwind" fn(_, Sel, *mut AnyObject),
+            );
             decl.register()
         }
     };

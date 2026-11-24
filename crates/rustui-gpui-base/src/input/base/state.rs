@@ -975,7 +975,10 @@ impl<M: InputModeKind> InputBaseState<M> {
                 }
             }),
             // Observe the blink cursor to repaint the view when it changes.
-            cx.observe(&blink_cursor, |_, _, cx| cx.notify()),
+            cx.observe(&blink_cursor, |_, _, cx| {
+                let _cause = gpui::fast_wake_cause(9);
+                cx.notify();
+            }),
             // Blink the cursor when the window is active, pause when it's not.
             cx.observe_window_activation(window, |input, window, cx| {
                 if window.is_window_active() {

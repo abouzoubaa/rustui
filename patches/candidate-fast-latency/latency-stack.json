@@ -28,6 +28,9 @@
     "gpui-fast-native-owner-proof-v1-fast.json",
     "gpui-kit-fold-cache-boundaries-v1-kit09.json",
     "gpui-fast-native-owner-readers-v1-fast.json",
-    "gpui-kit-fold-unchanged-row-reuse-v1-kit09.json"
+    "gpui-kit-fold-unchanged-row-reuse-v1-kit09.json",
+    "gpui-fast-native-budget-probe-v1-fast.json",
+    "gpui-fast-native-scheduler-v1-fast.json",
+    "gpui-fast-input-scoped-demand-v1-fast.json"
   ]
 }

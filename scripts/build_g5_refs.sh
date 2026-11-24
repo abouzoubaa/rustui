@@ -11,6 +11,7 @@ mkdir -p target/headstart/g5-1/appkit-build
 cp apps/latency-ref/appkit_display.swift target/headstart/g5-1/appkit-build/main.swift
 xcrun swiftc -O apps/latency-ref/pixel_capture.swift target/headstart/g5-1/appkit-build/main.swift -framework AppKit -framework ScreenCaptureKit -framework CoreMedia -framework CoreVideo -framework QuartzCore -o target/headstart/g5-1/latency-appkit-display
 xcrun swiftc -O -emit-library -module-name G5Pixels apps/latency-ref/pixel_capture.swift -framework AppKit -framework ScreenCaptureKit -framework CoreMedia -framework CoreVideo -framework QuartzCore -Xlinker -install_name -Xlinker @rpath/libG5Pixels.dylib -o target/headstart/g5-1/libG5Pixels.dylib
+xcrun clang -O2 -fobjc-arc -dynamiclib apps/latency-ref/native_input.m -framework AppKit -framework QuartzCore -framework CoreGraphics -o target/headstart/g5-1/libG5Native.dylib
 xcrun clang -O2 -fobjc-arc -DG5_REFRESH_AUTOSTART -dynamiclib apps/latency-ref/refresh.m -framework AppKit -framework QuartzCore -o target/headstart/g5-1/libG5Refresh.dylib
 python3 - <<'PY'
 import json,os,subprocess

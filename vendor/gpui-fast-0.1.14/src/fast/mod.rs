@@ -60,3 +60,6 @@ mod owner_present;
 pub(crate) mod present_order;
 
 pub(crate) mod frame_pacing;
+
+pub(crate) mod native_budget;
+pub(crate) mod native_scheduler;

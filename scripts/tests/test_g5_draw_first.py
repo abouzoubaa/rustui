@@ -11,8 +11,21 @@ class DrawFirstTests(unittest.TestCase):
             rust=Path(directory)/'state.rs';binary=Path(directory)/'state'
             switches=source[source.index('pub fn fast_coalesce_enabled'):source.index('#[derive(Default)]')]
             env=dict(os.environ)
-            for key in ['GPUI_FAST_IMMEDIATE_COALESCE','GPUI_FAST_IMMEDIATE_ANY_CHANGE']:env.pop(key,None)
-            rust.write_text('use std::{time::{Instant,Duration},sync::OnceLock};fn fast_immediate_enabled()->bool{true}\n'+switches+state+tests+'\n#[test]fn new_switches_default_off(){assert!(!fast_coalesce_enabled());assert!(!fast_any_change_enabled());}\n')
+            for key in ['GPUI_FAST_IMMEDIATE_COALESCE','GPUI_FAST_IMMEDIATE_ANY_CHANGE','GPUI_FAST_NATIVE_SCHEDULER','GPUI_FAST_INPUT_SCOPED_DEMAND','GPUI_FAST_TRACE_WAKES']:
+                env.pop(key,None)
+            scheduler = ROOT / 'crates/rustui-gpui-fast/src/fast/native_scheduler.rs'
+            rust.write_text(
+                '#![allow(dead_code)]\n'
+                '#[derive(Clone,Copy,Debug,Default,PartialEq,Eq,Hash)] pub struct WindowId(u64);\n'
+                'fn fast_immediate_enabled()->bool{true}\n'
+                'fn fast_latency_tick()->u64{0}\n'
+                f'#[path = "{scheduler}"] mod native_scheduler;\n'
+                'mod change_present {\n'
+                'use std::{time::{Instant,Duration},sync::OnceLock};\n'
+                + switches + state + tests
+                + '\n#[test]fn new_switches_default_off(){'
+                  'assert!(!fast_coalesce_enabled());assert!(!fast_any_change_enabled());}\n}\n'
+            )
             subprocess.run(['rustup','run','1.98.0','rustc','--edition=2024','--test',str(rust),'-o',str(binary)],cwd=ROOT,check=True)
             subprocess.run([str(binary)],cwd=ROOT,env=env,check=True)
     def test_cpu_admission_precedes_all_runtime_scene_builds(self):

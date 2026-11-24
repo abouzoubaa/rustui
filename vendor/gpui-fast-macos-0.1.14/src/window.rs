@@ -3408,6 +3408,7 @@ extern "C" fn handle_key_event(
     native_event: *mut AnyObject,
     key_equivalent: bool,
 ) -> Bool {
+    let _callback = gpui::fast_native_callback(2);
     let window_state = unsafe { get_window_state(this) };
     let mut lock = window_state.as_ref().lock();
 
@@ -3493,6 +3494,7 @@ extern "C" fn handle_key_event(
                 }
 
                 let handled: Bool = unsafe {
+                    let _interpret = gpui::fast_native_callback(16);
                     let input_context: *mut AnyObject = msg_send![this, inputContext];
                     if input_context.is_null() {
                         Bool::NO
@@ -3538,6 +3540,7 @@ extern "C" fn handle_key_event(
             }
 
             unsafe {
+                let _interpret = gpui::fast_native_callback(16);
                 let input_context: *mut AnyObject = msg_send![this, inputContext];
                 if input_context.is_null() {
                     Bool::NO
@@ -4145,6 +4148,11 @@ extern "C" fn display_layer(this: &AnyObject, _: Sel, _: *mut AnyObject) {
     let signal_at = PlatformFrameSignal::capture(scheduler::Instant::now);
     let window_state = unsafe { get_window_state(this) };
     let mut lock = window_state.lock();
+    if lock.renderer.immediate_allowed()
+        && gpui::fast_defer_native_layer_frame(lock.handle.window_id())
+    {
+        return;
+    }
     if let Some(mut callback) = lock.request_frame_callback.take() {
         gpui::fast_immediate_suspend(lock.handle.window_id());
         crate::fast::composition::set_presents_with_transaction(&mut lock, true);
@@ -4344,6 +4352,7 @@ extern "C" fn insert_text(
     text: *mut AnyObject,
     replacement_range: NSRange,
 ) {
+    let _callback = gpui::fast_native_callback(4);
     unsafe {
         let is_attributed_string: Bool = msg_send![text, isKindOfClass: class!(NSAttributedString)];
         let text: *mut AnyObject = if is_attributed_string == Bool::YES {
@@ -4367,6 +4376,7 @@ extern "C" fn set_marked_text(
     selected_range: NSRange,
     replacement_range: NSRange,
 ) {
+    let _callback = gpui::fast_native_callback(8);
     unsafe {
         let is_attributed_string: Bool = msg_send![text, isKindOfClass: class!(NSAttributedString)];
         let text: *mut AnyObject = if is_attributed_string == Bool::YES {

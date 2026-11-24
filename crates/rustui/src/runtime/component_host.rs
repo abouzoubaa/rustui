@@ -431,7 +431,9 @@ impl<V: View> ComponentHost<V> {
                     super::owner_projection::record_suppressed();
                     gpui::fast_latency_config(window, "g53_owner_dedup", [1., 0., 0., 0.]);
                 } else {
-                    if super::owner_projection::binding_active() {
+                    let binding = super::owner_projection::binding_active();
+                    let _wake = binding.then(|| gpui::fast_wake_cause(2));
+                    if binding {
                         gpui::fast_note_frame_cause(window, 2);
                     }
                     cx.notify();

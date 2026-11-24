@@ -178,6 +178,7 @@ impl TreeSitterInputHighlighter {
                     if visible_changed {
                         gpui::fast_note_frame_cause(window.window_handle().window_id(), 4);
                     }
+                    let _wake = gpui::fast_wake_cause(4);
                     state.apply_highlighter_fold_candidates_quiet(folds, visible_changed, cx);
                 });
             }

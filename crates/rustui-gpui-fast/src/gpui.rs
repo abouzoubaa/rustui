@@ -389,9 +389,11 @@ pub use fast::latency_breakdown::{
 #[doc(hidden)]
 pub use fast::edit_present::fast_draw_first_enabled;
 pub use fast::immediate_present::{
-    fast_immediate_active, fast_immediate_demand, fast_immediate_enabled,
-    fast_immediate_hold_active, fast_immediate_suspend,
+    fast_defer_native_layer_frame, fast_immediate_active, fast_immediate_demand,
+    fast_immediate_enabled, fast_immediate_hold_active, fast_immediate_suspend,
 };
+#[doc(hidden)]
+pub use fast::native_scheduler::{fast_native_callback, fast_wake_cause};
 
 #[doc(hidden)]
 pub use fast::present_order::{
