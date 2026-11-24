@@ -106,9 +106,11 @@ def analyse(path):
     # Lower envelope is an estimate, not an observed WindowServer deadline.
     deadline=positive[0] if positive else None
     for r in rows:
-        if r['display'] is not None and deadline is not None:r.update(decompose(r['handler'],r['gpu'],r['display'],r['presented'],deadline))
+        if r['display'] is not None and deadline is not None:
+            r.update(decompose(r['handler'],r['gpu'],r['display'],r['presented'],deadline))
+            r['hardware_sck_total'] = (r['display'] - r['hardware']) * 1000
     fields=['input_delivery_ms','P','draw_start_ms','draw_cpu_ms','acquire_to_commit_ms','gpu_callback_lag_ms',
-            'D_estimate','wait','S','sck_total','presented_total','hardware_presented_total','sck_residual','presented_residual']
+            'D_estimate','wait','S','sck_total','hardware_sck_total','presented_total','hardware_presented_total','sck_residual','presented_residual']
     stats={f:common.distribution([r[f] for r in rows if f in r]) for f in fields}
     refresh=[e['timestamp'] for e in data['G5_REFRESH ']]
     gaps=[(b[0]-a[0])*1000 for a,b in zip(presentations,presentations[1:]) if b[0]>a[0]]
@@ -162,3 +164,47 @@ def analyse(path):
                 presented_intervals_ms=common.distribution(gaps),passive_intervals_ms=common.distribution([(b-a)*1000 for a,b in zip(refresh,refresh[1:])]),
                 measured_render_link_recreates=len(recreates),measured_acquisitions_with_link=len(attached),
                 **acquisition)
+
+
+def analyse_appkit(path):
+    """Join the NSTextView's actual native handler and displayed barcode."""
+    data = load(path)
+    records = data['G5_REF ']
+    start = next(row for row in records if row['event'] == 'start')
+    end = next(row for row in records if row['event'] == 'end')
+    assert end['valid'], 'AppKit final text differed from the typing workload'
+    scale = start['numer'] / start['denom'] / 1e9
+    native = {row['version']: row for row in data['L1_NATIVE '] if row['event'] == 'native'}
+    assert len(native) == end['inputs'] and native, 'missing AppKit native input'
+    assert all(row['consumed'] for row in native.values()), 'NSTextView did not receive a native key'
+    handled = {row['version']: row['mach'] * scale for row in records if row['event'] == 'handled'}
+    pixels = {}
+    for row in sorted(records + data['G5_PIXELS '], key=lambda row: row.get('display_mach', 0)):
+        if row['event'] == 'displayed_pixels':
+            pixels.setdefault(row['version'], row['display_mach'] * scale)
+    drawn = {}
+    for row in records:
+        if row['event'] == 'draw':
+            drawn.setdefault(row['version'], row['mach'] * scale)
+    rows = []
+    for version, event in native.items():
+        if version not in pixels or version not in drawn:
+            continue
+        cocoa = event['handler_mach'] * scale
+        display = pixels[version]
+        assert display >= cocoa >= event['hardware_s'], 'AppKit clock order'
+        rows.append(dict(version=version,hardware=event['hardware_s'],handler=cocoa,
+                         text_view_handler=handled[version],draw_end=drawn[version],display=display,
+                         input_delivery_ms=(cocoa-event['hardware_s'])*1000,
+                         sck_total=(display-cocoa)*1000,
+                         hardware_sck_total=(display-event['hardware_s'])*1000))
+    assert rows and rows[-1]['version'] == end['inputs'], 'final AppKit text version was not captured'
+    refresh = [row['timestamp'] for row in records if row['event'] == 'cadence']
+    stats = {name:common.distribution([row[name] for row in rows])
+             for name in ('input_delivery_ms','sck_total','hardware_sck_total')}
+    cpu = end.get('cpu_s')
+    seconds = (end['mach'] - start['mach']) * scale if cpu is not None else None
+    return dict(inputs=len(native),captured=len(rows),stats=stats,rows=rows,seconds=seconds,
+                cpu_s=cpu,cpu_s_per_s=cpu/seconds if seconds else None,
+                presented_time_available=False,
+                passive_intervals_ms=common.distribution([(b-a)*1000 for a,b in zip(refresh,refresh[1:])]))

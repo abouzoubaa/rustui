@@ -463,13 +463,20 @@ fn playback(
             Err(error) => { eprintln!("G0 getrusage start failed: {error}"); cx.update(|app| app.quit()); return; }
         };
         let start = Instant::now();
+        let manual = scene == Scene::Typing && native_input::physical();
+        if manual { native_input::physical_count(1); }
         let mut ticks = 0;
         let mut handled = true;
         let mut min_len = initial_len;
         let mut max_len = initial_len;
         loop {
             let elapsed = start.elapsed().min(duration);
-            let mut due = due_ticks(elapsed, scene.hz());
+            let mut due = if manual {
+                ticks = native_input::physical_count(-1) as usize;
+                ticks
+            } else {
+                due_ticks(elapsed, scene.hz())
+            };
             // Replaying a backlog of pointer events into AppKit makes its
             // queue length part of the workload. Sample motion once per wake.
             if native_input::enabled() && matches!(scene, Scene::Hover | Scene::Drag) {
@@ -484,6 +491,7 @@ fn playback(
             if elapsed >= duration { break; }
             cx.background_executor().timer(if scene == Scene::Idle { duration } else { Duration::from_nanos(1_000_000_000 / u64::from(scene.hz())) }).await;
         }
+        if manual { ticks = native_input::physical_count(0) as usize; }
         let cpu_end = match cpu::Snapshot::take() {
             Ok(snapshot) => snapshot,
             Err(error) => { eprintln!("G0 getrusage end failed: {error}"); cx.update(|app| app.quit()); return; }

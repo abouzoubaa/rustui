@@ -5,12 +5,14 @@ cd "$repository_root"
 . scripts/pinned-toolchain.sh
 export CARGO_TARGET_DIR="$HOME/.cache/rustui-target"
 mkdir -p target/headstart/g5-1
+swift_target="$(uname -m)-apple-macos14.0"
 CARGO_PROFILE_RELEASE_DEBUG=line-tables-only CARGO_PROFILE_RELEASE_STRIP=none pinned_cargo build -p rustui-lab --release --locked --offline --message-format=json > target/headstart/g5-1/build-artifacts.jsonl
-xcrun swiftc -O apps/latency-ref/metal.swift -framework AppKit -framework Metal -framework QuartzCore -o target/headstart/g5-1/latency-metal
+xcrun swiftc -target "$swift_target" -O apps/latency-ref/metal.swift -framework AppKit -framework Metal -framework QuartzCore -o target/headstart/g5-1/latency-metal
 mkdir -p target/headstart/g5-1/appkit-build
 cp apps/latency-ref/appkit_display.swift target/headstart/g5-1/appkit-build/main.swift
-xcrun swiftc -O apps/latency-ref/pixel_capture.swift target/headstart/g5-1/appkit-build/main.swift -framework AppKit -framework ScreenCaptureKit -framework CoreMedia -framework CoreVideo -framework QuartzCore -o target/headstart/g5-1/latency-appkit-display
-xcrun swiftc -O -emit-library -module-name G5Pixels apps/latency-ref/pixel_capture.swift -framework AppKit -framework ScreenCaptureKit -framework CoreMedia -framework CoreVideo -framework QuartzCore -Xlinker -install_name -Xlinker @rpath/libG5Pixels.dylib -o target/headstart/g5-1/libG5Pixels.dylib
+xcrun swiftc -target "$swift_target" -O apps/latency-ref/pixel_capture.swift target/headstart/g5-1/appkit-build/main.swift -framework AppKit -framework ScreenCaptureKit -framework CoreMedia -framework CoreVideo -framework QuartzCore -o target/headstart/g5-1/latency-appkit-display
+xcrun swiftc -target "$swift_target" -O -emit-library -module-name G5Pixels apps/latency-ref/pixel_capture.swift -framework AppKit -framework ScreenCaptureKit -framework CoreMedia -framework CoreVideo -framework QuartzCore -Xlinker -install_name -Xlinker @rpath/libG5Pixels.dylib -o target/headstart/g5-1/libG5Pixels.dylib
+xcrun swiftc -target "$swift_target" -O apps/latency-ref/pixel_capture.swift apps/latency-ref/l1_observer.swift -framework AppKit -framework ScreenCaptureKit -framework CoreMedia -framework CoreVideo -framework QuartzCore -o target/headstart/g5-1/l1-observer
 xcrun clang -O2 -fobjc-arc -dynamiclib apps/latency-ref/native_input.m -framework AppKit -framework QuartzCore -framework CoreGraphics -o target/headstart/g5-1/libG5Native.dylib
 xcrun clang -O2 -fobjc-arc -DG5_REFRESH_AUTOSTART -dynamiclib apps/latency-ref/refresh.m -framework AppKit -framework QuartzCore -o target/headstart/g5-1/libG5Refresh.dylib
 python3 - <<'PY'
@@ -31,4 +33,21 @@ root=Path('target/headstart/g5-1');bundle=root/'G5 Bare.app'/'Contents'
 source=root/'latency-gpui';dest=bundle/'MacOS/latency-gpui';shutil.copy2(source,dest)
 (bundle/'Info.plist').write_bytes(plistlib.dumps({'CFBundleIdentifier':'dev.rustui.latency.g5.bare','CFBundleName':'G5 Bare','CFBundleExecutable':'latency-gpui','CFBundlePackageType':'APPL','CFBundleVersion':'1','NSHighResolutionCapable':True}))
 assert hashlib.sha256(source.read_bytes()).digest()==hashlib.sha256(dest.read_bytes()).digest()
+PYBUNDLE
+python3 - <<'PYBUNDLE'
+from pathlib import Path
+import os,plistlib,shutil
+root=Path('target/headstart/g5-1')
+apps=(
+    ('RustUI Lab','dev.rustui.latency.g5.lab',Path(os.environ['CARGO_TARGET_DIR'])/'release/rustui-lab'),
+    ('G5 AppKit','dev.rustui.latency.g5.appkit',root/'latency-appkit-display'),
+)
+for name,identifier,source in apps:
+    contents=root/(name+'.app')/'Contents'
+    executables=contents/'MacOS'
+    executables.mkdir(parents=True,exist_ok=True)
+    shutil.copy2(source,executables/source.name)
+    values={'CFBundleIdentifier':identifier,'CFBundleName':name,'CFBundleExecutable':source.name,
+            'CFBundlePackageType':'APPL','CFBundleVersion':'1','NSHighResolutionCapable':True}
+    (contents/'Info.plist').write_bytes(plistlib.dumps(values))
 PYBUNDLE
