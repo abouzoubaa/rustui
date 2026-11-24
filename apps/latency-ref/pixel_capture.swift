@@ -17,24 +17,40 @@ final class VersionCapture:NSObject,SCStreamOutput {
  var stream:SCStream!;var transitions=VersionTransitions();let emit:([String:Any])->Void
  init(emit:@escaping ([String:Any])->Void){self.emit=emit}
  @MainActor func start(window:NSWindow) async throws {
+  let scale=window.backingScaleFactor
+  let width=Int(window.frame.width*scale), height=Int(window.frame.height*scale)
+  let id=CGWindowID(window.windowNumber)
+  if let directory=ProcessInfo.processInfo.environment["RUSTUI_L1_CAPTURE_DIR"] {
+   let root=URL(fileURLWithPath:directory)
+   try "\(id) \(width) \(height)".write(to:root.appendingPathComponent("window"),atomically:true,encoding:.utf8)
+   let deadline=Date().addingTimeInterval(10)
+   while !FileManager.default.fileExists(atPath:root.appendingPathComponent("ready").path) {
+    guard Date()<deadline else{throw NSError(domain:"G5ObserverTimeout",code:1)}
+    try await Task.sleep(nanoseconds:10_000_000)
+   }
+   return
+  }
+  try await start(id:id,width:width,height:height)
+ }
+ @MainActor func start(id:CGWindowID,width:Int,height:Int) async throws {
   guard CGPreflightScreenCaptureAccess() else {throw NSError(domain:"G5ScreenAccess",code:1)}
   // WindowServer can publish a newly ordered window after AppKit returns.
   // Wait only during setup, before either app's normal warmup starts.
   let deadline=Date().addingTimeInterval(5);var selected:SCWindow?
   while selected==nil && Date()<deadline {
    let content=try await SCShareableContent.excludingDesktopWindows(false,onScreenWindowsOnly:true)
-   selected=content.windows.first(where:{$0.windowID==CGWindowID(window.windowNumber)})
+   selected=content.windows.first(where:{$0.windowID==id})
    if selected==nil {try await Task.sleep(nanoseconds:10_000_000)}
   }
   guard let target=selected else {throw NSError(domain:"G5WindowMissing",code:1)}
-  let config=SCStreamConfiguration();let scale=window.backingScaleFactor
-  config.width=Int(window.frame.width*scale);config.height=Int(window.frame.height*scale)
+  let config=SCStreamConfiguration()
+  config.width=width;config.height=height
   config.minimumFrameInterval=CMTime(value:1,timescale:120);config.pixelFormat=kCVPixelFormatType_32BGRA;config.queueDepth=3;config.showsCursor=false;config.colorSpaceName=CGColorSpace.sRGB
   stream=SCStream(filter:SCContentFilter(desktopIndependentWindow:target),configuration:config,delegate:nil)
   try stream.addStreamOutput(self,type:.screen,sampleHandlerQueue:queue)
   try await stream.startCapture()
  }
- @MainActor func stop() async {try? await stream.stopCapture();queue.sync{}}
+ @MainActor func stop() async {if let stream {try? await stream.stopCapture()};queue.sync{}}
  func stream(_ stream:SCStream,didOutputSampleBuffer buffer:CMSampleBuffer,of type:SCStreamOutputType) {
   guard type == .screen,let attachments=CMSampleBufferGetSampleAttachmentsArray(buffer,createIfNecessary:false) as? [[SCStreamFrameInfo:Any]],let info=attachments.first,
    let status=info[.status] as? Int,status==SCFrameStatus.complete.rawValue,let display=info[.displayTime] as? UInt64,display>0,let image=buffer.imageBuffer else{return}

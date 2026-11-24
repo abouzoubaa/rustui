@@ -7,18 +7,51 @@ import QuartzCore
 import Darwin
 let env=ProcessInfo.processInfo.environment
 guard env["RUSTUI_G5_REFERENCE"] == "1" else { fatalError("Set RUSTUI_G5_REFERENCE=1") }
-guard CGPreflightScreenCaptureAccess() else { fatalError("Screen recording access is required; no callback proxy is substituted") }
+guard env["RUSTUI_L1_CAPTURE_DIR"] != nil || CGPreflightScreenCaptureAccess() else { fatalError("Screen recording access is required; no callback proxy is substituted") }
+let native = env["RUSTUI_L1_NATIVE"] == "1"
+let physical = env["RUSTUI_L1_PHYSICAL"] == "1"
+let nativePost = dlsym(UnsafeMutableRawPointer(bitPattern: -2), "g5_native_post")
+let nativeClaim = dlsym(UnsafeMutableRawPointer(bitPattern: -2), "g5_native_claim_key")
+let physicalCounter = dlsym(UnsafeMutableRawPointer(bitPattern: -2), "g5_native_physical")
+if native && (nativePost == nil || nativeClaim == nil || physicalCounter == nil) {
+ fatalError("Native input helper is missing")
+}
+func countPhysical(_ arm: Int32) -> UInt64 {
+ unsafeBitCast(physicalCounter!, to: (@convention(c) (Int32) -> UInt64).self)(arm)
+}
 let seconds=Double(CommandLine.arguments.dropFirst().first ?? "60")!
 let inputHz=Double(env["RUSTUI_G5_INPUT_HZ"] ?? "10")!
 var tb=mach_timebase_info_data_t(); mach_timebase_info(&tb)
 func tick()->UInt64 { mach_absolute_time() }
 let secondsPerTick=Double(tb.numer)/Double(tb.denom)/1e9
+func processCPU() -> Double {
+ var usage = rusage()
+ precondition(getrusage(RUSAGE_SELF, &usage) == 0)
+ return Double(usage.ru_utime.tv_sec) + Double(usage.ru_stime.tv_sec)
+     + Double(usage.ru_utime.tv_usec + usage.ru_stime.tv_usec) / 1_000_000
+}
 let logLock=NSLock(); var records=[[String:Any]]()
 func record(_ r:[String:Any]) { logLock.withLock { records.append(r) } }
 func snapshot() -> [[String:Any]] { logLock.withLock { records } }
 final class Text:NSTextView {
  var version=0; let marker=CALayer()
- override func keyDown(with e:NSEvent) { version += 1; record(["event":"handled","version":version,"mach":tick()]); super.keyDown(with:e) }
+ override func keyDown(with e:NSEvent) {
+  let handled = tick()
+  if native {
+   let claim = unsafeBitCast(nativeClaim!, to: (@convention(c) () -> UInt64).self)
+   let input = claim()
+   super.keyDown(with:e)
+   if input != 0 {
+    version = Int(input)
+    needsDisplay = true
+    record(["event":"handled","version":version,"mach":handled])
+   }
+  } else {
+   version += 1
+   record(["event":"handled","version":version,"mach":handled])
+   super.keyDown(with:e)
+  }
+ }
  override func draw(_ r:NSRect) {
   super.draw(r)
   // Publish the version only after this text version has actually drawn.
@@ -36,6 +69,7 @@ final class Text:NSTextView {
 final class Driver:NSObject,NSApplicationDelegate {
  var window:NSWindow!;var text:Text!;var capture:VersionCapture!;var link:CADisplayLink!
  var timer:Timer?;var start:UInt64=0;var count=0;var finishing=false
+ var cpuAtStart = 0.0
  func applicationDidFinishLaunching(_ n:Notification) {
   window=NSWindow(contentRect:NSRect(x:100,y:100,width:1200,height:800),styleMask:[.titled,.closable],backing:.buffered,defer:false)
   window.title="G5 AppKit observed-display control"
@@ -43,13 +77,22 @@ final class Driver:NSObject,NSApplicationDelegate {
   text.isRichText=false;text.font=NSFont.monospacedSystemFont(ofSize:16,weight:.regular)
   text.wantsLayer=true;text.marker.frame=NSRect(x:1000,y:10,width:104,height:32);text.marker.magnificationFilter = .nearest;text.layer!.addSublayer(text.marker)
   scroll.documentView=text;window.contentView=scroll;window.makeKeyAndOrderFront(nil);window.makeFirstResponder(text);NSApp.activate(ignoringOtherApps:true)
-  link=scroll.displayLink(target:self,selector:#selector(display(_:)));link.add(to:.main,forMode:.common)
+  if !native || env["RUSTUI_G5_REFRESH"] == "1" {
+   link=scroll.displayLink(target:self,selector:#selector(display(_:)));link.add(to:.main,forMode:.common)
+  }
   Task {do {
    self.capture=VersionCapture(emit:record);try await self.capture.start(window:self.window)
-   for warm in 1...6 {DispatchQueue.main.asyncAfter(deadline:.now()+Double(warm)*0.1){self.sendEdit()}}
+   if !native {
+    for warm in 1...6 {DispatchQueue.main.asyncAfter(deadline:.now()+Double(warm)*0.1){self.sendEdit()}}
+   }
    DispatchQueue.main.asyncAfter(deadline:.now()+2) {
-    self.count=0;self.start=tick();record(["event":"start","mach":self.start,"numer":tb.numer,"denom":tb.denom,"input_hz":inputHz,"method":"marker pixels in ScreenCaptureKit frame; WindowServer displayTime"])
-    self.timer=Timer.scheduledTimer(withTimeInterval:1/inputHz,repeats:true) {_ in self.input()}
+    self.count=0;self.cpuAtStart=processCPU();self.start=tick();record(["event":"start","mach":self.start,"numer":tb.numer,"denom":tb.denom,"input_hz":inputHz,"method":"marker pixels in ScreenCaptureKit frame; WindowServer displayTime"])
+    if physical {
+     _ = countPhysical(1)
+     DispatchQueue.main.asyncAfter(deadline:.now()+seconds) {self.finish()}
+    } else {
+     self.timer=Timer.scheduledTimer(withTimeInterval:1/inputHz,repeats:true) {_ in self.input()}
+    }
    }
   } catch {fputs("G5 AppKit display capture failed: \(error)\n",stderr);exit(2)}}
  }
@@ -59,13 +102,20 @@ final class Driver:NSObject,NSApplicationDelegate {
   sendEdit()
  }
  func sendEdit() {
-  count += 1;let ch=count%2==1 ? "x":"\u{7f}"
+  count += 1
+  if native {
+   let post=unsafeBitCast(nativePost!,to:(@convention(c) (UInt32,UInt64,Double,Double)->Int32).self)
+   precondition(post(0,UInt64(count),0,0) == 1,"native key post failed")
+   return
+  }
+  let ch=count%2==1 ? "x":"\u{7f}"
   let e=NSEvent.keyEvent(with:.keyDown,location:.zero,modifierFlags:[],timestamp:ProcessInfo.processInfo.systemUptime,windowNumber:window.windowNumber,context:nil,characters:ch,charactersIgnoringModifiers:ch,isARepeat:false,keyCode:count%2==1 ? 7:51)!
   text.keyDown(with:e)
  }
  func finish() {
-  guard !finishing else{return};finishing=true;timer?.invalidate();link.invalidate();let end=tick()
-  DispatchQueue.main.asyncAfter(deadline:.now()+0.5) {Task {await self.capture.stop();record(["event":"end","mach":end,"inputs":self.count,"text":self.text.string,"valid":self.text.string == (self.count%2==1 ? "x":"")]);let all=snapshot();for row in all {let data=try! JSONSerialization.data(withJSONObject:row,options:[.sortedKeys]);print("G5_REF "+String(data:data,encoding:.utf8)!)};NSApp.terminate(nil)}}
+  guard !finishing else{return};finishing=true;timer?.invalidate();link?.invalidate();let end=tick();let cpu=processCPU()-cpuAtStart
+  if physical { count=Int(countPhysical(0)) }
+  DispatchQueue.main.asyncAfter(deadline:.now()+0.5) {Task {await self.capture.stop();record(["event":"end","mach":end,"cpu_s":cpu,"inputs":self.count,"text":self.text.string,"valid":self.text.string == (self.count%2==1 ? "x":"")]);let all=snapshot();for row in all {let data=try! JSONSerialization.data(withJSONObject:row,options:[.sortedKeys]);fputs("G5_REF "+String(data:data,encoding:.utf8)!+"\n",stderr)};NSApp.terminate(nil)}}
  }
 }
 let app=NSApplication.shared;app.setActivationPolicy(.regular);let driver=Driver();app.delegate=driver;app.run()

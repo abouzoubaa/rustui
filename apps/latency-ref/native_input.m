@@ -5,16 +5,32 @@
 #import <objc/runtime.h>
 #import <mach/mach_time.h>
 #import <dlfcn.h>
+#import <sys/socket.h>
+#import <sys/un.h>
+#import <unistd.h>
 typedef struct { uint64_t version; double hardware; uint64_t handler; uint64_t kind; int64_t window; uint64_t cg_timestamp; } NativeInfo;
 static NativeInfo current;
 static BOOL consumed;
 static IMP original;
 static NSMutableArray<NSDictionary *> *records;
 static char version_key;
+static BOOL physicalArmed;
+static uint64_t physicalCount;
+static int keysSocket = -1;
+
+uint64_t g5_native_physical(int arm) {
+ if(arm==1){physicalArmed=YES;physicalCount=0;}
+ if(arm==0)physicalArmed=NO;
+ return physicalCount;
+}
 static NSMutableDictionary<NSNumber *, NSNumber *> *pointerVersions;
 static const uint64_t magic=0x4c31000000000000ULL;
 static BOOL enabled(void){return [NSProcessInfo.processInfo.environment[@"RUSTUI_L1_NATIVE"] isEqualToString:@"1"];}
 int g5_native_take(unsigned kind,NativeInfo *out){if(!enabled()||!current.version||consumed||current.kind!=kind)return 0;*out=current;consumed=YES;return 1;}
+uint64_t g5_native_claim_key(void) {
+ NativeInfo info;
+ return g5_native_take(0,&info) ? info.version : 0;
+}
 static void native_send(id self,SEL selector,NSEvent *event){
  CGEventRef cg=(event.type==NSEventTypeKeyDown||event.type==NSEventTypeMouseMoved)?event.CGEvent:NULL;
  uint64_t data=cg?(uint64_t)CGEventGetIntegerValueField(cg,kCGEventSourceUserData):0;
@@ -31,6 +47,10 @@ static void native_send(id self,SEL selector,NSEvent *event){
   [pointerVersions removeObjectForKey:@(llround(event.timestamp*1000000.0))];
  }
  if ((pointerTag&0xffff0000ULL)==0x4c310000ULL) data=magic|(pointerTag&0xffffULL);
+ if(physicalArmed && !data && event.type==NSEventTypeKeyDown && !event.isARepeat
+       && (event.keyCode==7 || event.keyCode==51)) {
+  data=magic|++physicalCount;
+ }
  BOOL measured=(data&0xffff000000000000ULL)==magic && (event.type==NSEventTypeKeyDown || pointer);
  NativeInfo previous=current;BOOL previous_consumed=consumed;
  if(measured){current=(NativeInfo){data&0xffffffffULL,event.timestamp,mach_absolute_time(),event.type==NSEventTypeKeyDown?0:1,event.windowNumber,cg?CGEventGetTimestamp(cg):0};consumed=NO;}
@@ -41,6 +61,11 @@ int g5_native_post(unsigned kind,uint64_t version,double x,double y){
  if(!enabled())return 0;
  NSWindow *window=NSApp.keyWindow ?: NSApp.mainWindow; if(!window)return 0;
  if(kind==0){
+  if(keysSocket>=0) {
+   char request[64];
+   int length=snprintf(request,sizeof(request),"%d %llu",getpid(),(unsigned long long)version);
+   return send(keysSocket,request,(size_t)length,0)==length;
+  }
   if(!CGPreflightPostEventAccess())return 0;
   CGKeyCode key=version%2?7:51;
   CGEventRef down=CGEventCreateKeyboardEvent(NULL,key,true),up=CGEventCreateKeyboardEvent(NULL,key,false);
@@ -80,6 +105,14 @@ static void flush(void){
 }
 __attribute__((constructor)) static void install(void){
  if(!enabled())return;records=[NSMutableArray new];pointerVersions=[NSMutableDictionary new];atexit(flush);
+ const char *keyPath=getenv("RUSTUI_L1_KEY_SOCKET");
+ if(keyPath) {
+  struct sockaddr_un address={.sun_family=AF_UNIX};
+  if(strlen(keyPath)>=sizeof(address.sun_path))abort();
+  strlcpy(address.sun_path,keyPath,sizeof(address.sun_path));
+  keysSocket=socket(AF_UNIX,SOCK_DGRAM,0);
+  if(keysSocket<0 || connect(keysSocket,(struct sockaddr *)&address,sizeof(address))<0)abort();
+ }
  [NSNotificationCenter.defaultCenter addObserverForName:NSApplicationDidFinishLaunchingNotification object:nil queue:nil usingBlock:^(NSNotification*n){
   (void)n;Class cls=object_getClass(NSApp);SEL sel=@selector(sendEvent:);Method method=class_getInstanceMethod(cls,sel);original=method_getImplementation(method);
   if(!class_addMethod(cls,sel,(IMP)native_send,method_getTypeEncoding(method)))method_setImplementation(class_getInstanceMethod(cls,sel),(IMP)native_send);

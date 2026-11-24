@@ -202,7 +202,11 @@ fn main() {
    let cpu_start=cpu::Snapshot::take().unwrap();let start=Instant::now();
    eprintln!("RUSTUI_G0_LOG {{\"event\":\"start\",\"scene\":\"bare\",\"epoch_ms\":{},\"mach\":{},\"duration_s\":{seconds},\"input_hz\":{reported_hz},\"fullscreen\":{fullscreen}}}",epoch(),gpui::fast_latency_tick());
    let mut version=0u64;let mut valid=true;
-   if async_wake {
+   if native_input::physical() {
+    native_input::physical_count(1);
+    cx.background_executor().timer(Duration::from_secs(seconds)).await;
+    version=native_input::physical_count(0);
+   } else if async_wake {
     valid &= handle.update(cx,|_,window,app|{let stamp=window.fast_measure_input("bare",1,1);let ok=window.dispatch_keystroke(gpui::Keystroke::parse("x").unwrap(),app);window.fast_input_handled(stamp);ok}).unwrap_or(false);
     cx.background_executor().timer(Duration::from_secs(1)).await;
     version=2;

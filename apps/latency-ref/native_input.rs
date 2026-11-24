@@ -41,3 +41,19 @@ pub fn pixels_stop() {
         }
     }
 }
+
+pub fn physical() -> bool {
+    static ON: OnceLock<bool> = OnceLock::new();
+    *ON.get_or_init(|| std::env::var("RUSTUI_L1_PHYSICAL").as_deref() == Ok("1"))
+}
+
+pub fn physical_count(arm: i32) -> u64 {
+    type Call = unsafe extern "C" fn(i32) -> u64;
+    static FUNCTION: OnceLock<Call> = OnceLock::new();
+    let call = FUNCTION.get_or_init(|| unsafe {
+        let pointer = dlsym((-2isize) as *mut c_void, c"g5_native_physical".as_ptr());
+        assert!(!pointer.is_null(), "native keyboard helper was not loaded");
+        std::mem::transmute::<*mut c_void, Call>(pointer)
+    });
+    unsafe { call(arm) }
+}
