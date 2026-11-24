@@ -24,6 +24,7 @@ pub(crate) mod text_system;
 
 pub(crate) mod presented;
 
+pub(crate) mod late_drawable;
 pub(crate) mod latency;
 
 pub(crate) mod immediate_present;

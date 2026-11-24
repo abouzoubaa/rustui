@@ -3,7 +3,7 @@ use std::{
     ops::Range,
     rc::Rc,
     sync::{
-        Arc,
+        Arc, OnceLock,
         atomic::{AtomicBool, Ordering},
     },
     time::Duration,
@@ -31,6 +31,11 @@ pub(crate) fn input_highlighter_factory() -> InputHighlighterFactory {
 mod draw_first_background;
 #[path = "draw_first_folds.rs"]
 pub(crate) mod draw_first_folds;
+
+fn trim_editor() -> bool {
+    static ENABLED: OnceLock<bool> = OnceLock::new();
+    *ENABLED.get_or_init(|| std::env::var("RUSTUI_G5_TRIM_EDITOR").as_deref() == Ok("1"))
+}
 
 const SYNC_PARSE_TIMEOUT: Duration = Duration::from_millis(2);
 const SYNC_PARSE_MAX_BYTES: usize = 256 * 1024;
@@ -277,7 +282,7 @@ impl InputHighlighter for TreeSitterInputHighlighter {
         self.inner
             .borrow()
             .tree()
-            .map(|tree| extract_fold_ranges_in_range(tree, range))
+            .map(|tree| extract_fold_ranges_in_range(tree, range, trim_editor()))
             .unwrap_or_default()
     }
 }
@@ -294,14 +299,20 @@ fn to_tree_sitter_edit(edit: BaseInputEdit) -> InputEdit {
 }
 
 fn extract_fold_ranges(tree: &tree_sitter::Tree) -> Vec<FoldRange> {
-    extract_fold_ranges_in_range(tree, 0..usize::MAX)
+    extract_fold_ranges_in_range(tree, 0..usize::MAX, false)
 }
 
 fn extract_fold_ranges_in_range(
     tree: &tree_sitter::Tree,
     byte_range: Range<usize>,
+    seek: bool,
 ) -> Vec<FoldRange> {
-    fn collect(node: tree_sitter::Node, bytes: &Range<usize>, ranges: &mut Vec<FoldRange>) {
+    fn collect(
+        node: tree_sitter::Node,
+        bytes: &Range<usize>,
+        seek: bool,
+        ranges: &mut Vec<FoldRange>,
+    ) {
         if node.end_byte() <= bytes.start || node.start_byte() >= bytes.end {
             return;
         }
@@ -311,19 +322,77 @@ fn extract_fold_ranges_in_range(
             return;
         }
         ranges.push(FoldRange::new(start, end));
+        children(node, bytes, seek, ranges);
+    }
+
+    fn children(
+        node: tree_sitter::Node,
+        bytes: &Range<usize>,
+        seek: bool,
+        ranges: &mut Vec<FoldRange>,
+    ) {
         let mut cursor = node.walk();
-        for child in node.named_children(&mut cursor) {
-            collect(child, bytes, ranges);
+        if seek && u32::try_from(bytes.start).is_ok() {
+            if cursor.goto_first_child_for_byte(bytes.start).is_none() {
+                return;
+            }
+            loop {
+                let child = cursor.node();
+                if child.start_byte() >= bytes.end {
+                    break;
+                }
+                if child.is_named() {
+                    collect(child, bytes, seek, ranges);
+                }
+                if !cursor.goto_next_sibling() {
+                    break;
+                }
+            }
+        } else {
+            for child in node.named_children(&mut cursor) {
+                collect(child, bytes, seek, ranges);
+            }
         }
     }
 
-    let root = tree.root_node();
     let mut ranges = Vec::new();
-    let mut cursor = root.walk();
-    for child in root.named_children(&mut cursor) {
-        collect(child, &byte_range, &mut ranges);
-    }
+    children(tree.root_node(), &byte_range, seek, &mut ranges);
     ranges.sort_by_key(|range| range.start_line);
     ranges.dedup_by_key(|range| range.start_line);
     ranges
+}
+
+#[cfg(all(test, feature = "tree-sitter-rust"))]
+mod trim_editor_tests {
+    use super::*;
+
+    #[test]
+    fn seeking_fold_children_preserves_ranges_and_edit_boundaries() {
+        let original = "// café\nfn before() {\n    work();\n}\nfn edit() {\n    if ok {\n        work();\n    }\n}\nfn after() {\n    work();\n}\n";
+        let changed = original.replace(
+            "        work();",
+            "        if deeper {\n            work();\n        }",
+        );
+        let without_fold = original.replace(
+            "fn edit() {\n    if ok {\n        work();\n    }\n}\n",
+            "fn edit() {}\n",
+        );
+        let (mut parser, grammar) = LanguageRegistry::singleton()
+            .parser(&"rust".into())
+            .unwrap();
+        parser.set_language(&grammar).unwrap();
+        for text in [original, changed.as_str(), without_fold.as_str(), original] {
+            let tree = parser.parse(text, None).unwrap();
+            for start in 0..=text.len() {
+                for end in start..=text.len() {
+                    let range = start..end;
+                    assert_eq!(
+                        extract_fold_ranges_in_range(&tree, range.clone(), true),
+                        extract_fold_ranges_in_range(&tree, range.clone(), false),
+                        "fold result for {range:?}",
+                    );
+                }
+            }
+        }
+    }
 }

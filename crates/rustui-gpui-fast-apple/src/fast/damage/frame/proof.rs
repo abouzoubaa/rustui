@@ -59,6 +59,23 @@ fn prepare(renderer: &mut MetalRenderer, scene: &Scene, synchronous: bool) -> Pr
         true,
     )
 }
+fn preacquisition_instances_match_normal_frame() -> Result<()> {
+    let mut renderer = MetalRenderer::new_headless(Default::default())?;
+    let scene = scene();
+    let size = gpui::size(DevicePixels(64), DevicePixels(64));
+
+    let ordinary = retained::texture(&renderer.device, 64, 64)?;
+    let command = renderer.render_frame(&scene, &ordinary, size)?;
+    let expected = finish(&renderer, &command, &ordinary)?;
+
+    let (writer, bindings) = renderer.prepare_frame_instances(&scene)?;
+    let later = retained::texture(&renderer.device, 64, 64)?;
+    let command = renderer.encode_frame(&scene, &later, size, writer, bindings)?;
+    let actual = finish(&renderer, &command, &later)?;
+    assert!(actual.iter().any(|byte| *byte != 0));
+    assert_eq!(actual, expected);
+    Ok(())
+}
 fn copy_and_fallbacks() -> Result<()> {
     let mut renderer = MetalRenderer::new_headless(Default::default())?;
     let scene = scene();
@@ -218,6 +235,7 @@ impl MetalRenderer {
         let _serial = PROOF_LOCK.lock().unwrap();
         objc2::rc::autoreleasepool(|_| {
             retained::test_budget();
+            preacquisition_instances_match_normal_frame()?;
             copy_and_fallbacks()?;
             skip_drawable()
         })

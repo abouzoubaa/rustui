@@ -31,6 +31,8 @@
     "../candidate-fast-latency/gpui-kit-fold-unchanged-row-reuse-v1-kit09.json",
     "../candidate-fast-latency/gpui-fast-native-budget-probe-v1-fast.json",
     "../candidate-fast-latency/gpui-fast-native-scheduler-v1-fast.json",
-    "../candidate-fast-latency/gpui-fast-input-scoped-demand-v1-fast.json"
+    "../candidate-fast-latency/gpui-fast-input-scoped-demand-v1-fast.json",
+    "../candidate-fast-latency/gpui-fast-late-drawable-v1-fast.json",
+    "../candidate-fast-latency/gpui-kit-first-frame-editor-reuse-v1-kit09.json"
   ]
 }
