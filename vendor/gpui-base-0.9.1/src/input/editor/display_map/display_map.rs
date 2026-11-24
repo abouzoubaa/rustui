@@ -128,6 +128,10 @@ impl DisplayMap {
         }
     }
 
+    pub(crate) fn fold_candidates(&self) -> &[FoldRange] {
+        self.fold_map.fold_candidates()
+    }
+
     /// Set fold candidates (from tree-sitter/LSP)
     pub fn set_fold_candidates(&mut self, candidates: Vec<FoldRange>) {
         self.fold_map.set_candidates(candidates);

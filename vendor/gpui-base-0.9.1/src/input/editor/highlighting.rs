@@ -67,6 +67,11 @@ pub trait InputHighlighter {
 
     fn fold_ranges(&self, text: &Rope) -> Vec<FoldRange>;
 
+    /// Whether a scheduled parse will publish the fold candidates for this edit.
+    fn publishes_folds_after_edit(&self) -> bool {
+        false
+    }
+
     fn fold_ranges_for_edit(&self, range: Range<usize>, text: &Rope) -> Vec<FoldRange> {
         let _ = range;
         self.fold_ranges(text)

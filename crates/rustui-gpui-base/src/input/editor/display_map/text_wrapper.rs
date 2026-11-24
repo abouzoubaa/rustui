@@ -548,9 +548,11 @@ impl TextWrapper {
         keep_measurements: bool,
         cx: &mut App,
     ) {
-        let mut line_wrapper = cx
-            .text_system()
-            .line_wrapper(self.font.clone(), self.font_size);
+        let incremental = keep_measurements && crate::input::incremental_editor();
+        let mut line_wrapper = (!incremental).then(|| {
+            cx.text_system()
+                .line_wrapper(self.font.clone(), self.font_size)
+        });
         let metrics = self.inline_metrics.clone();
         let measurements = self.width_measurements.clone();
         if !reuse_widths && !keep_measurements {
@@ -560,12 +562,15 @@ impl TextWrapper {
         let font = self.font.clone();
         let font_size = self.font_size;
         let wrapping_indent = self.wrapping_indent;
-        let tab_stop = tab_stop_width(&text_system, &font, font_size, self.tab_size);
+        let tab_size = self.tab_size;
+        let mut tab_stop =
+            (!incremental).then(|| tab_stop_width(&text_system, &font, font_size, tab_size));
         self.update_lines(
             changed_text,
             range,
             new_text,
             reuse_widths,
+            incremental,
             &mut |line_str, wrap_width, line_start| {
                 let mut fragments = Vec::new();
                 let mut offset = 0;
@@ -605,7 +610,14 @@ impl TextWrapper {
                                 }],
                                 None,
                             );
-                            expanded_width(&layout, text, tab_stop)
+                            if incremental && !text.contains('\t') {
+                                layout.width
+                            } else {
+                                let tab_stop = *tab_stop.get_or_insert_with(|| {
+                                    tab_stop_width(&text_system, &font, font_size, tab_size)
+                                });
+                                expanded_width(&layout, text, tab_stop)
+                            }
                         })
                     });
                 }
@@ -615,6 +627,9 @@ impl TextWrapper {
                 // Inline element widths retain the original wrapper; no safe interval is inferred.
                 MeasuredWrap::uncached(
                     line_wrapper
+                        .get_or_insert_with(|| {
+                            cx.text_system().line_wrapper(font.clone(), font_size)
+                        })
                         .wrap_line(&fragments, wrap_width, gpui::IndentAdjustment::SameIndent)
                         .collect(),
                 )
@@ -715,6 +730,7 @@ impl TextWrapper {
             range,
             new_text,
             false,
+            false,
             &mut |text, width, start| MeasuredWrap::uncached(wrap_line(text, width, start)),
         );
     }
@@ -726,6 +742,7 @@ impl TextWrapper {
         range: &Range<usize>,
         new_text: &Rope,
         reuse_widths: bool,
+        reuse_edit_boundaries: bool,
         wrap_line: &mut F,
     ) where
         F: FnMut(&str, Pixels, usize) -> MeasuredWrap,
@@ -759,6 +776,28 @@ impl TextWrapper {
                 }
             }
             let line = changed_text.slice_line(row);
+            if reuse_edit_boundaries && !self.lines.is_empty() {
+                // A split or join can leave either edge line byte-for-byte unchanged.
+                let old_row = if row == new_start_row {
+                    Some(start_row)
+                } else if row == new_end_row {
+                    Some(end_row)
+                } else {
+                    None
+                };
+                if let Some(old_row) = old_row
+                    && line == self.text.slice_line(old_row)
+                {
+                    let mut cursor = self.lines.cursor::<BufferRows>(&());
+                    cursor.seek(&BufferRows(old_row), Bias::Right);
+                    if let Some(previous) = cursor.item()
+                        && previous.valid_widths.is_known()
+                    {
+                        new_lines.push(previous.clone());
+                        continue;
+                    }
+                }
+            }
             let mut wrapped_lines = SmallVec::<[Range<usize>; 1]>::new();
             let mut prev_boundary_ix = 0;
             let mut indent_chars = 0;
@@ -1808,6 +1847,97 @@ mod tests {
         assert_eq!(wrapper.wrap_row_to_buffer_line(2), 2);
         assert_eq!(wrapper.wrap_row_to_buffer_line(3), 2);
         assert_eq!(wrapper.wrap_row_to_buffer_line(4), 3);
+    }
+
+    #[test]
+    fn incremental_wrapping_matches_full_after_edits_and_resize() {
+        fn boundaries(line: &str, width: Pixels, _: usize) -> MeasuredWrap {
+            let step = if width == px(7.) { 7 } else { 19 };
+            let mut valid_widths = WidthRange::all();
+            if width == px(7.) {
+                assert!(!valid_widths.fits(px(19.), width, px(0.)));
+            } else {
+                assert!(valid_widths.fits(px(18.), width, px(0.)));
+            }
+            MeasuredWrap {
+                boundaries: (step..line.len())
+                    .step_by(step)
+                    .map(|ix| Boundary { ix, next_indent: 0 })
+                    .collect(),
+                valid_widths,
+            }
+        }
+        let original = Rope::from("first line\nsecond line\nthird line\nlast line");
+        let mut old = original.clone();
+        let mut actual = TextWrapper::new(test_font(), px(14.), Some(px(7.)));
+        actual.update_lines(&old, &(0..0), &old, false, false, &mut boundaries);
+        let long = "x".repeat(2048);
+        for (range, inserted, width) in [
+            (0..0, "new\n", px(7.)),
+            (0..4, "", px(7.)),
+            (6..6, "one\ntwo\nthree", px(7.)),
+            (6..19, "", px(7.)),
+            (14..14, long.as_str(), px(7.)),
+            (0..0, "", px(19.)),
+        ] {
+            let mut next = old.clone();
+            next.replace(range.clone(), inserted);
+            let mut measured = Vec::new();
+            if actual.wrap_width == Some(width) {
+                actual.update_lines(
+                    &next,
+                    &range,
+                    &Rope::from(inserted),
+                    false,
+                    true,
+                    &mut |line, width, start| {
+                        measured.push(next.offset_to_point(start).row);
+                        boundaries(line, width, start)
+                    },
+                );
+                let first = next.offset_to_point(range.start).row;
+                let last = next.offset_to_point(range.start + inserted.len()).row;
+                assert!(measured.iter().all(|row| (first..=last).contains(row)));
+                if inserted == "new\n" {
+                    assert_eq!(measured, vec![0], "the identical suffix boundary is reused");
+                }
+            } else {
+                actual.wrap_width = Some(width);
+                actual.update_lines(&next, &(0..old.len()), &next, true, false, &mut boundaries);
+            }
+            let mut expected = TextWrapper::new(test_font(), px(14.), Some(width));
+            expected.update_lines(&next, &(0..0), &next, false, false, &mut boundaries);
+            assert_eq!(actual.len(), expected.len());
+            let rows = |wrapper: &TextWrapper| {
+                wrapper
+                    .iter_lines()
+                    .map(|line| (line.len, line.indent, line.wrapped_lines.clone()))
+                    .collect::<Vec<_>>()
+            };
+            assert_eq!(rows(&actual), rows(&expected));
+            old = next;
+        }
+    }
+
+    #[test]
+    fn matching_text_does_not_reuse_old_inline_geometry() {
+        let text = Rope::from("same text");
+        let mut wrapper = TextWrapper::new(test_font(), px(14.), Some(px(7.)));
+        wrapper.update_lines(&text, &(0..0), &text, false, false, &mut |_, _, _| {
+            MeasuredWrap::uncached(vec![Boundary {
+                ix: 4,
+                next_indent: 0,
+            }])
+        });
+        assert_eq!(wrapper.len(), 2);
+        // Removing the only inline element leaves the text unchanged.
+        wrapper.update_lines(&text, &(0..0), &Rope::new(), false, true, &mut |_, _, _| {
+            MeasuredWrap {
+                boundaries: Vec::new(),
+                valid_widths: WidthRange::all(),
+            }
+        });
+        assert_eq!(wrapper.len(), 1);
     }
 
     #[test]
