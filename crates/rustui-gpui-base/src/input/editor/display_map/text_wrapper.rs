@@ -469,7 +469,7 @@ impl TextWrapper {
             return;
         }
         let text = self.text.clone();
-        self.update_wrapped(&text, &(0..text.len()), &text, width_only, cx);
+        self.update_wrapped(&text, &(0..text.len()), &text, width_only, false, cx);
     }
 
     pub(crate) fn set_wrapping_indent(&mut self, wrapping_indent: WrappingIndent, cx: &mut App) {
@@ -527,16 +527,25 @@ impl TextWrapper {
         new_text: &Rope,
         cx: &mut App,
     ) {
-        self.update_wrapped(changed_text, range, new_text, false, cx);
+        self.update_wrapped(
+            changed_text,
+            range,
+            new_text,
+            false,
+            self.inline_metrics.is_empty() && crate::input::trim_editor(),
+            cx,
+        );
     }
 
-    /// Only width changes reuse rows and measurements; edits, fonts, tab stops and inline metrics remeasure.
+    /// Width changes can retain rows. Exact, plain-text measurements can also
+    /// survive edits when font and tab configuration did not change.
     fn update_wrapped(
         &mut self,
         changed_text: &Rope,
         range: &Range<usize>,
         new_text: &Rope,
         reuse_widths: bool,
+        keep_measurements: bool,
         cx: &mut App,
     ) {
         let mut line_wrapper = cx
@@ -544,7 +553,7 @@ impl TextWrapper {
             .line_wrapper(self.font.clone(), self.font_size);
         let metrics = self.inline_metrics.clone();
         let measurements = self.width_measurements.clone();
-        if !reuse_widths {
+        if !reuse_widths && !keep_measurements {
             measurements.borrow_mut().clear();
         }
         let text_system = gpui::WindowTextSystem::new(cx.text_system().clone());
@@ -833,7 +842,7 @@ impl TextWrapper {
     ///
     /// If the `text` is the same as the current text, do nothing.
     fn update_all(&mut self, text: &Rope, cx: &mut App) {
-        self.update(text, &(0..text.len()), &text, cx);
+        self.update_wrapped(text, &(0..text.len()), text, false, false, cx);
     }
 
     /// Return display point (with soft wrap) from the given byte offset in the text.

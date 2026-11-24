@@ -179,7 +179,7 @@ struct EditorScrollbarLayout {
 /// prepaint reuses the stored width instead of copying the line and asking
 /// the text system for it again on every frame.
 #[derive(Clone, Debug, PartialEq)]
-pub(super) struct LongestLineKey {
+struct LongestLineKey {
     document_revision: u64,
     row: usize,
     len: usize,
@@ -187,6 +187,13 @@ pub(super) struct LongestLineKey {
     text_size: Pixels,
     wrap_width: Option<Pixels>,
     tab_size: usize,
+}
+
+pub(super) struct LongestLineMeasurement {
+    key: LongestLineKey,
+    candidate_width: Pixels,
+    observed_width: Pixels,
+    content: Option<SharedString>,
 }
 
 #[derive(Clone, Copy, Debug, PartialEq)]
@@ -3400,12 +3407,30 @@ impl<M: InputModeKind> Element for TextElement<M> {
                 wrap_width,
                 tab_size: state.mode.tab_size().tab_size,
             };
-            let cached = state
-                .longest_line_width
-                .take()
-                .filter(|(cached_key, _)| *cached_key == key);
-            longest_line_width = match cached {
-                Some((_, width)) => width.max(widest_laid_out_line),
+            // Keep the previous visible lower bound only for the same
+            // document revision. Across edits, reuse just the exact candidate.
+            let trim = crate::input::trim_editor() && longest_line.len() <= 4096;
+            let cached = state.longest_line_width.take();
+            let previous_visible = cached
+                .as_ref()
+                .filter(|prior| prior.key == key)
+                .map_or(px(0.), |prior| prior.observed_width);
+            let cached = cached.filter(|prior| {
+                if prior.key == key {
+                    return true;
+                }
+                if !trim {
+                    return false;
+                }
+                let mut compatible = prior.key.clone();
+                compatible.document_revision = key.document_revision;
+                compatible == key
+                    && prior.content.as_ref().is_some_and(|prior| {
+                        longest_line.chunks().flat_map(str::bytes).eq(prior.bytes())
+                    })
+            });
+            let (candidate_width, content) = match cached {
+                Some(prior) => (prior.candidate_width, prior.content),
                 None => {
                     let longest_line: SharedString = longest_line.to_string().into();
                     let tab_stop =
@@ -3423,12 +3448,21 @@ impl<M: InputModeKind> Element for TextElement<M> {
                         }],
                         wrap_width,
                     );
-                    expanded_width(&shaped, &longest_line, tab_stop).max(widest_laid_out_line)
+                    (
+                        expanded_width(&shaped, &longest_line, tab_stop),
+                        trim.then_some(longest_line),
+                    )
                 }
             };
-            state
-                .longest_line_width
-                .set(Some((key, longest_line_width)));
+            longest_line_width = candidate_width
+                .max(widest_laid_out_line)
+                .max(previous_visible);
+            state.longest_line_width.set(Some(LongestLineMeasurement {
+                key,
+                candidate_width,
+                observed_width: longest_line_width,
+                content,
+            }));
         }
         if state.tokens_visible() {
             longest_line_width = if let Some(width) = wrap_width {

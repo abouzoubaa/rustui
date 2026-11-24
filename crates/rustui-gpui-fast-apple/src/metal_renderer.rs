@@ -723,6 +723,23 @@ impl MetalRenderer {
             gpui::fast_order_defer();
             return;
         }
+        let staged = if prepared.reason == "disabled"
+            && source == 0
+            && !self.presents_with_transaction
+            && self.path_intermediate_texture.is_some()
+            && self.immediate.count() < layer.maximumDrawableCount()
+            && crate::fast::late_drawable::enabled()
+        {
+            match self.prepare_frame_instances(scene) {
+                Ok(frame) => Some(frame),
+                Err(error) => {
+                    log::error!("failed to prepare render instances: {error:#}");
+                    return;
+                }
+            }
+        } else {
+            None
+        };
         let drawable = if gpui::fast_immediate_active() {
             let Some(drawable) = crate::fast::immediate_present::next_drawable(
                 &layer,
@@ -781,13 +798,13 @@ impl MetalRenderer {
         }
         crate::fast::latency::layer(&layer, self.presents_with_transaction);
         let (planned_mode, planned_reason) = (prepared.mode, prepared.reason);
-        let command_buffer = match crate::fast::damage::frame::render(
-            self,
-            scene,
-            &texture,
-            viewport_size,
-            prepared,
-        ) {
+        let rendered = if let Some((writer, bindings)) = staged {
+            self.damage.last_mode = crate::fast::damage::frame::Mode::Direct;
+            self.encode_frame(scene, &texture, viewport_size, writer, bindings)
+        } else {
+            crate::fast::damage::frame::render(self, scene, &texture, viewport_size, prepared)
+        };
+        let command_buffer = match rendered {
             Ok(command_buffer) => command_buffer,
             Err(error) => {
                 log::error!("failed to render: {error:#}");
@@ -855,6 +872,14 @@ impl MetalRenderer {
         if self.path_intermediate_texture.is_none() {
             self.update_path_intermediate_textures(viewport_size)?;
         }
+        let (writer, bindings) = self.prepare_frame_instances(scene)?;
+        self.encode_frame(scene, texture, viewport_size, writer, bindings)
+    }
+
+    pub(crate) fn prepare_frame_instances(
+        &mut self,
+        scene: &Scene,
+    ) -> Result<(InstanceBufferWriter, InstanceBindings)> {
         crate::fast::layers::raster::rasterize_tiles(self, scene);
         let mut writer = InstanceBufferWriter::new(
             &self.device,
@@ -873,6 +898,17 @@ impl MetalRenderer {
                 scene.surfaces.len(),
             )
         })?;
+        Ok((writer, instance_bindings))
+    }
+
+    pub(crate) fn encode_frame(
+        &mut self,
+        scene: &Scene,
+        texture: &ProtocolObject<dyn MTLTexture>,
+        viewport_size: Size<DevicePixels>,
+        mut writer: InstanceBufferWriter,
+        instance_bindings: InstanceBindings,
+    ) -> Result<Retained<ProtocolObject<dyn MTLCommandBuffer>>> {
         let mut surface_textures = Vec::new();
         let command_buffer = self.draw_primitives_to_texture(
             scene,
