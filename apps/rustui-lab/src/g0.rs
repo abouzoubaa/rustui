@@ -1,4 +1,6 @@
 //! Scripted normal input in real Metal windows. No forced redraws or extra runtime.
+#[path = "../../latency-ref/native_input.rs"]
+mod native_input;
 use rustui::{
     gpui::{
         self, App, AppContext as _, Context, Entity, InteractiveElement as _, IntoElement as _,
@@ -295,6 +297,33 @@ fn step(
     window: &mut Window,
     app: &mut App,
 ) -> bool {
+    if native_input::enabled() && matches!(scene, Scene::Typing | Scene::Hover | Scene::Drag) {
+        let phase = tick % 42;
+        let row = if hover_pixels() {
+            if tick <= 240 { 2 } else { 8 }
+        } else if phase < 22 {
+            phase
+        } else {
+            42 - phase
+        };
+        let point = if scene == Scene::Drag {
+            drag_position(tick)
+        } else {
+            gpui::point(gpui::px(400.), gpui::px(PAD + 15. + row as f32 * 30.))
+        };
+        return native_input::post(
+            if scene == Scene::Typing {
+                0
+            } else if scene == Scene::Drag {
+                2
+            } else {
+                1
+            },
+            tick as u64,
+            f32::from(point.x) as f64,
+            f32::from(point.y) as f64,
+        );
+    }
     let stamp = if scene != Scene::Idle {
         // Log appends retain at least the newest 20 rows in this fixed viewport;
         // discrete edits/moves only claim the exact state version actually painted.
@@ -405,11 +434,26 @@ fn playback(
                 cx.notify();
             });
         }
+        if native_input::enabled() && std::env::var("RUSTUI_G5_PIXEL_CAPTURE").as_deref()==Ok("1") {
+            let wait=Instant::now();
+            while native_input::pixels_state()!=1 {
+                assert!(native_input::pixels_state()>=0 && wait.elapsed()<Duration::from_secs(10), "native ScreenCaptureKit setup failed");
+                cx.background_executor().timer(Duration::from_millis(20)).await;
+            }
+        }
         cx.background_executor().timer(Duration::from_secs(2)).await;
         if scene == Scene::Drag {
+            if native_input::enabled() {
+                let p = drag_position(0);
+                assert!(native_input::post(3, 0, f32::from(p.x) as f64, f32::from(p.y) as f64));
+                cx.background_executor().timer(Duration::from_millis(75)).await;
+            } else {
             let _ = handle.update(cx, |_, window, app| { window.dispatch_event(gpui::PlatformInput::MouseDown(gpui::MouseDownEvent { button: gpui::MouseButton::Left, position: drag_position(0), click_count: 1, ..Default::default() }), app); });
+            }
         }
         let initial_len = owner.read_with(cx, |host, _| host.component().source.len());
+        let initial_native_text = (native_input::enabled() && scene == Scene::Typing)
+            .then(|| owner.read_with(cx, |host, _| host.component().source.clone()));
         let input_ready = owner.read_with(cx, |host, _| if scene == Scene::Idle { host.component().caret != "G0 idle caret" } else { true });
         if !input_ready { eprintln!("G0 caret did not receive warm-up input"); cx.update(|app| app.quit()); return; }
         let (scale, width, height) = handle.update(cx, |_, window, _| (window.scale_factor(), f32::from(window.viewport_size().width), f32::from(window.viewport_size().height))).unwrap();
@@ -425,7 +469,12 @@ fn playback(
         let mut max_len = initial_len;
         loop {
             let elapsed = start.elapsed().min(duration);
-            let due = due_ticks(elapsed, scene.hz());
+            let mut due = due_ticks(elapsed, scene.hz());
+            // Replaying a backlog of pointer events into AppKit makes its
+            // queue length part of the workload. Sample motion once per wake.
+            if native_input::enabled() && matches!(scene, Scene::Hover | Scene::Drag) {
+                due = due.min(ticks + 1);
+            }
             while ticks < due {
                 ticks += 1;
                 handled &= handle.update(cx, |_, window, app| step(scene, ticks, &native, window, app)).unwrap_or(false);
@@ -442,11 +491,20 @@ fn playback(
         let end_epoch = epoch_ms();
         let end_mach = gpui::fast_latency_tick();
         let (cpu_user_s, cpu_sys_s) = cpu_start.elapsed(cpu_end);
-        if scene == Scene::Drag { let _ = handle.update(cx, |_, window, app| { window.dispatch_event(gpui::PlatformInput::MouseUp(gpui::MouseUpEvent { button: gpui::MouseButton::Left, position: drag_position(ticks), click_count: 1, ..Default::default() }), app); }); }
+        if scene == Scene::Drag && native_input::enabled() {
+            let p = drag_position(ticks);
+            assert!(native_input::post(4, 0, f32::from(p.x) as f64, f32::from(p.y) as f64));
+        } else if scene == Scene::Drag { let _ = handle.update(cx, |_, window, app| { window.dispatch_event(gpui::PlatformInput::MouseUp(gpui::MouseUpEvent { button: gpui::MouseButton::Left, position: drag_position(ticks), click_count: 1, ..Default::default() }), app); }); }
         cx.background_executor().timer(Duration::from_millis(250)).await;
         let (added, moves, dropped) = native.read_with(cx, |state, _| (state.lines.len().saturating_sub(INITIAL_LOG_LINES), state.moves, !state.dragging));
-        let valid = handled && match scene { Scene::Typing => max_len > min_len, Scene::Log => added == ticks, Scene::Drag => moves == ticks && dropped, _ => true };
+        let valid = handled && match scene { Scene::Typing => max_len > min_len && initial_native_text.as_ref().is_none_or(|initial| {
+            ticks % 2 != 0 || owner.read_with(cx, |host, _| &host.component().source == initial)
+        }), Scene::Log => added == ticks, Scene::Drag => dropped && if native_input::enabled() { moves > 0 } else { moves == ticks }, _ => true };
         eprintln!("RUSTUI_G0_LOG {{\"event\":\"end\",\"scene\":\"{}\",\"epoch_ms\":{:.6},\"mach\":{},\"ticks\":{},\"log_lines_added\":{},\"drag_moves\":{},\"valid\":{},\"cpu_user_s\":{:.9},\"cpu_sys_s\":{:.9}}}", scene.name(), end_epoch, end_mach, ticks, added, moves, valid, cpu_user_s, cpu_sys_s);
+        if native_input::enabled() && std::env::var("RUSTUI_G5_PIXEL_CAPTURE").as_deref()==Ok("1") {
+            native_input::pixels_stop();let wait=Instant::now();
+            while native_input::pixels_state()!=2 {assert!(wait.elapsed()<Duration::from_secs(10),"native capture did not stop");cx.background_executor().timer(Duration::from_millis(20)).await;}
+        }
         complete.set(valid);
         cx.update(|app| app.quit());
     }).detach();

@@ -1,4 +1,5 @@
 // RustUI G5-1: opt-in input-tick presentation on GPUI's executor.
+use super::native_scheduler as native;
 use crate::{AnyWindowHandle, App, PlatformWindow, Window, WindowId};
 use futures::{StreamExt, channel::mpsc};
 use std::{
@@ -121,8 +122,11 @@ fn hold_duration() -> Duration {
 // Per-window state is removed on close; no retained Window or alternate runtime.
 struct Entry {
     activity: Activity,
-    send: mpsc::UnboundedSender<bool>,
+    send: mpsc::UnboundedSender<u8>,
     admission: Arc<Admission>,
+    queued: Arc<AtomicBool>,
+    version: u64,
+    watchdog: native::Watchdog,
 }
 thread_local! {static WINDOWS:RefCell<HashMap<WindowId,Entry>>=RefCell::new(HashMap::new());}
 pub fn fast_immediate_hold_active(id: WindowId) -> bool {
@@ -136,6 +140,51 @@ pub fn fast_immediate_hold_active(id: WindowId) -> bool {
         })
 }
 pub fn fast_immediate_demand(id: WindowId) -> bool {
+    if native::enabled() {
+        // Only dirty transitions originate demand. Calls that merely restore a
+        // source, run a frame callback or request a normal tick must not loop.
+        let cause = native::cause();
+        let input = native::in_callback() || cause == 1;
+        if native::tracing() {
+            native::trace(
+                id,
+                cause,
+                cause == 5,
+                version(id),
+                crate::fast::present_order::scene_version(id),
+            );
+        }
+        if matches!(cause, 2..=4) || fast_immediate_active() || cooling_down(id) {
+            return false;
+        }
+        if !input && (cause != 5 || !crate::fast_any_change_enabled()) {
+            // A pending native edit owns the next submission. A generic
+            // schedule call must not attach a competing drawable source.
+            return WINDOWS.with(|windows| {
+                windows
+                    .borrow()
+                    .get(&id)
+                    .is_some_and(|entry| entry.queued.load(Ordering::Acquire))
+            });
+        }
+        if input {
+            // The outer native boundary queues one wake after AppKit returns.
+            queue(id, 1);
+        } else if !crate::fast::change_present::timer_pending(id) {
+            queue(id, 5);
+        }
+        return true;
+    }
+    if native::tracing() {
+        let cause = native::cause();
+        native::trace(
+            id,
+            if cause == 0 { 6 } else { cause },
+            cause == 5,
+            version(id),
+            crate::fast::present_order::scene_version(id),
+        );
+    }
     if !fast_immediate_hold_active(id) && !crate::fast_any_change_enabled() {
         return false;
     }
@@ -145,11 +194,39 @@ pub fn fast_immediate_demand(id: WindowId) -> bool {
     WINDOWS.with(|w| {
         if let Some(e) = w.borrow().get(&id) {
             if e.admission.accepts_demand() {
-                let _ = e.send.unbounded_send(true);
+                let _ = e.send.unbounded_send(6);
             }
         }
     });
     true
+}
+fn cooling_down(id: WindowId) -> bool {
+    WINDOWS.with(|windows| {
+        windows
+            .borrow()
+            .get(&id)
+            .is_some_and(|entry| entry.watchdog.cooling_down(Instant::now()))
+    })
+}
+fn version(id: WindowId) -> u64 {
+    WINDOWS.with(|windows| windows.borrow().get(&id).map_or(0, |entry| entry.version))
+}
+fn queue(id: WindowId, cause: u8) {
+    let pending = WINDOWS.with(|windows| {
+        let windows = windows.borrow();
+        let entry = windows.get(&id)?;
+        entry
+            .admission
+            .accepts_demand()
+            .then(|| (entry.queued.clone(), entry.send.clone()))
+    });
+    if let Some((queued, send)) = pending {
+        native::post_event(id, move || {
+            if !queued.swap(true, Ordering::AcqRel) {
+                let _ = send.unbounded_send(cause);
+            }
+        });
+    }
 }
 pub fn fast_immediate_suspend(id: WindowId) {
     if fast_immediate_enabled() {
@@ -167,7 +244,7 @@ pub(crate) fn close(id: WindowId) {
     if fast_immediate_enabled() {
         WINDOWS.with(|w| {
             if let Some(e) = w.borrow_mut().remove(&id) {
-                let _ = e.send.unbounded_send(false);
+                let _ = e.send.unbounded_send(0);
             }
         });
     }
@@ -175,6 +252,13 @@ pub(crate) fn close(id: WindowId) {
 pub(crate) fn before_input(window: &Window, cx: &mut App) {
     crate::fast::change_present::fast_note_frame_cause(window.handle.window_id(), 1);
     let id = window.handle.window_id();
+    if native::enabled() || native::tracing() {
+        WINDOWS.with(|windows| {
+            if let Some(entry) = windows.borrow_mut().get_mut(&id) {
+                entry.version = entry.version.wrapping_add(1);
+            }
+        });
+    }
     if crate::fast_latency_enabled() {
         crate::fast_latency_config(
             id,
@@ -226,7 +310,9 @@ pub(crate) fn before_input(window: &Window, cx: &mut App) {
     .detach();
 }
 pub(crate) fn scheduled(handle: AnyWindowHandle, force: bool, cx: &mut crate::AsyncApp) -> bool {
-    if !fast_immediate_hold_active(handle.window_id()) && !crate::fast_any_change_enabled() {
+    if native::enabled()
+        || (!fast_immediate_hold_active(handle.window_id()) && !crate::fast_any_change_enabled())
+    {
         return false;
     }
     if !handle
@@ -244,6 +330,41 @@ pub(crate) fn scheduled(handle: AnyWindowHandle, force: bool, cx: &mut crate::As
     true
 }
 pub(crate) fn try_draw(window: &mut Window, cx: &mut App) {
+    let id = window.handle.window_id();
+    if native::tracing() {
+        native::trace(
+            id,
+            native::cause(),
+            window.invalidator.is_dirty(),
+            version(id),
+            crate::fast::present_order::scene_version(id),
+        );
+    }
+    if native::enabled() && native::in_callback() {
+        queue(id, native::cause());
+        return;
+    }
+    let _frame_effect = native::enabled().then(|| native::fast_wake_cause(3));
+    if native::enabled() {
+        if cooling_down(id) || !window.invalidator.is_dirty() {
+            window.platform_window.resume_frame_source_after_drain();
+            return;
+        }
+        let refresh = window
+            .refresh_interval(cx)
+            .unwrap_or(Duration::from_millis(16));
+        let fallback = WINDOWS.with(|windows| {
+            windows
+                .borrow_mut()
+                .get_mut(&id)
+                .is_some_and(|entry| entry.watchdog.wake(entry.version, Instant::now(), refresh))
+        });
+        if fallback {
+            crate::fast_latency_config(id, "immediate_fallback", [version(id) as f64, 0., 0., 0.]);
+            window.platform_window.schedule_frame();
+            return;
+        }
+    }
     crate::fast::change_present::configure(window, cx);
     window.platform_window.resume_frame_source_after_drain();
     if crate::fast_frame_continuous(window.handle.window_id()) {
@@ -253,8 +374,9 @@ pub(crate) fn try_draw(window: &mut Window, cx: &mut App) {
     if crate::window::draw_in_progress() {
         return;
     }
-    let callbacks = (fast_immediate_hold_active(window.handle.window_id())
-        || crate::fast_any_change_enabled())
+    let callbacks = !native::enabled()
+        && (fast_immediate_hold_active(window.handle.window_id())
+            || crate::fast_any_change_enabled())
         && !window.next_frame_callbacks.borrow().is_empty();
     if !window.invalidator.is_dirty() && !callbacks {
         return;
@@ -288,6 +410,7 @@ pub(crate) fn try_draw(window: &mut Window, cx: &mut App) {
         return;
     }
     let _scope = Scope::new();
+    let _effects = native::fast_wake_cause(3);
     let arena = window.draw(cx);
     window.present();
     arena.clear(cx);
@@ -321,6 +444,18 @@ pub(crate) fn after_input(window: &Window, cx: &mut App) {
         window.platform_window.schedule_frame();
         return;
     }
+    if native::enabled() {
+        let _cause = native::fast_wake_cause(1);
+        native::trace(
+            window.handle.window_id(),
+            1,
+            window.invalidator.is_dirty(),
+            version(window.handle.window_id()),
+            crate::fast::present_order::scene_version(window.handle.window_id()),
+        );
+        queue(window.handle.window_id(), 1);
+        return;
+    }
     let handle = window.handle;
     cx.defer(move |cx| {
         let _ = handle.update(cx, |_, window, cx| try_draw(window, cx));
@@ -335,6 +470,7 @@ pub(crate) fn install(handle: AnyWindowHandle, platform: &dyn PlatformWindow, cx
     let (send, mut receive) = mpsc::unbounded();
     let admission = Arc::new(Admission::default());
     let ready = admission.clone();
+    let queued = Arc::new(AtomicBool::new(false));
     WINDOWS.with(|w| {
         w.borrow_mut().insert(
             id,
@@ -342,17 +478,34 @@ pub(crate) fn install(handle: AnyWindowHandle, platform: &dyn PlatformWindow, cx
                 activity: Activity::default(),
                 send: send.clone(),
                 admission,
+                queued: queued.clone(),
+                version: 0,
+                watchdog: native::Watchdog::default(),
             },
         );
     });
+    let drawable_queued = queued.clone();
     platform.on_drawable_available(Box::new(move || {
-        ready.available();
-        let _ = send.unbounded_send(true);
+        if native::enabled() {
+            if ready.waiting.swap(false, Ordering::AcqRel)
+                && !drawable_queued.swap(true, Ordering::AcqRel)
+            {
+                let _ = send.unbounded_send(8);
+            }
+        } else {
+            ready.available();
+            let _ = send.unbounded_send(8);
+        }
     }));
     cx.spawn(async move |cx| {
-        while receive.next().await == Some(true) {
+        while let Some(cause @ 1..) = receive.next().await {
+            queued.store(false, Ordering::Release);
+            let _effects = native::enabled().then(|| native::fast_wake_cause(3));
             if handle
-                .update(cx, |_, window, cx| try_draw(window, cx))
+                .update(cx, |_, window, cx| {
+                    let _cause = native::fast_wake_cause(cause);
+                    try_draw(window, cx);
+                })
                 .is_err()
             {
                 break;

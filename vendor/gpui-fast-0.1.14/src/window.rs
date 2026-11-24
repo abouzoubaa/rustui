@@ -186,6 +186,12 @@ impl WindowInvalidator {
             }
             cx.push_effect(Effect::Notify { emitter: entity });
             if let Some(waker) = waker {
+                let _wake = crate::fast::native_scheduler::fast_wake_cause(
+                    match crate::fast::native_scheduler::cause() {
+                        0 => 5,
+                        cause => cause,
+                    },
+                );
                 waker();
             }
             true
@@ -217,6 +223,12 @@ impl WindowInvalidator {
             profiler::journal::record_frame_pending(window_id, dirty_at);
         }
         if let Some(waker) = waker {
+            let _wake = crate::fast::native_scheduler::fast_wake_cause(
+                match crate::fast::native_scheduler::cause() {
+                    0 => 5,
+                    cause => cause,
+                },
+            );
             waker();
         }
     }
@@ -4057,6 +4069,7 @@ impl Window {
         // Exit the scope to obtain the arena-clear token this draw owes; the
         // scope's teardown itself happens in `ElementArenaScope::drop`.
         f0_frame_record(self.handle.window_id(), "draw", f0_frame);
+        crate::fast::native_budget::draw_end(self);
         arena_scope.exit(&cx.element_arena)
     }
 
@@ -4264,6 +4277,7 @@ impl Window {
         self.paint_inspector_hitbox(cx);
         crate::fast::stats::FramePhaseTimes::end_paint(&mut self.fast_layout.phase_times);
         f0_frame_record(self.handle.window_id(), "paint", f0_paint);
+        crate::fast::native_budget::paint(self);
         crate::fast::present_order::painted(self.handle.window_id());
         crate::fast::input_latency::painted(self.handle.window_id());
 
@@ -6145,6 +6159,7 @@ impl Window {
     /// Dispatch a mouse, keyboard, or touch event on the window.
     #[profiling::function]
     pub fn dispatch_event(&mut self, event: PlatformInput, cx: &mut App) -> DispatchEventResult {
+        let native_budget = crate::fast::native_budget::begin(self, &event);
         crate::fast::frame_pacing::input(self.handle.window_id(), &event);
         crate::fast::immediate_present::before_input(self, cx);
         #[cfg(feature = "profiler")]
@@ -6318,6 +6333,7 @@ impl Window {
         // is the last chance for drag listeners to see the pointer leave and reset their state.
         self.promote_external_drag_to_platform(&event, cx);
 
+        crate::fast::native_budget::end(self, native_budget);
         crate::fast::immediate_present::after_input(self, cx);
         let caused_invalidation = self.invalidator.update_count() > update_count_before;
         if caused_invalidation {

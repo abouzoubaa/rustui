@@ -12,6 +12,10 @@ impl Window {
         if !fast_draw_first_enabled() {
             return;
         }
+        if super::native_scheduler::enabled() && super::native_scheduler::in_callback() {
+            super::immediate_present::after_input(self, cx);
+            return;
+        }
         let handle = self.window_handle();
         cx.fast_defer_before_effects(move |cx| {
             let _ = handle.update(cx, |_, window, cx| {

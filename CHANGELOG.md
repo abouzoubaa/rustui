@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+- Add an opt-in post-event native presentation scheduler with a per-window wake watchdog.
+
 - Opt-in native typing caches structural folds and avoids redundant owner redraws; G5 integration CI verifies the reversible candidate chain.
 
 - G5-3c: admit opt-in immediate frames before scene construction, deduplicate binding events and visible colour updates, and scope background highlighting to edited and visible ranges.

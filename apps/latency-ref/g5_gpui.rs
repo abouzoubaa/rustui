@@ -1,3 +1,5 @@
+#[path = "native_input.rs"]
+mod native_input;
 // Local latency reference only: one ASCII input on GPUI Fast, no RustUI or Kit.
 use gpui::{
     AppContext as _, Context, FocusHandle, InteractiveElement as _, IntoElement,
@@ -20,15 +22,43 @@ struct Input {
     measuring: bool,
     position: gpui::Point<gpui::Pixels>,
     dragging: bool,
-    overlay:bool,
-    _surface:Option<gpui::WindowCompositionSurface>,
+    overlay: bool,
+    _surface: Option<gpui::WindowCompositionSurface>,
 }
 impl Render for Input {
     fn render(&mut self, _: &mut Window, cx: &mut Context<Self>) -> impl IntoElement {
         self.renders
             .borrow_mut()
             .push((self.version, gpui::fast_latency_tick()));
-        let marker=if self.pixels {Some(gpui::div().absolute().left(gpui::px(1000.)).top(gpui::px(10.)).w(gpui::px(104.)).h(gpui::px(32.)).flex().children((0..26).map(|column|{let color=if column==0 || column==25 {0xff0000}else{let bit=if column<=8{(0xa5>>(8-column))&1}else{(self.version>>(24-column))&1};if bit==1{0xffffff}else{0x000000}};gpui::div().w(gpui::px(4.)).h(gpui::px(32.)).bg(gpui::rgb(color))})))}else{None};
+        let marker = if self.pixels && !native_input::enabled() {
+            Some(
+                gpui::div()
+                    .absolute()
+                    .left(gpui::px(1000.))
+                    .top(gpui::px(10.))
+                    .w(gpui::px(104.))
+                    .h(gpui::px(32.))
+                    .flex()
+                    .children((0..26).map(|column| {
+                        let color = if column == 0 || column == 25 {
+                            0xff0000
+                        } else {
+                            let bit = if column <= 8 {
+                                (0xa5 >> (8 - column)) & 1
+                            } else {
+                                (self.version >> (24 - column)) & 1
+                            };
+                            if bit == 1 { 0xffffff } else { 0x000000 }
+                        };
+                        gpui::div()
+                            .w(gpui::px(4.))
+                            .h(gpui::px(32.))
+                            .bg(gpui::rgb(color))
+                    })),
+            )
+        } else {
+            None
+        };
         gpui::div()
             .size_full()
             .relative()
@@ -37,7 +67,9 @@ impl Render for Input {
             .text_color(gpui::rgb(0xffffff))
             .track_focus(&self.focus)
             .on_key_down(cx.listener(|this, event: &gpui::KeyDownEvent, window, cx| {
-                if !this.measuring || this.scene != "typing" {return;}
+                if !this.measuring || this.scene != "typing" {
+                    return;
+                }
                 match event.keystroke.key.as_str() {
                     "x" => this.text.push('x'),
                     "backspace" => {
@@ -46,20 +78,71 @@ impl Render for Input {
                     _ => return,
                 }
                 this.version += 1;
-                gpui::fast_latency_config(window.window_handle().window_id(),"g53_bare_text_applied",[this.text.len() as f64,this.version as f64,0.,0.]);
+                gpui::fast_latency_config(
+                    window.window_handle().window_id(),
+                    "g53_bare_text_applied",
+                    [this.text.len() as f64, this.version as f64, 0., 0.],
+                );
                 cx.notify();
                 cx.stop_propagation();
             }))
-            .on_mouse_down(gpui::MouseButton::Left,cx.listener(|this,_,_,_|{this.dragging=true;}))
-            .on_mouse_up(gpui::MouseButton::Left,cx.listener(|this,_,_,_|{this.dragging=false;}))
-            .on_mouse_move(cx.listener(|this,event:&gpui::MouseMoveEvent,_,cx|{
-                if !this.measuring || this.scene=="typing" || (this.scene=="drag" && !this.dragging){return;}
-                this.position=event.position;this.version+=1;cx.notify();cx.stop_propagation();
+            .on_mouse_down(
+                gpui::MouseButton::Left,
+                cx.listener(|this, _, _, _| {
+                    this.dragging = true;
+                }),
+            )
+            .on_mouse_up(
+                gpui::MouseButton::Left,
+                cx.listener(|this, _, _, _| {
+                    this.dragging = false;
+                }),
+            )
+            .on_mouse_move(cx.listener(|this, event: &gpui::MouseMoveEvent, _, cx| {
+                if !this.measuring
+                    || this.scene == "typing"
+                    || (this.scene == "drag" && !this.dragging)
+                {
+                    return;
+                }
+                this.position = event.position;
+                this.version += 1;
+                cx.notify();
+                cx.stop_propagation();
             }))
             .child(SharedString::from(format!("{}▏", self.text)))
-            .children((self.scene=="hover").then(||gpui::div().absolute().left(gpui::px(100.)).top(self.position.y).w(gpui::px(500.)).h(gpui::px(24.)).bg(gpui::rgb(0x4284d6)).child("Highlighted row")))
-            .children((self.scene=="drag" && !self.overlay).then(||gpui::div().absolute().left(self.position.x).top(self.position.y).w(gpui::px(180.)).h(gpui::px(90.)).bg(gpui::rgb(0x4284d6)).child("Dragged card")))
-            .children(self.overlay.then(||gpui::deferred(gpui::div().absolute().left(self.position.x).top(self.position.y).w(gpui::px(180.)).h(gpui::px(90.)).bg(gpui::rgb(0x4284d6)).child(SharedString::from(format!("Overlay {}",self.version))))))
+            .children((self.scene == "hover").then(|| {
+                gpui::div()
+                    .absolute()
+                    .left(gpui::px(100.))
+                    .top(self.position.y)
+                    .w(gpui::px(500.))
+                    .h(gpui::px(24.))
+                    .bg(gpui::rgb(0x4284d6))
+                    .child("Highlighted row")
+            }))
+            .children((self.scene == "drag" && !self.overlay).then(|| {
+                gpui::div()
+                    .absolute()
+                    .left(self.position.x)
+                    .top(self.position.y)
+                    .w(gpui::px(180.))
+                    .h(gpui::px(90.))
+                    .bg(gpui::rgb(0x4284d6))
+                    .child("Dragged card")
+            }))
+            .children(self.overlay.then(|| {
+                gpui::deferred(
+                    gpui::div()
+                        .absolute()
+                        .left(self.position.x)
+                        .top(self.position.y)
+                        .w(gpui::px(180.))
+                        .h(gpui::px(90.))
+                        .bg(gpui::rgb(0x4284d6))
+                        .child(SharedString::from(format!("Overlay {}", self.version))),
+                )
+            }))
             .children(marker)
     }
 }
@@ -72,7 +155,7 @@ fn epoch() -> f64 {
 }
 unsafe extern "C" {
     fn g5_pixels_start();
-    fn g5_pixels_state()->i32;
+    fn g5_pixels_state() -> i32;
     fn g5_pixels_stop();
     fn g5_refresh_start();
     fn g5_refresh_stop();
@@ -83,13 +166,19 @@ fn main() {
         .unwrap_or_else(|| "60".into())
         .parse::<u64>()
         .unwrap();
-    let scene=match std::env::var("RUSTUI_G5_SCENE").as_deref(){Ok("hover")=>"hover",Ok("drag")=>"drag",_=>"typing"};
+    let scene = match std::env::var("RUSTUI_G5_SCENE").as_deref() {
+        Ok("hover") => "hover",
+        Ok("drag") => "drag",
+        _ => "typing",
+    };
     let hz = std::env::var("RUSTUI_G5_INPUT_HZ")
         .ok()
         .map_or(10, |v| v.parse::<u64>().unwrap());
-    let hz=if scene=="typing"{hz}else{120};
-    assert!([10,30,120].contains(&hz));
-    let pixels=std::env::var("RUSTUI_G5_PIXEL_CAPTURE").as_deref()==Ok("1");
+    let hz = if scene == "typing" { hz } else { 120 };
+    let sparse = std::env::var("RUSTUI_L1_SPARSE").as_deref() == Ok("1");
+    let reported_hz = if sparse { 0.5 } else { hz as f64 };
+    assert!([10, 30, 120].contains(&hz));
+    let pixels = std::env::var("RUSTUI_G5_PIXEL_CAPTURE").as_deref() == Ok("1");
     let async_wake = std::env::var("RUSTUI_G5_ASYNC_WAKE").as_deref() == Ok("1");
     let fullscreen = std::env::var("RUSTUI_G5_FULLSCREEN").as_deref() == Ok("1");
     let warmup = std::env::var("RUSTUI_G5_WARMUP_S")
@@ -111,7 +200,7 @@ fn main() {
    typed.update(cx,|input,_,cx|{input.measuring=true;cx.notify();}).unwrap();
    if scene=="drag" {handle.update(cx,|_,window,app|{window.dispatch_event(gpui::PlatformInput::MouseDown(gpui::MouseDownEvent{button:gpui::MouseButton::Left,position:gpui::point(gpui::px(100.),gpui::px(150.)),click_count:1,..Default::default()}),app);}).unwrap();}
    let cpu_start=cpu::Snapshot::take().unwrap();let start=Instant::now();
-   eprintln!("RUSTUI_G0_LOG {{\"event\":\"start\",\"scene\":\"bare\",\"epoch_ms\":{},\"mach\":{},\"duration_s\":{seconds},\"input_hz\":{hz},\"fullscreen\":{fullscreen}}}",epoch(),gpui::fast_latency_tick());
+   eprintln!("RUSTUI_G0_LOG {{\"event\":\"start\",\"scene\":\"bare\",\"epoch_ms\":{},\"mach\":{},\"duration_s\":{seconds},\"input_hz\":{reported_hz},\"fullscreen\":{fullscreen}}}",epoch(),gpui::fast_latency_tick());
    let mut version=0u64;let mut valid=true;
    if async_wake {
     valid &= handle.update(cx,|_,window,app|{let stamp=window.fast_measure_input("bare",1,1);let ok=window.dispatch_keystroke(gpui::Keystroke::parse("x").unwrap(),app);window.fast_input_handled(stamp);ok}).unwrap_or(false);
@@ -123,13 +212,16 @@ fn main() {
    while start.elapsed()<Duration::from_secs(seconds){
     version+=1;
     valid &=handle.update(cx,|_,window,cx|{
+     if native_input::enabled() {
+       return native_input::post(if scene=="typing"{0}else if scene=="drag"{2}else{1},version,100.+(version%650)as f64,150.+(version%20)as f64*24.);
+     }
      let stamp=window.fast_measure_input("bare",version,version);
      let handled=if scene=="typing" {window.dispatch_keystroke(gpui::Keystroke::parse(if version%2==1{"x"}else{"backspace"}).unwrap(),cx)}else {
        window.dispatch_event(gpui::PlatformInput::MouseMove(gpui::MouseMoveEvent{position:gpui::point(gpui::px(100.+(version%650) as f32),gpui::px(150.+(version%20) as f32*24.)),pressed_button:(scene=="drag").then_some(gpui::MouseButton::Left),..Default::default()}),cx);true
      };
      if handled{window.fast_input_handled(stamp)}handled
     }).unwrap_or(false);
-    let deadline=Duration::from_secs_f64(version as f64/hz as f64);
+    let deadline=if sparse{Duration::from_secs(version*2)}else{Duration::from_secs_f64(version as f64/hz as f64)};
     if let Some(wait)=deadline.checked_sub(start.elapsed()){cx.background_executor().timer(wait).await;}
    }
    }

@@ -3408,6 +3408,7 @@ extern "C" fn handle_key_event(
     native_event: *mut AnyObject,
     key_equivalent: bool,
 ) -> Bool {
+    let _callback = gpui::fast_native_callback(2);
     let window_state = unsafe { get_window_state(this) };
     let mut lock = window_state.as_ref().lock();
 
@@ -4344,6 +4345,7 @@ extern "C" fn insert_text(
     text: *mut AnyObject,
     replacement_range: NSRange,
 ) {
+    let _callback = gpui::fast_native_callback(4);
     unsafe {
         let is_attributed_string: Bool = msg_send![text, isKindOfClass: class!(NSAttributedString)];
         let text: *mut AnyObject = if is_attributed_string == Bool::YES {
@@ -4367,6 +4369,7 @@ extern "C" fn set_marked_text(
     selected_range: NSRange,
     replacement_range: NSRange,
 ) {
+    let _callback = gpui::fast_native_callback(4);
     unsafe {
         let is_attributed_string: Bool = msg_send![text, isKindOfClass: class!(NSAttributedString)];
         let text: *mut AnyObject = if is_attributed_string == Bool::YES {
