@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+- Add an owner-run display-sync session for visual checks, power sampling and physical-key latency.
+
 - Add an opt-in windowed Metal display sync experiment and moving-bar capture proof.
 
 - Add local native-input latency controls for launch mode and passive display-link measurements.

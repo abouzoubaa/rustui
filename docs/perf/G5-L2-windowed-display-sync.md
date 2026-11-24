@@ -1,7 +1,6 @@
 # G5-L2 windowed display sync
 
-The control is the merged G5-L1 baseline at `35be237d4`. G5-L3 remains a separate draft
-after missing its latency targets. This experiment changes one layer
+The control for these captures is the merged G5-L1 baseline at `35be237d4`. This experiment changes one layer
 property, with `GPUI_FAST_NO_DISPLAY_SYNC=1` and the existing immediate
 and coalescing switches enabled. Unset leaves the existing default.
 
@@ -18,7 +17,9 @@ for the paired workloads. Use five alternating 60-second off/on pairs
 after warmup. AppKit reference captures run in the same session using the
 same external ScreenCaptureKit observer. AppKit does not expose an
 `MTLDrawable.presentedTime` for its NSTextView. ScreenCaptureKit provides
-the WindowServer display time.
+the WindowServer display time. **Metal `presentedTime` under sync off is
+not comparable to sync-on `presentedTime`. ScreenCaptureKit is the shared
+clock for the sync-on/off comparison.**
 [ScreenCaptureKit displayTime](https://developer.apple.com/documentation/screencapturekit/scstreamframeinfo/displaytime)
 
 The moving vertical bar proof checks for a change in the bar's left or
@@ -143,7 +144,7 @@ at both typing rates.
 For RustUI typing at 30/s, median P was 4.49 → 4.71 ms. D shifted from
 3.39 to 1.63 ms, and S from 11.41 to −1.55 ms. A negative S means the
 recorded Metal timestamp preceded the captured WindowServer frame.
-The clock-specific latency tables use their own observed endpoints.
+The Metal columns are timing telemetry within their respective modes.
 The passive-link-off timing matrix measures content presentation gaps.
 An independent physical refresh count and first-eligible-refresh floor
 were unavailable in those windows.
@@ -175,4 +176,6 @@ the experimental arm:
 The windowed preflight recorded a disabled sync property during the
 experimental run. The native-fullscreen typing preflight kept the
 property enabled with the same switch. The candidate remains draft for
-the owner's adoption decision and physical-panel visual check.
+the owner's adoption decision. The physical-panel visual check, power
+captures and physical-key typing captures are in the
+[G5 owner session](G5-owner-session.md).
