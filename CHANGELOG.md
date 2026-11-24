@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+- Add an opt-in editor path that reuses unchanged wrap rows and parsed fold candidates.
+
 - Add an opt-in Metal path that prepares tile and instance data before drawable acquisition.
 
 - Add local native-input latency controls for launch mode and passive display-link measurements.

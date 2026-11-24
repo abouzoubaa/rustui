@@ -144,7 +144,7 @@ impl TreeSitterInputHighlighter {
                     .replace_draw_first_cache(cache.clone());
                 if !gpui::fast_draw_first_enabled() {
                     let _ = entity.update(cx, |state, cx| {
-                        state.apply_highlighter_fold_candidates(folds, cx)
+                        state.apply_highlighter_fold_candidates(folds.into_owned(), cx)
                     });
                     return;
                 }
@@ -184,7 +184,19 @@ impl TreeSitterInputHighlighter {
                         gpui::fast_note_frame_cause(window.window_handle().window_id(), 4);
                     }
                     let _wake = gpui::fast_wake_cause(4);
-                    state.apply_highlighter_fold_candidates_quiet(folds, visible_changed, cx);
+                    if let draw_first_background::FoldCandidates::Cached(ref ranges) = folds
+                        && state.highlighter_fold_candidates_are_current(ranges)
+                    {
+                        if visible_changed {
+                            cx.notify();
+                        }
+                    } else {
+                        state.apply_highlighter_fold_candidates_quiet(
+                            folds.into_owned(),
+                            visible_changed,
+                            cx,
+                        );
+                    }
                 });
             }
         });
@@ -276,6 +288,10 @@ impl InputHighlighter for TreeSitterInputHighlighter {
             .tree()
             .map(extract_fold_ranges)
             .unwrap_or_default()
+    }
+
+    fn publishes_folds_after_edit(&self) -> bool {
+        gpui::fast_draw_first_enabled() && self.parse_task.borrow().is_some()
     }
 
     fn fold_ranges_for_edit(&self, range: Range<usize>, _: &Rope) -> Vec<FoldRange> {

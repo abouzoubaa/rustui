@@ -56,6 +56,11 @@ impl WidthRange {
         self.maximum = self.maximum.min(other.maximum);
     }
 
+    /// Inline elements and other unproven measurements cannot be reused on an edit.
+    pub(super) fn is_known(self) -> bool {
+        self.minimum < self.maximum
+    }
+
     /// NaN and threshold boundaries fail closed, allowing the original measurer to decide.
     pub(super) fn contains(self, width: Pixels) -> bool {
         width >= self.minimum && width < self.maximum

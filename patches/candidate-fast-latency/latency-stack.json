@@ -33,6 +33,7 @@
     "gpui-fast-native-scheduler-v1-fast.json",
     "gpui-fast-input-scoped-demand-v1-fast.json",
     "gpui-fast-late-drawable-v1-fast.json",
-    "gpui-kit-first-frame-editor-reuse-v1-kit09.json"
+    "gpui-kit-first-frame-editor-reuse-v1-kit09.json",
+    "gpui-kit-incremental-editor-v1-fast.json"
   ]
 }

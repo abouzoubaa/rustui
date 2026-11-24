@@ -132,6 +132,14 @@ pub use state::*;
 pub use textarea::{Textarea, TextareaState};
 
 // G5-L3: bounded editor caches on the first visible frame.
+/// Opt in to reusing unchanged editor wrapping and folds between native edits.
+pub fn incremental_editor() -> bool {
+    static ENABLED: std::sync::OnceLock<bool> = std::sync::OnceLock::new();
+    *ENABLED.get_or_init(|| {
+        std::env::var_os("RUSTUI_G5_INCREMENTAL_EDITOR").as_deref() == Some("1".as_ref())
+    })
+}
+
 fn trim_editor() -> bool {
     static ENABLED: std::sync::OnceLock<bool> = std::sync::OnceLock::new();
     *ENABLED.get_or_init(|| std::env::var("RUSTUI_G5_TRIM_EDITOR").as_deref() == Ok("1"))

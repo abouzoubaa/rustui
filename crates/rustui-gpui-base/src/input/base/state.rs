@@ -1242,6 +1242,14 @@ impl<M: InputModeKind> InputBaseState<M> {
             .as_ref()
             .map(|layout| layout.visible_range_offset.clone())
     }
+    /// Compare parsed fold candidates against the list presently installed by the editor.
+    pub fn highlighter_fold_candidates_are_current(
+        &self,
+        candidates: &[crate::input::FoldRange],
+    ) -> bool {
+        !self.mode.is_folding() || candidates == self.display_map.fold_candidates()
+    }
+
     pub fn apply_highlighter_fold_candidates_quiet(
         &mut self,
         candidates: Vec<crate::input::FoldRange>,
@@ -4626,6 +4634,10 @@ impl<M: InputModeKind> InputBaseState<M> {
         let Some(highlighter) = highlighter.as_ref() else {
             return;
         };
+
+        if crate::input::incremental_editor() && highlighter.publishes_folds_after_edit() {
+            return;
+        }
 
         // The new byte range in the updated text after the edit
         let new_end = edit_range.start + new_text.len();

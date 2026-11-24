@@ -1,7 +1,20 @@
 // RustUI G5-3b: snapshot parsing runs on GPUI's background executor.
 use super::super::highlighter::{InjectionLayer, InjectionParseData};
 use super::*;
-#[cfg(test)]
+
+pub(super) enum FoldCandidates {
+    Owned(Vec<FoldRange>),
+    Cached(Arc<Vec<FoldRange>>),
+}
+
+impl FoldCandidates {
+    pub(super) fn into_owned(self) -> Vec<FoldRange> {
+        match self {
+            Self::Owned(ranges) => ranges,
+            Self::Cached(ranges) => Arc::unwrap_or_clone(ranges),
+        }
+    }
+}
 pub(super) fn parse_snapshot(
     language: SharedString,
     old_tree: Option<tree_sitter::Tree>,
@@ -13,7 +26,7 @@ pub(super) fn parse_snapshot(
 ) -> Option<(
     tree_sitter::Tree,
     Vec<InjectionLayer>,
-    Vec<FoldRange>,
+    FoldCandidates,
     Option<Arc<super::super::highlighter::draw_first_cache::Cache>>,
 )> {
     parse_scoped(
@@ -48,7 +61,7 @@ pub(super) fn parse_scoped(
 ) -> Option<(
     tree_sitter::Tree,
     Vec<InjectionLayer>,
-    Vec<FoldRange>,
+    FoldCandidates,
     Option<Arc<super::super::highlighter::draw_first_cache::Cache>>,
 )> {
     let (mut parser, grammar) = LanguageRegistry::singleton().parser(&language).ok()?;
@@ -100,13 +113,19 @@ pub(super) fn parse_scoped(
     };
     let folds = fold_cache
         .as_ref()
-        .map(|c| c.ranges.as_ref().clone())
+        .map(|c| {
+            if gpui_base::input::incremental_editor() {
+                FoldCandidates::Cached(c.ranges.clone())
+            } else {
+                FoldCandidates::Owned(c.ranges.as_ref().clone())
+            }
+        })
         .unwrap_or_else(|| {
-            if folding {
+            FoldCandidates::Owned(if folding {
                 extract_fold_ranges(&tree)
             } else {
                 Vec::new()
-            }
+            })
         });
     let cache = highlight_query.as_ref().map(|query| {
         let snapshot = super::super::highlighter::draw_first_cache::Snapshot {
