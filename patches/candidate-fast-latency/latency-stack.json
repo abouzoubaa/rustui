@@ -31,6 +31,7 @@
     "gpui-kit-fold-unchanged-row-reuse-v1-kit09.json",
     "gpui-fast-native-budget-probe-v1-fast.json",
     "gpui-fast-native-scheduler-v1-fast.json",
-    "gpui-fast-input-scoped-demand-v1-fast.json"
+    "gpui-fast-input-scoped-demand-v1-fast.json",
+    "gpui-fast-windowed-display-sync-v1-fast.json"
   ]
 }

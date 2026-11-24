@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+- Add an opt-in windowed Metal display sync experiment and moving-bar capture proof.
+
 - Add local native-input latency controls for launch mode and passive display-link measurements.
 
 - Add opt-in native input demand routing that holds the immediate frame source across typing bursts.

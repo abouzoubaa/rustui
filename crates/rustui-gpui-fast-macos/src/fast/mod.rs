@@ -16,4 +16,5 @@ pub(crate) mod immediate_present;
 
 pub(crate) mod present_order;
 
+pub(crate) mod display_sync;
 pub(crate) mod frame_pacing;
