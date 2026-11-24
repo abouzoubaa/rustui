@@ -5,18 +5,19 @@ use std::sync::OnceLock;
 // Deliberately literal: a changed repository query must not silently opt in.
 const PINNED_QUERY: &str = "((macro_invocation\n  (token_tree) @injection.content)\n (#set! injection.language \"rust\")\n (#set! injection.include-children))\n\n((macro_rule\n  (token_tree) @injection.content)\n (#set! injection.language \"rust\")\n (#set! injection.include-children))";
 
-pub(super) struct State {
-    pub(super) enabled: bool,
+#[derive(Clone)]
+pub(crate) struct State {
+    pub(crate) enabled: bool,
     eligible: bool,
     generation: u64,
     query: Option<Arc<Query>>,
     empty: bool,
     #[cfg(test)]
-    pub(super) hits: usize,
+    pub(crate) hits: usize,
 }
 
 impl State {
-    pub(super) fn new(
+    pub(crate) fn new(
         config: &super::super::LanguageConfig,
         grammar: &tree_sitter::Language,
         query: Option<&Arc<Query>>,
@@ -44,7 +45,7 @@ impl State {
         }
     }
 
-    pub(super) fn inert() -> Self {
+    pub(crate) fn inert() -> Self {
         Self {
             enabled: false,
             eligible: false,
@@ -56,7 +57,7 @@ impl State {
         }
     }
 
-    pub(super) fn can_reuse(
+    pub(crate) fn can_reuse(
         &self,
         query: Option<&Arc<Query>>,
         grammar: Option<&tree_sitter::Language>,
@@ -80,13 +81,13 @@ impl State {
                 .is_some_and(|(a, b)| Arc::ptr_eq(a, b))
     }
 
-    pub(super) fn observed(&mut self, zero_matches: bool) {
+    pub(crate) fn observed(&mut self, zero_matches: bool) {
         self.empty = zero_matches;
     }
-    pub(super) fn invalidate(&mut self) {
+    pub(crate) fn invalidate(&mut self) {
         self.empty = false;
     }
-    pub(super) fn reused(&mut self) {
+    pub(crate) fn reused(&mut self) {
         #[cfg(test)]
         {
             self.hits += 1;

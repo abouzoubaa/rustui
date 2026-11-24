@@ -3186,7 +3186,10 @@ impl<M: InputModeKind> Element for TextElement<M> {
         let (display_text, text_color) = if is_empty {
             (
                 &Rope::from(placeholder.as_str()),
-                dim(state.editor_style.placeholder_foreground.unwrap_or(state.editor_style.muted_foreground)),
+                dim(state
+                    .editor_style
+                    .placeholder_foreground
+                    .unwrap_or(state.editor_style.muted_foreground)),
             )
         } else if state.masked {
             (
@@ -3790,6 +3793,21 @@ impl<M: InputModeKind> Element for TextElement<M> {
     ) {
         let (focus_handle, show_cursor, disabled, editor_style, editor_paddings) = {
             let state = self.state.read(cx);
+            if gpui::fast_draw_first_enabled() {
+                state
+                    .last_painted_revision
+                    .set(Some(state.document_revision));
+            }
+            gpui::fast_latency_config(
+                window.window_handle().window_id(),
+                "g53_kit_paint_text",
+                [
+                    state.text.len() as f64,
+                    state.document_revision as f64,
+                    0.,
+                    0.,
+                ],
+            );
             (
                 state.focus_handle.clone(),
                 state.show_cursor(window, cx),

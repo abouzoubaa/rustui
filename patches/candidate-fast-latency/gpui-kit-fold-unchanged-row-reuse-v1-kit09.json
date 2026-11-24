@@ -1,0 +1,24 @@
+{
+  "schema_version": 1,
+  "name": "gpui-kit-fold-unchanged-row-reuse-v1-kit09",
+  "patch": "gpui-kit-fold-unchanged-row-reuse-v1-kit09.patch",
+  "patch_sha256": "6fc385d26942d6b5ad95d4882d5d005b909b1d94e2537ae97cb3194d357d0167",
+  "files": {
+    "vendor/gpui-component-0.9.1/src/highlighter/draw_first_folds.rs": {
+      "pre_sha256": "375aa2eec63869a32aa15f422414ee821b53fa4376ea65aae0b70b65d8c35035",
+      "post_sha256": "d75f39670e0890013ac60f53ad5b68b1d2f0f66d68e57f8c48045b8b908f8d98"
+    },
+    "crates/rustui-gpui-component/src/highlighter/draw_first_folds.rs": {
+      "pre_sha256": "375aa2eec63869a32aa15f422414ee821b53fa4376ea65aae0b70b65d8c35035",
+      "post_sha256": "d75f39670e0890013ac60f53ad5b68b1d2f0f66d68e57f8c48045b8b908f8d98"
+    },
+    "vendor/gpui-component-0.9.1/.cargo-checksum.json": {
+      "pre_sha256": "516d7e3d97afb0890e7f4b7996e394c445bebca2ffd29b452f77212e7ed7836c",
+      "post_sha256": "0069459170bdc033ce6837f01e4e69227315e6875711cdfdc5b2c70052ec8896"
+    },
+    "crates/rustui-gpui-component/.cargo-checksum.json": {
+      "pre_sha256": "516d7e3d97afb0890e7f4b7996e394c445bebca2ffd29b452f77212e7ed7836c",
+      "post_sha256": "0069459170bdc033ce6837f01e4e69227315e6875711cdfdc5b2c70052ec8896"
+    }
+  }
+}

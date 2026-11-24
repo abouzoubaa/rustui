@@ -15,9 +15,20 @@ LAUNCHER = ROOT / "scripts" / "cargo-headstart"
 
 
 class CargoHeadstartTests(unittest.TestCase):
+    def isolated_launcher(self, root: Path) -> Path:
+        # Toolchain plumbing tests must not inspect the caller's source stack.
+        scripts = root / "launcher/scripts"
+        scripts.mkdir(parents=True)
+        for name in ("cargo-headstart", "rustdoc-headstart"):
+            target = scripts / name
+            target.write_bytes((ROOT / "scripts" / name).read_bytes())
+            target.chmod(0o755)
+        return scripts / "cargo-headstart"
+
     def test_tool_rustdoc_restores_library_path_and_preserves_caller_override(self) -> None:
         with tempfile.TemporaryDirectory(prefix="headstart docs ") as temporary:
             root = Path(temporary)
+            launcher = self.isolated_launcher(root)
             host = re.search(r"^host: (.+)$", subprocess.check_output(
                 ["rustc", "-vV"], text=True), re.MULTILINE)[1]
             stage = root / "rustc/build" / host
@@ -48,19 +59,20 @@ class CargoHeadstartTests(unittest.TestCase):
                 env.pop(name, None)
             env["RUSTUI_HEADSTART_ROOT"] = str(root)
             env["CARGO_TARGET_DIR"] = str(root / "target")
-            result = subprocess.run([str(LAUNCHER), "test", "--doc"], env=env,
+            result = subprocess.run([str(launcher), "test", "--doc"], env=env,
                                     capture_output=True, text=True, check=True)
             payload = json.loads(result.stdout)
             self.assertEqual(payload["library"], str(stage / "stage1/lib"))
             self.assertEqual(payload["args"], ["space argument"])
             env["RUSTDOC"] = str(caller)
-            result = subprocess.run([str(LAUNCHER), "test", "--doc"], env=env,
+            result = subprocess.run([str(launcher), "test", "--doc"], env=env,
                                     capture_output=True, text=True, check=True)
             self.assertEqual(json.loads(result.stdout), {"caller": True})
 
     def test_explicit_rustc_is_preserved_and_default_stays_headstart(self) -> None:
         with tempfile.TemporaryDirectory() as temporary:
             base = Path(temporary)
+            launcher = self.isolated_launcher(base)
             headstart = base / "headstart"
             cargo = headstart / "cargo" / "target" / "release" / "cargo"
             cargo.parent.mkdir(parents=True)
@@ -102,7 +114,7 @@ class CargoHeadstartTests(unittest.TestCase):
                 else:
                     env["RUSTC"] = requested_rustc
                 result = subprocess.run(
-                    [str(LAUNCHER), "check", "-p", "rustui"],
+                    [str(launcher), "check", "-p", "rustui"],
                     env=env,
                     text=True,
                     capture_output=True,
@@ -120,7 +132,7 @@ class CargoHeadstartTests(unittest.TestCase):
             env["CARGO_TARGET_DIR"] = str(base / "repro target with spaces")
             env["CARGO_HOME"] = str(base / "cargo home with spaces")
             mappings = [
-                "--remap-path-prefix=" + str(ROOT.resolve()) + "=/rustui/src",
+                "--remap-path-prefix=" + str(launcher.parent.parent.resolve()) + "=/rustui/src",
                 "--remap-path-prefix=" + str(Path(env["CARGO_TARGET_DIR"]).resolve()) + "=/rustui/build",
                 "--remap-path-prefix=" + str(Path(env["CARGO_HOME"]).resolve()) + "=/rustui/cargo",
             ]
@@ -134,14 +146,14 @@ class CargoHeadstartTests(unittest.TestCase):
                 else:
                     env["CARGO_ENCODED_RUSTFLAGS"] = encoded
                 env["RUSTFLAGS"] = raw
-                result = subprocess.run([str(LAUNCHER), "build", "--release"], env=env,
+                result = subprocess.run([str(launcher), "build", "--release"], env=env,
                                         text=True, capture_output=True, check=True)
                 payload = json.loads(result.stdout)
                 self.assertEqual(payload["encoded"].split("\x1f"),
                                  expected + mappings + ["-Zmetadata-crate-hash=no"])
                 self.assertEqual(payload["rustflags"], raw)
             env["RUSTUI_REMAP_BUILD_PATHS"] = "2"
-            result = subprocess.run([str(LAUNCHER), "check"], env=env,
+            result = subprocess.run([str(launcher), "check"], env=env,
                                     text=True, capture_output=True)
             self.assertEqual(result.returncode, 2)
             self.assertIn("must be 0 or 1", result.stderr)

@@ -16,6 +16,12 @@ mod stories;
 #[cfg(test)]
 mod story_smoke_tests;
 
+/// Existing F0 page exposed only to the local latency benchmark launcher.
+#[doc(hidden)]
+pub fn g5_acceptance_view() -> impl rustui::view::View {
+    stories::catalog_demo("f0_native_acceptance").expect("registered F0 acceptance page")
+}
+
 use catalog::{CATALOG, CatalogItem, MISSING_REFERENCES, filtered_indices};
 use rustui::{
     localization::MessageArguments,

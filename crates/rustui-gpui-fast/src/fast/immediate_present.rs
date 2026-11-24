@@ -136,8 +136,11 @@ pub fn fast_immediate_hold_active(id: WindowId) -> bool {
         })
 }
 pub fn fast_immediate_demand(id: WindowId) -> bool {
-    if !fast_immediate_hold_active(id) {
+    if !fast_immediate_hold_active(id) && !crate::fast_any_change_enabled() {
         return false;
+    }
+    if crate::fast::change_present::timer_pending(id) {
+        return true;
     }
     WINDOWS.with(|w| {
         if let Some(e) = w.borrow().get(&id) {
@@ -159,6 +162,7 @@ pub fn fast_immediate_suspend(id: WindowId) {
 }
 pub(crate) fn close(id: WindowId) {
     crate::fast::present_order::close(id);
+    crate::fast::change_present::close(id);
     crate::fast::frame_pacing::close(id);
     if fast_immediate_enabled() {
         WINDOWS.with(|w| {
@@ -169,6 +173,7 @@ pub(crate) fn close(id: WindowId) {
     }
 }
 pub(crate) fn before_input(window: &Window, cx: &mut App) {
+    crate::fast::change_present::fast_note_frame_cause(window.handle.window_id(), 1);
     let id = window.handle.window_id();
     if crate::fast_latency_enabled() {
         crate::fast_latency_config(
@@ -221,7 +226,7 @@ pub(crate) fn before_input(window: &Window, cx: &mut App) {
     .detach();
 }
 pub(crate) fn scheduled(handle: AnyWindowHandle, force: bool, cx: &mut crate::AsyncApp) -> bool {
-    if !fast_immediate_hold_active(handle.window_id()) {
+    if !fast_immediate_hold_active(handle.window_id()) && !crate::fast_any_change_enabled() {
         return false;
     }
     if !handle
@@ -238,7 +243,8 @@ pub(crate) fn scheduled(handle: AnyWindowHandle, force: bool, cx: &mut crate::As
     fast_immediate_demand(handle.window_id());
     true
 }
-fn try_draw(window: &mut Window, cx: &mut App) {
+pub(crate) fn try_draw(window: &mut Window, cx: &mut App) {
+    crate::fast::change_present::configure(window, cx);
     window.platform_window.resume_frame_source_after_drain();
     if crate::fast_frame_continuous(window.handle.window_id()) {
         window.platform_window.schedule_frame();
@@ -247,9 +253,13 @@ fn try_draw(window: &mut Window, cx: &mut App) {
     if crate::window::draw_in_progress() {
         return;
     }
-    let callbacks = fast_immediate_hold_active(window.handle.window_id())
+    let callbacks = (fast_immediate_hold_active(window.handle.window_id())
+        || crate::fast_any_change_enabled())
         && !window.next_frame_callbacks.borrow().is_empty();
     if !window.invalidator.is_dirty() && !callbacks {
+        return;
+    }
+    if !crate::fast::change_present::before_build(window, cx) {
         return;
     }
     let admission = WINDOWS.with(|w| {
@@ -267,15 +277,23 @@ fn try_draw(window: &mut Window, cx: &mut App) {
         g.available();
     }
     if callbacks {
-        window.refresh();
+        if !crate::fast_coalesce_enabled() {
+            window.refresh();
+        }
         for callback in window.next_frame_callbacks.take() {
             callback(window, cx);
         }
+    }
+    if crate::fast_coalesce_enabled() && !window.invalidator.is_dirty() {
+        return;
     }
     let _scope = Scope::new();
     let arena = window.draw(cx);
     window.present();
     arena.clear(cx);
+    if crate::fast::change_present::arm(window, cx) {
+        return;
+    }
     if !window.platform_window.immediate_submitted() {
         window.refresh();
         // A full pool at the acquisition-site recheck keeps dirty work queued

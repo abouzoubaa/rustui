@@ -2484,6 +2484,11 @@ impl App {
 
     /// Schedules the given function to be run at the end of the current effect cycle, allowing entities
     /// that are currently on the stack to be returned to the app.
+    pub(crate) fn fast_defer_before_effects(&mut self, f: impl FnOnce(&mut App) + 'static) {
+        self.pending_effects.push_front(Effect::Defer {
+            callback: Box::new(f),
+        });
+    }
     pub fn defer(&mut self, f: impl FnOnce(&mut App) + 'static) {
         self.push_effect(Effect::Defer {
             callback: Box::new(f),

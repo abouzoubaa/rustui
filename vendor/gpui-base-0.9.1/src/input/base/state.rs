@@ -447,6 +447,7 @@ pub struct InputBaseState<M: InputModeKind> {
     pub(super) replaying_history: bool,
     pub(super) validated_token_edit: bool,
     pub(super) document_revision: u64,
+    pub(super) last_painted_revision: Cell<Option<u64>>,
     pub(super) token_presentation: super::InlineTokenPresentation,
     pub(super) token_layout_cache: Option<Box<super::token_presentation::TokenLayoutCache>>,
     /// Real per-frame bounds of the placed token elements, keyed by token
@@ -1013,6 +1014,7 @@ impl<M: InputModeKind> InputBaseState<M> {
             replaying_history: false,
             validated_token_edit: false,
             document_revision: 0,
+            last_painted_revision: Cell::new(None),
             token_presentation: Default::default(),
             token_bounds: Default::default(),
             hovered_token: None,
@@ -1229,6 +1231,48 @@ impl<M: InputModeKind> InputBaseState<M> {
         self.scrollbar_renderer = renderer;
     }
 
+    pub fn fast_current_text_was_painted(&self) -> bool {
+        self.last_painted_revision.get() == Some(self.document_revision)
+    }
+    pub fn highlighter_visible_range(&self) -> Option<std::ops::Range<usize>> {
+        self.last_layout
+            .as_ref()
+            .map(|layout| layout.visible_range_offset.clone())
+    }
+    pub fn apply_highlighter_fold_candidates_quiet(
+        &mut self,
+        candidates: Vec<crate::input::FoldRange>,
+        visible_changed: bool,
+        cx: &mut Context<Self>,
+    ) {
+        let mut fold_changed = false;
+        if self.mode.is_folding() {
+            let before = self.display_map.folded_ranges().to_vec();
+            let rows = self.display_map.display_row_count();
+            let markers = self
+                .last_layout
+                .as_ref()
+                .map(|layout| {
+                    layout
+                        .visible_buffer_lines
+                        .iter()
+                        .map(|row| (*row, self.display_map.is_fold_candidate(*row)))
+                        .collect::<Vec<_>>()
+                })
+                .unwrap_or_default();
+            self.display_map.set_fold_candidates(candidates);
+            fold_changed = before != self.display_map.folded_ranges()
+                || rows != self.display_map.display_row_count()
+                || markers
+                    .iter()
+                    .any(|(row, old)| *old != self.display_map.is_fold_candidate(*row));
+        }
+        // Fold projection/gutter changes are visible changes of their own;
+        // unchanged colours must not hide a newly available fold control.
+        if visible_changed || fold_changed {
+            cx.notify();
+        }
+    }
     pub fn apply_highlighter_fold_candidates(
         &mut self,
         candidates: Vec<crate::input::FoldRange>,
@@ -1703,7 +1747,18 @@ impl<M: InputModeKind> InputBaseState<M> {
     }
 
     /// Report the change with its own snapshot before the legacy notification.
-    fn emit_change(&mut self, cx: &mut Context<Self>) {
+    fn emit_change(&mut self, window: &mut Window, cx: &mut Context<Self>) {
+        gpui::fast_latency_config(
+            window.window_handle().window_id(),
+            "g53_kit_change_queued",
+            [
+                self.text.len() as f64,
+                self.document_revision as f64,
+                0.,
+                0.,
+            ],
+        );
+        window.fast_draw_after_edit(cx);
         if let Some(original) = self.ime_original_text.take() {
             self.last_input_edits = vec![(
                 Self::full_input_edit(&original, &self.text),
@@ -3483,7 +3538,7 @@ impl<M: InputModeKind> InputBaseState<M> {
         self.emit_events = emit_events;
         if token_aware {
             if emit_events {
-                self.emit_change(cx);
+                self.emit_change(window, cx);
             } else {
                 self.last_input_edits.clear();
             }
@@ -4528,7 +4583,7 @@ impl<M: InputModeKind> InputBaseState<M> {
             self.mode.update_auto_grow(&self.display_map);
         }
         if self.emit_events {
-            self.emit_change(cx);
+            self.emit_change(window, cx);
         }
         cx.notify();
     }
@@ -4905,7 +4960,7 @@ impl<M: InputModeKind> EntityInputHandler for InputBaseState<M> {
             M::on_text_typed(self, &range, &new_text, window, cx);
         }
         if self.emit_events {
-            self.emit_change(cx);
+            self.emit_change(window, cx);
         }
         cx.notify();
     }
@@ -5045,6 +5100,7 @@ impl<M: InputModeKind> EntityInputHandler for InputBaseState<M> {
         if new_text.is_empty() {
             self.undo_manager.commit_transaction();
         }
+        window.fast_draw_after_edit(cx);
         cx.notify();
     }
 

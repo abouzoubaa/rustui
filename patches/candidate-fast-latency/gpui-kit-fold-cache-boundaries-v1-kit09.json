@@ -1,0 +1,24 @@
+{
+  "schema_version": 1,
+  "name": "gpui-kit-fold-cache-boundaries-v1-kit09",
+  "patch": "gpui-kit-fold-cache-boundaries-v1-kit09.patch",
+  "patch_sha256": "b01298a0575eb7d618d9a29ca530f6b3ffb9ddfcfefc82ce74ec9dceaffeb42a",
+  "files": {
+    "vendor/gpui-component-0.9.1/src/highlighter/draw_first_folds.rs": {
+      "pre_sha256": "e4c71bd711d41fb6e05ea9e1f858b2be30c756306b26c72136d1937c512c4bf9",
+      "post_sha256": "375aa2eec63869a32aa15f422414ee821b53fa4376ea65aae0b70b65d8c35035"
+    },
+    "crates/rustui-gpui-component/src/highlighter/draw_first_folds.rs": {
+      "pre_sha256": "e4c71bd711d41fb6e05ea9e1f858b2be30c756306b26c72136d1937c512c4bf9",
+      "post_sha256": "375aa2eec63869a32aa15f422414ee821b53fa4376ea65aae0b70b65d8c35035"
+    },
+    "vendor/gpui-component-0.9.1/.cargo-checksum.json": {
+      "pre_sha256": "edf4c953ac35811fd2fbb1ff123e2b22425f20f19cb3b3f523d54f72dddca8e1",
+      "post_sha256": "516d7e3d97afb0890e7f4b7996e394c445bebca2ffd29b452f77212e7ed7836c"
+    },
+    "crates/rustui-gpui-component/.cargo-checksum.json": {
+      "pre_sha256": "edf4c953ac35811fd2fbb1ff123e2b22425f20f19cb3b3f523d54f72dddca8e1",
+      "post_sha256": "516d7e3d97afb0890e7f4b7996e394c445bebca2ffd29b452f77212e7ed7836c"
+    }
+  }
+}

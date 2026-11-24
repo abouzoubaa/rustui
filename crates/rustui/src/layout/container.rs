@@ -170,6 +170,26 @@ impl<V: View> ContainerView<V> {
 }
 
 impl<V: View> View for ContainerView<V> {
+    fn fast_owner_projection(&self) -> Option<crate::runtime::OwnerProjection> {
+        let child = self.content.fast_owner_projection()?;
+        Some(
+            crate::runtime::OwnerProjection::leaf((
+                self.width,
+                self.height,
+                self.padding,
+                self.padding_edges,
+                self.radius,
+                self.fill,
+                self.grow,
+                self.border,
+                self.background,
+                self.opacity,
+                self.shadow.clone(),
+            ))
+            .and(child),
+        )
+    }
+
     fn body(&self) -> impl View {
         EmptyView
     }

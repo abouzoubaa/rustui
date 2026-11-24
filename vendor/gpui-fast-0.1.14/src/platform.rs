@@ -1340,6 +1340,9 @@ pub trait PlatformWindow: HasWindowHandle + HasDisplayHandle {
     fn immediate_input_state(&self) -> [f64; 4] {
         [-1.; 4]
     }
+    fn immediate_build_ready(&self) -> bool {
+        true
+    }
     fn can_present_immediately(&self) -> bool {
         false
     }

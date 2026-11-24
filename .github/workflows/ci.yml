@@ -2,7 +2,7 @@ name: RustUI checks
 
 on:
   push:
-    branches: [main]
+    branches: [main, g5-integration]
   pull_request:
   workflow_dispatch:
     inputs:
@@ -108,8 +108,18 @@ jobs:
         run: rm -rf "$HOME/.cache/rustui-target-fixture-kit8" "$HOME/.cache/rustui-target-fixture-kit9"
       - name: Install Rust 1.98.0
         run: rustup toolchain install 1.98.0 --profile minimal --component rustfmt --component clippy
-      - name: Verify approved Tree sources, replay lifecycle, and source release gates
-        run: ./scripts/verify-release.sh source
+      - name: Verify source state and exact patch replay
+        env:
+          RUSTUI_CI_EVENT: ${{ github.event_name }}
+          RUSTUI_CI_BRANCH: ${{ github.ref_name }}
+          RUSTUI_CI_PR_BASE: ${{ github.base_ref }}
+        run: |
+          if [[ "$RUSTUI_CI_EVENT" == pull_request && "$RUSTUI_CI_PR_BASE" == g5-integration ]] ||
+             [[ "$RUSTUI_CI_EVENT" != pull_request && "$RUSTUI_CI_BRANCH" == g5-integration ]]; then
+            python3 scripts/check_source_candidates.py --candidate-stack patches/candidate-fast-latency/latency-stack.json
+          else
+            ./scripts/verify-release.sh source
+          fi
       - name: Test isolated GPUI fixture build targets
         run: python3 -m unittest scripts.tests.test_fixture_target_dir -v
       - name: Test the GPUI Kit 0.9.1 source fixture harness

@@ -42,6 +42,49 @@ mod overlay_owner_tests {
     struct Owner(String);
 
     #[gpui::test]
+    fn binding_effects_preserve_duplicate_callbacks(cx: &mut gpui::TestAppContext) {
+        cx.update(gpui_component::init);
+        let (host, window) = cx.add_window_view(|_, cx| ComponentHost::new(EmptyView, cx));
+        window.update(|window, app| {
+            let owner = Rc::new(RefCell::new(Owner("before".into())));
+            let notifications = Rc::new(std::cell::Cell::new(0));
+            let state = owner.clone();
+            let count = notifications.clone();
+            let updater: ComponentUpdater = Rc::new(move |mutation, _| {
+                if mutation(&mut *state.borrow_mut()) {
+                    count.set(count.get() + 1);
+                }
+            });
+            let environment = EnvironmentValues::default();
+            let mut retained = RetainedEntities::default();
+            let context = RenderContext::new(
+                updater,
+                host.entity_id(),
+                TypeId::of::<Owner>(),
+                Rc::new(()),
+                px(14.),
+                &environment,
+                None,
+                None,
+                window,
+                app,
+                &mut retained,
+            );
+            let binding =
+                Binding::new("before".to_owned(), |o: &Owner| o.0.clone(), |o, v| o.0 = v);
+            let writer = context.binding_writer(binding);
+            writer("after".into(), context.app);
+            writer("after".into(), context.app);
+            assert_eq!(owner.borrow().0, "after");
+            assert_eq!(
+                notifications.get(),
+                2,
+                "notification dedup must not discard binding/validation callbacks"
+            );
+        });
+    }
+
+    #[gpui::test]
     fn deferred_cells_share_localization_snapshot_and_new_renders_pick_up_locale(
         cx: &mut gpui::TestAppContext,
     ) {
@@ -836,10 +879,12 @@ impl<'a> RenderContext<'a> {
         let update_component = self.update_component.clone();
         Rc::new(move |value, cx| {
             let binding = binding.clone();
-            update_component(
-                Box::new(move |component| binding.write_to(component, value)),
-                cx,
-            );
+            crate::runtime::owner_projection::binding_effect(false, || {
+                update_component(
+                    Box::new(move |component| binding.write_to(component, value)),
+                    cx,
+                );
+            });
         })
     }
 
@@ -1106,6 +1151,12 @@ mod text_element_identity_tests {
 
 /// A RustUI view whose body is another RustUI view.
 pub trait View: 'static {
+    /// Exact opt-in notification proof; unsupported views always notify.
+    #[doc(hidden)]
+    fn fast_owner_projection(&self) -> Option<crate::runtime::OwnerProjection> {
+        None
+    }
+
     /// Describes this view's body using RustUI views.
     fn body(&self) -> impl View;
 
@@ -1127,6 +1178,7 @@ pub trait View: 'static {
     where
         Self: Sized,
     {
+        crate::runtime::owner_projection::note_default_body(self);
         self.body().into_element(context)
     }
 }
@@ -1641,25 +1693,37 @@ impl<V: View> View for Option<V> {
 }
 
 /// Type-erased RustUI view used by heterogeneous declarative collections.
-pub struct AnyView {
-    render: Rc<dyn for<'a> Fn(&mut RenderContext<'a>) -> AnyElement>,
+trait ErasedView {
+    fn render(&self, context: &mut RenderContext<'_>) -> AnyElement;
+    fn projection(&self) -> Option<crate::runtime::OwnerProjection>;
 }
-
+impl<V: View> ErasedView for V {
+    fn render(&self, context: &mut RenderContext<'_>) -> AnyElement {
+        View::into_element(self, context)
+    }
+    fn projection(&self) -> Option<crate::runtime::OwnerProjection> {
+        View::fast_owner_projection(self)
+    }
+}
+pub struct AnyView {
+    view: Rc<dyn ErasedView>,
+}
 impl AnyView {
     pub fn new<V: View>(view: V) -> Self {
         Self {
-            render: Rc::new(move |context| view.into_element(context)),
+            view: Rc::new(view),
         }
     }
 }
-
 impl View for AnyView {
     fn body(&self) -> impl View {
         EmptyView
     }
-
+    fn fast_owner_projection(&self) -> Option<crate::runtime::OwnerProjection> {
+        self.view.projection()
+    }
     fn into_element(&self, context: &mut RenderContext<'_>) -> AnyElement {
-        (self.render)(context)
+        self.view.render(context)
     }
 }
 

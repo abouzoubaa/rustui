@@ -190,6 +190,68 @@ impl CodeEditorView {
 }
 
 impl View for CodeEditorView {
+    fn fast_owner_projection(&self) -> Option<crate::runtime::OwnerProjection> {
+        let check_id = self.id.clone();
+        let expected = self.value.snapshot();
+        let commit_id = self.id.clone();
+        let binding = self.value.clone();
+        Some(
+            crate::runtime::OwnerProjection::leaf((
+                self.id.clone(),
+                self.language.clone(),
+                self.placeholder.clone(),
+                self.placeholder_message_id.clone(),
+                self.line_numbers,
+                self.height,
+                self.disabled,
+                self.readonly,
+                self.accessibility_label.clone(),
+                self.accessibility_label_message_id.clone(),
+                self.tab_index,
+            ))
+            .with_native(
+                Rc::new(move |retained, cx| {
+                    retained
+                        .projection_entity::<RetainedCodeEditor>(&check_id)
+                        .is_some_and(|state| {
+                            let editor = &state.read(cx).editor;
+                            let native = editor.read(cx);
+                            native.fast_current_text_was_painted()
+                                && native.value().as_ref() == expected.as_str()
+                        })
+                }),
+                Rc::new(move |retained, cx, updater, window| {
+                    if let Some(state) =
+                        retained.projection_entity::<RetainedCodeEditor>(&commit_id)
+                    {
+                        let value = binding.snapshot();
+                        let latest = binding.clone();
+                        state.update(cx, |state, _| {
+                            // The next input must not mistake this synchronized owner
+                            // value for a new authoritative replacement of local text.
+                            state.owner_value = value;
+                            let writer = updater.clone();
+                            *state.writer.borrow_mut() = Some(Rc::new(move |value, cx| {
+                                let binding = latest.clone();
+                                crate::runtime::owner_projection::binding_effect(false, || {
+                                    writer(
+                                        Box::new(move |owner| binding.write_to(owner, value)),
+                                        cx,
+                                    )
+                                });
+                            }));
+                        });
+                        gpui::fast_latency_config(
+                            window,
+                            "g53_binding_slot_synced",
+                            [1., 0., 0., 0.],
+                        );
+                    }
+                }),
+            ),
+        )
+    }
+
     fn body(&self) -> impl View {
         EmptyView
     }
@@ -237,16 +299,30 @@ impl View for CodeEditorView {
         let native_changed = retained_state.native_changed.clone();
         let owner_changed = !Rc::ptr_eq(&current_value, &previous_owner_value)
             && current_value.as_str() != previous_owner_value.as_str();
-        let has_marked_text = context.update_entity(&editor, |native, window, cx| {
-            native.marked_text_range(window, cx).is_some()
-        });
+        let (has_marked_text, trace_window) =
+            context.update_entity(&editor, |native, window, cx| {
+                (
+                    native.marked_text_range(window, cx).is_some(),
+                    window.window_handle().window_id(),
+                )
+            });
         let must_inspect = owner_changed
-            || (had_marked_text && !has_marked_text)
+            || (!gpui::fast_draw_first_enabled() && had_marked_text && !has_marked_text)
             || ((self.disabled || self.readonly) && (native_changed.get() || has_marked_text));
         let value_changed = ((self.disabled || self.readonly) && has_marked_text)
             || (must_inspect
                 && editor.read(context.app()).value().as_ref() != current_value.as_str());
         let native = editor.read(context.app());
+        gpui::fast_latency_config(
+            trace_window,
+            "g53_rustui_render_text",
+            [
+                native.text().len() as f64,
+                current_value.len() as f64,
+                owner_changed as u8 as f64,
+                0.,
+            ],
+        );
         let language_changed = native.language_name() != self.language;
         let placeholder_changed = native.presentation().placeholder() != &resolved_placeholder;
         if value_changed || language_changed || placeholder_changed || line_numbers_changed {
@@ -284,7 +360,20 @@ impl View for CodeEditorView {
             context.subscribe_retained(&self.id, &editor, move |editor, event: &InputEvent, cx| {
                 if matches!(event, InputEvent::Change) {
                     native_changed.set(true);
-                    write_with_current_writer(&writer, editor.read(cx).value().to_string(), cx);
+                    gpui::fast_latency_config(
+                        trace_window,
+                        "g53_rustui_binding_start",
+                        [editor.read(cx).text().len() as f64, 0., 0., 0.],
+                    );
+                    let value = editor.read(cx).value().to_string();
+                    crate::runtime::owner_projection::binding_effect(true, || {
+                        write_with_current_writer(&writer, value, cx)
+                    });
+                    gpui::fast_latency_config(
+                        trace_window,
+                        "g53_rustui_binding_end",
+                        [editor.read(cx).text().len() as f64, 0., 0., 0.],
+                    );
                 }
             });
         }
@@ -292,7 +381,8 @@ impl View for CodeEditorView {
         if self.disabled || self.readonly {
             *writer.borrow_mut() = None;
         } else {
-            replace_event_writer(&writer, context.binding_writer(self.value.clone()));
+            let current_writer = context.binding_writer(self.value.clone());
+            replace_event_writer(&writer, current_writer);
         }
         context.update_entity(&editor, |state, window, cx| {
             use gpui::Focusable as _;
@@ -804,3 +894,7 @@ mod tests {
         }
     }
 }
+
+#[cfg(test)]
+#[path = "code_editor_draw_first_tests.rs"]
+mod draw_first_tests;

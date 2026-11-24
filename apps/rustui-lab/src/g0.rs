@@ -31,6 +31,7 @@ pub enum Scene {
     Hover,
     Log,
     Drag,
+    Acceptance,
 }
 impl Scene {
     pub fn name(self) -> &'static str {
@@ -40,18 +41,31 @@ impl Scene {
             Self::Hover => "hover",
             Self::Log => "log",
             Self::Drag => "drag",
+            Self::Acceptance => "acceptance",
         }
     }
     fn parse(value: &str) -> Option<Self> {
-        [Self::Idle, Self::Typing, Self::Hover, Self::Log, Self::Drag]
-            .into_iter()
-            .find(|scene| scene.name() == value)
+        [
+            Self::Idle,
+            Self::Typing,
+            Self::Hover,
+            Self::Log,
+            Self::Drag,
+            Self::Acceptance,
+        ]
+        .into_iter()
+        .find(|scene| scene.name() == value)
     }
     fn hz(self) -> u32 {
         match self {
             Self::Idle => 0,
-            Self::Typing | Self::Log => 10,
-            Self::Hover | Self::Drag => 120,
+            Self::Typing => std::env::var("RUSTUI_G0_TYPING_HZ")
+                .ok()
+                .and_then(|s| s.parse().ok())
+                .filter(|hz| [10, 30].contains(hz))
+                .unwrap_or(10),
+            Self::Log => 10,
+            Self::Hover | Self::Drag | Self::Acceptance => 120,
         }
     }
 }
@@ -104,6 +118,7 @@ impl View for Benchmark {
                     .height(700.0)
                     .row_height(30.0),
             ),
+            Scene::Acceptance => AnyView::new(rustui_playground::g5_acceptance_view()),
             Scene::Log | Scene::Drag => {
                 AnyView::new(EntityView(self.native.as_ref().unwrap().clone()))
             }
@@ -323,6 +338,24 @@ fn step(
             );
             true
         }
+        Scene::Acceptance => {
+            #[allow(deprecated)]
+            let event = gpui::ScrollWheelEvent {
+                position: gpui::point(gpui::px(900.), gpui::px(520.)),
+                delta: gpui::ScrollDelta::Pixels(gpui::point(
+                    gpui::px(0.),
+                    gpui::px(if tick % 600 < 300 { -500. } else { 500. }),
+                )),
+                touch_phase: if tick == 1 {
+                    gpui::TouchPhase::Started
+                } else {
+                    gpui::TouchPhase::Moved
+                },
+                ..Default::default()
+            };
+            window.dispatch_event(gpui::PlatformInput::Scroll(event), app);
+            true
+        }
         Scene::Drag => {
             window.dispatch_event(
                 gpui::PlatformInput::MouseMove(gpui::MouseMoveEvent {
@@ -423,7 +456,7 @@ pub fn run_cli(args: &[String]) -> Result<(), String> {
     let scene = args
         .get(1)
         .and_then(|value| Scene::parse(value))
-        .ok_or("expected --g0-scene idle|typing|hover|log|drag")?;
+        .ok_or("expected --g0-scene idle|typing|hover|log|drag|acceptance")?;
     let seconds = if args.len() == 2 {
         60
     } else if args.len() == 4 && args[2] == "--duration" {
@@ -477,6 +510,8 @@ mod tests {
         assert_eq!(due_ticks(Duration::from_millis(99), 10), 0);
         assert_eq!(due_ticks(Duration::from_millis(100), 10), 1);
         assert_eq!(Scene::parse("unknown"), None);
+        assert_eq!(Scene::parse("acceptance"), Some(Scene::Acceptance));
+        assert_eq!(Scene::Acceptance.hz(), 120);
     }
 
     #[gpui::test]

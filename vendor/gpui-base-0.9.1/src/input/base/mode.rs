@@ -303,7 +303,17 @@ impl LayoutMode {
                         update.change_text,
                     )
                 });
+                gpui::fast_latency_config(
+                    window.window_handle().window_id(),
+                    "g53_kit_text_applied",
+                    [update.new_text.len() as f64, 0., 0., 0.],
+                );
                 M::drive_highlighter(highlighter, edit, update.new_text, *folding, window, cx);
+                gpui::fast_latency_config(
+                    window.window_handle().window_id(),
+                    "g53_highlight_return",
+                    [update.new_text.len() as f64, 0., 0., 0.],
+                );
             }
             _ => {}
         }

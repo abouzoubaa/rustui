@@ -27,3 +27,7 @@ pub use tasks::OwnerTask;
 pub use window::{AnchoredPopupError, AnchoredPopupOptions};
 #[cfg(not(target_family = "wasm"))]
 pub use window::{AnchoredPopupHandle, open_anchored_popup, try_open_anchored_popup};
+
+pub(crate) mod owner_projection;
+#[doc(hidden)]
+pub use owner_projection::OwnerProjection;

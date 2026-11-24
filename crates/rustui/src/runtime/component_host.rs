@@ -80,6 +80,16 @@ pub(crate) struct RetainedEntities {
 }
 
 impl RetainedEntities {
+    pub(crate) fn projection_entity<T: 'static>(&self, id: &Identity) -> Option<Entity<T>> {
+        self.entries
+            .get(&RetainedKey {
+                scope: Vec::new(),
+                id: id.clone(),
+            })
+            .and_then(|entry| entry.entity.downcast_ref::<Entity<T>>())
+            .cloned()
+    }
+
     /// Reconcile one visited lazy cell without touching other cells.
     pub(crate) fn begin_cell(&mut self, id: &Identity) {
         debug_assert!(self.scope.is_empty());
@@ -321,6 +331,7 @@ pub struct ComponentHost<V> {
     pub(crate) component: V,
     environment: EnvironmentValues,
     retained: RetainedEntities,
+    uses_default_body: bool,
     pub(crate) tasks: TaskRegistry,
     _release: Subscription,
     _localization: Subscription,
@@ -345,6 +356,7 @@ impl<V: View> ComponentHost<V> {
             component,
             environment,
             retained: RetainedEntities::default(),
+            uses_default_body: false,
             tasks: TaskRegistry::default(),
             _release: release,
             _localization: localization,
@@ -383,23 +395,60 @@ impl<V: View> ComponentHost<V> {
     }
 }
 
+impl<V: View> ComponentHost<V> {
+    fn projection(&self) -> Option<crate::runtime::OwnerProjection> {
+        self.component.fast_owner_projection().or_else(|| {
+            self.uses_default_body
+                .then(|| self.component.body().fast_owner_projection())
+                .flatten()
+        })
+    }
+    fn component_updater(
+        owner: gpui::WeakEntity<Self>,
+        window: gpui::WindowId,
+    ) -> ComponentUpdater {
+        Rc::new(move |mutation: ComponentMutation, cx: &mut App| {
+            let _ = owner.update(cx, |host, cx| {
+                let eligible = super::owner_projection::native_binding_active()
+                    && cx.fast_owner_projection_allowed(cx.entity_id(), window);
+                let before = if eligible { host.projection() } else { None };
+                if !mutation(&mut host.component) {
+                    return;
+                }
+                let after = before.as_ref().and_then(|_| host.projection());
+                let unchanged =
+                    before
+                        .as_ref()
+                        .zip(after.as_ref())
+                        .is_some_and(|(before, after)| {
+                            before.same_shape(after) && after.already_painted(&host.retained, cx)
+                        });
+                if unchanged {
+                    let next_updater = Self::component_updater(owner.clone(), window);
+                    after
+                        .unwrap()
+                        .commit(&host.retained, cx, next_updater, window);
+                    super::owner_projection::record_suppressed();
+                    gpui::fast_latency_config(window, "g53_owner_dedup", [1., 0., 0., 0.]);
+                } else {
+                    if super::owner_projection::binding_active() {
+                        gpui::fast_note_frame_cause(window, 2);
+                    }
+                    cx.notify();
+                }
+            });
+        })
+    }
+}
+
 impl<V: View> Render for ComponentHost<V> {
     fn render(&mut self, window: &mut Window, cx: &mut Context<Self>) -> impl IntoElement {
         let control_font_size = gpui_component::Theme::global(cx).font_size;
         let button_theme =
             crate::theme::registry::active_theme(cx).map(|theme| theme.button.clone());
         let localization = crate::localization::active_localization(cx).cloned();
-        let owner = cx.weak_entity();
-        let update_component: ComponentUpdater =
-            Rc::new(move |mutation: ComponentMutation, cx: &mut App| {
-                owner
-                    .update(cx, |host, cx| {
-                        if mutation(&mut host.component) {
-                            cx.notify();
-                        }
-                    })
-                    .ok();
-            });
+        let update_component =
+            Self::component_updater(cx.weak_entity(), window.window_handle().window_id());
         self.retained.begin_frame();
         let mut context = RenderContext::new(
             update_component,
@@ -419,7 +468,11 @@ impl<V: View> Render for ComponentHost<V> {
         // lowering implementation instead of expanding through `body()`.
         let started =
             render_diagnostics::render_diagnostics_enabled(context.app()).then(Instant::now);
-        let element = self.component.into_element(&mut context);
+        let (element, uses_default_body) =
+            super::owner_projection::with_render_proof(&self.component, || {
+                self.component.into_element(&mut context)
+            });
+        self.uses_default_body = uses_default_body;
         let elapsed = started.map(|started| started.elapsed());
         drop(context);
         if let Some(elapsed) = elapsed {

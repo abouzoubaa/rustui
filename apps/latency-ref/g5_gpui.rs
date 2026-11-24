@@ -36,7 +36,7 @@ impl Render for Input {
             .bg(gpui::rgb(0x202020))
             .text_color(gpui::rgb(0xffffff))
             .track_focus(&self.focus)
-            .on_key_down(cx.listener(|this, event: &gpui::KeyDownEvent, _, cx| {
+            .on_key_down(cx.listener(|this, event: &gpui::KeyDownEvent, window, cx| {
                 if !this.measuring || this.scene != "typing" {return;}
                 match event.keystroke.key.as_str() {
                     "x" => this.text.push('x'),
@@ -46,6 +46,7 @@ impl Render for Input {
                     _ => return,
                 }
                 this.version += 1;
+                gpui::fast_latency_config(window.window_handle().window_id(),"g53_bare_text_applied",[this.text.len() as f64,this.version as f64,0.,0.]);
                 cx.notify();
                 cx.stop_propagation();
             }))

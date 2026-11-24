@@ -2,6 +2,14 @@
 
 ## Unreleased
 
+- Opt-in native typing caches structural folds and avoids redundant owner redraws; G5 integration CI verifies the reversible candidate chain.
+
+- G5-3c: admit opt-in immediate frames before scene construction, deduplicate binding events and visible colour updates, and scope background highlighting to edited and visible ranges.
+
+- G5-3b: add opt-in draw-first editor effects, background syntax colours and per-surface immediate change coalescing; retire the drawable reserve experiment.
+
+- Add an off-by-default two-free-drawable comparison and RustUI/F0 display-time and missed-slot diagnostics (G5-3).
+
 - Add per-surface G5-1 presentation-order, source-drain and legacy capacity safety; retain the unadopted NSView experiment off and retire Ahead (G5-2).
 
 - Add an off-by-default input-tick presentation candidate, burst-only input hold, drawable-capacity guard and shared pixel/display-time controls with machine-folder exclusions and owner-authorized CPU-gate bypass labeling (G5-1).

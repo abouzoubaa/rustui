@@ -15,6 +15,8 @@ from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
 STACK = ROOT / "patches/approved/kit09/kit09-stack.json"
+APPROVED_CATALOG = Path("scripts/fixtures/kit09-approved-cargo-state.json")
+APPROVED_CATALOG_SHA256 = "b394930d4741e9f8892e1da7adf139a953a1538fe34b7ef8b3ff40f8fe9102ba"
 MIRRORS = {
     "gpui-pre": "crates/rustui-gpui",
     "gpui-pre-linux": "crates/rustui-gpui-linux",
@@ -83,82 +85,132 @@ def refresh_mirrors(stack: dict) -> int:
     return refreshed
 
 
-def check_postimages(stack: dict, root: Path = ROOT) -> None:
-    """Validate approved Kit images plus explicitly listed candidate layers.
-
-    A candidate must start at the approved hash, chain exactly, and reverse to
-    the approved image (including absence of newly created files). The approved
-    manifest is never rewritten to bless a candidate's current contents.
-    """
-    root = root.resolve()
+def approved_images(stack: dict, root: Path):
     expected = {name: hashes["post_sha256"] for name, hashes in stack["files"].items()}
-    prefixes = {"/".join(Path(name).parts[:2]) + "/" for name in expected
-                if Path(name).parts[0] == "vendor"}
-    candidate_stack = root / "patches/candidate-fast-damage/damage-stack.json"
-    candidates = []
-    changed_kit = False
-    if candidate_stack.is_file():
-        from check_fast_patch_stack import load_manifests
-        entries, _ = load_manifests(candidate_stack)
-        candidates = [(path, files) for path, _, files in entries
-                      if not path.is_relative_to(root / "patches/approved")]
-        for path, files in candidates:
-            for name, hashes in files.items():
-                if not any(name.startswith(prefix) for prefix in prefixes):
-                    continue
-                if name not in expected and hashes["pre_sha256"] is not None:
-                    # The historical Kit table omitted Cargo checksum files.
-                    # Pin their otherwise-untracked preimage through the explicit
-                    # candidate manifest. Approved source hashes stay mandatory;
-                    # the reverse proof restores this metadata byte-for-byte too.
-                    if Path(name).name != ".cargo-checksum.json":
-                        raise RuntimeError(f"Kit candidate lacks an approved base image: {name}")
-                    expected[name] = hashes["pre_sha256"]
-                if hashes["pre_sha256"] != expected.get(name):
-                    raise RuntimeError(f"Kit candidate does not chain from approved image: {path.name}: {name}")
-                expected[name] = hashes["post_sha256"]
-                changed_kit = True
-    for target, postimage in expected.items():
-        path = root / target
-        if not path.is_file() or sha(path) != postimage:
-            raise RuntimeError(f"Kit 0.9 postimage mismatch: {target}")
-    if not changed_kit:
-        return
+    catalog_path = root / APPROVED_CATALOG
+    anchors = dict(expected)
+    prefixes = {"/".join(Path(name).parts[:2]) for name in expected if name.startswith("vendor/")}
+    if catalog_path.is_file():
+        if root == ROOT and sha(catalog_path) != APPROVED_CATALOG_SHA256:
+            raise RuntimeError("approved Kit Cargo catalog hash mismatch")
+        catalog = json.loads(catalog_path.read_text())
+        for name, digest in catalog["files"].items():
+            if name in expected and expected[name] != digest:
+                raise RuntimeError(f"approved Kit catalog disagrees with approved stack: {name}")
+            expected[name] = digest
+        anchors.update(catalog["cargo_anchors"])
+        prefixes = set(catalog["crate_prefixes"])
+    elif root == ROOT:
+        raise RuntimeError("approved Kit Cargo catalog missing")
+    return expected, anchors, prefixes
 
+
+def image_bytes(root: Path, name: str):
+    path = root / name
+    if path.is_symlink():
+        raise RuntimeError(f"non-regular candidate target: {name}")
+    if not path.exists():
+        return None
+    if not path.is_file():
+        raise RuntimeError(f"non-regular candidate target: {name}")
+    return path.read_bytes()
+
+
+def check_images(root: Path, expected: dict, prefixes: set):
+    names = set(expected)
+    for prefix in prefixes:
+        folder = root / prefix
+        if folder.is_dir():
+            names.update(str(p.relative_to(root)) for p in folder.rglob("*") if p.is_file() or p.is_symlink())
+    for name in names:
+        data = image_bytes(root, name)
+        digest = hashlib.sha256(data).hexdigest() if data is not None else None
+        if digest != expected.get(name):
+            raise RuntimeError(f"Kit 0.9 postimage mismatch: {name}")
+
+
+def check_postimages(stack: dict, root: Path = ROOT, candidate_stack: Path | None = None) -> None:
+    """Default: approved bytes only. Candidates require an explicit integration option."""
+    root = root.resolve()
+    approved, anchors, prefixes = approved_images(stack, root)
+    if candidate_stack is None:
+        check_images(root, approved, prefixes)
+        return
+    from check_fast_patch_stack import load_manifests
     from apply_f0_fast_candidate_patch import run as apply_candidate
+    candidate_stack = Path(candidate_stack)
+    if not candidate_stack.is_absolute():
+        candidate_stack = root / candidate_stack
+    entries, _ = load_manifests(candidate_stack)
+    candidates = [(path, files) for path, _, files in entries
+                  if not path.is_relative_to(root / "patches/approved")]
     names = {name for _, files in candidates for name in files}
     for name in names:
         if Path(name).is_absolute() or ".." in Path(name).parts:
             raise ValueError(f"unsafe candidate target: {name}")
-        if (root / name).is_symlink() or not (root / name).is_file():
-            raise RuntimeError(f"non-regular candidate target: {name}")
+        image_bytes(root, name)
+    def kit(name):
+        return any(name.startswith(prefix + "/") for prefix in prefixes)
+    expected = dict(approved)
+    touched = set()
+    for path, files in candidates:
+        for name, hashes in files.items():
+            if not kit(name):
+                continue
+            before = hashes["pre_sha256"]
+            if name not in touched and before is not None:
+                vendor_name = name.replace("crates/rustui-gpui-component/", "vendor/gpui-component-0.9.1/").replace("crates/rustui-gpui-base/", "vendor/gpui-base-0.9.1/")
+                known = vendor_name in stack["files"]
+                anchor = approved.get(name) if known else anchors.get(name)
+                if anchor is None:
+                    raise RuntimeError(f"Kit candidate lacks an approved base image: {name}")
+                if before != anchor:
+                    raise RuntimeError(f"Kit candidate does not chain from approved Cargo image: {path.name}: {name}")
+            if before != expected.get(name):
+                raise RuntimeError(f"Kit candidate does not chain from approved image: {path.name}: {name}")
+            expected[name] = hashes["post_sha256"]
+            touched.add(name)
+    check_images(root, expected, prefixes)
+    # Copy every approved Kit file, every candidate target (including Fast),
+    # and every actual Kit file. Nothing unknown can disappear from the proof.
+    names.update(approved)
+    for prefix in prefixes:
+        folder = root / prefix
+        if folder.is_dir():
+            names.update(str(p.relative_to(root)) for p in folder.rglob("*") if p.is_file() or p.is_symlink())
     with tempfile.TemporaryDirectory(prefix="rustui-kit-candidate-proof-") as directory:
         fixture = Path(directory)
-        originals = {}
-        for name in names:
-            source = root / name
-            originals[name] = source.read_bytes()
-            destination = fixture / name
-            destination.parent.mkdir(parents=True, exist_ok=True)
-            shutil.copy2(source, destination)
+        original = {name: image_bytes(root, name) for name in names}
+        for name, data in original.items():
+            if data is not None:
+                target = fixture / name
+                target.parent.mkdir(parents=True, exist_ok=True)
+                target.write_bytes(data)
         for path, _ in reversed(candidates):
             apply_candidate(path, "--reverse", fixture)
-        for name, hashes in stack["files"].items():
-            if name in names and sha(fixture / name) != hashes["post_sha256"]:
-                raise RuntimeError(f"Kit candidate reverse differs from approved image: {name}")
+        # Approved state first, including every catalogued source and metadata
+        # byte. A new candidate file must now be absent.
+        check_images(fixture, approved, prefixes)
+        baseline = {name: image_bytes(fixture, name) for name in names}
         for path, _ in candidates:
             apply_candidate(path, "--apply", fixture)
-        for name, original in originals.items():
-            if (fixture / name).read_bytes() != original:
+        for name, data in original.items():
+            if image_bytes(fixture, name) != data:
                 raise RuntimeError(f"Kit candidate round trip differs: {name}")
-    print("Kit candidate chain and reverse/apply: exact approved restoration=PASS")
+        for path, _ in reversed(candidates):
+            apply_candidate(path, "--reverse", fixture)
+        check_images(fixture, approved, prefixes)
+        for name, data in baseline.items():
+            if image_bytes(fixture, name) != data:
+                raise RuntimeError(f"Kit candidate reverse differs from approved bytes/absence: {name}")
+    print("Kit explicit candidate chain: Cargo anchors, post-hashes and exact approved reverse=PASS")
 
 
-def operate(action: str) -> None:
+def operate(action: str, candidate_stack: Path | None = None) -> None:
     stack = load_stack()
     if action == "--check":
-        check_postimages(stack)
-        print(f"Kit 0.9 approved patches={len(stack['patches'])}; files={len(stack['files'])}; applied state=PASS")
+        check_postimages(stack, candidate_stack=candidate_stack)
+        print(f"Kit 0.9 approved patches={len(stack['patches'])}; files={len(stack['files'])}; " + ("approved baseline + explicit candidates=PASS" if candidate_stack is not None else "approved-only state=PASS"))
         return
 
     entries = list(reversed(stack["patches"])) if action == "--reverse" else stack["patches"]
@@ -186,10 +238,13 @@ def main() -> int:
     group.add_argument("--apply", action="store_true")
     group.add_argument("--check", action="store_true")
     group.add_argument("--reverse", action="store_true")
+    parser.add_argument("--candidate-stack", type=Path, help="explicit integration-only candidate chain; --check only")
     args = parser.parse_args()
+    if args.candidate_stack and not args.check:
+        parser.error("--candidate-stack is supported only with --check")
     action = "--apply" if args.apply else "--reverse" if args.reverse else "--check"
     try:
-        operate(action)
+        operate(action, args.candidate_stack)
     except (OSError, ValueError, RuntimeError, json.JSONDecodeError, subprocess.CalledProcessError) as error:
         print(f"GPUI Kit 0.9 patch stack failed: {error}", file=sys.stderr)
         return 1
