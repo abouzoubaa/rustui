@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+- Add opt-in native input demand routing that holds the immediate frame source across typing bursts.
+
 - Add an opt-in post-event native presentation scheduler with a per-window wake watchdog.
 
 - Opt-in native typing caches structural folds and avoids redundant owner redraws; G5 integration CI verifies the reversible candidate chain.

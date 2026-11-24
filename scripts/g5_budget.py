@@ -1,6 +1,7 @@
 """Opt-in native-event latency budget; preserve both independent display clocks."""
 import json
-from bisect import bisect_right
+from bisect import bisect_left, bisect_right
+from collections import Counter, defaultdict
 from pathlib import Path
 import g5_latency as common
 
@@ -41,7 +42,38 @@ def analyse(path):
         if e.get('kind')=='l1_draw_end':draw_ends[(w,current.get(w))]=e
     pixels={}
     for e in sorted(data['G5_PIXELS '],key=lambda e:e['display_mach']):pixels.setdefault(e['version'],e['display_mach']*scale)
+    configurations = defaultdict(list)
+    for event in events:
+        if event['event'] == 'config':
+            configurations[event['window'], event['kind']].append(event)
+    timelines = {}
+    for key, config in configurations.items():
+        config.sort(key=lambda event: event['mach'])
+        timelines[key] = ([event['mach'] for event in config], config)
+
+    def between(window, kind, low, high):
+        ticks, records = timelines.get((window, kind), ([], []))
+        return records[bisect_left(ticks, low):bisect_right(ticks, high)]
+
+    def frame_path(window, n, attempt, commit, draw):
+        queue = between(window, 'g5_queue', attempt['mach'], commit['mach'])
+        if not queue:
+            return 'unknown', 'submission_without_path_marker'
+        if queue[-1]['values'][2]:
+            return 'immediate', 'immediate'
+        if draw['mach'] <= n['handler_end_mach']:
+            return 'scheduled', 'cpu_draw_before_native_handler_exit'
+        if between(window, 'g53_cpu_build_deferred', n['handler_mach'], draw['mach']):
+            return 'scheduled', 'admission_deferral_observed'
+        if between(window, 'g5_link_recreate', n['handler_mach'], commit['mach']):
+            return 'scheduled', 'link_recreated_after_input'
+        state = between(window, 'g5_input_state', n['handler_mach'], draw['mach'])
+        if state and state[0]['values'][0]:
+            return 'scheduled', 'link_attached_at_input'
+        return 'scheduled', 'scheduled_without_attributed_trigger'
+
     rows=[];seen=set();presentations=[];invalid=0
+    all_native_paths=Counter()
     for e in sorted((e for e in events if e['event']=='displayed'),key=lambda e:e['presented_host']):
         w=e['window'];key=(w,e['drawable']);commit=commits.get(key)
         if not commit:continue
@@ -50,12 +82,18 @@ def analyse(path):
         paint=paints.get((w,attempt['draw']))
         if not paint or not e['presented_host']>0:invalid+=1;continue
         version=paint['version'];presentations.append((e['presented_host'],version))
-        if version not in native or version in seen:continue
-        gpu=gpus.get(key);acquire=acquires.get(key);draw=draws.get((w,attempt['draw']));draw_end=draw_ends.get((w,attempt['draw']))
+        if version not in native:continue
+        n=native[version]
+        draw=draws.get((w,attempt['draw']))
+        path, reason = frame_path(w, n, attempt, commit, draw) if draw else ('unknown','missing_draw')
+        if start['mach']*scale <= e['presented_host'] <= end['mach']*scale:
+            all_native_paths[path] += 1
+        if version in seen:continue
+        gpu=gpus.get(key);acquire=acquires.get(key);draw_end=draw_ends.get((w,attempt['draw']))
         if not all((gpu,acquire,draw,draw_end)):continue
-        seen.add(version);n=native[version];h=n['handler_mach']*scale;g=gpu['gpu_end_host'];p=e['presented_host'];d=pixels.get(version)
+        seen.add(version);h=n['handler_mach']*scale;g=gpu['gpu_end_host'];p=e['presented_host'];d=pixels.get(version)
         assert g>=h and p>=g,('clock ordering',h,g,p)
-        rows.append(dict(version=version,hardware=n['hardware_s'],handler=h,draw_start=draw['mach']*scale,
+        rows.append(dict(path=path, reason=reason, version=version,hardware=n['hardware_s'],handler=h,draw_start=draw['mach']*scale,
                          draw_end=draw_end['mach']*scale,acquired=acquire['mach']*scale,committed=commit['mach']*scale,
                          gpu=g,gpu_callback=gpu['mach']*scale,display=d,presented=p,
                          input_delivery_ms=(h-n['hardware_s'])*1000,P=(g-h)*1000,
@@ -76,7 +114,16 @@ def analyse(path):
     gaps=[(b[0]-a[0])*1000 for a,b in zip(presentations,presentations[1:]) if b[0]>a[0]]
     configs=[e for e in events if e.get('event')=='config' and start['mach']<=e['mach']<=end['mach']]
     recreates=[e for e in configs if e['kind']=='g5_link_recreate']
-    attached=[e for e in configs if e['kind']=='g5_acquire_start' and e['values'][3]!=0]
+    bursts=[]
+    for tick in sorted(n['handler_mach'] for n in native.values()):
+        if not bursts or (tick-bursts[-1][1])*scale >= .25:
+            bursts.append([tick,tick])
+        else:
+            bursts[-1][1]=tick
+    recreate_ticks=sorted(e['mach'] for e in recreates)
+    recreates_per_burst=[bisect_left(recreate_ticks, last+.25/scale)-bisect_left(recreate_ticks, first)
+                         for first,last in bursts]
+    attached=[e for e in configs if e['kind']=='g5_acquire_start'  and e['values'][3]!=0]
     cpu=end['cpu_user_s']+end['cpu_sys_s']
     firsts=[r['version'] for r in rows];out_of_order=sum(b<a for a,b in zip([v for t,v in presentations],[v for t,v in presentations][1:]))
     shown = sorted({v for _, v in presentations if v in native})
@@ -104,6 +151,9 @@ def analyse(path):
                 versions_without_later_presentation=unaccounted,
                 lost_edits=lost, edit_revisions=len(revisions),
                 watchdog_fallbacks=sum(e.get('kind')=='immediate_fallback' for e in events),
+                presentation_paths=dict(Counter(r['path'] for r in rows)),
+                all_native_presentation_paths=dict(all_native_paths), recreates_per_burst=recreates_per_burst,
+                presentation_path_reasons=dict(Counter(r['reason'] for r in rows)),
                 final_valid=end['valid'],last_version=max(firsts,default=0),expected=end['ticks'],out_of_order=out_of_order,
                 cpu_s=cpu,cpu_s_per_s=cpu/seconds,cpu_s_per_attempt=cpu/max(1,sum(e['event']=='attempt' and start['mach']<=e['mach']<=end['mach'] for e in events)),
                 stats=stats,D_lower_envelope_ms=deadline*1000 if deadline is not None else None,

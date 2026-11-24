@@ -11,7 +11,7 @@ static BOOL consumed;
 static IMP original;
 static NSMutableArray<NSDictionary *> *records;
 static char version_key;
-static NSMutableDictionary<NSNumber *, NSNumber *> *dragVersions;
+static NSMutableDictionary<NSNumber *, NSNumber *> *pointerVersions;
 static const uint64_t magic=0x4c31000000000000ULL;
 static BOOL enabled(void){return [NSProcessInfo.processInfo.environment[@"RUSTUI_L1_NATIVE"] isEqualToString:@"1"];}
 int g5_native_take(unsigned kind,NativeInfo *out){if(!enabled()||!current.version||consumed||current.kind!=kind)return 0;*out=current;consumed=YES;return 1;}
@@ -21,14 +21,14 @@ static void native_send(id self,SEL selector,NSEvent *event){
  const BOOL pointer=event.type==NSEventTypeMouseMoved || event.type==NSEventTypeLeftMouseDragged;
  NSNumber *postedVersion=pointer?objc_getAssociatedObject(event,&version_key):nil;
  const uint64_t pointerTag=pointer?(uint64_t)event.eventNumber:0;
- if(event.type==NSEventTypeLeftMouseDragged && !postedVersion) {
+ if(pointer && !postedVersion) {
   // The run loop may reconstruct the posted NSEvent. Its timestamp survives
   // reconstruction even when AppKit replaces eventNumber and object identity.
-  postedVersion=dragVersions[@(llround(event.timestamp*1000000.0))];
+  postedVersion=pointerVersions[@(llround(event.timestamp*1000000.0))];
  }
  if(postedVersion) {
   data=magic|postedVersion.unsignedLongLongValue;
-  [dragVersions removeObjectForKey:@(llround(event.timestamp*1000000.0))];
+  [pointerVersions removeObjectForKey:@(llround(event.timestamp*1000000.0))];
  }
  if ((pointerTag&0xffff0000ULL)==0x4c310000ULL) data=magic|(pointerTag&0xffffULL);
  BOOL measured=(data&0xffff000000000000ULL)==magic && (event.type==NSEventTypeKeyDown || pointer);
@@ -50,7 +50,8 @@ int g5_native_post(unsigned kind,uint64_t version,double x,double y){
  }
  NSView *view=window.contentView;NSPoint p=NSMakePoint(x,view.isFlipped?y:view.bounds.size.height-y);
  p=[view convertPoint:p toView:nil];
- if(kind==1){
+ const BOOL targetHover=[NSProcessInfo.processInfo.environment[@"RUSTUI_L1_TARGET_HOVER"] isEqualToString:@"1"];
+ if(kind==1 && !targetHover){
   NSPoint screen=[window convertPointToScreen:p];
   CGPoint location=CGPointMake(screen.x,CGDisplayBounds(CGMainDisplayID()).size.height-screen.y);
   CGEventRef move=CGEventCreateMouseEvent(NULL,kCGEventMouseMoved,location,kCGMouseButtonLeft);
@@ -58,6 +59,7 @@ int g5_native_post(unsigned kind,uint64_t version,double x,double y){
   CGEventSetIntegerValueField(move,kCGEventSourceUserData,(int64_t)(magic|version));
   CGEventPostToPid(getpid(),move);CFRelease(move);return 1;
  }
+ if(kind==1)window.acceptsMouseMovedEvents=YES;
  // Explicitly name the target window: CGEventPostToPid drag events may reach
  // NSApp as window 0, bypassing the view and the actual drag state.
  NSEventType type=kind==1?NSEventTypeMouseMoved:kind==2?NSEventTypeLeftMouseDragged:kind==3?NSEventTypeLeftMouseDown:NSEventTypeLeftMouseUp;
@@ -65,8 +67,8 @@ int g5_native_post(unsigned kind,uint64_t version,double x,double y){
                                windowNumber:window.windowNumber context:nil eventNumber:(NSInteger)(0x4c310000ULL|version)
                                  clickCount:1 pressure:kind==4?0:1];
  if(!event)return 0;
- if(kind==2) {
-  dragVersions[@(llround(event.timestamp*1000000.0))]=@(version);
+ if(kind==1 || kind==2) {
+  pointerVersions[@(llround(event.timestamp*1000000.0))]=@(version);
   objc_setAssociatedObject(event,&version_key,@(version),OBJC_ASSOCIATION_RETAIN_NONATOMIC);
  }
  [NSApp postEvent:event atStart:NO];
@@ -77,7 +79,7 @@ static void flush(void){
  for(NSDictionary *r in records){NSData *d=[NSJSONSerialization dataWithJSONObject:r options:NSJSONWritingSortedKeys error:nil];fprintf(stderr,"L1_NATIVE %s\n",[[[NSString alloc]initWithData:d encoding:NSUTF8StringEncoding]UTF8String]);}
 }
 __attribute__((constructor)) static void install(void){
- if(!enabled())return;records=[NSMutableArray new];dragVersions=[NSMutableDictionary new];atexit(flush);
+ if(!enabled())return;records=[NSMutableArray new];pointerVersions=[NSMutableDictionary new];atexit(flush);
  [NSNotificationCenter.defaultCenter addObserverForName:NSApplicationDidFinishLaunchingNotification object:nil queue:nil usingBlock:^(NSNotification*n){
   (void)n;Class cls=object_getClass(NSApp);SEL sel=@selector(sendEvent:);Method method=class_getInstanceMethod(cls,sel);original=method_getImplementation(method);
   if(!class_addMethod(cls,sel,(IMP)native_send,method_getTypeEncoding(method)))method_setImplementation(class_getInstanceMethod(cls,sel),(IMP)native_send);

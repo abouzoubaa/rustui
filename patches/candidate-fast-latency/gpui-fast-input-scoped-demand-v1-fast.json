@@ -1,0 +1,88 @@
+{
+  "schema_version": 1,
+  "name": "gpui-fast-input-scoped-demand-v1-fast",
+  "patch": "gpui-fast-input-scoped-demand-v1-fast.patch",
+  "patch_sha256": "56c8d7a61636b764d6c77c2bc45f6daae4a4ee6998fe76e5e5d7079890c1523c",
+  "files": {
+    "vendor/gpui-fast-0.1.14/src/fast/native_scheduler.rs": {
+      "pre_sha256": "4161d1e0e9a87991398a76c0be81b9b404aeff6092a522f7338f3440bda46bb8",
+      "post_sha256": "8737e9c8dcf7e67664b2ab11b50cf080a142f6012010cf2a4139622d750fe1d0"
+    },
+    "vendor/gpui-fast-0.1.14/src/fast/immediate_present.rs": {
+      "pre_sha256": "da9e4cd513edc56048c7e864e8ac42cb83ae9faf5204c1d2524561ad7827b4b8",
+      "post_sha256": "1e5979afc8876b20f8bceb06323fc5b7288a99876e286347fc76fb1829f9b38d"
+    },
+    "vendor/gpui-fast-0.1.14/src/window.rs": {
+      "pre_sha256": "82b68b1f65f98b1ebf34c2724076c1aac632565e024e8ad0709979a24a3232a7",
+      "post_sha256": "60acd89d35e9f2c4ae65d91b5fd43114c3b43b0b58a079a6ed5077d4414fb9b0"
+    },
+    "vendor/gpui-base-0.9.1/src/input/base/state.rs": {
+      "pre_sha256": "b1de5bd92cf6a8e25f9627ad2d9cb1f5c9b5254f4d4b0f79e63d7e1a7b83e9aa",
+      "post_sha256": "a7857c111a3bdbf3d1d3b27cb53eeef119b940d64381dc2b451fff72d01e5351"
+    },
+    "vendor/gpui-fast-0.1.14/src/gpui.rs": {
+      "pre_sha256": "b3f01692c1db0e7149ccb0a77a607f01a45e247e59a433935899bfdf574b4e44",
+      "post_sha256": "74136d7cc92754d8b8cb579dd26624e81f8e96c8ce00b6198396c67a6b73039a"
+    },
+    "vendor/gpui-fast-macos-0.1.14/src/window.rs": {
+      "pre_sha256": "16041cffb7d79b1d454fa3392b72a5ad70dcb5ac3805d93050f99ef8820ac1d7",
+      "post_sha256": "1e05f47b3e30b08b5ce27ee4066add8c7049d35a0e6f8dd1ac9d16d73c9ad9c8"
+    },
+    "vendor/gpui-fast-0.1.14/src/fast/change_present.rs": {
+      "pre_sha256": "7f96ac8dca6022d4490a676f38b42d48771de532b63a4ecc6517178adf4e1e20",
+      "post_sha256": "6e390e487bb4cdc8947b2a4829ea2ad51d2ef4952bf4680b7d85daef7f536931"
+    },
+    "crates/rustui-gpui-fast/src/fast/native_scheduler.rs": {
+      "pre_sha256": "4161d1e0e9a87991398a76c0be81b9b404aeff6092a522f7338f3440bda46bb8",
+      "post_sha256": "8737e9c8dcf7e67664b2ab11b50cf080a142f6012010cf2a4139622d750fe1d0"
+    },
+    "crates/rustui-gpui-fast/src/fast/immediate_present.rs": {
+      "pre_sha256": "da9e4cd513edc56048c7e864e8ac42cb83ae9faf5204c1d2524561ad7827b4b8",
+      "post_sha256": "1e5979afc8876b20f8bceb06323fc5b7288a99876e286347fc76fb1829f9b38d"
+    },
+    "crates/rustui-gpui-fast/src/window.rs": {
+      "pre_sha256": "82b68b1f65f98b1ebf34c2724076c1aac632565e024e8ad0709979a24a3232a7",
+      "post_sha256": "60acd89d35e9f2c4ae65d91b5fd43114c3b43b0b58a079a6ed5077d4414fb9b0"
+    },
+    "crates/rustui-gpui-fast/src/gpui.rs": {
+      "pre_sha256": "b3f01692c1db0e7149ccb0a77a607f01a45e247e59a433935899bfdf574b4e44",
+      "post_sha256": "74136d7cc92754d8b8cb579dd26624e81f8e96c8ce00b6198396c67a6b73039a"
+    },
+    "crates/rustui-gpui-fast/src/fast/change_present.rs": {
+      "pre_sha256": "7f96ac8dca6022d4490a676f38b42d48771de532b63a4ecc6517178adf4e1e20",
+      "post_sha256": "6e390e487bb4cdc8947b2a4829ea2ad51d2ef4952bf4680b7d85daef7f536931"
+    },
+    "vendor/gpui-fast-0.1.14/.cargo-checksum.json": {
+      "pre_sha256": "9e664baff13cd77e3165598dd5b90a68524e58ff63344c8c43b93cc28f2b4a52",
+      "post_sha256": "9f2e46da56cbf3732237ee03bf469d62762e0746e821f54ac1d87e1aadb70a16"
+    },
+    "crates/rustui-gpui-fast/.cargo-checksum.json": {
+      "pre_sha256": "9e664baff13cd77e3165598dd5b90a68524e58ff63344c8c43b93cc28f2b4a52",
+      "post_sha256": "9f2e46da56cbf3732237ee03bf469d62762e0746e821f54ac1d87e1aadb70a16"
+    },
+    "crates/rustui-gpui-fast-macos/src/window.rs": {
+      "pre_sha256": "16041cffb7d79b1d454fa3392b72a5ad70dcb5ac3805d93050f99ef8820ac1d7",
+      "post_sha256": "1e05f47b3e30b08b5ce27ee4066add8c7049d35a0e6f8dd1ac9d16d73c9ad9c8"
+    },
+    "vendor/gpui-fast-macos-0.1.14/.cargo-checksum.json": {
+      "pre_sha256": "b02dbc97d9076abf7bab0df5043d5a09ee42260e3defa59e1dc05bf4902be65e",
+      "post_sha256": "b22a6df5b854e0f9d3b6bc2c7caea32a16f766c685cbd77d105b1fe248299ba0"
+    },
+    "crates/rustui-gpui-fast-macos/.cargo-checksum.json": {
+      "pre_sha256": "b02dbc97d9076abf7bab0df5043d5a09ee42260e3defa59e1dc05bf4902be65e",
+      "post_sha256": "b22a6df5b854e0f9d3b6bc2c7caea32a16f766c685cbd77d105b1fe248299ba0"
+    },
+    "crates/rustui-gpui-base/src/input/base/state.rs": {
+      "pre_sha256": "b1de5bd92cf6a8e25f9627ad2d9cb1f5c9b5254f4d4b0f79e63d7e1a7b83e9aa",
+      "post_sha256": "a7857c111a3bdbf3d1d3b27cb53eeef119b940d64381dc2b451fff72d01e5351"
+    },
+    "vendor/gpui-base-0.9.1/.cargo-checksum.json": {
+      "pre_sha256": "2db01e98a3b3a098d8ee572b38f015e20a726b92e3e53a0264a46967ed0ef551",
+      "post_sha256": "0c98c4089ce181680cc8b96f066bac3547a057e3c5e66425f3b9ac8ea41b2a71"
+    },
+    "crates/rustui-gpui-base/.cargo-checksum.json": {
+      "pre_sha256": "2db01e98a3b3a098d8ee572b38f015e20a726b92e3e53a0264a46967ed0ef551",
+      "post_sha256": "0c98c4089ce181680cc8b96f066bac3547a057e3c5e66425f3b9ac8ea41b2a71"
+    }
+  }
+}

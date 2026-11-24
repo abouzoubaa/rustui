@@ -14,17 +14,20 @@ ROOT = Path(__file__).resolve().parents[1]
 
 
 def run_capture(output, *, app="lab", scene="typing", hz=10, switches="1111",
-                scheduler=1, seconds=5, trace=False):
+                scheduler=1, seconds=5, trace=False, input_scoped=False, target_hover=False):
     command = [
         sys.executable, str(ROOT / "scripts/run_g5_budget.py"),
         "--app", app, "--scene", scene, "--hz", str(hz), "--switches", switches,
         "--scheduler", str(scheduler), "--seconds", str(seconds),
+        "--input-scoped", str(int(input_scoped)),
         "--pixels", "0", "--passive", "0", "--output", str(output),
     ]
     if seconds == 5:
         command += ["--timeout", "10" if scene == "typing" else "25"]
     if trace:
         command += ["--trace-wakes"]
+    if target_hover:
+        command += ["--target-hover"]
     with output.with_suffix(".txt").open("w") as log:
         result = subprocess.run(command, cwd=ROOT, stdout=log, stderr=subprocess.STDOUT)
     print(output.name, "exit", result.returncode, flush=True)
@@ -45,6 +48,7 @@ def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("mode", choices=("reproduce", "proof", "pairs"))
     parser.add_argument("--output", required=True, type=Path)
+    parser.add_argument("--input-scoped", action="store_true", help="Run G5-F2 typing pairs and pointer sanity captures.")
     args = parser.parse_args()
     output = args.output.resolve()
     output.mkdir(parents=True, exist_ok=False)
@@ -71,7 +75,10 @@ def main():
 
     frozen = fingerprint()
     (output / "frozen.json").write_text(json.dumps(frozen, indent=2) + "\n")
-    for scene, hz in (("typing", 10), ("typing", 30), ("hover", 10), ("drag", 10)):
+    workloads = (("typing", 10), ("typing", 30))
+    if not args.input_scoped:
+        workloads += (("hover", 10), ("drag", 10))
+    for scene, hz in workloads:
         results = []
         for pair in range(1, 6):
             captures = {}
@@ -79,7 +86,7 @@ def main():
                 stem = output / f"{scene}-{hz}-{pair}-{arm}"
                 captures[arm] = run_capture(
                     stem, scene=scene, hz=hz, switches="1111" if arm == "on" else "0000",
-                    seconds=60,
+                    seconds=60, input_scoped=args.input_scoped and arm == "on",
                 )
                 assert fingerprint() == frozen, "build changed during the matrix"
                 assert_correct(captures[arm])
@@ -97,6 +104,16 @@ def main():
             table[arm]["cpu_s_per_s"] = statistics.median(pair[arm]["cpu_s_per_s"] for pair in results)
         summary = dict(changes=changes, verdict=p_verdict(changes), arms=table)
         (output / f"{scene}-{hz}.json").write_text(json.dumps(summary, indent=2) + "\n")
+    if args.input_scoped:
+        for scene in ("hover", "drag"):
+            for arm in (0, 1):
+                capture = run_capture(
+                    output / f"{scene}-sanity-f{arm}", scene=scene, seconds=60,
+                    input_scoped=bool(arm), target_hover=scene == "hover",
+                )
+                assert fingerprint() == frozen, "build changed during the matrix"
+                assert_correct(capture)
+
 
 
 if __name__ == "__main__":

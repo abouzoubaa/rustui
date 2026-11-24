@@ -20,25 +20,44 @@ pub fn enabled() -> bool {
         && *ON.get_or_init(|| std::env::var("GPUI_FAST_NATIVE_SCHEDULER").as_deref() == Ok("1"))
 }
 
+pub(crate) fn input_scoped_enabled() -> bool {
+    static ON: OnceLock<bool> = OnceLock::new();
+    enabled()
+        && *ON.get_or_init(|| std::env::var("GPUI_FAST_INPUT_SCOPED_DEMAND").as_deref() == Ok("1"))
+}
+
+pub(crate) fn trace_point(stage: &'static str, detail: u8) {
+    if tracing() {
+        eprintln!(
+            "G5_F2_TRACE {{\"mach\":{},\"stage\":\"{stage}\",\"detail\":{detail}}}",
+            crate::fast_latency_tick()
+        );
+    }
+}
+
 pub fn tracing() -> bool {
     static ON: OnceLock<bool> = OnceLock::new();
     *ON.get_or_init(|| std::env::var("GPUI_FAST_TRACE_WAKES").as_deref() == Ok("1"))
 }
 
 /// An AppKit call stack is not a safe place to build or present a frame.
-pub struct CallbackScope(Option<u8>);
+pub struct CallbackScope(Option<u8>, u8);
 pub fn fast_native_callback(kind: u8) -> CallbackScope {
+    trace_point("callback_enter", kind);
     CallbackScope(
         (enabled() || tracing()).then(|| CALLBACK.with(|slot| slot.replace(slot.get() | kind))),
+        kind,
     )
 }
 impl Drop for CallbackScope {
     fn drop(&mut self) {
+        trace_point("callback_exit", self.1);
         if let Some(previous) = self.0 {
             CALLBACK.with(|slot| slot.set(previous));
             if previous == 0 {
                 let pending = POST_EVENT.with(|pending| std::mem::take(&mut *pending.borrow_mut()));
                 for wake in pending.into_values() {
+                    trace_point("post_event_release", 1);
                     wake();
                 }
             }
@@ -130,8 +149,8 @@ mod tests {
     fn nested_text_callbacks_drain_one_wake_after_the_outer_event() {
         let window = WindowId::default();
         let marks = Rc::new(Cell::new(0));
-        let outer = CallbackScope(Some(CALLBACK.with(|slot| slot.replace(1))));
-        let nested = CallbackScope(Some(CALLBACK.with(|slot| slot.replace(5))));
+        let outer = CallbackScope(Some(CALLBACK.with(|slot| slot.replace(1))), 1);
+        let nested = CallbackScope(Some(CALLBACK.with(|slot| slot.replace(5))), 4);
         let first = marks.clone();
         post_event(window, move || first.set(first.get() + 1));
         post_event(window, || panic!("duplicate event wake"));

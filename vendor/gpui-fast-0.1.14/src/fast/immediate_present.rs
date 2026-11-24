@@ -139,7 +139,43 @@ pub fn fast_immediate_hold_active(id: WindowId) -> bool {
                 .is_some_and(|e| e.activity.remaining(Instant::now()).is_some())
         })
 }
+fn input_scoped_owns_frame(id: WindowId) -> bool {
+    native::input_scoped_enabled()
+        && !crate::fast_frame_continuous(id)
+        && !crate::fast_frame_uses_view(id)
+        && !cooling_down(id)
+        && (native::in_callback() || fast_immediate_hold_active(id))
+}
+
+pub(crate) fn route_native_frame_callback(id: WindowId, demand: bool) -> bool {
+    if !input_scoped_owns_frame(id) {
+        return false;
+    }
+    native::trace_point("link_callback_redirect", u8::from(demand));
+    if demand && !crate::fast::change_present::timer_pending(id) {
+        queue(id, 6);
+    }
+    true
+}
+
+/// Defer AppKit's layer display callback while the input path owns the frame.
+pub fn fast_defer_native_layer_frame(id: WindowId) -> bool {
+    route_native_frame_callback(id, true)
+}
+
 pub fn fast_immediate_demand(id: WindowId) -> bool {
+    if input_scoped_owns_frame(id) {
+        // The outer AppKit event owns all its demand. During its hold, the
+        // existing coalescing timer supplies ordinary ticks to this same path.
+        let cause = native::cause();
+        native::trace_point("input_scoped_demand", cause);
+        if (!fast_immediate_active() && cause != 3 || native::in_callback())
+            && !crate::fast::change_present::timer_pending(id)
+        {
+            queue(id, if native::in_callback() { 1 } else { 6 });
+        }
+        return true;
+    }
     if native::enabled() {
         // Only dirty transitions originate demand. Calls that merely restore a
         // source, run a frame callback or request a normal tick must not loop.
@@ -157,7 +193,8 @@ pub fn fast_immediate_demand(id: WindowId) -> bool {
         if matches!(cause, 2..=4) || fast_immediate_active() || cooling_down(id) {
             return false;
         }
-        if !input && (cause != 5 || !crate::fast_any_change_enabled()) {
+        let outside_change = cause == 5 || (cause == 9 && !native::input_scoped_enabled());
+        if !input && (!outside_change || !crate::fast_any_change_enabled()) {
             // A pending native edit owns the next submission. A generic
             // schedule call must not attach a competing drawable source.
             return WINDOWS.with(|windows| {
@@ -273,9 +310,14 @@ pub(crate) fn before_input(window: &Window, cx: &mut App) {
         return;
     }
     let start = WINDOWS.with(|w| {
-        w.borrow_mut()
-            .get_mut(&id)
-            .is_some_and(|e| e.activity.note_input(Instant::now(), hold_duration()))
+        w.borrow_mut().get_mut(&id).is_some_and(|e| {
+            let now = Instant::now();
+            if native::input_scoped_enabled() && native::in_callback() {
+                e.activity.note(now, hold_duration())
+            } else {
+                e.activity.note_input(now, hold_duration())
+            }
+        })
     });
     if !start {
         return;
@@ -345,8 +387,17 @@ pub(crate) fn try_draw(window: &mut Window, cx: &mut App) {
         return;
     }
     let _frame_effect = native::enabled().then(|| native::fast_wake_cause(3));
+    let hold_tick = native::input_scoped_enabled()
+        && fast_immediate_hold_active(id)
+        && !window.next_frame_callbacks.borrow().is_empty();
     if native::enabled() {
-        if cooling_down(id) || !window.invalidator.is_dirty() {
+        let dirty = window.invalidator.is_dirty();
+        let ready_scene = native::input_scoped_enabled() && window.needs_present.get();
+        native::trace_point("wake_dirty", u8::from(dirty));
+        if ready_scene {
+            native::trace_point("wake_prebuilt", 1);
+        }
+        if cooling_down(id) || (!dirty && !hold_tick && !ready_scene) {
             window.platform_window.resume_frame_source_after_drain();
             return;
         }
@@ -374,14 +425,19 @@ pub(crate) fn try_draw(window: &mut Window, cx: &mut App) {
     if crate::window::draw_in_progress() {
         return;
     }
-    let callbacks = !native::enabled()
-        && (fast_immediate_hold_active(window.handle.window_id())
-            || crate::fast_any_change_enabled())
-        && !window.next_frame_callbacks.borrow().is_empty();
-    if !window.invalidator.is_dirty() && !callbacks {
+    let callbacks = hold_tick
+        || !native::enabled()
+            && (fast_immediate_hold_active(window.handle.window_id())
+                || crate::fast_any_change_enabled())
+            && !window.next_frame_callbacks.borrow().is_empty();
+    let ready_scene = native::input_scoped_enabled() && window.needs_present.get();
+    if !window.invalidator.is_dirty() && !callbacks && !ready_scene {
         return;
     }
-    if !crate::fast::change_present::before_build(window, cx) {
+    if (!ready_scene || window.invalidator.is_dirty() || callbacks)
+        && !crate::fast::change_present::before_build(window, cx)
+    {
+        native::trace_point("admission_refresh_deferred", 0);
         return;
     }
     let admission = WINDOWS.with(|w| {
@@ -393,6 +449,7 @@ pub(crate) fn try_draw(window: &mut Window, cx: &mut App) {
         g.block();
     }
     if !window.platform_window.can_present_immediately() {
+        native::trace_point("admission_drawable_deferred", 0);
         return;
     }
     if let Some(g) = &admission {
@@ -406,14 +463,21 @@ pub(crate) fn try_draw(window: &mut Window, cx: &mut App) {
             callback(window, cx);
         }
     }
-    if crate::fast_coalesce_enabled() && !window.invalidator.is_dirty() {
+    if crate::fast_coalesce_enabled() && !window.invalidator.is_dirty() && !ready_scene {
         return;
     }
+    native::trace_point("admission_immediate", 1);
     let _scope = Scope::new();
     let _effects = native::fast_wake_cause(3);
-    let arena = window.draw(cx);
-    window.present();
-    arena.clear(cx);
+    // Native key dispatch may have rebuilt the tree for keyboard routing.
+    // A clean scene can still be awaiting its first presentation.
+    if ready_scene && !window.invalidator.is_dirty() {
+        window.present();
+    } else {
+        let arena = window.draw(cx);
+        window.present();
+        arena.clear(cx);
+    }
     if crate::fast::change_present::arm(window, cx) {
         return;
     }
@@ -430,10 +494,16 @@ pub(crate) fn try_draw(window: &mut Window, cx: &mut App) {
         if let Some(g) = &admission {
             g.available();
         }
-        fast_immediate_suspend(window.handle.window_id());
+        if !native::input_scoped_enabled() {
+            fast_immediate_suspend(window.handle.window_id());
+        }
         window.platform_window.schedule_frame();
     } else if window.invalidator.is_dirty() || !window.next_frame_callbacks.borrow().is_empty() {
-        window.platform_window.schedule_frame();
+        if input_scoped_owns_frame(id) {
+            queue(id, 6);
+        } else {
+            window.platform_window.schedule_frame();
+        }
     }
 }
 pub(crate) fn after_input(window: &Window, cx: &mut App) {

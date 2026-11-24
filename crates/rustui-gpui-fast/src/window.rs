@@ -174,6 +174,10 @@ impl WindowInvalidator {
             #[cfg(feature = "profiler")]
             let dirty_at = Self::record_frame_dirty(&mut inner);
             let became_dirty = !inner.dirty;
+            crate::fast::native_scheduler::trace_point(
+                "notify",
+                crate::fast::native_scheduler::cause(),
+            );
             crate::fast::latency_breakdown::requested(inner.window_id);
             inner.dirty = true;
             let waker = became_dirty.then(|| inner.platform_waker.clone()).flatten();
@@ -1978,6 +1982,16 @@ impl Window {
                 let force_render =
                     mem::take(&mut deferred_force_render) || request_frame_options.force_render;
 
+                if !force_render
+                    && crate::fast::immediate_present::route_native_frame_callback(
+                        handle.window_id(),
+                        invalidator.is_dirty()
+                            || needs_present.get()
+                            || !next_frame_callbacks.borrow().is_empty(),
+                    )
+                {
+                    return;
+                }
                 let power_state = handle
                     .update(&mut cx, |_, _, cx| (cx.thermal_state(), cx.power_mode()))
                     .with_context(|| {
@@ -2668,6 +2682,10 @@ impl Window {
 
     /// Mark the window as dirty, scheduling it to be redrawn on the next frame.
     pub fn refresh(&mut self) {
+        crate::fast::native_scheduler::trace_point(
+            "refresh",
+            crate::fast::native_scheduler::cause(),
+        );
         if self.invalidator.not_drawing() {
             self.refreshing = true;
             self.invalidator.set_dirty(true);
@@ -6603,6 +6621,10 @@ impl Window {
 
     fn dispatch_key_event(&mut self, event: &dyn Any, cx: &mut App) {
         if self.invalidator.is_dirty() {
+            crate::fast::native_scheduler::trace_point(
+                "keyboard_rebuild",
+                u8::from(event.is::<crate::KeyUpEvent>()),
+            );
             self.draw(cx).clear(cx);
         }
 

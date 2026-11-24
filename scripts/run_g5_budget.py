@@ -14,6 +14,8 @@ def main():
     p.add_argument('--timeout',type=float)
     p.add_argument('--scheduler',choices=['0','1'],default='0')
     p.add_argument('--trace-wakes',action='store_true')
+    p.add_argument('--input-scoped',choices=['0','1'],default='0')
+    p.add_argument('--target-hover',action='store_true',help='Use an NSEvent addressed to the benchmark window for hover.')
     p.add_argument('--switches',help='Four bits: immediate, draw-first, coalescing, any-change')
     p.add_argument('--passive',choices=['0','1'],required=True)
     p.add_argument('--pixels',choices=['0','1'],required=True)
@@ -36,7 +38,7 @@ def main():
         RUSTUI_G5_PIXEL_CAPTURE=a.pixels,RUSTUI_G5_REFRESH=a.passive,RUSTUI_G5_SCENE=a.scene,RUSTUI_G5_INPUT_HZ=a.hz,RUSTUI_G0_TYPING_HZ=a.hz,
         RUSTUI_HL_FASTPATH='1' if a.app=='lab' and a.scene=='typing' else '0',GPUI_FAST_IMMEDIATE_PRESENT=arm[0],
         RUSTUI_DRAW_FIRST=arm[1],GPUI_FAST_IMMEDIATE_COALESCE=arm[2],GPUI_FAST_IMMEDIATE_ANY_CHANGE=arm[3],
-        GPUI_FAST_NATIVE_SCHEDULER=a.scheduler,GPUI_FAST_TRACE_WAKES=str(int(a.trace_wakes)),
+        GPUI_FAST_NATIVE_SCHEDULER=a.scheduler,GPUI_FAST_INPUT_SCOPED_DEMAND=a.input_scoped,RUSTUI_L1_TARGET_HOVER=str(int(a.target_hover)),GPUI_FAST_TRACE_WAKES=str(int(a.trace_wakes)),
         GPUI_FAST_IMMEDIATE_HOLD_MS='250',GPUI_FAST_VIEW_DISPLAY_LINK='0',GPUI_FAST_FORCE_LEGACY_LINK='0',GPUI_FAST_FRAME_AHEAD='0',
         GPUI_FAST_IMMEDIATE_TRANSACTION='0',DYLD_INSERT_LIBRARIES=':'.join(str(f.resolve()) for f in libs))
     assert not a.sparse or (a.app=='bare' and a.seconds==120 and a.scene=='typing')
