@@ -740,6 +740,7 @@ impl MetalRenderer {
         } else {
             None
         };
+        let acquire_phase = gpui::fast_latency_render_phase("acquire");
         let drawable = if gpui::fast_immediate_active() {
             let Some(drawable) = crate::fast::immediate_present::next_drawable(
                 &layer,
@@ -777,6 +778,7 @@ impl MetalRenderer {
                 }
             }
         };
+        drop(acquire_phase);
         let Some(mut order_hold) = self.order.hold(&drawable, source) else {
             gpui::fast_order_defer();
             return;
@@ -886,6 +888,7 @@ impl MetalRenderer {
             &self.instance_buffer_pool,
             self.is_unified_memory,
         )?;
+        let _phase = gpui::fast_latency_render_phase("scene_instances");
         let instance_bindings = write_instances(scene, &mut writer).with_context(|| {
             format!(
                 "writing instance data: {} paths, {} shadows, {} quads, {} underlines, {} mono, {} poly, {} surfaces",
@@ -909,6 +912,7 @@ impl MetalRenderer {
         mut writer: InstanceBufferWriter,
         instance_bindings: InstanceBindings,
     ) -> Result<Retained<ProtocolObject<dyn MTLCommandBuffer>>> {
+        let _phase = gpui::fast_latency_render_phase("encode");
         let mut surface_textures = Vec::new();
         let command_buffer = self.draw_primitives_to_texture(
             scene,

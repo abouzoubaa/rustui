@@ -61,6 +61,7 @@ extern "C-unwind" fn native_send_event(this: &AnyObject, _: Sel, event: *mut Any
     unsafe {
         let _: () = msg_send![super(this, class!(NSApplication)), sendEvent: event];
     }
+    gpui::fast_latency_native_handler_end();
 }
 
 const MAC_PLATFORM_IVAR: &CStr = c"platform";
