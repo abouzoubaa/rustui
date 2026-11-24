@@ -4015,7 +4015,11 @@ impl Window {
         self.text_system().finish_frame();
         crate::fast::global_id::GlobalIdCache::finish_frame(&mut self.global_ids);
         crate::fast::retained::finish_retained_frame(self);
-        self.next_frame.finish(&mut self.rendered_frame);
+        {
+            let _phase =
+                crate::fast::latency_breakdown::draw_phase(self.handle.window_id(), "scene_sort");
+            self.next_frame.finish(&mut self.rendered_frame);
+        }
 
         self.invalidator.set_phase(DrawPhase::Focus);
         let previous_focus_path = self.rendered_frame.focus_path();
@@ -4221,10 +4225,15 @@ impl Window {
         #[cfg(feature = "profiler")]
         let request_layout_start = Instant::now();
         let f0_build = f0_phase_start();
+        let layout_phase =
+            crate::fast::latency_breakdown::draw_phase(self.handle.window_id(), "layout");
         let mut root_element = self.root.as_ref().unwrap().clone().into_any_element();
         let root_layout_id = root_element.request_layout(self, cx);
+        drop(layout_phase);
         crate::fast::stats::FramePhaseTimes::end_build(&mut self.fast_layout.phase_times);
         f0_frame_record(self.handle.window_id(), "build", f0_build);
+        let prepaint_phase =
+            crate::fast::latency_breakdown::draw_phase(self.handle.window_id(), "prepaint");
         let f0_prepaint = f0_phase_start();
         #[cfg(feature = "profiler")]
         let prepaint_start = Instant::now();
@@ -4267,7 +4276,10 @@ impl Window {
         crate::fast::stats::FramePhaseTimes::end_prepaint(&mut self.fast_layout.phase_times);
         crate::fast::composition::finish_input(self);
         self.mouse_hit_test = self.next_frame.hit_test(self.mouse_position);
+        drop(prepaint_phase);
         f0_frame_record(self.handle.window_id(), "prepaint", f0_prepaint);
+        let _paint_phase =
+            crate::fast::latency_breakdown::draw_phase(self.handle.window_id(), "paint");
         let f0_paint = f0_phase_start();
 
         // Now actually paint the elements.
@@ -5821,6 +5833,8 @@ impl Window {
         available_space: Size<AvailableSpace>,
         cx: &mut App,
     ) {
+        let _layout_phase =
+            crate::fast::latency_breakdown::draw_phase(self.handle.window_id(), "layout");
         let f0_layout = f0_phase_start();
         self.invalidator.debug_assert_prepaint();
 

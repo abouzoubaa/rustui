@@ -382,7 +382,8 @@ pub use fast::latency_breakdown::{
     FastLatencyCallback, FastLatencyCommit, FastLatencyDrawable, FastLatencyFrame,
     fast_latency_acquired, fast_latency_callback, fast_latency_command, fast_latency_committed,
     fast_latency_completed, fast_latency_config, fast_latency_displayed, fast_latency_enabled,
-    fast_latency_frame, fast_latency_released, fast_latency_tick,
+    fast_latency_frame, fast_latency_gpu_interval, fast_latency_native_handler_end,
+    fast_latency_released, fast_latency_render_phase, fast_latency_tick,
 };
 
 #[doc(hidden)]

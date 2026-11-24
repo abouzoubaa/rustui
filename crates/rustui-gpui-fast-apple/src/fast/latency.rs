@@ -87,7 +87,8 @@ pub(crate) fn observe(
     let token = gpui::fast_latency_command(frame, key)?;
     let block = RcBlock::new(move |b: NonNull<ProtocolObject<dyn MTLCommandBuffer>>| {
         let end: f64 = unsafe { objc2::msg_send![b.as_ref(), GPUEndTime] };
-        gpui::fast_latency_completed(token, end);
+        let start: f64 = unsafe { objc2::msg_send![b.as_ref(), GPUStartTime] };
+        gpui::fast_latency_gpu_interval(token, start, end);
     });
     unsafe {
         command.addCompletedHandler(RcBlock::as_ptr(&block));

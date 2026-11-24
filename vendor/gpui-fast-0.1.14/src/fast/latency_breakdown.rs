@@ -39,9 +39,110 @@ enum Rec {
     Acquire(FastLatencyDrawable, usize, u64),
     Release(FastLatencyDrawable, &'static str, u64),
     Present(FastLatencyDrawable, u64, f64, f64),
-    Commit(FastLatencyCommit, &'static str, u64, f64),
+    Commit(FastLatencyCommit, &'static str, u64, f64, f64),
     Config(WindowId, &'static str, [f64; 4], u64),
 }
+// A bounded, statically allocated buffer keeps timing markers allocation-free.
+#[derive(Clone, Copy)]
+struct PhaseSpan {
+    window: Option<WindowId>,
+    frame: u64,
+    attempt: bool,
+    kind: &'static str,
+    start: u64,
+    end: u64,
+}
+
+const PHASE_CAPACITY: usize = 131_072;
+struct PhaseBuffer {
+    spans: [Option<PhaseSpan>; PHASE_CAPACITY],
+    len: usize,
+    dropped: usize,
+}
+static PHASES: Mutex<PhaseBuffer> = Mutex::new(PhaseBuffer {
+    spans: [None; PHASE_CAPACITY],
+    len: 0,
+    dropped: 0,
+});
+
+fn phases_enabled() -> bool {
+    static ON: OnceLock<bool> = OnceLock::new();
+    fast_latency_enabled()
+        && *ON.get_or_init(|| {
+            std::env::var_os("RUSTUI_G5_P_BREAKDOWN").as_deref() == Some("1".as_ref())
+        })
+}
+
+fn push_phase(span: PhaseSpan) {
+    if let Ok(mut buffer) = PHASES.lock() {
+        let index = buffer.len;
+        if index < PHASE_CAPACITY {
+            buffer.spans[index] = Some(span);
+            buffer.len += 1;
+        } else {
+            buffer.dropped += 1;
+        }
+    }
+}
+
+#[must_use]
+pub struct LatencyPhase(Option<PhaseSpan>);
+impl Drop for LatencyPhase {
+    fn drop(&mut self) {
+        if let Some(mut span) = self.0 {
+            span.end = fast_latency_tick();
+            push_phase(span);
+        }
+    }
+}
+
+pub(crate) fn draw_phase(window: WindowId, kind: &'static str) -> LatencyPhase {
+    if !phases_enabled() {
+        return LatencyPhase(None);
+    }
+    let start = fast_latency_tick();
+    let frame = RECORDS
+        .lock()
+        .ok()
+        .and_then(|guard| guard.as_ref()?.windows.get(&window).map(|win| win.draw));
+    LatencyPhase(frame.map(|frame| PhaseSpan {
+        window: Some(window),
+        frame,
+        attempt: false,
+        kind,
+        start,
+        end: 0,
+    }))
+}
+
+pub fn fast_latency_render_phase(kind: &'static str) -> LatencyPhase {
+    if !phases_enabled() {
+        return LatencyPhase(None);
+    }
+    LatencyPhase(fast_latency_frame().map(|frame| PhaseSpan {
+        window: Some(frame.window),
+        frame: frame.attempt,
+        attempt: true,
+        kind,
+        start: fast_latency_tick(),
+        end: 0,
+    }))
+}
+
+pub fn fast_latency_native_handler_end() {
+    if phases_enabled() {
+        let tick = fast_latency_tick();
+        push_phase(PhaseSpan {
+            window: None,
+            frame: 0,
+            attempt: false,
+            kind: "native_handler_end",
+            start: tick,
+            end: tick,
+        });
+    }
+}
+
 #[derive(Default)]
 struct Recorder {
     windows: HashMap<WindowId, Win>,
@@ -265,14 +366,23 @@ pub fn fast_latency_command(frame: FastLatencyFrame, key: u64) -> Option<FastLat
 pub fn fast_latency_committed(token: Option<FastLatencyCommit>) {
     if let Some(t) = token {
         let tick = fast_latency_tick();
-        record(|r| r.records.push(Rec::Commit(t, "committed", tick, 0.)))
+        record(|r| r.records.push(Rec::Commit(t, "committed", tick, 0., 0.)))
     }
 }
 pub fn fast_latency_completed(token: FastLatencyCommit, gpu_end: f64) {
+    fast_latency_gpu_interval(token, 0., gpu_end);
+}
+
+pub fn fast_latency_gpu_interval(token: FastLatencyCommit, gpu_start: f64, gpu_end: f64) {
     let tick = fast_latency_tick();
     record(|r| {
-        r.records
-            .push(Rec::Commit(token, "gpu_completed", tick, gpu_end))
+        r.records.push(Rec::Commit(
+            token,
+            "gpu_completed",
+            tick,
+            gpu_start,
+            gpu_end,
+        ))
     })
 }
 pub fn fast_latency_config(window: WindowId, kind: &'static str, values: [f64; 4]) {
@@ -311,8 +421,8 @@ fn flush() {
             Rec::Present(t, tick, p, h) => {
                 serde_json::json!({"event":"displayed","window":format!("{:?}",t.window),"drawable":t.id,"callback_mach":tick,"presented_host":p,"callback_host":h})
             }
-            Rec::Commit(t, kind, tick, end) => {
-                serde_json::json!({"event":kind,"window":format!("{:?}",t.frame.window),"draw":t.frame.draw,"attempt":t.frame.attempt,"drawable":t.drawable,"mach":tick,"gpu_end_host":end})
+            Rec::Commit(t, kind, tick, start, end) => {
+                serde_json::json!({"event":kind,"window":format!("{:?}",t.frame.window),"draw":t.frame.draw,"attempt":t.frame.attempt,"drawable":t.drawable,"mach":tick,"gpu_start_host":start,"gpu_end_host":end})
             }
             Rec::Config(w, kind, values, tick) => {
                 serde_json::json!({"event":"config","window":format!("{w:?}"),"kind":kind,"values":values,"mach":tick})
@@ -320,6 +430,28 @@ fn flush() {
         };
         writeln!(&mut out, "RUSTUI_PX4_LOG {row}").ok();
     }
+    flush_phases(&mut out);
     r.records.clear();
     let _ = std::io::stderr().lock().write_all(&out);
+}
+
+fn flush_phases(out: &mut Vec<u8>) {
+    let Ok(phases) = PHASES.lock() else { return };
+    if !phases_enabled() {
+        return;
+    }
+    for span in phases.spans[..phases.len].iter().flatten() {
+        let window = span.window.map(|id| format!("{id:?}"));
+        let row = serde_json::json!({
+            "event":"phase_span", "window":window, "frame":span.frame,
+            "attempt":span.attempt, "kind":span.kind, "start":span.start, "end":span.end
+        });
+        writeln!(out, "RUSTUI_PX4_LOG {row}").ok();
+    }
+    let dropped = phases.dropped;
+    writeln!(
+        out,
+        "RUSTUI_PX4_LOG {{\"event\":\"phase_dropped\",\"count\":{dropped}}}"
+    )
+    .ok();
 }

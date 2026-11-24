@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+- Add opt-in native typing phase diagnostics from AppKit handler entry through Metal GPU completion.
+
 - Add an opt-in Metal path that prepares tile and instance data before drawable acquisition.
 
 - Add local native-input latency controls for launch mode and passive display-link measurements.
