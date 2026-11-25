@@ -8,6 +8,7 @@
 #import <sys/socket.h>
 #import <sys/un.h>
 #import <unistd.h>
+#import "native_cpu.h"
 typedef struct { uint64_t version; double hardware; uint64_t handler; uint64_t kind; int64_t window; uint64_t cg_timestamp; } NativeInfo;
 static NativeInfo current;
 static BOOL consumed;
@@ -54,8 +55,13 @@ static void native_send(id self,SEL selector,NSEvent *event){
  BOOL measured=(data&0xffff000000000000ULL)==magic && (event.type==NSEventTypeKeyDown || pointer);
  NativeInfo previous=current;BOOL previous_consumed=consumed;
  if(measured){current=(NativeInfo){data&0xffffffffULL,event.timestamp,mach_absolute_time(),event.type==NSEventTypeKeyDown?0:1,event.windowNumber,cg?CGEventGetTimestamp(cg):0};consumed=NO;}
+ BOOL timing_key = measured && current.kind == 0 && cpu_probe_enabled;
+ uint64_t cpu_at_entry = timing_key ? cpu_handler_begin(current.version) : 0;
  ((void(*)(id,SEL,NSEvent *))original)(self,selector,event);
- if(measured){[records addObject:@{@"event":@"native",@"version":@(current.version),@"hardware_s":@(current.hardware),@"handler_mach":@(current.handler),@"handler_end_mach":@(mach_absolute_time()),@"cg_timestamp_ns":@(current.cg_timestamp),@"window":@(current.window),@"kind":@(current.kind),@"consumed":@(consumed)}];current=previous;consumed=previous_consumed;}
+ uint64_t handler_end = measured ? mach_absolute_time() : 0;
+ uint64_t cpu_delta = timing_key ? cpu_handler_end(cpu_at_entry) : 0;
+ if (timing_key) cpu_record_handler(current.version, cpu_delta);
+ if(measured){[records addObject:@{@"event":@"native",@"version":@(current.version),@"hardware_s":@(current.hardware),@"handler_mach":@(current.handler),@"handler_end_mach":@(handler_end),@"cg_timestamp_ns":@(current.cg_timestamp),@"window":@(current.window),@"kind":@(current.kind),@"consumed":@(consumed)}];current=previous;consumed=previous_consumed;}
 }
 int g5_native_post(unsigned kind,uint64_t version,double x,double y){
  if(!enabled())return 0;
@@ -105,6 +111,7 @@ static void flush(void){
 }
 __attribute__((constructor)) static void install(void){
  if(!enabled())return;records=[NSMutableArray new];pointerVersions=[NSMutableDictionary new];atexit(flush);
+ cpu_startup();
  const char *keyPath=getenv("RUSTUI_L1_KEY_SOCKET");
  if(keyPath) {
   struct sockaddr_un address={.sun_family=AF_UNIX};

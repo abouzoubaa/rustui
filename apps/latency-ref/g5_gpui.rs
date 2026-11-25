@@ -195,12 +195,22 @@ fn main() {
     let waiting=Instant::now();
     loop {let state=unsafe{g5_pixels_state()};if state==1{break;}assert!(state>=0 && waiting.elapsed()<Duration::from_secs(10),"ScreenCaptureKit startup failed");cx.background_executor().timer(Duration::from_millis(10)).await;}
    }
+   if let Some(unfocused)=native_input::cpu_idle_mode() {
+    native_input::cpu_prepare_idle(unfocused);
+    cx.background_executor().timer(Duration::from_secs(warmup)).await;
+    native_input::cpu_boundary(0);
+    cx.background_executor().timer(Duration::from_secs(seconds)).await;
+    native_input::cpu_boundary(1);
+    cx.update(|cx|cx.quit());
+    return;
+   }
    cx.background_executor().timer(Duration::from_secs(warmup)).await;
    unsafe{g5_refresh_start();}
    typed.update(cx,|input,_,cx|{input.measuring=true;cx.notify();}).unwrap();
    if scene=="drag" {handle.update(cx,|_,window,app|{window.dispatch_event(gpui::PlatformInput::MouseDown(gpui::MouseDownEvent{button:gpui::MouseButton::Left,position:gpui::point(gpui::px(100.),gpui::px(150.)),click_count:1,..Default::default()}),app);}).unwrap();}
    let cpu_start=cpu::Snapshot::take().unwrap();let start=Instant::now();
    eprintln!("RUSTUI_G0_LOG {{\"event\":\"start\",\"scene\":\"bare\",\"epoch_ms\":{},\"mach\":{},\"duration_s\":{seconds},\"input_hz\":{reported_hz},\"fullscreen\":{fullscreen}}}",epoch(),gpui::fast_latency_tick());
+   native_input::cpu_boundary(0);
    let mut version=0u64;let mut valid=true;
    if native_input::physical() {
     native_input::physical_count(1);
@@ -229,6 +239,7 @@ fn main() {
     if let Some(wait)=deadline.checked_sub(start.elapsed()){cx.background_executor().timer(wait).await;}
    }
    }
+   native_input::cpu_boundary(1);
    let cpu_end=cpu::Snapshot::take().unwrap();let end=epoch();let end_mach=gpui::fast_latency_tick();let (user,sys)=cpu_start.elapsed(cpu_end);
    if scene=="drag" {handle.update(cx,|_,window,app|{window.dispatch_event(gpui::PlatformInput::MouseUp(gpui::MouseUpEvent{button:gpui::MouseButton::Left,position:gpui::point(gpui::px(100.),gpui::px(150.)),click_count:1,..Default::default()}),app);}).unwrap();}
    cx.background_executor().timer(Duration::from_millis(500)).await;
