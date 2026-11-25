@@ -10,6 +10,8 @@ guard env["RUSTUI_G5_REFERENCE"] == "1" else { fatalError("Set RUSTUI_G5_REFEREN
 guard env["RUSTUI_L1_CAPTURE_DIR"] != nil || CGPreflightScreenCaptureAccess() else { fatalError("Screen recording access is required; no callback proxy is substituted") }
 let native = env["RUSTUI_L1_NATIVE"] == "1"
 let physical = env["RUSTUI_L1_PHYSICAL"] == "1"
+let documentURL = env["RUSTUI_G5_L7_DOCUMENT"].map { URL(fileURLWithPath: $0) }
+let document = try documentURL.map { try String(contentsOf: $0, encoding: .utf8) } ?? ""
 let nativePost = dlsym(UnsafeMutableRawPointer(bitPattern: -2), "g5_native_post")
 let nativeClaim = dlsym(UnsafeMutableRawPointer(bitPattern: -2), "g5_native_claim_key")
 let physicalCounter = dlsym(UnsafeMutableRawPointer(bitPattern: -2), "g5_native_physical")
@@ -75,8 +77,46 @@ final class Driver:NSObject,NSApplicationDelegate {
   window.title="G5 AppKit observed-display control"
   let scroll=NSScrollView(frame:NSRect(x:0,y:0,width:1200,height:800));text=Text(frame:scroll.bounds)
   text.isRichText=false;text.font=NSFont.monospacedSystemFont(ofSize:16,weight:.regular)
-  text.wantsLayer=true;text.marker.frame=NSRect(x:1000,y:10,width:104,height:32);text.marker.magnificationFilter = .nearest;text.layer!.addSublayer(text.marker)
-  scroll.documentView=text;window.contentView=scroll;window.makeKeyAndOrderFront(nil);window.makeFirstResponder(text);NSApp.activate(ignoringOtherApps:true)
+  text.wantsLayer=true;text.marker.frame=NSRect(x:1000,y:10,width:104,height:32);text.marker.magnificationFilter = .nearest
+  if documentURL != nil {
+   let size = Double(env["RUSTUI_G5_L7_FONT_SIZE"] ?? "") ?? 13
+   if let family = env["RUSTUI_G5_L7_FONT"], let font = NSFont(name: family, size: size) {
+    text.font = font
+   } else {
+    text.font = NSFont.monospacedSystemFont(ofSize: size, weight: .regular)
+   }
+   let viewport = NSView(frame: scroll.bounds)
+   scroll.frame = NSRect(x:32,y:68,width:1136,height:700)
+   scroll.hasVerticalScroller = true
+   text.frame = NSRect(origin:.zero,size:scroll.contentSize)
+   text.isVerticallyResizable = true
+   text.autoresizingMask = [.width]
+   text.textContainer?.widthTracksTextView = true
+   text.textContainer?.containerSize = NSSize(width:scroll.contentSize.width, height:.greatestFiniteMagnitude)
+   text.textContainerInset = .zero
+   text.string = document
+   // Match the Lab editor’s 1.5× line height in the comparative viewport.
+   let paragraph = NSMutableParagraphStyle()
+   paragraph.minimumLineHeight = text.font!.pointSize * 1.5
+   paragraph.maximumLineHeight = paragraph.minimumLineHeight
+   let attrs: [NSAttributedString.Key:Any] = [.font:text.font!, .paragraphStyle:paragraph]
+   text.textStorage?.setAttributes(attrs, range:NSRange(location:0,length:(document as NSString).length))
+   text.typingAttributes = attrs
+   text.setSelectedRange(NSRange(location:2,length:0))
+   scroll.documentView = text
+   viewport.addSubview(scroll)
+   let markerView = NSView(frame: NSRect(x:1000,y:758,width:104,height:32))
+   markerView.wantsLayer = true
+   text.marker.frame = markerView.bounds
+   markerView.layer!.addSublayer(text.marker)
+   viewport.addSubview(markerView)
+   window.contentView = viewport
+  } else {
+   text.layer!.addSublayer(text.marker)
+   scroll.documentView = text
+   window.contentView = scroll
+  }
+  window.makeKeyAndOrderFront(nil);window.makeFirstResponder(text);NSApp.activate(ignoringOtherApps:true)
   if !native || env["RUSTUI_G5_REFRESH"] == "1" {
    link=scroll.displayLink(target:self,selector:#selector(display(_:)));link.add(to:.main,forMode:.common)
   }
@@ -86,6 +126,19 @@ final class Driver:NSObject,NSApplicationDelegate {
     for warm in 1...6 {DispatchQueue.main.asyncAfter(deadline:.now()+Double(warm)*0.1){self.sendEdit()}}
    }
    DispatchQueue.main.asyncAfter(deadline:.now()+2) {
+    if documentURL != nil, let layout = self.text.layoutManager, let container = self.text.textContainer {
+     let inset = self.text.textContainerOrigin
+     let visible = self.text.visibleRect.offsetBy(dx:-inset.x,dy:-inset.y)
+     let range = layout.glyphRange(forBoundingRect:visible, in:container)
+     var rows = 0
+     layout.enumerateLineFragments(forGlyphRange:range) { _, _, _, _, _ in rows += 1 }
+     record(["event":"document","visible_rows":rows,"visible_layout_glyphs":range.length,
+             "font":self.text.font!.fontName,"point_size":self.text.font!.pointSize,
+             "content_width":self.window.contentView!.bounds.width,
+             "content_height":self.window.contentView!.bounds.height,
+             "viewport_width":visible.width,"viewport_height":visible.height,
+             "lines":document.split(separator:"\n",omittingEmptySubsequences:false).count])
+    }
     self.count=0;self.cpuAtStart=processCPU();self.start=tick();record(["event":"start","mach":self.start,"numer":tb.numer,"denom":tb.denom,"input_hz":inputHz,"method":"marker pixels in ScreenCaptureKit frame; WindowServer displayTime"])
     if physical {
      _ = countPhysical(1)
@@ -115,7 +168,21 @@ final class Driver:NSObject,NSApplicationDelegate {
  func finish() {
   guard !finishing else{return};finishing=true;timer?.invalidate();link?.invalidate();let end=tick();let cpu=processCPU()-cpuAtStart
   if physical { count=Int(countPhysical(0)) }
-  DispatchQueue.main.asyncAfter(deadline:.now()+0.5) {Task {await self.capture.stop();record(["event":"end","mach":end,"cpu_s":cpu,"inputs":self.count,"text":self.text.string,"valid":self.text.string == (self.count%2==1 ? "x":"")]);let all=snapshot();for row in all {let data=try! JSONSerialization.data(withJSONObject:row,options:[.sortedKeys]);fputs("G5_REF "+String(data:data,encoding:.utf8)!+"\n",stderr)};NSApp.terminate(nil)}}
+  DispatchQueue.main.asyncAfter(deadline:.now()+0.5) {
+   Task {
+    await self.capture.stop()
+    var expected = document
+    if self.count % 2 == 1 { expected.insert("x", at:expected.index(expected.startIndex,offsetBy:documentURL == nil ? 0 : 2)) }
+    record(["event":"end","mach":end,"cpu_s":cpu,"inputs":self.count,
+            "text":documentURL == nil ? self.text.string : "",
+            "valid":self.text.string == expected])
+    for row in snapshot() {
+     let data=try! JSONSerialization.data(withJSONObject:row,options:[.sortedKeys])
+     fputs("G5_REF "+String(data:data,encoding:.utf8)!+"\n",stderr)
+    }
+    NSApp.terminate(nil)
+   }
+  }
  }
 }
 let app=NSApplication.shared;app.setActivationPolicy(.regular);let driver=Driver();app.delegate=driver;app.run()
