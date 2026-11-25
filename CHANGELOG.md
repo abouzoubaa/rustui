@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+- Add opt-in changed-range injection reuse to Rust’s draw-first background highlighter.
+
 - Add opt-in native benchmark diagnostics for thread CPU, handler waits and idle wakeups.
 
 - Add content-matched native latency benchmark arms for single-line input and large documents.

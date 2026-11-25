@@ -69,22 +69,88 @@ pub(super) fn parse_scoped(
     if parse_cancel.load(Ordering::Relaxed) {
         return None;
     }
+    use super::super::highlighter::rust_injection_ranges::{self, Run, Trace};
+    proof.trace = None;
     let injections = injection_data.map_or_else(Default::default, |data| {
-        let reuse = edits.len() == 1
+        let trace_enabled = rust_injection_ranges::trace_enabled() || cfg!(test);
+        let started = trace_enabled.then(std::time::Instant::now);
+        let scoped_query = highlight_query.as_ref().filter(|_| {
+            visible.is_some()
+                && rust_injection_ranges::enabled()
+                && proof.current(Some(&data.query), Some(&grammar))
+        });
+        let scoped_old = scoped_query.and(old_tree.as_ref()).map(|old| {
+            let changes = old
+                .changed_ranges(&tree)
+                .map(|range| range.start_byte..range.end_byte)
+                .collect::<Vec<_>>();
+            (old, changes)
+        });
+        let has_structural_changes = std::cell::OnceCell::new();
+        let structural_changes = || {
+            *has_structural_changes.get_or_init(|| {
+                scoped_old.as_ref().map_or_else(
+                    || {
+                        old_tree
+                            .as_ref()
+                            .is_some_and(|old| old.changed_ranges(&tree).next().is_some())
+                    },
+                    |(_, ranges)| !ranges.is_empty(),
+                )
+            })
+        };
+        let failures = trace_enabled.then(|| {
+            proof.failed_predicates(
+                &data.query,
+                &grammar,
+                edits.len(),
+                old_tree.as_ref(),
+                &tree,
+                structural_changes(),
+            )
+        });
+        let reusable_empty = (scoped_query.is_none()
+            || proof
+                .captures
+                .as_ref()
+                .is_some_and(|index| index.is_empty()))
+            && edits.len() == 1
             && proof.can_reuse(Some(&data.query), Some(&grammar))
             && !tree.root_node().has_error()
-            && old_tree.as_ref().is_some_and(|old| {
-                !old.root_node().has_error() && old.changed_ranges(&tree).next().is_none()
-            });
-        if reuse {
-            proof.reused();
-            Vec::new()
+            && old_tree
+                .as_ref()
+                .is_some_and(|old| !old.root_node().has_error())
+            && !structural_changes();
+        let (layers, run) = if let Some(query) = scoped_query {
+            if reusable_empty {
+                proof.reused();
+                (Vec::new(), Run::ScopedEmptyReuse)
+            } else {
+                rust_injection_ranges::update(
+                    data, scoped_old, &tree, &text, &edits, &mut proof, query, revision,
+                )
+            }
         } else {
-            let (layers, zero) =
-                SyntaxHighlighter::compute_injection_layers_observed(data, &tree, &text);
-            proof.observed(zero);
-            layers
+            proof.captures = None;
+            if reusable_empty {
+                proof.reused();
+                (Vec::new(), Run::BaselineReuse)
+            } else {
+                let (layers, zero) =
+                    SyntaxHighlighter::compute_injection_layers_observed(data, &tree, &text);
+                proof.observed(zero);
+                (layers, Run::BaselineFull)
+            }
+        };
+        if let Some((failures, started)) = failures.zip(started) {
+            proof.trace = Some(Trace {
+                failures,
+                run,
+                query_ms: started.elapsed().as_secs_f64() * 1000.0,
+                worker_thread: rust_injection_ranges::worker_thread_id(),
+            });
         }
+        layers
     });
     let fold_cache = if folding && highlight_query.is_some() {
         Some(Arc::new(super::draw_first_folds::Cache::update(
@@ -319,5 +385,189 @@ mod tests {
             )
             .is_none()
         );
+    }
+}
+
+#[cfg(all(test, feature = "tree-sitter-rust"))]
+mod range_injection_oracle {
+    use super::*;
+    use crate::highlighter::HighlightTheme;
+    use crate::highlighter::highlighter::rust_injection_ranges::Run;
+
+    fn point(text: &str) -> Point {
+        Point::new(
+            text.bytes().filter(|&b| b == b'\n').count(),
+            text.rsplit('\n').next().unwrap().len(),
+        )
+    }
+
+    fn compare(h: &SyntaxHighlighter, text: &Rope) {
+        let mut full = SyntaxHighlighter::new("rust");
+        assert!(full.update(None, text, None));
+        let layers = |v: &SyntaxHighlighter| {
+            v.injection_parse_data()
+                .unwrap()
+                .old_layers
+                .into_iter()
+                .map(|layer| {
+                    (
+                        layer.language_name,
+                        layer.ranges,
+                        layer.tree.root_node().to_sexp(),
+                    )
+                })
+                .collect::<Vec<_>>()
+        };
+        let actual = layers(h);
+        let expected = layers(&full);
+        assert_eq!(actual.len(), expected.len());
+        for (actual, expected) in actual.iter().zip(&expected) {
+            assert_eq!(actual, expected);
+        }
+        let theme = HighlightTheme::default_dark();
+        assert_eq!(
+            h.styles(&(0..text.len()), theme.as_ref()),
+            full.styles(&(0..text.len()), theme.as_ref())
+        );
+    }
+
+    fn settle(h: &mut SyntaxHighlighter, text: &Rope, expected: Run) {
+        let mut proof = h.draw_first_proof();
+        proof.enabled = true;
+        let (previous, edits) = h.draw_first_pending();
+        let (tree, layers, _, cache) = parse_scoped(
+            "rust".into(),
+            h.tree().cloned(),
+            h.injection_parse_data(),
+            text.clone(),
+            true,
+            Arc::new(AtomicBool::new(false)),
+            h.draw_first_query(),
+            Some(0..text.len()),
+            previous,
+            edits,
+            proof,
+            h.draw_first_revision,
+        )
+        .unwrap();
+        assert_eq!(
+            cache
+                .as_ref()
+                .unwrap()
+                .proof
+                .as_ref()
+                .unwrap()
+                .trace
+                .unwrap()
+                .run,
+            expected
+        );
+        h.apply_background_tree(tree, text, layers);
+        h.replace_draw_first_cache(cache);
+        compare(h, text);
+    }
+
+    fn edit(
+        h: &mut SyntaxHighlighter,
+        source: &mut String,
+        offset: usize,
+        old: usize,
+        insert: &str,
+    ) {
+        let end = offset + old;
+        let start_position = point(&source[..offset]);
+        let old_end_position = point(&source[..end]);
+        source.replace_range(offset..end, insert);
+        let new_end_byte = offset + insert.len();
+        h.edit_tree(
+            Some(InputEdit {
+                start_byte: offset,
+                old_end_byte: end,
+                new_end_byte,
+                start_position,
+                old_end_position,
+                new_end_position: point(&source[..new_end_byte]),
+            }),
+            &Rope::from(source.as_str()),
+        );
+    }
+
+    #[test]
+    fn scoped_injections_and_styles_equal_full_recomputation() {
+        let mut h = SyntaxHighlighter::new("rust");
+        h.draw_first_cached = true;
+        let mut source = "// header\nfn main() { example!(if true { 10 }); untouched!((20)); }\nmacro_rules! other { () => { 3 }; }\n".to_owned();
+        let text = Rope::from(source.as_str());
+        h.edit_tree(None, &text);
+        settle(&mut h, &text, Run::LoadFull);
+
+        // Outside edits, inside token-tree, new macro, removed macro, and
+        // invalid EOF input all use the range path. Reversing each edit
+        // also compares the shifted layers with a fresh document.
+        for (needle, replacement) in [
+            ("header", "larger header"),
+            ("10", "30 + 40"),
+            ("20", "\n25"),
+            ("example!", "example"),
+            ("10", "inner!(42)"),
+            ("// header", "// header\nfn extra() { paste!((5)); }"),
+            ("", "x"),
+        ] {
+            let at = if needle.is_empty() {
+                source.len()
+            } else {
+                source.find(needle).unwrap()
+            };
+            edit(&mut h, &mut source, at, needle.len(), replacement);
+            settle(&mut h, &Rope::from(source.as_str()), Run::Scoped);
+            edit(&mut h, &mut source, at, replacement.len(), needle);
+            settle(&mut h, &Rope::from(source.as_str()), Run::Scoped);
+        }
+
+        // A worker can be cancelled between edits. Coordinates must advance
+        // through both edits since the last completed snapshot.
+        edit(&mut h, &mut source, 0, 0, "// inserted\n");
+        let inside = source.find("10").unwrap();
+        edit(&mut h, &mut source, inside, 2, "99");
+        settle(&mut h, &Rope::from(source.as_str()), Run::Scoped);
+    }
+
+    #[test]
+    fn scoped_injections_reuse_the_original_px3_empty_proof() {
+        let mut h = SyntaxHighlighter::new("rust");
+        h.draw_first_cached = true;
+        let mut source = "// header\nfn example() {}\n".to_owned();
+        let text = Rope::from(source.as_str());
+        h.edit_tree(None, &text);
+        settle(&mut h, &text, Run::LoadFull);
+        let comment = source.find("header").unwrap();
+        edit(&mut h, &mut source, comment, "header".len(), "different");
+        settle(&mut h, &Rope::from(source.as_str()), Run::ScopedEmptyReuse);
+        let at = source.find(" {}").unwrap();
+        edit(&mut h, &mut source, at, 3, " { nested!(42); }");
+        settle(&mut h, &Rope::from(source.as_str()), Run::Scoped);
+    }
+
+    #[test]
+    fn scoped_injections_preserve_full_query_caps_when_a_slot_opens() {
+        let mut h = SyntaxHighlighter::new("rust");
+        h.draw_first_cached = true;
+        let mut source = "fn main() {\n".to_owned();
+        for _ in 0..520 {
+            source.push_str("emit!{fn example() {}};\n");
+        }
+        source.push('}');
+        let text = Rope::from(source.as_str());
+        h.edit_tree(None, &text);
+        settle(&mut h, &text, Run::LoadFull);
+        let at = source.find("emit!").unwrap();
+        edit(
+            &mut h,
+            &mut source,
+            at,
+            "emit!{fn example() {}};\n".len(),
+            "",
+        );
+        settle(&mut h, &Rope::from(source.as_str()), Run::Scoped);
     }
 }

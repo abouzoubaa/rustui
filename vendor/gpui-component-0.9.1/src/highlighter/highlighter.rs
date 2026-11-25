@@ -23,6 +23,8 @@ pub(crate) mod rust_empty;
 #[cfg(all(test, feature = "tree-sitter-rust"))]
 #[path = "rust_empty_tests.rs"]
 mod rust_empty_tests;
+#[path = "rust_injection_ranges.rs"]
+pub(crate) mod rust_injection_ranges;
 
 #[path = "draw_first_cache.rs"]
 pub(crate) mod draw_first_cache;
