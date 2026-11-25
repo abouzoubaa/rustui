@@ -12,6 +12,8 @@ pub(crate) struct State {
     generation: u64,
     query: Option<Arc<Query>>,
     empty: bool,
+    pub(crate) captures: Option<Arc<[super::rust_injection_ranges::Capture]>>,
+    pub(crate) trace: Option<super::rust_injection_ranges::Trace>,
     #[cfg(test)]
     pub(crate) hits: usize,
 }
@@ -40,6 +42,8 @@ impl State {
             generation,
             query: query.cloned(),
             empty: false,
+            captures: None,
+            trace: None,
             #[cfg(test)]
             hits: 0,
         }
@@ -52,12 +56,22 @@ impl State {
             generation: 0,
             query: None,
             empty: false,
+            captures: None,
+            trace: None,
             #[cfg(test)]
             hits: 0,
         }
     }
 
     pub(crate) fn can_reuse(
+        &self,
+        query: Option<&Arc<Query>>,
+        grammar: Option<&tree_sitter::Language>,
+    ) -> bool {
+        self.empty && self.current(query, grammar)
+    }
+
+    pub(crate) fn current(
         &self,
         query: Option<&Arc<Query>>,
         grammar: Option<&tree_sitter::Language>,
@@ -71,7 +85,6 @@ impl State {
         };
         self.enabled
             && self.eligible
-            && self.empty
             && same_grammar
             && self.generation == LanguageRegistry::singleton().generation()
             && self
@@ -81,11 +94,53 @@ impl State {
                 .is_some_and(|(a, b)| Arc::ptr_eq(a, b))
     }
 
+    /// Diagnose every legacy predicate independently, including ones that
+    /// would be short-circuited by an earlier failure.
+    #[allow(clippy::too_many_arguments)]
+    pub(crate) fn failed_predicates(
+        &self,
+        query: &Arc<Query>,
+        grammar: &tree_sitter::Language,
+        edit_count: usize,
+        old: Option<&Tree>,
+        new: &Tree,
+        structural_changes: bool,
+    ) -> u16 {
+        #[cfg(feature = "tree-sitter-rust")]
+        let same_grammar = grammar == &tree_sitter_rust::LANGUAGE.into();
+        #[cfg(not(feature = "tree-sitter-rust"))]
+        let same_grammar = {
+            let _ = grammar;
+            false
+        };
+        [
+            edit_count != 1,
+            !self.enabled,
+            !self.eligible,
+            !self.empty,
+            !same_grammar,
+            self.generation != LanguageRegistry::singleton().generation(),
+            !self
+                .query
+                .as_ref()
+                .is_some_and(|saved| Arc::ptr_eq(saved, query)),
+            new.root_node().has_error(),
+            old.is_none(),
+            old.is_some_and(|old| old.root_node().has_error()),
+            structural_changes,
+        ]
+        .into_iter()
+        .enumerate()
+        .fold(0, |flags, (bit, failed)| flags | (u16::from(failed) << bit))
+    }
+
     pub(crate) fn observed(&mut self, zero_matches: bool) {
         self.empty = zero_matches;
     }
     pub(crate) fn invalidate(&mut self) {
         self.empty = false;
+        self.captures = None;
+        self.trace = None;
     }
     pub(crate) fn reused(&mut self) {
         #[cfg(test)]

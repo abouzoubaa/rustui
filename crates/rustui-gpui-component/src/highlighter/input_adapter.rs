@@ -149,6 +149,22 @@ impl TreeSitterInputHighlighter {
                     return;
                 }
                 let _ = entity.update_in(cx, |state, window, cx| {
+                    if let Some(trace) = cache
+                        .as_ref()
+                        .and_then(|cache| cache.proof.as_ref())
+                        .and_then(|proof| proof.trace)
+                    {
+                        gpui::fast_latency_config(
+                            window.window_handle().window_id(),
+                            "g59_injection",
+                            [
+                                trace.failures as f64,
+                                trace.run as u8 as f64,
+                                trace.query_ms,
+                                trace.worker_thread as f64,
+                            ],
+                        );
+                    }
                     if let Some((visited, ranges)) = fold_stats {
                         gpui::fast_latency_config(
                             window.window_handle().window_id(),
