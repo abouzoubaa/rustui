@@ -1,10 +1,10 @@
-use std::{ops::Range, rc::Rc};
+use std::ops::Range;
 
 use gpui::{Bounds, Half, Pixels, ShapedLine, TextAlign, px};
 
-use super::{WrappingIndent, display_map::LineLayout};
+use super::{WrappingIndent, display_map::LineLayout, prepaint_reuse::LayoutRows};
 
-#[derive(Clone, Default)]
+#[derive(Clone, Debug, Default)]
 pub(crate) struct WhitespaceIndicators {
     pub(crate) space: ShapedLine,
     pub(crate) tab: ShapedLine,
@@ -17,7 +17,7 @@ pub(super) struct LastLayout {
     pub(super) visible_line_byte_offsets: Vec<usize>,
     pub(super) visible_top: Pixels,
     pub(super) visible_range_offset: Range<usize>,
-    pub(super) lines: Rc<Vec<LineLayout>>,
+    pub(super) lines: LayoutRows,
     pub(super) line_height: Pixels,
     pub(super) wrap_width: Option<Pixels>,
     pub(super) wrapping_indent: WrappingIndent,

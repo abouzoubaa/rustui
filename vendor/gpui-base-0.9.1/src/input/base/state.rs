@@ -4382,6 +4382,9 @@ impl<M: InputModeKind> InputBaseState<M> {
             return;
         }
 
+        let id = window.window_handle().window_id();
+        let trace = |kind| crate::input::edit_trace::span(id, kind);
+        let prepare = trace("g56_edit_prepare");
         // Every edit invalidates provider responses for the previous document,
         // including deletion and indentation which do not trigger completion.
         M::hide_context_menu(self, cx);
@@ -4455,7 +4458,9 @@ impl<M: InputModeKind> InputBaseState<M> {
         if !accumulate_replay_edits {
             self.last_input_edits.clear();
         }
+        drop(prepare);
         for (range, new_text) in &sorted {
+            let text_history = trace("g56_edit_text_history");
             let old_text = self.text.clone();
             self.mode.adjust_auto_closed_pair(range, new_text.len());
             self.text.replace(range.clone(), new_text);
@@ -4470,22 +4475,28 @@ impl<M: InputModeKind> InputBaseState<M> {
                 None,
             );
 
+            drop(text_history);
+            let wrap = trace("g56_edit_wrap_projection");
             // Incremental, single-range updates must run per edit.
             self.display_map
                 .adjust_folds_for_edit(&old_text, range, new_text);
             self.display_map
                 .on_text_changed(&self.text, range, &Rope::from(*new_text), cx);
 
+            drop(wrap);
+            let input_edit = trace("g56_edit_describe");
             let edit = super::mode::replacement_input_edit(&old_text, &self.text, range, new_text);
             if self.emit_events || self.replaying_history {
                 self.last_input_edits.push((edit, self.text.clone()));
             }
 
+            drop(input_edit);
             if group {
                 if self.is_code_editor() {
                     highlighter_edits.push((edit, self.text.clone()));
                 }
             } else {
+                let highlight = trace("g56_edit_highlighter");
                 self.mode.update_highlighter(
                     super::mode::HighlighterUpdate {
                         selected_range: range,
@@ -4499,6 +4510,8 @@ impl<M: InputModeKind> InputBaseState<M> {
                     cx,
                 );
 
+                drop(highlight);
+                let _fold = trace("g56_edit_fold_candidates");
                 self.update_fold_candidates_incremental(range, new_text);
             }
         }
@@ -4520,6 +4533,7 @@ impl<M: InputModeKind> InputBaseState<M> {
             self.undo_manager.commit_transaction();
         }
 
+        let language = trace("g56_edit_language_search");
         // One observable update per batch instead of one per edit.
         if let Some(diagnostics) = self.mode.diagnostics_mut() {
             diagnostics.reset(&self.text)
@@ -4527,6 +4541,8 @@ impl<M: InputModeKind> InputBaseState<M> {
         M::refresh_language_features(self, window, cx);
         self.update_search(cx);
 
+        drop(language);
+        let _selection = trace("g56_edit_selection_notify");
         // Compute the resulting cursors.
         // One collapsed cursor per edit, at the end of its inserted text.
         let mut ascending: Vec<(Range<usize>, &str)> = sorted.clone();
@@ -4720,6 +4736,8 @@ impl<M: InputModeKind> EntityInputHandler for InputBaseState<M> {
         window: &mut Window,
         cx: &mut Context<Self>,
     ) {
+        let _native =
+            crate::input::edit_trace::span(window.window_handle().window_id(), "g56_edit_entry");
         let requested_intent = self.undo_manager.take_pending_intent();
         if !self.is_editable() {
             return;

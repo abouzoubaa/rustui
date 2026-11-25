@@ -957,6 +957,7 @@ impl WrapDisplayPoint {
 }
 
 /// The layout info of a line with soft wrapped lines.
+#[derive(Debug)]
 pub(crate) struct LineLayout {
     /// Total bytes length of this line.
     len: usize,
@@ -1830,7 +1831,7 @@ mod tests {
             visible_line_byte_offsets: vec![0],
             visible_top: px(0.),
             visible_range_offset: 0..0,
-            lines: Rc::new(vec![]),
+            lines: crate::input::prepaint_reuse::LayoutRows::plain(Vec::new()),
             line_height,
             wrap_width: None,
             wrapping_indent: WrappingIndent::default(),
@@ -2137,7 +2138,7 @@ mod tests {
             visible_line_byte_offsets: vec![0],
             visible_top: px(0.),
             visible_range_offset: 0..0,
-            lines: Rc::new(vec![]),
+            lines: crate::input::prepaint_reuse::LayoutRows::plain(Vec::new()),
             line_height: px(20.0),
             wrap_width: Some(px(10.)),
             wrapping_indent: WrappingIndent::Same,

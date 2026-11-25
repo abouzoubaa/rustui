@@ -82,6 +82,7 @@ pub(crate) fn draw_tiles(
             );
             command_encoder
                 .setFragmentTexture_atIndex(Some(texture), SpriteInputIndex::AtlasTexture as usize);
+            crate::fast::input_gpu_metrics::draw_call();
             command_encoder.drawPrimitives_vertexStart_vertexCount_instanceCount_baseInstance(
                 MTLPrimitiveType::Triangle,
                 0,

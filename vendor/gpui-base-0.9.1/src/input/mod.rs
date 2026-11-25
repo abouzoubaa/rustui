@@ -43,6 +43,8 @@ pub use token_presentation::{
     InlineTokenClickEvent, InlineTokenClickListener, InlineTokenContext, InlineTokenHoverEvent,
     InlineTokenHoverListener, InlineTokenRenderer,
 };
+#[path = "base/edit_trace.rs"]
+mod edit_trace;
 #[path = "base/kind.rs"]
 mod kind;
 #[path = "editor/language.rs"]
@@ -61,6 +63,8 @@ mod mode;
 mod movement;
 #[path = "base/native.rs"]
 mod native;
+#[path = "base/prepaint_reuse.rs"]
+mod prepaint_reuse;
 #[path = "base/rope_ext.rs"]
 mod rope_ext;
 mod scrollbar_presentation;

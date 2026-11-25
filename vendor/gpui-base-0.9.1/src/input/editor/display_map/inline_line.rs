@@ -2,6 +2,7 @@
 use gpui::{App, Pixels, Point, ShapedLine, SharedString, TextAlign, Window, point, px};
 use std::ops::Range;
 
+#[derive(Debug)]
 pub(crate) struct InlineFragment {
     pub(crate) range: Range<usize>,
     pub(crate) x: Pixels,
@@ -9,6 +10,7 @@ pub(crate) struct InlineFragment {
     pub(crate) text: Option<ShapedLine>,
 }
 
+#[derive(Debug)]
 pub(crate) struct InputLine {
     pub(crate) len: usize,
     pub(crate) width: Pixels,
@@ -18,6 +20,7 @@ pub(crate) struct InputLine {
 // Keep the ordinary shaped row inline: boxing it would add an allocation to
 // every existing plain-text row. Only token rows allocate fragment storage.
 #[allow(clippy::large_enum_variant)]
+#[derive(Debug)]
 enum Content {
     Text(ShapedLine),
     Inline(Vec<InlineFragment>),
