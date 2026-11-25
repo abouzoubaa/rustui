@@ -103,6 +103,7 @@ struct Benchmark {
     source: String,
     #[state(None)]
     selected: Option<usize>,
+    single_line: bool,
     rows: Rc<[gpui::SharedString]>,
     native: Option<Entity<NativeSurface>>,
 }
@@ -110,6 +111,7 @@ impl View for Benchmark {
     fn body(&self) -> impl View {
         let content = match self.scene {
             Scene::Idle => AnyView::new(TextField("G0 blinking caret", self.caret_binding())),
+            Scene::Typing if self.single_line => AnyView::new(TextField("", self.source_binding())),
             Scene::Typing => AnyView::new(
                 CodeEditor("g0-ten-thousand-lines", self.source_binding())
                     .language("rust")
@@ -257,11 +259,12 @@ impl gpui::Render for NativeSurface {
     }
 }
 
-fn mount(scene: Scene, app: &mut App) -> (Owner, Entity<NativeSurface>) {
+fn mount(scene: Scene, single_line: bool, app: &mut App) -> (Owner, Entity<NativeSurface>) {
     let native = app.new(|_| NativeSurface::new(scene));
     let component = Benchmark {
         scene,
-        source: if scene == Scene::Typing {
+        single_line,
+        source: if scene == Scene::Typing && !single_line {
             editor_source()
         } else {
             String::new()
@@ -403,6 +406,23 @@ fn step(
     handled
 }
 
+fn warm_input(
+    scene: Scene,
+    single_line: bool,
+    matched_document: bool,
+    window: &mut Window,
+    app: &mut App,
+) {
+    if scene == Scene::Typing && !single_line {
+        for _ in 0..2 {
+            window.dispatch_keystroke(gpui::Keystroke::parse("right").unwrap(), app);
+        }
+    }
+    if scene == Scene::Idle || (!single_line && !matched_document) {
+        window.dispatch_keystroke(gpui::Keystroke::parse("x").unwrap(), app);
+    }
+}
+
 fn playback(
     scene: Scene,
     duration: Duration,
@@ -414,6 +434,9 @@ fn playback(
     app.spawn(async move |cx| {
         cx.background_executor().timer(Duration::from_millis(200)).await;
         let Some(handle) = cx.update(|app| app.windows().first().copied()) else { cx.update(|app| app.quit()); return; };
+        let single_line = owner.read_with(cx, |host, _| host.component().single_line);
+        let matched_document =
+            std::env::var("RUSTUI_G5_L7_MATCH_EDITOR").as_deref() == Ok("1");
         if matches!(scene, Scene::Idle | Scene::Typing) {
             let deadline = Instant::now() + Duration::from_secs(10);
             loop {
@@ -424,8 +447,7 @@ fn playback(
             }
             cx.background_executor().timer(Duration::from_millis(100)).await;
             let _ = handle.update(cx, |_, window, app| {
-                if scene == Scene::Typing { for _ in 0..2 { window.dispatch_keystroke(gpui::Keystroke::parse("right").unwrap(), app); } }
-                window.dispatch_keystroke(gpui::Keystroke::parse("x").unwrap(), app);
+                warm_input(scene, single_line, matched_document, window, app);
             });
         }
         if scene == Scene::Log {
@@ -535,6 +557,11 @@ pub fn run_cli(args: &[String]) -> Result<(), String> {
     if seconds == 0 || seconds > 3600 {
         return Err("duration must be 1..=3600 seconds".into());
     }
+    if scene == Scene::Typing
+        && let Some(path) = std::env::var_os("RUSTUI_G5_L7_EXPORT_DOCUMENT")
+    {
+        std::fs::write(path, editor_source()).map_err(|error| error.to_string())?;
+    }
     let bridge = Rc::new(RefCell::new(None));
     let slot = bridge.clone();
     let complete = Rc::new(Cell::new(false));
@@ -547,7 +574,18 @@ pub fn run_cli(args: &[String]) -> Result<(), String> {
         .title(format!("RustUI G0 — {}", scene.name()))
         .on_launch(move |app| {
             activate_theme(&theme, Some(AppearanceMode::Dark), app).expect("bundled theme");
-            let (owner, native) = mount(scene, app);
+            if scene == Scene::Typing
+                && std::env::var("RUSTUI_G5_L7_MATCH_EDITOR").as_deref() == Ok("1")
+            {
+                let theme = app.theme();
+                eprintln!(
+                    "G5_L7_EDITOR_FONT {} {}",
+                    f32::from(theme.mono_font_size),
+                    theme.mono_font_family
+                );
+            }
+            let single_line = std::env::var("RUSTUI_G5_L7_SINGLE_LINE").as_deref() == Ok("1");
+            let (owner, native) = mount(scene, single_line, app);
             *slot.borrow_mut() = Some(owner.clone());
             playback(
                 scene,
@@ -581,13 +619,59 @@ mod tests {
     }
 
     #[gpui::test]
+    fn matched_typing_arms_preserve_the_initial_text_after_warmup_and_edit_pair(
+        cx: &mut gpui::TestAppContext,
+    ) {
+        cx.update(|app| {
+            rustui::gpui_component::init(app);
+            let theme = parse_theme(include_str!("../../../themes/macos27.json")).unwrap();
+            activate_theme(&theme, Some(AppearanceMode::Dark), app).unwrap();
+        });
+        for single_line in [true, false] {
+            let (owner, native) = cx.update(|app| mount(Scene::Typing, single_line, app));
+            let initial = if single_line {
+                String::new()
+            } else {
+                editor_source()
+            };
+            let root = owner.clone();
+            let handle = cx.open_window(
+                gpui::size(gpui::px(WIDTH), gpui::px(HEIGHT)),
+                |window, cx| rustui::gpui_component::Root::new(root, window, cx),
+            );
+            let mut window = gpui::VisualTestContext::from_window(handle.into(), cx);
+            window.update(|window, app| {
+                window.draw(app).clear(app);
+                window.focus_next(app);
+            });
+            window.run_until_parked();
+            window.update(|window, app| {
+                assert_eq!(owner.read(app).component().source, initial);
+                warm_input(Scene::Typing, single_line, !single_line, window, app);
+            });
+            window.run_until_parked();
+            window.update(|window, app| {
+                assert_eq!(owner.read(app).component().source, initial);
+                assert!(step(Scene::Typing, 1, &native, window, app));
+            });
+            window.run_until_parked();
+            window.update(|window, app| {
+                assert_eq!(owner.read(app).component().source.len(), initial.len() + 1);
+                assert!(step(Scene::Typing, 2, &native, window, app));
+            });
+            window.run_until_parked();
+            window.update(|_, app| assert_eq!(owner.read(app).component().source, initial));
+        }
+    }
+
+    #[gpui::test]
     fn normal_input_edits_fields_and_moves_then_drops_the_card(cx: &mut gpui::TestAppContext) {
         cx.update(|app| {
             rustui::gpui_component::init(app);
             let theme = parse_theme(include_str!("../../../themes/macos27.json")).unwrap();
             activate_theme(&theme, Some(AppearanceMode::Dark), app).unwrap();
         });
-        let (owner, _) = cx.update(|app| mount(Scene::Idle, app));
+        let (owner, _) = cx.update(|app| mount(Scene::Idle, false, app));
         let inner = owner.clone();
         let handle = cx.open_window(
             gpui::size(gpui::px(WIDTH), gpui::px(HEIGHT)),
@@ -602,7 +686,7 @@ mod tests {
         window.run_until_parked();
         window.update(|_, app| assert_ne!(owner.read(app).component().caret, "G0 idle caret"));
 
-        let (owner, native) = cx.update(|app| mount(Scene::Typing, app));
+        let (owner, native) = cx.update(|app| mount(Scene::Typing, false, app));
         let inner = owner.clone();
         let handle = cx.open_window(
             gpui::size(gpui::px(WIDTH), gpui::px(HEIGHT)),
@@ -623,7 +707,7 @@ mod tests {
         window.run_until_parked();
         window.update(|_, app| assert_eq!(owner.read(app).component().source, before));
 
-        let (owner, native) = cx.update(|app| mount(Scene::Drag, app));
+        let (owner, native) = cx.update(|app| mount(Scene::Drag, false, app));
         let handle = cx.open_window(
             gpui::size(gpui::px(WIDTH), gpui::px(HEIGHT)),
             |window, cx| rustui::gpui_component::Root::new(owner, window, cx),

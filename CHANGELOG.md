@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+- Add content-matched native latency benchmark arms for single-line input and large documents.
+
 - Add opt-in reuse of shaped visible editor lines and native edit and GPU diagnostics.
 
 - Add an opt-in Metal path that prepares tile and instance data before drawable acquisition.
