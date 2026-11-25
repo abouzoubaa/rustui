@@ -7,7 +7,9 @@ import QuartzCore
 import Darwin
 let env=ProcessInfo.processInfo.environment
 guard env["RUSTUI_G5_REFERENCE"] == "1" else { fatalError("Set RUSTUI_G5_REFERENCE=1") }
-guard env["RUSTUI_L1_CAPTURE_DIR"] != nil || CGPreflightScreenCaptureAccess() else { fatalError("Screen recording access is required; no callback proxy is substituted") }
+let cpuProbe = env["RUSTUI_G5_L8_CPU"] == "1"
+let idleMode = cpuProbe ? env["RUSTUI_G5_L8_IDLE"] : nil
+guard idleMode != nil || env["RUSTUI_L1_CAPTURE_DIR"] != nil || CGPreflightScreenCaptureAccess() else { fatalError("Screen recording access is required; no callback proxy is substituted") }
 let native = env["RUSTUI_L1_NATIVE"] == "1"
 let physical = env["RUSTUI_L1_PHYSICAL"] == "1"
 let documentURL = env["RUSTUI_G5_L7_DOCUMENT"].map { URL(fileURLWithPath: $0) }
@@ -23,6 +25,11 @@ func countPhysical(_ arm: Int32) -> UInt64 {
 }
 let seconds=Double(CommandLine.arguments.dropFirst().first ?? "60")!
 let inputHz=Double(env["RUSTUI_G5_INPUT_HZ"] ?? "10")!
+func cpuBoundary(_ phase: UInt32) {
+ guard cpuProbe else { return }
+ let call = dlsym(UnsafeMutableRawPointer(bitPattern: -2), "g5_cpu_boundary")!
+ unsafeBitCast(call, to: (@convention(c) (UInt32) -> Void).self)(phase)
+}
 var tb=mach_timebase_info_data_t(); mach_timebase_info(&tb)
 func tick()->UInt64 { mach_absolute_time() }
 let secondsPerTick=Double(tb.numer)/Double(tb.denom)/1e9
@@ -37,6 +44,12 @@ func record(_ r:[String:Any]) { logLock.withLock { records.append(r) } }
 func snapshot() -> [[String:Any]] { logLock.withLock { records } }
 final class Text:NSTextView {
  var version=0; let marker=CALayer()
+ override func drawInsertionPoint(in rect: NSRect, color: NSColor, turnedOn: Bool) {
+  super.drawInsertionPoint(in: rect, color: color, turnedOn: turnedOn)
+  if idleMode != nil, let note = dlsym(UnsafeMutableRawPointer(bitPattern: -2), "g5_cpu_note_idle_source") {
+   unsafeBitCast(note, to: (@convention(c) (UInt32) -> Void).self)(1)
+  }
+ }
  override func keyDown(with e:NSEvent) {
   let handled = tick()
   if native {
@@ -120,6 +133,21 @@ final class Driver:NSObject,NSApplicationDelegate {
   if !native || env["RUSTUI_G5_REFRESH"] == "1" {
    link=scroll.displayLink(target:self,selector:#selector(display(_:)));link.add(to:.main,forMode:.common)
   }
+  if let idleMode {
+   let prepare = dlsym(UnsafeMutableRawPointer(bitPattern: -2), "g5_cpu_idle_prepare")!
+   // Allow AppKit to finish launch activation before selecting the idle focus state.
+   DispatchQueue.main.asyncAfter(deadline:.now()+0.25) {
+    unsafeBitCast(prepare, to: (@convention(c) (Int32) -> Void).self)(idleMode == "unfocused" ? 1 : 0)
+    DispatchQueue.main.asyncAfter(deadline:.now()+2) {
+     cpuBoundary(0)
+     DispatchQueue.main.asyncAfter(deadline:.now()+seconds) {
+      cpuBoundary(1)
+      NSApp.terminate(nil)
+     }
+    }
+   }
+   return
+  }
   Task {do {
    self.capture=VersionCapture(emit:record);try await self.capture.start(window:self.window)
    if !native {
@@ -140,6 +168,7 @@ final class Driver:NSObject,NSApplicationDelegate {
              "lines":document.split(separator:"\n",omittingEmptySubsequences:false).count])
     }
     self.count=0;self.cpuAtStart=processCPU();self.start=tick();record(["event":"start","mach":self.start,"numer":tb.numer,"denom":tb.denom,"input_hz":inputHz,"method":"marker pixels in ScreenCaptureKit frame; WindowServer displayTime"])
+    cpuBoundary(0)
     if physical {
      _ = countPhysical(1)
      DispatchQueue.main.asyncAfter(deadline:.now()+seconds) {self.finish()}
@@ -166,7 +195,9 @@ final class Driver:NSObject,NSApplicationDelegate {
   text.keyDown(with:e)
  }
  func finish() {
-  guard !finishing else{return};finishing=true;timer?.invalidate();link?.invalidate();let end=tick();let cpu=processCPU()-cpuAtStart
+  guard !finishing else{return};finishing=true;timer?.invalidate();link?.invalidate()
+  cpuBoundary(1)
+  let end=tick();let cpu=processCPU()-cpuAtStart
   if physical { count=Int(countPhysical(0)) }
   DispatchQueue.main.asyncAfter(deadline:.now()+0.5) {
    Task {

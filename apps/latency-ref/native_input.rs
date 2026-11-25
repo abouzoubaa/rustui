@@ -57,3 +57,50 @@ pub fn physical_count(arm: i32) -> u64 {
     });
     unsafe { call(arm) }
 }
+
+/// The CPU measurement helpers are loaded only in local latency runs.
+#[allow(dead_code)]
+mod cpu_probe {
+    use super::*;
+
+    fn enabled() -> bool {
+        static ON: OnceLock<bool> = OnceLock::new();
+        *ON.get_or_init(|| std::env::var("RUSTUI_G5_L8_CPU").as_deref() == Ok("1"))
+    }
+
+    pub fn boundary(phase: u32) {
+        if !enabled() {
+            return;
+        }
+        unsafe {
+            let symbol = dlsym((-2isize) as *mut c_void, c"g5_cpu_boundary".as_ptr());
+            assert!(!symbol.is_null(), "CPU boundary helper was not loaded");
+            std::mem::transmute::<*mut c_void, unsafe extern "C" fn(u32)>(symbol)(phase);
+        }
+    }
+
+    pub fn idle_mode() -> Option<bool> {
+        if !enabled() {
+            return None;
+        }
+        match std::env::var("RUSTUI_G5_L8_IDLE").as_deref() {
+            Ok("focused") => Some(false),
+            Ok("unfocused") => Some(true),
+            _ => None,
+        }
+    }
+
+    pub fn prepare_idle(unfocused: bool) {
+        unsafe {
+            let symbol = dlsym((-2isize) as *mut c_void, c"g5_cpu_idle_prepare".as_ptr());
+            assert!(!symbol.is_null(), "CPU focus helper was not loaded");
+            std::mem::transmute::<*mut c_void, unsafe extern "C" fn(i32)>(symbol)(i32::from(
+                unfocused,
+            ));
+        }
+    }
+}
+#[allow(unused_imports)]
+pub use cpu_probe::{
+    boundary as cpu_boundary, idle_mode as cpu_idle_mode, prepare_idle as cpu_prepare_idle,
+};

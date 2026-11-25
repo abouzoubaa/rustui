@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+- Add opt-in native benchmark diagnostics for thread CPU, handler waits and idle wakeups.
+
 - Add content-matched native latency benchmark arms for single-line input and large documents.
 
 - Add opt-in reuse of shaped visible editor lines and native edit and GPU diagnostics.

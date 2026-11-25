@@ -463,6 +463,16 @@ fn playback(
                 cx.background_executor().timer(Duration::from_millis(20)).await;
             }
         }
+        if let Some(unfocused) = native_input::cpu_idle_mode() {
+            native_input::cpu_prepare_idle(unfocused);
+            cx.background_executor().timer(Duration::from_secs(2)).await;
+            native_input::cpu_boundary(0);
+            cx.background_executor().timer(duration).await;
+            native_input::cpu_boundary(1);
+            complete.set(true);
+            cx.update(|app| app.quit());
+            return;
+        }
         cx.background_executor().timer(Duration::from_secs(2)).await;
         if scene == Scene::Drag {
             if native_input::enabled() {
@@ -484,6 +494,7 @@ fn playback(
             Ok(snapshot) => snapshot,
             Err(error) => { eprintln!("G0 getrusage start failed: {error}"); cx.update(|app| app.quit()); return; }
         };
+        native_input::cpu_boundary(0);
         let start = Instant::now();
         let manual = scene == Scene::Typing && native_input::physical();
         if manual { native_input::physical_count(1); }
@@ -514,6 +525,7 @@ fn playback(
             cx.background_executor().timer(if scene == Scene::Idle { duration } else { Duration::from_nanos(1_000_000_000 / u64::from(scene.hz())) }).await;
         }
         if manual { ticks = native_input::physical_count(0) as usize; }
+        native_input::cpu_boundary(1);
         let cpu_end = match cpu::Snapshot::take() {
             Ok(snapshot) => snapshot,
             Err(error) => { eprintln!("G0 getrusage end failed: {error}"); cx.update(|app| app.quit()); return; }
