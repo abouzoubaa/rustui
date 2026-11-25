@@ -685,6 +685,7 @@ impl MetalRenderer {
     }
 
     pub fn draw(&mut self, scene: &Scene) {
+        let density = crate::fast::input_gpu_metrics::Scope::enter();
         let layer = match &self.layer {
             Some(l) => l.clone(),
             None => {
@@ -812,6 +813,7 @@ impl MetalRenderer {
             }
         };
 
+        density.emit(scene, texture.width() as u32, texture.height() as u32);
         gpui::fast_frame_reason(
             self.damage.last_mode.label(),
             if self.damage.last_mode == planned_mode {
@@ -1269,6 +1271,7 @@ impl MetalRenderer {
                 vertex_instance_bindings.offset,
                 PathRasterizationInputIndex::Vertices as usize,
             );
+            crate::fast::input_gpu_metrics::draw_call();
             command_encoder.drawPrimitives_vertexStart_vertexCount(
                 MTLPrimitiveType::Triangle,
                 0,
@@ -1315,6 +1318,7 @@ impl MetalRenderer {
                 mem::size_of_val(&viewport_size),
                 ShadowInputIndex::ViewportSize as usize,
             );
+            crate::fast::input_gpu_metrics::draw_call();
             command_encoder.drawPrimitives_vertexStart_vertexCount_instanceCount_baseInstance(
                 MTLPrimitiveType::Triangle,
                 0,
@@ -1360,6 +1364,7 @@ impl MetalRenderer {
                 mem::size_of_val(&viewport_size),
                 QuadInputIndex::ViewportSize as usize,
             );
+            crate::fast::input_gpu_metrics::draw_call();
             command_encoder.drawPrimitives_vertexStart_vertexCount_instanceCount_baseInstance(
                 MTLPrimitiveType::Triangle,
                 0,
@@ -1437,6 +1442,7 @@ impl MetalRenderer {
                 sprite_instance_bindings.offset,
                 SpriteInputIndex::Sprites as usize,
             );
+            crate::fast::input_gpu_metrics::draw_call();
             command_encoder.drawPrimitives_vertexStart_vertexCount_instanceCount(
                 MTLPrimitiveType::Triangle,
                 0,
@@ -1482,6 +1488,7 @@ impl MetalRenderer {
                 mem::size_of_val(&viewport_size),
                 UnderlineInputIndex::ViewportSize as usize,
             );
+            crate::fast::input_gpu_metrics::draw_call();
             command_encoder.drawPrimitives_vertexStart_vertexCount_instanceCount_baseInstance(
                 MTLPrimitiveType::Triangle,
                 0,
@@ -1546,6 +1553,7 @@ impl MetalRenderer {
                 Some(&texture),
                 SpriteInputIndex::AtlasTexture as usize,
             );
+            crate::fast::input_gpu_metrics::draw_call();
             command_encoder.drawPrimitives_vertexStart_vertexCount_instanceCount_baseInstance(
                 MTLPrimitiveType::Triangle,
                 0,
@@ -1620,6 +1628,7 @@ impl MetalRenderer {
                 Some(&texture),
                 SpriteInputIndex::AtlasTexture as usize,
             );
+            crate::fast::input_gpu_metrics::draw_call();
             command_encoder.drawPrimitives_vertexStart_vertexCount_instanceCount_baseInstance(
                 MTLPrimitiveType::Triangle,
                 0,
@@ -1732,6 +1741,7 @@ impl MetalRenderer {
 
             // SAFETY: Six unit vertices draw one instance within the uploaded scene's surface range.
             unsafe {
+                crate::fast::input_gpu_metrics::draw_call();
                 command_encoder.drawPrimitives_vertexStart_vertexCount_instanceCount_baseInstance(
                     MTLPrimitiveType::Triangle,
                     0,

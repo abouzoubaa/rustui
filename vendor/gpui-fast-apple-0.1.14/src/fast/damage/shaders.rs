@@ -63,6 +63,7 @@ impl Pipelines {
         encoder.setRenderPipelineState(&self.copy);
         unsafe {
             encoder.setFragmentTexture_atIndex(Some(source), 0);
+            crate::fast::input_gpu_metrics::draw_call();
             encoder.drawPrimitives_vertexStart_vertexCount(MTLPrimitiveType::Triangle, 0, 3);
         }
         encoder.endEncoding();
@@ -109,6 +110,7 @@ impl Pipelines {
                 std::mem::size_of_val(&color),
                 0,
             );
+            crate::fast::input_gpu_metrics::draw_call();
             encoder.drawPrimitives_vertexStart_vertexCount(MTLPrimitiveType::Triangle, 0, 3);
         }
     }

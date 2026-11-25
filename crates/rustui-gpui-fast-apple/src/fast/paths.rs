@@ -384,6 +384,7 @@ fn rasterize_group(
         );
         // The shaders index the vertices by `vertex_id`, which counts from the
         // group's first vertex.
+        crate::fast::input_gpu_metrics::draw_call();
         command_encoder.drawPrimitives_vertexStart_vertexCount(
             MTLPrimitiveType::Triangle,
             group.start,

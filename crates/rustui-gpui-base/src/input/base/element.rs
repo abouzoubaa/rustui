@@ -25,6 +25,7 @@ use super::{
     InputBaseState, PrepaintCaretGeometry, RangeDecorationStyle, TextDecoration,
     layout::{LastLayout, WhitespaceIndicators},
     mode::LayoutMode,
+    prepaint_reuse::{self, LayoutRows, RowReuse, RunCursor, ShapeSettings},
     tab_stops::{expand_tabs, expanded_width, tab_stop_width},
 };
 
@@ -2688,56 +2689,166 @@ impl<M: InputModeKind> TextElement<M> {
 
             debug_assert_eq!(line_item.len(), line_text.len());
 
-            let mut wrapped_lines: SmallVec<[ShapedLine; 1]> = SmallVec::with_capacity(1);
-            let mut line_has_background = false;
-
-            for range in &line_item.wrapped_lines {
-                let line_runs = runs_for_range(runs, run_offset, &range);
-                let line_runs = if bg_segments.is_empty() {
-                    line_runs
-                } else {
-                    split_runs_by_bg_segments(
-                        last_layout.visible_line_byte_offsets[vi] + (range.start),
-                        &line_runs,
-                        bg_segments,
-                    )
-                };
-
-                let sub_line: SharedString = line_text[range.clone()].to_string().into();
-                let line_runs =
-                    align_runs_to_char_boundaries(&sub_line, &line_runs).unwrap_or(line_runs);
-                let mut shaped_line = window
-                    .text_system()
-                    .shape_line(sub_line, font_size, &line_runs, None);
-                expand_tabs(&mut shaped_line, tab_stop);
-
-                line_has_background |= has_background(&line_runs);
-                wrapped_lines.push(shaped_line);
-            }
-
-            // Use the first visual line's indentation width for continuation lines.
-            let wrap_indent = if line_item.indent > 0 && wrapped_lines.len() > 1 {
-                let indent_byte_len = line_text
-                    .char_indices()
-                    .nth(line_item.indent as usize)
-                    .map(|(ix, _)| ix)
-                    .unwrap_or(line_text.len());
-                wrapped_lines[0].x_for_index(indent_byte_len)
-            } else {
-                px(0.)
-            };
-
-            let line_layout = LineLayout::new()
-                .lines(wrapped_lines)
-                .wrap_indent(wrap_indent)
-                .with_background(line_has_background)
-                .with_whitespaces(whitespace_indicators.clone());
+            let line_layout = Self::shape_plain_line(
+                &line_text,
+                &line_item.wrapped_lines,
+                line_item.indent,
+                runs,
+                run_offset,
+                bg_segments,
+                last_layout.visible_line_byte_offsets[vi],
+                &whitespace_indicators,
+                font_size,
+                tab_stop,
+                window,
+            );
             lines.push(line_layout);
 
             // +1 for the `\n`
             run_offset += line_text.len() + 1;
         }
 
+        lines
+    }
+
+    #[allow(clippy::too_many_arguments)]
+    fn shape_plain_line(
+        line_text: &str,
+        wraps: &[Range<usize>],
+        indent: u32,
+        runs: &[TextRun],
+        run_offset: usize,
+        bg_segments: &[(Range<usize>, Hsla)],
+        line_start: usize,
+        whitespace_indicators: &Option<WhitespaceIndicators>,
+        font_size: Pixels,
+        tab_stop: Pixels,
+        window: &mut Window,
+    ) -> LineLayout {
+        let mut wrapped_lines: SmallVec<[ShapedLine; 1]> = SmallVec::with_capacity(1);
+        let mut line_has_background = false;
+
+        for range in wraps {
+            let line_runs = runs_for_range(runs, run_offset, range);
+            let line_runs = if bg_segments.is_empty() {
+                line_runs
+            } else {
+                split_runs_by_bg_segments(line_start + range.start, &line_runs, bg_segments)
+            };
+
+            let sub_line: SharedString = line_text[range.clone()].to_string().into();
+            let line_runs =
+                align_runs_to_char_boundaries(&sub_line, &line_runs).unwrap_or(line_runs);
+            let mut shaped_line = window
+                .text_system()
+                .shape_line(sub_line, font_size, &line_runs, None);
+            expand_tabs(&mut shaped_line, tab_stop);
+
+            line_has_background |= has_background(&line_runs);
+            wrapped_lines.push(shaped_line);
+        }
+
+        // Use the first visual line's indentation width for continuation lines.
+        let wrap_indent = if indent > 0 && wrapped_lines.len() > 1 {
+            let indent_byte_len = line_text
+                .char_indices()
+                .nth(indent as usize)
+                .map(|(ix, _)| ix)
+                .unwrap_or(line_text.len());
+            wrapped_lines[0].x_for_index(indent_byte_len)
+        } else {
+            px(0.)
+        };
+
+        LineLayout::new()
+            .lines(wrapped_lines)
+            .wrap_indent(wrap_indent)
+            .with_background(line_has_background)
+            .with_whitespaces(whitespace_indicators.clone())
+    }
+
+    fn reuse_plain_lines(
+        state: &InputBaseState<M>,
+        layout: &LastLayout,
+        font_size: Pixels,
+        runs: &[TextRun],
+        whitespace: &Option<WhitespaceIndicators>,
+        window: &mut Window,
+    ) -> LayoutRows {
+        let font = window.text_style().font();
+        let tab_size = state.mode.tab_size().tab_size;
+        let settings = ShapeSettings {
+            window: window.window_handle().window_id(),
+            scale: window.scale_factor(),
+            font: font.clone(),
+            size: font_size,
+            content_width: layout.content_width,
+            wrap_width: layout.wrap_width,
+            wrapping_indent: layout.wrapping_indent,
+            tab_size,
+            whitespace_color: whitespace.as_ref().map(|_| {
+                state
+                    .editor_style
+                    .editor_invisible
+                    .unwrap_or(state.editor_style.muted_foreground)
+            }),
+        };
+        let prior = state
+            .last_layout
+            .as_ref()
+            .map(|prior| (&prior.lines, prior.visible_buffer_lines.as_slice()));
+        let mut rows = RowReuse::new(
+            prior,
+            settings,
+            layout.visible_buffer_lines.len(),
+            state.text.lines_len(),
+        );
+        let mut cursor = RunCursor::new(runs);
+        let mut offset = 0;
+        let mut tab_stop = None;
+        for (index, &row) in layout.visible_buffer_lines.iter().enumerate() {
+            let text = state.text.slice_line(row);
+            let item = state
+                .display_map
+                .line(row)
+                .expect("visible row in wrap map");
+            let len = text.len();
+            rows.line(
+                index,
+                row,
+                text,
+                &item.wrapped_lines,
+                item.indent,
+                cursor.line(offset, len),
+                |text, line_runs| {
+                    let tab_stop = *tab_stop.get_or_insert_with(|| {
+                        tab_stop_width(window.text_system(), &font, font_size, tab_size)
+                    });
+                    Self::shape_plain_line(
+                        text,
+                        &item.wrapped_lines,
+                        item.indent,
+                        line_runs,
+                        0,
+                        &[],
+                        0,
+                        whitespace,
+                        font_size,
+                        tab_stop,
+                        window,
+                    )
+                },
+            );
+            offset += len + 1;
+        }
+        let (lines, hits) = rows.finish();
+        if gpui::fast_latency_enabled() {
+            gpui::fast_latency_config(
+                window.window_handle().window_id(),
+                "g56_shape_reuse",
+                [hits as f64, lines.len() as f64, 0., 0.],
+            );
+        }
         lines
     }
 
@@ -3297,7 +3408,7 @@ impl<M: InputModeKind> Element for TextElement<M> {
             wrapping_indent,
             line_number_width,
             space_width,
-            lines: Rc::new(vec![]),
+            lines: LayoutRows::plain(Vec::new()),
             cursor_bounds: None,
             text_align: state.text_align,
             content_width: bounds.size.width,
@@ -3365,16 +3476,44 @@ impl<M: InputModeKind> Element for TextElement<M> {
         let whitespace_indicators =
             Self::layout_whitespace_indicators(&state, text_size, &text_style, window, cx);
 
-        let lines = Self::layout_lines(
-            &state,
-            &display_text,
-            &last_layout,
-            text_size,
-            &runs,
-            &document_colors,
-            whitespace_indicators,
-            window,
-        );
+        let full_shape = |window: &mut Window, whitespace| {
+            Self::layout_lines(
+                state,
+                display_text,
+                &last_layout,
+                text_size,
+                &runs,
+                &document_colors,
+                whitespace,
+                window,
+            )
+        };
+        let lines = if prepaint_reuse::enabled()
+            && !is_empty
+            && !state.masked
+            && !state.is_single_line()
+            && !state.tokens_visible()
+            && document_colors.is_empty()
+        {
+            let reused = Self::reuse_plain_lines(
+                state,
+                &last_layout,
+                text_size,
+                &runs,
+                &whitespace_indicators,
+                window,
+            );
+            if prepaint_reuse::verify() {
+                let full = full_shape(window, whitespace_indicators.clone());
+                assert_eq!(reused.len(), full.len());
+                for (actual, expected) in reused.iter().zip(&full) {
+                    assert_eq!(format!("{actual:?}"), format!("{expected:?}"));
+                }
+            }
+            reused
+        } else {
+            LayoutRows::plain(full_shape(window, whitespace_indicators))
+        };
 
         let mut longest_line_width = wrap_width.unwrap_or(px(0.));
         // 1. Single line
@@ -3474,7 +3613,7 @@ impl<M: InputModeKind> Element for TextElement<M> {
                     .map_or(px(0.), |cache| cache.unwrapped_width)
             };
         }
-        last_layout.lines = Rc::new(lines);
+        last_layout.lines = lines;
 
         let (ghost_first_line, ghost_lines) = Self::layout_inline_completion(
             state,

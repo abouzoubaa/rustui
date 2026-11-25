@@ -1,6 +1,6 @@
 use super::*;
 use crate::runtime::component_host::ComponentHost;
-use gpui::{EntityInputHandler, Focusable as _, ParentElement as _};
+use gpui::{EntityInputHandler, Focusable as _, ParentElement as _, Styled as _};
 
 #[gpui::test]
 fn local_edit_survives_draw_before_binding_effects(cx: &mut gpui::TestAppContext) {
@@ -414,4 +414,121 @@ fn custom_lowering_keeps_owner_notification(cx: &mut gpui::TestAppContext) {
         before,
         "body() cannot prove what a custom lowering paints"
     );
+}
+
+#[gpui::test]
+fn visible_prepaint_matches_full_after_edits_and_viewport_changes(cx: &mut gpui::TestAppContext) {
+    struct Owner {
+        value: String,
+    }
+
+    impl View for Owner {
+        fn body(&self) -> impl View {
+            CodeEditor(
+                "visible-prepaint-oracle",
+                Binding::new(
+                    self.value.clone(),
+                    |o: &Owner| o.value.clone(),
+                    |o, value| o.value = value,
+                ),
+            )
+            .language("rust")
+            .height(350.0)
+        }
+    }
+
+    let source: String = (0..120)
+        .map(|row| {
+            format!(
+                "    let row_{row:03} = \"a long decorated line for the editor wrap oracle\";\n"
+            )
+        })
+        .collect();
+    let theme = crate::theme::parse_theme(include_str!(concat!(
+        env!("CARGO_MANIFEST_DIR"),
+        "/../../themes/macos27.json"
+    )))
+    .unwrap();
+    let owner = cx.update(|app| {
+        gpui_component::init(app);
+        crate::theme::activate_theme(&theme, Some(crate::theme::AppearanceMode::Dark), app)
+            .unwrap();
+        app.new(|cx| {
+            crate::runtime::component_host::ComponentHost::new(
+                Owner {
+                    value: source.clone(),
+                },
+                cx,
+            )
+        })
+    });
+    let root = owner.clone();
+    let (_, window) = cx.add_window_view(|_, _| WindowShell(root));
+    struct WindowShell(gpui::Entity<crate::runtime::component_host::ComponentHost<Owner>>);
+    impl gpui::Render for WindowShell {
+        fn render(
+            &mut self,
+            _: &mut gpui::Window,
+            _: &mut gpui::Context<Self>,
+        ) -> impl gpui::IntoElement {
+            gpui::div().size_full().child(self.0.clone())
+        }
+    }
+
+    let editor = window.update(|window, app| {
+        window.draw(app).clear(app);
+        owner
+            .read(app)
+            .retained_entity_for_test::<RetainedCodeEditor>(
+                vec![],
+                Identity::from("visible-prepaint-oracle"),
+            )
+            .unwrap()
+            .read(app)
+            .editor
+            .clone()
+    });
+    for (range, text) in [(12..12, "a"), (12..13, "")] {
+        window.update(|window, app| {
+            editor.update(app, |state, cx| {
+                state.replace_text_in_range(Some(range), text, window, cx)
+            });
+            window.draw(app).clear(app);
+        });
+        window.cx.run_until_parked();
+    }
+    window.update(|window, app| {
+        let focus = editor.read(app).focus_handle(app);
+        window.focus(&focus, app);
+        editor.update(app, |state, cx| state.set_selected_range(0..0, cx));
+        app.write_to_clipboard(gpui::ClipboardItem::new_string(
+            "// pasted one\n// pasted two\n".into(),
+        ));
+        window.draw(app).clear(app);
+        window.dispatch_action(Box::new(gpui_base::input::Paste), app);
+    });
+    window.cx.run_until_parked();
+    window.update(|window, app| {
+        assert!(editor.read(app).value().starts_with("// pasted one"));
+        window.draw(app).clear(app);
+        window.dispatch_action(Box::new(gpui_base::input::Undo), app);
+    });
+    window.cx.run_until_parked();
+    window.update(|window, app| {
+        window.draw(app).clear(app);
+        assert_eq!(editor.read(app).value().as_ref(), source);
+        editor.update(app, |state, cx| {
+            state.set_scroll_offset(gpui::point(gpui::px(0.), gpui::px(-420.)), cx)
+        });
+        window.draw(app).clear(app);
+        window.draw(app).clear(app);
+    });
+    window.simulate_resize(gpui::size(gpui::px(340.), gpui::px(510.)));
+    window.update(|window, app| {
+        window.draw(app).clear(app);
+        crate::theme::activate_theme(&theme, Some(crate::theme::AppearanceMode::Light), app)
+            .unwrap();
+        window.draw(app).clear(app);
+        assert_eq!(editor.read(app).value().as_ref(), source);
+    });
 }
