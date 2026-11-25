@@ -580,6 +580,17 @@ impl MetalRenderer {
         };
     }
 
+    /// Select display sync for a window while preserving synchronous presents.
+    pub fn set_experimental_display_sync(&self, sync: bool) {
+        let sync =
+            sync || self.presents_with_transaction || crate::fast::immediate_present::transaction();
+        if let Some(layer) = &self.layer
+            && layer.displaySyncEnabled() != sync
+        {
+            layer.setDisplaySyncEnabled(sync);
+        }
+    }
+
     pub fn set_presents_with_transaction(&mut self, presents_with_transaction: bool) {
         if presents_with_transaction {
             self.damage.invalidate();

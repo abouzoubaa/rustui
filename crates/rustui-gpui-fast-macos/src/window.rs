@@ -440,6 +440,10 @@ unsafe fn build_window_class(name: &CStr, superclass: &AnyClass) -> *const AnyCl
             window_will_enter_fullscreen as extern "C" fn(_, Sel, *mut AnyObject),
         );
         decl.add_method(
+            sel!(windowDidFailToEnterFullScreen:),
+            window_did_fail_to_enter_fullscreen as extern "C" fn(_, Sel, *mut AnyObject),
+        );
+        decl.add_method(
             sel!(windowWillExitFullScreen:),
             window_will_exit_fullscreen as extern "C" fn(_, Sel, *mut AnyObject),
         );
@@ -702,6 +706,7 @@ pub(crate) struct MacWindowState {
     app_owns_titlebar_drag: bool,
     fullscreen_restore_bounds: Bounds<Pixels>,
     is_exiting_fullscreen: bool,
+    experimental_fullscreen_entered: bool,
     simple_fullscreen_state: Option<SimpleFullscreenState>,
     move_tab_to_new_window_callback: Option<Box<dyn FnMut()>>,
     merge_all_windows_callback: Option<Box<dyn FnMut()>>,
@@ -942,6 +947,20 @@ impl MacWindowState {
         self.native_window()
             .styleMask()
             .contains(NSWindowStyleMask::FullScreen)
+    }
+
+    pub(crate) fn refresh_experimental_display_sync(&mut self) {
+        if !crate::fast::display_sync::enabled()
+            || !gpui::fast_immediate_enabled()
+            || !gpui::fast_coalesce_enabled()
+        {
+            return;
+        }
+        let sync = crate::fast::display_sync::keep_sync(
+            self.is_fullscreen() || self.simple_fullscreen_state.is_some(),
+            self.experimental_fullscreen_entered || self.is_exiting_fullscreen,
+        );
+        crate::fast::composition::set_experimental_display_sync(self, sync);
     }
 
     fn toggle_simple_fullscreen(&mut self) -> Option<SimpleFullscreenPlan> {
@@ -1659,6 +1678,7 @@ impl MacWindow {
                 app_owns_titlebar_drag,
                 fullscreen_restore_bounds: Bounds::default(),
                 is_exiting_fullscreen: false,
+                experimental_fullscreen_entered: false,
                 simple_fullscreen_state: None,
                 move_tab_to_new_window_callback: None,
                 merge_all_windows_callback: None,
@@ -2763,6 +2783,7 @@ impl PlatformWindow for MacWindow {
         if let FrameSource::View(source) = &this.frame_source {
             source.used();
         }
+        this.refresh_experimental_display_sync();
         crate::fast::composition::begin_surface_frame(&this);
         this.renderer.draw(scene);
     }
@@ -3794,6 +3815,8 @@ extern "C" fn window_will_enter_fullscreen(this: &AnyObject, _: Sel, _: *mut Any
     let mut lock = window_state.as_ref().lock();
     lock.fullscreen_restore_bounds = lock.bounds();
     lock.is_exiting_fullscreen = false;
+    lock.experimental_fullscreen_entered = true;
+    lock.refresh_experimental_display_sync();
     lock.pre_fullscreen_traffic_light_frames = lock.traffic_light_frames;
     lock.restore_traffic_light();
 
@@ -3810,10 +3833,19 @@ extern "C" fn window_will_enter_fullscreen(this: &AnyObject, _: Sel, _: *mut Any
     }
 }
 
+extern "C" fn window_did_fail_to_enter_fullscreen(this: &AnyObject, _: Sel, _: *mut AnyObject) {
+    // SAFETY: Registered only on GPUI window classes holding MacWindowState.
+    let window_state = unsafe { get_window_state(this) };
+    let mut lock = window_state.as_ref().lock();
+    lock.experimental_fullscreen_entered = false;
+    lock.refresh_experimental_display_sync();
+}
+
 extern "C" fn window_will_exit_fullscreen(this: &AnyObject, _: Sel, _: *mut AnyObject) {
     let window_state = unsafe { get_window_state(this) };
     let mut lock = window_state.as_ref().lock();
     lock.is_exiting_fullscreen = true;
+    lock.refresh_experimental_display_sync();
 
     let min_version = NSOperatingSystemVersion {
         majorVersion: 15,
@@ -3843,6 +3875,8 @@ extern "C" fn window_did_exit_fullscreen(this: &AnyObject, _: Sel, _: *mut AnyOb
     let window_state = unsafe { get_window_state(this) };
     let mut lock = window_state.as_ref().lock();
     lock.is_exiting_fullscreen = false;
+    lock.experimental_fullscreen_entered = false;
+    lock.refresh_experimental_display_sync();
     // Moving the buttons during the transition captures their fullscreen frames.
     // Keep using the native windowed frames when restoring them on the next entry.
     lock.traffic_light_frames = lock.pre_fullscreen_traffic_light_frames.take();

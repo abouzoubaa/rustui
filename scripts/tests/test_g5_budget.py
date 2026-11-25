@@ -1,8 +1,21 @@
-import json,sys,tempfile,unittest
+import json,subprocess,sys,tempfile,unittest
 from pathlib import Path
 sys.path.insert(0,str(Path(__file__).resolve().parents[1]))
 from g5_budget import analyse_appkit,decompose
 class BudgetTests(unittest.TestCase):
+    def test_scroll_is_rejected_for_the_bare_reference_before_creating_output(self):
+        runner = Path(__file__).resolve().parents[1] / 'run_g5_budget.py'
+        with tempfile.TemporaryDirectory() as directory:
+            output = Path(directory) / 'capture'
+            result = subprocess.run(
+                [sys.executable, str(runner), '--app', 'bare', '--scene', 'scroll',
+                 '--passive', '0', '--pixels', '1', '--output', str(output)],
+                capture_output=True, text=True,
+            )
+            self.assertEqual(result.returncode, 2, result.stderr)
+            self.assertIn('the scroll scene requires --app lab', result.stderr)
+            self.assertFalse(output.exists())
+
     def test_formula_both_clocks_and_signed_s(self):
         r=decompose(10,10.002,10.011,10.010,.004)
         self.assertAlmostEqual(r['P'],2);self.assertAlmostEqual(r['wait'],5)

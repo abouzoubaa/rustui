@@ -36,6 +36,7 @@
     "../candidate-fast-latency/gpui-kit-first-frame-editor-reuse-v1-kit09.json",
     "../candidate-fast-latency/gpui-fast-input-gpu-density-v1-fast.json",
     "../candidate-fast-latency/gpui-kit-prepaint-visible-reuse-v1-fast.json",
-    "../candidate-fast-latency/gpui-kit-draw-first-injection-ranges-v1-fast.json"
+    "../candidate-fast-latency/gpui-kit-draw-first-injection-ranges-v1-fast.json",
+    "../candidate-fast-latency/gpui-fast-g5-closeout-v1-fast.json"
   ]
 }

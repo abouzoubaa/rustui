@@ -85,11 +85,13 @@ def main():
     p.add_argument('--external-observer',action='store_true',
                    help='Read ScreenCaptureKit and post test keys from the benchmark driver in both launch arms.')
     p.add_argument('--physical',action='store_true',help='Measure physical X and Backspace keys instead of posting synthetic keys.')
-    p.add_argument('--scene',choices=['typing','hover','drag'],default='typing')
+    p.add_argument('--scene',choices=['typing','hover','drag','scroll'],default='typing')
     p.add_argument('--seconds',type=int,default=60)
     p.add_argument('--hz',choices=['10','30'],default='10')
     p.add_argument('--timeout',type=float)
     p.add_argument('--scheduler',choices=['0','1'],default='0')
+    p.add_argument('--hl-fastpath',choices=['0','1'],
+                   help='Override the independent PX-3 switch for profile comparisons.')
     p.add_argument('--trace-wakes',action='store_true')
     p.add_argument('--input-scoped',choices=['0','1'],default='0')
     p.add_argument('--target-hover',action='store_true',help='Use an NSEvent addressed to the benchmark window for hover.')
@@ -101,7 +103,10 @@ def main():
     p.add_argument('--sparse',action='store_true')
     p.add_argument('--native-helper',type=Path)
     p.add_argument('--output',type=Path,required=True)
-    a=p.parse_args();a.output.mkdir(parents=True,exist_ok=False)
+    a=p.parse_args()
+    if a.scene == 'scroll' and a.app != 'lab':
+        p.error('the scroll scene requires --app lab')
+    a.output.mkdir(parents=True,exist_ok=False)
     assert 1<=a.seconds<=3600
     refs=ROOT/'target/headstart/g5-1'
     helper=a.native_helper or refs/'libG5Native.dylib'
@@ -126,7 +131,7 @@ def main():
     flags=dict(os.environ,RUSTUI_L1_NATIVE='1',RUSTUI_L1_PHYSICAL=str(int(a.physical)),RUSTUI_L1_LAB=str(int(a.app=='lab')),RUSTUI_L1_SPARSE=str(int(a.sparse)),
         RUSTUI_G5_REFERENCE='1',RUSTUI_DAMAGE='0',RUSTUI_FRAME_LOG='buffered',RUSTUI_FRAME_PROFILE='1',RUSTUI_G0_LATENCY='1',RUSTUI_LATENCY_BREAKDOWN='1',
         RUSTUI_G5_PIXEL_CAPTURE=a.pixels,RUSTUI_G5_REFRESH=a.passive,RUSTUI_G5_SCENE=a.scene,RUSTUI_G5_INPUT_HZ=a.hz,RUSTUI_G0_TYPING_HZ=a.hz,
-        RUSTUI_HL_FASTPATH='1' if a.app=='lab' and a.scene=='typing' else '0',GPUI_FAST_IMMEDIATE_PRESENT=arm[0],
+        RUSTUI_HL_FASTPATH=a.hl_fastpath or str(int(a.app=='lab' and a.scene=='typing')),GPUI_FAST_IMMEDIATE_PRESENT=arm[0],
         RUSTUI_DRAW_FIRST=arm[1],GPUI_FAST_IMMEDIATE_COALESCE=arm[2],GPUI_FAST_IMMEDIATE_ANY_CHANGE=arm[3],
         GPUI_FAST_NATIVE_SCHEDULER=a.scheduler,GPUI_FAST_INPUT_SCOPED_DEMAND=a.input_scoped,RUSTUI_L1_TARGET_HOVER=str(int(a.target_hover)),GPUI_FAST_TRACE_WAKES=str(int(a.trace_wakes)),
         GPUI_FAST_IMMEDIATE_HOLD_MS='250',GPUI_FAST_VIEW_DISPLAY_LINK='0',GPUI_FAST_FORCE_LEGACY_LINK='0',GPUI_FAST_FRAME_AHEAD='0',

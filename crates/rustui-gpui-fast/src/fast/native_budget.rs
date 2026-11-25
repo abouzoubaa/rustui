@@ -24,6 +24,7 @@ pub(crate) fn begin(window: &Window, event: &PlatformInput) -> Option<Stamp> {
     let kind = match event {
         PlatformInput::KeyDown(_) => 0,
         PlatformInput::MouseMove(_) => 1,
+        PlatformInput::Scroll(_) => 5,
         _ => return None,
     };
     #[cfg(target_os = "macos")]

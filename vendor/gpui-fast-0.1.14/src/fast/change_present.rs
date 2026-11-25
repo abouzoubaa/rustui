@@ -8,14 +8,19 @@ use std::{
 pub fn fast_coalesce_enabled() -> bool {
     static ON: OnceLock<bool> = OnceLock::new();
     crate::fast_immediate_enabled()
-        && (*ON.get_or_init(|| std::env::var("GPUI_FAST_IMMEDIATE_COALESCE").as_deref() == Ok("1"))
-            || (super::native_scheduler::enabled() && fast_any_change_enabled())
+        && (*ON.get_or_init(|| {
+            crate::fast_g5_profile_enabled()
+                || std::env::var("GPUI_FAST_IMMEDIATE_COALESCE").as_deref() == Ok("1")
+        }) || (super::native_scheduler::enabled() && fast_any_change_enabled())
             || super::native_scheduler::input_scoped_enabled())
 }
 pub fn fast_any_change_enabled() -> bool {
     static ON: OnceLock<bool> = OnceLock::new();
     crate::fast_immediate_enabled()
-        && *ON.get_or_init(|| std::env::var("GPUI_FAST_IMMEDIATE_ANY_CHANGE").as_deref() == Ok("1"))
+        && *ON.get_or_init(|| {
+            crate::fast_g5_profile_enabled()
+                || std::env::var("GPUI_FAST_IMMEDIATE_ANY_CHANGE").as_deref() == Ok("1")
+        })
 }
 #[derive(Default)]
 struct Surface {

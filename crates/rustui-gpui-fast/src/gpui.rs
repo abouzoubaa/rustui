@@ -412,3 +412,7 @@ pub use fast::change_present::{
     fast_any_change_enabled, fast_coalesce_enabled, fast_note_frame_cause, fast_surface_admit,
     fast_surface_build_admit, fast_surface_submitted,
 };
+
+#[path = "fast/g5_profile.rs"]
+mod g5_profile;
+pub use g5_profile::fast_g5_profile_enabled;

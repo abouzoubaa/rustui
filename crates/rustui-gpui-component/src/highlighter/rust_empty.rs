@@ -26,7 +26,10 @@ impl State {
         generation: u64,
     ) -> Self {
         static ON: OnceLock<bool> = OnceLock::new();
-        let enabled = *ON.get_or_init(|| std::env::var("RUSTUI_HL_FASTPATH").as_deref() == Ok("1"));
+        let enabled = *ON.get_or_init(|| {
+            gpui::fast_g5_profile_enabled()
+                || std::env::var("RUSTUI_HL_FASTPATH").as_deref() == Ok("1")
+        });
         #[cfg(feature = "tree-sitter-rust")]
         let eligible = config.name.as_ref() == "rust"
             && config.injections.as_ref() == PINNED_QUERY

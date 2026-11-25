@@ -33,7 +33,8 @@ uint64_t g5_native_claim_key(void) {
  return g5_native_take(0,&info) ? info.version : 0;
 }
 static void native_send(id self,SEL selector,NSEvent *event){
- CGEventRef cg=(event.type==NSEventTypeKeyDown||event.type==NSEventTypeMouseMoved)?event.CGEvent:NULL;
+ const BOOL wheel=event.type==NSEventTypeScrollWheel;
+ CGEventRef cg=(event.type==NSEventTypeKeyDown||event.type==NSEventTypeMouseMoved||wheel)?event.CGEvent:NULL;
  uint64_t data=cg?(uint64_t)CGEventGetIntegerValueField(cg,kCGEventSourceUserData):0;
  const BOOL pointer=event.type==NSEventTypeMouseMoved || event.type==NSEventTypeLeftMouseDragged;
  NSNumber *postedVersion=pointer?objc_getAssociatedObject(event,&version_key):nil;
@@ -52,9 +53,9 @@ static void native_send(id self,SEL selector,NSEvent *event){
        && (event.keyCode==7 || event.keyCode==51)) {
   data=magic|++physicalCount;
  }
- BOOL measured=(data&0xffff000000000000ULL)==magic && (event.type==NSEventTypeKeyDown || pointer);
+ BOOL measured=(data&0xffff000000000000ULL)==magic && (event.type==NSEventTypeKeyDown || pointer || wheel);
  NativeInfo previous=current;BOOL previous_consumed=consumed;
- if(measured){current=(NativeInfo){data&0xffffffffULL,event.timestamp,mach_absolute_time(),event.type==NSEventTypeKeyDown?0:1,event.windowNumber,cg?CGEventGetTimestamp(cg):0};consumed=NO;}
+ if(measured){current=(NativeInfo){data&0xffffffffULL,event.timestamp,mach_absolute_time(),event.type==NSEventTypeKeyDown?0:(wheel?5:1),event.windowNumber,cg?CGEventGetTimestamp(cg):0};consumed=NO;}
  BOOL timing_key = measured && current.kind == 0 && cpu_probe_enabled;
  uint64_t cpu_at_entry = timing_key ? cpu_handler_begin(current.version) : 0;
  ((void(*)(id,SEL,NSEvent *))original)(self,selector,event);
@@ -78,6 +79,21 @@ int g5_native_post(unsigned kind,uint64_t version,double x,double y){
   if(!down||!up){if(down)CFRelease(down);if(up)CFRelease(up);return 0;}
   CGEventSetIntegerValueField(down,kCGEventSourceUserData,(int64_t)(magic|version));
   CGEventPostToPid(getpid(),down);CGEventPostToPid(getpid(),up);CFRelease(down);CFRelease(up);return 1;
+ }
+ if(kind==5){
+  // Posted-to-PID wheel events reach AppKit with window 0. Let the
+  // WindowServer route the event at the active Lab window's location.
+  if(!NSApp.isActive || !window.isKeyWindow)return 0;
+  NSPoint local=NSMakePoint(x, NSHeight(window.contentView.bounds)/2);
+  NSPoint screen=[window convertPointToScreen:local];
+  CGPoint location=CGPointMake(screen.x,CGRectGetMaxY(CGDisplayBounds(CGMainDisplayID()))-screen.y);
+  CGEventRef scroll=CGEventCreateScrollWheelEvent(NULL,kCGScrollEventUnitPixel,1,(int32_t)y);
+  if(!scroll)return 0;
+  CGEventSetLocation(scroll,location);
+  CGEventSetIntegerValueField(scroll,kCGEventSourceUserData,(int64_t)(magic|version));
+  CGEventPost(kCGHIDEventTap,scroll);
+  CFRelease(scroll);
+  return 1;
  }
  NSView *view=window.contentView;NSPoint p=NSMakePoint(x,view.isFlipped?y:view.bounds.size.height-y);
  p=[view convertPoint:p toView:nil];

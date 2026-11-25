@@ -33,6 +33,7 @@ pub enum Scene {
     Hover,
     Log,
     Drag,
+    Scroll,
     Acceptance,
 }
 impl Scene {
@@ -43,6 +44,7 @@ impl Scene {
             Self::Hover => "hover",
             Self::Log => "log",
             Self::Drag => "drag",
+            Self::Scroll => "scroll",
             Self::Acceptance => "acceptance",
         }
     }
@@ -53,6 +55,7 @@ impl Scene {
             Self::Hover,
             Self::Log,
             Self::Drag,
+            Self::Scroll,
             Self::Acceptance,
         ]
         .into_iter()
@@ -67,7 +70,7 @@ impl Scene {
                 .filter(|hz| [10, 30].contains(hz))
                 .unwrap_or(10),
             Self::Log => 10,
-            Self::Hover | Self::Drag | Self::Acceptance => 120,
+            Self::Hover | Self::Drag | Self::Scroll | Self::Acceptance => 120,
         }
     }
 }
@@ -123,7 +126,7 @@ impl View for Benchmark {
                     .row_height(30.0),
             ),
             Scene::Acceptance => AnyView::new(rustui_playground::g5_acceptance_view()),
-            Scene::Log | Scene::Drag => {
+            Scene::Log | Scene::Drag | Scene::Scroll => {
                 AnyView::new(EntityView(self.native.as_ref().unwrap().clone()))
             }
         };
@@ -164,7 +167,7 @@ impl NativeSurface {
     fn new(scene: Scene) -> Self {
         Self {
             scene,
-            lines: if scene == Scene::Log {
+            lines: if matches!(scene, Scene::Log | Scene::Scroll) {
                 (0..INITIAL_LOG_LINES)
                     .map(|i| format!("{i:06}  G0 log record").into())
                     .collect()
@@ -206,7 +209,7 @@ impl gpui::Render for NativeSurface {
     fn render(&mut self, _: &mut Window, cx: &mut Context<Self>) -> impl gpui::IntoElement {
         let background = cx.theme().background;
         let foreground = cx.theme().foreground;
-        if self.scene == Scene::Log {
+        if matches!(self.scene, Scene::Log | Scene::Scroll) {
             let lines = self.lines.clone();
             return gpui::div()
                 .size_full()
@@ -259,13 +262,18 @@ impl gpui::Render for NativeSurface {
     }
 }
 
-fn mount(scene: Scene, single_line: bool, app: &mut App) -> (Owner, Entity<NativeSurface>) {
+fn mount(
+    scene: Scene,
+    single_line: bool,
+    document: Option<String>,
+    app: &mut App,
+) -> (Owner, Entity<NativeSurface>) {
     let native = app.new(|_| NativeSurface::new(scene));
     let component = Benchmark {
         scene,
         single_line,
         source: if scene == Scene::Typing && !single_line {
-            editor_source()
+            document.unwrap_or_else(editor_source)
         } else {
             String::new()
         },
@@ -300,6 +308,15 @@ fn step(
     window: &mut Window,
     app: &mut App,
 ) -> bool {
+    if scene == Scene::Scroll {
+        // Continuous wheel input oscillates around the pre-positioned viewport.
+        let delta = if (tick / 90).is_multiple_of(2) {
+            -16.0
+        } else {
+            16.0
+        };
+        return native_input::enabled() && native_input::post(5, tick as u64, 400.0, delta);
+    }
     if native_input::enabled() && matches!(scene, Scene::Typing | Scene::Hover | Scene::Drag) {
         let phase = tick % 42;
         let row = if hover_pixels() {
@@ -341,6 +358,7 @@ fn step(
     };
     let handled = match scene {
         Scene::Idle => true,
+        Scene::Scroll => unreachable!("native scroll handled above"),
         Scene::Typing => window.dispatch_keystroke(
             gpui::Keystroke::parse(if tick % 2 == 1 { "x" } else { "backspace" }).unwrap(),
             app,
@@ -450,6 +468,12 @@ fn playback(
                 warm_input(scene, single_line, matched_document, window, app);
             });
         }
+        if scene == Scene::Scroll {
+            native.update(cx, |state, cx| {
+                state.scroll.scroll_to_item_strict(200, gpui::ScrollStrategy::Top);
+                cx.notify();
+            });
+        }
         if scene == Scene::Log {
             native.update(cx, |state, cx| {
                 state.scroll.scroll_to_item_strict(INITIAL_LOG_LINES - 1, gpui::ScrollStrategy::Bottom);
@@ -483,6 +507,9 @@ fn playback(
             let _ = handle.update(cx, |_, window, app| { window.dispatch_event(gpui::PlatformInput::MouseDown(gpui::MouseDownEvent { button: gpui::MouseButton::Left, position: drag_position(0), click_count: 1, ..Default::default() }), app); });
             }
         }
+        let scroll_origin = (scene == Scene::Scroll)
+            .then(|| native.read_with(cx, |state, _| state.scroll.0.borrow().base_handle.offset().y));
+        let mut scroll_moved = false;
         let initial_len = owner.read_with(cx, |host, _| host.component().source.len());
         let initial_native_text = (native_input::enabled() && scene == Scene::Typing)
             .then(|| owner.read_with(cx, |host, _| host.component().source.clone()));
@@ -512,12 +539,15 @@ fn playback(
             };
             // Replaying a backlog of pointer events into AppKit makes its
             // queue length part of the workload. Sample motion once per wake.
-            if native_input::enabled() && matches!(scene, Scene::Hover | Scene::Drag) {
+            if native_input::enabled() && matches!(scene, Scene::Hover | Scene::Drag | Scene::Scroll) {
                 due = due.min(ticks + 1);
             }
             while ticks < due {
                 ticks += 1;
                 handled &= handle.update(cx, |_, window, app| step(scene, ticks, &native, window, app)).unwrap_or(false);
+            }
+            if let Some(origin) = scroll_origin {
+                scroll_moved |= native.read_with(cx, |state, _| state.scroll.0.borrow().base_handle.offset().y) != origin;
             }
             let length = owner.read_with(cx, |host, _| host.component().source.len());
             min_len = min_len.min(length); max_len = max_len.max(length);
@@ -541,7 +571,7 @@ fn playback(
         let (added, moves, dropped) = native.read_with(cx, |state, _| (state.lines.len().saturating_sub(INITIAL_LOG_LINES), state.moves, !state.dragging));
         let valid = handled && match scene { Scene::Typing => max_len > min_len && initial_native_text.as_ref().is_none_or(|initial| {
             ticks % 2 != 0 || owner.read_with(cx, |host, _| &host.component().source == initial)
-        }), Scene::Log => added == ticks, Scene::Drag => dropped && if native_input::enabled() { moves > 0 } else { moves == ticks }, _ => true };
+        }), Scene::Log => added == ticks, Scene::Scroll => scroll_moved, Scene::Drag => dropped && if native_input::enabled() { moves > 0 } else { moves == ticks }, _ => true };
         eprintln!("RUSTUI_G0_LOG {{\"event\":\"end\",\"scene\":\"{}\",\"epoch_ms\":{:.6},\"mach\":{},\"ticks\":{},\"log_lines_added\":{},\"drag_moves\":{},\"valid\":{},\"cpu_user_s\":{:.9},\"cpu_sys_s\":{:.9}}}", scene.name(), end_epoch, end_mach, ticks, added, moves, valid, cpu_user_s, cpu_sys_s);
         if native_input::enabled() && std::env::var("RUSTUI_G5_PIXEL_CAPTURE").as_deref()==Ok("1") {
             native_input::pixels_stop();let wait=Instant::now();
@@ -556,7 +586,7 @@ pub fn run_cli(args: &[String]) -> Result<(), String> {
     let scene = args
         .get(1)
         .and_then(|value| Scene::parse(value))
-        .ok_or("expected --g0-scene idle|typing|hover|log|drag|acceptance")?;
+        .ok_or("expected --g0-scene idle|typing|hover|log|drag|scroll|acceptance")?;
     let seconds = if args.len() == 2 {
         60
     } else if args.len() == 4 && args[2] == "--duration" {
@@ -574,6 +604,10 @@ pub fn run_cli(args: &[String]) -> Result<(), String> {
     {
         std::fs::write(path, editor_source()).map_err(|error| error.to_string())?;
     }
+    let document = std::env::var_os("RUSTUI_G5_C_RUST_FILE")
+        .map(std::fs::read_to_string)
+        .transpose()
+        .map_err(|error| format!("could not read the Rust benchmark file: {error}"))?;
     let bridge = Rc::new(RefCell::new(None));
     let slot = bridge.clone();
     let complete = Rc::new(Cell::new(false));
@@ -597,7 +631,7 @@ pub fn run_cli(args: &[String]) -> Result<(), String> {
                 );
             }
             let single_line = std::env::var("RUSTUI_G5_L7_SINGLE_LINE").as_deref() == Ok("1");
-            let (owner, native) = mount(scene, single_line, app);
+            let (owner, native) = mount(scene, single_line, document.clone(), app);
             *slot.borrow_mut() = Some(owner.clone());
             playback(
                 scene,
@@ -640,7 +674,7 @@ mod tests {
             activate_theme(&theme, Some(AppearanceMode::Dark), app).unwrap();
         });
         for single_line in [true, false] {
-            let (owner, native) = cx.update(|app| mount(Scene::Typing, single_line, app));
+            let (owner, native) = cx.update(|app| mount(Scene::Typing, single_line, None, app));
             let initial = if single_line {
                 String::new()
             } else {
@@ -683,7 +717,7 @@ mod tests {
             let theme = parse_theme(include_str!("../../../themes/macos27.json")).unwrap();
             activate_theme(&theme, Some(AppearanceMode::Dark), app).unwrap();
         });
-        let (owner, _) = cx.update(|app| mount(Scene::Idle, false, app));
+        let (owner, _) = cx.update(|app| mount(Scene::Idle, false, None, app));
         let inner = owner.clone();
         let handle = cx.open_window(
             gpui::size(gpui::px(WIDTH), gpui::px(HEIGHT)),
@@ -698,7 +732,7 @@ mod tests {
         window.run_until_parked();
         window.update(|_, app| assert_ne!(owner.read(app).component().caret, "G0 idle caret"));
 
-        let (owner, native) = cx.update(|app| mount(Scene::Typing, false, app));
+        let (owner, native) = cx.update(|app| mount(Scene::Typing, false, None, app));
         let inner = owner.clone();
         let handle = cx.open_window(
             gpui::size(gpui::px(WIDTH), gpui::px(HEIGHT)),
@@ -719,7 +753,7 @@ mod tests {
         window.run_until_parked();
         window.update(|_, app| assert_eq!(owner.read(app).component().source, before));
 
-        let (owner, native) = cx.update(|app| mount(Scene::Drag, false, app));
+        let (owner, native) = cx.update(|app| mount(Scene::Drag, false, None, app));
         let handle = cx.open_window(
             gpui::size(gpui::px(WIDTH), gpui::px(HEIGHT)),
             |window, cx| rustui::gpui_component::Root::new(owner, window, cx),

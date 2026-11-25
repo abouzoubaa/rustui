@@ -34,7 +34,10 @@ pub(crate) mod draw_first_folds;
 
 fn trim_editor() -> bool {
     static ENABLED: OnceLock<bool> = OnceLock::new();
-    *ENABLED.get_or_init(|| std::env::var("RUSTUI_G5_TRIM_EDITOR").as_deref() == Ok("1"))
+    *ENABLED.get_or_init(|| {
+        gpui::fast_g5_profile_enabled()
+            || std::env::var("RUSTUI_G5_TRIM_EDITOR").as_deref() == Ok("1")
+    })
 }
 
 const SYNC_PARSE_TIMEOUT: Duration = Duration::from_millis(2);
