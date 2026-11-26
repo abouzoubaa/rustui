@@ -14,6 +14,10 @@ static NativeInfo current;
 static BOOL consumed;
 static IMP original;
 static NSMutableArray<NSDictionary *> *records;
+static NSMutableArray<NSDictionary *> *posted;
+static void record_post(unsigned kind,uint64_t version,double delta){
+ if(posted && version)[posted addObject:@{@"kind":@(kind),@"version":@(version),@"mach":@(mach_absolute_time()),@"delta":@(delta)}];
+}
 static char version_key;
 static BOOL physicalArmed;
 static uint64_t physicalCount;
@@ -62,7 +66,9 @@ static void native_send(id self,SEL selector,NSEvent *event){
  uint64_t handler_end = measured ? mach_absolute_time() : 0;
  uint64_t cpu_delta = timing_key ? cpu_handler_end(cpu_at_entry) : 0;
  if (timing_key) cpu_record_handler(current.version, cpu_delta);
- if(measured){[records addObject:@{@"event":@"native",@"version":@(current.version),@"hardware_s":@(current.hardware),@"handler_mach":@(current.handler),@"handler_end_mach":@(handler_end),@"cg_timestamp_ns":@(current.cg_timestamp),@"window":@(current.window),@"kind":@(current.kind),@"consumed":@(consumed)}];current=previous;consumed=previous_consumed;}
+ if(measured){NSDictionary *record=@{@"event":@"native",@"version":@(current.version),@"hardware_s":@(current.hardware),@"handler_mach":@(current.handler),@"handler_end_mach":@(handler_end),@"cg_timestamp_ns":@(current.cg_timestamp),@"window":@(current.window),@"kind":@(current.kind),@"consumed":@(consumed)};
+  if(posted && wheel){NSMutableDictionary *withDelta=[record mutableCopy];withDelta[@"scroll_y"]=@(event.scrollingDeltaY);record=withDelta;}
+  [records addObject:record];current=previous;consumed=previous_consumed;}
 }
 int g5_native_post(unsigned kind,uint64_t version,double x,double y){
  if(!enabled())return 0;
@@ -91,6 +97,7 @@ int g5_native_post(unsigned kind,uint64_t version,double x,double y){
   if(!scroll)return 0;
   CGEventSetLocation(scroll,location);
   CGEventSetIntegerValueField(scroll,kCGEventSourceUserData,(int64_t)(magic|version));
+  record_post(kind,version,y);
   CGEventPost(kCGHIDEventTap,scroll);
   CFRelease(scroll);
   return 1;
@@ -104,6 +111,7 @@ int g5_native_post(unsigned kind,uint64_t version,double x,double y){
   CGEventRef move=CGEventCreateMouseEvent(NULL,kCGEventMouseMoved,location,kCGMouseButtonLeft);
   if(!move)return 0;
   CGEventSetIntegerValueField(move,kCGEventSourceUserData,(int64_t)(magic|version));
+  record_post(kind,version,0);
   CGEventPostToPid(getpid(),move);CFRelease(move);return 1;
  }
  if(kind==1)window.acceptsMouseMovedEvents=YES;
@@ -118,16 +126,19 @@ int g5_native_post(unsigned kind,uint64_t version,double x,double y){
   pointerVersions[@(llround(event.timestamp*1000000.0))]=@(version);
   objc_setAssociatedObject(event,&version_key,@(version),OBJC_ASSOCIATION_RETAIN_NONATOMIC);
  }
+ record_post(kind,version,0);
  [NSApp postEvent:event atStart:NO];
  return 1;
 }
 static void flush(void){
+ for(NSDictionary *r in posted){NSData *d=[NSJSONSerialization dataWithJSONObject:r options:NSJSONWritingSortedKeys error:nil];fprintf(stderr,"G54_POST %s\n",[[[NSString alloc]initWithData:d encoding:NSUTF8StringEncoding]UTF8String]);}
  mach_timebase_info_data_t b;mach_timebase_info(&b);fprintf(stderr,"L1_NATIVE {\"event\":\"clock\",\"numer\":%u,\"denom\":%u}\n",b.numer,b.denom);
  for(NSDictionary *r in records){NSData *d=[NSJSONSerialization dataWithJSONObject:r options:NSJSONWritingSortedKeys error:nil];fprintf(stderr,"L1_NATIVE %s\n",[[[NSString alloc]initWithData:d encoding:NSUTF8StringEncoding]UTF8String]);}
 }
 __attribute__((constructor)) static void install(void){
  if(!enabled())return;records=[NSMutableArray new];pointerVersions=[NSMutableDictionary new];atexit(flush);
  cpu_startup();
+ if([NSProcessInfo.processInfo.environment[@"RUSTUI_G54_TRACE"] isEqualToString:@"1"])posted=[NSMutableArray new];
  const char *keyPath=getenv("RUSTUI_L1_KEY_SOCKET");
  if(keyPath) {
   struct sockaddr_un address={.sun_family=AF_UNIX};

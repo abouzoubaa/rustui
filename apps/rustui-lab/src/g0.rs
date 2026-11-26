@@ -25,6 +25,21 @@ const HEIGHT: f32 = 800.0;
 const PAD: f32 = 32.0;
 const INITIAL_LOG_LINES: usize = 1000;
 
+fn latch_probe() -> bool {
+    static ON: std::sync::OnceLock<bool> = std::sync::OnceLock::new();
+    *ON.get_or_init(|| std::env::var("RUSTUI_G54_TRACE").as_deref() == Ok("1"))
+}
+
+fn motion_probe_rate() -> Option<u32> {
+    static RATE: std::sync::OnceLock<Option<u32>> = std::sync::OnceLock::new();
+    *RATE.get_or_init(|| {
+        latch_probe().then(|| match std::env::var("RUSTUI_G54_INPUT_HZ").as_deref() {
+            Ok("240") => 240,
+            _ => 120,
+        })
+    })
+}
+
 #[derive(Clone, Copy, Debug, Default, PartialEq, Eq)]
 pub enum Scene {
     #[default]
@@ -70,7 +85,8 @@ impl Scene {
                 .filter(|hz| [10, 30].contains(hz))
                 .unwrap_or(10),
             Self::Log => 10,
-            Self::Hover | Self::Drag | Self::Scroll | Self::Acceptance => 120,
+            Self::Hover | Self::Drag | Self::Scroll => motion_probe_rate().unwrap_or(120),
+            Self::Acceptance => 120,
         }
     }
 }
@@ -310,7 +326,13 @@ fn step(
 ) -> bool {
     if scene == Scene::Scroll {
         // Continuous wheel input oscillates around the pre-positioned viewport.
-        let delta = if (tick / 90).is_multiple_of(2) {
+        let delta = if latch_probe() {
+            if ((tick - 1) / 60).is_multiple_of(2) || tick.is_multiple_of(120) {
+                -8.0
+            } else {
+                8.0
+            }
+        } else if (tick / 90).is_multiple_of(2) {
             -16.0
         } else {
             16.0
@@ -539,7 +561,7 @@ fn playback(
             };
             // Replaying a backlog of pointer events into AppKit makes its
             // queue length part of the workload. Sample motion once per wake.
-            if native_input::enabled() && matches!(scene, Scene::Hover | Scene::Drag | Scene::Scroll) {
+            if !latch_probe() && native_input::enabled() && matches!(scene, Scene::Hover | Scene::Drag | Scene::Scroll) {
                 due = due.min(ticks + 1);
             }
             while ticks < due {
@@ -552,7 +574,15 @@ fn playback(
             let length = owner.read_with(cx, |host, _| host.component().source.len());
             min_len = min_len.min(length); max_len = max_len.max(length);
             if elapsed >= duration { break; }
-            cx.background_executor().timer(if scene == Scene::Idle { duration } else { Duration::from_nanos(1_000_000_000 / u64::from(scene.hz())) }).await;
+            let delay = if scene == Scene::Idle {
+                duration
+            } else if latch_probe() && matches!(scene, Scene::Hover | Scene::Drag | Scene::Scroll) {
+                Duration::from_nanos(1_000_000_000 * (ticks as u64 + 1) / u64::from(scene.hz()))
+                    .saturating_sub(start.elapsed())
+            } else {
+                Duration::from_nanos(1_000_000_000 / u64::from(scene.hz()))
+            };
+            cx.background_executor().timer(delay).await;
         }
         if manual { ticks = native_input::physical_count(0) as usize; }
         native_input::cpu_boundary(1);
@@ -576,6 +606,23 @@ fn playback(
         if native_input::enabled() && std::env::var("RUSTUI_G5_PIXEL_CAPTURE").as_deref()==Ok("1") {
             native_input::pixels_stop();let wait=Instant::now();
             while native_input::pixels_state()!=2 {assert!(wait.elapsed()<Duration::from_secs(10),"native capture did not stop");cx.background_executor().timer(Duration::from_millis(20)).await;}
+        }
+        if latch_probe() {
+            let (x, y, offset) = native.read_with(cx, |state, _| {
+                (f32::from(state.card.x), f32::from(state.card.y),
+                 f32::from(state.scroll.0.borrow().base_handle.offset().y))
+            });
+            let expected_card = drag_position(ticks) - drag_position(0)
+                + gpui::point(gpui::px(80.), gpui::px(80.));
+            let mouse = handle.update(cx, |_, window, _| window.mouse_position()).unwrap();
+            let phase = ticks % 42;
+            let row = phase.min(42 - phase);
+            let hover_target = gpui::point(gpui::px(400.), gpui::px(PAD + 15. + row as f32 * 30.));
+            let scroll_delta = scroll_origin.map(|origin| offset - f32::from(origin));
+            eprintln!("G54_FINAL {{\"drag\":[{x},{y}],\"expected_drag\":[{},{}],\"scroll\":{},\"hover\":[{},{}],\"expected_hover\":[{},{}]}}",
+                f32::from(expected_card.x), f32::from(expected_card.y),
+                scroll_delta.map_or_else(|| "null".to_owned(), |v| v.to_string()),
+                f32::from(mouse.x), f32::from(mouse.y), f32::from(hover_target.x), f32::from(hover_target.y));
         }
         complete.set(valid);
         cx.update(|app| app.quit());

@@ -197,6 +197,13 @@ active Lab window and verified that the visible list offset moved.
 
 All four workloads passed the no-REGRESSION gate.
 
+## G5-4 motion experiments
+
+| Switch | What it does | Evidence | Recommendation | Below macOS 14 |
+| --- | --- | --- | --- | --- |
+| `RUSTUI_G5_LATCH_LATEST=1` | Dispatches queued mouse motion and compatible wheel deltas immediately before building the frame | [G5-4 baseline and candidate](G5-4-latch.md) | REJECTED. Best paired p95 improvement 1.02 ms against a 2 ms gate | Cocoa queue path uses the existing CVDisplayLink fallback |
+| `RUSTUI_G5_LATCH_DEADLINE=1` | Delays the motion build until the measured render budget before the Metal display-link submit deadline | [G5-4 baseline and candidate](G5-4-latch.md) | REJECTED. Callbacks missed the cutoff and no motion versions were shown in six correctness captures | No-op with an unsupported marker |
+
 ## Local verification
 
 `scripts/check.sh` passed with 1,875 tests passing and 7 ignored across
