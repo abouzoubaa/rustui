@@ -2,7 +2,7 @@
 
 ## Unreleased
 
-- Add opt-in Metal damage attribution, early rejection of unsupported shifts, and safe damage for disjoint paint-order changes, and planner phase timing.
+- Add opt-in Metal damage attribution, phase timing, safe disjoint paint reordering, early shift rejection, and a per-view signature cache.
 
 - Add opt-in damage planner diagnostics and a full-display Lab benchmark mode.
 

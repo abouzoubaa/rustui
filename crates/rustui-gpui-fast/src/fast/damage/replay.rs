@@ -15,6 +15,7 @@ struct Source {
     id: u64,
     replayed: bool,
     element: u64,
+    view: u64,
 }
 #[derive(Clone, Copy)]
 struct Entry {
@@ -30,7 +31,7 @@ pub(crate) struct Provenance {
     kinds: [Vec<Entry>; 8],
 }
 thread_local! {
-    static SOURCE:Cell<Source> = const { Cell::new(Source{id:0,replayed:false,element:0}) };
+    static SOURCE:Cell<Source> = const { Cell::new(Source{id:0,replayed:false,element:0,view:0}) };
     #[cfg(any(test, feature="test-support"))]
     static TEST_ENABLED:Cell<bool> = const { Cell::new(false) };
 }
@@ -104,6 +105,29 @@ impl Drop for Restore {
         SOURCE.with(|s| s.set(self.0));
     }
 }
+/// Propagate the existing paint owner's generational SlotMap key. Nested
+/// views override it; replay and rounded-clip compilation retain the original.
+pub(crate) fn with_view<R>(view: crate::EntityId, paint: impl FnOnce() -> R) -> R {
+    static ACTIVE: OnceLock<bool> = OnceLock::new();
+    if !*ACTIVE.get_or_init(|| {
+        ["RUSTUI_G_R2_VIEW_SIGNATURES", "RUSTUI_G_R2_VIEW_SIZES"]
+            .iter()
+            .any(|key| std::env::var_os(key).as_deref() == Some("1".as_ref()))
+    }) {
+        return paint();
+    }
+    let _restore = Restore(SOURCE.with(|s| {
+        s.replace(Source {
+            view: if slotmap::Key::is_null(&view) {
+                0
+            } else {
+                view.as_u64()
+            },
+            ..s.get()
+        })
+    }));
+    paint()
+}
 fn insert(scene: &mut Scene, primitive: Primitive, source: Source) {
     let _restore = Restore(SOURCE.with(|s| s.replace(source)));
     scene.insert_primitive(primitive);
@@ -146,7 +170,7 @@ impl Window {
         }
         let source = Source {
             element: self.element_id_stack.hash(),
-            ..Source::default()
+            ..SOURCE.with(Cell::get)
         };
         insert(&mut self.next_frame.scene, primitive.into(), source);
     }
@@ -176,6 +200,21 @@ impl Scene {
             .get(kind)?
             .get(index)
             .map(|e| (e.source.id, e.source.replayed))
+    }
+    /// Full SlotMap key of the GPUI view that originally painted this operation.
+    #[doc(hidden)]
+    pub fn fast_damage_view(&self, kind: usize, index: usize) -> u64 {
+        self.fast_damage
+            .kinds
+            .get(kind)
+            .and_then(|k| k.get(index))
+            .map_or(0, |e| e.source.view)
+    }
+    /// Identity and owner of one exact GPUI paint operation, in renderer order.
+    #[doc(hidden)]
+    pub fn fast_damage_view_source(&self, kind: usize, index: usize) -> Option<(u64, bool, u64)> {
+        let source = self.fast_damage.kinds.get(kind)?.get(index)?.source;
+        Some((source.id, source.replayed, source.view))
     }
     /// Defer signature work for a whole frame until a later frame can be planned.
     /// Layer contents are immutable shared scenes; primitive bytes are copied.

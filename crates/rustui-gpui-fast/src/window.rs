@@ -5921,7 +5921,7 @@ impl Window {
         f: impl FnOnce(&mut Self) -> R,
     ) -> R {
         self.rendered_entity_stack.push(id);
-        let result = f(self);
+        let result = crate::fast::damage::replay::with_view(id, || f(self));
         self.rendered_entity_stack.pop();
         result
     }

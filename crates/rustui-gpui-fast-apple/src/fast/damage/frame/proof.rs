@@ -742,6 +742,7 @@ fn replay_budget_proof() -> Result<()> {
     next.finish();
     let prepared = prepare(&mut renderer, &next, false);
     assert_eq!(prepared.mode, Mode::Copy);
+    plan::Cache::test_view_invalidation(prepared.snapshot.as_ref().unwrap().signatures[0]);
     assert_eq!(
         renderer.damage.cache.reused, 1,
         "rounded compilation must preserve replay identity"
@@ -752,6 +753,26 @@ fn replay_budget_proof() -> Result<()> {
     );
     let command = render(&mut renderer, &next, &target, size, prepared)?;
     assert_eq!(finish(&renderer, &command, &target)?, expected);
+    // The formerly clean view paints new content at the same location.
+    // Its new operation ID must invalidate the old signature and pixels.
+    let mut changed = Scene::default();
+    changed.with_fast_damage_clip_for_test(box_at(0., 0., 64., 64.), |s| {
+        quad(s, 0., 0., 64., 64., gpui::blue(), 0.);
+    });
+    changed.finish();
+    let fresh = prepare(&mut renderer, &changed, false);
+    assert_eq!(
+        renderer.damage.cache.reused, 0,
+        "repaint used a stale signature"
+    );
+    assert!(renderer.damage.cache.hashed >= 1);
+    assert!(!matches!(fresh.mode, Mode::Copy | Mode::Same));
+    let cmd = render(&mut renderer, &changed, &target, size, fresh)?;
+    let pixels = finish(&renderer, &cmd, &target)?;
+    let reference = retained::texture(&renderer.device, 64, 64)?;
+    let cmd = renderer.render_frame(&changed, &reference, size)?;
+    assert_eq!(pixels, finish(&renderer, &cmd, &reference)?);
+    assert_ne!(pixels, expected);
     let resized = renderer.damage.choose(
         &renderer.sprite_atlas,
         &next,

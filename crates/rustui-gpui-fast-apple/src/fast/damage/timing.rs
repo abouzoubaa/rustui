@@ -192,6 +192,7 @@ pub(crate) fn enabled() -> bool {
 }
 
 pub(crate) struct Timing {
+    _allocations: super::allocation_probe::Sample,
     last: Option<Instant>,
     phase: Phase,
     elapsed_ns: [u64; 3],
@@ -202,6 +203,7 @@ pub(crate) struct Timing {
 impl Timing {
     pub(crate) fn start() -> Self {
         Self {
+            _allocations: super::allocation_probe::Sample::start("renderer"),
             last: enabled().then(Instant::now),
             phase: Phase::Present,
             elapsed_ns: [0; 3],

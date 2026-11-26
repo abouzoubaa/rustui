@@ -1,7 +1,138 @@
-GATE: MISSED (best = 172.9 µs, after 0 attempts)
+GATE: MISSED (best diff = 164.1 µs, after 2 attempts)
 
-G-R2c gate evidence is the pre-steer diagnostic baseline. Stable Rust
-1.97.1 failed to build before either allowed fix attempt could start.
+# G-R2d · signature collection on the repository compiler
+
+Attempt 1 had the lowest measured typing difference and passed the hover and typing pixel oracles. Each diagnostic used one damage-off and one damage-on 60-second native typing run. The 60 µs decision uses the arithmetic mean of all in-window renderer planning records in each arm, including the existing damage CPU log write. The separately qualified workload pairs are below.
+
+## Compiler
+
+```toml
+[toolchain]
+channel = "1.98.0"
+profile = "minimal"
+components = ["rustfmt", "clippy"]
+```
+
+Inside the worktree, plain `rustc --version` returned `rustc 1.97.1 (8bab26f4f 2026-07-14) (Homebrew)`. The repository helper returned `rustc 1.98.0 (88d9e12ae 2026-08-18)`. `scripts/check.sh` sources `scripts/pinned-toolchain.sh`, which reads the TOML channel and uses `rustup which` and `rustup run`. The check script also exports the 1.98.0 compiler and rustdoc explicitly and prepends their directory to PATH. Builds and checks used that helper. The toolchain files and the macOS `map_or_default` calls have an empty diff.
+
+## Planner diagnosis
+
+Values are mean / nearest-rank p95 in µs. The fixed-size recorder assigns each nanosecond to one sub-phase. Baseline is the fresh, pre-fix G-R2d build with the separate record-write timer.
+
+| Planner sub-phase | Baseline off | Baseline on | Attempt 1 off | Attempt 1 on | Attempt 2 off | Attempt 2 on |
+|---|---:|---:|---:|---:|---:|---:|
+| `plan_us` | 127.1 / 226.2 | 311.8 / 536.0 | 113.0 / 237.5 | 277.1 / 441.5 | 105.8 / 247.0 | 287.1 / 449.3 |
+| `preflight_us` | 1.3 / 2.3 | 1.8 / 3.3 | 1.1 / 2.5 | 1.9 / 3.5 | 1.6 / 3.0 | 2.4 / 4.1 |
+| `atlas_and_backoff_us` | 0.0 / 0.0 | 1.5 / 2.8 | 0.0 / 0.0 | 1.6 / 3.0 | 0.0 / 0.0 | 1.4 / 2.9 |
+| `prime_snapshot_us` | 0.0 / 0.0 | 0.0 / 0.0 | 0.0 / 0.0 | 0.0 / 0.0 | 0.0 / 0.0 | 0.0 / 0.0 |
+| `signature_collection_us` | 0.0 / 0.0 | 67.4 / 164.0 | 0.0 / 0.0 | 65.5 / 90.1 | 0.0 / 0.0 | 49.5 / 72.6 |
+| `fixed_compare_us` | 0.0 / 0.0 | 0.3 / 0.7 | 0.0 / 0.0 | 0.4 / 0.8 | 0.0 / 0.0 | 0.5 / 1.0 |
+| `match_unchanged_us` | 0.0 / 0.0 | 69.1 / 98.7 | 0.0 / 0.0 | 70.8 / 100.0 | 0.0 / 0.0 | 64.7 / 96.4 |
+| `scroll_vote_us` | 0.0 / 0.0 | 5.9 / 9.9 | 0.0 / 0.0 | 6.3 / 10.9 | 0.0 / 0.0 | 5.5 / 10.3 |
+| `paint_order_us` | 0.0 / 0.0 | 17.9 / 26.4 | 0.0 / 0.0 | 14.3 / 22.1 | 0.0 / 0.0 | 16.0 / 23.9 |
+| `shift_match_us` | 0.0 / 0.0 | 0.0 / 0.0 | 0.0 / 0.0 | 0.0 / 0.0 | 0.0 / 0.0 | 0.0 / 0.0 |
+| `rect_merge_us` | 0.0 / 0.0 | 3.5 / 5.9 | 0.0 / 0.0 | 3.9 / 6.5 | 0.0 / 0.0 | 3.3 / 5.3 |
+| `build_plan_us` | 0.0 / 0.0 | 2.1 / 3.5 | 0.0 / 0.0 | 2.2 / 3.6 | 0.0 / 0.0 | 1.1 / 2.0 |
+| `select_mode_us` | 0.0 / 0.0 | 2.0 / 3.6 | 0.0 / 0.0 | 1.8 / 3.5 | 0.0 / 0.0 | 1.8 / 3.3 |
+| `emit_cpu_record_us` | 125.8 / 224.0 | 140.2 / 237.2 | 111.9 / 234.8 | 108.4 / 225.9 | 104.2 / 244.9 | 141.1 / 231.5 |
+
+| Diagnostic | Mean on − off | Renderer records off / on | Hashed / replayed per active typing frame |
+|---|---:|---:|---:|
+| Baseline | +184.7 µs | 583 / 587 | 888.5 / 1.0 |
+| Attempt 1 | +164.1 µs | 584 / 582 | 888.5 / 1.0 |
+| Attempt 2 | +181.3 µs | 583 / 581 | 888.5 / 1.0 |
+
+Attempt 2 reduced matching by 6.2 µs. The synchronous CPU-record write contributed −3.6 µs to the attempt-1 on/off difference and +36.9 µs to attempt 2. Both writes were included in the gate as specified.
+
+**Attempt 1, fixes 1 and 4.** `RUSTUI_G_R2_VIEW_SIGNATURES=1` records the existing generational GPUI view key. A slot-indexed Vec holds the previous and current per-view signature lists. Reuse requires the exact operation that GPUI replayed from a clean paint range. A repaint receives a fresh identity. Atlas freshness and current paint order are applied when reusing a signature. Rounded groups retain their child provenance and rebuild their aggregate. The collector recycles its output vectors across frames and clip depths.
+
+The separate 60-second sizing capture yielded 1,749 nonempty view/frame observations. There were 583 counts of 1, 583 of 5, 288 of 883 and 295 of 884. Every observed signature had a view owner. Nearest-rank p95 was **884**, which is the per-view SmallVec inline capacity. Only one signature per typing frame qualified as exact clean replay on average. The editor repainted the view that owns nearly all glyphs.
+
+**Attempt 2, fix 2.** Matching unchanged primitives was the largest positive contribution to the attempt-1 difference (70.8 µs). It pairs a multiset across the two entire scenes, including duplicate signatures and fresh atlas draws. The paint replay flag alone cannot establish that pairing. The trial matcher retained the previous-index chains, head map, matched indices and kept flags. It clears the buffers between calls. The two lists of changed indices each have SmallVec inline capacity 20, their measured typing p95 over 141 general-plan frames. For inputs of at most 16 old primitives, it finds each head by linear search in a SmallVec of key/value pairs. Larger inputs use the existing FxHashMap. Missing heads and exhausted chains must guard index accesses. There was no interchangeable numeric choice requiring `select_unpredictable` in this phase. NEON inspection did not apply. No crates were added. The existing `smallvec` and hash-map dependencies were used.
+
+## Allocations and pixel correctness
+
+The allocation capture used a separate instrumented release run per setting, without compiling during capture. The optional Lab dylib counts main-thread calls to malloc, calloc, realloc, aligned_alloc and posix_memalign. The signature scope covers signature collection, the renderer scope covers MetalRenderer::draw. These numbers exclude other threads and allocator entry points that bypass those functions. Means use all frames in the 15-second measured window. The allocation interposer was absent during timing.
+
+| Damage / view cache | Renderer calls/frame mean / p95 | Signature calls/frame mean / p95 / max | Frames |
+|---|---:|---:|---:|
+| Off / off | 43.545 / 43 | 0 (collection bypassed) | 145 |
+| On / off | 104.069 / 106 | 1.0000 / 1 / 1 | 145 |
+| On / on | 103.097 / 105 | 0.0069 / 0 / 1 | 145 |
+
+Of 145 opt-in collection scopes, 144 made zero measured heap calls. The remaining call occurred on a Copy frame about 1.31 s into the window. All 133 subsequent signature scopes in that run recorded zero. This establishes zero allocations in the observed steady sequence, with one exception over the full window.
+
+| Native runtime byte oracle | Hover Partial frames | Typing Partial frames | Mismatches |
+|---|---:|---:|---:|
+| Attempt 1 | 838 | 568 | 0 |
+| Attempt 2 | 847 | 566 | 0 |
+
+The native proof also replays a clean clipped view, changes its content at the same location, requires a new signature, excludes Copy/Skip for the repaint, and checks the changed pixels against a whole draw. A companion test keeps the same numbered view slot across clean replay, repaint, and SlotMap generation replacement. It requires the edited signature on the following replay and rejects the retired owner’s cached entry. Both tests run under the existing nine native Metal proofs. The suite includes its deliberately injected damage mismatch, which must be detected.
+
+To repeat the allocation comparison, compile the Lab-only helper with `xcrun clang -O2 -dynamiclib apps/latency-ref/g_r2_allocations.c -o target/headstart/g5-1/libGR2Allocations.dylib`. Set `RUSTUI_G_R2_ALLOCATIONS=1` only for the diagnostic run. For workload timing, use `RUSTUI_G_R2_VIEW_SIGNATURES=1 python3 scripts/run_g_r2.py matrix --output <new-directory>`. The sizing-only switch is `RUSTUI_G_R2_VIEW_SIZES=1`. Raw capture files are local measurement artifacts.
+
+## Qualified workload pairs
+
+Each 60-second arm used the same release build, native Cocoa input, 3456 × 2234 drawable, G5 profile, display sync on and buffered logging. The order alternated by pair. The candidate view-tagging switch was set in both arms. With damage off, the renderer bypassed signature collection. The load gate excludes the Lab, WindowServer and kernel_task. Both arms must be ≤100% of one core and differ by ≤15 percentage points. Each pair gets at most three retries. A CPU speed limit below 100 also consumes a retry. At least four qualified pairs are required.
+
+Arm values are off → on. GPU ms/frame, draw+present ms/attempt and process CPU s/s are medians of qualified arm means. Partial percentages and mean plan µs use pooled measured records. Draw+present uses the 3% damage gate, scroll uses the 2% process CPU gate. PASS requires every qualified pair at or below its limit, FAIL every pair above it. The process CPU verdict uses the P rule across qualified pairs.
+
+| Workload | Qualified | Partial % | GPU ms/frame | Draw+present ms/attempt | Plan µs | Process CPU s/s | Gate | Process CPU verdict |
+|---|---:|---:|---:|---:|---:|---:|---|---|
+| typing | 5/5 | 0.00 → 97.15 | 1.037 → 0.490 | 1.989 → 2.227 | 106.7 → 264.5 | 0.1032 → 0.1061 | FAIL | INCONCLUSIVE |
+| hover | 5/5 | 0.00 → 99.82 | 1.310 → 0.970 | 2.089 → 2.128 | 88.2 → 154.6 | 0.3696 → 0.3744 | INCONCLUSIVE | INCONCLUSIVE |
+| drag | 5/5 | 0.00 → 99.99 | 1.744 → 1.215 | 0.620 → 0.637 | 111.4 → 137.8 | 0.2415 → 0.2424 | INCONCLUSIVE | INCONCLUSIVE |
+| scroll | 5/5 | 0.00 → 0.00 | 1.719 → 1.717 | 1.158 → 1.396 | 120.4 → 374.7 | 0.3504 → 0.3614 | INCONCLUSIVE | INCONCLUSIVE |
+
+| Workload | Qualified paired draw+present changes | Qualified paired process CPU changes |
+|---|---|---|
+| typing | +15.63%, +14.42%, +11.04%, +11.41%, +6.55% | +2.82%, +3.21%, +1.86%, +3.47%, -0.25% |
+| hover | +3.19%, +1.00%, -4.76%, +1.85%, +7.33% | +6.16%, +4.63%, -1.79%, +3.32%, +5.90% |
+| drag | +1.89%, +2.94%, +3.19%, +8.70%, -0.39% | +0.05%, +0.38%, -0.78%, +5.12%, -1.48% |
+| scroll | +23.18%, +21.49%, +18.18%, +19.42%, +16.30% | +4.81%, +4.22%, +2.12%, +2.87%, +0.57% |
+
+All 20 requested pairs qualified in 26 attempts. Typing exceeded +3% draw+present CPU in every pair even though GPU time fell by 0.547 ms/frame. Scroll stayed Direct. Four scroll pairs exceeded the +2% process CPU limit and one was within it, giving an inconclusive scroll gate.
+
+### Load and thermal state by pair attempt
+
+Values are off / on, as percentages of one logical core. Thermal codes below identify the complete `pmset -g therm` status text for each attempt. No attempt reported a CPU speed limit or a thermal warning.
+
+| Scene | Pair.try | Background | WindowServer | kernel_task | Thermal | Result |
+|---|---:|---:|---:|---:|---|---|
+| typing | 1.1 | 56.8 / 33.9 | 8.3 / 6.7 | 6.7 / 6.7 | T1 | load retry |
+| typing | 1.2 | 37.4 / 59.4 | 6.7 / 6.7 | 6.7 / 8.3 | T1 | load retry |
+| typing | 1.3 | 26.7 / 26.0 | 6.7 / 8.3 | 6.7 / 6.7 | T1 | qualified |
+| typing | 2.1 | 86.6 / 31.0 | 6.7 / 6.7 | 11.7 / 6.7 | T1 | load retry |
+| typing | 2.2 | 32.0 / 37.8 | 6.7 / 8.3 | 6.7 / 6.7 | T1 | qualified |
+| typing | 3.1 | 28.3 / 24.6 | 6.7 / 8.3 | 6.7 / 6.7 | T1 | qualified |
+| typing | 4.1 | 30.7 / 26.0 | 6.7 / 8.3 | 6.7 / 6.7 | T1 | qualified |
+| typing | 5.1 | 59.7 / 27.9 | 6.7 / 6.7 | 8.3 / 6.7 | T1 | load retry |
+| typing | 5.2 | 76.4 / 31.0 | 6.7 / 6.7 | 10.0 / 6.7 | T1 | load retry |
+| typing | 5.3 | 28.2 / 29.5 | 6.7 / 6.7 | 6.7 / 6.7 | T1 | qualified |
+| hover | 1.1 | 18.1 / 31.6 | 46.7 / 48.3 | 11.7 / 13.3 | T1 | qualified |
+| hover | 2.1 | 28.7 / 22.6 | 46.7 / 46.7 | 11.7 / 11.7 | T1 | qualified |
+| hover | 3.1 | 26.7 / 30.6 | 45.0 / 46.7 | 10.0 / 10.0 | T1 | qualified |
+| hover | 4.1 | 28.2 / 26.8 | 45.0 / 46.7 | 10.0 / 11.7 | T1 | qualified |
+| hover | 5.1 | 42.9 / 30.9 | 43.3 / 46.7 | 11.7 / 11.7 | T1 | qualified |
+| drag | 1.1 | 30.7 / 31.1 | 48.3 / 48.3 | 11.7 / 11.7 | T1 | qualified |
+| drag | 2.1 | 27.4 / 23.6 | 46.7 / 48.3 | 11.7 / 11.7 | T1 | qualified |
+| drag | 3.1 | 29.6 / 39.3 | 45.0 / 48.3 | 11.7 / 11.7 | T1 | qualified |
+| drag | 4.1 | 27.7 / 26.5 | 48.3 / 48.3 | 10.0 / 11.7 | T1 | qualified |
+| drag | 5.1 | 21.1 / 24.1 | 46.7 / 48.3 | 11.7 / 11.7 | T1 | qualified |
+| scroll | 1.1 | 46.4 / 38.6 | 40.0 / 41.7 | 13.3 / 13.3 | T1 | qualified |
+| scroll | 2.1 | 38.7 / 56.4 | 40.0 / 41.7 | 13.3 / 13.3 | T1 | load retry |
+| scroll | 2.2 | 36.9 / 44.4 | 40.0 / 40.0 | 11.7 / 13.3 | T1 | qualified |
+| scroll | 3.1 | 42.3 / 36.7 | 41.7 / 40.0 | 13.3 / 13.3 | T1 | qualified |
+| scroll | 4.1 | 49.2 / 37.8 | 41.7 / 40.0 | 13.3 / 13.3 | T1 | qualified |
+| scroll | 5.1 | 35.4 / 38.6 | 40.0 / 40.0 | 13.3 / 13.3 | T1 | qualified |
+
+T1 means macOS reported no recorded thermal warning, performance warning, or CPU power status. A numeric speed limit was unavailable.
+
+## Verification
+
+`scripts/check.sh` exited 0 with 1,875 passed, 7 ignored and 0 failed across 7 groups. All nine native Metal proofs passed. Both candidate Fast stacks passed full exact reverse/apply verification, and integration source verification exited 0. Attempt 2 was reversed before the workload pairs. All new switches default off.
+
+---
 
 # G-R2 damage engagement and renderer CPU
 

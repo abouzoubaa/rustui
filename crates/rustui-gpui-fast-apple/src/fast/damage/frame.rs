@@ -349,6 +349,8 @@ impl State {
             };
         }
         super::timing::plan_stage(super::timing::PlanStage::SignatureCollection);
+        self.cache.enable_from_env();
+        let allocation_sample = super::allocation_probe::Sample::start("signatures");
         let signature_start = std::time::Instant::now();
         if let Some(deferred) = self.snapshot.as_mut().unwrap().deferred.take() {
             self.cache.begin();
@@ -365,6 +367,7 @@ impl State {
             self.cache.finish();
         }
         self.cache.begin();
+        super::view_sizes::sample(scene);
         let Some(signatures) = plan::signatures_cached(
             scene,
             uploads.tiles.as_ref().unwrap(),
@@ -385,6 +388,7 @@ impl State {
         cpu.hashed += self.cache.hashed;
         cpu.reused += self.cache.reused;
         self.cache.finish();
+        drop(allocation_sample);
         cpu.signatures_ms = signature_start.elapsed().as_secs_f64() * 1000.;
         let plan_start = std::time::Instant::now();
         #[cfg(any(test, feature = "test-support"))]
@@ -507,6 +511,11 @@ impl State {
             prepared.probe,
         );
         if !prepared.preserve_snapshot {
+            if self.cache.pooled()
+                && let Some(retired) = self.snapshot.take()
+            {
+                self.cache.recycle(retired.signatures);
+            }
             self.snapshot = prepared.snapshot;
         }
         self.previous_large = prepared.large;

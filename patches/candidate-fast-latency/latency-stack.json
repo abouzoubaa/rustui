@@ -44,6 +44,9 @@
     "../candidate-fast-damage/gpui-fast-g-r2-early-metal-reject-v1-fast.json",
     "../candidate-fast-damage/gpui-fast-g-r2-paint-order-provenance-v1-fast.json",
     "../candidate-fast-damage/gpui-fast-g-r2b-disjoint-hover-order-v1-fast.json",
-    "../candidate-fast-damage/gpui-fast-g-r2c-planner-phases-v1-fast.json"
+    "../candidate-fast-damage/gpui-fast-g-r2c-planner-phases-v1-fast.json",
+    "../candidate-fast-damage/gpui-fast-g-r2d-view-provenance-v1-fast.json",
+    "../candidate-fast-damage/gpui-fast-g-r2d-view-signatures-v1-fast.json",
+    "../candidate-fast-damage/gpui-fast-g-r2d-view-generation-proof-v1-fast.json"
   ]
 }

@@ -113,6 +113,8 @@ def main():
     refs=ROOT/'target/headstart/g5-1'
     helper=a.native_helper or refs/'libG5Native.dylib'
     libs=[helper]+([refs/'libG5Pixels.dylib',refs/'libG5Refresh.dylib'] if a.app=='lab' else [])
+    if os.environ.get('RUSTUI_G_R2_ALLOCATIONS') == '1':
+        libs.append(refs / 'libGR2Allocations.dylib')
     bundles = {'bare': ('G5 Bare', 'latency-gpui'),
                'lab': ('RustUI Lab', 'rustui-lab'),
                'appkit': ('G5 AppKit', 'latency-appkit-display')}

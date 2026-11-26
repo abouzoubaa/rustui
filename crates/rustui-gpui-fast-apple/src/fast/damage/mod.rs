@@ -23,3 +23,7 @@ mod diagnosis;
 pub(crate) mod timing;
 
 mod order_probe;
+
+mod view_sizes;
+
+mod allocation_probe;

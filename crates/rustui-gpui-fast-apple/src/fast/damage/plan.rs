@@ -19,6 +19,7 @@ use std::collections::HashSet;
 mod cache;
 mod fixed;
 mod hover_order;
+mod views;
 pub(crate) use cache::Cache;
 use std::hash::{Hash, Hasher};
 
@@ -387,7 +388,8 @@ pub(crate) fn signatures_cached(
     let fresh = |tile: &AtlasTile| {
         uploaded.contains(&(tile.texture_id, tile.tile_id.0)) || dynamic(tile.texture_id)
     };
-    let mut out = Vec::with_capacity(
+    let mut out = cache.take_buffer();
+    out.reserve(
         scene.quads.len()
             + scene.shadows.len()
             + scene.underlines.len()
@@ -397,7 +399,7 @@ pub(crate) fn signatures_cached(
             + scene.paths.len(),
     );
     for (index, q) in scene.quads.iter().enumerate() {
-        let source = scene.fast_damage_source(0, index);
+        let source = scene.fast_damage_view_source(0, index);
         if let Some(signature) = cache.replay(source, q.order, false) {
             out.push(signature);
             continue;
@@ -426,7 +428,7 @@ pub(crate) fn signatures_cached(
         cache.push(source, s, &mut out);
     }
     for (index, s) in scene.shadows.iter().enumerate() {
-        let source = scene.fast_damage_source(1, index);
+        let source = scene.fast_damage_view_source(1, index);
         if let Some(signature) = cache.replay(source, s.order, false) {
             out.push(signature);
             continue;
@@ -450,7 +452,7 @@ pub(crate) fn signatures_cached(
         );
     }
     for (index, u) in scene.underlines.iter().enumerate() {
-        let source = scene.fast_damage_source(2, index);
+        let source = scene.fast_damage_view_source(2, index);
         if let Some(signature) = cache.replay(source, u.order, false) {
             out.push(signature);
             continue;
@@ -468,7 +470,7 @@ pub(crate) fn signatures_cached(
         );
     }
     for (index, g) in scene.monochrome_sprites.iter().enumerate() {
-        let source = scene.fast_damage_source(3, index);
+        let source = scene.fast_damage_view_source(3, index);
         if let Some(signature) = cache.replay(source, g.order, fresh(&g.tile)) {
             out.push(signature);
             continue;
@@ -486,7 +488,7 @@ pub(crate) fn signatures_cached(
         cache.push(source, s, &mut out);
     }
     for (index, g) in scene.subpixel_sprites.iter().enumerate() {
-        let source = scene.fast_damage_source(4, index);
+        let source = scene.fast_damage_view_source(4, index);
         if let Some(signature) = cache.replay(source, g.order, fresh(&g.tile)) {
             out.push(signature);
             continue;
@@ -504,7 +506,7 @@ pub(crate) fn signatures_cached(
         cache.push(source, s, &mut out);
     }
     for (index, p) in scene.polychrome_sprites.iter().enumerate() {
-        let source = scene.fast_damage_source(5, index);
+        let source = scene.fast_damage_view_source(5, index);
         if crate::fast::rounded_clip::group(scene, p.tile.texture_id).is_none()
             && let Some(signature) = cache.replay(source, p.order, fresh(&p.tile))
         {
@@ -540,6 +542,7 @@ pub(crate) fn signatures_cached(
                         .f(area.y1 - y);
                 }
             }
+            cache.recycle(inner);
             let mut s = sig(key.done(), p.order, &p.bounds, &p.content_mask, 1.0);
             s.fresh = fresh_inside;
             cache.push(source, s, &mut out);
@@ -557,7 +560,7 @@ pub(crate) fn signatures_cached(
         cache.push(source, s, &mut out);
     }
     for (index, p) in scene.paths.iter().enumerate() {
-        let source = scene.fast_damage_source(6, index);
+        let source = scene.fast_damage_view_source(6, index);
         if let Some(signature) = cache.replay(source, p.order, false) {
             out.push(signature);
             continue;
