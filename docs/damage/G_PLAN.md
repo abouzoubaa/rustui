@@ -7,6 +7,28 @@ This is the owner's unchanged source text below this section. The current base i
 - RustUI's library remains at `crates/rustui/src/`, as the Implementation tab assumes. `src/fast/damage/` paths refer to the affected GPUI Fast crates. `apps/rustui-lab` is currently a compatibility launcher for `apps/rustui-playground`; G0 scenes belong in the lab as requested by Batch 1.
 - New GPUI logic belongs under each affected crate's `src/fast/damage/` (present hints and pacing under `src/fast/`). All damage switches stay off by default until the owner's G2-6 decision. Power measurements are an owner run.
 
+## G-R0 order after the G5 port
+
+The [G-R0 rebaseline](../perf/G-R0-rebaseline.md) supersedes the older batch
+order below. Keep damage and planner back-off opt-in until G2-6.
+
+| Paused ticket | Status on G5 | Evidence and scope |
+| --- | --- | --- |
+| PR #163, planner back-off | Ported, still needs an isolated decision | The 8/30 state machine and recovery oracle run on the G5 renderer. The primary G-R0 gate leaves it off, so its effect needs an isolated comparison if large comparable frames persist. |
+| Hover classified as large | Still needed, run first | G-R0 hover recorded 29,314 Direct frames and zero Partial frames with damage on. Split the `large` reason into area, order and coarse-match decisions and log the rectangles. |
+| G2-8b, Partial culling | Still needed, conditioned on Partial coverage | G-R0 typing used Partial, cut GPU time, and failed the draw+present CPU gate. Partial still uploads and walks the whole scene. Preserve bounds and paint order, and diagnose hover first. |
+| G2-8c, retained allocation, prime clone and cache writes | Still valid as written | The port still discards targets on unsupported frames, calls `fast_damage_snapshot` on prime/recovery frames, and fills the signature cache for replayed content. Measure the three changes separately. |
+| G2-8d, early damage and rectangle dispersion | Still needed, design scope retained | G5 can skip CPU scene construction through admission. Frames it admits still reach the signature planner without view-level dirty bounds. Record the bounding-box / separate-area ratio and keep the early-damage proposal as design only. |
+| G2-5, scroll-layer compatibility | Still needed | `can_plan` still declines scroll-layer frames. Keep a fixture with real scroll-layer tiles and account for rasterized tiles and invalidation before making that path eligible. |
+| G3-1, scroll shift | Still needed, after G2-5 | The G-R0 scroll workload used Direct for 30,520 measured damage-on frames. The Metal path still falls back for a proposed shift. Keep whole-pixel and fractional-pixel assertions for the two blits. |
+| G2-6, owner decision | Changed to use the G5 reference | Use the G5-profile, display-sync-on captures and the existing owner power and pixel-oracle checks before deciding defaults. |
+| G4, native drag image | Changed for floating drag | GPUI Fast already builds `NSDraggingItem` images and preserves their grab offsets for external file drags. Extend that route where appropriate for internal floating drags, then measure base damage. Keep separate tests for in-place dragging and animation. |
+
+Order after G-R0: hover planner diagnosis, G2-8b, G2-8c, G2-8d,
+then the paired G2 CPU gate again. Recheck back-off in isolation after the
+hover diagnosis if large comparable frames persist. Continue to G2-5 and
+G3-1 only after the CPU gate or an explicit owner decision, then G2-6 and G4.
+
 ---
 
 # RustUI Performance Merge Plan: GPUI Forks and Damage Tracking

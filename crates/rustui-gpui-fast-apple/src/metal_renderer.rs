@@ -228,8 +228,11 @@ impl MetalRenderer {
         // Allow texture reading for visual tests and UI automation screenshots
         // (captures without ScreenCaptureKit). Only debug builds pay the
         // presentation cost, even when `test-support` is compiled in.
-        #[cfg(all(feature = "test-support", debug_assertions))]
-        layer.setFramebufferOnly(false);
+        if cfg!(all(feature = "test-support", debug_assertions))
+            || crate::fast::damage::frame::verification_requested()
+        {
+            layer.setFramebufferOnly(false);
+        }
         layer.setAllowsNextDrawableTimeout(false);
         layer.setNeedsDisplayOnBoundsChange(true);
         // UIKit sizes a view's backing layer itself; only AppKit-hosted
@@ -721,6 +724,7 @@ impl MetalRenderer {
         let prepared = crate::fast::damage::frame::choose(self, scene);
         if prepared.mode == crate::fast::damage::frame::Mode::Same {
             gpui::fast_frame_reason(prepared.mode.label(), prepared.reason);
+            crate::fast::damage::encode::skipped(scene);
             crate::fast::damage::frame::skip(self, prepared);
             return;
         }
@@ -735,7 +739,8 @@ impl MetalRenderer {
             gpui::fast_order_defer();
             return;
         }
-        let staged = if prepared.reason == "disabled"
+        let encoding = crate::fast::damage::encode::Scope::new(scene);
+        let staged = if prepared.mode == crate::fast::damage::frame::Mode::Direct
             && source == 0
             && !self.presents_with_transaction
             && self.path_intermediate_texture.is_some()
@@ -810,12 +815,15 @@ impl MetalRenderer {
         }
         crate::fast::latency::layer(&layer, self.presents_with_transaction);
         let (planned_mode, planned_reason) = (prepared.mode, prepared.reason);
-        let rendered = if let Some((writer, bindings)) = staged {
-            self.damage.last_mode = crate::fast::damage::frame::Mode::Direct;
-            self.encode_frame(scene, &texture, viewport_size, writer, bindings)
-        } else {
-            crate::fast::damage::frame::render(self, scene, &texture, viewport_size, prepared)
-        };
+        let rendered = crate::fast::damage::frame::render_with_instances(
+            self,
+            scene,
+            &texture,
+            viewport_size,
+            prepared,
+            staged,
+            encoding,
+        );
         let command_buffer = match rendered {
             Ok(command_buffer) => command_buffer,
             Err(error) => {
@@ -846,6 +854,8 @@ impl MetalRenderer {
             );
         }
         if !order_hold.submit() {
+            // The prepared retained contents were never submitted to Metal.
+            self.damage.invalidate();
             gpui::fast_order_defer();
             return;
         }
@@ -869,6 +879,11 @@ impl MetalRenderer {
             command_buffer.presentDrawable(ProtocolObject::from_ref(&*drawable));
             command_buffer.commit();
             gpui::fast_latency_committed(latency);
+        }
+        if let Some(reference) = self.damage.take_verification() {
+            // Queue after the admitted primary so the oracle never blocks
+            // this queue on a drawable rejected by the order guard.
+            reference.commit();
         }
         order_hold.submitted();
         self.immediate.did_submit();
@@ -1444,6 +1459,7 @@ impl MetalRenderer {
             sprites = vec![PathSprite { bounds }];
         }
 
+        crate::fast::damage::encode::uploaded(sprites.len());
         let sprite_instance_bindings = writer.write(&sprites)?;
         // SAFETY: The draw uses six unit vertices and exactly the sprites written at this aligned binding.
         // Metal retains the buffer, and writer.finish publishes CPU writes before submission.
@@ -1966,6 +1982,7 @@ pub(crate) fn write_instances(
     scene: &Scene,
     writer: &mut InstanceBufferWriter,
 ) -> Result<InstanceBindings> {
+    crate::fast::damage::encode::uploaded_regular(scene);
     Ok(InstanceBindings {
         quads: writer.write(&scene.quads)?,
         shadows: writer.write(&scene.shadows)?,

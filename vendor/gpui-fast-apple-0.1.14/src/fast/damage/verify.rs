@@ -103,26 +103,25 @@ impl Readback {
     }
 }
 
-/// Complete all fallible work before enqueueing either buffer. Reserving the
-/// primary buffer's queue slot lets its caller add presentation and commit it
-/// normally, while the committed reference waits behind it on the same queue.
+/// Encode the reference without queueing it. The renderer submits the reference
+/// after the primary passes the surface order guard.
 pub(crate) fn schedule(
     renderer: &mut MetalRenderer,
     scene: &Scene,
     primary: &Retained<ProtocolObject<dyn MTLCommandBuffer>>,
-    kept: &ProtocolObject<dyn MTLTexture>,
+    output: &ProtocolObject<dyn MTLTexture>,
     size: Size<DevicePixels>,
     mode: Mode,
     status: Arc<Status>,
     fail_allocation: bool,
 ) -> Result<Retained<ProtocolObject<dyn MTLCommandBuffer>>> {
     anyhow::ensure!(!fail_allocation, "injected verification allocation failure");
-    let reference = Target::new(&renderer.device, kept.width(), kept.height())?
+    let reference = Target::new(&renderer.device, output.width(), output.height())?
         .context("verification exceeds device retained budget")?;
-    let actual = Readback::encode(renderer, primary, kept)?;
+    let actual = Readback::encode(renderer, primary, output)?;
     let command = renderer.render_frame(scene, &reference.texture, size)?;
     let expected = Readback::encode(renderer, &command, &reference.texture)?;
-    let width = kept.width();
+    let width = output.width();
     let lifetime = Cell::new(Some(reference));
     let submitted = primary.clone();
     let callback = RcBlock::new(
@@ -138,6 +137,8 @@ pub(crate) fn schedule(
             } else if !status.disabled.load(Ordering::Acquire) {
                 if let Some((x, y)) = first_mismatch(&actual.pixels(), &expected.pixels(), width) {
                     status.mismatch(mode.label(), x, y);
+                } else {
+                    super::metrics::verified(mode.label());
                 }
             }
             let _ = lifetime.take();
@@ -147,9 +148,5 @@ pub(crate) fn schedule(
     unsafe {
         command.addCompletedHandler(RcBlock::as_ptr(&callback));
     }
-    // Nothing after this point can return an encoding/allocation error and
-    // leave an uncommitted primary buffer blocking the queue.
-    primary.enqueue();
-    command.commit();
     Ok(command)
 }

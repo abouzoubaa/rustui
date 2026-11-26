@@ -96,6 +96,8 @@ def main():
     p.add_argument('--input-scoped',choices=['0','1'],default='0')
     p.add_argument('--target-hover',action='store_true',help='Use an NSEvent addressed to the benchmark window for hover.')
     p.add_argument('--switches',help='Four bits: immediate, draw-first, coalescing, any-change')
+    p.add_argument('--damage', choices=['0', '1', 'verify'], default='0',
+                   help='Explicit Stage G damage arm. The default is off.')
     p.add_argument('--passive',choices=['0','1'],required=True)
     p.add_argument('--pixels',choices=['0','1'],required=True)
     p.add_argument('--immediate',choices=['0','1'],default='1')
@@ -129,7 +131,7 @@ def main():
     if len(arm)!=4 or set(arm)-set('01'):
         p.error('--switches expects four bits')
     flags=dict(os.environ,RUSTUI_L1_NATIVE='1',RUSTUI_L1_PHYSICAL=str(int(a.physical)),RUSTUI_L1_LAB=str(int(a.app=='lab')),RUSTUI_L1_SPARSE=str(int(a.sparse)),
-        RUSTUI_G5_REFERENCE='1',RUSTUI_DAMAGE='0',RUSTUI_FRAME_LOG='buffered',RUSTUI_FRAME_PROFILE='1',RUSTUI_G0_LATENCY='1',RUSTUI_LATENCY_BREAKDOWN='1',
+        RUSTUI_G5_REFERENCE='1',RUSTUI_DAMAGE=a.damage,RUSTUI_FRAME_LOG='buffered',RUSTUI_FRAME_PROFILE='1',RUSTUI_G0_LATENCY='1',RUSTUI_LATENCY_BREAKDOWN='1',
         RUSTUI_G5_PIXEL_CAPTURE=a.pixels,RUSTUI_G5_REFRESH=a.passive,RUSTUI_G5_SCENE=a.scene,RUSTUI_G5_INPUT_HZ=a.hz,RUSTUI_G0_TYPING_HZ=a.hz,
         RUSTUI_HL_FASTPATH=a.hl_fastpath or str(int(a.app=='lab' and a.scene=='typing')),GPUI_FAST_IMMEDIATE_PRESENT=arm[0],
         RUSTUI_DRAW_FIRST=arm[1],GPUI_FAST_IMMEDIATE_COALESCE=arm[2],GPUI_FAST_IMMEDIATE_ANY_CHANGE=arm[3],
