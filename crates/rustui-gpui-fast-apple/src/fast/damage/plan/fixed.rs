@@ -2,7 +2,7 @@
 // RustUI: linear comparison for fixed-position updates before the pinned
 // Longbridge planner (2002081b4a61249a1cef2b8a552f6ba0998d9f52,
 // crates/gpui_windows/src/fast/partial.rs). Original RustUI optimization.
-use super::{Area, MAX_DAMAGE, Plan, Sig, Trace, record_damage, tidy};
+use super::{Area, MAX_DAMAGE, Plan, Policy, Sig, Trace, record_damage, tidy};
 
 // Positions, clips and orders must match exactly. Any movement or reordering
 // goes through the general multiset/scroll planner. Changed visual signatures
@@ -12,6 +12,7 @@ pub(super) fn plan(
     new: &[Sig],
     view: Area,
     trace: Option<&mut Trace>,
+    policy: &mut Policy,
 ) -> Result<Option<Plan>, ()> {
     if old.len() != new.len() {
         return Err(());
@@ -25,6 +26,7 @@ pub(super) fn plan(
             damage.extend([old.reach, new.reach]);
         }
     }
+    super::plan_stage(super::PlanStage::RectMerge);
     let trace = trace.map(|trace| {
         trace.route = "fixed";
         trace.changed(
@@ -33,10 +35,14 @@ pub(super) fn plan(
         );
         trace
     });
+    if policy.rejects_area(damage.iter().copied(), view) {
+        return Ok(None);
+    }
     let damage = tidy(damage, &view);
     let total: f32 = damage.iter().map(Area::area).sum();
     record_damage(trace, &damage, total, view);
-    Ok((total <= MAX_DAMAGE * view.area()).then_some(Plan {
+    super::plan_stage(super::PlanStage::BuildPlan);
+    Ok((total <= MAX_DAMAGE * view.area()).then(|| Plan {
         shift: None,
         damage,
     }))
@@ -80,12 +86,21 @@ pub(super) fn test_fixed() {
         },
     ] {
         assert_eq!(
-            plan(&[old], &[new], view, None).unwrap(),
-            super::general_plan(&[old], &[new], view, None)
+            plan(&[old], &[new], view, None, &mut Policy::default()).unwrap(),
+            super::general_plan(&[old], &[new], view, None, &mut Policy::default())
         );
     }
-    assert!(plan(&[old], &[], view, None).is_err());
-    assert!(plan(&[old], &[Sig { order: 2, ..old }], view, None).is_err());
+    assert!(plan(&[old], &[], view, None, &mut Policy::default()).is_err());
+    assert!(
+        plan(
+            &[old],
+            &[Sig { order: 2, ..old }],
+            view,
+            None,
+            &mut Policy::default()
+        )
+        .is_err()
+    );
     assert!(
         plan(
             &[old],
@@ -95,6 +110,7 @@ pub(super) fn test_fixed() {
             }],
             view,
             None,
+            &mut Policy::default(),
         )
         .is_err()
     );
@@ -107,6 +123,7 @@ pub(super) fn test_fixed() {
             }],
             view,
             None,
+            &mut Policy::default(),
         )
         .is_err()
     );
@@ -120,6 +137,7 @@ pub(super) fn test_fixed() {
             }],
             view,
             None,
+            &mut Policy::default(),
         )
         .unwrap(),
         None

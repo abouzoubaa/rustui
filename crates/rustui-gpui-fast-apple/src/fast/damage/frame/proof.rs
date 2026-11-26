@@ -417,6 +417,72 @@ fn partial_pixels(case: &str) -> Result<()> {
     }
     Ok(())
 }
+fn hover_ordinal_pixels() -> Result<()> {
+    let mut renderer = MetalRenderer::new_headless(Default::default())?;
+    renderer.damage.enabled_override = Some(true);
+    renderer.damage.disjoint_order_override = true;
+    renderer.damage.magenta_prefill = true;
+    let size = gpui::size(DevicePixels(256), DevicePixels(256));
+    let target = retained::texture(&renderer.device, 256, 256)?;
+    let reference = retained::texture(&renderer.device, 256, 256)?;
+
+    for frame in 0..=300 {
+        let mut scene = Scene::default();
+        let paint = |s: &mut Scene, x, y, width, height, rgb| {
+            quad(s, x, y, width, height, gpui::Hsla::from(gpui::rgb(rgb)), 0.);
+        };
+        paint(&mut scene, 0., 0., 256., 256., 0x21232a);
+        paint(
+            &mut scene,
+            16.,
+            if frame % 2 == 0 { 28. } else { 68. },
+            180.,
+            28.,
+            0x4a5678,
+        );
+        let rows = if frame % 2 == 0 {
+            [38., 78.]
+        } else {
+            [78., 38.]
+        };
+        for y in rows {
+            paint(&mut scene, 24., y, 84., 6., 0xeeeeee);
+        }
+        scene.finish();
+        // Force the same 2→3 / 3→2 order-group reversal the hover trace observed.
+        for label in &mut scene.quads[2..] {
+            label.order = if label.bounds.origin.y.0 == rows[0] {
+                2
+            } else {
+                3
+            };
+        }
+        scene.quads[2..].sort_by_key(|quad| quad.order);
+        let choice = renderer.damage.choose(
+            &renderer.sprite_atlas,
+            &scene,
+            size,
+            1.,
+            renderer.opaque,
+            false,
+            true,
+        );
+        let command = render(&mut renderer, &scene, &target, size, choice)?;
+        let actual = finish(&renderer, &command, &target)?;
+        if frame > 0 {
+            assert!(
+                matches!(renderer.damage.last_mode, Mode::Partial(_)),
+                "frame {frame}"
+            );
+            assert_eq!(renderer.damage.last_magenta_prefills, 1, "frame {frame}");
+            let whole = renderer.render_frame(&scene, &reference, size)?;
+            let expected = finish(&renderer, &whole, &reference)?;
+            assert_eq!(actual, expected, "hover pixel mismatch on frame {frame}");
+        }
+    }
+    Ok(())
+}
+
 impl MetalRenderer {
     /// Magenta-prefilled Partial proofs; each case asserts the actual frame mode.
     pub fn test_damage_partials() -> Result<()> {
@@ -431,6 +497,7 @@ impl MetalRenderer {
             ] {
                 partial_pixels(case)?;
             }
+            hover_ordinal_pixels()?;
             Ok(())
         })
     }

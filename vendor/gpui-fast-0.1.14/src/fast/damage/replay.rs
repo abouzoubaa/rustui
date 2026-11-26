@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: Apache-2.0
 // RustUI Stage G: original provenance hooks for GPUI Fast 0.1.14 Scene replay.
 // These records carry identity, never a second rendering or retention system.
-use crate::{Primitive, Scene};
+use crate::{Primitive, Scene, Window};
 use std::{
     cell::Cell,
     sync::{
@@ -14,6 +14,7 @@ use std::{
 struct Source {
     id: u64,
     replayed: bool,
+    element: u64,
 }
 #[derive(Clone, Copy)]
 struct Entry {
@@ -21,6 +22,7 @@ struct Entry {
     order: u32,
     texture: u32,
     tile: u32,
+    paint_index: usize,
 }
 #[derive(Clone, Default)]
 pub(crate) struct Provenance {
@@ -28,7 +30,7 @@ pub(crate) struct Provenance {
     kinds: [Vec<Entry>; 8],
 }
 thread_local! {
-    static SOURCE:Cell<Source> = const { Cell::new(Source{id:0,replayed:false}) };
+    static SOURCE:Cell<Source> = const { Cell::new(Source{id:0,replayed:false,element:0}) };
     #[cfg(any(test, feature="test-support"))]
     static TEST_ENABLED:Cell<bool> = const { Cell::new(false) };
 }
@@ -93,6 +95,7 @@ pub(crate) fn record(scene: &mut Scene, primitive: &Primitive) {
         order,
         texture,
         tile,
+        paint_index: scene.paint_operations.len(),
     });
 }
 struct Restore(Source);
@@ -135,7 +138,36 @@ pub(crate) fn compile(
         previous.operations.get(index).copied().unwrap_or_default(),
     );
 }
+impl Window {
+    pub(crate) fn fast_damage_insert_primitive(&mut self, primitive: impl Into<Primitive>) {
+        if !Scene::fast_damage_order_probe_enabled() {
+            self.next_frame.scene.insert_primitive(primitive);
+            return;
+        }
+        let source = Source {
+            element: self.element_id_stack.hash(),
+            ..Source::default()
+        };
+        insert(&mut self.next_frame.scene, primitive.into(), source);
+    }
+}
 impl Scene {
+    /// Internal renderer bridge for bounded paint-order diagnostics.
+    #[doc(hidden)]
+    pub fn fast_damage_order_probe_enabled() -> bool {
+        static ENABLED: OnceLock<bool> = OnceLock::new();
+        *ENABLED.get_or_init(|| {
+            std::env::var_os("RUSTUI_G_R2_ORDER_TRACE").as_deref() == Some("1".as_ref())
+        })
+    }
+
+    /// The element path hash and original scene paint-operation index.
+    #[doc(hidden)]
+    pub fn fast_damage_order_identity(&self, kind: usize, index: usize) -> Option<(u64, usize)> {
+        let entry = self.fast_damage.kinds.get(kind)?.get(index)?;
+        (entry.source.element != 0).then_some((entry.source.element, entry.paint_index))
+    }
+
     /// Internal renderer bridge: stable identity only for exact GPUI paint replay.
     #[doc(hidden)]
     pub fn fast_damage_source(&self, kind: usize, index: usize) -> Option<(u64, bool)> {

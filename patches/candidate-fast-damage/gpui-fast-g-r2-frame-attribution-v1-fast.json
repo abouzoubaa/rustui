@@ -1,0 +1,40 @@
+{
+  "schema_version": 1,
+  "name": "gpui-fast-g-r2-frame-attribution-v1-fast",
+  "patch": "gpui-fast-g-r2-frame-attribution-v1-fast.patch",
+  "patch_sha256": "9458cd696b08ac34907246aa804d775711ac3c35d9a17a5729b0b0296d5a4d7c",
+  "files": {
+    "vendor/gpui-fast-apple-0.1.14/src/fast/damage/timing.rs": {
+      "pre_sha256": null,
+      "post_sha256": "44995d436c52db4562a0e767c583ea057a6e13d10d788d3a0cfa11274c42db68"
+    },
+    "vendor/gpui-fast-apple-0.1.14/src/fast/damage/mod.rs": {
+      "pre_sha256": "64471b2a2a1dc1d3d87a6ae669a6b62844d76dd6a6dd2ed663f75a8ec7cc086f",
+      "post_sha256": "15abf7e37c448018f1b9b08d79fd4f853ee9b11e79884d15a1ef958897d50517"
+    },
+    "vendor/gpui-fast-apple-0.1.14/src/metal_renderer.rs": {
+      "pre_sha256": "e7effb4d4d673f28293630190895882b5a46189fa36f1d4f871157935a447aa3",
+      "post_sha256": "a3cf22be128e20afbbcf4d30677dca527ef7d6f46a4defe049fcb132315f47e3"
+    },
+    "crates/rustui-gpui-fast-apple/src/fast/damage/timing.rs": {
+      "pre_sha256": null,
+      "post_sha256": "44995d436c52db4562a0e767c583ea057a6e13d10d788d3a0cfa11274c42db68"
+    },
+    "crates/rustui-gpui-fast-apple/src/fast/damage/mod.rs": {
+      "pre_sha256": "64471b2a2a1dc1d3d87a6ae669a6b62844d76dd6a6dd2ed663f75a8ec7cc086f",
+      "post_sha256": "15abf7e37c448018f1b9b08d79fd4f853ee9b11e79884d15a1ef958897d50517"
+    },
+    "crates/rustui-gpui-fast-apple/src/metal_renderer.rs": {
+      "pre_sha256": "e7effb4d4d673f28293630190895882b5a46189fa36f1d4f871157935a447aa3",
+      "post_sha256": "a3cf22be128e20afbbcf4d30677dca527ef7d6f46a4defe049fcb132315f47e3"
+    },
+    "vendor/gpui-fast-apple-0.1.14/.cargo-checksum.json": {
+      "pre_sha256": "3df6cba2dd5cbe6f7fe5bb79f339cd868a2d68e0a4a5438735908a163f245d92",
+      "post_sha256": "1ec6894d99c3c0f5cb413801855727c8a218f3e17fb8a18c6b59ac215f91af99"
+    },
+    "crates/rustui-gpui-fast-apple/.cargo-checksum.json": {
+      "pre_sha256": "3df6cba2dd5cbe6f7fe5bb79f339cd868a2d68e0a4a5438735908a163f245d92",
+      "post_sha256": "1ec6894d99c3c0f5cb413801855727c8a218f3e17fb8a18c6b59ac215f91af99"
+    }
+  }
+}

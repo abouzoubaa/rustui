@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+- Add opt-in Metal damage attribution, early rejection of unsupported shifts, and safe damage for disjoint paint-order changes, and planner phase timing.
+
 - Add opt-in damage planner diagnostics and a full-display Lab benchmark mode.
 
 - Rebaseline the opt-in Stage G damage candidates on the G5 frame pipeline.

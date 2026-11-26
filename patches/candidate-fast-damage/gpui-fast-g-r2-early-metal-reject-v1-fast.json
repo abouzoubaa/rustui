@@ -1,0 +1,48 @@
+{
+  "schema_version": 1,
+  "name": "gpui-fast-g-r2-early-metal-reject-v1-fast",
+  "patch": "gpui-fast-g-r2-early-metal-reject-v1-fast.patch",
+  "patch_sha256": "c164f5f9de69c2af4ba0e37ce39cce0db88a99999a0d7466013c9f4b3f569fdf",
+  "files": {
+    "vendor/gpui-fast-apple-0.1.14/src/fast/damage/plan.rs": {
+      "pre_sha256": "d38815103de9c8e7521876854b4585aec80813fd88737b414de0ecdb938d8e71",
+      "post_sha256": "6b92bcc8c21c9bb57fb68ec8ca6e0442c737c841c8616164effd42030c0cd430"
+    },
+    "vendor/gpui-fast-apple-0.1.14/src/fast/damage/diagnosis.rs": {
+      "pre_sha256": "95ca866011e1271b8195ae502d55799aa8356a1c59395af4800fc9185aaa3e99",
+      "post_sha256": "50db2b0b94448179d8cb5e4fc65036415711d6f328507abf72b9d01e3f458bda"
+    },
+    "vendor/gpui-fast-apple-0.1.14/src/fast/damage/plan/fixed.rs": {
+      "pre_sha256": "167ef7003a1271120dc437d5fc9083fc3c274e3ff381d8db5459f9c663d0c745",
+      "post_sha256": "27107cf43d506ca0a76e19f6f0f44674ab3ca4f38a1d91732c78663ccfc26476"
+    },
+    "vendor/gpui-fast-apple-0.1.14/src/fast/damage/frame.rs": {
+      "pre_sha256": "9ee679a3ed3923027846a551d55da4023c7d76cc3a78d22ff005b9e78987b083",
+      "post_sha256": "a93ff2edb7dc44ce62e2cb7319e3d52afa585ca60a565175728180e6768d3629"
+    },
+    "crates/rustui-gpui-fast-apple/src/fast/damage/plan.rs": {
+      "pre_sha256": "d38815103de9c8e7521876854b4585aec80813fd88737b414de0ecdb938d8e71",
+      "post_sha256": "6b92bcc8c21c9bb57fb68ec8ca6e0442c737c841c8616164effd42030c0cd430"
+    },
+    "crates/rustui-gpui-fast-apple/src/fast/damage/diagnosis.rs": {
+      "pre_sha256": "95ca866011e1271b8195ae502d55799aa8356a1c59395af4800fc9185aaa3e99",
+      "post_sha256": "50db2b0b94448179d8cb5e4fc65036415711d6f328507abf72b9d01e3f458bda"
+    },
+    "crates/rustui-gpui-fast-apple/src/fast/damage/plan/fixed.rs": {
+      "pre_sha256": "167ef7003a1271120dc437d5fc9083fc3c274e3ff381d8db5459f9c663d0c745",
+      "post_sha256": "27107cf43d506ca0a76e19f6f0f44674ab3ca4f38a1d91732c78663ccfc26476"
+    },
+    "crates/rustui-gpui-fast-apple/src/fast/damage/frame.rs": {
+      "pre_sha256": "9ee679a3ed3923027846a551d55da4023c7d76cc3a78d22ff005b9e78987b083",
+      "post_sha256": "a93ff2edb7dc44ce62e2cb7319e3d52afa585ca60a565175728180e6768d3629"
+    },
+    "vendor/gpui-fast-apple-0.1.14/.cargo-checksum.json": {
+      "pre_sha256": "1ec6894d99c3c0f5cb413801855727c8a218f3e17fb8a18c6b59ac215f91af99",
+      "post_sha256": "f66735ceb263350cb3b4d4d3a87f2224b48504607c37519b73808c883b950419"
+    },
+    "crates/rustui-gpui-fast-apple/.cargo-checksum.json": {
+      "pre_sha256": "1ec6894d99c3c0f5cb413801855727c8a218f3e17fb8a18c6b59ac215f91af99",
+      "post_sha256": "f66735ceb263350cb3b4d4d3a87f2224b48504607c37519b73808c883b950419"
+    }
+  }
+}

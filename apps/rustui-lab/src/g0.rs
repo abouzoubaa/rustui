@@ -526,6 +526,8 @@ fn playback(
         let input_ready = owner.read_with(cx, |host, _| if scene == Scene::Idle { host.component().caret != "G0 idle caret" } else { true });
         if !input_ready { eprintln!("G0 caret did not receive warm-up input"); cx.update(|app| app.quit()); return; }
         let (scale, width, height) = handle.update(cx, |_, window, _| (window.scale_factor(), f32::from(window.viewport_size().width), f32::from(window.viewport_size().height))).unwrap();
+        #[cfg(target_os = "macos")]
+        let background_start = cpu::Background::start().expect("G-R2 host CPU start");
         eprintln!("RUSTUI_G0_LOG {{\"event\":\"start\",\"scene\":\"{}\",\"duration_s\":{},\"epoch_ms\":{:.6},\"mach\":{},\"input_hz\":{},\"scale\":{},\"width\":{},\"height\":{}}}", scene.name(), duration.as_secs(), epoch_ms(), gpui::fast_latency_tick(), scene.hz(), scale, width, height);
         let cpu_start = match cpu::Snapshot::take() {
             Ok(snapshot) => snapshot,
@@ -573,6 +575,10 @@ fn playback(
         let end_epoch = epoch_ms();
         let end_mach = gpui::fast_latency_tick();
         let (cpu_user_s, cpu_sys_s) = cpu_start.elapsed(cpu_end);
+        #[cfg(target_os = "macos")]
+        if let Some(sample) = background_start {
+            sample.finish(cpu_user_s + cpu_sys_s).expect("G-R2 host CPU end");
+        }
         if scene == Scene::Drag && native_input::enabled() {
             let p = drag_position(ticks);
             assert!(native_input::post(4, 0, f32::from(p.x) as f64, f32::from(p.y) as f64));

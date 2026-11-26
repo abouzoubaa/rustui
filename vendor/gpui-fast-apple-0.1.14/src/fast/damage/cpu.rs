@@ -37,6 +37,7 @@ impl Drop for Measure {
     fn drop(&mut self) {
         let Some(start) = self.start else { return };
         let total_ms = start.elapsed().as_secs_f64() * 1000.;
+        super::timing::plan_stage(super::timing::PlanStage::EmitCpuRecord);
         let epoch_ms = SystemTime::now()
             .duration_since(SystemTime::UNIX_EPOCH)
             .unwrap_or_default()

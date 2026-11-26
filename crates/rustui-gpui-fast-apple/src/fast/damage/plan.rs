@@ -5,7 +5,11 @@
 // RustUI modifications: remove Windows drawing/adapter APIs, expose Metal inputs,
 // and run the preserved planner tests through test-support as well as crate tests.
 //! Platform-independent scene signatures, damage rectangles, and scroll planning.
-use super::diagnosis::Trace;
+use super::{
+    diagnosis::Trace,
+    order_probe,
+    timing::{PlanStage, plan_stage},
+};
 use collections::HashMap;
 use gpui::{
     AtlasTextureId, AtlasTile, Background, Bounds, ContentMask, Corners, Edges, Hsla, IsZero,
@@ -14,6 +18,7 @@ use gpui::{
 use std::collections::HashSet;
 mod cache;
 mod fixed;
+mod hover_order;
 pub(crate) use cache::Cache;
 use std::hash::{Hash, Hasher};
 
@@ -134,7 +139,7 @@ impl Area {
         }
     }
 
-    fn touches(&self, o: &Area) -> bool {
+    pub(super) fn touches(&self, o: &Area) -> bool {
         self.x0 <= o.x1 && o.x0 <= self.x1 && self.y0 <= o.y1 && o.y0 <= self.y1
     }
 
@@ -195,6 +200,19 @@ pub(crate) struct Sig {
     plain: bool,
     /// Shows something new whatever its bytes say.
     fresh: bool,
+}
+
+impl Sig {
+    pub(super) fn order(self) -> u32 {
+        self.order
+    }
+    pub(super) fn bounds(self) -> Area {
+        self.bounds
+    }
+
+    pub(super) fn order_reach(&self) -> Area {
+        self.reach.union(&self.bounds.grown(1.).and(&self.mask))
+    }
 }
 
 struct Key(collections::FxHasher);
@@ -661,11 +679,60 @@ fn tidy(rects: Vec<Area>, view: &Area) -> Vec<Area> {
     rects
 }
 
+#[derive(Default)]
+pub(super) struct Policy {
+    early_metal: bool,
+    pub allow_disjoint_order: bool,
+    pub reason: Option<&'static str>,
+    pub witness: Option<order_probe::Witness>,
+}
+impl Policy {
+    pub fn metal() -> Self {
+        static ENABLED: std::sync::OnceLock<bool> = std::sync::OnceLock::new();
+        static ORDER_CULL: std::sync::OnceLock<bool> = std::sync::OnceLock::new();
+        Self {
+            early_metal: *ENABLED.get_or_init(|| {
+                std::env::var_os("RUSTUI_G_R2_EARLY_REJECT").as_deref() == Some("1".as_ref())
+            }),
+            allow_disjoint_order: *ORDER_CULL.get_or_init(|| {
+                std::env::var_os("RUSTUI_G_R2_DISJOINT_ORDER").as_deref() == Some("1".as_ref())
+            }),
+            reason: None,
+            witness: None,
+        }
+    }
+
+    fn rejects_area(&mut self, areas: impl Iterator<Item = Area>, view: Area) -> bool {
+        if !self.early_metal {
+            return false;
+        }
+        // Metal redraws one box. Union is invariant under tidy's band and
+        // rectangle merges, so the final box can be rejected before tidy.
+        let bounds = areas
+            .map(|area| area.pixels().and(&view))
+            .filter(|area| !area.is_empty())
+            .reduce(|a, b| a.union(&b));
+        if bounds.is_some_and(|bounds| bounds.area() > MAX_DAMAGE * view.area()) {
+            self.reason = Some("area_bounding_box");
+            true
+        } else {
+            false
+        }
+    }
+
+    fn rejects_shift(&mut self) -> bool {
+        if self.early_metal {
+            self.reason = Some("shift_unsupported");
+        }
+        self.early_metal
+    }
+}
+
 /// How to make the frame of `new` from the frame of `old` in a window of
 /// `view`, or `None` to draw it whole.
 #[cfg(any(test, feature = "test-support"))]
 fn plan(old: &[Sig], new: &[Sig], view: Area) -> Option<Plan> {
-    plan_traced(old, new, view, None)
+    plan_traced(old, new, view, None, &mut Policy::default())
 }
 
 pub(super) fn plan_traced(
@@ -673,11 +740,13 @@ pub(super) fn plan_traced(
     new: &[Sig],
     view: Area,
     mut trace: Option<&mut Trace>,
+    policy: &mut Policy,
 ) -> Option<Plan> {
-    if let Ok(plan) = fixed::plan(old, new, view, trace.as_deref_mut()) {
+    plan_stage(PlanStage::FixedCompare);
+    if let Ok(plan) = fixed::plan(old, new, view, trace.as_deref_mut(), policy) {
         return plan;
     }
-    general_plan(old, new, view, trace)
+    general_plan(old, new, view, trace, policy)
 }
 
 fn general_plan(
@@ -685,7 +754,9 @@ fn general_plan(
     new: &[Sig],
     view: Area,
     mut trace: Option<&mut Trace>,
+    policy: &mut Policy,
 ) -> Option<Plan> {
+    plan_stage(PlanStage::MatchUnchanged);
     // The primitives that stayed as they were, as a multiset.
     // Intrusive index chains preserve first-to-last multiset pairing without
     // allocating one tiny Vec for every primitive in the previous frame.
@@ -718,12 +789,7 @@ fn general_plan(
             changed_new.iter().map(|&i| new[i].reach),
         );
     }
-    let mut orders: Vec<(u32, u32)> = stayed
-        .iter()
-        .enumerate()
-        .filter_map(|(i, j)| j.map(|j| (old[j].order, new[i].order)))
-        .collect();
-
+    plan_stage(PlanStage::ScrollVote);
     // A scroll: changed primitives of the same shape vote on how far they moved.
     let mut by_shape: HashMap<_, Vec<usize>> = HashMap::default();
     for &j in &changed_old {
@@ -752,6 +818,16 @@ fn general_plan(
         .max_by_key(|(dy, n)| (**n, -dy.abs()))
         .filter(|(_, n)| **n >= MIN_MOVED)
         .map(|(dy, _)| *dy as f32);
+    if scroll.is_some() && policy.rejects_shift() {
+        return None;
+    }
+    plan_stage(PlanStage::PaintOrder);
+    let mut orders: Vec<(u32, u32)> = stayed
+        .iter()
+        .enumerate()
+        .filter_map(|(i, j)| j.map(|j| (old[j].order, new[i].order)))
+        .collect();
+
     let Some(dy) = scroll else {
         if fractional && !votes.is_empty() {
             if let Some(trace) = trace {
@@ -760,26 +836,36 @@ fn general_plan(
             return None;
         }
         // No scroll: what changed is drawn again where it was and is.
-        if !orders_agree(&mut orders) {
+        if !orders_agree(&mut orders)
+            && !(policy.allow_disjoint_order && hover_order::disjoint(old, new, &stayed))
+        {
+            if order_probe::active() {
+                policy.witness = order_probe::find(old, new, &stayed);
+            }
             record_order_change(trace, &orders);
             return None;
         }
-        let damage = tidy(
+        plan_stage(PlanStage::RectMerge);
+        let areas = || {
             changed_old
                 .iter()
                 .map(|&j| old[j].reach)
                 .chain(changed_new.iter().map(|&i| new[i].reach))
-                .collect(),
-            &view,
-        );
+        };
+        if policy.rejects_area(areas(), view) {
+            return None;
+        }
+        let damage = tidy(areas().collect(), &view);
         let total: f32 = damage.iter().map(Area::area).sum();
         record_damage(trace, &damage, total, view);
-        return (total <= MAX_DAMAGE * view.area()).then_some(Plan {
+        plan_stage(PlanStage::BuildPlan);
+        return (total <= MAX_DAMAGE * view.area()).then(|| Plan {
             shift: None,
             damage,
         });
     };
 
+    plan_stage(PlanStage::ShiftMatch);
     // The scrolled clip: the masks of what moved by `dy`.
     let mut region: Option<Area> = None;
     for &i in &changed_new {
@@ -847,11 +933,13 @@ fn general_plan(
             trace.coarse_rejections += 1;
         }
     }
+    plan_stage(PlanStage::PaintOrder);
     if !orders_agree(&mut orders) {
         record_order_change(trace, &orders);
         return None;
     }
 
+    plan_stage(PlanStage::RectMerge);
     let mut damage = Vec::new();
     // The strip the scroll exposed.
     damage.push(if dy < 0.0 {
@@ -912,7 +1000,8 @@ fn general_plan(
     let damage = tidy(damage, &view);
     let total: f32 = damage.iter().map(Area::area).sum();
     record_damage(trace, &damage, total, view);
-    (total <= MAX_DAMAGE * view.area()).then_some(Plan {
+    plan_stage(PlanStage::BuildPlan);
+    (total <= MAX_DAMAGE * view.area()).then(|| Plan {
         shift: Some((from, to)),
         damage,
     })
@@ -1293,7 +1382,98 @@ mod tests {
         assert!(super::signatures(&scene, &Default::default(), &|_| false).is_none());
     }
 
+    #[cfg_attr(test, test)]
+    fn unsupported_shift_returns_before_building_rectangles() {
+        use super::{Policy, Trace, plan_traced};
+        let old = frame(0.);
+        let new = frame(-12.);
+        assert!(plan(&old, &new, VIEW).unwrap().shift.is_some());
+        let mut policy = Policy {
+            early_metal: true,
+            ..Policy::default()
+        };
+        let mut trace = Trace::test_sample();
+        assert!(plan_traced(&old, &new, VIEW, Some(&mut trace), &mut policy).is_none());
+        assert_eq!(policy.reason, Some("shift_unsupported"));
+        assert!(!trace.damage_was_built());
+    }
+
+    #[cfg_attr(test, test)]
+    fn oversized_box_returns_before_building_a_plan() {
+        use super::{Policy, Trace, plan_traced};
+        let old = [at(1, 1, 0., 0., 1000., 800., VIEW)];
+        let new = [Sig { key: 2, ..old[0] }];
+        let mut policy = Policy {
+            early_metal: true,
+            ..Policy::default()
+        };
+        let mut trace = Trace::test_sample();
+        assert!(plan_traced(&old, &new, VIEW, Some(&mut trace), &mut policy).is_none());
+        assert_eq!(policy.reason, Some("area_bounding_box"));
+        assert!(!trace.damage_was_built());
+    }
+
+    #[cfg_attr(test, test)]
+    fn hover_highlight_reproduces_an_order_group_inversion() {
+        let first = at(10, 2, 50., 50., 15., 15., VIEW);
+        let second = at(11, 3, 50., 80., 15., 15., VIEW);
+        let highlight = at(12, 1, 40., 45., 300., 30., VIEW);
+        let old = [first, second, highlight];
+        let new = [
+            Sig { order: 3, ..first },
+            Sig { order: 2, ..second },
+            at(12, 1, 40., 75., 300., 30., VIEW),
+        ];
+        assert!(plan(&old, &new, VIEW).is_none());
+        let witness = super::order_probe::find(&old, &new, &[Some(0), Some(1), None]).unwrap();
+        assert!(!witness.overlap);
+        let overlapping = Sig {
+            reach: first.reach,
+            ..second
+        };
+        let old_overlap = [first, overlapping];
+        let new_overlap = [
+            new[0],
+            Sig {
+                order: 2,
+                ..overlapping
+            },
+        ];
+        let witness =
+            super::order_probe::find(&old_overlap, &new_overlap, &[Some(0), Some(1)]).unwrap();
+        assert!(witness.overlap);
+    }
+
+    #[cfg_attr(test, test)]
+    fn hover_checks_aa_and_shadow_reach_before_accepting_order_inversions() {
+        let first = at(10, 2, 50., 50., 15., 15., VIEW);
+        let against = |second: Sig| {
+            let old = [first, second];
+            let new = [Sig { order: 3, ..first }, Sig { order: 2, ..second }];
+            let mut policy = super::Policy {
+                allow_disjoint_order: true,
+                ..Default::default()
+            };
+            super::plan_traced(&old, &new, VIEW, None, &mut policy)
+        };
+        let separate = at(11, 3, 50., 80., 15., 15., VIEW);
+        assert!(against(separate).is_some_and(|plan| plan.damage.is_empty()));
+        assert!(against(at(11, 3, 50., 60., 15., 15., VIEW)).is_none());
+        // The geometric bounds are 1 px apart, but antialias margins meet.
+        assert!(against(at(11, 3, 50., 66., 15., 15., VIEW)).is_none());
+        // A shadow with blur 6 has reach 3×6+1 px in the Metal signatures.
+        let shadow = Sig {
+            reach: separate.bounds.grown(19.),
+            ..separate
+        };
+        assert!(against(shadow).is_none());
+    }
+
     pub(super) fn run() {
+        hover_checks_aa_and_shadow_reach_before_accepting_order_inversions();
+        hover_highlight_reproduces_an_order_group_inversion();
+        oversized_box_returns_before_building_a_plan();
+        unsupported_shift_returns_before_building_rectangles();
         an_unchanged_frame_needs_nothing();
         a_scroll_copies_the_clip_and_damages_the_strip_it_exposed();
         a_change_without_a_scroll_damages_only_what_changed();

@@ -95,6 +95,7 @@ impl Geometry {
 struct Snapshot {
     geometry: Geometry,
     signatures: Vec<Sig>,
+    order_identities: Option<Vec<Option<super::order_probe::Identity>>>,
     generation: u64,
     deferred: Option<Box<Scene>>,
 }
@@ -113,6 +114,8 @@ pub(crate) struct State {
     enabled_override: Option<bool>,
     #[cfg(any(test, feature = "test-support"))]
     verify_override: bool,
+    #[cfg(any(test, feature = "test-support"))]
+    disjoint_order_override: bool,
     #[cfg(any(test, feature = "test-support"))]
     fail_verification: bool,
     verification: Option<Retained<ProtocolObject<dyn MTLCommandBuffer>>>,
@@ -250,6 +253,7 @@ impl State {
                 ..Prepared::direct()
             };
         }
+        super::timing::plan_stage(super::timing::PlanStage::AtlasAndBackoff);
         let geometry = Geometry::new(size, scale, opaque);
         let previous_generation = self
             .snapshot
@@ -269,6 +273,7 @@ impl State {
         self.backoff.observe(geometry, uploads.tiles.is_none());
         if self.backoff.skipping() {
             cpu.reason = "backoff";
+            super::timing::plan_stage(super::timing::PlanStage::PrimeSnapshot);
             let tail = self.backoff.remaining == 1;
             // Retain metadata without hashing or planning. On the last skipped
             // frame, snapshot that scene for an adjacent-frame recovery probe;
@@ -276,6 +281,8 @@ impl State {
             let snapshot = tail.then(|| Snapshot {
                 geometry,
                 signatures: Vec::new(),
+                order_identities: super::order_probe::active()
+                    .then(|| super::order_probe::identities(scene)),
                 generation: uploads.generation,
                 deferred: Some(Box::new(scene.fast_damage_snapshot())),
             });
@@ -298,6 +305,7 @@ impl State {
         // Scene metadata remains comparable after Direct invalidates kept pixels.
         // Pixel validity is checked only when selecting Copy, Skip or Partial.
         if !comparable {
+            super::timing::plan_stage(super::timing::PlanStage::PrimeSnapshot);
             cpu.reason = if uploads.tiles.is_none() {
                 "atlas_lost"
             } else {
@@ -328,6 +336,8 @@ impl State {
                 snapshot: Some(Snapshot {
                     geometry,
                     signatures: Vec::new(),
+                    order_identities: super::order_probe::active()
+                        .then(|| super::order_probe::identities(scene)),
                     generation: uploads.generation,
                     deferred: Some(Box::new(scene.fast_damage_snapshot())),
                 }),
@@ -338,6 +348,7 @@ impl State {
                 ..Prepared::direct()
             };
         }
+        super::timing::plan_stage(super::timing::PlanStage::SignatureCollection);
         let signature_start = std::time::Instant::now();
         if let Some(deferred) = self.snapshot.as_mut().unwrap().deferred.take() {
             self.cache.begin();
@@ -381,13 +392,31 @@ impl State {
             self.planner_calls += 1;
         }
         let mut trace = super::diagnosis::Trace::start();
+        let mut policy = plan::Policy::metal();
+        #[cfg(any(test, feature = "test-support"))]
+        if self.disjoint_order_override {
+            policy.allow_disjoint_order = true;
+        }
         let change = plan::plan_traced(
             &self.snapshot.as_ref().unwrap().signatures,
             &signatures,
             geometry.view(),
             trace.as_mut(),
+            &mut policy,
         );
         cpu.plan_ms = plan_start.elapsed().as_secs_f64() * 1000.;
+        super::timing::plan_stage(super::timing::PlanStage::SelectMode);
+        let order_identities =
+            super::order_probe::active().then(|| super::order_probe::identities(scene));
+        if let Some(witness) = policy.witness
+            && let Some(old) = self
+                .snapshot
+                .as_ref()
+                .and_then(|s| s.order_identities.as_deref())
+            && let Some(new) = order_identities.as_deref()
+        {
+            super::order_probe::emit(witness, old, new);
+        }
         let damage_box = change
             .as_ref()
             .and_then(|p| p.damage.iter().copied().reduce(|a, b| a.union(&b)))
@@ -395,11 +424,13 @@ impl State {
         let large = change.as_ref().is_none_or(|p| p.shift.is_some())
             || damage_box.is_some_and(|r| r.area() > plan::MAX_DAMAGE * geometry.view().area());
         let valid = self.target.as_ref().is_some_and(|t| t.valid);
-        let rejection = trace.as_ref().and_then(|_| match change.as_ref() {
-            Some(plan) if plan.shift.is_some() => Some("shift_unimplemented"),
-            Some(_) if large => Some("area_bounding_box"),
-            None => Some("no_plan"),
-            _ => None,
+        let rejection = policy.reason.or_else(|| {
+            trace.as_ref().and_then(|_| match change.as_ref() {
+                Some(plan) if plan.shift.is_some() => Some("shift_unimplemented"),
+                Some(_) if large => Some("area_bounding_box"),
+                None => Some("no_plan"),
+                _ => None,
+            })
         });
         let mode = match change {
             Some(p)
@@ -437,11 +468,12 @@ impl State {
                 Mode::Copy => "required",
                 Mode::Partial(_) => "changed",
                 Mode::Retained => "prime",
-                _ => "large",
+                _ => policy.reason.unwrap_or("large"),
             },
             snapshot: Some(Snapshot {
                 geometry,
                 signatures,
+                order_identities,
                 generation: uploads.generation,
                 deferred: None,
             }),

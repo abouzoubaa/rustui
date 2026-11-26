@@ -289,6 +289,7 @@ impl MetalRenderer {
         opaque: bool,
         instance_buffer_pool: Arc<Mutex<InstanceBufferPool>>,
     ) -> Result<Self> {
+        crate::fast::damage::timing::enabled();
         #[cfg(feature = "runtime_shaders")]
         let library = device
             .newLibraryWithSource_options_error(
@@ -699,6 +700,8 @@ impl MetalRenderer {
     }
 
     pub fn draw(&mut self, scene: &Scene) {
+        use crate::fast::damage::timing::{Phase, Reason, Timing};
+        let mut timing = Timing::start();
         let density = crate::fast::input_gpu_metrics::Scope::enter();
         let layer = match &self.layer {
             Some(l) => l.clone(),
@@ -721,11 +724,15 @@ impl MetalRenderer {
             }
             _ => {}
         }
+        timing.phase(Phase::Plan);
         let prepared = crate::fast::damage::frame::choose(self, scene);
+        timing.phase(Phase::Present);
+        timing.reason = Reason::selected(prepared.reason);
         if prepared.mode == crate::fast::damage::frame::Mode::Same {
             gpui::fast_frame_reason(prepared.mode.label(), prepared.reason);
             crate::fast::damage::encode::skipped(scene);
             crate::fast::damage::frame::skip(self, prepared);
+            timing.mode = "skip";
             return;
         }
         let source = if !gpui::fast_immediate_active()
@@ -735,6 +742,7 @@ impl MetalRenderer {
         } else {
             0
         };
+        timing.reason = Reason::Deferral;
         if !self.order.current_ready(source) {
             gpui::fast_order_defer();
             return;
@@ -747,9 +755,13 @@ impl MetalRenderer {
             && self.immediate.count() < layer.maximumDrawableCount()
             && crate::fast::late_drawable::enabled()
         {
-            match self.prepare_frame_instances(scene) {
+            timing.phase(Phase::Encode);
+            let instances = self.prepare_frame_instances(scene);
+            timing.phase(Phase::Present);
+            match instances {
                 Ok(frame) => Some(frame),
                 Err(error) => {
+                    timing.reason = Reason::RenderError;
                     log::error!("failed to prepare render instances: {error:#}");
                     return;
                 }
@@ -815,6 +827,7 @@ impl MetalRenderer {
         }
         crate::fast::latency::layer(&layer, self.presents_with_transaction);
         let (planned_mode, planned_reason) = (prepared.mode, prepared.reason);
+        timing.phase(Phase::Encode);
         let rendered = crate::fast::damage::frame::render_with_instances(
             self,
             scene,
@@ -824,9 +837,11 @@ impl MetalRenderer {
             staged,
             encoding,
         );
+        timing.phase(Phase::Present);
         let command_buffer = match rendered {
             Ok(command_buffer) => command_buffer,
             Err(error) => {
+                timing.reason = Reason::RenderError;
                 log::error!("failed to render: {error:#}");
                 return;
             }
@@ -886,6 +901,12 @@ impl MetalRenderer {
             reference.commit();
         }
         order_hold.submitted();
+        timing.mode = self.damage.last_mode.label();
+        timing.reason = if self.damage.last_mode == planned_mode {
+            Reason::selected(planned_reason)
+        } else {
+            Reason::Verification
+        };
         self.immediate.did_submit();
         immediate_hold.submitted();
         crate::fast::immediate_present::end(transaction_override);
