@@ -2,6 +2,7 @@
 import os
 from pathlib import Path
 import subprocess
+import sys
 import tempfile
 import unittest
 
@@ -20,10 +21,14 @@ class CandidateStateTests(unittest.TestCase):
         env = dict(os.environ)
         env.pop('GPUI_FAST_IMMEDIATE_PRESENT', None)
         env.pop('GPUI_FAST_IMMEDIATE_HOLD_MS', None)
+        env.pop('RUSTUI_G5_PROFILE', None)
+        profile = ROOT / 'crates/rustui-gpui-fast/src/fast/g5_profile.rs'
+        profile_module = f'#[path = "{profile}"] mod g5_profile; use g5_profile::fast_g5_profile_enabled;\n'
         snippets = [('pool', 'use std::collections::HashMap;\n' + pool + tests),
                     ('scope', 'use std::{cell::Cell,marker::PhantomData,rc::Rc,sync::{OnceLock,Arc,atomic::{AtomicBool,Ordering}},time::{Duration,Instant}};\n'
-                     + scope + scope_tests
-                     + '\n#[test] fn switch_defaults_off(){assert!(!fast_immediate_enabled());}\n#[test] fn hold_defaults_250_ms(){assert_eq!(hold_duration(),Duration::from_millis(250));}\n')]
+                     + profile_module + scope + scope_tests
+                     + '\n#[test] fn switch_defaults_off(){assert!(!fast_immediate_enabled());}\n#[test] fn hold_defaults_250_ms(){assert_eq!(hold_duration(),Duration::from_millis(250));}\n'
+                     + '#[test] #[ignore] fn profile_enables_immediate(){assert!(fast_immediate_enabled());}\n')]
         mac = (ROOT / 'crates/rustui-gpui-fast-macos/src/fast/immediate_present.rs').read_text()
         wake = mac[mac.index('#[derive(Default)]'):mac.index('pub(crate) fn frame_waker')]
         snippets.append(('wake', 'use std::cell::Cell;\n' + wake + mac[mac.index('#[cfg(test)]'):]))
@@ -35,6 +40,11 @@ class CandidateStateTests(unittest.TestCase):
                 rust.write_text(source)
                 subprocess.run(['rustup', 'run', '1.98.0', 'rustc', '--edition=2024', '--test', str(rust), '-o', str(binary)], cwd=ROOT, env=env, check=True)
                 subprocess.run([str(binary)], cwd=ROOT, env=env, check=True)
+                if name == 'scope' and sys.platform == 'darwin':
+                    subprocess.run(
+                        [str(binary), '--ignored', '--exact', 'profile_enables_immediate'],
+                        cwd=ROOT, env=dict(env, RUSTUI_G5_PROFILE='1'), check=True,
+                    )
 
     def test_native_pixel_filter_emits_returns_to_old_versions(self):
         source = (ROOT / 'apps/latency-ref/pixel_capture.swift').read_text()

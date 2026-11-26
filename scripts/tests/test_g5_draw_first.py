@@ -1,6 +1,6 @@
 """Run the candidate's actual surface state tests and check draw-first queue ordering."""
 from pathlib import Path
-import os,subprocess,tempfile,unittest
+import os,subprocess,sys,tempfile,unittest
 ROOT=Path(__file__).resolve().parents[2]
 class DrawFirstTests(unittest.TestCase):
     def test_candidate_surface_coalescing_state(self):
@@ -11,11 +11,13 @@ class DrawFirstTests(unittest.TestCase):
             rust=Path(directory)/'state.rs';binary=Path(directory)/'state'
             switches=source[source.index('pub fn fast_coalesce_enabled'):source.index('#[derive(Default)]')]
             env=dict(os.environ)
-            for key in ['GPUI_FAST_IMMEDIATE_COALESCE','GPUI_FAST_IMMEDIATE_ANY_CHANGE','GPUI_FAST_NATIVE_SCHEDULER','GPUI_FAST_INPUT_SCOPED_DEMAND','GPUI_FAST_TRACE_WAKES']:
+            for key in ['GPUI_FAST_IMMEDIATE_COALESCE','GPUI_FAST_IMMEDIATE_ANY_CHANGE','GPUI_FAST_NATIVE_SCHEDULER','GPUI_FAST_INPUT_SCOPED_DEMAND','GPUI_FAST_TRACE_WAKES','RUSTUI_G5_PROFILE']:
                 env.pop(key,None)
             scheduler = ROOT / 'crates/rustui-gpui-fast/src/fast/native_scheduler.rs'
+            profile = ROOT / 'crates/rustui-gpui-fast/src/fast/g5_profile.rs'
             rust.write_text(
                 '#![allow(dead_code)]\n'
+                f'#[path = "{profile}"] mod g5_profile; use g5_profile::fast_g5_profile_enabled;\n'
                 '#[derive(Clone,Copy,Debug,Default,PartialEq,Eq,Hash)] pub struct WindowId(u64);\n'
                 'fn fast_immediate_enabled()->bool{true}\n'
                 'fn fast_latency_tick()->u64{0}\n'
@@ -24,10 +26,17 @@ class DrawFirstTests(unittest.TestCase):
                 'use std::{time::{Instant,Duration},sync::OnceLock};\n'
                 + switches + state + tests
                 + '\n#[test]fn new_switches_default_off(){'
-                  'assert!(!fast_coalesce_enabled());assert!(!fast_any_change_enabled());}\n}\n'
+                  'assert!(!fast_coalesce_enabled());assert!(!fast_any_change_enabled());}\n'
+                  '#[test] #[ignore] fn profile_enables_both(){assert!(fast_coalesce_enabled());'
+                  'assert!(fast_any_change_enabled());}\n}\n'
             )
             subprocess.run(['rustup','run','1.98.0','rustc','--edition=2024','--test',str(rust),'-o',str(binary)],cwd=ROOT,check=True)
             subprocess.run([str(binary)],cwd=ROOT,env=env,check=True)
+            if sys.platform == 'darwin':
+                subprocess.run(
+                    [str(binary), '--ignored', '--exact', 'change_present::profile_enables_both'],
+                    cwd=ROOT, env=dict(env, RUSTUI_G5_PROFILE='1'), check=True,
+                )
     def test_cpu_admission_precedes_all_runtime_scene_builds(self):
         core=(ROOT/'crates/rustui-gpui-fast/src/fast/immediate_present.rs').read_text()
         body=core[core.index('pub(crate) fn try_draw('):core.index('pub(crate) fn after_input(')]

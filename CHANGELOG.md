@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+- Add an opt-in G5 performance profile and a three-arm owner comparison.
+
 - Add opt-in changed-range injection reuse to Rust’s draw-first background highlighter.
 
 - Add opt-in native benchmark diagnostics for thread CPU, handler waits and idle wakeups.

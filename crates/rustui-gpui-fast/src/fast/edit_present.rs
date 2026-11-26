@@ -4,7 +4,10 @@ use std::sync::OnceLock;
 pub fn fast_draw_first_enabled() -> bool {
     static ON: OnceLock<bool> = OnceLock::new();
     crate::fast_immediate_enabled()
-        && *ON.get_or_init(|| std::env::var("RUSTUI_DRAW_FIRST").as_deref() == Ok("1"))
+        && *ON.get_or_init(|| {
+            crate::fast_g5_profile_enabled()
+                || std::env::var("RUSTUI_DRAW_FIRST").as_deref() == Ok("1")
+        })
 }
 impl Window {
     #[doc(hidden)]

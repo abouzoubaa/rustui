@@ -9,7 +9,8 @@ use crate::input::display_map::{LineLayout, WrappingIndent};
 pub(super) fn enabled() -> bool {
     static ON: OnceLock<bool> = OnceLock::new();
     *ON.get_or_init(|| {
-        std::env::var_os("RUSTUI_G5_PREPAINT_REUSE").as_deref() == Some("1".as_ref())
+        gpui::fast_g5_profile_enabled()
+            || std::env::var_os("RUSTUI_G5_PREPAINT_REUSE").as_deref() == Some("1".as_ref())
     })
 }
 

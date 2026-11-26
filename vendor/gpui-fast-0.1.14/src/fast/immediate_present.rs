@@ -17,13 +17,14 @@ thread_local! { static ACTIVE: Cell<bool> = const {Cell::new(false)}; }
 pub fn fast_immediate_enabled() -> bool {
     static ON: OnceLock<bool> = OnceLock::new();
     *ON.get_or_init(|| {
-        [
-            "GPUI_FAST_IMMEDIATE_PRESENT",
-            "GPUI_FAST_FORCE_LEGACY_LINK",
-            "GPUI_FAST_VIEW_DISPLAY_LINK",
-        ]
-        .iter()
-        .any(|key| std::env::var(key).as_deref() == Ok("1"))
+        crate::fast_g5_profile_enabled()
+            || [
+                "GPUI_FAST_IMMEDIATE_PRESENT",
+                "GPUI_FAST_FORCE_LEGACY_LINK",
+                "GPUI_FAST_VIEW_DISPLAY_LINK",
+            ]
+            .iter()
+            .any(|key| std::env::var(key).as_deref() == Ok("1"))
     })
 }
 pub fn fast_immediate_active() -> bool {

@@ -17,13 +17,19 @@ thread_local! {
 pub fn enabled() -> bool {
     static ON: OnceLock<bool> = OnceLock::new();
     crate::fast_immediate_enabled()
-        && *ON.get_or_init(|| std::env::var("GPUI_FAST_NATIVE_SCHEDULER").as_deref() == Ok("1"))
+        && *ON.get_or_init(|| {
+            crate::fast_g5_profile_enabled()
+                || std::env::var("GPUI_FAST_NATIVE_SCHEDULER").as_deref() == Ok("1")
+        })
 }
 
 pub(crate) fn input_scoped_enabled() -> bool {
     static ON: OnceLock<bool> = OnceLock::new();
     enabled()
-        && *ON.get_or_init(|| std::env::var("GPUI_FAST_INPUT_SCOPED_DEMAND").as_deref() == Ok("1"))
+        && *ON.get_or_init(|| {
+            crate::fast_g5_profile_enabled()
+                || std::env::var("GPUI_FAST_INPUT_SCOPED_DEMAND").as_deref() == Ok("1")
+        })
 }
 
 pub(crate) fn trace_point(stage: &'static str, detail: u8) {

@@ -534,6 +534,7 @@ extern "C" fn dealloc_overlay_view(this: &AnyObject, _: Sel) {
 pub(crate) fn draw_composed(window_state: &Rc<Mutex<MacWindowState>>, scene: ComposedScene<'_>) {
     let mut lock = window_state.lock();
     let state = &mut *lock;
+    state.refresh_experimental_display_sync();
     begin_surface_frame(state);
     let Some(base_surface) = state.fast_composition.base_surface else {
         state.renderer.draw(scene.scene());
@@ -863,6 +864,13 @@ unsafe fn create_gpui_surface(
         renderer,
         input_regions,
     })
+}
+
+pub(crate) fn set_experimental_display_sync(state: &mut MacWindowState, sync: bool) {
+    state.renderer.set_experimental_display_sync(sync);
+    for surface in state.fast_composition.gpui_surfaces.values() {
+        surface.renderer.set_experimental_display_sync(sync);
+    }
 }
 
 /// Sets whether the window's renderer and every surface's present their

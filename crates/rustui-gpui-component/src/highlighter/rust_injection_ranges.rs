@@ -54,7 +54,11 @@ pub(crate) fn worker_thread_id() -> u64 {
 pub(crate) fn enabled() -> bool {
     static ON: std::sync::OnceLock<bool> = std::sync::OnceLock::new();
     // Only the existing RUSTUI_HL_FASTPATH opt-in reaches this gate.
-    cfg!(test) || *ON.get_or_init(|| std::env::var("RUSTUI_G5_L9_SCOPED").as_deref() == Ok("1"))
+    cfg!(test)
+        || *ON.get_or_init(|| {
+            gpui::fast_g5_profile_enabled()
+                || std::env::var("RUSTUI_G5_L9_SCOPED").as_deref() == Ok("1")
+        })
 }
 
 fn bytes(range: NodeRange) -> ByteRange<usize> {
