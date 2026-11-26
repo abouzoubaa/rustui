@@ -54,12 +54,14 @@ pub struct Scene {
     pub(crate) sort_scratch: crate::fast::scene::SortScratch,
     pub(crate) fast_rounded_clip: crate::fast::rounded_clip::SceneClips,
     pub layers: crate::fast::layers::scene::SceneLayers,
+    pub(crate) fast_damage: crate::fast::damage::replay::Provenance,
 }
 
 #[expect(missing_docs)]
 impl Scene {
     pub fn clear(&mut self) {
         crate::fast::rounded_clip::clear(self);
+        self.fast_damage.clear();
         self.paint_operations.clear();
         self.primitive_bounds.clear();
         self.layer_stack.clear();
@@ -140,15 +142,24 @@ impl Scene {
                 self.surfaces.push(surface.clone());
             }
         }
+        crate::fast::damage::replay::record(self, &primitive);
         self.paint_operations
             .push(PaintOperation::Primitive(primitive));
     }
 
     pub fn replay(&mut self, range: Range<usize>, prev_scene: &Scene) {
         crate::fast::layers::paint::replay_layers(self, range.clone(), prev_scene);
-        for operation in &prev_scene.paint_operations[range] {
+        for (index, operation) in prev_scene.paint_operations[range.clone()]
+            .iter()
+            .enumerate()
+        {
             match operation {
-                PaintOperation::Primitive(primitive) => self.insert_primitive(primitive.clone()),
+                PaintOperation::Primitive(primitive) => crate::fast::damage::replay::replay(
+                    self,
+                    primitive.clone(),
+                    prev_scene,
+                    range.start + index,
+                ),
                 PaintOperation::StartLayer(bounds) => self.push_layer(*bounds),
                 PaintOperation::EndLayer => self.pop_layer(),
                 PaintOperation::FastRoundedClip(fast_clip) => {
@@ -160,6 +171,7 @@ impl Scene {
 
     pub fn finish(&mut self) {
         crate::fast::scene::sort_in_drawing_order(self);
+        self.fast_damage.finish();
     }
 
     #[cfg_attr(

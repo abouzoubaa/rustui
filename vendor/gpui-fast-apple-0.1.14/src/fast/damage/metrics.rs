@@ -8,7 +8,12 @@ use std::{ptr::NonNull, sync::OnceLock, time::SystemTime};
 
 fn enabled() -> bool {
     static ENABLED: OnceLock<bool> = OnceLock::new();
-    *ENABLED.get_or_init(|| matches!(std::env::var("RUSTUI_FRAME_LOG").as_deref(), Ok("1" | "buffered")))
+    *ENABLED.get_or_init(|| {
+        matches!(
+            std::env::var("RUSTUI_FRAME_LOG").as_deref(),
+            Ok("1" | "buffered")
+        )
+    })
 }
 
 fn gpu_ms(start: f64, end: f64) -> Option<f64> {
@@ -37,15 +42,15 @@ pub(crate) fn on_commit(buffer: &ProtocolObject<dyn MTLCommandBuffer>, mode: &'s
             let Some(gpu_ms) = gpu_ms(start, end) else {
                 return;
             };
-            let epoch_ms = SystemTime::now()
+            let epoch_ms = std::time::SystemTime::now()
                 .duration_since(SystemTime::UNIX_EPOCH)
                 .unwrap_or_default()
                 .as_secs_f64()
                 * 1000.0;
             // GPU records contribute no CPU phase time to legacy phase readers.
-            eprintln!(
+            super::log::line(format_args!(
                 "RUSTUI_FRAME_LOG {{\"event\":\"gpu\",\"mode\":\"{mode}\",\"cpu_ms\":0.0,\"gpu_ms\":{gpu_ms:.6},\"epoch_ms\":{epoch_ms:.6}}}"
-            );
+            ));
         },
     );
     // SAFETY: the block is live here; Metal copies it until completion. Its
@@ -57,14 +62,14 @@ pub(crate) fn skipped() {
     if !enabled() {
         return;
     }
-    let epoch_ms = SystemTime::now()
+    let epoch_ms = std::time::SystemTime::now()
         .duration_since(SystemTime::UNIX_EPOCH)
         .unwrap_or_default()
         .as_secs_f64()
         * 1000.;
-    eprintln!(
+    super::log::line(format_args!(
         "RUSTUI_FRAME_LOG {{\"event\":\"gpu\",\"mode\":\"skip\",\"cpu_ms\":0.0,\"gpu_ms\":null,\"epoch_ms\":{epoch_ms:.6}}}"
-    );
+    ));
 }
 
 #[cfg(test)]
@@ -88,12 +93,26 @@ mod tests {
 
 /// Verify is explicitly requested, so a mismatch is logged even without frame timing.
 pub(crate) fn mismatch(mode: &'static str, x: usize, y: usize) {
-    let epoch_ms = SystemTime::now()
+    let epoch_ms = std::time::SystemTime::now()
         .duration_since(SystemTime::UNIX_EPOCH)
         .unwrap_or_default()
         .as_secs_f64()
         * 1000.;
-    eprintln!(
+    super::log::line(format_args!(
         "RUSTUI_FRAME_LOG {{\"event\":\"damage_mismatch\",\"mode\":\"{mode}\",\"x\":{x},\"y\":{y},\"cpu_ms\":0.0,\"epoch_ms\":{epoch_ms:.6}}}"
-    );
+    ));
+}
+
+pub(crate) fn verified(mode: &'static str) {
+    if !enabled() {
+        return;
+    }
+    let epoch_ms = std::time::SystemTime::now()
+        .duration_since(std::time::UNIX_EPOCH)
+        .unwrap_or_default()
+        .as_secs_f64()
+        * 1000.;
+    super::log::line(format_args!(
+        "RUSTUI_FRAME_LOG {{\"event\":\"damage_verify\",\"mode\":\"{mode}\",\"cpu_ms\":0.0,\"epoch_ms\":{epoch_ms:.6}}}"
+    ));
 }

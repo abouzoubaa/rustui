@@ -27,6 +27,7 @@ pub(crate) fn compile(scene: &mut Scene) {
         return;
     }
     let operations = mem::take(&mut scene.paint_operations);
+    let provenance = mem::take(&mut scene.fast_damage);
     let layers: Vec<LayerFrame> = scene
         .layers
         .frames
@@ -42,7 +43,7 @@ pub(crate) fn compile(scene: &mut Scene) {
     let mut stack = vec![new_scene()];
     let mut shapes = Vec::new();
     let mut redundant = Vec::new();
-    for operation in &operations {
+    for (operation_index, operation) in operations.iter().enumerate() {
         match operation {
             PaintOperation::FastRoundedClip(ClipOperation::Begin(shape)) => {
                 let already_active = shapes.contains(shape);
@@ -94,10 +95,12 @@ pub(crate) fn compile(scene: &mut Scene) {
                     },
                 });
             }
-            PaintOperation::Primitive(primitive) => stack
-                .last_mut()
-                .unwrap()
-                .insert_primitive(primitive.clone()),
+            PaintOperation::Primitive(primitive) => crate::fast::damage::replay::compile(
+                stack.last_mut().unwrap(),
+                primitive.clone(),
+                &provenance,
+                operation_index,
+            ),
             PaintOperation::StartLayer(bounds) => stack.last_mut().unwrap().push_layer(*bounds),
             PaintOperation::EndLayer => stack.last_mut().unwrap().pop_layer(),
         }
@@ -108,6 +111,7 @@ pub(crate) fn compile(scene: &mut Scene) {
     );
     let mut compiled = stack.pop().unwrap();
     compiled.paint_operations = operations;
+    compiled.fast_damage.restore_operations(provenance);
     compiled.fast_rounded_clip = mem::take(&mut scene.fast_rounded_clip);
     compiled.fast_rounded_clip.compiled = true;
     compiled.sort_scratch = mem::take(&mut scene.sort_scratch);

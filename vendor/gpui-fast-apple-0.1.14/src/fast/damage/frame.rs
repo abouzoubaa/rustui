@@ -10,7 +10,7 @@ use super::{
     plan::{self, Area, Sig},
     retained::{self, Target},
 };
-use crate::metal_renderer::MetalRenderer;
+use crate::metal_renderer::{InstanceBindings, InstanceBufferWriter, MetalRenderer};
 use anyhow::{Context as _, Result};
 use block2::RcBlock;
 use gpui::{DevicePixels, Scene, Size};
@@ -21,6 +21,8 @@ use std::{
     ptr::NonNull,
     sync::{Arc, OnceLock, atomic::Ordering},
 };
+
+mod backoff;
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 enum Config {
@@ -38,6 +40,11 @@ fn config(value: Option<&str>) -> Config {
 fn configured() -> Config {
     static CONFIG: OnceLock<Config> = OnceLock::new();
     *CONFIG.get_or_init(|| config(std::env::var("RUSTUI_DAMAGE").ok().as_deref()))
+}
+
+// Only the explicit pixel oracle needs release drawables to be readable.
+pub(crate) fn verification_requested() -> bool {
+    configured() == Config::Verify
 }
 
 #[derive(Clone, Copy, Debug, Default, PartialEq)]
@@ -89,12 +96,17 @@ struct Snapshot {
     geometry: Geometry,
     signatures: Vec<Sig>,
     generation: u64,
+    deferred: Option<Box<Scene>>,
 }
 #[derive(Default)]
 pub(crate) struct State {
     target: Option<Target>,
     snapshot: Option<Snapshot>,
     previous_large: bool,
+    backoff: backoff::State,
+    #[cfg(any(test, feature = "test-support"))]
+    planner_calls: usize,
+    cache: plan::Cache,
     pub(crate) failed: Option<Arc<super::verify::Status>>,
     pub(crate) last_mode: Mode,
     #[cfg(any(test, feature = "test-support"))]
@@ -103,7 +115,6 @@ pub(crate) struct State {
     verify_override: bool,
     #[cfg(any(test, feature = "test-support"))]
     fail_verification: bool,
-    #[cfg(any(test, feature = "test-support"))]
     verification: Option<Retained<ProtocolObject<dyn MTLCommandBuffer>>>,
     #[cfg(any(test, feature = "test-support"))]
     fail_allocation: bool,
@@ -119,6 +130,10 @@ pub(crate) struct Prepared {
     pub(crate) reason: &'static str,
     snapshot: Option<Snapshot>,
     large: bool,
+    plannable: bool,
+    backoff: bool,
+    probe: bool,
+    preserve_snapshot: bool,
 }
 impl Prepared {
     pub(crate) fn direct() -> Self {
@@ -127,6 +142,10 @@ impl Prepared {
             reason: "disabled",
             snapshot: None,
             large: false,
+            plannable: false,
+            backoff: false,
+            probe: false,
+            preserve_snapshot: false,
         }
     }
 }
@@ -137,6 +156,11 @@ impl State {
             return enabled;
         }
         configured() != Config::Off
+    }
+    pub(crate) fn take_verification(
+        &mut self,
+    ) -> Option<Retained<ProtocolObject<dyn MTLCommandBuffer>>> {
+        self.verification.take()
     }
     fn verifying(&self) -> bool {
         #[cfg(any(test, feature = "test-support"))]
@@ -157,8 +181,11 @@ impl State {
     }
     pub(crate) fn invalidate(&mut self) {
         self.target = None;
+        self.verification = None;
         self.snapshot = None;
         self.previous_large = false;
+        self.backoff.reset();
+        self.cache.clear();
     }
     pub(crate) fn resized(&mut self, size: Size<DevicePixels>) {
         if self
@@ -188,40 +215,150 @@ impl State {
             || size.width.0 <= 0
             || size.height.0 <= 0
         {
-            self.invalidate();
-            let mut direct = Prepared::direct();
-            direct.reason = if !self.enabled() {
+            let _cpu = super::cpu::Measure::new("off_path");
+            let reason = if !self.enabled() {
                 "disabled"
             } else if synchronous {
                 "live_resize"
-            } else if self
-                .failed
-                .as_ref()
-                .is_some_and(|s| s.disabled.load(Ordering::Acquire))
-            {
-                "verify_off_path"
-            } else {
+            } else if size.width.0 <= 0 || size.height.0 <= 0 {
                 "geometry"
+            } else {
+                "verify_off_path"
             };
-            return direct;
+            self.invalidate();
+            return Prepared {
+                reason,
+                ..Prepared::direct()
+            };
+        }
+        let mut cpu = super::cpu::Measure::new("off_path");
+        if !plan::can_plan(scene) {
+            cpu.reason = "unsupported";
+            self.invalidate();
+            // Unsupported frames predict another whole draw. Keep this history
+            // until a comparable frame can demonstrate a cheap follow-up.
+            self.previous_large = true;
+            return Prepared {
+                reason: if !scene.layers.frames.is_empty() {
+                    "unsupported_scroll_layer"
+                } else if !scene.surfaces.is_empty() {
+                    "surface"
+                } else {
+                    "unsupported_scene"
+                },
+                large: true,
+                ..Prepared::direct()
+            };
         }
         let geometry = Geometry::new(size, scale, opaque);
-        let old = self.snapshot.as_ref().filter(|s| s.geometry == geometry);
-        let uploads = renderer_atlas.damage_uploads(old.map_or(0, |s| s.generation));
+        let previous_generation = self
+            .snapshot
+            .as_ref()
+            .filter(|s| s.geometry == geometry)
+            .map_or(0, |s| s.generation);
+        let uploads = renderer_atlas.damage_uploads(previous_generation);
         self.failed = Some(uploads.status.clone());
         if uploads.status.disabled.load(Ordering::Acquire) {
+            cpu.reason = "disabled";
             self.invalidate();
-            let mut direct = Prepared::direct();
-            direct.reason = "atlas_lost";
-            return direct;
+            return Prepared {
+                reason: "verify_off_path",
+                ..Prepared::direct()
+            };
         }
-        // An expired atlas journal requires a whole draw; signatures use an empty
-        // upload set only to establish a fresh baseline for the following frame.
-        let empty = Default::default();
-        let Some(signatures) = plan::signatures(
+        self.backoff.observe(geometry, uploads.tiles.is_none());
+        if self.backoff.skipping() {
+            cpu.reason = "backoff";
+            let tail = self.backoff.remaining == 1;
+            // Retain metadata without hashing or planning. On the last skipped
+            // frame, snapshot that scene for an adjacent-frame recovery probe;
+            // comparing with a 30-frame-old scene could falsely restart back-off.
+            let snapshot = tail.then(|| Snapshot {
+                geometry,
+                signatures: Vec::new(),
+                generation: uploads.generation,
+                deferred: Some(Box::new(scene.fast_damage_snapshot())),
+            });
+            return Prepared {
+                reason: "backoff",
+                snapshot,
+                large: true,
+                plannable: true,
+                backoff: true,
+                preserve_snapshot: !tail,
+                ..Prepared::direct()
+            };
+        }
+        let probe = self.backoff.probing();
+        let comparable = self
+            .snapshot
+            .as_ref()
+            .is_some_and(|s| s.geometry == geometry)
+            && uploads.tiles.is_some();
+        // Scene metadata remains comparable after Direct invalidates kept pixels.
+        // Pixel validity is checked only when selecting Copy, Skip or Partial.
+        if !comparable {
+            cpu.reason = if uploads.tiles.is_none() {
+                "atlas_lost"
+            } else {
+                "prime"
+            };
+            if self
+                .snapshot
+                .as_ref()
+                .is_none_or(|s| s.geometry != geometry)
+            {
+                self.target = None;
+                if self
+                    .snapshot
+                    .as_ref()
+                    .is_some_and(|s| s.geometry != geometry)
+                {
+                    self.previous_large = false;
+                }
+            }
+            self.cache.clear();
+            return Prepared {
+                reason: cpu.reason,
+                mode: if self.previous_large {
+                    Mode::Direct
+                } else {
+                    Mode::Retained
+                },
+                snapshot: Some(Snapshot {
+                    geometry,
+                    signatures: Vec::new(),
+                    generation: uploads.generation,
+                    deferred: Some(Box::new(scene.fast_damage_snapshot())),
+                }),
+                // This is a whole draw, preserving the large-change hysteresis.
+                large: true,
+                plannable: true,
+                probe,
+                ..Prepared::direct()
+            };
+        }
+        let signature_start = std::time::Instant::now();
+        if let Some(deferred) = self.snapshot.as_mut().unwrap().deferred.take() {
+            self.cache.begin();
+            let empty = Default::default();
+            let Some(old) =
+                plan::signatures_cached(&deferred, &empty, &inputs::dynamic, &mut self.cache)
+            else {
+                self.invalidate();
+                return Prepared::direct();
+            };
+            self.snapshot.as_mut().unwrap().signatures = old;
+            cpu.hashed += self.cache.hashed;
+            cpu.reused += self.cache.reused;
+            self.cache.finish();
+        }
+        self.cache.begin();
+        let Some(signatures) = plan::signatures_cached(
             scene,
-            uploads.tiles.as_ref().unwrap_or(&empty),
+            uploads.tiles.as_ref().unwrap(),
             &inputs::dynamic,
+            &mut self.cache,
         ) else {
             self.invalidate();
             let mut direct = Prepared::direct();
@@ -234,52 +371,68 @@ impl State {
             };
             return direct;
         };
-        let change = old.and_then(|old| {
-            uploads
-                .tiles
-                .as_ref()
-                .and_then(|_| plan::plan(&old.signatures, &signatures, geometry.view()))
-        });
+        cpu.hashed += self.cache.hashed;
+        cpu.reused += self.cache.reused;
+        self.cache.finish();
+        cpu.signatures_ms = signature_start.elapsed().as_secs_f64() * 1000.;
+        let plan_start = std::time::Instant::now();
+        #[cfg(any(test, feature = "test-support"))]
+        {
+            self.planner_calls += 1;
+        }
+        let change = plan::plan(
+            &self.snapshot.as_ref().unwrap().signatures,
+            &signatures,
+            geometry.view(),
+        );
+        cpu.plan_ms = plan_start.elapsed().as_secs_f64() * 1000.;
         let damage_box = change
             .as_ref()
             .and_then(|p| p.damage.iter().copied().reduce(|a, b| a.union(&b)))
             .map(|r| r.pixels().and(&geometry.view()));
         let large = change.as_ref().is_none_or(|p| p.shift.is_some())
             || damage_box.is_some_and(|r| r.area() > plan::MAX_DAMAGE * geometry.view().area());
-        if old.is_none() {
-            self.target = None;
-        }
         let valid = self.target.as_ref().is_some_and(|t| t.valid);
         let mode = match change {
-            Some(p) if p.shift.is_none() && p.damage.is_empty() && !required && valid => Mode::Same,
+            Some(p)
+                if p.shift.is_none()
+                    && p.damage.is_empty()
+                    && !required
+                    && valid
+                    && !self.verifying() =>
+            {
+                Mode::Same
+            }
             Some(p) if p.shift.is_none() && p.damage.is_empty() && valid => Mode::Copy,
             Some(p) if !large && p.shift.is_none() && valid && damage_box.is_some() => {
                 Mode::Partial(damage_box.unwrap())
             }
-            _ if large && self.previous_large && old.is_some() => Mode::Direct,
+            // Large changes never pay for a full draw plus a full copy. After
+            // one, require two consecutive cheap plans before priming again:
+            // this Direct records large=false; the next cheap frame may prime.
+            _ if large || (self.previous_large && !probe) => Mode::Direct,
             _ => Mode::Retained,
         };
-        let reason = if old.is_none() {
-            "prime"
-        } else if uploads.tiles.is_none() {
-            "atlas_lost"
-        } else {
-            match mode {
+        cpu.reason = mode.label();
+        Prepared {
+            mode,
+            reason: match mode {
                 Mode::Same => "identical",
                 Mode::Copy => "required",
                 Mode::Partial(_) => "changed",
+                Mode::Retained => "prime",
                 _ => "large",
-            }
-        };
-        Prepared {
-            mode,
-            reason,
+            },
             snapshot: Some(Snapshot {
                 geometry,
                 signatures,
                 generation: uploads.generation,
+                deferred: None,
             }),
             large,
+            plannable: true,
+            probe,
+            ..Prepared::direct()
         }
     }
     fn allocate(
@@ -299,13 +452,22 @@ impl State {
         )
     }
     fn complete(&mut self, prepared: Prepared, mode: Mode) {
-        self.snapshot = prepared.snapshot;
+        self.backoff.complete(
+            prepared.plannable,
+            prepared.large || mode == Mode::Direct,
+            prepared.backoff,
+            prepared.probe,
+        );
+        if !prepared.preserve_snapshot {
+            self.snapshot = prepared.snapshot;
+        }
         self.previous_large = prepared.large;
         self.last_mode = mode;
     }
 }
 pub(crate) fn choose(renderer: &mut MetalRenderer, scene: &Scene) -> Prepared {
     if !renderer.damage.enabled() {
+        let _cpu = super::cpu::Measure::new("off");
         renderer.damage.invalidate();
         return Prepared::direct();
     }
@@ -331,12 +493,33 @@ pub(crate) fn skip(renderer: &mut MetalRenderer, prepared: Prepared) {
     renderer.damage.complete(prepared, Mode::Same);
     super::metrics::skipped();
 }
+#[cfg(any(test, feature = "test-support"))]
 pub(crate) fn render(
     renderer: &mut MetalRenderer,
     scene: &Scene,
     target: &ProtocolObject<dyn MTLTexture>,
     size: Size<DevicePixels>,
+    prepared: Prepared,
+) -> Result<Retained<ProtocolObject<dyn MTLCommandBuffer>>> {
+    render_with_instances(
+        renderer,
+        scene,
+        target,
+        size,
+        prepared,
+        None,
+        super::encode::Scope::new(scene),
+    )
+}
+
+pub(crate) fn render_with_instances(
+    renderer: &mut MetalRenderer,
+    scene: &Scene,
+    target: &ProtocolObject<dyn MTLTexture>,
+    size: Size<DevicePixels>,
     mut prepared: Prepared,
+    staged: Option<(InstanceBufferWriter, InstanceBindings)>,
+    encoding: super::encode::Scope,
 ) -> Result<Retained<ProtocolObject<dyn MTLCommandBuffer>>> {
     let mut state = std::mem::take(&mut renderer.damage);
     let result = (|| {
@@ -365,7 +548,11 @@ pub(crate) fn render(
                 if let Some(kept) = &mut state.target {
                     kept.valid = false;
                 }
-                renderer.render_frame(scene, target, size)?
+                if let Some((writer, bindings)) = staged {
+                    renderer.encode_frame(scene, target, size, writer, bindings)?
+                } else {
+                    renderer.render_frame(scene, target, size)?
+                }
             }
             Mode::Retained | Mode::Copy | Mode::Partial(_) => {
                 let kept = state.target.as_mut().context("missing retained texture")?;
@@ -438,8 +625,12 @@ pub(crate) fn render(
                 command.addCompletedHandler(RcBlock::as_ptr(&block));
             }
         }
-        if state.verifying() && mode != Mode::Direct {
-            let kept = state.target.as_ref().context("verify retained target")?;
+        if state.verifying()
+            && state
+                .failed
+                .as_ref()
+                .is_some_and(|s| !s.disabled.load(Ordering::Acquire))
+        {
             let status = state
                 .failed
                 .as_ref()
@@ -449,22 +640,13 @@ pub(crate) fn render(
                 renderer,
                 scene,
                 &command,
-                &kept.texture,
+                target,
                 size,
                 mode,
                 status.clone(),
                 state.verification_failure(),
             ) {
-                Ok(reference) => {
-                    #[cfg(any(test, feature = "test-support"))]
-                    {
-                        state.verification = Some(reference);
-                    }
-                    #[cfg(not(any(test, feature = "test-support")))]
-                    {
-                        drop(reference);
-                    }
-                }
+                Ok(reference) => state.verification = Some(reference),
                 Err(error) => {
                     log::error!("damage verification unavailable; drawing whole: {error:#}");
                     status.disabled.store(true, Ordering::Release);
@@ -477,7 +659,13 @@ pub(crate) fn render(
                 }
             }
         }
+        let reason = if prepared.backoff {
+            "backoff"
+        } else {
+            mode.label()
+        };
         state.complete(prepared, mode);
+        encoding.finish(mode.label(), reason);
         Ok(command)
     })();
     if result.is_err() {

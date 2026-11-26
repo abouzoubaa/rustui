@@ -37,6 +37,7 @@
     "gpui-fast-input-gpu-density-v1-fast.json",
     "gpui-kit-prepaint-visible-reuse-v1-fast.json",
     "gpui-kit-draw-first-injection-ranges-v1-fast.json",
-    "gpui-fast-g5-closeout-v1-fast.json"
+    "gpui-fast-g5-closeout-v1-fast.json",
+    "../candidate-fast-damage/gpui-fast-g-r0-damage-rebaseline-v1-fast.json"
   ]
 }

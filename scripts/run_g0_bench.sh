@@ -81,9 +81,16 @@ for scene in sys.argv[3:] or ('idle', 'typing', 'hover', 'log', 'drag'):
             assert record['gpu_ms'] is not None, (scene, 'submitted frame needs GPU time')
     gpu = [r['gpu_ms'] for r in presents if r['mode'] != 'skip']
     assert all(math.isfinite(n) and n >= 0 for n in gpu)
+    damage_records = [r for r in records if r['event'] == 'damage_cpu']
+    damage_cpu = dict(samples=len(damage_records),
+                      signatures_mean_ms=statistics.mean(r['signatures_ms'] for r in damage_records) if damage_records else 0.0,
+                      plan_mean_ms=statistics.mean(r['plan_ms'] for r in damage_records) if damage_records else 0.0,
+                      total_mean_ms=statistics.mean(r['total_ms'] for r in damage_records) if damage_records else 0.0,
+                      hashed=sum(r['hashed'] for r in damage_records), reused=sum(r['reused'] for r in damage_records),
+                      reasons=dict(collections.Counter(r['reason'] for r in damage_records)))
     phases = {}
     for r in records:
-        if r['event'] not in ('gpu', 'frame_reason'):
+        if r['event'] not in ('gpu', 'frame_reason', 'damage_cpu', 'encode', 'damage_verify'):
             phases.setdefault(r['event'], []).append(r['cpu_ms'])
     frames, draw = [], 0.0
     for r in records:
@@ -95,8 +102,28 @@ for scene in sys.argv[3:] or ('idle', 'typing', 'hover', 'log', 'drag'):
     assert frames, (scene, 'missing CPU presents')
     process_cpu_s = end['cpu_user_s'] + end['cpu_sys_s']
     assert math.isfinite(process_cpu_s) and process_cpu_s > 0, (scene, 'missing process CPU')
+    encoding = [r for r in records if r['event'] == 'encode']
+    assert all(r['mode'] in allowed and r['instances_encoded'] >= 0 and r['instances_total'] >= 0 for r in encoding), (scene, 'invalid encoding sample')
+    mode_runs = []
+    for r in sorted(encoding, key=lambda r: r['sequence']):
+        if mode_runs and mode_runs[-1]['mode'] == r['mode']:
+            mode_runs[-1]['frames'] += 1
+        else:
+            mode_runs.append(dict(mode=r['mode'], frames=1))
+    planning_runs = []
+    for r in sorted(encoding, key=lambda r: r['sequence']):
+        label = r.get('reason', r['mode'])
+        assert label == r['mode'] or (label == 'backoff' and r['mode'] == 'direct'), (scene, r)
+        if planning_runs and planning_runs[-1]['mode'] == label:
+            planning_runs[-1]['frames'] += 1
+        else:
+            planning_runs.append(dict(mode=label, frames=1))
+    instances = dict(samples=len(encoding), encoded=sum(r['instances_encoded'] for r in encoding),
+                     total=sum(r['instances_total'] for r in encoding), mode_runs=mode_runs,
+                     planning_runs=planning_runs, backoff_frames=sum(r.get('reason') == 'backoff' for r in encoding))
     results.append(dict(scene=scene, seconds=seconds, damage=damage, window=start, workload=end,
                         input_to_screen=latency, non_partial_reasons=dict(reasons),
+                        damage_cpu=damage_cpu, instances=instances,
                         frame_mode_counts={mode: modes[mode] for mode in allowed},
                         frame_mode_samples=len(presents),
                         gpu_samples=len(gpu), gpu_mean_ms=statistics.mean(gpu) if gpu else 0.0,

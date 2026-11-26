@@ -5,11 +5,15 @@
 // RustUI modifications: remove Windows drawing/adapter APIs, expose Metal inputs,
 // and run the preserved planner tests through test-support as well as crate tests.
 //! Platform-independent scene signatures, damage rectangles, and scroll planning.
+use collections::HashMap;
 use gpui::{
     AtlasTextureId, AtlasTile, Background, Bounds, ContentMask, Corners, Edges, Hsla, IsZero,
     ScaledPixels, Scene, TransformationMatrix,
 };
-use std::collections::{HashMap, HashSet};
+use std::collections::HashSet;
+mod cache;
+mod fixed;
+pub(crate) use cache::Cache;
 use std::hash::{Hash, Hasher};
 
 /// More damage than this share of the window: the frame is drawn whole.
@@ -192,11 +196,11 @@ pub(crate) struct Sig {
     fresh: bool,
 }
 
-struct Key(std::collections::hash_map::DefaultHasher);
+struct Key(collections::FxHasher);
 
 impl Key {
     fn new(kind: u8) -> Key {
-        let mut hasher = std::collections::hash_map::DefaultHasher::new();
+        let mut hasher = collections::FxHasher::default();
         kind.hash(&mut hasher);
         Key(hasher)
     }
@@ -338,15 +342,47 @@ pub(crate) fn signatures(
     uploaded: &HashSet<(AtlasTextureId, u32)>,
     dynamic: &dyn Fn(AtlasTextureId) -> bool,
 ) -> Option<Vec<Sig>> {
+    signatures_cached(scene, uploaded, dynamic, &mut Cache::default())
+}
+
+pub(crate) fn can_plan(scene: &Scene) -> bool {
+    if !scene.surfaces.is_empty() {
+        return false;
+    }
+    scene.layers.frames.iter().all(|frame| {
+        frame.tile_size == 0
+            && (frame.key.0 == u32::MAX || frame.content.scene().is_some_and(can_plan))
+    })
+}
+
+pub(crate) fn signatures_cached(
+    scene: &Scene,
+    uploaded: &HashSet<(AtlasTextureId, u32)>,
+    dynamic: &dyn Fn(AtlasTextureId) -> bool,
+    cache: &mut Cache,
+) -> Option<Vec<Sig>> {
     // A scroll layer's tiles change under sprites that stay the same.
-    if scene.layers.frames.iter().any(|frame| frame.tile_size != 0) || !scene.surfaces.is_empty() {
+    if !can_plan(scene) {
         return None;
     }
     let fresh = |tile: &AtlasTile| {
         uploaded.contains(&(tile.texture_id, tile.tile_id.0)) || dynamic(tile.texture_id)
     };
-    let mut out = Vec::with_capacity(scene.len());
-    for q in &scene.quads {
+    let mut out = Vec::with_capacity(
+        scene.quads.len()
+            + scene.shadows.len()
+            + scene.underlines.len()
+            + scene.monochrome_sprites.len()
+            + scene.subpixel_sprites.len()
+            + scene.polychrome_sprites.len()
+            + scene.paths.len(),
+    );
+    for (index, q) in scene.quads.iter().enumerate() {
+        let source = scene.fast_damage_source(0, index);
+        if let Some(signature) = cache.replay(source, q.order, false) {
+            out.push(signature);
+            continue;
+        }
         let solid = q.background.as_solid();
         let key = Key::new(1)
             .size(&q.bounds)
@@ -368,9 +404,14 @@ pub(crate) fn signatures(
             && w.right.is_zero()
             && w.bottom.is_zero()
             && w.left.is_zero();
-        out.push(s);
+        cache.push(source, s, &mut out);
     }
-    for s in &scene.shadows {
+    for (index, s) in scene.shadows.iter().enumerate() {
+        let source = scene.fast_damage_source(1, index);
+        if let Some(signature) = cache.replay(source, s.order, false) {
+            out.push(signature);
+            continue;
+        }
         let key = Key::new(2)
             .size(&s.bounds)
             .f(s.blur_radius.0)
@@ -383,18 +424,36 @@ pub(crate) fn signatures(
             .u(s.inset as u64)
             .done();
         let grow = 3.0 * s.blur_radius.0.max(0.0) + 1.0;
-        out.push(sig(key, s.order, &s.bounds, &s.content_mask, grow));
+        cache.push(
+            source,
+            sig(key, s.order, &s.bounds, &s.content_mask, grow),
+            &mut out,
+        );
     }
-    for u in &scene.underlines {
+    for (index, u) in scene.underlines.iter().enumerate() {
+        let source = scene.fast_damage_source(2, index);
+        if let Some(signature) = cache.replay(source, u.order, false) {
+            out.push(signature);
+            continue;
+        }
         let key = Key::new(3)
             .size(&u.bounds)
             .color(&u.color)
             .f(u.thickness.0)
             .u((u.wavy == true.into()) as u64)
             .done();
-        out.push(sig(key, u.order, &u.bounds, &u.content_mask, 1.0));
+        cache.push(
+            source,
+            sig(key, u.order, &u.bounds, &u.content_mask, 1.0),
+            &mut out,
+        );
     }
-    for g in &scene.monochrome_sprites {
+    for (index, g) in scene.monochrome_sprites.iter().enumerate() {
+        let source = scene.fast_damage_source(3, index);
+        if let Some(signature) = cache.replay(source, g.order, fresh(&g.tile)) {
+            out.push(signature);
+            continue;
+        }
         let t = &g.transformation;
         let key = Key::new(4)
             .size(&g.bounds)
@@ -405,9 +464,14 @@ pub(crate) fn signatures(
         let mut s = sig(key, g.order, &g.bounds, &g.content_mask, 1.0);
         s.reach = transformed(&g.bounds, t).grown(1.0).and(&s.mask);
         s.fresh = fresh(&g.tile);
-        out.push(s);
+        cache.push(source, s, &mut out);
     }
-    for g in &scene.subpixel_sprites {
+    for (index, g) in scene.subpixel_sprites.iter().enumerate() {
+        let source = scene.fast_damage_source(4, index);
+        if let Some(signature) = cache.replay(source, g.order, fresh(&g.tile)) {
+            out.push(signature);
+            continue;
+        }
         let t = &g.transformation;
         let key = Key::new(5)
             .size(&g.bounds)
@@ -418,14 +482,21 @@ pub(crate) fn signatures(
         let mut s = sig(key, g.order, &g.bounds, &g.content_mask, 1.0);
         s.reach = transformed(&g.bounds, t).grown(1.0).and(&s.mask);
         s.fresh = fresh(&g.tile);
-        out.push(s);
+        cache.push(source, s, &mut out);
     }
-    for p in &scene.polychrome_sprites {
+    for (index, p) in scene.polychrome_sprites.iter().enumerate() {
+        let source = scene.fast_damage_source(5, index);
+        if crate::fast::rounded_clip::group(scene, p.tile.texture_id).is_none()
+            && let Some(signature) = cache.replay(source, p.order, fresh(&p.tile))
+        {
+            out.push(signature);
+            continue;
+        }
         // A rounded clip: a sprite standing for a scene drawn through its
         // rounded bounds. It looks like that scene, seen from the sprite.
         if let Some(group) = crate::fast::rounded_clip::group(scene, p.tile.texture_id) {
             let child = group.content.scene()?;
-            let inner = signatures(child, uploaded, dynamic)?;
+            let inner = signatures_cached(child, uploaded, dynamic, cache)?;
             let (x, y) = (p.bounds.origin.x.0, p.bounds.origin.y.0);
             let mut key = Key::new(8)
                 .size(&p.bounds)
@@ -452,7 +523,7 @@ pub(crate) fn signatures(
             }
             let mut s = sig(key.done(), p.order, &p.bounds, &p.content_mask, 1.0);
             s.fresh = fresh_inside;
-            out.push(s);
+            cache.push(source, s, &mut out);
             continue;
         }
         let key = Key::new(6)
@@ -464,9 +535,14 @@ pub(crate) fn signatures(
             .done();
         let mut s = sig(key, p.order, &p.bounds, &p.content_mask, 1.0);
         s.fresh = fresh(&p.tile);
-        out.push(s);
+        cache.push(source, s, &mut out);
     }
-    for p in &scene.paths {
+    for (index, p) in scene.paths.iter().enumerate() {
+        let source = scene.fast_damage_source(6, index);
+        if let Some(signature) = cache.replay(source, p.order, false) {
+            out.push(signature);
+            continue;
+        }
         // A path is its vertices where they are: one that moved is new.
         let mut key = Key::new(7).background(&p.color);
         for v in &p.vertices {
@@ -476,7 +552,11 @@ pub(crate) fn signatures(
                 .f(v.st_position.x)
                 .f(v.st_position.y);
         }
-        out.push(sig(key.done(), p.order, &p.bounds, &p.content_mask, 1.0));
+        cache.push(
+            source,
+            sig(key.done(), p.order, &p.bounds, &p.content_mask, 1.0),
+            &mut out,
+        );
     }
     Some(out)
 }
@@ -544,7 +624,7 @@ fn tidy(rects: Vec<Area>, view: &Area) -> Vec<Area> {
         // Many (a page changed): their boxes by band of the window, so that
         // what follows is quick. More damage than needed is still right.
         let band = ((view.y1 - view.y0) / 16.0).max(1.0);
-        let mut bands: HashMap<i64, Area> = HashMap::new();
+        let mut bands: HashMap<i64, Area> = HashMap::default();
         for r in &rects {
             bands
                 .entry((r.y0 / band).floor() as i64)
@@ -583,12 +663,20 @@ fn tidy(rects: Vec<Area>, view: &Area) -> Vec<Area> {
 /// How to make the frame of `new` from the frame of `old` in a window of
 /// `view`, or `None` to draw it whole.
 pub(crate) fn plan(old: &[Sig], new: &[Sig], view: Area) -> Option<Plan> {
+    if let Ok(plan) = fixed::plan(old, new, view) {
+        return plan;
+    }
+    general_plan(old, new, view)
+}
+
+fn general_plan(old: &[Sig], new: &[Sig], view: Area) -> Option<Plan> {
     // The primitives that stayed as they were, as a multiset.
-    let mut left: HashMap<_, Vec<usize>> = HashMap::new();
+    // Intrusive index chains preserve first-to-last multiset pairing without
+    // allocating one tiny Vec for every primitive in the previous frame.
+    let mut left: HashMap<_, usize> = HashMap::default();
+    let mut next = vec![usize::MAX; old.len()];
     for (i, s) in old.iter().enumerate().rev() {
-        // Popped first to last: primitives alike at one place pair in the
-        // sequence they are painted in.
-        left.entry(placed(s)).or_default().push(i);
+        next[i] = left.insert(placed(s), i).unwrap_or(usize::MAX);
     }
     let mut stayed: Vec<Option<usize>> = vec![None; new.len()];
     let mut old_kept = vec![false; old.len()];
@@ -596,9 +684,13 @@ pub(crate) fn plan(old: &[Sig], new: &[Sig], view: Area) -> Option<Plan> {
         if s.fresh {
             continue;
         }
-        if let Some(j) = left.get_mut(&placed(s)).and_then(Vec::pop) {
-            stayed[i] = Some(j);
-            old_kept[j] = true;
+        if let Some(head) = left.get_mut(&placed(s)) {
+            if *head != usize::MAX {
+                let j = *head;
+                *head = next[j];
+                stayed[i] = Some(j);
+                old_kept[j] = true;
+            }
         }
     }
     let changed_new: Vec<usize> = (0..new.len()).filter(|i| stayed[*i].is_none()).collect();
@@ -610,11 +702,11 @@ pub(crate) fn plan(old: &[Sig], new: &[Sig], view: Area) -> Option<Plan> {
         .collect();
 
     // A scroll: changed primitives of the same shape vote on how far they moved.
-    let mut by_shape: HashMap<_, Vec<usize>> = HashMap::new();
+    let mut by_shape: HashMap<_, Vec<usize>> = HashMap::default();
     for &j in &changed_old {
         by_shape.entry(shape(&old[j])).or_default().push(j);
     }
-    let mut votes: HashMap<i32, usize> = HashMap::new();
+    let mut votes: HashMap<i32, usize> = HashMap::default();
     let mut fractional = false;
     for &i in &changed_new {
         if new[i].fresh {
@@ -686,7 +778,7 @@ pub(crate) fn plan(old: &[Sig], new: &[Sig], view: Area) -> Option<Plan> {
 
     // What moved with the scroll: the same shape, `dy` further, inside the
     // clip, showing the same part of itself where the copy lands.
-    let mut pool: HashMap<_, Vec<usize>> = HashMap::new();
+    let mut pool: HashMap<_, Vec<usize>> = HashMap::default();
     for &j in &changed_old {
         pool.entry((shape(&old[j]), coarse(old[j].bounds.y0 + dy)))
             .or_default()
@@ -1153,6 +1245,7 @@ impl crate::metal_renderer::MetalRenderer {
     /// Runs the pinned planner tests and current Scene compatibility checks.
     pub fn test_damage_planner() {
         tests::run();
+        fixed::test_fixed();
         super::inputs::test_upload_observers();
         super::inputs::test_atlas_hooks().expect("Metal atlas upload/remove hooks");
     }
