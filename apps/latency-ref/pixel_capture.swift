@@ -14,6 +14,7 @@ struct VersionTransitions {
 }
 final class VersionCapture:NSObject,SCStreamOutput {
  let queue=DispatchQueue(label:"g5.shared.pixels")
+ private let everyFrame=ProcessInfo.processInfo.environment["RUSTUI_G54_TRACE"]=="1"
  var stream:SCStream!;var transitions=VersionTransitions();let emit:([String:Any])->Void
  init(emit:@escaping ([String:Any])->Void){self.emit=emit}
  @MainActor func start(window:NSWindow) async throws {
@@ -67,8 +68,8 @@ final class VersionCapture:NSObject,SCStreamOutput {
     if r>220 && g>220 && b>220 {bits.append(1)}else if r<35 && g<35 && b<35 {bits.append(0)}else{valid=false;break}
    }
    guard valid,bits.count==24,bits.prefix(8).reduce(0,{$0*2+$1})==0xa5,red(left+25*unit+unit/2,y) else{continue}
-   let v=bits.dropFirst(8).reduce(0,{$0*2+$1});guard v>=0,v<=10000 else{continue}
-   if transitions.observe(v) {emit(["event":"displayed_pixels","version":v,"display_mach":display,"callback_mach":mach_absolute_time(),"pixel_x":left,"pixel_y":y])};return
+   let v=bits.dropFirst(8).reduce(0,{$0*2+$1});guard v>=0,v<=(everyFrame ? 65535 : 10000) else{continue}
+   if transitions.observe(v) || everyFrame {emit(["event":"displayed_pixels","version":v,"display_mach":display,"callback_mach":mach_absolute_time(),"pixel_x":left,"pixel_y":y])};return
   }}
  }
 }
