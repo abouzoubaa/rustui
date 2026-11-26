@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+- Add opt-in damage planner diagnostics and a full-display Lab benchmark mode.
+
 - Rebaseline the opt-in Stage G damage candidates on the G5 frame pipeline.
 
 - Add an opt-in G5 performance profile and a three-arm owner comparison.

@@ -452,6 +452,16 @@ fn playback(
     app.spawn(async move |cx| {
         cx.background_executor().timer(Duration::from_millis(200)).await;
         let Some(handle) = cx.update(|app| app.windows().first().copied()) else { cx.update(|app| app.quit()); return; };
+        if std::env::var_os("RUSTUI_G_R1_FULLSCREEN").as_deref() == Some("1".as_ref()) {
+            handle.update(cx, |_, window, _| window.toggle_simple_fullscreen()).unwrap();
+            let deadline = Instant::now() + Duration::from_secs(5);
+            loop {
+                let full_screen = handle.update(cx, |_, window, _| window.is_simple_fullscreen()).unwrap();
+                if full_screen { break; }
+                assert!(Instant::now() < deadline, "G-R1 could not enter borderless fullscreen");
+                cx.background_executor().timer(Duration::from_millis(20)).await;
+            }
+        }
         let single_line = owner.read_with(cx, |host, _| host.component().single_line);
         let matched_document =
             std::env::var("RUSTUI_G5_L7_MATCH_EDITOR").as_deref() == Ok("1");

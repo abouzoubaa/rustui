@@ -380,10 +380,12 @@ impl State {
         {
             self.planner_calls += 1;
         }
-        let change = plan::plan(
+        let mut trace = super::diagnosis::Trace::start();
+        let change = plan::plan_traced(
             &self.snapshot.as_ref().unwrap().signatures,
             &signatures,
             geometry.view(),
+            trace.as_mut(),
         );
         cpu.plan_ms = plan_start.elapsed().as_secs_f64() * 1000.;
         let damage_box = change
@@ -393,6 +395,12 @@ impl State {
         let large = change.as_ref().is_none_or(|p| p.shift.is_some())
             || damage_box.is_some_and(|r| r.area() > plan::MAX_DAMAGE * geometry.view().area());
         let valid = self.target.as_ref().is_some_and(|t| t.valid);
+        let rejection = trace.as_ref().and_then(|_| match change.as_ref() {
+            Some(plan) if plan.shift.is_some() => Some("shift_unimplemented"),
+            Some(_) if large => Some("area_bounding_box"),
+            None => Some("no_plan"),
+            _ => None,
+        });
         let mode = match change {
             Some(p)
                 if p.shift.is_none()
@@ -414,6 +422,14 @@ impl State {
             _ => Mode::Retained,
         };
         cpu.reason = mode.label();
+        if let Some(mut trace) = trace {
+            if let Some(rejection) = rejection.filter(|_| trace.reason == "planned") {
+                trace.reason = rejection;
+            } else if !large && matches!(mode, Mode::Direct) {
+                trace.reason = "large_hysteresis";
+            }
+            trace.emit(mode.label(), geometry.view(), damage_box);
+        }
         Prepared {
             mode,
             reason: match mode {

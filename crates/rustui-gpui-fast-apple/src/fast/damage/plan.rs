@@ -5,6 +5,7 @@
 // RustUI modifications: remove Windows drawing/adapter APIs, expose Metal inputs,
 // and run the preserved planner tests through test-support as well as crate tests.
 //! Platform-independent scene signatures, damage rectangles, and scroll planning.
+use super::diagnosis::Trace;
 use collections::HashMap;
 use gpui::{
     AtlasTextureId, AtlasTile, Background, Bounds, ContentMask, Corners, Edges, Hsla, IsZero,
@@ -662,14 +663,29 @@ fn tidy(rects: Vec<Area>, view: &Area) -> Vec<Area> {
 
 /// How to make the frame of `new` from the frame of `old` in a window of
 /// `view`, or `None` to draw it whole.
-pub(crate) fn plan(old: &[Sig], new: &[Sig], view: Area) -> Option<Plan> {
-    if let Ok(plan) = fixed::plan(old, new, view) {
-        return plan;
-    }
-    general_plan(old, new, view)
+#[cfg(any(test, feature = "test-support"))]
+fn plan(old: &[Sig], new: &[Sig], view: Area) -> Option<Plan> {
+    plan_traced(old, new, view, None)
 }
 
-fn general_plan(old: &[Sig], new: &[Sig], view: Area) -> Option<Plan> {
+pub(super) fn plan_traced(
+    old: &[Sig],
+    new: &[Sig],
+    view: Area,
+    mut trace: Option<&mut Trace>,
+) -> Option<Plan> {
+    if let Ok(plan) = fixed::plan(old, new, view, trace.as_deref_mut()) {
+        return plan;
+    }
+    general_plan(old, new, view, trace)
+}
+
+fn general_plan(
+    old: &[Sig],
+    new: &[Sig],
+    view: Area,
+    mut trace: Option<&mut Trace>,
+) -> Option<Plan> {
     // The primitives that stayed as they were, as a multiset.
     // Intrusive index chains preserve first-to-last multiset pairing without
     // allocating one tiny Vec for every primitive in the previous frame.
@@ -695,6 +711,13 @@ fn general_plan(old: &[Sig], new: &[Sig], view: Area) -> Option<Plan> {
     }
     let changed_new: Vec<usize> = (0..new.len()).filter(|i| stayed[*i].is_none()).collect();
     let changed_old: Vec<usize> = (0..old.len()).filter(|j| !old_kept[*j]).collect();
+    if let Some(trace) = trace.as_deref_mut() {
+        trace.route = "general";
+        trace.changed(
+            changed_old.iter().map(|&j| old[j].reach),
+            changed_new.iter().map(|&i| new[i].reach),
+        );
+    }
     let mut orders: Vec<(u32, u32)> = stayed
         .iter()
         .enumerate()
@@ -731,10 +754,14 @@ fn general_plan(old: &[Sig], new: &[Sig], view: Area) -> Option<Plan> {
         .map(|(dy, _)| *dy as f32);
     let Some(dy) = scroll else {
         if fractional && !votes.is_empty() {
+            if let Some(trace) = trace {
+                trace.reason = "fractional_motion";
+            }
             return None;
         }
         // No scroll: what changed is drawn again where it was and is.
         if !orders_agree(&mut orders) {
+            record_order_change(trace, &orders);
             return None;
         }
         let damage = tidy(
@@ -746,6 +773,7 @@ fn general_plan(old: &[Sig], new: &[Sig], view: Area) -> Option<Plan> {
             &view,
         );
         let total: f32 = damage.iter().map(Area::area).sum();
+        record_damage(trace, &damage, total, view);
         return (total <= MAX_DAMAGE * view.area()).then_some(Plan {
             shift: None,
             damage,
@@ -763,8 +791,16 @@ fn general_plan(old: &[Sig], new: &[Sig], view: Area) -> Option<Plan> {
             region = Some(region.map_or(new[i].mask, |r| r.union(&new[i].mask)));
         }
     }
-    let region = region?.and(&view);
+    let Some(region) = region.map(|region| region.and(&view)) else {
+        if let Some(trace) = trace {
+            trace.reason = "no_shift_region";
+        }
+        return None;
+    };
     if region.is_empty() || !region.on_grid() || dy.abs() >= region.y1 - region.y0 {
+        if let Some(trace) = trace {
+            trace.reason = "invalid_shift_region";
+        }
         return None;
     }
     let region = region.pixels();
@@ -805,9 +841,14 @@ fn general_plan(old: &[Sig], new: &[Sig], view: Area) -> Option<Plan> {
             moved_new[i] = true;
             moved_old[j] = true;
             orders.push((old[j].order, s.order));
+        } else if !candidates.is_empty()
+            && let Some(trace) = trace.as_deref_mut()
+        {
+            trace.coarse_rejections += 1;
         }
     }
     if !orders_agree(&mut orders) {
+        record_order_change(trace, &orders);
         return None;
     }
 
@@ -870,10 +911,40 @@ fn general_plan(old: &[Sig], new: &[Sig], view: Area) -> Option<Plan> {
     }
     let damage = tidy(damage, &view);
     let total: f32 = damage.iter().map(Area::area).sum();
+    record_damage(trace, &damage, total, view);
     (total <= MAX_DAMAGE * view.area()).then_some(Plan {
         shift: Some((from, to)),
         damage,
     })
+}
+
+fn record_damage(trace: Option<&mut Trace>, damage: &[Area], total: f32, view: Area) {
+    if let Some(trace) = trace {
+        trace.damage(damage);
+        if total > MAX_DAMAGE * view.area() {
+            trace.reason = "area_rectangles";
+        }
+    }
+}
+
+fn record_order_change(trace: Option<&mut Trace>, orders: &[(u32, u32)]) {
+    if let Some(trace) = trace {
+        trace.reason = "order_change";
+        let mut max_prior = (0, 0);
+        let mut max_current = (0, 0);
+        for &(old, new) in orders {
+            if old != max_current.0 && max_current.1 > max_prior.1 {
+                max_prior = max_current;
+            }
+            if max_prior.1 > new {
+                trace.order_conflict = Some([[max_prior.0, max_prior.1], [old, new]]);
+                break;
+            }
+            if old != max_current.0 || new > max_current.1 {
+                max_current = (old, new);
+            }
+        }
+    }
 }
 
 #[cfg(any(test, feature = "test-support"))]
