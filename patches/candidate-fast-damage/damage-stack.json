@@ -39,6 +39,16 @@
     "../candidate-fast-latency/gpui-kit-draw-first-injection-ranges-v1-fast.json",
     "../candidate-fast-latency/gpui-fast-g5-closeout-v1-fast.json",
     "gpui-fast-g-r0-damage-rebaseline-v1-fast.json",
-    "gpui-fast-g-r1-planner-diagnostics-v1-fast.json"
+    "gpui-fast-g-r1-planner-diagnostics-v1-fast.json",
+    "gpui-fast-g-r2-frame-attribution-v1-fast.json",
+    "gpui-fast-g-r2-early-metal-reject-v1-fast.json",
+    "gpui-fast-g-r2-paint-order-provenance-v1-fast.json",
+    "gpui-fast-g-r2b-disjoint-hover-order-v1-fast.json",
+    "gpui-fast-g-r2c-planner-phases-v1-fast.json",
+    "gpui-fast-g-r2d-view-provenance-v1-fast.json",
+    "gpui-fast-g-r2d-view-signatures-v1-fast.json",
+    "gpui-fast-g-r2d-view-generation-proof-v1-fast.json",
+    "gpui-fast-g-r2e-scoped-editor-damage-v1-fast.json",
+    "gpui-fast-g-r3-close-diagnostics-v1-fast.json"
   ]
 }

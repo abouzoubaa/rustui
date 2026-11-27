@@ -19,3 +19,16 @@ pub(crate) mod log;
 pub(crate) mod encode;
 
 mod diagnosis;
+
+pub(crate) mod timing;
+
+mod order_probe;
+
+mod view_sizes;
+
+mod allocation_probe;
+
+mod ring;
+
+mod area;
+pub(crate) mod copy_gpu;

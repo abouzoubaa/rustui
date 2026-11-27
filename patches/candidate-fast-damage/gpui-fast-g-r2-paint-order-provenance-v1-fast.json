@@ -1,0 +1,72 @@
+{
+  "schema_version": 1,
+  "name": "gpui-fast-g-r2-paint-order-provenance-v1-fast",
+  "patch": "gpui-fast-g-r2-paint-order-provenance-v1-fast.patch",
+  "patch_sha256": "82e3e94f2ec40cdd2a26ef462667ef89bfc7738d053e1ccd59c6be8929846855",
+  "files": {
+    "vendor/gpui-fast-0.1.14/src/fast/damage/replay.rs": {
+      "pre_sha256": "3e9c74774f30654f1f67049007ec2751a03a55da22912116066ec9ad33acb8bd",
+      "post_sha256": "a04fac6cddefa743182f73fabf3f86d02d279c611d76f29b82054f1ea80d1190"
+    },
+    "vendor/gpui-fast-0.1.14/src/window.rs": {
+      "pre_sha256": "60acd89d35e9f2c4ae65d91b5fd43114c3b43b0b58a079a6ed5077d4414fb9b0",
+      "post_sha256": "051415278bd4e51542a055614159d2466682c6e9d0915e69a81580cc3f8dec33"
+    },
+    "vendor/gpui-fast-apple-0.1.14/src/fast/damage/mod.rs": {
+      "pre_sha256": "15abf7e37c448018f1b9b08d79fd4f853ee9b11e79884d15a1ef958897d50517",
+      "post_sha256": "a2ddc4645615595261946d55ff263fecb7ad652869ab86dc01e84e4ebaf36a55"
+    },
+    "vendor/gpui-fast-apple-0.1.14/src/fast/damage/order_probe.rs": {
+      "pre_sha256": null,
+      "post_sha256": "b452d0ba7345c679a6840b4e97bc239bbce1289b578a0a65127de7a51a83e2b0"
+    },
+    "vendor/gpui-fast-apple-0.1.14/src/fast/damage/plan.rs": {
+      "pre_sha256": "6b92bcc8c21c9bb57fb68ec8ca6e0442c737c841c8616164effd42030c0cd430",
+      "post_sha256": "86271a26cee8bd1fc4e6a335ac16e48a3f84effc2a148b63c063d8b703bdb45f"
+    },
+    "vendor/gpui-fast-apple-0.1.14/src/fast/damage/frame.rs": {
+      "pre_sha256": "a93ff2edb7dc44ce62e2cb7319e3d52afa585ca60a565175728180e6768d3629",
+      "post_sha256": "93ada034eb206338609f7c852c31d35d522df54dc47ee1e63919bdf88b4f431d"
+    },
+    "crates/rustui-gpui-fast/src/fast/damage/replay.rs": {
+      "pre_sha256": "3e9c74774f30654f1f67049007ec2751a03a55da22912116066ec9ad33acb8bd",
+      "post_sha256": "a04fac6cddefa743182f73fabf3f86d02d279c611d76f29b82054f1ea80d1190"
+    },
+    "crates/rustui-gpui-fast/src/window.rs": {
+      "pre_sha256": "60acd89d35e9f2c4ae65d91b5fd43114c3b43b0b58a079a6ed5077d4414fb9b0",
+      "post_sha256": "051415278bd4e51542a055614159d2466682c6e9d0915e69a81580cc3f8dec33"
+    },
+    "vendor/gpui-fast-0.1.14/.cargo-checksum.json": {
+      "pre_sha256": "eadc02145f0045fcf39fed8c0bd59845efaf77eaeba1cf2480fcf4c033976bac",
+      "post_sha256": "010dfb8a23a30dcd19eb25ac2aba5e24aba58ca769172348112dd1a7f7328250"
+    },
+    "crates/rustui-gpui-fast/.cargo-checksum.json": {
+      "pre_sha256": "eadc02145f0045fcf39fed8c0bd59845efaf77eaeba1cf2480fcf4c033976bac",
+      "post_sha256": "010dfb8a23a30dcd19eb25ac2aba5e24aba58ca769172348112dd1a7f7328250"
+    },
+    "crates/rustui-gpui-fast-apple/src/fast/damage/mod.rs": {
+      "pre_sha256": "15abf7e37c448018f1b9b08d79fd4f853ee9b11e79884d15a1ef958897d50517",
+      "post_sha256": "a2ddc4645615595261946d55ff263fecb7ad652869ab86dc01e84e4ebaf36a55"
+    },
+    "crates/rustui-gpui-fast-apple/src/fast/damage/order_probe.rs": {
+      "pre_sha256": null,
+      "post_sha256": "b452d0ba7345c679a6840b4e97bc239bbce1289b578a0a65127de7a51a83e2b0"
+    },
+    "crates/rustui-gpui-fast-apple/src/fast/damage/plan.rs": {
+      "pre_sha256": "6b92bcc8c21c9bb57fb68ec8ca6e0442c737c841c8616164effd42030c0cd430",
+      "post_sha256": "86271a26cee8bd1fc4e6a335ac16e48a3f84effc2a148b63c063d8b703bdb45f"
+    },
+    "crates/rustui-gpui-fast-apple/src/fast/damage/frame.rs": {
+      "pre_sha256": "a93ff2edb7dc44ce62e2cb7319e3d52afa585ca60a565175728180e6768d3629",
+      "post_sha256": "93ada034eb206338609f7c852c31d35d522df54dc47ee1e63919bdf88b4f431d"
+    },
+    "vendor/gpui-fast-apple-0.1.14/.cargo-checksum.json": {
+      "pre_sha256": "f66735ceb263350cb3b4d4d3a87f2224b48504607c37519b73808c883b950419",
+      "post_sha256": "801b99be0929c0216f1895d801c4a9d5d5e5a72985525bd2d60bdb2156d5cad2"
+    },
+    "crates/rustui-gpui-fast-apple/.cargo-checksum.json": {
+      "pre_sha256": "f66735ceb263350cb3b4d4d3a87f2224b48504607c37519b73808c883b950419",
+      "post_sha256": "801b99be0929c0216f1895d801c4a9d5d5e5a72985525bd2d60bdb2156d5cad2"
+    }
+  }
+}

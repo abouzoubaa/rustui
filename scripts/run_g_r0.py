@@ -52,7 +52,7 @@ def frames(directory):
                     break
 
 
-def capture(out, scene, damage, seconds, frozen, prepair=None, retry=False):
+def capture(out, scene, damage, seconds, frozen, prepair=None, retry=False, observe_pixels=True):
     print(time.strftime("%H:%M:%S UTC", time.gmtime()), out.name, flush=True)
     if out.exists() and retry:
         archive = out.parent / f"{out.name}-discarded-{int(time.time())}"
@@ -76,9 +76,11 @@ def capture(out, scene, damage, seconds, frozen, prepair=None, retry=False):
             end_background_cpu_percent=after["background_cpu_percent"])}
     else:
         cmd = [sys.executable, "scripts/run_g5_budget.py", "--app", "lab", "--launch", "direct",
-               "--scene", scene, "--seconds", str(seconds), "--damage", damage, "--external-observer",
-               "--target-hover", "--passive", "0", "--pixels", "1", "--switches", "0000",
+               "--scene", scene, "--seconds", str(seconds), "--damage", damage,
+               "--target-hover", "--passive", "0", "--pixels", str(int(observe_pixels)), "--switches", "0000",
                "--scheduler", "0", "--input-scoped", "0", "--hl-fastpath", "0", "--output", str(out)]
+        if observe_pixels:
+            cmd.append("--external-observer")
         with out.with_suffix(".driver").open("w") as logfile:
             subprocess.run(cmd, env=env, check=True, stdout=logfile, stderr=subprocess.STDOUT)
         native = json.loads((out / "summary.json").read_text())
@@ -133,7 +135,7 @@ def capture(out, scene, damage, seconds, frozen, prepair=None, retry=False):
     if not attempts or not gpu_times or (damage == "0" and set(modes) != {"direct"}):
         raise RuntimeError(f"No usable renderer timings or unexpected damage mode in {out}")
     sck = native["stats"].get("sck_total")
-    if scene != "idle" and damage != "verify" and (not sck or not sck["samples"]):
+    if observe_pixels and scene != "idle" and damage != "verify" and (not sck or not sck["samples"]):
         raise RuntimeError(f"No native handler-to-SCK samples in {out}")
     if mismatches and damage != "verify":
         raise RuntimeError(f"Unexpected damage mismatch in timing run {out}")

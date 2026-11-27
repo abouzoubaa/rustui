@@ -1,0 +1,72 @@
+{
+  "schema_version": 1,
+  "name": "gpui-fast-g-r2b-disjoint-hover-order-v1-fast",
+  "patch": "gpui-fast-g-r2b-disjoint-hover-order-v1-fast.patch",
+  "patch_sha256": "44469ffdaa3f2b7f1c3d4dca8470e028fe6a6a45359d1cbf2d02c42363f01281",
+  "files": {
+    "vendor/gpui-fast-0.1.14/src/fast/glyphs.rs": {
+      "pre_sha256": "e06ca403c21d8c9e57e4606f04e63a551b9ffef7c554a4d39dda9f1f0eded32c",
+      "post_sha256": "4684b1689afe5def67af528719cbc168e70831b2555293cd06108ceedfe162f2"
+    },
+    "vendor/gpui-fast-apple-0.1.14/src/fast/damage/plan.rs": {
+      "pre_sha256": "86271a26cee8bd1fc4e6a335ac16e48a3f84effc2a148b63c063d8b703bdb45f",
+      "post_sha256": "8622c3f4a2f06105aad3cb8baacc0a0e6fea02de0d30f447992fda4d182d7f24"
+    },
+    "vendor/gpui-fast-apple-0.1.14/src/fast/damage/plan/hover_order.rs": {
+      "pre_sha256": null,
+      "post_sha256": "9552ea26cd6564e6a8f393218faf26c8c07b5570286cf3af9ecb9330412885b5"
+    },
+    "vendor/gpui-fast-apple-0.1.14/src/fast/damage/order_probe.rs": {
+      "pre_sha256": "b452d0ba7345c679a6840b4e97bc239bbce1289b578a0a65127de7a51a83e2b0",
+      "post_sha256": "423801b491befc95ebd6fb5481be25845581fa12e91ece8cadb31460001d198b"
+    },
+    "vendor/gpui-fast-apple-0.1.14/src/fast/damage/frame.rs": {
+      "pre_sha256": "93ada034eb206338609f7c852c31d35d522df54dc47ee1e63919bdf88b4f431d",
+      "post_sha256": "fd94ef33bd4a95b944f28f77f273dbcf14bb6835827312345cde492e751135e3"
+    },
+    "vendor/gpui-fast-apple-0.1.14/src/fast/damage/frame/proof.rs": {
+      "pre_sha256": "f956c4a71d4784d728d4f5b7376ac1809785d690b6c774bc196e7d72138bd465",
+      "post_sha256": "427b47d97f4db3ac3c5d13c79dd97c4554396b00227bc79ec85d63bec067574b"
+    },
+    "crates/rustui-gpui-fast/src/fast/glyphs.rs": {
+      "pre_sha256": "e06ca403c21d8c9e57e4606f04e63a551b9ffef7c554a4d39dda9f1f0eded32c",
+      "post_sha256": "4684b1689afe5def67af528719cbc168e70831b2555293cd06108ceedfe162f2"
+    },
+    "vendor/gpui-fast-0.1.14/.cargo-checksum.json": {
+      "pre_sha256": "010dfb8a23a30dcd19eb25ac2aba5e24aba58ca769172348112dd1a7f7328250",
+      "post_sha256": "c93e23889acec19d06f7cc8922bbfae89f05e44fef44e0b97d1fe418cfc4e403"
+    },
+    "crates/rustui-gpui-fast/.cargo-checksum.json": {
+      "pre_sha256": "010dfb8a23a30dcd19eb25ac2aba5e24aba58ca769172348112dd1a7f7328250",
+      "post_sha256": "c93e23889acec19d06f7cc8922bbfae89f05e44fef44e0b97d1fe418cfc4e403"
+    },
+    "crates/rustui-gpui-fast-apple/src/fast/damage/plan.rs": {
+      "pre_sha256": "86271a26cee8bd1fc4e6a335ac16e48a3f84effc2a148b63c063d8b703bdb45f",
+      "post_sha256": "8622c3f4a2f06105aad3cb8baacc0a0e6fea02de0d30f447992fda4d182d7f24"
+    },
+    "crates/rustui-gpui-fast-apple/src/fast/damage/plan/hover_order.rs": {
+      "pre_sha256": null,
+      "post_sha256": "9552ea26cd6564e6a8f393218faf26c8c07b5570286cf3af9ecb9330412885b5"
+    },
+    "crates/rustui-gpui-fast-apple/src/fast/damage/order_probe.rs": {
+      "pre_sha256": "b452d0ba7345c679a6840b4e97bc239bbce1289b578a0a65127de7a51a83e2b0",
+      "post_sha256": "423801b491befc95ebd6fb5481be25845581fa12e91ece8cadb31460001d198b"
+    },
+    "crates/rustui-gpui-fast-apple/src/fast/damage/frame.rs": {
+      "pre_sha256": "93ada034eb206338609f7c852c31d35d522df54dc47ee1e63919bdf88b4f431d",
+      "post_sha256": "fd94ef33bd4a95b944f28f77f273dbcf14bb6835827312345cde492e751135e3"
+    },
+    "crates/rustui-gpui-fast-apple/src/fast/damage/frame/proof.rs": {
+      "pre_sha256": "f956c4a71d4784d728d4f5b7376ac1809785d690b6c774bc196e7d72138bd465",
+      "post_sha256": "427b47d97f4db3ac3c5d13c79dd97c4554396b00227bc79ec85d63bec067574b"
+    },
+    "vendor/gpui-fast-apple-0.1.14/.cargo-checksum.json": {
+      "pre_sha256": "801b99be0929c0216f1895d801c4a9d5d5e5a72985525bd2d60bdb2156d5cad2",
+      "post_sha256": "4ad7118e21ab4b67ddec30c2720e329d4c7d8e41299deec303f8a398bf875539"
+    },
+    "crates/rustui-gpui-fast-apple/.cargo-checksum.json": {
+      "pre_sha256": "801b99be0929c0216f1895d801c4a9d5d5e5a72985525bd2d60bdb2156d5cad2",
+      "post_sha256": "4ad7118e21ab4b67ddec30c2720e329d4c7d8e41299deec303f8a398bf875539"
+    }
+  }
+}

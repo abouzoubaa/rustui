@@ -21,11 +21,20 @@ fn with_line<R>(
     })
 }
 pub(crate) fn line(args: fmt::Arguments<'_>) {
+    if super::ring::buffered() {
+        with_line(args, |bytes| {
+            super::ring::push(bytes);
+            Ok(())
+        })
+        .expect("formatting damage telemetry");
+        return;
+    }
     with_line(args, |bytes| io::stderr().lock().write_all(bytes))
         .expect("writing RustUI frame log");
 }
 #[cfg(any(test, feature = "test-support"))]
 pub(crate) fn test_records() {
+    super::ring::proof();
     #[derive(Default)]
     struct Sink {
         calls: usize,

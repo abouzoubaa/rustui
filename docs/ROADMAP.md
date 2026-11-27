@@ -6,7 +6,7 @@
 - A2 — DONE: upgraded to GPUI Kit 0.8.1 / gpui-pre 0.3.10; 1,000-row forced-draw median 8.24 ms vs 8.03 ms before. NP-7's macOS crate test is parked until A3 touches that crate.
 - A3 — DONE: upgraded to GPUI Kit 0.9.1 / gpui-pre 0.3.12. The final 1,000-row forced-draw median is 8.64 ms vs 8.24 ms on A2; update-only is 4.49 ms vs 4.59 ms. Next on this base: native popups and crates.io, then Stage B.
 - F0 — DONE: GPUI Fast 0.1.14 adopted as RustUI’s macOS base in 0.5.0, with owned source mirrors and approved patches. Next: Stage G (damage tracking, macOS), then Stage B (theme engine). Owner native/visual review remains pending (scrolling comparison, R-1 grid).
-- G — NOW: damage tracking on GPUI Fast (macOS, Metal; Phase 4) → 0.8.0. Work on `g-integration`; candidate patches remain off by default until the owner’s G2-6 decision.
+- G — GPUI Fast damage tracking on macOS/Metal (Phase 4) stays opt-in on `g5-integration`. See [Stage G — later](#stage-g--later).
 - B — follows Stage G: theme engine rework (professional, robust; owner-provided materials) → 0.3.0
 - C — components: chat bubbles + message list, diff viewer, Markdown/rich text, dock/panel layout, command palette, charts/plots, status bar, time picker, accordion, hover card, kbd, form layout, settings panel, rating, pagination, carousel, attachments, description list, async images + SVG → 0.4.0 Mostly wrap components GPUI Kit already ships (Command, NativeMenu, StatusBar, Message/Bubble/MessageScroller, Diff, Markdown TextView, charts, Dock, TimeField, HoverCard, Rating, Pagination, Carousel).
 - D — macOS desktop app features: native menu bar + keyboard shortcut system, clipboard, open/save dialogs, multi-window + window state restore, custom title bar, undo/redo, settings persistence, system notifications, menu-bar extra, drag out to Finder, trackpad gestures → 0.5.0
@@ -56,10 +56,20 @@ Work one item at a time; each item becomes a ticket in docs/TICKETS.md before wo
 
 Reference: [GPUI Fast feature delta](archive/tasks/GPUI_FAST_FEATURE_DELTA.md).
 
-## Phase 4 Damage tracking (Stage G, current)
+## Phase 4 Damage tracking (Stage G)
 
 15. Add GPU damage tracking on GPUI Fast for macOS/Metal, starting with measurement, present hints, and retained damage frames; append-only panels follow with scroll shift. See [the owner’s plan](damage/G_PLAN.md) and [implementation tickets](damage/G_IMPLEMENTATION.md).
 16. Use GPUI Fast’s public composition API for drag and animation layers; the earlier hand-built `wgpu` surface proposal is superseded.
+
+## Stage G — later
+
+1. Tighten editor damage rectangles (S).
+2. Diagnose the fullscreen fallback to Direct during warmup before enabling damage by default or combining it with fullscreen direct-to-display.
+3. Remove the full retained-frame copy (M/L).
+4. Revisit non-planner typing CPU only if the measured increase reappears.
+5. Implement Metal scroll shift (M).
+
+The [Stage G close-out](perf/G-close.md#backlog) gives the measurements behind these priorities.
 
 ## Phase 5 Chorus integration (ongoing)
 

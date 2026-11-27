@@ -30,19 +30,33 @@ impl Trace {
         static SEQUENCE: AtomicUsize = AtomicUsize::new(0);
         ENABLED
             .get_or_init(|| std::env::var_os("RUSTUI_G_R1_TRACE").as_deref() == Some("1".as_ref()))
-            .then(|| Self {
-                sequence: SEQUENCE.fetch_add(1, Ordering::Relaxed),
-                reason: "planned",
-                route: "preflight",
-                coarse_rejections: 0,
-                order_conflict: None,
-                old: Vec::new(),
-                new: Vec::new(),
-                damage: Vec::new(),
-                damage_area: 0.,
-                old_count: 0,
-                new_count: 0,
-            })
+            .then(|| Self::new(SEQUENCE.fetch_add(1, Ordering::Relaxed)))
+    }
+
+    fn new(sequence: usize) -> Self {
+        Self {
+            sequence,
+            reason: "planned",
+            route: "preflight",
+            coarse_rejections: 0,
+            order_conflict: None,
+            old: Vec::new(),
+            new: Vec::new(),
+            damage: Vec::new(),
+            damage_area: 0.,
+            old_count: 0,
+            new_count: 0,
+        }
+    }
+
+    #[cfg(any(test, feature = "test-support"))]
+    pub fn test_sample() -> Self {
+        Self::new(0)
+    }
+
+    #[cfg(any(test, feature = "test-support"))]
+    pub fn damage_was_built(&self) -> bool {
+        !self.damage.is_empty()
     }
 
     pub fn changed(&mut self, old: impl Iterator<Item = Area>, new: impl Iterator<Item = Area>) {

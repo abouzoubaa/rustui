@@ -55,6 +55,7 @@ pub(crate) fn first_mismatch(a: &[u8], b: &[u8], width: usize) -> Option<(usize,
         .position(|(a, b)| a != b)
         .map(|index| (index / 4 % width, index / 4 / width))
 }
+#[derive(Clone)]
 pub(crate) struct Readback {
     buffer: Retained<ProtocolObject<dyn MTLBuffer>>,
     width: usize,
@@ -103,6 +104,32 @@ impl Readback {
     }
 }
 
+pub(crate) struct History {
+    declarations: Vec<super::area::Decl>,
+    reference: Readback,
+    signatures: Vec<super::plan::Sig>,
+    generation: u64,
+}
+fn changed_outside(
+    old: &[u8],
+    new: &[u8],
+    width: usize,
+    areas: &[super::plan::Area],
+) -> Option<(usize, usize)> {
+    old.chunks_exact(4)
+        .zip(new.chunks_exact(4))
+        .enumerate()
+        .find_map(|(i, (a, b))| {
+            if a == b {
+                return None;
+            }
+            let (x, y) = (i % width, i / width);
+            let inside = areas.iter().any(|r| {
+                x as f32 >= r.x0 && (x as f32) < r.x1 && y as f32 >= r.y0 && (y as f32) < r.y1
+            });
+            (!inside).then_some((x, y))
+        })
+}
 /// Encode the reference without queueing it. The renderer submits the reference
 /// after the primary passes the surface order guard.
 pub(crate) fn schedule(
@@ -114,6 +141,8 @@ pub(crate) fn schedule(
     mode: Mode,
     status: Arc<Status>,
     fail_allocation: bool,
+    history: &mut Option<History>,
+    allowed: Option<Vec<super::plan::Area>>,
 ) -> Result<Retained<ProtocolObject<dyn MTLCommandBuffer>>> {
     anyhow::ensure!(!fail_allocation, "injected verification allocation failure");
     let reference = Target::new(&renderer.device, output.width(), output.height())?
@@ -122,6 +151,58 @@ pub(crate) fn schedule(
     let command = renderer.render_frame(scene, &reference.texture, size)?;
     let expected = Readback::encode(renderer, &command, &reference.texture)?;
     let width = output.width();
+    let previous = history.take();
+    let uploads = renderer
+        .sprite_atlas
+        .damage_uploads(previous.as_ref().map_or(0, |h| h.generation));
+    let mut prior = None;
+    let declarations = super::area::snapshot(scene);
+    let height = output.height();
+    if let Some(tiles) = uploads.tiles {
+        if let Some(full) = super::plan::signatures(scene, &tiles, &super::inputs::dynamic) {
+            if let Some(old) = previous
+                && old.reference.width == width
+                && old.reference.height == output.height()
+            {
+                if let Some(allowed) = allowed {
+                    let whole = super::plan::Area {
+                        x0: 0.,
+                        y0: 0.,
+                        x1: width as f32,
+                        y1: output.height() as f32,
+                    };
+                    let diff = super::plan::plan_traced(
+                        &old.signatures,
+                        &full,
+                        whole,
+                        None,
+                        &mut super::plan::Policy::default(),
+                    );
+                    // Use the original full diff as an independent diagnostic;
+                    // readback is definitive even when it declines the frame.
+                    if let Some(diff) = diff {
+                        super::metrics::declared_diff(diff.damage.len());
+                    }
+                    let area = super::area::enabled().then(|| {
+                        super::area::declared(
+                            &old.declarations,
+                            &declarations,
+                            scene,
+                            width,
+                            height,
+                        )
+                    });
+                    prior = Some((old.reference, allowed, area));
+                }
+            }
+            *history = Some(History {
+                declarations,
+                reference: expected.clone(),
+                signatures: full,
+                generation: uploads.generation,
+            });
+        }
+    }
     let lifetime = Cell::new(Some(reference));
     let submitted = primary.clone();
     let callback = RcBlock::new(
@@ -135,7 +216,25 @@ pub(crate) fn schedule(
                 status.disabled.store(true, Ordering::Release);
                 log::error!("damage reference GPU failure: {:?}", buffer.error());
             } else if !status.disabled.load(Ordering::Acquire) {
-                if let Some((x, y)) = first_mismatch(&actual.pixels(), &expected.pixels(), width) {
+                let reference = expected.pixels();
+                if let Some((x, y)) = prior.as_ref().and_then(|(old, permitted, declared)| {
+                    let old = old.pixels();
+                    if let Some(area) = declared
+                        && let Mode::Partial(scissor) = mode
+                    {
+                        super::area::emit(
+                            &old,
+                            &reference,
+                            *area,
+                            scissor.area() as usize,
+                            width,
+                            height,
+                        );
+                    }
+                    changed_outside(&old, &reference, width, permitted)
+                }) {
+                    status.mismatch("declared_outside", x, y);
+                } else if let Some((x, y)) = first_mismatch(&actual.pixels(), &reference, width) {
                     status.mismatch(mode.label(), x, y);
                 } else {
                     super::metrics::verified(mode.label());

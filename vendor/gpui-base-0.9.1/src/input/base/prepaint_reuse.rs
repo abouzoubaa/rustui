@@ -42,6 +42,13 @@ pub(super) enum LayoutRows {
 }
 
 impl LayoutRows {
+    pub(super) fn damage_revision(&self, index: usize) -> Option<u64> {
+        match self {
+            Self::Cached(rows) => Some(rows.lines.get(index)?.damage_revision),
+            Self::Plain(_) => None,
+        }
+    }
+
     pub(super) fn plain(lines: Vec<LineLayout>) -> Self {
         Self::Plain(Rc::new(lines))
     }
@@ -78,6 +85,7 @@ impl std::ops::Index<usize> for LayoutRows {
 }
 
 struct CachedLine {
+    damage_revision: u64,
     text: String,
     wraps: SmallVec<[Range<usize>; 1]>,
     indent: u32,
@@ -171,6 +179,13 @@ impl<'a> RowReuse<'a> {
                 .collect();
             let layout = shape(&text, &runs);
             self.output(index).push(Rc::new(CachedLine {
+                damage_revision: if gpui::Window::declared_damage_enabled() {
+                    static NEXT: std::sync::atomic::AtomicU64 =
+                        std::sync::atomic::AtomicU64::new(1);
+                    NEXT.fetch_add(1, std::sync::atomic::Ordering::Relaxed)
+                } else {
+                    0
+                },
                 text,
                 wraps: wraps.clone(),
                 indent,

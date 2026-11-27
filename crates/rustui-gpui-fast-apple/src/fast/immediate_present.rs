@@ -206,8 +206,16 @@ pub(crate) fn next_drawable(
     ) {
         return None;
     }
-    let start = (gpui::fast_latency_enabled() || gpui::fast_immediate_enabled()).then(Instant::now);
+    let start = (gpui::fast_latency_enabled()
+        || gpui::fast_immediate_enabled()
+        || crate::fast::damage::timing::close_cpu())
+    .then(Instant::now);
     let drawable = layer.nextDrawable();
+    if crate::fast::damage::timing::close_cpu()
+        && let Some(s) = start
+    {
+        crate::fast::damage::timing::acquired(s);
+    }
     if let (Some(start), Some(frame)) = (start, gpui::fast_latency_frame()) {
         gpui::fast_latency_config(
             frame.window(),

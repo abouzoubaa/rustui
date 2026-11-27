@@ -417,6 +417,72 @@ fn partial_pixels(case: &str) -> Result<()> {
     }
     Ok(())
 }
+fn hover_ordinal_pixels() -> Result<()> {
+    let mut renderer = MetalRenderer::new_headless(Default::default())?;
+    renderer.damage.enabled_override = Some(true);
+    renderer.damage.disjoint_order_override = true;
+    renderer.damage.magenta_prefill = true;
+    let size = gpui::size(DevicePixels(256), DevicePixels(256));
+    let target = retained::texture(&renderer.device, 256, 256)?;
+    let reference = retained::texture(&renderer.device, 256, 256)?;
+
+    for frame in 0..=300 {
+        let mut scene = Scene::default();
+        let paint = |s: &mut Scene, x, y, width, height, rgb| {
+            quad(s, x, y, width, height, gpui::Hsla::from(gpui::rgb(rgb)), 0.);
+        };
+        paint(&mut scene, 0., 0., 256., 256., 0x21232a);
+        paint(
+            &mut scene,
+            16.,
+            if frame % 2 == 0 { 28. } else { 68. },
+            180.,
+            28.,
+            0x4a5678,
+        );
+        let rows = if frame % 2 == 0 {
+            [38., 78.]
+        } else {
+            [78., 38.]
+        };
+        for y in rows {
+            paint(&mut scene, 24., y, 84., 6., 0xeeeeee);
+        }
+        scene.finish();
+        // Force the same 2→3 / 3→2 order-group reversal the hover trace observed.
+        for label in &mut scene.quads[2..] {
+            label.order = if label.bounds.origin.y.0 == rows[0] {
+                2
+            } else {
+                3
+            };
+        }
+        scene.quads[2..].sort_by_key(|quad| quad.order);
+        let choice = renderer.damage.choose(
+            &renderer.sprite_atlas,
+            &scene,
+            size,
+            1.,
+            renderer.opaque,
+            false,
+            true,
+        );
+        let command = render(&mut renderer, &scene, &target, size, choice)?;
+        let actual = finish(&renderer, &command, &target)?;
+        if frame > 0 {
+            assert!(
+                matches!(renderer.damage.last_mode, Mode::Partial(_)),
+                "frame {frame}"
+            );
+            assert_eq!(renderer.damage.last_magenta_prefills, 1, "frame {frame}");
+            let whole = renderer.render_frame(&scene, &reference, size)?;
+            let expected = finish(&renderer, &whole, &reference)?;
+            assert_eq!(actual, expected, "hover pixel mismatch on frame {frame}");
+        }
+    }
+    Ok(())
+}
+
 impl MetalRenderer {
     /// Magenta-prefilled Partial proofs; each case asserts the actual frame mode.
     pub fn test_damage_partials() -> Result<()> {
@@ -431,6 +497,7 @@ impl MetalRenderer {
             ] {
                 partial_pixels(case)?;
             }
+            hover_ordinal_pixels()?;
             Ok(())
         })
     }
@@ -630,6 +697,7 @@ impl MetalRenderer {
             assert_eq!(config(Some("0")), Config::Off);
             assert_eq!(config(Some("1")), Config::On);
             assert_eq!(config(Some("verify")), Config::Verify);
+            Scene::with_fast_damage_provenance(declaration_hole_proof)?;
             verify_pair(false)?;
             verify_pair(true)?;
             verify_failure_falls_back()
@@ -675,6 +743,7 @@ fn replay_budget_proof() -> Result<()> {
     next.finish();
     let prepared = prepare(&mut renderer, &next, false);
     assert_eq!(prepared.mode, Mode::Copy);
+    plan::Cache::test_view_invalidation(prepared.snapshot.as_ref().unwrap().signatures[0]);
     assert_eq!(
         renderer.damage.cache.reused, 1,
         "rounded compilation must preserve replay identity"
@@ -685,6 +754,26 @@ fn replay_budget_proof() -> Result<()> {
     );
     let command = render(&mut renderer, &next, &target, size, prepared)?;
     assert_eq!(finish(&renderer, &command, &target)?, expected);
+    // The formerly clean view paints new content at the same location.
+    // Its new operation ID must invalidate the old signature and pixels.
+    let mut changed = Scene::default();
+    changed.with_fast_damage_clip_for_test(box_at(0., 0., 64., 64.), |s| {
+        quad(s, 0., 0., 64., 64., gpui::blue(), 0.);
+    });
+    changed.finish();
+    let fresh = prepare(&mut renderer, &changed, false);
+    assert_eq!(
+        renderer.damage.cache.reused, 0,
+        "repaint used a stale signature"
+    );
+    assert!(renderer.damage.cache.hashed >= 1);
+    assert!(!matches!(fresh.mode, Mode::Copy | Mode::Same));
+    let cmd = render(&mut renderer, &changed, &target, size, fresh)?;
+    let pixels = finish(&renderer, &cmd, &target)?;
+    let reference = retained::texture(&renderer.device, 64, 64)?;
+    let cmd = renderer.render_frame(&changed, &reference, size)?;
+    assert_eq!(pixels, finish(&renderer, &cmd, &reference)?);
+    assert_ne!(pixels, expected);
     let resized = renderer.damage.choose(
         &renderer.sprite_atlas,
         &next,
@@ -749,6 +838,22 @@ fn replay_budget_proof() -> Result<()> {
         renderer.damage.cache.hashed, 0,
         "atlas loss must precede hashing"
     );
+    let mut scroll = changed.fast_damage_snapshot();
+    let mut offset = None;
+    let origin = gpui::point(gpui::px(0.), gpui::px(0.));
+    scroll.observe_damage_scroll(&mut offset, origin);
+    scroll.observe_damage_scroll(&mut offset, origin);
+    assert!(!scroll.fast_damage_scroll_changed());
+    scroll.observe_damage_scroll(&mut offset, gpui::point(gpui::px(0.), gpui::px(-12.)));
+    let calls = renderer.damage.cache.collection_calls;
+    assert!(calls > 0);
+    let decision = prepare(&mut renderer, &scroll, false);
+    assert_eq!(
+        (decision.mode, decision.reason),
+        (Mode::Direct, "shift_unsupported")
+    );
+    assert_eq!(renderer.damage.cache.collection_calls - calls, 0);
+
     Ok(())
 }
 impl MetalRenderer {
@@ -769,3 +874,113 @@ mod cpu_budget_tests {
 mod policy;
 
 mod backoff;
+
+pub(crate) fn editor_image(
+    renderer: &mut MetalRenderer,
+    scene: &Scene,
+    size: gpui::Size<DevicePixels>,
+) -> Result<image::RgbaImage> {
+    use anyhow::ensure;
+    ensure!(
+        scene.has_damage_declarations(),
+        "editor did not declare damage"
+    );
+    renderer.damage.enabled_override = Some(true);
+    renderer.damage.verify_override = true;
+    renderer.damage.cache.test_declared = true;
+    renderer.damage.magenta_prefill = true;
+    let first = renderer.damage.snapshot.is_none();
+    let decision = renderer.damage.choose(
+        &renderer.sprite_atlas,
+        scene,
+        size,
+        1.,
+        renderer.opaque,
+        false,
+        true,
+    );
+    if first {
+        ensure!(
+            decision.mode == Mode::Retained,
+            "expected prime, got {:?}",
+            decision.mode
+        );
+    } else {
+        ensure!(
+            matches!(decision.mode, Mode::Partial(_)),
+            "expected Partial, got {:?} ({})",
+            decision.mode,
+            decision.reason
+        );
+    }
+    let target = retained::texture(
+        &renderer.device,
+        size.width.0 as usize,
+        size.height.0 as usize,
+    )?;
+    let command = render(renderer, scene, &target, size, decision)?;
+    let pixels = finish(renderer, &command, &target)?;
+    wait_verification(renderer);
+    let status = renderer.damage.failed.as_ref().unwrap();
+    ensure!(
+        !status.disabled.load(Ordering::Acquire),
+        "declaration oracle mismatch: {:?}",
+        status.record()
+    );
+    if !first {
+        ensure!(
+            matches!(renderer.damage.last_mode, Mode::Partial(_)),
+            "Partial was declined"
+        );
+    }
+    image::RgbaImage::from_raw(size.width.0 as u32, size.height.0 as u32, pixels)
+        .context("invalid verified image dimensions")
+}
+
+fn declaration_hole_proof() -> Result<()> {
+    let mut renderer = MetalRenderer::new_headless(Default::default())?;
+    renderer.damage.enabled_override = Some(true);
+    renderer.damage.verify_override = true;
+    renderer.damage.cache.test_declared = true;
+    let size = gpui::size(DevicePixels(256), DevicePixels(256));
+    let texture = retained::texture(&renderer.device, 256, 256)?;
+    for changed in [false, true] {
+        let mut scene = Scene::default();
+        for row in 0..3 {
+            let y = 20. + row as f32 * 38.;
+            let token = 1 + row + u64::from(changed && row != 1) * 10;
+            scene.with_test_damage_region(box_at(20., y, 20., 12.), token, |s| {
+                quad(
+                    s,
+                    20.,
+                    y,
+                    20.,
+                    12.,
+                    if changed { gpui::red() } else { gpui::blue() },
+                    0.,
+                );
+            });
+        }
+        scene.finish();
+        let decision =
+            renderer
+                .damage
+                .choose(&renderer.sprite_atlas, &scene, size, 1., true, false, true);
+        if changed {
+            assert!(matches!(decision.mode, Mode::Partial(_)));
+        }
+        let command = render(&mut renderer, &scene, &texture, size, decision)?;
+        finish(&renderer, &command, &texture)?;
+        wait_verification(&mut renderer);
+    }
+    let failure = renderer
+        .damage
+        .failed
+        .as_ref()
+        .unwrap()
+        .record()
+        .expect("underdeclared middle region was silently accepted");
+    assert_eq!(failure.mode, "declared_outside");
+    assert!((58..70).contains(&failure.y));
+    Ok(())
+}

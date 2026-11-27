@@ -5,7 +5,11 @@
 // RustUI modifications: remove Windows drawing/adapter APIs, expose Metal inputs,
 // and run the preserved planner tests through test-support as well as crate tests.
 //! Platform-independent scene signatures, damage rectangles, and scroll planning.
-use super::diagnosis::Trace;
+use super::{
+    diagnosis::Trace,
+    order_probe,
+    timing::{PlanStage, plan_stage},
+};
 use collections::HashMap;
 use gpui::{
     AtlasTextureId, AtlasTile, Background, Bounds, ContentMask, Corners, Edges, Hsla, IsZero,
@@ -14,6 +18,8 @@ use gpui::{
 use std::collections::HashSet;
 mod cache;
 mod fixed;
+mod hover_order;
+mod views;
 pub(crate) use cache::Cache;
 use std::hash::{Hash, Hasher};
 
@@ -125,7 +131,7 @@ impl Area {
         }
     }
 
-    fn grown(&self, by: f32) -> Area {
+    pub(super) fn grown(&self, by: f32) -> Area {
         Area {
             x0: self.x0 - by,
             y0: self.y0 - by,
@@ -134,7 +140,7 @@ impl Area {
         }
     }
 
-    fn touches(&self, o: &Area) -> bool {
+    pub(super) fn touches(&self, o: &Area) -> bool {
         self.x0 <= o.x1 && o.x0 <= self.x1 && self.y0 <= o.y1 && o.y0 <= self.y1
     }
 
@@ -195,6 +201,19 @@ pub(crate) struct Sig {
     plain: bool,
     /// Shows something new whatever its bytes say.
     fresh: bool,
+}
+
+impl Sig {
+    pub(super) fn order(self) -> u32 {
+        self.order
+    }
+    pub(super) fn bounds(self) -> Area {
+        self.bounds
+    }
+
+    pub(super) fn order_reach(&self) -> Area {
+        self.reach.union(&self.bounds.grown(1.).and(&self.mask))
+    }
 }
 
 struct Key(collections::FxHasher);
@@ -362,6 +381,10 @@ pub(crate) fn signatures_cached(
     dynamic: &dyn Fn(AtlasTextureId) -> bool,
     cache: &mut Cache,
 ) -> Option<Vec<Sig>> {
+    #[cfg(any(test, feature = "test-support"))]
+    {
+        cache.collection_calls += 1;
+    }
     // A scroll layer's tiles change under sprites that stay the same.
     if !can_plan(scene) {
         return None;
@@ -369,7 +392,8 @@ pub(crate) fn signatures_cached(
     let fresh = |tile: &AtlasTile| {
         uploaded.contains(&(tile.texture_id, tile.tile_id.0)) || dynamic(tile.texture_id)
     };
-    let mut out = Vec::with_capacity(
+    let mut out = cache.take_buffer();
+    out.reserve(
         scene.quads.len()
             + scene.shadows.len()
             + scene.underlines.len()
@@ -378,8 +402,29 @@ pub(crate) fn signatures_cached(
             + scene.polychrome_sprites.len()
             + scene.paths.len(),
     );
+    let mut partitions = [0; 7];
+    let declared = cache.declared && scene.has_damage_declarations();
     for (index, q) in scene.quads.iter().enumerate() {
-        let source = scene.fast_damage_source(0, index);
+        if declared && let Some(region) = scene.fast_damage_region(0, index) {
+            let footprint = Area::of(&q.bounds).and(&Area::of(&q.content_mask.bounds));
+            let bounds = Area::of(&region.bounds);
+            // Overhanging glyphs and unbounded paths retain their ordinary signatures.
+            if footprint.within(&bounds.grown(1.0)) {
+                declared::push(
+                    &mut out,
+                    region.owner,
+                    region.revision,
+                    region.anchor,
+                    0,
+                    q.order,
+                    bounds,
+                    Area::of(&q.content_mask.bounds),
+                    false,
+                );
+                continue;
+            }
+        }
+        let source = scene.fast_damage_view_source(0, index);
         if let Some(signature) = cache.replay(source, q.order, false) {
             out.push(signature);
             continue;
@@ -407,8 +452,9 @@ pub(crate) fn signatures_cached(
             && w.left.is_zero();
         cache.push(source, s, &mut out);
     }
+    partitions[0] = out.len();
     for (index, s) in scene.shadows.iter().enumerate() {
-        let source = scene.fast_damage_source(1, index);
+        let source = scene.fast_damage_view_source(1, index);
         if let Some(signature) = cache.replay(source, s.order, false) {
             out.push(signature);
             continue;
@@ -431,8 +477,9 @@ pub(crate) fn signatures_cached(
             &mut out,
         );
     }
+    partitions[1] = out.len();
     for (index, u) in scene.underlines.iter().enumerate() {
-        let source = scene.fast_damage_source(2, index);
+        let source = scene.fast_damage_view_source(2, index);
         if let Some(signature) = cache.replay(source, u.order, false) {
             out.push(signature);
             continue;
@@ -449,8 +496,31 @@ pub(crate) fn signatures_cached(
             &mut out,
         );
     }
+    partitions[2] = out.len();
     for (index, g) in scene.monochrome_sprites.iter().enumerate() {
-        let source = scene.fast_damage_source(3, index);
+        if declared
+            && is_unit(&g.transformation)
+            && let Some(region) = scene.fast_damage_region(3, index)
+        {
+            let footprint = Area::of(&g.bounds).and(&Area::of(&g.content_mask.bounds));
+            let bounds = Area::of(&region.bounds);
+            // Overhanging glyphs and unbounded paths retain their ordinary signatures.
+            if footprint.within(&bounds.grown(1.0)) {
+                declared::push(
+                    &mut out,
+                    region.owner,
+                    region.revision,
+                    region.anchor,
+                    3,
+                    g.order,
+                    bounds,
+                    Area::of(&g.content_mask.bounds),
+                    fresh(&g.tile),
+                );
+                continue;
+            }
+        }
+        let source = scene.fast_damage_view_source(3, index);
         if let Some(signature) = cache.replay(source, g.order, fresh(&g.tile)) {
             out.push(signature);
             continue;
@@ -467,8 +537,31 @@ pub(crate) fn signatures_cached(
         s.fresh = fresh(&g.tile);
         cache.push(source, s, &mut out);
     }
+    partitions[3] = out.len();
     for (index, g) in scene.subpixel_sprites.iter().enumerate() {
-        let source = scene.fast_damage_source(4, index);
+        if declared
+            && is_unit(&g.transformation)
+            && let Some(region) = scene.fast_damage_region(4, index)
+        {
+            let footprint = Area::of(&g.bounds).and(&Area::of(&g.content_mask.bounds));
+            let bounds = Area::of(&region.bounds);
+            // Overhanging glyphs and unbounded paths retain their ordinary signatures.
+            if footprint.within(&bounds.grown(1.0)) {
+                declared::push(
+                    &mut out,
+                    region.owner,
+                    region.revision,
+                    region.anchor,
+                    4,
+                    g.order,
+                    bounds,
+                    Area::of(&g.content_mask.bounds),
+                    fresh(&g.tile),
+                );
+                continue;
+            }
+        }
+        let source = scene.fast_damage_view_source(4, index);
         if let Some(signature) = cache.replay(source, g.order, fresh(&g.tile)) {
             out.push(signature);
             continue;
@@ -485,8 +578,9 @@ pub(crate) fn signatures_cached(
         s.fresh = fresh(&g.tile);
         cache.push(source, s, &mut out);
     }
+    partitions[4] = out.len();
     for (index, p) in scene.polychrome_sprites.iter().enumerate() {
-        let source = scene.fast_damage_source(5, index);
+        let source = scene.fast_damage_view_source(5, index);
         if crate::fast::rounded_clip::group(scene, p.tile.texture_id).is_none()
             && let Some(signature) = cache.replay(source, p.order, fresh(&p.tile))
         {
@@ -522,6 +616,7 @@ pub(crate) fn signatures_cached(
                         .f(area.y1 - y);
                 }
             }
+            cache.recycle(inner);
             let mut s = sig(key.done(), p.order, &p.bounds, &p.content_mask, 1.0);
             s.fresh = fresh_inside;
             cache.push(source, s, &mut out);
@@ -538,8 +633,28 @@ pub(crate) fn signatures_cached(
         s.fresh = fresh(&p.tile);
         cache.push(source, s, &mut out);
     }
+    partitions[5] = out.len();
     for (index, p) in scene.paths.iter().enumerate() {
-        let source = scene.fast_damage_source(6, index);
+        if declared && let Some(region) = scene.fast_damage_region(6, index) {
+            let footprint = Area::of(&p.bounds).and(&Area::of(&p.content_mask.bounds));
+            let bounds = Area::of(&region.bounds);
+            // Overhanging glyphs and unbounded paths retain their ordinary signatures.
+            if footprint.within(&bounds.grown(1.0)) {
+                declared::push(
+                    &mut out,
+                    region.owner,
+                    region.revision,
+                    region.anchor,
+                    6,
+                    p.order,
+                    bounds,
+                    Area::of(&p.content_mask.bounds),
+                    false,
+                );
+                continue;
+            }
+        }
+        let source = scene.fast_damage_view_source(6, index);
         if let Some(signature) = cache.replay(source, p.order, false) {
             out.push(signature);
             continue;
@@ -559,6 +674,8 @@ pub(crate) fn signatures_cached(
             &mut out,
         );
     }
+    partitions[6] = out.len();
+    cache.partitions = partitions;
     Some(out)
 }
 
@@ -661,11 +778,60 @@ fn tidy(rects: Vec<Area>, view: &Area) -> Vec<Area> {
     rects
 }
 
+#[derive(Default)]
+pub(super) struct Policy {
+    early_metal: bool,
+    pub allow_disjoint_order: bool,
+    pub reason: Option<&'static str>,
+    pub witness: Option<order_probe::Witness>,
+}
+impl Policy {
+    pub fn metal() -> Self {
+        static ENABLED: std::sync::OnceLock<bool> = std::sync::OnceLock::new();
+        static ORDER_CULL: std::sync::OnceLock<bool> = std::sync::OnceLock::new();
+        Self {
+            early_metal: *ENABLED.get_or_init(|| {
+                std::env::var_os("RUSTUI_G_R2_EARLY_REJECT").as_deref() == Some("1".as_ref())
+            }),
+            allow_disjoint_order: *ORDER_CULL.get_or_init(|| {
+                std::env::var_os("RUSTUI_G_R2_DISJOINT_ORDER").as_deref() == Some("1".as_ref())
+            }),
+            reason: None,
+            witness: None,
+        }
+    }
+
+    fn rejects_area(&mut self, areas: impl Iterator<Item = Area>, view: Area) -> bool {
+        if !self.early_metal {
+            return false;
+        }
+        // Metal redraws one box. Union is invariant under tidy's band and
+        // rectangle merges, so the final box can be rejected before tidy.
+        let bounds = areas
+            .map(|area| area.pixels().and(&view))
+            .filter(|area| !area.is_empty())
+            .reduce(|a, b| a.union(&b));
+        if bounds.is_some_and(|bounds| bounds.area() > MAX_DAMAGE * view.area()) {
+            self.reason = Some("area_bounding_box");
+            true
+        } else {
+            false
+        }
+    }
+
+    fn rejects_shift(&mut self) -> bool {
+        if self.early_metal {
+            self.reason = Some("shift_unsupported");
+        }
+        self.early_metal
+    }
+}
+
 /// How to make the frame of `new` from the frame of `old` in a window of
 /// `view`, or `None` to draw it whole.
 #[cfg(any(test, feature = "test-support"))]
 fn plan(old: &[Sig], new: &[Sig], view: Area) -> Option<Plan> {
-    plan_traced(old, new, view, None)
+    plan_traced(old, new, view, None, &mut Policy::default())
 }
 
 pub(super) fn plan_traced(
@@ -673,11 +839,13 @@ pub(super) fn plan_traced(
     new: &[Sig],
     view: Area,
     mut trace: Option<&mut Trace>,
+    policy: &mut Policy,
 ) -> Option<Plan> {
-    if let Ok(plan) = fixed::plan(old, new, view, trace.as_deref_mut()) {
+    plan_stage(PlanStage::FixedCompare);
+    if let Ok(plan) = fixed::plan(old, new, view, trace.as_deref_mut(), policy) {
         return plan;
     }
-    general_plan(old, new, view, trace)
+    general_plan(old, new, view, trace, policy)
 }
 
 fn general_plan(
@@ -685,7 +853,9 @@ fn general_plan(
     new: &[Sig],
     view: Area,
     mut trace: Option<&mut Trace>,
+    policy: &mut Policy,
 ) -> Option<Plan> {
+    plan_stage(PlanStage::MatchUnchanged);
     // The primitives that stayed as they were, as a multiset.
     // Intrusive index chains preserve first-to-last multiset pairing without
     // allocating one tiny Vec for every primitive in the previous frame.
@@ -718,12 +888,7 @@ fn general_plan(
             changed_new.iter().map(|&i| new[i].reach),
         );
     }
-    let mut orders: Vec<(u32, u32)> = stayed
-        .iter()
-        .enumerate()
-        .filter_map(|(i, j)| j.map(|j| (old[j].order, new[i].order)))
-        .collect();
-
+    plan_stage(PlanStage::ScrollVote);
     // A scroll: changed primitives of the same shape vote on how far they moved.
     let mut by_shape: HashMap<_, Vec<usize>> = HashMap::default();
     for &j in &changed_old {
@@ -752,6 +917,16 @@ fn general_plan(
         .max_by_key(|(dy, n)| (**n, -dy.abs()))
         .filter(|(_, n)| **n >= MIN_MOVED)
         .map(|(dy, _)| *dy as f32);
+    if scroll.is_some() && policy.rejects_shift() {
+        return None;
+    }
+    plan_stage(PlanStage::PaintOrder);
+    let mut orders: Vec<(u32, u32)> = stayed
+        .iter()
+        .enumerate()
+        .filter_map(|(i, j)| j.map(|j| (old[j].order, new[i].order)))
+        .collect();
+
     let Some(dy) = scroll else {
         if fractional && !votes.is_empty() {
             if let Some(trace) = trace {
@@ -760,26 +935,36 @@ fn general_plan(
             return None;
         }
         // No scroll: what changed is drawn again where it was and is.
-        if !orders_agree(&mut orders) {
+        if !orders_agree(&mut orders)
+            && !(policy.allow_disjoint_order && hover_order::disjoint(old, new, &stayed))
+        {
+            if order_probe::active() {
+                policy.witness = order_probe::find(old, new, &stayed);
+            }
             record_order_change(trace, &orders);
             return None;
         }
-        let damage = tidy(
+        plan_stage(PlanStage::RectMerge);
+        let areas = || {
             changed_old
                 .iter()
                 .map(|&j| old[j].reach)
                 .chain(changed_new.iter().map(|&i| new[i].reach))
-                .collect(),
-            &view,
-        );
+        };
+        if policy.rejects_area(areas(), view) {
+            return None;
+        }
+        let damage = tidy(areas().collect(), &view);
         let total: f32 = damage.iter().map(Area::area).sum();
         record_damage(trace, &damage, total, view);
-        return (total <= MAX_DAMAGE * view.area()).then_some(Plan {
+        plan_stage(PlanStage::BuildPlan);
+        return (total <= MAX_DAMAGE * view.area()).then(|| Plan {
             shift: None,
             damage,
         });
     };
 
+    plan_stage(PlanStage::ShiftMatch);
     // The scrolled clip: the masks of what moved by `dy`.
     let mut region: Option<Area> = None;
     for &i in &changed_new {
@@ -847,11 +1032,13 @@ fn general_plan(
             trace.coarse_rejections += 1;
         }
     }
+    plan_stage(PlanStage::PaintOrder);
     if !orders_agree(&mut orders) {
         record_order_change(trace, &orders);
         return None;
     }
 
+    plan_stage(PlanStage::RectMerge);
     let mut damage = Vec::new();
     // The strip the scroll exposed.
     damage.push(if dy < 0.0 {
@@ -912,7 +1099,8 @@ fn general_plan(
     let damage = tidy(damage, &view);
     let total: f32 = damage.iter().map(Area::area).sum();
     record_damage(trace, &damage, total, view);
-    (total <= MAX_DAMAGE * view.area()).then_some(Plan {
+    plan_stage(PlanStage::BuildPlan);
+    (total <= MAX_DAMAGE * view.area()).then(|| Plan {
         shift: Some((from, to)),
         damage,
     })
@@ -1293,7 +1481,98 @@ mod tests {
         assert!(super::signatures(&scene, &Default::default(), &|_| false).is_none());
     }
 
+    #[cfg_attr(test, test)]
+    fn unsupported_shift_returns_before_building_rectangles() {
+        use super::{Policy, Trace, plan_traced};
+        let old = frame(0.);
+        let new = frame(-12.);
+        assert!(plan(&old, &new, VIEW).unwrap().shift.is_some());
+        let mut policy = Policy {
+            early_metal: true,
+            ..Policy::default()
+        };
+        let mut trace = Trace::test_sample();
+        assert!(plan_traced(&old, &new, VIEW, Some(&mut trace), &mut policy).is_none());
+        assert_eq!(policy.reason, Some("shift_unsupported"));
+        assert!(!trace.damage_was_built());
+    }
+
+    #[cfg_attr(test, test)]
+    fn oversized_box_returns_before_building_a_plan() {
+        use super::{Policy, Trace, plan_traced};
+        let old = [at(1, 1, 0., 0., 1000., 800., VIEW)];
+        let new = [Sig { key: 2, ..old[0] }];
+        let mut policy = Policy {
+            early_metal: true,
+            ..Policy::default()
+        };
+        let mut trace = Trace::test_sample();
+        assert!(plan_traced(&old, &new, VIEW, Some(&mut trace), &mut policy).is_none());
+        assert_eq!(policy.reason, Some("area_bounding_box"));
+        assert!(!trace.damage_was_built());
+    }
+
+    #[cfg_attr(test, test)]
+    fn hover_highlight_reproduces_an_order_group_inversion() {
+        let first = at(10, 2, 50., 50., 15., 15., VIEW);
+        let second = at(11, 3, 50., 80., 15., 15., VIEW);
+        let highlight = at(12, 1, 40., 45., 300., 30., VIEW);
+        let old = [first, second, highlight];
+        let new = [
+            Sig { order: 3, ..first },
+            Sig { order: 2, ..second },
+            at(12, 1, 40., 75., 300., 30., VIEW),
+        ];
+        assert!(plan(&old, &new, VIEW).is_none());
+        let witness = super::order_probe::find(&old, &new, &[Some(0), Some(1), None]).unwrap();
+        assert!(!witness.overlap);
+        let overlapping = Sig {
+            reach: first.reach,
+            ..second
+        };
+        let old_overlap = [first, overlapping];
+        let new_overlap = [
+            new[0],
+            Sig {
+                order: 2,
+                ..overlapping
+            },
+        ];
+        let witness =
+            super::order_probe::find(&old_overlap, &new_overlap, &[Some(0), Some(1)]).unwrap();
+        assert!(witness.overlap);
+    }
+
+    #[cfg_attr(test, test)]
+    fn hover_checks_aa_and_shadow_reach_before_accepting_order_inversions() {
+        let first = at(10, 2, 50., 50., 15., 15., VIEW);
+        let against = |second: Sig| {
+            let old = [first, second];
+            let new = [Sig { order: 3, ..first }, Sig { order: 2, ..second }];
+            let mut policy = super::Policy {
+                allow_disjoint_order: true,
+                ..Default::default()
+            };
+            super::plan_traced(&old, &new, VIEW, None, &mut policy)
+        };
+        let separate = at(11, 3, 50., 80., 15., 15., VIEW);
+        assert!(against(separate).is_some_and(|plan| plan.damage.is_empty()));
+        assert!(against(at(11, 3, 50., 60., 15., 15., VIEW)).is_none());
+        // The geometric bounds are 1 px apart, but antialias margins meet.
+        assert!(against(at(11, 3, 50., 66., 15., 15., VIEW)).is_none());
+        // A shadow with blur 6 has reach 3×6+1 px in the Metal signatures.
+        let shadow = Sig {
+            reach: separate.bounds.grown(19.),
+            ..separate
+        };
+        assert!(against(shadow).is_none());
+    }
+
     pub(super) fn run() {
+        hover_checks_aa_and_shadow_reach_before_accepting_order_inversions();
+        hover_highlight_reproduces_an_order_group_inversion();
+        oversized_box_returns_before_building_a_plan();
+        unsupported_shift_returns_before_building_rectangles();
         an_unchanged_frame_needs_nothing();
         a_scroll_copies_the_clip_and_damages_the_strip_it_exposed();
         a_change_without_a_scroll_damages_only_what_changed();
@@ -1320,4 +1599,102 @@ impl crate::metal_renderer::MetalRenderer {
         super::inputs::test_upload_observers();
         super::inputs::test_atlas_hooks().expect("Metal atlas upload/remove hooks");
     }
+}
+
+mod declared;
+
+/// In verification, retain disjoint regions and holes instead of using the
+/// enclosing render scissor. A change in stacking also invalidates its footprint.
+pub(super) fn unmerged_changes(old: &[Sig], new: &[Sig]) -> Vec<Area> {
+    let mut counts = HashMap::default();
+    for s in old {
+        *counts.entry((placed(s), s.order)).or_insert(0usize) += 1;
+    }
+    let mut areas = Vec::new();
+    for s in new {
+        let n = counts.entry((placed(s), s.order)).or_default();
+        if *n == 0 {
+            areas.push(s.reach.pixels());
+        } else {
+            *n -= 1;
+            if s.fresh {
+                areas.push(s.reach.pixels());
+            }
+        }
+    }
+    for s in old {
+        if let Some(n) = counts.get_mut(&(placed(s), s.order))
+            && *n > 0
+        {
+            areas.push(s.reach.pixels());
+            *n -= 1;
+        }
+    }
+    areas
+}
+
+/// Within each ordered primitive stream, identical prefix/suffix signatures
+/// cannot change pixels. Redraw both sides of every unmatched span. Decline
+/// this shortcut when it produces a large box; the normal planner can do better.
+pub(super) fn declared_plan(
+    old: &[Sig],
+    new: &[Sig],
+    old_ends: [usize; 7],
+    new_ends: [usize; 7],
+    view: Area,
+) -> Option<Plan> {
+    let same = |a: &Sig, b: &Sig| {
+        a.key == b.key
+            && a.order == b.order
+            && a.bounds == b.bounds
+            && a.mask == b.mask
+            && a.reach == b.reach
+            && !b.fresh
+    };
+    let mut result: Option<Area> = None;
+    let mut add = |s: &Sig| {
+        let reach = s.reach.pixels().and(&view);
+        if !reach.is_empty() {
+            result = Some(result.map_or(reach, |r| r.union(&reach)));
+        }
+    };
+    let (mut left, mut right) = (0, 0);
+    for (end, next_end) in old_ends.into_iter().zip(new_ends) {
+        let before = &old[left..end];
+        let after = &new[right..next_end];
+        left = end;
+        right = next_end;
+        if before.len() == after.len() {
+            for (a, b) in before.iter().zip(after) {
+                if !same(a, b) {
+                    add(a);
+                    add(b);
+                }
+            }
+        } else {
+            let prefix = before
+                .iter()
+                .zip(after)
+                .take_while(|(a, b)| same(a, b))
+                .count();
+            let before = &before[prefix..];
+            let after = &after[prefix..];
+            let suffix = before
+                .iter()
+                .rev()
+                .zip(after.iter().rev())
+                .take_while(|(a, b)| same(a, b))
+                .count();
+            before[..before.len() - suffix].iter().for_each(&mut add);
+            after[..after.len() - suffix].iter().for_each(&mut add);
+        }
+    }
+    debug_assert_eq!((left, right), (old.len(), new.len()));
+    if result.is_some_and(|r| r.area() > MAX_DAMAGE * view.area()) {
+        return None;
+    }
+    Some(Plan {
+        shift: None,
+        damage: result.into_iter().collect(),
+    })
 }

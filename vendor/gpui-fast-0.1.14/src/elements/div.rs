@@ -2500,6 +2500,14 @@ impl Interactivity {
                             let result = window.with_element_opacity(style.opacity, |window| {
                                 f(&style, scroll_offset, hitbox, window, cx)
                             });
+                            if let (Some(state), Some(offset)) =
+                                (element_state.as_mut(), self.scroll_offset.as_ref())
+                            {
+                                window.fast_damage_observe_scroll(
+                                    &mut state.damage_scroll_offset,
+                                    *offset.borrow(),
+                                );
+                            }
                             (result, element_state)
                         },
                     )
@@ -3682,9 +3690,15 @@ impl Interactivity {
             node.set_description(description.to_string());
         }
         if let Some(readonly) = self.aria.readonly {
-            if readonly { node.set_read_only(); } else { node.clear_read_only(); }
+            if readonly {
+                node.set_read_only();
+            } else {
+                node.clear_read_only();
+            }
         }
-        if let Some(sort) = self.aria.sort { node.set_sort_direction(sort); }
+        if let Some(sort) = self.aria.sort {
+            node.set_sort_direction(sort);
+        }
         if let Some(keyshortcuts) = &self.aria.keyshortcuts {
             node.set_keyboard_shortcut(keyshortcuts.to_string());
         }
@@ -3762,6 +3776,7 @@ impl Interactivity {
 /// and scroll offsets.
 #[derive(Default)]
 pub struct InteractiveElementState {
+    damage_scroll_offset: Option<Point<Pixels>>,
     pub(crate) focus_handle: Option<FocusHandle>,
     pub(crate) clicked_state: Option<Rc<RefCell<ElementClickedState>>>,
     pub(crate) hover_state: Option<Rc<RefCell<ElementHoverState>>>,
@@ -5909,5 +5924,4 @@ mod tests {
         enabled.interactivity().write_a11y_info(&mut node);
         assert!(!node.is_disabled());
     }
-
 }

@@ -3,9 +3,10 @@
 use crate::WindowId;
 use std::{
     collections::HashMap,
+    collections::VecDeque,
     fmt::Write as _,
     io::Write as _,
-    sync::{Mutex, OnceLock},
+    sync::{LazyLock, Mutex, OnceLock},
     time::{Instant, SystemTime},
 };
 
@@ -27,11 +28,12 @@ fn mode() -> Mode {
             extern "C" fn at_exit() {
                 flush();
             }
-            if unsafe { atexit(at_exit) } == 0 {
-                Mode::Exit
-            } else {
-                Mode::Frame
-            }
+            assert_eq!(
+                unsafe { atexit(at_exit) },
+                0,
+                "cannot register buffered frame log"
+            );
+            Mode::Exit
         }
         _ => Mode::Off,
     })
@@ -71,7 +73,23 @@ impl Record {
         );
     }
 }
-static RECORDS: Mutex<Vec<Record>> = Mutex::new(Vec::new());
+// A 60-second native hover capture exceeded 196,000 phase records.
+const LIMIT: usize = 524_288;
+struct Queue {
+    records: VecDeque<Record>,
+    lost: usize,
+}
+impl Queue {
+    fn is_empty(&self) -> bool {
+        self.records.is_empty()
+    }
+}
+static RECORDS: LazyLock<Mutex<Queue>> = LazyLock::new(|| {
+    Mutex::new(Queue {
+        records: VecDeque::with_capacity(LIMIT),
+        lost: 0,
+    })
+});
 pub(crate) fn record(window: WindowId, event: &'static str, start: Option<Instant>) {
     let Some(start) = start else { return };
     let end = Instant::now();
@@ -100,7 +118,11 @@ pub(crate) fn record(window: WindowId, event: &'static str, start: Option<Instan
             * 1000.,
     };
     if let Ok(mut records) = RECORDS.lock() {
-        records.push(record);
+        if records.records.len() < LIMIT {
+            records.records.push_back(record);
+        } else {
+            records.lost += 1;
+        }
     }
 }
 pub(crate) fn after_present() {
@@ -115,10 +137,23 @@ fn flush() {
     if records.is_empty() {
         return;
     }
-    let mut output = String::with_capacity(records.len() * 180);
-    for record in records.iter() {
+    let mut output = String::with_capacity(records.records.len() * 180);
+    for record in records.records.iter() {
         record.append(&mut output);
     }
-    records.clear();
+    records.records.clear();
+    if records.lost > 0 {
+        let _ = writeln!(output, "RUSTUI_FRAME_LOG_LOST {}", records.lost);
+        records.lost = 0;
+    }
     let _ = std::io::stderr().lock().write_all(output.as_bytes());
+}
+
+pub(crate) fn close_phase() -> Option<Instant> {
+    static ON: OnceLock<bool> = OnceLock::new();
+    if *ON.get_or_init(|| std::env::var("RUSTUI_G_R3_CPU").as_deref() == Ok("1")) {
+        phase_start()
+    } else {
+        None
+    }
 }
