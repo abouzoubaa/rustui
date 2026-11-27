@@ -8,6 +8,7 @@ use gpui::FastScrollViewport;
 pub(crate) struct ScrollPlan {
     pub(crate) copies: Vec<(Area, Area)>,
     pub(crate) damage: Vec<Area>,
+    pub(crate) exposed: Vec<Area>,
     pub(crate) reason: &'static str,
     pub(crate) shifted: bool,
 }
@@ -24,7 +25,7 @@ fn integral(a: Area) -> bool {
         .into_iter()
         .all(|v| v.is_finite() && v.fract() == 0.)
 }
-fn subtract(a: Area, cut: Area, out: &mut Vec<Area>) {
+pub(crate) fn subtract(a: Area, cut: Area, out: &mut Vec<Area>) {
     let hit = a.and(&cut);
     if hit.is_empty() {
         out.push(a);
@@ -317,6 +318,7 @@ pub(crate) fn plan(
         result.shifted = true;
         let mut strips = Vec::new();
         subtract(clip, to, &mut strips);
+        result.exposed.extend_from_slice(&strips);
         for r in strips {
             result.dirty(r);
         }

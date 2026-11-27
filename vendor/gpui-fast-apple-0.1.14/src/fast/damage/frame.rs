@@ -104,6 +104,7 @@ impl Geometry {
     }
 }
 struct Snapshot {
+    declared_scroll: Option<gpui::FastScrollViewport>,
     scrolls: Vec<gpui::FastScrollViewport>,
     geometry: Geometry,
     signatures: Vec<Sig>,
@@ -362,6 +363,7 @@ impl State {
             // frame, snapshot that scene for an adjacent-frame recovery probe;
             // comparing with a 30-frame-old scene could falsely restart back-off.
             let snapshot = tail.then(|| Snapshot {
+                declared_scroll: None,
                 scrolls: scene.fast_scroll_viewports().to_vec(),
                 geometry,
                 signatures: Vec::new(),
@@ -423,6 +425,7 @@ impl State {
                     Mode::Retained
                 },
                 snapshot: Some(Snapshot {
+                    declared_scroll: None,
                     scrolls: scene.fast_scroll_viewports().to_vec(),
                     geometry,
                     signatures: Vec::new(),
@@ -446,12 +449,16 @@ impl State {
         if let Some(deferred) = self.snapshot.as_mut().unwrap().deferred.take() {
             self.cache.begin();
             let empty = Default::default();
-            let Some(old) =
-                plan::signatures_cached(&deferred, &empty, &inputs::dynamic, &mut self.cache)
-            else {
+            let Some((old, old_scroll)) = plan::scroll_declared::collect(
+                &deferred,
+                &empty,
+                &inputs::dynamic,
+                &mut self.cache,
+            ) else {
                 self.invalidate();
                 return Prepared::direct();
             };
+            self.snapshot.as_mut().unwrap().declared_scroll = old_scroll;
             self.snapshot.as_mut().unwrap().partitions = self.cache.partitions;
             self.snapshot.as_mut().unwrap().signatures = old;
             cpu.hashed += self.cache.hashed;
@@ -460,7 +467,7 @@ impl State {
         }
         self.cache.begin();
         super::view_sizes::sample(scene);
-        let Some(signatures) = plan::signatures_cached(
+        let Some((signatures, declared_scroll)) = plan::scroll_declared::collect(
             scene,
             uploads.tiles.as_ref().unwrap(),
             &inputs::dynamic,
@@ -497,6 +504,7 @@ impl State {
             plan::unmerged_changes(&self.snapshot.as_ref().unwrap().signatures, &signatures)
         });
         let prior = self.snapshot.as_ref().unwrap();
+        let changed_rows = plan::scroll_declared::changed(prior.declared_scroll, declared_scroll);
         super::timing::plan_stage(super::timing::PlanStage::FixedCompare);
         if gpui::fast_scroll_shift_enabled() {
             use plan::scroll::Decision;
@@ -514,6 +522,14 @@ impl State {
                     Decision::Planned(mut scroll)
                         if self.target.as_ref().is_some_and(|t| t.valid) =>
                     {
+                        if let Some(area) = changed_rows {
+                            // A changed revision explicitly invalidates the complete list clip.
+                            scroll.dirty(area.and(&geometry.view()));
+                        } else if let Some((old, new)) = prior.declared_scroll.zip(declared_scroll)
+                            && let Some(edge) = plan::scroll_declared::edge(old, new)
+                        {
+                            scroll.dirty(edge.and(&geometry.view()));
+                        }
                         for rect in scene.extra_damage_rects() {
                             scroll.dirty(Area::of(rect).grown(1.).pixels().and(&geometry.view()));
                         }
@@ -522,6 +538,9 @@ impl State {
                         } else {
                             Mode::Partial(scroll.bounds().unwrap_or(geometry.view()))
                         };
+                        if declared_scroll.is_some() && changed_rows.is_none() && scroll.shifted {
+                            scroll.reason = "shift_declared";
+                        }
                         (mode, scroll.reason, Some(scroll))
                     }
                     Decision::Planned(_) => (Mode::Retained, "prime", None),
@@ -546,6 +565,7 @@ impl State {
                     reason,
                     scroll,
                     snapshot: Some(Snapshot {
+                        declared_scroll,
                         geometry,
                         scrolls: scene.fast_scroll_viewports().to_vec(),
                         signatures,
@@ -582,6 +602,9 @@ impl State {
             )
         });
         if let Some(plan) = change.as_mut() {
+            if let Some(area) = changed_rows {
+                plan.damage.push(area.and(&geometry.view()));
+            }
             for rect in scene.extra_damage_rects() {
                 let area = Area::of(rect).grown(1.).pixels().and(&geometry.view());
                 if !area.is_empty() {
@@ -660,6 +683,7 @@ impl State {
                 _ => policy.reason.unwrap_or("large"),
             },
             snapshot: Some(Snapshot {
+                declared_scroll,
                 scrolls: scene.fast_scroll_viewports().to_vec(),
                 geometry,
                 signatures,
@@ -956,6 +980,11 @@ pub(crate) fn render_with_instances(
                 fail,
                 &mut state.verify_history,
                 prepared.verify_areas.take(),
+                prepared
+                    .scroll
+                    .as_ref()
+                    .filter(|p| p.reason == "shift_declared")
+                    .map(|p| (p.copies.clone(), p.damage.clone())),
             ) {
                 Ok(reference) => state.verification = Some(reference),
                 Err(error) => {

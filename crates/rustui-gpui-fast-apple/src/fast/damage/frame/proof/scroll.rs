@@ -21,6 +21,8 @@ fn rows(
 ) {
     scene.record_scroll_viewport(FastScrollViewport {
         id,
+        content_revision: None,
+        row_height: 0.,
         clip,
         offset: gpui::point(ScaledPixels(dx), ScaledPixels(dy)),
     });
@@ -69,6 +71,32 @@ fn image(case: &str, frame: i32) -> Scene {
         offset,
         (case == "append").then_some(frame + 9),
     );
+    if matches!(case, "declared" | "declared-content" | "declared-lie") {
+        let mut v = scene.fast_scroll_viewports()[0];
+        v.content_revision = Some(if case == "declared-content" {
+            (frame / 3) as u64
+        } else {
+            1
+        });
+        v.row_height = 0.; // Fixture paints overscan at both edges.
+        scene.record_scroll_viewport(v);
+        if case != "declared" {
+            // This belongs to the moving content. The extra stationary patch changes its pixels.
+            Scene::with_test_scroll_owner(11, || {
+                scene.insert_primitive(gpui::Quad {
+                    bounds: box_at(46., 45. - (frame % 3) as f32, 14., 9.),
+                    content_mask: gpui::ContentMask {
+                        bounds: clip,
+                        ..Default::default()
+                    },
+                    background: color(frame / 3 + 8).into(),
+                    ..Default::default()
+                });
+            });
+        }
+        // This change is outside the declaration and must always be diffed.
+        quad(&mut scene, 153., 88., 14., 9., color(frame), 0.);
+    }
     match case {
         "sticky" => quad(&mut scene, 8., 10., 116., 14., color(7), 0.),
         "scrollbar" => quad(&mut scene, 118., 12. + n % 52., 5., 21., color(9), 0.),
@@ -128,6 +156,8 @@ impl MetalRenderer {
     }
     fn scroll_shift_frames() -> Result<()> {
         for case in [
+            "declared",
+            "declared-content",
             "down",
             "up",
             "momentum",
@@ -164,6 +194,8 @@ impl MetalRenderer {
                     let reason = prepared.reason;
                     let expected = match (frame, case) {
                         (0, _) => "prime",
+                        (_, "declared") => "shift_declared",
+                        (_, "declared-content") if frame % 3 != 0 => "shift_declared",
                         (_, "nested") => "nested_overlap",
                         (_, "fractional") => "fractional_delta",
                         (_, "oversized") => "delta_too_large",
@@ -174,7 +206,7 @@ impl MetalRenderer {
                         reason == expected,
                         "{case} frame {frame}: expected {expected}, got {reason}"
                     );
-                    if frame > 0 && expected == "shift" {
+                    if frame > 0 && matches!(expected, "shift" | "shift_declared") {
                         let scroll = prepared.scroll.as_ref().unwrap();
                         anyhow::ensure!(
                             scroll.copies.iter().any(|(src, dst)| src != dst),
@@ -213,7 +245,7 @@ impl MetalRenderer {
                     let expected_mode = match expected {
                         "prime" => "retained",
                         "nested_overlap" | "overlay_translucent" => "direct",
-                        "shift" => "shift",
+                        "shift" | "shift_declared" => "shift",
                         _ => "partial",
                     };
                     anyhow::ensure!(
@@ -271,6 +303,38 @@ impl MetalRenderer {
             );
         }
         println!("G3_TRANSITIONS resize and texture loss primed and resumed shift");
+        let mut renderer = Self::new_headless(Default::default())?;
+        renderer.damage.enabled_override = Some(true);
+        renderer.damage.verify_override = true;
+        let target = retained::texture(&renderer.device, 192, 144)?;
+        for n in 2..=3 {
+            let scene = Scene::with_fast_damage_provenance(|| image("declared-lie", n));
+            let size = gpui::size(DevicePixels(192), DevicePixels(144));
+            let prepared =
+                renderer
+                    .damage
+                    .choose(&renderer.sprite_atlas, &scene, size, 2., true, false, true);
+            if n == 3 {
+                anyhow::ensure!(
+                    prepared.reason == "shift_declared",
+                    "lying declaration was not exercised"
+                );
+            }
+            let command = render(&mut renderer, &scene, &target, size, prepared)?;
+            command.commit();
+            wait_verification(&mut renderer);
+        }
+        anyhow::ensure!(
+            renderer
+                .damage
+                .failed
+                .as_ref()
+                .unwrap()
+                .disabled
+                .load(Ordering::Acquire),
+            "unchanged revision hid a real change"
+        );
+        println!("G3B fake stable revision rejected by verify");
         Self::test_fs2_drawable_sizes()
     }
 }

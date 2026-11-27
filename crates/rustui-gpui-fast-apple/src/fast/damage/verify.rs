@@ -109,6 +109,7 @@ impl Readback {
 }
 
 pub(crate) struct History {
+    scrolls: Vec<gpui::FastScrollViewport>,
     declarations: Vec<super::area::Decl>,
     reference: Readback,
     signatures: Vec<super::plan::Sig>,
@@ -147,6 +148,10 @@ pub(crate) fn schedule(
     fail_allocation: bool,
     history: &mut Option<History>,
     allowed: Option<Vec<super::plan::Area>>,
+    shift: Option<(
+        Vec<(super::plan::Area, super::plan::Area)>,
+        Vec<super::plan::Area>,
+    )>,
 ) -> Result<Retained<ProtocolObject<dyn MTLCommandBuffer>>> {
     let requested = super::budget::bytes(output.width(), output.height());
     let failure = super::budget::Failure {
@@ -169,6 +174,7 @@ pub(crate) fn schedule(
         .sprite_atlas
         .damage_uploads(previous.as_ref().map_or(0, |h| h.generation));
     let mut prior = None;
+    let mut shifted_prior = None;
     let declarations = super::area::snapshot(scene);
     let height = output.height();
     if let Some(tiles) = uploads.tiles {
@@ -177,6 +183,26 @@ pub(crate) fn schedule(
                 && old.reference.width == width
                 && old.reference.height == output.height()
             {
+                if let Some(shift) = shift {
+                    let whole = super::plan::Area {
+                        x0: 0.,
+                        y0: 0.,
+                        x1: width as f32,
+                        y1: height as f32,
+                    };
+                    let diff = super::plan::scroll::plan(
+                        &old.signatures,
+                        &full,
+                        &old.scrolls,
+                        scene.fast_scroll_viewports(),
+                        whole,
+                        &mut Default::default(),
+                    );
+                    if let super::plan::scroll::Decision::Planned(full_plan) = diff {
+                        super::metrics::declared_diff(full_plan.damage.len());
+                    }
+                    shifted_prior = Some((old.reference.clone(), shift));
+                }
                 if let Some(allowed) = allowed {
                     let whole = super::plan::Area {
                         x0: 0.,
@@ -209,6 +235,7 @@ pub(crate) fn schedule(
                 }
             }
             *history = Some(History {
+                scrolls: scene.fast_scroll_viewports().to_vec(),
                 declarations,
                 reference: expected.clone(),
                 signatures: full,
@@ -230,22 +257,28 @@ pub(crate) fn schedule(
                 log::error!("damage reference GPU failure: {:?}", buffer.error());
             } else if !status.disabled.load(Ordering::Acquire) {
                 let reference = expected.pixels();
-                if let Some((x, y)) = prior.as_ref().and_then(|(old, permitted, declared)| {
-                    let old = old.pixels();
-                    if let Some(area) = declared
-                        && let Mode::Partial(scissor) = mode
-                    {
-                        super::area::emit(
-                            &old,
-                            &reference,
-                            *area,
-                            scissor.area() as usize,
-                            width,
-                            height,
-                        );
-                    }
-                    changed_outside(&old, &reference, width, permitted)
+                if let Some((x, y)) = shifted_prior.as_ref().and_then(|(old, (copies, areas))| {
+                    shifted_outside(&old.pixels(), &reference, width, copies, areas)
                 }) {
+                    status.mismatch("scroll_declared_outside", x, y);
+                } else if let Some((x, y)) =
+                    prior.as_ref().and_then(|(old, permitted, declared)| {
+                        let old = old.pixels();
+                        if let Some(area) = declared
+                            && let Mode::Partial(scissor) = mode
+                        {
+                            super::area::emit(
+                                &old,
+                                &reference,
+                                *area,
+                                scissor.area() as usize,
+                                width,
+                                height,
+                            );
+                        }
+                        changed_outside(&old, &reference, width, permitted)
+                    })
+                {
                     status.mismatch("declared_outside", x, y);
                 } else if let Some((x, y)) = first_mismatch(&actual.pixels(), &reference, width) {
                     status.mismatch(mode.label(), x, y);
@@ -261,4 +294,39 @@ pub(crate) fn schedule(
         command.addCompletedHandler(RcBlock::as_ptr(&callback));
     }
     Ok(command)
+}
+
+fn shifted_outside(
+    old: &[u8],
+    new: &[u8],
+    width: usize,
+    copies: &[(super::plan::Area, super::plan::Area)],
+    repairs: &[super::plan::Area],
+) -> Option<(usize, usize)> {
+    for &(src, dst) in copies {
+        let mut pieces = vec![dst];
+        for repair in repairs {
+            let mut remaining = Vec::new();
+            for r in pieces {
+                super::plan::scroll::subtract(r, *repair, &mut remaining);
+            }
+            pieces = remaining;
+        }
+        for r in pieces {
+            for y in r.y0 as usize..r.y1 as usize {
+                let x = r.x0 as usize;
+                let start = (width * y + x) * 4;
+                let prior = ((y as i32 + (src.y0 - dst.y0) as i32) as usize * width
+                    + (x as i32 + (src.x0 - dst.x0) as i32) as usize)
+                    * 4;
+                let len = (r.x1 as usize - x) * 4;
+                let (a, b) = (&old[prior..prior + len], &new[start..start + len]);
+                if a != b {
+                    let byte = a.iter().zip(b).position(|(l, r)| l != r).unwrap();
+                    return Some((x + byte / 4, y));
+                }
+            }
+        }
+    }
+    None
 }

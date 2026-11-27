@@ -6,6 +6,10 @@ use std::{cell::RefCell, rc::Rc, sync::OnceLock};
 /// Painted scroll container in device pixels, in surface coordinates.
 #[derive(Clone, Copy, Debug, PartialEq)]
 pub struct FastScrollViewport {
+    /// A revision supplied by rows whose pixels translate with the list. None uses the full diff.
+    pub content_revision: Option<u64>,
+    /// Device-pixel height of one virtual row. Edge rows can enter/leave the painted set.
+    pub row_height: f32,
     /// Stable element path of the scroll container.
     pub id: u64,
     /// Intersection of the container and inherited content mask.
@@ -31,7 +35,33 @@ pub fn fast_scroll_shift_enabled() -> bool {
             )
     })
 }
+impl FastScrollViewport {
+    /// Enables list declarations only when the opt-in scroll renderer is active.
+    pub fn declarations_enabled() -> bool {
+        static ENABLED: OnceLock<bool> = OnceLock::new();
+        fast_scroll_shift_enabled()
+            && *ENABLED.get_or_init(|| {
+                std::env::var("RUSTUI_DAMAGE_SCROLL_DECLARED").as_deref() == Ok("1")
+            })
+    }
+}
 impl Window {
+    pub(crate) fn declare_scroll_rows(&mut self, revision: u64, row_height: Pixels) {
+        let id = super::replay::current_scroll_owner();
+        let height = row_height.to_f64() as f32 * self.scale_factor();
+        if let Some(v) = self
+            .next_frame
+            .scene
+            .fast_damage
+            .scrolls
+            .iter_mut()
+            .find(|v| v.id == id)
+        {
+            v.content_revision = Some(revision);
+            v.row_height = height;
+        }
+    }
+
     pub(crate) fn with_damage_scroll<R>(
         &mut self,
         offset: Option<&Rc<RefCell<Point<Pixels>>>>,
@@ -43,6 +73,8 @@ impl Window {
         };
         let scale = self.scale_factor();
         let viewport = FastScrollViewport {
+            content_revision: None,
+            row_height: 0.,
             id: self.element_id_stack.hash(),
             clip: bounds.intersect(&self.content_mask().bounds).scale(scale),
             offset: offset.borrow().scale(scale),

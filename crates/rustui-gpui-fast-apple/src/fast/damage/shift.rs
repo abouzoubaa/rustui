@@ -42,9 +42,7 @@ fn blit(
         !std::ptr::eq(&**source, &**dest),
         "aliased retained scroll surfaces"
     );
-    let encoder = command
-        .blitCommandEncoder()
-        .context("creating scroll blit encoder")?;
+    let encoder = super::copy_gpu::blit(command).context("creating scroll blit encoder")?;
     for &(from, to) in copies {
         let origin = |r: Area| MTLOrigin {
             x: r.x0 as usize,
@@ -80,11 +78,41 @@ fn repair<'a>(
         || !scene.surfaces.is_empty()
         || !scene.subpixel_sprites.is_empty()
         || !scene.polychrome_sprites.is_empty()
-        || signatures.len() != scene.quads.len() + scene.monochrome_sprites.len()
     {
         return scene;
     }
     let sub = slot.get_or_insert_with(Default::default);
+    if signatures.len() != scene.quads.len() + scene.monochrome_sprites.len() {
+        // Interior rows have no signatures. Cull their uploads from actual device bounds.
+        sub.quads.clear();
+        sub.monochrome_sprites.clear();
+        sub.quads.extend(
+            scene
+                .quads
+                .iter()
+                .filter(|q| {
+                    !Area::of(&q.bounds)
+                        .and(&Area::of(&q.content_mask.bounds))
+                        .and(&area)
+                        .is_empty()
+                })
+                .copied(),
+        );
+        sub.monochrome_sprites.extend(
+            scene
+                .monochrome_sprites
+                .iter()
+                .filter(|g| {
+                    !super::plan::transformed(&g.bounds, &g.transformation)
+                        .grown(1.)
+                        .and(&Area::of(&g.content_mask.bounds))
+                        .and(&area)
+                        .is_empty()
+                })
+                .copied(),
+        );
+        return sub;
+    }
     let (quads, glyphs) = signatures.split_at(scene.quads.len());
     sub.quads.clear();
     sub.monochrome_sprites.clear();
@@ -123,6 +151,8 @@ pub(super) fn render(
         .command_queue
         .commandBuffer()
         .context("creating retained scroll command")?;
+    let mut pass_counts = [0; 3];
+    let gpu = super::copy_gpu::ShiftProbe::new(mode == Mode::Shift);
     let _restore = Restore(ACTIVE.replace(Some((next.texture.clone(), cmd.clone()))));
     if mode == Mode::Retained {
         renderer.render_frame(scene, &next.texture, size)?;
@@ -147,6 +177,17 @@ pub(super) fn render(
             &[]
         };
         for &area in rects {
+            let mut phase_index = 1;
+            if gpu.active() {
+                if let Some(plan) = plan {
+                    if plan.exposed.iter().any(|e| area.and(e) == area) {
+                        phase_index = 0;
+                    } else if plan.exposed.iter().any(|e| !area.and(e).is_empty()) {
+                        phase_index = 2;
+                    }
+                }
+                gpu.phase(["exposed", "other", "mixed"][phase_index]);
+            }
             let scope = partial::Scope::new(
                 next.texture.clone(),
                 area,
@@ -161,9 +202,14 @@ pub(super) fn render(
                 scene
             };
             renderer.render_frame(sub, &next.texture, size)?;
-            ensure!(scope.finish().encoders > 0, "missing scroll repair encoder");
+            let encoders = scope.finish().encoders;
+            ensure!(encoders > 0, "missing scroll repair encoder");
+            if gpu.active() {
+                pass_counts[phase_index] += encoders;
+            }
         }
     }
+    gpu.phase("present_copy");
     renderer.damage_pipelines.copy(
         &cmd,
         &next.texture,
@@ -171,6 +217,7 @@ pub(super) fn render(
         size,
         matches!(mode, Mode::Partial(_) | Mode::Shift),
     )?;
+    gpu.finish(&cmd, pass_counts);
     next.valid = true;
     Ok(cmd)
 }

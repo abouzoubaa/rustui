@@ -155,6 +155,8 @@ impl View for RootBridge {
 }
 
 struct NativeSurface {
+    scroll_appearance: Option<(usize, gpui::TextStyle, gpui::Hsla, gpui::Hsla, gpui::Pixels)>,
+    scroll_revision: u64,
     scene: Scene,
     lines: Vec<gpui::SharedString>,
     scroll: gpui::UniformListScrollHandle,
@@ -167,6 +169,8 @@ impl NativeSurface {
     fn new(scene: Scene) -> Self {
         Self {
             scene,
+            scroll_appearance: None,
+            scroll_revision: 0,
             lines: if matches!(scene, Scene::Log | Scene::Scroll) {
                 (0..INITIAL_LOG_LINES)
                     .map(|i| format!("{i:06}  G0 log record").into())
@@ -206,10 +210,24 @@ impl NativeSurface {
     }
 }
 impl gpui::Render for NativeSurface {
-    fn render(&mut self, _: &mut Window, cx: &mut Context<Self>) -> impl gpui::IntoElement {
+    fn render(&mut self, window: &mut Window, cx: &mut Context<Self>) -> impl gpui::IntoElement {
         let background = cx.theme().background;
         let foreground = cx.theme().foreground;
         if matches!(self.scene, Scene::Log | Scene::Scroll) {
+            if gpui::FastScrollViewport::declarations_enabled() {
+                // This list is append-only. Length identifies its content revision.
+                let appearance = (
+                    self.lines.len(),
+                    window.text_style(),
+                    foreground,
+                    background,
+                    window.rem_size(),
+                );
+                if self.scroll_appearance.as_ref() != Some(&appearance) {
+                    self.scroll_appearance = Some(appearance);
+                    self.scroll_revision += 1;
+                }
+            }
             let lines = self.lines.clone();
             return gpui::div()
                 .size_full()
@@ -222,7 +240,8 @@ impl gpui::Render for NativeSurface {
                             .collect::<Vec<_>>()
                     })
                     .size_full()
-                    .track_scroll(&self.scroll),
+                    .track_scroll(&self.scroll)
+                    .scroll_damage_revision(self.scroll_revision),
                 )
                 .into_any_element();
         }

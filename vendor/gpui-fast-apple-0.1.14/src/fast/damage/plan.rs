@@ -20,6 +20,7 @@ mod cache;
 mod fixed;
 mod hover_order;
 pub(crate) mod scroll;
+pub(crate) mod scroll_declared;
 mod views;
 pub(crate) use cache::Cache;
 use std::hash::{Hash, Hasher};
@@ -308,7 +309,7 @@ fn is_unit(t: &TransformationMatrix) -> bool {
 
 /// The box of where `t` takes `bounds`. The matrix is read both ways round
 /// (rows or columns first), so that the box holds whichever the shader does.
-fn transformed(bounds: &Bounds<ScaledPixels>, t: &TransformationMatrix) -> Area {
+pub(super) fn transformed(bounds: &Bounds<ScaledPixels>, t: &TransformationMatrix) -> Area {
     let area = Area::of(bounds);
     if is_unit(t) {
         return area;

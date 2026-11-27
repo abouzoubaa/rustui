@@ -1844,9 +1844,7 @@ pub(crate) fn command_encoder_for_damage_probe(
         color_attachment.setLoadAction(MTLLoadAction::Load);
     }
 
-    if probe_copy {
-        crate::fast::damage::copy_gpu::attach(command_buffer, &render_pass_descriptor);
-    }
+    crate::fast::damage::copy_gpu::attach(command_buffer, &render_pass_descriptor, probe_copy);
     let command_encoder = command_buffer
         .renderCommandEncoderWithDescriptor(&render_pass_descriptor)
         .context("creating render command encoder")?;

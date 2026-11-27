@@ -375,6 +375,9 @@ impl Scene {
     }
 }
 
+pub(super) fn current_scroll_owner() -> u64 {
+    SOURCE.with(|s| s.get().scroll_owner)
+}
 pub(super) fn with_scroll_owner<R>(id: u64, paint: impl FnOnce() -> R) -> R {
     let _restore = Restore(SOURCE.with(|s| {
         s.replace(Source {

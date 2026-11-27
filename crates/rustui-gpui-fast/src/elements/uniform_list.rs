@@ -43,6 +43,7 @@ where
         item_count,
         item_to_measure_index: 0,
         render_items: Box::new(render_range),
+        damage_revision: None,
         decorations: Vec::new(),
         interactivity: Interactivity {
             element_id: Some(id),
@@ -57,6 +58,7 @@ where
 
 /// A list element for efficiently laying out and displaying a list of uniform-height elements.
 pub struct UniformList {
+    damage_revision: Option<u64>,
     item_count: usize,
     item_to_measure_index: usize,
     render_items: Box<
@@ -71,6 +73,7 @@ pub struct UniformList {
 
 /// Frame state used by the [UniformList].
 pub struct UniformListFrameState {
+    row_height: Pixels,
     items: SmallVec<[AnyElement; 32]>,
     decorations: SmallVec<[AnyElement; 2]>,
 }
@@ -327,6 +330,7 @@ impl Element for UniformList {
         (
             layout_id,
             UniformListFrameState {
+                row_height: Pixels::default(),
                 items: SmallVec::new(),
                 decorations: SmallVec::new(),
             },
@@ -377,6 +381,7 @@ impl Element for UniformList {
 
         let shared_scroll_offset = self.interactivity.scroll_offset.clone().unwrap();
         let item_height = longest_item_size.height;
+        frame_state.row_height = item_height;
         let shared_scroll_to_item = self.scroll_handle.as_mut().and_then(|handle| {
             let mut handle = handle.0.borrow_mut();
             handle.last_item_size = Some(ItemSize {
@@ -606,6 +611,12 @@ impl Element for UniformList {
             window,
             cx,
             |_, window, cx| {
+                if let Some(revision) = self.damage_revision
+                    && self.decorations.is_empty()
+                    && crate::FastScrollViewport::declarations_enabled()
+                {
+                    window.declare_scroll_rows(revision, request_layout.row_height);
+                }
                 crate::fast::layers::lists::begin_paint_rows(window, cx, global_id);
                 for item in &mut request_layout.items {
                     crate::fast::layers::lists::paint_row(window, cx, None, |window, cx| {
@@ -672,6 +683,15 @@ impl<T: UniformListDecoration + 'static> UniformListDecoration for Entity<T> {
 }
 
 impl UniformList {
+    /// Declare that rows paint the same content at the same row-relative coordinates
+    /// until this revision changes. Include style, layout and all row model changes.
+    /// Each row must paint within one row height of its layout bounds, including overhang.
+    /// Decorated lists continue to use the ordinary scene diff.
+    pub fn scroll_damage_revision(mut self, revision: u64) -> Self {
+        self.damage_revision = Some(revision);
+        self
+    }
+
     /// Selects a specific list item for measurement.
     pub fn with_width_from_item(mut self, item_index: Option<usize>) -> Self {
         self.item_to_measure_index = item_index.unwrap_or(0);
