@@ -17,3 +17,5 @@ pub(crate) mod cpu;
 pub(crate) mod log;
 
 pub(crate) mod encode;
+
+mod diagnosis;

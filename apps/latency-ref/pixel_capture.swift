@@ -78,10 +78,16 @@ private let pixelsLock=NSLock();private var pixelRecords=[[String:Any]]()
  guard ProcessInfo.processInfo.environment["RUSTUI_G5_PIXEL_CAPTURE"]=="1" else{return}
  captureState=0
  Task {@MainActor in
-  let deadline=Date().addingTimeInterval(5);var selected:NSWindow?
-  while selected==nil && Date()<deadline {
-   selected=NSApp.keyWindow ?? NSApp.mainWindow ?? NSApp.windows.first(where:{$0.isVisible && $0.contentView != nil})
-   if selected==nil {try? await Task.sleep(nanoseconds:10_000_000)}
+  let fullScreen = ProcessInfo.processInfo.environment["RUSTUI_G_R1_FULLSCREEN"] == "1"
+  let deadline = Date().addingTimeInterval(5)
+  var selected: NSWindow?
+  while selected == nil && Date() < deadline {
+   let candidate = NSApp.keyWindow ?? NSApp.mainWindow ?? NSApp.windows.first(where: {$0.isVisible && $0.contentView != nil})
+   if let candidate, !fullScreen || candidate.frame == candidate.screen?.frame {
+    selected = candidate
+   } else {
+    try? await Task.sleep(nanoseconds: 10_000_000)
+   }
   }
   guard let window=selected else {fputs("G5 capture has no visible reference window\n",stderr);captureState = -1;return}
   capture=VersionCapture {r in pixelsLock.withLock{pixelRecords.append(r)}}

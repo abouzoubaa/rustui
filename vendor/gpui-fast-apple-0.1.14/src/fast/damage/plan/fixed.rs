@@ -2,12 +2,17 @@
 // RustUI: linear comparison for fixed-position updates before the pinned
 // Longbridge planner (2002081b4a61249a1cef2b8a552f6ba0998d9f52,
 // crates/gpui_windows/src/fast/partial.rs). Original RustUI optimization.
-use super::{Area, MAX_DAMAGE, Plan, Sig, tidy};
+use super::{Area, MAX_DAMAGE, Plan, Sig, Trace, record_damage, tidy};
 
 // Positions, clips and orders must match exactly. Any movement or reordering
 // goes through the general multiset/scroll planner. Changed visual signatures
 // and fresh atlas tiles redraw their old and new reach in paint order.
-pub(super) fn plan(old: &[Sig], new: &[Sig], view: Area) -> Result<Option<Plan>, ()> {
+pub(super) fn plan(
+    old: &[Sig],
+    new: &[Sig],
+    view: Area,
+    trace: Option<&mut Trace>,
+) -> Result<Option<Plan>, ()> {
     if old.len() != new.len() {
         return Err(());
     }
@@ -20,8 +25,17 @@ pub(super) fn plan(old: &[Sig], new: &[Sig], view: Area) -> Result<Option<Plan>,
             damage.extend([old.reach, new.reach]);
         }
     }
+    let trace = trace.map(|trace| {
+        trace.route = "fixed";
+        trace.changed(
+            damage.iter().step_by(2).copied(),
+            damage.iter().skip(1).step_by(2).copied(),
+        );
+        trace
+    });
     let damage = tidy(damage, &view);
     let total: f32 = damage.iter().map(Area::area).sum();
+    record_damage(trace, &damage, total, view);
     Ok((total <= MAX_DAMAGE * view.area()).then_some(Plan {
         shift: None,
         damage,
@@ -66,12 +80,12 @@ pub(super) fn test_fixed() {
         },
     ] {
         assert_eq!(
-            plan(&[old], &[new], view).unwrap(),
-            super::general_plan(&[old], &[new], view)
+            plan(&[old], &[new], view, None).unwrap(),
+            super::general_plan(&[old], &[new], view, None)
         );
     }
-    assert!(plan(&[old], &[], view).is_err());
-    assert!(plan(&[old], &[Sig { order: 2, ..old }], view).is_err());
+    assert!(plan(&[old], &[], view, None).is_err());
+    assert!(plan(&[old], &[Sig { order: 2, ..old }], view, None).is_err());
     assert!(
         plan(
             &[old],
@@ -79,7 +93,8 @@ pub(super) fn test_fixed() {
                 bounds: Area { y0: 11., ..bounds },
                 ..old
             }],
-            view
+            view,
+            None,
         )
         .is_err()
     );
@@ -90,7 +105,8 @@ pub(super) fn test_fixed() {
                 mask: bounds,
                 ..old
             }],
-            view
+            view,
+            None,
         )
         .is_err()
     );
@@ -102,7 +118,8 @@ pub(super) fn test_fixed() {
                 reach: view,
                 ..old
             }],
-            view
+            view,
+            None,
         )
         .unwrap(),
         None
