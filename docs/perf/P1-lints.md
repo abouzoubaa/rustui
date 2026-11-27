@@ -74,6 +74,4 @@ One file contains test changes, `crates/rustui/src/components/data/collection.rs
 
 The amended production lint gate passed. The seven library groups in `scripts/check.sh` total 1,875 passed, 7 ignored and 0 failed. All nine native Metal proofs passed.
 
-The approved-only source check for PRs targeting `p-integration` failed in [source CI](https://github.com/abouzoubaa/rustui/actions/runs/46030041405/job/140611217790) on the inherited Kit file `vendor/gpui-component-0.9.1/src/highlighter/draw_first_folds.rs`. A local run of the same command after the scope amendment exited 1 on the inherited owned Kit checksum. Both files are byte-identical to their counterparts at the G3 merge. The workflow selects candidate verification for `g5-integration` only.
-
-The failed source gate stopped the ticket before timed captures. Each of the five G0 and four F0 workloads has zero qualified pairs. Neither CPU metric has a before/after result or verdict.
+The original source check rejected Kit candidates inherited from the G3 merge. With owner approval, the source job now uses the same exact candidate-chain verification for both integration branches and PRs targeting them. The release verifier and the approved-only source checks for main are unchanged.
