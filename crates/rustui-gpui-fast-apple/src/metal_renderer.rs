@@ -1157,8 +1157,8 @@ impl MetalRenderer {
             return Ok(command_buffer);
         }
         let command_queue = self.command_queue.clone();
-        let command_buffer = command_queue
-            .commandBuffer()
+        let command_buffer = crate::fast::damage::shift::command_for(texture)
+            .or_else(|| command_queue.commandBuffer())
             .context("creating command buffer")?;
         crate::fast::dynamic_textures::encode_uploads(&command_buffer);
         let alpha = if self.opaque { 1. } else { 0. };

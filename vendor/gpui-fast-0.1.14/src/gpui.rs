@@ -130,6 +130,8 @@ pub use fast::composition::{
     PlatformCompositionSurface, PlatformCompositionSurfaceContent, PlatformSurfaceAttachment,
     WindowComposition, WindowCompositionSurface,
 };
+#[doc(hidden)]
+pub use fast::damage::scroll::{FastScrollViewport, fast_scroll_shift_enabled};
 pub use fast::dynamic_textures::{
     DynamicTexture, DynamicTextureId, DynamicTexturePlatform, set_dynamic_texture_platform,
 };

@@ -64,6 +64,7 @@ pub(crate) enum Mode {
     Copy,
     Same,
     Partial(Area),
+    Shift,
 }
 impl Mode {
     pub(crate) fn label(self) -> &'static str {
@@ -71,6 +72,7 @@ impl Mode {
             Self::Direct => "direct",
             Self::Retained => "retained",
             Self::Copy => "copy",
+            Self::Shift => "shift",
             Self::Same => "skip",
             Self::Partial(_) => "partial",
         }
@@ -102,6 +104,7 @@ impl Geometry {
     }
 }
 struct Snapshot {
+    scrolls: Vec<gpui::FastScrollViewport>,
     geometry: Geometry,
     signatures: Vec<Sig>,
     partitions: [usize; 7],
@@ -112,6 +115,9 @@ struct Snapshot {
 #[derive(Default)]
 pub(crate) struct State {
     pub(super) target: Option<Target>,
+    spare: Option<Target>,
+    scroll_scratch: plan::scroll::Scratch,
+    repair_scene: Option<Box<Scene>>,
     budget: OnceLock<Arc<super::budget::WindowBudget>>,
     allocation_failure: Option<(Size<DevicePixels>, super::budget::Failure)>,
     snapshot: Option<Snapshot>,
@@ -142,6 +148,7 @@ pub(crate) struct State {
     last_magenta_prefills: usize,
 }
 pub(crate) struct Prepared {
+    scroll: Option<plan::scroll::ScrollPlan>,
     pub(crate) mode: Mode,
     pub(crate) reason: &'static str,
     snapshot: Option<Snapshot>,
@@ -156,6 +163,7 @@ impl Prepared {
     pub(crate) fn direct() -> Self {
         Self {
             mode: Mode::Direct,
+            scroll: None,
             reason: "disabled",
             snapshot: None,
             large: false,
@@ -222,6 +230,7 @@ impl State {
     }
     pub(crate) fn invalidate(&mut self) {
         self.target = None;
+        self.spare = None;
         self.verification = None;
         self.verify_history = None;
         self.snapshot = None;
@@ -276,6 +285,11 @@ impl State {
         }
         self.retry_if_resized(size);
         let bytes = super::budget::bytes(size.width.0 as usize, size.height.0 as usize);
+        let bytes = if gpui::fast_scroll_shift_enabled() {
+            bytes.saturating_mul(2)
+        } else {
+            bytes
+        };
         if bytes > super::budget::CEILING && self.allocation_failure.is_none() {
             self.allocation_failed(
                 size,
@@ -293,9 +307,8 @@ impl State {
             };
         }
         let mut cpu = super::cpu::Measure::new("off_path");
-        // This Metal backend cannot execute a scroll shift. A measured change
-        // to a real scroll offset is sufficient to decline before collection.
-        if scene.fast_damage_scroll_changed() {
+        // When shift is off, reject a changed scroll offset before signature collection.
+        if scene.fast_damage_scroll_changed() && !gpui::fast_scroll_shift_enabled() {
             cpu.reason = "shift_unsupported";
             self.invalidate();
             self.previous_large = true;
@@ -349,6 +362,7 @@ impl State {
             // frame, snapshot that scene for an adjacent-frame recovery probe;
             // comparing with a 30-frame-old scene could falsely restart back-off.
             let snapshot = tail.then(|| Snapshot {
+                scrolls: scene.fast_scroll_viewports().to_vec(),
                 geometry,
                 signatures: Vec::new(),
                 partitions: [0; 7],
@@ -376,8 +390,11 @@ impl State {
         // Scene metadata remains comparable after Direct invalidates kept pixels.
         // Pixel validity is checked only when selecting Copy, Skip or Partial.
         if !comparable {
+            if gpui::fast_scroll_shift_enabled() {
+                self.previous_large = false;
+            }
             super::timing::plan_stage(super::timing::PlanStage::PrimeSnapshot);
-            cpu.reason = if uploads.tiles.is_none() {
+            cpu.reason = if uploads.tiles.is_none() && !gpui::fast_scroll_shift_enabled() {
                 "atlas_lost"
             } else {
                 "prime"
@@ -388,6 +405,7 @@ impl State {
                 .is_none_or(|s| s.geometry != geometry)
             {
                 self.target = None;
+                self.spare = None;
                 if self
                     .snapshot
                     .as_ref()
@@ -405,6 +423,7 @@ impl State {
                     Mode::Retained
                 },
                 snapshot: Some(Snapshot {
+                    scrolls: scene.fast_scroll_viewports().to_vec(),
                     geometry,
                     signatures: Vec::new(),
                     partitions: [0; 7],
@@ -479,6 +498,68 @@ impl State {
         });
         let prior = self.snapshot.as_ref().unwrap();
         super::timing::plan_stage(super::timing::PlanStage::FixedCompare);
+        if gpui::fast_scroll_shift_enabled() {
+            use plan::scroll::Decision;
+            let decision = plan::scroll::plan(
+                &prior.signatures,
+                &signatures,
+                &prior.scrolls,
+                scene.fast_scroll_viewports(),
+                geometry.view(),
+                &mut self.scroll_scratch,
+            );
+            if !matches!(decision, Decision::NoMotion) {
+                let (mode, reason, scroll) = match decision {
+                    Decision::Direct(reason) => (Mode::Direct, reason, None),
+                    Decision::Planned(mut scroll)
+                        if self.target.as_ref().is_some_and(|t| t.valid) =>
+                    {
+                        for rect in scene.extra_damage_rects() {
+                            scroll.dirty(Area::of(rect).grown(1.).pixels().and(&geometry.view()));
+                        }
+                        let mode = if scroll.shifted {
+                            Mode::Shift
+                        } else {
+                            Mode::Partial(scroll.bounds().unwrap_or(geometry.view()))
+                        };
+                        (mode, scroll.reason, Some(scroll))
+                    }
+                    Decision::Planned(_) => (Mode::Retained, "prime", None),
+                    Decision::NoMotion => unreachable!(),
+                };
+                if let Some(mut t) = trace {
+                    t.route = "scroll";
+                    t.reason = reason;
+                    if let Some(ref p) = scroll {
+                        t.damage(&p.damage);
+                    }
+                    t.emit(
+                        mode.label(),
+                        geometry.view(),
+                        scroll.as_ref().and_then(|p| p.bounds()),
+                    );
+                }
+                cpu.reason = reason;
+                cpu.plan_ms = plan_start.elapsed().as_secs_f64() * 1000.;
+                return Prepared {
+                    mode,
+                    reason,
+                    scroll,
+                    snapshot: Some(Snapshot {
+                        geometry,
+                        scrolls: scene.fast_scroll_viewports().to_vec(),
+                        signatures,
+                        partitions: self.cache.partitions,
+                        order_identities: None,
+                        generation: uploads.generation,
+                        deferred: None,
+                    }),
+                    plannable: true,
+                    probe,
+                    ..Prepared::direct()
+                };
+            }
+        }
         let quick = scene
             .has_damage_declarations()
             .then(|| {
@@ -579,6 +660,7 @@ impl State {
                 _ => policy.reason.unwrap_or("large"),
             },
             snapshot: Some(Snapshot {
+                scrolls: scene.fast_scroll_viewports().to_vec(),
                 geometry,
                 signatures,
                 partitions: self.cache.partitions,
@@ -733,6 +815,15 @@ pub(crate) fn render_with_instances(
                 }
             }
         }
+        if gpui::fast_scroll_shift_enabled() && mode != Mode::Direct && state.spare.is_none() {
+            match state.allocate(renderer, size) {
+                Ok(t) => state.spare = Some(t),
+                Err(f) => {
+                    state.allocation_failed(size, f);
+                    mode = Mode::Direct;
+                }
+            }
+        }
         let mut command = match mode {
             Mode::Direct => {
                 if let Some(kept) = &mut state.target {
@@ -744,6 +835,29 @@ pub(crate) fn render_with_instances(
                     renderer.render_frame(scene, target, size)?
                 }
             }
+            Mode::Shift | Mode::Retained | Mode::Copy | Mode::Partial(_)
+                if gpui::fast_scroll_shift_enabled() =>
+            {
+                let magenta = false;
+                #[cfg(any(test, feature = "test-support"))]
+                let magenta = state.magenta_prefill || magenta;
+                let cmd = super::shift::render(
+                    renderer,
+                    scene,
+                    target,
+                    size,
+                    mode,
+                    prepared.scroll.as_ref(),
+                    prepared.snapshot.as_ref().map(|s| s.signatures.as_slice()),
+                    &mut state.repair_scene,
+                    state.target.as_ref().context("missing scroll source")?,
+                    state.spare.as_mut().context("missing scroll destination")?,
+                    magenta,
+                )?;
+                std::mem::swap(&mut state.target, &mut state.spare);
+                cmd
+            }
+            Mode::Shift => anyhow::bail!("shift selected with scroll shift disabled"),
             Mode::Retained | Mode::Copy | Mode::Partial(_) => {
                 let kept = state.target.as_mut().context("missing retained texture")?;
                 let command = if mode == Mode::Copy {
@@ -799,12 +913,11 @@ pub(crate) fn render_with_instances(
         };
         if state.enabled() {
             let failed = state.failed.get_or_insert_with(Default::default).clone();
-            let resources = Cell::new(
-                state
-                    .target
+            let resources = Cell::new(Some([&state.target, &state.spare].map(|target| {
+                target
                     .as_ref()
-                    .map(|t| (t.texture.clone(), t.reservation.clone())),
-            );
+                    .map(|t| (t.texture.clone(), t.reservation.clone()))
+            })));
             let block = RcBlock::new(
                 move |buffer: NonNull<ProtocolObject<dyn MTLCommandBuffer>>| {
                     // SAFETY: Metal supplies the live completed command buffer.

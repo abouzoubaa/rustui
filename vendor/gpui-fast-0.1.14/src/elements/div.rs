@@ -2725,7 +2725,11 @@ impl Interactivity {
                                             }
                                         }
 
-                                        f(&style, window, cx);
+                                        window.with_damage_scroll(
+                                            self.scroll_offset.as_ref(),
+                                            bounds,
+                                            |window| f(&style, window, cx),
+                                        );
 
                                         if let Some(_hitbox) = hitbox {
                                             #[cfg(any(feature = "inspector", debug_assertions))]

@@ -12,6 +12,7 @@ use std::{
 
 #[derive(Clone, Copy, Default)]
 struct Source {
+    scroll_owner: u64,
     id: u64,
     replayed: bool,
     region: u32,
@@ -29,6 +30,7 @@ struct Entry {
 #[derive(Clone, Default)]
 pub(crate) struct Provenance {
     scroll_changed: bool,
+    pub(super) scrolls: Vec<super::scroll::FastScrollViewport>,
     pub(super) extra_damage: Vec<crate::Bounds<crate::ScaledPixels>>,
     pub(super) regions: Vec<super::declared::DamageRegion>,
     // Rounded-clip compilation retains original operations for future replay,
@@ -38,7 +40,7 @@ pub(crate) struct Provenance {
     kinds: [Vec<Entry>; 8],
 }
 thread_local! {
-    static SOURCE:Cell<Source> = const { Cell::new(Source{id:0,region:0,replayed:false,element:0,view:0}) };
+    static SOURCE:Cell<Source> = const { Cell::new(Source{scroll_owner:0,id:0,region:0,replayed:false,element:0,view:0}) };
     #[cfg(any(test, feature="test-support"))]
     static TEST_ENABLED:Cell<bool> = const { Cell::new(false) };
 }
@@ -89,6 +91,15 @@ impl Provenance {
         self.regions.get(id as usize).copied()
     }
     fn import(&mut self, original: &Self, mut source: Source) -> Source {
+        if source.scroll_owner != 0
+            && !self.scrolls.iter().any(|v| v.id == source.scroll_owner)
+            && let Some(v) = original
+                .scrolls
+                .iter()
+                .find(|v| v.id == source.scroll_owner)
+        {
+            self.scrolls.push(*v);
+        }
         if let Some(i) = source.region.checked_sub(1) {
             let regions = original
                 .operation_regions
@@ -102,6 +113,7 @@ impl Provenance {
         self.extra_damage.clear();
         self.regions.clear();
         self.operation_regions = None;
+        self.scrolls.clear();
         self.scroll_changed = false;
         self.operations.clear();
         for kind in &mut self.kinds {
@@ -118,6 +130,7 @@ impl Provenance {
     }
     pub(crate) fn restore_operations(&mut self, original: Self) {
         self.extra_damage = original.extra_damage;
+        self.scrolls = original.scrolls;
         self.scroll_changed = original.scroll_changed;
         self.operation_regions = original.operation_regions.or(Some(original.regions));
         self.operations = original.operations;
@@ -359,5 +372,28 @@ impl Scene {
         );
         paint(self);
         record(self, ClipOperation::End);
+    }
+}
+
+pub(super) fn with_scroll_owner<R>(id: u64, paint: impl FnOnce() -> R) -> R {
+    let _restore = Restore(SOURCE.with(|s| {
+        s.replace(Source {
+            scroll_owner: id,
+            ..s.get()
+        })
+    }));
+    paint()
+}
+impl Scene {
+    #[doc(hidden)]
+    pub fn fast_scroll_owner(&self, kind: usize, index: usize) -> u64 {
+        self.fast_damage.kinds[kind]
+            .get(index)
+            .map_or(0, |e| e.source.scroll_owner)
+    }
+    #[cfg(any(test, feature = "test-support"))]
+    #[doc(hidden)]
+    pub fn with_test_scroll_owner<R>(id: u64, paint: impl FnOnce() -> R) -> R {
+        with_scroll_owner(id, paint)
     }
 }

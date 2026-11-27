@@ -3,3 +3,5 @@
 pub(crate) mod replay;
 
 pub(crate) mod declared;
+
+pub(crate) mod scroll;

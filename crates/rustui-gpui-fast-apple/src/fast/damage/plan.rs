@@ -19,6 +19,7 @@ use std::collections::HashSet;
 mod cache;
 mod fixed;
 mod hover_order;
+pub(crate) mod scroll;
 mod views;
 pub(crate) use cache::Cache;
 use std::hash::{Hash, Hasher};
@@ -196,9 +197,12 @@ pub(crate) struct Sig {
     /// tail, a pixel of antialiasing included) within its mask.
     bounds: Area,
     mask: Area,
-    reach: Area,
+    pub(super) reach: Area,
     /// The same colour everywhere, through any mask.
     plain: bool,
+    owner: u64,
+    opaque: bool,
+    batch_rank: u8,
     /// Shows something new whatever its bytes say.
     fresh: bool,
 }
@@ -350,6 +354,9 @@ fn sig(
         mask,
         reach: bounds.grown(grow).and(&mask),
         plain: false,
+        owner: 0,
+        opaque: false,
+        batch_rank: 0,
         fresh: false,
     }
 }
@@ -403,7 +410,8 @@ pub(crate) fn signatures_cached(
             + scene.paths.len(),
     );
     let mut partitions = [0; 7];
-    let declared = cache.declared && scene.has_damage_declarations();
+    let scroll = !scene.fast_scroll_viewports().is_empty();
+    let declared = !scroll && cache.declared && scene.has_damage_declarations();
     for (index, q) in scene.quads.iter().enumerate() {
         if declared && let Some(region) = scene.fast_damage_region(0, index) {
             let footprint = Area::of(&q.bounds).and(&Area::of(&q.content_mask.bounds));
@@ -675,6 +683,23 @@ pub(crate) fn signatures_cached(
         );
     }
     partitions[6] = out.len();
+    if scroll {
+        let mut start = 0;
+        for (kind, end) in partitions.iter().copied().enumerate() {
+            for (index, s) in out[start..end].iter_mut().enumerate() {
+                s.owner = scene.fast_scroll_owner(kind, index);
+                // GPUI's BatchIterator orders equal draw orders by PrimitiveKind.
+                s.batch_rank = [1, 0, 3, 4, 5, 6, 2][kind];
+                s.opaque = kind == 0
+                    && s.plain
+                    && scene.quads[index]
+                        .background
+                        .as_solid()
+                        .is_some_and(|color| color.a >= 1.);
+            }
+            start = end;
+        }
+    }
     cache.partitions = partitions;
     Some(out)
 }
@@ -1167,6 +1192,9 @@ mod tests {
             mask,
             reach: bounds.and(&mask),
             plain: false,
+            owner: 0,
+            opaque: false,
+            batch_rank: 0,
             fresh: false,
         }
     }
