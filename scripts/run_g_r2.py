@@ -24,9 +24,11 @@ def thermal(path):
 
 
 def capture(out, scene, arm, seconds, frozen, probe=False):
-    native = os.environ.get("RUSTUI_G_FS1_SEQUENCE") in ("A", "B")
+    sequence = os.environ.get("RUSTUI_G_FS1_SEQUENCE")
+    native = sequence in ("A", "B")
+    windowed = sequence == "C"
     os.environ.update(
-        RUSTUI_G_R1_FULLSCREEN=str(int(not native)),
+        RUSTUI_G_R1_FULLSCREEN=str(int(not native and not windowed)),
         RUSTUI_G_R1_TRACE="0",
         RUSTUI_G_R2_LOAD=str(int(not probe)),
         RUSTUI_G_R2_ATTRIBUTION=str(int(not probe)),
@@ -38,7 +40,8 @@ def capture(out, scene, arm, seconds, frozen, probe=False):
     log = list(run_g_r0.frames(out))
     start, _ = [row for prefix, row in log if prefix == "RUSTUI_G0_LOG "]
     drawable = tuple(round(start[axis] * start["scale"]) for axis in ("width", "height"))
-    if drawable != ((3456, 2168) if native else (3456, 2234)):
+    expected = (2400, 1600) if windowed else (3456, 2168) if native else (3456, 2234)
+    if drawable != expected:
         raise RuntimeError(f"unexpected drawable {drawable} in {out}")
     if probe:
         return result
