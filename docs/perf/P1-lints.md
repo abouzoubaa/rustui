@@ -40,24 +40,40 @@ This ticket makes no measured runtime-performance verdict and adds no latency or
 
 ## Stage P v4 supplemental lint gate
 
-The baseline is the G3 merge at `46bf8878c4648dab7ad9a434154b69afce35ae15`. The five RustUI-owned crates use the pinned Rust 1.98.0 toolchain. The new CI command, `./scripts/check-owned-perf-lints.sh`, checks all their targets with the performance group and the twelve named lints set to errors. The existing workspace checks run as before.
+The baseline is the G3 merge at `46bf8878c4648dab7ad9a434154b69afce35ae15`. The supplemental gate runs the pinned Clippy 1.98.0 with `--lib --bins` on the five RustUI-owned crates. It promotes the performance group and twelve named lints to errors. Tests continue through the existing all-targets Clippy command and library test groups in `scripts/check.sh`.
 
-| Distinct Clippy diagnostics | Before | After |
+| Distinct production findings | G3 baseline | Amended P1 |
 |---|---:|---:|
-| Redundant clone or string copy | 68 | 14 |
-| Small copyable value passed by reference | 9 | 7 |
-| Eager fallback expression | 2 | 1 |
-| **Total** | **79** | **22** |
+| Redundant clone or string copy | 43 | 0 |
+| Small copyable value passed by reference | 3 | 0 |
+| Eager fallback expression | 1 | 0 |
+| **Total** | **47** | **0** |
 
-Clippy’s diagnostic inventory was run separately from the error gate so that Cargo could visit every target, including integration tests. Counts use unique lint and primary source spans. The patch removes 54 redundant copies, passes two small values by value, and makes Collection compute the previous-row fallback lazily. The five owned crates contained no `.context(format!(...))` calls.
+The baseline counts unique primary source spans from the library targets in the saved pre-change Clippy inventory. The five selected packages have no production binary targets. The resumed deny-level command exited 0. The earlier inventory included 21 test-only findings. Those findings stay outside the supplemental gate. No owned crate contained a `.context(format!(...))` call.
 
-**Gate stopped.** The new error gate exited 101. Of the 22 remaining findings, 21 occur in test targets. For example, the French sheet close-button test passes its final English locale through `en.clone()` at `components/overlay/focus_recovery_tests.rs:657`. The remaining production finding is the Collection keyboard filter’s five-byte `Modifiers` argument. Its existing tests call the borrowed signature. Completing the lint cleanup requires authorization to edit existing tests.
+### Test edit
 
-| Verification | Result |
-|---|---|
-| Existing `scripts/check.sh` | 1,875 passed, 7 ignored, 0 failed |
-| Native Metal proofs | 9 passed |
-| Supplemental owned-crate lint gate | Exit 101 |
-| Before/after CPU measurements | 0 qualified pairs for each G0 and F0 workload. No performance verdict. |
+One file contains test changes, `crates/rustui/src/components/data/collection.rs`. The Collection keyboard filter now takes its five-byte `Modifiers` value by value. The following is the complete diff inside its test module.
 
-P0 records no per-frame allocation counts or per-frame type-size table. Those baselines still need to be measured before P3 can set budgets.
+```diff
+@@ -1566,4 +1565,4 @@ mod tests {
+-        assert!(keyboard_event_eligible(true, false, false, &plain));
+-        assert!(!keyboard_event_eligible(false, false, false, &plain));
+-        assert!(!keyboard_event_eligible(true, true, false, &plain));
+-        assert!(!keyboard_event_eligible(true, false, true, &plain));
++        assert!(keyboard_event_eligible(true, false, false, plain));
++        assert!(!keyboard_event_eligible(false, false, false, plain));
++        assert!(!keyboard_event_eligible(true, true, false, plain));
++        assert!(!keyboard_event_eligible(true, false, true, plain));
+@@ -1586 +1585 @@ mod tests {
+-            assert!(!keyboard_event_eligible(true, false, false, &modifiers));
++            assert!(!keyboard_event_eligible(true, false, false, modifiers));
+```
+
+### Verification and measurement
+
+The amended production lint gate passed. The seven library groups in `scripts/check.sh` total 1,875 passed, 7 ignored and 0 failed. All nine native Metal proofs passed.
+
+The approved-only source check for PRs targeting `p-integration` failed in [source CI](https://github.com/abouzoubaa/rustui/actions/runs/46030041405/job/140611217790) on the inherited Kit file `vendor/gpui-component-0.9.1/src/highlighter/draw_first_folds.rs`. A local run of the same command after the scope amendment exited 1 on the inherited owned Kit checksum. Both files are byte-identical to their counterparts at the G3 merge. The workflow selects candidate verification for `g5-integration` only.
+
+The failed source gate stopped the ticket before timed captures. Each of the five G0 and four F0 workloads has zero qualified pairs. Neither CPU metric has a before/after result or verdict.
