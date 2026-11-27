@@ -201,6 +201,7 @@ def main():
                 out.write(b'\n')
                 out.write(source.read_bytes())
     assert frozen=={str(f):hashlib.sha256(f.read_bytes()).hexdigest() for f in artifacts},'build changed during capture'
+    g5_budget.check_damage_allocations(log)
     after=g5_latency.collect_load(str(a.output/'load-end.txt'),[str(binary)],None)
     x=g5_budget.analyse_appkit(log) if a.app=='appkit' else g5_budget.analyse(log)
     g5_latency.annotate_load(x,before,after)

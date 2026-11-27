@@ -6,6 +6,14 @@ from pathlib import Path
 import g5_latency as common
 
 
+def check_damage_allocations(log):
+    """An allocation failure invalidates a test capture even if a later resize recovers."""
+    with open(log) as records:
+        for record in records:
+            if record.startswith(("RUSTUI_DAMAGE_WARNING ", "RUSTUI_DAMAGE_CAPTURE_FAILED ")):
+                raise RuntimeError(f"damage allocation failed during capture: {record.strip()}")
+
+
 def load(path):
     data=common.records(path)
     data['L1_NATIVE ']=[json.loads(l[len('L1_NATIVE '):]) for l in Path(path).read_text().splitlines() if l.startswith('L1_NATIVE ')]

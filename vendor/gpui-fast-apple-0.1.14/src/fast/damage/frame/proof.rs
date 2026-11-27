@@ -5,7 +5,7 @@
 // RustUI modifications: headless byte comparisons and real display-link skip assertions.
 use super::super::verify::Readback;
 use super::*;
-use objc2_metal::{MTLDevice, MTLResource, MTLStorageMode};
+use objc2_metal::{MTLResource, MTLStorageMode};
 use std::sync::Mutex;
 static PROOF_LOCK: Mutex<()> = Mutex::new(());
 
@@ -129,53 +129,59 @@ fn copy_and_fallbacks() -> Result<()> {
     let command = render(&mut renderer, &scene, &target, size, synchronous)?;
     assert_eq!(finish(&renderer, &command, &target)?, expected);
     assert_eq!(renderer.damage.last_mode, Mode::Direct);
-    // Occupy this physical device's complete retained budget, then prove the
-    // production allocation path falls back without changing any pixels.
+    // An explicit allocation failure renders Direct and makes the test read fail.
     renderer.damage.invalidate();
-    let budget = retained::reserve(renderer.device.registryID(), retained::DEVICE_LIMIT)
-        .context("exclusive test budget")?;
-    let denied = prepare(&mut renderer, &scene, false);
-    assert_eq!(denied.mode, Mode::Retained);
-    let command = render(&mut renderer, &scene, &target, size, denied)?;
-    assert_eq!(
-        renderer.damage.last_mode,
-        Mode::Direct,
-        "over budget must draw whole"
-    );
-    assert!(renderer.damage.target.is_none());
-    assert_eq!(finish(&renderer, &command, &target)?, expected);
-    let no_kept = renderer.damage.choose(
+    let quota = renderer
+        .damage
+        .budget_handle()
+        .reserve(super::super::budget::CEILING, super::super::budget::CEILING)?;
+    for reason in ["budget_exceeded", "budget_exceeded"] {
+        let prepared = prepare(&mut renderer, &scene, false);
+        let err = render(&mut renderer, &scene, &target, size, prepared).unwrap_err();
+        assert_eq!(
+            err.downcast_ref::<super::super::budget::Failure>()
+                .unwrap()
+                .reason
+                .label(),
+            reason
+        );
+        assert_eq!(renderer.damage.last_mode, Mode::Direct);
+        let read = renderer.command_queue.commandBuffer().unwrap();
+        assert_eq!(finish(&renderer, &read, &target)?, expected);
+    }
+    drop(quota);
+    let bigger = gpui::size(DevicePixels(80), DevicePixels(64));
+    renderer.damage.resized(bigger);
+    let larger_target = retained::texture(&renderer.device, 80, 64)?;
+    renderer.damage.fail_allocation = true;
+    let prep = renderer.damage.choose(
         &renderer.sprite_atlas,
         &scene,
-        size,
+        bigger,
         1.,
-        renderer.opaque,
+        true,
         false,
-        false,
+        true,
     );
-    assert_ne!(
-        no_kept.mode,
-        Mode::Same,
-        "over-budget frames must draw whole"
-    );
-    let command = render(&mut renderer, &scene, &target, size, no_kept)?;
-    assert_eq!(renderer.damage.last_mode, Mode::Direct);
-    assert_eq!(finish(&renderer, &command, &target)?, expected);
-    drop(budget);
-    renderer.damage.invalidate();
-    renderer.damage.fail_allocation = true;
-    for _ in 0..2 {
-        let failed = prepare(&mut renderer, &scene, false);
-        let command = render(&mut renderer, &scene, &target, size, failed)?;
-        assert_eq!(
-            renderer.damage.last_mode,
-            Mode::Direct,
-            "allocation errors must still present a whole draw"
-        );
-        assert!(renderer.damage.target.is_none());
-        assert_eq!(finish(&renderer, &command, &target)?, expected);
-    }
+    assert!(render(&mut renderer, &scene, &larger_target, bigger, prep).is_err());
     renderer.damage.fail_allocation = false;
+    let same = renderer.damage.choose(
+        &renderer.sprite_atlas,
+        &scene,
+        bigger,
+        1.,
+        true,
+        false,
+        true,
+    );
+    assert_eq!((same.mode, same.reason), (Mode::Direct, "alloc_failed"));
+    renderer.damage.resized(size);
+    let retry = prepare(&mut renderer, &scene, false);
+    assert_eq!(retry.mode, Mode::Retained);
+    let cmd = render(&mut renderer, &scene, &target, size, retry)?;
+    assert_eq!(finish(&renderer, &cmd, &target)?, expected);
+    assert!(renderer.damage.target.as_ref().unwrap().valid);
+    renderer.damage.invalidate();
     // A stale-size display-link drawable also forces the direct path.
     let mut stale = prepare(&mut renderer, &scene, false);
     stale.snapshot.as_mut().unwrap().geometry.width = 65;
@@ -234,7 +240,7 @@ impl MetalRenderer {
     pub fn test_damage_frames() -> Result<()> {
         let _serial = PROOF_LOCK.lock().unwrap();
         objc2::rc::autoreleasepool(|_| {
-            retained::test_budget();
+            super::super::budget::test_budget();
             preacquisition_instances_match_normal_frame()?;
             copy_and_fallbacks()?;
             skip_drawable()
@@ -674,11 +680,20 @@ fn verify_failure_falls_back() -> Result<()> {
     let expected = finish(&renderer, &whole, &target)?;
     let prepared = prepare(&mut renderer, &scene, false);
     assert_eq!(prepared.mode, Mode::Retained);
-    let command = render(&mut renderer, &scene, &target, size, prepared)?;
+    let error = render(&mut renderer, &scene, &target, size, prepared).unwrap_err();
+    assert_eq!(
+        error
+            .downcast_ref::<super::super::budget::Failure>()
+            .unwrap()
+            .reason
+            .label(),
+        "alloc_failed"
+    );
     assert_eq!(renderer.damage.last_mode, Mode::Direct);
-    assert_eq!(finish(&renderer, &command, &target)?, expected);
+    let read = renderer.command_queue.commandBuffer().unwrap();
+    assert_eq!(finish(&renderer, &read, &target)?, expected);
     assert!(
-        renderer
+        !renderer
             .damage
             .failed
             .as_ref()
@@ -686,6 +701,28 @@ fn verify_failure_falls_back() -> Result<()> {
             .disabled
             .load(Ordering::Acquire)
     );
+    renderer.damage.fail_verification = false;
+    let resized = gpui::size(DevicePixels(80), DevicePixels(64));
+    renderer.damage.resized(resized);
+    let output = retained::texture(&renderer.device, 80, 64)?;
+    let next = renderer.damage.choose(
+        &renderer.sprite_atlas,
+        &scene,
+        resized,
+        1.,
+        true,
+        false,
+        true,
+    );
+    let command = render(&mut renderer, &scene, &output, resized, next)?;
+    command.commit();
+    let verify = renderer
+        .damage
+        .take_verification()
+        .expect("resize retries verification");
+    verify.commit();
+    verify.waitUntilCompleted();
+    assert!(renderer.damage.failed.as_ref().unwrap().record().is_none());
     Ok(())
 }
 impl MetalRenderer {
@@ -983,4 +1020,82 @@ fn declaration_hole_proof() -> Result<()> {
     assert_eq!(failure.mode, "declared_outside");
     assert!((58..70).contains(&failure.y));
     Ok(())
+}
+
+impl MetalRenderer {
+    pub fn test_fs2_drawable_sizes() -> Result<()> {
+        for (w, h) in [(3456, 2168), (5120, 2880), (6016, 3384)] {
+            objc2::rc::autoreleasepool(|_| -> Result<()> {
+                let mut renderer = MetalRenderer::new_headless(Default::default())?;
+                renderer.damage.enabled_override = Some(true);
+                let target = retained::texture(&renderer.device, w, h)?;
+                let size = gpui::size(DevicePixels(w as i32), DevicePixels(h as i32));
+                for changed in [false, true] {
+                    let scene = partial_scene("row hover", changed)?;
+                    let prepared = renderer.damage.choose(
+                        &renderer.sprite_atlas,
+                        &scene,
+                        size,
+                        2.,
+                        true,
+                        false,
+                        true,
+                    );
+                    let planned = prepared.mode;
+                    let reason = prepared.reason;
+                    let command = render(&mut renderer, &scene, &target, size, prepared)?;
+                    command.commit();
+                    command.waitUntilCompleted();
+                    anyhow::ensure!(
+                        command.status() == MTLCommandBufferStatus::Completed,
+                        "GPU failure"
+                    );
+                    println!(
+                        "FS2_SIZE {w}x{h} changed={changed} planned={} reason={reason} actual={} allocated={}",
+                        planned.label(),
+                        renderer.damage.last_mode.label(),
+                        renderer.damage.target.is_some()
+                    );
+                    if !changed {
+                        let kept = renderer.damage.target.as_ref().unwrap();
+                        println!(
+                            "FS2_FOOTPRINT {w}x{h} allocated={} limit={}",
+                            kept.texture.allocatedSize(),
+                            kept.reservation.failed().limit
+                        );
+                    }
+                    assert!(renderer.damage.target.as_ref().unwrap().valid);
+                    if changed {
+                        assert!(matches!(renderer.damage.last_mode, Mode::Partial(_)));
+                    } else {
+                        assert_eq!(renderer.damage.last_mode, Mode::Retained);
+                    }
+                }
+                Ok(())
+            })?;
+        }
+        let mut renderer = MetalRenderer::new_headless(Default::default())?;
+        renderer.damage.enabled_override = Some(true);
+        let huge = gpui::size(DevicePixels(16384), DevicePixels(8193));
+        for _ in 0..3 {
+            let p = renderer.damage.choose(
+                &renderer.sprite_atlas,
+                &scene(),
+                huge,
+                1.,
+                true,
+                false,
+                true,
+            );
+            assert_eq!((p.mode, p.reason), (Mode::Direct, "budget_exceeded"));
+            assert!(renderer.damage.target.is_none());
+        }
+        Ok(())
+    }
+}
+
+#[cfg(test)]
+#[test]
+fn drawable_scaled_budget() {
+    MetalRenderer::test_fs2_drawable_sizes().unwrap();
 }

@@ -93,7 +93,7 @@ A supplemental 35-second fullscreen Lab verification run completed 350 native in
 | Reduce non-planner typing CPU | Only if the increase reappears | The historical +143.5 µs residual included +121.6 µs in `Window::draw`. The new pair measured +39.7 µs in `next_frame.finish()` and +19.0 µs to encode the copy. Reproduce the scene-build delta across pairs before changing the implementation. |
 | Avoid the full retained-to-drawable copy | M/L | Every Partial frame still copies all 7.72 million drawable pixels. The copy fragment averaged 166 µs, and a Copy-only command averaged 279 µs. A persistent presentation texture or IOSurface-backed layer would need separate proofs for ownership, in-flight frames, alpha, resize and presentation order. |
 | Metal scroll shift | M | All 5,289 historical shift plans returned `shift_unimplemented`; the current early rejection kept every qualified scroll frame Direct. A retained-to-scratch-to-retained blit and exposed-strip redraw need a byte oracle for overlapping moves and a fractional-scroll fallback. |
-| Fullscreen verification budget | Diagnosed in G-FS1 | The fullscreen verification run fell back to Direct during warmup. [G-FS1](G-FS1-fullscreen.md) reproduced the verifier’s reference-texture budget refusal. Enabling damage by default or combining it with fullscreen direct-to-display remains an owner decision. |
+| Fullscreen verification budget | Fixed in G-FS2 candidate | [G-FS1](G-FS1-fullscreen.md) reproduced the verifier’s reference-texture budget refusal. [G-FS2](G-FS2-texture-budget.md) separates verify-only references and tests native fullscreen drag. Enabling damage by default or combining it with fullscreen direct-to-display remains an owner decision. |
 
 ## Verification and reproduction
 

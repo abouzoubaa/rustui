@@ -146,7 +146,9 @@ impl Scope {
         if let Some(r) = &mut self.0 {
             r.after = Image::kept(state.target.as_ref());
             r.decision = state.last_mode.label();
-            r.reason = if state.last_mode == planned {
+            r.reason = if let Some(reason) = state.allocation_reason() {
+                reason
+            } else if state.last_mode == planned {
                 reason
             } else {
                 "allocation_or_verify"

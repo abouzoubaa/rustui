@@ -3,7 +3,7 @@
 // crates/gpui_apple/src/metal_renderer.rs (whole reference rendering and readback).
 // Copyright 2022 - 2025 Zed Industries, Inc.; Havunen and gpui-ce contributors.
 // RustUI modifications: async byte oracle, first mismatch coordinates and window disable.
-use super::{frame::Mode, retained::Target};
+use super::{frame::Mode, retained};
 use crate::metal_renderer::MetalRenderer;
 use anyhow::{Context as _, Result};
 use block2::RcBlock;
@@ -73,7 +73,11 @@ impl Readback {
         let buffer = renderer
             .device
             .newBufferWithLength_options(row * height, MTLResourceOptions::StorageModeShared)
-            .context("damage pixel readback")?;
+            .ok_or_else(|| super::budget::Failure {
+                reason: super::budget::Reason::AllocFailed,
+                requested: (row * height) as u64,
+                limit: u64::MAX,
+            })?;
         let encoder = command.blitCommandEncoder().context("damage pixel blit")?;
         // SAFETY: Both the exact source rectangle and aligned destination span
         // are in bounds; Metal retains both resources through completion.
@@ -144,15 +148,21 @@ pub(crate) fn schedule(
     history: &mut Option<History>,
     allowed: Option<Vec<super::plan::Area>>,
 ) -> Result<Retained<ProtocolObject<dyn MTLCommandBuffer>>> {
-    anyhow::ensure!(!fail_allocation, "injected verification allocation failure");
-    let reference =
-        Target::new(&renderer.device, output.width(), output.height())?.ok_or_else(|| {
-            super::fs_trace::cause("verify_reference_budget");
-            anyhow::anyhow!("verification exceeds device retained budget")
-        })?;
+    let requested = super::budget::bytes(output.width(), output.height());
+    let failure = super::budget::Failure {
+        reason: super::budget::Reason::AllocFailed,
+        requested,
+        limit: u64::MAX,
+    };
+    if fail_allocation {
+        return Err(failure.into());
+    }
+    // A verify-only reference is never a product retained texture.
+    let reference = retained::texture(&renderer.device, output.width(), output.height())
+        .map_err(|_| failure)?;
     let actual = Readback::encode(renderer, primary, output)?;
-    let command = renderer.render_frame(scene, &reference.texture, size)?;
-    let expected = Readback::encode(renderer, &command, &reference.texture)?;
+    let command = renderer.render_frame(scene, &reference, size)?;
+    let expected = Readback::encode(renderer, &command, &reference)?;
     let width = output.width();
     let previous = history.take();
     let uploads = renderer

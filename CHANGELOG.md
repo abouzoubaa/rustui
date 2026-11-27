@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+- Scale the opt-in Metal damage budget to each window, report allocation failures, and retry after a resize.
+
 - Trace Metal damage decisions across native fullscreen transitions and identify when verification exhausts the retained-texture budget.
 
 - Document the Stage G workload verdicts and add opt-in Metal diagnostics for typing costs and damaged pixels.

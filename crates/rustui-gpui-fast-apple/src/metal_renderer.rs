@@ -854,7 +854,9 @@ impl MetalRenderer {
         density.emit(scene, texture.width() as u32, texture.height() as u32);
         gpui::fast_frame_reason(
             self.damage.last_mode.label(),
-            if self.damage.last_mode == planned_mode {
+            if let Some(reason) = self.damage.allocation_reason() {
+                reason
+            } else if self.damage.last_mode == planned_mode {
                 planned_reason
             } else {
                 "allocation_or_verify"
@@ -907,7 +909,9 @@ impl MetalRenderer {
         }
         order_hold.submitted();
         timing.mode = self.damage.last_mode.label();
-        timing.reason = if self.damage.last_mode == planned_mode {
+        timing.reason = if let Some(reason) = self.damage.allocation_reason() {
+            Reason::selected(reason)
+        } else if self.damage.last_mode == planned_mode {
             Reason::selected(planned_reason)
         } else {
             Reason::Verification

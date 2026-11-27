@@ -112,6 +112,8 @@ struct Snapshot {
 #[derive(Default)]
 pub(crate) struct State {
     pub(super) target: Option<Target>,
+    budget: OnceLock<Arc<super::budget::WindowBudget>>,
+    allocation_failure: Option<(Size<DevicePixels>, super::budget::Failure)>,
     snapshot: Option<Snapshot>,
     previous_large: bool,
     verify_history: Option<super::verify::History>,
@@ -166,6 +168,29 @@ impl Prepared {
     }
 }
 impl State {
+    pub(crate) fn share_window_budget(&mut self, base: &State) {
+        self.budget = base.budget_handle().clone().into();
+    }
+    fn budget_handle(&self) -> &Arc<super::budget::WindowBudget> {
+        self.budget.get_or_init(Default::default)
+    }
+    pub(crate) fn allocation_reason(&self) -> Option<&'static str> {
+        self.allocation_failure.map(|(_, f)| f.reason.label())
+    }
+    fn allocation_failed(&mut self, size: Size<DevicePixels>, failure: super::budget::Failure) {
+        self.budget_handle().warn(failure);
+        super::fs_trace::cause(failure.reason.label());
+        if self.verifying() {
+            super::log::line(format_args!("RUSTUI_DAMAGE_CAPTURE_FAILED {failure}"));
+        }
+        self.invalidate();
+        self.allocation_failure = Some((size, failure));
+    }
+    fn retry_if_resized(&mut self, size: Size<DevicePixels>) {
+        if self.allocation_failure.is_some_and(|(old, _)| old != size) {
+            self.allocation_failure = None;
+        }
+    }
     fn enabled(&self) -> bool {
         #[cfg(any(test, feature = "test-support"))]
         if let Some(enabled) = self.enabled_override {
@@ -205,6 +230,7 @@ impl State {
         self.cache.clear();
     }
     pub(crate) fn resized(&mut self, size: Size<DevicePixels>) {
+        self.retry_if_resized(size);
         if self
             .snapshot
             .as_ref()
@@ -243,6 +269,24 @@ impl State {
                 "verify_off_path"
             };
             self.invalidate();
+            return Prepared {
+                reason,
+                ..Prepared::direct()
+            };
+        }
+        self.retry_if_resized(size);
+        let bytes = super::budget::bytes(size.width.0 as usize, size.height.0 as usize);
+        if bytes > super::budget::CEILING && self.allocation_failure.is_none() {
+            self.allocation_failed(
+                size,
+                super::budget::Failure {
+                    reason: super::budget::Reason::BudgetExceeded,
+                    requested: bytes,
+                    limit: super::budget::CEILING,
+                },
+            );
+        }
+        if let Some(reason) = self.allocation_reason() {
             return Prepared {
                 reason,
                 ..Prepared::direct()
@@ -552,14 +596,19 @@ impl State {
         &self,
         renderer: &MetalRenderer,
         size: Size<DevicePixels>,
-    ) -> Result<Option<Target>> {
+    ) -> Result<Target, super::budget::Failure> {
         #[cfg(any(test, feature = "test-support"))]
-        anyhow::ensure!(
-            !self.fail_allocation,
-            "injected retained texture allocation failure"
-        );
+        if self.fail_allocation {
+            let requested = super::budget::bytes(size.width.0 as usize, size.height.0 as usize);
+            return Err(super::budget::Failure {
+                reason: super::budget::Reason::AllocFailed,
+                requested,
+                limit: super::budget::limit(requested),
+            });
+        }
         Target::new(
             &renderer.device,
+            self.budget_handle(),
             size.width.0 as usize,
             size.height.0 as usize,
         )
@@ -619,7 +668,7 @@ pub(crate) fn render(
     size: Size<DevicePixels>,
     prepared: Prepared,
 ) -> Result<Retained<ProtocolObject<dyn MTLCommandBuffer>>> {
-    render_with_instances(
+    let command = render_with_instances(
         renderer,
         scene,
         target,
@@ -627,7 +676,13 @@ pub(crate) fn render(
         prepared,
         None,
         super::encode::Scope::new(scene),
-    )
+    )?;
+    if let Some((_, failure)) = renderer.damage.allocation_failure {
+        command.commit();
+        command.waitUntilCompleted();
+        return Err(failure.into());
+    }
+    Ok(command)
 }
 
 pub(crate) fn render_with_instances(
@@ -667,15 +722,15 @@ pub(crate) fn render_with_instances(
             ));
         }
         if mode != Mode::Direct && state.target.is_none() {
-            state.target = state.allocate(renderer, size).unwrap_or_else(|error| {
-                log::warn!("retained damage allocation failed; drawing whole: {error:#}");
-                None
-            });
-            if state.target.is_some() {
-                super::fs_trace::allocated();
-            } else {
-                super::fs_trace::cause("retained_allocation");
-                mode = Mode::Direct;
+            match state.allocate(renderer, size) {
+                Ok(target) => {
+                    state.target = Some(target);
+                    super::fs_trace::allocated();
+                }
+                Err(failure) => {
+                    state.allocation_failed(size, failure);
+                    mode = Mode::Direct;
+                }
             }
         }
         let mut command = match mode {
@@ -765,6 +820,7 @@ pub(crate) fn render_with_instances(
             }
         }
         if state.verifying()
+            && state.allocation_failure.is_none()
             && state
                 .failed
                 .as_ref()
@@ -791,7 +847,11 @@ pub(crate) fn render_with_instances(
                 Ok(reference) => state.verification = Some(reference),
                 Err(error) => {
                     log::error!("damage verification unavailable; drawing whole: {error:#}");
-                    status.disabled.store(true, Ordering::Release);
+                    if let Some(failure) = error.downcast_ref::<super::budget::Failure>() {
+                        state.allocation_failed(size, *failure);
+                    } else {
+                        status.disabled.store(true, Ordering::Release);
+                    }
                     // Preserve uploads and GPU lifetimes already encoded in the
                     // first buffer. It never presents; a full draw follows it.
                     command.commit();
