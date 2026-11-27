@@ -65,11 +65,13 @@ Reference: [GPUI Fast feature delta](archive/tasks/GPUI_FAST_FEATURE_DELTA.md).
 
 1. Tighten editor damage rectangles (S).
 2. Diagnose the fullscreen fallback to Direct during warmup before enabling damage by default or combining it with fullscreen direct-to-display.
-3. Remove the full retained-frame copy (M/L).
+3. Remove the retained B → drawable copy with an IOSurface-backed layer (L). Together, the A → B blit and the final copy consumed 55–63% of shift-frame GPU time in G3b.
 4. Revisit non-planner typing CPU only if the measured increase reappears.
-5. Implement Metal scroll shift (M).
+5. Metal scroll shift is implemented and opt-in. It is not recommended until the B → drawable copy is removed.
+6. Record 60 seconds of real trackpad deltas with the owner present to measure whole-device-pixel motion during gestures and momentum.
+7. Explain the G-R2e damage-off scroll baseline of 1.713 ms/frame. The same-build G3b fullscreen controls did not reproduce it.
 
-The [Stage G close-out](perf/G-close.md#backlog) gives the measurements behind these priorities.
+See the [Stage G close-out](perf/G-close.md#backlog) and the [G3b scroll measurements](perf/G3b-scroll-planner.md).
 
 ## Phase 5 Chorus integration (ongoing)
 
