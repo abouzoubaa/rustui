@@ -652,6 +652,19 @@ pub(crate) fn render_with_instances(
             prepared = Prepared::direct();
         }
         let mut mode = prepared.mode;
+        if let Mode::Partial(area) = mode
+            && super::area::enabled()
+        {
+            let epoch = std::time::SystemTime::now()
+                .duration_since(std::time::UNIX_EPOCH)
+                .unwrap_or_default()
+                .as_secs_f64()
+                * 1000.;
+            super::log::line(format_args!(
+                "RUSTUI_G_R3_SCISSOR {epoch:.6} {} {} {} {} {} {}",
+                size.width.0, size.height.0, area.x0, area.y0, area.x1, area.y1
+            ));
+        }
         if mode != Mode::Direct && state.target.is_none() {
             state.target = state.allocate(renderer, size).unwrap_or_else(|error| {
                 log::warn!("retained damage allocation failed; drawing whole: {error:#}");
@@ -713,9 +726,13 @@ pub(crate) fn render_with_instances(
                 } else {
                     renderer.render_frame(scene, &kept.texture, size)?
                 };
-                renderer
-                    .damage_pipelines
-                    .copy(&command, &kept.texture, target, size)?;
+                renderer.damage_pipelines.copy(
+                    &command,
+                    &kept.texture,
+                    target,
+                    size,
+                    matches!(mode, Mode::Partial(_)),
+                )?;
                 kept.valid = true;
                 command
             }

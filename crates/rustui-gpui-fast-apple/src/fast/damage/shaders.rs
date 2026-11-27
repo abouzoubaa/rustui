@@ -53,13 +53,20 @@ impl Pipelines {
         source: &ProtocolObject<dyn MTLTexture>,
         target: &ProtocolObject<dyn MTLTexture>,
         size: Size<DevicePixels>,
+        sample_partial: bool,
     ) -> Result<()> {
+        let started = super::timing::close_cpu().then(std::time::Instant::now);
         anyhow::ensure!(
             source.width() == target.width() && source.height() == target.height(),
             "damage copy dimensions differ"
         );
-        let encoder =
-            crate::metal_renderer::new_command_encoder_for_texture(buffer, target, size, None)?;
+        let encoder = crate::metal_renderer::command_encoder_for_damage_probe(
+            buffer,
+            target,
+            size,
+            None,
+            sample_partial,
+        )?;
         encoder.setRenderPipelineState(&self.copy);
         unsafe {
             encoder.setFragmentTexture_atIndex(Some(source), 0);
@@ -67,6 +74,9 @@ impl Pipelines {
             encoder.drawPrimitives_vertexStart_vertexCount(MTLPrimitiveType::Triangle, 0, 3);
         }
         encoder.endEncoding();
+        if let Some(started) = started {
+            super::timing::copy_encoded(started);
+        }
         Ok(())
     }
     pub(crate) fn clear(
@@ -182,7 +192,7 @@ mod proof {
                     .context("copy command")?;
                 renderer
                     .damage_pipelines
-                    .copy(&command, &source, &target, size)?;
+                    .copy(&command, &source, &target, size, false)?;
                 let actual = read(&renderer, &command, &target)?;
                 assert_eq!(
                     actual, pixels,

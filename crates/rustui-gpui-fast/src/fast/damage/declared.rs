@@ -68,6 +68,12 @@ impl Window {
 }
 
 impl Scene {
+    /// Unmerged painter declarations from this frame, for the pixel verifier.
+    #[doc(hidden)]
+    pub fn fast_damage_regions_for_reporting(&self) -> &[DamageRegion] {
+        &self.fast_damage.regions
+    }
+
     #[doc(hidden)]
     pub fn extra_damage_rects(&self) -> &[Bounds<ScaledPixels>] {
         &self.fast_damage.extra_damage

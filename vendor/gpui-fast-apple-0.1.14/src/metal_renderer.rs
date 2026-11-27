@@ -1809,6 +1809,15 @@ pub(crate) fn new_command_encoder_for_texture(
     viewport_size: Size<DevicePixels>,
     clear_color: Option<MTLClearColor>,
 ) -> Result<Retained<ProtocolObject<dyn MTLRenderCommandEncoder>>> {
+    command_encoder_for_damage_probe(command_buffer, texture, viewport_size, clear_color, false)
+}
+pub(crate) fn command_encoder_for_damage_probe(
+    command_buffer: &ProtocolObject<dyn MTLCommandBuffer>,
+    texture: &ProtocolObject<dyn MTLTexture>,
+    viewport_size: Size<DevicePixels>,
+    clear_color: Option<MTLClearColor>,
+    probe_copy: bool,
+) -> Result<Retained<ProtocolObject<dyn MTLRenderCommandEncoder>>> {
     let clear_color = crate::fast::damage::frame::pass_clear(texture, clear_color);
     let render_pass_descriptor = MTLRenderPassDescriptor::new();
     // SAFETY: Index zero is within the render pass's color attachment array.
@@ -1826,6 +1835,9 @@ pub(crate) fn new_command_encoder_for_texture(
         color_attachment.setLoadAction(MTLLoadAction::Load);
     }
 
+    if probe_copy {
+        crate::fast::damage::copy_gpu::attach(command_buffer, &render_pass_descriptor);
+    }
     let command_encoder = command_buffer
         .renderCommandEncoderWithDescriptor(&render_pass_descriptor)
         .context("creating render command encoder")?;

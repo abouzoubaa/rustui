@@ -148,3 +148,12 @@ fn flush() {
     }
     let _ = std::io::stderr().lock().write_all(output.as_bytes());
 }
+
+pub(crate) fn close_phase() -> Option<Instant> {
+    static ON: OnceLock<bool> = OnceLock::new();
+    if *ON.get_or_init(|| std::env::var("RUSTUI_G_R3_CPU").as_deref() == Ok("1")) {
+        phase_start()
+    } else {
+        None
+    }
+}

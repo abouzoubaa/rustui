@@ -105,6 +105,7 @@ impl Readback {
 }
 
 pub(crate) struct History {
+    declarations: Vec<super::area::Decl>,
     reference: Readback,
     signatures: Vec<super::plan::Sig>,
     generation: u64,
@@ -155,6 +156,8 @@ pub(crate) fn schedule(
         .sprite_atlas
         .damage_uploads(previous.as_ref().map_or(0, |h| h.generation));
     let mut prior = None;
+    let declarations = super::area::snapshot(scene);
+    let height = output.height();
     if let Some(tiles) = uploads.tiles {
         if let Some(full) = super::plan::signatures(scene, &tiles, &super::inputs::dynamic) {
             if let Some(old) = previous
@@ -180,10 +183,20 @@ pub(crate) fn schedule(
                     if let Some(diff) = diff {
                         super::metrics::declared_diff(diff.damage.len());
                     }
-                    prior = Some((old.reference, allowed));
+                    let area = super::area::enabled().then(|| {
+                        super::area::declared(
+                            &old.declarations,
+                            &declarations,
+                            scene,
+                            width,
+                            height,
+                        )
+                    });
+                    prior = Some((old.reference, allowed, area));
                 }
             }
             *history = Some(History {
+                declarations,
                 reference: expected.clone(),
                 signatures: full,
                 generation: uploads.generation,
@@ -204,8 +217,21 @@ pub(crate) fn schedule(
                 log::error!("damage reference GPU failure: {:?}", buffer.error());
             } else if !status.disabled.load(Ordering::Acquire) {
                 let reference = expected.pixels();
-                if let Some((x, y)) = prior.as_ref().and_then(|(old, permitted)| {
-                    changed_outside(&old.pixels(), &reference, width, permitted)
+                if let Some((x, y)) = prior.as_ref().and_then(|(old, permitted, declared)| {
+                    let old = old.pixels();
+                    if let Some(area) = declared
+                        && let Mode::Partial(scissor) = mode
+                    {
+                        super::area::emit(
+                            &old,
+                            &reference,
+                            *area,
+                            scissor.area() as usize,
+                            width,
+                            height,
+                        );
+                    }
+                    changed_outside(&old, &reference, width, permitted)
                 }) {
                     status.mismatch("declared_outside", x, y);
                 } else if let Some((x, y)) = first_mismatch(&actual.pixels(), &reference, width) {

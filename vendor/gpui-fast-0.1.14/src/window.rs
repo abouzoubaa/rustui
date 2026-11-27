@@ -4015,13 +4015,17 @@ impl Window {
         self.text_system().finish_frame();
         crate::fast::global_id::GlobalIdCache::finish_frame(&mut self.global_ids);
         crate::fast::retained::finish_retained_frame(self);
+        let close_phase = crate::fast::frame_recorder::close_phase();
         self.next_frame.finish(&mut self.rendered_frame);
+        f0_frame_record(self.handle.window_id(), "r3_scene_finish", close_phase);
 
         self.invalidator.set_phase(DrawPhase::Focus);
         let previous_focus_path = self.rendered_frame.focus_path();
         let previous_window_active = self.rendered_frame.window_active;
         mem::swap(&mut self.rendered_frame, &mut self.next_frame);
+        let close_phase = crate::fast::frame_recorder::close_phase();
         self.next_frame.clear();
+        f0_frame_record(self.handle.window_id(), "r3_scene_clear", close_phase);
         let current_focus_path = self.rendered_frame.focus_path();
         let current_window_active = self.rendered_frame.window_active;
         let mut focus_before_listeners = self.focus;

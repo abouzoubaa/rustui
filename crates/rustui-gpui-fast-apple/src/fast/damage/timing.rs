@@ -137,6 +137,8 @@ pub(crate) fn plan_stage(stage: PlanStage) {
 
 #[derive(Clone, Copy)]
 struct Sample {
+    copy_encode_ns: u64,
+    drawable_ns: u64,
     elapsed_ns: [u64; 3],
     plan_stages_ns: [u64; PLAN_STAGES],
     reason: Reason,
@@ -169,6 +171,14 @@ extern "C" fn flush() {
             sample.mode,
             sample.reason.label(),
         );
+        if close_cpu() {
+            let _ = write!(
+                stderr,
+                ",\"copy_encode_us\":{:.3},\"drawable_wait_us\":{:.3}",
+                sample.copy_encode_ns as f64 / 1000.,
+                sample.drawable_ns as f64 / 1000.
+            );
+        }
         for (label, ns) in PLAN_LABELS.iter().zip(sample.plan_stages_ns) {
             let _ = write!(stderr, ",\"{label}\":{:.3}", ns as f64 / 1000.);
         }
@@ -254,6 +264,8 @@ impl Drop for Timing {
             let index = recorder.len;
             if index < MAX_SAMPLES {
                 recorder.samples[index] = Some(Sample {
+                    copy_encode_ns: COPY_NS.with(|v| v.replace(0)),
+                    drawable_ns: DRAWABLE_NS.with(|v| v.replace(0)),
                     elapsed_ns: self.elapsed_ns,
                     plan_stages_ns: self.plan_stages_ns,
                     reason: self.reason,
@@ -266,4 +278,19 @@ impl Drop for Timing {
             }
         }
     }
+}
+
+thread_local! {
+    static COPY_NS: std::cell::Cell<u64> = const {std::cell::Cell::new(0)};
+    static DRAWABLE_NS: std::cell::Cell<u64> = const {std::cell::Cell::new(0)};
+}
+pub(crate) fn close_cpu() -> bool {
+    static ON: OnceLock<bool> = OnceLock::new();
+    *ON.get_or_init(|| enabled() && std::env::var("RUSTUI_G_R3_CPU").as_deref() == Ok("1"))
+}
+pub(crate) fn copy_encoded(s: Instant) {
+    COPY_NS.with(|n| n.set(n.get() + s.elapsed().as_nanos() as u64));
+}
+pub(crate) fn acquired(s: Instant) {
+    DRAWABLE_NS.with(|n| n.set(n.get() + s.elapsed().as_nanos() as u64));
 }
