@@ -142,6 +142,8 @@ jobs:
         run: rm -rf "$HOME/.cache/rustui-target-fixture-kit9" "$RUNNER_TEMP/gpui-kit-0.9.1-fixture"
       - name: Stable Rust formatting, workspace check, Clippy (-D warnings), and library tests
         run: ./scripts/check.sh
+      - name: Check Stage P performance lints in the RustUI-owned crates
+        run: ./scripts/check-owned-perf-lints.sh
       - name: Report disk space at job end
         if: always()
         run: df -h

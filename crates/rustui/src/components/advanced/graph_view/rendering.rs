@@ -25,7 +25,7 @@ fn graph_display_label(context: &RenderContext<'_>, key: Option<&str>, fallback:
     }
 }
 
-fn localized_graph_error(context: &RenderContext<'_>, error: &GraphError) -> String {
+fn localized_graph_error(context: &RenderContext<'_>, error: GraphError) -> String {
     let id = error.localization_key();
     localized_graph_message(context, id, &MessageArguments::new(), &error.to_string())
 }
@@ -720,7 +720,7 @@ pub(crate) fn render_graph(
                 true
             }
             "delete" | "backspace" if edit.is_some() && key_selected.is_some() => {
-                edit.as_ref().unwrap()(GraphEdit::RemoveNode(key_selected.clone().unwrap()), cx);
+                edit.as_ref().unwrap()(GraphEdit::RemoveNode(key_selected.unwrap()), cx);
                 select(None, cx);
                 true
             }
@@ -731,7 +731,7 @@ pub(crate) fn render_graph(
                     "up" => (0.0, -10.0),
                     _ => (0.0, 10.0),
                 };
-                move_node.as_ref().unwrap()((key_selected.clone().unwrap(), dx, dy), cx);
+                move_node.as_ref().unwrap()((key_selected.unwrap(), dx, dy), cx);
                 true
             }
             "left" | "up" | "right" | "down" | "[" | "]" => {
@@ -819,7 +819,7 @@ pub(crate) fn render_graph(
                 .absolute()
                 .bottom_0()
                 .role(Role::Status)
-                .child(localized_graph_error(context, &error)),
+                .child(localized_graph_error(context, error)),
         );
     }
     root.into_any_element()

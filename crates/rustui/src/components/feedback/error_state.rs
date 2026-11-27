@@ -186,7 +186,7 @@ impl View for ErrorStateView {
             state = state.child(
                 div()
                     .text_color(muted_foreground)
-                    .child(Text(detail.clone()).into_element(context)),
+                    .child(Text(detail).into_element(context)),
             );
         }
         state.into_any_element()

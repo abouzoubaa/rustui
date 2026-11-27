@@ -764,7 +764,7 @@ pub struct LengthProperty {
 }
 
 impl LengthProperty {
-    fn validate(&self, name: &str) -> Result<(), String> {
+    fn validate(self, name: &str) -> Result<(), String> {
         if self.value.px.is_finite() && self.value.px > 0.0 {
             Ok(())
         } else {

@@ -321,7 +321,6 @@ impl View for ComboBoxView {
 
         let options_changed = retained_options != options;
         if options_changed {
-            let options = options.clone();
             context.update_entity(&select, |state, window, cx| {
                 state.set_items(SearchableVec::new(options.clone()), window, cx);
             });

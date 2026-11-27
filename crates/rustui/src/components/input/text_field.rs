@@ -554,7 +554,6 @@ impl View for TextFieldView {
             .placeholder()
             .to_string();
         if placeholder_changed(&retained_placeholder, &placeholder) {
-            let placeholder = placeholder.clone();
             context.update_entity(&state, move |state, window, cx| {
                 state.set_placeholder(placeholder, window, cx);
             });
@@ -599,7 +598,6 @@ impl View for TextFieldView {
             )
         {
             let value_to_sync = current_value.clone();
-            let selection_to_restore = selection_to_restore.clone();
             context.update_entity(&state, move |state, window, cx| {
                 state.set_value(value_to_sync, window, cx);
                 if let Some(selection) = selection_to_restore {
@@ -802,7 +800,7 @@ impl View for TextFieldView {
                             .snap_to_window()
                             .child(
                                 div()
-                                    .debug_selector(move || error_selector.clone())
+                                    .debug_selector(move || error_selector)
                                     .bg(gpui_component::Theme::global(context.app()).colors.popover)
                                     .text_xs()
                                     .text_color(danger)
@@ -817,7 +815,7 @@ impl View for TextFieldView {
                     .child(input)
                     .child(
                         div()
-                            .debug_selector(move || error_selector.clone())
+                            .debug_selector(move || error_selector)
                             .text_xs()
                             .text_color(danger)
                             .child(message),

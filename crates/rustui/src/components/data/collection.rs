@@ -267,7 +267,7 @@ fn next_selection(
         "escape" => return Some(None),
         "home" => 0,
         "end" => ids.len().saturating_sub(1),
-        "up" => index.map_or(ids.len().saturating_sub(1), |i| i.saturating_sub(1)),
+        "up" => index.map_or_else(|| ids.len().saturating_sub(1), |i| i.saturating_sub(1)),
         "down" => index.map_or(0, |i| (i + 1).min(ids.len().saturating_sub(1))),
         _ => return None,
     };
@@ -589,7 +589,7 @@ impl<T: 'static, V: View, F: Fn(usize, &T) -> V + 'static> View for Collection<T
                 let target = Rc::new(RefCell::new(None));
                 let read_target = target.clone();
                 let expected = Rc::new(RefCell::new(requested.clone()));
-                let update_expected = expected.clone();
+                let update_expected = expected;
                 let update = context.binding_updater(binding.clone(), move |current| {
                     let desired = read_target.borrow();
                     update_selection(current, &update_expected, &desired)

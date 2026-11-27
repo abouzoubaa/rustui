@@ -608,7 +608,7 @@ impl View for KeyedListView {
             let event_selection_id = selection_id.clone();
             let event_expected_selection = expected_selection.clone();
             let current_update = selection_update.clone();
-            let requested = requested_selection.clone();
+            let requested = requested_selection;
             context.subscribe_retained(&identity, &state, move |state, event: &ListEvent, cx| {
                 let selected_index = state.read(cx).selected_index();
                 match event {
@@ -723,7 +723,7 @@ impl View for KeyedListView {
 
         if requested != desired {
             let invalid_id = requested.expect("only a missing selected ID needs normalization");
-            let latest_selection = selection_id.clone();
+            let latest_selection = selection_id;
             let clear = context.binding_updater(self.selection.clone(), move |current| {
                 clear_removed_selection(current, &invalid_id, latest_selection.borrow().as_deref())
             });

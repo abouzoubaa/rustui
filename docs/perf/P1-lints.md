@@ -37,3 +37,27 @@ A focused generic-payload test checks that deriving AsyncState's unit default do
 - The PR must pass the source CI job and review before merging into `p-integration`.
 
 This ticket makes no measured runtime-performance verdict and adds no latency or damage behavior feature.
+
+## Stage P v4 supplemental lint gate
+
+The baseline is the G3 merge at `46bf8878c4648dab7ad9a434154b69afce35ae15`. The five RustUI-owned crates use the pinned Rust 1.98.0 toolchain. The new CI command, `./scripts/check-owned-perf-lints.sh`, checks all their targets with the performance group and the twelve named lints set to errors. The existing workspace checks run as before.
+
+| Distinct Clippy diagnostics | Before | After |
+|---|---:|---:|
+| Redundant clone or string copy | 68 | 14 |
+| Small copyable value passed by reference | 9 | 7 |
+| Eager fallback expression | 2 | 1 |
+| **Total** | **79** | **22** |
+
+Clippy’s diagnostic inventory was run separately from the error gate so that Cargo could visit every target, including integration tests. Counts use unique lint and primary source spans. The patch removes 54 redundant copies, passes two small values by value, and makes Collection compute the previous-row fallback lazily. The five owned crates contained no `.context(format!(...))` calls.
+
+**Gate stopped.** The new error gate exited 101. Of the 22 remaining findings, 21 occur in test targets. For example, the French sheet close-button test passes its final English locale through `en.clone()` at `components/overlay/focus_recovery_tests.rs:657`. The remaining production finding is the Collection keyboard filter’s five-byte `Modifiers` argument. Its existing tests call the borrowed signature. Completing the lint cleanup requires authorization to edit existing tests.
+
+| Verification | Result |
+|---|---|
+| Existing `scripts/check.sh` | 1,875 passed, 7 ignored, 0 failed |
+| Native Metal proofs | 9 passed |
+| Supplemental owned-crate lint gate | Exit 101 |
+| Before/after CPU measurements | 0 qualified pairs for each G0 and F0 workload. No performance verdict. |
+
+P0 records no per-frame allocation counts or per-frame type-size table. Those baselines still need to be measured before P3 can set budgets.

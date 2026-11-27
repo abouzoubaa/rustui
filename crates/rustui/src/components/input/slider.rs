@@ -467,8 +467,7 @@ impl RenderOnce for ThemedSlider {
             });
 
         if !self.disabled {
-            let slider_state = self.state.clone();
-            let keyboard_state = slider_state.clone();
+            let keyboard_state = self.state.clone();
             slider = slider
                 .focusable()
                 .tab_stop(true)
@@ -517,7 +516,7 @@ impl RenderOnce for ThemedSlider {
                 AccessibleAction::Increment,
                 AccessibleAction::Decrement,
             ] {
-                let state = slider_state.clone();
+                let state = self.state.clone();
                 slider = slider.on_a11y_action(action, move |data, window, cx| {
                     handle_slider_accessibility_action(&state, action, data, window, cx);
                 });

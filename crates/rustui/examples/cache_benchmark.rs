@@ -99,7 +99,7 @@ impl View for BenchmarkRoot {
             .child(
                 HStack::new()
                     .children((0..self.scenario.retained_children_per_side).map({
-                        let output = cached_output.clone();
+                        let output = cached_output;
                         move |index| {
                             let output = output.clone();
                             let child =
@@ -121,7 +121,7 @@ impl View for BenchmarkRoot {
                         }
                     }))
                     .children((0..self.scenario.retained_children_per_side).map({
-                        let output = uncached_output.clone();
+                        let output = uncached_output;
                         move |index| {
                             let output = output.clone();
                             let child =
@@ -778,7 +778,7 @@ fn run_invalidation() {
             },
             move |window, _| {
                 schedule_invalidation(window, window_state);
-                root.clone()
+                root
             },
         )
         .expect("cache invalidation window must open");
@@ -864,7 +864,7 @@ fn main() {
             },
             move |window, _| {
                 schedule(window, window_state);
-                root.clone()
+                root
             },
         )
         .expect("cache benchmark window must open");

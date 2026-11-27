@@ -404,7 +404,7 @@ impl View for ListView {
             )
         };
         owner_selection.set(self.selection.value());
-        let marker = owner_selection.clone();
+        let marker = owner_selection;
         let current_request = requested_selection.clone();
         replace_selection_updater(
             &selection_update,

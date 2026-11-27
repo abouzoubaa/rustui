@@ -181,25 +181,25 @@ fn main() {
             )
         });
 
-        let first_root = first.clone();
+        let first_root = first;
         let first_bounds = Bounds::centered(None, size(px(560.0), px(260.0)), cx);
         cx.open_window(
             WindowOptions {
                 window_bounds: Some(WindowBounds::Windowed(first_bounds)),
                 ..Default::default()
             },
-            move |_, _| first_root.clone(),
+            move |_, _| first_root,
         )
         .expect("first probe window must open");
 
-        let second_root = second.clone();
+        let second_root = second;
         let second_bounds = Bounds::centered(None, size(px(560.0), px(220.0)), cx);
         cx.open_window(
             WindowOptions {
                 window_bounds: Some(WindowBounds::Windowed(second_bounds)),
                 ..Default::default()
             },
-            move |_, _| second_root.clone(),
+            move |_, _| second_root,
         )
         .expect("second probe window must open");
 

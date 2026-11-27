@@ -224,7 +224,7 @@ impl ToastBuilder {
                 });
             }
             if let Some((label, action)) = &self.action {
-                let label = action_label.clone().unwrap_or_else(|| label.clone());
+                let label = action_label.unwrap_or_else(|| label.clone());
                 let action = action.clone();
                 notification = notification.action(move |_, _, _| {
                     let action = action.clone();
@@ -238,7 +238,6 @@ impl ToastBuilder {
                 });
             }
             let announcement_id = next_toast_announcement_id();
-            let announcement_value = announcement_value.clone();
             notification = notification.content(move |_, _, _| {
                 semantic_scoped_element(
                     &RetentionScope::Semantics(announcement_id.clone()),

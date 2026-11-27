@@ -146,7 +146,7 @@ impl TreeNode {
         if let Some(key) = &self.label_key {
             let value = context.localized_message(key);
             if !value.trim().is_empty() && value.trim() != key {
-                self.label = value.to_string();
+                self.label = value;
             }
         }
         for child in &mut self.children {
@@ -652,12 +652,10 @@ impl View for TreeView {
 
         if created {
             let last_selection = observed_selection.clone();
-            let event_owner_selection = owner_selection.clone();
-            let pending_selection = pending_selection.clone();
+            let event_owner_selection = owner_selection;
             let current_update = selection_update.clone();
             let last_expansion = observed_expansion.clone();
             let event_owner_expansion = owner_expansion.clone();
-            let pending_expansion = pending_expansion.clone();
             let expansion_update = expansion_update.clone();
             context.observe_retained(&identity, &tree, move |tree, cx| {
                 let selected = tree
@@ -718,7 +716,6 @@ impl View for TreeView {
             let check_expected = request.expected_owner.clone();
             let check_expanded = request.expanded.clone();
             let current_tree = retained.clone();
-            let owner_expansion = owner_expansion.clone();
             let normalize = context.binding_updater(binding.clone(), move |current| {
                 let changed = apply_expansion_request(current, &request);
                 *owner_expansion.borrow_mut() = Some(current.clone());

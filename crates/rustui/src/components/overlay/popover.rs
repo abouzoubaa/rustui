@@ -270,9 +270,9 @@ fn native_popover_element<V: View>(
     let content = owner.content.clone();
     let state_for_click = state.clone();
     let update_for_click = update_open.clone();
-    let content_for_root = content.clone();
+    let content_for_root = content;
     let state_for_root = state.clone();
-    let seed_for_root = seed.clone();
+    let seed_for_root = seed;
     let update_for_root = update_open.clone();
     let requested_for_root = requested_open.clone();
     let trigger = trigger.on_click(move |_, window, cx| {
