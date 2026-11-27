@@ -1,8 +1,19 @@
 import json,subprocess,sys,tempfile,unittest
 from pathlib import Path
 sys.path.insert(0,str(Path(__file__).resolve().parents[1]))
-from g5_budget import analyse_appkit,decompose
+from g5_budget import analyse_appkit,check_damage_allocations,decompose
 class BudgetTests(unittest.TestCase):
+    def test_allocation_failure_rejects_capture_even_after_recovery(self):
+        with tempfile.TemporaryDirectory() as directory:
+            path = Path(directory) / "capture.log"
+            success = 'RUSTUI_FRAME_LOG {"event":"damage_verify","mode":"partial"}\n'
+            path.write_text(success)
+            check_damage_allocations(path)
+            for marker in ("RUSTUI_DAMAGE_WARNING", "RUSTUI_DAMAGE_CAPTURE_FAILED"):
+                path.write_text(f"{marker} alloc_failed requested_bytes=16384 limit_bytes=18023\n" + success)
+                with self.assertRaisesRegex(RuntimeError, "alloc_failed"):
+                    check_damage_allocations(path)
+
     def test_scroll_is_rejected_for_the_bare_reference_before_creating_output(self):
         runner = Path(__file__).resolve().parents[1] / 'run_g5_budget.py'
         with tempfile.TemporaryDirectory() as directory:

@@ -25,6 +25,9 @@ g0_wait() {
   python3 - "$1" <<'PY'
 import json, sys
 from pathlib import Path
+sys.path.insert(0, 'scripts')
+from g5_budget import check_damage_allocations
+check_damage_allocations(sys.argv[1])
 markers = [json.loads(line.removeprefix('RUSTUI_G0_LOG '))
            for line in Path(sys.argv[1]).read_text().splitlines()
            if line.startswith('RUSTUI_G0_LOG ')]

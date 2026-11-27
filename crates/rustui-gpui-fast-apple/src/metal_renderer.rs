@@ -712,6 +712,8 @@ impl MetalRenderer {
                 return;
             }
         };
+        let mut fs_trace =
+            crate::fast::damage::fs_trace::Scope::start(&layer, &self.damage, self.order.surface());
         match if self.presents_with_transaction {
             0
         } else {
@@ -728,6 +730,7 @@ impl MetalRenderer {
         let prepared = crate::fast::damage::frame::choose(self, scene);
         timing.phase(Phase::Present);
         timing.reason = Reason::selected(prepared.reason);
+        fs_trace.planned(&prepared, &self.damage);
         if prepared.mode == crate::fast::damage::frame::Mode::Same {
             gpui::fast_frame_reason(prepared.mode.label(), prepared.reason);
             crate::fast::damage::encode::skipped(scene);
@@ -816,6 +819,7 @@ impl MetalRenderer {
         // A display link's drawable was sized when the link handed it out,
         // which can be before a resize the layer has since taken.
         let texture = drawable.texture();
+        fs_trace.acquired(&texture);
         let viewport_size: Size<DevicePixels> = size(
             (texture.width() as i32).into(),
             (texture.height() as i32).into(),
@@ -850,7 +854,9 @@ impl MetalRenderer {
         density.emit(scene, texture.width() as u32, texture.height() as u32);
         gpui::fast_frame_reason(
             self.damage.last_mode.label(),
-            if self.damage.last_mode == planned_mode {
+            if let Some(reason) = self.damage.allocation_reason() {
+                reason
+            } else if self.damage.last_mode == planned_mode {
                 planned_reason
             } else {
                 "allocation_or_verify"
@@ -874,6 +880,7 @@ impl MetalRenderer {
             gpui::fast_order_defer();
             return;
         }
+        fs_trace.submitted(&self.damage, planned_mode, planned_reason);
         gpui::fast_surface_submitted(self.order.surface());
         crate::fast::presented::observe(&drawable);
         crate::fast::damage::metrics::on_commit(&command_buffer, self.damage.last_mode.label());
@@ -902,7 +909,9 @@ impl MetalRenderer {
         }
         order_hold.submitted();
         timing.mode = self.damage.last_mode.label();
-        timing.reason = if self.damage.last_mode == planned_mode {
+        timing.reason = if let Some(reason) = self.damage.allocation_reason() {
+            Reason::selected(reason)
+        } else if self.damage.last_mode == planned_mode {
             Reason::selected(planned_reason)
         } else {
             Reason::Verification

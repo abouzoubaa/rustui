@@ -104,3 +104,15 @@ mod cpu_probe {
 pub use cpu_probe::{
     boundary as cpu_boundary, idle_mode as cpu_idle_mode, prepare_idle as cpu_prepare_idle,
 };
+
+#[allow(dead_code)]
+pub fn fullscreen_entered() -> bool {
+    type F = unsafe extern "C" fn() -> f64;
+    static FNC: OnceLock<F> = OnceLock::new();
+    let callback = FNC.get_or_init(|| unsafe {
+        let symbol = dlsym((-2isize) as *mut c_void, c"g_fs1_entered_ms".as_ptr());
+        assert!(!symbol.is_null(), "missing native fullscreen observer");
+        std::mem::transmute::<*mut c_void, F>(symbol)
+    });
+    unsafe { callback() > 0.0 }
+}

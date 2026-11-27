@@ -35,6 +35,7 @@ fn new_sharing_atlas(
     copy_colorspace(base, &layer);
     let mut renderer =
         MetalRenderer::new_internal(device, Some(layer), !transparent, instance_buffer_pool)?;
+    renderer.damage.share_window_budget(&base.damage);
     renderer.sprite_atlas = base.sprite_atlas().clone();
     Ok(renderer)
 }

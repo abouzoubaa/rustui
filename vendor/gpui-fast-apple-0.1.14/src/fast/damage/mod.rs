@@ -31,4 +31,6 @@ mod allocation_probe;
 mod ring;
 
 mod area;
+mod budget;
 pub(crate) mod copy_gpu;
+pub(crate) mod fs_trace;
