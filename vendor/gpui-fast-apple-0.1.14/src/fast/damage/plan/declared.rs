@@ -38,6 +38,9 @@ pub(super) fn push(
         mask,
         reach: bounds.grown(2.).and(&mask),
         plain: false,
+        owner: 0,
+        opaque: false,
+        batch_rank: 0,
         fresh,
     });
 }

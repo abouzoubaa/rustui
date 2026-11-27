@@ -1058,6 +1058,15 @@ impl MetalRenderer {
                     );
                     if !changed {
                         let kept = renderer.damage.target.as_ref().unwrap();
+                        if let Some(spare) = &renderer.damage.spare {
+                            println!(
+                                "G3_BUDGET {w}x{h} current={} spare={} charged={} limit={}",
+                                kept.texture.allocatedSize(),
+                                spare.texture.allocatedSize(),
+                                kept.texture.allocatedSize() + spare.texture.allocatedSize(),
+                                kept.reservation.failed().limit
+                            );
+                        }
                         println!(
                             "FS2_FOOTPRINT {w}x{h} allocated={} limit={}",
                             kept.texture.allocatedSize(),
@@ -1099,3 +1108,5 @@ impl MetalRenderer {
 fn drawable_scaled_budget() {
     MetalRenderer::test_fs2_drawable_sizes().unwrap();
 }
+
+mod scroll;

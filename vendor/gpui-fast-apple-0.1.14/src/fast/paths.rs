@@ -89,8 +89,8 @@ pub(crate) fn draw_primitives_to_texture(
     let vertices = write_vertices(scene, &path_batches, writer)?;
 
     let command_queue = renderer.command_queue.clone();
-    let command_buffer = command_queue
-        .commandBuffer()
+    let command_buffer = crate::fast::damage::shift::command_for(texture)
+        .or_else(|| command_queue.commandBuffer())
         .context("creating command buffer")?;
     crate::fast::dynamic_textures::encode_uploads(&command_buffer);
     let alpha = if renderer.opaque { 1. } else { 0. };

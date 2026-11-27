@@ -12,7 +12,7 @@ FIELDS = """index epoch_ms surface layer_w layer_h scale framebuffer_only
 drawable_w drawable_h drawable_format before_w before_h before_format before_valid
 after_w after_h after_format after_valid allocated planned decision reason
 budget_used budget_requested""".split()
-SUBMITTED = {"direct", "partial", "copy", "retained"}
+SUBMITTED = {"direct", "partial", "copy", "retained", "shift"}
 
 
 def summarize(path):

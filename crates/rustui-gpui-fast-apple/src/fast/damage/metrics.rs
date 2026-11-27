@@ -119,8 +119,13 @@ pub(crate) fn verified(mode: &'static str) {
 
 pub(super) fn declared_diff(rectangles: usize) {
     if enabled() {
+        let epoch_ms = SystemTime::now()
+            .duration_since(SystemTime::UNIX_EPOCH)
+            .unwrap_or_default()
+            .as_secs_f64()
+            * 1000.;
         super::log::line(format_args!(
-            "RUSTUI_FRAME_LOG {{\"event\":\"declared_full_diff\",\"rectangles\":{rectangles}}}"
+            "RUSTUI_FRAME_LOG {{\"event\":\"declared_full_diff\",\"rectangles\":{rectangles},\"epoch_ms\":{epoch_ms:.6}}}"
         ));
     }
 }

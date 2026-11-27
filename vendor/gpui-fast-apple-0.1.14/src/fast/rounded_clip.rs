@@ -122,7 +122,9 @@ pub(crate) fn draw(
     surface_textures: &mut Vec<CFRetained<CVMetalTexture>>,
 ) -> Result<Retained<ProtocolObject<dyn MTLCommandBuffer>>> {
     let queue = renderer.command_queue.clone();
-    let command_buffer = queue.commandBuffer().context("creating command buffer")?;
+    let command_buffer = crate::fast::damage::shift::command_for(texture)
+        .or_else(|| queue.commandBuffer())
+        .context("creating command buffer")?;
     crate::fast::dynamic_textures::encode_uploads(&command_buffer);
     let alpha = if renderer.opaque { 1. } else { 0. };
     let encoder = new_command_encoder_for_texture(

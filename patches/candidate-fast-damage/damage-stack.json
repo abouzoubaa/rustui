@@ -51,6 +51,8 @@
     "gpui-fast-g-r2e-scoped-editor-damage-v1-fast.json",
     "gpui-fast-g-r3-close-diagnostics-v1-fast.json",
     "gpui-fast-g-fs1-fullscreen-trace-v1-fast.json",
-    "gpui-fast-g-fs2-texture-budget-v1-fast.json"
+    "gpui-fast-g-fs2-texture-budget-v1-fast.json",
+    "gpui-fast-damage-scroll-shift-v1-fast.json",
+    "gpui-fast-damage-scroll-declared-v1-fast.json"
   ]
 }

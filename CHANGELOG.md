@@ -2,6 +2,10 @@
 
 ## Unreleased
 
+- Let opt-in Metal scroll lists declare stable rows and measure the GPU cost of shifting and presenting them.
+
+- Add opt-in Metal scroll shifting with two retained textures, clipped copies and full-redraw pixel checks.
+
 - Scale the opt-in Metal damage budget to each window, report allocation failures, and retry after a resize.
 
 - Trace Metal damage decisions across native fullscreen transitions and identify when verification exhausts the retained-texture budget.

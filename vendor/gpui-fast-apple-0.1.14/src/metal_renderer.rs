@@ -1157,8 +1157,8 @@ impl MetalRenderer {
             return Ok(command_buffer);
         }
         let command_queue = self.command_queue.clone();
-        let command_buffer = command_queue
-            .commandBuffer()
+        let command_buffer = crate::fast::damage::shift::command_for(texture)
+            .or_else(|| command_queue.commandBuffer())
             .context("creating command buffer")?;
         crate::fast::dynamic_textures::encode_uploads(&command_buffer);
         let alpha = if self.opaque { 1. } else { 0. };
@@ -1844,9 +1844,7 @@ pub(crate) fn command_encoder_for_damage_probe(
         color_attachment.setLoadAction(MTLLoadAction::Load);
     }
 
-    if probe_copy {
-        crate::fast::damage::copy_gpu::attach(command_buffer, &render_pass_descriptor);
-    }
+    crate::fast::damage::copy_gpu::attach(command_buffer, &render_pass_descriptor, probe_copy);
     let command_encoder = command_buffer
         .renderCommandEncoderWithDescriptor(&render_pass_descriptor)
         .context("creating render command encoder")?;
