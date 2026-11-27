@@ -32,3 +32,4 @@ mod ring;
 
 mod area;
 pub(crate) mod copy_gpu;
+pub(crate) mod fs_trace;

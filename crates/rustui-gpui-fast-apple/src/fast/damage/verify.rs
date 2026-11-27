@@ -145,8 +145,11 @@ pub(crate) fn schedule(
     allowed: Option<Vec<super::plan::Area>>,
 ) -> Result<Retained<ProtocolObject<dyn MTLCommandBuffer>>> {
     anyhow::ensure!(!fail_allocation, "injected verification allocation failure");
-    let reference = Target::new(&renderer.device, output.width(), output.height())?
-        .context("verification exceeds device retained budget")?;
+    let reference =
+        Target::new(&renderer.device, output.width(), output.height())?.ok_or_else(|| {
+            super::fs_trace::cause("verify_reference_budget");
+            anyhow::anyhow!("verification exceeds device retained budget")
+        })?;
     let actual = Readback::encode(renderer, primary, output)?;
     let command = renderer.render_frame(scene, &reference.texture, size)?;
     let expected = Readback::encode(renderer, &command, &reference.texture)?;

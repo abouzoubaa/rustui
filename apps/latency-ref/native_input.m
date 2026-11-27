@@ -121,12 +121,20 @@ int g5_native_post(unsigned kind,uint64_t version,double x,double y){
  [NSApp postEvent:event atStart:NO];
  return 1;
 }
+static double fullscreenEnteredMs;
+double g_fs1_entered_ms(void) { return fullscreenEnteredMs; }
 static void flush(void){
+ if (fullscreenEnteredMs) fprintf(stderr, "G_FS1_ENTER %.6f\n", fullscreenEnteredMs);
  mach_timebase_info_data_t b;mach_timebase_info(&b);fprintf(stderr,"L1_NATIVE {\"event\":\"clock\",\"numer\":%u,\"denom\":%u}\n",b.numer,b.denom);
  for(NSDictionary *r in records){NSData *d=[NSJSONSerialization dataWithJSONObject:r options:NSJSONWritingSortedKeys error:nil];fprintf(stderr,"L1_NATIVE %s\n",[[[NSString alloc]initWithData:d encoding:NSUTF8StringEncoding]UTF8String]);}
 }
 __attribute__((constructor)) static void install(void){
  if(!enabled())return;records=[NSMutableArray new];pointerVersions=[NSMutableDictionary new];atexit(flush);
+ if (getenv("RUSTUI_G_FS1_SEQUENCE")) {
+  [NSNotificationCenter.defaultCenter addObserverForName:NSWindowDidEnterFullScreenNotification object:nil queue:nil usingBlock:^(NSNotification *note) {
+   fullscreenEnteredMs = NSDate.date.timeIntervalSince1970 * 1000.0;
+  }];
+ }
  cpu_startup();
  const char *keyPath=getenv("RUSTUI_L1_KEY_SOCKET");
  if(keyPath) {

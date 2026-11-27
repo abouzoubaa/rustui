@@ -111,7 +111,7 @@ struct Snapshot {
 }
 #[derive(Default)]
 pub(crate) struct State {
-    target: Option<Target>,
+    pub(super) target: Option<Target>,
     snapshot: Option<Snapshot>,
     previous_large: bool,
     verify_history: Option<super::verify::History>,
@@ -649,6 +649,7 @@ pub(crate) fn render_with_instances(
             // A display-link drawable can predate a layer resize. Never reuse or
             // copy a differently sized retained target into it.
             state.invalidate();
+            super::fs_trace::cause("stale_drawable_size");
             prepared = Prepared::direct();
         }
         let mut mode = prepared.mode;
@@ -670,7 +671,10 @@ pub(crate) fn render_with_instances(
                 log::warn!("retained damage allocation failed; drawing whole: {error:#}");
                 None
             });
-            if state.target.is_none() {
+            if state.target.is_some() {
+                super::fs_trace::allocated();
+            } else {
+                super::fs_trace::cause("retained_allocation");
                 mode = Mode::Direct;
             }
         }

@@ -47,6 +47,7 @@ pub(crate) fn reserve(device: u64, bytes: u64) -> Option<Arc<Reservation>> {
         .fetch_update(Ordering::AcqRel, Ordering::Acquire, |used| {
             used.checked_add(bytes).filter(|n| *n <= DEVICE_LIMIT)
         })
+        .inspect_err(|used| super::fs_trace::denied(*used, bytes))
         .ok()?;
     Some(Arc::new(Reservation { budget, bytes }))
 }

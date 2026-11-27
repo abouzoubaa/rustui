@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+- Trace Metal damage decisions across native fullscreen transitions and identify when verification exhausts the retained-texture budget.
+
 - Document the Stage G workload verdicts and add opt-in Metal diagnostics for typing costs and damaged pixels.
 
 - Let editors declare changed rows, caret and selection bounds for opt-in Metal damage tracking.

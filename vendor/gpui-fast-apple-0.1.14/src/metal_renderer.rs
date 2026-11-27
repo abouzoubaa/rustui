@@ -712,6 +712,8 @@ impl MetalRenderer {
                 return;
             }
         };
+        let mut fs_trace =
+            crate::fast::damage::fs_trace::Scope::start(&layer, &self.damage, self.order.surface());
         match if self.presents_with_transaction {
             0
         } else {
@@ -728,6 +730,7 @@ impl MetalRenderer {
         let prepared = crate::fast::damage::frame::choose(self, scene);
         timing.phase(Phase::Present);
         timing.reason = Reason::selected(prepared.reason);
+        fs_trace.planned(&prepared, &self.damage);
         if prepared.mode == crate::fast::damage::frame::Mode::Same {
             gpui::fast_frame_reason(prepared.mode.label(), prepared.reason);
             crate::fast::damage::encode::skipped(scene);
@@ -816,6 +819,7 @@ impl MetalRenderer {
         // A display link's drawable was sized when the link handed it out,
         // which can be before a resize the layer has since taken.
         let texture = drawable.texture();
+        fs_trace.acquired(&texture);
         let viewport_size: Size<DevicePixels> = size(
             (texture.width() as i32).into(),
             (texture.height() as i32).into(),
@@ -874,6 +878,7 @@ impl MetalRenderer {
             gpui::fast_order_defer();
             return;
         }
+        fs_trace.submitted(&self.damage, planned_mode, planned_reason);
         gpui::fast_surface_submitted(self.order.surface());
         crate::fast::presented::observe(&drawable);
         crate::fast::damage::metrics::on_commit(&command_buffer, self.damage.last_mode.label());

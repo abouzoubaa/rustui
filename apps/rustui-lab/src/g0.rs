@@ -452,6 +452,18 @@ fn playback(
     app.spawn(async move |cx| {
         cx.background_executor().timer(Duration::from_millis(200)).await;
         let Some(handle) = cx.update(|app| app.windows().first().copied()) else { cx.update(|app| app.quit()); return; };
+        let fs_sequence = std::env::var("RUSTUI_G_FS1_SEQUENCE").ok();
+        if matches!(fs_sequence.as_deref(), Some("A" | "B")) {
+            if fs_sequence.as_deref() == Some("A") {
+                handle.update(cx, |_, window, _| window.toggle_fullscreen()).unwrap();
+            }
+            let deadline = Instant::now() + Duration::from_secs(12);
+            while !native_input::fullscreen_entered() {
+                assert!(Instant::now() < deadline, "no native fullscreen entry notification");
+                cx.background_executor().timer(Duration::from_millis(20)).await;
+            }
+            assert!(handle.update(cx, |_, window, _| window.is_fullscreen()).unwrap());
+        }
         if std::env::var_os("RUSTUI_G_R1_FULLSCREEN").as_deref() == Some("1".as_ref()) {
             handle.update(cx, |_, window, _| window.toggle_simple_fullscreen()).unwrap();
             let deadline = Instant::now() + Duration::from_secs(5);
@@ -507,7 +519,8 @@ fn playback(
             cx.update(|app| app.quit());
             return;
         }
-        cx.background_executor().timer(Duration::from_secs(2)).await;
+        let still_seconds = if fs_sequence.is_some() { 5 } else { 2 };
+        cx.background_executor().timer(Duration::from_secs(still_seconds)).await;
         if scene == Scene::Drag {
             if native_input::enabled() {
                 let p = drag_position(0);
@@ -630,10 +643,20 @@ pub fn run_cli(args: &[String]) -> Result<(), String> {
     let result = complete.clone();
     let theme = parse_theme(include_str!("../../../themes/macos27.json"))
         .map_err(|error| error.to_string())?;
-    RustUI::new()
-        .assets(rustui::component_assets())
-        .window_size(WIDTH, HEIGHT)
-        .title(format!("RustUI G0 — {}", scene.name()))
+    let app = RustUI::new().assets(rustui::component_assets());
+    let app = if std::env::var("RUSTUI_G_FS1_SEQUENCE").as_deref() == Ok("B") {
+        let bounds = gpui::Bounds::new(
+            gpui::point(gpui::px(0.), gpui::px(0.)),
+            gpui::size(gpui::px(WIDTH), gpui::px(HEIGHT)),
+        );
+        app.window_options(gpui::WindowOptions {
+            window_bounds: Some(gpui::WindowBounds::Fullscreen(bounds)),
+            ..Default::default()
+        })
+    } else {
+        app.window_size(WIDTH, HEIGHT)
+    };
+    app.title(format!("RustUI G0 — {}", scene.name()))
         .on_launch(move |app| {
             activate_theme(&theme, Some(AppearanceMode::Dark), app).expect("bundled theme");
             if scene == Scene::Typing
