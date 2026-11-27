@@ -89,10 +89,11 @@ A supplemental 35-second fullscreen Lab verification run completed 350 native in
 
 | Follow-up | Size | Evidence and scope |
 | --- | --- | --- |
-| Tighten editor rectangles | M | Insert declared 1.56% for 0.042% changed. Newline and paste declared 44.43% for under 0.49% changed. Keep the full-reference check for glyph overhangs, caret, selection and reflow. Verify the single scissor also gets smaller in the full Lab scene. |
-| Reduce non-planner typing CPU | M | The historical +143.5 µs residual included +121.6 µs in `Window::draw`. The new pair measured +39.7 µs in `next_frame.finish()` and +19.0 µs to encode the copy. Reproduce the scene-build delta across pairs before changing the implementation. |
-| Avoid the full retained-to-drawable copy | L | Every Partial frame still copies all 7.72 million drawable pixels. The copy fragment averaged 166 µs, and a Copy-only command averaged 279 µs. A persistent presentation texture or IOSurface-backed layer would need separate proofs for ownership, in-flight frames, alpha, resize and presentation order. |
+| Tighten editor rectangles | S | Insert declared 1.56% for 0.042% changed. Newline and paste declared 44.43% for under 0.49% changed. Keep the full-reference check for glyph overhangs, caret, selection and reflow. Verify the single scissor also gets smaller in the full Lab scene. |
+| Reduce non-planner typing CPU | Only if the increase reappears | The historical +143.5 µs residual included +121.6 µs in `Window::draw`. The new pair measured +39.7 µs in `next_frame.finish()` and +19.0 µs to encode the copy. Reproduce the scene-build delta across pairs before changing the implementation. |
+| Avoid the full retained-to-drawable copy | M/L | Every Partial frame still copies all 7.72 million drawable pixels. The copy fragment averaged 166 µs, and a Copy-only command averaged 279 µs. A persistent presentation texture or IOSurface-backed layer would need separate proofs for ownership, in-flight frames, alpha, resize and presentation order. |
 | Metal scroll shift | M | All 5,289 historical shift plans returned `shift_unimplemented`; the current early rejection kept every qualified scroll frame Direct. A retained-to-scratch-to-retained blit and exposed-strip redraw need a byte oracle for overlapping moves and a fractional-scroll fallback. |
+| Diagnose fullscreen fallback | Unknown (diagnose first) | Fullscreen live run fell back to Direct during warmup; cause unknown. Must be explained before damage can be enabled by default or combined with fullscreen direct-to-display. |
 
 ## Verification and reproduction
 
