@@ -39,7 +39,16 @@ fn config(value: Option<&str>) -> Config {
 }
 fn configured() -> Config {
     static CONFIG: OnceLock<Config> = OnceLock::new();
-    *CONFIG.get_or_init(|| config(std::env::var("RUSTUI_DAMAGE").ok().as_deref()))
+    *CONFIG.get_or_init(|| {
+        let mode = config(std::env::var("RUSTUI_DAMAGE").ok().as_deref());
+        if mode != Config::Off
+            && std::env::var_os("RUSTUI_DAMAGE_VERIFY").as_deref() == Some("1".as_ref())
+        {
+            Config::Verify
+        } else {
+            mode
+        }
+    })
 }
 
 // Only the explicit pixel oracle needs release drawables to be readable.
@@ -95,6 +104,7 @@ impl Geometry {
 struct Snapshot {
     geometry: Geometry,
     signatures: Vec<Sig>,
+    partitions: [usize; 7],
     order_identities: Option<Vec<Option<super::order_probe::Identity>>>,
     generation: u64,
     deferred: Option<Box<Scene>>,
@@ -104,6 +114,7 @@ pub(crate) struct State {
     target: Option<Target>,
     snapshot: Option<Snapshot>,
     previous_large: bool,
+    verify_history: Option<super::verify::History>,
     backoff: backoff::State,
     #[cfg(any(test, feature = "test-support"))]
     planner_calls: usize,
@@ -136,6 +147,7 @@ pub(crate) struct Prepared {
     plannable: bool,
     backoff: bool,
     probe: bool,
+    verify_areas: Option<Vec<Area>>,
     preserve_snapshot: bool,
 }
 impl Prepared {
@@ -148,6 +160,7 @@ impl Prepared {
             plannable: false,
             backoff: false,
             probe: false,
+            verify_areas: None,
             preserve_snapshot: false,
         }
     }
@@ -185,6 +198,7 @@ impl State {
     pub(crate) fn invalidate(&mut self) {
         self.target = None;
         self.verification = None;
+        self.verify_history = None;
         self.snapshot = None;
         self.previous_large = false;
         self.backoff.reset();
@@ -235,6 +249,18 @@ impl State {
             };
         }
         let mut cpu = super::cpu::Measure::new("off_path");
+        // This Metal backend cannot execute a scroll shift. A measured change
+        // to a real scroll offset is sufficient to decline before collection.
+        if scene.fast_damage_scroll_changed() {
+            cpu.reason = "shift_unsupported";
+            self.invalidate();
+            self.previous_large = true;
+            return Prepared {
+                reason: cpu.reason,
+                large: true,
+                ..Prepared::direct()
+            };
+        }
         if !plan::can_plan(scene) {
             cpu.reason = "unsupported";
             self.invalidate();
@@ -281,6 +307,7 @@ impl State {
             let snapshot = tail.then(|| Snapshot {
                 geometry,
                 signatures: Vec::new(),
+                partitions: [0; 7],
                 order_identities: super::order_probe::active()
                     .then(|| super::order_probe::identities(scene)),
                 generation: uploads.generation,
@@ -336,6 +363,7 @@ impl State {
                 snapshot: Some(Snapshot {
                     geometry,
                     signatures: Vec::new(),
+                    partitions: [0; 7],
                     order_identities: super::order_probe::active()
                         .then(|| super::order_probe::identities(scene)),
                     generation: uploads.generation,
@@ -361,6 +389,7 @@ impl State {
                 self.invalidate();
                 return Prepared::direct();
             };
+            self.snapshot.as_mut().unwrap().partitions = self.cache.partitions;
             self.snapshot.as_mut().unwrap().signatures = old;
             cpu.hashed += self.cache.hashed;
             cpu.reused += self.cache.reused;
@@ -401,13 +430,43 @@ impl State {
         if self.disjoint_order_override {
             policy.allow_disjoint_order = true;
         }
-        let change = plan::plan_traced(
-            &self.snapshot.as_ref().unwrap().signatures,
-            &signatures,
-            geometry.view(),
-            trace.as_mut(),
-            &mut policy,
-        );
+        let mut verify_areas = (self.verifying() && scene.has_damage_declarations()).then(|| {
+            plan::unmerged_changes(&self.snapshot.as_ref().unwrap().signatures, &signatures)
+        });
+        let prior = self.snapshot.as_ref().unwrap();
+        super::timing::plan_stage(super::timing::PlanStage::FixedCompare);
+        let quick = scene
+            .has_damage_declarations()
+            .then(|| {
+                plan::declared_plan(
+                    &prior.signatures,
+                    &signatures,
+                    prior.partitions,
+                    self.cache.partitions,
+                    geometry.view(),
+                )
+            })
+            .flatten();
+        let mut change = quick.or_else(|| {
+            plan::plan_traced(
+                &self.snapshot.as_ref().unwrap().signatures,
+                &signatures,
+                geometry.view(),
+                trace.as_mut(),
+                &mut policy,
+            )
+        });
+        if let Some(plan) = change.as_mut() {
+            for rect in scene.extra_damage_rects() {
+                let area = Area::of(rect).grown(1.).pixels().and(&geometry.view());
+                if !area.is_empty() {
+                    plan.damage.push(area);
+                    if let Some(areas) = &mut verify_areas {
+                        areas.push(area);
+                    }
+                }
+            }
+        }
         cpu.plan_ms = plan_start.elapsed().as_secs_f64() * 1000.;
         super::timing::plan_stage(super::timing::PlanStage::SelectMode);
         let order_identities =
@@ -467,6 +526,7 @@ impl State {
         }
         Prepared {
             mode,
+            verify_areas,
             reason: match mode {
                 Mode::Same => "identical",
                 Mode::Copy => "required",
@@ -477,6 +537,7 @@ impl State {
             snapshot: Some(Snapshot {
                 geometry,
                 signatures,
+                partitions: self.cache.partitions,
                 order_identities,
                 generation: uploads.generation,
                 deferred: None,
@@ -693,6 +754,7 @@ pub(crate) fn render_with_instances(
                 .as_ref()
                 .context("verify window status")?
                 .clone();
+            let fail = state.verification_failure();
             match super::verify::schedule(
                 renderer,
                 scene,
@@ -701,7 +763,9 @@ pub(crate) fn render_with_instances(
                 size,
                 mode,
                 status.clone(),
-                state.verification_failure(),
+                fail,
+                &mut state.verify_history,
+                prepared.verify_areas.take(),
             ) {
                 Ok(reference) => state.verification = Some(reference),
                 Err(error) => {
@@ -738,3 +802,6 @@ mod proof;
 pub(crate) use proof::test_skip_leaves_drawable_unused;
 
 pub(crate) use super::partial::{pass_clear, pass_scissor};
+
+#[cfg(any(test, feature = "test-support"))]
+pub(crate) use proof::editor_image;

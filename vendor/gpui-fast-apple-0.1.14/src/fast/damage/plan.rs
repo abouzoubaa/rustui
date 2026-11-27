@@ -131,7 +131,7 @@ impl Area {
         }
     }
 
-    fn grown(&self, by: f32) -> Area {
+    pub(super) fn grown(&self, by: f32) -> Area {
         Area {
             x0: self.x0 - by,
             y0: self.y0 - by,
@@ -381,6 +381,10 @@ pub(crate) fn signatures_cached(
     dynamic: &dyn Fn(AtlasTextureId) -> bool,
     cache: &mut Cache,
 ) -> Option<Vec<Sig>> {
+    #[cfg(any(test, feature = "test-support"))]
+    {
+        cache.collection_calls += 1;
+    }
     // A scroll layer's tiles change under sprites that stay the same.
     if !can_plan(scene) {
         return None;
@@ -398,7 +402,28 @@ pub(crate) fn signatures_cached(
             + scene.polychrome_sprites.len()
             + scene.paths.len(),
     );
+    let mut partitions = [0; 7];
+    let declared = cache.declared && scene.has_damage_declarations();
     for (index, q) in scene.quads.iter().enumerate() {
+        if declared && let Some(region) = scene.fast_damage_region(0, index) {
+            let footprint = Area::of(&q.bounds).and(&Area::of(&q.content_mask.bounds));
+            let bounds = Area::of(&region.bounds);
+            // Overhanging glyphs and unbounded paths retain their ordinary signatures.
+            if footprint.within(&bounds.grown(1.0)) {
+                declared::push(
+                    &mut out,
+                    region.owner,
+                    region.revision,
+                    region.anchor,
+                    0,
+                    q.order,
+                    bounds,
+                    Area::of(&q.content_mask.bounds),
+                    false,
+                );
+                continue;
+            }
+        }
         let source = scene.fast_damage_view_source(0, index);
         if let Some(signature) = cache.replay(source, q.order, false) {
             out.push(signature);
@@ -427,6 +452,7 @@ pub(crate) fn signatures_cached(
             && w.left.is_zero();
         cache.push(source, s, &mut out);
     }
+    partitions[0] = out.len();
     for (index, s) in scene.shadows.iter().enumerate() {
         let source = scene.fast_damage_view_source(1, index);
         if let Some(signature) = cache.replay(source, s.order, false) {
@@ -451,6 +477,7 @@ pub(crate) fn signatures_cached(
             &mut out,
         );
     }
+    partitions[1] = out.len();
     for (index, u) in scene.underlines.iter().enumerate() {
         let source = scene.fast_damage_view_source(2, index);
         if let Some(signature) = cache.replay(source, u.order, false) {
@@ -469,7 +496,30 @@ pub(crate) fn signatures_cached(
             &mut out,
         );
     }
+    partitions[2] = out.len();
     for (index, g) in scene.monochrome_sprites.iter().enumerate() {
+        if declared
+            && is_unit(&g.transformation)
+            && let Some(region) = scene.fast_damage_region(3, index)
+        {
+            let footprint = Area::of(&g.bounds).and(&Area::of(&g.content_mask.bounds));
+            let bounds = Area::of(&region.bounds);
+            // Overhanging glyphs and unbounded paths retain their ordinary signatures.
+            if footprint.within(&bounds.grown(1.0)) {
+                declared::push(
+                    &mut out,
+                    region.owner,
+                    region.revision,
+                    region.anchor,
+                    3,
+                    g.order,
+                    bounds,
+                    Area::of(&g.content_mask.bounds),
+                    fresh(&g.tile),
+                );
+                continue;
+            }
+        }
         let source = scene.fast_damage_view_source(3, index);
         if let Some(signature) = cache.replay(source, g.order, fresh(&g.tile)) {
             out.push(signature);
@@ -487,7 +537,30 @@ pub(crate) fn signatures_cached(
         s.fresh = fresh(&g.tile);
         cache.push(source, s, &mut out);
     }
+    partitions[3] = out.len();
     for (index, g) in scene.subpixel_sprites.iter().enumerate() {
+        if declared
+            && is_unit(&g.transformation)
+            && let Some(region) = scene.fast_damage_region(4, index)
+        {
+            let footprint = Area::of(&g.bounds).and(&Area::of(&g.content_mask.bounds));
+            let bounds = Area::of(&region.bounds);
+            // Overhanging glyphs and unbounded paths retain their ordinary signatures.
+            if footprint.within(&bounds.grown(1.0)) {
+                declared::push(
+                    &mut out,
+                    region.owner,
+                    region.revision,
+                    region.anchor,
+                    4,
+                    g.order,
+                    bounds,
+                    Area::of(&g.content_mask.bounds),
+                    fresh(&g.tile),
+                );
+                continue;
+            }
+        }
         let source = scene.fast_damage_view_source(4, index);
         if let Some(signature) = cache.replay(source, g.order, fresh(&g.tile)) {
             out.push(signature);
@@ -505,6 +578,7 @@ pub(crate) fn signatures_cached(
         s.fresh = fresh(&g.tile);
         cache.push(source, s, &mut out);
     }
+    partitions[4] = out.len();
     for (index, p) in scene.polychrome_sprites.iter().enumerate() {
         let source = scene.fast_damage_view_source(5, index);
         if crate::fast::rounded_clip::group(scene, p.tile.texture_id).is_none()
@@ -559,7 +633,27 @@ pub(crate) fn signatures_cached(
         s.fresh = fresh(&p.tile);
         cache.push(source, s, &mut out);
     }
+    partitions[5] = out.len();
     for (index, p) in scene.paths.iter().enumerate() {
+        if declared && let Some(region) = scene.fast_damage_region(6, index) {
+            let footprint = Area::of(&p.bounds).and(&Area::of(&p.content_mask.bounds));
+            let bounds = Area::of(&region.bounds);
+            // Overhanging glyphs and unbounded paths retain their ordinary signatures.
+            if footprint.within(&bounds.grown(1.0)) {
+                declared::push(
+                    &mut out,
+                    region.owner,
+                    region.revision,
+                    region.anchor,
+                    6,
+                    p.order,
+                    bounds,
+                    Area::of(&p.content_mask.bounds),
+                    false,
+                );
+                continue;
+            }
+        }
         let source = scene.fast_damage_view_source(6, index);
         if let Some(signature) = cache.replay(source, p.order, false) {
             out.push(signature);
@@ -580,6 +674,8 @@ pub(crate) fn signatures_cached(
             &mut out,
         );
     }
+    partitions[6] = out.len();
+    cache.partitions = partitions;
     Some(out)
 }
 
@@ -1503,4 +1599,102 @@ impl crate::metal_renderer::MetalRenderer {
         super::inputs::test_upload_observers();
         super::inputs::test_atlas_hooks().expect("Metal atlas upload/remove hooks");
     }
+}
+
+mod declared;
+
+/// In verification, retain disjoint regions and holes instead of using the
+/// enclosing render scissor. A change in stacking also invalidates its footprint.
+pub(super) fn unmerged_changes(old: &[Sig], new: &[Sig]) -> Vec<Area> {
+    let mut counts = HashMap::default();
+    for s in old {
+        *counts.entry((placed(s), s.order)).or_insert(0usize) += 1;
+    }
+    let mut areas = Vec::new();
+    for s in new {
+        let n = counts.entry((placed(s), s.order)).or_default();
+        if *n == 0 {
+            areas.push(s.reach.pixels());
+        } else {
+            *n -= 1;
+            if s.fresh {
+                areas.push(s.reach.pixels());
+            }
+        }
+    }
+    for s in old {
+        if let Some(n) = counts.get_mut(&(placed(s), s.order))
+            && *n > 0
+        {
+            areas.push(s.reach.pixels());
+            *n -= 1;
+        }
+    }
+    areas
+}
+
+/// Within each ordered primitive stream, identical prefix/suffix signatures
+/// cannot change pixels. Redraw both sides of every unmatched span. Decline
+/// this shortcut when it produces a large box; the normal planner can do better.
+pub(super) fn declared_plan(
+    old: &[Sig],
+    new: &[Sig],
+    old_ends: [usize; 7],
+    new_ends: [usize; 7],
+    view: Area,
+) -> Option<Plan> {
+    let same = |a: &Sig, b: &Sig| {
+        a.key == b.key
+            && a.order == b.order
+            && a.bounds == b.bounds
+            && a.mask == b.mask
+            && a.reach == b.reach
+            && !b.fresh
+    };
+    let mut result: Option<Area> = None;
+    let mut add = |s: &Sig| {
+        let reach = s.reach.pixels().and(&view);
+        if !reach.is_empty() {
+            result = Some(result.map_or(reach, |r| r.union(&reach)));
+        }
+    };
+    let (mut left, mut right) = (0, 0);
+    for (end, next_end) in old_ends.into_iter().zip(new_ends) {
+        let before = &old[left..end];
+        let after = &new[right..next_end];
+        left = end;
+        right = next_end;
+        if before.len() == after.len() {
+            for (a, b) in before.iter().zip(after) {
+                if !same(a, b) {
+                    add(a);
+                    add(b);
+                }
+            }
+        } else {
+            let prefix = before
+                .iter()
+                .zip(after)
+                .take_while(|(a, b)| same(a, b))
+                .count();
+            let before = &before[prefix..];
+            let after = &after[prefix..];
+            let suffix = before
+                .iter()
+                .rev()
+                .zip(after.iter().rev())
+                .take_while(|(a, b)| same(a, b))
+                .count();
+            before[..before.len() - suffix].iter().for_each(&mut add);
+            after[..after.len() - suffix].iter().for_each(&mut add);
+        }
+    }
+    debug_assert_eq!((left, right), (old.len(), new.len()));
+    if result.is_some_and(|r| r.area() > MAX_DAMAGE * view.area()) {
+        return None;
+    }
+    Some(Plan {
+        shift: None,
+        damage: result.into_iter().collect(),
+    })
 }

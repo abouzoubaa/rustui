@@ -14,6 +14,7 @@ use std::{
 struct Source {
     id: u64,
     replayed: bool,
+    region: u32,
     element: u64,
     view: u64,
 }
@@ -27,11 +28,17 @@ struct Entry {
 }
 #[derive(Clone, Default)]
 pub(crate) struct Provenance {
+    scroll_changed: bool,
+    pub(super) extra_damage: Vec<crate::Bounds<crate::ScaledPixels>>,
+    pub(super) regions: Vec<super::declared::DamageRegion>,
+    // Rounded-clip compilation retains original operations for future replay,
+    // while its renderer-order primitives belong to the compiled scene.
+    operation_regions: Option<Vec<super::declared::DamageRegion>>,
     operations: Vec<Source>,
     kinds: [Vec<Entry>; 8],
 }
 thread_local! {
-    static SOURCE:Cell<Source> = const { Cell::new(Source{id:0,replayed:false,element:0,view:0}) };
+    static SOURCE:Cell<Source> = const { Cell::new(Source{id:0,region:0,replayed:false,element:0,view:0}) };
     #[cfg(any(test, feature="test-support"))]
     static TEST_ENABLED:Cell<bool> = const { Cell::new(false) };
 }
@@ -49,7 +56,53 @@ fn enabled() -> bool {
     })
 }
 impl Provenance {
+    pub(super) fn declaration_start(&self) -> [usize; 8] {
+        std::array::from_fn(|i| self.kinds[i].len())
+    }
+    fn intern_region(&mut self, region: super::declared::DamageRegion) -> u32 {
+        if self.regions.last() != Some(&region) {
+            self.regions.push(region);
+        }
+        u32::try_from(self.regions.len()).expect("too many declared damage regions")
+    }
+    pub(super) fn declare(&mut self, start: [usize; 8], region: super::declared::DamageRegion) {
+        let id = self.intern_region(region);
+        for (kind, start) in self.kinds.iter_mut().zip(start) {
+            for entry in &mut kind[start..] {
+                entry.source.region = id;
+                self.operations[entry.paint_index].region = id;
+            }
+        }
+    }
+    pub(super) fn region(
+        &self,
+        kind: usize,
+        index: usize,
+    ) -> Option<super::declared::DamageRegion> {
+        let id = self
+            .kinds
+            .get(kind)?
+            .get(index)?
+            .source
+            .region
+            .checked_sub(1)?;
+        self.regions.get(id as usize).copied()
+    }
+    fn import(&mut self, original: &Self, mut source: Source) -> Source {
+        if let Some(i) = source.region.checked_sub(1) {
+            let regions = original
+                .operation_regions
+                .as_ref()
+                .unwrap_or(&original.regions);
+            source.region = self.intern_region(regions[i as usize]);
+        }
+        source
+    }
     pub(crate) fn clear(&mut self) {
+        self.extra_damage.clear();
+        self.regions.clear();
+        self.operation_regions = None;
+        self.scroll_changed = false;
         self.operations.clear();
         for kind in &mut self.kinds {
             kind.clear();
@@ -64,6 +117,9 @@ impl Provenance {
         }
     }
     pub(crate) fn restore_operations(&mut self, original: Self) {
+        self.extra_damage = original.extra_damage;
+        self.scroll_changed = original.scroll_changed;
+        self.operation_regions = original.operation_regions.or(Some(original.regions));
         self.operations = original.operations;
     }
 }
@@ -143,6 +199,7 @@ pub(crate) fn replay(scene: &mut Scene, primitive: Primitive, previous: &Scene, 
         .get(index)
         .copied()
         .unwrap_or_default();
+    source = scene.fast_damage.import(&previous.fast_damage, source);
     source.replayed = source.id != 0;
     insert(scene, primitive, source);
 }
@@ -156,13 +213,30 @@ pub(crate) fn compile(
         scene.insert_primitive(primitive);
         return;
     }
-    insert(
-        scene,
-        primitive,
+    let source = scene.fast_damage.import(
+        previous,
         previous.operations.get(index).copied().unwrap_or_default(),
     );
+    insert(scene, primitive, source);
 }
 impl Window {
+    pub(crate) fn fast_damage_observe_scroll(
+        &mut self,
+        previous: &mut Option<crate::Point<crate::Pixels>>,
+        current: crate::Point<crate::Pixels>,
+    ) {
+        static ACTIVE: OnceLock<bool> = OnceLock::new();
+        if enabled()
+            && *ACTIVE.get_or_init(|| {
+                std::env::var_os("RUSTUI_G_R2_EARLY_REJECT").as_deref() == Some("1".as_ref())
+            })
+        {
+            self.next_frame
+                .scene
+                .observe_damage_scroll(previous, current);
+        }
+    }
+
     pub(crate) fn fast_damage_insert_primitive(&mut self, primitive: impl Into<Primitive>) {
         if !Scene::fast_damage_order_probe_enabled() {
             self.next_frame.scene.insert_primitive(primitive);
@@ -176,6 +250,21 @@ impl Window {
     }
 }
 impl Scene {
+    /// Observe the final clamped offset, including a programmatic scroll-to-item.
+    #[doc(hidden)]
+    pub fn observe_damage_scroll(
+        &mut self,
+        previous: &mut Option<crate::Point<crate::Pixels>>,
+        current: crate::Point<crate::Pixels>,
+    ) {
+        self.fast_damage.scroll_changed |=
+            previous.replace(current).is_some_and(|old| old != current);
+    }
+    #[doc(hidden)]
+    pub fn fast_damage_scroll_changed(&self) -> bool {
+        self.fast_damage.scroll_changed
+    }
+
     /// Internal renderer bridge for bounded paint-order diagnostics.
     #[doc(hidden)]
     pub fn fast_damage_order_probe_enabled() -> bool {

@@ -4129,7 +4129,10 @@ impl<M: InputModeKind> Element for TextElement<M> {
             }
 
             for path in prepaint.selection_paths.drain(..) {
-                window.paint_path(path, editor_style.selection);
+                let rect = path.bounds;
+                window.paint_with_declared_damage(rect, rect.origin, 0, |w| {
+                    w.paint_path(path, editor_style.selection)
+                });
             }
 
             // Paint hover highlight
@@ -4152,11 +4155,56 @@ impl<M: InputModeKind> Element for TextElement<M> {
         // Track the y-position of the cursor row for positioning the first line suffix
         let mut cursor_row_y = None;
 
-        for (line, &buffer_line) in prepaint
+        let declared = gpui::Window::declared_damage_enabled();
+        let tail = if declared {
+            let state = self.state.read(cx);
+            let layout = &prepaint.last_layout;
+            let count = state.text.lines_len();
+            let edit = state.damage_edit_row.take();
+            let mut previous = state.damage_previous_layout.borrow_mut();
+            let first = previous
+                .as_ref()
+                .and_then(|(old_count, old_first, old_height, old)| {
+                    layout.lines.iter().enumerate().find_map(|(i, line)| {
+                        let old_line = old.get(i)?;
+                        let row_moved =
+                            i == 0 && Some(old_first) != layout.visible_buffer_lines.first();
+                        let reflow =
+                            old_line.size(*old_height).height != line.size(line_height).height;
+                        let changed = old.damage_revision(i) != layout.lines.damage_revision(i);
+                        (row_moved || reflow || (*old_count != count && changed)).then_some(i)
+                    })
+                });
+            let structural = previous.as_ref().and_then(|(old_count, ..)| {
+                if *old_count == count {
+                    return None;
+                }
+                let row = edit.unwrap_or(0);
+                let i = layout
+                    .visible_buffer_lines
+                    .partition_point(|visible| *visible < row);
+                (i < layout.lines.len()).then_some(i)
+            });
+            let first = match (first, structural) {
+                (Some(a), Some(b)) => Some(a.min(b)),
+                (a, b) => a.or(b),
+            };
+            *previous = Some((
+                count,
+                layout.visible_buffer_lines.first().copied().unwrap_or(0),
+                layout.line_height,
+                layout.lines.clone(),
+            ));
+            first
+        } else {
+            None
+        };
+        for (i, (line, &buffer_line)) in prepaint
             .last_layout
             .lines
             .iter()
             .zip(prepaint.last_layout.visible_buffer_lines.iter())
+            .enumerate()
         {
             let row = buffer_line;
             let line_y = origin.y + offset_y;
@@ -4166,14 +4214,43 @@ impl<M: InputModeKind> Element for TextElement<M> {
             );
 
             // Paint the actual line
-            _ = line.paint(
-                p,
-                line_height,
-                text_align,
-                Some(prepaint.last_layout.content_width),
-                window,
-                cx,
-            );
+            let paint = |window: &mut Window| {
+                _ = line.paint(
+                    p,
+                    line_height,
+                    text_align,
+                    Some(prepaint.last_layout.content_width),
+                    window,
+                    cx,
+                );
+            };
+            if declared && let Some(revision) = prepaint.last_layout.lines.damage_revision(i) {
+                let mut height = line.size(line_height).height;
+                if Some(i) == tail {
+                    height = height.max(input_bounds.bottom() - line_y);
+                    window.declare_damage_rect(Bounds::new(
+                        point(input_bounds.left(), line_y),
+                        size(input_bounds.size.width, height),
+                    ));
+                }
+                let rect = Bounds::new(
+                    point(input_bounds.left(), line_y),
+                    size(input_bounds.size.width, height),
+                );
+                let alignment = match text_align {
+                    TextAlign::Left => 0,
+                    TextAlign::Center => 1,
+                    TextAlign::Right => 2,
+                };
+                let revision = revision
+                    .checked_mul(4)
+                    .expect("shaped row revision overflow")
+                    | alignment;
+                window.paint_with_declared_damage(rect, p, revision, paint);
+            } else {
+                let mut paint = paint;
+                paint(window);
+            }
             offset_y += line.size(line_height).height;
 
             if Some(row) == prepaint.current_row {
@@ -4221,10 +4298,10 @@ impl<M: InputModeKind> Element for TextElement<M> {
         // Paint blinking cursors (shared blink state for all carets)
         if focused && show_cursor {
             for cursor_info in prepaint.cursor_infos_with_scroll() {
-                window.paint_quad(fill(
-                    snap_caret_to_device_pixels(cursor_info.bounds, window.scale_factor()),
-                    editor_style.caret,
-                ));
+                let rect = snap_caret_to_device_pixels(cursor_info.bounds, window.scale_factor());
+                window.paint_with_declared_damage(rect, rect.origin, 0, |w| {
+                    w.paint_quad(fill(rect, editor_style.caret))
+                });
             }
         }
 

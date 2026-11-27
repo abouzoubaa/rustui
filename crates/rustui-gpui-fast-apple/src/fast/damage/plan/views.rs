@@ -4,7 +4,9 @@
 use super::Sig;
 use smallvec::SmallVec;
 
-const INLINE: usize = 884;
+// Median of 1,749 view observations (1, 5, 883 or 884 signatures).
+// A large view retains its spill on both sides of the frame swap.
+const INLINE: usize = 5;
 type List = SmallVec<[(u64, Sig); INLINE]>;
 
 #[derive(Default)]
@@ -24,6 +26,30 @@ pub(super) struct Views {
 }
 
 impl Views {
+    pub(super) fn allocated_bytes(&self) -> usize {
+        use std::mem::size_of;
+        size_of::<Self>()
+            + self.slots.capacity() * size_of::<Option<Box<Entry>>>()
+            + self
+                .touched
+                .iter()
+                .map(|v| v.capacity() * size_of::<usize>())
+                .sum::<usize>()
+            + self
+                .slots
+                .iter()
+                .flatten()
+                .map(|e| {
+                    size_of::<Entry>()
+                        + e.lists
+                            .iter()
+                            .filter(|list| list.spilled())
+                            .map(|list| list.capacity() * size_of::<(u64, Sig)>())
+                            .sum::<usize>()
+                })
+                .sum::<usize>()
+    }
+
     pub(super) fn advance(&mut self) {
         self.frame = self
             .frame

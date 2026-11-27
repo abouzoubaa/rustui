@@ -167,6 +167,21 @@ impl TestAppContext {
         )
     }
 
+    /// Construct a test window with a real text system and renderer, while
+    /// retaining deterministic input, timers, and the isolated test clipboard.
+    #[doc(hidden)]
+    pub fn build_with_metal_fixture(
+        dispatcher: TestDispatcher,
+        text: Arc<dyn PlatformTextSystem>,
+        factory: Box<dyn Fn() -> anyhow::Result<Option<Box<dyn crate::PlatformHeadlessRenderer>>>>,
+    ) -> Self {
+        let shared = Arc::new(dispatcher.clone());
+        let bg = BackgroundExecutor::new(shared.clone());
+        let fg = ForegroundExecutor::new(shared);
+        let platform = TestPlatform::with_platform(bg.clone(), fg.clone(), text, Some(factory));
+        Self::build_with_platform(dispatcher, None, bg, fg, platform)
+    }
+
     fn build_with_platform(
         dispatcher: TestDispatcher,
         fn_name: Option<&'static str>,
@@ -473,8 +488,14 @@ impl TestAppContext {
     }
 
     /// Returns the last anchor rectangle sent to a test popup window.
-    pub fn anchored_popup_anchor_rect(&self, window_handle: AnyWindowHandle) -> Option<Bounds<Pixels>> {
-        self.test_window(window_handle).0.lock().last_anchored_popup_anchor_rect
+    pub fn anchored_popup_anchor_rect(
+        &self,
+        window_handle: AnyWindowHandle,
+    ) -> Option<Bounds<Pixels>> {
+        self.test_window(window_handle)
+            .0
+            .lock()
+            .last_anchored_popup_anchor_rect
     }
 
     /// Simulates a change in whether the platform is presenting the window.

@@ -2234,6 +2234,10 @@ impl gpui::PlatformHeadlessRenderer for MetalHeadlessRenderer {
         scene: &Scene,
         size: Size<DevicePixels>,
     ) -> anyhow::Result<image::RgbaImage> {
+        #[cfg(feature = "test-support")]
+        if std::env::var_os("RUSTUI_G_R2_EDITOR_ORACLE").as_deref() == Some("1".as_ref()) {
+            return crate::fast::damage::frame::editor_image(&mut self.renderer, scene, size);
+        }
         self.renderer.render_scene_to_image(scene, size)
     }
 

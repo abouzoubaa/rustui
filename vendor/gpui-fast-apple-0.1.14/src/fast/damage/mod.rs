@@ -27,3 +27,5 @@ mod order_probe;
 mod view_sizes;
 
 mod allocation_probe;
+
+mod ring;

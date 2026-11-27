@@ -5,17 +5,28 @@ use super::Sig;
 #[derive(Default)]
 pub(crate) struct Cache {
     enabled: bool,
+    pub(super) declared: bool,
+    pub(crate) partitions: [usize; 7],
+    #[cfg(any(test, feature = "test-support"))]
+    pub(crate) test_declared: bool,
     views: super::views::Views,
     // Child clip scenes need one work vector per nesting level.
     buffers: Vec<Vec<Sig>>,
     previous: collections::HashMap<u64, Sig>,
     next: collections::HashMap<u64, Sig>,
+    #[cfg(any(test, feature = "test-support"))]
+    pub(crate) collection_calls: usize,
     pub(crate) hashed: usize,
     pub(crate) reused: usize,
 }
 impl Cache {
     pub(crate) fn enable_from_env(&mut self) {
         static SWITCH: std::sync::OnceLock<bool> = std::sync::OnceLock::new();
+        self.declared = gpui::Window::declared_damage_enabled();
+        #[cfg(any(test, feature = "test-support"))]
+        {
+            self.declared |= self.test_declared;
+        }
         self.enabled = *SWITCH.get_or_init(|| {
             std::env::var_os("RUSTUI_G_R2_VIEW_SIGNATURES").as_deref() == Some("1".as_ref())
         });
@@ -45,6 +56,23 @@ impl Cache {
         self.reused = 0;
     }
     pub(crate) fn finish(&mut self) {
+        static MEASURE: std::sync::OnceLock<bool> = std::sync::OnceLock::new();
+        if self.enabled
+            && *MEASURE.get_or_init(|| {
+                std::env::var_os("RUSTUI_G_R2_CACHE_BYTES").as_deref() == Some("1".as_ref())
+            })
+        {
+            let epoch_ms = std::time::SystemTime::now()
+                .duration_since(std::time::UNIX_EPOCH)
+                .unwrap_or_default()
+                .as_secs_f64()
+                * 1000.;
+            super::super::log::line(format_args!(
+                "RUSTUI_G_R2_CACHE_BYTES {} {epoch_ms:.6}",
+                self.views.allocated_bytes()
+            ));
+        }
+
         std::mem::swap(&mut self.previous, &mut self.next);
         self.next.clear();
     }

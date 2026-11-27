@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+- Let editors declare changed rows, caret and selection bounds for opt-in Metal damage tracking.
+
 - Add opt-in Metal damage attribution, phase timing, safe disjoint paint reordering, early shift rejection, and a per-view signature cache.
 
 - Add opt-in damage planner diagnostics and a full-display Lab benchmark mode.

@@ -45,7 +45,7 @@ pub(super) fn sample(scene: &Scene) {
         slots.clear();
         count(scene, &mut slots);
         for (slot, count) in slots.iter().enumerate().filter(|(_, n)| **n != 0) {
-            eprintln!("RUSTUI_G_R2_VIEW_SIZE {slot} {count}");
+            super::log::line(format_args!("RUSTUI_G_R2_VIEW_SIZE {slot} {count}"));
         }
     });
 }

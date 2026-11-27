@@ -116,3 +116,11 @@ pub(crate) fn verified(mode: &'static str) {
         "RUSTUI_FRAME_LOG {{\"event\":\"damage_verify\",\"mode\":\"{mode}\",\"cpu_ms\":0.0,\"epoch_ms\":{epoch_ms:.6}}}"
     ));
 }
+
+pub(super) fn declared_diff(rectangles: usize) {
+    if enabled() {
+        super::log::line(format_args!(
+            "RUSTUI_FRAME_LOG {{\"event\":\"declared_full_diff\",\"rectangles\":{rectangles}}}"
+        ));
+    }
+}

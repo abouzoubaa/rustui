@@ -32,7 +32,9 @@ impl Drop for Sample {
                 .unwrap_or_default()
                 .as_secs_f64()
                 * 1000.;
-            eprintln!("RUSTUI_G_R2_ALLOC {label} {calls} {epoch_ms:.6}");
+            super::log::line(format_args!(
+                "RUSTUI_G_R2_ALLOC {label} {calls} {epoch_ms:.6}"
+            ));
         }
     }
 }

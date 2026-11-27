@@ -47,6 +47,7 @@
     "../candidate-fast-damage/gpui-fast-g-r2c-planner-phases-v1-fast.json",
     "../candidate-fast-damage/gpui-fast-g-r2d-view-provenance-v1-fast.json",
     "../candidate-fast-damage/gpui-fast-g-r2d-view-signatures-v1-fast.json",
-    "../candidate-fast-damage/gpui-fast-g-r2d-view-generation-proof-v1-fast.json"
+    "../candidate-fast-damage/gpui-fast-g-r2d-view-generation-proof-v1-fast.json",
+    "../candidate-fast-damage/gpui-fast-g-r2e-scoped-editor-damage-v1-fast.json"
   ]
 }

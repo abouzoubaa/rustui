@@ -10,7 +10,7 @@ import time
 
 import run_g_r0
 
-SCENES = ("typing", "hover", "drag", "scroll")
+SCENES = ("typing", "scroll", "hover", "drag")
 MAX_ATTEMPTS = 4
 
 
@@ -42,6 +42,12 @@ def capture(out, scene, arm, seconds, frozen, probe=False):
     if probe:
         return result
     records = (out / "capture.log").read_text().splitlines()
+    end = next(i for i, line in enumerate(records)
+               if line.startswith('RUSTUI_G0_LOG {"event":"end"'))
+    if ("RUSTUI_G_R2_LOG_LOST 0" not in records[end + 1:]
+            or any(line.startswith("RUSTUI_FRAME_LOG_LOST ") for line in records)
+            or any(line.startswith("RUSTUI_FRAME_LOG ") for line in records[:end])):
+        raise RuntimeError(f"frame telemetry was streamed or dropped in {out}")
     prefix = "RUSTUI_G_R2_LOAD "
     load, = [json.loads(line[len(prefix):]) for line in records if line.startswith(prefix)]
     if (
@@ -88,6 +94,8 @@ def matrix(output, scenes, frozen, cutoff):
                 if cutoff and time.time() + 155 > cutoff:
                     return
                 qualified, throttled = attempt(output, scene, pair, retry, frozen)
+                state = "qualified" if qualified else ("thermal hold" if throttled else "load retry")
+                print(f"{scene} pair {pair}, attempt {retry}: {state}", flush=True)
                 if qualified:
                     outcomes[key] = "QUALIFIED"
                 elif retry == MAX_ATTEMPTS:

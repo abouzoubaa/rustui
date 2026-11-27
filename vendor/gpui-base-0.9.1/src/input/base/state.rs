@@ -448,6 +448,9 @@ pub struct InputBaseState<M: InputModeKind> {
     pub(super) validated_token_edit: bool,
     pub(super) document_revision: u64,
     pub(super) last_painted_revision: Cell<Option<u64>>,
+    pub(super) damage_edit_row: Cell<Option<usize>>,
+    pub(super) damage_previous_layout:
+        std::cell::RefCell<Option<(usize, usize, Pixels, super::prepaint_reuse::LayoutRows)>>,
     pub(super) token_presentation: super::InlineTokenPresentation,
     pub(super) token_layout_cache: Option<Box<super::token_presentation::TokenLayoutCache>>,
     /// Real per-frame bounds of the placed token elements, keyed by token
@@ -1018,6 +1021,8 @@ impl<M: InputModeKind> InputBaseState<M> {
             validated_token_edit: false,
             document_revision: 0,
             last_painted_revision: Cell::new(None),
+            damage_edit_row: Default::default(),
+            damage_previous_layout: Default::default(),
             token_presentation: Default::default(),
             token_bounds: Default::default(),
             hovered_token: None,
@@ -3445,6 +3450,12 @@ impl<M: InputModeKind> InputBaseState<M> {
         selection_before: CursorSelection,
         selection_after: Option<CursorSelection>,
     ) -> bool {
+        if gpui::Window::declared_damage_enabled() {
+            let row = text.offset_to_point(range.start.min(text.len())).row;
+            self.damage_edit_row.set(Some(
+                self.damage_edit_row.get().map_or(row, |old| old.min(row)),
+            ));
+        }
         self.document_revision = self.document_revision.wrapping_add(1);
         let token_delta = self.edit_tokens(range, new_text.len());
         if self.undo_manager.is_ignoring() {
