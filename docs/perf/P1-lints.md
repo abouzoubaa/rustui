@@ -75,3 +75,58 @@ One file contains test changes, `crates/rustui/src/components/data/collection.rs
 The amended production lint gate passed. The seven library groups in `scripts/check.sh` total 1,875 passed, 7 ignored and 0 failed. All nine native Metal proofs passed.
 
 The original source check rejected Kit candidates inherited from the G3 merge. With owner approval, the source job now uses the same exact candidate-chain verification for both integration branches and PRs targeting them. The release verifier and the approved-only source checks for main are unchanged.
+
+### P1 paired captures
+
+Source CI passed on [the measured code revision](https://github.com/abouzoubaa/rustui/actions/runs/46035864999/job/140630981721). The release comparison used Rust 1.98.0, 60-second G0 windows after warmup, damage off and buffered logging. Each arm ran directly from its frozen executable with the same logging flags. Before was the G3 merge and after was the amended P1 code. The executable SHA-256 values were `06a796fca7e43435649b51a9a5bdc98e1b68f87da17ba5bb3b3288d04841592a` and `797a68d0e1e0fd46485609620496ac31b413ab608fddd45470b3ce92ed9f6e5f`, respectively.
+
+**0 of 29 completed pair attempts qualified.** An owner-requested pause interrupted one additional pair. On resume, that pair restarted from its first arm. The timebox ended before the remaining G0 pairs and the four F0 workloads could finish. A dash denotes no qualified observation. The 100%-of-one-core arm limit and 15-point pair difference apply to background CPU after excluding the app, WindowServer and kernel_task.
+
+| G0 scene | Qualified | Metric per attempted present | Median before → after | Paired changes 1–5 (%) | Median change | Min / max | Verdict |
+|---|---:|---|---:|---|---:|---:|---|
+| idle | 0/5 | Draw + present (ms) | — | —, —, —, —, — | — | — | INCONCLUSIVE |
+| idle | 0/5 | Process user + system (s) | — | —, —, —, —, — | — | — | INCONCLUSIVE |
+| typing | 0/5 | Draw + present (ms) | — | —, —, —, —, — | — | — | INCONCLUSIVE |
+| typing | 0/5 | Process user + system (s) | — | —, —, —, —, — | — | — | INCONCLUSIVE |
+| hover | 0/5 | Draw + present (ms) | — | —, —, —, —, — | — | — | INCONCLUSIVE |
+| hover | 0/5 | Process user + system (s) | — | —, —, —, —, — | — | — | INCONCLUSIVE |
+| log | 0/5 | Draw + present (ms) | — | —, —, —, —, — | — | — | INCONCLUSIVE |
+| log | 0/5 | Process user + system (s) | — | —, —, —, —, — | — | — | INCONCLUSIVE |
+| drag | 0/5 | Draw + present (ms) | — | —, —, —, —, — | — | — | INCONCLUSIVE |
+| drag | 0/5 | Process user + system (s) | — | —, —, —, —, — | — | — | INCONCLUSIVE |
+
+CPU load in percent of one core, before / after. An empty CPU speed limit means pmset reported no limit.
+
+| Scene | Pair / attempt | CPU speed limit | Background | WindowServer | kernel_task | Qualified |
+|---|---|---|---:|---:|---:|---|
+| idle | 1 / 1 | — | 118.91 / 104.06 | 49.73 / 51.36 | 16.58 / 16.57 | no |
+| idle | 1 / 2 | — | 101.92 / 93.55 | 51.35 / 51.39 | 16.57 / 14.92 | no |
+| idle | 1 / 3 | — | 101.75 / 138.05 | 51.66 / 51.36 | 16.66 / 18.23 | no |
+| idle | 1 / 4 | — | 154.76 / 169.43 | 51.38 / 51.35 | 18.23 / 18.22 | no |
+| idle | 2 / 1 | — | 124.86 / 167.15 | 51.35 / 51.64 | 18.22 / 18.33 | no |
+| idle | 2 / 2 | — | 180.93 / 143.51 | 51.36 / 51.42 | 28.17 / 21.56 | no |
+| idle | 2 / 3 | — | 165.21 / 197.94 | 51.36 / 49.92 | 21.54 / 26.63 | no |
+| idle | 2 / 4 | — | 158.30 / 148.63 | 51.65 / 49.98 | 21.66 / 21.66 | no |
+| idle | 3 / 1 | — | 178.58 / 164.86 | 51.64 / 51.40 | 23.32 / 21.56 | no |
+| idle | 3 / 2 | — | 153.45 / 160.95 | 49.98 / 49.71 | 21.66 / 21.54 | no |
+| idle | 3 / 3 | — | 159.38 / 180.95 | 49.71 / 49.98 | 19.88 / 21.66 | no |
+| idle | 3 / 4 | — | 159.71 / 153.72 | 49.98 / 49.69 | 21.66 / 21.53 | no |
+| idle | 4 / 1 | — | 170.95 / 160.94 | 49.71 / 51.36 | 21.54 / 21.54 | no |
+| idle | 4 / 2 | — | 156.77 / 186.36 | 49.70 / 49.69 | 21.54 / 23.19 | no |
+| idle | 4 / 3 | — | 177.53 / 159.12 | 49.70 / 49.70 | 21.54 / 21.54 | no |
+| idle | 4 / 4 | — | 162.90 / 163.67 | 49.99 / 49.70 | 21.66 / 21.54 | no |
+| idle | 5 / 1 | — | 166.56 / 158.79 | 50.00 / 49.72 | 20.00 / 19.89 | no |
+| idle | 5 / 2 | — | 223.90 / 318.56 | 48.06 / 46.66 | 21.54 / 20.00 | no |
+| typing | 1 / 1 | — | 364.50 / 346.74 | 48.24 / 49.89 | 18.30 / 18.29 | no |
+| typing | 2 / 1 | — | 200.11 / 199.42 | 46.64 / 48.29 | 19.99 / 18.32 | no |
+| typing | 3 / 1 | — | 206.93 / 158.80 | 46.57 / 48.25 | 18.29 / 19.97 | no |
+| hover | 1 / 1 | — | 348.10 / 242.21 | 53.33 / 53.33 | 21.67 / 23.33 | no |
+| hover | 2 / 1 | — | 189.72 / 249.92 | 51.66 / 51.66 | 23.33 / 23.33 | no |
+| hover | 3 / 1 | — | 127.25 / 93.55 | 50.00 / 51.66 | 21.67 / 20.00 | no |
+| log | 1 / 1 | — | 236.50 / 204.31 | 49.98 / 49.98 | 24.99 / 21.66 | no |
+| log | 2 / 1 | — | 202.93 / 213.99 | 48.30 / 48.30 | 23.32 / 21.65 | no |
+| log | 3 / 1 | — | 86.64 / 179.60 | 49.99 / 48.30 | 16.66 / 21.65 | no |
+| drag | 1 / 1 | — | 188.92 / 193.94 | 51.66 / 51.66 | 23.33 / 23.33 | no |
+| drag | 2 / 1 | — | 182.61 / 196.46 | 51.66 / 51.66 | 25.00 / 23.33 | no |
+
+The four F0 workloads (5,000-row scroll, 10,000-line typing, idle redraw with 60 panels, and forced draw with 1,000 rows) each have 0/5 qualified pairs and no CPU measurements. P1 stays draft. No new crates were added.
