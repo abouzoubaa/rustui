@@ -80,7 +80,7 @@ The original source check rejected Kit candidates inherited from the G3 merge. W
 
 Source CI passed on [the measured code revision](https://github.com/abouzoubaa/rustui/actions/runs/46035864999/job/140630981721). The release comparison used Rust 1.98.0, 60-second G0 windows after warmup, damage off and buffered logging. Each arm ran directly from its frozen executable with the same logging flags. Before was the G3 merge and after was the amended P1 code. The executable SHA-256 values were `06a796fca7e43435649b51a9a5bdc98e1b68f87da17ba5bb3b3288d04841592a` and `797a68d0e1e0fd46485609620496ac31b413ab608fddd45470b3ce92ed9f6e5f`, respectively.
 
-**0 of 29 completed pair attempts qualified.** An owner-requested pause interrupted one additional pair. On resume, that pair restarted from its first arm. The timebox ended before the remaining G0 pairs and the four F0 workloads could finish. A dash denotes no qualified observation. The 100%-of-one-core arm limit and 15-point pair difference apply to background CPU after excluding the app, WindowServer and kernel_task.
+**0 of 29 completed pair attempts qualified.** An owner-requested pause interrupted one additional pair. On resume, that pair restarted from its first arm. The original timebox ended before the remaining G0 pairs and the four F0 workloads could finish. A dash denotes no qualified observation. The 100%-of-one-core arm limit and 15-point pair difference apply to background CPU after excluding the app, WindowServer and kernel_task.
 
 | G0 scene | Qualified | Metric per attempted present | Median before → after | Paired changes 1–5 (%) | Median change | Min / max | Verdict |
 |---|---:|---|---:|---|---:|---:|---|
@@ -129,4 +129,174 @@ CPU load in percent of one core, before / after. An empty CPU speed limit means 
 | drag | 1 / 1 | — | 188.92 / 193.94 | 51.66 / 51.66 | 23.33 / 23.33 | no |
 | drag | 2 / 1 | — | 182.61 / 196.46 | 51.66 / 51.66 | 25.00 / 23.33 | no |
 
-The four F0 workloads (5,000-row scroll, 10,000-line typing, idle redraw with 60 panels, and forced draw with 1,000 rows) each have 0/5 qualified pairs and no CPU measurements. P1 stays draft. No new crates were added.
+The four F0 workloads (5,000-row scroll, 10,000-line typing, idle redraw with 60 panels, and forced draw with 1,000 rows) each have 0/5 qualified pairs and no CPU measurements. No new crates were added.
+
+### Amended P1 measurement
+
+The November 28 run used a 150% per-arm load ceiling and a maximum 15-point difference. CPU load is expressed as a percentage of one core. Earlier captures under the 100% ceiling are reported separately. All captures used release builds with damage off. Pairs alternated before/after order. The RustUI Lab recorder collected 60 seconds after warmup and flushed its frame log on exit. The before and after Lab SHA-256 hashes are recorded above.
+
+The four F0 comparisons used separate measurement binaries built from the original headless workloads. Each measured 300 list scrolls, 100 editor inputs, 60 idle draws, or 100 forced draws at 1,000 rows. The first CPU metric is dispatch/update plus draw duration for F0, and draw plus present duration for G0. The second is process user plus system CPU sampled around the timed workload. F0 background load covers each complete test invocation, including setup. No existing test changed for instrumentation.
+
+Top background processes over 10.12 seconds before pair 1.
+
+| Process | PID | CPU (% of one core) |
+|---|---:|---:|
+| signpost_reporter | 39522 | 70.17 |
+| Google Chrome Helper (Aperitif) | 40729 | 36.17 |
+| Codex (Aperitif Renderer) | 63259 | 20.06 |
+| Codex (Aperitif) | 63244 | 17.89 |
+| Google Chrome Helper (Aperitif Renderer) | 69847 | 7.21 |
+
+| Scene | Metric per attempt | Qualified | Median before → after | Paired changes 1–5 (%) | Median (%) | Min / max (%) | Verdict |
+|---|---|---:|---:|---|---:|---:|---|
+| typing | Frame CPU (ms) | 1/5 | 1.34107 → 1.34914 | —, —, +0.60, —, — | +0.60 | +0.60 / +0.60 | INCONCLUSIVE |
+| typing | Process CPU (s) | 1/5 | 0.01961744 → 0.01959223 | —, —, -0.13, —, — | -0.13 | -0.13 / -0.13 | INCONCLUSIVE |
+| hover | Frame CPU (ms) | 0/5 | — | —, —, —, —, — | — | — | INCONCLUSIVE |
+| hover | Process CPU (s) | 0/5 | — | —, —, —, —, — | — | — | INCONCLUSIVE |
+| log | Frame CPU (ms) | 0/5 | — | —, —, —, —, — | — | — | INCONCLUSIVE |
+| log | Process CPU (s) | 0/5 | — | —, —, —, —, — | — | — | INCONCLUSIVE |
+| drag | Frame CPU (ms) | 0/5 | — | —, —, —, —, — | — | — | INCONCLUSIVE |
+| drag | Process CPU (s) | 0/5 | — | —, —, —, —, — | — | — | INCONCLUSIVE |
+| idle | Frame CPU (ms) | 0/5 | — | —, —, —, —, — | — | — | INCONCLUSIVE |
+| idle | Process CPU (s) | 0/5 | — | —, —, —, —, — | — | — | INCONCLUSIVE |
+| f0-scroll | Frame CPU (ms) | 2/5 | 1.27064 → 1.25221 | -2.96, —, —, +0.10, — | -1.43 | -2.96 / +0.10 | INCONCLUSIVE |
+| f0-scroll | Process CPU (s) | 2/5 | 0.00126313 → 0.00124792 | -2.42, —, —, +0.04, — | -1.19 | -2.42 / +0.04 | INCONCLUSIVE |
+| f0-typing | Frame CPU (ms) | 2/5 | 0.58885 → 0.55930 | —, -3.13, —, —, -6.82 | -4.97 | -6.82 / -3.13 | INCONCLUSIVE |
+| f0-typing | Process CPU (s) | 2/5 | 0.00058760 → 0.00055823 | —, -3.09, —, —, -6.82 | -4.96 | -6.82 / -3.09 | INCONCLUSIVE |
+| f0-idle | Frame CPU (ms) | 0/5 | — | —, —, —, —, — | — | — | INCONCLUSIVE |
+| f0-idle | Process CPU (s) | 0/5 | — | —, —, —, —, — | — | — | INCONCLUSIVE |
+| f0-forced | Frame CPU (ms) | 2/5 | 5.23150 → 5.16177 | -1.10, -1.57, —, —, — | -1.33 | -1.57 / -1.10 | INCONCLUSIVE |
+| f0-forced | Process CPU (s) | 2/5 | 0.00521646 → 0.00515020 | -1.03, -1.51, —, —, — | -1.27 | -1.51 / -1.03 | INCONCLUSIVE |
+
+<details><summary>Thermal and per-arm CPU qualification for each attempt</summary>
+
+| Scene | Pair / try | CPU speed limit | Background before / after | WindowServer before / after | kernel_task before / after | Qualified |
+|---|---|---|---:|---:|---:|---|
+| typing | 1 / 1 | No limit reported | 176.10 / 154.05 | 48.29 / 49.95 | 18.32 / 16.65 | no |
+| typing | 1 / 2 | No limit reported | 154.37 / 155.54 | 48.26 / 49.93 | 16.64 / 16.64 | no |
+| typing | 1 / 3 | No limit reported | 157.25 / 168.38 | 48.28 / 48.30 | 16.65 / 16.66 | no |
+| typing | 2 / 1 | No limit reported | 156.04 / 157.14 | 48.28 / 48.30 | 18.31 / 16.66 | no |
+| typing | 2 / 2 | No limit reported | 157.59 / 154.90 | 48.30 / 48.23 | 18.32 / 18.29 | no |
+| typing | 3 / 1 | No limit reported | 139.19 / 126.56 | 48.29 / 48.27 | 16.65 / 18.31 | yes |
+| typing | 4 / 1 | No limit reported | 168.57 / 157.57 | 48.26 / 48.27 | 16.64 / 18.31 | no |
+| typing | 4 / 2 | No limit reported | 159.80 / 156.98 | 46.63 / 48.24 | 18.32 / 18.30 | no |
+| typing | 5 / 1 | No limit reported | 185.47 / 151.46 | 48.30 / 48.28 | 18.32 / 18.31 | no |
+| typing | 5 / 2 | No limit reported | 170.52 / 156.70 | 48.22 / 48.23 | 18.29 / 18.29 | no |
+| hover | 1 / 1 | No limit reported | 174.40 / 151.23 | 53.32 / 51.67 | 21.66 / 21.67 | no |
+| hover | 1 / 2 | No limit reported | 154.50 / 160.49 | 51.67 / 51.66 | 21.67 / 20.00 | no |
+| hover | 2 / 1 | No limit reported | 153.49 / 148.66 | 51.66 / 51.66 | 21.66 / 21.67 | no |
+| hover | 2 / 2 | No limit reported | 153.48 / 167.14 | 53.33 / 51.66 | 21.67 / 21.66 | no |
+| hover | 3 / 1 | No limit reported | 165.75 / 155.32 | 51.66 / 53.33 | 21.66 / 20.00 | no |
+| hover | 3 / 2 | No limit reported | 157.29 / 153.97 | 51.66 / 51.66 | 21.66 / 21.66 | no |
+| hover | 4 / 1 | No limit reported | 155.53 / 159.31 | 53.33 / 51.66 | 21.67 / 21.66 | no |
+| hover | 4 / 2 | No limit reported | 157.45 / 156.67 | 51.66 / 53.32 | 21.66 / 21.66 | no |
+| hover | 5 / 1 | No limit reported | 164.21 / 156.53 | 53.33 / 51.66 | 20.00 / 21.66 | no |
+| hover | 5 / 2 | No limit reported | 157.74 / 163.26 | 53.33 / 51.66 | 21.67 / 21.66 | no |
+| log | 1 / 1 | No limit reported | 176.90 / 157.87 | 49.96 / 49.95 | 19.99 / 19.98 | no |
+| log | 1 / 2 | No limit reported | 161.65 / 165.65 | 49.97 / 49.97 | 19.99 / 19.99 | no |
+| log | 2 / 1 | No limit reported | 157.89 / 164.58 | 49.98 / 48.29 | 19.99 / 19.98 | no |
+| log | 2 / 2 | No limit reported | 160.22 / 167.22 | 49.96 / 48.31 | 19.99 / 19.99 | no |
+| log | 3 / 1 | No limit reported | 157.35 / 155.37 | 49.97 / 49.99 | 19.99 / 20.00 | no |
+| log | 3 / 2 | No limit reported | 169.73 / 162.85 | 49.96 / 49.96 | 19.98 / 19.98 | no |
+| log | 4 / 1 | No limit reported | 161.41 / 156.58 | 48.31 / 48.31 | 19.99 / 19.99 | no |
+| log | 4 / 2 | No limit reported | 160.38 / 181.54 | 49.97 / 49.95 | 19.99 / 18.32 | no |
+| log | 5 / 1 | No limit reported | 174.41 / 171.13 | 49.96 / 49.96 | 19.98 / 18.32 | no |
+| log | 5 / 2 | No limit reported | 161.05 / 157.81 | 49.97 / 49.98 | 18.32 / 19.99 | no |
+| drag | 1 / 1 | No limit reported | 150.71 / 104.03 | 53.33 / 51.67 | 23.33 / 20.00 | no |
+| drag | 1 / 2 | No limit reported | 151.02 / 179.76 | 51.66 / 51.66 | 21.67 / 23.33 | no |
+| drag | 2 / 1 | No limit reported | 155.65 / 186.00 | 53.33 / 51.67 | 21.67 / 25.00 | no |
+| drag | 2 / 2 | No limit reported | 150.46 / 174.14 | 53.33 / 51.66 | 21.67 / 20.00 | no |
+| drag | 3 / 1 | No limit reported | 170.93 / 154.79 | 53.33 / 53.33 | 20.00 / 21.66 | no |
+| drag | 3 / 2 | No limit reported | 150.80 / 150.02 | 51.66 / 51.67 | 21.67 / 20.00 | no |
+| drag | 4 / 1 | No limit reported | 151.96 / 153.20 | 53.33 / 53.33 | 21.67 / 20.00 | no |
+| drag | 4 / 2 | No limit reported | 151.97 / 153.02 | 53.33 / 51.66 | 21.67 / 20.00 | no |
+| drag | 5 / 1 | No limit reported | 153.67 / 153.89 | 51.66 / 51.66 | 23.33 / 21.66 | no |
+| drag | 5 / 2 | No limit reported | 179.80 / 153.90 | 53.33 / 51.67 | 21.67 / 21.67 | no |
+| idle | 1 / 1 | No limit reported | 178.54 / 164.15 | 49.73 / 49.73 | 18.23 / 18.24 | no |
+| idle | 1 / 2 | No limit reported | 160.74 / 160.55 | 48.06 / 48.07 | 19.89 / 19.89 | no |
+| idle | 2 / 1 | No limit reported | 152.64 / 158.57 | 49.71 / 49.71 | 19.89 / 18.23 | no |
+| idle | 2 / 2 | No limit reported | 158.59 / 187.63 | 49.69 / 48.06 | 19.88 / 21.55 | no |
+| idle | 3 / 1 | No limit reported | 153.58 / 163.62 | 49.72 / 48.05 | 19.89 / 18.23 | no |
+| idle | 3 / 2 | No limit reported | 161.13 / 159.11 | 49.71 / 49.99 | 18.23 / 18.33 | no |
+| idle | 4 / 1 | No limit reported | 162.87 / 160.04 | 48.04 / 48.06 | 18.22 / 18.23 | no |
+| idle | 4 / 2 | No limit reported | 162.53 / 176.92 | 48.33 / 48.06 | 18.33 / 18.23 | no |
+| idle | 5 / 1 | No limit reported | 174.63 / 160.71 | 48.04 / 48.31 | 18.22 / 18.33 | no |
+| idle | 5 / 2 | No limit reported | 162.12 / 161.14 | 48.04 / 48.33 | 18.22 / 18.33 | no |
+| f0-scroll | 1 / 1 | No limit reported | 269.72 / 0.00 | 0.00 / 251.09 | 0.00 / 251.09 | no |
+| f0-scroll | 1 / 2 | No limit reported | 177.53 / 179.89 | 0.00 / 0.00 | 0.00 / 0.00 | no |
+| f0-scroll | 1 / 3 | No limit reported | 0.00 / 175.91 | 251.13 / 0.00 | 0.00 / 0.00 | no |
+| f0-scroll | 1 / 4 | No limit reported | 0.00 / 0.00 | 245.08 / 0.00 | 0.00 / 252.07 | yes |
+| f0-scroll | 2 / 1 | No limit reported | 0.00 / 172.65 | 254.70 / 0.00 | 0.00 / 0.00 | no |
+| f0-scroll | 2 / 2 | No limit reported | 178.95 / 179.11 | 0.00 / 0.00 | 0.00 / 0.00 | no |
+| f0-scroll | 2 / 3 | No limit reported | 187.87 / 0.00 | 0.00 / 254.02 | 0.00 / 0.00 | no |
+| f0-scroll | 2 / 4 | No limit reported | 180.04 / 0.00 | 0.00 / 249.87 | 0.00 / 0.00 | no |
+| f0-scroll | 3 / 1 | No limit reported | 181.36 / 0.00 | 0.00 / 252.79 | 0.00 / 252.79 | no |
+| f0-scroll | 3 / 2 | No limit reported | 0.00 / 174.37 | 0.00 / 0.00 | 251.99 / 0.00 | no |
+| f0-scroll | 3 / 3 | No limit reported | 0.00 / 186.01 | 253.76 / 0.00 | 0.00 / 0.00 | no |
+| f0-scroll | 3 / 4 | No limit reported | 0.00 / 214.62 | 251.40 / 0.00 | 0.00 / 0.00 | no |
+| f0-scroll | 4 / 1 | No limit reported | 0.00 / 194.10 | 255.63 / 0.00 | 0.00 / 0.00 | no |
+| f0-scroll | 4 / 2 | No limit reported | 232.51 / 179.12 | 0.00 / 0.00 | 0.00 / 0.00 | no |
+| f0-scroll | 4 / 3 | No limit reported | 0.00 / 0.00 | 0.00 / 250.69 | 250.78 / 0.00 | yes |
+| f0-scroll | 5 / 1 | No limit reported | 176.55 / 0.00 | 0.00 / 253.83 | 0.00 / 0.00 | no |
+| f0-scroll | 5 / 2 | No limit reported | 0.00 / 173.72 | 0.00 / 0.00 | 251.59 / 0.00 | no |
+| f0-scroll | 5 / 3 | No limit reported | 0.00 / 278.47 | 250.64 / 0.00 | 0.00 / 0.00 | no |
+| f0-scroll | 5 / 4 | No limit reported | 197.86 / 179.58 | 0.00 / 0.00 | 0.00 / 0.00 | no |
+| f0-typing | 1 / 1 | No limit reported | 177.29 / 188.78 | 0.00 / 0.00 | 0.00 / 0.00 | no |
+| f0-typing | 1 / 2 | No limit reported | 177.24 / 187.94 | 0.00 / 0.00 | 0.00 / 0.00 | no |
+| f0-typing | 1 / 3 | No limit reported | 233.55 / 191.87 | 0.00 / 0.00 | 0.00 / 0.00 | no |
+| f0-typing | 1 / 4 | No limit reported | 176.78 / 181.95 | 0.00 / 0.00 | 0.00 / 0.00 | no |
+| f0-typing | 2 / 1 | No limit reported | 184.00 / 0.00 | 0.00 / 0.00 | 0.00 / 689.14 | no |
+| f0-typing | 2 / 2 | No limit reported | 233.54 / 184.99 | 0.00 / 0.00 | 0.00 / 0.00 | no |
+| f0-typing | 2 / 3 | No limit reported | 0.00 / 0.00 | 0.00 / 706.51 | 685.16 / 0.00 | yes |
+| f0-typing | 3 / 1 | No limit reported | 0.00 / 169.68 | 683.04 / 0.00 | 0.00 / 0.00 | no |
+| f0-typing | 3 / 2 | No limit reported | 217.07 / 0.00 | 0.00 / 680.52 | 0.00 / 0.00 | no |
+| f0-typing | 3 / 3 | No limit reported | 0.00 / 185.94 | 698.60 / 0.00 | 0.00 / 0.00 | no |
+| f0-typing | 3 / 4 | No limit reported | 177.96 / 196.76 | 0.00 / 0.00 | 0.00 / 0.00 | no |
+| f0-typing | 4 / 1 | No limit reported | 158.97 / 179.17 | 0.00 / 0.00 | 0.00 / 0.00 | no |
+| f0-typing | 4 / 2 | No limit reported | 0.00 / 182.77 | 691.82 / 0.00 | 0.00 / 0.00 | no |
+| f0-typing | 4 / 3 | No limit reported | 0.00 / 194.75 | 677.30 / 0.00 | 0.00 / 0.00 | no |
+| f0-typing | 4 / 4 | No limit reported | 203.03 / 0.00 | 0.00 / 668.93 | 0.00 / 0.00 | no |
+| f0-typing | 5 / 1 | No limit reported | 146.69 / 0.00 | 0.00 / 687.95 | 0.00 / 0.00 | no |
+| f0-typing | 5 / 2 | No limit reported | 0.00 / 177.95 | 0.00 / 0.00 | 697.25 / 0.00 | no |
+| f0-typing | 5 / 3 | No limit reported | 0.00 / 0.00 | 0.00 / 702.08 | 688.64 / 0.00 | yes |
+| f0-idle | 1 / 1 | No limit reported | 0.00 / 163.64 | 5223.35 / 0.00 | 0.00 / 0.00 | no |
+| f0-idle | 1 / 2 | No limit reported | 0.00 / 300.41 | 5129.17 / 0.00 | 0.00 / 0.00 | no |
+| f0-idle | 1 / 3 | No limit reported | 163.37 / 0.00 | 0.00 / 5046.98 | 0.00 / 0.00 | no |
+| f0-idle | 1 / 4 | No limit reported | 66.83 / 0.00 | 0.00 / 4964.36 | 0.00 / 0.00 | no |
+| f0-idle | 2 / 1 | No limit reported | 300.24 / 150.26 | 0.00 / 0.00 | 0.00 / 0.00 | no |
+| f0-idle | 2 / 2 | No limit reported | 122.46 / 268.70 | 0.00 / 0.00 | 0.00 / 0.00 | no |
+| f0-idle | 2 / 3 | No limit reported | 0.00 / 233.68 | 0.00 / 0.00 | 5057.86 / 0.00 | no |
+| f0-idle | 2 / 4 | No limit reported | 300.28 / 163.31 | 0.00 / 0.00 | 0.00 / 0.00 | no |
+| f0-idle | 3 / 1 | No limit reported | 163.26 / 0.00 | 0.00 / 5176.70 | 0.00 / 0.00 | no |
+| f0-idle | 3 / 2 | No limit reported | 233.54 / 248.01 | 0.00 / 0.00 | 0.00 / 0.00 | no |
+| f0-idle | 3 / 3 | No limit reported | 194.40 / 122.47 | 0.00 / 0.00 | 0.00 / 0.00 | no |
+| f0-idle | 3 / 4 | No limit reported | 186.09 / 321.88 | 0.00 / 0.00 | 0.00 / 0.00 | no |
+| f0-idle | 4 / 1 | No limit reported | 122.44 / 172.94 | 0.00 / 0.00 | 0.00 / 0.00 | no |
+| f0-idle | 4 / 2 | No limit reported | 216.05 / 0.00 | 0.00 / 5090.85 | 0.00 / 0.00 | no |
+| f0-idle | 4 / 3 | No limit reported | 200.29 / 0.00 | 0.00 / 5090.33 | 0.00 / 0.00 | no |
+| f0-idle | 4 / 4 | No limit reported | 233.76 / 0.00 | 0.00 / 5154.85 | 0.00 / 0.00 | no |
+| f0-idle | 5 / 1 | No limit reported | 0.00 / 194.28 | 0.00 / 0.00 | 5160.55 / 0.00 | no |
+| f0-idle | 5 / 2 | No limit reported | 0.00 / 122.47 | 0.00 / 0.00 | 5107.58 / 0.00 | no |
+| f0-idle | 5 / 3 | No limit reported | 100.35 / 0.00 | 0.00 / 0.00 | 0.00 / 5155.65 | no |
+| f0-idle | 5 / 4 | No limit reported | 138.24 / 233.71 | 0.00 / 0.00 | 0.00 / 0.00 | no |
+| f0-forced | 1 / 1 | No limit reported | 153.71 / 182.88 | 0.00 / 0.00 | 90.27 / 0.00 | no |
+| f0-forced | 1 / 2 | No limit reported | 96.28 / 182.05 | 94.96 / 0.00 | 0.00 / 0.00 | no |
+| f0-forced | 1 / 3 | No limit reported | 91.99 / 81.91 | 95.93 / 96.68 | 0.00 / 0.00 | yes |
+| f0-forced | 2 / 1 | No limit reported | 0.00 / 91.47 | 96.42 / 96.42 | 96.42 / 0.00 | no |
+| f0-forced | 2 / 2 | No limit reported | 94.33 / 93.88 | 96.47 / 0.00 | 0.00 / 97.21 | yes |
+| f0-forced | 3 / 1 | No limit reported | 192.55 / 263.35 | 0.00 / 0.00 | 0.00 / 0.00 | no |
+| f0-forced | 3 / 2 | No limit reported | 87.57 / 129.13 | 95.77 / 0.00 | 0.00 / 94.66 | no |
+| f0-forced | 3 / 3 | No limit reported | 92.20 / 181.62 | 0.00 / 0.00 | 96.12 / 0.00 | no |
+| f0-forced | 3 / 4 | No limit reported | 0.87 / 182.07 | 96.27 / 0.00 | 96.27 / 0.00 | no |
+| f0-forced | 4 / 1 | No limit reported | 87.16 / 0.00 | 96.72 / 97.50 | 0.00 / 97.50 | no |
+| f0-forced | 4 / 2 | No limit reported | 91.37 / 184.70 | 97.63 / 0.00 | 0.00 / 0.00 | no |
+| f0-forced | 4 / 3 | No limit reported | 95.58 / 117.33 | 0.00 / 96.11 | 95.17 / 0.00 | no |
+| f0-forced | 4 / 4 | No limit reported | 3.41 / 192.71 | 96.20 / 0.00 | 96.20 / 0.00 | no |
+| f0-forced | 5 / 1 | No limit reported | 199.14 / 87.07 | 0.00 / 0.00 | 0.00 / 96.12 | no |
+| f0-forced | 5 / 2 | No limit reported | 185.81 / 185.12 | 0.00 / 0.00 | 0.00 / 0.00 | no |
+| f0-forced | 5 / 3 | No limit reported | 187.08 / 95.69 | 0.00 / 95.48 | 0.00 / 0.00 | no |
+| f0-forced | 5 / 4 | No limit reported | 121.16 / 208.81 | 95.01 / 0.00 | 0.00 / 0.00 | no |
+
+</details>
+
+**P1 qualified scenes = 0/9.** Seven of 124 pair attempts qualified individually. No scene reached four qualified pairs. All nine process CPU verdicts are INCONCLUSIVE. Under Amendment 6 this satisfies the performance condition for the behavior-preserving P1 lint ticket.
