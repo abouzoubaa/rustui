@@ -230,7 +230,7 @@ pub(super) fn run(reduce_motion: bool) {
                 window_bounds: Some(WindowBounds::Windowed(bounds)),
                 ..Default::default()
             },
-            move |_, _| window_root.clone(),
+            move |_, _| window_root,
         )
         .expect("spring probe window must open");
 

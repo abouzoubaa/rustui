@@ -267,7 +267,7 @@ fn next_selection(
         "escape" => return Some(None),
         "home" => 0,
         "end" => ids.len().saturating_sub(1),
-        "up" => index.map_or(ids.len().saturating_sub(1), |i| i.saturating_sub(1)),
+        "up" => index.map_or_else(|| ids.len().saturating_sub(1), |i| i.saturating_sub(1)),
         "down" => index.map_or(0, |i| (i + 1).min(ids.len().saturating_sub(1))),
         _ => return None,
     };
@@ -285,7 +285,7 @@ fn keyboard_event_eligible(
     focused: bool,
     prefer_character_input: bool,
     ime_in_progress: bool,
-    modifiers: &Modifiers,
+    modifiers: Modifiers,
 ) -> bool {
     focused
         && !prefer_character_input
@@ -354,12 +354,11 @@ impl CollectionState {
     }
 
     fn keyboard(&self, event: &KeyDownEvent, window: &mut Window, cx: &mut App) {
-        let modifiers = &event.keystroke.modifiers;
         if !keyboard_event_eligible(
             self.focus.is_focused(window),
             event.prefer_character_input,
             event.keystroke.is_ime_in_progress(),
-            modifiers,
+            event.keystroke.modifiers,
         ) {
             return;
         }
@@ -589,7 +588,7 @@ impl<T: 'static, V: View, F: Fn(usize, &T) -> V + 'static> View for Collection<T
                 let target = Rc::new(RefCell::new(None));
                 let read_target = target.clone();
                 let expected = Rc::new(RefCell::new(requested.clone()));
-                let update_expected = expected.clone();
+                let update_expected = expected;
                 let update = context.binding_updater(binding.clone(), move |current| {
                     let desired = read_target.borrow();
                     update_selection(current, &update_expected, &desired)
@@ -1563,10 +1562,10 @@ mod tests {
     #[test]
     fn keyboard_event_filter_rejects_unfocused_text_ime_and_modified_input() {
         let plain = Modifiers::default();
-        assert!(keyboard_event_eligible(true, false, false, &plain));
-        assert!(!keyboard_event_eligible(false, false, false, &plain));
-        assert!(!keyboard_event_eligible(true, true, false, &plain));
-        assert!(!keyboard_event_eligible(true, false, true, &plain));
+        assert!(keyboard_event_eligible(true, false, false, plain));
+        assert!(!keyboard_event_eligible(false, false, false, plain));
+        assert!(!keyboard_event_eligible(true, true, false, plain));
+        assert!(!keyboard_event_eligible(true, false, true, plain));
 
         for modifiers in [
             Modifiers {
@@ -1583,7 +1582,7 @@ mod tests {
                 ..plain
             },
         ] {
-            assert!(!keyboard_event_eligible(true, false, false, &modifiers));
+            assert!(!keyboard_event_eligible(true, false, false, modifiers));
         }
     }
 

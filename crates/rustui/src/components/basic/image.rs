@@ -263,7 +263,7 @@ impl View for ImageView {
         }
         // Clip image pixels to the record's corner radius; a rounded container
         // alone leaves the child image square.
-        let mut container_style = style.clone();
+        let mut container_style = style;
         container_style.lengths.remove("width");
         container_style.lengths.remove("height");
         let mut container = styled_container(div(), &container_style).overflow_hidden();
@@ -278,7 +278,7 @@ impl View for ImageView {
                 container
                     .id(id.as_str().to_owned())
                     .role(gpui::Role::Image)
-                    .aria_label(label.clone())
+                    .aria_label(label)
                     .child(image)
                     .into_any_element()
             }

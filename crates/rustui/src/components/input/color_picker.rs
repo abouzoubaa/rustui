@@ -986,7 +986,7 @@ impl View for ColorPickerView {
                     .gap_2()
                     .child(trigger_swatch)
                     .child(if self.compact {
-                        visible_label.clone()
+                        visible_label
                     } else {
                         SharedString::from(
                             selected
@@ -997,7 +997,7 @@ impl View for ColorPickerView {
             );
 
         let popup = self.render_popup(&state, context, &selector);
-        let popup_change_state = popup_state.clone();
+        let popup_change_state = popup_state;
         let popup_owner = retained.clone();
         let root_owner = retained.clone();
         let popup_element = GpuiPopover::new(format!("{identity}:popover"))

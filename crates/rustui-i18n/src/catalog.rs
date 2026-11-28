@@ -23,7 +23,7 @@ impl Catalog {
 
             let Some((identifier, value)) = line.split_once('=') else {
                 return Err(CatalogError::new(
-                    locale.clone(),
+                    locale,
                     line_number,
                     "expected `message-id = value`",
                 ));
@@ -34,7 +34,7 @@ impl Catalog {
             let value = value.trim();
             if value.is_empty() {
                 return Err(CatalogError::new(
-                    locale.clone(),
+                    locale,
                     line_number,
                     format!("message `{identifier}` has an empty value"),
                 ));
@@ -44,7 +44,7 @@ impl Catalog {
                 .is_some()
             {
                 return Err(CatalogError::new(
-                    locale.clone(),
+                    locale,
                     line_number,
                     format!("message `{identifier}` is defined more than once"),
                 ));

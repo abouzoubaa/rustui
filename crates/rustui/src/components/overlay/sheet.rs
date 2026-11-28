@@ -301,7 +301,7 @@ impl View for SheetView {
                         sheet = sheet.title(accessible_title);
                     }
                     if let Some(body) = content.clone() {
-                        sheet = sheet.child(body.clone());
+                        sheet = sheet.child(body);
                     }
                     sheet
                 });

@@ -245,7 +245,7 @@ fn main() {
                 window_bounds: Some(WindowBounds::Windowed(bounds)),
                 ..Default::default()
             },
-            move |_, _| window_root.clone(),
+            move |_, _| window_root,
         )
         .expect("opacity frame probe window must open");
 

@@ -114,8 +114,11 @@ jobs:
           RUSTUI_CI_BRANCH: ${{ github.ref_name }}
           RUSTUI_CI_PR_BASE: ${{ github.base_ref }}
         run: |
-          if [[ "$RUSTUI_CI_EVENT" == pull_request && "$RUSTUI_CI_PR_BASE" == g5-integration ]] ||
-             [[ "$RUSTUI_CI_EVENT" != pull_request && "$RUSTUI_CI_BRANCH" == g5-integration ]]; then
+          verification_branch="$RUSTUI_CI_BRANCH"
+          if [[ "$RUSTUI_CI_EVENT" == pull_request ]]; then
+            verification_branch="$RUSTUI_CI_PR_BASE"
+          fi
+          if [[ "$verification_branch" == g5-integration || "$verification_branch" == p-integration ]]; then
             python3 scripts/check_source_candidates.py --candidate-stack patches/candidate-fast-latency/latency-stack.json
           else
             ./scripts/verify-release.sh source
@@ -142,6 +145,8 @@ jobs:
         run: rm -rf "$HOME/.cache/rustui-target-fixture-kit9" "$RUNNER_TEMP/gpui-kit-0.9.1-fixture"
       - name: Stable Rust formatting, workspace check, Clippy (-D warnings), and library tests
         run: ./scripts/check.sh
+      - name: Check Stage P performance lints in the RustUI-owned crates
+        run: ./scripts/check-owned-perf-lints.sh
       - name: Report disk space at job end
         if: always()
         run: df -h

@@ -541,8 +541,6 @@ impl View for TableView {
             let columns = display_columns;
             let rows = display_rows;
             let column_width = self.column_width;
-            let row_style = row_style.clone();
-            let header_style = header_style.clone();
             context.update_entity(&state, move |state, _window, cx| {
                 state
                     .delegate_mut()
@@ -595,7 +593,7 @@ impl View for TableView {
             )
         };
         last_owner_selection.set(owner_selection);
-        let marker = last_owner_selection.clone();
+        let marker = last_owner_selection;
         let current_request = requested_selection.clone();
         let updater = context.binding_updater(self.selection.clone(), move |current| {
             apply_owner_selection_request(current, &marker, current_request.get())
@@ -604,7 +602,7 @@ impl View for TableView {
 
         if created {
             let current_update = selection_update.clone();
-            let requested = requested_selection.clone();
+            let requested = requested_selection;
             context.subscribe_retained(&identity, &state, move |state, event: &TableEvent, cx| {
                 let selection = match event {
                     TableEvent::SelectRow(row) => Some(*row),

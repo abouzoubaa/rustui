@@ -220,7 +220,7 @@ where
         let column_gap = self.column_gap;
         let viewport_height = self.viewport_height;
         let direction = context.layout_direction();
-        context.with_element_scope(RetentionScope::LazyGrid(grid_id.clone()), |context| {
+        context.with_element_scope(RetentionScope::LazyGrid(grid_id), |context| {
             let (state, _) =
                 context.retained_entity(Identity::from("grid-state"), |_, _| GridState {
                     seed: seed.clone(),

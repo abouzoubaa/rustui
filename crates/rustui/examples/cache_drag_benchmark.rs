@@ -389,7 +389,7 @@ fn main() {
                 probe.ax_active_seen.set(window.is_a11y_active());
                 schedule_poll(window, probe);
             });
-            root.clone()
+            root
         }).expect("cache drag window must open");
         cx.spawn(async move |cx| {
             cx.background_executor().timer(TIMEOUT).await;

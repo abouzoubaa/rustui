@@ -216,7 +216,7 @@ impl View for IconView {
             div()
                 .id(id.to_string())
                 .role(gpui::Role::Image)
-                .aria_label(label.clone())
+                .aria_label(label)
                 .child(icon)
                 .into_any_element()
         } else if let Some(id) = &self.id {

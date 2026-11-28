@@ -926,7 +926,7 @@ impl<R: Clone + 'static> TableDelegate for EditableGridDelegate<R> {
             let selector = format!("editable-grid-header:{}", column.id);
             return header
                 .size_full()
-                .debug_selector(move || selector.clone())
+                .debug_selector(move || selector)
                 .child(title)
                 .into_any_element();
         }
@@ -947,7 +947,7 @@ impl<R: Clone + 'static> TableDelegate for EditableGridDelegate<R> {
             .size_full()
             .track_focus(&focus)
             .tab_stop(true)
-            .debug_selector(move || selector.clone())
+            .debug_selector(move || selector)
             .on_mouse_down(MouseButton::Left, move |_, window, cx| {
                 click_focus.focus(window, cx);
             })
@@ -1023,7 +1023,7 @@ impl<R: Clone + 'static> TableDelegate for EditableGridDelegate<R> {
             div()
                 .w_full()
                 .h_full()
-                .debug_selector(move || label_selector.clone())
+                .debug_selector(move || label_selector)
                 .child((column.read)(row))
                 .into_any_element()
         };
@@ -1032,7 +1032,7 @@ impl<R: Clone + 'static> TableDelegate for EditableGridDelegate<R> {
             .h_full()
             .flex()
             .items_center()
-            .debug_selector(move || content_selector.clone())
+            .debug_selector(move || content_selector)
             .child(content);
         let accessible_value = editing
             .map(|edit| edit.draft.borrow().clone())
@@ -1064,7 +1064,7 @@ impl<R: Clone + 'static> TableDelegate for EditableGridDelegate<R> {
             .font_family(appearance.typography.family.clone())
             .text_size(px(appearance.typography.size))
             .font_weight(gpui::FontWeight(appearance.typography.weight))
-            .debug_selector(move || selector.clone())
+            .debug_selector(move || selector)
             .when(selected, |cell| {
                 cell.child(
                     div()

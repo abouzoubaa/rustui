@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+- Move owned values into component callbacks where their last use previously cloned them.
+
 - Let opt-in Metal scroll lists declare stable rows and measure the GPU cost of shifting and presenting them.
 
 - Add opt-in Metal scroll shifting with two retained textures, clipped copies and full-redraw pixel checks.
